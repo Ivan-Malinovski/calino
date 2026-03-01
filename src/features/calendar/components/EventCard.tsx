@@ -12,6 +12,7 @@ interface EventCardProps {
   onClick?: (event: CalendarEvent) => void
   compact?: boolean
   isDragging?: boolean
+  enableResize?: boolean
 }
 
 export function EventCard({
@@ -19,6 +20,7 @@ export function EventCard({
   onClick,
   compact = false,
   isDragging = false,
+  enableResize = true,
 }: EventCardProps): JSX.Element {
   const calendars = useCalendarStore((state) => state.calendars)
   const setSelectedEventId = useCalendarStore((state) => state.setSelectedEventId)
@@ -126,7 +128,9 @@ export function EventCard({
       )}
       {event.isAllDay && <div className={styles.time}>All day</div>}
       {event.location && <div className={styles.location}>{event.location}</div>}
-      {!compact && <div className={styles.resizeHandle} onPointerDown={handleResizeStart} />}
+      {enableResize && !compact && (
+        <div className={styles.resizeHandle} onPointerDown={handleResizeStart} />
+      )}
     </div>
   )
 }

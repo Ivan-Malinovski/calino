@@ -177,7 +177,7 @@ export function WeekView(): JSX.Element {
             width: `${widthPercent}%`,
           }}
         >
-          <EventCard event={event} compact />
+          <EventCard event={event} compact enableResize />
         </div>
       )
     })
