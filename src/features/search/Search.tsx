@@ -1,4 +1,5 @@
 import type { JSX } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useSearch } from './hooks/useSearch'
 import { SearchBar } from './components/SearchBar'
 import { SearchResults } from './components/SearchResults'
@@ -28,6 +29,8 @@ export function Search({ onSelectEvent }: SearchProps): JSX.Element {
     closeSearch()
   }
 
+  const showResults = isSearchOpen || query.length > 0
+
   return (
     <div className={styles.searchContainer}>
       <SearchBar
@@ -38,16 +41,24 @@ export function Search({ onSelectEvent }: SearchProps): JSX.Element {
         onClose={closeSearch}
         isOpen={isSearchOpen}
       />
-      {isSearchOpen && (
-        <>
-          <SearchFilters
-            filters={filters}
-            onUpdateFilters={updateFilters}
-            onClearFilters={clearFilters}
-          />
-          <SearchResults results={results} onSelectEvent={handleEventSelect} />
-        </>
-      )}
+      <AnimatePresence>
+        {showResults && (
+          <motion.div
+            initial={{ opacity: 0, y: -10, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -10, scale: 0.95 }}
+            transition={{ duration: 0.2, ease: 'easeOut' }}
+            style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 1000 }}
+          >
+            <SearchFilters
+              filters={filters}
+              onUpdateFilters={updateFilters}
+              onClearFilters={clearFilters}
+            />
+            <SearchResults results={results} onSelectEvent={handleEventSelect} />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

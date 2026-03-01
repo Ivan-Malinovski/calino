@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useMemo } from 'react'
 import { useCalendarStore } from '@/store/calendarStore'
-import { initializeSearchIndex, search, updateSearchIndex } from '../lib/searchIndex'
+import { initializeSearchIndex, search } from '../lib/searchIndex'
 import type { SearchResult, SearchFilters } from '../types'
 
 const DEBOUNCE_MS = 300
@@ -22,11 +22,7 @@ export function useSearch() {
   }, [query])
 
   useEffect(() => {
-    if (events.length > 0) {
-      updateSearchIndex(events)
-    } else {
-      initializeSearchIndex([])
-    }
+    initializeSearchIndex(events)
   }, [events])
 
   const results = useMemo((): SearchResult[] => {

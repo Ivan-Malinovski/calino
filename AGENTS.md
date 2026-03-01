@@ -210,7 +210,8 @@ src/
 │   ├── calendar/        # Calendar views and logic
 │   ├── events/          # Event CRUD operations
 │   ├── caldav/          # CalDAV sync integration
-│   └── nlp/             # Natural language parsing
+│   ├── nlp/             # Natural language parsing
+│   └── search/          # Full-text search with Fuse.js
 ├── hooks/               # Custom React hooks
 ├── lib/                 # Utilities and services
 ├── types/               # TypeScript interfaces
@@ -248,9 +249,12 @@ src/
 
 ### Search Feature
 
-- Plan for full-text search on event titles, descriptions, locations
-- Consider indexing with Fuse.js for client-side search
-- Server-side search via CalDAV if available
+- Full-text search on event titles, descriptions, locations
+- Fuse.js for client-side fuzzy search with weighted scoring
+- Debounced input (300ms) for performance
+- Keyboard shortcut: Cmd/Ctrl+K to open, Escape to close
+- Filter by date range and calendar
+- Animated panel with framer-motion
 
 ### Modern UX Features
 

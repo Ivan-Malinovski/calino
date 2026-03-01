@@ -1,12 +1,12 @@
-import type { JSX } from 'react';
-import { useState, useMemo } from 'react';
-import { format, parseISO, addHours } from 'date-fns';
-import { v4 as uuidv4 } from 'uuid';
-import { useCalendarStore } from '@/store/calendarStore';
-import type { CalendarEvent, RecurrenceRule } from '@/types';
-import styles from './EventModal.module.css';
+import type { JSX } from 'react'
+import { useState, useMemo, useEffect } from 'react'
+import { format, parseISO, addHours } from 'date-fns'
+import { v4 as uuidv4 } from 'uuid'
+import { useCalendarStore } from '@/store/calendarStore'
+import type { CalendarEvent, RecurrenceRule } from '@/types'
+import styles from './EventModal.module.css'
 
-const DEFAULT_DURATION_HOURS = 1;
+const DEFAULT_DURATION_HOURS = 1
 
 const RECURRENCE_OPTIONS: { value: RecurrenceRule['frequency'] | 'none'; label: string }[] = [
   { value: 'none', label: 'Does not repeat' },
@@ -14,19 +14,19 @@ const RECURRENCE_OPTIONS: { value: RecurrenceRule['frequency'] | 'none'; label: 
   { value: 'weekly', label: 'Weekly' },
   { value: 'monthly', label: 'Monthly' },
   { value: 'yearly', label: 'Yearly' },
-];
+]
 
 interface InitialFormState {
-  title: string;
-  description: string;
-  location: string;
-  startDate: string;
-  startTime: string;
-  endDate: string;
-  endTime: string;
-  isAllDay: boolean;
-  calendarId: string;
-  recurrence: RecurrenceRule['frequency'] | 'none';
+  title: string
+  description: string
+  location: string
+  startDate: string
+  startTime: string
+  endDate: string
+  endTime: string
+  isAllDay: boolean
+  calendarId: string
+  recurrence: RecurrenceRule['frequency'] | 'none'
 }
 
 function getInitialFormState(
@@ -36,10 +36,10 @@ function getInitialFormState(
   events: CalendarEvent[],
   calendars: { id: string; isDefault: boolean }[]
 ): InitialFormState {
-  const defaultCalendar = calendars.find((c) => c.isDefault) || calendars[0];
+  const defaultCalendar = calendars.find((c) => c.isDefault) || calendars[0]
 
-  const isEditing = selectedEventId !== null;
-  const existingEvent = isEditing ? events.find((e) => e.id === selectedEventId) : null;
+  const isEditing = selectedEventId !== null
+  const existingEvent = isEditing ? events.find((e) => e.id === selectedEventId) : null
 
   if (isModalOpen) {
     if (existingEvent) {
@@ -54,19 +54,19 @@ function getInitialFormState(
         isAllDay: existingEvent.isAllDay,
         calendarId: existingEvent.calendarId,
         recurrence: existingEvent.recurrence?.frequency || 'none',
-      };
+      }
     }
 
     if (selectedDate) {
-      const dateStr = selectedDate.includes('T') ? selectedDate.split('T')[0] : selectedDate;
-      let startTimeVal = '09:00';
-      let endTimeVal = '10:00';
+      const dateStr = selectedDate.includes('T') ? selectedDate.split('T')[0] : selectedDate
+      let startTimeVal = '09:00'
+      let endTimeVal = '10:00'
 
       if (selectedDate.includes('T')) {
-        const time = selectedDate.split('T')[1];
-        startTimeVal = time;
-        const parsedTime = parseISO(`2000-01-01T${time}`);
-        endTimeVal = format(addHours(parsedTime, DEFAULT_DURATION_HOURS), 'HH:mm');
+        const time = selectedDate.split('T')[1]
+        startTimeVal = time
+        const parsedTime = parseISO(`2000-01-01T${time}`)
+        endTimeVal = format(addHours(parsedTime, DEFAULT_DURATION_HOURS), 'HH:mm')
       }
 
       return {
@@ -80,11 +80,11 @@ function getInitialFormState(
         isAllDay: false,
         calendarId: defaultCalendar?.id || '',
         recurrence: 'none',
-      };
+      }
     }
   }
 
-  const today = format(new Date(), 'yyyy-MM-dd');
+  const today = format(new Date(), 'yyyy-MM-dd')
   return {
     title: '',
     description: '',
@@ -96,51 +96,60 @@ function getInitialFormState(
     isAllDay: false,
     calendarId: defaultCalendar?.id || '',
     recurrence: 'none',
-  };
+  }
 }
 
 export function EventModal(): JSX.Element | null {
-  const isModalOpen = useCalendarStore((state) => state.isModalOpen);
-  const selectedEventId = useCalendarStore((state) => state.selectedEventId);
-  const selectedDate = useCalendarStore((state) => state.selectedDate);
-  const events = useCalendarStore((state) => state.events);
-  const calendars = useCalendarStore((state) => state.calendars);
-  const addEvent = useCalendarStore((state) => state.addEvent);
-  const updateEvent = useCalendarStore((state) => state.updateEvent);
-  const deleteEvent = useCalendarStore((state) => state.deleteEvent);
-  const closeModal = useCalendarStore((state) => state.closeModal);
+  const isModalOpen = useCalendarStore((state) => state.isModalOpen)
+  const selectedEventId = useCalendarStore((state) => state.selectedEventId)
+  const selectedDate = useCalendarStore((state) => state.selectedDate)
+  const events = useCalendarStore((state) => state.events)
+  const calendars = useCalendarStore((state) => state.calendars)
+  const addEvent = useCalendarStore((state) => state.addEvent)
+  const updateEvent = useCalendarStore((state) => state.updateEvent)
+  const deleteEvent = useCalendarStore((state) => state.deleteEvent)
+  const closeModal = useCalendarStore((state) => state.closeModal)
 
   const initialState = useMemo(
     () => getInitialFormState(isModalOpen, selectedEventId, selectedDate, events, calendars),
     [isModalOpen, selectedEventId, selectedDate, events, calendars]
-  );
+  )
 
-  const [title, setTitle] = useState(initialState.title);
-  const [description, setDescription] = useState(initialState.description);
-  const [location, setLocation] = useState(initialState.location);
-  const [startDate, setStartDate] = useState(initialState.startDate);
-  const [startTime, setStartTime] = useState(initialState.startTime);
-  const [endDate, setEndDate] = useState(initialState.endDate);
-  const [endTime, setEndTime] = useState(initialState.endTime);
-  const [isAllDay, setIsAllDay] = useState(initialState.isAllDay);
-  const [calendarId] = useState(initialState.calendarId);
-  const [recurrence, setRecurrence] = useState<RecurrenceRule['frequency'] | 'none'>(initialState.recurrence);
+  const [title, setTitle] = useState(initialState.title)
+  const [description, setDescription] = useState(initialState.description)
+  const [location, setLocation] = useState(initialState.location)
+  const [startDate, setStartDate] = useState(initialState.startDate)
+  const [startTime, setStartTime] = useState(initialState.startTime)
+  const [endDate, setEndDate] = useState(initialState.endDate)
+  const [endTime, setEndTime] = useState(initialState.endTime)
+  const [isAllDay, setIsAllDay] = useState(initialState.isAllDay)
+  const [calendarId] = useState(initialState.calendarId)
+  const [recurrence, setRecurrence] = useState<RecurrenceRule['frequency'] | 'none'>(
+    initialState.recurrence
+  )
 
-  const isEditing = selectedEventId !== null;
+  useEffect(() => {
+    setTitle(initialState.title)
+    setDescription(initialState.description)
+    setLocation(initialState.location)
+    setStartDate(initialState.startDate)
+    setStartTime(initialState.startTime)
+    setEndDate(initialState.endDate)
+    setEndTime(initialState.endTime)
+    setIsAllDay(initialState.isAllDay)
+    setRecurrence(initialState.recurrence)
+  }, [initialState])
+
+  const isEditing = selectedEventId !== null
 
   const handleSubmit = (e: React.FormEvent): void => {
-    e.preventDefault();
+    e.preventDefault()
 
-    const startDateTime = isAllDay
-      ? `${startDate}T00:00:00`
-      : `${startDate}T${startTime}:00`;
-    const endDateTime = isAllDay
-      ? `${endDate}T23:59:59`
-      : `${endDate}T${endTime}:00`;
+    const startDateTime = isAllDay ? `${startDate}T00:00:00` : `${startDate}T${startTime}:00`
+    const endDateTime = isAllDay ? `${endDate}T23:59:59` : `${endDate}T${endTime}:00`
 
-    const recurrenceRule: RecurrenceRule | undefined = recurrence !== 'none'
-      ? { frequency: recurrence, interval: 1 }
-      : undefined;
+    const recurrenceRule: RecurrenceRule | undefined =
+      recurrence !== 'none' ? { frequency: recurrence, interval: 1 } : undefined
 
     if (isEditing && selectedEventId) {
       updateEvent(selectedEventId, {
@@ -152,7 +161,7 @@ export function EventModal(): JSX.Element | null {
         isAllDay,
         calendarId,
         recurrence: recurrenceRule,
-      });
+      })
     } else {
       const newEvent: CalendarEvent = {
         id: uuidv4(),
@@ -164,22 +173,22 @@ export function EventModal(): JSX.Element | null {
         isAllDay,
         calendarId,
         recurrence: recurrenceRule,
-      };
-      addEvent(newEvent);
+      }
+      addEvent(newEvent)
     }
 
-    closeModal();
-  };
+    closeModal()
+  }
 
   const handleDelete = (): void => {
     if (selectedEventId) {
-      deleteEvent(selectedEventId);
-      closeModal();
+      deleteEvent(selectedEventId)
+      closeModal()
     }
-  };
+  }
 
   if (!isModalOpen) {
-    return null;
+    return null
   }
 
   return (
@@ -189,7 +198,12 @@ export function EventModal(): JSX.Element | null {
           <h2 className={styles.title}>{isEditing ? 'Edit event' : 'Create event'}</h2>
           <button className={styles.closeButton} onClick={closeModal}>
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-              <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              <path
+                d="M18 6L6 18M6 6L18 18"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
             </svg>
           </button>
         </div>
@@ -268,7 +282,9 @@ export function EventModal(): JSX.Element | null {
             <label className={styles.label}>Repeat</label>
             <select
               value={recurrence}
-              onChange={(e) => setRecurrence(e.target.value as RecurrenceRule['frequency'] | 'none')}
+              onChange={(e) =>
+                setRecurrence(e.target.value as RecurrenceRule['frequency'] | 'none')
+              }
               className={styles.select}
             >
               {RECURRENCE_OPTIONS.map((option) => (
@@ -317,5 +333,5 @@ export function EventModal(): JSX.Element | null {
         </form>
       </div>
     </div>
-  );
+  )
 }

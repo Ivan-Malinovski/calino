@@ -3,6 +3,7 @@ import { format, addMonths, addWeeks, addDays, parseISO, startOfWeek, endOfWeek 
 import { useNavigate } from 'react-router-dom'
 import { useCalendarStore } from '@/store/calendarStore'
 import { ViewSwitcher } from './ViewSwitcher'
+import { Search } from '@/features/search'
 import styles from './CalendarHeader.module.css'
 
 interface CalendarHeaderProps {
@@ -81,6 +82,12 @@ export function CalendarHeader({ onQuickAdd }: CalendarHeaderProps): JSX.Element
         </div>
       </div>
       <div className={styles.right}>
+        <Search
+          onSelectEvent={(eventId) => {
+            useCalendarStore.getState().setSelectedEventId(eventId)
+            openModal()
+          }}
+        />
         <ViewSwitcher />
         <button className={styles.createButton} onClick={onQuickAdd}>
           Quick Add
