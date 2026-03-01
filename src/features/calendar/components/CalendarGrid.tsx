@@ -1,6 +1,6 @@
 import type { JSX } from 'react'
-import { useMemo, useState } from 'react'
-import { AnimatePresence } from 'framer-motion'
+import { useMemo, useState, useRef, useCallback, useEffect } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
 import {
   DndContext,
   DragOverlay,
@@ -16,13 +16,14 @@ import {
   startOfMonth,
   endOfMonth,
   startOfWeek,
-  endOfWeek,
   eachDayOfInterval,
   isSameMonth,
   isToday,
   parseISO,
   getISOWeek,
   getDay,
+  addMonths,
+  subMonths,
 } from 'date-fns'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
@@ -42,6 +43,9 @@ export function CalendarGrid(): JSX.Element {
   const firstDayOfWeek = useSettingsStore((state) => state.firstDayOfWeek)
 
   const [activeEvent, setActiveEvent] = useState<CalendarEvent | null>(null)
+  const [scrollDirection, setScrollDirection] = useState<'up' | 'down' | null>(null)
+  const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -50,6 +54,60 @@ export function CalendarGrid(): JSX.Element {
       },
     })
   )
+
+  const changeMonth = useCallback(
+    (direction: 'up' | 'down') => {
+      if (direction === 'down') {
+        setCurrentDate(format(addMonths(parseISO(currentDate), 1), 'yyyy-MM-dd'))
+      } else if (direction === 'up') {
+        setCurrentDate(format(subMonths(parseISO(currentDate), 1), 'yyyy-MM-dd'))
+      }
+    },
+    [currentDate, setCurrentDate]
+  )
+
+  const handleWheel = useCallback(
+    (e: React.WheelEvent) => {
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current)
+      }
+
+      const direction = e.deltaY > 0 ? 'down' : 'up'
+      setScrollDirection(direction)
+
+      scrollTimeoutRef.current = setTimeout(() => {
+        changeMonth(direction)
+        setScrollDirection(null)
+      }, 300)
+    },
+    [changeMonth]
+  )
+
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault()
+        const direction = e.key === 'ArrowDown' ? 'down' : 'up'
+        changeMonth(direction)
+      }
+    },
+    [changeMonth]
+  )
+
+  useEffect(() => {
+    const container = containerRef.current
+    if (!container) return
+
+    container.addEventListener('keydown', handleKeyDown)
+    container.tabIndex = 0
+
+    return () => {
+      container.removeEventListener('keydown', handleKeyDown)
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current)
+      }
+    }
+  }, [handleKeyDown])
 
   const handleDragStart = (event: DragStartEvent): void => {
     const eventId = event.active.id as string
@@ -97,9 +155,9 @@ export function CalendarGrid(): JSX.Element {
 
   const days = useMemo(() => {
     const monthStart = startOfMonth(date)
-    const monthEnd = endOfMonth(date)
     const calendarStart = startOfWeek(monthStart, { weekStartsOn: firstDayOfWeek })
-    const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: firstDayOfWeek })
+    const calendarEnd = new Date(calendarStart)
+    calendarEnd.setDate(calendarEnd.getDate() + 35)
 
     return eachDayOfInterval({ start: calendarStart, end: calendarEnd })
   }, [date, firstDayOfWeek])
@@ -143,7 +201,7 @@ export function CalendarGrid(): JSX.Element {
 
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-      <div className={styles.grid}>
+      <div className={styles.grid} ref={containerRef} onWheel={handleWheel}>
         <div className={styles.header}>
           <div className={styles.weekNumHeader}>W#</div>
           {weekdays.map((day) => (
@@ -152,37 +210,49 @@ export function CalendarGrid(): JSX.Element {
             </div>
           ))}
         </div>
-        <div className={styles.daysContainer}>
-          {weekNumbers.map((weekNum, weekIdx) => (
-            <div key={weekIdx} className={styles.weekRow}>
-              <div className={styles.weekNumber} onClick={() => handleWeekClick(days[weekIdx * 7])}>
-                {weekNum}
-              </div>
-              {days.slice(weekIdx * 7, weekIdx * 7 + 7).map((day) => {
-                const dateKey = format(day, 'yyyy-MM-dd')
-                const dayEvents = eventsMap.get(dateKey) || []
-                const isCurrentMonth = isSameMonth(day, date)
-                const isTodayDate = isToday(day)
-                const dayOfWeek = getDay(day)
-                const isWeekend = dayOfWeek === 0 || dayOfWeek === 6
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={currentDate}
+            className={styles.daysContainer}
+            initial={{ opacity: 0, y: scrollDirection === 'down' ? -20 : 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: scrollDirection === 'down' ? 20 : -20 }}
+            transition={{ duration: 0.2 }}
+          >
+            {weekNumbers.map((weekNum, weekIdx) => (
+              <div key={weekIdx} className={styles.weekRow}>
+                <div
+                  className={styles.weekNumber}
+                  onClick={() => handleWeekClick(days[weekIdx * 7])}
+                >
+                  {weekNum}
+                </div>
+                {days.slice(weekIdx * 7, weekIdx * 7 + 7).map((day) => {
+                  const dateKey = format(day, 'yyyy-MM-dd')
+                  const dayEvents = eventsMap.get(dateKey) || []
+                  const isCurrentMonth = isSameMonth(day, date)
+                  const isTodayDate = isToday(day)
+                  const dayOfWeek = getDay(day)
+                  const isWeekend = dayOfWeek === 0 || dayOfWeek === 6
 
-                return (
-                  <DroppableDay
-                    key={dateKey}
-                    dateKey={dateKey}
-                    day={day}
-                    dayEvents={dayEvents}
-                    isCurrentMonth={isCurrentMonth}
-                    isTodayDate={isTodayDate}
-                    isWeekend={isWeekend}
-                    onDayClick={handleDayClick}
-                    onDayNumberClick={handleDayNumberClick}
-                  />
-                )
-              })}
-            </div>
-          ))}
-        </div>
+                  return (
+                    <DroppableDay
+                      key={dateKey}
+                      dateKey={dateKey}
+                      day={day}
+                      dayEvents={dayEvents}
+                      isCurrentMonth={isCurrentMonth}
+                      isTodayDate={isTodayDate}
+                      isWeekend={isWeekend}
+                      onDayClick={handleDayClick}
+                      onDayNumberClick={handleDayNumberClick}
+                    />
+                  )
+                })}
+              </div>
+            ))}
+          </motion.div>
+        </AnimatePresence>
       </div>
       <DragOverlay>{activeEvent ? <EventCard event={activeEvent} /> : null}</DragOverlay>
     </DndContext>

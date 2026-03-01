@@ -1,73 +1,90 @@
-# React + TypeScript + Vite
+# GoodCal
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A modern calendar application with CalDAV synchronization and natural language event creation.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **Multiple Views**: Month, week, day, and agenda views
+- **Natural Language Events**: Create events using natural language like "meeting tomorrow at 2pm"
+- **CalDAV Sync**: Sync with any CalDAV server (Baikal, Nextcloud, etc.)
+- **Local Storage**: Offline-first with IndexedDB persistence
+- **Full-text Search**: Search events with Cmd/Ctrl+K
+- **Drag and Drop**: Reschedule events by dragging in week/day views
+- **Multiple Calendars**: Create and manage multiple calendars with colors
+- **Settings**: Customizable timezone, date/time formats, and sync options
 
-## React Compiler
+## Tech Stack
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- React 18 + TypeScript + Vite
+- pnpm (package manager)
+- Zustand (state management)
+- Dexie.js (IndexedDB)
+- date-fns + chrono-node (date handling)
+- @dnd-kit (drag and drop)
+- framer-motion (animations)
+- Fuse.js (search)
+- tsdav (CalDAV client)
+- rrule (recurring events)
+- Vitest + React Testing Library (testing)
 
-## Expanding the ESLint configuration
+## Getting Started
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+```bash
+# Install dependencies
+pnpm install
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+# Start development server
+pnpm dev
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+# Build for production
+pnpm build
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+# Run tests
+pnpm test
+
+# Run tests once (no watch mode)
+pnpm test -- --run
+
+# Lint
+pnpm lint
+
+# Type check
+pnpm typecheck
+
+# Format code
+pnpm format
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Project Structure
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
 ```
+src/
+├── components/          # Shared UI components
+│   └── common/          # Button, Input, Modal, etc.
+├── features/
+│   ├── calendar/        # Calendar views (Month, Week, Day, Agenda)
+│   ├── caldav/         # CalDAV sync client and adapters
+│   ├── nlp/            # Natural language parser
+│   ├── search/         # Full-text search
+│   └── settings/       # Settings pages
+├── hooks/              # Custom React hooks
+├── lib/
+│   └── db/              # IndexedDB via Dexie.js
+├── store/               # Zustand stores
+└── types/               # TypeScript interfaces
+```
+
+## Commands
+
+| Command          | Description              |
+| ---------------- | ------------------------ |
+| `pnpm dev`       | Start development server |
+| `pnpm build`     | Production build         |
+| `pnpm test`      | Run tests in watch mode  |
+| `pnpm lint`      | Run ESLint               |
+| `pnpm typecheck` | TypeScript checking      |
+| `pnpm format`    | Format with Prettier     |
+
+## License
+
+MIT
