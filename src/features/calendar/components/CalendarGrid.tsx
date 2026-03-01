@@ -143,6 +143,11 @@ export function CalendarGrid(): JSX.Element {
     openModal(format(day, 'yyyy-MM-dd'))
   }
 
+  const handleDayNumberClick = (day: Date): void => {
+    setCurrentDate(format(day, 'yyyy-MM-dd'))
+    setCurrentView('day')
+  }
+
   const handleWeekClick = (weekStart: Date): void => {
     setCurrentDate(format(weekStart, 'yyyy-MM-dd'))
     setCurrentView('week')
@@ -204,6 +209,7 @@ export function CalendarGrid(): JSX.Element {
                       isTodayDate={isTodayDate}
                       isWeekend={isWeekend}
                       onDayClick={handleDayClick}
+                      onDayNumberClick={handleDayNumberClick}
                     />
                   )
                 })}
@@ -224,6 +230,7 @@ interface DroppableDayProps {
   isTodayDate: boolean
   isWeekend: boolean
   onDayClick: (day: Date) => void
+  onDayNumberClick: (day: Date) => void
 }
 
 function DroppableDay({
@@ -234,6 +241,7 @@ function DroppableDay({
   isTodayDate,
   isWeekend,
   onDayClick,
+  onDayNumberClick,
 }: DroppableDayProps): JSX.Element {
   const { setNodeRef, isOver } = useDroppable({ id: dateKey })
 
@@ -244,7 +252,15 @@ function DroppableDay({
       onClick={() => onDayClick(day)}
     >
       <div className={styles.dayHeader}>
-        <span className={styles.dayNumber}>{format(day, 'd')}</span>
+        <span
+          className={styles.dayNumber}
+          onClick={(e) => {
+            e.stopPropagation()
+            onDayNumberClick(day)
+          }}
+        >
+          {format(day, 'd')}
+        </span>
       </div>
       <div className={styles.events}>
         <AnimatePresence>

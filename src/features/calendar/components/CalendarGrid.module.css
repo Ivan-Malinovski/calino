@@ -122,6 +122,11 @@
   font-weight: 600;
 }
 
+.today .dayNumber:hover {
+  background: #3367d6;
+  color: white;
+}
+
 .dayHeader {
   display: flex;
   justify-content: flex-end;
@@ -133,6 +138,19 @@
   font-size: 14px;
   font-weight: 500;
   color: #202124;
+  cursor: pointer;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background 0.15s ease;
+}
+
+.dayNumber:hover {
+  background: #e8f0fe;
+  color: #4285f4;
 }
 
 .events {
