@@ -67,7 +67,8 @@ export function EventCard({
       if (resizeStartY.current === null || resizeStartEnd.current === null) return
 
       const deltaY = moveEvent.clientY - resizeStartY.current
-      const deltaMinutes = Math.round((deltaY / 60) * 60)
+      const rawDeltaMinutes = (deltaY / 60) * 60
+      const deltaMinutes = Math.round(rawDeltaMinutes / 15) * 15
       const newEnd = new Date(resizeStartEnd.current.getTime() + deltaMinutes * 60 * 1000)
 
       if (newEnd > parseISO(event.start)) {
