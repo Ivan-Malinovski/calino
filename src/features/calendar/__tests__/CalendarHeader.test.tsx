@@ -17,7 +17,7 @@ describe('CalendarHeader', () => {
 
   it('renders current month title', () => {
     renderWithRouter(<CalendarHeader />)
-    expect(screen.getByText('March 2024')).toBeInTheDocument()
+    expect(screen.getByText('March')).toBeInTheDocument()
   })
 
   it('renders week view title', () => {

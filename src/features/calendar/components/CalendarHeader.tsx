@@ -39,21 +39,21 @@ export function CalendarHeader({ onQuickAdd }: CalendarHeaderProps): JSX.Element
   const getTitle = (): string => {
     switch (currentView) {
       case 'month':
-        return format(date, 'MMMM yyyy')
+        return format(date, 'MMMM')
       case 'week': {
         const weekStart = startOfWeek(date, { weekStartsOn: firstDayOfWeek })
         const weekEnd = endOfWeek(date, { weekStartsOn: firstDayOfWeek })
         if (format(weekStart, 'MMM') === format(weekEnd, 'MMM')) {
-          return `${format(weekStart, 'MMM d')} - ${format(weekEnd, 'd, yyyy')}`
+          return `${format(weekStart, 'MMM d')} - ${format(weekEnd, 'd')}`
         }
-        return `${format(weekStart, 'MMM d')} - ${format(weekEnd, 'MMM d, yyyy')}`
+        return `${format(weekStart, 'MMM d')} - ${format(weekEnd, 'MMM d')}`
       }
       case 'day':
-        return format(date, 'EEEE, MMMM d, yyyy')
+        return format(date, 'EEEE, MMMM d')
       case 'agenda':
-        return format(date, 'MMMM yyyy')
+        return format(date, 'MMMM')
       default:
-        return format(date, 'MMMM yyyy')
+        return format(date, 'MMMM')
     }
   }
 

@@ -2,7 +2,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px 24px;
+  padding: 12px 24px;
   background: white;
   border-bottom: 1px solid #e0e0e0;
   position: relative;
@@ -16,12 +16,12 @@
 }
 
 .title {
-  font-size: 24px;
+  font-size: 20px;
   font-weight: 600;
   color: #202124;
   margin: 0;
-  min-width: 220px;
-  width: 220px;
+  min-width: 180px;
+  width: 180px;
 }
 
 .nav {
