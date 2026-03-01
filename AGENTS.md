@@ -393,39 +393,124 @@ const eventStart = new Date('2024-03-15T14:00:00')
 
 ## Local Data Persistence
 
-### Recommended: Dexie.js (IndexedDB)
+### Implemented: Dexie.js (IndexedDB)
 
-- Use Dexie.js for local event/calendar storage
+- Dexie.js for local event/calendar storage (`src/lib/db/`)
 - IndexedDB is more capable than localStorage (larger capacity, async)
 - Dexie provides a clean Promise-based API
 
+#### Database Schema
+
 ```typescript
-// Example Dexie store
+// src/lib/db/db.ts
 import Dexie, { Table } from 'dexie'
+import type { StoredEvent, StoredCalendar, StoredAccount, SyncQueueItem } from '@/types/storage'
 
-interface StoredEvent {
-  id: string
-  calendarId: string
-  title: string
-  start: string // ISO 8601
-  end: string
-  // ... other fields
-}
-
-class GoodCalDB extends Dexie {
-  events!: Table<StoredEvent>
-  calendars!: Table<Calendar>
+export class GoodCalDB extends Dexie {
+  events!: Table<StoredEvent, string>
+  calendars!: Table<StoredCalendar, string>
+  accounts!: Table<StoredAccount, string>
+  syncQueue!: Table<SyncQueueItem, number>
 
   constructor() {
     super('GoodCalDB')
     this.version(1).stores({
-      events: 'id, calendarId, start, end',
-      calendars: 'id, name',
+      events: 'id, calendarId, start, end, syncStatus, remoteId',
+      calendars: 'id, accountId',
+      accounts: 'id',
+      syncQueue: '++id, entity, entityId, timestamp, syncStatus',
     })
   }
 }
 
 export const db = new GoodCalDB()
+```
+
+#### Storage Types
+
+```typescript
+// src/types/storage.ts
+export type SyncStatus = 'synced' | 'pending' | 'conflict'
+
+export interface StoredEvent {
+  id: string
+  calendarId: string
+  title: string
+  description?: string
+  location?: string
+  start: string // ISO 8601 UTC
+  end: string // ISO 8601 UTC
+  isAllDay: boolean
+  color?: string
+  recurrence?: string
+  etag?: string
+  remoteId?: string
+  syncStatus: SyncStatus
+  createdAt: string
+  updatedAt: string
+}
+
+export interface StoredCalendar {
+  id: string
+  accountId?: string
+  name: string
+  color: string
+  ctag?: string
+  syncToken?: string
+  isVisible: boolean
+  isDefault: boolean
+}
+
+export interface StoredAccount {
+  id: string
+  name: string
+  serverUrl: string
+  username: string
+}
+
+export interface SyncQueueItem {
+  id?: number
+  operation: 'create' | 'update' | 'delete'
+  entity: 'event' | 'calendar'
+  entityId: string
+  data?: unknown
+  timestamp: string
+  retryCount: number
+  lastError?: string
+}
+```
+
+#### Repository Modules
+
+| Module     | Path                      | Description                                                                                                                          |
+| ---------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| Events     | `src/lib/db/events.ts`    | CRUD: addEvent, updateEvent, deleteEvent, getEventById, getEventsByDateRange, getEventsByCalendar, getPendingEvents, bulk operations |
+| Calendars  | `src/lib/db/calendars.ts` | CRUD: addCalendar, updateCalendar, deleteCalendar, getCalendarById, getCalendarsByAccount, getVisibleCalendars, getDefaultCalendar   |
+| Accounts   | `src/lib/db/accounts.ts`  | CRUD: addAccount, updateAccount, deleteAccount, getAccountById, getAllAccounts                                                       |
+| Sync Queue | `src/lib/db/syncQueue.ts` | addToSyncQueue, getSyncQueue, processSyncQueue, removeSyncQueueItem, incrementRetryCount                                             |
+
+#### Sync Middleware Helpers
+
+```typescript
+// src/store/middleware/dbSyncMiddleware.ts
+export async function initializeFromDB(db: Dexie): Promise<{
+  events: StoredEvent[]
+  calendars: StoredCalendar[]
+}>
+
+export async function syncEventToDB(
+  db: Dexie,
+  event: StoredEvent,
+  operation: 'add' | 'update' | 'delete'
+): Promise<void>
+
+export async function syncCalendarToDB(
+  db: Dexie,
+  calendar: StoredCalendar,
+  operation: 'add' | 'update' | 'delete'
+): Promise<void>
+
+export async function clearAllData(db: Dexie): Promise<void>
 ```
 
 ### Sync Strategy
@@ -442,6 +527,12 @@ CalDAV Server <--> Sync Engine <--> Zustand Store <--> UI
                               |
                          IndexedDB (Dexie)
 ```
+
+### Testing
+
+- Database tests in `src/lib/db/__tests__/db.test.ts`
+- Uses vitest with mocked Dexie for unit testing
+- 19 tests covering events, calendars, accounts, and sync queue
 
 ---
 
