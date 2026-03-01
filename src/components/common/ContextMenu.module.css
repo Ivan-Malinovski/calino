@@ -1,0 +1,59 @@
+.menu {
+  position: fixed;
+  background: white;
+  border-radius: 8px;
+  box-shadow:
+    0 2px 10px rgba(0, 0, 0, 0.15),
+    0 0 0 1px rgba(0, 0, 0, 0.05);
+  padding: 4px;
+  min-width: 160px;
+  z-index: 1000;
+  animation: fadeIn 0.1s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  background: none;
+  border-radius: 4px;
+  font-size: 14px;
+  color: #202124;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s ease;
+}
+
+.item:hover {
+  background: #f1f3f4;
+}
+
+.item.danger {
+  color: #dc3545;
+}
+
+.item.danger:hover {
+  background: #fef2f2;
+}
+
+.icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+}

@@ -55,6 +55,7 @@ export interface CalendarActions {
   addEvent: (event: CalendarEvent) => void
   updateEvent: (id: string, updates: Partial<CalendarEvent>) => void
   deleteEvent: (id: string) => void
+  duplicateEvent: (id: string) => string | null
   addCalendar: (calendar: Calendar) => void
   updateCalendar: (id: string, updates: Partial<Calendar>) => void
   deleteCalendar: (id: string) => void

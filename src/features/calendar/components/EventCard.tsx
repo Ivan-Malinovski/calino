@@ -4,6 +4,7 @@ import { format, parseISO } from 'date-fns'
 import { useDraggable } from '@dnd-kit/core'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
+import { ContextMenu } from '@/components/common/ContextMenu'
 import type { CalendarEvent } from '@/types'
 import styles from './EventCard.module.css'
 
@@ -26,7 +27,11 @@ export function EventCard({
   const setSelectedEventId = useCalendarStore((state) => state.setSelectedEventId)
   const openModal = useCalendarStore((state) => state.openModal)
   const updateEvent = useCalendarStore((state) => state.updateEvent)
+  const deleteEvent = useCalendarStore((state) => state.deleteEvent)
+  const duplicateEvent = useCalendarStore((state) => state.duplicateEvent)
   const timeFormat = useSettingsStore((state) => state.timeFormat)
+
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null)
 
   const [isResizing, setIsResizing] = useState(false)
   const [didInteract, setDidInteract] = useState(false)
@@ -122,41 +127,100 @@ export function EventCard({
         cursor: 'grab',
       }
 
+  const handleContextMenu = (e: React.MouseEvent): void => {
+    e.preventDefault()
+    setContextMenu({ x: e.clientX, y: e.clientY })
+  }
+
   return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className={`${styles.card} ${compact ? styles.compact : ''} ${isCurrentDragging || isDragging ? styles.dragging : ''} ${isResizing ? styles.resizing : ''}`}
-    >
+    <>
       <div
-        className={styles.dragContent}
-        onClick={handleClick}
-        onPointerDown={(e) => {
-          e.stopPropagation()
-          pointerStartPos.current = { x: e.clientX, y: e.clientY }
-        }}
-        {...listeners}
-        {...attributes}
+        ref={setNodeRef}
+        style={style}
+        className={`${styles.card} ${compact ? styles.compact : ''} ${isCurrentDragging || isDragging ? styles.dragging : ''} ${isResizing ? styles.resizing : ''}`}
+        onContextMenu={handleContextMenu}
       >
-        <div className={styles.title}>{event.title}</div>
-        {!compact && !event.isAllDay && (
-          <div className={styles.time}>
-            {formatTime(event.start)} - {formatTime(event.end)}
-          </div>
-        )}
-        {event.isAllDay && <div className={styles.time}>All day</div>}
-        {event.location && <div className={styles.location}>{event.location}</div>}
-      </div>
-      {enableResize && (
         <div
-          className={styles.resizeHandle}
+          className={styles.dragContent}
+          onClick={handleClick}
           onPointerDown={(e) => {
             e.stopPropagation()
-            e.preventDefault()
-            handleResizeStart(e)
+            pointerStartPos.current = { x: e.clientX, y: e.clientY }
           }}
+          {...listeners}
+          {...attributes}
+        >
+          <div className={styles.title}>{event.title}</div>
+          {!compact && !event.isAllDay && (
+            <div className={styles.time}>
+              {formatTime(event.start)} - {formatTime(event.end)}
+            </div>
+          )}
+          {event.isAllDay && <div className={styles.time}>All day</div>}
+          {event.location && <div className={styles.location}>{event.location}</div>}
+        </div>
+        {enableResize && (
+          <div
+            className={styles.resizeHandle}
+            onPointerDown={(e) => {
+              e.stopPropagation()
+              e.preventDefault()
+              handleResizeStart(e)
+            }}
+          />
+        )}
+      </div>
+      {contextMenu && (
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          onClose={() => setContextMenu(null)}
+          items={[
+            {
+              label: 'Duplicate',
+              onClick: () => duplicateEvent(event.id),
+              icon: <DuplicateIcon />,
+            },
+            {
+              label: 'Delete',
+              onClick: () => deleteEvent(event.id),
+              icon: <DeleteIcon />,
+              danger: true,
+            },
+          ]}
         />
       )}
-    </div>
+    </>
+  )
+}
+
+function DeleteIcon(): JSX.Element {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
+      <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
+    </svg>
+  )
+}
+
+function DuplicateIcon(): JSX.Element {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
+      <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+      <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
+    </svg>
   )
 }
