@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react'
-import { addDays, subDays } from 'date-fns'
+import { addDays } from 'date-fns'
 import type { CalendarEvent } from '@/types'
 import type { CalDAVAccount, CalDAVCalendar, SyncState } from '../types'
 import { createCalDAVClient } from '../client/CalDAVClient'
@@ -160,18 +160,28 @@ export function useCalDAV(): UseCalDAVReturn {
         const client = await createCalDAVClient(account.serverUrl, credential)
         const accountCalendars = storage.getCalendarsByAccountId(accountId)
 
-        const isFirstSync = !account.lastSyncAt
-        const start = isFirstSync
-          ? '1970-01-01T00:00:00.000Z'
-          : subDays(new Date(), 365).toISOString()
+        const start = '1970-01-01T00:00:00.000Z'
         const end = addDays(new Date(), 365).toISOString()
 
         for (const cal of accountCalendars) {
           const fetchedEvents = await client.fetchEvents(cal.url, start, end)
+          console.log(
+            `Fetched ${fetchedEvents.length} events from calendar ${cal.name}`,
+            fetchedEvents.map((e) => ({ url: e.url, hasData: !!e.data }))
+          )
 
           for (const eventData of fetchedEvents) {
             if (eventData.data) {
               const parsedEvents = parseICALEvent(eventData.data, cal.id)
+              console.log(
+                `Parsed ${parsedEvents.length} events from ${eventData.url.substring(eventData.url.lastIndexOf('/') + 1)}`,
+                parsedEvents.map((e) => ({
+                  id: e.id,
+                  title: e.title,
+                  recurrence: e.recurrence,
+                  rruleString: e.rruleString,
+                }))
+              )
 
               for (const parsedEvent of parsedEvents) {
                 const existingIndex = existingEvents.findIndex((e) => e.id === parsedEvent.id)
