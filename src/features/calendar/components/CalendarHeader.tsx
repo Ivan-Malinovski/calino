@@ -2,6 +2,7 @@ import type { JSX } from 'react'
 import { format, addMonths, addWeeks, addDays, parseISO, startOfWeek, endOfWeek } from 'date-fns'
 import { useNavigate } from 'react-router-dom'
 import { useCalendarStore } from '@/store/calendarStore'
+import { useSettingsStore } from '@/store/settingsStore'
 import { ViewSwitcher } from './ViewSwitcher'
 import { Search } from '@/features/search'
 import styles from './CalendarHeader.module.css'
@@ -16,6 +17,7 @@ export function CalendarHeader({ onQuickAdd }: CalendarHeaderProps): JSX.Element
   const currentView = useCalendarStore((state) => state.currentView)
   const setCurrentDate = useCalendarStore((state) => state.setCurrentDate)
   const openModal = useCalendarStore((state) => state.openModal)
+  const firstDayOfWeek = useSettingsStore((state) => state.firstDayOfWeek)
 
   const date = parseISO(currentDate)
 
@@ -24,8 +26,8 @@ export function CalendarHeader({ onQuickAdd }: CalendarHeaderProps): JSX.Element
       case 'month':
         return format(date, 'MMMM yyyy')
       case 'week': {
-        const weekStart = startOfWeek(date)
-        const weekEnd = endOfWeek(date)
+        const weekStart = startOfWeek(date, { weekStartsOn: firstDayOfWeek })
+        const weekEnd = endOfWeek(date, { weekStartsOn: firstDayOfWeek })
         if (format(weekStart, 'MMM') === format(weekEnd, 'MMM')) {
           return `${format(weekStart, 'MMM d')} - ${format(weekEnd, 'd, yyyy')}`
         }

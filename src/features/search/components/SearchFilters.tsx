@@ -1,6 +1,7 @@
 import type { JSX } from 'react'
 import { format, addDays, startOfWeek, endOfWeek } from 'date-fns'
 import { useCalendarStore } from '@/store/calendarStore'
+import { useSettingsStore } from '@/store/settingsStore'
 import type { SearchFilters } from '../types'
 import styles from './SearchFilters.module.css'
 
@@ -16,10 +17,11 @@ export function SearchFilters({
   onClearFilters,
 }: SearchFiltersProps): JSX.Element {
   const calendars = useCalendarStore((state) => state.calendars)
+  const firstDayOfWeek = useSettingsStore((state) => state.firstDayOfWeek)
 
   const today = format(new Date(), 'yyyy-MM-dd')
-  const weekStart = format(startOfWeek(new Date()), 'yyyy-MM-dd')
-  const weekEnd = format(endOfWeek(new Date()), 'yyyy-MM-dd')
+  const weekStart = format(startOfWeek(new Date(), { weekStartsOn: firstDayOfWeek }), 'yyyy-MM-dd')
+  const weekEnd = format(endOfWeek(new Date(), { weekStartsOn: firstDayOfWeek }), 'yyyy-MM-dd')
   const nextWeek = format(addDays(new Date(), 7), 'yyyy-MM-dd')
   const nextMonth = format(addDays(new Date(), 30), 'yyyy-MM-dd')
 

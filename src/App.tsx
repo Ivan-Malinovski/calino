@@ -1,8 +1,9 @@
 import type { JSX } from 'react'
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { v4 as uuidv4 } from 'uuid'
 import { useCalendarStore } from './store/calendarStore'
+import { useSettingsStore } from './store/settingsStore'
 import {
   CalendarHeader,
   CalendarGrid,
@@ -18,9 +19,17 @@ import './App.css'
 
 function CalendarApp(): JSX.Element {
   const currentView = useCalendarStore((state) => state.currentView)
+  const setCurrentView = useCalendarStore((state) => state.setCurrentView)
   const addEvent = useCalendarStore((state) => state.addEvent)
   const calendars = useCalendarStore((state) => state.calendars)
+  const defaultView = useSettingsStore((state) => state.defaultView)
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false)
+
+  useEffect(() => {
+    if (defaultView && defaultView !== currentView) {
+      setCurrentView(defaultView)
+    }
+  }, [defaultView, currentView, setCurrentView])
 
   const renderView = (): JSX.Element => {
     switch (currentView) {

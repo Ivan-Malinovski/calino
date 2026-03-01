@@ -1,5 +1,5 @@
-import type { JSX } from 'react';
-import { useMemo } from 'react';
+import type { JSX } from 'react'
+import { useMemo } from 'react'
 import {
   format,
   startOfMonth,
@@ -10,57 +10,63 @@ import {
   isSameMonth,
   isToday,
   parseISO,
-} from 'date-fns';
-import { useCalendarStore } from '@/store/calendarStore';
-import { EventCard } from './EventCard';
-import type { CalendarEvent } from '@/types';
-import styles from './CalendarGrid.module.css';
-
-const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+} from 'date-fns'
+import { useCalendarStore } from '@/store/calendarStore'
+import { useSettingsStore } from '@/store/settingsStore'
+import { EventCard } from './EventCard'
+import type { CalendarEvent } from '@/types'
+import styles from './CalendarGrid.module.css'
 
 export function CalendarGrid(): JSX.Element {
-  const currentDate = useCalendarStore((state) => state.currentDate);
-  const events = useCalendarStore((state) => state.events);
-  const calendars = useCalendarStore((state) => state.calendars);
-  const getEventsForDateRange = useCalendarStore((state) => state.getEventsForDateRange);
-  const openModal = useCalendarStore((state) => state.openModal);
+  const currentDate = useCalendarStore((state) => state.currentDate)
+  const events = useCalendarStore((state) => state.events)
+  const calendars = useCalendarStore((state) => state.calendars)
+  const getEventsForDateRange = useCalendarStore((state) => state.getEventsForDateRange)
+  const openModal = useCalendarStore((state) => state.openModal)
+  const firstDayOfWeek = useSettingsStore((state) => state.firstDayOfWeek)
 
-  const date = parseISO(currentDate);
+  const weekdays = useMemo(() => {
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+    const idx = firstDayOfWeek || 0
+    return [...days.slice(idx), ...days.slice(0, idx)]
+  }, [firstDayOfWeek])
+
+  const date = parseISO(currentDate)
 
   const days = useMemo(() => {
-    const monthStart = startOfMonth(date);
-    const monthEnd = endOfMonth(date);
-    const calendarStart = startOfWeek(monthStart);
-    const calendarEnd = endOfWeek(monthEnd);
+    const monthStart = startOfMonth(date)
+    const monthEnd = endOfMonth(date)
+    const calendarStart = startOfWeek(monthStart, { weekStartsOn: firstDayOfWeek })
+    const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: firstDayOfWeek })
 
-    return eachDayOfInterval({ start: calendarStart, end: calendarEnd });
-  }, [date]);
+    return eachDayOfInterval({ start: calendarStart, end: calendarEnd })
+  }, [date, firstDayOfWeek])
 
   const eventsMap = useMemo(() => {
-    const monthStart = startOfMonth(date);
-    const monthEnd = endOfMonth(date);
+    const monthStart = startOfMonth(date)
+    const monthEnd = endOfMonth(date)
     const events = getEventsForDateRange(
       format(monthStart, 'yyyy-MM-dd'),
       format(monthEnd, 'yyyy-MM-dd')
-    );
+    )
 
-    const map = new Map<string, CalendarEvent[]>();
+    const map = new Map<string, CalendarEvent[]>()
     events.forEach((event) => {
-      const eventDate = format(parseISO(event.start), 'yyyy-MM-dd');
-      const existing = map.get(eventDate) || [];
-      map.set(eventDate, [...existing, event]);
-    });
-    return map;
-  }, [date, events, calendars, getEventsForDateRange]);
+      const eventDate = format(parseISO(event.start), 'yyyy-MM-dd')
+      const existing = map.get(eventDate) || []
+      map.set(eventDate, [...existing, event])
+    })
+    return map
+  }, [date, events, calendars, getEventsForDateRange])
 
   const handleDayClick = (day: Date): void => {
-    openModal(format(day, 'yyyy-MM-dd'));
-  };
+    openModal(format(day, 'yyyy-MM-dd'))
+  }
 
   return (
     <div className={styles.grid}>
       <div className={styles.weekdays}>
-        {WEEKDAYS.map((day) => (
+        {weekdays.map((day) => (
           <div key={day} className={styles.weekday}>
             {day}
           </div>
@@ -68,10 +74,10 @@ export function CalendarGrid(): JSX.Element {
       </div>
       <div className={styles.days}>
         {days.map((day) => {
-          const dateKey = format(day, 'yyyy-MM-dd');
-          const dayEvents = eventsMap.get(dateKey) || [];
-          const isCurrentMonth = isSameMonth(day, date);
-          const isTodayDate = isToday(day);
+          const dateKey = format(day, 'yyyy-MM-dd')
+          const dayEvents = eventsMap.get(dateKey) || []
+          const isCurrentMonth = isSameMonth(day, date)
+          const isTodayDate = isToday(day)
 
           return (
             <div
@@ -91,9 +97,9 @@ export function CalendarGrid(): JSX.Element {
                 )}
               </div>
             </div>
-          );
+          )
         })}
       </div>
     </div>
-  );
+  )
 }
