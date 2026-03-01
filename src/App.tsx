@@ -1,6 +1,6 @@
 import type { JSX } from 'react'
-import { useCallback } from 'react'
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { useCallback, useEffect } from 'react'
+import { BrowserRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom'
 import { v4 as uuidv4 } from 'uuid'
 import { useCalendarStore } from './store/calendarStore'
 import {
@@ -14,13 +14,69 @@ import {
 } from './features/calendar'
 import { type NLPParseResult } from './features/nlp'
 import { SettingsPage } from './features/settings'
-import type { CalendarEvent } from './types'
+import type { CalendarEvent, ViewType } from './types'
 import './App.css'
+
+const VIEW_ROUTES: Record<ViewType, string> = {
+  month: '/month',
+  week: '/week',
+  day: '/day',
+  agenda: '/agenda',
+}
+
+const VIEW_ORDER: ViewType[] = ['month', 'week', 'day', 'agenda']
+
+function useViewManager(): void {
+  const navigate = useNavigate()
+  const location = useLocation()
+  const currentView = useCalendarStore((state) => state.currentView)
+  const setCurrentView = useCalendarStore((state) => state.setCurrentView)
+
+  useEffect(() => {
+    const path = location.pathname
+    const view = (path.slice(1) as ViewType) || 'month'
+    if (VIEW_ORDER.includes(view) && view !== currentView) {
+      setCurrentView(view)
+    }
+  }, [location.pathname])
+
+  useEffect(() => {
+    const targetPath = VIEW_ROUTES[currentView]
+    if (location.pathname !== targetPath) {
+      navigate(targetPath, { replace: true })
+    }
+  }, [currentView])
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent): void => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        return
+      }
+
+      if (e.key === '<' || e.key === ',') {
+        e.preventDefault()
+        const currentIndex = VIEW_ORDER.indexOf(currentView)
+        const prevIndex = (currentIndex - 1 + VIEW_ORDER.length) % VIEW_ORDER.length
+        setCurrentView(VIEW_ORDER[prevIndex])
+      } else if (e.key === '>' || e.key === '.') {
+        e.preventDefault()
+        const currentIndex = VIEW_ORDER.indexOf(currentView)
+        const nextIndex = (currentIndex + 1) % VIEW_ORDER.length
+        setCurrentView(VIEW_ORDER[nextIndex])
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [currentView, setCurrentView])
+}
 
 function CalendarApp(): JSX.Element {
   const currentView = useCalendarStore((state) => state.currentView)
   const addEvent = useCalendarStore((state) => state.addEvent)
   const calendars = useCalendarStore((state) => state.calendars)
+
+  useViewManager()
 
   const renderView = (): JSX.Element => {
     switch (currentView) {
@@ -73,6 +129,10 @@ function App(): JSX.Element {
   return (
     <BrowserRouter>
       <Routes>
+        <Route path="/month" element={<CalendarApp />} />
+        <Route path="/week" element={<CalendarApp />} />
+        <Route path="/day" element={<CalendarApp />} />
+        <Route path="/agenda" element={<CalendarApp />} />
         <Route path="/" element={<CalendarApp />} />
         <Route path="/settings" element={<SettingsPage />} />
       </Routes>
