@@ -163,7 +163,7 @@ export function useCalDAV(): UseCalDAVReturn {
         const isFirstSync = !account.lastSyncAt
         const start = isFirstSync
           ? '1970-01-01T00:00:00.000Z'
-          : subDays(new Date(), 30).toISOString()
+          : subDays(new Date(), 365).toISOString()
         const end = addDays(new Date(), 365).toISOString()
 
         for (const cal of accountCalendars) {
