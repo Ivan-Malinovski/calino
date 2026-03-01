@@ -127,24 +127,35 @@ export function EventCard({
       ref={setNodeRef}
       style={style}
       className={`${styles.card} ${compact ? styles.compact : ''} ${isCurrentDragging || isDragging ? styles.dragging : ''} ${isResizing ? styles.resizing : ''}`}
-      onClick={handleClick}
-      onPointerDown={(e) => {
-        e.stopPropagation()
-        pointerStartPos.current = { x: e.clientX, y: e.clientY }
-      }}
-      {...listeners}
-      {...attributes}
     >
-      <div className={styles.title}>{event.title}</div>
-      {!compact && !event.isAllDay && (
-        <div className={styles.time}>
-          {formatTime(event.start)} - {formatTime(event.end)}
-        </div>
-      )}
-      {event.isAllDay && <div className={styles.time}>All day</div>}
-      {event.location && <div className={styles.location}>{event.location}</div>}
-      {enableResize && !compact && (
-        <div className={styles.resizeHandle} onPointerDown={handleResizeStart} />
+      <div
+        className={styles.dragContent}
+        onClick={handleClick}
+        onPointerDown={(e) => {
+          e.stopPropagation()
+          pointerStartPos.current = { x: e.clientX, y: e.clientY }
+        }}
+        {...listeners}
+        {...attributes}
+      >
+        <div className={styles.title}>{event.title}</div>
+        {!compact && !event.isAllDay && (
+          <div className={styles.time}>
+            {formatTime(event.start)} - {formatTime(event.end)}
+          </div>
+        )}
+        {event.isAllDay && <div className={styles.time}>All day</div>}
+        {event.location && <div className={styles.location}>{event.location}</div>}
+      </div>
+      {enableResize && (
+        <div
+          className={styles.resizeHandle}
+          onPointerDown={(e) => {
+            e.stopPropagation()
+            e.preventDefault()
+            handleResizeStart(e)
+          }}
+        />
       )}
     </div>
   )

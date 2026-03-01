@@ -9,10 +9,22 @@
   position: relative;
   height: 100%;
   box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
 }
 
 .card:hover {
   filter: brightness(0.95);
+}
+
+.dragContent {
+  flex: 1;
+  min-height: 0;
+  cursor: grab;
+}
+
+.dragContent:active {
+  cursor: grabbing;
 }
 
 .compact {
