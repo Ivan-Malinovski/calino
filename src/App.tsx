@@ -1,7 +1,8 @@
-import type { JSX } from 'react';
-import { useState, useCallback } from 'react';
-import { v4 as uuidv4 } from 'uuid';
-import { useCalendarStore } from './store/calendarStore';
+import type { JSX } from 'react'
+import { useState, useCallback } from 'react'
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { v4 as uuidv4 } from 'uuid'
+import { useCalendarStore } from './store/calendarStore'
 import {
   CalendarHeader,
   CalendarGrid,
@@ -9,53 +10,57 @@ import {
   DayView,
   AgendaView,
   EventModal,
-} from './features/calendar';
-import { QuickAdd, type NLPParseResult } from './features/nlp';
-import type { CalendarEvent } from './types';
-import './App.css';
+} from './features/calendar'
+import { QuickAdd, type NLPParseResult } from './features/nlp'
+import { SettingsPage } from './features/settings'
+import type { CalendarEvent } from './types'
+import './App.css'
 
-function App(): JSX.Element {
-  const currentView = useCalendarStore((state) => state.currentView);
-  const addEvent = useCalendarStore((state) => state.addEvent);
-  const calendars = useCalendarStore((state) => state.calendars);
-  const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
+function CalendarApp(): JSX.Element {
+  const currentView = useCalendarStore((state) => state.currentView)
+  const addEvent = useCalendarStore((state) => state.addEvent)
+  const calendars = useCalendarStore((state) => state.calendars)
+  const [isQuickAddOpen, setIsQuickAddOpen] = useState(false)
 
   const renderView = (): JSX.Element => {
     switch (currentView) {
       case 'month':
-        return <CalendarGrid />;
+        return <CalendarGrid />
       case 'week':
-        return <WeekView />;
+        return <WeekView />
       case 'day':
-        return <DayView />;
+        return <DayView />
       case 'agenda':
-        return <AgendaView />;
+        return <AgendaView />
       default:
-        return <CalendarGrid />;
+        return <CalendarGrid />
     }
-  };
+  }
 
-  const handleQuickAdd = useCallback((result: NLPParseResult): void => {
-    const defaultCalendar = calendars.find((c) => c.isDefault) || calendars[0];
-    
-    const event: CalendarEvent = {
-      id: uuidv4(),
-      calendarId: defaultCalendar?.id || 'default',
-      title: result.title,
-      location: result.location,
-      start: result.startDate.toISOString(),
-      end: result.endDate ? result.endDate.toISOString() : result.startDate.toISOString(),
-      isAllDay: result.isAllDay,
-      recurrence: result.recurrence,
-    };
+  const handleQuickAdd = useCallback(
+    (result: NLPParseResult): void => {
+      const defaultCalendar = calendars.find((c) => c.isDefault) || calendars[0]
 
-    addEvent(event);
-    setIsQuickAddOpen(false);
-  }, [addEvent, calendars]);
+      const event: CalendarEvent = {
+        id: uuidv4(),
+        calendarId: defaultCalendar?.id || 'default',
+        title: result.title,
+        location: result.location,
+        start: result.startDate.toISOString(),
+        end: result.endDate ? result.endDate.toISOString() : result.startDate.toISOString(),
+        isAllDay: result.isAllDay,
+        recurrence: result.recurrence,
+      }
+
+      addEvent(event)
+      setIsQuickAddOpen(false)
+    },
+    [addEvent, calendars]
+  )
 
   const handleToggleQuickAdd = useCallback(() => {
-    setIsQuickAddOpen((prev) => !prev);
-  }, []);
+    setIsQuickAddOpen((prev) => !prev)
+  }, [])
 
   return (
     <div className="app">
@@ -68,7 +73,18 @@ function App(): JSX.Element {
       </main>
       <EventModal />
     </div>
-  );
+  )
 }
 
-export default App;
+function App(): JSX.Element {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<CalendarApp />} />
+        <Route path="/settings" element={<SettingsPage />} />
+      </Routes>
+    </BrowserRouter>
+  )
+}
+
+export default App

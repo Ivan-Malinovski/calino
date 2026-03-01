@@ -1,0 +1,7 @@
+export { SettingsPage } from './components/SettingsPage'
+export { GeneralSettings } from './components/GeneralSettings'
+export { CalendarSettings } from './components/CalendarSettings'
+export { EventDefaultsSettings } from './components/EventDefaultsSettings'
+export { NotificationSettings } from './components/NotificationSettings'
+export { DataSettings } from './components/DataSettings'
+export { CalDAVSettings } from './components/CalDAVSettings'

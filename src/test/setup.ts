@@ -1,4 +1,5 @@
-import '@testing-library/jest-dom';
+import '@testing-library/jest-dom'
+import { vi } from 'vitest'
 
 const localStorageMock = {
   getItem: vi.fn(),
@@ -7,12 +8,12 @@ const localStorageMock = {
   clear: vi.fn(),
   key: vi.fn(),
   length: 0,
-};
+}
 
 Object.defineProperty(window, 'localStorage', {
   value: localStorageMock,
-});
+})
 
 Object.defineProperty(globalThis, 'localStorage', {
   value: localStorageMock,
-});
+})
