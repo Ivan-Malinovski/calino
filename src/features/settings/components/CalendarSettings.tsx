@@ -3,7 +3,8 @@ import { useSettingsStore, VIEW_OPTIONS, DENSITY_OPTIONS } from '@/store/setting
 import styles from './Settings.module.css'
 
 export function CalendarSettings(): JSX.Element {
-  const { defaultView, showWeekNumbers, eventDensity, updateSettings } = useSettingsStore()
+  const { defaultView, showWeekNumbers, eventDensity, compactRecurringEvents, updateSettings } =
+    useSettingsStore()
 
   return (
     <div className={styles.section}>
@@ -62,6 +63,22 @@ export function CalendarSettings(): JSX.Element {
             </option>
           ))}
         </select>
+      </div>
+
+      <div className={styles.settingRow}>
+        <div className={styles.settingLabel}>
+          <span className={styles.settingLabelText}>Compact Recurring Events</span>
+          <span className={styles.settingLabelHint}>
+            Show recurring events as minimal blocks in month view
+          </span>
+        </div>
+        <button
+          className={`${styles.toggle} ${compactRecurringEvents ? styles.active : ''}`}
+          onClick={() => updateSettings({ compactRecurringEvents: !compactRecurringEvents })}
+          aria-pressed={compactRecurringEvents}
+        >
+          <span className={styles.toggleKnob} />
+        </button>
       </div>
     </div>
   )

@@ -28,15 +28,30 @@
 }
 
 .compact {
-  padding: 2px 4px;
+  padding: 1px 4px;
+  min-height: 18px;
+  height: auto;
+  flex-shrink: 0;
 }
 
 .compact .resizeHandle {
-  height: 12px;
+  display: none;
 }
 
 .compact .title {
   font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.compact .dragContent {
+  padding: 0;
+}
+
+.compact .time,
+.compact .location {
+  display: none;
 }
 
 .dragging {

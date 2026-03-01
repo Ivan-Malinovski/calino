@@ -95,6 +95,7 @@ export interface UserSettings {
   syncEnabled: boolean
   syncIntervalMinutes: number
   conflictResolution: 'server-wins' | 'local-wins' | 'ask'
+  compactRecurringEvents: boolean
 }
 
 export type SettingsState = UserSettings

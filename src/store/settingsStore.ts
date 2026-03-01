@@ -27,6 +27,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   syncEnabled: true,
   syncIntervalMinutes: 15,
   conflictResolution: 'server-wins',
+  compactRecurringEvents: false,
 }
 
 export const useSettingsStore = create<SettingsStore>()(

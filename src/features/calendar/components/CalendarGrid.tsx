@@ -41,6 +41,7 @@ export function CalendarGrid(): JSX.Element {
   const setCurrentDate = useCalendarStore((state) => state.setCurrentDate)
   const setCurrentView = useCalendarStore((state) => state.setCurrentView)
   const firstDayOfWeek = useSettingsStore((state) => state.firstDayOfWeek)
+  const compactRecurringEvents = useSettingsStore((state) => state.compactRecurringEvents ?? false)
 
   const [activeEvent, setActiveEvent] = useState<CalendarEvent | null>(null)
   const [scrollDirection, setScrollDirection] = useState<'up' | 'down' | null>(null)
@@ -49,7 +50,9 @@ export function CalendarGrid(): JSX.Element {
   const currentDateRef = useRef(currentDate)
   const containerRef = useRef<HTMLDivElement>(null)
 
-  currentDateRef.current = currentDate
+  useEffect(() => {
+    currentDateRef.current = currentDate
+  }, [currentDate])
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -251,6 +254,7 @@ export function CalendarGrid(): JSX.Element {
                       isCurrentMonth={isCurrentMonth}
                       isTodayDate={isTodayDate}
                       isWeekend={isWeekend}
+                      compactRecurringEvents={compactRecurringEvents}
                       onDayClick={handleDayClick}
                       onDayNumberClick={handleDayNumberClick}
                     />
@@ -273,6 +277,7 @@ interface DroppableDayProps {
   isCurrentMonth: boolean
   isTodayDate: boolean
   isWeekend: boolean
+  compactRecurringEvents: boolean
   onDayClick: (day: Date) => void
   onDayNumberClick: (day: Date) => void
 }
@@ -284,6 +289,7 @@ function DroppableDay({
   isCurrentMonth,
   isTodayDate,
   isWeekend,
+  compactRecurringEvents,
   onDayClick,
   onDayNumberClick,
 }: DroppableDayProps): JSX.Element {
@@ -309,7 +315,11 @@ function DroppableDay({
       <div className={styles.events}>
         <AnimatePresence>
           {dayEvents.slice(0, 3).map((event) => (
-            <EventCard key={event.id} event={event} />
+            <EventCard
+              key={event.id}
+              event={event}
+              compact={compactRecurringEvents && !!event.rruleString}
+            />
           ))}
         </AnimatePresence>
         {dayEvents.length > 3 && (
