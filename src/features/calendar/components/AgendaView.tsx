@@ -1,5 +1,5 @@
 import type { JSX } from 'react'
-import { useMemo } from 'react'
+import { useMemo, useState, useRef } from 'react'
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, parseISO, isToday } from 'date-fns'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
@@ -52,8 +52,21 @@ export function AgendaView(): JSX.Element {
     openModal(format(day, 'yyyy-MM-dd'))
   }
 
+  const [isScrolled, setIsScrolled] = useState(false)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  const handleScroll = (): void => {
+    if (containerRef.current) {
+      setIsScrolled(containerRef.current.scrollTop > 0)
+    }
+  }
+
   return (
-    <div className={styles.container}>
+    <div
+      ref={containerRef}
+      className={`${styles.container} ${isScrolled ? styles.containerShadow : ''}`}
+      onScroll={handleScroll}
+    >
       {days.map((day) => {
         const dateKey = format(day, 'yyyy-MM-dd')
         const dayEvents = eventsByDate.get(dateKey) || []

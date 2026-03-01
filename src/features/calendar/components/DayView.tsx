@@ -53,20 +53,31 @@ export function DayView(): JSX.Element {
     return getEventsForDateRange(format(date, 'yyyy-MM-dd'), format(date, 'yyyy-MM-dd'))
   }, [date, getEventsForDateRange, events])
 
+  const [isScrolled, setIsScrolled] = useState(false)
+
   useEffect(() => {
     if (dayEvents.length === 0 || !bodyRef.current) return
 
-    const sortedEvents = [...dayEvents].sort(
-      (a, b) => parseISO(a.start).getTime() - parseISO(b.start).getTime()
-    )
-    const firstEvent = sortedEvents[0]
-    const eventStart = parseISO(firstEvent.start)
-    const hours = eventStart.getHours()
-    const minutes = eventStart.getMinutes()
-    const scrollTop = (hours * 60 + minutes) * (HOUR_HEIGHT / 60) - 100
+    const timer = setTimeout(() => {
+      if (!bodyRef.current) return
+      const sortedEvents = [...dayEvents].sort(
+        (a, b) => parseISO(a.start).getTime() - parseISO(b.start).getTime()
+      )
+      const firstEvent = sortedEvents[0]
+      const eventStart = parseISO(firstEvent.start)
+      const hours = eventStart.getHours()
+      const minutes = eventStart.getMinutes()
+      const scrollTop = (hours * 60 + minutes) * (HOUR_HEIGHT / 60) - 100
 
-    bodyRef.current.scrollTo({ top: Math.max(0, scrollTop), behavior: 'smooth' })
+      bodyRef.current.scrollTo({ top: Math.max(0, scrollTop), behavior: 'smooth' })
+    }, 100)
+
+    return () => clearTimeout(timer)
   }, [dayEvents])
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>): void => {
+    setIsScrolled(e.currentTarget.scrollTop > 0)
+  }
 
   const handleCellClick = (hour: Date): void => {
     const hourStr = format(hour, 'HH:mm')
@@ -286,7 +297,7 @@ export function DayView(): JSX.Element {
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <div className={styles.container}>
-        <div className={styles.header}>
+        <div className={`${styles.header} ${isScrolled ? styles.headerShadow : ''}`}>
           <div className={styles.dayInfo}>
             <div className={styles.dayName}>{format(date, 'EEEE')}</div>
             <div className={`${styles.dayNumber} ${isCurrentDay ? styles.today : ''}`}>
@@ -300,6 +311,7 @@ export function DayView(): JSX.Element {
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
           onMouseLeave={handleMouseUp}
+          onScroll={handleScroll}
         >
           {HOURS.map((hour) => (
             <HourCell key={hour.toISOString()} hour={hour} />

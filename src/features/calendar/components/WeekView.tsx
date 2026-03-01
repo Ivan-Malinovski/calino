@@ -105,26 +105,37 @@ export function WeekView(): JSX.Element {
   }, [date, firstDayOfWeek, getEventsForDateRange, events])
 
   const bodyRef = useRef<HTMLDivElement>(null)
+  const [isScrolled, setIsScrolled] = useState(false)
 
   useEffect(() => {
     if (!bodyRef.current) return
 
-    const sortedAllEvents: CalendarEvent[] = []
-    eventsMap.forEach((dayEvents) => {
-      sortedAllEvents.push(...dayEvents)
-    })
+    const timer = setTimeout(() => {
+      if (!bodyRef.current) return
 
-    if (sortedAllEvents.length === 0) return
+      const sortedAllEvents: CalendarEvent[] = []
+      eventsMap.forEach((dayEvents) => {
+        sortedAllEvents.push(...dayEvents)
+      })
 
-    sortedAllEvents.sort((a, b) => parseISO(a.start).getTime() - parseISO(b.start).getTime())
-    const firstEvent = sortedAllEvents[0]
-    const eventStart = parseISO(firstEvent.start)
-    const hours = eventStart.getHours()
-    const minutes = eventStart.getMinutes()
-    const scrollTop = (hours * 60 + minutes) * (HOUR_HEIGHT / 60) - 100
+      if (sortedAllEvents.length === 0) return
 
-    bodyRef.current.scrollTo({ top: Math.max(0, scrollTop), behavior: 'smooth' })
+      sortedAllEvents.sort((a, b) => parseISO(a.start).getTime() - parseISO(b.start).getTime())
+      const firstEvent = sortedAllEvents[0]
+      const eventStart = parseISO(firstEvent.start)
+      const hours = eventStart.getHours()
+      const minutes = eventStart.getMinutes()
+      const scrollTop = (hours * 60 + minutes) * (HOUR_HEIGHT / 60) - 100
+
+      bodyRef.current.scrollTo({ top: Math.max(0, scrollTop), behavior: 'smooth' })
+    }, 100)
+
+    return () => clearTimeout(timer)
   }, [eventsMap])
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>): void => {
+    setIsScrolled(e.currentTarget.scrollTop > 0)
+  }
 
   const handleCellClick = (day: Date, hour: Date): void => {
     const hourStr = format(hour, 'HH:mm')
@@ -358,7 +369,7 @@ export function WeekView(): JSX.Element {
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <div className={styles.container} key={renderKey}>
-        <div className={styles.header}>
+        <div className={`${styles.header} ${isScrolled ? styles.headerShadow : ''}`}>
           <div className={styles.weekNumberHeader}>W{weekNumber}</div>
           {weekDays.map((day) => (
             <div
@@ -376,6 +387,7 @@ export function WeekView(): JSX.Element {
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
           onMouseLeave={handleMouseUp}
+          onScroll={handleScroll}
         >
           <div className={styles.timeColumn}>
             {HOURS.map((hour) => (
