@@ -2,7 +2,6 @@
   display: flex;
   flex-direction: column;
   flex: 1;
-  overflow: auto;
   position: relative;
 }
 
@@ -11,6 +10,13 @@
   border-bottom: 1px solid #e0e0e0;
   background: white;
   transition: box-shadow 0.2s ease;
+}
+
+.body {
+  flex: 1;
+  position: relative;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .headerShadow {
