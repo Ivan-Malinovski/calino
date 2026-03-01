@@ -268,8 +268,9 @@ export function EventModal(): JSX.Element | null {
   }
 
   const handleDelete = (): void => {
-    if (selectedEventId) {
-      deleteEvent(selectedEventId)
+    const eventIdToDelete = originalEventId || selectedEventId
+    if (eventIdToDelete) {
+      deleteEvent(eventIdToDelete)
       closeModal()
     }
   }
