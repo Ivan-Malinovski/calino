@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react'
-import { addDays, format, subDays } from 'date-fns'
+import { addDays, subDays } from 'date-fns'
 import type { CalendarEvent } from '@/types'
 import type { CalDAVAccount, CalDAVCalendar, SyncState } from '../types'
 import { createCalDAVClient } from '../client/CalDAVClient'
@@ -36,6 +36,9 @@ export function useCalDAV(): UseCalDAVReturn {
   const storeAddEvent = useCalendarStore((state) => state.addEvent)
   const storeUpdateEvent = useCalendarStore((state) => state.updateEvent)
   const storeDeleteEvent = useCalendarStore((state) => state.deleteEvent)
+  const storeAddCalendar = useCalendarStore((state) => state.addCalendar)
+  const storeDeleteCalendar = useCalendarStore((state) => state.deleteCalendar)
+  const storeCalendars = useCalendarStore((state) => state.calendars)
   const existingEvents = useCalendarStore((state) => state.events)
 
   useEffect(() => {
@@ -43,6 +46,19 @@ export function useCalDAV(): UseCalDAVReturn {
     const loadedCalendars = storage.getAllCalendars()
     setAccounts(loadedAccounts)
     setCalendars(loadedCalendars)
+
+    const existingIds = storeCalendars.map((c) => c.id)
+    for (const cal of loadedCalendars) {
+      if (!existingIds.includes(cal.id)) {
+        storeAddCalendar({
+          id: cal.id,
+          name: cal.name,
+          color: cal.color,
+          isVisible: cal.isVisible,
+          isDefault: cal.isDefault,
+        })
+      }
+    }
 
     const pending = storage.getPendingChanges()
     setSyncState((prev) => ({ ...prev, pendingChanges: pending.length }))
@@ -69,16 +85,26 @@ export function useCalDAV(): UseCalDAVReturn {
         const client = await createCalDAVClient(discoveredUrl, credential)
         const serverCalendars = await client.fetchCalendars()
 
-        for (const cal of serverCalendars) {
-          storage.saveCalendar(cal)
-        }
-
-        storage.saveAccount({
+        const newAccount = storage.saveAccount({
           name,
           serverUrl: discoveredUrl,
           username,
           credentialId: credential.id,
         })
+
+        for (const cal of serverCalendars) {
+          storage.saveCalendar({
+            ...cal,
+            accountId: newAccount.id,
+          })
+          storeAddCalendar({
+            id: cal.id,
+            name: cal.name,
+            color: cal.color,
+            isVisible: cal.isVisible,
+            isDefault: cal.isDefault,
+          })
+        }
 
         setAccounts(storage.getAllAccounts())
         setCalendars(storage.getAllCalendars())
@@ -104,6 +130,10 @@ export function useCalDAV(): UseCalDAVReturn {
     const account = storage.getAccountById(accountId)
     if (account) {
       deleteCredential(account.credentialId)
+      const accountCalendars = storage.getCalendarsByAccountId(accountId)
+      for (const cal of accountCalendars) {
+        storeDeleteCalendar(cal.id)
+      }
       storage.deleteCalendarsByAccountId(accountId)
       storage.deleteAccount(accountId)
 
@@ -130,8 +160,11 @@ export function useCalDAV(): UseCalDAVReturn {
         const client = await createCalDAVClient(account.serverUrl, credential)
         const accountCalendars = storage.getCalendarsByAccountId(accountId)
 
-        const start = format(subDays(new Date(), 30), 'yyyy-MM-dd')
-        const end = format(addDays(new Date(), 365), 'yyyy-MM-dd')
+        const isFirstSync = !account.lastSyncAt
+        const start = isFirstSync
+          ? '1970-01-01T00:00:00.000Z'
+          : subDays(new Date(), 30).toISOString()
+        const end = addDays(new Date(), 365).toISOString()
 
         for (const cal of accountCalendars) {
           const fetchedEvents = await client.fetchEvents(cal.url, start, end)

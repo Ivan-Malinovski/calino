@@ -1,5 +1,5 @@
 import type { JSX } from 'react'
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useRef } from 'react'
 import {
   format,
   startOfMonth,
@@ -19,11 +19,38 @@ import styles from './Sidebar.module.css'
 
 export function Sidebar(): JSX.Element {
   const [isCollapsed, setIsCollapsed] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editName, setEditName] = useState('')
+  const inputRef = useRef<HTMLInputElement>(null)
   const currentDate = useCalendarStore((state) => state.currentDate)
   const setCurrentDate = useCalendarStore((state) => state.setCurrentDate)
   const calendars = useCalendarStore((state) => state.calendars)
   const toggleCalendarVisibility = useCalendarStore((state) => state.toggleCalendarVisibility)
+  const updateCalendar = useCalendarStore((state) => state.updateCalendar)
   const firstDayOfWeek = useSettingsStore((state) => state.firstDayOfWeek)
+
+  const handleStartRename = (id: string, name: string): void => {
+    setEditingId(id)
+    setEditName(name)
+    setTimeout(() => inputRef.current?.select(), 0)
+  }
+
+  const handleFinishRename = (): void => {
+    if (editingId && editName.trim()) {
+      updateCalendar(editingId, { name: editName.trim() })
+    }
+    setEditingId(null)
+    setEditName('')
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent): void => {
+    if (e.key === 'Enter') {
+      handleFinishRename()
+    } else if (e.key === 'Escape') {
+      setEditingId(null)
+      setEditName('')
+    }
+  }
 
   const date = parseISO(currentDate)
 
@@ -135,7 +162,24 @@ export function Sidebar(): JSX.Element {
               className={styles.checkbox}
             />
             <span className={styles.colorDot} style={{ backgroundColor: calendar.color }} />
-            <span className={styles.calendarName}>{calendar.name}</span>
+            {editingId === calendar.id ? (
+              <input
+                ref={inputRef}
+                type="text"
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                onBlur={handleFinishRename}
+                onKeyDown={handleKeyDown}
+                className={styles.renameInput}
+              />
+            ) : (
+              <span
+                className={styles.calendarName}
+                onDoubleClick={() => handleStartRename(calendar.id, calendar.name)}
+              >
+                {calendar.name}
+              </span>
+            )}
           </label>
         ))}
       </div>

@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { format, parseISO, isWithinInterval, startOfDay, endOfDay } from 'date-fns'
+import { RRule } from 'rrule'
 import type { CalendarStore, CalendarEvent, Calendar, ViewType } from '@/types'
 
 const DEFAULT_CALENDAR: Calendar = {
@@ -139,21 +140,62 @@ export const useCalendarStore = create<CalendarStore>()(
 
         const startDate = startOfDay(parseISO(start))
         const endDate = endOfDay(parseISO(end))
+        const expandedEvents: CalendarEvent[] = []
 
-        return state.events.filter((event) => {
+        for (const event of state.events) {
           if (!visibleCalendarIds.includes(event.calendarId)) {
-            return false
+            continue
           }
 
-          const eventStart = parseISO(event.start)
-          const eventEnd = parseISO(event.end)
+          if (event.rruleString) {
+            try {
+              const options = RRule.parseString(event.rruleString)
+              const eventStart = parseISO(event.start)
 
-          return (
-            isWithinInterval(eventStart, { start: startDate, end: endDate }) ||
-            isWithinInterval(eventEnd, { start: startDate, end: endDate }) ||
-            (eventStart <= startDate && eventEnd >= endDate)
-          )
-        })
+              const rule = new RRule({
+                ...options,
+                dtstart: eventStart,
+              })
+
+              const occurrences = rule.between(startDate, endDate, true)
+
+              for (const occ of occurrences) {
+                const duration = parseISO(event.end).getTime() - eventStart.getTime()
+                const occEnd = new Date(occ.getTime() + duration)
+
+                expandedEvents.push({
+                  ...event,
+                  id: `${event.id}-${occ.toISOString()}`,
+                  start: occ.toISOString(),
+                  end: occEnd.toISOString(),
+                })
+              }
+            } catch {
+              const eventStart = parseISO(event.start)
+              const eventEnd = parseISO(event.end)
+              if (
+                isWithinInterval(eventStart, { start: startDate, end: endDate }) ||
+                isWithinInterval(eventEnd, { start: startDate, end: endDate }) ||
+                (eventStart <= startDate && eventEnd >= endDate)
+              ) {
+                expandedEvents.push(event)
+              }
+            }
+          } else {
+            const eventStart = parseISO(event.start)
+            const eventEnd = parseISO(event.end)
+
+            if (
+              isWithinInterval(eventStart, { start: startDate, end: endDate }) ||
+              isWithinInterval(eventEnd, { start: startDate, end: endDate }) ||
+              (eventStart <= startDate && eventEnd >= endDate)
+            ) {
+              expandedEvents.push(event)
+            }
+          }
+        }
+
+        return expandedEvents
       },
 
       getVisibleEvents: (): CalendarEvent[] => {

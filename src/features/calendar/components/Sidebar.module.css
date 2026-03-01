@@ -224,3 +224,12 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+.renameInput {
+  flex: 1;
+  font-size: 13px;
+  padding: 2px 4px;
+  border: 1px solid #4285f4;
+  border-radius: 4px;
+  outline: none;
+}
