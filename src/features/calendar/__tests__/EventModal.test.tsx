@@ -121,4 +121,25 @@ describe('EventModal', () => {
     expect(screen.getByRole('button', { name: /cancel/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /create/i })).toBeInTheDocument()
   })
+
+  it('loads event data when clicking recurring event instance', () => {
+    const store = useCalendarStore.getState()
+    store.addEvent({
+      id: 'recurring-event',
+      calendarId: 'default',
+      title: 'Weekly Meeting',
+      description: 'Original description',
+      start: '2024-03-01T10:00:00',
+      end: '2024-03-01T11:00:00',
+      isAllDay: false,
+      recurrence: { frequency: 'weekly', interval: 1 },
+    })
+    store.setSelectedEventId('recurring-event-2024-03-08T10:00:00.000Z')
+    store.openModal()
+
+    render(<EventModal />)
+
+    expect(screen.getByPlaceholderText('Title')).toHaveValue('Weekly Meeting')
+    expect(screen.getByPlaceholderText('Description')).toHaveValue('Original description')
+  })
 })

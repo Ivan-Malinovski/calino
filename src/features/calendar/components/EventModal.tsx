@@ -1,5 +1,5 @@
 import type { JSX } from 'react'
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo } from 'react'
 import { format, parseISO, addHours } from 'date-fns'
 import { v4 as uuidv4 } from 'uuid'
 import { useCalendarStore } from '@/store/calendarStore'
@@ -15,6 +15,16 @@ const RECURRENCE_OPTIONS: { value: RecurrenceRule['frequency'] | 'none'; label: 
   { value: 'monthly', label: 'Monthly' },
   { value: 'yearly', label: 'Yearly' },
 ]
+
+type RecurrenceEditMode = 'all' | 'future' | 'this'
+
+function extractOriginalEventId(eventId: string): string | null {
+  const isoDateMatch = eventId.match(/(.+)-(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z)$/)
+  if (isoDateMatch) {
+    return isoDateMatch[1]
+  }
+  return null
+}
 
 interface InitialFormState {
   title: string
@@ -36,11 +46,29 @@ function getInitialFormState(
   selectedEndDate: string | null,
   events: CalendarEvent[],
   calendars: { id: string; isDefault: boolean }[]
-): InitialFormState {
+): InitialFormState & { isRecurringInstance: boolean; originalEventId: string | null } {
   const defaultCalendar = calendars.find((c) => c.isDefault) || calendars[0]
 
   const isEditing = selectedEventId !== null
-  const existingEvent = isEditing ? events.find((e) => e.id === selectedEventId) : null
+
+  let existingEvent: CalendarEvent | undefined
+  let isRecurringInstance = false
+  let originalEventId: string | null = null
+
+  if (isEditing && selectedEventId) {
+    existingEvent = events.find((e) => e.id === selectedEventId)
+
+    if (!existingEvent) {
+      const originalId = extractOriginalEventId(selectedEventId)
+      if (originalId) {
+        existingEvent = events.find((e) => e.id === originalId)
+        if (existingEvent) {
+          isRecurringInstance = true
+          originalEventId = originalId
+        }
+      }
+    }
+  }
 
   if (isModalOpen) {
     if (existingEvent) {
@@ -55,6 +83,8 @@ function getInitialFormState(
         isAllDay: existingEvent.isAllDay,
         calendarId: existingEvent.calendarId,
         recurrence: existingEvent.recurrence?.frequency || 'none',
+        isRecurringInstance,
+        originalEventId,
       }
     }
 
@@ -86,6 +116,8 @@ function getInitialFormState(
             isAllDay: false,
             calendarId: defaultCalendar?.id || '',
             recurrence: 'none',
+            isRecurringInstance: false,
+            originalEventId: null,
           }
         }
       }
@@ -101,6 +133,8 @@ function getInitialFormState(
         isAllDay: false,
         calendarId: defaultCalendar?.id || '',
         recurrence: 'none',
+        isRecurringInstance: false,
+        originalEventId: null,
       }
     }
   }
@@ -117,6 +151,8 @@ function getInitialFormState(
     isAllDay: false,
     calendarId: defaultCalendar?.id || '',
     recurrence: 'none',
+    isRecurringInstance: false,
+    originalEventId: null,
   }
 }
 
@@ -157,24 +193,25 @@ export function EventModal(): JSX.Element | null {
   const [recurrence, setRecurrence] = useState<RecurrenceRule['frequency'] | 'none'>(
     initialState.recurrence
   )
-
-  useEffect(() => {
-    setTitle(initialState.title)
-    setDescription(initialState.description)
-    setLocation(initialState.location)
-    setStartDate(initialState.startDate)
-    setStartTime(initialState.startTime)
-    setEndDate(initialState.endDate)
-    setEndTime(initialState.endTime)
-    setIsAllDay(initialState.isAllDay)
-    setRecurrence(initialState.recurrence)
-  }, [initialState])
+  const [showRecurrenceDialog, setShowRecurrenceDialog] = useState(false)
 
   const isEditing = selectedEventId !== null
+  const isRecurringEvent = initialState.recurrence !== 'none'
+  const isRecurringInstance = initialState.isRecurringInstance
+  const originalEventId = initialState.originalEventId
 
   const handleSubmit = (e: React.FormEvent): void => {
     e.preventDefault()
 
+    if (isEditing && isRecurringInstance && isRecurringEvent) {
+      setShowRecurrenceDialog(true)
+      return
+    }
+
+    saveEvent('all')
+  }
+
+  const saveEvent = (mode: RecurrenceEditMode): void => {
     const startDateTime = isAllDay ? `${startDate}T00:00:00` : `${startDate}T${startTime}:00`
     const endDateTime = isAllDay ? `${endDate}T23:59:59` : `${endDate}T${endTime}:00`
 
@@ -182,16 +219,31 @@ export function EventModal(): JSX.Element | null {
       recurrence !== 'none' ? { frequency: recurrence, interval: 1 } : undefined
 
     if (isEditing && selectedEventId) {
-      updateEvent(selectedEventId, {
-        title,
-        description: description || undefined,
-        location: location || undefined,
-        start: startDateTime,
-        end: endDateTime,
-        isAllDay,
-        calendarId,
-        recurrence: recurrenceRule,
-      })
+      if (mode === 'this' && originalEventId) {
+        const newEvent: CalendarEvent = {
+          id: uuidv4(),
+          title,
+          description: description || undefined,
+          location: location || undefined,
+          start: startDateTime,
+          end: endDateTime,
+          isAllDay,
+          calendarId,
+          recurrence: undefined,
+        }
+        addEvent(newEvent)
+      } else {
+        updateEvent(originalEventId || selectedEventId, {
+          title,
+          description: description || undefined,
+          location: location || undefined,
+          start: startDateTime,
+          end: endDateTime,
+          isAllDay,
+          calendarId,
+          recurrence: recurrenceRule,
+        })
+      }
     } else {
       const newEvent: CalendarEvent = {
         id: uuidv4(),
@@ -207,7 +259,12 @@ export function EventModal(): JSX.Element | null {
       addEvent(newEvent)
     }
 
+    setShowRecurrenceDialog(false)
     closeModal()
+  }
+
+  const handleRecurrenceDialogConfirm = (mode: RecurrenceEditMode): void => {
+    saveEvent(mode)
   }
 
   const handleDelete = (): void => {
@@ -362,6 +419,57 @@ export function EventModal(): JSX.Element | null {
           </div>
         </form>
       </div>
+
+      {showRecurrenceDialog && (
+        <div className={styles.overlay} onClick={() => setShowRecurrenceDialog(false)}>
+          <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.header}>
+              <h2 className={styles.title}>Update recurring event</h2>
+              <button className={styles.closeButton} onClick={() => setShowRecurrenceDialog(false)}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="M18 6L6 18M6 6L18 18"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </button>
+            </div>
+            <div className={styles.form}>
+              <p style={{ padding: '16px', color: '#666' }}>
+                How would you like to apply these changes?
+              </p>
+              <div className={styles.field} style={{ padding: '0 16px 16px' }}>
+                <button
+                  type="button"
+                  className={styles.saveButton}
+                  style={{ width: '100%', marginBottom: '8px' }}
+                  onClick={() => handleRecurrenceDialogConfirm('all')}
+                >
+                  All events
+                </button>
+                <button
+                  type="button"
+                  className={styles.saveButton}
+                  style={{ width: '100%', marginBottom: '8px' }}
+                  onClick={() => handleRecurrenceDialogConfirm('this')}
+                >
+                  This event only
+                </button>
+                <button
+                  type="button"
+                  className={styles.cancelButton}
+                  style={{ width: '100%' }}
+                  onClick={() => setShowRecurrenceDialog(false)}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -41,12 +41,12 @@ describe('CalendarHeader', () => {
 
   it('renders create button', () => {
     renderWithRouter(<CalendarHeader />)
-    expect(screen.getByRole('button', { name: /create/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /\+/i })).toBeInTheDocument()
   })
 
   it('renders quick add button', () => {
     renderWithRouter(<CalendarHeader />)
-    expect(screen.getByRole('button', { name: /quick add/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /⚡/i })).toBeInTheDocument()
   })
 
   it('renders navigation buttons', () => {
