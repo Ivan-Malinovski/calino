@@ -129,7 +129,7 @@ export function WeekView(): JSX.Element {
       const eventStart = parseISO(firstEvent.start)
       const hours = eventStart.getHours()
       const minutes = eventStart.getMinutes()
-      const scrollTop = (hours * 60 + minutes) * (HOUR_HEIGHT / 60) - 100
+      const scrollTop = (hours * 60 + minutes) * (HOUR_HEIGHT / 60) - 60
 
       bodyRef.current.scrollTo({ top: Math.max(0, scrollTop), behavior: 'smooth' })
     })
