@@ -129,6 +129,7 @@ export function EventCard({
 
   const handleContextMenu = (e: React.MouseEvent): void => {
     e.preventDefault()
+    e.stopPropagation()
     setContextMenu({ x: e.clientX, y: e.clientY })
   }
 

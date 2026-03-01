@@ -67,7 +67,8 @@ export function ContextMenu({ x, y, items, onClose }: ContextMenuProps): JSX.Ele
         <button
           key={index}
           className={`${styles.item} ${item.danger ? styles.danger : ''}`}
-          onClick={() => {
+          onClick={(e) => {
+            e.stopPropagation()
             item.onClick()
             onClose()
           }}
