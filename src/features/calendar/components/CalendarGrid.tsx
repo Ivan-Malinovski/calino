@@ -18,7 +18,6 @@ import {
   startOfWeek,
   endOfWeek,
   eachDayOfInterval,
-  eachWeekOfInterval,
   isSameMonth,
   isToday,
   parseISO,
@@ -105,22 +104,11 @@ export function CalendarGrid(): JSX.Element {
     return eachDayOfInterval({ start: calendarStart, end: calendarEnd })
   }, [date, firstDayOfWeek])
 
-  const weeks = useMemo(() => {
-    const monthStart = startOfMonth(date)
-    const monthEnd = endOfMonth(date)
-    const calendarStart = startOfWeek(monthStart, { weekStartsOn: firstDayOfWeek })
-    const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: firstDayOfWeek })
-
-    return eachWeekOfInterval({
-      start: calendarStart,
-      end: calendarEnd,
-      weekStartsOn: firstDayOfWeek || 0,
-    })
-  }, [date, firstDayOfWeek])
+  const numWeeks = Math.floor(days.length / 7)
 
   const weekNumbers = useMemo(() => {
-    return weeks.map((weekStart) => getISOWeek(weekStart))
-  }, [weeks])
+    return Array.from({ length: numWeeks }, (_, i) => getISOWeek(days[i * 7]))
+  }, [numWeeks, days])
 
   const eventsMap = useMemo(() => {
     const monthStart = startOfMonth(date)
@@ -153,25 +141,6 @@ export function CalendarGrid(): JSX.Element {
     setCurrentView('week')
   }
 
-  const daysWithWeeks = useMemo(() => {
-    const result: { day: Date; weekNum: number }[] = []
-    let currentWeekStart = days[0]
-    let weekIndex = 0
-
-    days.forEach((day) => {
-      const dayWeekStart = startOfWeek(day, { weekStartsOn: firstDayOfWeek || 0 })
-      if (dayWeekStart.getTime() !== currentWeekStart.getTime()) {
-        currentWeekStart = dayWeekStart
-        weekIndex++
-      }
-      result.push({
-        day,
-        weekNum: weekNumbers[weekIndex],
-      })
-    })
-    return result
-  }, [days, weekNumbers, firstDayOfWeek])
-
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <div className={styles.grid}>
@@ -186,33 +155,31 @@ export function CalendarGrid(): JSX.Element {
         <div className={styles.daysContainer}>
           {weekNumbers.map((weekNum, weekIdx) => (
             <div key={weekIdx} className={styles.weekRow}>
-              <div className={styles.weekNumber} onClick={() => handleWeekClick(weeks[weekIdx])}>
+              <div className={styles.weekNumber} onClick={() => handleWeekClick(days[weekIdx * 7])}>
                 {weekNum}
               </div>
-              {daysWithWeeks
-                .filter((d) => d.weekNum === weekNum)
-                .map(({ day }) => {
-                  const dateKey = format(day, 'yyyy-MM-dd')
-                  const dayEvents = eventsMap.get(dateKey) || []
-                  const isCurrentMonth = isSameMonth(day, date)
-                  const isTodayDate = isToday(day)
-                  const dayOfWeek = getDay(day)
-                  const isWeekend = dayOfWeek === 0 || dayOfWeek === 6
+              {days.slice(weekIdx * 7, weekIdx * 7 + 7).map((day) => {
+                const dateKey = format(day, 'yyyy-MM-dd')
+                const dayEvents = eventsMap.get(dateKey) || []
+                const isCurrentMonth = isSameMonth(day, date)
+                const isTodayDate = isToday(day)
+                const dayOfWeek = getDay(day)
+                const isWeekend = dayOfWeek === 0 || dayOfWeek === 6
 
-                  return (
-                    <DroppableDay
-                      key={dateKey}
-                      dateKey={dateKey}
-                      day={day}
-                      dayEvents={dayEvents}
-                      isCurrentMonth={isCurrentMonth}
-                      isTodayDate={isTodayDate}
-                      isWeekend={isWeekend}
-                      onDayClick={handleDayClick}
-                      onDayNumberClick={handleDayNumberClick}
-                    />
-                  )
-                })}
+                return (
+                  <DroppableDay
+                    key={dateKey}
+                    dateKey={dateKey}
+                    day={day}
+                    dayEvents={dayEvents}
+                    isCurrentMonth={isCurrentMonth}
+                    isTodayDate={isTodayDate}
+                    isWeekend={isWeekend}
+                    onDayClick={handleDayClick}
+                    onDayNumberClick={handleDayNumberClick}
+                  />
+                )
+              })}
             </div>
           ))}
         </div>

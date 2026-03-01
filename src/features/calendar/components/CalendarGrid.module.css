@@ -3,12 +3,14 @@
   flex-direction: column;
   flex: 1;
   background: white;
+  overflow: auto;
 }
 
 .header {
   display: grid;
   grid-template-columns: 40px repeat(7, 1fr);
   border-bottom: 1px solid #e0e0e0;
+  flex-shrink: 0;
 }
 
 .weekNumHeader {
@@ -42,9 +44,7 @@
 .weekRow {
   display: grid;
   grid-template-columns: 40px repeat(7, 1fr);
-  height: 100px;
-  min-height: 100px;
-  max-height: 100px;
+  flex-shrink: 0;
 }
 
 .weekNumber {
@@ -59,11 +59,9 @@
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  height: 100px;
-  min-height: 100px;
-  max-height: 100px;
   cursor: pointer;
   transition: background 0.15s ease;
+  min-height: 100px;
 }
 
 .weekNumber:hover {
@@ -72,9 +70,7 @@
 }
 
 .day {
-  height: 100px;
   min-height: 100px;
-  max-height: 100px;
   border-right: 1px solid #e0e0e0;
   border-bottom: 1px solid #e0e0e0;
   padding: 4px;
