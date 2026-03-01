@@ -5,10 +5,25 @@
   cursor: pointer;
   transition: all 0.15s ease;
   overflow: hidden;
+  user-select: none;
 }
 
 .card:hover {
   filter: brightness(0.95);
+}
+
+.compact {
+  padding: 2px 4px;
+}
+
+.compact .title {
+  font-size: 11px;
+}
+
+.dragging {
+  opacity: 0.9;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transform: scale(1.02);
 }
 
 .title {

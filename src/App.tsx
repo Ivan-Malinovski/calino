@@ -1,6 +1,7 @@
 import type { JSX } from 'react'
 import { useState, useCallback, useEffect } from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { motion } from 'framer-motion'
 import { v4 as uuidv4 } from 'uuid'
 import { useCalendarStore } from './store/calendarStore'
 import { useSettingsStore } from './store/settingsStore'
@@ -11,6 +12,7 @@ import {
   DayView,
   AgendaView,
   EventModal,
+  Sidebar,
 } from './features/calendar'
 import { QuickAdd, type NLPParseResult } from './features/nlp'
 import { SettingsPage } from './features/settings'
@@ -74,12 +76,22 @@ function CalendarApp(): JSX.Element {
   return (
     <div className="app">
       <CalendarHeader onQuickAdd={handleToggleQuickAdd} />
-      <main className="main">
-        {isQuickAddOpen && (
-          <QuickAdd onAdd={handleQuickAdd} onCancel={() => setIsQuickAddOpen(false)} />
-        )}
-        {renderView()}
-      </main>
+      <div className="appContent">
+        <Sidebar />
+        <main className="main">
+          {isQuickAddOpen && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.2, ease: 'easeOut' }}
+            >
+              <QuickAdd onAdd={handleQuickAdd} onCancel={() => setIsQuickAddOpen(false)} />
+            </motion.div>
+          )}
+          {renderView()}
+        </main>
+      </div>
       <EventModal />
     </div>
   )

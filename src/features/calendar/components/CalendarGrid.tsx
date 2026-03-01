@@ -1,5 +1,6 @@
 import type { JSX } from 'react'
 import { useMemo } from 'react'
+import { AnimatePresence } from 'framer-motion'
 import {
   format,
   startOfMonth,
@@ -89,9 +90,11 @@ export function CalendarGrid(): JSX.Element {
                 <span className={styles.dayNumber}>{format(day, 'd')}</span>
               </div>
               <div className={styles.events}>
-                {dayEvents.slice(0, 3).map((event) => (
-                  <EventCard key={event.id} event={event} />
-                ))}
+                <AnimatePresence>
+                  {dayEvents.slice(0, 3).map((event) => (
+                    <EventCard key={event.id} event={event} />
+                  ))}
+                </AnimatePresence>
                 {dayEvents.length > 3 && (
                   <div className={styles.moreEvents}>+{dayEvents.length - 3} more</div>
                 )}

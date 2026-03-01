@@ -1,0 +1,226 @@
+.sidebar {
+  width: 260px;
+  min-width: 260px;
+  background: #fff;
+  border-right: 1px solid #e5e7eb;
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  gap: 20px;
+  overflow-y: auto;
+}
+
+.collapsed {
+  width: 40px;
+  min-width: 40px;
+  background: #fff;
+  border-right: 1px solid #e5e7eb;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 16px;
+}
+
+.expandButton,
+.collapseButton {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 6px;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    background-color 0.15s,
+    color 0.15s;
+}
+
+.expandButton:hover,
+.collapseButton:hover {
+  background: #f3f4f6;
+  color: #111827;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.miniCalendar {
+  background: #f9fafb;
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.miniHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.miniMonth {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.miniNavBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    background-color 0.15s,
+    color 0.15s;
+}
+
+.miniNavBtn:hover {
+  background: #e5e7eb;
+  color: #111827;
+}
+
+.miniWeekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  margin-bottom: 4px;
+}
+
+.miniWeekday {
+  text-align: center;
+  font-size: 10px;
+  font-weight: 500;
+  color: #9ca3af;
+  padding: 4px 0;
+}
+
+.miniDays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+
+.miniDay {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: #374151;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition:
+    background-color 0.15s,
+    color 0.15s;
+}
+
+.miniDay:hover {
+  background: #e5e7eb;
+}
+
+.miniDay.otherMonth {
+  color: #d1d5db;
+}
+
+.miniDay.selected {
+  background: #4285f4;
+  color: #fff;
+}
+
+.miniDay.selected:hover {
+  background: #3367d6;
+}
+
+.miniDay.today:not(.selected) {
+  font-weight: 600;
+  color: #4285f4;
+}
+
+.todayBtn {
+  width: 100%;
+  margin-top: 12px;
+  padding: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #4285f4;
+  background: none;
+  border: 1px solid #4285f4;
+  border-radius: 6px;
+  cursor: pointer;
+  transition:
+    background-color 0.15s,
+    color 0.15s;
+}
+
+.todayBtn:hover {
+  background: #4285f4;
+  color: #fff;
+}
+
+.calendars {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sectionTitle {
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.calendarItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.calendarItem:hover {
+  background: #f9fafb;
+}
+
+.checkbox {
+  width: 16px;
+  height: 16px;
+  accent-color: #4285f4;
+  cursor: pointer;
+}
+
+.colorDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.calendarName {
+  font-size: 13px;
+  color: #374151;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

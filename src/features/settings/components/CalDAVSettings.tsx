@@ -1,30 +1,25 @@
 import type { JSX } from 'react'
-import { useState, useEffect } from 'react'
-import { v4 as uuidv4 } from 'uuid'
+import { useState } from 'react'
 import { useSettingsStore, SYNC_INTERVAL_OPTIONS, CONFLICT_OPTIONS } from '@/store/settingsStore'
-import * as accountStorage from '@/features/caldav/sync/accountStorage'
-import type { CalDAVAccount } from '@/features/caldav/types'
+import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
 import styles from './Settings.module.css'
 
 export function CalDAVSettings(): JSX.Element {
-  const [accounts, setAccounts] = useState<CalDAVAccount[]>([])
   const [isAddingAccount, setIsAddingAccount] = useState(false)
-  const [isTestingConnection, setIsTestingConnection] = useState(false)
   const [connectionStatus, setConnectionStatus] = useState<'idle' | 'success' | 'error'>('idle')
+  const [isTesting, setIsTesting] = useState(false)
 
   const { syncEnabled, syncIntervalMinutes, conflictResolution, updateSettings } =
     useSettingsStore()
 
-  useEffect(() => {
-    setAccounts(accountStorage.getAllAccounts())
-  }, [])
+  const { accounts, syncAccount, addAccount, removeAccount } = useCalDAV()
 
   const handleTestConnection = async (
     serverUrl: string,
     username: string,
     password: string
   ): Promise<boolean> => {
-    setIsTestingConnection(true)
+    setIsTesting(true)
     setConnectionStatus('idle')
 
     try {
@@ -49,7 +44,7 @@ export function CalDAVSettings(): JSX.Element {
       setConnectionStatus('error')
       return false
     } finally {
-      setIsTestingConnection(false)
+      setIsTesting(false)
     }
   }
 
@@ -68,20 +63,17 @@ export function CalDAVSettings(): JSX.Element {
       return
     }
 
-    const newAccount = accountStorage.saveAccount({
-      name: accountName,
-      serverUrl,
-      username,
-      credentialId: uuidv4(),
-    })
-
-    setAccounts((prev) => [...prev, newAccount])
-    setIsAddingAccount(false)
-    setConnectionStatus('idle')
-    form.reset()
+    try {
+      await addAccount(serverUrl, username, password, accountName)
+      setIsAddingAccount(false)
+      setConnectionStatus('idle')
+      form.reset()
+    } catch {
+      setConnectionStatus('error')
+    }
   }
 
-  const handleDeleteAccount = (id: string): void => {
+  const handleDeleteAccount = async (id: string): Promise<void> => {
     if (
       !confirm(
         'Are you sure you want to remove this account? Calendar data will be preserved locally.'
@@ -89,15 +81,11 @@ export function CalDAVSettings(): JSX.Element {
     ) {
       return
     }
-    accountStorage.deleteAccount(id)
-    accountStorage.deleteCalendarsByAccountId(id)
-    setAccounts((prev) => prev.filter((a) => a.id !== id))
+    await removeAccount(id)
   }
 
   const handleSyncNow = async (accountId: string): Promise<void> => {
-    console.log('Manual sync triggered for account:', accountId)
-    accountStorage.updateAccountLastSync(accountId)
-    setAccounts(accountStorage.getAllAccounts())
+    await syncAccount(accountId)
   }
 
   return (
@@ -277,9 +265,9 @@ export function CalDAVSettings(): JSX.Element {
                 <button
                   type="submit"
                   className={`${styles.button} ${styles.buttonPrimary}`}
-                  disabled={isTestingConnection}
+                  disabled={isTesting}
                 >
-                  {isTestingConnection ? 'Testing...' : 'Add Account'}
+                  {isTesting ? 'Testing...' : 'Add Account'}
                 </button>
               </div>
             </form>
