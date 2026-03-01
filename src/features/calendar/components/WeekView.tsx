@@ -63,6 +63,7 @@ export function WeekView(): JSX.Element {
   const openModal = useCalendarStore((state) => state.openModal)
   const updateEvent = useCalendarStore((state) => state.updateEvent)
   const firstDayOfWeek = useSettingsStore((state) => state.firstDayOfWeek)
+  const timeFormat = useSettingsStore((state) => state.timeFormat)
 
   const [activeEvent, setActiveEvent] = useState<CalendarEvent | null>(null)
   const [renderKey, setRenderKey] = useState(0)
@@ -336,7 +337,7 @@ export function WeekView(): JSX.Element {
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <div className={styles.container} key={renderKey}>
         <div className={styles.header}>
-          <div className={styles.weekNumberColumn}>W{weekNumber}</div>
+          <div className={styles.weekNumberHeader}>W{weekNumber}</div>
           {weekDays.map((day) => (
             <div
               key={day.toISOString()}
@@ -353,10 +354,10 @@ export function WeekView(): JSX.Element {
           onMouseUp={handleMouseUp}
           onMouseLeave={handleMouseUp}
         >
-          <div className={styles.weekNumberColumn}>
+          <div className={styles.timeColumn}>
             {HOURS.map((hour) => (
-              <div key={hour.toISOString()} className={styles.weekNumberCell}>
-                {format(hour, 'h a')}
+              <div key={hour.toISOString()} className={styles.timeCell}>
+                {format(hour, timeFormat === '24h' ? 'HH:mm' : 'h a')}
               </div>
             ))}
           </div>

@@ -22,7 +22,26 @@
   background: #f8f9fa;
 }
 
-.weekNumberCell {
+.weekNumberHeader {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: #5f6368;
+  background: #f8f9fa;
+  border-right: 1px solid #e0e0e0;
+  min-height: 48px;
+}
+
+.timeColumn {
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid #e0e0e0;
+  background: #f8f9fa;
+}
+
+.timeCell {
   min-height: 60px;
   padding: 4px 8px;
   font-size: 11px;

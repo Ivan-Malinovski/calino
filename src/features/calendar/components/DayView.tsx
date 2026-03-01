@@ -12,6 +12,7 @@ import {
 } from '@dnd-kit/core'
 import { format, eachHourOfInterval, startOfDay, endOfDay, parseISO, isToday } from 'date-fns'
 import { useCalendarStore } from '@/store/calendarStore'
+import { useSettingsStore } from '@/store/settingsStore'
 import { EventCard } from './EventCard'
 import type { CalendarEvent } from '@/types'
 import styles from './DayView.module.css'
@@ -30,6 +31,7 @@ export function DayView(): JSX.Element {
   const openModal = useCalendarStore((state) => state.openModal)
   const updateEvent = useCalendarStore((state) => state.updateEvent)
   const setCurrentDate = useCalendarStore((state) => state.setCurrentDate)
+  const timeFormat = useSettingsStore((state) => state.timeFormat)
 
   const [activeEvent, setActiveEvent] = useState<CalendarEvent | null>(null)
   const [isDraggingToCreate, setIsDraggingToCreate] = useState(false)
@@ -252,7 +254,9 @@ export function DayView(): JSX.Element {
 
     return (
       <div key={hour.toISOString()} className={styles.hourRow}>
-        <div className={styles.timeLabel}>{format(hour, 'h a')}</div>
+        <div className={styles.timeLabel}>
+          {format(hour, timeFormat === '24h' ? 'HH:mm' : 'h a')}
+        </div>
         <div
           ref={setNodeRef}
           className={`${styles.cell} ${isOver ? styles.dropTarget : ''}`}
