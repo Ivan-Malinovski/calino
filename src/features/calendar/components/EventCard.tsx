@@ -3,6 +3,7 @@ import { useState, useRef } from 'react'
 import { format, parseISO } from 'date-fns'
 import { useDraggable } from '@dnd-kit/core'
 import { useCalendarStore } from '@/store/calendarStore'
+import { useSettingsStore } from '@/store/settingsStore'
 import type { CalendarEvent } from '@/types'
 import styles from './EventCard.module.css'
 
@@ -23,6 +24,7 @@ export function EventCard({
   const setSelectedEventId = useCalendarStore((state) => state.setSelectedEventId)
   const openModal = useCalendarStore((state) => state.openModal)
   const updateEvent = useCalendarStore((state) => state.updateEvent)
+  const timeFormat = useSettingsStore((state) => state.timeFormat)
 
   const [isResizing, setIsResizing] = useState(false)
   const resizeStartY = useRef<number | null>(null)
@@ -86,7 +88,8 @@ export function EventCard({
   }
 
   const formatTime = (dateString: string): string => {
-    return format(parseISO(dateString), 'h:mm a')
+    const pattern = timeFormat === '24h' ? 'HH:mm' : 'h:mm a'
+    return format(parseISO(dateString), pattern)
   }
 
   const style = transform

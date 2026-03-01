@@ -1,6 +1,7 @@
 import type { JSX } from 'react'
 import { format, parseISO } from 'date-fns'
 import { useCalendarStore } from '@/store/calendarStore'
+import { useSettingsStore } from '@/store/settingsStore'
 import type { SearchResult } from '../types'
 import styles from './SearchResults.module.css'
 
@@ -42,9 +43,15 @@ function HighlightedText({
   return <>{parts}</>
 }
 
-function formatEventDate(start: string, end: string, isAllDay: boolean): string {
+function formatEventDate(
+  start: string,
+  end: string,
+  isAllDay: boolean,
+  timeFormat: '12h' | '24h'
+): string {
   const startDate = parseISO(start)
   const endDate = parseISO(end)
+  const pattern = timeFormat === '24h' ? 'HH:mm' : 'h:mm a'
 
   if (isAllDay) {
     return format(startDate, 'MMM d, yyyy')
@@ -53,14 +60,15 @@ function formatEventDate(start: string, end: string, isAllDay: boolean): string 
   const sameDay = format(startDate, 'yyyy-MM-dd') === format(endDate, 'yyyy-MM-dd')
 
   if (sameDay) {
-    return `${format(startDate, 'MMM d')} · ${format(startDate, 'h:mm a')} - ${format(endDate, 'h:mm a')}`
+    return `${format(startDate, 'MMM d')} · ${format(startDate, pattern)} - ${format(endDate, pattern)}`
   }
 
-  return `${format(startDate, 'MMM d, h:mm a')} - ${format(endDate, 'MMM d, h:mm a')}`
+  return `${format(startDate, `MMM d, ${pattern}`)} - ${format(endDate, `MMM d, ${pattern}`)}`
 }
 
 export function SearchResults({ results, onSelectEvent }: SearchResultsProps): JSX.Element | null {
   const calendars = useCalendarStore((state) => state.calendars)
+  const timeFormat = useSettingsStore((state) => state.timeFormat)
 
   const getCalendarColor = (calendarId: string): string => {
     const calendar = calendars.find((c) => c.id === calendarId)
@@ -141,7 +149,12 @@ export function SearchResults({ results, onSelectEvent }: SearchResultsProps): J
                     <line x1="8" x2="8" y1="2" y2="6" />
                     <line x1="3" x2="21" y1="10" y2="10" />
                   </svg>
-                  {formatEventDate(result.event.start, result.event.end, result.event.isAllDay)}
+                  {formatEventDate(
+                    result.event.start,
+                    result.event.end,
+                    result.event.isAllDay,
+                    timeFormat
+                  )}
                 </span>
                 {result.event.location && (
                   <span className={styles.resultLocation}>

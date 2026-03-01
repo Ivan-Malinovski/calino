@@ -1,71 +1,76 @@
-import type { JSX } from 'react';
-import { useState, useCallback, useEffect, useRef } from 'react';
-import { format, isValid } from 'date-fns';
-import { Button } from '@/components/common/Button';
-import { Input } from '@/components/common/Input';
-import { parseNaturalLanguage, type NLPParseResult } from '../index';
-import styles from './QuickAdd.module.css';
+import type { JSX } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
+import { format, isValid } from 'date-fns'
+import { Button } from '@/components/common/Button'
+import { Input } from '@/components/common/Input'
+import { useSettingsStore } from '@/store/settingsStore'
+import { parseNaturalLanguage, type NLPParseResult } from '../index'
+import styles from './QuickAdd.module.css'
 
 export interface QuickAddProps {
-  onAdd: (result: NLPParseResult) => void;
-  onCancel?: () => void;
+  onAdd: (result: NLPParseResult) => void
+  onCancel?: () => void
 }
 
 export function QuickAdd({ onAdd, onCancel }: QuickAddProps): JSX.Element {
-  const [input, setInput] = useState('');
-  const [preview, setPreview] = useState<NLPParseResult | null>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [input, setInput] = useState('')
+  const [preview, setPreview] = useState<NLPParseResult | null>(null)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const timeFormat = useSettingsStore((state) => state.timeFormat)
 
   const parseInput = useCallback((text: string) => {
     if (!text.trim()) {
-      setPreview(null);
-      return;
+      setPreview(null)
+      return
     }
 
-    const result = parseNaturalLanguage(text);
-    setPreview(result);
-  }, []);
+    const result = parseNaturalLanguage(text)
+    setPreview(result)
+  }, [])
 
   useEffect(() => {
     if (debounceRef.current) {
-      clearTimeout(debounceRef.current);
+      clearTimeout(debounceRef.current)
     }
 
     debounceRef.current = setTimeout(() => {
-      parseInput(input);
-    }, 150);
+      parseInput(input)
+    }, 150)
 
     return () => {
       if (debounceRef.current) {
-        clearTimeout(debounceRef.current);
+        clearTimeout(debounceRef.current)
       }
-    };
-  }, [input, parseInput]);
-
-  const handleSubmit = useCallback((e: React.FormEvent) => {
-    e.preventDefault();
-    if (preview) {
-      onAdd(preview);
-      setInput('');
-      setPreview(null);
     }
-  }, [preview, onAdd]);
+  }, [input, parseInput])
+
+  const handleSubmit = useCallback(
+    (e: React.FormEvent) => {
+      e.preventDefault()
+      if (preview) {
+        onAdd(preview)
+        setInput('')
+        setPreview(null)
+      }
+    },
+    [preview, onAdd]
+  )
 
   const handleCancel = useCallback(() => {
-    setInput('');
-    setPreview(null);
-    onCancel?.();
-  }, [onCancel]);
+    setInput('')
+    setPreview(null)
+    onCancel?.()
+  }, [onCancel])
 
   const formatDate = (date: Date): string => {
-    if (!isValid(date)) return 'Invalid date';
-    return format(date, 'EEEE, MMMM d, yyyy');
-  };
+    if (!isValid(date)) return 'Invalid date'
+    return format(date, 'EEEE, MMMM d, yyyy')
+  }
 
   const formatTime = (date: Date): string => {
-    if (!isValid(date)) return '';
-    return format(date, 'h:mm a');
-  };
+    if (!isValid(date)) return ''
+    return format(date, timeFormat === '24h' ? 'HH:mm' : 'h:mm a')
+  }
 
   return (
     <form className={styles.container} onSubmit={handleSubmit}>
@@ -81,9 +86,7 @@ export function QuickAdd({ onAdd, onCancel }: QuickAddProps): JSX.Element {
 
       {preview && (
         <div className={styles.preview}>
-          <div className={styles.previewTitle}>
-            {preview.title}
-          </div>
+          <div className={styles.previewTitle}>{preview.title}</div>
           <div className={styles.previewDetails}>
             <div className={styles.previewRow}>
               <span className={styles.previewLabel}>Date:</span>
@@ -147,5 +150,5 @@ export function QuickAdd({ onAdd, onCancel }: QuickAddProps): JSX.Element {
         </Button>
       </div>
     </form>
-  );
+  )
 }

@@ -29,7 +29,7 @@ export function CalDAVSettings(): JSX.Element {
       let baseUrl = serverUrl
       if (serverUrl.includes('/calendars/')) {
         // Extract base URL from calendar URL
-        const match = serverUrl.match(/^https?:\/\/[^\/]+/)
+        const match = serverUrl.match(/^https?:\/\/[^/]+/)
         if (match) {
           baseUrl = match[0] + '/dav.php'
         }
