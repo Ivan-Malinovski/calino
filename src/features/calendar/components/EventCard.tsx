@@ -29,7 +29,9 @@ export function EventCard({
   const timeFormat = useSettingsStore((state) => state.timeFormat)
 
   const [isResizing, setIsResizing] = useState(false)
+  const [didInteract, setDidInteract] = useState(false)
   const resizeStartY = useRef<number | null>(null)
+  const pointerStartPos = useRef<{ x: number; y: number } | null>(null)
   const resizeStartEnd = useRef<Date | null>(null)
 
   const {
@@ -46,8 +48,17 @@ export function EventCard({
   const eventColor = event.color || calendar?.color || '#4285F4'
 
   const handleClick = (e: React.MouseEvent): void => {
-    if (isCurrentDragging || isResizing) {
+    let moved = false
+    if (pointerStartPos.current) {
+      const dx = e.clientX - pointerStartPos.current.x
+      const dy = e.clientY - pointerStartPos.current.y
+      moved = Math.abs(dx) > 5 || Math.abs(dy) > 5
+      pointerStartPos.current = null
+    }
+
+    if (isCurrentDragging || isResizing || didInteract || moved) {
       e.stopPropagation()
+      setDidInteract(false)
       return
     }
     if (onClick) {
@@ -62,6 +73,7 @@ export function EventCard({
     e.stopPropagation()
     e.preventDefault()
     setIsResizing(true)
+    setDidInteract(true)
     resizeStartY.current = e.clientY
     resizeStartEnd.current = parseISO(event.end)
 
@@ -116,7 +128,10 @@ export function EventCard({
       style={style}
       className={`${styles.card} ${compact ? styles.compact : ''} ${isCurrentDragging || isDragging ? styles.dragging : ''} ${isResizing ? styles.resizing : ''}`}
       onClick={handleClick}
-      onPointerDown={(e) => e.stopPropagation()}
+      onPointerDown={(e) => {
+        e.stopPropagation()
+        pointerStartPos.current = { x: e.clientX, y: e.clientY }
+      }}
       {...listeners}
       {...attributes}
     >

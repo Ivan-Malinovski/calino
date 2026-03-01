@@ -19,6 +19,10 @@
   padding: 2px 4px;
 }
 
+.compact .resizeHandle {
+  height: 12px;
+}
+
 .compact .title {
   font-size: 11px;
 }
