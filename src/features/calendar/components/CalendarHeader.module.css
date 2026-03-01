@@ -85,11 +85,16 @@
 }
 
 .createButton {
-  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+  height: 40px;
+  padding: 0 12px;
   border: none;
   background: #4285f4;
   border-radius: 4px;
-  font-size: 14px;
+  font-size: 18px;
   font-weight: 500;
   color: white;
   cursor: pointer;

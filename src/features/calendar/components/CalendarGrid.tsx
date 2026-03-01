@@ -46,7 +46,10 @@ export function CalendarGrid(): JSX.Element {
   const [scrollDirection, setScrollDirection] = useState<'up' | 'down' | null>(null)
   const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const scrollCooldownRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const currentDateRef = useRef(currentDate)
   const containerRef = useRef<HTMLDivElement>(null)
+
+  currentDateRef.current = currentDate
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -59,18 +62,18 @@ export function CalendarGrid(): JSX.Element {
   const changeMonth = useCallback(
     (direction: 'up' | 'down') => {
       if (direction === 'down') {
-        setCurrentDate(format(addMonths(parseISO(currentDate), 1), 'yyyy-MM-dd'))
+        setCurrentDate(format(addMonths(parseISO(currentDateRef.current), 1), 'yyyy-MM-dd'))
       } else if (direction === 'up') {
-        setCurrentDate(format(subMonths(parseISO(currentDate), 1), 'yyyy-MM-dd'))
+        setCurrentDate(format(subMonths(parseISO(currentDateRef.current), 1), 'yyyy-MM-dd'))
       }
     },
-    [currentDate, setCurrentDate]
+    [setCurrentDate]
   )
 
   const handleWheel = useCallback(
     (e: React.WheelEvent) => {
       if (scrollCooldownRef.current) return
-      if (Math.abs(e.deltaY) < 50) return
+      if (Math.abs(e.deltaY) < 20) return
 
       if (scrollTimeoutRef.current) {
         clearTimeout(scrollTimeoutRef.current)
