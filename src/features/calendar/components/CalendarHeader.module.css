@@ -20,6 +20,8 @@
   font-weight: 600;
   color: #202124;
   margin: 0;
+  min-width: 220px;
+  width: 220px;
 }
 
 .nav {

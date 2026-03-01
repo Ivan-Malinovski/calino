@@ -1,4 +1,5 @@
 import type { JSX } from 'react'
+import { useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useSearch } from './hooks/useSearch'
 import { SearchBar } from './components/SearchBar'
@@ -30,9 +31,23 @@ export function Search({ onSelectEvent }: SearchProps): JSX.Element {
   }
 
   const showResults = isSearchOpen || query.length > 0
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!isSearchOpen) return
+
+    const handleClickOutside = (event: MouseEvent): void => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        closeSearch()
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [isSearchOpen, closeSearch])
 
   return (
-    <div className={styles.searchContainer}>
+    <div className={styles.searchContainer} ref={containerRef}>
       <SearchBar
         value={query}
         onChange={handleSearch}

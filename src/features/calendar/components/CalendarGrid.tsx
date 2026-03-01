@@ -37,6 +37,8 @@ export function CalendarGrid(): JSX.Element {
   const getEventsForDateRange = useCalendarStore((state) => state.getEventsForDateRange)
   const openModal = useCalendarStore((state) => state.openModal)
   const updateEvent = useCalendarStore((state) => state.updateEvent)
+  const setCurrentDate = useCalendarStore((state) => state.setCurrentDate)
+  const setCurrentView = useCalendarStore((state) => state.setCurrentView)
   const firstDayOfWeek = useSettingsStore((state) => state.firstDayOfWeek)
 
   const [activeEvent, setActiveEvent] = useState<CalendarEvent | null>(null)
@@ -140,6 +142,11 @@ export function CalendarGrid(): JSX.Element {
     openModal(format(day, 'yyyy-MM-dd'))
   }
 
+  const handleWeekClick = (weekStart: Date): void => {
+    setCurrentDate(format(weekStart, 'yyyy-MM-dd'))
+    setCurrentView('week')
+  }
+
   const daysWithWeeks = useMemo(() => {
     const result: { day: Date; weekNum: number }[] = []
     let currentWeekStart = days[0]
@@ -173,7 +180,9 @@ export function CalendarGrid(): JSX.Element {
         <div className={styles.daysContainer}>
           {weekNumbers.map((weekNum, weekIdx) => (
             <div key={weekIdx} className={styles.weekRow}>
-              <div className={styles.weekNumber}>{weekNum}</div>
+              <div className={styles.weekNumber} onClick={() => handleWeekClick(weeks[weekIdx])}>
+                {weekNum}
+              </div>
               {daysWithWeeks
                 .filter((d) => d.weekNum === weekNum)
                 .map(({ day }) => {
