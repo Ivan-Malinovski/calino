@@ -44,8 +44,13 @@ export function parseICALEvent(iCalData: string, calendarId: string): CalendarEv
 
         if (existingIndex !== undefined) {
           const existing = events[existingIndex]
-          if (eventData.rruleString && !existing.rruleString) {
+          if (existing.rruleString) {
+            // Already have the master event, skip this instance
+          } else if (eventData.rruleString) {
+            // This is the master event, replace the instance
             events[existingIndex] = eventData
+          } else {
+            // Both are non-recurring instances, skip duplicate
           }
         } else {
           if (uid) {

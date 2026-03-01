@@ -165,23 +165,10 @@ export function useCalDAV(): UseCalDAVReturn {
 
         for (const cal of accountCalendars) {
           const fetchedEvents = await client.fetchEvents(cal.url, start, end)
-          console.log(
-            `Fetched ${fetchedEvents.length} events from calendar ${cal.name}`,
-            fetchedEvents.map((e) => ({ url: e.url, hasData: !!e.data }))
-          )
 
           for (const eventData of fetchedEvents) {
             if (eventData.data) {
               const parsedEvents = parseICALEvent(eventData.data, cal.id)
-              console.log(
-                `Parsed ${parsedEvents.length} events from ${eventData.url.substring(eventData.url.lastIndexOf('/') + 1)}`,
-                parsedEvents.map((e) => ({
-                  id: e.id,
-                  title: e.title,
-                  recurrence: e.recurrence,
-                  rruleString: e.rruleString,
-                }))
-              )
 
               for (const parsedEvent of parsedEvents) {
                 const existingIndex = existingEvents.findIndex((e) => e.id === parsedEvent.id)
