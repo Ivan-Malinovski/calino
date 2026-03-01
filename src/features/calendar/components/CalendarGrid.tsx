@@ -23,6 +23,7 @@ import {
   isToday,
   parseISO,
   getISOWeek,
+  getDay,
 } from 'date-fns'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
@@ -190,6 +191,8 @@ export function CalendarGrid(): JSX.Element {
                   const dayEvents = eventsMap.get(dateKey) || []
                   const isCurrentMonth = isSameMonth(day, date)
                   const isTodayDate = isToday(day)
+                  const dayOfWeek = getDay(day)
+                  const isWeekend = dayOfWeek === 0 || dayOfWeek === 6
 
                   return (
                     <DroppableDay
@@ -199,6 +202,7 @@ export function CalendarGrid(): JSX.Element {
                       dayEvents={dayEvents}
                       isCurrentMonth={isCurrentMonth}
                       isTodayDate={isTodayDate}
+                      isWeekend={isWeekend}
                       onDayClick={handleDayClick}
                     />
                   )
@@ -218,6 +222,7 @@ interface DroppableDayProps {
   dayEvents: CalendarEvent[]
   isCurrentMonth: boolean
   isTodayDate: boolean
+  isWeekend: boolean
   onDayClick: (day: Date) => void
 }
 
@@ -227,6 +232,7 @@ function DroppableDay({
   dayEvents,
   isCurrentMonth,
   isTodayDate,
+  isWeekend,
   onDayClick,
 }: DroppableDayProps): JSX.Element {
   const { setNodeRef, isOver } = useDroppable({ id: dateKey })
@@ -234,7 +240,7 @@ function DroppableDay({
   return (
     <div
       ref={setNodeRef}
-      className={`${styles.day} ${!isCurrentMonth ? styles.otherMonth : ''} ${isTodayDate ? styles.today : ''} ${isOver ? styles.dropTarget : ''}`}
+      className={`${styles.day} ${!isCurrentMonth ? styles.otherMonth : ''} ${isTodayDate ? styles.today : ''} ${isWeekend ? styles.weekend : ''} ${isOver ? styles.dropTarget : ''}`}
       onClick={() => onDayClick(day)}
     >
       <div className={styles.dayHeader}>

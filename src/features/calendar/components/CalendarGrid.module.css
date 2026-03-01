@@ -102,6 +102,10 @@
   background: #fafafa;
 }
 
+.weekend {
+  background: #fafbfc;
+}
+
 .otherMonth .dayNumber {
   color: #9e9e9e;
 }
