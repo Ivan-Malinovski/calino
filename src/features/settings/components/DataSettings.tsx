@@ -1,12 +1,17 @@
 import type { JSX } from 'react'
 import { useState, useRef } from 'react'
 import { useCalendarStore } from '@/store/calendarStore'
+import { parseICALEvent } from '@/features/caldav/adapter/iCalendarAdapter'
 import styles from './Settings.module.css'
 
 export function DataSettings(): JSX.Element {
   const [isExporting, setIsExporting] = useState(false)
   const [isImporting, setIsImporting] = useState(false)
   const [isClearing, setIsClearing] = useState(false)
+  const [importStatus, setImportStatus] = useState<{
+    type: 'success' | 'error'
+    message: string
+  } | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const events = useCalendarStore((state) => state.events)
@@ -87,20 +92,45 @@ export function DataSettings(): JSX.Element {
     setIsImporting(true)
     try {
       const text = await file.text()
-      const data = JSON.parse(text)
+      const fileName = file.name.toLowerCase()
 
-      if (data.events && Array.isArray(data.events)) {
-        for (const event of data.events) {
+      if (fileName.endsWith('.json')) {
+        const data = JSON.parse(text)
+
+        if (data.events && Array.isArray(data.events)) {
+          for (const event of data.events) {
+            useCalendarStore.getState().addEvent(event)
+          }
+          setImportStatus({
+            type: 'success',
+            message: `Imported ${data.events.length} events from JSON`,
+          })
+        } else {
+          setImportStatus({ type: 'error', message: 'No events found in JSON file' })
+        }
+      } else if (fileName.endsWith('.ics')) {
+        const defaultCalendar = calendars.find((c) => c.isDefault) ?? calendars[0]
+        const calendarId = defaultCalendar?.id ?? 'default'
+
+        const importedEvents = parseICALEvent(text, calendarId)
+
+        for (const event of importedEvents) {
           useCalendarStore.getState().addEvent(event)
         }
+        setImportStatus({
+          type: 'success',
+          message: `Imported ${importedEvents.length} events from ICS`,
+        })
       }
-    } catch {
-      console.error('Failed to import file')
+    } catch (error) {
+      console.error('Failed to import file:', error)
+      setImportStatus({ type: 'error', message: 'Failed to import file. Please check the format.' })
     } finally {
       setIsImporting(false)
       if (fileInputRef.current) {
         fileInputRef.current.value = ''
       }
+      setTimeout(() => setImportStatus(null), 3000)
     }
   }
 
@@ -150,19 +180,40 @@ export function DataSettings(): JSX.Element {
       <div className={styles.settingRow}>
         <div className={styles.settingLabel}>
           <span className={styles.settingLabelText}>Import Calendar</span>
-          <span className={styles.settingLabelHint}>Restore events from a JSON backup</span>
+          <span className={styles.settingLabelHint}>Restore events from a JSON or ICS file</span>
         </div>
-        <button
-          className={`${styles.button} ${styles.buttonSecondary}`}
-          onClick={handleImport}
-          disabled={isImporting}
-        >
-          {isImporting ? 'Importing...' : 'Import JSON'}
-        </button>
+        <div style={{ display: 'flex', gap: '8px', flexDirection: 'column' }}>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button
+              className={`${styles.button} ${styles.buttonSecondary}`}
+              onClick={handleImport}
+              disabled={isImporting}
+            >
+              {isImporting ? 'Importing...' : 'Import JSON'}
+            </button>
+            <button
+              className={`${styles.button} ${styles.buttonSecondary}`}
+              onClick={handleImport}
+              disabled={isImporting}
+            >
+              {isImporting ? 'Importing...' : 'Import ICS'}
+            </button>
+          </div>
+          {importStatus && (
+            <span
+              style={{
+                fontSize: '13px',
+                color: importStatus.type === 'success' ? '#1e8e3e' : '#d93025',
+              }}
+            >
+              {importStatus.message}
+            </span>
+          )}
+        </div>
         <input
           ref={fileInputRef}
           type="file"
-          accept=".json"
+          accept=".json,.ics"
           onChange={handleFileChange}
           style={{ display: 'none' }}
         />
