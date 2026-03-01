@@ -17,6 +17,26 @@ import { useCalendarStore } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
 import styles from './Sidebar.module.css'
 
+const CALENDAR_COLORS = [
+  '#4285F4',
+  '#EA4335',
+  '#34A853',
+  '#FBBC05',
+  '#FF6D01',
+  '#46BDC6',
+  '#7B1FA2',
+  '#C2185B',
+  '#00796B',
+  '#F57C00',
+  '#455A64',
+  '#5D4037',
+]
+
+function getNextColor(currentColor: string): string {
+  const idx = CALENDAR_COLORS.indexOf(currentColor)
+  return CALENDAR_COLORS[(idx + 1) % CALENDAR_COLORS.length]
+}
+
 export function Sidebar(): JSX.Element {
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -50,6 +70,11 @@ export function Sidebar(): JSX.Element {
       setEditingId(null)
       setEditName('')
     }
+  }
+
+  const handleColorClick = (calendarId: string, currentColor: string): void => {
+    const nextColor = getNextColor(currentColor)
+    updateCalendar(calendarId, { color: nextColor })
   }
 
   const date = parseISO(currentDate)
@@ -161,7 +186,12 @@ export function Sidebar(): JSX.Element {
               onChange={() => toggleCalendarVisibility(calendar.id)}
               className={styles.checkbox}
             />
-            <span className={styles.colorDot} style={{ backgroundColor: calendar.color }} />
+            <button
+              className={styles.colorDot}
+              style={{ backgroundColor: calendar.color }}
+              onClick={() => handleColorClick(calendar.id, calendar.color)}
+              title="Click to change color"
+            />
             {editingId === calendar.id ? (
               <input
                 ref={inputRef}

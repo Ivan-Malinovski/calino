@@ -117,9 +117,10 @@ export const useCalendarStore = create<CalendarStore>()(
         set({ selectedEventId: id })
       },
 
-      openModal: (date?: string, endDate?: string): void => {
+      openModal: (date?: string, endDate?: string, eventId?: string): void => {
         set({
           isModalOpen: true,
+          selectedEventId: eventId ?? null,
           selectedDate: date ?? null,
           selectedEndDate: endDate ?? null,
         })
@@ -147,9 +148,27 @@ export const useCalendarStore = create<CalendarStore>()(
             continue
           }
 
-          if (event.rruleString) {
+          const hasRecurrence = event.rruleString || event.recurrence
+
+          if (hasRecurrence) {
+            let rruleString = event.rruleString
+
+            if (!rruleString && event.recurrence) {
+              const freqMap: Record<string, string> = {
+                daily: 'DAILY',
+                weekly: 'WEEKLY',
+                monthly: 'MONTHLY',
+                yearly: 'YEARLY',
+              }
+              const freq = freqMap[event.recurrence.frequency] || 'WEEKLY'
+              rruleString = `FREQ=${freq};INTERVAL=${event.recurrence.interval || 1}`
+            }
+
             try {
-              const options = RRule.parseString(event.rruleString)
+              if (!rruleString) {
+                throw new Error('No rrule string')
+              }
+              const options = RRule.parseString(rruleString)
               const eventStart = parseISO(event.start)
 
               const rule = new RRule({

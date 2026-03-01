@@ -1,5 +1,5 @@
 import type { JSX } from 'react'
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef } from 'react'
 import { format, parseISO, addHours } from 'date-fns'
 import { v4 as uuidv4 } from 'uuid'
 import { useCalendarStore } from '@/store/calendarStore'
@@ -189,12 +189,27 @@ export function EventModal(): JSX.Element | null {
   const [endDate, setEndDate] = useState(initialState.endDate)
   const [endTime, setEndTime] = useState(initialState.endTime)
   const [isAllDay, setIsAllDay] = useState(initialState.isAllDay)
-  const [calendarId] = useState(initialState.calendarId)
+  const [calendarId, setCalendarId] = useState(initialState.calendarId)
   const [recurrence, setRecurrence] = useState<RecurrenceRule['frequency'] | 'none'>(
     initialState.recurrence
   )
   const [showRecurrenceDialog, setShowRecurrenceDialog] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+
+  const lastSelectedEventId = useRef<string | null>(null)
+  if (selectedEventId !== lastSelectedEventId.current) {
+    lastSelectedEventId.current = selectedEventId
+    setTitle(initialState.title)
+    setDescription(initialState.description)
+    setLocation(initialState.location)
+    setStartDate(initialState.startDate)
+    setStartTime(initialState.startTime)
+    setEndDate(initialState.endDate)
+    setEndTime(initialState.endTime)
+    setIsAllDay(initialState.isAllDay)
+    setCalendarId(initialState.calendarId)
+    setRecurrence(initialState.recurrence)
+  }
 
   const isEditing = selectedEventId !== null
   const isRecurringEvent = initialState.recurrence !== 'none'
@@ -394,8 +409,11 @@ export function EventModal(): JSX.Element | null {
           </div>
 
           <div className={styles.field}>
-            <label className={styles.label}>Repeat</label>
+            <label className={styles.label} htmlFor="recurrence-select">
+              Repeat
+            </label>
             <select
+              id="recurrence-select"
               value={recurrence}
               onChange={(e) =>
                 setRecurrence(e.target.value as RecurrenceRule['frequency'] | 'none')
@@ -405,6 +423,24 @@ export function EventModal(): JSX.Element | null {
               {RECURRENCE_OPTIONS.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className={styles.field}>
+            <label className={styles.label} htmlFor="calendar-select">
+              Calendar
+            </label>
+            <select
+              id="calendar-select"
+              value={calendarId}
+              onChange={(e) => setCalendarId(e.target.value)}
+              className={styles.select}
+            >
+              {calendars.map((cal) => (
+                <option key={cal.id} value={cal.id}>
+                  {cal.name}
                 </option>
               ))}
             </select>

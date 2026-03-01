@@ -86,8 +86,7 @@ export function CalendarHeader({ onQuickAdd }: CalendarHeaderProps): JSX.Element
       <div className={styles.right}>
         <Search
           onSelectEvent={(eventId) => {
-            useCalendarStore.getState().setSelectedEventId(eventId)
-            openModal()
+            openModal(undefined, undefined, eventId)
           }}
         />
         <ViewSwitcher />

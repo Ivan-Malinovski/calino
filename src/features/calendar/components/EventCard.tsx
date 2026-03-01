@@ -24,7 +24,6 @@ export function EventCard({
   enableResize = true,
 }: EventCardProps): JSX.Element {
   const calendars = useCalendarStore((state) => state.calendars)
-  const setSelectedEventId = useCalendarStore((state) => state.setSelectedEventId)
   const openModal = useCalendarStore((state) => state.openModal)
   const updateEvent = useCalendarStore((state) => state.updateEvent)
   const deleteEvent = useCalendarStore((state) => state.deleteEvent)
@@ -66,11 +65,11 @@ export function EventCard({
       setDidInteract(false)
       return
     }
+    e.stopPropagation()
     if (onClick) {
       onClick(event)
     } else {
-      setSelectedEventId(event.id)
-      openModal()
+      openModal(undefined, undefined, event.id)
     }
   }
 

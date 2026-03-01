@@ -56,7 +56,7 @@ describe('Sidebar', () => {
 
   it('shows color dot for each calendar', () => {
     render(<Sidebar />)
-    const colorDots = document.querySelectorAll('span[class*="colorDot"]')
+    const colorDots = document.querySelectorAll('button[class*="colorDot"]')
     expect(colorDots.length).toBeGreaterThan(0)
   })
 

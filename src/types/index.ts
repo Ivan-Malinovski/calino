@@ -65,7 +65,7 @@ export interface CalendarActions {
   setCurrentDate: (date: string) => void
   setCurrentView: (view: ViewType) => void
   setSelectedEventId: (id: string | null) => void
-  openModal: (date?: string, endDate?: string) => void
+  openModal: (date?: string, endDate?: string, eventId?: string) => void
   closeModal: () => void
   getEventsForDateRange: (start: string, end: string) => CalendarEvent[]
   getVisibleEvents: () => CalendarEvent[]

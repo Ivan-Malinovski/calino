@@ -41,8 +41,7 @@ describe('EventModal', () => {
       end: '2024-03-15T11:00:00',
       isAllDay: false,
     })
-    store.setSelectedEventId('edit-test')
-    store.openModal()
+    store.openModal(undefined, undefined, 'edit-test')
 
     render(<EventModal />)
     expect(screen.getByRole('heading', { name: /edit event/i })).toBeInTheDocument()
@@ -58,8 +57,7 @@ describe('EventModal', () => {
       end: '2024-03-15T11:00:00',
       isAllDay: false,
     })
-    store.setSelectedEventId('edit-test')
-    store.openModal()
+    store.openModal(undefined, undefined, 'edit-test')
 
     render(<EventModal />)
     expect(screen.getByRole('button', { name: /delete/i })).toBeInTheDocument()
@@ -86,7 +84,7 @@ describe('EventModal', () => {
     store.openModal()
 
     render(<EventModal />)
-    expect(screen.getByRole('combobox')).toBeInTheDocument()
+    expect(screen.getByLabelText('Repeat')).toBeInTheDocument()
   })
 
   it('renders title input', () => {
@@ -134,8 +132,7 @@ describe('EventModal', () => {
       isAllDay: false,
       recurrence: { frequency: 'weekly', interval: 1 },
     })
-    store.setSelectedEventId('recurring-event-2024-03-08T10:00:00.000Z')
-    store.openModal()
+    store.openModal(undefined, undefined, 'recurring-event-2024-03-08T10:00:00.000Z')
 
     render(<EventModal />)
 
