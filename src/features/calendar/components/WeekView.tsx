@@ -110,7 +110,7 @@ export function WeekView(): JSX.Element {
   useEffect(() => {
     if (!bodyRef.current) return
 
-    const timer = setTimeout(() => {
+    const rafId = requestAnimationFrame(() => {
       if (!bodyRef.current) return
 
       const sortedAllEvents: CalendarEvent[] = []
@@ -128,9 +128,9 @@ export function WeekView(): JSX.Element {
       const scrollTop = (hours * 60 + minutes) * (HOUR_HEIGHT / 60) - 100
 
       bodyRef.current.scrollTo({ top: Math.max(0, scrollTop), behavior: 'smooth' })
-    }, 100)
+    })
 
-    return () => clearTimeout(timer)
+    return () => cancelAnimationFrame(rafId)
   }, [eventsMap])
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>): void => {

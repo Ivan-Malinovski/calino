@@ -58,8 +58,9 @@ export function DayView(): JSX.Element {
   useEffect(() => {
     if (dayEvents.length === 0 || !bodyRef.current) return
 
-    const timer = setTimeout(() => {
-      if (!bodyRef.current) return
+    const rafId = requestAnimationFrame(() => {
+      if (!bodyRef.current || dayEvents.length === 0) return
+
       const sortedEvents = [...dayEvents].sort(
         (a, b) => parseISO(a.start).getTime() - parseISO(b.start).getTime()
       )
@@ -70,9 +71,9 @@ export function DayView(): JSX.Element {
       const scrollTop = (hours * 60 + minutes) * (HOUR_HEIGHT / 60) - 100
 
       bodyRef.current.scrollTo({ top: Math.max(0, scrollTop), behavior: 'smooth' })
-    }, 100)
+    })
 
-    return () => clearTimeout(timer)
+    return () => cancelAnimationFrame(rafId)
   }, [dayEvents])
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>): void => {
