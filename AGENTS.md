@@ -54,21 +54,21 @@ Organize imports in this order (separate with blank lines):
 
 ```typescript
 // 1. React
-import { useState, useCallback } from 'react';
+import { useState, useCallback } from 'react'
 
 // 2. External
-import { format, addDays } from 'date-fns';
-import { Chrono } from 'chrono-node';
+import { format, addDays } from 'date-fns'
+import { Chrono } from 'chrono-node'
 
 // 3. Internal
-import { CalendarGrid } from '@/components/CalendarGrid';
-import { useCalendarSync } from '@/hooks/useCalendarSync';
+import { CalendarGrid } from '@/components/CalendarGrid'
+import { useCalendarSync } from '@/hooks/useCalendarSync'
 
 // 4. Types
-import type { CalendarEvent, CalDAVAccount } from '@/types';
+import type { CalendarEvent, CalDAVAccount } from '@/types'
 
 // 5. Styles
-import styles from './EventModal.module.css';
+import styles from './EventModal.module.css'
 ```
 
 ### Formatting (Prettier)
@@ -89,25 +89,25 @@ import styles from './EventModal.module.css';
 ```typescript
 // Good
 function getEventById(id: string): CalendarEvent | undefined {
-  return events.find(e => e.id === id);
+  return events.find((e) => e.id === id)
 }
 
 // Bad
 function getEventById(id) {
-  return events.find(e => e.id === id);
+  return events.find((e) => e.id === id)
 }
 ```
 
 ### Naming Conventions
 
-| Type | Convention | Example |
-|------|------------|---------|
-| Variables/functions | camelCase | `getEvents()`, `isLoading` |
-| Components | PascalCase | `CalendarGrid`, `EventModal` |
-| Constants | SCREAMING_SNAKE_CASE | `MAX_EVENT_TITLE_LENGTH` |
-| File names (components) | PascalCase | `EventModal.tsx` |
-| File names (utilities) | camelCase | `dateUtils.ts` |
-| Hooks | camelCase with `use` prefix | `useCalendarSync.ts` |
+| Type                    | Convention                  | Example                      |
+| ----------------------- | --------------------------- | ---------------------------- |
+| Variables/functions     | camelCase                   | `getEvents()`, `isLoading`   |
+| Components              | PascalCase                  | `CalendarGrid`, `EventModal` |
+| Constants               | SCREAMING_SNAKE_CASE        | `MAX_EVENT_TITLE_LENGTH`     |
+| File names (components) | PascalCase                  | `EventModal.tsx`             |
+| File names (utilities)  | camelCase                   | `dateUtils.ts`               |
+| Hooks                   | camelCase with `use` prefix | `useCalendarSync.ts`         |
 
 ### Component Guidelines
 
@@ -154,17 +154,17 @@ export class CalendarSyncError extends Error {
     public readonly code: string,
     public readonly recoverable: boolean = false
   ) {
-    super(message);
-    this.name = 'CalendarSyncError';
+    super(message)
+    this.name = 'CalendarSyncError'
   }
 }
 
 // Usage
 try {
-  await syncCalendar(account);
+  await syncCalendar(account)
 } catch (error) {
   if (error instanceof CalendarSyncError) {
-    showToast(error.recoverable ? 'Sync failed. Retrying...' : 'Sync failed');
+    showToast(error.recoverable ? 'Sync failed. Retrying...' : 'Sync failed')
   }
 }
 ```
@@ -233,6 +233,7 @@ src/
 ## Future Considerations
 
 ### PWA/Mobile Ready
+
 - Use responsive design from the start (mobile-first CSS)
 - Use semantic HTML for accessibility
 - Consider PWA features: service worker, manifest.json, offline-first data
@@ -240,16 +241,19 @@ src/
 - Test on mobile/tablet sizes during development
 
 ### Multi-User Support
+
 - Design for account isolation from the start
 - Store user preferences separately from calendar data
 - Consider shared calendars/collaboration later
 
 ### Search Feature
+
 - Plan for full-text search on event titles, descriptions, locations
 - Consider indexing with Fuse.js for client-side search
 - Server-side search via CalDAV if available
 
 ### Modern UX Features
+
 - Drag-and-drop event rescheduling in week/day views
 - Keyboard shortcuts for power users
 - Toast notifications for sync status
@@ -262,12 +266,14 @@ src/
 **Smooth user experience and polished animations are of utmost importance.**
 
 ### Principles
+
 - **Instant feedback**: Optimistic UI updates (update UI immediately, sync in background)
 - **Smooth transitions**: Use CSS transitions or Framer Motion for all state changes
 - **Loading states**: Never show raw loading spinners - use skeleton screens or subtle animations
 - **Micro-interactions**: Animate button presses, hover states, modal opens/closes
 
 ### Implementation Guidelines
+
 - Use CSS transitions for simple animations (200-300ms)
 - Use `framer-motion` for complex animations (drag-drop, layout changes)
 - Animate: modal open/close, day/week/month view switches, event creation, toast notifications
@@ -292,6 +298,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 ```
 
 ### Performance
+
 - Keep animations at 60fps
 - Use `transform` and `opacity` for GPU-accelerated animations
 - Avoid animating `width`, `height`, `top`, `left` (trigger layout recalculations)
@@ -302,6 +309,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 ## State Management Guidelines
 
 ### Recommended: Zustand
+
 - Use Zustand for global state (calendars, events, accounts)
 - Simple API with hooks: `useCalendarStore()`
 - Supports persistence middleware for local storage
@@ -309,15 +317,15 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 ```typescript
 // Example store
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
 
 interface CalendarState {
-  events: CalendarEvent[];
-  calendars: Calendar[];
-  addEvent: (event: CalendarEvent) => void;
-  updateEvent: (id: string, updates: Partial<CalendarEvent>) => void;
-  deleteEvent: (id: string) => void;
+  events: CalendarEvent[]
+  calendars: Calendar[]
+  addEvent: (event: CalendarEvent) => void
+  updateEvent: (id: string, updates: Partial<CalendarEvent>) => void
+  deleteEvent: (id: string) => void
 }
 
 export const useCalendarStore = create<CalendarState>()(
@@ -326,19 +334,22 @@ export const useCalendarStore = create<CalendarState>()(
       events: [],
       calendars: [],
       addEvent: (event) => set((state) => ({ events: [...state.events, event] })),
-      updateEvent: (id, updates) => set((state) => ({
-        events: state.events.map(e => e.id === id ? { ...e, ...updates } : e)
-      })),
-      deleteEvent: (id) => set((state) => ({
-        events: state.events.filter(e => e.id !== id)
-      })),
+      updateEvent: (id, updates) =>
+        set((state) => ({
+          events: state.events.map((e) => (e.id === id ? { ...e, ...updates } : e)),
+        })),
+      deleteEvent: (id) =>
+        set((state) => ({
+          events: state.events.filter((e) => e.id !== id),
+        })),
     }),
     { name: 'goodcal-storage' }
   )
-);
+)
 ```
 
 ### Alternative: React Context
+
 - Use for small-scale state (theme, user preferences)
 - Use for provider composition (CalendarProvider, SyncProvider)
 
@@ -347,11 +358,13 @@ export const useCalendarStore = create<CalendarState>()(
 ## Date/Time Handling Guidelines
 
 ### Storage Format
+
 - **Always store dates in UTC** in the database
 - Convert to local time only for display
 - Use `date-fns` for all date operations
 
 ### Key Rules
+
 - Never use JavaScript `Date` object directly for storage
 - Use ISO 8601 strings for serialization
 - Use `date-fns` functions: `toISOString()`, `parseISO()`, `format()`, `parse()`
@@ -359,14 +372,15 @@ export const useCalendarStore = create<CalendarState>()(
 
 ```typescript
 // Good
-const eventStart = parseISO('2024-03-15T14:00:00Z'); // UTC
-const displayTime = format(eventStart, 'h:mm a'); // Local time
+const eventStart = parseISO('2024-03-15T14:00:00Z') // UTC
+const displayTime = format(eventStart, 'h:mm a') // Local time
 
 // Bad
-const eventStart = new Date('2024-03-15T14:00:00');
+const eventStart = new Date('2024-03-15T14:00:00')
 ```
 
 ### Time Zones (Future)
+
 - For MVP, assume single timezone (user's local)
 - Future: Store events with IANA timezone (e.g., "America/New_York")
 - Future: Use `date-fns-tz` for timezone conversions
@@ -376,46 +390,49 @@ const eventStart = new Date('2024-03-15T14:00:00');
 ## Local Data Persistence
 
 ### Recommended: Dexie.js (IndexedDB)
+
 - Use Dexie.js for local event/calendar storage
 - IndexedDB is more capable than localStorage (larger capacity, async)
 - Dexie provides a clean Promise-based API
 
 ```typescript
 // Example Dexie store
-import Dexie, { Table } from 'dexie';
+import Dexie, { Table } from 'dexie'
 
 interface StoredEvent {
-  id: string;
-  calendarId: string;
-  title: string;
-  start: string; // ISO 8601
-  end: string;
+  id: string
+  calendarId: string
+  title: string
+  start: string // ISO 8601
+  end: string
   // ... other fields
 }
 
 class GoodCalDB extends Dexie {
-  events!: Table<StoredEvent>;
-  calendars!: Table<Calendar>;
+  events!: Table<StoredEvent>
+  calendars!: Table<Calendar>
 
   constructor() {
-    super('GoodCalDB');
+    super('GoodCalDB')
     this.version(1).stores({
       events: 'id, calendarId, start, end',
-      calendars: 'id, name'
-    });
+      calendars: 'id, name',
+    })
   }
 }
 
-export const db = new GoodCalDB();
+export const db = new GoodCalDB()
 ```
 
 ### Sync Strategy
+
 1. Load events from IndexedDB on app start
 2. Merge with CalDAV data after sync
 3. Write to IndexedDB on every change (optimistic UI)
 4. Queue CalDAV changes for sync
 
 ### Data Flow
+
 ```
 CalDAV Server <--> Sync Engine <--> Zustand Store <--> UI
                               |
@@ -427,16 +444,19 @@ CalDAV Server <--> Sync Engine <--> Zustand Store <--> UI
 ## Error Handling in Data Layer
 
 ### IndexedDB Errors
+
 - Handle quota exceeded errors gracefully
 - Implement cleanup strategy for old events
 - Show user-friendly message when storage is full
 
 ### Sync Errors
+
 - Network failures: Queue changes for retry
 - Conflict errors: Implement resolution strategy (server wins, local wins, merge)
 - Auth errors: Prompt re-authentication
 
 ### Error Recovery
+
 - Always keep local backup before overwriting
 - Implement undo functionality operations
 - Log errors for debugging ( for destructivenot to user)
@@ -444,27 +464,27 @@ CalDAV Server <--> Sync Engine <--> Zustand Store <--> UI
 ```typescript
 // Example: Handling sync errors
 interface SyncError {
-  code: 'NETWORK_ERROR' | 'AUTH_ERROR' | 'CONFLICT' | 'QUOTA_EXCEEDED';
-  message: string;
-  recoverable: boolean;
-  retryAt?: Date;
+  code: 'NETWORK_ERROR' | 'AUTH_ERROR' | 'CONFLICT' | 'QUOTA_EXCEEDED'
+  message: string
+  recoverable: boolean
+  retryAt?: Date
 }
 
 async function handleSyncError(error: SyncError): Promise<void> {
   switch (error.code) {
     case 'NETWORK_ERROR':
-      queueForRetry(error.retryAt);
-      showToast('Changes saved locally. Will sync when online.');
-      break;
+      queueForRetry(error.retryAt)
+      showToast('Changes saved locally. Will sync when online.')
+      break
     case 'AUTH_ERROR':
-      promptReauth();
-      break;
+      promptReauth()
+      break
     case 'CONFLICT':
-      await resolveConflict();
-      break;
+      await resolveConflict()
+      break
     case 'QUOTA_EXCEEDED':
-      showToast('Storage full. Please delete old events.');
-      break;
+      showToast('Storage full. Please delete old events.')
+      break
   }
 }
 ```
@@ -481,7 +501,47 @@ See the `PLANS/` directory for detailed implementation plans on major features:
 - `PLANS/06-local-storage.md` - Local IndexedDB persistence
 
 Each plan contains:
+
 - Feature requirements
 - Technical approach
 - Implementation steps
 - Testing strategy
+
+---
+
+## Settings Feature
+
+The app includes a comprehensive settings system located at `/settings`.
+
+### Store
+
+- Settings are stored in `src/store/settingsStore.ts` using Zustand with persist middleware
+- Persisted to localStorage under `goodcal-settings` key
+- Uses `date-fns-tz` for timezone handling
+
+### Types
+
+- Settings types defined in `src/types/index.ts` (`UserSettings`, `SettingsStore`)
+- Includes: timezone, dateFormat, timeFormat, firstDayOfWeek, defaultDuration, defaultView, showWeekNumbers, eventDensity, defaultReminderMinutes, defaultEventColor, enableDesktopNotifications, enableSoundAlerts, syncEnabled, syncIntervalMinutes, conflictResolution
+
+### Components
+
+- Settings page: `src/features/settings/components/SettingsPage.tsx`
+- Individual setting panels in `src/features/settings/components/`
+- Access via header gear icon → navigates to `/settings`
+
+### Key Options
+
+- **Timezones**: Major IANA timezones (America, Europe, Asia, Australia, Pacific)
+- **Date formats**: MM/DD/YYYY, DD/MM/YYYY, YYYY-MM-DD
+- **Time formats**: 12-hour, 24-hour
+- **Event colors**: 10 preset colors matching Google Calendar
+- **CalDAV**: Account management with connection testing, sync intervals, conflict resolution
+
+### Usage in Components
+
+```typescript
+import { useSettingsStore } from '@/store/settingsStore'
+
+const { timezone, timeFormat, defaultEventColor } = useSettingsStore()
+```
