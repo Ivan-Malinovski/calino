@@ -1,5 +1,5 @@
 import type { JSX } from 'react'
-import { useMemo, useState, useCallback } from 'react'
+import { useMemo, useState, useCallback, useRef, useEffect } from 'react'
 import {
   DndContext,
   DragOverlay,
@@ -103,6 +103,28 @@ export function WeekView(): JSX.Element {
     })
     return map
   }, [date, firstDayOfWeek, getEventsForDateRange, events])
+
+  const bodyRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!bodyRef.current) return
+
+    const sortedAllEvents: CalendarEvent[] = []
+    eventsMap.forEach((dayEvents) => {
+      sortedAllEvents.push(...dayEvents)
+    })
+
+    if (sortedAllEvents.length === 0) return
+
+    sortedAllEvents.sort((a, b) => parseISO(a.start).getTime() - parseISO(b.start).getTime())
+    const firstEvent = sortedAllEvents[0]
+    const eventStart = parseISO(firstEvent.start)
+    const hours = eventStart.getHours()
+    const minutes = eventStart.getMinutes()
+    const scrollTop = (hours * 60 + minutes) * (HOUR_HEIGHT / 60) - 100
+
+    bodyRef.current.scrollTo({ top: Math.max(0, scrollTop), behavior: 'smooth' })
+  }, [eventsMap])
 
   const handleCellClick = (day: Date, hour: Date): void => {
     const hourStr = format(hour, 'HH:mm')
@@ -349,6 +371,7 @@ export function WeekView(): JSX.Element {
           ))}
         </div>
         <div
+          ref={bodyRef}
           className={styles.body}
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}

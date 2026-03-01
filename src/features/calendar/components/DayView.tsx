@@ -1,5 +1,5 @@
 import type { JSX } from 'react'
-import { useMemo, useState, useCallback } from 'react'
+import { useMemo, useState, useCallback, useRef, useEffect } from 'react'
 import {
   DndContext,
   DragOverlay,
@@ -37,6 +37,7 @@ export function DayView(): JSX.Element {
   const [isDraggingToCreate, setIsDraggingToCreate] = useState(false)
   const [dragStart, setDragStart] = useState<string | null>(null)
   const [dragEnd, setDragEnd] = useState<string | null>(null)
+  const bodyRef = useRef<HTMLDivElement>(null)
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -51,6 +52,21 @@ export function DayView(): JSX.Element {
   const dayEvents = useMemo(() => {
     return getEventsForDateRange(format(date, 'yyyy-MM-dd'), format(date, 'yyyy-MM-dd'))
   }, [date, getEventsForDateRange, events])
+
+  useEffect(() => {
+    if (dayEvents.length === 0 || !bodyRef.current) return
+
+    const sortedEvents = [...dayEvents].sort(
+      (a, b) => parseISO(a.start).getTime() - parseISO(b.start).getTime()
+    )
+    const firstEvent = sortedEvents[0]
+    const eventStart = parseISO(firstEvent.start)
+    const hours = eventStart.getHours()
+    const minutes = eventStart.getMinutes()
+    const scrollTop = (hours * 60 + minutes) * (HOUR_HEIGHT / 60) - 100
+
+    bodyRef.current.scrollTo({ top: Math.max(0, scrollTop), behavior: 'smooth' })
+  }, [dayEvents])
 
   const handleCellClick = (hour: Date): void => {
     const hourStr = format(hour, 'HH:mm')
@@ -279,6 +295,7 @@ export function DayView(): JSX.Element {
           </div>
         </div>
         <div
+          ref={bodyRef}
           className={styles.body}
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
