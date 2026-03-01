@@ -53,13 +53,14 @@ export function DayView(): JSX.Element {
   }, [date, getEventsForDateRange, events])
 
   const [isScrolled, setIsScrolled] = useState(false)
-  const isMounted = useRef(false)
+  const lastDateRef = useRef(date.toISOString())
 
   useLayoutEffect(() => {
     if (dayEvents.length === 0 || !bodyRef.current) return
 
-    if (isMounted.current) return
-    isMounted.current = true
+    const currentDateStr = date.toISOString()
+    if (lastDateRef.current === currentDateStr && isScrolled) return
+    lastDateRef.current = currentDateStr
 
     const rafId = requestAnimationFrame(() => {
       if (!bodyRef.current || dayEvents.length === 0) return
@@ -77,7 +78,7 @@ export function DayView(): JSX.Element {
     })
 
     return () => cancelAnimationFrame(rafId)
-  }, [dayEvents])
+  }, [dayEvents, date, isScrolled])
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>): void => {
     setIsScrolled(e.currentTarget.scrollTop > 0)

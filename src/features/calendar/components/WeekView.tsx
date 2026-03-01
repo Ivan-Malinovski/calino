@@ -105,13 +105,14 @@ export function WeekView(): JSX.Element {
 
   const bodyRef = useRef<HTMLDivElement>(null)
   const [isScrolled, setIsScrolled] = useState(false)
-  const isMounted = useRef(false)
+  const lastDateRef = useRef(date.toISOString())
 
   useLayoutEffect(() => {
     if (!bodyRef.current) return
 
-    if (isMounted.current) return
-    isMounted.current = true
+    const currentDateStr = date.toISOString()
+    if (lastDateRef.current === currentDateStr && isScrolled) return
+    lastDateRef.current = currentDateStr
 
     const rafId = requestAnimationFrame(() => {
       if (!bodyRef.current) return
@@ -134,7 +135,7 @@ export function WeekView(): JSX.Element {
     })
 
     return () => cancelAnimationFrame(rafId)
-  }, [eventsMap])
+  }, [eventsMap, date, isScrolled])
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>): void => {
     setIsScrolled(e.currentTarget.scrollTop > 0)
