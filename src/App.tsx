@@ -3,6 +3,7 @@ import { useCallback, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom'
 import { v4 as uuidv4 } from 'uuid'
 import { useCalendarStore } from './store/calendarStore'
+import { useSettingsStore } from './store/settingsStore'
 import {
   CalendarHeader,
   CalendarGrid,
@@ -31,14 +32,15 @@ function useViewManager(): void {
   const location = useLocation()
   const currentView = useCalendarStore((state) => state.currentView)
   const setCurrentView = useCalendarStore((state) => state.setCurrentView)
+  const defaultView = useSettingsStore((state) => state.defaultView)
 
   useEffect(() => {
-    const path = location.pathname
-    const view = (path.slice(1) as ViewType) || 'month'
+    const path = location.pathname === '/' ? '' : location.pathname.slice(1)
+    const view = (path as ViewType) || defaultView
     if (VIEW_ORDER.includes(view) && view !== currentView) {
       setCurrentView(view)
     }
-  }, [location.pathname])
+  }, [location.pathname, defaultView])
 
   useEffect(() => {
     const targetPath = VIEW_ROUTES[currentView]

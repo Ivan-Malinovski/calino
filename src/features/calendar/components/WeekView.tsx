@@ -66,7 +66,6 @@ export function WeekView(): JSX.Element {
   const timeFormat = useSettingsStore((state) => state.timeFormat)
 
   const [activeEvent, setActiveEvent] = useState<CalendarEvent | null>(null)
-  const [renderKey, setRenderKey] = useState(0)
   const [isDraggingToCreate, setIsDraggingToCreate] = useState(false)
   const [dragStart, setDragStart] = useState<string | null>(null)
   const [dragEnd, setDragEnd] = useState<string | null>(null)
@@ -356,9 +355,6 @@ export function WeekView(): JSX.Element {
       start: newStart.toISOString(),
       end: newEnd.toISOString(),
     })
-
-    // Force re-render to ensure visual update
-    setRenderKey((k) => k + 1)
   }
 
   const weekNumber = useMemo(() => {
@@ -368,7 +364,7 @@ export function WeekView(): JSX.Element {
 
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-      <div className={styles.container} key={renderKey}>
+      <div className={styles.container}>
         <div className={`${styles.header} ${isScrolled ? styles.headerShadow : ''}`}>
           <div className={styles.weekNumberHeader}>W{weekNumber}</div>
           {weekDays.map((day) => (
