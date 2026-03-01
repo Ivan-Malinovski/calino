@@ -69,3 +69,8 @@
 .cell:hover {
   background: #f8f9fa;
 }
+
+.cell.dropTarget {
+  background: #e8f0fe;
+  border: 2px dashed #4285f4;
+}

@@ -23,9 +23,11 @@ export function EventCard({
   const calendars = useCalendarStore((state) => state.calendars)
   const setSelectedEventId = useCalendarStore((state) => state.setSelectedEventId)
   const openModal = useCalendarStore((state) => state.openModal)
+  const updateEvent = useCalendarStore((state) => state.updateEvent)
 
-  const [didDrag, setDidDrag] = useState(false)
-  const startPos = useRef<{ x: number; y: number } | null>(null)
+  const [isResizing, setIsResizing] = useState(false)
+  const resizeStartY = useRef<number | null>(null)
+  const resizeStartEnd = useRef<Date | null>(null)
 
   const {
     attributes,
@@ -40,12 +42,11 @@ export function EventCard({
   const calendar = calendars.find((c) => c.id === event.calendarId)
   const eventColor = event.color || calendar?.color || '#4285F4'
 
-  const handleClick = (): void => {
-    if (didDrag) {
-      setDidDrag(false)
+  const handleClick = (e: React.MouseEvent): void => {
+    if (isCurrentDragging || isResizing) {
+      e.stopPropagation()
       return
     }
-
     if (onClick) {
       onClick(event)
     } else {
@@ -54,26 +55,35 @@ export function EventCard({
     }
   }
 
-  const handlePointerDown = (e: React.PointerEvent): void => {
-    startPos.current = { x: e.clientX, y: e.clientY }
-    setDidDrag(false)
-  }
+  const handleResizeStart = (e: React.PointerEvent): void => {
+    e.stopPropagation()
+    e.preventDefault()
+    setIsResizing(true)
+    resizeStartY.current = e.clientY
+    resizeStartEnd.current = parseISO(event.end)
 
-  const handlePointerMove = (e: React.PointerEvent): void => {
-    if (startPos.current) {
-      const dx = Math.abs(e.clientX - startPos.current.x)
-      const dy = Math.abs(e.clientY - startPos.current.y)
-      if (dx > 5 || dy > 5) {
-        setDidDrag(true)
+    const handleResizeMove = (moveEvent: PointerEvent): void => {
+      if (resizeStartY.current === null || resizeStartEnd.current === null) return
+
+      const deltaY = moveEvent.clientY - resizeStartY.current
+      const deltaMinutes = Math.round((deltaY / 60) * 60)
+      const newEnd = new Date(resizeStartEnd.current.getTime() + deltaMinutes * 60 * 1000)
+
+      if (newEnd > parseISO(event.start)) {
+        updateEvent(event.id, { end: newEnd.toISOString() })
       }
     }
-  }
 
-  const handlePointerUp = (): void => {
-    setTimeout(() => {
-      setDidDrag(false)
-      startPos.current = null
-    }, 50)
+    const handleResizeEnd = (): void => {
+      setIsResizing(false)
+      resizeStartY.current = null
+      resizeStartEnd.current = null
+      document.removeEventListener('pointermove', handleResizeMove)
+      document.removeEventListener('pointerup', handleResizeEnd)
+    }
+
+    document.addEventListener('pointermove', handleResizeMove)
+    document.addEventListener('pointerup', handleResizeEnd)
   }
 
   const formatTime = (dateString: string): string => {
@@ -86,6 +96,7 @@ export function EventCard({
         borderLeftColor: eventColor,
         transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
         cursor: 'grabbing',
+        zIndex: 1000,
       }
     : {
         backgroundColor: `${eventColor}20`,
@@ -97,11 +108,9 @@ export function EventCard({
     <motion.div
       ref={setNodeRef}
       style={style}
-      className={`${styles.card} ${compact ? styles.compact : ''} ${isCurrentDragging || isDragging ? styles.dragging : ''}`}
+      className={`${styles.card} ${compact ? styles.compact : ''} ${isCurrentDragging || isDragging ? styles.dragging : ''} ${isResizing ? styles.resizing : ''}`}
       onClick={handleClick}
-      onPointerDown={handlePointerDown}
-      onPointerMove={handlePointerMove}
-      onPointerUp={handlePointerUp}
+      onPointerDown={(e) => e.stopPropagation()}
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: isCurrentDragging ? 0.5 : 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.9 }}
@@ -118,6 +127,7 @@ export function EventCard({
       )}
       {event.isAllDay && <div className={styles.time}>All day</div>}
       {event.location && <div className={styles.location}>{event.location}</div>}
+      {!compact && <div className={styles.resizeHandle} onPointerDown={handleResizeStart} />}
     </motion.div>
   )
 }

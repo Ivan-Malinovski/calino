@@ -6,6 +6,7 @@
   transition: all 0.15s ease;
   overflow: hidden;
   user-select: none;
+  position: relative;
 }
 
 .card:hover {
@@ -24,6 +25,26 @@
   opacity: 0.9;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   transform: scale(1.02);
+}
+
+.resizing {
+  resize: vertical;
+  overflow: hidden;
+}
+
+.resizeHandle {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 8px;
+  cursor: ns-resize;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.1));
+  border-radius: 0 0 4px 4px;
+}
+
+.resizeHandle:hover {
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.2));
 }
 
 .title {

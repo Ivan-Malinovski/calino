@@ -5,10 +5,24 @@
   background: white;
 }
 
-.weekdays {
+.header {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: 40px repeat(7, 1fr);
   border-bottom: 1px solid #e0e0e0;
+}
+
+.weekNumHeader {
+  padding: 12px 8px;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: #9ca3af;
+  background: #f8f9fa;
+  border-right: 1px solid #e0e0e0;
+}
+
+.weekdays {
+  display: contents;
 }
 
 .weekday {
@@ -20,19 +34,48 @@
   text-transform: uppercase;
 }
 
-.days {
+.daysContainer {
+  display: flex;
+  flex-direction: column;
+}
+
+.weekRow {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  flex: 1;
+  grid-template-columns: 40px repeat(7, 1fr);
+  height: 100px;
+  min-height: 100px;
+  max-height: 100px;
+}
+
+.weekNumber {
+  padding: 8px 4px;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: #9ca3af;
+  background: #f8f9fa;
+  border-right: 1px solid #e0e0e0;
+  border-bottom: 1px solid #e0e0e0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  height: 100px;
+  min-height: 100px;
+  max-height: 100px;
 }
 
 .day {
+  height: 100px;
   min-height: 100px;
+  max-height: 100px;
   border-right: 1px solid #e0e0e0;
   border-bottom: 1px solid #e0e0e0;
   padding: 4px;
   cursor: pointer;
   transition: background 0.15s ease;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .day:nth-child(7n) {
@@ -67,6 +110,7 @@
   display: flex;
   justify-content: flex-end;
   padding: 4px;
+  flex-shrink: 0;
 }
 
 .dayNumber {
@@ -80,6 +124,7 @@
   flex-direction: column;
   gap: 2px;
   margin-top: 4px;
+  overflow: hidden;
 }
 
 .moreEvents {
@@ -87,6 +132,7 @@
   color: #5f6368;
   padding: 2px 8px;
   cursor: pointer;
+  flex-shrink: 0;
 }
 
 .moreEvents:hover {

@@ -50,9 +50,9 @@ function DroppableCell({ day, hour, events, onClick }: DroppableCellProps): JSX.
       className={`${styles.cell} ${isOver ? styles.dropTarget : ''}`}
       onClick={onClick}
     >
-      {events.length > 0
-        ? events.map((event) => <EventCard key={event.id} event={event} compact />)
-        : null}
+      {events.map((event) => (
+        <EventCard key={event.id} event={event} compact />
+      ))}
     </div>
   )
 }
@@ -60,7 +60,6 @@ function DroppableCell({ day, hour, events, onClick }: DroppableCellProps): JSX.
 export function WeekView(): JSX.Element {
   const currentDate = useCalendarStore((state) => state.currentDate)
   const events = useCalendarStore((state) => state.events)
-  const calendars = useCalendarStore((state) => state.calendars)
   const getEventsForDateRange = useCalendarStore((state) => state.getEventsForDateRange)
   const openModal = useCalendarStore((state) => state.openModal)
   const updateEvent = useCalendarStore((state) => state.updateEvent)
@@ -79,14 +78,14 @@ export function WeekView(): JSX.Element {
   const date = parseISO(currentDate)
 
   const weekDays = useMemo(() => {
-    const weekStart = startOfWeek(date, { weekStartsOn: firstDayOfWeek })
-    const weekEnd = endOfWeek(date, { weekStartsOn: firstDayOfWeek })
+    const weekStart = startOfWeek(date, { weekStartsOn: firstDayOfWeek || 0 })
+    const weekEnd = endOfWeek(date, { weekStartsOn: firstDayOfWeek || 0 })
     return eachDayOfInterval({ start: weekStart, end: weekEnd })
   }, [date, firstDayOfWeek])
 
   const eventsMap = useMemo(() => {
-    const weekStart = startOfWeek(date, { weekStartsOn: firstDayOfWeek })
-    const weekEnd = endOfWeek(date, { weekStartsOn: firstDayOfWeek })
+    const weekStart = startOfWeek(date, { weekStartsOn: firstDayOfWeek || 0 })
+    const weekEnd = endOfWeek(date, { weekStartsOn: firstDayOfWeek || 0 })
     const weekEvents = getEventsForDateRange(
       format(weekStart, 'yyyy-MM-dd'),
       format(weekEnd, 'yyyy-MM-dd')
@@ -99,13 +98,11 @@ export function WeekView(): JSX.Element {
       map.set(dateKey, [...existing, event])
     })
     return map
-  }, [date, firstDayOfWeek, events, calendars, getEventsForDateRange])
+  }, [date, firstDayOfWeek, getEventsForDateRange])
 
   const handleCellClick = (day: Date, hour: Date): void => {
-    if (!activeEvent) {
-      const hourStr = format(hour, 'HH:mm')
-      openModal(`${format(day, 'yyyy-MM-dd')}T${hourStr}`)
-    }
+    const hourStr = format(hour, 'HH:mm')
+    openModal(`${format(day, 'yyyy-MM-dd')}T${hourStr}`)
   }
 
   const getEventsForHour = (day: Date, hour: Date): CalendarEvent[] => {
@@ -132,22 +129,16 @@ export function WeekView(): JSX.Element {
     if (!over) return
 
     const [dayStr, hourStr] = (over.id as string).split('-')
-
     if (!dayStr || !hourStr) return
 
     const newStart = parseISO(`${dayStr}T${hourStr}`)
     const originalEvent = events.find((e) => e.id === active.id)
-
     if (!originalEvent) return
 
     const originalStart = parseISO(originalEvent.start)
     const originalEnd = parseISO(originalEvent.end)
     const durationMs = originalEnd.getTime() - originalStart.getTime()
     const newEnd = new Date(newStart.getTime() + durationMs)
-
-    if (isToday(originalStart) && originalStart.getHours() === newStart.getHours()) {
-      return
-    }
 
     updateEvent(active.id as string, {
       start: newStart.toISOString(),
@@ -156,7 +147,7 @@ export function WeekView(): JSX.Element {
   }
 
   const weekNumber = useMemo(() => {
-    const weekStart = startOfWeek(date, { weekStartsOn: firstDayOfWeek })
+    const weekStart = startOfWeek(date, { weekStartsOn: firstDayOfWeek || 0 })
     return getISOWeek(weekStart)
   }, [date, firstDayOfWeek])
 
@@ -164,10 +155,7 @@ export function WeekView(): JSX.Element {
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <div className={styles.container}>
         <div className={styles.header}>
-          <div className={styles.weekNumberColumn}>
-            <span className={styles.weekNumber}>W{weekNumber}</span>
-          </div>
-          <div className={styles.timeGutter}></div>
+          <div className={styles.weekNumberColumn}>W{weekNumber}</div>
           {weekDays.map((day) => (
             <div
               key={day.toISOString()}

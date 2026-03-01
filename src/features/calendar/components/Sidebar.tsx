@@ -95,8 +95,8 @@ export function Sidebar(): JSX.Element {
           </button>
         </div>
         <div className={styles.miniWeekdays}>
-          {weekdays.map((day) => (
-            <span key={day} className={styles.miniWeekday}>
+          {weekdays.map((day, idx) => (
+            <span key={idx} className={styles.miniWeekday}>
               {day}
             </span>
           ))}

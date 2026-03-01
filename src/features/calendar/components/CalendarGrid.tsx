@@ -8,9 +8,11 @@ import {
   startOfWeek,
   endOfWeek,
   eachDayOfInterval,
+  eachWeekOfInterval,
   isSameMonth,
   isToday,
   parseISO,
+  getISOWeek,
 } from 'date-fns'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
@@ -43,6 +45,23 @@ export function CalendarGrid(): JSX.Element {
     return eachDayOfInterval({ start: calendarStart, end: calendarEnd })
   }, [date, firstDayOfWeek])
 
+  const weeks = useMemo(() => {
+    const monthStart = startOfMonth(date)
+    const monthEnd = endOfMonth(date)
+    const calendarStart = startOfWeek(monthStart, { weekStartsOn: firstDayOfWeek })
+    const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: firstDayOfWeek })
+
+    return eachWeekOfInterval({
+      start: calendarStart,
+      end: calendarEnd,
+      weekStartsOn: firstDayOfWeek || 0,
+    })
+  }, [date, firstDayOfWeek])
+
+  const weekNumbers = useMemo(() => {
+    return weeks.map((weekStart) => getISOWeek(weekStart))
+  }, [weeks])
+
   const eventsMap = useMemo(() => {
     const monthStart = startOfMonth(date)
     const monthEnd = endOfMonth(date)
@@ -64,44 +83,71 @@ export function CalendarGrid(): JSX.Element {
     openModal(format(day, 'yyyy-MM-dd'))
   }
 
+  const daysWithWeeks = useMemo(() => {
+    const result: { day: Date; weekNum: number }[] = []
+    let currentWeekStart = days[0]
+    let weekIndex = 0
+
+    days.forEach((day) => {
+      const dayWeekStart = startOfWeek(day, { weekStartsOn: firstDayOfWeek || 0 })
+      if (dayWeekStart.getTime() !== currentWeekStart.getTime()) {
+        currentWeekStart = dayWeekStart
+        weekIndex++
+      }
+      result.push({
+        day,
+        weekNum: weekNumbers[weekIndex],
+      })
+    })
+    return result
+  }, [days, weekNumbers, firstDayOfWeek])
+
   return (
     <div className={styles.grid}>
-      <div className={styles.weekdays}>
+      <div className={styles.header}>
+        <div className={styles.weekNumHeader}>W#</div>
         {weekdays.map((day) => (
           <div key={day} className={styles.weekday}>
             {day}
           </div>
         ))}
       </div>
-      <div className={styles.days}>
-        {days.map((day) => {
-          const dateKey = format(day, 'yyyy-MM-dd')
-          const dayEvents = eventsMap.get(dateKey) || []
-          const isCurrentMonth = isSameMonth(day, date)
-          const isTodayDate = isToday(day)
+      <div className={styles.daysContainer}>
+        {weekNumbers.map((weekNum, weekIdx) => (
+          <div key={weekIdx} className={styles.weekRow}>
+            <div className={styles.weekNumber}>{weekNum}</div>
+            {daysWithWeeks
+              .filter((d) => d.weekNum === weekNum)
+              .map(({ day }) => {
+                const dateKey = format(day, 'yyyy-MM-dd')
+                const dayEvents = eventsMap.get(dateKey) || []
+                const isCurrentMonth = isSameMonth(day, date)
+                const isTodayDate = isToday(day)
 
-          return (
-            <div
-              key={dateKey}
-              className={`${styles.day} ${!isCurrentMonth ? styles.otherMonth : ''} ${isTodayDate ? styles.today : ''}`}
-              onClick={() => handleDayClick(day)}
-            >
-              <div className={styles.dayHeader}>
-                <span className={styles.dayNumber}>{format(day, 'd')}</span>
-              </div>
-              <div className={styles.events}>
-                <AnimatePresence>
-                  {dayEvents.slice(0, 3).map((event) => (
-                    <EventCard key={event.id} event={event} />
-                  ))}
-                </AnimatePresence>
-                {dayEvents.length > 3 && (
-                  <div className={styles.moreEvents}>+{dayEvents.length - 3} more</div>
-                )}
-              </div>
-            </div>
-          )
-        })}
+                return (
+                  <div
+                    key={dateKey}
+                    className={`${styles.day} ${!isCurrentMonth ? styles.otherMonth : ''} ${isTodayDate ? styles.today : ''}`}
+                    onClick={() => handleDayClick(day)}
+                  >
+                    <div className={styles.dayHeader}>
+                      <span className={styles.dayNumber}>{format(day, 'd')}</span>
+                    </div>
+                    <div className={styles.events}>
+                      <AnimatePresence>
+                        {dayEvents.slice(0, 3).map((event) => (
+                          <EventCard key={event.id} event={event} />
+                        ))}
+                      </AnimatePresence>
+                      {dayEvents.length > 3 && (
+                        <div className={styles.moreEvents}>+{dayEvents.length - 3} more</div>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+          </div>
+        ))}
       </div>
     </div>
   )

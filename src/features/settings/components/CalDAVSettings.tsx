@@ -7,6 +7,7 @@ import styles from './Settings.module.css'
 export function CalDAVSettings(): JSX.Element {
   const [isAddingAccount, setIsAddingAccount] = useState(false)
   const [connectionStatus, setConnectionStatus] = useState<'idle' | 'success' | 'error'>('idle')
+  const [connectionError, setConnectionError] = useState<string>('')
   const [isTesting, setIsTesting] = useState(false)
 
   const { syncEnabled, syncIntervalMinutes, conflictResolution, updateSettings } =
@@ -21,13 +22,25 @@ export function CalDAVSettings(): JSX.Element {
   ): Promise<boolean> => {
     setIsTesting(true)
     setConnectionStatus('idle')
+    setConnectionError('')
 
     try {
-      const response = await fetch(serverUrl, {
+      // First, normalize the URL - try to get base URL
+      let baseUrl = serverUrl
+      if (serverUrl.includes('/calendars/')) {
+        // Extract base URL from calendar URL
+        const match = serverUrl.match(/^https?:\/\/[^\/]+/)
+        if (match) {
+          baseUrl = match[0] + '/dav.php'
+        }
+      }
+
+      const response = await fetch(baseUrl, {
         method: 'PROPFIND',
         headers: {
           Authorization: `Basic ${btoa(`${username}:${password}`)}`,
           'Content-Type': 'application/xml',
+          Depth: '0',
         },
         body: `<?xml version="1.0" encoding="UTF-8"?>
           <d:propfind xmlns:d="DAV:">
@@ -39,8 +52,15 @@ export function CalDAVSettings(): JSX.Element {
 
       const success = response.ok || response.status === 207
       setConnectionStatus(success ? 'success' : 'error')
+      if (!success) {
+        setConnectionError(`Server returned status ${response.status}`)
+      }
       return success
-    } catch {
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error'
+      setConnectionError(
+        `Connection failed: ${errorMsg}. This may be a CORS issue - the server must allow cross-origin requests.`
+      )
       setConnectionStatus('error')
       return false
     } finally {
@@ -248,7 +268,9 @@ export function CalDAVSettings(): JSX.Element {
               )}
               {connectionStatus === 'error' && (
                 <p style={{ color: '#ea4335', fontSize: '14px', marginBottom: '16px' }}>
-                  ✕ Connection failed. Please check your credentials.
+                  ✕{' '}
+                  {connectionError ||
+                    'Connection failed. Please check your credentials and server URL.'}
                 </p>
               )}
               <div className={styles.modalFooter}>
