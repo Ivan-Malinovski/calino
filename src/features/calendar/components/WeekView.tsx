@@ -1,5 +1,5 @@
 import type { JSX } from 'react'
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useCallback } from 'react'
 import {
   DndContext,
   DragOverlay,
@@ -39,9 +39,10 @@ interface DroppableCellProps {
   day: Date
   hour: Date
   onClick: () => void
+  onMouseDown: (e: React.MouseEvent) => void
 }
 
-function DroppableCell({ day, hour, onClick }: DroppableCellProps): JSX.Element {
+function DroppableCell({ day, hour, onClick, onMouseDown }: DroppableCellProps): JSX.Element {
   const droppableId = `${format(day, 'yyyy-MM-dd')}-${format(hour, 'HH:mm')}`
   const { setNodeRef, isOver } = useDroppable({ id: droppableId })
 
@@ -50,6 +51,7 @@ function DroppableCell({ day, hour, onClick }: DroppableCellProps): JSX.Element 
       ref={setNodeRef}
       className={`${styles.cell} ${isOver ? styles.dropTarget : ''}`}
       onClick={onClick}
+      onMouseDown={onMouseDown}
     />
   )
 }
@@ -64,6 +66,9 @@ export function WeekView(): JSX.Element {
 
   const [activeEvent, setActiveEvent] = useState<CalendarEvent | null>(null)
   const [renderKey, setRenderKey] = useState(0)
+  const [isDraggingToCreate, setIsDraggingToCreate] = useState(false)
+  const [dragStart, setDragStart] = useState<string | null>(null)
+  const [dragEnd, setDragEnd] = useState<string | null>(null)
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -102,6 +107,106 @@ export function WeekView(): JSX.Element {
     const hourStr = format(hour, 'HH:mm')
     openModal(`${format(day, 'yyyy-MM-dd')}T${hourStr}`)
   }
+
+  const handleDragStartFromCell = useCallback(
+    (day: Date, hour: Date, e: React.MouseEvent): void => {
+      if (e.button !== 0) return
+      e.preventDefault()
+      const hourStr = format(hour, 'HH:mm')
+      const startTime = `${format(day, 'yyyy-MM-dd')}T${hourStr}`
+      setIsDraggingToCreate(true)
+      setDragStart(startTime)
+      setDragEnd(startTime)
+    },
+    []
+  )
+
+  const handleMouseMove = useCallback(
+    (e: React.MouseEvent): void => {
+      if (!isDraggingToCreate || !dragStart) return
+
+      const target = e.currentTarget as HTMLDivElement
+      const rect = target.getBoundingClientRect()
+      const x = e.clientX - rect.left
+      const dayWidth = rect.width / 7
+      const dayIndex = Math.floor(x / dayWidth)
+      const y = e.clientY - rect.top
+
+      const day = weekDays[Math.min(Math.max(dayIndex, 0), 6)]
+      if (!day) return
+
+      const totalMinutes = (y / HOUR_HEIGHT) * 60
+      const snappedMinutes = Math.round(totalMinutes / 15) * 15
+      const hours = Math.floor(snappedMinutes / 60)
+      const mins = snappedMinutes % 60
+      const timeStr = `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`
+      const endTime = `${format(day, 'yyyy-MM-dd')}T${timeStr}`
+      setDragEnd(endTime)
+    },
+    [isDraggingToCreate, dragStart, date, firstDayOfWeek, weekDays]
+  )
+
+  const handleMouseUp = useCallback((): void => {
+    if (!isDraggingToCreate || !dragStart || !dragEnd) return
+
+    const startDateTime = parseISO(dragStart)
+    const endDateTime = parseISO(dragEnd)
+
+    if (endDateTime <= startDateTime) {
+      setIsDraggingToCreate(false)
+      setDragStart(null)
+      setDragEnd(null)
+      return
+    }
+
+    const startDateStr = format(startDateTime, 'yyyy-MM-dd')
+    const startTimeStr = format(startDateTime, 'HH:mm')
+    const endDateStr = format(endDateTime, 'yyyy-MM-dd')
+    const endTimeStr = format(endDateTime, 'HH:mm')
+
+    const selectedDate = `${startDateStr}T${startTimeStr}`
+    const endDateTimeStr = `${endDateStr}T${endTimeStr}`
+    openModal(selectedDate, endDateTimeStr)
+
+    setIsDraggingToCreate(false)
+    setDragStart(null)
+    setDragEnd(null)
+  }, [isDraggingToCreate, dragStart, dragEnd, openModal])
+
+  const selectionOverlay = useMemo(() => {
+    if (!isDraggingToCreate || !dragStart || !dragEnd) return null
+
+    const start = parseISO(dragStart)
+    const end = parseISO(dragEnd)
+
+    const startDateKey = format(start, 'yyyy-MM-dd')
+    const endDateKey = format(end, 'yyyy-MM-dd')
+    const startDayIndex = weekDays.findIndex((d) => format(d, 'yyyy-MM-dd') === startDateKey)
+    const endDayIndex = weekDays.findIndex((d) => format(d, 'yyyy-MM-dd') === endDateKey)
+
+    if (startDayIndex === -1 || endDayIndex === -1) return null
+
+    const startMinutes = start.getHours() * 60 + start.getMinutes()
+    const endMinutes = end.getHours() * 60 + end.getMinutes()
+    const top = startMinutes * (HOUR_HEIGHT / 60)
+    const height = (endMinutes - startMinutes) * (HOUR_HEIGHT / 60)
+
+    const dayWidth = 100 / 7
+    const left = startDayIndex * dayWidth
+    const width = (endDayIndex - startDayIndex + 1) * dayWidth
+
+    return (
+      <div
+        className={styles.selectionOverlay}
+        style={{
+          top: `${top}px`,
+          height: `${Math.max(height, 20)}px`,
+          left: `${left}%`,
+          width: `${width}%`,
+        }}
+      />
+    )
+  }, [isDraggingToCreate, dragStart, dragEnd, weekDays])
 
   const renderDayEvents = (day: Date): JSX.Element[] => {
     const dateKey = format(day, 'yyyy-MM-dd')
@@ -242,7 +347,12 @@ export function WeekView(): JSX.Element {
             </div>
           ))}
         </div>
-        <div className={styles.body}>
+        <div
+          className={styles.body}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseUp}
+        >
           <div className={styles.weekNumberColumn}>
             {HOURS.map((hour) => (
               <div key={hour.toISOString()} className={styles.weekNumberCell}>
@@ -259,10 +369,14 @@ export function WeekView(): JSX.Element {
                     day={day}
                     hour={hour}
                     onClick={() => handleCellClick(day, hour)}
+                    onMouseDown={(e) => handleDragStartFromCell(day, hour, e)}
                   />
                 ))}
               </div>
-              <div className={styles.eventsOverlay}>{renderDayEvents(day)}</div>
+              <div className={styles.eventsOverlay}>
+                {day === weekDays[0] && selectionOverlay}
+                {renderDayEvents(day)}
+              </div>
             </div>
           ))}
         </div>

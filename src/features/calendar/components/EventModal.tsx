@@ -33,6 +33,7 @@ function getInitialFormState(
   isModalOpen: boolean,
   selectedEventId: string | null,
   selectedDate: string | null,
+  selectedEndDate: string | null,
   events: CalendarEvent[],
   calendars: { id: string; isDefault: boolean }[]
 ): InitialFormState {
@@ -69,6 +70,26 @@ function getInitialFormState(
         endTimeVal = format(addHours(parsedTime, DEFAULT_DURATION_HOURS), 'HH:mm')
       }
 
+      if (selectedEndDate && selectedEndDate.includes('T')) {
+        const endTime = selectedEndDate.split('T')[1]
+        const endDatePart = selectedEndDate.split('T')[0]
+        endTimeVal = endTime
+        if (endDatePart !== dateStr) {
+          return {
+            title: '',
+            description: '',
+            location: '',
+            startDate: dateStr,
+            startTime: startTimeVal,
+            endDate: endDatePart,
+            endTime: endTimeVal,
+            isAllDay: false,
+            calendarId: defaultCalendar?.id || '',
+            recurrence: 'none',
+          }
+        }
+      }
+
       return {
         title: '',
         description: '',
@@ -103,6 +124,7 @@ export function EventModal(): JSX.Element | null {
   const isModalOpen = useCalendarStore((state) => state.isModalOpen)
   const selectedEventId = useCalendarStore((state) => state.selectedEventId)
   const selectedDate = useCalendarStore((state) => state.selectedDate)
+  const selectedEndDate = useCalendarStore((state) => state.selectedEndDate)
   const events = useCalendarStore((state) => state.events)
   const calendars = useCalendarStore((state) => state.calendars)
   const addEvent = useCalendarStore((state) => state.addEvent)
@@ -111,8 +133,16 @@ export function EventModal(): JSX.Element | null {
   const closeModal = useCalendarStore((state) => state.closeModal)
 
   const initialState = useMemo(
-    () => getInitialFormState(isModalOpen, selectedEventId, selectedDate, events, calendars),
-    [isModalOpen, selectedEventId, selectedDate, events, calendars]
+    () =>
+      getInitialFormState(
+        isModalOpen,
+        selectedEventId,
+        selectedDate,
+        selectedEndDate,
+        events,
+        calendars
+      ),
+    [isModalOpen, selectedEventId, selectedDate, selectedEndDate, events, calendars]
   )
 
   const [title, setTitle] = useState(initialState.title)

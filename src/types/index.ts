@@ -49,6 +49,7 @@ export interface CalendarState {
   selectedEventId: string | null
   isModalOpen: boolean
   selectedDate: string | null
+  selectedEndDate: string | null
 }
 
 export interface CalendarActions {
@@ -64,7 +65,7 @@ export interface CalendarActions {
   setCurrentDate: (date: string) => void
   setCurrentView: (view: ViewType) => void
   setSelectedEventId: (id: string | null) => void
-  openModal: (date?: string) => void
+  openModal: (date?: string, endDate?: string) => void
   closeModal: () => void
   getEventsForDateRange: (start: string, end: string) => CalendarEvent[]
   getVisibleEvents: () => CalendarEvent[]

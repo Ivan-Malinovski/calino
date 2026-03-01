@@ -1,5 +1,5 @@
 import type { JSX } from 'react'
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useCallback } from 'react'
 import {
   DndContext,
   DragOverlay,
@@ -32,6 +32,9 @@ export function DayView(): JSX.Element {
   const setCurrentDate = useCalendarStore((state) => state.setCurrentDate)
 
   const [activeEvent, setActiveEvent] = useState<CalendarEvent | null>(null)
+  const [isDraggingToCreate, setIsDraggingToCreate] = useState(false)
+  const [dragStart, setDragStart] = useState<string | null>(null)
+  const [dragEnd, setDragEnd] = useState<string | null>(null)
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -51,6 +54,82 @@ export function DayView(): JSX.Element {
     const hourStr = format(hour, 'HH:mm')
     openModal(`${format(date, 'yyyy-MM-dd')}T${hourStr}`)
   }
+
+  const handleDragStartFromCell = useCallback(
+    (hour: Date, e: React.MouseEvent): void => {
+      if (e.button !== 0) return
+      e.preventDefault()
+      const hourStr = format(hour, 'HH:mm')
+      const startTime = `${format(date, 'yyyy-MM-dd')}T${hourStr}`
+      setIsDraggingToCreate(true)
+      setDragStart(startTime)
+      setDragEnd(startTime)
+    },
+    [date]
+  )
+
+  const handleMouseMove = useCallback(
+    (e: React.MouseEvent): void => {
+      if (!isDraggingToCreate || !dragStart) return
+
+      const target = e.currentTarget as HTMLDivElement
+      const rect = target.getBoundingClientRect()
+      const y = e.clientY - rect.top
+      const totalMinutes = (y / HOUR_HEIGHT) * 60
+      const snappedMinutes = Math.round(totalMinutes / 15) * 15
+      const hours = Math.floor(snappedMinutes / 60)
+      const mins = snappedMinutes % 60
+      const timeStr = `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`
+      const endTime = `${format(date, 'yyyy-MM-dd')}T${timeStr}`
+      setDragEnd(endTime)
+    },
+    [isDraggingToCreate, dragStart, date]
+  )
+
+  const handleMouseUp = useCallback((): void => {
+    if (!isDraggingToCreate || !dragStart || !dragEnd) return
+
+    const startDateTime = parseISO(dragStart)
+    const endDateTime = parseISO(dragEnd)
+
+    if (endDateTime <= startDateTime) {
+      setIsDraggingToCreate(false)
+      setDragStart(null)
+      setDragEnd(null)
+      return
+    }
+
+    const startDateStr = format(startDateTime, 'yyyy-MM-dd')
+    const startTimeStr = format(startDateTime, 'HH:mm')
+    const endDateStr = format(endDateTime, 'yyyy-MM-dd')
+    const endTimeStr = format(endDateTime, 'HH:mm')
+
+    const selectedDate = `${startDateStr}T${startTimeStr}`
+    const endDateTimeStr = `${endDateStr}T${endTimeStr}`
+    openModal(selectedDate, endDateTimeStr)
+
+    setIsDraggingToCreate(false)
+    setDragStart(null)
+    setDragEnd(null)
+  }, [isDraggingToCreate, dragStart, dragEnd, openModal])
+
+  const selectionOverlay = useMemo(() => {
+    if (!isDraggingToCreate || !dragStart || !dragEnd) return null
+
+    const start = parseISO(dragStart)
+    const end = parseISO(dragEnd)
+    const startMinutes = start.getHours() * 60 + start.getMinutes()
+    const endMinutes = end.getHours() * 60 + end.getMinutes()
+    const top = startMinutes * (HOUR_HEIGHT / 60)
+    const height = (endMinutes - startMinutes) * (HOUR_HEIGHT / 60)
+
+    return (
+      <div
+        className={styles.selectionOverlay}
+        style={{ top: `${top}px`, height: `${Math.max(height, 20)}px` }}
+      />
+    )
+  }, [isDraggingToCreate, dragStart, dragEnd])
 
   const handleDragStart = (event: DragStartEvent): void => {
     const eventId = event.active.id as string
@@ -178,6 +257,7 @@ export function DayView(): JSX.Element {
           ref={setNodeRef}
           className={`${styles.cell} ${isOver ? styles.dropTarget : ''}`}
           onClick={() => handleCellClick(hour)}
+          onMouseDown={(e) => handleDragStartFromCell(hour, e)}
         />
       </div>
     )
@@ -194,11 +274,19 @@ export function DayView(): JSX.Element {
             </div>
           </div>
         </div>
-        <div className={styles.body}>
+        <div
+          className={styles.body}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseUp}
+        >
           {HOURS.map((hour) => (
             <HourCell key={hour.toISOString()} hour={hour} />
           ))}
-          <div className={styles.eventsOverlay}>{renderEvents()}</div>
+          <div className={styles.eventsOverlay}>
+            {selectionOverlay}
+            {renderEvents()}
+          </div>
         </div>
       </div>
       <DragOverlay>{activeEvent ? <EventCard event={activeEvent} isDragging /> : null}</DragOverlay>

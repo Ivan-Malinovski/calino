@@ -21,6 +21,7 @@ export const useCalendarStore = create<CalendarStore>()(
       selectedEventId: null,
       isModalOpen: false,
       selectedDate: null,
+      selectedEndDate: null,
 
       addEvent: (event: CalendarEvent): void => {
         set((state) => ({
@@ -115,10 +116,11 @@ export const useCalendarStore = create<CalendarStore>()(
         set({ selectedEventId: id })
       },
 
-      openModal: (date?: string): void => {
+      openModal: (date?: string, endDate?: string): void => {
         set({
           isModalOpen: true,
           selectedDate: date ?? null,
+          selectedEndDate: endDate ?? null,
         })
       },
 
@@ -127,6 +129,7 @@ export const useCalendarStore = create<CalendarStore>()(
           isModalOpen: false,
           selectedEventId: null,
           selectedDate: null,
+          selectedEndDate: null,
         })
       },
 
