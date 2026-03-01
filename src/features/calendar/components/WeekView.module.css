@@ -18,14 +18,22 @@
 .weekNumberColumn {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 8px 4px;
   border-right: 1px solid #e0e0e0;
   background: #f8f9fa;
+}
+
+.weekNumberCell {
+  min-height: 60px;
+  padding: 4px 8px;
   font-size: 11px;
-  font-weight: 600;
-  color: #5f6368;
+  font-weight: 500;
+  color: #9ca3af;
+  text-align: right;
+  border-bottom: 1px solid #e0e0e0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding-top: 8px;
 }
 
 .timeGutter {
@@ -79,47 +87,30 @@
 }
 
 .body {
+  display: grid;
+  grid-template-columns: 60px repeat(7, 1fr);
   flex: 1;
 }
 
-.hourRow {
-  display: grid;
-  grid-template-columns: 60px repeat(7, 1fr);
-  min-height: 60px;
+.dayColumn {
+  position: relative;
+  border-right: 1px solid #e0e0e0;
 }
 
-.weekNumberCell {
+.dayColumn:last-child {
+  border-right: none;
+}
+
+.hourCells {
   display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  padding-top: 8px;
-  border-right: 1px solid #e0e0e0;
-  border-bottom: 1px solid #e0e0e0;
-  background: #f8f9fa;
-  font-size: 11px;
-  font-weight: 500;
-  color: #9ca3af;
-}
-
-.timeLabel {
-  padding: 4px 8px;
-  font-size: 11px;
-  color: #5f6368;
-  text-align: right;
-  border-right: 1px solid #e0e0e0;
-  border-bottom: 1px solid #e0e0e0;
+  flex-direction: column;
 }
 
 .cell {
-  border-right: 1px solid #e0e0e0;
+  min-height: 60px;
   border-bottom: 1px solid #e0e0e0;
-  padding: 2px;
   cursor: pointer;
   transition: background 0.15s ease;
-}
-
-.cell:last-child {
-  border-right: none;
 }
 
 .cell:hover {
@@ -131,7 +122,18 @@
   border: 2px dashed #4285f4;
 }
 
-.cell.dropTarget {
-  background: #e8f0fe;
-  border: 2px dashed #4285f4;
+.eventsOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1440px;
+  pointer-events: none;
+}
+
+.eventPositioned {
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  pointer-events: auto;
 }

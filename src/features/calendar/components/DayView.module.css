@@ -3,6 +3,7 @@
   flex-direction: column;
   flex: 1;
   overflow: auto;
+  position: relative;
 }
 
 .header {
@@ -43,6 +44,7 @@
 
 .body {
   flex: 1;
+  position: relative;
 }
 
 .hourRow {
@@ -58,10 +60,10 @@
   color: #5f6368;
   text-align: right;
   border-right: 1px solid #e0e0e0;
+  background: white;
 }
 
 .cell {
-  padding: 4px;
   cursor: pointer;
   transition: background 0.15s ease;
 }
@@ -73,4 +75,20 @@
 .cell.dropTarget {
   background: #e8f0fe;
   border: 2px dashed #4285f4;
+}
+
+.eventsOverlay {
+  position: absolute;
+  top: 0;
+  left: 60px;
+  right: 0;
+  height: 1440px;
+  pointer-events: none;
+}
+
+.eventPositioned {
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  pointer-events: auto;
 }

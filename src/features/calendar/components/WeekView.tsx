@@ -33,14 +33,15 @@ const HOURS = eachHourOfInterval({
   end: endOfDay(new Date()),
 })
 
+const HOUR_HEIGHT = 60
+
 interface DroppableCellProps {
   day: Date
   hour: Date
-  events: CalendarEvent[]
   onClick: () => void
 }
 
-function DroppableCell({ day, hour, events, onClick }: DroppableCellProps): JSX.Element {
+function DroppableCell({ day, hour, onClick }: DroppableCellProps): JSX.Element {
   const droppableId = `${format(day, 'yyyy-MM-dd')}-${format(hour, 'HH:mm')}`
   const { setNodeRef, isOver } = useDroppable({ id: droppableId })
 
@@ -49,11 +50,7 @@ function DroppableCell({ day, hour, events, onClick }: DroppableCellProps): JSX.
       ref={setNodeRef}
       className={`${styles.cell} ${isOver ? styles.dropTarget : ''}`}
       onClick={onClick}
-    >
-      {events.map((event) => (
-        <EventCard key={event.id} event={event} compact />
-      ))}
-    </div>
+    />
   )
 }
 
@@ -66,6 +63,7 @@ export function WeekView(): JSX.Element {
   const firstDayOfWeek = useSettingsStore((state) => state.firstDayOfWeek)
 
   const [activeEvent, setActiveEvent] = useState<CalendarEvent | null>(null)
+  const [renderKey, setRenderKey] = useState(0)
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -98,21 +96,90 @@ export function WeekView(): JSX.Element {
       map.set(dateKey, [...existing, event])
     })
     return map
-  }, [date, firstDayOfWeek, getEventsForDateRange])
+  }, [date, firstDayOfWeek, getEventsForDateRange, events])
 
   const handleCellClick = (day: Date, hour: Date): void => {
     const hourStr = format(hour, 'HH:mm')
     openModal(`${format(day, 'yyyy-MM-dd')}T${hourStr}`)
   }
 
-  const getEventsForHour = (day: Date, hour: Date): CalendarEvent[] => {
+  const renderDayEvents = (day: Date): JSX.Element[] => {
     const dateKey = format(day, 'yyyy-MM-dd')
     const dayEvents = eventsMap.get(dateKey) || []
-    const hourStart = hour.getHours()
 
-    return dayEvents.filter((event) => {
-      const eventHour = parseISO(event.start).getHours()
-      return eventHour === hourStart
+    const sortedEvents = [...dayEvents].sort(
+      (a, b) => parseISO(a.start).getTime() - parseISO(b.start).getTime()
+    )
+
+    const positioned: { event: CalendarEvent; column: number }[] = []
+
+    // First pass: assign columns
+    sortedEvents.forEach((event) => {
+      const eventStart = parseISO(event.start).getTime()
+      const eventEnd = parseISO(event.end).getTime()
+
+      let column = 0
+      while (true) {
+        const hasCollision = positioned.some(
+          (p) =>
+            p.column === column &&
+            parseISO(p.event.start).getTime() < eventEnd &&
+            parseISO(p.event.end).getTime() > eventStart
+        )
+        if (!hasCollision) break
+        column++
+      }
+
+      positioned.push({ event, column })
+    })
+
+    // Second pass: calculate totalColumns for each event
+    const withTotals = positioned.map(({ event, column }) => {
+      const eventStart = parseISO(event.start).getTime()
+      const eventEnd = parseISO(event.end).getTime()
+
+      let totalColumns = 1
+      const eventStartMinutes = eventStart / 60000
+      const eventEndMinutes = eventEnd / 60000
+
+      for (let t = eventStartMinutes; t < eventEndMinutes; t += 30) {
+        const overlapping = positioned.filter(
+          (p) =>
+            parseISO(p.event.start).getTime() / 60000 < t + 30 &&
+            parseISO(p.event.end).getTime() / 60000 > t
+        ).length
+        totalColumns = Math.max(totalColumns, overlapping)
+      }
+
+      return { event, column, totalColumns }
+    })
+
+    return withTotals.map(({ event, column, totalColumns }) => {
+      const start = parseISO(event.start)
+      const end = parseISO(event.end)
+
+      const startHour = start.getHours()
+      const startMinutes = start.getMinutes()
+      const durationMinutes = (end.getTime() - start.getTime()) / (1000 * 60)
+      const height = Math.max((durationMinutes / 60) * HOUR_HEIGHT, 20)
+
+      const leftPercent = (column / totalColumns) * 100
+      const widthPercent = 100 / totalColumns
+
+      return (
+        <div
+          key={event.id}
+          className={styles.eventPositioned}
+          style={{
+            top: `${(startHour * 60 + startMinutes) * (HOUR_HEIGHT / 60)}px`,
+            height: `${height}px`,
+            left: `${leftPercent}%`,
+            width: `${widthPercent}%`,
+          }}
+        >
+          <EventCard event={event} compact />
+        </div>
+      )
     })
   }
 
@@ -124,14 +191,20 @@ export function WeekView(): JSX.Element {
 
   const handleDragEnd = (event: DragEndEvent): void => {
     const { active, over } = event
-    setActiveEvent(null)
+    // Defer clearing active event to avoid scroll jump
+    setTimeout(() => setActiveEvent(null), 0)
 
     if (!over) return
 
-    const [dayStr, hourStr] = (over.id as string).split('-')
+    const droppableId = over.id as string
+    const lastDashIndex = droppableId.lastIndexOf('-')
+    const dayStr = droppableId.substring(0, lastDashIndex)
+    const hourStr = droppableId.substring(lastDashIndex + 1)
+
     if (!dayStr || !hourStr) return
 
     const newStart = parseISO(`${dayStr}T${hourStr}`)
+
     const originalEvent = events.find((e) => e.id === active.id)
     if (!originalEvent) return
 
@@ -144,6 +217,9 @@ export function WeekView(): JSX.Element {
       start: newStart.toISOString(),
       end: newEnd.toISOString(),
     })
+
+    // Force re-render to ensure visual update
+    setRenderKey((k) => k + 1)
   }
 
   const weekNumber = useMemo(() => {
@@ -153,7 +229,7 @@ export function WeekView(): JSX.Element {
 
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-      <div className={styles.container}>
+      <div className={styles.container} key={renderKey}>
         <div className={styles.header}>
           <div className={styles.weekNumberColumn}>W{weekNumber}</div>
           {weekDays.map((day) => (
@@ -167,21 +243,26 @@ export function WeekView(): JSX.Element {
           ))}
         </div>
         <div className={styles.body}>
-          {HOURS.map((hour) => (
-            <div key={hour.toISOString()} className={styles.hourRow}>
-              <div className={styles.timeLabel}>{format(hour, 'h a')}</div>
-              {weekDays.map((day) => {
-                const hourEvents = getEventsForHour(day, hour)
-                return (
+          <div className={styles.weekNumberColumn}>
+            {HOURS.map((hour) => (
+              <div key={hour.toISOString()} className={styles.weekNumberCell}>
+                {format(hour, 'h a')}
+              </div>
+            ))}
+          </div>
+          {weekDays.map((day) => (
+            <div key={day.toISOString()} className={styles.dayColumn}>
+              <div className={styles.hourCells}>
+                {HOURS.map((hour) => (
                   <DroppableCell
                     key={`${day.toISOString()}-${hour.toISOString()}`}
                     day={day}
                     hour={hour}
-                    events={hourEvents}
                     onClick={() => handleCellClick(day, hour)}
                   />
-                )
-              })}
+                ))}
+              </div>
+              <div className={styles.eventsOverlay}>{renderDayEvents(day)}</div>
             </div>
           ))}
         </div>

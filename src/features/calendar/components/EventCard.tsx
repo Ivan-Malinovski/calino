@@ -1,7 +1,6 @@
 import type { JSX } from 'react'
 import { useState, useRef } from 'react'
 import { format, parseISO } from 'date-fns'
-import { motion } from 'framer-motion'
 import { useDraggable } from '@dnd-kit/core'
 import { useCalendarStore } from '@/store/calendarStore'
 import type { CalendarEvent } from '@/types'
@@ -97,6 +96,7 @@ export function EventCard({
         transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
         cursor: 'grabbing',
         zIndex: 1000,
+        opacity: 0,
       }
     : {
         backgroundColor: `${eventColor}20`,
@@ -105,17 +105,12 @@ export function EventCard({
       }
 
   return (
-    <motion.div
+    <div
       ref={setNodeRef}
       style={style}
       className={`${styles.card} ${compact ? styles.compact : ''} ${isCurrentDragging || isDragging ? styles.dragging : ''} ${isResizing ? styles.resizing : ''}`}
       onClick={handleClick}
       onPointerDown={(e) => e.stopPropagation()}
-      initial={{ opacity: 0, scale: 0.9 }}
-      animate={{ opacity: isCurrentDragging ? 0.5 : 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.9 }}
-      transition={{ duration: 0.2 }}
-      layout
       {...listeners}
       {...attributes}
     >
@@ -128,6 +123,6 @@ export function EventCard({
       {event.isAllDay && <div className={styles.time}>All day</div>}
       {event.location && <div className={styles.location}>{event.location}</div>}
       {!compact && <div className={styles.resizeHandle} onPointerDown={handleResizeStart} />}
-    </motion.div>
+    </div>
   )
 }
