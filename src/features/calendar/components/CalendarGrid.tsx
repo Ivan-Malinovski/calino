@@ -45,6 +45,7 @@ export function CalendarGrid(): JSX.Element {
   const [activeEvent, setActiveEvent] = useState<CalendarEvent | null>(null)
   const [scrollDirection, setScrollDirection] = useState<'up' | 'down' | null>(null)
   const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const scrollCooldownRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
 
   const sensors = useSensors(
@@ -68,6 +69,9 @@ export function CalendarGrid(): JSX.Element {
 
   const handleWheel = useCallback(
     (e: React.WheelEvent) => {
+      if (scrollCooldownRef.current) return
+      if (Math.abs(e.deltaY) < 50) return
+
       if (scrollTimeoutRef.current) {
         clearTimeout(scrollTimeoutRef.current)
       }
@@ -75,39 +79,39 @@ export function CalendarGrid(): JSX.Element {
       const direction = e.deltaY > 0 ? 'down' : 'up'
       setScrollDirection(direction)
 
+      scrollCooldownRef.current = setTimeout(() => {
+        scrollCooldownRef.current = null
+      }, 400)
+
       scrollTimeoutRef.current = setTimeout(() => {
         changeMonth(direction)
         setScrollDirection(null)
-      }, 300)
-    },
-    [changeMonth]
-  )
-
-  const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => {
-      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-        e.preventDefault()
-        const direction = e.key === 'ArrowDown' ? 'down' : 'up'
-        changeMonth(direction)
-      }
+      }, 0)
     },
     [changeMonth]
   )
 
   useEffect(() => {
-    const container = containerRef.current
-    if (!container) return
+    const handleKeyDown = (e: KeyboardEvent): void => {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault()
+        const direction = e.key === 'ArrowDown' ? 'down' : 'up'
+        changeMonth(direction)
+      }
+    }
 
-    container.addEventListener('keydown', handleKeyDown)
-    container.tabIndex = 0
+    window.addEventListener('keydown', handleKeyDown)
 
     return () => {
-      container.removeEventListener('keydown', handleKeyDown)
+      window.removeEventListener('keydown', handleKeyDown)
       if (scrollTimeoutRef.current) {
         clearTimeout(scrollTimeoutRef.current)
       }
+      if (scrollCooldownRef.current) {
+        clearTimeout(scrollCooldownRef.current)
+      }
     }
-  }, [handleKeyDown])
+  }, [changeMonth])
 
   const handleDragStart = (event: DragStartEvent): void => {
     const eventId = event.active.id as string
@@ -214,10 +218,10 @@ export function CalendarGrid(): JSX.Element {
           <motion.div
             key={currentDate}
             className={styles.daysContainer}
-            initial={{ opacity: 0, y: scrollDirection === 'down' ? -20 : 20 }}
+            initial={{ opacity: 0, y: scrollDirection === 'down' ? -10 : 10 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: scrollDirection === 'down' ? 20 : -20 }}
-            transition={{ duration: 0.2 }}
+            exit={{ opacity: 0, y: scrollDirection === 'down' ? 10 : -10 }}
+            transition={{ duration: 0.1 }}
           >
             {weekNumbers.map((weekNum, weekIdx) => (
               <div key={weekIdx} className={styles.weekRow}>
