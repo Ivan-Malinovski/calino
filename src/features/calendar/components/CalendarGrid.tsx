@@ -24,6 +24,7 @@ import {
   getDay,
   addMonths,
   subMonths,
+  isSameDay,
 } from 'date-fns'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
@@ -314,13 +315,12 @@ function DroppableDay({
       </div>
       <div className={styles.events}>
         <AnimatePresence>
-          {dayEvents.slice(0, 3).map((event) => (
-            <EventCard
-              key={event.id}
-              event={event}
-              compact={compactRecurringEvents && !!event.rruleString}
-            />
-          ))}
+          {dayEvents.slice(0, 3).map((event) => {
+            const isMultiDay = !isSameDay(parseISO(event.start), parseISO(event.end))
+            const shouldCompact =
+              compactRecurringEvents && (!!event.rruleString || event.isAllDay || isMultiDay)
+            return <EventCard key={event.id} event={event} compact={shouldCompact} />
+          })}
         </AnimatePresence>
         {dayEvents.length > 3 && (
           <div className={styles.moreEvents}>+{dayEvents.length - 3} more</div>
