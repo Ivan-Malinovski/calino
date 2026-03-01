@@ -194,6 +194,7 @@ export function EventModal(): JSX.Element | null {
     initialState.recurrence
   )
   const [showRecurrenceDialog, setShowRecurrenceDialog] = useState(false)
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
 
   const isEditing = selectedEventId !== null
   const isRecurringEvent = initialState.recurrence !== 'none'
@@ -268,11 +269,37 @@ export function EventModal(): JSX.Element | null {
   }
 
   const handleDelete = (): void => {
-    const eventIdToDelete = originalEventId || selectedEventId
-    if (eventIdToDelete) {
-      deleteEvent(eventIdToDelete)
-      closeModal()
+    if (isRecurringInstance && isRecurringEvent) {
+      setShowDeleteDialog(true)
+      return
     }
+
+    performDelete('all')
+  }
+
+  const performDelete = (mode: RecurrenceEditMode): void => {
+    if (mode === 'this' && originalEventId) {
+      const newEvent: CalendarEvent = {
+        id: uuidv4(),
+        title: `${title} (exception)`,
+        description: description || undefined,
+        location: location || undefined,
+        start: startDate && startTime ? `${startDate}T${startTime}:00` : `${startDate}T00:00:00`,
+        end: endDate && endTime ? `${endDate}T${endTime}:00` : `${endDate}T23:59:59`,
+        isAllDay,
+        calendarId,
+        recurrence: undefined,
+      }
+      deleteEvent(originalEventId)
+      addEvent(newEvent)
+    } else {
+      const eventIdToDelete = originalEventId || selectedEventId
+      if (eventIdToDelete) {
+        deleteEvent(eventIdToDelete)
+      }
+    }
+    setShowDeleteDialog(false)
+    closeModal()
   }
 
   if (!isModalOpen) {
@@ -463,6 +490,57 @@ export function EventModal(): JSX.Element | null {
                   className={styles.cancelButton}
                   style={{ width: '100%' }}
                   onClick={() => setShowRecurrenceDialog(false)}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showDeleteDialog && (
+        <div className={styles.overlay} onClick={() => setShowDeleteDialog(false)}>
+          <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.header}>
+              <h2 className={styles.title}>Delete recurring event</h2>
+              <button className={styles.closeButton} onClick={() => setShowDeleteDialog(false)}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="M18 6L6 18M6 6L18 18"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </button>
+            </div>
+            <div className={styles.form}>
+              <p style={{ padding: '16px', color: '#666' }}>
+                How would you like to delete this event?
+              </p>
+              <div className={styles.field} style={{ padding: '0 16px 16px' }}>
+                <button
+                  type="button"
+                  className={styles.deleteButton}
+                  style={{ width: '100%', marginBottom: '8px' }}
+                  onClick={() => performDelete('all')}
+                >
+                  All events
+                </button>
+                <button
+                  type="button"
+                  className={styles.deleteButton}
+                  style={{ width: '100%', marginBottom: '8px' }}
+                  onClick={() => performDelete('this')}
+                >
+                  This event only
+                </button>
+                <button
+                  type="button"
+                  className={styles.cancelButton}
+                  style={{ width: '100%' }}
+                  onClick={() => setShowDeleteDialog(false)}
                 >
                   Cancel
                 </button>
