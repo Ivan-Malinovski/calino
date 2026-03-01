@@ -1,5 +1,5 @@
 import type { JSX } from 'react'
-import { useMemo, useState, useCallback, useRef, useEffect } from 'react'
+import { useMemo, useState, useCallback, useRef, useLayoutEffect } from 'react'
 import {
   DndContext,
   DragOverlay,
@@ -107,7 +107,7 @@ export function WeekView(): JSX.Element {
   const bodyRef = useRef<HTMLDivElement>(null)
   const [isScrolled, setIsScrolled] = useState(false)
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!bodyRef.current) return
 
     const rafId = requestAnimationFrame(() => {

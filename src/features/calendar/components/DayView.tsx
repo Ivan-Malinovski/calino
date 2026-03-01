@@ -1,5 +1,5 @@
 import type { JSX } from 'react'
-import { useMemo, useState, useCallback, useRef, useEffect } from 'react'
+import { useMemo, useState, useCallback, useRef, useLayoutEffect } from 'react'
 import {
   DndContext,
   DragOverlay,
@@ -55,7 +55,7 @@ export function DayView(): JSX.Element {
 
   const [isScrolled, setIsScrolled] = useState(false)
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (dayEvents.length === 0 || !bodyRef.current) return
 
     const rafId = requestAnimationFrame(() => {
