@@ -1,0 +1,36 @@
+.card {
+  padding: 4px 8px;
+  border-radius: 4px;
+  border-left: 3px solid;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  overflow: hidden;
+}
+
+.card:hover {
+  filter: brightness(0.95);
+}
+
+.title {
+  font-size: 12px;
+  font-weight: 500;
+  color: #202124;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.time {
+  font-size: 11px;
+  color: #5f6368;
+  margin-top: 2px;
+}
+
+.location {
+  font-size: 11px;
+  color: #5f6368;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

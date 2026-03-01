@@ -1,0 +1,71 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: auto;
+}
+
+.header {
+  padding: 16px 24px;
+  border-bottom: 1px solid #e0e0e0;
+  background: white;
+}
+
+.dayInfo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.dayName {
+  font-size: 14px;
+  font-weight: 500;
+  color: #5f6368;
+  text-transform: uppercase;
+}
+
+.dayNumber {
+  font-size: 36px;
+  font-weight: 500;
+  color: #202124;
+}
+
+.dayNumber.today {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  background: #4285f4;
+  color: white;
+  border-radius: 50%;
+}
+
+.body {
+  flex: 1;
+}
+
+.hourRow {
+  display: grid;
+  grid-template-columns: 60px 1fr;
+  min-height: 60px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.timeLabel {
+  padding: 4px 8px;
+  font-size: 11px;
+  color: #5f6368;
+  text-align: right;
+  border-right: 1px solid #e0e0e0;
+}
+
+.cell {
+  padding: 4px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.cell:hover {
+  background: #f8f9fa;
+}

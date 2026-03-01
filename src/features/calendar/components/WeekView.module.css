@@ -1,0 +1,95 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: auto;
+}
+
+.header {
+  display: grid;
+  grid-template-columns: 60px repeat(7, 1fr);
+  border-bottom: 1px solid #e0e0e0;
+  position: sticky;
+  top: 0;
+  background: white;
+  z-index: 10;
+}
+
+.timeGutter {
+  border-right: 1px solid #e0e0e0;
+}
+
+.dayHeader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px;
+  border-right: 1px solid #e0e0e0;
+}
+
+.dayHeader:last-child {
+  border-right: none;
+}
+
+.dayHeader.today {
+  background: #f8f9fa;
+}
+
+.dayHeader.today .dayNumber {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: #4285f4;
+  color: white;
+  border-radius: 50%;
+}
+
+.dayName {
+  font-size: 12px;
+  font-weight: 500;
+  color: #5f6368;
+  text-transform: uppercase;
+}
+
+.dayNumber {
+  font-size: 18px;
+  font-weight: 500;
+  color: #202124;
+}
+
+.body {
+  flex: 1;
+}
+
+.hourRow {
+  display: grid;
+  grid-template-columns: 60px repeat(7, 1fr);
+  min-height: 60px;
+}
+
+.timeLabel {
+  padding: 4px 8px;
+  font-size: 11px;
+  color: #5f6368;
+  text-align: right;
+  border-right: 1px solid #e0e0e0;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.cell {
+  border-right: 1px solid #e0e0e0;
+  border-bottom: 1px solid #e0e0e0;
+  padding: 2px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.cell:last-child {
+  border-right: none;
+}
+
+.cell:hover {
+  background: #f8f9fa;
+}

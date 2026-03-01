@@ -1,0 +1,215 @@
+# Modern Calendar Application - Requirements
+
+## 1. Core Calendar Features
+
+### 1.1 Event Management
+- Create, read, update, delete (CRUD) events
+- Events with title, description, location, start/end datetime
+- All-day events support
+- Recurring events (daily, weekly, monthly, yearly, custom patterns)
+- Event colors/categories
+- Event reminders/notifications
+
+### 1.2 Views
+- Month view (default)
+- Week view
+- Day view
+- Agenda/List view
+- Ability to navigate to specific dates
+
+### 1.3 Calendar Management
+- Multiple calendars support
+- Calendar colors
+- Show/hide calendars
+- Default calendar selection
+
+---
+
+## 2. Natural Language Event Creation
+
+### 2.1 Parser Requirements
+- Parse natural language input into structured event data
+- Extract: event title, date, time, duration, location
+- Handle relative dates: "tomorrow", "next Thursday", "in 3 days"
+- Handle times: "2 PM", "14:00", "noon", "evening"
+- Handle implicit duration: "hang out with girlfriend at 2 PM" → default 1 hour
+- Handle explicit duration: "meeting for 2 hours starting at 3 PM"
+
+### 2.2 Implementation Approach
+No AI required. Use rule-based parsing with libraries:
+- **JavaScript/TypeScript**: `chrono-node` for date parsing
+- **Python**: `dateparser` or `parsedatetime`
+- Custom regex patterns for event title extraction
+
+### 2.3 Example Inputs and Expected Outputs
+
+| Input | Title | Date | Time | Duration |
+|-------|-------|------|------|----------|
+| "hang out with girlfriend at 2 PM on Thursday" | hang out with girlfriend | Next Thursday | 14:00 | 1 hour (default) |
+| "dentist appointment tomorrow at 10am" | dentist appointment | Tomorrow | 10:00 | 1 hour (default) |
+| "team standup every weekday at 9am" | team standup | Weekdays | 09:00 | Recurring |
+| "lunch with mom on March 15th at noon for 2 hours" | lunch with mom | March 15 | 12:00 | 2 hours |
+
+---
+
+## 3. CalDAV Integration
+
+### 3.1 Connection
+- CalDAV server discovery (well-known URIs)
+- Baikal server specific compatibility
+- Secure credential storage (local encrypted storage)
+- Multiple account support
+
+### 3.2 Authentication
+- Username/password authentication
+- Credential testing on setup
+- Session management
+- Logout/reconnect functionality
+
+### 3.3 Synchronization
+- Full calendar sync on startup
+- Incremental sync (CTag/SyncToken)
+- Manual refresh trigger
+- Offline mode with queue for changes
+- Conflict resolution strategy
+
+### 3.4 CalDAV Operations
+- PROPFIND (discover calendars)
+- REPORT (query events with time-range)
+- PUT (create/update events)
+- DELETE (remove events)
+- Handle VCALENDAR/VEVENT iCalendar format
+
+---
+
+## 4. Design Requirements
+
+### 4.1 Aesthetic
+- Soft, cozy, modern feel (Google Calendar inspired)
+- Rounded corners (8-12px radius)
+- Subtle drop shadows (soft, diffused)
+- Comfortable spacing, not cramped
+- Smooth transitions and animations
+
+### 4.2 Color Palette
+- Primary background: Off-white/cream (#FAFAFA to #F5F5F5)
+- Cards/surfaces: White (#FFFFFF)
+- Primary accent: Soft blue (#4285F4 or similar)
+- Secondary accents: Muted pastels for event colors
+- Text: Dark gray (#202124), secondary gray (#5F6368)
+- Borders: Very light gray (#E0E0E0)
+
+### 4.3 Typography
+- Clean sans-serif font (Inter, Roboto, or similar)
+- Generous line height (1.5+)
+- Clear hierarchy (titles larger, secondary info muted)
+- Date numbers bold but not heavy
+
+### 4.4 Components
+- Soft buttons with hover states
+- Pill-shaped event chips
+- Floating action button (FAB) for quick add
+- Modal dialogs with soft backdrop
+- Toast notifications for feedback
+
+### 4.5 Responsive Design
+- Desktop-first (given CalDAV use case)
+- Responsive down to tablet
+- Collapsible sidebar for smaller screens
+
+---
+
+## 5. Technical Stack (Suggested)
+
+### Frontend Options
+| Option | Pros | Cons |
+|--------|------|------|
+| React + TypeScript | Large ecosystem, type safety | Bundle size |
+| Vue 3 + TypeScript | Simpler, good performance | Smaller ecosystem |
+| Svelte + TypeScript | Lightweight, fast | Smaller ecosystem |
+
+### CalDAV Libraries
+| Language | Library |
+|----------|---------|
+| JavaScript | `tsdav`, `caldav-js` |
+| Python | `caldav`, `icalendar` |
+| Electron | Use Node.js caldav libraries |
+
+### Date/NLP Libraries
+- `chrono-node` (JS/TS) - excellent natural date parsing
+- `date-fns` or `dayjs` - date manipulation
+- `rrule` - recurring event handling
+
+---
+
+## 6. Non-Functional Requirements
+
+| Requirement | Target |
+|-------------|--------|
+| Initial load time | < 2 seconds |
+| Event creation response | Instant (optimistic UI) |
+| Sync time (full) | < 5 seconds for typical calendar |
+| Offline support | Basic read + queue writes |
+| Accessibility | WCAG 2.1 AA |
+
+---
+
+## 7. Non-Functional Requirements
+
+| Requirement | Target |
+|-------------|--------|
+| Initial load time | < 2 seconds |
+| Event creation response | Instant (optimistic UI) |
+| Sync time (full) | < 5 seconds for typical calendar |
+| Offline support | Basic read + queue writes |
+| Accessibility | WCAG 2.1 AA |
+
+---
+
+## 8. Modern UX Features
+
+### Drag and Drop
+- Event rescheduling in week/day views
+- Drag events to new time slots
+- Resize events by dragging bottom edge
+- Visual feedback during drag operations
+- Keyboard accessible alternatives
+
+### Search
+- Full-text search on event titles, descriptions, locations
+- Fuzzy matching for typo tolerance
+- Filter by date range and calendar
+- Keyboard shortcut (Cmd/Ctrl+K)
+
+### Notifications
+- Toast notifications for sync status
+- Event reminders
+- Conflict resolution prompts
+
+### Keyboard Shortcuts
+- Arrow keys to navigate calendar
+- Enter to edit event
+- Escape to close modals
+- Cmd/Ctrl+K for search
+
+---
+
+## 9. Future Considerations (Out of Scope for MVP)
+
+### Mobile App
+- Native iOS/Android apps
+- Consider React Native or Capacitor
+
+### PWA Features
+- Service worker for offline support
+- App manifest for installability
+- Push notifications
+
+### Calendar Sharing
+- Share calendars with read/write permissions
+- Collaboration features
+
+### Additional Features
+- Invitations/RSVP
+- Multiple time zones
+- Tasks/Todos integration
