@@ -105,9 +105,13 @@ export function WeekView(): JSX.Element {
 
   const bodyRef = useRef<HTMLDivElement>(null)
   const [isScrolled, setIsScrolled] = useState(false)
+  const isMounted = useRef(false)
 
   useLayoutEffect(() => {
     if (!bodyRef.current) return
+
+    if (isMounted.current) return
+    isMounted.current = true
 
     const rafId = requestAnimationFrame(() => {
       if (!bodyRef.current) return

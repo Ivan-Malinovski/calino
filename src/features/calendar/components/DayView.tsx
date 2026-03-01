@@ -30,7 +30,6 @@ export function DayView(): JSX.Element {
   const getEventsForDateRange = useCalendarStore((state) => state.getEventsForDateRange)
   const openModal = useCalendarStore((state) => state.openModal)
   const updateEvent = useCalendarStore((state) => state.updateEvent)
-  const setCurrentDate = useCalendarStore((state) => state.setCurrentDate)
   const timeFormat = useSettingsStore((state) => state.timeFormat)
 
   const [activeEvent, setActiveEvent] = useState<CalendarEvent | null>(null)
@@ -54,9 +53,13 @@ export function DayView(): JSX.Element {
   }, [date, getEventsForDateRange, events])
 
   const [isScrolled, setIsScrolled] = useState(false)
+  const isMounted = useRef(false)
 
   useLayoutEffect(() => {
     if (dayEvents.length === 0 || !bodyRef.current) return
+
+    if (isMounted.current) return
+    isMounted.current = true
 
     const rafId = requestAnimationFrame(() => {
       if (!bodyRef.current || dayEvents.length === 0) return
@@ -193,7 +196,6 @@ export function DayView(): JSX.Element {
       start: newStart.toISOString(),
       end: newEnd.toISOString(),
     })
-    setCurrentDate(dayStr)
   }
 
   const renderEvents = (): JSX.Element[] => {

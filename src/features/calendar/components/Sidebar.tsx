@@ -1,5 +1,5 @@
 import type { JSX } from 'react'
-import { useMemo, useState, useRef } from 'react'
+import { useMemo, useState, useRef, useEffect } from 'react'
 import {
   format,
   startOfMonth,
@@ -41,13 +41,68 @@ export function Sidebar(): JSX.Element {
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editName, setEditName] = useState('')
+  const [showYearDropdown, setShowYearDropdown] = useState(false)
+  const [showMonthDropdown, setShowMonthDropdown] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+  const dropdownRef = useRef<HTMLDivElement>(null)
   const currentDate = useCalendarStore((state) => state.currentDate)
   const setCurrentDate = useCalendarStore((state) => state.setCurrentDate)
   const calendars = useCalendarStore((state) => state.calendars)
   const toggleCalendarVisibility = useCalendarStore((state) => state.toggleCalendarVisibility)
   const updateCalendar = useCalendarStore((state) => state.updateCalendar)
   const firstDayOfWeek = useSettingsStore((state) => state.firstDayOfWeek)
+
+  const currentYear = new Date().getFullYear()
+  const years = Array.from({ length: 11 }, (_, i) => currentYear - 5 + i)
+  const months = [
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
+  ]
+
+  const handleMonthClick = (): void => {
+    setShowMonthDropdown(!showMonthDropdown)
+  }
+
+  const handleMonthSelect = (monthIndex: number): void => {
+    const newDate = new Date(date.getFullYear(), monthIndex, 1)
+    setCurrentDate(format(newDate, 'yyyy-MM-dd'))
+    setShowMonthDropdown(false)
+  }
+
+  const handleYearClick = (): void => {
+    setShowYearDropdown(!showYearDropdown)
+  }
+
+  const handleYearSelect = (year: number): void => {
+    const newDate = new Date(date.getFullYear(), date.getMonth(), 1)
+    newDate.setFullYear(year)
+    setCurrentDate(format(newDate, 'yyyy-MM-dd'))
+    setShowYearDropdown(false)
+  }
+
+  const handleClickOutside = (e: MouseEvent): void => {
+    if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+      setShowYearDropdown(false)
+      setShowMonthDropdown(false)
+    }
+  }
+
+  useEffect(() => {
+    if (showYearDropdown || showMonthDropdown) {
+      document.addEventListener('mousedown', handleClickOutside)
+      return () => document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [showYearDropdown, showMonthDropdown])
 
   const handleStartRename = (id: string, name: string): void => {
     setEditingId(id)
@@ -141,7 +196,46 @@ export function Sidebar(): JSX.Element {
           <button onClick={handlePrevMonth} className={styles.miniNavBtn}>
             <ChevronLeft />
           </button>
-          <span className={styles.miniMonth}>{format(date, 'MMMM yyyy')}</span>
+          <div style={{ position: 'relative' }} ref={dropdownRef}>
+            <span className={styles.miniMonth}>
+              <button onClick={handleMonthClick} className={styles.miniMonthButton}>
+                {format(date, 'MMMM')}
+              </button>
+              {showMonthDropdown && (
+                <div className={styles.yearDropdown}>
+                  {months.map((month, index) => (
+                    <button
+                      key={month}
+                      onClick={() => handleMonthSelect(index)}
+                      className={`${styles.yearOption} ${
+                        index === date.getMonth() ? styles.yearOptionSelected : ''
+                      }`}
+                    >
+                      {month}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <button onClick={handleYearClick} className={styles.miniMonthButton}>
+                {format(date, 'yyyy')}
+              </button>
+              {showYearDropdown && (
+                <div className={`${styles.yearDropdown} ${styles.yearDropdownRight}`}>
+                  {years.map((year) => (
+                    <button
+                      key={year}
+                      onClick={() => handleYearSelect(year)}
+                      className={`${styles.yearOption} ${
+                        year === date.getFullYear() ? styles.yearOptionSelected : ''
+                      }`}
+                    >
+                      {year}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </span>
+          </div>
           <button onClick={handleNextMonth} className={styles.miniNavBtn}>
             <ChevronRight />
           </button>

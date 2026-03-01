@@ -25,7 +25,8 @@ describe('Sidebar', () => {
 
   it('renders mini calendar', () => {
     render(<Sidebar />)
-    expect(screen.getByText('March 2024')).toBeInTheDocument()
+    expect(screen.getByText('March')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /2024/ })).toBeInTheDocument()
   })
 
   it('renders today button', () => {

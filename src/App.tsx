@@ -44,7 +44,8 @@ function useViewManager(): void {
 
   useEffect(() => {
     const targetPath = VIEW_ROUTES[currentView]
-    if (location.pathname !== targetPath) {
+    const validViews = Object.values(VIEW_ROUTES)
+    if (!validViews.includes(location.pathname) && location.pathname !== targetPath) {
       navigate(targetPath, { replace: true })
     }
   }, [currentView])

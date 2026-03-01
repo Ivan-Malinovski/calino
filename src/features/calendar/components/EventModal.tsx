@@ -3,6 +3,7 @@ import { useState, useMemo, useRef } from 'react'
 import { format, parseISO, addHours } from 'date-fns'
 import { v4 as uuidv4 } from 'uuid'
 import { useCalendarStore } from '@/store/calendarStore'
+import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
 import type { CalendarEvent, RecurrenceRule } from '@/types'
 import styles from './EventModal.module.css'
 
@@ -167,6 +168,11 @@ export function EventModal(): JSX.Element | null {
   const updateEvent = useCalendarStore((state) => state.updateEvent)
   const deleteEvent = useCalendarStore((state) => state.deleteEvent)
   const closeModal = useCalendarStore((state) => state.closeModal)
+  const {
+    createEvent: createCalDAVEvent,
+    updateEvent: updateCalDAVEvent,
+    deleteEvent: deleteCalDAVEvent,
+  } = useCalDAV()
 
   const initialState = useMemo(
     () =>
@@ -227,7 +233,7 @@ export function EventModal(): JSX.Element | null {
     saveEvent('all')
   }
 
-  const saveEvent = (mode: RecurrenceEditMode): void => {
+  const saveEvent = async (mode: RecurrenceEditMode): Promise<void> => {
     const startDateTime = isAllDay ? `${startDate}T00:00:00` : `${startDate}T${startTime}:00`
     const endDateTime = isAllDay ? `${endDate}T23:59:59` : `${endDate}T${endTime}:00`
 
@@ -248,8 +254,14 @@ export function EventModal(): JSX.Element | null {
           recurrence: undefined,
         }
         addEvent(newEvent)
+        try {
+          await createCalDAVEvent(calendarId, newEvent)
+        } catch {
+          // error already handled by useCalDAV
+        }
       } else {
-        updateEvent(originalEventId || selectedEventId, {
+        const eventId = originalEventId || selectedEventId
+        updateEvent(eventId, {
           title,
           description: description || undefined,
           location: location || undefined,
@@ -259,6 +271,24 @@ export function EventModal(): JSX.Element | null {
           calendarId,
           recurrence: recurrenceRule,
         })
+        const existingEvent = events.find((e) => e.id === eventId)
+        if (existingEvent) {
+          try {
+            await updateCalDAVEvent(calendarId, {
+              ...existingEvent,
+              title,
+              description: description || undefined,
+              location: location || undefined,
+              start: startDateTime,
+              end: endDateTime,
+              isAllDay,
+              calendarId,
+              recurrence: recurrenceRule,
+            })
+          } catch {
+            // error already handled by useCalDAV
+          }
+        }
       }
     } else {
       const newEvent: CalendarEvent = {
@@ -273,14 +303,19 @@ export function EventModal(): JSX.Element | null {
         recurrence: recurrenceRule,
       }
       addEvent(newEvent)
+      try {
+        await createCalDAVEvent(calendarId, newEvent)
+      } catch {
+        // error already handled by useCalDAV
+      }
     }
 
     setShowRecurrenceDialog(false)
     closeModal()
   }
 
-  const handleRecurrenceDialogConfirm = (mode: RecurrenceEditMode): void => {
-    saveEvent(mode)
+  const handleRecurrenceDialogConfirm = async (mode: RecurrenceEditMode): Promise<void> => {
+    await saveEvent(mode)
   }
 
   const handleDelete = (): void => {
@@ -292,7 +327,7 @@ export function EventModal(): JSX.Element | null {
     performDelete('all')
   }
 
-  const performDelete = (mode: RecurrenceEditMode): void => {
+  const performDelete = async (mode: RecurrenceEditMode): Promise<void> => {
     if (mode === 'this' && originalEventId) {
       const newEvent: CalendarEvent = {
         id: uuidv4(),
@@ -307,10 +342,21 @@ export function EventModal(): JSX.Element | null {
       }
       deleteEvent(originalEventId)
       addEvent(newEvent)
+      try {
+        await deleteCalDAVEvent(calendarId, originalEventId)
+        await createCalDAVEvent(calendarId, newEvent)
+      } catch {
+        // error already handled by useCalDAV
+      }
     } else {
       const eventIdToDelete = originalEventId || selectedEventId
       if (eventIdToDelete) {
         deleteEvent(eventIdToDelete)
+        try {
+          await deleteCalDAVEvent(calendarId, eventIdToDelete)
+        } catch {
+          // error already handled by useCalDAV
+        }
       }
     }
     setShowDeleteDialog(false)
