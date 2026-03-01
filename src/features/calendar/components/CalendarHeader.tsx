@@ -1,14 +1,18 @@
 import type { JSX } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import { format, addMonths, addWeeks, addDays, parseISO, startOfWeek, endOfWeek } from 'date-fns'
 import { useNavigate } from 'react-router-dom'
+import { motion } from 'framer-motion'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
 import { ViewSwitcher } from './ViewSwitcher'
 import { Search } from '@/features/search'
+import { QuickAdd } from '@/features/nlp'
+import type { NLPParseResult } from '@/features/nlp'
 import styles from './CalendarHeader.module.css'
 
 interface CalendarHeaderProps {
-  onQuickAdd?: () => void
+  onQuickAdd?: (result: NLPParseResult) => void
 }
 
 export function CalendarHeader({ onQuickAdd }: CalendarHeaderProps): JSX.Element {
@@ -18,6 +22,17 @@ export function CalendarHeader({ onQuickAdd }: CalendarHeaderProps): JSX.Element
   const setCurrentDate = useCalendarStore((state) => state.setCurrentDate)
   const openModal = useCalendarStore((state) => state.openModal)
   const firstDayOfWeek = useSettingsStore((state) => state.firstDayOfWeek)
+
+  const [isQuickAddOpen, setIsQuickAddOpen] = useState(false)
+  const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (closeTimeoutRef.current) {
+        clearTimeout(closeTimeoutRef.current)
+      }
+    }
+  }, [])
 
   const date = parseISO(currentDate)
 
@@ -67,6 +82,28 @@ export function CalendarHeader({ onQuickAdd }: CalendarHeaderProps): JSX.Element
     setCurrentDate(format(new Date(), 'yyyy-MM-dd'))
   }
 
+  const handleQuickAddHover = useCallback((open: boolean) => {
+    if (closeTimeoutRef.current) {
+      clearTimeout(closeTimeoutRef.current)
+      closeTimeoutRef.current = null
+    }
+    if (open) {
+      setIsQuickAddOpen(true)
+    } else {
+      closeTimeoutRef.current = setTimeout(() => {
+        setIsQuickAddOpen(false)
+      }, 150)
+    }
+  }, [])
+
+  const handleQuickAddEvent = useCallback(
+    (result: NLPParseResult) => {
+      onQuickAdd?.(result)
+      setIsQuickAddOpen(false)
+    },
+    [onQuickAdd]
+  )
+
   return (
     <div className={styles.header}>
       <div className={styles.left}>
@@ -90,9 +127,24 @@ export function CalendarHeader({ onQuickAdd }: CalendarHeaderProps): JSX.Element
           }}
         />
         <ViewSwitcher />
-        <button className={styles.createButton} onClick={onQuickAdd}>
-          ⚡
-        </button>
+        <div
+          className={styles.quickAddWrapper}
+          onMouseEnter={() => handleQuickAddHover(true)}
+          onMouseLeave={() => handleQuickAddHover(false)}
+        >
+          <button className={styles.createButton}>⚡</button>
+          {isQuickAddOpen && (
+            <motion.div
+              className={styles.quickAddDropdown}
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.15 }}
+            >
+              <QuickAdd onAdd={handleQuickAddEvent} onCancel={() => setIsQuickAddOpen(false)} />
+            </motion.div>
+          )}
+        </div>
         <button className={styles.createButton} onClick={() => openModal()}>
           +
         </button>

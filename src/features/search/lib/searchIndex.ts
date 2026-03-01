@@ -83,17 +83,23 @@ export function search(
     })
   }
 
-  return filteredResults.map((result) => ({
-    event: result.item,
-    score: result.score ?? 0,
-    matches:
-      result.matches?.map((match) => ({
-        field: match.key as 'title' | 'description' | 'location',
-        indices: match.indices as [number, number][],
-        value: match.value ?? '',
-        key: match.key ?? '',
-      })) ?? [],
-  }))
+  return filteredResults
+    .sort((a, b) => {
+      const dateA = parseISO(a.item.start).getTime()
+      const dateB = parseISO(b.item.start).getTime()
+      return dateB - dateA
+    })
+    .map((result) => ({
+      event: result.item,
+      score: result.score ?? 0,
+      matches:
+        result.matches?.map((match) => ({
+          field: match.key as 'title' | 'description' | 'location',
+          indices: match.indices as [number, number][],
+          value: match.value ?? '',
+          key: match.key ?? '',
+        })) ?? [],
+    }))
 }
 
 export function getSearchInstance(): Fuse<CalendarEvent> | null {

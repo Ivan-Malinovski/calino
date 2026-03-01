@@ -1,7 +1,6 @@
 import type { JSX } from 'react'
-import { useState, useCallback } from 'react'
+import { useCallback } from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
-import { motion } from 'framer-motion'
 import { v4 as uuidv4 } from 'uuid'
 import { useCalendarStore } from './store/calendarStore'
 import {
@@ -13,7 +12,7 @@ import {
   EventModal,
   Sidebar,
 } from './features/calendar'
-import { QuickAdd, type NLPParseResult } from './features/nlp'
+import { type NLPParseResult } from './features/nlp'
 import { SettingsPage } from './features/settings'
 import type { CalendarEvent } from './types'
 import './App.css'
@@ -22,7 +21,6 @@ function CalendarApp(): JSX.Element {
   const currentView = useCalendarStore((state) => state.currentView)
   const addEvent = useCalendarStore((state) => state.addEvent)
   const calendars = useCalendarStore((state) => state.calendars)
-  const [isQuickAddOpen, setIsQuickAddOpen] = useState(false)
 
   const renderView = (): JSX.Element => {
     switch (currentView) {
@@ -55,33 +53,16 @@ function CalendarApp(): JSX.Element {
       }
 
       addEvent(event)
-      setIsQuickAddOpen(false)
     },
     [addEvent, calendars]
   )
 
-  const handleToggleQuickAdd = useCallback(() => {
-    setIsQuickAddOpen((prev) => !prev)
-  }, [])
-
   return (
     <div className="app">
-      <CalendarHeader onQuickAdd={handleToggleQuickAdd} />
+      <CalendarHeader onQuickAdd={handleQuickAdd} />
       <div className="appContent">
         <Sidebar />
-        <main className="main">
-          {isQuickAddOpen && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.2, ease: 'easeOut' }}
-            >
-              <QuickAdd onAdd={handleQuickAdd} onCancel={() => setIsQuickAddOpen(false)} />
-            </motion.div>
-          )}
-          {renderView()}
-        </main>
+        <main className="main">{renderView()}</main>
       </div>
       <EventModal />
     </div>
