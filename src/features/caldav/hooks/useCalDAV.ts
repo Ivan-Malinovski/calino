@@ -217,12 +217,12 @@ export function useCalDAV(): UseCalDAVReturn {
       const calendar = calendars.find((c) => c.id === calendarId)
       const account = accounts.find((a) => a.id === calendar?.accountId)
 
-      if (!calendar || !account) {
-        console.error('[CalDAV] Calendar or account not found', { calendarId, calendar, account })
-        throw new Error('Calendar or account not found')
-      }
-
       storeAddEvent(event)
+
+      if (!calendar || !account) {
+        console.log('[CalDAV] No CalDAV account found, local-only update')
+        return
+      }
 
       try {
         const credential = getCredentialById(account.credentialId)
@@ -270,12 +270,12 @@ export function useCalDAV(): UseCalDAVReturn {
       const calendar = calendars.find((c) => c.id === calendarId)
       const account = accounts.find((a) => a.id === calendar?.accountId)
 
-      if (!calendar || !account) {
-        console.error('[CalDAV] Calendar or account not found', { calendarId, calendar, account })
-        throw new Error('Calendar or account not found')
-      }
-
       storeUpdateEvent(event.id, event)
+
+      if (!calendar || !account) {
+        console.log('[CalDAV] No CalDAV account found, local-only update')
+        return
+      }
 
       try {
         const credential = getCredentialById(account.credentialId)
@@ -320,8 +320,9 @@ export function useCalDAV(): UseCalDAVReturn {
       const account = accounts.find((a) => a.id === calendar?.accountId)
 
       if (!calendar || !account) {
-        console.error('[CalDAV] Calendar or account not found', { calendarId, calendar, account })
-        throw new Error('Calendar or account not found')
+        console.log('[CalDAV] No CalDAV account found, local-only delete')
+        storeDeleteEvent(eventId)
+        return
       }
 
       try {

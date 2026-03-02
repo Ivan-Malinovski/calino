@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { EventModal } from '../components/EventModal'
 import { useCalendarStore } from '@/store/calendarStore'
 
@@ -92,7 +92,7 @@ describe('EventModal', () => {
     store.openModal()
 
     render(<EventModal />)
-    expect(screen.getByPlaceholderText('Title')).toBeInTheDocument()
+    expect(screen.getByPlaceholderText('Add title')).toBeInTheDocument()
   })
 
   it('renders location input', () => {
@@ -108,7 +108,8 @@ describe('EventModal', () => {
     store.openModal()
 
     render(<EventModal />)
-    expect(screen.getByPlaceholderText('Description')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /add description/i }))
+    expect(screen.getByPlaceholderText('Add description...')).toBeInTheDocument()
   })
 
   it('renders cancel and create buttons', () => {
@@ -136,7 +137,7 @@ describe('EventModal', () => {
 
     render(<EventModal />)
 
-    expect(screen.getByPlaceholderText('Title')).toHaveValue('Weekly Meeting')
-    expect(screen.getByPlaceholderText('Description')).toHaveValue('Original description')
+    expect(screen.getByPlaceholderText('Add title')).toHaveValue('Weekly Meeting')
+    expect(screen.getByPlaceholderText('Add description...')).toHaveValue('Original description')
   })
 })
