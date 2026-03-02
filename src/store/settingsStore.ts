@@ -12,10 +12,10 @@ import type {
 } from '@/types'
 
 const DEFAULT_SETTINGS: UserSettings = {
-  timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-  dateFormat: 'MM/dd/yyyy',
-  timeFormat: '12h',
-  firstDayOfWeek: 0,
+  timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Berlin',
+  dateFormat: 'dd/MM/yyyy',
+  timeFormat: '24h',
+  firstDayOfWeek: 1,
   defaultDuration: 60,
   defaultView: 'month',
   showWeekNumbers: false,

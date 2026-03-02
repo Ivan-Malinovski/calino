@@ -10,9 +10,9 @@ describe('settingsStore', () => {
     const settings = useSettingsStore.getState()
 
     expect(settings.timezone).toBeDefined()
-    expect(settings.dateFormat).toBe('MM/dd/yyyy')
-    expect(settings.timeFormat).toBe('12h')
-    expect(settings.firstDayOfWeek).toBe(0)
+    expect(settings.dateFormat).toBe('dd/MM/yyyy')
+    expect(settings.timeFormat).toBe('24h')
+    expect(settings.firstDayOfWeek).toBe(1)
     expect(settings.defaultDuration).toBe(60)
     expect(settings.defaultView).toBe('month')
     expect(settings.showWeekNumbers).toBe(false)
@@ -48,8 +48,8 @@ describe('settingsStore', () => {
 
     const settings = useSettingsStore.getState()
     expect(settings.timeFormat).toBe('24h')
-    expect(settings.dateFormat).toBe('MM/dd/yyyy')
-    expect(settings.firstDayOfWeek).toBe(0)
+    expect(settings.dateFormat).toBe('dd/MM/yyyy')
+    expect(settings.firstDayOfWeek).toBe(1)
   })
 
   it('resetSettings restores default values', () => {
@@ -65,8 +65,8 @@ describe('settingsStore', () => {
     store.resetSettings()
 
     const settings = useSettingsStore.getState()
-    expect(settings.timeFormat).toBe('12h')
-    expect(settings.firstDayOfWeek).toBe(0)
+    expect(settings.timeFormat).toBe('24h')
+    expect(settings.firstDayOfWeek).toBe(1)
     expect(settings.defaultView).toBe('month')
     expect(settings.showWeekNumbers).toBe(false)
   })

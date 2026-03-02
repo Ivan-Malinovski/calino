@@ -174,24 +174,29 @@ export const useCalendarStore = create<CalendarStore>()(
                 throw new Error('No rrule string')
               }
               const options = RRule.parseString(rruleString)
-              const eventStart = parseISO(event.start)
+              const eventStartUtc = parseISO(event.start)
+              const offset = eventStartUtc.getTimezoneOffset() * 60000
+              const eventStartLocal = new Date(eventStartUtc.getTime() - offset)
 
               const rule = new RRule({
                 ...options,
-                dtstart: eventStart,
+                dtstart: eventStartLocal,
               })
 
               const occurrences = rule.between(startDate, endDate, true)
 
               for (const occ of occurrences) {
-                const duration = parseISO(event.end).getTime() - eventStart.getTime()
+                const duration = parseISO(event.end).getTime() - eventStartUtc.getTime()
+                const occOffset = occ.getTimezoneOffset() * 60000
+                const occUtc = new Date(occ.getTime() + occOffset)
                 const occEnd = new Date(occ.getTime() + duration)
+                const occEndUtc = new Date(occEnd.getTime() + occOffset)
 
                 expandedEvents.push({
                   ...event,
-                  id: `${event.id}-${occ.toISOString()}`,
-                  start: occ.toISOString(),
-                  end: occEnd.toISOString(),
+                  id: `${event.id}-${occUtc.toISOString()}`,
+                  start: occUtc.toISOString(),
+                  end: occEndUtc.toISOString(),
                 })
               }
             } catch {

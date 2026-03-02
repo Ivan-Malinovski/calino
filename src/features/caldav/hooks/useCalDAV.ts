@@ -217,10 +217,8 @@ export function useCalDAV(): UseCalDAVReturn {
       const calendar = calendars.find((c) => c.id === calendarId)
       const account = accounts.find((a) => a.id === calendar?.accountId)
 
-      storeAddEvent(event)
-
       if (!calendar || !account) {
-        console.log('[CalDAV] No CalDAV account found, local-only update')
+        console.log('[CalDAV] No CalDAV account found, skipping server push')
         return
       }
 
@@ -257,7 +255,7 @@ export function useCalDAV(): UseCalDAVReturn {
         throw error
       }
     },
-    [accounts, calendars, storeAddEvent]
+    [accounts, calendars]
   )
 
   const updateEventFn = useCallback(
@@ -270,10 +268,8 @@ export function useCalDAV(): UseCalDAVReturn {
       const calendar = calendars.find((c) => c.id === calendarId)
       const account = accounts.find((a) => a.id === calendar?.accountId)
 
-      storeUpdateEvent(event.id, event)
-
       if (!calendar || !account) {
-        console.log('[CalDAV] No CalDAV account found, local-only update')
+        console.log('[CalDAV] No CalDAV account found, skipping server push')
         return
       }
 
@@ -310,7 +306,7 @@ export function useCalDAV(): UseCalDAVReturn {
         throw error
       }
     },
-    [accounts, calendars, storeUpdateEvent]
+    [accounts, calendars]
   )
 
   const deleteEventFn = useCallback(
@@ -320,8 +316,7 @@ export function useCalDAV(): UseCalDAVReturn {
       const account = accounts.find((a) => a.id === calendar?.accountId)
 
       if (!calendar || !account) {
-        console.log('[CalDAV] No CalDAV account found, local-only delete')
-        storeDeleteEvent(eventId)
+        console.log('[CalDAV] No CalDAV account found, skipping server delete')
         return
       }
 
@@ -339,7 +334,6 @@ export function useCalDAV(): UseCalDAVReturn {
         console.log('[CalDAV] Deleting event from server', { eventUrl })
         await engine.deleteEvent(eventUrl, '')
 
-        storeDeleteEvent(eventId)
         storage.updateAccountLastSync(account.id)
         console.log('[CalDAV] deleteEventFn succeeded', { eventId })
       } catch (error) {

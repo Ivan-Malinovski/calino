@@ -258,8 +258,10 @@ export function EventModal(): JSX.Element | null {
   }
 
   const saveEvent = async (mode: RecurrenceEditMode): Promise<void> => {
-    const startDateTime = isAllDay ? `${startDate}T00:00:00` : `${startDate}T${startTime}:00`
-    const endDateTime = isAllDay ? `${endDate}T23:59:59` : `${endDate}T${endTime}:00`
+    const localStart = isAllDay ? `${startDate}T00:00:00` : `${startDate}T${startTime}:00`
+    const localEnd = isAllDay ? `${endDate}T23:59:59` : `${endDate}T${endTime}:00`
+    const startDateTime = new Date(localStart).toISOString()
+    const endDateTime = new Date(localEnd).toISOString()
 
     const recurrenceRule: RecurrenceRule | undefined =
       recurrence !== 'none' ? { frequency: recurrence, interval: 1 } : undefined

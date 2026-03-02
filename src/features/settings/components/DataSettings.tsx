@@ -54,7 +54,8 @@ export function DataSettings(): JSX.Element {
     setIsExporting(true)
     try {
       const formatDate = (date: string): string => {
-        return date.replace(/[-:]/g, '').replace(/\.\d{3}/, '')
+        const formatted = date.replace(/[-:]/g, '').replace(/\.\d{3}/, '')
+        return formatted.endsWith('Z') || formatted.endsWith('z') ? formatted : formatted + 'Z'
       }
 
       let ics = 'BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//GoodCal//Calendar//EN\r\n'

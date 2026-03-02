@@ -116,7 +116,7 @@ export function parseICALEvent(iCalData: string, calendarId: string): CalendarEv
 }
 
 function extractICalValue(line: string): string {
-  const colonIndex = line.indexOf(':')
+  const colonIndex = line.lastIndexOf(':')
   return colonIndex !== -1 ? line.substring(colonIndex + 1) : ''
 }
 
@@ -137,7 +137,42 @@ function parseICalDateTime(value: string): { date: string; isAllDay: boolean } {
     const hour = value.substring(9, 11)
     const minute = value.substring(11, 13)
     const second = value.substring(13, 15)
-    return { date: `${year}-${month}-${day}T${hour}:${minute}:${second}`, isAllDay: false }
+    const isUtc = value.endsWith('Z')
+    if (isUtc) {
+      return {
+        date: `${year}-${month}-${day}T${hour}:${minute}:${second}Z`,
+        isAllDay: false,
+      }
+    }
+    const asLocal = new Date(`${year}-${month}-${day}T${hour}:${minute}:${second}`)
+    return {
+      date: asLocal.toISOString(),
+      isAllDay: false,
+    }
+  }
+
+  if (value.length >= 15 && value.includes('T')) {
+    const dateTimePart = value.slice(-15)
+    if (dateTimePart.length === 15 && dateTimePart.includes('T')) {
+      const year = dateTimePart.substring(0, 4)
+      const month = dateTimePart.substring(4, 6)
+      const day = dateTimePart.substring(6, 8)
+      const hour = dateTimePart.substring(9, 11)
+      const minute = dateTimePart.substring(11, 13)
+      const second = dateTimePart.substring(13, 15)
+      const isUtc = dateTimePart.endsWith('Z')
+      if (isUtc) {
+        return {
+          date: `${year}-${month}-${day}T${hour}:${minute}:${second}Z`,
+          isAllDay: false,
+        }
+      }
+      const asLocal = new Date(`${year}-${month}-${day}T${hour}:${minute}:${second}`)
+      return {
+        date: asLocal.toISOString(),
+        isAllDay: false,
+      }
+    }
   }
 
   return { date: new Date().toISOString(), isAllDay: false }
