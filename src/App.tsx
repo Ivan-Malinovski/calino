@@ -61,18 +61,17 @@ function useViewManager(): void {
   useEffect(() => {
     const path = location.pathname === '/' ? '' : location.pathname.slice(1)
     const view = (path as ViewType) || defaultView
-    if (VIEW_ORDER.includes(view) && view !== currentView) {
+    if (VIEW_ORDER.includes(view)) {
       setCurrentView(view)
     }
-  }, [location.pathname, defaultView])
+  }, [location.pathname, defaultView, setCurrentView])
 
   useEffect(() => {
     const targetPath = VIEW_ROUTES[currentView]
-    const validViews = Object.values(VIEW_ROUTES)
-    if (!validViews.includes(location.pathname) && location.pathname !== targetPath) {
+    if (location.pathname !== targetPath) {
       navigate(targetPath, { replace: true })
     }
-  }, [currentView])
+  }, [currentView, navigate])
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent): void => {
