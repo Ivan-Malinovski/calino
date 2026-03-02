@@ -1,0 +1,6 @@
+services:
+  goodcal:
+    build: .
+    ports:
+      - '3921:80'
+    restart: unless-stopped
