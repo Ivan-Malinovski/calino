@@ -20,19 +20,30 @@ const DATE_TIME_PATTERNS = [
   /\b(?:at\s+)?night\b/i,
   /\b\d+\s*(?:minute|minutes|hour|hours|day|days|week|weeks)\b/i,
   /\b(?:for|duration|lasting)\s+\d+\s*(?:minute|minutes|hour|hours|day|days)\b/i,
-];
+]
 
 export function extractTitle(input: string, parsedText: string): string {
-  let text = input;
-  
+  let text = input
+
   if (parsedText) {
-    text = text.replace(parsedText, '').trim();
+    text = text.replace(parsedText, '').trim()
+  }
+
+  const locationPatterns = [
+    /\bat\s+[a-zA-Z][^onfor]*(?:\s+(?:on|for)\b|$)/i,
+    /\b@\s*[a-zA-Z][a-zA-Z\s]*(?:\s+(?:on|for)\b|$)/i,
+    /\bin\s+[a-zA-Z][^onfor]*(?:\s+(?:on|for)\b|$)/i,
+    /\blocation\s*:\s*[a-zA-Z].+$/i,
+  ]
+
+  for (const pattern of locationPatterns) {
+    text = text.replace(pattern, '').trim()
   }
 
   text = text
     .replace(/\s+/g, ' ')
     .replace(/^[,\-\s]+|[,\-\s]+$/g, '')
-    .trim();
+    .trim()
 
   const prepositionsToRemove = [
     /\bwith\b\s*$/i,
@@ -41,19 +52,19 @@ export function extractTitle(input: string, parsedText: string): string {
     /\bat\b\s*$/i,
     /\bin\b\s*$/i,
     /\bon\b\s*$/i,
-  ];
+  ]
 
   for (const pattern of prepositionsToRemove) {
-    text = text.replace(pattern, '').trim();
+    text = text.replace(pattern, '').trim()
   }
 
   if (!text || text.length < 2) {
-    return 'New Event';
+    return 'New Event'
   }
 
-  return text.charAt(0).toUpperCase() + text.slice(1);
+  return text.charAt(0).toUpperCase() + text.slice(1)
 }
 
 export function getDateTimePatterns(): RegExp[] {
-  return DATE_TIME_PATTERNS;
+  return DATE_TIME_PATTERNS
 }

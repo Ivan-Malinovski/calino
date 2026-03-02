@@ -1,5 +1,5 @@
 import type { JSX } from 'react'
-import { useRef, useEffect } from 'react'
+import { useRef, useEffect, useCallback } from 'react'
 import { useSettingsStore } from '@/store/settingsStore'
 import { useCommandPalette } from '../hooks/useCommandPalette'
 import { CommandItem } from './CommandItem'
@@ -12,17 +12,32 @@ interface CommandPaletteProps {
 
 export function CommandPalette({ isOpen, onClose }: CommandPaletteProps): JSX.Element | null {
   const inputRef = useRef<HTMLInputElement>(null)
-  const {
-    query,
-    setQuery,
-    results,
-    selectedIndex,
-    setSelectedIndex,
-    handleKeyDown,
-    executeSelected,
-  } = useCommandPalette({ isOpen })
+  const { query, setQuery, results, selectedIndex, setSelectedIndex, executeSelected } =
+    useCommandPalette({ isOpen })
 
   const timeFormat = useSettingsStore((state) => state.timeFormat)
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault()
+        setSelectedIndex((i) => Math.min(i + 1, results.length - 1))
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault()
+        setSelectedIndex((i) => Math.max(i - 1, 0))
+      } else if (e.key === 'Enter') {
+        e.preventDefault()
+        const result = executeSelected()
+        if (result?.success && result.message) {
+          window.dispatchEvent(
+            new CustomEvent('show-toast', { detail: { message: result.message } })
+          )
+        }
+        onClose()
+      }
+    },
+    [results.length, executeSelected, onClose, setSelectedIndex]
+  )
 
   useEffect(() => {
     if (isOpen && inputRef.current) {
