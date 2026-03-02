@@ -130,48 +130,29 @@ function parseICalDateTime(value: string): { date: string; isAllDay: boolean } {
     return { date: `${year}-${month}-${day}T00:00:00`, isAllDay: true }
   }
 
-  if (value.length === 15 && value.includes('T')) {
-    const year = value.substring(0, 4)
-    const month = value.substring(4, 6)
-    const day = value.substring(6, 8)
-    const hour = value.substring(9, 11)
-    const minute = value.substring(11, 13)
-    const second = value.substring(13, 15)
-    const isUtc = value.endsWith('Z')
-    if (isUtc) {
+  const hasTime = value.includes('T')
+  const hasZ = value.endsWith('Z')
+  const dateTimeValue = hasZ ? value.slice(0, -1) : value
+
+  if (hasTime && dateTimeValue.length >= 15) {
+    const year = dateTimeValue.substring(0, 4)
+    const month = dateTimeValue.substring(4, 6)
+    const day = dateTimeValue.substring(6, 8)
+    const hour = dateTimeValue.substring(9, 11)
+    const minute = dateTimeValue.substring(11, 13)
+    const second = dateTimeValue.substring(13, 15)
+
+    if (hasZ) {
       return {
         date: `${year}-${month}-${day}T${hour}:${minute}:${second}Z`,
         isAllDay: false,
       }
     }
+
     const asLocal = new Date(`${year}-${month}-${day}T${hour}:${minute}:${second}`)
     return {
       date: asLocal.toISOString(),
       isAllDay: false,
-    }
-  }
-
-  if (value.length >= 15 && value.includes('T')) {
-    const dateTimePart = value.slice(-15)
-    if (dateTimePart.length === 15 && dateTimePart.includes('T')) {
-      const year = dateTimePart.substring(0, 4)
-      const month = dateTimePart.substring(4, 6)
-      const day = dateTimePart.substring(6, 8)
-      const hour = dateTimePart.substring(9, 11)
-      const minute = dateTimePart.substring(11, 13)
-      const second = dateTimePart.substring(13, 15)
-      const isUtc = dateTimePart.endsWith('Z')
-      if (isUtc) {
-        return {
-          date: `${year}-${month}-${day}T${hour}:${minute}:${second}Z`,
-          isAllDay: false,
-        }
-      }
-      const asLocal = new Date(`${year}-${month}-${day}T${hour}:${minute}:${second}`)
-      return {
-        date: asLocal.toISOString(),
-        isAllDay: false,
-      }
     }
   }
 

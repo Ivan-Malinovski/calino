@@ -305,4 +305,72 @@ END:VCALENDAR`
       expect(parsedEvents[0].isAllDay).toBe(true)
     })
   })
+
+  describe('timezone handling', () => {
+    it('parses UTC datetime with Z suffix', () => {
+      const iCal = `BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+UID:utc-event
+DTSTART:20240315T140000Z
+DTEND:20240315T150000Z
+SUMMARY:UTC Event
+END:VEVENT
+END:VCALENDAR`
+
+      const events = parseICALEvent(iCal, 'cal-1')
+
+      expect(events[0].start).toContain('14:00:00')
+      expect(events[0].start).toContain('Z')
+    })
+
+    it('parses datetime without timezone as local time', () => {
+      const iCal = `BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+UID:local-event
+DTSTART:20240315T140000
+DTEND:20240315T150000
+SUMMARY:Local Event
+END:VEVENT
+END:VCALENDAR`
+
+      const events = parseICALEvent(iCal, 'cal-1')
+
+      expect(events[0].start).toContain('T')
+      expect(events[0].end).toContain('T')
+    })
+
+    it('handles datetime with TZID parameter', () => {
+      const iCal = `BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+UID:tzid-event
+DTSTART;TZID=Europe/Berlin:20240315T080000
+DTEND;TZID=Europe/Berlin:20240315T090000
+SUMMARY:Berlin Event
+END:VEVENT
+END:VCALENDAR`
+
+      const events = parseICALEvent(iCal, 'cal-1')
+
+      expect(events[0].start).toContain('T')
+    })
+
+    it('exports UTC datetime with Z suffix', () => {
+      const event: CalendarEvent = {
+        id: 'utc-export',
+        title: 'UTC Export',
+        start: '2024-03-15T14:00:00.000Z',
+        end: '2024-03-15T15:00:00.000Z',
+        isAllDay: false,
+        calendarId: 'cal-1',
+      }
+
+      const iCal = eventToICAL(event)
+
+      expect(iCal).toContain('DTSTART:20240315T140000Z')
+      expect(iCal).toContain('DTEND:20240315T150000Z')
+    })
+  })
 })

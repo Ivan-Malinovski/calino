@@ -1,20 +1,20 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { useCalendarStore } from '../calendarStore';
+import { describe, it, expect, beforeEach } from 'vitest'
+import { useCalendarStore } from '../calendarStore'
 
 describe('calendarStore', () => {
   beforeEach(() => {
-    const store = useCalendarStore.getState();
-    store.events.forEach((e) => store.deleteEvent(e.id));
-    const calendars = store.calendars.filter((c) => c.isDefault);
+    const store = useCalendarStore.getState()
+    store.events.forEach((e) => store.deleteEvent(e.id))
+    const calendars = store.calendars.filter((c) => c.isDefault)
     calendars.forEach((c) => {
-      if (!c.isDefault) store.deleteCalendar(c.id);
-    });
-  });
+      if (!c.isDefault) store.deleteCalendar(c.id)
+    })
+  })
 
   describe('addEvent', () => {
     it('adds an event to the store', () => {
-      const store = useCalendarStore.getState();
-      const initialCount = store.events.length;
+      const store = useCalendarStore.getState()
+      const initialCount = store.events.length
 
       store.addEvent({
         id: 'test-1',
@@ -23,16 +23,16 @@ describe('calendarStore', () => {
         start: '2024-03-15T10:00:00',
         end: '2024-03-15T11:00:00',
         isAllDay: false,
-      });
+      })
 
-      expect(useCalendarStore.getState().events.length).toBe(initialCount + 1);
-      expect(useCalendarStore.getState().events[0].title).toBe('Test Event');
-    });
-  });
+      expect(useCalendarStore.getState().events.length).toBe(initialCount + 1)
+      expect(useCalendarStore.getState().events[0].title).toBe('Test Event')
+    })
+  })
 
   describe('updateEvent', () => {
     it('updates an existing event', () => {
-      const store = useCalendarStore.getState();
+      const store = useCalendarStore.getState()
 
       store.addEvent({
         id: 'test-2',
@@ -41,18 +41,18 @@ describe('calendarStore', () => {
         start: '2024-03-15T10:00:00',
         end: '2024-03-15T11:00:00',
         isAllDay: false,
-      });
+      })
 
-      store.updateEvent('test-2', { title: 'Updated Title' });
+      store.updateEvent('test-2', { title: 'Updated Title' })
 
-      const updated = useCalendarStore.getState().events.find((e) => e.id === 'test-2');
-      expect(updated?.title).toBe('Updated Title');
-    });
-  });
+      const updated = useCalendarStore.getState().events.find((e) => e.id === 'test-2')
+      expect(updated?.title).toBe('Updated Title')
+    })
+  })
 
   describe('deleteEvent', () => {
     it('removes an event from the store', () => {
-      const store = useCalendarStore.getState();
+      const store = useCalendarStore.getState()
 
       store.addEvent({
         id: 'test-3',
@@ -61,18 +61,18 @@ describe('calendarStore', () => {
         start: '2024-03-15T10:00:00',
         end: '2024-03-15T11:00:00',
         isAllDay: false,
-      });
+      })
 
-      store.deleteEvent('test-3');
+      store.deleteEvent('test-3')
 
-      const exists = useCalendarStore.getState().events.find((e) => e.id === 'test-3');
-      expect(exists).toBeUndefined();
-    });
-  });
+      const exists = useCalendarStore.getState().events.find((e) => e.id === 'test-3')
+      expect(exists).toBeUndefined()
+    })
+  })
 
   describe('getEventsForDateRange', () => {
     it('returns events within a date range', () => {
-      const store = useCalendarStore.getState();
+      const store = useCalendarStore.getState()
 
       store.addEvent({
         id: 'event-1',
@@ -81,7 +81,7 @@ describe('calendarStore', () => {
         start: '2024-03-15T10:00:00',
         end: '2024-03-15T11:00:00',
         isAllDay: false,
-      });
+      })
 
       store.addEvent({
         id: 'event-2',
@@ -90,15 +90,15 @@ describe('calendarStore', () => {
         start: '2024-03-20T14:00:00',
         end: '2024-03-20T15:00:00',
         isAllDay: false,
-      });
+      })
 
-      const events = store.getEventsForDateRange('2024-03-15', '2024-03-15');
-      expect(events.length).toBe(1);
-      expect(events[0].title).toBe('Event 1');
-    });
+      const events = store.getEventsForDateRange('2024-03-15', '2024-03-15')
+      expect(events.length).toBe(1)
+      expect(events[0].title).toBe('Event 1')
+    })
 
     it('excludes events from hidden calendars', () => {
-      const store = useCalendarStore.getState();
+      const store = useCalendarStore.getState()
 
       store.addCalendar({
         id: 'work',
@@ -106,7 +106,7 @@ describe('calendarStore', () => {
         color: '#FF0000',
         isVisible: false,
         isDefault: false,
-      });
+      })
 
       store.addEvent({
         id: 'visible-event',
@@ -115,7 +115,7 @@ describe('calendarStore', () => {
         start: '2024-03-15T10:00:00',
         end: '2024-03-15T11:00:00',
         isAllDay: false,
-      });
+      })
 
       store.addEvent({
         id: 'hidden-event',
@@ -124,15 +124,15 @@ describe('calendarStore', () => {
         start: '2024-03-15T14:00:00',
         end: '2024-03-15T15:00:00',
         isAllDay: false,
-      });
+      })
 
-      const events = store.getEventsForDateRange('2024-03-15', '2024-03-15');
-      expect(events.length).toBe(1);
-      expect(events[0].title).toBe('Visible Event');
-    });
+      const events = store.getEventsForDateRange('2024-03-15', '2024-03-15')
+      expect(events.length).toBe(1)
+      expect(events[0].title).toBe('Visible Event')
+    })
 
     it('returns all-day events', () => {
-      const store = useCalendarStore.getState();
+      const store = useCalendarStore.getState()
 
       store.addEvent({
         id: 'allday',
@@ -141,18 +141,18 @@ describe('calendarStore', () => {
         start: '2024-03-15T00:00:00',
         end: '2024-03-15T23:59:59',
         isAllDay: true,
-      });
+      })
 
-      const events = store.getEventsForDateRange('2024-03-15', '2024-03-15');
-      expect(events.length).toBe(1);
-      expect(events[0].isAllDay).toBe(true);
-    });
-  });
+      const events = store.getEventsForDateRange('2024-03-15', '2024-03-15')
+      expect(events.length).toBe(1)
+      expect(events[0].isAllDay).toBe(true)
+    })
+  })
 
   describe('calendar management', () => {
     it('adds a calendar', () => {
-      const store = useCalendarStore.getState();
-      const initialCount = store.calendars.length;
+      const store = useCalendarStore.getState()
+      const initialCount = store.calendars.length
 
       store.addCalendar({
         id: 'personal',
@@ -160,13 +160,13 @@ describe('calendarStore', () => {
         color: '#00FF00',
         isVisible: true,
         isDefault: false,
-      });
+      })
 
-      expect(useCalendarStore.getState().calendars.length).toBe(initialCount + 1);
-    });
+      expect(useCalendarStore.getState().calendars.length).toBe(initialCount + 1)
+    })
 
     it('toggles calendar visibility', () => {
-      const store = useCalendarStore.getState();
+      const store = useCalendarStore.getState()
 
       store.addCalendar({
         id: 'test-cal',
@@ -174,16 +174,16 @@ describe('calendarStore', () => {
         color: '#000000',
         isVisible: true,
         isDefault: false,
-      });
+      })
 
-      store.toggleCalendarVisibility('test-cal');
+      store.toggleCalendarVisibility('test-cal')
 
-      const calendar = useCalendarStore.getState().calendars.find((c) => c.id === 'test-cal');
-      expect(calendar?.isVisible).toBe(false);
-    });
+      const calendar = useCalendarStore.getState().calendars.find((c) => c.id === 'test-cal')
+      expect(calendar?.isVisible).toBe(false)
+    })
 
     it('deletes calendar and its events', () => {
-      const store = useCalendarStore.getState();
+      const store = useCalendarStore.getState()
 
       store.addCalendar({
         id: 'to-delete',
@@ -191,7 +191,7 @@ describe('calendarStore', () => {
         color: '#000000',
         isVisible: true,
         isDefault: false,
-      });
+      })
 
       store.addEvent({
         id: 'event-to-delete',
@@ -200,62 +200,116 @@ describe('calendarStore', () => {
         start: '2024-03-15T10:00:00',
         end: '2024-03-15T11:00:00',
         isAllDay: false,
-      });
+      })
 
-      store.deleteCalendar('to-delete');
+      store.deleteCalendar('to-delete')
 
-      const calendar = useCalendarStore.getState().calendars.find((c) => c.id === 'to-delete');
-      const event = useCalendarStore.getState().events.find((e) => e.id === 'event-to-delete');
+      const calendar = useCalendarStore.getState().calendars.find((c) => c.id === 'to-delete')
+      const event = useCalendarStore.getState().events.find((e) => e.id === 'event-to-delete')
 
-      expect(calendar).toBeUndefined();
-      expect(event).toBeUndefined();
-    });
-  });
+      expect(calendar).toBeUndefined()
+      expect(event).toBeUndefined()
+    })
+  })
 
   describe('navigation', () => {
     it('sets current date', () => {
-      const store = useCalendarStore.getState();
-      store.setCurrentDate('2024-06-15');
-      expect(useCalendarStore.getState().currentDate).toBe('2024-06-15');
-    });
+      const store = useCalendarStore.getState()
+      store.setCurrentDate('2024-06-15')
+      expect(useCalendarStore.getState().currentDate).toBe('2024-06-15')
+    })
 
     it('sets current view', () => {
-      const store = useCalendarStore.getState();
-      store.setCurrentView('week');
-      expect(useCalendarStore.getState().currentView).toBe('week');
+      const store = useCalendarStore.getState()
+      store.setCurrentView('week')
+      expect(useCalendarStore.getState().currentView).toBe('week')
 
-      store.setCurrentView('day');
-      expect(useCalendarStore.getState().currentView).toBe('day');
+      store.setCurrentView('day')
+      expect(useCalendarStore.getState().currentView).toBe('day')
 
-      store.setCurrentView('agenda');
-      expect(useCalendarStore.getState().currentView).toBe('agenda');
-    });
-  });
+      store.setCurrentView('agenda')
+      expect(useCalendarStore.getState().currentView).toBe('agenda')
+    })
+  })
 
   describe('modal', () => {
     it('opens modal with date', () => {
-      const store = useCalendarStore.getState();
-      store.openModal('2024-03-15');
+      const store = useCalendarStore.getState()
+      store.openModal('2024-03-15')
 
-      expect(useCalendarStore.getState().isModalOpen).toBe(true);
-      expect(useCalendarStore.getState().selectedDate).toBe('2024-03-15');
-    });
+      expect(useCalendarStore.getState().isModalOpen).toBe(true)
+      expect(useCalendarStore.getState().selectedDate).toBe('2024-03-15')
+    })
 
     it('opens modal without date', () => {
-      const store = useCalendarStore.getState();
-      store.openModal();
+      const store = useCalendarStore.getState()
+      store.openModal()
 
-      expect(useCalendarStore.getState().isModalOpen).toBe(true);
-      expect(useCalendarStore.getState().selectedDate).toBeNull();
-    });
+      expect(useCalendarStore.getState().isModalOpen).toBe(true)
+      expect(useCalendarStore.getState().selectedDate).toBeNull()
+    })
 
     it('closes modal', () => {
-      const store = useCalendarStore.getState();
-      store.openModal('2024-03-15');
-      store.closeModal();
+      const store = useCalendarStore.getState()
+      store.openModal('2024-03-15')
+      store.closeModal()
 
-      expect(useCalendarStore.getState().isModalOpen).toBe(false);
-      expect(useCalendarStore.getState().selectedEventId).toBeNull();
-    });
-  });
-});
+      expect(useCalendarStore.getState().isModalOpen).toBe(false)
+      expect(useCalendarStore.getState().selectedEventId).toBeNull()
+    })
+  })
+
+  describe('recurring event expansion with timezone', () => {
+    it('expands recurring event with correct UTC conversion', () => {
+      const store = useCalendarStore.getState()
+
+      store.addEvent({
+        id: 'recurring-test',
+        calendarId: 'default',
+        title: 'Weekly Meeting',
+        start: '2024-03-18T09:00:00.000Z',
+        end: '2024-03-18T10:00:00.000Z',
+        isAllDay: false,
+        recurrence: { frequency: 'weekly', interval: 1 },
+        rruleString: 'FREQ=WEEKLY;INTERVAL=1',
+      })
+
+      const events = store.getEventsForDateRange('2024-03-18', '2024-03-22')
+
+      expect(events.length).toBeGreaterThan(0)
+
+      const mondayEvent = events.find((e) => e.id.startsWith('recurring-test-2024-03-18'))
+      expect(mondayEvent).toBeDefined()
+
+      const hour = new Date(mondayEvent!.start).getUTCHours()
+      expect(hour).toBe(9)
+    })
+
+    it('handles DST transition correctly', () => {
+      const store = useCalendarStore.getState()
+
+      store.addEvent({
+        id: 'dst-test',
+        calendarId: 'default',
+        title: 'DST Test',
+        start: '2024-03-25T08:00:00.000Z',
+        end: '2024-03-25T09:00:00.000Z',
+        isAllDay: false,
+        recurrence: { frequency: 'weekly', interval: 1 },
+        rruleString: 'FREQ=WEEKLY;INTERVAL=1',
+      })
+
+      const marchEvents = store.getEventsForDateRange('2024-03-25', '2024-03-31')
+      const octEvents = store.getEventsForDateRange('2024-10-28', '2024-11-03')
+
+      expect(marchEvents.length).toBeGreaterThan(0)
+      expect(octEvents.length).toBeGreaterThan(0)
+
+      const marchHour = new Date(marchEvents[0].start).getUTCHours()
+      const octHour = new Date(octEvents[0].start).getUTCHours()
+
+      expect(marchHour).toBe(8)
+      expect(octHour).toBe(8)
+    })
+  })
+})
