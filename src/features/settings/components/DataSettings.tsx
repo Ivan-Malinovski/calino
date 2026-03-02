@@ -16,6 +16,15 @@ export function DataSettings(): JSX.Element {
 
   const events = useCalendarStore((state) => state.events)
   const calendars = useCalendarStore((state) => state.calendars)
+  const updateCalendar = useCalendarStore((state) => state.updateCalendar)
+
+  const defaultCalendar = calendars.find((c) => c.isDefault) || calendars[0]
+
+  const handleSetDefaultCalendar = (calendarId: string): void => {
+    calendars.forEach((cal) => {
+      updateCalendar(cal.id, { isDefault: cal.id === calendarId })
+    })
+  }
 
   const handleExport = async (): Promise<void> => {
     setIsExporting(true)
@@ -153,6 +162,26 @@ export function DataSettings(): JSX.Element {
     <div className={styles.section}>
       <h2 className={styles.sectionTitle}>Data & Storage</h2>
       <p className={styles.sectionDescription}>Export, import, or clear your calendar data.</p>
+
+      {calendars.length > 0 && (
+        <div className={styles.settingRow}>
+          <div className={styles.settingLabel}>
+            <span className={styles.settingLabelText}>Default Calendar</span>
+            <span className={styles.settingLabelHint}>Used when creating new events</span>
+          </div>
+          <select
+            className={styles.select}
+            value={defaultCalendar?.id || ''}
+            onChange={(e) => handleSetDefaultCalendar(e.target.value)}
+          >
+            {calendars.map((cal) => (
+              <option key={cal.id} value={cal.id}>
+                {cal.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       <div className={styles.settingRow}>
         <div className={styles.settingLabel}>

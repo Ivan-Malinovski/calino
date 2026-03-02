@@ -99,7 +99,6 @@ export interface UserSettings {
   syncIntervalMinutes: number
   conflictResolution: 'server-wins' | 'local-wins' | 'ask'
   compactRecurringEvents: boolean
-  defaultCalendarId?: string
 }
 
 export type SettingsState = UserSettings
