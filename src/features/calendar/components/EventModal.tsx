@@ -222,6 +222,7 @@ export function EventModal(): JSX.Element | null {
   )
   const [showRecurrenceDialog, setShowRecurrenceDialog] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [showDescription, setShowDescription] = useState(!!initialState.description)
 
   const lastSelectedEventId = useRef<string | null>(null)
   if (selectedEventId !== lastSelectedEventId.current) {
@@ -237,6 +238,7 @@ export function EventModal(): JSX.Element | null {
     setCalendarId(initialState.calendarId)
     setRecurrence(initialState.recurrence)
     setTravelDuration(initialState.travelDuration)
+    setShowDescription(!!initialState.description)
   }
 
   const isEditing = selectedEventId !== null
@@ -414,10 +416,10 @@ export function EventModal(): JSX.Element | null {
           <div className={styles.field}>
             <input
               type="text"
-              placeholder="Title"
+              placeholder="Add title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className={styles.input}
+              className={styles.titleInput}
               required
             />
           </div>
@@ -433,131 +435,172 @@ export function EventModal(): JSX.Element | null {
             </label>
           </div>
 
-          <div className={styles.row}>
-            <div className={styles.field}>
+          <div className={styles.dateTimeRow}>
+            <div className={styles.dateTimeGroup}>
               <label className={styles.label}>Start</label>
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className={styles.input}
-                required
-              />
-            </div>
-            {!isAllDay && (
-              <div className={styles.field}>
+              <div className={styles.dateTimeInputs}>
                 <input
-                  type="time"
-                  value={startTime}
-                  onChange={(e) => setStartTime(e.target.value)}
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
                   className={styles.input}
                   required
                 />
+                {!isAllDay && (
+                  <input
+                    type="time"
+                    value={startTime}
+                    onChange={(e) => setStartTime(e.target.value)}
+                    className={styles.input}
+                    required
+                  />
+                )}
               </div>
-            )}
+            </div>
+
+            <div className={styles.dateTimeGroup}>
+              <label className={styles.label}>End</label>
+              <div className={styles.dateTimeInputs}>
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className={styles.input}
+                  required
+                />
+                {!isAllDay && (
+                  <input
+                    type="time"
+                    value={endTime}
+                    onChange={(e) => setEndTime(e.target.value)}
+                    className={styles.input}
+                    required
+                  />
+                )}
+              </div>
+            </div>
           </div>
 
           <div className={styles.row}>
             <div className={styles.field}>
-              <label className={styles.label}>End</label>
+              <label className={styles.label} htmlFor="recurrence-select">
+                Repeat
+              </label>
+              <select
+                id="recurrence-select"
+                value={recurrence}
+                onChange={(e) =>
+                  setRecurrence(e.target.value as RecurrenceRule['frequency'] | 'none')
+                }
+                className={styles.select}
+              >
+                {RECURRENCE_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className={styles.field}>
+              <label className={styles.label} htmlFor="travel-duration-select">
+                Travel time
+              </label>
+              <select
+                id="travel-duration-select"
+                value={travelDuration ?? ''}
+                onChange={(e) =>
+                  setTravelDuration(e.target.value ? Number(e.target.value) : undefined)
+                }
+                className={styles.select}
+              >
+                {TRAVEL_DURATION_OPTIONS.map((option) => (
+                  <option key={option.label} value={option.value ?? ''}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className={styles.row}>
+            <div className={styles.field}>
               <input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
+                type="text"
+                placeholder="Location"
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
                 className={styles.input}
-                required
               />
             </div>
-            {!isAllDay && (
-              <div className={styles.field}>
-                <input
-                  type="time"
-                  value={endTime}
-                  onChange={(e) => setEndTime(e.target.value)}
-                  className={styles.input}
-                  required
-                />
+
+            <div className={styles.field}>
+              <select
+                id="calendar-select"
+                value={calendarId}
+                onChange={(e) => setCalendarId(e.target.value)}
+                className={styles.select}
+              >
+                {calendars.map((cal) => (
+                  <option key={cal.id} value={cal.id}>
+                    {cal.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {!showDescription ? (
+            <button
+              type="button"
+              className={styles.addButton}
+              onClick={() => setShowDescription(true)}
+            >
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+              Add description
+            </button>
+          ) : (
+            <div className={styles.field}>
+              <div className={styles.fieldHeader}>
+                <label className={styles.label}>Description</label>
+                <button
+                  type="button"
+                  className={styles.removeFieldButton}
+                  onClick={() => {
+                    setShowDescription(false)
+                    setDescription('')
+                  }}
+                >
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
+                    <path d="M18 6L6 18M6 6l12 12" />
+                  </svg>
+                </button>
               </div>
-            )}
-          </div>
-
-          <div className={styles.field}>
-            <label className={styles.label} htmlFor="recurrence-select">
-              Repeat
-            </label>
-            <select
-              id="recurrence-select"
-              value={recurrence}
-              onChange={(e) =>
-                setRecurrence(e.target.value as RecurrenceRule['frequency'] | 'none')
-              }
-              className={styles.select}
-            >
-              {RECURRENCE_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className={styles.field}>
-            <label className={styles.label} htmlFor="travel-duration-select">
-              Travel time
-            </label>
-            <select
-              id="travel-duration-select"
-              value={travelDuration ?? ''}
-              onChange={(e) =>
-                setTravelDuration(e.target.value ? Number(e.target.value) : undefined)
-              }
-              className={styles.select}
-            >
-              {TRAVEL_DURATION_OPTIONS.map((option) => (
-                <option key={option.label} value={option.value ?? ''}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className={styles.field}>
-            <label className={styles.label} htmlFor="calendar-select">
-              Calendar
-            </label>
-            <select
-              id="calendar-select"
-              value={calendarId}
-              onChange={(e) => setCalendarId(e.target.value)}
-              className={styles.select}
-            >
-              {calendars.map((cal) => (
-                <option key={cal.id} value={cal.id}>
-                  {cal.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className={styles.field}>
-            <input
-              type="text"
-              placeholder="Location"
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              className={styles.input}
-            />
-          </div>
-
-          <div className={styles.field}>
-            <textarea
-              placeholder="Description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className={styles.textarea}
-              rows={3}
-            />
-          </div>
+              <textarea
+                placeholder="Add description..."
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                className={styles.textarea}
+                rows={3}
+              />
+            </div>
+          )}
 
           <div className={styles.footer}>
             {isEditing && (

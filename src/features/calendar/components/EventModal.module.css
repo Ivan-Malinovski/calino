@@ -15,7 +15,7 @@
   background: white;
   border-radius: 8px;
   width: 100%;
-  max-width: 500px;
+  max-width: 560px;
   max-height: 90vh;
   overflow: auto;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
@@ -56,10 +56,10 @@
 }
 
 .form {
-  padding: 24px;
+  padding: 20px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
 }
 
 .field {
@@ -70,11 +70,12 @@
 
 .row {
   display: flex;
-  gap: 12px;
+  gap: 8px;
 }
 
 .row .field {
   flex: 1;
+  min-width: 0;
 }
 
 .label {
@@ -86,7 +87,7 @@
 .input,
 .select,
 .textarea {
-  padding: 10px 12px;
+  padding: 8px 10px;
   border: 1px solid #dadce0;
   border-radius: 4px;
   font-size: 14px;
@@ -95,11 +96,36 @@
   transition: border-color 0.15s ease;
 }
 
+.titleInput {
+  padding: 10px 10px;
+  border: 1px solid #dadce0;
+  border-radius: 4px;
+  font-size: 16px;
+  font-weight: 500;
+  color: #202124;
+  background: white;
+  transition: border-color 0.15s ease;
+}
+
+.titleInput::placeholder {
+  color: #9aa0a6;
+}
+
+.titleInput:focus {
+  outline: none;
+  border-color: #4285f4;
+}
+
 .input:focus,
 .select:focus,
 .textarea:focus {
   outline: none;
   border-color: #4285f4;
+}
+
+.input,
+.select {
+  height: 36px;
 }
 
 .textarea {
@@ -183,4 +209,70 @@
 
 .deleteButton:hover {
   background: #fce8e6;
+}
+
+.dateTimeRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.dateTimeGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dateTimeInputs {
+  display: flex;
+  gap: 6px;
+}
+
+.dateTimeInputs .input {
+  flex: 1;
+  min-width: 0;
+}
+
+.addButton {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  border-radius: 4px;
+  font-size: 14px;
+  color: #5f6368;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.addButton:hover {
+  background: #f1f3f4;
+  color: #202124;
+}
+
+.fieldHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.removeFieldButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: transparent;
+  border-radius: 4px;
+  color: #5f6368;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.removeFieldButton:hover {
+  background: #f1f3f4;
+  color: #202124;
 }
