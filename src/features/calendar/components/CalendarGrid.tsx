@@ -41,6 +41,7 @@ export function CalendarGrid(): JSX.Element {
   const updateEvent = useCalendarStore((state) => state.updateEvent)
   const setCurrentDate = useCalendarStore((state) => state.setCurrentDate)
   const setCurrentView = useCalendarStore((state) => state.setCurrentView)
+  const isOverlayOpen = useCalendarStore((state) => state.isOverlayOpen)
   const firstDayOfWeek = useSettingsStore((state) => state.firstDayOfWeek)
   const compactRecurringEvents = useSettingsStore((state) => state.compactRecurringEvents ?? false)
 
@@ -100,6 +101,8 @@ export function CalendarGrid(): JSX.Element {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent): void => {
+      if (isOverlayOpen) return
+
       if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
         e.preventDefault()
         const direction = e.key === 'ArrowDown' ? 'down' : 'up'
@@ -118,7 +121,7 @@ export function CalendarGrid(): JSX.Element {
         clearTimeout(scrollCooldownRef.current)
       }
     }
-  }, [changeMonth])
+  }, [changeMonth, isOverlayOpen])
 
   const handleDragStart = (event: DragStartEvent): void => {
     const eventId = event.active.id as string

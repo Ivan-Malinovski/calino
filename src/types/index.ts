@@ -48,6 +48,7 @@ export interface CalendarState {
   currentView: ViewType
   selectedEventId: string | null
   isModalOpen: boolean
+  isOverlayOpen: boolean
   selectedDate: string | null
   selectedEndDate: string | null
 }
@@ -67,6 +68,7 @@ export interface CalendarActions {
   setSelectedEventId: (id: string | null) => void
   openModal: (date?: string, endDate?: string, eventId?: string) => void
   closeModal: () => void
+  setOverlayOpen: (isOpen: boolean) => void
   getEventsForDateRange: (start: string, end: string) => CalendarEvent[]
   getVisibleEvents: () => CalendarEvent[]
 }

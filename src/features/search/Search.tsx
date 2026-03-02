@@ -19,7 +19,6 @@ export function Search({ onSelectEvent }: SearchProps): JSX.Element {
     filters,
     handleSearch,
     handleClear,
-    openSearch,
     closeSearch,
     updateFilters,
     clearFilters,
@@ -52,7 +51,6 @@ export function Search({ onSelectEvent }: SearchProps): JSX.Element {
         value={query}
         onChange={handleSearch}
         onClear={handleClear}
-        onOpen={openSearch}
         onClose={closeSearch}
         isOpen={isSearchOpen}
       />

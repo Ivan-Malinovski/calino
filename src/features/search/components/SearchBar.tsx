@@ -1,12 +1,11 @@
 import type { JSX } from 'react'
-import { useEffect, useRef, useCallback, type KeyboardEvent } from 'react'
+import { useRef, useCallback, type KeyboardEvent } from 'react'
 import styles from './SearchBar.module.css'
 
 interface SearchBarProps {
   value: string
   onChange: (value: string) => void
   onClear: () => void
-  onOpen: () => void
   onClose: () => void
   isOpen: boolean
   placeholder?: string
@@ -16,7 +15,6 @@ export function SearchBar({
   value,
   onChange,
   onClear,
-  onOpen,
   onClose,
   isOpen,
   placeholder = 'Search events...',
@@ -31,30 +29,6 @@ export function SearchBar({
     },
     [onClose]
   )
-
-  useEffect(() => {
-    const handleGlobalKeyDown = (event: globalThis.KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && event.key === 'k') {
-        event.preventDefault()
-        if (!isOpen) {
-          onOpen()
-          setTimeout(() => inputRef.current?.focus(), 0)
-        }
-      }
-    }
-
-    document.addEventListener('keydown', handleGlobalKeyDown)
-
-    return () => {
-      document.removeEventListener('keydown', handleGlobalKeyDown)
-    }
-  }, [isOpen, onOpen])
-
-  useEffect(() => {
-    if (isOpen && inputRef.current) {
-      inputRef.current.focus()
-    }
-  }, [isOpen])
 
   return (
     <div className={styles.searchBar}>

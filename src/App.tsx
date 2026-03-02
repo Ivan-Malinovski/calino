@@ -1,5 +1,5 @@
 import type { JSX } from 'react'
-import { useCallback, useEffect } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { BrowserRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom'
 import { v4 as uuidv4 } from 'uuid'
 import { useCalendarStore } from './store/calendarStore'
@@ -15,6 +15,7 @@ import {
 } from './features/calendar'
 import { type NLPParseResult } from './features/nlp'
 import { SettingsPage } from './features/settings'
+import { CommandPalette } from './features/commandPalette'
 import type { CalendarEvent, ViewType } from './types'
 import './App.css'
 
@@ -26,6 +27,29 @@ const VIEW_ROUTES: Record<ViewType, string> = {
 }
 
 const VIEW_ORDER: ViewType[] = ['month', 'week', 'day', 'agenda']
+
+function Toast(): JSX.Element | null {
+  const [message, setMessage] = useState<string | null>(null)
+
+  useEffect(() => {
+    const handleShowToast = (e: CustomEvent) => {
+      setMessage(e.detail.message)
+      setTimeout(() => setMessage(null), 2000)
+    }
+
+    window.addEventListener('show-toast', handleShowToast as EventListener)
+    return () => window.removeEventListener('show-toast', handleShowToast as EventListener)
+  }, [])
+
+  if (!message) return null
+
+  return (
+    <div className="toast">
+      <span className="toastIcon">✓</span>
+      {message}
+    </div>
+  )
+}
 
 function useViewManager(): void {
   const navigate = useNavigate()
@@ -78,8 +102,23 @@ function CalendarApp(): JSX.Element {
   const currentView = useCalendarStore((state) => state.currentView)
   const addEvent = useCalendarStore((state) => state.addEvent)
   const calendars = useCalendarStore((state) => state.calendars)
+  const setOverlayOpen = useCalendarStore((state) => state.setOverlayOpen)
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false)
 
   useViewManager()
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent): void => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault()
+        setIsCommandPaletteOpen(true)
+        setOverlayOpen(true)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [setOverlayOpen])
 
   const renderView = (): JSX.Element => {
     switch (currentView) {
@@ -124,6 +163,13 @@ function CalendarApp(): JSX.Element {
         <main className="main">{renderView()}</main>
       </div>
       <EventModal />
+      <CommandPalette
+        isOpen={isCommandPaletteOpen}
+        onClose={() => {
+          setIsCommandPaletteOpen(false)
+          setOverlayOpen(false)
+        }}
+      />
     </div>
   )
 }
@@ -131,6 +177,7 @@ function CalendarApp(): JSX.Element {
 function App(): JSX.Element {
   return (
     <BrowserRouter>
+      <Toast />
       <Routes>
         <Route path="/month" element={<CalendarApp />} />
         <Route path="/week" element={<CalendarApp />} />
