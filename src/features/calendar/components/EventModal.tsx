@@ -9,6 +9,19 @@ import styles from './EventModal.module.css'
 
 const DEFAULT_DURATION_HOURS = 1
 
+const TRAVEL_DURATION_OPTIONS: { value: number | undefined; label: string }[] = [
+  { value: undefined, label: 'None' },
+  { value: 5, label: '5 min' },
+  { value: 10, label: '10 min' },
+  { value: 15, label: '15 min' },
+  { value: 20, label: '20 min' },
+  { value: 30, label: '30 min' },
+  { value: 45, label: '45 min' },
+  { value: 60, label: '1 hour' },
+  { value: 90, label: '1.5 hours' },
+  { value: 120, label: '2 hours' },
+]
+
 const RECURRENCE_OPTIONS: { value: RecurrenceRule['frequency'] | 'none'; label: string }[] = [
   { value: 'none', label: 'Does not repeat' },
   { value: 'daily', label: 'Daily' },
@@ -38,6 +51,7 @@ interface InitialFormState {
   isAllDay: boolean
   calendarId: string
   recurrence: RecurrenceRule['frequency'] | 'none'
+  travelDuration: number | undefined
 }
 
 function getInitialFormState(
@@ -84,6 +98,7 @@ function getInitialFormState(
         isAllDay: existingEvent.isAllDay,
         calendarId: existingEvent.calendarId,
         recurrence: existingEvent.recurrence?.frequency || 'none',
+        travelDuration: existingEvent.travelDuration,
         isRecurringInstance,
         originalEventId,
       }
@@ -117,6 +132,7 @@ function getInitialFormState(
             isAllDay: false,
             calendarId: defaultCalendar?.id || '',
             recurrence: 'none',
+            travelDuration: undefined,
             isRecurringInstance: false,
             originalEventId: null,
           }
@@ -134,6 +150,7 @@ function getInitialFormState(
         isAllDay: false,
         calendarId: defaultCalendar?.id || '',
         recurrence: 'none',
+        travelDuration: undefined,
         isRecurringInstance: false,
         originalEventId: null,
       }
@@ -152,6 +169,7 @@ function getInitialFormState(
     isAllDay: false,
     calendarId: defaultCalendar?.id || '',
     recurrence: 'none',
+    travelDuration: undefined,
     isRecurringInstance: false,
     originalEventId: null,
   }
@@ -199,6 +217,9 @@ export function EventModal(): JSX.Element | null {
   const [recurrence, setRecurrence] = useState<RecurrenceRule['frequency'] | 'none'>(
     initialState.recurrence
   )
+  const [travelDuration, setTravelDuration] = useState<number | undefined>(
+    initialState.travelDuration
+  )
   const [showRecurrenceDialog, setShowRecurrenceDialog] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
 
@@ -215,6 +236,7 @@ export function EventModal(): JSX.Element | null {
     setIsAllDay(initialState.isAllDay)
     setCalendarId(initialState.calendarId)
     setRecurrence(initialState.recurrence)
+    setTravelDuration(initialState.travelDuration)
   }
 
   const isEditing = selectedEventId !== null
@@ -252,6 +274,7 @@ export function EventModal(): JSX.Element | null {
           isAllDay,
           calendarId,
           recurrence: undefined,
+          travelDuration,
         }
         addEvent(newEvent)
         try {
@@ -270,6 +293,7 @@ export function EventModal(): JSX.Element | null {
           isAllDay,
           calendarId,
           recurrence: recurrenceRule,
+          travelDuration,
         })
         const existingEvent = events.find((e) => e.id === eventId)
         if (existingEvent) {
@@ -284,6 +308,7 @@ export function EventModal(): JSX.Element | null {
               isAllDay,
               calendarId,
               recurrence: recurrenceRule,
+              travelDuration,
             })
           } catch {
             // error already handled by useCalDAV
@@ -301,6 +326,7 @@ export function EventModal(): JSX.Element | null {
         isAllDay,
         calendarId,
         recurrence: recurrenceRule,
+        travelDuration,
       }
       addEvent(newEvent)
       try {
@@ -339,6 +365,7 @@ export function EventModal(): JSX.Element | null {
         isAllDay,
         calendarId,
         recurrence: undefined,
+        travelDuration,
       }
       deleteEvent(originalEventId)
       addEvent(newEvent)
@@ -468,6 +495,26 @@ export function EventModal(): JSX.Element | null {
             >
               {RECURRENCE_OPTIONS.map((option) => (
                 <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className={styles.field}>
+            <label className={styles.label} htmlFor="travel-duration-select">
+              Travel time
+            </label>
+            <select
+              id="travel-duration-select"
+              value={travelDuration ?? ''}
+              onChange={(e) =>
+                setTravelDuration(e.target.value ? Number(e.target.value) : undefined)
+              }
+              className={styles.select}
+            >
+              {TRAVEL_DURATION_OPTIONS.map((option) => (
+                <option key={option.label} value={option.value ?? ''}>
                   {option.label}
                 </option>
               ))}

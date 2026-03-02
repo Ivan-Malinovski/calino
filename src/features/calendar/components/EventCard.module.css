@@ -13,6 +13,10 @@
   flex-direction: column;
 }
 
+.card.noTopRadius {
+  border-top-left-radius: 0;
+}
+
 .card:hover {
   filter: brightness(0.95);
 }
@@ -50,7 +54,8 @@
 }
 
 .compact .time,
-.compact .location {
+.compact .location,
+.compact .travelTime {
   display: none;
 }
 
@@ -93,6 +98,20 @@
   font-size: 11px;
   color: #5f6368;
   margin-top: 2px;
+}
+
+.travelTime {
+  font-size: 11px;
+  color: #5f6368;
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  opacity: 0.8;
+}
+
+.travelTime svg {
+  flex-shrink: 0;
 }
 
 .location {

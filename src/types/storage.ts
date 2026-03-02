@@ -11,6 +11,7 @@ export interface StoredEvent {
   isAllDay: boolean
   color?: string
   recurrence?: string
+  travelDuration?: number
   etag?: string
   remoteId?: string
   syncStatus: SyncStatus

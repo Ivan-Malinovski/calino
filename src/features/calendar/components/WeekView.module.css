@@ -160,8 +160,8 @@
 
 .eventPositioned {
   position: absolute;
-  left: 2px;
-  right: 2px;
+  left: 8px;
+  right: 8px;
   pointer-events: auto;
 }
 
@@ -174,4 +174,30 @@
   border-radius: 4px;
   pointer-events: none;
   z-index: 5;
+}
+
+.travelBar {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  border-radius: 4px 4px 0 0;
+  cursor: pointer;
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.travelBar:hover {
+  filter: brightness(0.95);
+}
+
+.travelBarInner {
+  font-size: 10px;
+  color: rgba(0, 0, 0, 0.5);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 0 4px;
 }

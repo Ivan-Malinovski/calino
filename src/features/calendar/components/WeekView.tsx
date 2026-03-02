@@ -25,7 +25,7 @@ import {
 import { useCalendarStore } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
 import { EventCard } from './EventCard'
-import type { CalendarEvent } from '@/types'
+import type { CalendarEvent, Calendar } from '@/types'
 import styles from './WeekView.module.css'
 
 const HOURS = eachHourOfInterval({
@@ -34,6 +34,18 @@ const HOURS = eachHourOfInterval({
 })
 
 const HOUR_HEIGHT = 60
+
+function formatTravelDuration(minutes: number): string {
+  if (minutes >= 60) {
+    const hours = Math.floor(minutes / 60)
+    const mins = minutes % 60
+    if (mins > 0) {
+      return `${hours}h ${mins}m`
+    }
+    return `${hours}h`
+  }
+  return `${minutes} min`
+}
 
 interface DroppableCellProps {
   day: Date
@@ -59,6 +71,7 @@ function DroppableCell({ day, hour, onClick, onMouseDown }: DroppableCellProps):
 export function WeekView(): JSX.Element {
   const currentDate = useCalendarStore((state) => state.currentDate)
   const events = useCalendarStore((state) => state.events)
+  const calendars = useCalendarStore((state) => state.calendars)
   const getEventsForDateRange = useCalendarStore((state) => state.getEventsForDateRange)
   const openModal = useCalendarStore((state) => state.openModal)
   const updateEvent = useCalendarStore((state) => state.updateEvent)
@@ -297,7 +310,7 @@ export function WeekView(): JSX.Element {
       return { event, column, totalColumns }
     })
 
-    return withTotals.map(({ event, column, totalColumns }) => {
+    return withTotals.flatMap(({ event, column, totalColumns }) => {
       const start = parseISO(event.start)
       const end = parseISO(event.end)
 
@@ -306,10 +319,43 @@ export function WeekView(): JSX.Element {
       const durationMinutes = (end.getTime() - start.getTime()) / (1000 * 60)
       const height = Math.max((durationMinutes / 60) * HOUR_HEIGHT, 20)
 
-      const leftPercent = (column / totalColumns) * 100
-      const widthPercent = 100 / totalColumns
+      const gap = 4
+      const leftPercent = (column / totalColumns) * 100 + gap / 2
+      const widthPercent = 100 / totalColumns - gap
 
-      return (
+      const calendar = calendars.find((c: Calendar) => c.id === event.calendarId)
+      const eventColor = event.color || calendar?.color || '#4285F4'
+
+      const elements: JSX.Element[] = []
+
+      if (event.travelDuration && event.travelDuration > 0) {
+        const travelStart = new Date(start.getTime() - event.travelDuration * 60 * 1000)
+        const travelStartHour = travelStart.getHours()
+        const travelStartMinutes = travelStart.getMinutes()
+        const travelDurationMinutes = event.travelDuration
+        const travelHeight = Math.max((travelDurationMinutes / 60) * HOUR_HEIGHT, 16)
+
+        elements.push(
+          <div
+            key={`${event.id}-travel`}
+            className={styles.travelBar}
+            style={{
+              top: `${(travelStartHour * 60 + travelStartMinutes) * (HOUR_HEIGHT / 60)}px`,
+              height: `${travelHeight}px`,
+              left: `${leftPercent}%`,
+              width: `${widthPercent}%`,
+              backgroundColor: `${eventColor}15`,
+            }}
+            onClick={() => openModal(undefined, undefined, event.id)}
+          >
+            <span className={styles.travelBarInner}>
+              {formatTravelDuration(event.travelDuration)} travel
+            </span>
+          </div>
+        )
+      }
+
+      elements.push(
         <div
           key={event.id}
           className={styles.eventPositioned}
@@ -320,9 +366,11 @@ export function WeekView(): JSX.Element {
             width: `${widthPercent}%`,
           }}
         >
-          <EventCard event={event} enableResize />
+          <EventCard event={event} enableResize hideTopRadius={!!event.travelDuration} />
         </div>
       )
+
+      return elements
     })
   }
 

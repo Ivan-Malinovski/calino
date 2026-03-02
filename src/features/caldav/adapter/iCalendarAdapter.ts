@@ -40,6 +40,7 @@ export function parseICALEvent(iCalData: string, calendarId: string): CalendarEv
           recurrence: currentEvent.recurrence,
           reminders: currentAlarms.length > 0 ? currentAlarms : undefined,
           rruleString: currentEvent.rruleString,
+          travelDuration: currentEvent.travelDuration,
         }
 
         if (existingIndex !== undefined) {
@@ -91,6 +92,12 @@ export function parseICALEvent(iCalData: string, calendarId: string): CalendarEv
       } else if (line.startsWith('RRULE:')) {
         currentEvent.rruleString = line.substring(6)
         currentEvent.recurrence = parseRRule(line.substring(6))
+      } else if (line.startsWith('X-APPLE-TRAVEL-DURATION:')) {
+        const duration = line.substring(24)
+        const minutes = parseTravelDuration(duration)
+        if (minutes !== null) {
+          currentEvent.travelDuration = minutes
+        }
       } else if (inAlarm && line.startsWith('TRIGGER:')) {
         const trigger = line.substring(8)
         const minutes = parseTriggerDuration(trigger)
@@ -172,6 +179,18 @@ function parseTriggerDuration(trigger: string): number | null {
   }
 
   return null
+}
+
+function parseTravelDuration(duration: string): number | null {
+  const match = duration.match(/P(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?)?/)
+  if (!match) return null
+
+  const days = parseInt(match[1] || '0', 10)
+  const hours = parseInt(match[2] || '0', 10)
+  const minutes = parseInt(match[3] || '0', 10)
+
+  const totalMinutes = days * 24 * 60 + hours * 60 + minutes
+  return totalMinutes > 0 ? totalMinutes : null
 }
 
 function parseRRule(rruleString: string): RecurrenceRule | undefined {
@@ -263,6 +282,10 @@ export function eventToICAL(event: CalendarEvent): string {
     lines.push(`RRULE:${event.rruleString}`)
   }
 
+  if (event.travelDuration) {
+    lines.push(`X-APPLE-TRAVEL-DURATION:${formatMinutesToDuration(event.travelDuration)}`)
+  }
+
   if (event.reminders && event.reminders.length > 0) {
     for (const reminder of event.reminders) {
       lines.push('BEGIN:VALARM')
@@ -300,4 +323,17 @@ function formatICalDateTime(isoString: string, isAllDay: boolean): string {
   const second = String(date.getUTCSeconds()).padStart(2, '0')
 
   return `${year}${month}${day}T${hour}${minute}${second}Z`
+}
+
+function formatMinutesToDuration(minutes: number): string {
+  const hours = Math.floor(minutes / 60)
+  const mins = minutes % 60
+
+  if (hours > 0 && mins > 0) {
+    return `PT${hours}H${mins}M`
+  } else if (hours > 0) {
+    return `PT${hours}H`
+  } else {
+    return `PT${mins}M`
+  }
 }

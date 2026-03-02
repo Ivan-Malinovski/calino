@@ -29,6 +29,7 @@ export interface CalendarEvent {
   recurrence?: RecurrenceRule
   reminders?: Reminder[]
   rruleString?: string
+  travelDuration?: number
 }
 
 export interface Calendar {
@@ -98,6 +99,7 @@ export interface UserSettings {
   syncIntervalMinutes: number
   conflictResolution: 'server-wins' | 'local-wins' | 'ask'
   compactRecurringEvents: boolean
+  defaultCalendarId?: string
 }
 
 export type SettingsState = UserSettings
