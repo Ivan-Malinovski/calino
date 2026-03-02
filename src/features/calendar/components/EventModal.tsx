@@ -1,5 +1,5 @@
 import type { JSX } from 'react'
-import { useState, useMemo, useRef } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { format, parseISO, addHours } from 'date-fns'
 import { v4 as uuidv4 } from 'uuid'
 import { useCalendarStore } from '@/store/calendarStore'
@@ -226,25 +226,28 @@ export function EventModal(): JSX.Element | null {
 
   const lastSelectedEventId = useRef<string | null>(null)
   const lastSelectedDate = useRef<string | null>(null)
-  if (
-    selectedEventId !== lastSelectedEventId.current ||
-    selectedDate !== lastSelectedDate.current
-  ) {
-    lastSelectedEventId.current = selectedEventId
-    lastSelectedDate.current = selectedDate
-    setTitle(initialState.title)
-    setDescription(initialState.description)
-    setLocation(initialState.location)
-    setStartDate(initialState.startDate)
-    setStartTime(initialState.startTime)
-    setEndDate(initialState.endDate)
-    setEndTime(initialState.endTime)
-    setIsAllDay(initialState.isAllDay)
-    setCalendarId(initialState.calendarId)
-    setRecurrence(initialState.recurrence)
-    setTravelDuration(initialState.travelDuration)
-    setShowDescription(!!initialState.description)
-  }
+
+  useEffect(() => {
+    if (
+      selectedEventId !== lastSelectedEventId.current ||
+      selectedDate !== lastSelectedDate.current
+    ) {
+      lastSelectedEventId.current = selectedEventId
+      lastSelectedDate.current = selectedDate
+      setTitle(initialState.title)
+      setDescription(initialState.description)
+      setLocation(initialState.location)
+      setStartDate(initialState.startDate)
+      setStartTime(initialState.startTime)
+      setEndDate(initialState.endDate)
+      setEndTime(initialState.endTime)
+      setIsAllDay(initialState.isAllDay)
+      setCalendarId(initialState.calendarId)
+      setRecurrence(initialState.recurrence)
+      setTravelDuration(initialState.travelDuration)
+      setShowDescription(!!initialState.description)
+    }
+  }, [selectedEventId, selectedDate, initialState])
 
   const isEditing = selectedEventId !== null
   const isRecurringEvent = initialState.recurrence !== 'none'
@@ -419,7 +422,11 @@ export function EventModal(): JSX.Element | null {
             </svg>
           </button>
         </div>
-        <form onSubmit={handleSubmit} className={styles.form}>
+        <form
+          key={`${selectedEventId}-${selectedDate}`}
+          onSubmit={handleSubmit}
+          className={styles.form}
+        >
           <div className={styles.field}>
             <input
               type="text"

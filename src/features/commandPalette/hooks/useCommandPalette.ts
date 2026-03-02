@@ -24,7 +24,6 @@ export function useCommandPalette({ isOpen }: UseCommandPaletteProps) {
   const navigate = useNavigate()
   const [query, setQuery] = useState('')
   const [selectedIndex, setSelectedIndex] = useState(0)
-  const [preview, setPreview] = useState<NLPParseResult | null>(null)
 
   const setCurrentView = useCalendarStore((state) => state.setCurrentView)
   const setCurrentDate = useCalendarStore((state) => state.setCurrentDate)
@@ -160,6 +159,8 @@ export function useCommandPalette({ isOpen }: UseCommandPaletteProps) {
     [commands]
   )
 
+  // React Compiler cannot optimize this due to function dependencies
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization
   const results = useMemo((): CommandResult[] => {
     if (!query.trim()) {
       const defaultCommands = filterCommands('')
@@ -227,18 +228,15 @@ export function useCommandPalette({ isOpen }: UseCommandPaletteProps) {
     return [...commandResults, ...calendarResults, ...eventResults]
   }, [query, parseInput, filterCommands, searchEvents, searchCalendars])
 
-  useEffect(() => {
+  const preview = useMemo((): NLPParseResult | null => {
     const parsed = parseInput(query)
     if (parsed.type === 'quick-add') {
       const nlpResult = parseNaturalLanguage(query)
       if (nlpResult.confidence > 0.5) {
-        setPreview(nlpResult)
-      } else {
-        setPreview(null)
+        return nlpResult
       }
-    } else {
-      setPreview(null)
     }
+    return null
   }, [query, parseInput])
 
   const executeSelected = useCallback(() => {
@@ -307,7 +305,6 @@ export function useCommandPalette({ isOpen }: UseCommandPaletteProps) {
     if (!isOpen) {
       setQuery('')
       setSelectedIndex(0)
-      setPreview(null)
     }
   }, [isOpen])
 

@@ -135,12 +135,13 @@ export function Sidebar(): JSX.Element {
   const date = parseISO(currentDate)
 
   const miniCalendarDays = useMemo(() => {
-    const monthStart = startOfMonth(date)
-    const monthEnd = endOfMonth(date)
+    const parsedDate = parseISO(currentDate)
+    const monthStart = startOfMonth(parsedDate)
+    const monthEnd = endOfMonth(parsedDate)
     const calendarStart = startOfWeek(monthStart, { weekStartsOn: firstDayOfWeek })
     const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: firstDayOfWeek })
     return eachDayOfInterval({ start: calendarStart, end: calendarEnd })
-  }, [date, firstDayOfWeek])
+  }, [currentDate, firstDayOfWeek])
 
   const weekdays = useMemo(() => {
     const days = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
