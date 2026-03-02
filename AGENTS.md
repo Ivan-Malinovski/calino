@@ -46,3 +46,20 @@ src/
 - Database: `src/lib/db/` (Dexie tables: events, calendars, accounts, syncQueue)
 - Settings: `/settings` route, `src/store/settingsStore.ts`
 - Plans: See `PLANS/` directory for feature roadmaps
+
+## Power Bar (Command Palette)
+
+A VS Code-style command palette activated with `Cmd+K` (or `Ctrl+K`). Located at `src/features/commandPalette/`.
+
+**Features:**
+
+- **Commands**: Navigation (today, next week, switch views), Actions (new event, sync), Settings
+- **Smart detection**: Type naturally like "tomorrow meeting at 2pm" for quick event creation
+- **Prefix hints**: `>` for commands, `@` for quick navigation
+- **Toast feedback**: Shows confirmation when actions execute
+
+**Key files:**
+
+- `components/CommandPalette.tsx` - Main modal component
+- `hooks/useCommandPalette.ts` - Logic for parsing input and executing commands
+- `commands/index.ts` - Command registry
