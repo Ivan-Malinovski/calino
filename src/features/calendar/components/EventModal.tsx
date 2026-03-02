@@ -444,7 +444,12 @@ export function EventModal(): JSX.Element | null {
                 <input
                   type="date"
                   value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
+                  onChange={(e) => {
+                    setStartDate(e.target.value)
+                    if (endDate && e.target.value > endDate) {
+                      setEndDate(e.target.value)
+                    }
+                  }}
                   className={styles.input}
                   required
                 />
@@ -452,7 +457,12 @@ export function EventModal(): JSX.Element | null {
                   <input
                     type="time"
                     value={startTime}
-                    onChange={(e) => setStartTime(e.target.value)}
+                    onChange={(e) => {
+                      setStartTime(e.target.value)
+                      if (startDate === endDate && e.target.value > endTime) {
+                        setEndTime(e.target.value)
+                      }
+                    }}
                     className={styles.input}
                     required
                   />
