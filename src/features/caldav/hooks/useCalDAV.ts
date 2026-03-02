@@ -209,10 +209,16 @@ export function useCalDAV(): UseCalDAVReturn {
 
   const createEvent = useCallback(
     async (calendarId: string, event: CalendarEvent): Promise<void> => {
+      console.log('[CalDAV] createEvent called', {
+        calendarId,
+        eventId: event.id,
+        title: event.title,
+      })
       const calendar = calendars.find((c) => c.id === calendarId)
       const account = accounts.find((a) => a.id === calendar?.accountId)
 
       if (!calendar || !account) {
+        console.error('[CalDAV] Calendar or account not found', { calendarId, calendar, account })
         throw new Error('Calendar or account not found')
       }
 
@@ -221,16 +227,23 @@ export function useCalDAV(): UseCalDAVReturn {
       try {
         const credential = getCredentialById(account.credentialId)
         if (!credential) {
+          console.error('[CalDAV] Credentials not found', { credentialId: account.credentialId })
           throw new Error('Credentials not found')
         }
 
         const client = await createCalDAVClient(account.serverUrl, credential)
         const engine = new SyncEngine(client, calendarId)
 
+        console.log('[CalDAV] Pushing event to', {
+          calendarUrl: calendar.url,
+          filename: `${event.id}.ics`,
+        })
         await engine.pushEvent(event)
 
         storage.updateAccountLastSync(account.id)
+        console.log('[CalDAV] createEvent succeeded', { eventId: event.id })
       } catch (error) {
+        console.error('[CalDAV] createEvent failed', error)
         storage.addPendingChange({
           type: 'create',
           eventId: event.id,
@@ -249,10 +262,16 @@ export function useCalDAV(): UseCalDAVReturn {
 
   const updateEventFn = useCallback(
     async (calendarId: string, event: CalendarEvent): Promise<void> => {
+      console.log('[CalDAV] updateEventFn called', {
+        calendarId,
+        eventId: event.id,
+        title: event.title,
+      })
       const calendar = calendars.find((c) => c.id === calendarId)
       const account = accounts.find((a) => a.id === calendar?.accountId)
 
       if (!calendar || !account) {
+        console.error('[CalDAV] Calendar or account not found', { calendarId, calendar, account })
         throw new Error('Calendar or account not found')
       }
 
@@ -261,16 +280,23 @@ export function useCalDAV(): UseCalDAVReturn {
       try {
         const credential = getCredentialById(account.credentialId)
         if (!credential) {
+          console.error('[CalDAV] Credentials not found', { credentialId: account.credentialId })
           throw new Error('Credentials not found')
         }
 
         const client = await createCalDAVClient(account.serverUrl, credential)
         const engine = new SyncEngine(client, calendarId)
 
+        console.log('[CalDAV] Updating event on server', {
+          calendarUrl: calendar.url,
+          eventUrl: `${calendar.url}${event.id}.ics`,
+        })
         await engine.updateEvent(event, '')
 
         storage.updateAccountLastSync(account.id)
+        console.log('[CalDAV] updateEventFn succeeded', { eventId: event.id })
       } catch (error) {
+        console.error('[CalDAV] updateEventFn failed', error)
         storage.addPendingChange({
           type: 'update',
           eventId: event.id,
@@ -289,16 +315,19 @@ export function useCalDAV(): UseCalDAVReturn {
 
   const deleteEventFn = useCallback(
     async (calendarId: string, eventId: string): Promise<void> => {
+      console.log('[CalDAV] deleteEventFn called', { calendarId, eventId })
       const calendar = calendars.find((c) => c.id === calendarId)
       const account = accounts.find((a) => a.id === calendar?.accountId)
 
       if (!calendar || !account) {
+        console.error('[CalDAV] Calendar or account not found', { calendarId, calendar, account })
         throw new Error('Calendar or account not found')
       }
 
       try {
         const credential = getCredentialById(account.credentialId)
         if (!credential) {
+          console.error('[CalDAV] Credentials not found', { credentialId: account.credentialId })
           throw new Error('Credentials not found')
         }
 
@@ -306,11 +335,14 @@ export function useCalDAV(): UseCalDAVReturn {
         const engine = new SyncEngine(client, calendarId)
 
         const eventUrl = `${calendar.url}${eventId}.ics`
+        console.log('[CalDAV] Deleting event from server', { eventUrl })
         await engine.deleteEvent(eventUrl, '')
 
         storeDeleteEvent(eventId)
         storage.updateAccountLastSync(account.id)
+        console.log('[CalDAV] deleteEventFn succeeded', { eventId })
       } catch (error) {
+        console.error('[CalDAV] deleteEventFn failed', error)
         storage.addPendingChange({
           type: 'delete',
           eventId,

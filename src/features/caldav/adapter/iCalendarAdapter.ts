@@ -120,7 +120,7 @@ function parseICalDateTime(value: string): { date: string; isAllDay: boolean } {
     const year = value.substring(0, 4)
     const month = value.substring(4, 6)
     const day = value.substring(6, 8)
-    return { date: `${year}-${month}-${day}T00:00:00.000Z`, isAllDay: true }
+    return { date: `${year}-${month}-${day}T00:00:00`, isAllDay: true }
   }
 
   if (value.length === 15 && value.includes('T')) {
@@ -130,7 +130,7 @@ function parseICalDateTime(value: string): { date: string; isAllDay: boolean } {
     const hour = value.substring(9, 11)
     const minute = value.substring(11, 13)
     const second = value.substring(13, 15)
-    return { date: `${year}-${month}-${day}T${hour}:${minute}:${second}.000Z`, isAllDay: false }
+    return { date: `${year}-${month}-${day}T${hour}:${minute}:${second}`, isAllDay: false }
   }
 
   return { date: new Date().toISOString(), isAllDay: false }
@@ -287,7 +287,7 @@ function formatICalDateTime(isoString: string, isAllDay: boolean): string {
 
   if (isAllDay) {
     const year = date.getUTCFullYear()
-    const month = String(date.getUTCDate()).padStart(2, '0')
+    const month = String(date.getUTCMonth() + 1).padStart(2, '0')
     const day = String(date.getUTCDate()).padStart(2, '0')
     return `${year}${month}${day}`
   }
