@@ -29,6 +29,7 @@ import {
 import { useCalendarStore } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
 import { EventCard } from './EventCard'
+import { DayEventsPopup } from './DayEventsPopup'
 import type { CalendarEvent } from '@/types'
 import styles from './CalendarGrid.module.css'
 
@@ -261,6 +262,7 @@ export function CalendarGrid(): JSX.Element {
                       compactRecurringEvents={compactRecurringEvents}
                       onDayClick={handleDayClick}
                       onDayNumberClick={handleDayNumberClick}
+                      openModal={openModal}
                     />
                   )
                 })}
@@ -284,6 +286,7 @@ interface DroppableDayProps {
   compactRecurringEvents: boolean
   onDayClick: (day: Date) => void
   onDayNumberClick: (day: Date) => void
+  openModal: (date?: string, endDate?: string, eventId?: string) => void
 }
 
 function DroppableDay({
@@ -296,8 +299,26 @@ function DroppableDay({
   compactRecurringEvents,
   onDayClick,
   onDayNumberClick,
+  openModal,
 }: DroppableDayProps): JSX.Element {
   const { setNodeRef, isOver } = useDroppable({ id: dateKey })
+  const [showPopup, setShowPopup] = useState(false)
+  const [popupPosition, setPopupPosition] = useState({ x: 0, y: 0 })
+  const moreEventsRef = useRef<HTMLDivElement>(null)
+
+  const handleMoreEventsClick = (e: React.MouseEvent): void => {
+    e.stopPropagation()
+    if (moreEventsRef.current) {
+      const rect = moreEventsRef.current.getBoundingClientRect()
+      setPopupPosition({ x: rect.left, y: rect.bottom + 4 })
+    }
+    setShowPopup(true)
+  }
+
+  const handlePopupEventClick = (event: CalendarEvent): void => {
+    setShowPopup(false)
+    openModal(undefined, undefined, event.id)
+  }
 
   return (
     <div
@@ -326,9 +347,20 @@ function DroppableDay({
           })}
         </AnimatePresence>
         {dayEvents.length > 3 && (
-          <div className={styles.moreEvents}>+{dayEvents.length - 3} more</div>
+          <div ref={moreEventsRef} className={styles.moreEvents} onClick={handleMoreEventsClick}>
+            +{dayEvents.length - 3} more
+          </div>
         )}
       </div>
+      {showPopup && (
+        <DayEventsPopup
+          date={day}
+          events={dayEvents}
+          position={popupPosition}
+          onClose={() => setShowPopup(false)}
+          onEventClick={handlePopupEventClick}
+        />
+      )}
     </div>
   )
 }
