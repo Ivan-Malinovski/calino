@@ -225,8 +225,13 @@ export function EventModal(): JSX.Element | null {
   const [showDescription, setShowDescription] = useState(!!initialState.description)
 
   const lastSelectedEventId = useRef<string | null>(null)
-  if (selectedEventId !== lastSelectedEventId.current) {
+  const lastSelectedDate = useRef<string | null>(null)
+  if (
+    selectedEventId !== lastSelectedEventId.current ||
+    selectedDate !== lastSelectedDate.current
+  ) {
     lastSelectedEventId.current = selectedEventId
+    lastSelectedDate.current = selectedDate
     setTitle(initialState.title)
     setDescription(initialState.description)
     setLocation(initialState.location)
