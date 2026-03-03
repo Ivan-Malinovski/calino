@@ -56,6 +56,14 @@ Calino is just a static React app — host it anywhere that serves HTML/JS.
 - Add your CalDAV server URL, username, password
 - App stores credentials in localStorage (encrypted)
 
+**Site URL (for SEO/social cards):**
+
+```bash
+cp .env.example .env.local
+# Edit .env.local and set VITE_SITE_URL=https://your-domain.com
+pnpm build
+```
+
 **Supported CalDAV servers:**
 
 - Baikal
