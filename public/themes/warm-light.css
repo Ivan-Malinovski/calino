@@ -1,0 +1,32 @@
+/* Theme: Warm Light | light */
+
+:root,
+[data-theme='light'] {
+  --color-bg-primary: #fdf6e3;
+  --color-bg-secondary: #faf0dc;
+  --color-bg-tertiary: #f5e6c8;
+  --color-bg-hover: #f0dbc0;
+
+  --color-text-primary: #5c4b37;
+  --color-text-secondary: #8b7355;
+  --color-text-muted: #a08060;
+
+  --color-border: #e6d5b8;
+  --color-border-light: #efe0c0;
+
+  --color-accent: #d4a373;
+  --color-accent-hover: #c4925f;
+  --color-accent-light: #f5e6d0;
+
+  --color-success: #6ab04c;
+  --color-warning: #f0932b;
+  --color-error: #eb4d4b;
+  --color-info: #d4a373;
+
+  --color-overlay: rgba(92, 75, 55, 0.5);
+
+  --color-focus: #d4a373;
+
+  --color-scrollbar: #d4c4a8;
+  --color-scrollbar-hover: #b8a47c;
+}

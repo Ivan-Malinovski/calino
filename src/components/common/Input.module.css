@@ -7,39 +7,41 @@
 .label {
   font-size: 14px;
   font-weight: 500;
-  color: #202124;
+  color: var(--color-text-primary);
 }
 
 .input {
   padding: 10px 12px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   font-size: 14px;
-  color: #202124;
-  background: #ffffff;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  color: var(--color-text-primary);
+  background: var(--color-bg-secondary);
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .input:focus {
   outline: none;
-  border-color: #4285f4;
+  border-color: var(--color-accent);
   box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.15);
 }
 
 .input::placeholder {
-  color: #9aa0a6;
+  color: var(--color-text-muted);
 }
 
 .hasError {
-  border-color: #ea4335;
+  border-color: var(--color-error);
 }
 
 .hasError:focus {
-  border-color: #ea4335;
+  border-color: var(--color-error);
   box-shadow: 0 0 0 3px rgba(234, 67, 53, 0.15);
 }
 
 .error {
   font-size: 12px;
-  color: #ea4335;
+  color: var(--color-error);
 }

@@ -7,7 +7,7 @@
   display: flex;
   justify-content: center;
   padding-top: 100px;
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: var(--color-overlay);
   z-index: 1000;
 }
 
@@ -26,7 +26,7 @@
   max-height: 400px;
   display: flex;
   flex-direction: column;
-  background-color: #ffffff;
+  background-color: var(--color-bg-secondary);
   border-radius: 12px;
   box-shadow: 0 16px 70px rgba(0, 0, 0, 0.3);
   overflow: hidden;
@@ -48,13 +48,13 @@
   display: flex;
   align-items: center;
   padding: 16px;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .inputIcon {
   width: 20px;
   height: 20px;
-  color: #5f6368;
+  color: var(--color-text-secondary);
   margin-right: 12px;
   flex-shrink: 0;
 }
@@ -65,7 +65,7 @@
   border: none;
   outline: none;
   background-color: transparent;
-  color: #202124;
+  color: var(--color-text-primary);
 }
 
 .input:focus {
@@ -74,15 +74,15 @@
 }
 
 .input::placeholder {
-  color: #9aa0a6;
+  color: var(--color-text-muted);
 }
 
 .shortcut {
   padding: 4px 8px;
   font-size: 11px;
   font-weight: 500;
-  color: #5f6368;
-  background-color: #f1f3f4;
+  color: var(--color-text-secondary);
+  background-color: var(--color-bg-tertiary);
   border-radius: 4px;
 }
 
@@ -97,24 +97,24 @@
   font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
-  color: #9aa0a6;
+  color: var(--color-text-muted);
   letter-spacing: 0.5px;
 }
 
 .empty {
   padding: 24px;
   text-align: center;
-  color: #5f6368;
+  color: var(--color-text-secondary);
 }
 
 .footer {
   display: flex;
   justify-content: space-between;
   padding: 12px 16px;
-  border-top: 1px solid #e0e0e0;
-  background-color: #f8f9fa;
+  border-top: 1px solid var(--color-border);
+  background-color: var(--color-bg-tertiary);
   font-size: 12px;
-  color: #5f6368;
+  color: var(--color-text-secondary);
 }
 
 .footerHints {
@@ -132,7 +132,7 @@
   padding: 2px 6px;
   font-family: inherit;
   font-size: 11px;
-  background-color: #e8eaed;
+  background-color: var(--color-bg-secondary);
   border-radius: 3px;
-  border: 1px solid #dadce0;
+  border: 1px solid var(--color-border);
 }

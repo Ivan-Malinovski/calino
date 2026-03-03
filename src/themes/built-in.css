@@ -1,0 +1,40 @@
+/* Theme: Default Light */
+
+:root,
+[data-theme='light'] {
+  /* Backgrounds */
+  --color-bg-primary: #fafafa;
+  --color-bg-secondary: #ffffff;
+  --color-bg-tertiary: #f3f4f6;
+  --color-bg-hover: #f1f3f4;
+
+  /* Text */
+  --color-text-primary: #202124;
+  --color-text-secondary: #5f6368;
+  --color-text-muted: #9ca3af;
+
+  /* Borders */
+  --color-border: #e5e7eb;
+  --color-border-light: #f1f3f4;
+
+  /* Accent / Primary */
+  --color-accent: #4285f4;
+  --color-accent-hover: #3367d6;
+  --color-accent-light: #e8f0fe;
+
+  /* Status colors */
+  --color-success: #34a853;
+  --color-warning: #fbbc04;
+  --color-error: #ea4335;
+  --color-info: #4285f4;
+
+  /* Overlay */
+  --color-overlay: rgba(0, 0, 0, 0.5);
+
+  /* Focus */
+  --color-focus: #4285f4;
+
+  /* Scrollbar */
+  --color-scrollbar: #d1d5db;
+  --color-scrollbar-hover: #9ca3af;
+}

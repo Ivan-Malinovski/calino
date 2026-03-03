@@ -178,4 +178,45 @@ describe('settingsStore', () => {
       expect(useSettingsStore.getState().defaultReminderMinutes).toBe(reminder)
     })
   })
+
+  it('has default theme settings', () => {
+    const settings = useSettingsStore.getState()
+
+    expect(settings.themeMode).toBe('auto')
+    expect(settings.lightTheme).toBe('built-in')
+    expect(settings.darkTheme).toBe('built-in')
+  })
+
+  it('updates theme settings', () => {
+    const store = useSettingsStore.getState()
+
+    store.updateSettings({ themeMode: 'dark' })
+    expect(useSettingsStore.getState().themeMode).toBe('dark')
+
+    store.updateSettings({ themeMode: 'light' })
+    expect(useSettingsStore.getState().themeMode).toBe('light')
+
+    store.updateSettings({ themeMode: 'auto' })
+    expect(useSettingsStore.getState().themeMode).toBe('auto')
+  })
+
+  it('updates light and dark theme selections', () => {
+    const store = useSettingsStore.getState()
+
+    store.updateSettings({ lightTheme: 'warm-light' })
+    expect(useSettingsStore.getState().lightTheme).toBe('warm-light')
+
+    store.updateSettings({ darkTheme: 'oled-dark' })
+    expect(useSettingsStore.getState().darkTheme).toBe('oled-dark')
+  })
+
+  it('handles all theme mode options', () => {
+    const store = useSettingsStore.getState()
+
+    const modes = ['light', 'dark', 'auto'] as const
+    modes.forEach((mode) => {
+      store.updateSettings({ themeMode: mode })
+      expect(useSettingsStore.getState().themeMode).toBe(mode)
+    })
+  })
 })

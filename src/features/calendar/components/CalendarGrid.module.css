@@ -2,14 +2,14 @@
   display: flex;
   flex-direction: column;
   flex: 1;
-  background: white;
+  background: var(--color-bg-secondary);
   overflow: auto;
 }
 
 .header {
   display: grid;
   grid-template-columns: 40px repeat(7, 1fr);
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid var(--color-border);
   flex-shrink: 0;
 }
 
@@ -18,9 +18,9 @@
   text-align: center;
   font-size: 11px;
   font-weight: 600;
-  color: #9ca3af;
-  background: #f8f9fa;
-  border-right: 1px solid #e0e0e0;
+  color: var(--color-text-muted);
+  background: var(--color-bg-tertiary);
+  border-right: 1px solid var(--color-border);
 }
 
 .weekdays {
@@ -32,7 +32,7 @@
   text-align: center;
   font-size: 12px;
   font-weight: 600;
-  color: #5f6368;
+  color: var(--color-text-secondary);
   text-transform: uppercase;
 }
 
@@ -53,10 +53,10 @@
   text-align: center;
   font-size: 11px;
   font-weight: 600;
-  color: #9ca3af;
-  background: #f8f9fa;
-  border-right: 1px solid #e0e0e0;
-  border-bottom: 1px solid #e0e0e0;
+  color: var(--color-text-muted);
+  background: var(--color-bg-tertiary);
+  border-right: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
   display: flex;
   align-items: flex-start;
   justify-content: center;
@@ -67,15 +67,15 @@
 }
 
 .weekNumber:hover {
-  background: #e8eaed;
-  color: #4285f4;
+  background: var(--color-bg-hover);
+  color: var(--color-accent);
 }
 
 .day {
   min-height: 100px;
   height: 100%;
-  border-right: 1px solid #e0e0e0;
-  border-bottom: 1px solid #e0e0e0;
+  border-right: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
   padding: 4px;
   cursor: pointer;
   transition: background 0.15s ease;
@@ -89,24 +89,20 @@
 }
 
 .day:hover {
-  background: #f8f9fa;
+  background: var(--color-bg-hover);
 }
 
 .dropTarget {
-  background: #e8f0fe;
-  border: 2px dashed #4285f4;
+  background: var(--color-accent-light);
+  border: 2px dashed var(--color-accent);
 }
 
 .otherMonth {
-  background: #fafafa;
-}
-
-.weekend {
-  background: #fafbfc;
+  background: var(--color-bg-tertiary);
 }
 
 .otherMonth .dayNumber {
-  color: #9e9e9e;
+  color: var(--color-text-muted);
 }
 
 .today .dayNumber {
@@ -115,14 +111,17 @@
   justify-content: center;
   width: 28px;
   height: 28px;
-  background: #4285f4;
-  color: white;
+  background: var(--color-accent);
+  color: #202124;
   border-radius: 50%;
   font-weight: 600;
+  box-shadow:
+    0 0 0 2px var(--color-bg-primary, white),
+    0 0 0 4px var(--color-current-day, var(--color-accent));
 }
 
 .today .dayNumber:hover {
-  background: #3367d6;
+  background: var(--color-accent-hover);
   color: white;
 }
 
@@ -136,7 +135,7 @@
 .dayNumber {
   font-size: 14px;
   font-weight: 500;
-  color: #202124;
+  color: var(--color-grid-number, var(--color-text-primary));
   cursor: pointer;
   width: 28px;
   height: 28px;
@@ -148,8 +147,8 @@
 }
 
 .dayNumber:hover {
-  background: #e8f0fe;
-  color: #4285f4;
+  background: var(--color-accent-light);
+  color: var(--color-accent);
 }
 
 .events {
@@ -162,31 +161,31 @@
 
 .moreEvents {
   font-size: 11px;
-  color: #5f6368;
+  color: var(--color-text-secondary);
   padding: 2px 8px;
   cursor: pointer;
   flex-shrink: 0;
 }
 
 .moreEvents:hover {
-  color: #202124;
+  color: var(--color-text-primary);
 }
 
 .tasks {
   margin-top: 4px;
   padding-top: 2px;
-  border-top: 1px dashed #e0e0e0;
+  border-top: 1px dashed var(--color-border);
 }
 
 .taskCount {
   font-size: 11px;
-  color: #5f6368;
+  color: var(--color-text-secondary);
   padding: 2px 4px;
   cursor: pointer;
 }
 
 .taskCount:hover {
-  background: #e8f0fe;
-  color: #4285f4;
+  background: var(--color-accent-light);
+  color: var(--color-accent);
   border-radius: 4px;
 }

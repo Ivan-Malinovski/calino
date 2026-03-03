@@ -1,7 +1,7 @@
 .overlay {
   position: fixed;
   inset: 0;
-  background-color: rgba(0, 0, 0, 0.4);
+  background-color: var(--color-overlay);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -19,7 +19,7 @@
 }
 
 .modal {
-  background: #ffffff;
+  background: var(--color-bg-secondary);
   border-radius: 12px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
   max-width: 90vw;
@@ -44,14 +44,14 @@
   align-items: center;
   justify-content: space-between;
   padding: 16px 20px;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .title {
   margin: 0;
   font-size: 18px;
   font-weight: 600;
-  color: #202124;
+  color: var(--color-text-primary);
 }
 
 .closeButton {
@@ -63,14 +63,14 @@
   border: none;
   background: transparent;
   font-size: 24px;
-  color: #5f6368;
+  color: var(--color-text-secondary);
   border-radius: 50%;
   cursor: pointer;
   transition: background-color 0.2s ease;
 }
 
 .closeButton:hover {
-  background-color: #f1f3f4;
+  background-color: var(--color-bg-hover);
 }
 
 .content {

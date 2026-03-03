@@ -2,6 +2,7 @@ import type { Command, CommandCategory } from '../types'
 
 export type { Command, CommandCategory }
 import { addDays, addWeeks, addMonths, subWeeks, subMonths, format } from 'date-fns'
+import type { ThemeMode } from '@/types'
 
 interface CommandFactoryDeps {
   navigate: (path: string) => void
@@ -10,6 +11,10 @@ interface CommandFactoryDeps {
   openModal: (date?: string, endDate?: string) => void
   toggleSidebar?: () => void
   triggerSync?: () => void
+  themeMode?: ThemeMode
+  updateSettings?: (
+    settings: Partial<{ themeMode: ThemeMode; lightTheme: string; darkTheme: string }>
+  ) => void
 }
 
 const createNavigationCommands = (deps: CommandFactoryDeps): Command[] => [
@@ -237,6 +242,35 @@ const createSettingsCommands = (deps: CommandFactoryDeps): Command[] => [
     action: () => {
       deps.navigate('/settings?tab=sync')
       return 'Opened sync settings'
+    },
+  },
+  {
+    id: 'settings-theme',
+    label: 'Theme Settings',
+    description: 'Change theme and dark mode',
+    category: 'settings',
+    keywords: ['theme', 'dark mode', 'light mode', 'appearance'],
+    icon: '🎨',
+    action: () => {
+      deps.navigate('/settings?tab=theme')
+      return 'Opened theme settings'
+    },
+  },
+  {
+    id: 'theme-toggle-dark',
+    label: 'Toggle Dark Mode',
+    description: 'Switch between light and dark themes',
+    category: 'settings',
+    keywords: ['dark mode', 'light mode', 'theme', 'toggle'],
+    icon: '🌓',
+    action: () => {
+      const modes: ThemeMode[] = ['light', 'dark', 'auto']
+      const currentMode = deps.themeMode || 'auto'
+      const currentIndex = modes.indexOf(currentMode)
+      const nextMode = modes[(currentIndex + 1) % modes.length]
+      deps.updateSettings?.({ themeMode: nextMode })
+      const modeLabels = { light: 'Light', dark: 'Dark', auto: 'System' }
+      return `Switched to ${modeLabels[nextMode]} mode`
     },
   },
 ]

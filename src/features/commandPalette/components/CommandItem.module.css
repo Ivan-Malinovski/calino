@@ -9,11 +9,11 @@
 
 .item:hover,
 .item.selected {
-  background-color: #f1f3f4;
+  background-color: var(--color-bg-hover);
 }
 
 .item.selected {
-  background-color: #e8f0fe;
+  background-color: var(--color-accent-light);
 }
 
 .icon {
@@ -33,7 +33,7 @@
 .label {
   font-size: 14px;
   font-weight: 500;
-  color: #202124;
+  color: var(--color-text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -41,7 +41,7 @@
 
 .description {
   font-size: 12px;
-  color: #5f6368;
+  color: var(--color-text-secondary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -52,10 +52,10 @@
   padding: 3px 6px;
   font-size: 11px;
   font-weight: 500;
-  color: #5f6368;
-  background-color: #e8eaed;
+  color: var(--color-text-secondary);
+  background-color: var(--color-bg-tertiary);
   border-radius: 4px;
-  border: 1px solid #dadce0;
+  border: 1px solid var(--color-border);
   flex-shrink: 0;
 }
 
@@ -68,6 +68,6 @@
 }
 
 .confidence {
-  color: #1a73e8;
+  color: var(--color-accent);
   font-weight: 500;
 }

@@ -18,6 +18,7 @@ import { SettingsPage, PrivacyPolicy } from './features/settings'
 import { CommandPalette } from './features/commandPalette'
 import { CookieConsent, ErrorBoundary } from './components/common'
 import { OnboardingModal } from './features/onboarding/OnboardingModal'
+import { ThemeProvider } from './components/ThemeProvider'
 import type { CalendarEvent, ViewType } from './types'
 import './App.css'
 
@@ -219,17 +220,19 @@ function CalendarApp(): JSX.Element {
 function App(): JSX.Element {
   return (
     <BrowserRouter>
-      <Toast />
-      <CookieConsent />
-      <Routes>
-        <Route path="/month" element={<CalendarApp />} />
-        <Route path="/week" element={<CalendarApp />} />
-        <Route path="/day" element={<CalendarApp />} />
-        <Route path="/agenda" element={<CalendarApp />} />
-        <Route path="/" element={<CalendarApp />} />
-        <Route path="/settings" element={<SettingsPage />} />
-        <Route path="/privacy" element={<PrivacyPolicy />} />
-      </Routes>
+      <ThemeProvider>
+        <Toast />
+        <CookieConsent />
+        <Routes>
+          <Route path="/month" element={<CalendarApp />} />
+          <Route path="/week" element={<CalendarApp />} />
+          <Route path="/day" element={<CalendarApp />} />
+          <Route path="/agenda" element={<CalendarApp />} />
+          <Route path="/" element={<CalendarApp />} />
+          <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/privacy" element={<PrivacyPolicy />} />
+        </Routes>
+      </ThemeProvider>
     </BrowserRouter>
   )
 }

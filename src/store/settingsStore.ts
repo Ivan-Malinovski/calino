@@ -9,6 +9,7 @@ import type {
   EventDensity,
   DefaultDuration,
   ViewType,
+  ThemeMode,
 } from '@/types'
 import { config, DEFAULT_CALENDAR_COLOR, CALENDAR_COLORS } from '@/config'
 
@@ -111,6 +112,9 @@ const DEFAULT_SETTINGS: UserSettings = {
   conflictResolution: 'server-wins',
   compactRecurringEvents: true,
   hasCompletedOnboarding: false,
+  themeMode: 'auto' as ThemeMode,
+  lightTheme: 'built-in',
+  darkTheme: 'built-in',
 }
 
 export const useSettingsStore = create<SettingsStore>()(
@@ -198,3 +202,9 @@ export const CONFLICT_OPTIONS: { value: 'server-wins' | 'local-wins' | 'ask'; la
 export const TIMEZONE_OPTIONS = generateTimezoneOptions()
 
 export const EVENT_COLORS = [...CALENDAR_COLORS, '#9334E6', '#00796B']
+
+export const THEME_MODE_OPTIONS: { value: ThemeMode; label: string }[] = [
+  { value: 'light', label: 'Light' },
+  { value: 'dark', label: 'Dark' },
+  { value: 'auto', label: 'System' },
+]

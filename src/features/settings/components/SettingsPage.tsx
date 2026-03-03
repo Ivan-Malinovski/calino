@@ -2,6 +2,7 @@ import type { JSX } from 'react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { GeneralSettings } from './GeneralSettings'
+import { ThemeSettings } from './ThemeSettings'
 import { CalendarSettings } from './CalendarSettings'
 import { EventDefaultsSettings } from './EventDefaultsSettings'
 import { NotificationSettings } from './NotificationSettings'
@@ -9,7 +10,7 @@ import { DataSettings } from './DataSettings'
 import { CalDAVSettings } from './CalDAVSettings'
 import styles from './Settings.module.css'
 
-type SettingsTab = 'general' | 'calendar' | 'events' | 'notifications' | 'caldav' | 'data'
+type SettingsTab = 'general' | 'theme' | 'calendar' | 'events' | 'notifications' | 'caldav' | 'data'
 
 interface NavItem {
   id: SettingsTab
@@ -31,6 +32,22 @@ const NAV_ITEMS: NavItem[] = [
       >
         <circle cx="12" cy="12" r="3" />
         <path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83" />
+      </svg>
+    ),
+  },
+  {
+    id: 'theme',
+    label: 'Theme',
+    icon: (
+      <svg
+        className={styles.navIcon}
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+      >
+        <circle cx="12" cy="12" r="5" />
+        <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
       </svg>
     ),
   },
@@ -125,6 +142,8 @@ export function SettingsPage(): JSX.Element {
     switch (activeTab) {
       case 'general':
         return <GeneralSettings />
+      case 'theme':
+        return <ThemeSettings />
       case 'calendar':
         return <CalendarSettings />
       case 'events':
@@ -144,6 +163,8 @@ export function SettingsPage(): JSX.Element {
     switch (activeTab) {
       case 'general':
         return 'General Settings'
+      case 'theme':
+        return 'Theme Settings'
       case 'calendar':
         return 'Calendar Display'
       case 'events':

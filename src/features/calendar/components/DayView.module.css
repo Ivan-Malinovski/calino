@@ -8,8 +8,8 @@
 
 .header {
   padding: 8px 16px;
-  border-bottom: 1px solid #e0e0e0;
-  background: white;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg-secondary);
   transition: box-shadow 0.2s ease;
   flex-shrink: 0;
 }
@@ -22,17 +22,7 @@
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-}
-
-.body {
-  flex: 1;
-  position: relative;
-  overflow-y: auto;
-  overflow-x: hidden;
-}
-
-.headerShadow {
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  background: var(--color-bg-primary);
 }
 
 .dayInfo {
@@ -44,14 +34,14 @@
 .dayName {
   font-size: 14px;
   font-weight: 500;
-  color: #5f6368;
+  color: var(--color-text-secondary);
   text-transform: uppercase;
 }
 
 .dayNumber {
   font-size: 36px;
   font-weight: 500;
-  color: #202124;
+  color: var(--color-text-primary);
 }
 
 .dayNumber.today {
@@ -60,30 +50,25 @@
   justify-content: center;
   width: 56px;
   height: 56px;
-  background: #4285f4;
-  color: white;
+  background: var(--color-current-day, var(--color-accent));
+  color: #202124;
   border-radius: 50%;
-}
-
-.body {
-  flex: 1;
-  position: relative;
 }
 
 .hourRow {
   display: grid;
   grid-template-columns: 60px 1fr;
   min-height: 60px;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .timeLabel {
   padding: 4px 8px;
   font-size: 11px;
-  color: #5f6368;
+  color: var(--color-text-secondary);
   text-align: right;
-  border-right: 1px solid #e0e0e0;
-  background: white;
+  border-right: 1px solid var(--color-border);
+  background: var(--color-bg-secondary);
 }
 
 .cell {
@@ -92,12 +77,12 @@
 }
 
 .cell:hover {
-  background: #f8f9fa;
+  background: var(--color-bg-hover);
 }
 
 .cell.dropTarget {
-  background: #e8f0fe;
-  border: 2px dashed #4285f4;
+  background: var(--color-accent-light);
+  border: 2px dashed var(--color-accent);
 }
 
 .eventsOverlay {
@@ -121,7 +106,7 @@
   left: 2px;
   right: 2px;
   background: rgba(66, 133, 244, 0.3);
-  border: 2px solid #4285f4;
+  border: 2px solid var(--color-accent);
   border-radius: 4px;
   pointer-events: none;
   z-index: 5;
@@ -182,8 +167,8 @@
 .tasksFixedFooter {
   position: sticky;
   bottom: 0;
-  background: #f8f9fa;
-  border-top: 1px solid #e0e0e0;
+  background: var(--color-bg-tertiary);
+  border-top: 1px solid var(--color-border);
   padding: 8px 0;
   display: grid;
   grid-template-columns: 60px 1fr;

@@ -1,6 +1,7 @@
 import { useMemo, useCallback, useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useCalendarStore } from '@/store/calendarStore'
+import { useSettingsStore } from '@/store/settingsStore'
 import { createCommandRegistry, type Command } from '../commands'
 import { parseNaturalLanguage, type NLPParseResult } from '@/features/nlp'
 import type {
@@ -32,14 +33,19 @@ export function useCommandPalette({ isOpen }: UseCommandPaletteProps) {
   const events = useCalendarStore((state) => state.events)
   const calendars = useCalendarStore((state) => state.calendars)
 
+  const themeMode = useSettingsStore((state) => state.themeMode)
+  const updateSettings = useSettingsStore((state) => state.updateSettings)
+
   const commands = useMemo(() => {
     return createCommandRegistry({
       navigate,
       setCurrentView,
       setCurrentDate,
       openModal,
+      themeMode,
+      updateSettings,
     })
-  }, [navigate, setCurrentView, setCurrentDate, openModal])
+  }, [navigate, setCurrentView, setCurrentDate, openModal, themeMode, updateSettings])
 
   const parseInput = useCallback((input: string): ParsedInput => {
     const trimmed = input.trim().toLowerCase()

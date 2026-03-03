@@ -6,6 +6,7 @@ import { motion } from 'framer-motion'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
 import { ViewSwitcher } from './ViewSwitcher'
+import { ThemeToggle } from './ThemeToggle'
 import { Search } from '@/features/search'
 import { QuickAdd } from '@/features/nlp'
 import type { NLPParseResult } from '@/features/nlp'
@@ -148,6 +149,7 @@ export function CalendarHeader({ onQuickAdd }: CalendarHeaderProps): JSX.Element
         <button className={styles.createButton} onClick={() => openModal()}>
           +
         </button>
+        <ThemeToggle className={styles.createButton} />
         <button className={styles.createButton} onClick={() => navigate('/settings')}>
           <SettingsIcon />
         </button>
