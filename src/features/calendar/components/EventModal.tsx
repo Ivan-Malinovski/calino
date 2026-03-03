@@ -5,37 +5,13 @@ import { v4 as uuidv4 } from 'uuid'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
 import type { CalendarEvent, RecurrenceRule, TaskPriority } from '@/types'
+import { TaskFormFields } from './TaskFormFields'
+import { EventFormFields } from './EventFormFields'
+import { RecurrenceDialog } from './RecurrenceDialog'
+import { DeleteDialog } from './DeleteDialog'
 import styles from './EventModal.module.css'
 
 const DEFAULT_DURATION_HOURS = 1
-
-const TRAVEL_DURATION_OPTIONS: { value: number | undefined; label: string }[] = [
-  { value: undefined, label: 'None' },
-  { value: 5, label: '5 min' },
-  { value: 10, label: '10 min' },
-  { value: 15, label: '15 min' },
-  { value: 20, label: '20 min' },
-  { value: 30, label: '30 min' },
-  { value: 45, label: '45 min' },
-  { value: 60, label: '1 hour' },
-  { value: 90, label: '1.5 hours' },
-  { value: 120, label: '2 hours' },
-]
-
-const RECURRENCE_OPTIONS: { value: RecurrenceRule['frequency'] | 'none'; label: string }[] = [
-  { value: 'none', label: 'Does not repeat' },
-  { value: 'daily', label: 'Daily' },
-  { value: 'weekly', label: 'Weekly' },
-  { value: 'monthly', label: 'Monthly' },
-  { value: 'yearly', label: 'Yearly' },
-]
-
-const PRIORITY_OPTIONS: { value: TaskPriority | undefined; label: string }[] = [
-  { value: undefined, label: 'None' },
-  { value: 1, label: 'High' },
-  { value: 2, label: 'Medium' },
-  { value: 3, label: 'Low' },
-]
 
 type RecurrenceEditMode = 'all' | 'future' | 'this'
 
@@ -298,10 +274,67 @@ export function EventModal(): JSX.Element | null {
   const eventType = existingEventForMode?.type
   const isTaskMode = selectedEventType === 'task' || eventType === 'task'
 
+  const hasChanges = useMemo(() => {
+    if (!existingEventForMode) return true
+
+    if (isTaskMode) {
+      const taskDueDate = dueDate || format(parseISO(existingEventForMode.start), 'yyyy-MM-dd')
+      const taskTime = dueAllDay ? '00:00:00' : `${dueTime}:00`
+      const currentStart = `${taskDueDate}T${taskTime}`
+      return (
+        title !== existingEventForMode.title ||
+        description !== (existingEventForMode.description || '') ||
+        location !== (existingEventForMode.location || '') ||
+        currentStart !== existingEventForMode.start ||
+        dueAllDay !== (existingEventForMode.isAllDay ?? true) ||
+        completed !== (existingEventForMode.completed || false) ||
+        priority !== existingEventForMode.priority ||
+        calendarId !== existingEventForMode.calendarId
+      )
+    }
+
+    const localStart = isAllDay ? `${startDate}T00:00:00` : `${startDate}T${startTime}:00`
+    const localEnd = isAllDay ? `${endDate}T23:59:59` : `${endDate}T${endTime}:00`
+    const existingStart = format(parseISO(existingEventForMode.start), "yyyy-MM-dd'T'HH:mm:ss")
+    const existingEnd = format(parseISO(existingEventForMode.end), "yyyy-MM-dd'T'HH:mm:ss")
+
+    return (
+      title !== existingEventForMode.title ||
+      description !== (existingEventForMode.description || '') ||
+      location !== (existingEventForMode.location || '') ||
+      localStart !== existingStart ||
+      localEnd !== existingEnd ||
+      isAllDay !== existingEventForMode.isAllDay ||
+      recurrence !== (existingEventForMode.recurrence?.frequency || 'none') ||
+      travelDuration !== existingEventForMode.travelDuration ||
+      calendarId !== existingEventForMode.calendarId
+    )
+  }, [
+    existingEventForMode,
+    isTaskMode,
+    title,
+    description,
+    location,
+    startDate,
+    startTime,
+    endDate,
+    endTime,
+    isAllDay,
+    dueDate,
+    dueTime,
+    dueAllDay,
+    completed,
+    priority,
+    recurrence,
+    travelDuration,
+    calendarId,
+    events,
+  ])
+
   const handleSubmit = (e: React.FormEvent): void => {
     e.preventDefault()
 
-    if (isEditing && isRecurringInstance && isRecurringEvent) {
+    if (isEditing && isRecurringInstance && isRecurringEvent && hasChanges) {
       setShowRecurrenceDialog(true)
       return
     }
@@ -310,6 +343,11 @@ export function EventModal(): JSX.Element | null {
   }
 
   const saveEvent = async (mode: RecurrenceEditMode): Promise<void> => {
+    if (isEditing && !hasChanges) {
+      closeModal()
+      return
+    }
+
     const localStart = isAllDay ? `${startDate}T00:00:00` : `${startDate}T${startTime}:00`
     const localEnd = isAllDay ? `${endDate}T23:59:59` : `${endDate}T${endTime}:00`
     const startDateTime = new Date(localStart).toISOString()
@@ -512,199 +550,37 @@ export function EventModal(): JSX.Element | null {
           </div>
 
           {isTaskMode && (
-            <>
-              <div className={styles.row}>
-                <div className={styles.field}>
-                  <label className={styles.checkbox}>
-                    <input
-                      type="checkbox"
-                      checked={completed}
-                      onChange={(e) => setCompleted(e.target.checked)}
-                    />
-                    <span>Completed</span>
-                  </label>
-                </div>
-
-                <div className={styles.field}>
-                  <label className={styles.checkbox}>
-                    <input
-                      type="checkbox"
-                      checked={dueAllDay}
-                      onChange={(e) => setDueAllDay(e.target.checked)}
-                    />
-                    <span>Only due date</span>
-                  </label>
-                </div>
-              </div>
-
-              <div className={styles.row}>
-                <div className={styles.field}>
-                  <label className={styles.label} htmlFor="due-date">
-                    Due date
-                  </label>
-                  <input
-                    type="date"
-                    id="due-date"
-                    value={dueDate}
-                    onChange={(e) => setDueDate(e.target.value)}
-                    className={styles.input}
-                    required={isTaskMode}
-                  />
-                </div>
-
-                {!dueAllDay && (
-                  <div className={styles.field}>
-                    <label className={styles.label} htmlFor="due-time">
-                      Due time
-                    </label>
-                    <input
-                      type="time"
-                      id="due-time"
-                      value={dueTime}
-                      onChange={(e) => setDueTime(e.target.value)}
-                      className={styles.input}
-                    />
-                  </div>
-                )}
-
-                <div className={styles.field}>
-                  <label className={styles.label} htmlFor="priority-select">
-                    Priority
-                  </label>
-                  <select
-                    id="priority-select"
-                    value={priority ?? ''}
-                    onChange={(e) =>
-                      setPriority(
-                        e.target.value ? (Number(e.target.value) as TaskPriority) : undefined
-                      )
-                    }
-                    className={styles.select}
-                  >
-                    {PRIORITY_OPTIONS.map((option) => (
-                      <option key={option.label} value={option.value ?? ''}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            </>
+            <TaskFormFields
+              completed={completed}
+              onCompletedChange={setCompleted}
+              dueDate={dueDate}
+              onDueDateChange={setDueDate}
+              dueTime={dueTime}
+              onDueTimeChange={setDueTime}
+              dueAllDay={dueAllDay}
+              onDueAllDayChange={setDueAllDay}
+              priority={priority}
+              onPriorityChange={setPriority}
+            />
           )}
 
           {!isTaskMode && (
-            <div className={styles.field}>
-              <label className={styles.checkbox}>
-                <input
-                  type="checkbox"
-                  checked={isAllDay}
-                  onChange={(e) => setIsAllDay(e.target.checked)}
-                />
-                <span>All day</span>
-              </label>
-            </div>
-          )}
-
-          {!isTaskMode && (
-            <div className={styles.dateTimeRow}>
-              <div className={styles.dateTimeGroup}>
-                <label className={styles.label}>Start</label>
-                <div className={styles.dateTimeInputs}>
-                  <input
-                    type="date"
-                    value={startDate}
-                    onChange={(e) => {
-                      setStartDate(e.target.value)
-                      if (endDate && e.target.value > endDate) {
-                        setEndDate(e.target.value)
-                      }
-                    }}
-                    className={styles.input}
-                    required
-                  />
-                  {!isAllDay && (
-                    <input
-                      type="time"
-                      value={startTime}
-                      onChange={(e) => {
-                        setStartTime(e.target.value)
-                        if (startDate === endDate && e.target.value > endTime) {
-                          setEndTime(e.target.value)
-                        }
-                      }}
-                      className={styles.input}
-                      required
-                    />
-                  )}
-                </div>
-              </div>
-
-              <div className={styles.dateTimeGroup}>
-                <label className={styles.label}>End</label>
-                <div className={styles.dateTimeInputs}>
-                  <input
-                    type="date"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                    className={styles.input}
-                    required
-                  />
-                  {!isAllDay && (
-                    <input
-                      type="time"
-                      value={endTime}
-                      onChange={(e) => setEndTime(e.target.value)}
-                      className={styles.input}
-                      required
-                    />
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {!isTaskMode && (
-            <div className={styles.row}>
-              <div className={styles.field}>
-                <label className={styles.label} htmlFor="recurrence-select">
-                  Repeat
-                </label>
-                <select
-                  id="recurrence-select"
-                  value={recurrence}
-                  onChange={(e) =>
-                    setRecurrence(e.target.value as RecurrenceRule['frequency'] | 'none')
-                  }
-                  className={styles.select}
-                >
-                  {RECURRENCE_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className={styles.field}>
-                <label className={styles.label} htmlFor="travel-duration-select">
-                  Travel time
-                </label>
-                <select
-                  id="travel-duration-select"
-                  value={travelDuration ?? ''}
-                  onChange={(e) =>
-                    setTravelDuration(e.target.value ? Number(e.target.value) : undefined)
-                  }
-                  className={styles.select}
-                >
-                  {TRAVEL_DURATION_OPTIONS.map((option) => (
-                    <option key={option.label} value={option.value ?? ''}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
+            <EventFormFields
+              isAllDay={isAllDay}
+              onIsAllDayChange={setIsAllDay}
+              startDate={startDate}
+              onStartDateChange={setStartDate}
+              startTime={startTime}
+              onStartTimeChange={setStartTime}
+              endDate={endDate}
+              onEndDateChange={setEndDate}
+              endTime={endTime}
+              onEndTimeChange={setEndTime}
+              recurrence={recurrence}
+              onRecurrenceChange={setRecurrence}
+              travelDuration={travelDuration}
+              onTravelDurationChange={setTravelDuration}
+            />
           )}
 
           <div className={styles.row}>
@@ -804,107 +680,17 @@ export function EventModal(): JSX.Element | null {
         </form>
       </div>
 
-      {showRecurrenceDialog && (
-        <div className={styles.overlay} onClick={() => setShowRecurrenceDialog(false)}>
-          <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-            <div className={styles.header}>
-              <h2 className={styles.title}>Update recurring event</h2>
-              <button className={styles.closeButton} onClick={() => setShowRecurrenceDialog(false)}>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                  <path
-                    d="M18 6L6 18M6 6L18 18"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                  />
-                </svg>
-              </button>
-            </div>
-            <div className={styles.form}>
-              <p style={{ padding: '16px', color: '#666' }}>
-                How would you like to apply these changes?
-              </p>
-              <div className={styles.field} style={{ padding: '0 16px 16px' }}>
-                <button
-                  type="button"
-                  className={styles.saveButton}
-                  style={{ width: '100%', marginBottom: '8px' }}
-                  onClick={() => handleRecurrenceDialogConfirm('all')}
-                >
-                  All events
-                </button>
-                <button
-                  type="button"
-                  className={styles.saveButton}
-                  style={{ width: '100%', marginBottom: '8px' }}
-                  onClick={() => handleRecurrenceDialogConfirm('this')}
-                >
-                  This event only
-                </button>
-                <button
-                  type="button"
-                  className={styles.cancelButton}
-                  style={{ width: '100%' }}
-                  onClick={() => setShowRecurrenceDialog(false)}
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <RecurrenceDialog
+        isOpen={showRecurrenceDialog}
+        onClose={() => setShowRecurrenceDialog(false)}
+        onConfirm={handleRecurrenceDialogConfirm}
+      />
 
-      {showDeleteDialog && (
-        <div className={styles.overlay} onClick={() => setShowDeleteDialog(false)}>
-          <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-            <div className={styles.header}>
-              <h2 className={styles.title}>Delete recurring event</h2>
-              <button className={styles.closeButton} onClick={() => setShowDeleteDialog(false)}>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                  <path
-                    d="M18 6L6 18M6 6L18 18"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                  />
-                </svg>
-              </button>
-            </div>
-            <div className={styles.form}>
-              <p style={{ padding: '16px', color: '#666' }}>
-                How would you like to delete this event?
-              </p>
-              <div className={styles.field} style={{ padding: '0 16px 16px' }}>
-                <button
-                  type="button"
-                  className={styles.deleteButton}
-                  style={{ width: '100%', marginBottom: '8px' }}
-                  onClick={() => performDelete('all')}
-                >
-                  All events
-                </button>
-                <button
-                  type="button"
-                  className={styles.deleteButton}
-                  style={{ width: '100%', marginBottom: '8px' }}
-                  onClick={() => performDelete('this')}
-                >
-                  This event only
-                </button>
-                <button
-                  type="button"
-                  className={styles.cancelButton}
-                  style={{ width: '100%' }}
-                  onClick={() => setShowDeleteDialog(false)}
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <DeleteDialog
+        isOpen={showDeleteDialog}
+        onClose={() => setShowDeleteDialog(false)}
+        onConfirm={performDelete}
+      />
     </div>
   )
 }

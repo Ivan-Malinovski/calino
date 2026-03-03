@@ -16,7 +16,7 @@ import {
 import { type NLPParseResult } from './features/nlp'
 import { SettingsPage, PrivacyPolicy } from './features/settings'
 import { CommandPalette } from './features/commandPalette'
-import { CookieConsent } from './components/common'
+import { CookieConsent, ErrorBoundary } from './components/common'
 import { OnboardingModal } from './features/onboarding/OnboardingModal'
 import type { CalendarEvent, ViewType } from './types'
 import './App.css'
@@ -138,15 +138,35 @@ function CalendarApp(): JSX.Element {
   const renderView = (): JSX.Element => {
     switch (currentView) {
       case 'month':
-        return <CalendarGrid />
+        return (
+          <ErrorBoundary>
+            <CalendarGrid />
+          </ErrorBoundary>
+        )
       case 'week':
-        return <WeekView />
+        return (
+          <ErrorBoundary>
+            <WeekView />
+          </ErrorBoundary>
+        )
       case 'day':
-        return <DayView />
+        return (
+          <ErrorBoundary>
+            <DayView />
+          </ErrorBoundary>
+        )
       case 'agenda':
-        return <AgendaView />
+        return (
+          <ErrorBoundary>
+            <AgendaView />
+          </ErrorBoundary>
+        )
       default:
-        return <CalendarGrid />
+        return (
+          <ErrorBoundary>
+            <CalendarGrid />
+          </ErrorBoundary>
+        )
     }
   }
 

@@ -112,6 +112,7 @@ export function parseICALEvent(iCalData: string, calendarId: string): CalendarEv
     }
   }
 
+  uidToIndex.clear()
   return events
 }
 
@@ -363,6 +364,7 @@ export function parseICALData(iCalData: string, calendarId: string): CalendarEve
 export function parseICALTask(iCalData: string, calendarId: string): CalendarEvent[] {
   const tasks: CalendarEvent[] = []
   const lines = iCalData.split(/\r\n|\n|\r/)
+  const uidToIndex = new Map<string, number>()
 
   let currentTask: Partial<CalendarEvent> | null = null
   let inTask = false
@@ -379,23 +381,33 @@ export function parseICALTask(iCalData: string, calendarId: string): CalendarEve
       }
       inTask = true
     } else if (line.startsWith('END:VTODO') && currentTask) {
-      const taskData: CalendarEvent = {
-        id: currentTask.id ?? uuidv4(),
-        calendarId: currentTask.calendarId ?? calendarId,
-        title: currentTask.title ?? 'Untitled',
-        description: currentTask.description,
-        location: currentTask.location,
-        start: currentTask.dueDate ?? new Date().toISOString(),
-        end: currentTask.dueDate ?? new Date().toISOString(),
-        isAllDay: true,
-        color: currentTask.color,
-        type: 'task',
-        dueDate: currentTask.dueDate,
-        completed: currentTask.completed,
-        priority: currentTask.priority,
-        percentComplete: currentTask.percentComplete,
+      const uid = currentTask.id
+      const existingIndex = uid ? uidToIndex.get(uid) : undefined
+
+      if (existingIndex !== undefined) {
+        // Skip duplicate task
+      } else {
+        const taskData: CalendarEvent = {
+          id: currentTask.id ?? uuidv4(),
+          calendarId: currentTask.calendarId ?? calendarId,
+          title: currentTask.title ?? 'Untitled',
+          description: currentTask.description,
+          location: currentTask.location,
+          start: currentTask.dueDate ?? new Date().toISOString(),
+          end: currentTask.dueDate ?? new Date().toISOString(),
+          isAllDay: true,
+          color: currentTask.color,
+          type: 'task',
+          dueDate: currentTask.dueDate,
+          completed: currentTask.completed,
+          priority: currentTask.priority,
+          percentComplete: currentTask.percentComplete,
+        }
+        if (uid) {
+          uidToIndex.set(uid, tasks.length)
+        }
+        tasks.push(taskData)
       }
-      tasks.push(taskData)
       currentTask = null
       inTask = false
     } else if (inTask && currentTask) {
@@ -440,6 +452,7 @@ export function parseICALTask(iCalData: string, calendarId: string): CalendarEve
     }
   }
 
+  uidToIndex.clear()
   return tasks
 }
 
