@@ -109,6 +109,31 @@ export function useCalDAV(): UseCalDAVReturn {
         setAccounts(storage.getAllAccounts())
         setCalendars(storage.getAllCalendars())
 
+        const start = '1970-01-01T00:00:00.000Z'
+        const end = addDays(new Date(), 365).toISOString()
+
+        for (const cal of serverCalendars) {
+          const fetchedEvents = await client.fetchEvents(cal.url, start, end)
+
+          for (const eventData of fetchedEvents) {
+            if (eventData.data) {
+              const parsedEvents = parseICALEvent(eventData.data, cal.id)
+
+              for (const parsedEvent of parsedEvents) {
+                const existingIndex = existingEvents.findIndex((e) => e.id === parsedEvent.id)
+
+                if (existingIndex >= 0) {
+                  storeUpdateEvent(parsedEvent.id, parsedEvent)
+                } else {
+                  storeAddEvent(parsedEvent)
+                }
+              }
+            }
+          }
+        }
+
+        storage.updateAccountLastSync(newAccount.id)
+
         setSyncState((prev) => ({
           ...prev,
           status: 'idle',
@@ -123,7 +148,7 @@ export function useCalDAV(): UseCalDAVReturn {
         throw error
       }
     },
-    []
+    [existingEvents, storeAddEvent, storeUpdateEvent]
   )
 
   const removeAccount = useCallback(async (accountId: string): Promise<void> => {

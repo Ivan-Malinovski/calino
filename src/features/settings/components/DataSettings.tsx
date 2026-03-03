@@ -1,7 +1,9 @@
 import type { JSX } from 'react'
 import { useState, useRef } from 'react'
 import { useCalendarStore } from '@/store/calendarStore'
+import { useSettingsStore } from '@/store/settingsStore'
 import { parseICALEvent } from '@/features/caldav/adapter/iCalendarAdapter'
+import * as accountStorage from '@/features/caldav/sync/accountStorage'
 import styles from './Settings.module.css'
 
 export function DataSettings(): JSX.Element {
@@ -17,6 +19,7 @@ export function DataSettings(): JSX.Element {
   const events = useCalendarStore((state) => state.events)
   const calendars = useCalendarStore((state) => state.calendars)
   const updateCalendar = useCalendarStore((state) => state.updateCalendar)
+  const settings = useSettingsStore()
 
   const defaultCalendar = calendars.find((c) => c.isDefault) || calendars[0]
 
@@ -58,7 +61,7 @@ export function DataSettings(): JSX.Element {
         return formatted.endsWith('Z') || formatted.endsWith('z') ? formatted : formatted + 'Z'
       }
 
-      let ics = 'BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//GoodCal//Calendar//EN\r\n'
+      let ics = 'BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Calino//Calendar//EN\r\n'
 
       for (const event of events) {
         ics += 'BEGIN:VEVENT\r\n'
@@ -89,6 +92,63 @@ export function DataSettings(): JSX.Element {
     } finally {
       setIsExporting(false)
     }
+  }
+
+  const handleExportSettings = (): void => {
+    const accounts = accountStorage.getAllAccounts()
+    const calendars = accountStorage.getAllCalendars()
+
+    const exportData = {
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      type: 'goodcal-settings',
+      settings: {
+        timezone: settings.timezone,
+        dateFormat: settings.dateFormat,
+        timeFormat: settings.timeFormat,
+        firstDayOfWeek: settings.firstDayOfWeek,
+        defaultDuration: settings.defaultDuration,
+        defaultView: settings.defaultView,
+        showWeekNumbers: settings.showWeekNumbers,
+        eventDensity: settings.eventDensity,
+        defaultReminderMinutes: settings.defaultReminderMinutes,
+        defaultEventColor: settings.defaultEventColor,
+        enableDesktopNotifications: settings.enableDesktopNotifications,
+        enableSoundAlerts: settings.enableSoundAlerts,
+        syncEnabled: settings.syncEnabled,
+        syncIntervalMinutes: settings.syncIntervalMinutes,
+        conflictResolution: settings.conflictResolution,
+        compactRecurringEvents: settings.compactRecurringEvents,
+      },
+      calendars: accounts.map((account) => ({
+        id: account.id,
+        name: account.name,
+        serverUrl: account.serverUrl,
+        username: account.username,
+        lastSyncAt: account.lastSyncAt,
+        createdAt: account.createdAt,
+        calendars: calendars
+          .filter((c) => c.accountId === account.id)
+          .map((c) => ({
+            id: c.id,
+            name: c.name,
+            color: c.color,
+            url: c.url,
+            isVisible: c.isVisible,
+            isDefault: c.isDefault,
+          })),
+      })),
+    }
+
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `goodcal-settings-${new Date().toISOString().split('T')[0]}.json`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
   }
 
   const handleImport = (): void => {
@@ -183,6 +243,21 @@ export function DataSettings(): JSX.Element {
           </select>
         </div>
       )}
+
+      <div className={styles.settingRow}>
+        <div className={styles.settingLabel}>
+          <span className={styles.settingLabelText}>Export Settings</span>
+          <span className={styles.settingLabelHint}>
+            Download your settings and calendar accounts (without passwords)
+          </span>
+        </div>
+        <button
+          className={`${styles.button} ${styles.buttonSecondary}`}
+          onClick={handleExportSettings}
+        >
+          Export Settings
+        </button>
+      </div>
 
       <div className={styles.settingRow}>
         <div className={styles.settingLabel}>

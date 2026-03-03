@@ -20,7 +20,7 @@ export function PrivacyPolicy(): JSX.Element {
         <section>
           <h2>1. Your Data Stays on Your Device</h2>
           <p>
-            GoodCal is a local-first calendar application. All your calendar events, settings, and
+            Calino is a local-first calendar application. All your calendar events, settings, and
             preferences are stored locally in your browser using IndexedDB and localStorage. We do
             not have access to your personal data.
           </p>
@@ -29,8 +29,8 @@ export function PrivacyPolicy(): JSX.Element {
         <section>
           <h2>2. CalDAV Sync (Optional)</h2>
           <p>
-            GoodCal can sync with CalDAV servers (like Nextcloud, ownCloud, or other
-            CalDAV-compliant services) you personally configure. When you add a CalDAV account:
+            Calino can sync with CalDAV servers (like Nextcloud, ownCloud, or other CalDAV-compliant
+            services) you personally configure. When you add a CalDAV account:
           </p>
           <ul>
             <li>
@@ -44,7 +44,7 @@ export function PrivacyPolicy(): JSX.Element {
 
         <section>
           <h2>3. Cookies & Local Storage</h2>
-          <p>GoodCal uses localStorage to store:</p>
+          <p>Calino uses localStorage to store:</p>
           <ul>
             <li>Your preferences and settings</li>
             <li>CalDAV account credentials (encrypted only in your browser)</li>
@@ -58,7 +58,7 @@ export function PrivacyPolicy(): JSX.Element {
         <section>
           <h2>4. No Account Required</h2>
           <p>
-            GoodCal does not require registration or an account. You can use the app immediately
+            Calino does not require registration or an account. You can use the app immediately
             without providing any personal information.
           </p>
         </section>

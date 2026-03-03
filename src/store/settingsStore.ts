@@ -11,14 +11,95 @@ import type {
   ViewType,
 } from '@/types'
 
+function getBrowserTimezone(): string {
+  try {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
+    if (tz) return tz
+  } catch {
+    // Fallback to default
+  }
+  return 'Europe/Berlin'
+}
+
+function getEuropeDefaultFirstDay(): FirstDayOfWeek {
+  try {
+    const locale = Intl.DateTimeFormat().resolvedOptions().locale
+    const region = locale.split('-')[1]
+    const europeanRegions = [
+      'GB',
+      'DE',
+      'FR',
+      'IT',
+      'ES',
+      'NL',
+      'BE',
+      'SE',
+      'NO',
+      'DK',
+      'FI',
+      'AT',
+      'CH',
+      'PL',
+      'PT',
+      'CZ',
+      'HU',
+      'IE',
+      'IS',
+    ]
+    if (region && europeanRegions.includes(region)) {
+      return 1
+    }
+  } catch {
+    // Fallback to Monday
+  }
+  return 1
+}
+
+function generateTimezoneOptions(): { value: string; label: string }[] {
+  try {
+    const timezones = Intl.supportedValuesOf('timeZone')
+    const options: { value: string; label: string }[] = []
+
+    for (const tz of timezones) {
+      try {
+        const formatter = new Intl.DateTimeFormat('en-US', {
+          timeZone: tz,
+          timeZoneName: 'shortOffset',
+        })
+        const parts = formatter.formatToParts(new Date())
+        const offsetPart = parts.find((p) => p.type === 'timeZoneName')
+        const offset = offsetPart?.value || ''
+
+        const city = tz.split('/').pop()?.replace(/_/g, ' ') || tz
+        const label = offset ? `${city} (${offset})` : city
+        options.push({ value: tz, label })
+      } catch {
+        options.push({ value: tz, label: tz })
+      }
+    }
+
+    return options.sort((a, b) => a.label.localeCompare(b.label))
+  } catch {
+    return [
+      { value: 'UTC', label: 'UTC' },
+      { value: 'Europe/London', label: 'London (GMT+0/GMT+1)' },
+      { value: 'Europe/Paris', label: 'Paris (GMT+1/GMT+2)' },
+      { value: 'Europe/Berlin', label: 'Berlin (GMT+1/GMT+2)' },
+      { value: 'Europe/Copenhagen', label: 'Copenhagen (GMT+1/GMT+2)' },
+      { value: 'America/New_York', label: 'New York (GMT-5/GMT-4)' },
+      { value: 'America/Los_Angeles', label: 'Los Angeles (GMT-8/GMT-7)' },
+    ]
+  }
+}
+
 const DEFAULT_SETTINGS: UserSettings = {
-  timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Berlin',
+  timezone: getBrowserTimezone(),
   dateFormat: 'dd/MM/yyyy',
   timeFormat: '24h',
-  firstDayOfWeek: 1,
+  firstDayOfWeek: getEuropeDefaultFirstDay(),
   defaultDuration: 60,
   defaultView: 'month',
-  showWeekNumbers: false,
+  showWeekNumbers: true,
   eventDensity: 'comfortable',
   defaultReminderMinutes: 15,
   defaultEventColor: '#4285F4',
@@ -27,7 +108,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   syncEnabled: true,
   syncIntervalMinutes: 15,
   conflictResolution: 'server-wins',
-  compactRecurringEvents: false,
+  compactRecurringEvents: true,
 }
 
 export const useSettingsStore = create<SettingsStore>()(
@@ -112,25 +193,7 @@ export const CONFLICT_OPTIONS: { value: 'server-wins' | 'local-wins' | 'ask'; la
   { value: 'ask', label: 'Ask me' },
 ]
 
-export const TIMEZONE_OPTIONS: { value: string; label: string }[] = [
-  { value: 'America/New_York', label: 'Eastern Time (US & Canada)' },
-  { value: 'America/Chicago', label: 'Central Time (US & Canada)' },
-  { value: 'America/Denver', label: 'Mountain Time (US & Canada)' },
-  { value: 'America/Los_Angeles', label: 'Pacific Time (US & Canada)' },
-  { value: 'America/Anchorage', label: 'Alaska' },
-  { value: 'Pacific/Honolulu', label: 'Hawaii' },
-  { value: 'Europe/London', label: 'London' },
-  { value: 'Europe/Paris', label: 'Paris, Berlin, Rome' },
-  { value: 'Europe/Moscow', label: 'Moscow' },
-  { value: 'Asia/Dubai', label: 'Dubai' },
-  { value: 'Asia/Kolkata', label: 'Mumbai, New Delhi' },
-  { value: 'Asia/Bangkok', label: 'Bangkok, Jakarta' },
-  { value: 'Asia/Singapore', label: 'Singapore, Hong Kong' },
-  { value: 'Asia/Tokyo', label: 'Tokyo' },
-  { value: 'Australia/Sydney', label: 'Sydney, Melbourne' },
-  { value: 'Pacific/Auckland', label: 'Auckland' },
-  { value: 'UTC', label: 'UTC' },
-]
+export const TIMEZONE_OPTIONS = generateTimezoneOptions()
 
 export const EVENT_COLORS = [
   '#4285F4',

@@ -46,7 +46,7 @@ export async function getServerInfo(
       defaultAccountType: 'caldav',
     })
 
-    const productId = 'GoodCal Client'
+    const productId = 'Calino Client'
     const capabilities: string[] = []
 
     return {

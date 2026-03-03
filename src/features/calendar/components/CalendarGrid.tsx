@@ -30,6 +30,7 @@ import { useCalendarStore } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
 import { EventCard } from './EventCard'
 import { DayEventsPopup } from './DayEventsPopup'
+import { ContextMenu } from '@/components/common/ContextMenu'
 import type { CalendarEvent } from '@/types'
 import styles from './CalendarGrid.module.css'
 
@@ -148,15 +149,17 @@ export function CalendarGrid(): JSX.Element {
     const originalEnd = parseISO(originalEvent.end)
     const durationMs = originalEnd.getTime() - originalStart.getTime()
 
-    // Keep the same time as the original event
     const hours = originalStart.getHours().toString().padStart(2, '0')
     const minutes = originalStart.getMinutes().toString().padStart(2, '0')
     const newStart = parseISO(`${dayStr}T${hours}:${minutes}:00`)
     const newEnd = new Date(newStart.getTime() + durationMs)
 
+    const isTask = originalEvent.type === 'task'
+
     updateEvent(active.id as string, {
       start: newStart.toISOString(),
       end: newEnd.toISOString(),
+      ...(isTask && { dueDate: dayStr }),
     })
   }
 
@@ -192,13 +195,30 @@ export function CalendarGrid(): JSX.Element {
     )
 
     const map = new Map<string, CalendarEvent[]>()
-    monthEvents.forEach((event) => {
-      const eventDate = format(parseISO(event.start), 'yyyy-MM-dd')
-      const existing = map.get(eventDate) || []
-      map.set(eventDate, [...existing, event])
-    })
+    monthEvents
+      .filter((event) => event.type !== 'task')
+      .forEach((event) => {
+        const eventDate = format(parseISO(event.start), 'yyyy-MM-dd')
+        const existing = map.get(eventDate) || []
+        map.set(eventDate, [...existing, event])
+      })
     return map
   }, [date, events, calendars, getEventsForDateRange])
+
+  const tasksMap = useMemo(() => {
+    const map = new Map<string, CalendarEvent[]>()
+    const visibleCalendarIds = calendars.filter((c) => c.isVisible).map((c) => c.id)
+    events
+      .filter((event) => event.type === 'task' && visibleCalendarIds.includes(event.calendarId))
+      .forEach((task) => {
+        const taskDate = task.dueDate
+          ? format(parseISO(task.dueDate), 'yyyy-MM-dd')
+          : format(parseISO(task.start), 'yyyy-MM-dd')
+        const existing = map.get(taskDate) || []
+        map.set(taskDate, [...existing, task])
+      })
+    return map
+  }, [events, calendars])
 
   const handleDayClick = (day: Date): void => {
     openModal(format(day, 'yyyy-MM-dd'))
@@ -245,6 +265,7 @@ export function CalendarGrid(): JSX.Element {
                 {days.slice(weekIdx * 7, weekIdx * 7 + 7).map((day) => {
                   const dateKey = format(day, 'yyyy-MM-dd')
                   const dayEvents = eventsMap.get(dateKey) || []
+                  const dayTasks = tasksMap.get(dateKey) || []
                   const isCurrentMonth = isSameMonth(day, date)
                   const isTodayDate = isToday(day)
                   const dayOfWeek = getDay(day)
@@ -256,6 +277,7 @@ export function CalendarGrid(): JSX.Element {
                       dateKey={dateKey}
                       day={day}
                       dayEvents={dayEvents}
+                      dayTasks={dayTasks}
                       isCurrentMonth={isCurrentMonth}
                       isTodayDate={isTodayDate}
                       isWeekend={isWeekend}
@@ -280,19 +302,21 @@ interface DroppableDayProps {
   dateKey: string
   day: Date
   dayEvents: CalendarEvent[]
+  dayTasks: CalendarEvent[]
   isCurrentMonth: boolean
   isTodayDate: boolean
   isWeekend: boolean
   compactRecurringEvents: boolean
   onDayClick: (day: Date) => void
   onDayNumberClick: (day: Date) => void
-  openModal: (date?: string, endDate?: string, eventId?: string) => void
+  openModal: (date?: string, endDate?: string, eventId?: string, mode?: 'event' | 'task') => void
 }
 
 function DroppableDay({
   dateKey,
   day,
   dayEvents,
+  dayTasks,
   isCurrentMonth,
   isTodayDate,
   isWeekend,
@@ -304,6 +328,7 @@ function DroppableDay({
   const { setNodeRef, isOver } = useDroppable({ id: dateKey })
   const [showPopup, setShowPopup] = useState(false)
   const [popupPosition, setPopupPosition] = useState({ x: 0, y: 0 })
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null)
   const moreEventsRef = useRef<HTMLDivElement>(null)
 
   const handleMoreEventsClick = (e: React.MouseEvent): void => {
@@ -320,11 +345,18 @@ function DroppableDay({
     openModal(undefined, undefined, event.id)
   }
 
+  const handleContextMenu = (e: React.MouseEvent): void => {
+    e.preventDefault()
+    e.stopPropagation()
+    setContextMenu({ x: e.clientX, y: e.clientY })
+  }
+
   return (
     <div
       ref={setNodeRef}
       className={`${styles.day} ${!isCurrentMonth ? styles.otherMonth : ''} ${isTodayDate ? styles.today : ''} ${isWeekend ? styles.weekend : ''} ${isOver ? styles.dropTarget : ''}`}
       onClick={() => onDayClick(day)}
+      onContextMenu={handleContextMenu}
     >
       <div className={styles.dayHeader}>
         <span
@@ -352,6 +384,18 @@ function DroppableDay({
           </div>
         )}
       </div>
+      {dayTasks.length > 0 && (
+        <div className={styles.tasks}>
+          <AnimatePresence>
+            {dayTasks.slice(0, 3).map((task) => (
+              <EventCard key={task.id} event={task} compact />
+            ))}
+          </AnimatePresence>
+          {dayTasks.length > 3 && (
+            <div className={styles.moreEvents}>+{dayTasks.length - 3} more</div>
+          )}
+        </div>
+      )}
       {showPopup && (
         <DayEventsPopup
           date={day}
@@ -359,6 +403,29 @@ function DroppableDay({
           position={popupPosition}
           onClose={() => setShowPopup(false)}
           onEventClick={handlePopupEventClick}
+        />
+      )}
+      {contextMenu && (
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          onClose={() => setContextMenu(null)}
+          items={[
+            {
+              label: 'Create event',
+              onClick: () => {
+                openModal(format(day, 'yyyy-MM-dd'))
+                setContextMenu(null)
+              },
+            },
+            {
+              label: 'Create task',
+              onClick: () => {
+                openModal(format(day, 'yyyy-MM-dd'), undefined, undefined, 'task')
+                setContextMenu(null)
+              },
+            },
+          ]}
         />
       )}
     </div>

@@ -25,6 +25,7 @@ import {
 import { useCalendarStore } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
 import { EventCard } from './EventCard'
+import { ContextMenu } from '@/components/common/ContextMenu'
 import type { CalendarEvent, Calendar } from '@/types'
 import styles from './WeekView.module.css'
 
@@ -80,6 +81,7 @@ export function WeekView(): JSX.Element {
 
   const [activeEvent, setActiveEvent] = useState<CalendarEvent | null>(null)
   const [isDraggingToCreate, setIsDraggingToCreate] = useState(false)
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; day: Date } | null>(null)
   const [dragStart, setDragStart] = useState<string | null>(null)
   const [dragEnd, setDragEnd] = useState<string | null>(null)
 
@@ -108,14 +110,39 @@ export function WeekView(): JSX.Element {
     )
 
     const map = new Map<string, CalendarEvent[]>()
-    weekEvents.forEach((event: CalendarEvent) => {
-      const dateKey = format(parseISO(event.start), 'yyyy-MM-dd')
-      const existing = map.get(dateKey) || []
-      map.set(dateKey, [...existing, event])
-    })
+    weekEvents
+      .filter((event) => {
+        if (event.type !== 'task') return true
+        if (event.isAllDay) return false
+        return event.start && event.dueDate
+      })
+      .forEach((event: CalendarEvent) => {
+        const dateKey = format(parseISO(event.start), 'yyyy-MM-dd')
+        const existing = map.get(dateKey) || []
+        map.set(dateKey, [...existing, event])
+      })
     return map
   }, [date, firstDayOfWeek, getEventsForDateRange, events])
 
+  const tasksMap = useMemo(() => {
+    const map = new Map<string, CalendarEvent[]>()
+    const visibleCalendarIds = calendars.filter((c) => c.isVisible).map((c) => c.id)
+    events
+      .filter(
+        (event) =>
+          event.type === 'task' && event.isAllDay && visibleCalendarIds.includes(event.calendarId)
+      )
+      .forEach((task) => {
+        const taskDate = task.dueDate
+          ? format(parseISO(task.dueDate), 'yyyy-MM-dd')
+          : format(parseISO(task.start), 'yyyy-MM-dd')
+        const existing = map.get(taskDate) || []
+        map.set(taskDate, [...existing, task])
+      })
+    return map
+  }, [events, calendars])
+
+  const containerRef = useRef<HTMLDivElement>(null)
   const bodyRef = useRef<HTMLDivElement>(null)
   const [isScrolled, setIsScrolled] = useState(false)
   const lastDateRef = useRef(date.toISOString())
@@ -417,7 +444,7 @@ export function WeekView(): JSX.Element {
 
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-      <div className={styles.container}>
+      <div ref={containerRef} className={styles.container}>
         <div className={`${styles.header} ${isScrolled ? styles.headerShadow : ''}`}>
           <div className={styles.weekNumberHeader}>W{weekNumber}</div>
           {weekDays.map((day) => (
@@ -445,28 +472,84 @@ export function WeekView(): JSX.Element {
               </div>
             ))}
           </div>
-          {weekDays.map((day) => (
-            <div key={day.toISOString()} className={styles.dayColumn}>
-              <div className={styles.hourCells}>
-                {HOURS.map((hour) => (
-                  <DroppableCell
-                    key={`${day.toISOString()}-${hour.toISOString()}`}
-                    day={day}
-                    hour={hour}
-                    onClick={() => handleCellClick(day, hour)}
-                    onMouseDown={(e) => handleDragStartFromCell(day, hour, e)}
-                  />
-                ))}
+          {weekDays.map((day) => {
+            return (
+              <div
+                key={day.toISOString()}
+                className={styles.dayColumn}
+                onContextMenu={(e) => {
+                  e.preventDefault()
+                  setContextMenu({ x: e.clientX, y: e.clientY, day })
+                }}
+              >
+                <div className={styles.hourCells}>
+                  {HOURS.map((hour) => (
+                    <DroppableCell
+                      key={`${day.toISOString()}-${hour.toISOString()}`}
+                      day={day}
+                      hour={hour}
+                      onClick={() => handleCellClick(day, hour)}
+                      onMouseDown={(e) => handleDragStartFromCell(day, hour, e)}
+                    />
+                  ))}
+                </div>
+                <div className={styles.eventsOverlay}>
+                  {day === weekDays[0] && selectionOverlay}
+                  {renderDayEvents(day)}
+                </div>
               </div>
-              <div className={styles.eventsOverlay}>
-                {day === weekDays[0] && selectionOverlay}
-                {renderDayEvents(day)}
-              </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
+        {(() => {
+          const tasksByDay: CalendarEvent[][] = Array(7)
+            .fill(null)
+            .map(() => [])
+          weekDays.forEach((day, idx) => {
+            const dayKey = format(day, 'yyyy-MM-dd')
+            const dayTasks = tasksMap.get(dayKey) || []
+            dayTasks.filter((t) => t.isAllDay).forEach((t) => tasksByDay[idx].push(t))
+          })
+          const hasTasks = tasksByDay.some((arr) => arr.length > 0)
+          if (!hasTasks) return null
+          return (
+            <div className={styles.tasksFixedFooter}>
+              <div></div>
+              {tasksByDay.map((tasks, idx) => (
+                <div key={idx} className={styles.tasksFixedFooterCol}>
+                  {tasks.map((task) => (
+                    <EventCard key={task.id} event={task} compact />
+                  ))}
+                </div>
+              ))}
+            </div>
+          )
+        })()}
       </div>
       <DragOverlay>{activeEvent ? <EventCard event={activeEvent} isDragging /> : null}</DragOverlay>
+      {contextMenu && (
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          onClose={() => setContextMenu(null)}
+          items={[
+            {
+              label: 'Create event',
+              onClick: () => {
+                openModal(format(contextMenu.day, 'yyyy-MM-dd'))
+                setContextMenu(null)
+              },
+            },
+            {
+              label: 'Create task',
+              onClick: () => {
+                openModal(format(contextMenu.day, 'yyyy-MM-dd'), undefined, undefined, 'task')
+                setContextMenu(null)
+              },
+            },
+          ]}
+        />
+      )}
     </DndContext>
   )
 }

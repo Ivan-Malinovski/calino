@@ -1,14 +1,14 @@
 import Dexie, { type Table } from 'dexie'
 import type { StoredEvent, StoredCalendar, StoredAccount, SyncQueueItem } from '@/types/storage'
 
-export class GoodCalDB extends Dexie {
+export class CalinoDB extends Dexie {
   events!: Table<StoredEvent, string>
   calendars!: Table<StoredCalendar, string>
   accounts!: Table<StoredAccount, string>
   syncQueue!: Table<SyncQueueItem, number>
 
   constructor() {
-    super('GoodCalDB')
+    super('CalinoDB')
 
     this.version(1).stores({
       events: 'id, calendarId, start, end, syncStatus, remoteId',
@@ -19,4 +19,4 @@ export class GoodCalDB extends Dexie {
   }
 }
 
-export const db = new GoodCalDB()
+export const db = new CalinoDB()

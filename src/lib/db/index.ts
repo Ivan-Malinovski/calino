@@ -1,4 +1,4 @@
-export { db, GoodCalDB } from './db'
+export { db, CalinoDB } from './db'
 export * from './events'
 export * from './calendars'
 export * from './accounts'

@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { format, parseISO, isWithinInterval, startOfDay, endOfDay } from 'date-fns'
 import { RRule } from 'rrule'
-import type { CalendarStore, CalendarEvent, Calendar, ViewType } from '@/types'
+import type { CalendarStore, CalendarEvent, Calendar, ViewType, EventType } from '@/types'
 
 const DEFAULT_CALENDAR: Calendar = {
   id: 'default',
@@ -24,6 +24,7 @@ export const useCalendarStore = create<CalendarStore>()(
       selectedDate: null,
       selectedEndDate: null,
       isOverlayOpen: false,
+      selectedEventType: 'event',
 
       addEvent: (event: CalendarEvent): void => {
         set((state) => ({
@@ -118,12 +119,13 @@ export const useCalendarStore = create<CalendarStore>()(
         set({ selectedEventId: id })
       },
 
-      openModal: (date?: string, endDate?: string, eventId?: string): void => {
+      openModal: (date?: string, endDate?: string, eventId?: string, mode?: EventType): void => {
         set({
           isModalOpen: true,
           selectedEventId: eventId ?? null,
           selectedDate: date ?? null,
           selectedEndDate: endDate ?? null,
+          selectedEventType: mode ?? 'event',
         })
       },
 
@@ -133,6 +135,7 @@ export const useCalendarStore = create<CalendarStore>()(
           selectedEventId: null,
           selectedDate: null,
           selectedEndDate: null,
+          selectedEventType: 'event',
         })
       },
 

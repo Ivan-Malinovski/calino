@@ -1,4 +1,4 @@
-# GoodCal - AI Agent Guidelines
+# Calino - AI Agent Guidelines
 
 React 18 + TypeScript + Vite calendar app with CalDAV sync and NLP event creation.
 
@@ -63,3 +63,27 @@ A VS Code-style command palette activated with `Cmd+K` (or `Ctrl+K`). Located at
 - `components/CommandPalette.tsx` - Main modal component
 - `hooks/useCommandPalette.ts` - Logic for parsing input and executing commands
 - `commands/index.ts` - Command registry
+
+## VTODO (Tasks)
+
+Tasks are stored as calendar events with `type: 'task'`. Key task fields:
+
+- `dueDate`: ISO date string (required for display)
+- `dueDateTime`: Optional time component in DUE property
+- `isAllDay`: True if no specific time (shown in footer)
+- `completed`: Boolean completion status
+- `priority`: TaskPriority enum (1=high, 5=low, 9=none)
+
+**Display logic:**
+
+- Month view: Tasks appear with checkbox, strike-through when completed
+- Week/Day view timed: Tasks with due time show in events overlay at their time
+- Week/Day view all-day: Tasks without due time shown in sticky footer aligned to day columns
+
+**Key files:**
+
+- `types/index.ts` - EventType, TaskPriority, CalendarEvent task fields
+- `features/caldav/adapter/iCalendarAdapter.ts` - VTODO parsing/generation (parseICALTask, taskToICAL)
+- `features/calendar/components/EventModal.tsx` - Task form with completed, due date/time, priority
+- `features/calendar/components/WeekView.tsx` - Task footer with sticky positioning
+- `features/calendar/components/DayView.tsx` - Task footer with sticky positioning

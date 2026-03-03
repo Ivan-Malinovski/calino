@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { eventToICAL, parseICALEvent } from '../iCalendarAdapter'
+import { eventToICAL, parseICALEvent, parseICALTask, taskToICAL } from '../iCalendarAdapter'
 import type { CalendarEvent } from '@/types'
 
 describe('iCalendarAdapter', () => {
@@ -371,6 +371,143 @@ END:VCALENDAR`
 
       expect(iCal).toContain('DTSTART:20240315T140000Z')
       expect(iCal).toContain('DTEND:20240315T150000Z')
+    })
+  })
+
+  describe('VTODO functions', () => {
+    describe('parseICALTask', () => {
+      it('parses basic VTODO', () => {
+        const iCalData = `BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VTODO
+UID:task-123
+SUMMARY:Buy groceries
+DUE;VALUE=DATE:20240320
+PRIORITY:1
+END:VTODO
+END:VCALENDAR`
+
+        const tasks = parseICALTask(iCalData, 'cal-1')
+
+        expect(tasks).toHaveLength(1)
+        expect(tasks[0].id).toBe('task-123')
+        expect(tasks[0].title).toBe('Buy groceries')
+        expect(tasks[0].type).toBe('task')
+        expect(tasks[0].dueDate).toContain('2024-03-20')
+        expect(tasks[0].priority).toBe(1)
+      })
+
+      it('parses completed task', () => {
+        const iCalData = `BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VTODO
+UID:task-456
+SUMMARY:Completed task
+STATUS:COMPLETED
+PERCENT-COMPLETE:100
+END:VTODO
+END:VCALENDAR`
+
+        const tasks = parseICALTask(iCalData, 'cal-1')
+        const task = tasks[0]
+
+        expect(task).toBeDefined()
+        expect(task.percentComplete).toBe(100)
+        expect(task.completed).toBe(true)
+      })
+
+      it('handles multiple tasks', () => {
+        const iCalData = `BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VTODO
+UID:task-1
+SUMMARY:Task 1
+END:VTODO
+BEGIN:VTODO
+UID:task-2
+SUMMARY:Task 2
+END:VTODO
+END:VCALENDAR`
+
+        const tasks = parseICALTask(iCalData, 'cal-1')
+
+        expect(tasks).toHaveLength(2)
+      })
+    })
+
+    describe('taskToICAL', () => {
+      it('converts basic task to VTODO format', () => {
+        const task: CalendarEvent = {
+          id: 'task-123',
+          title: 'Buy groceries',
+          start: '2024-03-20T00:00:00',
+          end: '2024-03-20T23:59:59',
+          isAllDay: true,
+          calendarId: 'cal-1',
+          type: 'task',
+          dueDate: '2024-03-20T00:00:00',
+          priority: 1,
+        }
+
+        const iCal = taskToICAL(task)
+
+        expect(iCal).toContain('BEGIN:VTODO')
+        expect(iCal).toContain('UID:task-123')
+        expect(iCal).toContain('SUMMARY:Buy groceries')
+        expect(iCal).toContain('DUE;VALUE=DATE:')
+        expect(iCal).toContain('PRIORITY:1')
+        expect(iCal).toContain('STATUS:NEEDS-ACTION')
+        expect(iCal).toContain('END:VTODO')
+      })
+
+      it('includes COMPLETED status for completed tasks', () => {
+        const task: CalendarEvent = {
+          id: 'task-456',
+          title: 'Done task',
+          start: '2024-03-20T00:00:00',
+          end: '2024-03-20T23:59:59',
+          isAllDay: true,
+          calendarId: 'cal-1',
+          type: 'task',
+          completed: true,
+          percentComplete: 100,
+        }
+
+        const iCal = taskToICAL(task)
+
+        expect(iCal).toContain('STATUS:COMPLETED')
+        expect(iCal).toContain('PERCENT-COMPLETE:100')
+      })
+
+      it('maps priority correctly', () => {
+        const taskHigh: CalendarEvent = {
+          id: 'task-high',
+          title: 'High priority',
+          start: '2024-03-20T00:00:00',
+          end: '2024-03-20T23:59:59',
+          isAllDay: true,
+          calendarId: 'cal-1',
+          type: 'task',
+          priority: 1,
+        }
+
+        const taskLow: CalendarEvent = {
+          id: 'task-low',
+          title: 'Low priority',
+          start: '2024-03-20T00:00:00',
+          end: '2024-03-20T23:59:59',
+          isAllDay: true,
+          calendarId: 'cal-1',
+          type: 'task',
+          priority: 3,
+        }
+
+        const iCalHigh = taskToICAL(taskHigh)
+        const iCalLow = taskToICAL(taskLow)
+
+        expect(iCalHigh).toContain('PRIORITY:1')
+        expect(iCalLow).toContain('PRIORITY:9')
+      })
     })
   })
 })

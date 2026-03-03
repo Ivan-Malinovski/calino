@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid'
-import type { CalendarEvent, RecurrenceRule, Reminder } from '@/types'
+import type { CalendarEvent, RecurrenceRule, Reminder, TaskPriority } from '@/types'
 
 export function parseICALEvent(iCalData: string, calendarId: string): CalendarEvent[] {
   const events: CalendarEvent[] = []
@@ -276,7 +276,7 @@ export function eventToICAL(event: CalendarEvent): string {
   const lines: string[] = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
-    'PRODID:-//GoodCal//EN',
+    'PRODID:-//Calino//EN',
     'CALSCALE:GREGORIAN',
     'BEGIN:VEVENT',
     `UID:${event.id}`,
@@ -352,4 +352,133 @@ function formatMinutesToDuration(minutes: number): string {
   } else {
     return `PT${mins}M`
   }
+}
+
+export function parseICALTask(iCalData: string, calendarId: string): CalendarEvent[] {
+  const tasks: CalendarEvent[] = []
+  const lines = iCalData.split(/\r\n|\n|\r/)
+
+  let currentTask: Partial<CalendarEvent> | null = null
+  let inTask = false
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]
+
+    if (line.startsWith('BEGIN:VTODO')) {
+      currentTask = {
+        id: uuidv4(),
+        calendarId,
+        type: 'task',
+        isAllDay: true,
+      }
+      inTask = true
+    } else if (line.startsWith('END:VTODO') && currentTask) {
+      const taskData: CalendarEvent = {
+        id: currentTask.id ?? uuidv4(),
+        calendarId: currentTask.calendarId ?? calendarId,
+        title: currentTask.title ?? 'Untitled',
+        description: currentTask.description,
+        location: currentTask.location,
+        start: currentTask.dueDate ?? new Date().toISOString(),
+        end: currentTask.dueDate ?? new Date().toISOString(),
+        isAllDay: true,
+        color: currentTask.color,
+        type: 'task',
+        dueDate: currentTask.dueDate,
+        completed: currentTask.completed,
+        priority: currentTask.priority,
+        percentComplete: currentTask.percentComplete,
+      }
+      tasks.push(taskData)
+      currentTask = null
+      inTask = false
+    } else if (inTask && currentTask) {
+      if (line.startsWith('UID:')) {
+        currentTask.id = line.substring(4)
+      } else if (line.startsWith('SUMMARY:')) {
+        currentTask.title = line.substring(8)
+      } else if (line.startsWith('DESCRIPTION:')) {
+        currentTask.description = line.substring(12)
+      } else if (line.startsWith('DUE')) {
+        const colonIndex = line.indexOf(':')
+        const value = colonIndex !== -1 ? line.substring(colonIndex + 1) : ''
+        const parsed = parseICalDateTime(value)
+        currentTask.dueDate = parsed.date
+        currentTask.start = parsed.date
+        currentTask.end = parsed.date
+      } else if (line.startsWith('PRIORITY:')) {
+        const priority = parseInt(line.substring(9), 10)
+        const priorityMap: Record<number, TaskPriority> = {
+          1: 1,
+          2: 2,
+          3: 2,
+          5: 2,
+          6: 3,
+          7: 3,
+          8: 3,
+          9: 3,
+        }
+        currentTask.priority = priorityMap[priority] ?? 2
+      } else if (line.startsWith('PERCENT-COMPLETE')) {
+        const colonIndex = line.indexOf(':')
+        const value = colonIndex !== -1 ? line.substring(colonIndex + 1) : ''
+        const percent = parseInt(value, 10)
+        if (!isNaN(percent)) {
+          currentTask.percentComplete = percent
+          currentTask.completed = percent >= 100
+        }
+      } else if (line.startsWith('STATUS:')) {
+        const status = line.substring(7)
+        currentTask.completed = status === 'COMPLETED'
+      }
+    }
+  }
+
+  return tasks
+}
+
+export function taskToICAL(task: CalendarEvent): string {
+  const lines: string[] = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//Calino//EN',
+    'CALSCALE:GREGORIAN',
+    'BEGIN:VTODO',
+    `UID:${task.id}`,
+    `DTSTAMP:${formatICalTimestamp(new Date())}`,
+    `SUMMARY:${task.title}`,
+  ]
+
+  if (task.dueDate) {
+    lines.push(`DUE;VALUE=DATE:${formatICalDateTime(task.dueDate, true)}`)
+  }
+
+  if (task.description) {
+    lines.push(`DESCRIPTION:${task.description}`)
+  }
+
+  if (task.priority) {
+    const priorityMap: Record<TaskPriority, number> = {
+      1: 1,
+      2: 5,
+      3: 9,
+    }
+    lines.push(`PRIORITY:${priorityMap[task.priority]}`)
+  }
+
+  if (task.percentComplete !== undefined) {
+    lines.push(`PERCENT-COMPLETE:${task.percentComplete}`)
+  }
+
+  if (task.completed) {
+    lines.push('STATUS:COMPLETED')
+    lines.push(`COMPLETED:${formatICalTimestamp(new Date())}`)
+  } else {
+    lines.push('STATUS:NEEDS-ACTION')
+  }
+
+  lines.push('END:VTODO')
+  lines.push('END:VCALENDAR')
+
+  return lines.join('\r\n')
 }

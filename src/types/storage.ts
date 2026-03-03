@@ -17,6 +17,11 @@ export interface StoredEvent {
   syncStatus: SyncStatus
   createdAt: string
   updatedAt: string
+  type?: 'event' | 'task'
+  dueDate?: string
+  completed?: boolean
+  priority?: 1 | 2 | 3
+  percentComplete?: number
 }
 
 export interface StoredCalendar {

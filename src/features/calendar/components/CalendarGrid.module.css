@@ -171,3 +171,22 @@
 .moreEvents:hover {
   color: #202124;
 }
+
+.tasks {
+  margin-top: 4px;
+  padding-top: 2px;
+  border-top: 1px dashed #e0e0e0;
+}
+
+.taskCount {
+  font-size: 11px;
+  color: #5f6368;
+  padding: 2px 4px;
+  cursor: pointer;
+}
+
+.taskCount:hover {
+  background: #e8f0fe;
+  color: #4285f4;
+  border-radius: 4px;
+}

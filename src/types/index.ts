@@ -16,6 +16,9 @@ export interface Reminder {
   method: 'popup' | 'email'
 }
 
+export type EventType = 'event' | 'task'
+export type TaskPriority = 1 | 2 | 3
+
 export interface CalendarEvent {
   id: string
   calendarId: string
@@ -30,6 +33,11 @@ export interface CalendarEvent {
   reminders?: Reminder[]
   rruleString?: string
   travelDuration?: number
+  type?: EventType
+  dueDate?: string
+  completed?: boolean
+  priority?: TaskPriority
+  percentComplete?: number
 }
 
 export interface Calendar {
@@ -52,6 +60,7 @@ export interface CalendarState {
   isOverlayOpen: boolean
   selectedDate: string | null
   selectedEndDate: string | null
+  selectedEventType: EventType
 }
 
 export interface CalendarActions {
@@ -67,7 +76,7 @@ export interface CalendarActions {
   setCurrentDate: (date: string) => void
   setCurrentView: (view: ViewType) => void
   setSelectedEventId: (id: string | null) => void
-  openModal: (date?: string, endDate?: string, eventId?: string) => void
+  openModal: (date?: string, endDate?: string, eventId?: string, mode?: EventType) => void
   closeModal: () => void
   setOverlayOpen: (isOpen: boolean) => void
   getEventsForDateRange: (start: string, end: string) => CalendarEvent[]

@@ -4,7 +4,7 @@ import { format, parseISO, addHours } from 'date-fns'
 import { v4 as uuidv4 } from 'uuid'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
-import type { CalendarEvent, RecurrenceRule } from '@/types'
+import type { CalendarEvent, RecurrenceRule, TaskPriority } from '@/types'
 import styles from './EventModal.module.css'
 
 const DEFAULT_DURATION_HOURS = 1
@@ -28,6 +28,13 @@ const RECURRENCE_OPTIONS: { value: RecurrenceRule['frequency'] | 'none'; label: 
   { value: 'weekly', label: 'Weekly' },
   { value: 'monthly', label: 'Monthly' },
   { value: 'yearly', label: 'Yearly' },
+]
+
+const PRIORITY_OPTIONS: { value: TaskPriority | undefined; label: string }[] = [
+  { value: undefined, label: 'None' },
+  { value: 1, label: 'High' },
+  { value: 2, label: 'Medium' },
+  { value: 3, label: 'Low' },
 ]
 
 type RecurrenceEditMode = 'all' | 'future' | 'this'
@@ -180,6 +187,7 @@ export function EventModal(): JSX.Element | null {
   const selectedEventId = useCalendarStore((state) => state.selectedEventId)
   const selectedDate = useCalendarStore((state) => state.selectedDate)
   const selectedEndDate = useCalendarStore((state) => state.selectedEndDate)
+  const selectedEventType = useCalendarStore((state) => state.selectedEventType)
   const events = useCalendarStore((state) => state.events)
   const calendars = useCalendarStore((state) => state.calendars)
   const addEvent = useCalendarStore((state) => state.addEvent)
@@ -223,6 +231,11 @@ export function EventModal(): JSX.Element | null {
   const [showRecurrenceDialog, setShowRecurrenceDialog] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [showDescription, setShowDescription] = useState(!!initialState.description)
+  const [dueDate, setDueDate] = useState<string>('')
+  const [dueTime, setDueTime] = useState<string>('09:00')
+  const [dueAllDay, setDueAllDay] = useState(true)
+  const [completed, setCompleted] = useState(false)
+  const [priority, setPriority] = useState<TaskPriority | undefined>(undefined)
 
   const lastSelectedEventId = useRef<string | null>(null)
   const lastSelectedDate = useRef<string | null>(null)
@@ -246,13 +259,41 @@ export function EventModal(): JSX.Element | null {
       setRecurrence(initialState.recurrence)
       setTravelDuration(initialState.travelDuration)
       setShowDescription(!!initialState.description)
+
+      const existingEvent = selectedEventId
+        ? events.find((e) => e.id === selectedEventId)
+        : undefined
+      if (existingEvent?.type === 'task') {
+        const taskDueDate =
+          existingEvent.dueDate || format(parseISO(existingEvent.start), 'yyyy-MM-dd')
+        setDueDate(taskDueDate)
+        const taskTime = format(parseISO(existingEvent.start), 'HH:mm')
+        setDueTime(taskTime !== '00:00' ? taskTime : '09:00')
+        setDueAllDay(existingEvent.isAllDay ?? true)
+        setCompleted(existingEvent.completed || false)
+        setPriority(existingEvent.priority)
+      } else if (selectedEventType === 'task') {
+        setDueDate(selectedDate || format(new Date(), 'yyyy-MM-dd'))
+        setDueTime('09:00')
+        setDueAllDay(true)
+        setCompleted(false)
+        setPriority(undefined)
+      } else {
+        setDueDate('')
+        setDueTime('09:00')
+        setDueAllDay(true)
+        setCompleted(false)
+        setPriority(undefined)
+      }
     }
-  }, [selectedEventId, selectedDate, initialState])
+  }, [selectedEventId, selectedDate, initialState, events, selectedEventType])
 
   const isEditing = selectedEventId !== null
   const isRecurringEvent = initialState.recurrence !== 'none'
   const isRecurringInstance = initialState.isRecurringInstance
   const originalEventId = initialState.originalEventId
+  const isTaskMode =
+    selectedEventType === 'task' || events.find((e) => e.id === selectedEventId)?.type === 'task'
 
   const handleSubmit = (e: React.FormEvent): void => {
     e.preventDefault()
@@ -296,16 +337,24 @@ export function EventModal(): JSX.Element | null {
         }
       } else {
         const eventId = originalEventId || selectedEventId
-        updateEvent(eventId, {
+        const taskTime = dueAllDay ? '00:00:00' : `${dueTime}:00`
+        const taskEndTime = dueAllDay ? '23:59:59' : `${dueTime}:00`
+        const eventStart = isTaskMode && dueDate ? `${dueDate}T${taskTime}` : startDateTime
+        const eventEnd = isTaskMode && dueDate ? `${dueDate}T${taskEndTime}` : endDateTime
+        updateEvent(eventId!, {
           title,
           description: description || undefined,
           location: location || undefined,
-          start: startDateTime,
-          end: endDateTime,
-          isAllDay,
+          start: eventStart,
+          end: eventEnd,
+          isAllDay: isTaskMode ? dueAllDay : isAllDay,
           calendarId,
-          recurrence: recurrenceRule,
-          travelDuration,
+          recurrence: isTaskMode ? undefined : recurrenceRule,
+          travelDuration: isTaskMode ? undefined : travelDuration,
+          type: isTaskMode ? 'task' : 'event',
+          dueDate: isTaskMode ? dueDate : undefined,
+          completed: isTaskMode ? completed : undefined,
+          priority: isTaskMode ? priority : undefined,
         })
         const existingEvent = events.find((e) => e.id === eventId)
         if (existingEvent) {
@@ -328,17 +377,26 @@ export function EventModal(): JSX.Element | null {
         }
       }
     } else {
+      const taskTime = dueAllDay ? '00:00:00' : `${dueTime}:00`
+      const taskEndTime = dueAllDay ? '23:59:59' : `${dueTime}:00`
+      const eventStart = isTaskMode && dueDate ? `${dueDate}T${taskTime}` : startDateTime
+      const eventEnd = isTaskMode && dueDate ? `${dueDate}T${taskEndTime}` : endDateTime
+
       const newEvent: CalendarEvent = {
         id: uuidv4(),
         title,
         description: description || undefined,
         location: location || undefined,
-        start: startDateTime,
-        end: endDateTime,
-        isAllDay,
+        start: eventStart,
+        end: eventEnd,
+        isAllDay: isTaskMode ? dueAllDay : isAllDay,
         calendarId,
-        recurrence: recurrenceRule,
-        travelDuration,
+        recurrence: isTaskMode ? undefined : recurrenceRule,
+        travelDuration: isTaskMode ? undefined : travelDuration,
+        type: isTaskMode ? 'task' : 'event',
+        dueDate: isTaskMode ? dueDate : undefined,
+        completed: isTaskMode ? completed : undefined,
+        priority: isTaskMode ? priority : undefined,
       }
       addEvent(newEvent)
       try {
@@ -410,7 +468,15 @@ export function EventModal(): JSX.Element | null {
     <div className={styles.overlay} onClick={closeModal}>
       <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
         <div className={styles.header}>
-          <h2 className={styles.title}>{isEditing ? 'Edit event' : 'Create event'}</h2>
+          <h2 className={styles.title}>
+            {isEditing
+              ? isTaskMode
+                ? 'Edit task'
+                : 'Edit event'
+              : isTaskMode
+                ? 'Create task'
+                : 'Create event'}
+          </h2>
           <button className={styles.closeButton} onClick={closeModal}>
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
               <path
@@ -438,114 +504,201 @@ export function EventModal(): JSX.Element | null {
             />
           </div>
 
-          <div className={styles.field}>
-            <label className={styles.checkbox}>
-              <input
-                type="checkbox"
-                checked={isAllDay}
-                onChange={(e) => setIsAllDay(e.target.checked)}
-              />
-              <span>All day</span>
-            </label>
-          </div>
+          {isTaskMode && (
+            <>
+              <div className={styles.row}>
+                <div className={styles.field}>
+                  <label className={styles.checkbox}>
+                    <input
+                      type="checkbox"
+                      checked={completed}
+                      onChange={(e) => setCompleted(e.target.checked)}
+                    />
+                    <span>Completed</span>
+                  </label>
+                </div>
 
-          <div className={styles.dateTimeRow}>
-            <div className={styles.dateTimeGroup}>
-              <label className={styles.label}>Start</label>
-              <div className={styles.dateTimeInputs}>
-                <input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => {
-                    setStartDate(e.target.value)
-                    if (endDate && e.target.value > endDate) {
-                      setEndDate(e.target.value)
-                    }
-                  }}
-                  className={styles.input}
-                  required
-                />
-                {!isAllDay && (
+                <div className={styles.field}>
+                  <label className={styles.checkbox}>
+                    <input
+                      type="checkbox"
+                      checked={dueAllDay}
+                      onChange={(e) => setDueAllDay(e.target.checked)}
+                    />
+                    <span>Only due date</span>
+                  </label>
+                </div>
+              </div>
+
+              <div className={styles.row}>
+                <div className={styles.field}>
+                  <label className={styles.label} htmlFor="due-date">
+                    Due date
+                  </label>
                   <input
-                    type="time"
-                    value={startTime}
+                    type="date"
+                    id="due-date"
+                    value={dueDate}
+                    onChange={(e) => setDueDate(e.target.value)}
+                    className={styles.input}
+                    required={isTaskMode}
+                  />
+                </div>
+
+                {!dueAllDay && (
+                  <div className={styles.field}>
+                    <label className={styles.label} htmlFor="due-time">
+                      Due time
+                    </label>
+                    <input
+                      type="time"
+                      id="due-time"
+                      value={dueTime}
+                      onChange={(e) => setDueTime(e.target.value)}
+                      className={styles.input}
+                    />
+                  </div>
+                )}
+
+                <div className={styles.field}>
+                  <label className={styles.label} htmlFor="priority-select">
+                    Priority
+                  </label>
+                  <select
+                    id="priority-select"
+                    value={priority ?? ''}
+                    onChange={(e) =>
+                      setPriority(
+                        e.target.value ? (Number(e.target.value) as TaskPriority) : undefined
+                      )
+                    }
+                    className={styles.select}
+                  >
+                    {PRIORITY_OPTIONS.map((option) => (
+                      <option key={option.label} value={option.value ?? ''}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </>
+          )}
+
+          {!isTaskMode && (
+            <div className={styles.field}>
+              <label className={styles.checkbox}>
+                <input
+                  type="checkbox"
+                  checked={isAllDay}
+                  onChange={(e) => setIsAllDay(e.target.checked)}
+                />
+                <span>All day</span>
+              </label>
+            </div>
+          )}
+
+          {!isTaskMode && (
+            <div className={styles.dateTimeRow}>
+              <div className={styles.dateTimeGroup}>
+                <label className={styles.label}>Start</label>
+                <div className={styles.dateTimeInputs}>
+                  <input
+                    type="date"
+                    value={startDate}
                     onChange={(e) => {
-                      setStartTime(e.target.value)
-                      if (startDate === endDate && e.target.value > endTime) {
-                        setEndTime(e.target.value)
+                      setStartDate(e.target.value)
+                      if (endDate && e.target.value > endDate) {
+                        setEndDate(e.target.value)
                       }
                     }}
                     className={styles.input}
                     required
                   />
-                )}
+                  {!isAllDay && (
+                    <input
+                      type="time"
+                      value={startTime}
+                      onChange={(e) => {
+                        setStartTime(e.target.value)
+                        if (startDate === endDate && e.target.value > endTime) {
+                          setEndTime(e.target.value)
+                        }
+                      }}
+                      className={styles.input}
+                      required
+                    />
+                  )}
+                </div>
               </div>
-            </div>
 
-            <div className={styles.dateTimeGroup}>
-              <label className={styles.label}>End</label>
-              <div className={styles.dateTimeInputs}>
-                <input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  className={styles.input}
-                  required
-                />
-                {!isAllDay && (
+              <div className={styles.dateTimeGroup}>
+                <label className={styles.label}>End</label>
+                <div className={styles.dateTimeInputs}>
                   <input
-                    type="time"
-                    value={endTime}
-                    onChange={(e) => setEndTime(e.target.value)}
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
                     className={styles.input}
                     required
                   />
-                )}
+                  {!isAllDay && (
+                    <input
+                      type="time"
+                      value={endTime}
+                      onChange={(e) => setEndTime(e.target.value)}
+                      className={styles.input}
+                      required
+                    />
+                  )}
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
-          <div className={styles.row}>
-            <div className={styles.field}>
-              <label className={styles.label} htmlFor="recurrence-select">
-                Repeat
-              </label>
-              <select
-                id="recurrence-select"
-                value={recurrence}
-                onChange={(e) =>
-                  setRecurrence(e.target.value as RecurrenceRule['frequency'] | 'none')
-                }
-                className={styles.select}
-              >
-                {RECURRENCE_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
+          {!isTaskMode && (
+            <div className={styles.row}>
+              <div className={styles.field}>
+                <label className={styles.label} htmlFor="recurrence-select">
+                  Repeat
+                </label>
+                <select
+                  id="recurrence-select"
+                  value={recurrence}
+                  onChange={(e) =>
+                    setRecurrence(e.target.value as RecurrenceRule['frequency'] | 'none')
+                  }
+                  className={styles.select}
+                >
+                  {RECURRENCE_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-            <div className={styles.field}>
-              <label className={styles.label} htmlFor="travel-duration-select">
-                Travel time
-              </label>
-              <select
-                id="travel-duration-select"
-                value={travelDuration ?? ''}
-                onChange={(e) =>
-                  setTravelDuration(e.target.value ? Number(e.target.value) : undefined)
-                }
-                className={styles.select}
-              >
-                {TRAVEL_DURATION_OPTIONS.map((option) => (
-                  <option key={option.label} value={option.value ?? ''}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
+              <div className={styles.field}>
+                <label className={styles.label} htmlFor="travel-duration-select">
+                  Travel time
+                </label>
+                <select
+                  id="travel-duration-select"
+                  value={travelDuration ?? ''}
+                  onChange={(e) =>
+                    setTravelDuration(e.target.value ? Number(e.target.value) : undefined)
+                  }
+                  className={styles.select}
+                >
+                  {TRAVEL_DURATION_OPTIONS.map((option) => (
+                    <option key={option.label} value={option.value ?? ''}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
-          </div>
+          )}
 
           <div className={styles.row}>
             <div className={styles.field}>

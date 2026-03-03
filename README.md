@@ -1,4 +1,4 @@
-# GoodCal
+# Calino
 
 A modern calendar app with CalDAV sync and natural language event creation.
 

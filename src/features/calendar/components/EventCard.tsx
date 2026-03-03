@@ -52,6 +52,7 @@ export function EventCard({
 
   const calendar = calendars.find((c) => c.id === event.calendarId)
   const eventColor = event.color || calendar?.color || '#4285F4'
+  const isTask = event.type === 'task'
 
   const handleClick = (e: React.MouseEvent): void => {
     let moved = false
@@ -134,48 +135,80 @@ export function EventCard({
     setContextMenu({ x: e.clientX, y: e.clientY })
   }
 
+  const handleCheckboxClick = (e: React.MouseEvent): void => {
+    e.stopPropagation()
+    updateEvent(event.id, { completed: !event.completed })
+  }
+
   return (
     <>
       <div
         ref={setNodeRef}
         style={style}
-        className={`${styles.card} ${compact ? styles.compact : ''} ${isCurrentDragging || isDragging ? styles.dragging : ''} ${isResizing ? styles.resizing : ''} ${hideTopRadius ? styles.noTopRadius : ''}`}
+        className={`${styles.card} ${compact ? styles.compact : ''} ${isCurrentDragging || isDragging ? styles.dragging : ''} ${isResizing ? styles.resizing : ''} ${hideTopRadius ? styles.noTopRadius : ''} ${isTask ? styles.task : ''} ${event.completed ? styles.completed : ''}`}
         onContextMenu={handleContextMenu}
       >
-        <div
-          className={styles.dragContent}
-          onClick={handleClick}
-          onPointerDown={(e) => {
-            e.stopPropagation()
-            pointerStartPos.current = { x: e.clientX, y: e.clientY }
-          }}
-          {...listeners}
-          {...attributes}
-        >
-          <div className={styles.title}>{event.title}</div>
-          {!compact && !event.isAllDay && (
-            <div className={styles.time}>
-              {formatTime(event.start)} - {formatTime(event.end)}
-            </div>
-          )}
-          {event.isAllDay && <div className={styles.time}>All day</div>}
-          {event.travelDuration && (
-            <div className={styles.travelTime}>
-              <TravelIcon />
-              <span>{formatTravelDuration(event.travelDuration)}</span>
-            </div>
-          )}
-          {event.location && <div className={styles.location}>{event.location}</div>}
-        </div>
-        {enableResize && (
+        {isTask ? (
           <div
-            className={styles.resizeHandle}
+            className={styles.taskContent}
+            onClick={handleClick}
             onPointerDown={(e) => {
               e.stopPropagation()
-              e.preventDefault()
-              handleResizeStart(e)
+              pointerStartPos.current = { x: e.clientX, y: e.clientY }
             }}
-          />
+            {...listeners}
+            {...attributes}
+          >
+            <div className={styles.checkbox} onClick={handleCheckboxClick}>
+              {event.completed ? <CheckedIcon /> : <UncheckedIcon />}
+            </div>
+            <div className={styles.taskInfo}>
+              <div className={styles.title}>{event.title}</div>
+              {event.dueDate && (
+                <div className={styles.dueDate}>
+                  Due: {format(parseISO(event.dueDate), 'MMM d')}
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          <>
+            <div
+              className={styles.dragContent}
+              onClick={handleClick}
+              onPointerDown={(e) => {
+                e.stopPropagation()
+                pointerStartPos.current = { x: e.clientX, y: e.clientY }
+              }}
+              {...listeners}
+              {...attributes}
+            >
+              <div className={styles.title}>{event.title}</div>
+              {!compact && !event.isAllDay && (
+                <div className={styles.time}>
+                  {formatTime(event.start)} - {formatTime(event.end)}
+                </div>
+              )}
+              {event.isAllDay && <div className={styles.time}>All day</div>}
+              {event.travelDuration && (
+                <div className={styles.travelTime}>
+                  <TravelIcon />
+                  <span>{formatTravelDuration(event.travelDuration)}</span>
+                </div>
+              )}
+              {event.location && <div className={styles.location}>{event.location}</div>}
+            </div>
+            {enableResize && (
+              <div
+                className={styles.resizeHandle}
+                onPointerDown={(e) => {
+                  e.stopPropagation()
+                  e.preventDefault()
+                  handleResizeStart(e)
+                }}
+              />
+            )}
+          </>
         )}
       </div>
       {contextMenu && (
@@ -263,4 +296,38 @@ function formatTravelDuration(minutes: number): string {
     return `${hours}h`
   }
   return `${minutes} min`
+}
+
+function CheckedIcon(): JSX.Element {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <polyline points="20 6 9 17 4 12" />
+    </svg>
+  )
+}
+
+function UncheckedIcon(): JSX.Element {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+    </svg>
+  )
 }

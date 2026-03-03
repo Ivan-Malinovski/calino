@@ -315,7 +315,7 @@ export function Sidebar(): JSX.Element {
           Privacy
         </Link>
         <a
-          href="https://github.com/ivan-malinovski/GoodCal"
+          href="https://github.com/ivan-malinovski/Calino"
           target="_blank"
           rel="noopener noreferrer"
           className={styles.footerLink}

@@ -14,6 +14,7 @@ import { format, eachHourOfInterval, startOfDay, endOfDay, parseISO, isToday } f
 import { useCalendarStore } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
 import { EventCard } from './EventCard'
+import { ContextMenu } from '@/components/common/ContextMenu'
 import type { CalendarEvent, Calendar } from '@/types'
 import styles from './DayView.module.css'
 
@@ -49,7 +50,9 @@ export function DayView(): JSX.Element {
   const [isDraggingToCreate, setIsDraggingToCreate] = useState(false)
   const [dragStart, setDragStart] = useState<string | null>(null)
   const [dragEnd, setDragEnd] = useState<string | null>(null)
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null)
   const bodyRef = useRef<HTMLDivElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -62,8 +65,23 @@ export function DayView(): JSX.Element {
   const date = parseISO(currentDate)
 
   const dayEvents = useMemo(() => {
-    return getEventsForDateRange(format(date, 'yyyy-MM-dd'), format(date, 'yyyy-MM-dd'))
+    return getEventsForDateRange(format(date, 'yyyy-MM-dd'), format(date, 'yyyy-MM-dd')).filter(
+      (e) => e.type !== 'task'
+    )
   }, [date, getEventsForDateRange, events])
+
+  const dayTasks = useMemo(() => {
+    const dateKey = format(date, 'yyyy-MM-dd')
+    const visibleCalendarIds = calendars.filter((c) => c.isVisible).map((c) => c.id)
+    return events.filter(
+      (e) =>
+        e.type === 'task' &&
+        visibleCalendarIds.includes(e.calendarId) &&
+        (e.dueDate
+          ? format(parseISO(e.dueDate), 'yyyy-MM-dd') === dateKey
+          : format(parseISO(e.start), 'yyyy-MM-dd') === dateKey)
+    )
+  }, [date, events, calendars])
 
   const [isScrolled, setIsScrolled] = useState(false)
   const lastDateRef = useRef(date.toISOString())
@@ -348,7 +366,14 @@ export function DayView(): JSX.Element {
 
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-      <div className={styles.container}>
+      <div
+        ref={containerRef}
+        className={styles.container}
+        onContextMenu={(e) => {
+          e.preventDefault()
+          setContextMenu({ x: e.clientX, y: e.clientY })
+        }}
+      >
         <div className={`${styles.header} ${isScrolled ? styles.headerShadow : ''}`}>
           <div className={styles.dayInfo}>
             <div className={styles.dayName}>{format(date, 'EEEE')}</div>
@@ -374,7 +399,42 @@ export function DayView(): JSX.Element {
           </div>
         </div>
       </div>
+      {dayTasks.filter((t) => t.isAllDay).length > 0 && (
+        <div className={styles.tasksFixedFooter}>
+          <div></div>
+          <div>
+            {dayTasks
+              .filter((t) => t.isAllDay)
+              .map((task) => (
+                <EventCard key={task.id} event={task} compact />
+              ))}
+          </div>
+        </div>
+      )}
       <DragOverlay>{activeEvent ? <EventCard event={activeEvent} isDragging /> : null}</DragOverlay>
+      {contextMenu && (
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          onClose={() => setContextMenu(null)}
+          items={[
+            {
+              label: 'Create event',
+              onClick: () => {
+                openModal(format(date, 'yyyy-MM-dd'))
+                setContextMenu(null)
+              },
+            },
+            {
+              label: 'Create task',
+              onClick: () => {
+                openModal(format(date, 'yyyy-MM-dd'), undefined, undefined, 'task')
+                setContextMenu(null)
+              },
+            },
+          ]}
+        />
+      )}
     </DndContext>
   )
 }

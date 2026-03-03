@@ -122,3 +122,55 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+.task {
+  border-left: 3px solid #34a853;
+  padding: 2px 4px;
+  min-height: 24px;
+  height: auto;
+}
+
+.task .title {
+  font-size: 11px;
+}
+
+.completed .title {
+  text-decoration: line-through;
+  color: #9e9e9e;
+}
+
+.completed {
+  opacity: 0.7;
+}
+
+.taskContent {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.checkbox {
+  flex-shrink: 0;
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.checkbox:hover {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 4px;
+}
+
+.taskInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.dueDate {
+  font-size: 10px;
+  color: #5f6368;
+  margin-top: 2px;
+}
