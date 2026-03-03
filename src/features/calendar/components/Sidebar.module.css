@@ -299,3 +299,22 @@
   border-radius: 4px;
   outline: none;
 }
+
+.footer {
+  margin-top: auto;
+  padding-top: 16px;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: space-between;
+}
+
+.footerLink {
+  font-size: 12px;
+  color: #6b7280;
+  text-decoration: none;
+}
+
+.footerLink:hover {
+  color: #111827;
+  text-decoration: underline;
+}

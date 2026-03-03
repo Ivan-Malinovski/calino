@@ -1,5 +1,6 @@
 import type { JSX } from 'react'
 import { useMemo, useState, useRef, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import {
   format,
   startOfMonth,
@@ -307,6 +308,20 @@ export function Sidebar(): JSX.Element {
             )}
           </label>
         ))}
+      </div>
+
+      <div className={styles.footer}>
+        <Link to="/privacy" className={styles.footerLink}>
+          Privacy
+        </Link>
+        <a
+          href="https://github.com/ivan-malinovski/GoodCal"
+          target="_blank"
+          rel="noopener noreferrer"
+          className={styles.footerLink}
+        >
+          GitHub
+        </a>
       </div>
     </div>
   )

@@ -14,8 +14,9 @@ import {
   Sidebar,
 } from './features/calendar'
 import { type NLPParseResult } from './features/nlp'
-import { SettingsPage } from './features/settings'
+import { SettingsPage, PrivacyPolicy } from './features/settings'
 import { CommandPalette } from './features/commandPalette'
+import { CookieConsent } from './components/common'
 import type { CalendarEvent, ViewType } from './types'
 import './App.css'
 
@@ -58,20 +59,25 @@ function useViewManager(): void {
   const setCurrentView = useCalendarStore((state) => state.setCurrentView)
   const defaultView = useSettingsStore((state) => state.defaultView)
 
+  const isCalendarRoute = VIEW_ORDER.some((view) => location.pathname === VIEW_ROUTES[view])
+  const isRootRoute = location.pathname === '/'
+
   useEffect(() => {
+    if (!isCalendarRoute && !isRootRoute) return
     const path = location.pathname === '/' ? '' : location.pathname.slice(1)
     const view = (path as ViewType) || defaultView
     if (VIEW_ORDER.includes(view)) {
       setCurrentView(view)
     }
-  }, [location.pathname, defaultView, setCurrentView])
+  }, [location.pathname, defaultView, setCurrentView, isCalendarRoute, isRootRoute])
 
   useEffect(() => {
+    if (!isCalendarRoute && !isRootRoute) return
     const targetPath = VIEW_ROUTES[currentView]
     if (location.pathname !== targetPath) {
       navigate(targetPath, { replace: true })
     }
-  }, [currentView, navigate])
+  }, [currentView, navigate, isCalendarRoute, isRootRoute])
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent): void => {
@@ -177,6 +183,7 @@ function App(): JSX.Element {
   return (
     <BrowserRouter>
       <Toast />
+      <CookieConsent />
       <Routes>
         <Route path="/month" element={<CalendarApp />} />
         <Route path="/week" element={<CalendarApp />} />
@@ -184,6 +191,7 @@ function App(): JSX.Element {
         <Route path="/agenda" element={<CalendarApp />} />
         <Route path="/" element={<CalendarApp />} />
         <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/privacy" element={<PrivacyPolicy />} />
       </Routes>
     </BrowserRouter>
   )
