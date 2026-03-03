@@ -21,11 +21,15 @@
 
 .recurringIcon {
   position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
+  top: 2px;
   right: 10px;
   opacity: 0.5;
   color: var(--color-text-secondary);
+}
+
+.compact .recurringIcon {
+  top: 50%;
+  transform: translateY(-50%);
 }
 
 .card:hover {
