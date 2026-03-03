@@ -464,12 +464,8 @@ export function taskToICAL(task: CalendarEvent): string {
   }
 
   if (task.priority) {
-    const priorityMap: Record<TaskPriority, number> = {
-      1: 1,
-      2: 5,
-      3: 9,
-    }
-    lines.push(`PRIORITY:${priorityMap[task.priority]}`)
+    const priorityValue = task.priority === 1 ? 1 : task.priority === 2 ? 5 : 9
+    lines.push(`PRIORITY:${priorityValue}`)
   }
 
   if (task.percentComplete !== undefined) {

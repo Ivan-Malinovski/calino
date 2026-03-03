@@ -10,7 +10,7 @@ import type {
   DefaultDuration,
   ViewType,
 } from '@/types'
-import { config } from '@/config'
+import { config, DEFAULT_CALENDAR_COLOR, CALENDAR_COLORS } from '@/config'
 
 function getBrowserTimezone(): string {
   try {
@@ -103,7 +103,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   showWeekNumbers: true,
   eventDensity: 'comfortable',
   defaultReminderMinutes: 15,
-  defaultEventColor: '#4285F4',
+  defaultEventColor: DEFAULT_CALENDAR_COLOR,
   enableDesktopNotifications: true,
   enableSoundAlerts: false,
   syncEnabled: true,
@@ -197,15 +197,4 @@ export const CONFLICT_OPTIONS: { value: 'server-wins' | 'local-wins' | 'ask'; la
 
 export const TIMEZONE_OPTIONS = generateTimezoneOptions()
 
-export const EVENT_COLORS = [
-  '#4285F4',
-  '#EA4335',
-  '#FBBC05',
-  '#34A853',
-  '#9334E6',
-  '#FF6D01',
-  '#46BDC6',
-  '#7B1FA2',
-  '#C2185B',
-  '#00796B',
-]
+export const EVENT_COLORS = [...CALENDAR_COLORS, '#9334E6', '#00796B']

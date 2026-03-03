@@ -3,12 +3,12 @@ import { persist } from 'zustand/middleware'
 import { format, parseISO, isWithinInterval, startOfDay, endOfDay } from 'date-fns'
 import { RRule } from 'rrule'
 import type { CalendarStore, CalendarEvent, Calendar, ViewType, EventType } from '@/types'
-import { config } from '@/config'
+import { config, DEFAULT_CALENDAR_COLOR } from '@/config'
 
 const DEFAULT_CALENDAR: Calendar = {
   id: 'default',
   name: 'My Calendar',
-  color: '#4285F4',
+  color: DEFAULT_CALENDAR_COLOR,
   isVisible: true,
   isDefault: true,
 }

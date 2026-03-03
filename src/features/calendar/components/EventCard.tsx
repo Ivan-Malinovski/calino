@@ -6,6 +6,7 @@ import { useCalendarStore } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
 import { ContextMenu } from '@/components/common/ContextMenu'
 import type { CalendarEvent } from '@/types'
+import { DEFAULT_CALENDAR_COLOR } from '@/config'
 import styles from './EventCard.module.css'
 
 interface EventCardProps {
@@ -51,7 +52,7 @@ export function EventCard({
   })
 
   const calendar = calendars.find((c) => c.id === event.calendarId)
-  const eventColor = event.color || calendar?.color || '#4285F4'
+  const eventColor = event.color || calendar?.color || DEFAULT_CALENDAR_COLOR
   const isTask = event.type === 'task'
 
   const handleClick = (e: React.MouseEvent): void => {

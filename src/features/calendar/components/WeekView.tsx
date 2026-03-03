@@ -24,6 +24,7 @@ import {
 } from 'date-fns'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
+import { DEFAULT_CALENDAR_COLOR } from '@/config'
 import { EventCard } from './EventCard'
 import { ContextMenu } from '@/components/common/ContextMenu'
 import type { CalendarEvent, Calendar } from '@/types'
@@ -350,7 +351,7 @@ export function WeekView(): JSX.Element {
       const widthPercent = 100 / totalColumns - gap
 
       const calendar = calendars.find((c: Calendar) => c.id === event.calendarId)
-      const eventColor = event.color || calendar?.color || '#4285F4'
+      const eventColor = event.color || calendar?.color || DEFAULT_CALENDAR_COLOR
 
       const elements: JSX.Element[] = []
 
