@@ -114,8 +114,8 @@ const DEFAULT_SETTINGS: UserSettings = {
   compressPastWeeks: true,
   hasCompletedOnboarding: false,
   themeMode: 'auto' as ThemeMode,
-  lightTheme: 'built-in',
-  darkTheme: 'built-in',
+  lightTheme: config.defaultLightTheme,
+  darkTheme: config.defaultDarkTheme,
 }
 
 export const useSettingsStore = create<SettingsStore>()(

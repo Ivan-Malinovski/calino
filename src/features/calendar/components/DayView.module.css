@@ -23,6 +23,7 @@
   overflow-y: auto;
   overflow-x: hidden;
   background: var(--color-bg, var(--color-bg-primary));
+  position: relative;
 }
 
 .dayInfo {

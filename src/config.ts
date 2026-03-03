@@ -6,6 +6,8 @@ export const config = {
   websiteUrl: 'https://calino.io',
   privacyPolicyUrl: '/privacy',
   defaultView: 'month' as const,
+  defaultLightTheme: 'calm-v2',
+  defaultDarkTheme: 'built-in',
 } as const
 
 export const DEFAULT_CALENDAR_COLOR = '#4285F4'

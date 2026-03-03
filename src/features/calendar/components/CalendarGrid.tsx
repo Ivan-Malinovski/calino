@@ -292,6 +292,7 @@ export function CalendarGrid(): JSX.Element {
                         isCurrentMonth={isCurrentMonth}
                         isTodayDate={isTodayDate}
                         isWeekend={isWeekend}
+                        isPastWeek={isPastWeek}
                         compactRecurringEvents={compactRecurringEvents}
                         onDayClick={handleDayClick}
                         onDayNumberClick={handleDayNumberClick}
@@ -318,6 +319,7 @@ interface DroppableDayProps {
   isCurrentMonth: boolean
   isTodayDate: boolean
   isWeekend: boolean
+  isPastWeek: boolean
   compactRecurringEvents: boolean
   onDayClick: (day: Date) => void
   onDayNumberClick: (day: Date) => void
@@ -332,6 +334,7 @@ function DroppableDay({
   isCurrentMonth,
   isTodayDate,
   isWeekend,
+  isPastWeek,
   compactRecurringEvents,
   onDayClick,
   onDayNumberClick,
@@ -386,7 +389,8 @@ function DroppableDay({
           {dayEvents.slice(0, 3).map((event) => {
             const isMultiDay = !isSameDay(parseISO(event.start), parseISO(event.end))
             const shouldCompact =
-              compactRecurringEvents && (!!event.rruleString || event.isAllDay || isMultiDay)
+              isPastWeek ||
+              (compactRecurringEvents && (!!event.rruleString || event.isAllDay || isMultiDay))
             return <EventCard key={event.id} event={event} compact={shouldCompact} />
           })}
         </AnimatePresence>

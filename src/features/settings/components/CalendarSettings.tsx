@@ -89,9 +89,9 @@ export function CalendarSettings(): JSX.Element {
 
       <div className={styles.settingRow}>
         <div className={styles.settingLabel}>
-          <span className={styles.settingLabelText}>Compress Past Weeks</span>
+          <span className={styles.settingLabelText}>Compact Past Weeks</span>
           <span className={styles.settingLabelHint}>
-            Reduce size of previous weeks in month view
+            Compact events in past weeks in month view
           </span>
         </div>
         <button

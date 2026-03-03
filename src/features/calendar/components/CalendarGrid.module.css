@@ -173,6 +173,13 @@
   gap: var(--event-gap, 2px);
   margin-top: var(--space-2, 8px);
   overflow: hidden;
+  min-height: 24px;
+}
+
+.events .card {
+  height: auto !important;
+  min-height: 24px;
+  max-height: 28px;
 }
 
 .moreEvents {
