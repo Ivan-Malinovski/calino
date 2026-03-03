@@ -1,7 +1,7 @@
 import type { CalendarEvent } from '@/types'
 import type { SyncResult, ConflictResolution } from '../types'
 import { CalDAVClient } from '../client/CalDAVClient'
-import { eventToICAL, parseICALEvent } from '../adapter/iCalendarAdapter'
+import { eventToICAL, parseICALData, taskToICAL } from '../adapter/iCalendarAdapter'
 import * as storage from './accountStorage'
 
 export class SyncEngine {
@@ -28,7 +28,7 @@ export class SyncEngine {
 
     const parsedEvents: CalendarEvent[] = []
     for (const serverEvent of serverEvents) {
-      const events = parseICALEvent(serverEvent.data, this.calendarId)
+      const events = parseICALData(serverEvent.data, this.calendarId)
       parsedEvents.push(...events)
     }
 
@@ -72,11 +72,9 @@ export class SyncEngine {
       throw new Error(`Calendar not found: ${this.calendarId}`)
     }
 
-    console.log('[SyncEngine] pushEvent', { calendarUrl: calendar.url, eventId: event.id })
-    const iCalString = eventToICAL(event)
+    const iCalString = event.type === 'task' ? taskToICAL(event) : eventToICAL(event)
     const filename = `${event.id}.ics`
 
-    console.log('[SyncEngine] full iCal content:', iCalString)
     return this.client.createEvent(calendar.url, iCalString, filename)
   }
 
@@ -87,11 +85,9 @@ export class SyncEngine {
       throw new Error(`Calendar not found: ${this.calendarId}`)
     }
 
-    console.log('[SyncEngine] updateEvent', { calendarUrl: calendar.url, eventId: event.id })
-    const iCalString = eventToICAL(event)
+    const iCalString = event.type === 'task' ? taskToICAL(event) : eventToICAL(event)
     const eventUrl = `${calendar.url}${event.id}.ics`
 
-    console.log('[SyncEngine] full iCal content:', iCalString)
     return this.client.updateEvent(calendar.url, eventUrl, iCalString, etag)
   }
 

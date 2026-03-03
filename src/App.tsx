@@ -1,5 +1,5 @@
 import type { JSX } from 'react'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, useRef } from 'react'
 import { BrowserRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom'
 import { v4 as uuidv4 } from 'uuid'
 import { useCalendarStore } from './store/calendarStore'
@@ -60,33 +60,33 @@ function useViewManager(): void {
   const setCurrentView = useCalendarStore((state) => state.setCurrentView)
   const defaultView = useSettingsStore((state) => state.defaultView)
 
-  const [isMounted, setIsMounted] = useState(false)
+  const isMounted = useRef(false)
 
   useEffect(() => {
-    setIsMounted(true)
+    isMounted.current = true
   }, [])
 
   const isCalendarRoute = VIEW_ORDER.some((view) => location.pathname === VIEW_ROUTES[view])
   const isRootRoute = location.pathname === '/'
 
   useEffect(() => {
-    if (!isMounted) return
+    if (!isMounted.current) return
     if (!isCalendarRoute && !isRootRoute) return
     const path = location.pathname === '/' ? '' : location.pathname.slice(1)
     const view = (path as ViewType) || defaultView
     if (VIEW_ORDER.includes(view)) {
       setCurrentView(view)
     }
-  }, [location.pathname, defaultView, setCurrentView, isCalendarRoute, isRootRoute, isMounted])
+  }, [location.pathname, defaultView, setCurrentView, isCalendarRoute, isRootRoute])
 
   useEffect(() => {
-    if (!isMounted) return
+    if (!isMounted.current) return
     if (!isCalendarRoute && !isRootRoute) return
     const targetPath = VIEW_ROUTES[currentView]
     if (location.pathname !== targetPath) {
       navigate(targetPath, { replace: true })
     }
-  }, [currentView, navigate, isCalendarRoute, isRootRoute, isMounted])
+  }, [currentView, navigate, isCalendarRoute, isRootRoute])
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent): void => {

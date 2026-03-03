@@ -81,14 +81,12 @@ export class CalDAVClient {
     iCalString: string,
     filename: string
   ): Promise<{ url: string; etag: string }> {
-    console.log('[CalDAVClient] createEvent', { calendarUrl, filename })
     const client = this.getClient()
 
     const calendars = await client.fetchCalendars()
     const calendar = calendars.find((c) => c.url === calendarUrl)
 
     if (!calendar) {
-      console.error('[CalDAVClient] Calendar not found:', calendarUrl)
       throw new Error(`Calendar not found: ${calendarUrl}`)
     }
 
@@ -98,7 +96,6 @@ export class CalDAVClient {
       iCalString,
     })
 
-    console.log('[CalDAVClient] createEvent result:', result)
     return {
       url: result.url,
       etag: '',
@@ -111,14 +108,12 @@ export class CalDAVClient {
     iCalString: string,
     etag: string
   ): Promise<{ url: string; etag: string }> {
-    console.log('[CalDAVClient] updateEvent', { calendarUrl, eventUrl })
     const client = this.getClient()
 
     const calendars = await client.fetchCalendars()
     const calendar = calendars.find((c) => c.url === calendarUrl)
 
     if (!calendar) {
-      console.error('[CalDAVClient] Calendar not found:', calendarUrl)
       throw new Error(`Calendar not found: ${calendarUrl}`)
     }
 
@@ -126,7 +121,6 @@ export class CalDAVClient {
       calendarObject: { url: eventUrl, etag, data: iCalString },
     })
 
-    console.log('[CalDAVClient] updateEvent result:', result)
     return {
       url: result.url,
       etag: '',
@@ -134,13 +128,11 @@ export class CalDAVClient {
   }
 
   async deleteEvent(eventUrl: string, etag: string): Promise<void> {
-    console.log('[CalDAVClient] deleteEvent', { eventUrl })
     const client = this.getClient()
 
     await client.deleteCalendarObject({
       calendarObject: { url: eventUrl, etag },
     })
-    console.log('[CalDAVClient] deleteEvent done')
   }
 
   getServerUrl(): string {

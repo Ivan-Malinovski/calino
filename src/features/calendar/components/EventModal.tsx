@@ -292,8 +292,11 @@ export function EventModal(): JSX.Element | null {
   const isRecurringEvent = initialState.recurrence !== 'none'
   const isRecurringInstance = initialState.isRecurringInstance
   const originalEventId = initialState.originalEventId
-  const isTaskMode =
-    selectedEventType === 'task' || events.find((e) => e.id === selectedEventId)?.type === 'task'
+  const existingEventForMode = selectedEventId
+    ? events.find((e) => e.id === selectedEventId)
+    : undefined
+  const eventType = existingEventForMode?.type
+  const isTaskMode = selectedEventType === 'task' || eventType === 'task'
 
   const handleSubmit = (e: React.FormEvent): void => {
     e.preventDefault()
@@ -364,12 +367,16 @@ export function EventModal(): JSX.Element | null {
               title,
               description: description || undefined,
               location: location || undefined,
-              start: startDateTime,
-              end: endDateTime,
-              isAllDay,
+              start: eventStart,
+              end: eventEnd,
+              isAllDay: isTaskMode ? dueAllDay : isAllDay,
               calendarId,
-              recurrence: recurrenceRule,
-              travelDuration,
+              recurrence: isTaskMode ? undefined : recurrenceRule,
+              travelDuration: isTaskMode ? undefined : travelDuration,
+              type: isTaskMode ? 'task' : 'event',
+              dueDate: isTaskMode ? dueDate : undefined,
+              completed: isTaskMode ? completed : undefined,
+              priority: isTaskMode ? priority : undefined,
             })
           } catch {
             // error already handled by useCalDAV

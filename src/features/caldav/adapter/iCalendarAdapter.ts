@@ -354,6 +354,12 @@ function formatMinutesToDuration(minutes: number): string {
   }
 }
 
+export function parseICALData(iCalData: string, calendarId: string): CalendarEvent[] {
+  const events = parseICALEvent(iCalData, calendarId)
+  const tasks = parseICALTask(iCalData, calendarId)
+  return [...events, ...tasks]
+}
+
 export function parseICALTask(iCalData: string, calendarId: string): CalendarEvent[] {
   const tasks: CalendarEvent[] = []
   const lines = iCalData.split(/\r\n|\n|\r/)

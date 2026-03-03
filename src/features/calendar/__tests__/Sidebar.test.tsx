@@ -1,7 +1,12 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
+import { BrowserRouter } from 'react-router-dom'
 import { Sidebar } from '../components/Sidebar'
 import { useCalendarStore } from '@/store/calendarStore'
+
+function renderWithRouter(component: React.ReactElement) {
+  return render(<BrowserRouter>{component}</BrowserRouter>)
+}
 
 describe('Sidebar', () => {
   beforeEach(() => {
@@ -19,35 +24,35 @@ describe('Sidebar', () => {
   })
 
   it('renders sidebar by default', () => {
-    render(<Sidebar />)
+    renderWithRouter(<Sidebar />)
     expect(screen.getByText('Calendars')).toBeInTheDocument()
   })
 
   it('renders mini calendar', () => {
-    render(<Sidebar />)
+    renderWithRouter(<Sidebar />)
     expect(screen.getByText('March')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /2024/ })).toBeInTheDocument()
   })
 
   it('renders today button', () => {
-    render(<Sidebar />)
+    renderWithRouter(<Sidebar />)
     expect(screen.getByRole('button', { name: /today/i })).toBeInTheDocument()
   })
 
   it('renders calendars list', () => {
-    render(<Sidebar />)
+    renderWithRouter(<Sidebar />)
     expect(screen.getByText('My Calendars')).toBeInTheDocument()
     expect(screen.getByText('Default Calendar')).toBeInTheDocument()
   })
 
   it('renders calendar checkboxes', () => {
-    render(<Sidebar />)
+    renderWithRouter(<Sidebar />)
     const checkboxes = screen.getAllByRole('checkbox')
     expect(checkboxes.length).toBeGreaterThan(0)
   })
 
   it('can collapse sidebar', async () => {
-    render(<Sidebar />)
+    renderWithRouter(<Sidebar />)
 
     const collapseButton = screen.getByRole('button', { name: /collapse/i })
     await collapseButton.click()
@@ -56,13 +61,13 @@ describe('Sidebar', () => {
   })
 
   it('shows color dot for each calendar', () => {
-    render(<Sidebar />)
+    renderWithRouter(<Sidebar />)
     const colorDots = document.querySelectorAll('button[class*="colorDot"]')
     expect(colorDots.length).toBeGreaterThan(0)
   })
 
   it('renders weekday headers in mini calendar', () => {
-    render(<Sidebar />)
+    renderWithRouter(<Sidebar />)
     const headers = screen.getAllByText('S')
     expect(headers.length).toBeGreaterThan(0)
   })

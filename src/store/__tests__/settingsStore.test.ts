@@ -15,7 +15,7 @@ describe('settingsStore', () => {
     expect(settings.firstDayOfWeek).toBe(1)
     expect(settings.defaultDuration).toBe(60)
     expect(settings.defaultView).toBe('month')
-    expect(settings.showWeekNumbers).toBe(false)
+    expect(settings.showWeekNumbers).toBe(true)
     expect(settings.eventDensity).toBe('comfortable')
     expect(settings.defaultReminderMinutes).toBe(15)
     expect(settings.defaultEventColor).toBe('#4285F4')
@@ -68,7 +68,7 @@ describe('settingsStore', () => {
     expect(settings.timeFormat).toBe('24h')
     expect(settings.firstDayOfWeek).toBe(1)
     expect(settings.defaultView).toBe('month')
-    expect(settings.showWeekNumbers).toBe(false)
+    expect(settings.showWeekNumbers).toBe(true)
   })
 
   it('handles all date format options', () => {
