@@ -1,17 +1,40 @@
 # Calino
 
-A modern calendar app with CalDAV sync and natural language event creation.
+A browser-based CalDAV client — sync with your own server, no cloud required.
+
+**Philosophy:** Your calendar data should belong to you, not Google or Apple. Calino connects to any CalDAV server (Nextcloud, Baikal, Radicale, etc.). Your events stay in your own server, not in ours. The only thing that lives locally is your preferences. No accounts, no signups, no data mining.
 
 ## Features
 
-- **Multiple Views**: Month, week, day, and agenda views
-- **NLP Events**: Create events like "meeting tomorrow at 2pm"
-- **CalDAV Sync**: Sync with any CalDAV server (Baikal, Nextcloud, etc.)
-- **Offline-first**: IndexedDB persistence
-- **Search**: Cmd/Ctrl+K quick search
-- **Drag & Drop**: Reschedule events in week/day views
-- **Multiple Calendars**: Color-coded calendars
-- **Settings**: Timezone, date/time formats, sync options
+**Views:**
+
+- Month, week, day, agenda
+- Click week numbers to jump straight to that week
+- Click any date to see it in day view
+- Drag events to move them, drag edges to resize
+
+**Time stuff:**
+
+- Auto timezone detection
+- 12h/24h toggle
+- Compact recurring events (no giant blocks cluttering your week)
+- Apple Travel Time support
+
+**Tasks:**
+
+- Full VTODO support with due dates, priorities, and completion status
+- Shows up as checkboxes in month view, inline in week/day view
+
+**Smart input:**
+
+- Type naturally: _"coffee with friends on wednesday, at 12-18"_ → creates a 4-hour event on March 4, 2026
+- Press `Cmd+K` (or `Ctrl+K`) for the command palette — navigate, create events, sync, everything from one bar
+
+**Coming:**
+
+- Theme support (dark mode + custom)
+
+**No login screen.** Open the app, you're in.
 
 ## Quick Start
 
@@ -20,31 +43,37 @@ pnpm install
 pnpm dev
 ```
 
-## Commands
+## Selfhosting
 
-| Command          | Description        |
-| ---------------- | ------------------ |
-| `pnpm dev`       | Development server |
-| `pnpm build`     | Production build   |
-| `pnpm test`      | Run tests          |
-| `pnpm lint`      | ESLint             |
-| `pnpm typecheck` | TypeScript         |
+Calino is just a static React app — host it anywhere that serves HTML/JS.
+
+1. Build: `pnpm build`
+2. Serve the `dist/` folder
+
+**Config:**
+
+- Click the gear icon or use `Cmd+K` → "Settings"
+- Add your CalDAV server URL, username, password
+- App stores credentials in localStorage (encrypted)
+
+**Supported CalDAV servers:**
+
+- Baikal
+- Nextcloud Calendar
+- Radicale
+- Any RFC 4791 compliant server
+
+**CORS note:** Most CalDAV servers don't send CORS headers by default. If you get CORS errors, add these headers to your reverse proxy:
+
+```
+Access-Control-Allow-Origin: <your-calino-origin>
+Access-Control-Allow-Headers: Authorization, Content-Type, Depth, If-Match, If-None-Match
+Access-Control-Allow-Methods: GET, PUT, POST, DELETE, PROPFIND, PROPPATCH, REPORT, OPTIONS
+```
 
 ## Tech Stack
 
 React 18 + TypeScript + Vite, Zustand, Dexie.js, date-fns, chrono-node, @dnd-kit, framer-motion, Fuse.js, tsdav, Vitest
-
-## Project Structure
-
-```
-src/
-├── components/     # Shared UI
-├── features/       # calendar, caldav, nlp, search, settings
-├── hooks/          # Custom hooks
-├── lib/db/         # IndexedDB
-├── store/          # Zustand
-└── types/          # TypeScript
-```
 
 ## License
 
