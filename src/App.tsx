@@ -61,6 +61,7 @@ function useViewManager(): void {
   const defaultView = useSettingsStore((state) => state.defaultView)
 
   const isMounted = useRef(false)
+  const prevPath = useRef<string>(location.pathname)
 
   useEffect(() => {
     isMounted.current = true
@@ -82,11 +83,16 @@ function useViewManager(): void {
   useEffect(() => {
     if (!isMounted.current) return
     if (!isCalendarRoute && !isRootRoute) return
+
+    // Don't navigate if path hasn't actually changed (prevents loops)
+    if (location.pathname === prevPath.current) return
+    prevPath.current = location.pathname
+
     const targetPath = VIEW_ROUTES[currentView]
     if (location.pathname !== targetPath) {
       navigate(targetPath, { replace: true })
     }
-  }, [currentView, navigate, isCalendarRoute, isRootRoute])
+  }, [currentView, location.pathname, navigate, isCalendarRoute, isRootRoute])
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent): void => {
