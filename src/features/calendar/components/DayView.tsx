@@ -52,7 +52,6 @@ export function DayView(): JSX.Element {
   const [dragEnd, setDragEnd] = useState<string | null>(null)
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null)
   const bodyRef = useRef<HTMLDivElement>(null)
-  const containerRef = useRef<HTMLDivElement>(null)
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -367,7 +366,6 @@ export function DayView(): JSX.Element {
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <div
-        ref={containerRef}
         className={styles.container}
         onContextMenu={(e) => {
           e.preventDefault()

@@ -142,7 +142,6 @@ export function WeekView(): JSX.Element {
     return map
   }, [events, calendars])
 
-  const containerRef = useRef<HTMLDivElement>(null)
   const bodyRef = useRef<HTMLDivElement>(null)
   const [isScrolled, setIsScrolled] = useState(false)
   const lastDateRef = useRef(date.toISOString())
@@ -444,7 +443,7 @@ export function WeekView(): JSX.Element {
 
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-      <div ref={containerRef} className={styles.container}>
+      <div className={styles.container}>
         <div className={`${styles.header} ${isScrolled ? styles.headerShadow : ''}`}>
           <div className={styles.weekNumberHeader}>W{weekNumber}</div>
           {weekDays.map((day) => (

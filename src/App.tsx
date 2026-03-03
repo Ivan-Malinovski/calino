@@ -59,25 +59,33 @@ function useViewManager(): void {
   const setCurrentView = useCalendarStore((state) => state.setCurrentView)
   const defaultView = useSettingsStore((state) => state.defaultView)
 
+  const [isMounted, setIsMounted] = useState(false)
+
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
+
   const isCalendarRoute = VIEW_ORDER.some((view) => location.pathname === VIEW_ROUTES[view])
   const isRootRoute = location.pathname === '/'
 
   useEffect(() => {
+    if (!isMounted) return
     if (!isCalendarRoute && !isRootRoute) return
     const path = location.pathname === '/' ? '' : location.pathname.slice(1)
     const view = (path as ViewType) || defaultView
     if (VIEW_ORDER.includes(view)) {
       setCurrentView(view)
     }
-  }, [location.pathname, defaultView, setCurrentView, isCalendarRoute, isRootRoute])
+  }, [location.pathname, defaultView, setCurrentView, isCalendarRoute, isRootRoute, isMounted])
 
   useEffect(() => {
+    if (!isMounted) return
     if (!isCalendarRoute && !isRootRoute) return
     const targetPath = VIEW_ROUTES[currentView]
     if (location.pathname !== targetPath) {
       navigate(targetPath, { replace: true })
     }
-  }, [currentView, navigate, isCalendarRoute, isRootRoute])
+  }, [currentView, navigate, isCalendarRoute, isRootRoute, isMounted])
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent): void => {
