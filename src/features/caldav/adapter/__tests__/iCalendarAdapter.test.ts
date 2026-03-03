@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest'
-import { eventToICAL, parseICALEvent, parseICALTask, taskToICAL } from '../iCalendarAdapter'
+import {
+  eventToICAL,
+  parseICALData,
+  parseICALEvent,
+  parseICALTask,
+  taskToICAL,
+} from '../iCalendarAdapter'
 import type { CalendarEvent } from '@/types'
 
 describe('iCalendarAdapter', () => {
@@ -508,6 +514,73 @@ END:VCALENDAR`
         expect(iCalHigh).toContain('PRIORITY:1')
         expect(iCalLow).toContain('PRIORITY:9')
       })
+    })
+  })
+
+  describe('parseICALData', () => {
+    it('parses both events and tasks from combined iCal data', () => {
+      const iCalData = `BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+UID:event-1
+SUMMARY:Test Event
+DTSTART:20240315T140000Z
+DTEND:20240315T150000Z
+END:VEVENT
+BEGIN:VTODO
+UID:task-1
+SUMMARY:Test Task
+DUE:20240315
+END:VTODO
+END:VCALENDAR`
+
+      const result = parseICALData(iCalData, 'cal-1')
+
+      expect(result).toHaveLength(2)
+      const event = result.find((e) => e.id === 'event-1')
+      const task = result.find((e) => e.id === 'task-1')
+      expect(event).toBeDefined()
+      expect(event?.type).toBeUndefined()
+      expect(task).toBeDefined()
+      expect(task?.type).toBe('task')
+    })
+
+    it('returns empty array for empty iCal data', () => {
+      const result = parseICALData('', 'cal-1')
+      expect(result).toHaveLength(0)
+    })
+
+    it('returns only events when no tasks present', () => {
+      const iCalData = `BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+UID:event-1
+SUMMARY:Test Event
+DTSTART:20240315T140000Z
+DTEND:20240315T150000Z
+END:VEVENT
+END:VCALENDAR`
+
+      const result = parseICALData(iCalData, 'cal-1')
+
+      expect(result).toHaveLength(1)
+      expect(result[0]?.type).toBeUndefined()
+    })
+
+    it('returns only tasks when no events present', () => {
+      const iCalData = `BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VTODO
+UID:task-1
+SUMMARY:Test Task
+DUE:20240315
+END:VTODO
+END:VCALENDAR`
+
+      const result = parseICALData(iCalData, 'cal-1')
+
+      expect(result).toHaveLength(1)
+      expect(result[0]?.type).toBe('task')
     })
   })
 })
