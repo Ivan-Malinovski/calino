@@ -2,20 +2,23 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="A local-first calendar with CalDAV sync. Private, fast, and works offline."
+      content="An easy, private, local web calendar with CalDAV sync. Your data on your terms."
     />
+    <link rel="canonical" href="https://calino.io/" />
 
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://calino.io/" />
     <meta property="og:title" content="Calino - Local-First Calendar" />
+    <meta property="og:site_name" content="Calino" />
+    <meta property="og:locale" content="en_US" />
     <meta
       property="og:description"
-      content="A private, fast calendar with CalDAV sync. Your data stays on your device."
+      content="An easy, private, local web calendar with CalDAV sync. Your data on your terms."
     />
     <meta property="og:image" content="https://calino.io/og-image.png" />
 
@@ -25,9 +28,22 @@
     <meta name="twitter:title" content="Calino - Local-First Calendar" />
     <meta
       name="twitter:description"
-      content="A private, fast calendar with CalDAV sync. Your data stays on your device."
+      content="An easy, private, local web calendar with CalDAV sync. Your data on your terms."
     />
     <meta name="twitter:image" content="https://calino.io/og-image.png" />
+
+    <!-- Structured Data -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Calino",
+        "description": "An easy, private, local web calendar with CalDAV sync. Your data on your terms.",
+        "url": "https://calino.io/",
+        "applicationCategory": "ProductivityApplication",
+        "operatingSystem": "Web"
+      }
+    </script>
 
     <title>Calino</title>
   </head>

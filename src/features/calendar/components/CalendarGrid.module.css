@@ -90,7 +90,6 @@
 
 .day {
   min-height: 100px;
-  height: 100%;
   border-right: 1px solid var(--color-border-subtle, var(--color-border));
   border-bottom: 1px solid var(--color-border-subtle, var(--color-border));
   padding: var(--space-1, 4px);
@@ -178,8 +177,7 @@
 
 .events .card {
   height: auto !important;
-  min-height: 24px;
-  max-height: 28px;
+  flex-shrink: 0;
 }
 
 .moreEvents {
