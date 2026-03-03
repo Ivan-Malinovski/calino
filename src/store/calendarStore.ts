@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware'
 import { format, parseISO, isWithinInterval, startOfDay, endOfDay } from 'date-fns'
 import { RRule } from 'rrule'
 import type { CalendarStore, CalendarEvent, Calendar, ViewType, EventType } from '@/types'
+import { config } from '@/config'
 
 const DEFAULT_CALENDAR: Calendar = {
   id: 'default',
@@ -18,7 +19,7 @@ export const useCalendarStore = create<CalendarStore>()(
       events: [],
       calendars: [DEFAULT_CALENDAR],
       currentDate: format(new Date(), 'yyyy-MM-dd'),
-      currentView: 'month',
+      currentView: config.defaultView,
       selectedEventId: null,
       isModalOpen: false,
       selectedDate: null,

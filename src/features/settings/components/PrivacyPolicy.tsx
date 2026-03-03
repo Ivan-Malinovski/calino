@@ -1,5 +1,6 @@
 import type { JSX } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { config } from '@/config'
 import styles from './PrivacyPolicy.module.css'
 
 export function PrivacyPolicy(): JSX.Element {
@@ -68,7 +69,7 @@ export function PrivacyPolicy(): JSX.Element {
           <p>
             If you have questions about this privacy policy, please contact:
             <br />
-            <a href="mailto:calendar@malinov.ski">calendar@malinov.ski</a>
+            <a href={`mailto:${config.contactEmail}`}>{config.contactEmail}</a>
           </p>
         </section>
       </div>

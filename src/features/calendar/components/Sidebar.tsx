@@ -14,8 +14,10 @@ import {
   addMonths,
   subMonths,
 } from 'date-fns'
+import { config } from '@/config'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
+import { AddCalendarModal } from './AddCalendarModal'
 import styles from './Sidebar.module.css'
 
 const CALENDAR_COLORS = [
@@ -44,6 +46,7 @@ export function Sidebar(): JSX.Element {
   const [editName, setEditName] = useState('')
   const [showYearDropdown, setShowYearDropdown] = useState(false)
   const [showMonthDropdown, setShowMonthDropdown] = useState(false)
+  const [showAddCalendar, setShowAddCalendar] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const currentDate = useCalendarStore((state) => state.currentDate)
@@ -273,7 +276,16 @@ export function Sidebar(): JSX.Element {
       </div>
 
       <div className={styles.calendars}>
-        <span className={styles.sectionTitle}>My Calendars</span>
+        <div className={styles.sectionTitleRow}>
+          <span className={styles.sectionTitle}>My Calendars</span>
+          <button
+            className={styles.addCalendarButton}
+            onClick={() => setShowAddCalendar(true)}
+            title="Add calendar"
+          >
+            <PlusIcon />
+          </button>
+        </div>
         {calendars.map((calendar) => (
           <label key={calendar.id} className={styles.calendarItem}>
             <input
@@ -315,7 +327,7 @@ export function Sidebar(): JSX.Element {
           Privacy
         </Link>
         <a
-          href="https://github.com/ivan-malinovski/Calino"
+          href={`https://github.com/${config.githubRepo}`}
           target="_blank"
           rel="noopener noreferrer"
           className={styles.footerLink}
@@ -323,6 +335,8 @@ export function Sidebar(): JSX.Element {
           GitHub
         </a>
       </div>
+
+      <AddCalendarModal isOpen={showAddCalendar} onClose={() => setShowAddCalendar(false)} />
     </div>
   )
 }
@@ -357,4 +371,18 @@ function ChevronRight(): JSX.Element {
 
 function parseISO(dateString: string): Date {
   return new Date(dateString)
+}
+
+function PlusIcon(): JSX.Element {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+      <path
+        d="M7 3V11M3 7H11"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
 }

@@ -10,6 +10,7 @@ import type {
   DefaultDuration,
   ViewType,
 } from '@/types'
+import { config } from '@/config'
 
 function getBrowserTimezone(): string {
   try {
@@ -98,7 +99,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   timeFormat: '24h',
   firstDayOfWeek: getEuropeDefaultFirstDay(),
   defaultDuration: 60,
-  defaultView: 'month',
+  defaultView: config.defaultView,
   showWeekNumbers: true,
   eventDensity: 'comfortable',
   defaultReminderMinutes: 15,
