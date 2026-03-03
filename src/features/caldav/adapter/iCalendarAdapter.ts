@@ -424,6 +424,7 @@ export function parseICALTask(iCalData: string, calendarId: string): CalendarEve
         currentTask.dueDate = parsed.date
         currentTask.start = parsed.date
         currentTask.end = parsed.date
+        currentTask.isAllDay = parsed.isAllDay
       } else if (line.startsWith('PRIORITY:')) {
         const priority = parseInt(line.substring(9), 10)
         const priorityMap: Record<number, TaskPriority> = {
