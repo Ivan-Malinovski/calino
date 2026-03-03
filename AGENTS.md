@@ -1,5 +1,7 @@
 # Calino - AI Agent Guidelines
 
+**Version:** 0.1.0 (follows semver: 0.x.y = breaking changes allowed, bump minor for features, patch for fixes)
+
 React 18 + TypeScript + Vite calendar app with CalDAV sync and NLP event creation.
 
 ## Commands
