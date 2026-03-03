@@ -1,1 +1,8 @@
-/index.html 200
+/month /index.html 200
+/week /index.html 200
+/week/:day /index.html 200
+/day /index.html 200
+/day/:date /index.html 200
+/settings /index.html 200
+/privacy /index.html 200
+/* /index.html 200
