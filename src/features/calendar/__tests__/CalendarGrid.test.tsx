@@ -19,6 +19,9 @@ describe('CalendarGrid', () => {
     if (typeof settings.compactRecurringEvents === 'undefined') {
       useSettingsStore.setState({ compactRecurringEvents: false })
     }
+    if (typeof settings.compressPastWeeks === 'undefined') {
+      useSettingsStore.setState({ compressPastWeeks: false })
+    }
   })
 
   it('renders the calendar grid with weekdays', () => {
@@ -135,5 +138,25 @@ describe('CalendarGrid', () => {
 
     expect(screen.getByText('Visible')).toBeInTheDocument()
     expect(screen.queryByText('Hidden')).not.toBeInTheDocument()
+  })
+
+  describe('compressPastWeeks', () => {
+    it('does not compress weeks when setting is disabled', () => {
+      useSettingsStore.setState({ compressPastWeeks: false })
+
+      renderWithStore(<CalendarGrid />)
+
+      const weekRows = document.querySelectorAll('[class*="weekRow"]')
+      expect(weekRows.length).toBeGreaterThan(0)
+    })
+
+    it('applies compressed style to past weeks when setting is enabled', () => {
+      useSettingsStore.setState({ compressPastWeeks: true })
+
+      renderWithStore(<CalendarGrid />)
+
+      const weekRows = document.querySelectorAll('[class*="weekRow"]')
+      expect(weekRows.length).toBeGreaterThan(0)
+    })
   })
 })

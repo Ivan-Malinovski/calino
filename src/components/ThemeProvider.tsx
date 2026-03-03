@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useMemo, type ReactNode } from 'react'
 import { useSettingsStore } from '@/store/settingsStore'
-import { loadThemes, getBuiltInThemeCSS, type ThemeInfo } from '@/lib/themes'
+import { loadThemes, getBuiltInThemeCSS, getThemeCSS, type ThemeInfo } from '@/lib/themes'
 import { ThemeContext } from './ThemeContext'
 
 interface ThemeProviderProps {
@@ -10,7 +10,6 @@ interface ThemeProviderProps {
 export function ThemeProvider({ children }: ThemeProviderProps) {
   const { themeMode, lightTheme, darkTheme } = useSettingsStore()
   const [loadedThemes, setLoadedThemes] = useState<ThemeInfo[]>([])
-  const [customCSSMap, setCustomCSSMap] = useState<Map<string, string>>(new Map())
   const [, setTick] = useState(0)
 
   const effectiveMode = useMemo(() => {
@@ -23,7 +22,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
   const currentThemeId = effectiveMode === 'dark' ? darkTheme : lightTheme
 
   const builtInCSS = useMemo(() => getBuiltInThemeCSS(), [])
-  const customCSS = customCSSMap.get(currentThemeId) || ''
+  const customCSS = currentThemeId !== 'built-in' ? getThemeCSS(currentThemeId) : ''
 
   useEffect(() => {
     const styleElement =
@@ -61,14 +60,6 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
   useEffect(() => {
     loadThemes().then((themes) => {
       setLoadedThemes(themes)
-
-      const cssMap = new Map<string, string>()
-      themes.forEach((theme) => {
-        if (theme.id !== 'built-in') {
-          cssMap.set(theme.id, '')
-        }
-      })
-      setCustomCSSMap(cssMap)
     })
   }, [])
 

@@ -54,6 +54,7 @@ export function EventCard({
   const calendar = calendars.find((c) => c.id === event.calendarId)
   const eventColor = event.color || calendar?.color || DEFAULT_CALENDAR_COLOR
   const isTask = event.type === 'task'
+  const isRecurring = !!event.recurrence || !!event.rruleString
 
   const handleClick = (e: React.MouseEvent): void => {
     let moved = false
@@ -149,6 +150,11 @@ export function EventCard({
         className={`${styles.card} ${compact ? styles.compact : ''} ${isCurrentDragging || isDragging ? styles.dragging : ''} ${isResizing ? styles.resizing : ''} ${hideTopRadius ? styles.noTopRadius : ''} ${isTask ? styles.task : ''} ${event.completed ? styles.completed : ''}`}
         onContextMenu={handleContextMenu}
       >
+        {isRecurring && (
+          <div className={styles.recurringIcon}>
+            <RecurringIcon />
+          </div>
+        )}
         {isTask ? (
           <div
             className={styles.taskContent}
@@ -329,6 +335,26 @@ function UncheckedIcon(): JSX.Element {
       strokeLinejoin="round"
     >
       <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+    </svg>
+  )
+}
+
+function RecurringIcon(): JSX.Element {
+  return (
+    <svg
+      width="10"
+      height="10"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M17 2l4 4-4 4" />
+      <path d="M3 11v-1a4 4 0 014-4h14" />
+      <path d="M7 22l-4-4 4-4" />
+      <path d="M21 13v1a4 4 0 01-4 4H3" />
     </svg>
   )
 }

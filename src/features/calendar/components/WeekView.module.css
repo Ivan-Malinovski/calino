@@ -8,10 +8,10 @@
 .header {
   display: grid;
   grid-template-columns: 60px repeat(7, 1fr);
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border-subtle, var(--color-border));
   position: sticky;
   top: 0;
-  background: var(--color-bg-secondary);
+  background: var(--color-bg, var(--color-bg-secondary));
   z-index: 10;
   transition: box-shadow 0.2s ease;
   flex-shrink: 0;
@@ -24,7 +24,7 @@
 .weekNumberColumn {
   display: flex;
   flex-direction: column;
-  border-right: 1px solid var(--color-border);
+  border-right: 1px solid var(--color-border-subtle, var(--color-border));
   background: var(--color-bg-tertiary);
 }
 
@@ -32,41 +32,41 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
+  font-size: var(--font-size-day-header, 12px);
   font-weight: 600;
   color: var(--color-text-secondary);
   background: var(--color-bg-tertiary);
-  border-right: 1px solid var(--color-border);
+  border-right: 1px solid var(--color-border-subtle, var(--color-border));
   min-height: 48px;
 }
 
 .timeColumn {
   display: flex;
   flex-direction: column;
-  border-right: 1px solid var(--color-border);
+  border-right: 1px solid var(--color-border-subtle, var(--color-border));
   background: var(--color-bg-tertiary);
 }
 
 .timeCell {
   min-height: 60px;
-  padding: 4px 8px;
-  font-size: 11px;
+  padding: var(--space-1, 4px) var(--space-2, 8px);
+  font-size: var(--font-size-event-time, 11px);
   font-weight: 500;
   color: var(--color-text-muted);
   text-align: right;
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border-subtle, var(--color-border));
   display: flex;
   align-items: flex-start;
   justify-content: flex-end;
-  padding-top: 8px;
+  padding-top: var(--space-2, 8px);
 }
 
 .timeGutter {
-  border-right: 1px solid var(--color-border);
+  border-right: 1px solid var(--color-border-subtle, var(--color-border));
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 11px;
+  font-size: var(--font-size-event-time, 11px);
   color: var(--color-text-muted);
   font-weight: 500;
 }
@@ -75,8 +75,8 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 4px;
-  border-right: 1px solid var(--color-border);
+  padding: var(--space-1, 4px);
+  border-right: 1px solid var(--color-border-subtle, var(--color-border));
 }
 
 .dayHeader:last-child {
@@ -91,23 +91,25 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
-  background: var(--color-current-day, var(--color-accent));
-  color: #202124;
-  border-radius: 50%;
+  width: var(--today-badge-size, 28px);
+  height: var(--today-badge-size, 28px);
+  background: var(--color-terracotta, var(--color-accent));
+  color: white;
+  border-radius: var(--today-badge-radius, 50%);
+  font-weight: var(--font-weight-today-number, 600);
 }
 
 .dayName {
-  font-size: 12px;
-  font-weight: 500;
+  font-size: var(--font-size-day-header, 12px);
+  font-weight: var(--font-weight-day-header, 500);
   color: var(--color-text-secondary);
   text-transform: uppercase;
+  letter-spacing: var(--letter-spacing-uppercase, 0.05em);
 }
 
 .dayNumber {
   font-size: 18px;
-  font-weight: 500;
+  font-weight: var(--font-weight-day-number, 400);
   color: var(--color-text-primary);
 }
 

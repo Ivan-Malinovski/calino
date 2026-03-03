@@ -3,8 +3,14 @@ import { useSettingsStore, VIEW_OPTIONS, DENSITY_OPTIONS } from '@/store/setting
 import styles from './Settings.module.css'
 
 export function CalendarSettings(): JSX.Element {
-  const { defaultView, showWeekNumbers, eventDensity, compactRecurringEvents, updateSettings } =
-    useSettingsStore()
+  const {
+    defaultView,
+    showWeekNumbers,
+    eventDensity,
+    compactRecurringEvents,
+    compressPastWeeks,
+    updateSettings,
+  } = useSettingsStore()
 
   return (
     <div className={styles.section}>
@@ -76,6 +82,22 @@ export function CalendarSettings(): JSX.Element {
           className={`${styles.toggle} ${compactRecurringEvents ? styles.active : ''}`}
           onClick={() => updateSettings({ compactRecurringEvents: !compactRecurringEvents })}
           aria-pressed={compactRecurringEvents}
+        >
+          <span className={styles.toggleKnob} />
+        </button>
+      </div>
+
+      <div className={styles.settingRow}>
+        <div className={styles.settingLabel}>
+          <span className={styles.settingLabelText}>Compress Past Weeks</span>
+          <span className={styles.settingLabelHint}>
+            Reduce size of previous weeks in month view
+          </span>
+        </div>
+        <button
+          className={`${styles.toggle} ${compressPastWeeks ? styles.active : ''}`}
+          onClick={() => updateSettings({ compressPastWeeks: !compressPastWeeks })}
+          aria-pressed={compressPastWeeks}
         >
           <span className={styles.toggleKnob} />
         </button>

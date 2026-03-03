@@ -111,6 +111,7 @@ export interface UserSettings {
   syncIntervalMinutes: number
   conflictResolution: 'server-wins' | 'local-wins' | 'ask'
   compactRecurringEvents: boolean
+  compressPastWeeks: boolean
   hasCompletedOnboarding: boolean
   themeMode: ThemeMode
   lightTheme: string

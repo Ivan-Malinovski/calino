@@ -111,6 +111,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   syncIntervalMinutes: 15,
   conflictResolution: 'server-wins',
   compactRecurringEvents: true,
+  compressPastWeeks: true,
   hasCompletedOnboarding: false,
   themeMode: 'auto' as ThemeMode,
   lightTheme: 'built-in',

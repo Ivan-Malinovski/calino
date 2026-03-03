@@ -1,7 +1,6 @@
 import type { ThemeInfo } from './types'
 
 const BUILT_IN_THEME_ID = 'built-in'
-const THEMES_PATH = '/themes/'
 
 let cachedThemes: ThemeInfo[] | null = null
 const cachedCSS: Map<string, string> = new Map()
@@ -40,41 +39,21 @@ export async function loadThemes(): Promise<ThemeInfo[]> {
     },
   ]
 
-  try {
-    const response = await fetch(THEMES_PATH)
-    const text = await response.text()
+  const themeFiles = import.meta.glob('/public/themes/*.css', { as: 'raw', eager: true })
 
-    const fileMatches = text.matchAll(/href="([^"]*\.css)"/g)
-    const cssFiles: string[] = []
+  for (const path in themeFiles) {
+    const css = themeFiles[path] as string
+    const filename = path.split('/').pop() || ''
+    const themeId = filename.replace(/\.css$/, '')
+    const { name, isDark } = extractThemeName(css, filename)
 
-    for (const match of fileMatches) {
-      const href = match[1]
-      if (!href.includes('.css')) continue
-      cssFiles.push(href)
-    }
+    themes.push({
+      id: themeId,
+      name,
+      isDark,
+    })
 
-    for (const cssFile of cssFiles) {
-      try {
-        const cssResponse = await fetch(cssFile)
-        const css = await cssResponse.text()
-
-        const filename = cssFile.split('/').pop() || cssFile
-        const themeId = filename.replace(/\.css$/, '')
-        const { name, isDark } = extractThemeName(css, filename)
-
-        themes.push({
-          id: themeId,
-          name,
-          isDark,
-        })
-
-        cachedCSS.set(themeId, css)
-      } catch (err) {
-        console.warn(`Failed to load theme CSS: ${cssFile}`, err)
-      }
-    }
-  } catch {
-    console.warn('No custom themes found in /themes/, using built-in only')
+    cachedCSS.set(themeId, css)
   }
 
   cachedThemes = themes

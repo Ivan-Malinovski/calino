@@ -25,6 +25,8 @@ import {
   addMonths,
   subMonths,
   isSameDay,
+  isBefore,
+  startOfDay,
 } from 'date-fns'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
@@ -46,6 +48,7 @@ export function CalendarGrid(): JSX.Element {
   const isOverlayOpen = useCalendarStore((state) => state.isOverlayOpen)
   const firstDayOfWeek = useSettingsStore((state) => state.firstDayOfWeek)
   const compactRecurringEvents = useSettingsStore((state) => state.compactRecurringEvents ?? false)
+  const compressPastWeeks = useSettingsStore((state) => state.compressPastWeeks ?? false)
 
   const [activeEvent, setActiveEvent] = useState<CalendarEvent | null>(null)
   const [scrollDirection, setScrollDirection] = useState<'up' | 'down' | null>(null)
@@ -254,42 +257,51 @@ export function CalendarGrid(): JSX.Element {
             exit={{ opacity: 0, y: scrollDirection === 'down' ? 10 : -10 }}
             transition={{ duration: 0.1 }}
           >
-            {weekNumbers.map((weekNum, weekIdx) => (
-              <div key={weekIdx} className={styles.weekRow}>
-                <div
-                  className={styles.weekNumber}
-                  onClick={() => handleWeekClick(days[weekIdx * 7])}
-                >
-                  {weekNum}
-                </div>
-                {days.slice(weekIdx * 7, weekIdx * 7 + 7).map((day) => {
-                  const dateKey = format(day, 'yyyy-MM-dd')
-                  const dayEvents = eventsMap.get(dateKey) || []
-                  const dayTasks = tasksMap.get(dateKey) || []
-                  const isCurrentMonth = isSameMonth(day, date)
-                  const isTodayDate = isToday(day)
-                  const dayOfWeek = getDay(day)
-                  const isWeekend = dayOfWeek === 0 || dayOfWeek === 6
+            {weekNumbers.map((weekNum, weekIdx) => {
+              const weekEnd = days[weekIdx * 7 + 6]
+              const today = startOfDay(new Date())
+              const isPastWeek = compressPastWeeks && isBefore(weekEnd, today)
 
-                  return (
-                    <DroppableDay
-                      key={dateKey}
-                      dateKey={dateKey}
-                      day={day}
-                      dayEvents={dayEvents}
-                      dayTasks={dayTasks}
-                      isCurrentMonth={isCurrentMonth}
-                      isTodayDate={isTodayDate}
-                      isWeekend={isWeekend}
-                      compactRecurringEvents={compactRecurringEvents}
-                      onDayClick={handleDayClick}
-                      onDayNumberClick={handleDayNumberClick}
-                      openModal={openModal}
-                    />
-                  )
-                })}
-              </div>
-            ))}
+              return (
+                <div
+                  key={weekIdx}
+                  className={`${styles.weekRow} ${isPastWeek ? styles.compressedWeek : ''}`}
+                >
+                  <div
+                    className={styles.weekNumber}
+                    onClick={() => handleWeekClick(days[weekIdx * 7])}
+                  >
+                    {weekNum}
+                  </div>
+                  {days.slice(weekIdx * 7, weekIdx * 7 + 7).map((day) => {
+                    const dateKey = format(day, 'yyyy-MM-dd')
+                    const dayEvents = eventsMap.get(dateKey) || []
+                    const dayTasks = tasksMap.get(dateKey) || []
+                    const isCurrentMonth = isSameMonth(day, date)
+                    const isTodayDate = isToday(day)
+                    const dayOfWeek = getDay(day)
+                    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6
+
+                    return (
+                      <DroppableDay
+                        key={dateKey}
+                        dateKey={dateKey}
+                        day={day}
+                        dayEvents={dayEvents}
+                        dayTasks={dayTasks}
+                        isCurrentMonth={isCurrentMonth}
+                        isTodayDate={isTodayDate}
+                        isWeekend={isWeekend}
+                        compactRecurringEvents={compactRecurringEvents}
+                        onDayClick={handleDayClick}
+                        onDayNumberClick={handleDayNumberClick}
+                        openModal={openModal}
+                      />
+                    )
+                  })}
+                </div>
+              )
+            })}
           </motion.div>
         </AnimatePresence>
       </div>

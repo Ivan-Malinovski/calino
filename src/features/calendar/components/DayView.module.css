@@ -7,9 +7,9 @@
 }
 
 .header {
-  padding: 8px 16px;
-  border-bottom: 1px solid var(--color-border);
-  background: var(--color-bg-secondary);
+  padding: var(--space-2, 8px) var(--space-4, 16px);
+  border-bottom: 1px solid var(--color-border-subtle, var(--color-border));
+  background: var(--color-bg, var(--color-bg-secondary));
   transition: box-shadow 0.2s ease;
   flex-shrink: 0;
 }
@@ -22,7 +22,7 @@
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  background: var(--color-bg-primary);
+  background: var(--color-bg, var(--color-bg-primary));
 }
 
 .dayInfo {
@@ -32,10 +32,11 @@
 }
 
 .dayName {
-  font-size: 14px;
-  font-weight: 500;
+  font-size: var(--font-size-day-header, 14px);
+  font-weight: var(--font-weight-day-header, 500);
   color: var(--color-text-secondary);
   text-transform: uppercase;
+  letter-spacing: var(--letter-spacing-uppercase, 0.05em);
 }
 
 .dayNumber {
@@ -50,25 +51,26 @@
   justify-content: center;
   width: 56px;
   height: 56px;
-  background: var(--color-current-day, var(--color-accent));
-  color: #202124;
-  border-radius: 50%;
+  background: var(--color-terracotta, var(--color-accent));
+  color: white;
+  border-radius: var(--today-badge-radius, 50%);
+  font-weight: var(--font-weight-today-number, 600);
 }
 
 .hourRow {
   display: grid;
   grid-template-columns: 60px 1fr;
   min-height: 60px;
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border-subtle, var(--color-border));
 }
 
 .timeLabel {
-  padding: 4px 8px;
-  font-size: 11px;
+  padding: var(--space-1, 4px) var(--space-2, 8px);
+  font-size: var(--font-size-event-time, 11px);
   color: var(--color-text-secondary);
   text-align: right;
-  border-right: 1px solid var(--color-border);
-  background: var(--color-bg-secondary);
+  border-right: 1px solid var(--color-border-subtle, var(--color-border));
+  background: var(--color-bg, var(--color-bg-secondary));
 }
 
 .cell {
