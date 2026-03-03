@@ -1,0 +1,139 @@
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modalContent {
+  background: #ffffff;
+  border-radius: 8px;
+  padding: 24px;
+  width: 100%;
+  max-width: 400px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.modalTitle {
+  font-size: 18px;
+  font-weight: 600;
+  color: #202124;
+  margin: 0;
+}
+
+.modalClose {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 18px;
+  color: #5f6368;
+  padding: 4px;
+  border-radius: 4px;
+  line-height: 1;
+}
+
+.modalClose:hover {
+  background: #f1f3f4;
+  color: #202124;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.formLabel {
+  font-size: 14px;
+  font-weight: 500;
+  color: #202124;
+}
+
+.formHint {
+  font-size: 12px;
+  color: #5f6368;
+}
+
+.input {
+  padding: 8px 12px;
+  border: 1px solid #dadce0;
+  border-radius: 4px;
+  font-size: 14px;
+  color: #202124;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.input:focus {
+  outline: none;
+  border-color: #1a73e8;
+  box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.2);
+}
+
+.successMessage {
+  color: #34a853;
+  font-size: 14px;
+  margin-bottom: 16px;
+}
+
+.errorMessage {
+  color: #ea4335;
+  font-size: 14px;
+  margin-bottom: 16px;
+}
+
+.modalFooter {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.button {
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border: none;
+}
+
+.buttonPrimary {
+  background: #1a73e8;
+  color: #ffffff;
+}
+
+.buttonPrimary:hover {
+  background: #1557b0;
+}
+
+.buttonPrimary:disabled {
+  background: #9fc3f4;
+  cursor: not-allowed;
+}
+
+.buttonSecondary {
+  background: #ffffff;
+  color: #1a73e8;
+  border: 1px solid #dadce0;
+}
+
+.buttonSecondary:hover {
+  background: #f1f3f4;
+}

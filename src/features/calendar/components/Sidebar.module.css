@@ -246,6 +246,32 @@
   margin-bottom: 4px;
 }
 
+.sectionTitleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.addCalendarButton {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 4px;
+  color: #9ca3af;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    background-color 0.15s,
+    color 0.15s;
+}
+
+.addCalendarButton:hover {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
 .calendarItem {
   display: flex;
   align-items: center;
