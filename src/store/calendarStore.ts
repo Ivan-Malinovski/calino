@@ -26,6 +26,7 @@ export const useCalendarStore = create<CalendarStore>()(
       selectedEndDate: null,
       isOverlayOpen: false,
       selectedEventType: 'event',
+      showAddCalendar: false,
 
       addEvent: (event: CalendarEvent): void => {
         set((state) => ({
@@ -142,6 +143,10 @@ export const useCalendarStore = create<CalendarStore>()(
 
       setOverlayOpen: (isOpen: boolean): void => {
         set({ isOverlayOpen: isOpen })
+      },
+
+      setShowAddCalendar: (show: boolean): void => {
+        set({ showAddCalendar: show })
       },
 
       getEventsForDateRange: (start: string, end: string): CalendarEvent[] => {

@@ -1,0 +1,87 @@
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modalContent {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 32px;
+  width: 100%;
+  max-width: 440px;
+  max-height: 90vh;
+  overflow-y: auto;
+  text-align: center;
+}
+
+.icon {
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: center;
+}
+
+.title {
+  font-size: 22px;
+  font-weight: 600;
+  color: #202124;
+  margin: 0 0 16px 0;
+}
+
+.description {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #5f6368;
+  margin: 0 0 12px 0;
+  text-align: left;
+}
+
+.description:last-of-type {
+  margin-bottom: 24px;
+}
+
+.footer {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.addButton {
+  padding: 12px 24px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border: none;
+  background: #1a73e8;
+  color: #ffffff;
+}
+
+.addButton:hover {
+  background: #1557b0;
+}
+
+.skipButton {
+  padding: 12px 24px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border: 1px solid #dadce0;
+  background: #ffffff;
+  color: #5f6368;
+}
+
+.skipButton:hover {
+  background: #f1f3f4;
+  color: #202124;
+}

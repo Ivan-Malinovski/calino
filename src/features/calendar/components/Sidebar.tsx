@@ -46,7 +46,6 @@ export function Sidebar(): JSX.Element {
   const [editName, setEditName] = useState('')
   const [showYearDropdown, setShowYearDropdown] = useState(false)
   const [showMonthDropdown, setShowMonthDropdown] = useState(false)
-  const [showAddCalendar, setShowAddCalendar] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const currentDate = useCalendarStore((state) => state.currentDate)
@@ -55,6 +54,8 @@ export function Sidebar(): JSX.Element {
   const toggleCalendarVisibility = useCalendarStore((state) => state.toggleCalendarVisibility)
   const updateCalendar = useCalendarStore((state) => state.updateCalendar)
   const firstDayOfWeek = useSettingsStore((state) => state.firstDayOfWeek)
+  const showAddCalendar = useCalendarStore((state) => state.showAddCalendar)
+  const setShowAddCalendar = useCalendarStore((state) => state.setShowAddCalendar)
 
   const currentYear = new Date().getFullYear()
   const years = Array.from({ length: 11 }, (_, i) => currentYear - 5 + i)

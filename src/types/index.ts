@@ -57,10 +57,11 @@ export interface CalendarState {
   currentView: ViewType
   selectedEventId: string | null
   isModalOpen: boolean
-  isOverlayOpen: boolean
   selectedDate: string | null
   selectedEndDate: string | null
+  isOverlayOpen: boolean
   selectedEventType: EventType
+  showAddCalendar: boolean
 }
 
 export interface CalendarActions {
@@ -79,6 +80,7 @@ export interface CalendarActions {
   openModal: (date?: string, endDate?: string, eventId?: string, mode?: EventType) => void
   closeModal: () => void
   setOverlayOpen: (isOpen: boolean) => void
+  setShowAddCalendar: (show: boolean) => void
   getEventsForDateRange: (start: string, end: string) => CalendarEvent[]
   getVisibleEvents: () => CalendarEvent[]
 }
@@ -108,6 +110,7 @@ export interface UserSettings {
   syncIntervalMinutes: number
   conflictResolution: 'server-wins' | 'local-wins' | 'ask'
   compactRecurringEvents: boolean
+  hasCompletedOnboarding: boolean
 }
 
 export type SettingsState = UserSettings

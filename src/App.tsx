@@ -17,6 +17,7 @@ import { type NLPParseResult } from './features/nlp'
 import { SettingsPage, PrivacyPolicy } from './features/settings'
 import { CommandPalette } from './features/commandPalette'
 import { CookieConsent } from './components/common'
+import { OnboardingModal } from './features/onboarding/OnboardingModal'
 import type { CalendarEvent, ViewType } from './types'
 import './App.css'
 
@@ -116,6 +117,7 @@ function CalendarApp(): JSX.Element {
   const addEvent = useCalendarStore((state) => state.addEvent)
   const calendars = useCalendarStore((state) => state.calendars)
   const setOverlayOpen = useCalendarStore((state) => state.setOverlayOpen)
+  const setShowAddCalendar = useCalendarStore((state) => state.setShowAddCalendar)
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false)
 
   useViewManager()
@@ -183,6 +185,7 @@ function CalendarApp(): JSX.Element {
           setOverlayOpen(false)
         }}
       />
+      <OnboardingModal onAddCalendar={() => setShowAddCalendar(true)} />
     </div>
   )
 }
