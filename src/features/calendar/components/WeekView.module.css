@@ -43,8 +43,8 @@
   background: var(--color-bg-tertiary);
   border-right: 1px solid var(--color-border-subtle, var(--color-border));
   min-height: 48px;
-  min-width: 60px;
-  max-width: 60px;
+  min-width: 50px;
+  max-width: 50px;
 }
 
 .timeColumn {
@@ -52,8 +52,8 @@
   flex-direction: column;
   border-right: 1px solid var(--color-border-subtle, var(--color-border));
   background: var(--color-bg-tertiary);
-  min-width: 60px;
-  max-width: 60px;
+  min-width: 50px;
+  max-width: 50px;
 }
 
 .timeCell {
@@ -292,8 +292,57 @@
   }
 
   .dayHeader {
-    min-width: 50vw;
-    max-width: 50vw;
+    min-width: 28vw;
+    max-width: 28vw;
+    flex-shrink: 0;
+  }
+
+  .timeColumn {
+    position: sticky;
+    left: 0;
+    z-index: 5;
+    background: var(--color-bg-tertiary);
+    min-width: 45px;
+    max-width: 45px;
+  }
+
+  .timeCell {
+    font-size: 10px;
+    padding: var(--space-1, 4px) 2px;
+  }
+
+  .daysContainer {
+    display: flex;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .daysContainer::-webkit-scrollbar {
+    display: none;
+  }
+
+  .dayColumn {
+    min-width: 28vw;
+    max-width: 28vw;
+    flex-shrink: 0;
+  }
+}
+
+  .headerDays {
+    display: flex;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .headerDays::-webkit-scrollbar {
+    display: none;
+  }
+
+  .dayHeader {
+    min-width: 28vw;
+    max-width: 28vw;
     flex-shrink: 0;
   }
 
@@ -307,7 +356,6 @@
   .daysContainer {
     display: flex;
     overflow-x: auto;
-    overflow-y: hidden;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
   }
@@ -317,8 +365,8 @@
   }
 
   .dayColumn {
-    min-width: 50vw;
-    max-width: 50vw;
+    min-width: 28vw;
+    max-width: 28vw;
     flex-shrink: 0;
   }
 }
