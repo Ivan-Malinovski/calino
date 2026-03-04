@@ -12,11 +12,24 @@ export function NotificationSettings(): JSX.Element {
     if (permissionStatus === 'default') {
       const newPermission = await requestNotificationPermission()
       setPermissionStatus(newPermission)
+      if (newPermission !== 'granted') {
+        return
+      }
+    }
+    if (permissionStatus === 'denied') {
+      return
     }
     updateSettings({ enableDesktopNotifications: !enableDesktopNotifications })
   }
 
-  const handleTestNotification = (): void => {
+  const handleTestNotification = async (): Promise<void> => {
+    if (permissionStatus === 'default') {
+      const newPermission = await requestNotificationPermission()
+      setPermissionStatus(newPermission)
+      if (newPermission !== 'granted') {
+        return
+      }
+    }
     showTestNotification()
   }
 
@@ -35,15 +48,16 @@ export function NotificationSettings(): JSX.Element {
 
       <div className={styles.settingRow}>
         <div className={styles.settingLabel}>
-          <span className={styles.settingLabelText}>Desktop Notifications</span>
+          <span className={styles.settingLabelText}>Browser Notifications</span>
           <span className={styles.settingLabelHint}>
-            Show browser notifications for upcoming events
+            Show notifications for upcoming events and tasks
           </span>
         </div>
         <button
           className={`${styles.toggle} ${enableDesktopNotifications ? styles.active : ''}`}
           onClick={handleEnableNotifications}
           aria-pressed={enableDesktopNotifications}
+          disabled={permissionStatus === 'denied'}
         >
           <span className={styles.toggleKnob} />
         </button>
@@ -69,15 +83,19 @@ export function NotificationSettings(): JSX.Element {
         <div className={styles.settingLabel}>
           <span className={styles.settingLabelText}>Test Notification</span>
           <span className={styles.settingLabelHint}>
-            Send a test notification to verify everything works
+            {permissionStatus === 'default' 
+              ? 'Click to enable notifications and test' 
+              : permissionStatus === 'denied'
+                ? 'Notifications are blocked in browser settings'
+                : 'Send a test notification'}
           </span>
         </div>
         <button
           className={styles.button}
           onClick={handleTestNotification}
-          disabled={permissionStatus !== 'granted'}
+          disabled={permissionStatus === 'denied'}
         >
-          Send Test
+          {permissionStatus === 'default' ? 'Enable & Test' : 'Send Test'}
         </button>
       </div>
     </div>
