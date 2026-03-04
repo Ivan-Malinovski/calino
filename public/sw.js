@@ -1,5 +1,5 @@
-const CACHE_NAME = 'calino-v3'
-const STATIC_ASSETS = ['/', '/index.html', '/manifest.json', '/icon-192.svg', '/appicon.png', '/favicon.ico']
+const CACHE_NAME = 'calino-v4'
+const STATIC_ASSETS = ['/', '/index.html', '/manifest.json', '/appicon.png', '/favicon.ico']
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -40,7 +40,8 @@ self.addEventListener('fetch', (event) => {
           cache.put(event.request, responseToCache)
         })
 
-      return response
+        return response
+      })
     })
   )
 })
@@ -63,5 +64,4 @@ self.addEventListener('notificationclick', (event) => {
       })
     )
   }
-})
 })
