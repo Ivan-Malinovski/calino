@@ -1,8 +1,8 @@
 # Calino - AI Agent Guidelines
 
-**Version:** 0.1.0 (follows semver: 0.x.y = breaking changes allowed, bump minor for features, patch for fixes)
+**Version:** 0.2.0 (follows semver: 0.x.y = breaking changes allowed, bump minor for features, patch for fixes)
 
-React 18 + TypeScript + Vite calendar app with CalDAV sync and NLP event creation.
+React 18 + TypeScript + Vite calendar app with CalDAV sync, NLP event creation, and PWA support.
 
 ## Commands
 
@@ -11,8 +11,11 @@ pnpm install          # Install deps
 pnpm dev              # Dev server
 pnpm build            # Production build
 pnpm lint             # ESLint
+pnpm lint:fix         # ESLint with auto-fix
 pnpm typecheck        # TypeScript
 pnpm test             # Run tests
+pnpm test:run         # Run tests once
+pnpm format           # Prettier format
 ```
 
 ## Code Style
@@ -26,12 +29,14 @@ pnpm test             # Run tests
 
 ```
 src/
-├── components/     # CalendarGrid, EventCard, EventModal
-├── features/       # calendar, events, caldav, nlp, search
-├── hooks/          # Custom hooks
-├── lib/db/         # Dexie.js IndexedDB
-├── store/          # Zustand stores
-└── types/          # TypeScript interfaces
+├── components/     # Common UI (ThemeProvider, common/)
+├── features/      # calendar, events, caldav, nlp, search, commandPalette, settings, onboarding
+├── hooks/         # Custom hooks (useNotifications, useSwipeNavigation)
+├── lib/           # db/ (Dexie), themes/, notifications.ts
+├── store/         # Zustand stores (calendarStore, settingsStore)
+├── themes/        # CSS themes (built-in.css)
+├── types/         # TypeScript interfaces
+└── test/          # Test setup
 ```
 
 ## Key Guidelines
@@ -41,51 +46,51 @@ src/
 - **Sync**: Optimistic UI, queue CalDAV changes
 - **Animations**: Framer Motion for complex, CSS for simple (200-300ms)
 - **Errors**: Custom error classes, user-friendly messages, try/catch async
+- **Mobile**: Touch gestures via `useSwipeNavigation`, native event listeners for pinch-to-zoom
+- **PWA**: Notifications via `lib/notifications.ts`, service worker for offline
 
-## Files
+## Routes
 
-- Store: `src/store/` (calendarStore, settingsStore)
-- Database: `src/lib/db/` (Dexie tables: events, calendars, accounts, syncQueue)
-- Settings: `/settings` route, `src/store/settingsStore.ts`
-- Plans: See `PLANS/` directory for feature roadmaps
+| Path                                 | Component               |
+| ------------------------------------ | ----------------------- |
+| `/`                                  | Calendar (default view) |
+| `/month`, `/week`, `/day`, `/agenda` | Calendar views          |
+| `/settings`                          | SettingsPage            |
+| `/privacy`                           | PrivacyPolicy           |
 
-## Power Bar (Command Palette)
+## Key Files
 
-A VS Code-style command palette activated with `Cmd+K` (or `Ctrl+K`). Located at `src/features/commandPalette/`.
+- **Store**: `src/store/calendarStore.ts`, `src/store/settingsStore.ts`
+- **Database**: `src/lib/db/` (Dexie tables: events, calendars, accounts, syncQueue)
+- **Notifications**: `src/lib/notifications.ts`, `src/hooks/useNotifications.ts`
+- **Config**: `src/config.ts` (appName, colors, default themes)
 
-**Features:**
+## Features
 
-- **Commands**: Navigation (today, next week, switch views), Actions (new event, sync), Settings
-- **Smart detection**: Type naturally like "tomorrow meeting at 2pm" for quick event creation
-- **Prefix hints**: `>` for commands, `@` for quick navigation
-- **Toast feedback**: Shows confirmation when actions execute
+### Power Bar (Command Palette)
 
-**Key files:**
+- Activated with `Cmd+K` / `Ctrl+K`
+- Smart detection: type "tomorrow meeting at 2pm" for quick event creation
+- Prefix hints: `>` for commands, `@` for navigation
+- Files: `features/commandPalette/`, `hooks/useCommandPalette.ts`, `features/commandPalette/commands/`
 
-- `components/CommandPalette.tsx` - Main modal component
-- `hooks/useCommandPalette.ts` - Logic for parsing input and executing commands
-- `commands/index.ts` - Command registry
+### VTODO (Tasks)
 
-## VTODO (Tasks)
+- Stored as events with `type: 'task'`
+- Fields: `dueDate`, `dueDateTime`, `isAllDay`, `completed`, `priority` (0-9)
+- Display: checkbox in month view, sticky footer in week/day view
 
-Tasks are stored as calendar events with `type: 'task'`. Key task fields:
+### Zoom
 
-- `dueDate`: ISO date string (required for display)
-- `dueDateTime`: Optional time component in DUE property
-- `isAllDay`: True if no specific time (shown in footer)
-- `completed`: Boolean completion status
-- `priority`: TaskPriority enum (1=high, 5=low, 9=none)
+- `Ctrl+scroll` to zoom in/out on WeekView and DayView
+- Events scale with hour rows
 
-**Display logic:**
+### Notifications
 
-- Month view: Tasks appear with checkbox, strike-through when completed
-- Week/Day view timed: Tasks with due time show in events overlay at their time
-- Week/Day view all-day: Tasks without due time shown in sticky footer aligned to day columns
+- PWA push notifications with configurable reminders
+- Request permission via `requestNotificationPermission()` in `lib/notifications.ts`
 
-**Key files:**
+### Self-Hosting
 
-- `types/index.ts` - EventType, TaskPriority, CalendarEvent task fields
-- `features/caldav/adapter/iCalendarAdapter.ts` - VTODO parsing/generation (parseICALTask, taskToICAL)
-- `features/calendar/components/EventModal.tsx` - Task form with completed, due date/time, priority
-- `features/calendar/components/WeekView.tsx` - Task footer with sticky positioning
-- `features/calendar/components/DayView.tsx` - Task footer with sticky positioning
+- Set `VITE_SITE_URL=https://your-domain.com` in `.env`
+- See `.env.example`
