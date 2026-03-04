@@ -301,14 +301,10 @@
   }
 
   .body {
-    display: block;
+    display: flex;
+    flex: 1;
     overflow: auto;
     -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-  }
-
-  .body::-webkit-scrollbar {
-    display: none;
   }
 
   .timeColumn {
@@ -318,6 +314,7 @@
     background: var(--color-bg-tertiary);
     min-width: 45px;
     max-width: 45px;
+    flex-shrink: 0;
   }
 
   .timeCell {
@@ -326,11 +323,13 @@
   }
 
   .daysContainer {
-    display: grid;
-    grid-template-columns: repeat(7, minmax(28vw, 1fr));
+    display: flex;
+    flex: 1;
+    min-width: max-content;
   }
 
   .dayColumn {
+    width: 28vw;
     min-width: 28vw;
   }
 }
