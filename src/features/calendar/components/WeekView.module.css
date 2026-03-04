@@ -281,6 +281,7 @@
   }
 
   .body {
+    display: flex;
     overflow-x: auto;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
@@ -309,11 +310,27 @@
   }
 
   .timeColumn {
-    display: none;
+    position: fixed;
+    left: 0;
+    top: auto;
+    bottom: 0;
+    z-index: 100;
+    background: var(--color-bg-tertiary);
+    min-width: 45px;
+    max-width: 45px;
+    height: 100vh;
+    padding-top: 100px;
+    box-sizing: border-box;
+  }
+
+  .timeCell {
+    font-size: 10px;
+    padding: var(--space-1, 4px) 2px;
   }
 
   .daysContainer {
     display: flex;
+    margin-left: 45px;
   }
 
   .dayColumn {
