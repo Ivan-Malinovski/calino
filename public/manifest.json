@@ -7,18 +7,24 @@
   "background_color": "#fafafa",
   "theme_color": "#4285f4",
   "orientation": "portrait-primary",
-  "icons": [
+"icons": [
     {
       "src": "/appicon.jpg",
       "sizes": "192x192",
-      "type": "image/jpeg",
+      "type": "image/png",
       "purpose": "any"
     },
     {
       "src": "/appicon.jpg",
       "sizes": "512x512",
-      "type": "image/jpeg",
+      "type": "image/png",
       "purpose": "maskable"
+    },
+    {
+      "src": "/appicon.jpg",
+      "sizes": "192x192 512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ],
   "categories": ["productivity", "utilities"]

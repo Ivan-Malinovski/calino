@@ -1,5 +1,5 @@
-const CACHE_NAME = 'calino-v2'
-const STATIC_ASSETS = ['/', '/index.html', '/manifest.json', '/icon-192.svg', '/appicon.jpg', '/favicon.ico']
+const CACHE_NAME = 'calino-v3'
+const STATIC_ASSETS = ['/', '/index.html', '/manifest.json', '/icon-192.svg', '/appicon.png', '/favicon.ico']
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
