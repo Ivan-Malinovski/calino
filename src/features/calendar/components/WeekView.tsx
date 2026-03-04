@@ -149,13 +149,19 @@ export function WeekView(): JSX.Element {
 
   const bodyRef = useRef<HTMLDivElement>(null)
   const lastDateRef = useRef(date.toISOString())
+  const hasScrolledForDate = useRef(false)
 
   useLayoutEffect(() => {
     if (isMobile || !bodyRef.current) return
 
     const currentDateStr = date.toISOString()
-    if (lastDateRef.current === currentDateStr && isScrolled) return
-    lastDateRef.current = currentDateStr
+
+    if (lastDateRef.current !== currentDateStr) {
+      lastDateRef.current = currentDateStr
+      hasScrolledForDate.current = false
+    }
+
+    if (hasScrolledForDate.current) return
 
     const rafId = requestAnimationFrame(() => {
       if (!bodyRef.current) return
@@ -175,10 +181,11 @@ export function WeekView(): JSX.Element {
       const scrollTop = (hours * 60 + minutes) * (HOUR_HEIGHT / 60) - 60
 
       bodyRef.current.scrollTo({ top: Math.max(0, scrollTop), behavior: 'smooth' })
+      hasScrolledForDate.current = true
     })
 
     return () => cancelAnimationFrame(rafId)
-  }, [eventsMap, date, isScrolled, isMobile])
+  }, [eventsMap, date, isMobile])
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>): void => {
     setIsScrolled(e.currentTarget.scrollTop > 0)
