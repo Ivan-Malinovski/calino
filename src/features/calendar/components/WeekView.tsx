@@ -197,8 +197,15 @@ export function WeekView(): JSX.Element {
     const bodyEl = bodyScrollRef.current
     if (!headerEl || !bodyEl) return
 
+    let isSyncing = false
+
     const syncScroll = (source: HTMLElement, target: HTMLElement) => () => {
+      if (isSyncing) return
+      isSyncing = true
       target.scrollLeft = source.scrollLeft
+      requestAnimationFrame(() => {
+        isSyncing = false
+      })
     }
 
     const handleHeaderScroll = syncScroll(headerEl, bodyEl)
