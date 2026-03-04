@@ -59,7 +59,15 @@ END:VCALENDAR`,
     createCalendarObject: vi.fn(),
     updateCalendarObject: vi.fn(),
     deleteCalendarObject: vi.fn(),
-  }
+    davRequest: vi.fn(),
+    fetchVCals: vi.fn(),
+    getMultipleVCard: vi.fn(),
+    getSingleVCard: vi.fn(),
+    createVCard: vi.fn(),
+    updateVCard: vi.fn(),
+    deleteVCard: vi.fn(),
+    syncCollection: vi.fn(),
+  } as any
 
   beforeEach(() => {
     vi.clearAllMocks()

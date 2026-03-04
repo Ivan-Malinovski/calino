@@ -43,10 +43,10 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
 
     const updateThemeColor = () => {
       const style = getComputedStyle(document.documentElement)
-      const accentColor = style.getPropertyValue('--color-accent').trim()
+      const bgColor = style.getPropertyValue('--color-bg-primary').trim()
       const metaThemeColor = document.querySelector('meta[name="theme-color"]')
       if (metaThemeColor) {
-        metaThemeColor.setAttribute('content', accentColor || '#4285f4')
+        metaThemeColor.setAttribute('content', bgColor || '#fafafa')
       }
     }
 
