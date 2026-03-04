@@ -85,3 +85,31 @@
   background: #f1f3f4;
   color: #202124;
 }
+
+.demoButton {
+  padding: 12px 24px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border: 1px solid #34a853;
+  background: #ffffff;
+  color: #34a853;
+}
+
+.demoButton:hover:not(:disabled) {
+  background: #e8f5e9;
+}
+
+.demoButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.errorMessage {
+  color: #ea4335;
+  font-size: 14px;
+  margin: 0 0 16px 0;
+  text-align: center;
+}

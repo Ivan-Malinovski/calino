@@ -1,5 +1,8 @@
 import type { JSX } from 'react'
+import { useState } from 'react'
 import { useSettingsStore } from '@/store/settingsStore'
+import { useCalendarStore } from '@/store/calendarStore'
+import { parseICALEvent } from '@/features/caldav/adapter/iCalendarAdapter'
 import styles from './OnboardingModal.module.css'
 
 interface OnboardingModalProps {
@@ -7,8 +10,13 @@ interface OnboardingModalProps {
 }
 
 export function OnboardingModal({ onAddCalendar }: OnboardingModalProps): JSX.Element | null {
+  const [isLoadingDemo, setIsLoadingDemo] = useState(false)
+  const [demoError, setDemoError] = useState('')
+
   const hasCompletedOnboarding = useSettingsStore((state) => state.hasCompletedOnboarding)
   const updateSettings = useSettingsStore((state) => state.updateSettings)
+  const addEvent = useCalendarStore((state) => state.addEvent)
+  const calendars = useCalendarStore((state) => state.calendars)
 
   if (hasCompletedOnboarding) {
     return null
@@ -21,6 +29,31 @@ export function OnboardingModal({ onAddCalendar }: OnboardingModalProps): JSX.El
   const handleAddCalendar = (): void => {
     updateSettings({ hasCompletedOnboarding: true })
     onAddCalendar()
+  }
+
+  const handleLoadDemoData = async (): Promise<void> => {
+    setIsLoadingDemo(true)
+    setDemoError('')
+
+    try {
+      const response = await fetch('/sample-events.ics')
+      if (!response.ok) {
+        throw new Error('Failed to load demo data')
+      }
+
+      const icsData = await response.text()
+      const defaultCalendar = calendars.find((c) => c.isDefault) ?? calendars[0]
+      const calendarId = defaultCalendar?.id ?? 'default'
+
+      const events = parseICALEvent(icsData, calendarId)
+      events.forEach((event) => addEvent(event))
+
+      updateSettings({ hasCompletedOnboarding: true })
+    } catch (error) {
+      setDemoError(error instanceof Error ? error.message : 'Failed to load demo data')
+    } finally {
+      setIsLoadingDemo(false)
+    }
   }
 
   const handleBackdropClick = (e: React.MouseEvent): void => {
@@ -56,9 +89,18 @@ export function OnboardingModal({ onAddCalendar }: OnboardingModalProps): JSX.El
           export/import feature in Settings.
         </p>
 
+        {demoError && <p className={styles.errorMessage}>{demoError}</p>}
+
         <div className={styles.footer}>
           <button className={styles.addButton} onClick={handleAddCalendar}>
             Add CalDAV Account
+          </button>
+          <button
+            className={styles.demoButton}
+            onClick={handleLoadDemoData}
+            disabled={isLoadingDemo}
+          >
+            {isLoadingDemo ? 'Loading...' : 'Try with sample data'}
           </button>
           <button className={styles.skipButton} onClick={handleDismiss}>
             I'll do it later

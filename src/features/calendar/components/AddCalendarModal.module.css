@@ -137,3 +137,11 @@
 .buttonSecondary:hover {
   background: #f1f3f4;
 }
+
+@media (max-width: 768px) {
+  .modalContent {
+    margin: 16px;
+    max-width: calc(100% - 32px);
+    width: 100%;
+  }
+}
