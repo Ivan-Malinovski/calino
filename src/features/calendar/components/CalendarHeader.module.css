@@ -237,7 +237,7 @@
 
 @media (max-width: 768px) {
   .mobileViewSwitcher {
-    display: block;
+    display: flex;
   }
 }
 
