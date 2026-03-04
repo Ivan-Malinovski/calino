@@ -305,6 +305,9 @@
   }
 
   .weekNumberHeader {
+    position: sticky;
+    left: 0;
+    z-index: 11;
     min-width: 45px;
     max-width: 45px;
     flex-shrink: 0;
