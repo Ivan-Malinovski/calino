@@ -27,7 +27,6 @@ import { useSettingsStore } from '@/store/settingsStore'
 import { DEFAULT_CALENDAR_COLOR } from '@/config'
 import { EventCard } from './EventCard'
 import { ContextMenu } from '@/components/common/ContextMenu'
-import { DayView } from './DayView'
 import { useSwipeNavigation } from '@/hooks/useSwipeNavigation'
 import type { CalendarEvent, Calendar } from '@/types'
 import styles from './WeekView.module.css'
@@ -514,10 +513,6 @@ export function WeekView(): JSX.Element {
     const weekStart = startOfWeek(date, { weekStartsOn: firstDayOfWeek || 0 })
     return getISOWeek(weekStart)
   }, [date, firstDayOfWeek])
-
-  if (isMobile) {
-    return <DayView />
-  }
 
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
