@@ -10,7 +10,15 @@ import { ThemeToggle } from './ThemeToggle'
 import { Search } from '@/features/search'
 import { QuickAdd } from '@/features/nlp'
 import type { NLPParseResult } from '@/features/nlp'
+import type { ViewType } from '@/types'
 import styles from './CalendarHeader.module.css'
+
+const VIEW_OPTIONS: { value: ViewType; label: string }[] = [
+  { value: 'day', label: 'Day' },
+  { value: 'week', label: 'Week' },
+  { value: 'month', label: 'Month' },
+  { value: 'agenda', label: 'List' },
+]
 
 interface CalendarHeaderProps {
   onQuickAdd?: (result: NLPParseResult) => void
@@ -28,6 +36,8 @@ export function CalendarHeader({ onQuickAdd, onToggleSidebar }: CalendarHeaderPr
 
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false)
+  const [dropdownRef, setDropdownRef] = useState<HTMLDivElement | null>(null)
   const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
@@ -44,6 +54,18 @@ export function CalendarHeader({ onQuickAdd, onToggleSidebar }: CalendarHeaderPr
       }
     }
   }, [])
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent): void => {
+      if (dropdownRef && !dropdownRef.contains(e.target as Node)) {
+        setIsDropdownOpen(false)
+      }
+    }
+    if (isDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [isDropdownOpen, dropdownRef])
 
   const date = parseISO(currentDate)
 
@@ -213,25 +235,38 @@ export function CalendarHeader({ onQuickAdd, onToggleSidebar }: CalendarHeaderPr
       )}
       {isMobile && (
         <div className={styles.right}>
-          <div className={styles.mobileViewSwitcher}>
+          <div className={styles.mobileViewDropdown} ref={setDropdownRef}>
             <button
-              className={`${styles.mobileViewButton} ${currentView === 'day' ? styles.mobileViewActive : ''}`}
-              onClick={() => setCurrentView('day')}
+              className={styles.mobileViewDropdownButton}
+              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
             >
-              Day
+              {VIEW_OPTIONS.find((v) => v.value === currentView)?.label}
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 12 12"
+                fill="none"
+                className={`${styles.dropdownArrow} ${isDropdownOpen ? styles.dropdownArrowOpen : ''}`}
+              >
+                <path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
             </button>
-            <button
-              className={`${styles.mobileViewButton} ${currentView === 'month' ? styles.mobileViewActive : ''}`}
-              onClick={() => setCurrentView('month')}
-            >
-              Month
-            </button>
-            <button
-              className={`${styles.mobileViewButton} ${currentView === 'agenda' ? styles.mobileViewActive : ''}`}
-              onClick={() => setCurrentView('agenda')}
-            >
-              List
-            </button>
+            {isDropdownOpen && (
+              <div className={styles.mobileViewDropdownMenu}>
+                {VIEW_OPTIONS.map((view) => (
+                  <button
+                    key={view.value}
+                    className={`${styles.mobileViewDropdownItem} ${currentView === view.value ? styles.mobileViewActive : ''}`}
+                    onClick={() => {
+                      setCurrentView(view.value)
+                      setIsDropdownOpen(false)
+                    }}
+                  >
+                    {view.label}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}

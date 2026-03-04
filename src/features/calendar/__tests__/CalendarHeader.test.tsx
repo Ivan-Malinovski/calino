@@ -56,18 +56,9 @@ describe('CalendarHeader', () => {
     expect(buttons.length).toBeGreaterThanOrEqual(3)
   })
 
-  it('has multiple view switcher buttons', () => {
+  it('renders view switcher dropdown', () => {
     renderWithRouter(<CalendarHeader />)
-    const buttons = screen.getAllByRole('button')
-    const viewButtons = buttons.filter(
-      (btn) =>
-        btn.textContent === 'Month' ||
-        btn.textContent === 'Week' ||
-        btn.textContent === 'Day' ||
-        btn.textContent === 'Agenda' ||
-        btn.textContent === 'List'
-    )
-    expect(viewButtons.length).toBeGreaterThanOrEqual(4)
+    expect(screen.getByRole('button', { name: /month/i })).toBeInTheDocument()
   })
 
   it('renders settings button with icon', () => {

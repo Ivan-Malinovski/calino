@@ -119,7 +119,9 @@
   gap: 12px;
   padding: 14px 20px;
   border: none;
-  background: transparent;
+  background: rgba(var(--color-bg-secondary-rgb, 255, 255, 255), 0.5);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   color: var(--color-text-primary);
   font-size: 15px;
   font-weight: 500;

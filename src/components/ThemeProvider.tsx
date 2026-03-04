@@ -40,6 +40,17 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', effectiveMode)
     document.documentElement.setAttribute('data-theme-mode', themeMode)
+
+    const updateThemeColor = () => {
+      const style = getComputedStyle(document.documentElement)
+      const accentColor = style.getPropertyValue('--color-accent').trim()
+      const metaThemeColor = document.querySelector('meta[name="theme-color"]')
+      if (metaThemeColor) {
+        metaThemeColor.setAttribute('content', accentColor || '#4285f4')
+      }
+    }
+
+    requestAnimationFrame(updateThemeColor)
   }, [effectiveMode, themeMode])
 
   const handleMediaChange = useCallback(() => {

@@ -74,7 +74,9 @@
   width: 32px;
   height: 32px;
   border: none;
-  background: transparent;
+  background: rgba(var(--color-bg-secondary-rgb, 255, 255, 255), 0.5);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border-radius: 50%;
   color: var(--color-text-secondary);
   cursor: pointer;
@@ -233,20 +235,88 @@
   display: none;
 }
 
+.mobileViewDropdown {
+  position: relative;
+}
+
+.mobileViewDropdownButton {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border: none;
+  background: var(--color-bg-tertiary);
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.mobileViewDropdownButton:hover {
+  background: var(--color-bg-hover);
+}
+
+.dropdownArrow {
+  transition: transform 0.15s ease;
+}
+
+.dropdownArrowOpen {
+  transform: rotate(180deg);
+}
+
+.mobileViewDropdownMenu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+  z-index: 100;
+  min-width: 120px;
+}
+
+.mobileViewDropdownItem {
+  display: block;
+  width: 100%;
+  padding: 10px 16px;
+  border: none;
+  background: rgba(var(--color-bg-secondary-rgb, 255, 255, 255), 0.5);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  text-align: left;
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.mobileViewDropdownItem:hover {
+  background: var(--color-bg-hover);
+  color: var(--color-text-primary);
+}
+
+.mobileViewDropdownItem.mobileViewActive {
+  background: var(--color-accent-light);
+  color: var(--color-accent);
+  font-weight: 500;
+}
+
 @media (max-width: 768px) {
-  .mobileViewSwitcher {
-    display: flex;
-    gap: 4px;
-    background: var(--color-bg-tertiary);
-    padding: 4px;
-    border-radius: 8px;
+  .mobileViewDropdown {
+    display: block;
   }
 }
 
 .mobileViewButton {
   padding: 6px 10px;
   border: none;
-  background: transparent;
+  background: rgba(var(--color-bg-secondary-rgb, 255, 255, 255), 0.5);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border-radius: 6px;
   font-size: 12px;
   font-weight: 500;

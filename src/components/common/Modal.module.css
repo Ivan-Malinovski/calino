@@ -61,7 +61,9 @@
   align-items: center;
   justify-content: center;
   border: none;
-  background: transparent;
+  background: rgba(var(--color-bg-secondary-rgb, 255, 255, 255), 0.5);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   font-size: 24px;
   color: var(--color-text-secondary);
   border-radius: 50%;

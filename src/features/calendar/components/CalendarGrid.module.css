@@ -57,6 +57,10 @@
   min-height: 50px;
 }
 
+.compressedWeek > .day[data-vh] {
+  min-height: calc(50px * var(--scale, 1));
+}
+
 .compressedWeek .events {
   margin-top: 2px;
 }
@@ -80,7 +84,7 @@
   cursor: pointer;
   transition: background 0.15s ease;
   height: 100%;
-  min-height: 100px;
+  min-height: var(--day-cell-height, 100px);
 }
 
 .weekNumber:hover {
@@ -89,7 +93,7 @@
 }
 
 .day {
-  min-height: 100px;
+  min-height: var(--day-cell-height, 100px);
   border-right: 1px solid var(--color-border-subtle, var(--color-border));
   border-bottom: 1px solid var(--color-border-subtle, var(--color-border));
   padding: var(--space-1, 4px);

@@ -57,7 +57,9 @@
   width: 32px;
   height: 32px;
   border: none;
-  background: transparent;
+  background: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border-radius: 50%;
   color: #5f6368;
   cursor: pointer;
@@ -234,7 +236,9 @@
 .deleteButton {
   padding: 8px 16px;
   border: none;
-  background: transparent;
+  background: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border-radius: 4px;
   font-size: 14px;
   font-weight: 500;
@@ -275,7 +279,9 @@
   gap: 8px;
   padding: 8px 12px;
   border: none;
-  background: transparent;
+  background: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border-radius: 4px;
   font-size: 14px;
   color: #5f6368;
@@ -301,7 +307,9 @@
   width: 24px;
   height: 24px;
   border: none;
-  background: transparent;
+  background: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border-radius: 4px;
   color: #5f6368;
   cursor: pointer;

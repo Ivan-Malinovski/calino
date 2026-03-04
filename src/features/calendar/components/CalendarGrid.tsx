@@ -84,6 +84,13 @@ export function CalendarGrid(): JSX.Element {
 
   const handleWheel = useCallback(
     (e: React.WheelEvent) => {
+      if (e.ctrlKey) {
+        e.preventDefault()
+        const delta = e.deltaY > 0 ? -0.1 : 0.1
+        setScale((s) => Math.min(Math.max(s + delta, 0.7), 1.5))
+        return
+      }
+
       if (scrollCooldownRef.current) return
       if (Math.abs(e.deltaY) < 20) return
 
@@ -270,6 +277,8 @@ export function CalendarGrid(): JSX.Element {
     lastPinchDistance.current = null
   }
 
+  const rowHeight = Math.round(100 * scale)
+
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <div
@@ -279,7 +288,7 @@ export function CalendarGrid(): JSX.Element {
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
-        style={{ transform: `scale(${scale})`, transformOrigin: 'top center' }}
+        style={{ '--day-cell-height': `${rowHeight}px` } as React.CSSProperties}
       >
         <div className={styles.header}>
           <div className={styles.weekNumHeader}>W#</div>

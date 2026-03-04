@@ -1,40 +1,69 @@
 .container {
+  position: relative;
+}
+
+.dropdownButton {
   display: flex;
-  gap: 4px;
-  background: var(--color-bg-tertiary);
-  padding: 4px;
-  border-radius: 8px;
-}
-
-@media (max-width: 768px) {
-  .container {
-    display: none;
-  }
-}
-
-.button {
-  padding: 6px 12px;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
   border: none;
-  background: transparent;
-  border-radius: 6px;
+  background: var(--color-bg-tertiary);
+  border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
+  color: var(--color-text-primary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.dropdownButton:hover {
+  background: var(--color-bg-hover);
+}
+
+.arrow {
+  transition: transform 0.15s ease;
+}
+
+.arrowOpen {
+  transform: rotate(180deg);
+}
+
+.dropdownMenu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+  z-index: 100;
+  min-width: 120px;
+}
+
+.dropdownItem {
+  display: block;
+  width: 100%;
+  padding: 10px 16px;
+  border: none;
+  background: rgba(var(--color-bg-secondary-rgb, 255, 255, 255), 0.5);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  text-align: left;
+  font-size: 14px;
   color: var(--color-text-secondary);
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
-.button:hover {
+.dropdownItem:hover {
   background: var(--color-bg-hover);
   color: var(--color-text-primary);
 }
 
-.button:active {
-  transform: scale(0.97);
-}
-
-.button.active {
-  background: var(--color-bg-secondary);
-  color: var(--color-text-primary);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+.dropdownItem.active {
+  background: var(--color-accent-light);
+  color: var(--color-accent);
+  font-weight: 500;
 }

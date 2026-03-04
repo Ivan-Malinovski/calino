@@ -53,7 +53,9 @@
   padding: 0;
   border: none;
   border-radius: 50%;
-  background-color: transparent;
+  background-color: rgba(var(--color-bg-secondary-rgb, 255, 255, 255), 0.5);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   color: var(--color-text-secondary);
   cursor: pointer;
   transition: background-color 0.2s ease;

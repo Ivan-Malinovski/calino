@@ -28,14 +28,11 @@ describe('CalendarHeader Mobile', () => {
     expect(screen.getByLabelText(/toggle menu/i)).toBeInTheDocument()
   })
 
-  it('renders mobile view switcher buttons', () => {
+  it('renders mobile view switcher dropdown', () => {
     renderWithRouter(<CalendarHeader />)
     const buttons = screen.getAllByRole('button')
-    const mobileButtons = buttons.filter(
-      (btn) =>
-        btn.textContent === 'Day' || btn.textContent === 'Month' || btn.textContent === 'List'
-    )
-    expect(mobileButtons.length).toBeGreaterThanOrEqual(3)
+    const viewDropdown = buttons.find((btn) => btn.textContent?.includes('Month'))
+    expect(viewDropdown).toBeInTheDocument()
   })
 
   it('calls onToggleSidebar when hamburger is clicked', () => {

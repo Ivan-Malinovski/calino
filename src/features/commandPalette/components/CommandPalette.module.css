@@ -66,7 +66,9 @@
   font-size: 16px;
   border: none;
   outline: none;
-  background-color: transparent;
+  background-color: rgba(var(--color-bg-secondary-rgb, 255, 255, 255), 0.5);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   color: var(--color-text-primary);
 }
 
