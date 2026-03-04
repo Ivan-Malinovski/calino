@@ -6,8 +6,7 @@
 }
 
 .header {
-  display: grid;
-  grid-template-columns: 60px repeat(7, 1fr);
+  display: flex;
   border-bottom: 1px solid var(--color-border-subtle, var(--color-border));
   position: sticky;
   top: 0;
@@ -15,6 +14,12 @@
   z-index: 10;
   transition: box-shadow 0.2s ease;
   flex-shrink: 0;
+}
+
+.headerDays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  flex: 1;
 }
 
 .headerShadow {
@@ -116,12 +121,17 @@
 }
 
 .body {
-  display: grid;
-  grid-template-columns: 60px repeat(7, 1fr);
+  display: flex;
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
   background: var(--color-bg-primary);
+}
+
+.daysContainer {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  flex: 1;
 }
 
 .dayColumn {
@@ -262,9 +272,46 @@
 }
 
 @media (max-width: 768px) {
-  .body {
+  .header {
+    display: flex;
+  }
+
+  .headerDays {
+    display: flex;
     overflow-x: auto;
-    overflow-y: auto;
     -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .headerDays::-webkit-scrollbar {
+    display: none;
+  }
+
+  .dayHeader {
+    min-width: 50vw;
+    max-width: 50vw;
+    flex-shrink: 0;
+  }
+
+  .body {
+    display: flex;
+    overflow: hidden;
+  }
+
+  .daysContainer {
+    display: flex;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .daysContainer::-webkit-scrollbar {
+    display: none;
+  }
+
+  .dayColumn {
+    min-width: 50vw;
+    max-width: 50vw;
+    flex-shrink: 0;
   }
 }
