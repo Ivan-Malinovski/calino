@@ -7,7 +7,9 @@
   display: flex;
   justify-content: center;
   padding-top: 100px;
-  background-color: var(--color-overlay);
+  background-color: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   z-index: 1000;
 }
 

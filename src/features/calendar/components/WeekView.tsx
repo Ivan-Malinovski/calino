@@ -27,6 +27,7 @@ import { useSettingsStore } from '@/store/settingsStore'
 import { DEFAULT_CALENDAR_COLOR } from '@/config'
 import { EventCard } from './EventCard'
 import { ContextMenu } from '@/components/common/ContextMenu'
+import { DayView } from './DayView'
 import type { CalendarEvent, Calendar } from '@/types'
 import styles from './WeekView.module.css'
 
@@ -85,6 +86,9 @@ export function WeekView(): JSX.Element {
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; day: Date } | null>(null)
   const [dragStart, setDragStart] = useState<string | null>(null)
   const [dragEnd, setDragEnd] = useState<string | null>(null)
+  const [isScrolled, setIsScrolled] = useState(false)
+
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -144,11 +148,10 @@ export function WeekView(): JSX.Element {
   }, [events, calendars])
 
   const bodyRef = useRef<HTMLDivElement>(null)
-  const [isScrolled, setIsScrolled] = useState(false)
   const lastDateRef = useRef(date.toISOString())
 
   useLayoutEffect(() => {
-    if (!bodyRef.current) return
+    if (isMobile || !bodyRef.current) return
 
     const currentDateStr = date.toISOString()
     if (lastDateRef.current === currentDateStr && isScrolled) return
@@ -175,7 +178,7 @@ export function WeekView(): JSX.Element {
     })
 
     return () => cancelAnimationFrame(rafId)
-  }, [eventsMap, date, isScrolled])
+  }, [eventsMap, date, isScrolled, isMobile])
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>): void => {
     setIsScrolled(e.currentTarget.scrollTop > 0)
@@ -441,6 +444,10 @@ export function WeekView(): JSX.Element {
     const weekStart = startOfWeek(date, { weekStartsOn: firstDayOfWeek || 0 })
     return getISOWeek(weekStart)
   }, [date, firstDayOfWeek])
+
+  if (isMobile) {
+    return <DayView />
+  }
 
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>

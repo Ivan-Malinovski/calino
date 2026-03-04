@@ -14,18 +14,28 @@ import styles from './CalendarHeader.module.css'
 
 interface CalendarHeaderProps {
   onQuickAdd?: (result: NLPParseResult) => void
+  onToggleSidebar?: () => void
 }
 
-export function CalendarHeader({ onQuickAdd }: CalendarHeaderProps): JSX.Element {
+export function CalendarHeader({ onQuickAdd, onToggleSidebar }: CalendarHeaderProps): JSX.Element {
   const navigate = useNavigate()
   const currentDate = useCalendarStore((state) => state.currentDate)
   const currentView = useCalendarStore((state) => state.currentView)
   const setCurrentDate = useCalendarStore((state) => state.setCurrentDate)
+  const setCurrentView = useCalendarStore((state) => state.setCurrentView)
   const openModal = useCalendarStore((state) => state.openModal)
   const firstDayOfWeek = useSettingsStore((state) => state.firstDayOfWeek)
 
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
   const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768)
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
 
   useEffect(() => {
     return () => {
@@ -83,6 +93,46 @@ export function CalendarHeader({ onQuickAdd }: CalendarHeaderProps): JSX.Element
     setCurrentDate(format(new Date(), 'yyyy-MM-dd'))
   }
 
+  const touchStartX = useRef<number | null>(null)
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX
+  }, [])
+
+  const handleTouchEnd = useCallback(
+    (e: React.TouchEvent) => {
+      if (touchStartX.current === null) return
+
+      const touchEndX = e.changedTouches[0].clientX
+      const diff = touchStartX.current - touchEndX
+
+      if (Math.abs(diff) > 50) {
+        const direction = diff > 0 ? 'next' : 'prev'
+        let newDate: Date
+        switch (currentView) {
+          case 'month':
+            newDate = direction === 'prev' ? addMonths(date, -1) : addMonths(date, 1)
+            break
+          case 'week':
+            newDate = direction === 'prev' ? addWeeks(date, -1) : addWeeks(date, 1)
+            break
+          case 'day':
+            newDate = direction === 'prev' ? addDays(date, -1) : addDays(date, 1)
+            break
+          case 'agenda':
+            newDate = direction === 'prev' ? addMonths(date, -1) : addMonths(date, 1)
+            break
+          default:
+            newDate = date
+        }
+        setCurrentDate(format(newDate, 'yyyy-MM-dd'))
+      }
+
+      touchStartX.current = null
+    },
+    [currentView, date, setCurrentDate]
+  )
+
   const handleQuickAddHover = useCallback((open: boolean) => {
     if (closeTimeoutRef.current) {
       clearTimeout(closeTimeoutRef.current)
@@ -106,54 +156,85 @@ export function CalendarHeader({ onQuickAdd }: CalendarHeaderProps): JSX.Element
   )
 
   return (
-    <div className={styles.header}>
+    <div className={styles.header} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
       <div className={styles.left}>
+        <button className={styles.hamburger} onClick={onToggleSidebar} aria-label="Toggle menu">
+          <MenuIcon />
+        </button>
         <h1 className={styles.title}>{getTitle()}</h1>
-        <div className={styles.nav}>
-          <button className={styles.navButton} onClick={() => handleNavigate('prev')}>
-            <ChevronLeft />
+        {!isMobile && (
+          <div className={styles.nav}>
+            <button className={styles.navButton} onClick={() => handleNavigate('prev')}>
+              <ChevronLeft />
+            </button>
+            <button className={styles.todayButton} onClick={handleToday}>
+              Today
+            </button>
+            <button className={styles.navButton} onClick={() => handleNavigate('next')}>
+              <ChevronRight />
+            </button>
+          </div>
+        )}
+      </div>
+      {!isMobile && (
+        <div className={styles.right}>
+          <Search
+            onSelectEvent={(eventId) => {
+              openModal(undefined, undefined, eventId)
+            }}
+          />
+          <ViewSwitcher />
+          <div
+            className={styles.quickAddWrapper}
+            onMouseEnter={() => handleQuickAddHover(true)}
+            onMouseLeave={() => handleQuickAddHover(false)}
+          >
+            <button className={styles.createButton}>⚡</button>
+            {isQuickAddOpen && (
+              <motion.div
+                className={styles.quickAddDropdown}
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.15 }}
+              >
+                <QuickAdd onAdd={handleQuickAddEvent} onCancel={() => setIsQuickAddOpen(false)} />
+              </motion.div>
+            )}
+          </div>
+          <button className={styles.createButton} onClick={() => openModal()}>
+            +
           </button>
-          <button className={styles.todayButton} onClick={handleToday}>
-            Today
-          </button>
-          <button className={styles.navButton} onClick={() => handleNavigate('next')}>
-            <ChevronRight />
+          <ThemeToggle className={`${styles.createButton} ${styles.themeToggle}`} />
+          <button className={styles.createButton} onClick={() => navigate('/settings')}>
+            <SettingsIcon />
           </button>
         </div>
-      </div>
-      <div className={styles.right}>
-        <Search
-          onSelectEvent={(eventId) => {
-            openModal(undefined, undefined, eventId)
-          }}
-        />
-        <ViewSwitcher />
-        <div
-          className={styles.quickAddWrapper}
-          onMouseEnter={() => handleQuickAddHover(true)}
-          onMouseLeave={() => handleQuickAddHover(false)}
-        >
-          <button className={styles.createButton}>⚡</button>
-          {isQuickAddOpen && (
-            <motion.div
-              className={styles.quickAddDropdown}
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.15 }}
+      )}
+      {isMobile && (
+        <div className={styles.right}>
+          <div className={styles.mobileViewSwitcher}>
+            <button
+              className={`${styles.mobileViewButton} ${currentView === 'day' ? styles.mobileViewActive : ''}`}
+              onClick={() => setCurrentView('day')}
             >
-              <QuickAdd onAdd={handleQuickAddEvent} onCancel={() => setIsQuickAddOpen(false)} />
-            </motion.div>
-          )}
+              Day
+            </button>
+            <button
+              className={`${styles.mobileViewButton} ${currentView === 'month' ? styles.mobileViewActive : ''}`}
+              onClick={() => setCurrentView('month')}
+            >
+              Month
+            </button>
+            <button
+              className={`${styles.mobileViewButton} ${currentView === 'agenda' ? styles.mobileViewActive : ''}`}
+              onClick={() => setCurrentView('agenda')}
+            >
+              List
+            </button>
+          </div>
         </div>
-        <button className={styles.createButton} onClick={() => openModal()}>
-          +
-        </button>
-        <ThemeToggle className={styles.createButton} />
-        <button className={styles.createButton} onClick={() => navigate('/settings')}>
-          <SettingsIcon />
-        </button>
-      </div>
+      )}
     </div>
   )
 }
@@ -177,6 +258,20 @@ function ChevronRight(): JSX.Element {
     <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
       <path
         d="M7.5 5L12.5 10L7.5 15"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
+function MenuIcon(): JSX.Element {
+  return (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path
+        d="M3 12H21M3 6H21M3 18H21"
         stroke="currentColor"
         strokeWidth="2"
         strokeLinecap="round"

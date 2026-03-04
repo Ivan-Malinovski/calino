@@ -125,7 +125,10 @@ function CalendarApp(): JSX.Element {
   const calendars = useCalendarStore((state) => state.calendars)
   const setOverlayOpen = useCalendarStore((state) => state.setOverlayOpen)
   const setShowAddCalendar = useCalendarStore((state) => state.setShowAddCalendar)
+  const openModal = useCalendarStore((state) => state.openModal)
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false)
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  const [isFabMenuOpen, setIsFabMenuOpen] = useState(false)
 
   useViewManager()
 
@@ -197,13 +200,43 @@ function CalendarApp(): JSX.Element {
     [addEvent, calendars]
   )
 
+  const handleToggleSidebar = useCallback(() => {
+    setIsSidebarOpen((prev) => !prev)
+  }, [])
+
+  const handleCloseSidebar = useCallback(() => {
+    setIsSidebarOpen(false)
+  }, [])
+
+  const handleOpenCommandPalette = useCallback(() => {
+    setIsCommandPaletteOpen(true)
+    setOverlayOpen(true)
+  }, [setOverlayOpen])
+
+  const handleFabAction = useCallback(
+    (action: 'event' | 'task' | 'command') => {
+      setIsFabMenuOpen(false)
+      if (action === 'command') {
+        handleOpenCommandPalette()
+      } else {
+        openModal(undefined, undefined, undefined, action)
+      }
+    },
+    [openModal, handleOpenCommandPalette]
+  )
+
   return (
     <div className="app">
-      <CalendarHeader onQuickAdd={handleQuickAdd} />
+      <CalendarHeader onQuickAdd={handleQuickAdd} onToggleSidebar={handleToggleSidebar} />
       <div className="appContent">
-        <Sidebar />
+        <Sidebar isOpen={isSidebarOpen} onClose={handleCloseSidebar} />
         <main className="main">{renderView()}</main>
       </div>
+      <MobileFAB
+        onClick={() => setIsFabMenuOpen(!isFabMenuOpen)}
+        isOpen={isFabMenuOpen}
+        onAction={handleFabAction}
+      />
       <EventModal />
       <CommandPalette
         isOpen={isCommandPaletteOpen}
@@ -214,6 +247,88 @@ function CalendarApp(): JSX.Element {
       />
       <OnboardingModal onAddCalendar={() => setShowAddCalendar(true)} />
     </div>
+  )
+}
+
+interface MobileFABProps {
+  onClick: () => void
+  isOpen: boolean
+  onAction: (action: 'event' | 'task' | 'command') => void
+}
+
+function MobileFAB({ onClick, isOpen, onAction }: MobileFABProps): JSX.Element {
+  return (
+    <>
+      <button className="mobile-fab" onClick={onClick} aria-label="Quick actions">
+        <svg
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M12 5V19M5 12H19"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </button>
+      {isOpen && (
+        <div className="mobile-fab-menu">
+          <button className="mobile-fab-option" onClick={() => onAction('command')}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <path
+                d="M18 3a3 3 0 00-3 3v12a3 3 0 003 3 3 3 0 003-3V6a3 3 0 00-3-3 3 3 0 00-3 3v12a3 3 0 003 3 3 3 0 003-3V6a3 3 0 00-3-3z"
+                stroke="currentColor"
+                strokeWidth="2"
+              />
+            </svg>
+            Command Palette
+          </button>
+          <button className="mobile-fab-option" onClick={() => onAction('event')}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <rect
+                x="3"
+                y="4"
+                width="18"
+                height="18"
+                rx="2"
+                stroke="currentColor"
+                strokeWidth="2"
+              />
+              <path
+                d="M16 2v4M8 2v4M3 10h18"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
+            </svg>
+            Create Event
+          </button>
+          <button className="mobile-fab-option" onClick={() => onAction('task')}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <path
+                d="M9 11l3 3L22 4"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
+            </svg>
+            Create Task
+          </button>
+        </div>
+      )}
+    </>
   )
 }
 

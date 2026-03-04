@@ -13,6 +13,19 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  /* Layout */
+  --sidebar-width: 260px;
+  --sidebar-collapsed-width: 40px;
+  --header-height: 64px;
+  --mobile-breakpoint: 768px;
+}
+
+@media (max-width: 768px) {
+  :root {
+    --sidebar-width: 260px;
+    --header-height: 56px;
+  }
 }
 
 body {

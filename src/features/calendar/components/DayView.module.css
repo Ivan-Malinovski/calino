@@ -65,6 +65,12 @@
   border-bottom: 1px solid var(--color-border-subtle, var(--color-border));
 }
 
+@media (max-width: 768px) {
+  .hourRow {
+    min-height: 50px;
+  }
+}
+
 .timeLabel {
   padding: var(--space-1, 4px) var(--space-2, 8px);
   font-size: var(--font-size-event-time, 11px);

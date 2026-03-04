@@ -13,6 +13,7 @@ import {
   isToday,
   addMonths,
   subMonths,
+  parseISO,
 } from 'date-fns'
 import { config } from '@/config'
 import { useCalendarStore } from '@/store/calendarStore'
@@ -40,7 +41,12 @@ function getNextColor(currentColor: string): string {
   return CALENDAR_COLORS[(idx + 1) % CALENDAR_COLORS.length]
 }
 
-export function Sidebar(): JSX.Element {
+interface SidebarProps {
+  isOpen?: boolean
+  onClose?: () => void
+}
+
+export function Sidebar({ isOpen = false, onClose }: SidebarProps): JSX.Element {
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editName, setEditName] = useState('')
@@ -170,6 +176,20 @@ export function Sidebar(): JSX.Element {
     setCurrentDate(format(new Date(), 'yyyy-MM-dd'))
   }
 
+  useEffect(() => {
+    if (isOpen && onClose) {
+      const handleResize = (): void => {
+        if (window.innerWidth > 768) {
+          onClose()
+        }
+      }
+      window.addEventListener('resize', handleResize)
+      return () => window.removeEventListener('resize', handleResize)
+    }
+  }, [isOpen, onClose])
+
+  const sidebarClass = `${styles.sidebar}${isOpen ? ` ${styles.open}` : ''}`
+
   if (isCollapsed) {
     return (
       <div className={styles.collapsed}>
@@ -185,160 +205,169 @@ export function Sidebar(): JSX.Element {
   }
 
   return (
-    <div className={styles.sidebar}>
-      <div className={styles.header}>
-        <span className={styles.title}>Calendars</span>
-        <button
-          className={styles.collapseButton}
-          onClick={() => setIsCollapsed(true)}
-          title="Collapse sidebar"
-        >
-          <ChevronLeft />
-        </button>
-      </div>
-
-      <div className={styles.miniCalendar}>
-        <div className={styles.miniHeader}>
-          <button onClick={handlePrevMonth} className={styles.miniNavBtn}>
+    <>
+      {isOpen && <div className={styles.overlay} onClick={onClose} />}
+      <div className={sidebarClass}>
+        <div className={styles.header}>
+          <span className={styles.title}>Calendars</span>
+          <button
+            className={styles.collapseButton}
+            onClick={() => {
+              if (onClose) {
+                onClose()
+              } else {
+                setIsCollapsed(true)
+              }
+            }}
+            title="Collapse sidebar"
+          >
             <ChevronLeft />
           </button>
-          <div style={{ position: 'relative' }} ref={dropdownRef}>
-            <span className={styles.miniMonth}>
-              <button onClick={handleMonthClick} className={styles.miniMonthButton}>
-                {format(date, 'MMMM')}
-              </button>
-              {showMonthDropdown && (
-                <div className={styles.yearDropdown}>
-                  {months.map((month, index) => (
-                    <button
-                      key={month}
-                      onClick={() => handleMonthSelect(index)}
-                      className={`${styles.yearOption} ${
-                        index === date.getMonth() ? styles.yearOptionSelected : ''
-                      }`}
-                    >
-                      {month}
-                    </button>
-                  ))}
-                </div>
-              )}
-              <button onClick={handleYearClick} className={styles.miniMonthButton}>
-                {format(date, 'yyyy')}
-              </button>
-              {showYearDropdown && (
-                <div className={`${styles.yearDropdown} ${styles.yearDropdownRight}`}>
-                  {years.map((year) => (
-                    <button
-                      key={year}
-                      onClick={() => handleYearSelect(year)}
-                      className={`${styles.yearOption} ${
-                        year === date.getFullYear() ? styles.yearOptionSelected : ''
-                      }`}
-                    >
-                      {year}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </span>
+        </div>
+
+        <div className={styles.miniCalendar}>
+          <div className={styles.miniHeader}>
+            <button onClick={handlePrevMonth} className={styles.miniNavBtn}>
+              <ChevronLeft />
+            </button>
+            <div style={{ position: 'relative' }} ref={dropdownRef}>
+              <span className={styles.miniMonth}>
+                <button onClick={handleMonthClick} className={styles.miniMonthButton}>
+                  {format(date, 'MMMM')}
+                </button>
+                {showMonthDropdown && (
+                  <div className={styles.yearDropdown}>
+                    {months.map((month, index) => (
+                      <button
+                        key={month}
+                        onClick={() => handleMonthSelect(index)}
+                        className={`${styles.yearOption} ${
+                          index === date.getMonth() ? styles.yearOptionSelected : ''
+                        }`}
+                      >
+                        {month}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <button onClick={handleYearClick} className={styles.miniMonthButton}>
+                  {format(date, 'yyyy')}
+                </button>
+                {showYearDropdown && (
+                  <div className={`${styles.yearDropdown} ${styles.yearDropdownRight}`}>
+                    {years.map((year) => (
+                      <button
+                        key={year}
+                        onClick={() => handleYearSelect(year)}
+                        className={`${styles.yearOption} ${
+                          year === date.getFullYear() ? styles.yearOptionSelected : ''
+                        }`}
+                      >
+                        {year}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </span>
+            </div>
+            <button onClick={handleNextMonth} className={styles.miniNavBtn}>
+              <ChevronRight />
+            </button>
           </div>
-          <button onClick={handleNextMonth} className={styles.miniNavBtn}>
-            <ChevronRight />
+          <div className={styles.miniWeekdays}>
+            {weekdays.map((day, idx) => (
+              <span key={idx} className={styles.miniWeekday}>
+                {day}
+              </span>
+            ))}
+          </div>
+          <div className={styles.miniDays}>
+            {miniCalendarDays.map((day) => {
+              const isCurrentMonth = isSameMonth(day, date)
+              const isSelected = isSameDay(day, date)
+              const isTodayDate = isToday(day)
+              return (
+                <button
+                  key={day.toISOString()}
+                  className={`${styles.miniDay} ${!isCurrentMonth ? styles.otherMonth : ''} ${
+                    isSelected ? styles.selected : ''
+                  } ${isTodayDate ? styles.today : ''}`}
+                  onClick={() => handleDayClick(day)}
+                >
+                  {format(day, 'd')}
+                </button>
+              )
+            })}
+          </div>
+          <button className={styles.todayBtn} onClick={handleToday}>
+            Today
           </button>
         </div>
-        <div className={styles.miniWeekdays}>
-          {weekdays.map((day, idx) => (
-            <span key={idx} className={styles.miniWeekday}>
-              {day}
-            </span>
+
+        <div className={styles.calendars}>
+          <div className={styles.sectionTitleRow}>
+            <span className={styles.sectionTitle}>My Calendars</span>
+            <button
+              className={styles.addCalendarButton}
+              onClick={() => setShowAddCalendar(true)}
+              title="Add calendar"
+            >
+              <PlusIcon />
+            </button>
+          </div>
+          {calendars.map((calendar) => (
+            <label key={calendar.id} className={styles.calendarItem}>
+              <input
+                type="checkbox"
+                checked={calendar.isVisible}
+                onChange={() => toggleCalendarVisibility(calendar.id)}
+                className={styles.checkbox}
+              />
+              <button
+                className={styles.colorDot}
+                style={{ backgroundColor: calendar.color }}
+                onClick={() => handleColorClick(calendar.id, calendar.color)}
+                title="Click to change color"
+              />
+              {editingId === calendar.id ? (
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  onBlur={handleFinishRename}
+                  onKeyDown={handleKeyDown}
+                  className={styles.renameInput}
+                />
+              ) : (
+                <span
+                  className={styles.calendarName}
+                  onDoubleClick={() => handleStartRename(calendar.id, calendar.name)}
+                >
+                  {calendar.name}
+                </span>
+              )}
+            </label>
           ))}
         </div>
-        <div className={styles.miniDays}>
-          {miniCalendarDays.map((day) => {
-            const isCurrentMonth = isSameMonth(day, date)
-            const isSelected = isSameDay(day, date)
-            const isTodayDate = isToday(day)
-            return (
-              <button
-                key={day.toISOString()}
-                className={`${styles.miniDay} ${!isCurrentMonth ? styles.otherMonth : ''} ${
-                  isSelected ? styles.selected : ''
-                } ${isTodayDate ? styles.today : ''}`}
-                onClick={() => handleDayClick(day)}
-              >
-                {format(day, 'd')}
-              </button>
-            )
-          })}
-        </div>
-        <button className={styles.todayBtn} onClick={handleToday}>
-          Today
-        </button>
-      </div>
 
-      <div className={styles.calendars}>
-        <div className={styles.sectionTitleRow}>
-          <span className={styles.sectionTitle}>My Calendars</span>
-          <button
-            className={styles.addCalendarButton}
-            onClick={() => setShowAddCalendar(true)}
-            title="Add calendar"
+        <div className={styles.footer}>
+          <Link to="/privacy" className={styles.footerLink}>
+            Privacy
+          </Link>
+          <a
+            href={`https://github.com/${config.githubRepo}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={styles.footerLink}
           >
-            <PlusIcon />
-          </button>
+            GitHub
+          </a>
         </div>
-        {calendars.map((calendar) => (
-          <label key={calendar.id} className={styles.calendarItem}>
-            <input
-              type="checkbox"
-              checked={calendar.isVisible}
-              onChange={() => toggleCalendarVisibility(calendar.id)}
-              className={styles.checkbox}
-            />
-            <button
-              className={styles.colorDot}
-              style={{ backgroundColor: calendar.color }}
-              onClick={() => handleColorClick(calendar.id, calendar.color)}
-              title="Click to change color"
-            />
-            {editingId === calendar.id ? (
-              <input
-                ref={inputRef}
-                type="text"
-                value={editName}
-                onChange={(e) => setEditName(e.target.value)}
-                onBlur={handleFinishRename}
-                onKeyDown={handleKeyDown}
-                className={styles.renameInput}
-              />
-            ) : (
-              <span
-                className={styles.calendarName}
-                onDoubleClick={() => handleStartRename(calendar.id, calendar.name)}
-              >
-                {calendar.name}
-              </span>
-            )}
-          </label>
-        ))}
-      </div>
 
-      <div className={styles.footer}>
-        <Link to="/privacy" className={styles.footerLink}>
-          Privacy
-        </Link>
-        <a
-          href={`https://github.com/${config.githubRepo}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className={styles.footerLink}
-        >
-          GitHub
-        </a>
+        <AddCalendarModal isOpen={showAddCalendar} onClose={() => setShowAddCalendar(false)} />
       </div>
-
-      <AddCalendarModal isOpen={showAddCalendar} onClose={() => setShowAddCalendar(false)} />
-    </div>
+    </>
   )
 }
 
@@ -368,10 +397,6 @@ function ChevronRight(): JSX.Element {
       />
     </svg>
   )
-}
-
-function parseISO(dateString: string): Date {
-  return new Date(dateString)
 }
 
 function PlusIcon(): JSX.Element {
