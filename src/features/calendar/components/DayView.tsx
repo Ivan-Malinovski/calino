@@ -54,7 +54,7 @@ export function DayView(): JSX.Element {
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null)
   const bodyRef = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
-  const [scale, setScale] = useState(1)
+  const [scale, setScale] = useState(0.7)
   const hourHeight = BASE_hourHeight * scale
 
   const sensors = useSensors(

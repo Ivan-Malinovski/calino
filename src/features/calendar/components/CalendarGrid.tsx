@@ -52,7 +52,7 @@ export function CalendarGrid(): JSX.Element {
 
   const [activeEvent, setActiveEvent] = useState<CalendarEvent | null>(null)
   const [scrollDirection, setScrollDirection] = useState<'up' | 'down' | null>(null)
-  const [scale, setScale] = useState(1)
+  const [scale, setScale] = useState(0.7)
   const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const scrollCooldownRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const currentDateRef = useRef(currentDate)

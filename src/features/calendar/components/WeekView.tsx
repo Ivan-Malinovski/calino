@@ -87,7 +87,7 @@ export function WeekView(): JSX.Element {
   const [dragStart, setDragStart] = useState<string | null>(null)
   const [dragEnd, setDragEnd] = useState<string | null>(null)
   const [isScrolled, setIsScrolled] = useState(false)
-  const [scale, setScale] = useState(1)
+  const [scale, setScale] = useState(0.7)
 
   const containerRef = useRef<HTMLDivElement>(null)
   const hourHeight = BASE_HOUR_HEIGHT * scale
