@@ -43,6 +43,8 @@
   background: var(--color-bg-tertiary);
   border-right: 1px solid var(--color-border-subtle, var(--color-border));
   min-height: 48px;
+  min-width: 60px;
+  max-width: 60px;
 }
 
 .timeColumn {
@@ -50,6 +52,8 @@
   flex-direction: column;
   border-right: 1px solid var(--color-border-subtle, var(--color-border));
   background: var(--color-bg-tertiary);
+  min-width: 60px;
+  max-width: 60px;
 }
 
 .timeCell {

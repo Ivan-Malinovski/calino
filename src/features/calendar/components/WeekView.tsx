@@ -101,6 +101,66 @@ export function WeekView(): JSX.Element {
 
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768
 
+  const handleMobileTouchStart = useCallback(
+    (e: React.TouchEvent) => {
+      handlePinchTouchStart(e)
+      if (!isMobile) {
+        swipeTouchStart(e)
+      }
+    },
+    [isMobile, swipeTouchStart]
+  )
+
+  const handleMobileTouchEnd = useCallback(
+    (e: React.TouchEvent) => {
+      handlePinchTouchEnd()
+
+      if (!isMobile) {
+        swipeTouchEnd(e)
+        return
+      }
+
+      const scrollContainer = bodyScrollRef.current
+      if (!scrollContainer) {
+        swipeTouchEnd(e)
+        return
+      }
+
+      const touchStartX = (e.target as HTMLElement).dataset.touchStartX
+      if (!touchStartX) {
+        swipeTouchEnd(e)
+        return
+      }
+
+      const touchEndX = e.changedTouches[0].clientX
+      const diff = parseFloat(touchStartX) - touchEndX
+
+      if (Math.abs(diff) < 50) {
+        return
+      }
+
+      const scrollLeft = scrollContainer.scrollLeft
+      const maxScroll = scrollContainer.scrollWidth - scrollContainer.clientWidth
+      const isAtStart = scrollLeft <= 10
+      const isAtEnd = scrollLeft >= maxScroll - 10
+
+      if ((diff > 0 && isAtEnd) || (diff < 0 && isAtStart)) {
+        swipeTouchEnd(e)
+      }
+    },
+    [isMobile, swipeTouchEnd]
+  )
+
+  const handleTouchStartCapture = useCallback(
+    (e: React.TouchEvent) => {
+      if (isMobile && e.touches.length === 1) {
+        const target = e.target as HTMLElement
+        target.dataset.touchStartX = String(e.touches[0].clientX)
+      }
+    },
+    [isMobile]
+  )
+
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -545,15 +605,10 @@ export function WeekView(): JSX.Element {
         className={styles.container}
         ref={containerRef}
         style={{ '--hour-height': `${60 * scale}px`, touchAction: 'none' } as React.CSSProperties}
-        onTouchStart={(e) => {
-          handlePinchTouchStart(e)
-          swipeTouchStart(e)
-        }}
+        onTouchStartCapture={handleTouchStartCapture}
+        onTouchStart={handleMobileTouchStart}
         onTouchMove={handlePinchTouchMove}
-        onTouchEnd={(e) => {
-          handlePinchTouchEnd()
-          swipeTouchEnd(e)
-        }}
+        onTouchEnd={handleMobileTouchEnd}
       >
         <div className={`${styles.header} ${isScrolled ? styles.headerShadow : ''}`}>
           <div className={styles.weekNumberHeader}>W{weekNumber}</div>
