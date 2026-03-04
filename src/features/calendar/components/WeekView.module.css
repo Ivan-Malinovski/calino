@@ -280,6 +280,11 @@
     display: flex;
   }
 
+  .body {
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
   .headerDays {
     display: flex;
     overflow-x: auto;
@@ -305,6 +310,7 @@
     background: var(--color-bg-tertiary);
     min-width: 45px;
     max-width: 45px;
+    align-self: flex-start;
   }
 
   .timeCell {
