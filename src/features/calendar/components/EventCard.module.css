@@ -193,3 +193,20 @@
   color: var(--color-text-secondary);
   margin-top: 2px;
 }
+
+.mobileMonth {
+  padding-left: 8px;
+  border-left: none;
+}
+
+.mobileMonth .title {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: none;
+}
+
+.mobileMonth .time,
+.mobileMonth .location,
+.mobileMonth .travelTime {
+  display: none;
+}

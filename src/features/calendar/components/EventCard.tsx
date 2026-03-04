@@ -17,6 +17,7 @@ interface EventCardProps {
   isDragging?: boolean
   enableResize?: boolean
   hideTopRadius?: boolean
+  isMobileMonth?: boolean
 }
 
 export function EventCard({
@@ -26,6 +27,7 @@ export function EventCard({
   isDragging = false,
   enableResize = true,
   hideTopRadius = false,
+  isMobileMonth = false,
 }: EventCardProps): JSX.Element {
   const calendars = useCalendarStore((state) => state.calendars)
   const openModal = useCalendarStore((state) => state.openModal)
@@ -164,7 +166,7 @@ export function EventCard({
       <div
         ref={setNodeRef}
         style={style}
-        className={`${styles.card} ${compact ? styles.compact : ''} ${isCurrentDragging || isDragging ? styles.dragging : ''} ${isResizing ? styles.resizing : ''} ${hideTopRadius ? styles.noTopRadius : ''} ${isTask ? styles.task : ''} ${event.completed ? styles.completed : ''}`}
+        className={`${styles.card} ${compact ? styles.compact : ''} ${isCurrentDragging || isDragging ? styles.dragging : ''} ${isResizing ? styles.resizing : ''} ${hideTopRadius ? styles.noTopRadius : ''} ${isTask ? styles.task : ''} ${event.completed ? styles.completed : ''} ${isMobileMonth ? styles.mobileMonth : ''}`}
         onContextMenu={handleContextMenu}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}

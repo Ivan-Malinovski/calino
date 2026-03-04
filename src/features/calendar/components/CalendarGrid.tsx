@@ -59,6 +59,7 @@ export function CalendarGrid(): JSX.Element {
   const [activeEvent, setActiveEvent] = useState<CalendarEvent | null>(null)
   const [scrollDirection, setScrollDirection] = useState<'up' | 'down' | null>(null)
   const [scale, setScale] = useState(0.7)
+  const [isMobile, setIsMobile] = useState(false)
   const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const scrollCooldownRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const currentDateRef = useRef(currentDate)
@@ -135,6 +136,15 @@ export function CalendarGrid(): JSX.Element {
         container.removeEventListener('wheel', handleWheelZoom)
       }
     }
+  }, [])
+
+  useEffect(() => {
+    const checkMobile = (): void => {
+      setIsMobile(window.innerWidth < 768)
+    }
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
   }, [])
 
   useEffect(() => {
@@ -377,6 +387,7 @@ export function CalendarGrid(): JSX.Element {
                         isWeekend={isWeekend}
                         isPastWeek={isPastWeek}
                         compactRecurringEvents={compactRecurringEvents}
+                        isMobile={isMobile}
                         onDayClick={handleDayClick}
                         onDayNumberClick={handleDayNumberClick}
                         openModal={openModal}
@@ -404,6 +415,7 @@ interface DroppableDayProps {
   isWeekend: boolean
   isPastWeek: boolean
   compactRecurringEvents: boolean
+  isMobile: boolean
   onDayClick: (day: Date) => void
   onDayNumberClick: (day: Date) => void
   openModal: (date?: string, endDate?: string, eventId?: string, mode?: 'event' | 'task') => void
@@ -419,6 +431,7 @@ function DroppableDay({
   isWeekend,
   isPastWeek,
   compactRecurringEvents,
+  isMobile,
   onDayClick,
   onDayNumberClick,
   openModal,
@@ -474,7 +487,14 @@ function DroppableDay({
             const shouldCompact =
               isPastWeek ||
               (compactRecurringEvents && (!!event.rruleString || event.isAllDay || isMultiDay))
-            return <EventCard key={event.id} event={event} compact={shouldCompact} />
+            return (
+              <EventCard
+                key={event.id}
+                event={event}
+                compact={shouldCompact}
+                isMobileMonth={isMobile}
+              />
+            )
           })}
         </AnimatePresence>
         {dayEvents.length > 3 && (
@@ -487,7 +507,7 @@ function DroppableDay({
         <div className={styles.tasks}>
           <AnimatePresence>
             {dayTasks.slice(0, 3).map((task) => (
-              <EventCard key={task.id} event={task} compact />
+              <EventCard key={task.id} event={task} compact isMobileMonth={isMobile} />
             ))}
           </AnimatePresence>
           {dayTasks.length > 3 && (
