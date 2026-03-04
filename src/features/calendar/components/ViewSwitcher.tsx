@@ -12,7 +12,11 @@ const VIEWS: { value: ViewType; label: string }[] = [
   { value: 'agenda', label: 'Agenda' },
 ]
 
-export function ViewSwitcher(): JSX.Element {
+interface ViewSwitcherProps {
+  className?: string
+}
+
+export function ViewSwitcher({ className }: ViewSwitcherProps): JSX.Element {
   const currentView = useCalendarStore((state) => state.currentView)
   const setCurrentView = useCalendarStore((state) => state.setCurrentView)
   const [isMobile, setIsMobile] = useState(
@@ -42,7 +46,7 @@ export function ViewSwitcher(): JSX.Element {
 
   if (isMobile) {
     return (
-      <div className={styles.dropdown} ref={dropdownRef}>
+      <div className={clsx(styles.dropdown, className)} ref={dropdownRef}>
         <button
           className={styles.dropdownButton}
           onClick={() => setIsDropdownOpen(!isDropdownOpen)}
@@ -85,7 +89,7 @@ export function ViewSwitcher(): JSX.Element {
   }
 
   return (
-    <div className={styles.container}>
+    <div className={clsx(styles.container, className)}>
       {VIEWS.map((view) => (
         <button
           key={view.value}

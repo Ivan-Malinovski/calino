@@ -185,7 +185,7 @@ export function CalendarHeader({ onQuickAdd, onToggleSidebar }: CalendarHeaderPr
             }}
           />
         )}
-        <ViewSwitcher />
+        <ViewSwitcher className={isMobile ? styles.mobileViewSwitcher : undefined} />
         {!isMobile && (
           <div
             className={styles.quickAddWrapper}
