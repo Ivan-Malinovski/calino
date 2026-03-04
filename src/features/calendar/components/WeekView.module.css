@@ -300,6 +300,7 @@
   .timeColumn {
     position: sticky;
     left: 0;
+    top: 0;
     z-index: 5;
     background: var(--color-bg-tertiary);
     min-width: 45px;
