@@ -36,7 +36,6 @@ export function useCommandPalette({ isOpen }: UseCommandPaletteProps) {
 
   const themeMode = useSettingsStore((state) => state.themeMode)
   const updateSettings = useSettingsStore((state) => state.updateSettings)
-  const accounts = useCalendarStore((state) => state.calendars)
 
   const { syncAll } = useCalDAV()
 
