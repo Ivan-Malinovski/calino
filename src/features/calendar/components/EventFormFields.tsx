@@ -1,5 +1,5 @@
 import type { JSX } from 'react'
-import type { RecurrenceRule } from '@/types'
+import type { RecurrenceRule, Reminder } from '@/types'
 import styles from './EventModal.module.css'
 
 interface EventFormFieldsProps {
@@ -17,6 +17,8 @@ interface EventFormFieldsProps {
   onRecurrenceChange: (recurrence: RecurrenceRule['frequency'] | 'none') => void
   travelDuration: number | undefined
   onTravelDurationChange: (duration: number | undefined) => void
+  reminders: Reminder[]
+  onRemindersChange: (reminders: Reminder[]) => void
 }
 
 const TRAVEL_DURATION_OPTIONS: { value: number | undefined; label: string }[] = [
@@ -40,6 +42,17 @@ const RECURRENCE_OPTIONS: { value: RecurrenceRule['frequency'] | 'none'; label: 
   { value: 'yearly', label: 'Yearly' },
 ]
 
+const REMINDER_OPTIONS: { value: number; label: string }[] = [
+  { value: 0, label: 'At time of event' },
+  { value: 5, label: '5 minutes before' },
+  { value: 10, label: '10 minutes before' },
+  { value: 15, label: '15 minutes before' },
+  { value: 30, label: '30 minutes before' },
+  { value: 60, label: '1 hour before' },
+  { value: 120, label: '2 hours before' },
+  { value: 1440, label: '1 day before' },
+]
+
 export function EventFormFields({
   isAllDay,
   onIsAllDayChange,
@@ -55,6 +68,8 @@ export function EventFormFields({
   onRecurrenceChange,
   travelDuration,
   onTravelDurationChange,
+  reminders,
+  onRemindersChange,
 }: EventFormFieldsProps): JSX.Element {
   return (
     <>
@@ -160,6 +175,34 @@ export function EventFormFields({
           >
             {TRAVEL_DURATION_OPTIONS.map((option) => (
               <option key={option.label} value={option.value ?? ''}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      <div className={styles.row}>
+        <div className={styles.field}>
+          <label className={styles.label} htmlFor="reminder-select">
+            Reminder
+          </label>
+          <select
+            id="reminder-select"
+            value={reminders[0]?.minutesBefore ?? ''}
+            onChange={(e) => {
+              const value = e.target.value ? Number(e.target.value) : undefined
+              if (value !== undefined) {
+                onRemindersChange([{ id: 'default', minutesBefore: value, method: 'popup' }])
+              } else {
+                onRemindersChange([])
+              }
+            }}
+            className={styles.select}
+          >
+            <option value="">None</option>
+            {REMINDER_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
                 {option.label}
               </option>
             ))}

@@ -35,6 +35,7 @@ interface InitialFormState {
   calendarId: string
   recurrence: RecurrenceRule['frequency'] | 'none'
   travelDuration: number | undefined
+  reminders: Reminder[]
 }
 
 function getInitialFormState(
@@ -82,6 +83,7 @@ function getInitialFormState(
         calendarId: existingEvent.calendarId,
         recurrence: existingEvent.recurrence?.frequency || 'none',
         travelDuration: existingEvent.travelDuration,
+        reminders: existingEvent.reminders || [],
         isRecurringInstance,
         originalEventId,
       }
@@ -116,6 +118,7 @@ function getInitialFormState(
             calendarId: defaultCalendar?.id || '',
             recurrence: 'none',
             travelDuration: undefined,
+            reminders: [],
             isRecurringInstance: false,
             originalEventId: null,
           }
@@ -134,6 +137,7 @@ function getInitialFormState(
         calendarId: defaultCalendar?.id || '',
         recurrence: 'none',
         travelDuration: undefined,
+        reminders: [],
         isRecurringInstance: false,
         originalEventId: null,
       }
@@ -153,6 +157,7 @@ function getInitialFormState(
     calendarId: defaultCalendar?.id || '',
     recurrence: 'none',
     travelDuration: undefined,
+    reminders: [],
     isRecurringInstance: false,
     originalEventId: null,
   }
@@ -204,6 +209,7 @@ export function EventModal(): JSX.Element | null {
   const [travelDuration, setTravelDuration] = useState<number | undefined>(
     initialState.travelDuration
   )
+  const [reminders, setReminders] = useState<Reminder[]>(initialState.reminders)
   const [showRecurrenceDialog, setShowRecurrenceDialog] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [showDescription, setShowDescription] = useState(!!initialState.description)
@@ -234,6 +240,7 @@ export function EventModal(): JSX.Element | null {
       setCalendarId(initialState.calendarId)
       setRecurrence(initialState.recurrence)
       setTravelDuration(initialState.travelDuration)
+      setReminders(initialState.reminders)
       setShowDescription(!!initialState.description)
 
       const existingEvent = selectedEventId
@@ -369,6 +376,7 @@ export function EventModal(): JSX.Element | null {
           calendarId,
           recurrence: undefined,
           travelDuration,
+          reminders,
         }
         addEvent(newEvent)
         try {
@@ -396,6 +404,7 @@ export function EventModal(): JSX.Element | null {
           dueDate: isTaskMode ? dueDate : undefined,
           completed: isTaskMode ? completed : undefined,
           priority: isTaskMode ? priority : undefined,
+          reminders: isTaskMode ? undefined : reminders,
         })
         const existingEvent = events.find((e) => e.id === eventId)
         if (existingEvent) {
@@ -415,6 +424,7 @@ export function EventModal(): JSX.Element | null {
               dueDate: isTaskMode ? dueDate : undefined,
               completed: isTaskMode ? completed : undefined,
               priority: isTaskMode ? priority : undefined,
+              reminders: isTaskMode ? undefined : reminders,
             })
           } catch {
             // error already handled by useCalDAV
@@ -442,6 +452,7 @@ export function EventModal(): JSX.Element | null {
         dueDate: isTaskMode ? dueDate : undefined,
         completed: isTaskMode ? completed : undefined,
         priority: isTaskMode ? priority : undefined,
+        reminders: isTaskMode ? undefined : reminders,
       }
       addEvent(newEvent)
       try {
@@ -580,6 +591,8 @@ export function EventModal(): JSX.Element | null {
               onRecurrenceChange={setRecurrence}
               travelDuration={travelDuration}
               onTravelDurationChange={setTravelDuration}
+              reminders={reminders}
+              onRemindersChange={setReminders}
             />
           )}
 

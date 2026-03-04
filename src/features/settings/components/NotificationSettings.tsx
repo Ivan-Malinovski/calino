@@ -1,9 +1,24 @@
 import type { JSX } from 'react'
+import { useState } from 'react'
 import { useSettingsStore } from '@/store/settingsStore'
+import { showTestNotification, requestNotificationPermission, getNotificationPermission } from '@/lib/notifications'
 import styles from './Settings.module.css'
 
 export function NotificationSettings(): JSX.Element {
   const { enableDesktopNotifications, enableSoundAlerts, updateSettings } = useSettingsStore()
+  const [permissionStatus, setPermissionStatus] = useState(getNotificationPermission)
+
+  const handleEnableNotifications = async (): Promise<void> => {
+    if (permissionStatus === 'default') {
+      const newPermission = await requestNotificationPermission()
+      setPermissionStatus(newPermission)
+    }
+    updateSettings({ enableDesktopNotifications: !enableDesktopNotifications })
+  }
+
+  const handleTestNotification = (): void => {
+    showTestNotification()
+  }
 
   return (
     <div className={styles.section}>
@@ -11,6 +26,12 @@ export function NotificationSettings(): JSX.Element {
       <p className={styles.sectionDescription}>
         Configure how you receive event reminders and alerts.
       </p>
+
+      {permissionStatus === 'denied' && (
+        <div className={styles.warning}>
+          Notifications are blocked. Please enable them in your browser settings.
+        </div>
+      )}
 
       <div className={styles.settingRow}>
         <div className={styles.settingLabel}>
@@ -21,9 +42,7 @@ export function NotificationSettings(): JSX.Element {
         </div>
         <button
           className={`${styles.toggle} ${enableDesktopNotifications ? styles.active : ''}`}
-          onClick={() =>
-            updateSettings({ enableDesktopNotifications: !enableDesktopNotifications })
-          }
+          onClick={handleEnableNotifications}
           aria-pressed={enableDesktopNotifications}
         >
           <span className={styles.toggleKnob} />
@@ -43,6 +62,22 @@ export function NotificationSettings(): JSX.Element {
           aria-pressed={enableSoundAlerts}
         >
           <span className={styles.toggleKnob} />
+        </button>
+      </div>
+
+      <div className={styles.settingRow}>
+        <div className={styles.settingLabel}>
+          <span className={styles.settingLabelText}>Test Notification</span>
+          <span className={styles.settingLabelHint}>
+            Send a test notification to verify everything works
+          </span>
+        </div>
+        <button
+          className={styles.button}
+          onClick={handleTestNotification}
+          disabled={permissionStatus !== 'granted'}
+        >
+          Send Test
         </button>
       </div>
     </div>

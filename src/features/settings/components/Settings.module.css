@@ -341,6 +341,15 @@
   color: var(--color-error);
 }
 
+.warning {
+  padding: 12px 16px;
+  background: #fff3cd;
+  color: #856404;
+  border-radius: 4px;
+  font-size: 14px;
+  margin-bottom: 16px;
+}
+
 .button {
   padding: 8px 16px;
   border-radius: 4px;

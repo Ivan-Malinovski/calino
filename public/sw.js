@@ -1,5 +1,5 @@
-const CACHE_NAME = 'calino-v1'
-const STATIC_ASSETS = ['/', '/index.html', '/manifest.json', '/icon-192.svg', '/favicon.ico']
+const CACHE_NAME = 'calino-v2'
+const STATIC_ASSETS = ['/', '/index.html', '/manifest.json', '/icon-192.svg', '/appicon.jpg', '/favicon.ico']
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -40,8 +40,29 @@ self.addEventListener('fetch', (event) => {
           cache.put(event.request, responseToCache)
         })
 
-        return response
-      })
+      return response
     })
+  )
+})
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close()
+
+  const eventData = event.notification.data
+  if (eventData && eventData.eventId) {
+    const url = `/?date=${eventData.eventDate.split('T')[0]}&event=${eventData.eventId}`
+    event.waitUntil(
+      clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+        for (const client of clientList) {
+          if (client.url.includes('/') && 'focus' in client) {
+            client.navigate(url)
+            return client.focus()
+          }
+        }
+        return clients.openWindow(url)
+      })
+    )
+  }
+})
   )
 })
