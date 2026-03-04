@@ -39,7 +39,11 @@ export async function loadThemes(): Promise<ThemeInfo[]> {
     },
   ]
 
-  const themeFiles = import.meta.glob('/public/themes/*.css', { as: 'raw', eager: true })
+  const themeFiles = import.meta.glob('/public/themes/*.css', {
+    query: '?raw',
+    import: 'default',
+    eager: true,
+  })
 
   for (const path in themeFiles) {
     const css = themeFiles[path] as string
