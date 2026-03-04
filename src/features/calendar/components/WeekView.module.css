@@ -293,14 +293,17 @@
     flex-shrink: 0;
   }
 
-  .body {
-    display: flex;
-    overflow: hidden;
+  .timeColumn {
+    position: sticky;
+    left: 0;
+    z-index: 5;
+    background: var(--color-bg-tertiary);
   }
 
   .daysContainer {
     display: flex;
     overflow-x: auto;
+    overflow-y: hidden;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
   }
