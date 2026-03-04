@@ -278,18 +278,9 @@
 @media (max-width: 768px) {
   .header {
     display: flex;
-  }
-
-  .body {
-    display: flex;
-    overflow-x: auto;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-  }
-
-  .body::-webkit-scrollbar {
-    display: none;
+    position: sticky;
+    top: 0;
+    z-index: 10;
   }
 
   .headerDays {
@@ -309,18 +300,24 @@
     flex-shrink: 0;
   }
 
+  .body {
+    display: block;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .body::-webkit-scrollbar {
+    display: none;
+  }
+
   .timeColumn {
-    position: fixed;
+    position: sticky;
     left: 0;
-    top: auto;
-    bottom: 0;
-    z-index: 100;
+    z-index: 5;
     background: var(--color-bg-tertiary);
     min-width: 45px;
     max-width: 45px;
-    height: 100vh;
-    padding-top: 100px;
-    box-sizing: border-box;
   }
 
   .timeCell {
@@ -329,13 +326,11 @@
   }
 
   .daysContainer {
-    display: flex;
-    margin-left: 45px;
+    display: grid;
+    grid-template-columns: repeat(7, minmax(28vw, 1fr));
   }
 
   .dayColumn {
     min-width: 28vw;
-    max-width: 28vw;
-    flex-shrink: 0;
   }
 }
