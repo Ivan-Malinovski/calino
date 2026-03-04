@@ -50,7 +50,7 @@ export function CalendarHeader({ onQuickAdd }: CalendarHeaderProps): JSX.Element
         return `${format(weekStart, 'MMM d')} - ${format(weekEnd, 'MMM d')}`
       }
       case 'day':
-        return format(date, 'EEEE, MMMM d')
+        return format(date, 'EEE, MMMM d')
       case 'agenda':
         return format(date, 'MMMM')
       default:
