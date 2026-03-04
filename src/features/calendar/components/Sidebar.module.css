@@ -94,6 +94,8 @@
 
 .miniCalendar {
   background: var(--mini-cal-bg, var(--color-bg-tertiary));
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border-radius: var(--mini-cal-radius, 12px);
   padding: 12px;
   width: 100%;
