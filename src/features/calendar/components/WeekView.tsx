@@ -91,6 +91,7 @@ export function WeekView(): JSX.Element {
   const containerRef = useRef<HTMLDivElement>(null)
   const headerScrollRef = useRef<HTMLDivElement>(null)
   const bodyScrollRef = useRef<HTMLDivElement>(null)
+  const mobileScrollRef = useRef<HTMLDivElement>(null)
   const hourHeight = BASE_HOUR_HEIGHT * scale
   const lastPinchDistance = useRef<number | null>(null)
 
@@ -606,6 +607,129 @@ export function WeekView(): JSX.Element {
     return getISOWeek(weekStart)
   }, [date, firstDayOfWeek])
 
+  const renderMobileContent = () => (
+    <div ref={mobileScrollRef} className={styles.mobileContainer}>
+      <div className={styles.mobileHeader}>
+        <div className={styles.weekNumberHeader}>W{weekNumber}</div>
+        <div className={styles.headerDays}>
+          {weekDays.map((day) => (
+            <div
+              key={day.toISOString()}
+              className={`${styles.dayHeader} ${isToday(day) ? styles.today : ''}`}
+            >
+              <div className={styles.dayName}>{format(day, 'EEE')}</div>
+              <div className={styles.dayNumber}>{format(day, 'd')}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className={styles.mobileBody}>
+        <div className={styles.timeColumn}>
+          {HOURS.map((hour) => (
+            <div key={hour.toISOString()} className={styles.timeCell}>
+              {format(hour, timeFormat === '24h' ? 'HH:mm' : 'h a')}
+            </div>
+          ))}
+        </div>
+        <div className={styles.daysContainer}>
+          {weekDays.map((day) => {
+            return (
+              <div
+                key={day.toISOString()}
+                className={styles.dayColumn}
+                onContextMenu={(e) => {
+                  e.preventDefault()
+                  setContextMenu({ x: e.clientX, y: e.clientY, day })
+                }}
+              >
+                <div className={styles.hourCells}>
+                  {HOURS.map((hour) => (
+                    <DroppableCell
+                      key={`${day.toISOString()}-${hour.toISOString()}`}
+                      day={day}
+                      hour={hour}
+                      onClick={() => handleCellClick(day, hour)}
+                      onMouseDown={(e) => handleDragStartFromCell(day, hour, e)}
+                    />
+                  ))}
+                </div>
+                <div className={styles.eventsOverlay} style={{ height: 24 * hourHeight }}>
+                  {day === weekDays[0] && selectionOverlay}
+                  {renderDayEvents(day)}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    </div>
+  )
+
+  const renderDesktopContent = () => (
+    <>
+      <div className={`${styles.header} ${isScrolled ? styles.headerShadow : ''}`}>
+        <div className={styles.weekNumberHeader}>W{weekNumber}</div>
+        <div className={styles.headerDays}>
+          {weekDays.map((day) => (
+            <div
+              key={day.toISOString()}
+              className={`${styles.dayHeader} ${isToday(day) ? styles.today : ''}`}
+            >
+              <div className={styles.dayName}>{format(day, 'EEE')}</div>
+              <div className={styles.dayNumber}>{format(day, 'd')}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div
+        ref={bodyRef}
+        className={styles.body}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+        onScroll={handleScroll}
+      >
+        <div className={styles.timeColumn}>
+          {HOURS.map((hour) => (
+            <div key={hour.toISOString()} className={styles.timeCell}>
+              {format(hour, timeFormat === '24h' ? 'HH:mm' : 'h a')}
+            </div>
+          ))}
+        </div>
+        <div className={styles.daysContainer}>
+          {weekDays.map((day) => {
+            return (
+              <div
+                key={day.toISOString()}
+                className={styles.dayColumn}
+                onContextMenu={(e) => {
+                  e.preventDefault()
+                  setContextMenu({ x: e.clientX, y: e.clientY, day })
+                }}
+              >
+                <div className={styles.hourCells}>
+                  {HOURS.map((hour) => (
+                    <DroppableCell
+                      key={`${day.toISOString()}-${hour.toISOString()}`}
+                      day={day}
+                      hour={hour}
+                      onClick={() => handleCellClick(day, hour)}
+                      onMouseDown={(e) => handleDragStartFromCell(day, hour, e)}
+                    />
+                  ))}
+                </div>
+                <div className={styles.eventsOverlay} style={{ height: 24 * hourHeight }}>
+                  {day === weekDays[0] && selectionOverlay}
+                  {renderDayEvents(day)}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    </>
+  )
+
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <div
@@ -617,69 +741,7 @@ export function WeekView(): JSX.Element {
         onTouchMove={handlePinchTouchMove}
         onTouchEnd={handleMobileTouchEnd}
       >
-        <div
-          ref={headerScrollRef}
-          className={`${styles.header} ${isScrolled ? styles.headerShadow : ''}`}
-        >
-          <div className={styles.weekNumberHeader}>W{weekNumber}</div>
-          <div className={styles.headerDays}>
-            {weekDays.map((day) => (
-              <div
-                key={day.toISOString()}
-                className={`${styles.dayHeader} ${isToday(day) ? styles.today : ''}`}
-              >
-                <div className={styles.dayName}>{format(day, 'EEE')}</div>
-                <div className={styles.dayNumber}>{format(day, 'd')}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div
-          ref={bodyRef}
-          className={styles.body}
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
-          onMouseLeave={handleMouseUp}
-          onScroll={handleScroll}
-        >
-          <div className={styles.timeColumn}>
-            {HOURS.map((hour) => (
-              <div key={hour.toISOString()} className={styles.timeCell}>
-                {format(hour, timeFormat === '24h' ? 'HH:mm' : 'h a')}
-              </div>
-            ))}
-          </div>
-          <div ref={bodyScrollRef} className={styles.daysContainer}>
-            {weekDays.map((day) => {
-              return (
-                <div
-                  key={day.toISOString()}
-                  className={styles.dayColumn}
-                  onContextMenu={(e) => {
-                    e.preventDefault()
-                    setContextMenu({ x: e.clientX, y: e.clientY, day })
-                  }}
-                >
-                  <div className={styles.hourCells}>
-                    {HOURS.map((hour) => (
-                      <DroppableCell
-                        key={`${day.toISOString()}-${hour.toISOString()}`}
-                        day={day}
-                        hour={hour}
-                        onClick={() => handleCellClick(day, hour)}
-                        onMouseDown={(e) => handleDragStartFromCell(day, hour, e)}
-                      />
-                    ))}
-                  </div>
-                  <div className={styles.eventsOverlay} style={{ height: 24 * hourHeight }}>
-                    {day === weekDays[0] && selectionOverlay}
-                    {renderDayEvents(day)}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </div>
+        {isMobile ? renderMobileContent() : renderDesktopContent()}
         {(() => {
           const tasksByDay: CalendarEvent[][] = Array(7)
             .fill(null)

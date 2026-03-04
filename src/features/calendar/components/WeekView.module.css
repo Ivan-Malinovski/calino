@@ -274,45 +274,73 @@
   padding: 0 2px;
 }
 
+.mobileContainer {
+  display: none;
+}
+
 @media (max-width: 768px) {
-  .header {
-    display: flex;
-    overflow-x: auto;
+  .mobileContainer {
+    display: block;
+    overflow: auto;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
-    flex-shrink: 0;
+    flex: 1;
   }
 
-  .header::-webkit-scrollbar {
+  .mobileContainer::-webkit-scrollbar {
     display: none;
+  }
+
+  .mobileHeader {
+    display: flex;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: var(--color-bg, var(--color-bg-secondary));
+    border-bottom: 1px solid var(--color-border-subtle, var(--color-border));
+  }
+
+  .mobileBody {
+    display: flex;
   }
 
   .weekNumberHeader {
     min-width: 45px;
     max-width: 45px;
     flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--font-size-day-header, 12px);
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    background: var(--color-bg-tertiary);
+    border-right: 1px solid var(--color-border-subtle, var(--color-border));
+    min-height: 48px;
   }
 
   .headerDays {
     display: flex;
-    flex-shrink: 0;
+    flex: 1;
   }
 
   .dayHeader {
     min-width: 28vw;
     max-width: 28vw;
     flex-shrink: 0;
-  }
-
-  .body {
     display: flex;
-    flex: 1;
-    overflow: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
+    flex-direction: column;
+    align-items: center;
+    padding: var(--space-1, 4px);
+    border-right: 1px solid var(--color-border-subtle, var(--color-border));
   }
 
-  .body::-webkit-scrollbar {
+  .dayHeader:last-child {
+    border-right: none;
+  }
+
+  .header,
+  .body {
     display: none;
   }
 
@@ -324,12 +352,22 @@
     min-width: 45px;
     max-width: 45px;
     flex-shrink: 0;
+    border-right: 1px solid var(--color-border-subtle, var(--color-border));
   }
 
   .timeCell {
-    font-size: 10px;
+    min-height: var(--hour-height, 60px);
+    height: var(--hour-height, 60px);
     padding: var(--space-1, 4px) 2px;
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--color-text-muted);
     text-align: center;
+    justify-content: center;
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid var(--color-border-subtle, var(--color-border));
+    box-sizing: border-box;
   }
 
   .daysContainer {
@@ -341,5 +379,11 @@
   .dayColumn {
     width: 28vw;
     min-width: 28vw;
+    position: relative;
+    border-right: 1px solid var(--color-border);
+  }
+
+  .dayColumn:last-child {
+    border-right: none;
   }
 }
