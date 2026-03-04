@@ -150,8 +150,8 @@
   /* ========================================
      Mini Calendar
      ======================================== */
-  --mini-cal-bg: transparent;
-  --mini-cal-radius: 0px;
+  --mini-cal-bg: rgba(255, 255, 255, 0.5);
+  --mini-cal-radius: 12px;
 
   /* ========================================
      Day Cell

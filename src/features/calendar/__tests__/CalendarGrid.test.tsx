@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { CalendarGrid } from '../components/CalendarGrid'
 import { useCalendarStore } from '@/store/calendarStore'
@@ -157,6 +157,76 @@ describe('CalendarGrid', () => {
 
       const weekRows = document.querySelectorAll('[class*="weekRow"]')
       expect(weekRows.length).toBeGreaterThan(0)
+    })
+
+    it('starts with default zoom level of 0.7', () => {
+      renderWithStore(<CalendarGrid />)
+
+      const grid = document.querySelector('[class*="grid"]')
+      expect(grid).toBeTruthy()
+      const style = grid?.getAttribute('style')
+      expect(style).toContain('--day-cell-height: 70px')
+    })
+
+    it('zooms in with ctrl+scroll down', () => {
+      renderWithStore(<CalendarGrid />)
+
+      const grid = document.querySelector('[class*="grid"]')
+      expect(grid).toBeTruthy()
+
+      fireEvent.wheel(grid!, {
+        deltaY: -100,
+        ctrlKey: true,
+      })
+
+      const style = grid?.getAttribute('style')
+      expect(style).toContain('--day-cell-height: 80px')
+    })
+
+    it('does not zoom below min (0.7)', () => {
+      renderWithStore(<CalendarGrid />)
+
+      const grid = document.querySelector('[class*="grid"]')
+
+      fireEvent.wheel(grid!, {
+        deltaY: 100,
+        ctrlKey: true,
+      })
+
+      const style = grid?.getAttribute('style')
+      expect(style).toContain('--day-cell-height: 70px')
+    })
+
+    it('does not zoom beyond max (1.5)', () => {
+      renderWithStore(<CalendarGrid />)
+
+      const grid = document.querySelector('[class*="grid"]')
+
+      for (let i = 0; i < 20; i++) {
+        fireEvent.wheel(grid!, {
+          deltaY: -100,
+          ctrlKey: true,
+        })
+      }
+
+      const style = grid?.getAttribute('style')
+      expect(style).toContain('--day-cell-height: 150px')
+    })
+
+    it('does not zoom below min (0.7)', () => {
+      renderWithStore(<CalendarGrid />)
+
+      const grid = document.querySelector('[class*="grid"]')
+
+      for (let i = 0; i < 20; i++) {
+        fireEvent.wheel(grid!, {
+          deltaY: 100,
+          ctrlKey: true,
+        })
+      }
+
+      const style = grid?.getAttribute('style')
+      expect(style).toContain('--day-cell-height: 70px')
     })
   })
 })
