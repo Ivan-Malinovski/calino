@@ -61,7 +61,8 @@ export class CalDAVClient {
       throw new Error(`Calendar not found: ${calendarUrl}`)
     }
 
-    const calendarObjects = await client.fetchCalendarObjects({
+    // Fetch VEVENTs with time range
+    const eventObjects = await client.fetchCalendarObjects({
       calendar,
       timeRange: {
         start,
@@ -69,11 +70,38 @@ export class CalDAVClient {
       },
     })
 
-    return calendarObjects.map((obj) => ({
-      url: obj.url,
-      data: obj.data as string,
-      etag: obj.etag,
-    }))
+    // Fetch VTODOs with custom filter (tsdav defaults to VEVENT only)
+    const todoObjects = await client.fetchCalendarObjects({
+      calendar,
+      filters: {
+        'comp-filter': {
+          _attributes: {
+            name: 'VCALENDAR',
+          },
+          'comp-filter': {
+            _attributes: {
+              name: 'VTODO',
+            },
+          },
+        },
+      },
+    })
+
+    const allItems = [...eventObjects, ...todoObjects]
+    
+    // Remove duplicates by URL
+    const uniqueByUrl = new Map<string, { url: string; data: string; etag?: string }>()
+    for (const obj of allItems) {
+      if (!uniqueByUrl.has(obj.url)) {
+        uniqueByUrl.set(obj.url, {
+          url: obj.url,
+          data: obj.data as string,
+          etag: obj.etag,
+        })
+      }
+    }
+
+    return Array.from(uniqueByUrl.values())
   }
 
   async createEvent(
