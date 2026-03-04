@@ -24,7 +24,7 @@ const HOURS = eachHourOfInterval({
   end: endOfDay(new Date()),
 })
 
-const HOUR_HEIGHT = 60
+const BASE_hourHeight = 60
 
 function formatTravelDuration(minutes: number): string {
   if (minutes >= 60) {
@@ -55,6 +55,7 @@ export function DayView(): JSX.Element {
   const bodyRef = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const [scale, setScale] = useState(1)
+  const hourHeight = BASE_hourHeight * scale
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -132,7 +133,7 @@ export function DayView(): JSX.Element {
       const eventStart = parseISO(firstEvent.start)
       const hours = eventStart.getHours()
       const minutes = eventStart.getMinutes()
-      const scrollTop = (hours * 60 + minutes) * (HOUR_HEIGHT / 60) - 60
+      const scrollTop = (hours * 60 + minutes) * (hourHeight / 60) - 60
 
       bodyRef.current.scrollTo({ top: Math.max(0, scrollTop), behavior: 'smooth' })
       hasScrolledForDate.current = true
@@ -170,7 +171,7 @@ export function DayView(): JSX.Element {
       const target = e.currentTarget as HTMLDivElement
       const rect = target.getBoundingClientRect()
       const y = e.clientY - rect.top
-      const totalMinutes = (y / HOUR_HEIGHT) * 60
+      const totalMinutes = (y / hourHeight) * 60
       const snappedMinutes = Math.round(totalMinutes / 15) * 15
       const hours = Math.floor(snappedMinutes / 60)
       const mins = snappedMinutes % 60
@@ -215,8 +216,8 @@ export function DayView(): JSX.Element {
     const end = parseISO(dragEnd)
     const startMinutes = start.getHours() * 60 + start.getMinutes()
     const endMinutes = end.getHours() * 60 + end.getMinutes()
-    const top = startMinutes * (HOUR_HEIGHT / 60)
-    const height = (endMinutes - startMinutes) * (HOUR_HEIGHT / 60)
+    const top = startMinutes * (hourHeight / 60)
+    const height = (endMinutes - startMinutes) * (hourHeight / 60)
 
     return (
       <div
@@ -316,7 +317,7 @@ export function DayView(): JSX.Element {
       const startMinutes = start.getMinutes()
 
       const durationMinutes = (end.getTime() - start.getTime()) / (1000 * 60)
-      const height = Math.max((durationMinutes / 60) * HOUR_HEIGHT, 20)
+      const height = Math.max((durationMinutes / 60) * hourHeight, 20)
 
       const gap = 4
       const leftPercent = (column / totalColumns) * 100 + gap / 2
@@ -332,14 +333,14 @@ export function DayView(): JSX.Element {
         const travelStartHour = travelStart.getHours()
         const travelStartMinutes = travelStart.getMinutes()
         const travelDurationMinutes = event.travelDuration
-        const travelHeight = Math.max((travelDurationMinutes / 60) * HOUR_HEIGHT, 16)
+        const travelHeight = Math.max((travelDurationMinutes / 60) * hourHeight, 16)
 
         elements.push(
           <div
             key={`${event.id}-travel`}
             className={styles.travelBar}
             style={{
-              top: `${(travelStartHour * 60 + travelStartMinutes) * (HOUR_HEIGHT / 60)}px`,
+              top: `${(travelStartHour * 60 + travelStartMinutes) * (hourHeight / 60)}px`,
               height: `${travelHeight}px`,
               left: `${leftPercent}%`,
               width: `${widthPercent}%`,
@@ -359,7 +360,7 @@ export function DayView(): JSX.Element {
           key={event.id}
           className={styles.eventPositioned}
           style={{
-            top: `${(startHour * 60 + startMinutes) * (HOUR_HEIGHT / 60)}px`,
+            top: `${(startHour * 60 + startMinutes) * (hourHeight / 60)}px`,
             height: `${height}px`,
             left: `${leftPercent}%`,
             width: `${widthPercent}%`,
