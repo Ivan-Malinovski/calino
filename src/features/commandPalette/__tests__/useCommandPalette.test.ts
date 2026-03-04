@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useCommandPalette } from '../hooks/useCommandPalette'
-import type { CalendarEvent } from '@/types'
+import type { CalendarEvent, CalendarStore, SettingsStore } from '@/types'
 
 const mockEvents: CalendarEvent[] = [
   {
@@ -20,13 +20,23 @@ const mockCalendars = [
 ]
 
 vi.mock('@/store/calendarStore', () => ({
-  useCalendarStore: vi.fn((selector) => {
-    const state = {
+  useCalendarStore: vi.fn((selector: (state: CalendarStore) => unknown) => {
+    const state: CalendarStore = {
       events: mockEvents,
       calendars: mockCalendars,
+      currentDate: '2024-03-15',
+      currentView: 'month',
+      selectedEventId: null,
+      isModalOpen: false,
+      selectedDate: null,
+      selectedEndDate: null,
+      isOverlayOpen: false,
+      selectedEventType: 'event',
+      showAddCalendar: false,
       addEvent: vi.fn(),
       updateEvent: vi.fn(),
       deleteEvent: vi.fn(),
+      duplicateEvent: vi.fn(),
       addCalendar: vi.fn(),
       updateCalendar: vi.fn(),
       deleteCalendar: vi.fn(),
@@ -37,32 +47,52 @@ vi.mock('@/store/calendarStore', () => ({
       setSelectedEventId: vi.fn(),
       openModal: vi.fn(),
       closeModal: vi.fn(),
+      setOverlayOpen: vi.fn(),
+      setShowAddCalendar: vi.fn(),
       getEventsForDateRange: vi.fn(),
       getVisibleEvents: vi.fn(),
     }
-    return selector(state as never)
+    return selector(state)
   }),
-  selectSetCurrentView: (state: never) => state.setCurrentView,
-  selectSetCurrentDate: (state: never) => state.setCurrentDate,
-  selectOpenModal: (state: never) => state.openModal,
-  selectAddEvent: (state: never) => state.addEvent,
-  selectEvents: (state: never) => state.events,
-  selectCalendars: (state: never) => state.calendars,
+  selectSetCurrentView: (state: CalendarStore) => state.setCurrentView,
+  selectSetCurrentDate: (state: CalendarStore) => state.setCurrentDate,
+  selectOpenModal: (state: CalendarStore) => state.openModal,
+  selectAddEvent: (state: CalendarStore) => state.addEvent,
+  selectEvents: (state: CalendarStore) => state.events,
+  selectCalendars: (state: CalendarStore) => state.calendars,
 }))
 
 vi.mock('@/store/settingsStore', () => ({
-  useSettingsStore: vi.fn((selector) => {
-    const state = {
-      timeFormat: '12h' as const,
+  useSettingsStore: vi.fn((selector: (state: SettingsStore) => unknown) => {
+    const state: SettingsStore = {
+      timezone: 'UTC',
+      dateFormat: 'yyyy-MM-dd',
+      timeFormat: '12h',
       firstDayOfWeek: 0,
-      defaultView: 'month' as const,
-      themeMode: 'auto' as const,
+      defaultDuration: 60,
+      defaultView: 'month',
+      showWeekNumbers: false,
+      eventDensity: 'comfortable',
+      defaultReminderMinutes: 15,
+      defaultEventColor: '#4285F4',
+      enableDesktopNotifications: false,
+      enableSoundAlerts: false,
+      syncEnabled: false,
+      syncIntervalMinutes: 30,
+      conflictResolution: 'local-wins',
+      compactRecurringEvents: false,
+      compressPastWeeks: false,
+      hasCompletedOnboarding: false,
+      themeMode: 'auto',
+      lightTheme: 'default',
+      darkTheme: 'default',
       updateSettings: vi.fn(),
+      resetSettings: vi.fn(),
     }
-    return selector(state as never)
+    return selector(state)
   }),
-  selectThemeMode: (state: never) => state.themeMode,
-  selectUpdateSettings: (state: never) => state.updateSettings,
+  selectThemeMode: (state: SettingsStore) => state.themeMode,
+  selectUpdateSettings: (state: SettingsStore) => state.updateSettings,
 }))
 
 vi.mock('react-router-dom', () => ({
