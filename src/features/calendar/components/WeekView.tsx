@@ -28,6 +28,7 @@ import { DEFAULT_CALENDAR_COLOR } from '@/config'
 import { EventCard } from './EventCard'
 import { ContextMenu } from '@/components/common/ContextMenu'
 import { DayView } from './DayView'
+import { useSwipeNavigation } from '@/hooks/useSwipeNavigation'
 import type { CalendarEvent, Calendar } from '@/types'
 import styles from './WeekView.module.css'
 
@@ -88,9 +89,14 @@ export function WeekView(): JSX.Element {
   const [dragEnd, setDragEnd] = useState<string | null>(null)
   const [isScrolled, setIsScrolled] = useState(false)
   const [scale, setScale] = useState(0.7)
-
   const containerRef = useRef<HTMLDivElement>(null)
   const hourHeight = BASE_HOUR_HEIGHT * scale
+  const lastPinchDistance = useRef<number | null>(null)
+
+  const { handleTouchStart: swipeTouchStart, handleTouchEnd: swipeTouchEnd } = useSwipeNavigation({
+    currentView: 'week',
+    currentDate,
+  })
 
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768
 
@@ -122,6 +128,38 @@ export function WeekView(): JSX.Element {
       }
     }
   }, [])
+
+  const getPinchDistance = (touches: React.TouchList): number => {
+    const dx = touches[0].clientX - touches[1].clientX
+    const dy = touches[0].clientY - touches[1].clientY
+    return Math.sqrt(dx * dx + dy * dy)
+  }
+
+  const handlePinchTouchStart = (e: React.TouchEvent): void => {
+    if (e.touches.length === 2) {
+      lastPinchDistance.current = getPinchDistance(e.touches)
+    }
+  }
+
+  const handlePinchTouchMove = (e: React.TouchEvent): void => {
+    if (e.touches.length === 2 && lastPinchDistance.current !== null) {
+      e.preventDefault()
+      const currentDistance = getPinchDistance(e.touches)
+      const delta = currentDistance - lastPinchDistance.current
+
+      if (delta > 10) {
+        setScale((s) => Math.min(s + 0.1, 1.5))
+        lastPinchDistance.current = currentDistance
+      } else if (delta < -10) {
+        setScale((s) => Math.max(s - 0.1, 0.7))
+        lastPinchDistance.current = currentDistance
+      }
+    }
+  }
+
+  const handlePinchTouchEnd = (): void => {
+    lastPinchDistance.current = null
+  }
 
   const date = parseISO(currentDate)
 
@@ -483,7 +521,20 @@ export function WeekView(): JSX.Element {
 
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-      <div className={styles.container} ref={containerRef} style={{ '--hour-height': `${60 * scale}px` } as React.CSSProperties}>
+      <div
+        className={styles.container}
+        ref={containerRef}
+        style={{ '--hour-height': `${60 * scale}px`, touchAction: 'none' } as React.CSSProperties}
+        onTouchStart={(e) => {
+          handlePinchTouchStart(e)
+          swipeTouchStart(e)
+        }}
+        onTouchMove={handlePinchTouchMove}
+        onTouchEnd={(e) => {
+          handlePinchTouchEnd()
+          swipeTouchEnd(e)
+        }}
+      >
         <div className={`${styles.header} ${isScrolled ? styles.headerShadow : ''}`}>
           <div className={styles.weekNumberHeader}>W{weekNumber}</div>
           {weekDays.map((day) => (

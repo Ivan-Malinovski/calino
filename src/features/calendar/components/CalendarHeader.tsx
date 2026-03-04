@@ -10,15 +10,7 @@ import { ThemeToggle } from './ThemeToggle'
 import { Search } from '@/features/search'
 import { QuickAdd } from '@/features/nlp'
 import type { NLPParseResult } from '@/features/nlp'
-import type { ViewType } from '@/types'
 import styles from './CalendarHeader.module.css'
-
-const VIEW_OPTIONS: { value: ViewType; label: string }[] = [
-  { value: 'day', label: 'Day' },
-  { value: 'week', label: 'Week' },
-  { value: 'month', label: 'Month' },
-  { value: 'agenda', label: 'List' },
-]
 
 interface CalendarHeaderProps {
   onQuickAdd?: (result: NLPParseResult) => void
@@ -30,14 +22,13 @@ export function CalendarHeader({ onQuickAdd, onToggleSidebar }: CalendarHeaderPr
   const currentDate = useCalendarStore((state) => state.currentDate)
   const currentView = useCalendarStore((state) => state.currentView)
   const setCurrentDate = useCalendarStore((state) => state.setCurrentDate)
-  const setCurrentView = useCalendarStore((state) => state.setCurrentView)
   const openModal = useCalendarStore((state) => state.openModal)
   const firstDayOfWeek = useSettingsStore((state) => state.firstDayOfWeek)
 
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false)
-  const [isMobile, setIsMobile] = useState(false)
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false)
-  const [dropdownRef, setDropdownRef] = useState<HTMLDivElement | null>(null)
+  const [isMobile, setIsMobile] = useState(
+    typeof window !== 'undefined' ? window.innerWidth < 768 : false
+  )
   const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
@@ -54,18 +45,6 @@ export function CalendarHeader({ onQuickAdd, onToggleSidebar }: CalendarHeaderPr
       }
     }
   }, [])
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent): void => {
-      if (dropdownRef && !dropdownRef.contains(e.target as Node)) {
-        setIsDropdownOpen(false)
-      }
-    }
-    if (isDropdownOpen) {
-      document.addEventListener('mousedown', handleClickOutside)
-    }
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [isDropdownOpen, dropdownRef])
 
   const date = parseISO(currentDate)
 
@@ -198,14 +177,16 @@ export function CalendarHeader({ onQuickAdd, onToggleSidebar }: CalendarHeaderPr
           </div>
         )}
       </div>
-      {!isMobile && (
-        <div className={styles.right}>
+      <div className={styles.right}>
+        {!isMobile && (
           <Search
             onSelectEvent={(eventId) => {
               openModal(undefined, undefined, eventId)
             }}
           />
-          <ViewSwitcher />
+        )}
+        <ViewSwitcher />
+        {!isMobile && (
           <div
             className={styles.quickAddWrapper}
             onMouseEnter={() => handleQuickAddHover(true)}
@@ -224,52 +205,19 @@ export function CalendarHeader({ onQuickAdd, onToggleSidebar }: CalendarHeaderPr
               </motion.div>
             )}
           </div>
-          <button className={styles.createButton} onClick={() => openModal()}>
-            +
-          </button>
-          <ThemeToggle className={`${styles.createButton} ${styles.themeToggle}`} />
-          <button className={styles.createButton} onClick={() => navigate('/settings')}>
-            <SettingsIcon />
-          </button>
-        </div>
-      )}
-      {isMobile && (
-        <div className={styles.right}>
-          <div className={styles.mobileViewDropdown} ref={setDropdownRef}>
-            <button
-              className={styles.mobileViewDropdownButton}
-              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-            >
-              {VIEW_OPTIONS.find((v) => v.value === currentView)?.label}
-              <svg
-                width="12"
-                height="12"
-                viewBox="0 0 12 12"
-                fill="none"
-                className={`${styles.dropdownArrow} ${isDropdownOpen ? styles.dropdownArrowOpen : ''}`}
-              >
-                <path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
+        )}
+        {!isMobile && (
+          <>
+            <button className={styles.createButton} onClick={() => openModal()}>
+              +
             </button>
-            {isDropdownOpen && (
-              <div className={styles.mobileViewDropdownMenu}>
-                {VIEW_OPTIONS.map((view) => (
-                  <button
-                    key={view.value}
-                    className={`${styles.mobileViewDropdownItem} ${currentView === view.value ? styles.mobileViewActive : ''}`}
-                    onClick={() => {
-                      setCurrentView(view.value)
-                      setIsDropdownOpen(false)
-                    }}
-                  >
-                    {view.label}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+            <ThemeToggle className={`${styles.createButton} ${styles.themeToggle}`} />
+            <button className={styles.createButton} onClick={() => navigate('/settings')}>
+              <SettingsIcon />
+            </button>
+          </>
+        )}
+      </div>
     </div>
   )
 }

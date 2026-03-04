@@ -33,6 +33,7 @@ import { useSettingsStore } from '@/store/settingsStore'
 import { EventCard } from './EventCard'
 import { DayEventsPopup } from './DayEventsPopup'
 import { ContextMenu } from '@/components/common/ContextMenu'
+import { useSwipeNavigation } from '@/hooks/useSwipeNavigation'
 import type { CalendarEvent } from '@/types'
 import styles from './CalendarGrid.module.css'
 
@@ -49,6 +50,11 @@ export function CalendarGrid(): JSX.Element {
   const firstDayOfWeek = useSettingsStore((state) => state.firstDayOfWeek)
   const compactRecurringEvents = useSettingsStore((state) => state.compactRecurringEvents ?? false)
   const compressPastWeeks = useSettingsStore((state) => state.compressPastWeeks ?? false)
+
+  const { handleTouchStart, handleTouchEnd } = useSwipeNavigation({
+    currentView: 'month',
+    currentDate,
+  })
 
   const [activeEvent, setActiveEvent] = useState<CalendarEvent | null>(null)
   const [scrollDirection, setScrollDirection] = useState<'up' | 'down' | null>(null)
@@ -270,14 +276,15 @@ export function CalendarGrid(): JSX.Element {
     return Math.sqrt(dx * dx + dy * dy)
   }
 
-  const handleTouchStart = (e: React.TouchEvent): void => {
+  const handlePinchTouchStart = (e: React.TouchEvent): void => {
     if (e.touches.length === 2) {
       lastPinchDistance.current = getPinchDistance(e.touches)
     }
   }
 
-  const handleTouchMove = (e: React.TouchEvent): void => {
+  const handlePinchTouchMove = (e: React.TouchEvent): void => {
     if (e.touches.length === 2 && lastPinchDistance.current !== null) {
+      e.preventDefault()
       const currentDistance = getPinchDistance(e.touches)
       const delta = currentDistance - lastPinchDistance.current
 
@@ -291,7 +298,7 @@ export function CalendarGrid(): JSX.Element {
     }
   }
 
-  const handleTouchEnd = (): void => {
+  const handlePinchTouchEnd = (): void => {
     lastPinchDistance.current = null
   }
 
@@ -303,10 +310,18 @@ export function CalendarGrid(): JSX.Element {
         className={styles.grid}
         ref={containerRef}
         onWheel={handleWheel}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-        style={{ '--day-cell-height': `${rowHeight}px` } as React.CSSProperties}
+        onTouchStart={(e) => {
+          handlePinchTouchStart(e)
+          handleTouchStart(e)
+        }}
+        onTouchMove={handlePinchTouchMove}
+        onTouchEnd={(e) => {
+          handlePinchTouchEnd()
+          handleTouchEnd(e)
+        }}
+        style={
+          { '--day-cell-height': `${rowHeight}px`, touchAction: 'none' } as React.CSSProperties
+        }
       >
         <div className={styles.header}>
           <div className={styles.weekNumHeader}>W#</div>
