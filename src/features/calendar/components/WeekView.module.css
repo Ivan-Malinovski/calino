@@ -262,29 +262,9 @@
 }
 
 @media (max-width: 768px) {
-  .header {
-    grid-template-columns: 0px repeat(7, 1fr);
-  }
-
-  .weekNumberColumn,
-  .weekNumberHeader,
-  .timeColumn,
-  .timeGutter {
-    display: none;
-  }
-
-  .header {
-    grid-template-columns: repeat(7, 1fr);
-  }
-
   .body {
-    grid-template-columns: repeat(7, 1fr);
     overflow-x: auto;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
-  }
-
-  .timeCell {
-    display: none;
   }
 }
