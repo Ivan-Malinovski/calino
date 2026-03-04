@@ -22,12 +22,15 @@ import {
   parseISO,
   getISOWeek,
 } from 'date-fns'
+import { addWeeks, addDays } from 'date-fns'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
 import { DEFAULT_CALENDAR_COLOR } from '@/config'
 import { EventCard } from './EventCard'
 import { ContextMenu } from '@/components/common/ContextMenu'
-import { useSwipeNavigation } from '@/hooks/useSwipeNavigation'
+import { useGestures } from '@/hooks/useGestures'
+import { useContextMenuStore } from '@/store/contextMenuStore'
+import { hapticIfEnabled } from '@/lib/haptics'
 import type { CalendarEvent, Calendar } from '@/types'
 import styles from './WeekView.module.css'
 
@@ -78,8 +81,12 @@ export function WeekView(): JSX.Element {
   const getEventsForDateRange = useCalendarStore((state) => state.getEventsForDateRange)
   const openModal = useCalendarStore((state) => state.openModal)
   const updateEvent = useCalendarStore((state) => state.updateEvent)
+  const setCurrentDate = useCalendarStore((state) => state.setCurrentDate)
   const firstDayOfWeek = useSettingsStore((state) => state.firstDayOfWeek)
   const timeFormat = useSettingsStore((state) => state.timeFormat)
+  const openMenuId = useContextMenuStore((state) => state.openMenuId)
+  const openMenu = useContextMenuStore((state) => state.openMenu)
+  const closeMenu = useContextMenuStore((state) => state.closeMenu)
 
   const [activeEvent, setActiveEvent] = useState<CalendarEvent | null>(null)
   const [isDraggingToCreate, setIsDraggingToCreate] = useState(false)
@@ -93,74 +100,41 @@ export function WeekView(): JSX.Element {
   const bodyScrollRef = useRef<HTMLDivElement>(null)
   const mobileScrollRef = useRef<HTMLDivElement>(null)
   const hourHeight = BASE_HOUR_HEIGHT * scale
-  const lastPinchDistance = useRef<number | null>(null)
 
-  const { handleTouchStart: swipeTouchStart, handleTouchEnd: swipeTouchEnd } = useSwipeNavigation({
-    currentView: 'week',
-    currentDate,
-  })
+  useEffect(() => {
+    if (openMenuId !== null && openMenuId !== 'weekview' && contextMenu) {
+      setContextMenu(null)
+    }
+  }, [openMenuId])
 
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768
 
-  const handleMobileTouchStart = useCallback(
-    (e: React.TouchEvent) => {
-      handlePinchTouchStart(e)
-      if (!isMobile) {
-        swipeTouchStart(e)
+  const handleSwipe = useCallback(
+    (direction: 'left' | 'right' | 'up' | 'down') => {
+      const date = parseISO(currentDate)
+      let newDate: Date
+
+      if (direction === 'left' || direction === 'right') {
+        newDate = direction === 'left' ? addWeeks(date, 1) : addWeeks(date, -1)
+      } else {
+        newDate = direction === 'up' ? addDays(date, 7) : addDays(date, -7)
       }
+
+      setCurrentDate(newDate.toISOString().split('T')[0])
     },
-    [isMobile, swipeTouchStart]
+    [currentDate, setCurrentDate]
   )
 
-  const handleMobileTouchEnd = useCallback(
-    (e: React.TouchEvent) => {
-      handlePinchTouchEnd()
+  const handlePinch = useCallback((scaleValue: number) => {
+    setScale(scaleValue)
+  }, [])
 
-      if (!isMobile) {
-        swipeTouchEnd(e)
-        return
-      }
-
-      const scrollContainer = bodyScrollRef.current
-      if (!scrollContainer) {
-        swipeTouchEnd(e)
-        return
-      }
-
-      const touchStartX = (e.target as HTMLElement).dataset.touchStartX
-      if (!touchStartX) {
-        swipeTouchEnd(e)
-        return
-      }
-
-      const touchEndX = e.changedTouches[0].clientX
-      const diff = parseFloat(touchStartX) - touchEndX
-
-      if (Math.abs(diff) < 50) {
-        return
-      }
-
-      const scrollLeft = scrollContainer.scrollLeft
-      const maxScroll = scrollContainer.scrollWidth - scrollContainer.clientWidth
-      const isAtStart = scrollLeft <= 10
-      const isAtEnd = scrollLeft >= maxScroll - 10
-
-      if ((diff > 0 && isAtEnd) || (diff < 0 && isAtStart)) {
-        swipeTouchEnd(e)
-      }
-    },
-    [isMobile, swipeTouchEnd]
-  )
-
-  const handleTouchStartCapture = useCallback(
-    (e: React.TouchEvent) => {
-      if (isMobile && e.touches.length === 1) {
-        const target = e.target as HTMLElement
-        target.dataset.touchStartX = String(e.touches[0].clientX)
-      }
-    },
-    [isMobile]
-  )
+  const { bind } = useGestures({
+    onSwipe: handleSwipe,
+    onPinch: handlePinch,
+    swipeThreshold: 50,
+    pinchScaleRange: { min: 0.7, max: 1.5 },
+  })
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -220,38 +194,6 @@ export function WeekView(): JSX.Element {
       bodyEl.removeEventListener('scroll', handleBodyScroll)
     }
   }, [isMobile])
-
-  const getPinchDistance = (touches: React.TouchList): number => {
-    const dx = touches[0].clientX - touches[1].clientX
-    const dy = touches[0].clientY - touches[1].clientY
-    return Math.sqrt(dx * dx + dy * dy)
-  }
-
-  const handlePinchTouchStart = (e: React.TouchEvent): void => {
-    if (e.touches.length === 2) {
-      lastPinchDistance.current = getPinchDistance(e.touches)
-    }
-  }
-
-  const handlePinchTouchMove = (e: React.TouchEvent): void => {
-    if (e.touches.length === 2 && lastPinchDistance.current !== null) {
-      e.preventDefault()
-      const currentDistance = getPinchDistance(e.touches)
-      const delta = currentDistance - lastPinchDistance.current
-
-      if (delta > 10) {
-        setScale((s) => Math.min(s + 0.1, 1.5))
-        lastPinchDistance.current = currentDistance
-      } else if (delta < -10) {
-        setScale((s) => Math.max(s - 0.1, 0.7))
-        lastPinchDistance.current = currentDistance
-      }
-    }
-  }
-
-  const handlePinchTouchEnd = (): void => {
-    lastPinchDistance.current = null
-  }
 
   const date = parseISO(currentDate)
 
@@ -567,6 +509,7 @@ export function WeekView(): JSX.Element {
   }
 
   const handleDragStart = (event: DragStartEvent): void => {
+    hapticIfEnabled('light')
     const eventId = event.active.id as string
     const draggedEvent = events.find((e) => e.id === eventId)
     setActiveEvent(draggedEvent || null)
@@ -639,6 +582,7 @@ export function WeekView(): JSX.Element {
                 className={styles.dayColumn}
                 onContextMenu={(e) => {
                   e.preventDefault()
+                  openMenu('weekview')
                   setContextMenu({ x: e.clientX, y: e.clientY, day })
                 }}
               >
@@ -704,6 +648,7 @@ export function WeekView(): JSX.Element {
                 className={styles.dayColumn}
                 onContextMenu={(e) => {
                   e.preventDefault()
+                  openMenu('weekview')
                   setContextMenu({ x: e.clientX, y: e.clientY, day })
                 }}
               >
@@ -736,10 +681,7 @@ export function WeekView(): JSX.Element {
         className={styles.container}
         ref={containerRef}
         style={{ '--hour-height': `${60 * scale}px`, touchAction: 'none' } as React.CSSProperties}
-        onTouchStartCapture={handleTouchStartCapture}
-        onTouchStart={handleMobileTouchStart}
-        onTouchMove={handlePinchTouchMove}
-        onTouchEnd={handleMobileTouchEnd}
+        {...bind}
       >
         {isMobile ? renderMobileContent() : renderDesktopContent()}
         {(() => {
@@ -772,7 +714,11 @@ export function WeekView(): JSX.Element {
         <ContextMenu
           x={contextMenu.x}
           y={contextMenu.y}
-          onClose={() => setContextMenu(null)}
+          menuId="weekview"
+          onClose={() => {
+            closeMenu()
+            setContextMenu(null)
+          }}
           items={[
             {
               label: 'Create event',

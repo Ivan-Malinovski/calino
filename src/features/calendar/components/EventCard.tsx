@@ -1,5 +1,5 @@
 import type { JSX } from 'react'
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { format, parseISO } from 'date-fns'
 import { useDraggable } from '@dnd-kit/core'
 import { useCalendarStore } from '@/store/calendarStore'
@@ -8,6 +8,9 @@ import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
 import { ContextMenu } from '@/components/common/ContextMenu'
 import type { CalendarEvent } from '@/types'
 import { DEFAULT_CALENDAR_COLOR } from '@/config'
+import { useGestures } from '@/hooks/useGestures'
+import { useContextMenuStore } from '@/store/contextMenuStore'
+import { hapticIfEnabled } from '@/lib/haptics'
 import styles from './EventCard.module.css'
 
 interface EventCardProps {
@@ -36,7 +39,11 @@ export function EventCard({
   const duplicateEvent = useCalendarStore((state) => state.duplicateEvent)
   const timeFormat = useSettingsStore((state) => state.timeFormat)
   const { deleteEvent: deleteCalDAVEvent } = useCalDAV()
+  const openMenuId = useContextMenuStore((state) => state.openMenuId)
+  const openMenu = useContextMenuStore((state) => state.openMenu)
+  const closeMenu = useContextMenuStore((state) => state.closeMenu)
 
+  const menuId = `event-${event.id}`
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null)
 
   const [isResizing, setIsResizing] = useState(false)
@@ -44,7 +51,25 @@ export function EventCard({
   const resizeStartY = useRef<number | null>(null)
   const pointerStartPos = useRef<{ x: number; y: number } | null>(null)
   const resizeStartEnd = useRef<Date | null>(null)
-  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const { bind } = useGestures({
+    onLongPress: ({ x, y }) => {
+      hapticIfEnabled('medium')
+      openMenu(menuId)
+      setContextMenu({ x, y })
+    },
+    onTap: ({ x, y }) => {
+      pointerStartPos.current = { x, y }
+    },
+    longPressDelay: 400,
+    swipeThreshold: 30,
+  })
+
+  useEffect(() => {
+    if (openMenuId !== null && openMenuId !== menuId && contextMenu) {
+      setContextMenu(null)
+    }
+  }, [openMenuId, menuId])
 
   const {
     attributes,
@@ -139,21 +164,8 @@ export function EventCard({
   const handleContextMenu = (e: React.MouseEvent): void => {
     e.preventDefault()
     e.stopPropagation()
+    openMenu(menuId)
     setContextMenu({ x: e.clientX, y: e.clientY })
-  }
-
-  const handleTouchStart = (e: React.TouchEvent): void => {
-    longPressTimer.current = setTimeout(() => {
-      const touch = e.touches[0]
-      setContextMenu({ x: touch.clientX, y: touch.clientY })
-    }, 500)
-  }
-
-  const handleTouchEnd = (): void => {
-    if (longPressTimer.current) {
-      clearTimeout(longPressTimer.current)
-      longPressTimer.current = null
-    }
   }
 
   const handleCheckboxClick = (e: React.MouseEvent): void => {
@@ -168,8 +180,7 @@ export function EventCard({
         style={style}
         className={`${styles.card} ${compact ? styles.compact : ''} ${isCurrentDragging || isDragging ? styles.dragging : ''} ${isResizing ? styles.resizing : ''} ${hideTopRadius ? styles.noTopRadius : ''} ${isTask ? styles.task : ''} ${event.completed ? styles.completed : ''} ${isMobileMonth ? styles.mobileMonth : ''}`}
         onContextMenu={handleContextMenu}
-        onTouchStart={handleTouchStart}
-        onTouchEnd={handleTouchEnd}
+        {...bind}
       >
         {isRecurring && (
           <div className={styles.recurringIcon}>
@@ -243,7 +254,11 @@ export function EventCard({
         <ContextMenu
           x={contextMenu.x}
           y={contextMenu.y}
-          onClose={() => setContextMenu(null)}
+          menuId={menuId}
+          onClose={() => {
+            closeMenu()
+            setContextMenu(null)
+          }}
           items={[
             {
               label: 'Edit',

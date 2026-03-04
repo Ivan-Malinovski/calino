@@ -1,5 +1,6 @@
 import type { JSX } from 'react'
 import { useEffect, useRef } from 'react'
+import { useContextMenuStore } from '@/store/contextMenuStore'
 import styles from './ContextMenu.module.css'
 
 export interface ContextMenuItem {
@@ -14,10 +15,18 @@ interface ContextMenuProps {
   y: number
   items: ContextMenuItem[]
   onClose: () => void
+  menuId: string
 }
 
-export function ContextMenu({ x, y, items, onClose }: ContextMenuProps): JSX.Element {
+export function ContextMenu({ x, y, items, onClose, menuId }: ContextMenuProps): JSX.Element {
   const menuRef = useRef<HTMLDivElement>(null)
+  const openMenuId = useContextMenuStore((state) => state.openMenuId)
+
+  useEffect(() => {
+    if (openMenuId && openMenuId !== menuId) {
+      onClose()
+    }
+  }, [openMenuId, menuId, onClose])
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent): void => {

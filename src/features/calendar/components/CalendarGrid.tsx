@@ -33,7 +33,8 @@ import { useSettingsStore } from '@/store/settingsStore'
 import { EventCard } from './EventCard'
 import { DayEventsPopup } from './DayEventsPopup'
 import { ContextMenu } from '@/components/common/ContextMenu'
-import { useSwipeNavigation } from '@/hooks/useSwipeNavigation'
+import { useGestures } from '@/hooks/useGestures'
+import { hapticIfEnabled } from '@/lib/haptics'
 import type { CalendarEvent } from '@/types'
 import styles from './CalendarGrid.module.css'
 
@@ -51,9 +52,17 @@ export function CalendarGrid(): JSX.Element {
   const compactRecurringEvents = useSettingsStore((state) => state.compactRecurringEvents ?? false)
   const compressPastWeeks = useSettingsStore((state) => state.compressPastWeeks ?? false)
 
-  const { handleTouchStart, handleTouchEnd } = useSwipeNavigation({
-    currentView: 'month',
-    currentDate,
+  const { bind } = useGestures({
+    onSwipe: (direction) => {
+      if (direction === 'down' || direction === 'up') {
+        changeMonth(direction)
+      }
+    },
+    onPinch: (scaleValue) => {
+      setScale(scaleValue)
+    },
+    swipeThreshold: 50,
+    pinchScaleRange: { min: 0.7, max: 1.5 },
   })
 
   const [activeEvent, setActiveEvent] = useState<CalendarEvent | null>(null)
@@ -64,7 +73,6 @@ export function CalendarGrid(): JSX.Element {
   const scrollCooldownRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const currentDateRef = useRef(currentDate)
   const containerRef = useRef<HTMLDivElement>(null)
-  const lastPinchDistance = useRef<number | null>(null)
 
   useEffect(() => {
     currentDateRef.current = currentDate
@@ -172,6 +180,7 @@ export function CalendarGrid(): JSX.Element {
   }, [changeMonth, isOverlayOpen])
 
   const handleDragStart = (event: DragStartEvent): void => {
+    hapticIfEnabled('light')
     const eventId = event.active.id as string
     const draggedEvent = events.find((e) => e.id === eventId)
     setActiveEvent(draggedEvent || null)
@@ -280,37 +289,29 @@ export function CalendarGrid(): JSX.Element {
     setCurrentView('week')
   }
 
-  const getPinchDistance = (touches: React.TouchList): number => {
-    const dx = touches[0].clientX - touches[1].clientX
-    const dy = touches[0].clientY - touches[1].clientY
-    return Math.sqrt(dx * dx + dy * dy)
-  }
+  const touchStartY = useRef<number | null>(null)
 
-  const handlePinchTouchStart = (e: React.TouchEvent): void => {
-    if (e.touches.length === 2) {
-      lastPinchDistance.current = getPinchDistance(e.touches)
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    if (e.touches.length === 1) {
+      touchStartY.current = e.touches[0].clientY
     }
-  }
+  }, [])
 
-  const handlePinchTouchMove = (e: React.TouchEvent): void => {
-    if (e.touches.length === 2 && lastPinchDistance.current !== null) {
-      e.preventDefault()
-      const currentDistance = getPinchDistance(e.touches)
-      const delta = currentDistance - lastPinchDistance.current
+  const handleTouchEnd = useCallback(
+    (e: React.TouchEvent) => {
+      if (touchStartY.current === null) return
 
-      if (delta > 10) {
-        setScale((s) => Math.min(s + 0.1, 1.5))
-        lastPinchDistance.current = currentDistance
-      } else if (delta < -10) {
-        setScale((s) => Math.max(s - 0.1, 0.7))
-        lastPinchDistance.current = currentDistance
+      const touchEndY = e.changedTouches[0].clientY
+      const diff = touchStartY.current - touchEndY
+
+      if (Math.abs(diff) > 50) {
+        changeMonth(diff > 0 ? 'up' : 'down')
       }
-    }
-  }
 
-  const handlePinchTouchEnd = (): void => {
-    lastPinchDistance.current = null
-  }
+      touchStartY.current = null
+    },
+    [changeMonth]
+  )
 
   const rowHeight = Math.round(100 * scale)
 
@@ -320,15 +321,9 @@ export function CalendarGrid(): JSX.Element {
         className={styles.grid}
         ref={containerRef}
         onWheel={handleWheel}
-        onTouchStart={(e) => {
-          handlePinchTouchStart(e)
-          handleTouchStart(e)
-        }}
-        onTouchMove={handlePinchTouchMove}
-        onTouchEnd={(e) => {
-          handlePinchTouchEnd()
-          handleTouchEnd(e)
-        }}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        {...bind}
         style={
           { '--day-cell-height': `${rowHeight}px`, touchAction: 'none' } as React.CSSProperties
         }
@@ -528,6 +523,7 @@ function DroppableDay({
         <ContextMenu
           x={contextMenu.x}
           y={contextMenu.y}
+          menuId={`day-${day.getTime()}`}
           onClose={() => setContextMenu(null)}
           items={[
             {
