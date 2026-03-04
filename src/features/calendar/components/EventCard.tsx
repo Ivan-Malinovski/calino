@@ -4,6 +4,7 @@ import { format, parseISO } from 'date-fns'
 import { useDraggable } from '@dnd-kit/core'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
+import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
 import { ContextMenu } from '@/components/common/ContextMenu'
 import type { CalendarEvent } from '@/types'
 import { DEFAULT_CALENDAR_COLOR } from '@/config'
@@ -32,6 +33,7 @@ export function EventCard({
   const deleteEvent = useCalendarStore((state) => state.deleteEvent)
   const duplicateEvent = useCalendarStore((state) => state.duplicateEvent)
   const timeFormat = useSettingsStore((state) => state.timeFormat)
+  const { deleteEvent: deleteCalDAVEvent } = useCalDAV()
 
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null)
 
@@ -248,7 +250,14 @@ export function EventCard({
             },
             {
               label: 'Delete',
-              onClick: () => deleteEvent(event.id),
+              onClick: async () => {
+                deleteEvent(event.id)
+                try {
+                  await deleteCalDAVEvent(event.calendarId, event.id)
+                } catch {
+                  // error handled by useCalDAV
+                }
+              },
               icon: <DeleteIcon />,
               danger: true,
             },

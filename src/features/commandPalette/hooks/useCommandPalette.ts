@@ -2,6 +2,7 @@ import { useMemo, useCallback, useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
+import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
 import { createCommandRegistry, type Command } from '../commands'
 import { parseNaturalLanguage, type NLPParseResult } from '@/features/nlp'
 import type {
@@ -35,6 +36,9 @@ export function useCommandPalette({ isOpen }: UseCommandPaletteProps) {
 
   const themeMode = useSettingsStore((state) => state.themeMode)
   const updateSettings = useSettingsStore((state) => state.updateSettings)
+  const accounts = useCalendarStore((state) => state.calendars)
+
+  const { syncAll } = useCalDAV()
 
   const commands = useMemo(() => {
     return createCommandRegistry({
@@ -44,8 +48,9 @@ export function useCommandPalette({ isOpen }: UseCommandPaletteProps) {
       openModal,
       themeMode,
       updateSettings,
+      triggerSync: syncAll,
     })
-  }, [navigate, setCurrentView, setCurrentDate, openModal, themeMode, updateSettings])
+  }, [navigate, setCurrentView, setCurrentDate, openModal, themeMode, updateSettings, syncAll])
 
   const parseInput = useCallback((input: string): ParsedInput => {
     const trimmed = input.trim().toLowerCase()
