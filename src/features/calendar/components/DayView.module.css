@@ -41,7 +41,7 @@
 }
 
 .dayNumber {
-  font-size: 36px;
+  font-size: 18px;
   font-weight: 500;
   color: var(--color-text-primary);
 }
@@ -50,8 +50,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 56px;
-  height: 56px;
+  width: 28px;
+  height: 28px;
   background: var(--color-terracotta, var(--color-accent));
   color: white;
   border-radius: var(--today-badge-radius, 50%);
@@ -64,12 +64,12 @@
   }
 
   .dayNumber {
-    font-size: 28px;
+    font-size: 16px;
   }
 
   .dayNumber.today {
-    width: 40px;
-    height: 40px;
+    width: 24px;
+    height: 24px;
   }
 }
 
