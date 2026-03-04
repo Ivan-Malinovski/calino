@@ -1,9 +1,14 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { EventCard } from '../components/EventCard'
 import { useCalendarStore } from '@/store/calendarStore'
+import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
 import type { CalendarEvent } from '@/types'
+
+vi.mock('@/features/caldav/hooks/useCalDAV')
+
+const mockUseCalDAV = vi.mocked(useCalDAV)
 
 const mockEvent: CalendarEvent = {
   id: 'test-event-1',
@@ -15,7 +20,23 @@ const mockEvent: CalendarEvent = {
 }
 
 describe('EventCard', () => {
+  const mockDeleteCalDAVEvent = vi.fn().mockResolvedValue(undefined)
+
   beforeEach(() => {
+    vi.clearAllMocks()
+    mockUseCalDAV.mockReturnValue({
+      accounts: [],
+      calendars: [],
+      syncState: { status: 'idle', lastSyncAt: null, error: null, pendingChanges: 0 },
+      addAccount: vi.fn(),
+      removeAccount: vi.fn(),
+      syncAccount: vi.fn(),
+      syncAll: vi.fn(),
+      createEvent: vi.fn(),
+      updateEvent: vi.fn(),
+      deleteEvent: mockDeleteCalDAVEvent,
+    } as unknown as ReturnType<typeof useCalDAV>)
+
     const store = useCalendarStore.getState()
     store.events.forEach((e) => store.deleteEvent(e.id))
     store.calendars.forEach((c) => store.deleteCalendar(c.id))
@@ -70,5 +91,23 @@ describe('EventCard', () => {
     await user.click(screen.getByText('Test Meeting'))
 
     expect(handleClick).toHaveBeenCalledWith(mockEvent)
+  })
+
+  it('deletes event from CalDAV when using context menu delete', async () => {
+    const user = userEvent.setup()
+    const store = useCalendarStore.getState()
+    store.addEvent(mockEvent)
+
+    render(<EventCard event={mockEvent} />)
+
+    // Trigger context menu (right-click)
+    const card = screen.getByText('Test Meeting')
+    fireEvent.contextMenu(card)
+
+    // Click delete in context menu
+    const deleteButton = screen.getByText('Delete')
+    await user.click(deleteButton)
+
+    expect(mockDeleteCalDAVEvent).toHaveBeenCalledWith('default', 'test-event-1')
   })
 })
