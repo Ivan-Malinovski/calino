@@ -191,12 +191,17 @@ export function useCalDAV(): UseCalDAVReturn {
         for (const cal of accountCalendars) {
           const fetchedEvents = await client.fetchEvents(cal.url, start, end)
 
+          // Get events that belong to this calendar
+          const calendarEvents = existingEvents.filter((e) => e.calendarId === cal.id)
+          const serverEventIds = new Set<string>()
+
           for (const eventData of fetchedEvents) {
             if (eventData.data) {
               const parsedEvents = parseICALData(eventData.data, cal.id)
 
               for (const parsedEvent of parsedEvents) {
-                const existingIndex = existingEvents.findIndex((e) => e.id === parsedEvent.id)
+                serverEventIds.add(parsedEvent.id)
+                const existingIndex = calendarEvents.findIndex((e) => e.id === parsedEvent.id)
 
                 if (existingIndex >= 0) {
                   storeUpdateEvent(parsedEvent.id, parsedEvent)
@@ -204,6 +209,13 @@ export function useCalDAV(): UseCalDAVReturn {
                   storeAddEvent(parsedEvent)
                 }
               }
+            }
+          }
+
+          // Delete events that exist locally but not on server
+          for (const localEvent of calendarEvents) {
+            if (!serverEventIds.has(localEvent.id)) {
+              storeDeleteEvent(localEvent.id)
             }
           }
         }
@@ -329,6 +341,7 @@ export function useCalDAV(): UseCalDAVReturn {
         const eventUrl = `${calendar.url}${eventId}.ics`
         await engine.deleteEvent(eventUrl, '')
 
+        storeDeleteEvent(eventId)
         storage.updateAccountLastSync(account.id)
       } catch (error) {
         storage.addPendingChange({
