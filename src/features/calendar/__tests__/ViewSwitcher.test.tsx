@@ -10,40 +10,43 @@ describe('ViewSwitcher', () => {
     store.setCurrentView('month')
   })
 
-  it('renders current view button', () => {
+  it('renders all view options', () => {
     render(<ViewSwitcher />)
     expect(screen.getByRole('button', { name: /month/i })).toBeInTheDocument()
-  })
-
-  it('shows dropdown menu when clicked', async () => {
-    const user = userEvent.setup()
-    render(<ViewSwitcher />)
-
-    await user.click(screen.getByRole('button', { name: /month/i }))
-
     expect(screen.getByRole('button', { name: /week/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /day/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /agenda/i })).toBeInTheDocument()
   })
 
-  it('changes view when dropdown item is clicked', async () => {
-    const user = userEvent.setup()
+  it('renders as a group of buttons', () => {
     render(<ViewSwitcher />)
-
-    await user.click(screen.getByRole('button', { name: /month/i }))
-    await user.click(screen.getByRole('button', { name: /week/i }))
-
-    expect(useCalendarStore.getState().currentView).toBe('week')
+    const buttons = screen.getAllByRole('button')
+    expect(buttons.length).toBe(4)
   })
 
-  it('closes dropdown after selection', async () => {
-    const user = userEvent.setup()
+  it('has buttons with proper labels', () => {
     render(<ViewSwitcher />)
-
-    await user.click(screen.getByRole('button', { name: /month/i }))
+    expect(screen.getByRole('button', { name: /month/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /week/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /day/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /agenda/i })).toBeInTheDocument()
+  })
+
+  it('each button is clickable', async () => {
+    const user = userEvent.setup()
+
+    render(<ViewSwitcher />)
 
     await user.click(screen.getByRole('button', { name: /day/i }))
     expect(useCalendarStore.getState().currentView).toBe('day')
+
+    await user.click(screen.getByRole('button', { name: /week/i }))
+    expect(useCalendarStore.getState().currentView).toBe('week')
+
+    await user.click(screen.getByRole('button', { name: /agenda/i }))
+    expect(useCalendarStore.getState().currentView).toBe('agenda')
+
+    await user.click(screen.getByRole('button', { name: /month/i }))
+    expect(useCalendarStore.getState().currentView).toBe('month')
   })
 })

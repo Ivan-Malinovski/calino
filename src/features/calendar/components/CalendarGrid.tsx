@@ -85,9 +85,6 @@ export function CalendarGrid(): JSX.Element {
   const handleWheel = useCallback(
     (e: React.WheelEvent) => {
       if (e.ctrlKey) {
-        e.preventDefault()
-        const delta = e.deltaY > 0 ? -0.1 : 0.1
-        setScale((s) => Math.min(Math.max(s + delta, 0.7), 1.5))
         return
       }
 
@@ -112,6 +109,27 @@ export function CalendarGrid(): JSX.Element {
     },
     [changeMonth]
   )
+
+  useEffect(() => {
+    const handleWheelZoom = (e: WheelEvent): void => {
+      if (e.ctrlKey) {
+        e.preventDefault()
+        const delta = e.deltaY > 0 ? -0.1 : 0.1
+        setScale((s) => Math.min(Math.max(s + delta, 0.7), 1.5))
+      }
+    }
+
+    const container = containerRef.current
+    if (container) {
+      container.addEventListener('wheel', handleWheelZoom, { passive: false })
+    }
+
+    return () => {
+      if (container) {
+        container.removeEventListener('wheel', handleWheelZoom)
+      }
+    }
+  }, [])
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent): void => {
