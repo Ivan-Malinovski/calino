@@ -277,21 +277,28 @@
 @media (max-width: 768px) {
   .header {
     display: flex;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
     position: sticky;
     top: 0;
     left: 0;
     z-index: 10;
   }
 
-  .headerDays {
-    display: flex;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
+  .header::-webkit-scrollbar {
+    display: none;
   }
 
-  .headerDays::-webkit-scrollbar {
-    display: none;
+  .weekNumberHeader {
+    min-width: 45px;
+    max-width: 45px;
+    flex-shrink: 0;
+  }
+
+  .headerDays {
+    display: flex;
+    flex-shrink: 0;
   }
 
   .dayHeader {
@@ -305,6 +312,11 @@
     flex: 1;
     overflow: auto;
     -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .body::-webkit-scrollbar {
+    display: none;
   }
 
   .timeColumn {

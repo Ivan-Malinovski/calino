@@ -610,9 +610,12 @@ export function WeekView(): JSX.Element {
         onTouchMove={handlePinchTouchMove}
         onTouchEnd={handleMobileTouchEnd}
       >
-        <div className={`${styles.header} ${isScrolled ? styles.headerShadow : ''}`}>
+        <div
+          ref={headerScrollRef}
+          className={`${styles.header} ${isScrolled ? styles.headerShadow : ''}`}
+        >
           <div className={styles.weekNumberHeader}>W{weekNumber}</div>
-          <div ref={headerScrollRef} className={styles.headerDays}>
+          <div className={styles.headerDays}>
             {weekDays.map((day) => (
               <div
                 key={day.toISOString()}
