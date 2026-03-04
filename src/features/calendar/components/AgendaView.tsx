@@ -1,6 +1,14 @@
 import type { JSX } from 'react'
-import { useMemo, useState, useRef } from 'react'
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, parseISO, isToday } from 'date-fns'
+import { useMemo, useState, useRef, useEffect } from 'react'
+import {
+  format,
+  startOfMonth,
+  endOfMonth,
+  eachDayOfInterval,
+  parseISO,
+  isToday,
+  startOfDay,
+} from 'date-fns'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
 import type { CalendarEvent } from '@/types'
@@ -54,12 +62,32 @@ export function AgendaView(): JSX.Element {
 
   const [isScrolled, setIsScrolled] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
+  const hasScrolledRef = useRef(false)
 
   const handleScroll = (): void => {
     if (containerRef.current) {
       setIsScrolled(containerRef.current.scrollTop > 0)
     }
   }
+
+  useEffect(() => {
+    if (containerRef.current && !hasScrolledRef.current) {
+      const today = startOfDay(new Date())
+      const viewDate = parseISO(currentDate)
+      const monthStart = startOfMonth(viewDate)
+      const monthEnd = endOfMonth(viewDate)
+
+      if (today >= monthStart && today <= monthEnd) {
+        const todayElement = containerRef.current.querySelector(
+          `[data-date="${format(today, 'yyyy-MM-dd')}"]`
+        )
+        if (todayElement) {
+          todayElement.scrollIntoView({ behavior: 'smooth', block: 'start' })
+          hasScrolledRef.current = true
+        }
+      }
+    }
+  }, [currentDate, days])
 
   return (
     <div
@@ -79,7 +107,7 @@ export function AgendaView(): JSX.Element {
         })
 
         return (
-          <div key={dateKey} className={styles.dayGroup}>
+          <div key={dateKey} className={styles.dayGroup} data-date={dateKey}>
             <div className={`${styles.dayHeader} ${isCurrentDay ? styles.today : ''}`}>
               <div className={styles.dayInfo}>
                 <span className={styles.dayName}>{format(day, 'EEEE')}</span>

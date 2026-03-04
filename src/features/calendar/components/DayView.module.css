@@ -58,6 +58,21 @@
   font-weight: var(--font-weight-today-number, 600);
 }
 
+@media (max-width: 768px) {
+  .dayName {
+    font-size: 12px;
+  }
+
+  .dayNumber {
+    font-size: 28px;
+  }
+
+  .dayNumber.today {
+    width: 40px;
+    height: 40px;
+  }
+}
+
 .hourRow {
   display: grid;
   grid-template-columns: 60px 1fr;
