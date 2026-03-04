@@ -37,6 +37,7 @@
   position: relative;
   display: flex;
   align-items: center;
+  max-width: 100%;
 }
 
 .dropdownButton {
@@ -53,7 +54,10 @@
   cursor: pointer;
   transition: all 0.15s ease;
   min-width: 80px;
+  max-width: 100%;
+  width: 100%;
   justify-content: space-between;
+  box-sizing: border-box;
 }
 
 .dropdownButton:hover {
