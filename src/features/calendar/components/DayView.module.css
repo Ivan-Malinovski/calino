@@ -101,7 +101,7 @@
   top: 0;
   left: 60px;
   right: 0;
-  height: 1440px;
+  height: calc(24 * var(--hour-height, 60px));
   pointer-events: none;
 }
 

@@ -139,10 +139,12 @@
 }
 
 .cell {
-  min-height: 60px;
+  min-height: var(--hour-height, 60px);
+  height: var(--hour-height, 60px);
   border-bottom: 1px solid var(--color-border);
   cursor: pointer;
   transition: background 0.15s ease;
+  box-sizing: border-box;
 }
 
 .cell:hover {

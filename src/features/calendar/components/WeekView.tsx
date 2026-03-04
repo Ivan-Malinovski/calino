@@ -532,7 +532,7 @@ export function WeekView(): JSX.Element {
                     />
                   ))}
                 </div>
-                <div className={styles.eventsOverlay}>
+                <div className={styles.eventsOverlay} style={{ height: 24 * hourHeight }}>
                   {day === weekDays[0] && selectionOverlay}
                   {renderDayEvents(day)}
                 </div>
