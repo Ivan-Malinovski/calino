@@ -5,6 +5,20 @@ import { RRule } from 'rrule'
 import type { CalendarStore, CalendarEvent, Calendar, ViewType, EventType } from '@/types'
 import { config, DEFAULT_CALENDAR_COLOR } from '@/config'
 
+export const selectCurrentView = (state: CalendarStore) => state.currentView
+export const selectCurrentDate = (state: CalendarStore) => state.currentDate
+export const selectOpenModal = (state: CalendarStore) => state.openModal
+export const selectCloseModal = (state: CalendarStore) => state.closeModal
+export const selectAddEvent = (state: CalendarStore) => state.addEvent
+export const selectUpdateEvent = (state: CalendarStore) => state.updateEvent
+export const selectDeleteEvent = (state: CalendarStore) => state.deleteEvent
+export const selectAddCalendar = (state: CalendarStore) => state.addCalendar
+export const selectDeleteCalendar = (state: CalendarStore) => state.deleteCalendar
+export const selectCalendars = (state: CalendarStore) => state.calendars
+export const selectEvents = (state: CalendarStore) => state.events
+export const selectSetCurrentView = (state: CalendarStore) => state.setCurrentView
+export const selectSetCurrentDate = (state: CalendarStore) => state.setCurrentDate
+
 const DEFAULT_CALENDAR: Calendar = {
   id: 'default',
   name: 'My Calendar',

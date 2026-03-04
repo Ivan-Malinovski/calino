@@ -42,6 +42,12 @@ vi.mock('@/store/calendarStore', () => ({
     }
     return selector(state as never)
   }),
+  selectSetCurrentView: (state: never) => state.setCurrentView,
+  selectSetCurrentDate: (state: never) => state.setCurrentDate,
+  selectOpenModal: (state: never) => state.openModal,
+  selectAddEvent: (state: never) => state.addEvent,
+  selectEvents: (state: never) => state.events,
+  selectCalendars: (state: never) => state.calendars,
 }))
 
 vi.mock('@/store/settingsStore', () => ({
@@ -50,9 +56,13 @@ vi.mock('@/store/settingsStore', () => ({
       timeFormat: '12h' as const,
       firstDayOfWeek: 0,
       defaultView: 'month' as const,
+      themeMode: 'auto' as const,
+      updateSettings: vi.fn(),
     }
     return selector(state as never)
   }),
+  selectThemeMode: (state: never) => state.themeMode,
+  selectUpdateSettings: (state: never) => state.updateSettings,
 }))
 
 vi.mock('react-router-dom', () => ({

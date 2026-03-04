@@ -1,7 +1,15 @@
 import { useMemo, useCallback, useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useCalendarStore } from '@/store/calendarStore'
-import { useSettingsStore } from '@/store/settingsStore'
+import {
+  useCalendarStore,
+  selectOpenModal,
+  selectAddEvent,
+  selectEvents,
+  selectCalendars,
+  selectSetCurrentView,
+  selectSetCurrentDate,
+} from '@/store/calendarStore'
+import { useSettingsStore, selectThemeMode, selectUpdateSettings } from '@/store/settingsStore'
 import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
 import { createCommandRegistry, type Command } from '../commands'
 import { parseNaturalLanguage, type NLPParseResult } from '@/features/nlp'
@@ -27,15 +35,15 @@ export function useCommandPalette({ isOpen }: UseCommandPaletteProps) {
   const [query, setQuery] = useState('')
   const [selectedIndex, setSelectedIndex] = useState(0)
 
-  const setCurrentView = useCalendarStore((state) => state.setCurrentView)
-  const setCurrentDate = useCalendarStore((state) => state.setCurrentDate)
-  const openModal = useCalendarStore((state) => state.openModal)
-  const addEvent = useCalendarStore((state) => state.addEvent)
-  const events = useCalendarStore((state) => state.events)
-  const calendars = useCalendarStore((state) => state.calendars)
+  const setCurrentView = useCalendarStore(selectSetCurrentView)
+  const setCurrentDate = useCalendarStore(selectSetCurrentDate)
+  const openModal = useCalendarStore(selectOpenModal)
+  const addEvent = useCalendarStore(selectAddEvent)
+  const events = useCalendarStore(selectEvents)
+  const calendars = useCalendarStore(selectCalendars)
 
-  const themeMode = useSettingsStore((state) => state.themeMode)
-  const updateSettings = useSettingsStore((state) => state.updateSettings)
+  const themeMode = useSettingsStore(selectThemeMode)
+  const updateSettings = useSettingsStore(selectUpdateSettings)
 
   const { syncAll } = useCalDAV()
 

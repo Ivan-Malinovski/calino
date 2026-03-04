@@ -13,6 +13,9 @@ import type {
 } from '@/types'
 import { config, DEFAULT_CALENDAR_COLOR, CALENDAR_COLORS } from '@/config'
 
+export const selectThemeMode = (state: SettingsStore) => state.themeMode
+export const selectUpdateSettings = (state: SettingsStore) => state.updateSettings
+
 function getBrowserTimezone(): string {
   try {
     const tz = Intl.DateTimeFormat().resolvedOptions().timeZone

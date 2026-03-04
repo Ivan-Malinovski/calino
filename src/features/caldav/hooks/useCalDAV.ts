@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react'
 import { addDays } from 'date-fns'
-import type { CalendarEvent } from '@/types'
+import type { CalendarEvent, CalendarStore } from '@/types'
 import type { CalDAVAccount, CalDAVCalendar, SyncState } from '../types'
 import { createCalDAVClient } from '../client/CalDAVClient'
 import { testConnection, discoverServerUrl } from '../client/discovery'
@@ -9,6 +9,14 @@ import { parseICALData } from '../adapter/iCalendarAdapter'
 import * as storage from '../sync/accountStorage'
 import { SyncEngine } from '../sync/syncEngine'
 import { useCalendarStore } from '@/store/calendarStore'
+
+const selectAddEvent = (state: CalendarStore) => state.addEvent
+const selectUpdateEvent = (state: CalendarStore) => state.updateEvent
+const selectDeleteEvent = (state: CalendarStore) => state.deleteEvent
+const selectAddCalendar = (state: CalendarStore) => state.addCalendar
+const selectDeleteCalendar = (state: CalendarStore) => state.deleteCalendar
+const selectCalendars = (state: CalendarStore) => state.calendars
+const selectEvents = (state: CalendarStore) => state.events
 
 interface UseCalDAVReturn {
   accounts: CalDAVAccount[]
@@ -33,13 +41,13 @@ export function useCalDAV(): UseCalDAVReturn {
     pendingChanges: 0,
   })
 
-  const storeAddEvent = useCalendarStore((state) => state.addEvent)
-  const storeUpdateEvent = useCalendarStore((state) => state.updateEvent)
-  const storeDeleteEvent = useCalendarStore((state) => state.deleteEvent)
-  const storeAddCalendar = useCalendarStore((state) => state.addCalendar)
-  const storeDeleteCalendar = useCalendarStore((state) => state.deleteCalendar)
-  const storeCalendars = useCalendarStore((state) => state.calendars)
-  const existingEvents = useCalendarStore((state) => state.events)
+  const storeAddEvent = useCalendarStore(selectAddEvent)
+  const storeUpdateEvent = useCalendarStore(selectUpdateEvent)
+  const storeDeleteEvent = useCalendarStore(selectDeleteEvent)
+  const storeAddCalendar = useCalendarStore(selectAddCalendar)
+  const storeDeleteCalendar = useCalendarStore(selectDeleteCalendar)
+  const storeCalendars = useCalendarStore(selectCalendars)
+  const existingEvents = useCalendarStore(selectEvents)
 
   useEffect(() => {
     const loadedAccounts = storage.getAllAccounts()
