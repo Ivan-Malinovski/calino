@@ -150,7 +150,6 @@ describe('useCalDAV', () => {
         },
       ])
 
-      const deleteEventMock = vi.fn()
       const mockClient = {
         fetchEvents: vi.fn().mockResolvedValue([]),
         fetchCalendars: vi.fn().mockResolvedValue([]),
@@ -158,9 +157,6 @@ describe('useCalDAV', () => {
       mockCalDAVClient.createCalDAVClient.mockResolvedValue(mockClient as unknown as Awaited<ReturnType<typeof CalDAVClientModule.createCalDAVClient>>)
 
       const { result } = renderHook(() => useCalDAV())
-
-      // Manually set up store with events
-      const { rerender } = renderHook(() => useCalDAV())
 
       // The hook needs the calendar to be in the calendars state
       // Since the hook loads from storage, we need a different approach
