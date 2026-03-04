@@ -72,6 +72,7 @@
   position: absolute;
   top: calc(100% + 4px);
   right: 0;
+  left: auto;
   background: var(--color-bg-secondary);
   border: 1px solid var(--color-border);
   border-radius: 8px;
@@ -79,6 +80,7 @@
   overflow: hidden;
   z-index: 100;
   min-width: 120px;
+  max-width: calc(100vw - 32px);
 }
 
 .dropdownItem {
