@@ -61,8 +61,8 @@
 .mobile-fab {
   display: none;
   position: fixed;
-  bottom: 24px;
-  right: 24px;
+  bottom: calc(24px + var(--safe-area-bottom));
+  right: calc(24px + var(--safe-area-right));
   width: 56px;
   height: 56px;
   border-radius: 16px;
@@ -95,8 +95,8 @@
 .mobile-fab-menu {
   display: none;
   position: fixed;
-  bottom: 90px;
-  right: 24px;
+  bottom: calc(90px + var(--safe-area-bottom));
+  right: calc(24px + var(--safe-area-right));
   background: rgba(var(--color-bg-secondary-rgb, 255, 255, 255), 0.85);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);

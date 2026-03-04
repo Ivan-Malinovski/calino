@@ -40,6 +40,7 @@ export function EventCard({
   const resizeStartY = useRef<number | null>(null)
   const pointerStartPos = useRef<{ x: number; y: number } | null>(null)
   const resizeStartEnd = useRef<Date | null>(null)
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const {
     attributes,
@@ -137,6 +138,20 @@ export function EventCard({
     setContextMenu({ x: e.clientX, y: e.clientY })
   }
 
+  const handleTouchStart = (e: React.TouchEvent): void => {
+    longPressTimer.current = setTimeout(() => {
+      const touch = e.touches[0]
+      setContextMenu({ x: touch.clientX, y: touch.clientY })
+    }, 500)
+  }
+
+  const handleTouchEnd = (): void => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current)
+      longPressTimer.current = null
+    }
+  }
+
   const handleCheckboxClick = (e: React.MouseEvent): void => {
     e.stopPropagation()
     updateEvent(event.id, { completed: !event.completed })
@@ -149,6 +164,8 @@ export function EventCard({
         style={style}
         className={`${styles.card} ${compact ? styles.compact : ''} ${isCurrentDragging || isDragging ? styles.dragging : ''} ${isResizing ? styles.resizing : ''} ${hideTopRadius ? styles.noTopRadius : ''} ${isTask ? styles.task : ''} ${event.completed ? styles.completed : ''}`}
         onContextMenu={handleContextMenu}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
       >
         {isRecurring && (
           <div className={styles.recurringIcon}>

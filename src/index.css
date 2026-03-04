@@ -19,6 +19,12 @@
   --sidebar-collapsed-width: 40px;
   --header-height: 64px;
   --mobile-breakpoint: 768px;
+
+  /* Safe area for notched phones */
+  --safe-area-top: env(safe-area-inset-top, 0px);
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-left: env(safe-area-inset-left, 0px);
+  --safe-area-right: env(safe-area-inset-right, 0px);
 }
 
 @media (max-width: 768px) {

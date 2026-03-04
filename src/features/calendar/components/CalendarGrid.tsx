@@ -52,10 +52,12 @@ export function CalendarGrid(): JSX.Element {
 
   const [activeEvent, setActiveEvent] = useState<CalendarEvent | null>(null)
   const [scrollDirection, setScrollDirection] = useState<'up' | 'down' | null>(null)
+  const [scale, setScale] = useState(1)
   const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const scrollCooldownRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const currentDateRef = useRef(currentDate)
   const containerRef = useRef<HTMLDivElement>(null)
+  const lastPinchDistance = useRef<number | null>(null)
 
   useEffect(() => {
     currentDateRef.current = currentDate
@@ -237,9 +239,48 @@ export function CalendarGrid(): JSX.Element {
     setCurrentView('week')
   }
 
+  const getPinchDistance = (touches: React.TouchList): number => {
+    const dx = touches[0].clientX - touches[1].clientX
+    const dy = touches[0].clientY - touches[1].clientY
+    return Math.sqrt(dx * dx + dy * dy)
+  }
+
+  const handleTouchStart = (e: React.TouchEvent): void => {
+    if (e.touches.length === 2) {
+      lastPinchDistance.current = getPinchDistance(e.touches)
+    }
+  }
+
+  const handleTouchMove = (e: React.TouchEvent): void => {
+    if (e.touches.length === 2 && lastPinchDistance.current !== null) {
+      const currentDistance = getPinchDistance(e.touches)
+      const delta = currentDistance - lastPinchDistance.current
+
+      if (delta > 10) {
+        setScale((s) => Math.min(s + 0.1, 1.5))
+        lastPinchDistance.current = currentDistance
+      } else if (delta < -10) {
+        setScale((s) => Math.max(s - 0.1, 0.7))
+        lastPinchDistance.current = currentDistance
+      }
+    }
+  }
+
+  const handleTouchEnd = (): void => {
+    lastPinchDistance.current = null
+  }
+
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-      <div className={styles.grid} ref={containerRef} onWheel={handleWheel}>
+      <div
+        className={styles.grid}
+        ref={containerRef}
+        onWheel={handleWheel}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        style={{ transform: `scale(${scale})`, transformOrigin: 'top center' }}
+      >
         <div className={styles.header}>
           <div className={styles.weekNumHeader}>W#</div>
           {weekdays.map((day) => (

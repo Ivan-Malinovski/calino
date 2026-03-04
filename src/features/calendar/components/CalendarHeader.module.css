@@ -12,7 +12,8 @@
 
 @media (max-width: 768px) {
   .header {
-    padding: var(--space-2, 8px) var(--space-3, 12px);
+    padding: calc(var(--space-2, 8px) + var(--safe-area-top)) var(--space-3, 12px)
+      var(--space-2, 8px) var(--space-3, 12px);
   }
 }
 
