@@ -2,6 +2,7 @@
   display: flex;
   flex-direction: column;
   flex: 1;
+  overflow: hidden;
 }
 
 .header {
@@ -278,6 +279,7 @@
     display: flex;
     position: sticky;
     top: 0;
+    left: 0;
     z-index: 10;
   }
 
