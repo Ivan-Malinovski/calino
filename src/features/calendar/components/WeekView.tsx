@@ -1,5 +1,5 @@
 import type { JSX } from 'react'
-import { useMemo, useState, useCallback, useRef, useLayoutEffect } from 'react'
+import { useMemo, useState, useCallback, useRef, useLayoutEffect, useEffect } from 'react'
 import {
   DndContext,
   DragOverlay,
@@ -87,6 +87,9 @@ export function WeekView(): JSX.Element {
   const [dragStart, setDragStart] = useState<string | null>(null)
   const [dragEnd, setDragEnd] = useState<string | null>(null)
   const [isScrolled, setIsScrolled] = useState(false)
+  const [scale, setScale] = useState(1)
+
+  const containerRef = useRef<HTMLDivElement>(null)
 
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768
 
@@ -97,6 +100,27 @@ export function WeekView(): JSX.Element {
       },
     })
   )
+
+  useEffect(() => {
+    const handleWheelZoom = (e: WheelEvent): void => {
+      if (e.ctrlKey) {
+        e.preventDefault()
+        const delta = e.deltaY > 0 ? -0.1 : 0.1
+        setScale((s) => Math.min(Math.max(s + delta, 0.7), 1.5))
+      }
+    }
+
+    const container = containerRef.current
+    if (container) {
+      container.addEventListener('wheel', handleWheelZoom, { passive: false })
+    }
+
+    return () => {
+      if (container) {
+        container.removeEventListener('wheel', handleWheelZoom)
+      }
+    }
+  }, [])
 
   const date = parseISO(currentDate)
 
@@ -458,7 +482,7 @@ export function WeekView(): JSX.Element {
 
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-      <div className={styles.container}>
+      <div className={styles.container} ref={containerRef} style={{ '--hour-height': `${60 * scale}px` } as React.CSSProperties}>
         <div className={`${styles.header} ${isScrolled ? styles.headerShadow : ''}`}>
           <div className={styles.weekNumberHeader}>W{weekNumber}</div>
           {weekDays.map((day) => (

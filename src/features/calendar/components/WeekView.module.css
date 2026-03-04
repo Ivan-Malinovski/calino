@@ -48,7 +48,8 @@
 }
 
 .timeCell {
-  min-height: 60px;
+  min-height: var(--hour-height, 60px);
+  height: var(--hour-height, 60px);
   padding: var(--space-1, 4px) var(--space-2, 8px);
   font-size: var(--font-size-event-time, 11px);
   font-weight: 500;
@@ -59,6 +60,7 @@
   align-items: flex-start;
   justify-content: flex-end;
   padding-top: var(--space-2, 8px);
+  box-sizing: border-box;
 }
 
 .timeGutter {

@@ -61,8 +61,10 @@
 .hourRow {
   display: grid;
   grid-template-columns: 60px 1fr;
-  min-height: 60px;
+  min-height: var(--hour-height, 60px);
+  height: var(--hour-height, 60px);
   border-bottom: 1px solid var(--color-border-subtle, var(--color-border));
+  box-sizing: border-box;
 }
 
 @media (max-width: 768px) {
