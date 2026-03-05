@@ -9,6 +9,7 @@ import { ViewSwitcher } from './ViewSwitcher'
 import { ThemeToggle } from './ThemeToggle'
 import { Search } from '@/features/search'
 import { QuickAdd } from '@/features/nlp'
+import { useGestures } from '@/hooks/useGestures'
 import type { NLPParseResult } from '@/features/nlp'
 import styles from './CalendarHeader.module.css'
 
@@ -94,45 +95,37 @@ export function CalendarHeader({ onQuickAdd, onToggleSidebar }: CalendarHeaderPr
     setCurrentDate(format(new Date(), 'yyyy-MM-dd'))
   }
 
-  const touchStartX = useRef<number | null>(null)
+  const handleSwipe = useCallback(
+    (direction: 'left' | 'right' | 'up' | 'down') => {
+      const dir = direction === 'left' ? 'next' : direction === 'right' ? 'prev' : null
+      if (!dir) return
 
-  const handleTouchStart = useCallback((e: React.TouchEvent) => {
-    touchStartX.current = e.touches[0].clientX
-  }, [])
-
-  const handleTouchEnd = useCallback(
-    (e: React.TouchEvent) => {
-      if (touchStartX.current === null) return
-
-      const touchEndX = e.changedTouches[0].clientX
-      const diff = touchStartX.current - touchEndX
-
-      if (Math.abs(diff) > 50) {
-        const direction = diff > 0 ? 'next' : 'prev'
-        let newDate: Date
-        switch (currentView) {
-          case 'month':
-            newDate = direction === 'prev' ? addMonths(date, -1) : addMonths(date, 1)
-            break
-          case 'week':
-            newDate = direction === 'prev' ? addWeeks(date, -1) : addWeeks(date, 1)
-            break
-          case 'day':
-            newDate = direction === 'prev' ? addDays(date, -1) : addDays(date, 1)
-            break
-          case 'agenda':
-            newDate = direction === 'prev' ? addMonths(date, -1) : addMonths(date, 1)
-            break
-          default:
-            newDate = date
-        }
-        setCurrentDate(format(newDate, 'yyyy-MM-dd'))
+      let newDate: Date
+      switch (currentView) {
+        case 'month':
+          newDate = dir === 'prev' ? addMonths(date, -1) : addMonths(date, 1)
+          break
+        case 'week':
+          newDate = dir === 'prev' ? addWeeks(date, -1) : addWeeks(date, 1)
+          break
+        case 'day':
+          newDate = dir === 'prev' ? addDays(date, -1) : addDays(date, 1)
+          break
+        case 'agenda':
+          newDate = dir === 'prev' ? addMonths(date, -1) : addMonths(date, 1)
+          break
+        default:
+          newDate = date
       }
-
-      touchStartX.current = null
+      setCurrentDate(format(newDate, 'yyyy-MM-dd'))
     },
     [currentView, date, setCurrentDate]
   )
+
+  const { bind } = useGestures({
+    onSwipe: handleSwipe,
+    swipeThreshold: 50,
+  })
 
   const handleQuickAddHover = useCallback((open: boolean) => {
     if (closeTimeoutRef.current) {
@@ -157,7 +150,7 @@ export function CalendarHeader({ onQuickAdd, onToggleSidebar }: CalendarHeaderPr
   )
 
   return (
-    <div className={styles.header} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
+    <div className={styles.header} {...bind}>
       <div className={styles.left}>
         <button className={styles.hamburger} onClick={onToggleSidebar} aria-label="Toggle menu">
           <MenuIcon />

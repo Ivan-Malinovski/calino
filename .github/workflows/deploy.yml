@@ -37,6 +37,8 @@ jobs:
 
       - name: Build
         run: pnpm build
+        env:
+          VITE_SITE_URL: https://ivan-malinovski.github.io/calino
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3

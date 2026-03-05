@@ -10,13 +10,23 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from '@dnd-kit/core'
-import { format, eachHourOfInterval, startOfDay, endOfDay, parseISO, isToday } from 'date-fns'
+import {
+  format,
+  eachHourOfInterval,
+  startOfDay,
+  endOfDay,
+  parseISO,
+  isToday,
+  addDays,
+} from 'date-fns'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
 import { DEFAULT_CALENDAR_COLOR } from '@/config'
 import { EventCard } from './EventCard'
 import { ContextMenu } from '@/components/common/ContextMenu'
-import { useSwipeNavigation } from '@/hooks/useSwipeNavigation'
+import { useGestures } from '@/hooks/useGestures'
+import { useContextMenuStore } from '@/store/contextMenuStore'
+import { hapticIfEnabled } from '@/lib/haptics'
 import type { CalendarEvent, Calendar } from '@/types'
 import styles from './DayView.module.css'
 
@@ -46,22 +56,57 @@ export function DayView(): JSX.Element {
   const getEventsForDateRange = useCalendarStore((state) => state.getEventsForDateRange)
   const openModal = useCalendarStore((state) => state.openModal)
   const updateEvent = useCalendarStore((state) => state.updateEvent)
+  const setCurrentDate = useCalendarStore((state) => state.setCurrentDate)
   const timeFormat = useSettingsStore((state) => state.timeFormat)
 
   const [activeEvent, setActiveEvent] = useState<CalendarEvent | null>(null)
   const [isDraggingToCreate, setIsDraggingToCreate] = useState(false)
   const [dragStart, setDragStart] = useState<string | null>(null)
   const [dragEnd, setDragEnd] = useState<string | null>(null)
+  const openMenuId = useContextMenuStore((state) => state.openMenuId)
+  const openMenu = useContextMenuStore((state) => state.openMenu)
+  const closeMenu = useContextMenuStore((state) => state.closeMenu)
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null)
   const bodyRef = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const [scale, setScale] = useState(0.7)
   const hourHeight = BASE_hourHeight * scale
-  const lastPinchDistance = useRef<number | null>(null)
 
-  const { handleTouchStart: swipeTouchStart, handleTouchEnd: swipeTouchEnd } = useSwipeNavigation({
-    currentView: 'day',
-    currentDate,
+  useEffect(() => {
+    if (openMenuId !== null && openMenuId !== 'dayview' && contextMenu) {
+      setContextMenu(null)
+    }
+  }, [openMenuId])
+
+  const handleSwipe = useCallback(
+    (direction: 'left' | 'right' | 'up' | 'down') => {
+      const date = parseISO(currentDate)
+      let newDate: Date
+
+      if (direction === 'left') {
+        newDate = addDays(date, 1)
+      } else if (direction === 'right') {
+        newDate = addDays(date, -1)
+      } else if (direction === 'up') {
+        newDate = addDays(date, 7)
+      } else {
+        newDate = addDays(date, -7)
+      }
+
+      setCurrentDate(newDate.toISOString().split('T')[0])
+    },
+    [currentDate, setCurrentDate]
+  )
+
+  const handlePinch = useCallback((scaleValue: number) => {
+    setScale(scaleValue)
+  }, [])
+
+  const { bind } = useGestures({
+    onSwipe: handleSwipe,
+    onPinch: handlePinch,
+    swipeThreshold: 50,
+    pinchScaleRange: { min: 0.7, max: 1.5 },
   })
 
   const sensors = useSensors(
@@ -92,38 +137,6 @@ export function DayView(): JSX.Element {
       }
     }
   }, [])
-
-  const getPinchDistance = (touches: React.TouchList): number => {
-    const dx = touches[0].clientX - touches[1].clientX
-    const dy = touches[0].clientY - touches[1].clientY
-    return Math.sqrt(dx * dx + dy * dy)
-  }
-
-  const handlePinchTouchStart = (e: React.TouchEvent): void => {
-    if (e.touches.length === 2) {
-      lastPinchDistance.current = getPinchDistance(e.touches)
-    }
-  }
-
-  const handlePinchTouchMove = (e: React.TouchEvent): void => {
-    if (e.touches.length === 2 && lastPinchDistance.current !== null) {
-      e.preventDefault()
-      const currentDistance = getPinchDistance(e.touches)
-      const delta = currentDistance - lastPinchDistance.current
-
-      if (delta > 10) {
-        setScale((s) => Math.min(s + 0.1, 1.5))
-        lastPinchDistance.current = currentDistance
-      } else if (delta < -10) {
-        setScale((s) => Math.max(s - 0.1, 0.7))
-        lastPinchDistance.current = currentDistance
-      }
-    }
-  }
-
-  const handlePinchTouchEnd = (): void => {
-    lastPinchDistance.current = null
-  }
 
   const date = parseISO(currentDate)
 
@@ -267,6 +280,7 @@ export function DayView(): JSX.Element {
   }, [isDraggingToCreate, dragStart, dragEnd])
 
   const handleDragStart = (event: DragStartEvent): void => {
+    hapticIfEnabled('light')
     const eventId = event.active.id as string
     const draggedEvent = events.find((e) => e.id === eventId)
     setActiveEvent(draggedEvent || null)
@@ -442,17 +456,10 @@ export function DayView(): JSX.Element {
         style={{ '--hour-height': `${60 * scale}px`, touchAction: 'none' } as React.CSSProperties}
         onContextMenu={(e) => {
           e.preventDefault()
+          openMenu('dayview')
           setContextMenu({ x: e.clientX, y: e.clientY })
         }}
-        onTouchStart={(e) => {
-          handlePinchTouchStart(e)
-          swipeTouchStart(e)
-        }}
-        onTouchMove={handlePinchTouchMove}
-        onTouchEnd={(e) => {
-          handlePinchTouchEnd()
-          swipeTouchEnd(e)
-        }}
+        {...bind}
       >
         <div className={`${styles.header} ${isScrolled ? styles.headerShadow : ''}`}>
           <div className={styles.dayInfo}>
@@ -496,7 +503,11 @@ export function DayView(): JSX.Element {
         <ContextMenu
           x={contextMenu.x}
           y={contextMenu.y}
-          onClose={() => setContextMenu(null)}
+          menuId="dayview"
+          onClose={() => {
+            closeMenu()
+            setContextMenu(null)
+          }}
           items={[
             {
               label: 'Create event',
