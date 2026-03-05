@@ -8,9 +8,12 @@ interface UseSwipeNavigationOptions {
   currentDate: string
 }
 
+const SWIPE_COOLDOWN_MS = 500
+
 export function useSwipeNavigation({ currentView, currentDate }: UseSwipeNavigationOptions) {
   const setCurrentDate = useCalendarStore((state) => state.setCurrentDate)
   const touchStartX = useRef<number | null>(null)
+  const lastSwipeTime = useRef<number>(0)
 
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX
@@ -20,11 +23,19 @@ export function useSwipeNavigation({ currentView, currentDate }: UseSwipeNavigat
     (e: React.TouchEvent) => {
       if (touchStartX.current === null) return
 
+      // Check cooldown to prevent double-triggering
+      const now = Date.now()
+      if (now - lastSwipeTime.current < SWIPE_COOLDOWN_MS) {
+        touchStartX.current = null
+        return
+      }
+
       const touchEndX = e.changedTouches[0].clientX
       const diff = touchStartX.current - touchEndX
 
       if (Math.abs(diff) > 50) {
         const direction = diff > 0 ? 'next' : 'prev'
+        lastSwipeTime.current = now
         const date = parseISO(currentDate)
         let newDate: Date
 

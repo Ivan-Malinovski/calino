@@ -261,6 +261,25 @@ export function WeekView(): JSX.Element {
     return eachDayOfInterval({ start: weekStart, end: weekEnd })
   }, [date, firstDayOfWeek])
 
+  const allDayEventsMap = useMemo(() => {
+    const weekStart = startOfWeek(date, { weekStartsOn: firstDayOfWeek || 0 })
+    const weekEnd = endOfWeek(date, { weekStartsOn: firstDayOfWeek || 0 })
+    const weekEvents = getEventsForDateRange(
+      format(weekStart, 'yyyy-MM-dd'),
+      format(weekEnd, 'yyyy-MM-dd')
+    )
+
+    const map = new Map<string, CalendarEvent[]>()
+    weekEvents
+      .filter((event) => event.type !== 'task' && event.isAllDay)
+      .forEach((event: CalendarEvent) => {
+        const dateKey = format(parseISO(event.start), 'yyyy-MM-dd')
+        const existing = map.get(dateKey) || []
+        map.set(dateKey, [...existing, event])
+      })
+    return map
+  }, [date, firstDayOfWeek, getEventsForDateRange, events])
+
   const eventsMap = useMemo(() => {
     const weekStart = startOfWeek(date, { weekStartsOn: firstDayOfWeek || 0 })
     const weekEnd = endOfWeek(date, { weekStartsOn: firstDayOfWeek || 0 })
@@ -272,7 +291,7 @@ export function WeekView(): JSX.Element {
     const map = new Map<string, CalendarEvent[]>()
     weekEvents
       .filter((event) => {
-        if (event.type !== 'task') return true
+        if (event.type !== 'task') return !event.isAllDay
         if (event.isAllDay) return false
         return event.start && event.dueDate
       })
@@ -623,6 +642,18 @@ export function WeekView(): JSX.Element {
           ))}
         </div>
       </div>
+      <div className={styles.allDayHeader}>
+        <div className={styles.weekNumberHeader} style={{ visibility: 'hidden' }}>
+          W{weekNumber}
+        </div>
+        <div className={styles.headerDays}>
+          {weekDays.map((day) => (
+            <div key={`mobile-allDay-${day.toISOString()}`} className={styles.allDayCell}>
+              {renderAllDayPills(day)}
+            </div>
+          ))}
+        </div>
+      </div>
       <div className={styles.mobileBody}>
         <div className={styles.timeColumn}>
           {HOURS.map((hour) => (
@@ -665,6 +696,39 @@ export function WeekView(): JSX.Element {
     </div>
   )
 
+  const renderAllDayPills = (day: Date) => {
+    const dateKey = format(day, 'yyyy-MM-dd')
+    const dayAllDayEvents = allDayEventsMap.get(dateKey) || []
+
+    // Debug
+    if (dayAllDayEvents.length > 0) {
+      console.log('DEBUG: All-day pills for', dateKey, dayAllDayEvents.length, 'events')
+    }
+
+    if (dayAllDayEvents.length === 0) return null
+
+    return (
+      <div className={styles.allDayPills}>
+        {dayAllDayEvents.slice(0, 2).map((event) => (
+          <div
+            key={event.id}
+            className={styles.allDayPill}
+            style={{ backgroundColor: event.color || '#6366f1' }}
+            onClick={(e) => {
+              e.stopPropagation()
+              openModal(undefined, undefined, event.id)
+            }}
+          >
+            <span className={styles.allDayPillText}>{event.title}</span>
+          </div>
+        ))}
+        {dayAllDayEvents.length > 2 && (
+          <div className={styles.moreAllDayEvents}>+{dayAllDayEvents.length - 2} more</div>
+        )}
+      </div>
+    )
+  }
+
   const renderDesktopContent = () => (
     <>
       <div className={`${styles.header} ${isScrolled ? styles.headerShadow : ''}`}>
@@ -677,6 +741,18 @@ export function WeekView(): JSX.Element {
             >
               <div className={styles.dayName}>{format(day, 'EEE')}</div>
               <div className={styles.dayNumber}>{format(day, 'd')}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className={styles.allDayHeader}>
+        <div className={styles.weekNumberHeader} style={{ visibility: 'hidden' }}>
+          W{weekNumber}
+        </div>
+        <div className={styles.headerDays}>
+          {weekDays.map((day) => (
+            <div key={`allDay-${day.toISOString()}`} className={styles.allDayCell}>
+              {renderAllDayPills(day)}
             </div>
           ))}
         </div>

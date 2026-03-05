@@ -47,6 +47,7 @@ export function CalendarGrid(): JSX.Element {
   const setCurrentDate = useCalendarStore((state) => state.setCurrentDate)
   const setCurrentView = useCalendarStore((state) => state.setCurrentView)
   const isOverlayOpen = useCalendarStore((state) => state.isOverlayOpen)
+  const isModalOpen = useCalendarStore((state) => state.isModalOpen)
   const firstDayOfWeek = useSettingsStore((state) => state.firstDayOfWeek)
   const compactRecurringEvents = useSettingsStore((state) => state.compactRecurringEvents ?? false)
   const compressPastWeeks = useSettingsStore((state) => state.compressPastWeeks ?? false)
@@ -96,7 +97,7 @@ export function CalendarGrid(): JSX.Element {
       }
 
       if (scrollCooldownRef.current) return
-      if (Math.abs(e.deltaY) < 20) return
+      if (Math.abs(e.deltaY) < 10) return
 
       if (scrollTimeoutRef.current) {
         clearTimeout(scrollTimeoutRef.current)
@@ -149,7 +150,7 @@ export function CalendarGrid(): JSX.Element {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent): void => {
-      if (isOverlayOpen) return
+      if (isOverlayOpen || isModalOpen) return
 
       if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
         e.preventDefault()
@@ -169,7 +170,7 @@ export function CalendarGrid(): JSX.Element {
         clearTimeout(scrollCooldownRef.current)
       }
     }
-  }, [changeMonth, isOverlayOpen])
+  }, [changeMonth, isOverlayOpen, isModalOpen])
 
   const handleDragStart = (event: DragStartEvent): void => {
     const eventId = event.active.id as string
@@ -232,6 +233,25 @@ export function CalendarGrid(): JSX.Element {
     return Array.from({ length: numWeeks }, (_, i) => getISOWeek(days[i * 7]))
   }, [numWeeks, days])
 
+  const allDayEventsMap = useMemo(() => {
+    const monthStart = startOfMonth(date)
+    const monthEnd = endOfMonth(date)
+    const monthEvents = getEventsForDateRange(
+      format(monthStart, 'yyyy-MM-dd'),
+      format(monthEnd, 'yyyy-MM-dd')
+    )
+
+    const map = new Map<string, CalendarEvent[]>()
+    monthEvents
+      .filter((event) => event.type !== 'task' && event.isAllDay)
+      .forEach((event) => {
+        const eventDate = format(parseISO(event.start), 'yyyy-MM-dd')
+        const existing = map.get(eventDate) || []
+        map.set(eventDate, [...existing, event])
+      })
+    return map
+  }, [date, events, calendars, getEventsForDateRange])
+
   const eventsMap = useMemo(() => {
     const monthStart = startOfMonth(date)
     const monthEnd = endOfMonth(date)
@@ -242,7 +262,7 @@ export function CalendarGrid(): JSX.Element {
 
     const map = new Map<string, CalendarEvent[]>()
     monthEvents
-      .filter((event) => event.type !== 'task')
+      .filter((event) => event.type !== 'task' && !event.isAllDay)
       .forEach((event) => {
         const eventDate = format(parseISO(event.start), 'yyyy-MM-dd')
         const existing = map.get(eventDate) || []
@@ -368,6 +388,7 @@ export function CalendarGrid(): JSX.Element {
                   </div>
                   {days.slice(weekIdx * 7, weekIdx * 7 + 7).map((day) => {
                     const dateKey = format(day, 'yyyy-MM-dd')
+                    const dayAllDayEvents = allDayEventsMap.get(dateKey) || []
                     const dayEvents = eventsMap.get(dateKey) || []
                     const dayTasks = tasksMap.get(dateKey) || []
                     const isCurrentMonth = isSameMonth(day, date)
@@ -380,6 +401,7 @@ export function CalendarGrid(): JSX.Element {
                         key={dateKey}
                         dateKey={dateKey}
                         day={day}
+                        dayAllDayEvents={dayAllDayEvents}
                         dayEvents={dayEvents}
                         dayTasks={dayTasks}
                         isCurrentMonth={isCurrentMonth}
@@ -408,6 +430,7 @@ export function CalendarGrid(): JSX.Element {
 interface DroppableDayProps {
   dateKey: string
   day: Date
+  dayAllDayEvents: CalendarEvent[]
   dayEvents: CalendarEvent[]
   dayTasks: CalendarEvent[]
   isCurrentMonth: boolean
@@ -424,6 +447,7 @@ interface DroppableDayProps {
 function DroppableDay({
   dateKey,
   day,
+  dayAllDayEvents,
   dayEvents,
   dayTasks,
   isCurrentMonth,
@@ -480,13 +504,36 @@ function DroppableDay({
           {format(day, 'd')}
         </span>
       </div>
+      {dayAllDayEvents.length > 0 && (
+        <div className={styles.allDayEvents}>
+          <AnimatePresence>
+            {dayAllDayEvents.slice(0, 2).map((event) => (
+              <div
+                key={event.id}
+                className={styles.allDayPill}
+                style={{
+                  backgroundColor: event.color || '#6366f1',
+                }}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  openModal(undefined, undefined, event.id)
+                }}
+              >
+                <span className={styles.allDayPillText}>{event.title}</span>
+              </div>
+            ))}
+          </AnimatePresence>
+          {dayAllDayEvents.length > 2 && (
+            <div className={styles.moreAllDayEvents}>+{dayAllDayEvents.length - 2} more</div>
+          )}
+        </div>
+      )}
       <div className={styles.events}>
         <AnimatePresence>
           {dayEvents.slice(0, 3).map((event) => {
             const isMultiDay = !isSameDay(parseISO(event.start), parseISO(event.end))
             const shouldCompact =
-              isPastWeek ||
-              (compactRecurringEvents && (!!event.rruleString || event.isAllDay || isMultiDay))
+              isPastWeek || (compactRecurringEvents && (!!event.rruleString || isMultiDay))
             return (
               <EventCard
                 key={event.id}

@@ -26,6 +26,67 @@
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
+.allDayHeader {
+  display: flex;
+  border-bottom: 1px solid var(--color-border-subtle, var(--color-border));
+  background: var(--color-bg, var(--color-bg-secondary));
+  flex-shrink: 0;
+  max-height: 80px;
+  overflow-y: auto;
+}
+
+.allDayCell {
+  display: flex;
+  flex-direction: column;
+  padding: 4px;
+  border-right: 1px solid var(--color-border-subtle, var(--color-border));
+  min-height: 48px;
+  gap: 2px;
+}
+
+.allDayCell:last-child {
+  border-right: none;
+}
+
+.allDayPills {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.allDayPill {
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: white;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-height: 18px;
+  display: flex;
+  align-items: center;
+  transition: opacity 0.15s ease;
+}
+
+.allDayPill:hover {
+  opacity: 0.85;
+}
+
+.allDayPillText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.moreAllDayEvents {
+  font-size: 10px;
+  color: var(--color-text-secondary);
+  padding: 2px 6px;
+  text-align: center;
+}
+
 .weekNumberColumn {
   display: flex;
   flex-direction: column;

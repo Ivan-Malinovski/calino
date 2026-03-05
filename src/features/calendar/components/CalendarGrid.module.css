@@ -170,11 +170,52 @@
   color: var(--color-accent);
 }
 
+.allDayEvents {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: var(--space-1, 4px);
+  margin-bottom: 4px;
+  overflow: hidden;
+}
+
+.allDayPill {
+  padding: 2px 8px;
+  border-radius: 4px;
+  color: white;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-height: 20px;
+  display: flex;
+  align-items: center;
+  transition: opacity 0.15s ease;
+}
+
+.allDayPill:hover {
+  opacity: 0.85;
+}
+
+.allDayPillText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.moreAllDayEvents {
+  font-size: 10px;
+  color: var(--color-text-secondary);
+  padding: 2px 8px;
+  text-align: center;
+}
+
 .events {
   display: flex;
   flex-direction: column;
   gap: var(--event-gap, 2px);
-  margin-top: var(--space-2, 8px);
   overflow: hidden;
   min-height: 24px;
 }
