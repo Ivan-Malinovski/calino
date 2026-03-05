@@ -1,0 +1,155 @@
+# Task: Fix Swipe Double-Trigger on Mobile
+
+## Objective
+Fix the issue where swiping on mobile calendar views changes months/weeks/days twice.
+
+## Current State
+- `useSwipeNavigation` hook handles swipe detection
+- Used in: CalendarGrid (Month), WeekView, DayView
+- Issues identified:
+  1. No debouncing/cooldown between swipe triggers
+  2. Complex mobile logic in WeekView may double-call
+  3. Touch events may fire multiple times on some devices
+
+## Root Causes
+
+### Cause 1: No Cooldown in Hook (useSwipeNavigation.ts)
+```typescript
+const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+  if (touchStartX.current === null) return
+  
+  const touchEndX = e.changedTouches[0].clientX
+  const diff = touchStartX.current - touchEndX
+  
+  if (Math.abs(diff) > 50) {
+    const direction = diff > 0 ? 'next' : 'prev'
+    onNavigate(direction)  // Called immediately, no cooldown
+  }
+  touchStartX.current = null
+}, [onNavigate])
+```
+
+### Cause 2: WeekView Complex Logic (WeekView.tsx lines 105-163)
+```typescript
+const handleMobileTouchEnd = useCallback(
+  (e: React.TouchEvent) => {
+    if (!isMobile) {
+      swipeTouchEnd(e)  // Trigger 1
+      return
+    }
+    // Mobile logic with scroll position checks
+    if ((diff > 0 && isAtEnd) || (diff < 0 && isAtStart)) {
+      swipeTouchEnd(e)  // Trigger 2 - potential double
+    }
+  },
+  [isMobile, swipeTouchEnd]
+)
+```
+
+### Cause 3: Touch Event Bubbling
+Touch events may bubble up and trigger multiple handlers.
+
+## Requirements
+1. Add cooldown/debounce to prevent rapid re-triggering
+2. Ensure single swipe = single navigation
+3. Maintain responsive feel (no lag)
+4. Work consistently across all views
+
+## Implementation Details
+
+### Files to Modify
+- `src/hooks/useSwipeNavigation.ts` - Add cooldown
+- `src/features/calendar/components/WeekView.tsx` - Simplify/fix logic
+- `src/features/calendar/components/CalendarGrid.tsx` - Verify integration
+- `src/features/calendar/components/DayView.tsx` - Verify integration
+
+### Solution: Add Cooldown to Hook
+
+```typescript
+// useSwipeNavigation.ts
+export function useSwipeNavigation(options: SwipeOptions) {
+  const { onNavigate } = options
+  const touchStartX = useRef<number | null>(null)
+  const lastSwipeTime = useRef<number>(0)
+  const SWIPE_COOLDOWN = 500  // ms
+  
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX
+  }, [])
+  
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    if (touchStartX.current === null) return
+    
+    // Check cooldown
+    const now = Date.now()
+    if (now - lastSwipeTime.current < SWIPE_COOLDOWN) {
+      touchStartX.current = null
+      return
+    }
+    
+    const touchEndX = e.changedTouches[0].clientX
+    const diff = touchStartX.current - touchEndX
+    const threshold = 50
+    
+    if (Math.abs(diff) > threshold) {
+      const direction = diff > 0 ? 'next' : 'prev'
+      lastSwipeTime.current = now
+      onNavigate(direction)
+    }
+    
+    touchStartX.current = null
+  }, [onNavigate])
+  
+  return { handleTouchStart, handleTouchEnd }
+}
+```
+
+### Fix WeekView Logic
+Simplify the WeekView touch end handler to remove potential double-call:
+
+```typescript
+// WeekView.tsx
+const handleTouchEnd = useCallback(
+  (e: React.TouchEvent) => {
+    // Always call swipe handler - let the hook manage cooldown
+    swipeTouchEnd(e)
+    handlePinchTouchEnd()
+  },
+  [swipeTouchEnd, handlePinchTouchEnd]
+)
+```
+
+Remove the complex mobile scroll-position checking that's causing issues, OR ensure it only calls swipe handler once.
+
+### Alternative: CSS touch-action
+Prevent browser handling of touch gestures:
+```css
+.calendarContainer {
+  touch-action: pan-y;  /* Allow vertical scroll, handle horizontal in JS */
+}
+```
+
+## Testing
+
+Test scenarios:
+- [ ] Normal swipe left/right - single navigation
+- [ ] Rapid swipes - only first triggers
+- [ ] Slow drag then release - single navigation
+- [ ] Swipe during scroll - no double trigger
+- [ ] All views: Month, Week, Day
+- [ ] Different devices: iOS Safari, Android Chrome
+
+### Debugging
+Add console logs to verify:
+```typescript
+console.log('Swipe detected:', direction, 'at', new Date().toISOString())
+```
+
+## Acceptance Criteria
+- [ ] Single swipe gesture triggers exactly one navigation
+- [ ] 500ms cooldown prevents double triggers
+- [ ] Navigation feels responsive (no perceived lag)
+- [ ] Works on Month, Week, and Day views
+- [ ] Works on iOS and Android
+- [ ] Does not interfere with pinch-to-zoom
+- [ ] Does not interfere with vertical scrolling

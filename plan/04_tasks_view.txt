@@ -1,0 +1,104 @@
+# Task: Create Dedicated Tasks View
+
+## Objective
+Create a new calendar view specifically for tasks, accessed from the view switcher alongside Month/Week/Day/Agenda.
+
+## Current State
+- Tasks are stored as events with `type: 'task'`
+- Tasks appear in: MonthView (checkbox), WeekView/DayView (sticky footer)
+- View switcher has 4 views: month, week, day, agenda
+- Route `/agenda` exists for agenda view
+
+## Requirements
+1. Add new "Tasks" view option to view switcher
+2. Display tasks in a list/agenda format (similar to current AgendaView)
+3. Show task-specific fields: due date, priority, completed status
+4. Allow filtering: All, Today, Upcoming, Completed
+5. Support sorting: by due date, by priority, by created date
+6. Quick actions: mark complete, edit, delete
+7. Add new route `/tasks`
+
+## Implementation Details
+
+### Files to Create
+- `src/features/calendar/components/TasksView.tsx` - Main component
+- `src/features/calendar/TasksView.module.css` - Styles
+- `src/features/calendar/__tests__/TasksView.test.tsx` - Tests
+
+### Files to Modify
+- `src/features/calendar/components/ViewSwitcher.tsx` - Add "Tasks" option
+- `src/store/calendarStore.ts` - Add 'tasks' to ViewType
+- `src/App.tsx` or routing file - Add /tasks route
+- `src/features/calendar/index.ts` - Export TasksView
+
+### View Switcher Changes
+```typescript
+// Current ViewType: 'month' | 'week' | 'day' | 'agenda'
+// New ViewType: 'month' | 'week' | 'day' | 'agenda' | 'tasks'
+```
+
+### TasksView Component Structure
+```
+TasksView
+├── Header
+│   ├── Title "Tasks"
+│   └── Filter tabs: All | Today | Upcoming | Completed
+├── Toolbar
+│   ├── Sort dropdown: Due Date | Priority | Created
+│   └── Add Task button
+├── Task List
+│   └── TaskItem[]
+│       ├── Checkbox (completed toggle)
+│       ├── Title
+│       ├── Due date/time
+│       ├── Priority indicator (color/dot)
+│       ├── Calendar color
+│       └── Actions (edit, delete)
+└── Empty state (when no tasks)
+```
+
+### Task Item Design
+```
+[ ] Task Title                    Due: Today  [High]  [Edit] [Del]
+    Calendar: Work (blue)
+```
+
+### Filtering Logic
+- **All**: Show all non-deleted tasks
+- **Today**: Due date = today
+- **Upcoming**: Due date > today and not completed
+- **Completed**: completed === true
+
+### Sorting Options
+- **Due Date**: Earliest first, no due date at end
+- **Priority**: 9 (highest) to 0 (lowest), undefined last
+- **Created**: Newest first
+
+### Data Fetching
+```typescript
+// From calendarStore
+const tasks = useCalendarStore(state => 
+  state.events.filter(e => e.type === 'task')
+)
+```
+
+### Quick Actions
+- Checkbox: Toggle `completed` status
+- Click title: Open EventModal
+- Edit button: Open EventModal
+- Delete button: Confirm then delete
+
+### Empty States
+- No tasks: "No tasks yet. Create your first task!"
+- Filter returns empty: "No tasks match the current filter"
+
+## Acceptance Criteria
+- [ ] "Tasks" appears in view switcher
+- [ ] /tasks route works and renders TasksView
+- [ ] Only tasks (type: 'task') displayed
+- [ ] Filter tabs work correctly
+- [ ] Sorting works correctly
+- [ ] Checkboxes toggle completion
+- [ ] Edit/delete actions work
+- [ ] Responsive layout
+- [ ] Empty states shown appropriately

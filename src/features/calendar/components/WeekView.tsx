@@ -636,19 +636,10 @@ export function WeekView(): JSX.Element {
               key={day.toISOString()}
               className={`${styles.dayHeader} ${isToday(day) ? styles.today : ''}`}
             >
-              <div className={styles.dayName}>{format(day, 'EEE')}</div>
-              <div className={styles.dayNumber}>{format(day, 'd')}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-      <div className={styles.allDayHeader}>
-        <div className={styles.weekNumberHeader} style={{ visibility: 'hidden' }}>
-          W{weekNumber}
-        </div>
-        <div className={styles.headerDays}>
-          {weekDays.map((day) => (
-            <div key={`mobile-allDay-${day.toISOString()}`} className={styles.allDayCell}>
+              <div className={styles.dayHeaderTop}>
+                <div className={styles.dayName}>{format(day, 'EEE')}</div>
+                <div className={styles.dayNumber}>{format(day, 'd')}</div>
+              </div>
               {renderAllDayPills(day)}
             </div>
           ))}
@@ -700,27 +691,17 @@ export function WeekView(): JSX.Element {
     const dateKey = format(day, 'yyyy-MM-dd')
     const dayAllDayEvents = allDayEventsMap.get(dateKey) || []
 
-    // Debug
-    if (dayAllDayEvents.length > 0) {
-      console.log('DEBUG: All-day pills for', dateKey, dayAllDayEvents.length, 'events')
-    }
-
     if (dayAllDayEvents.length === 0) return null
 
     return (
       <div className={styles.allDayPills}>
         {dayAllDayEvents.slice(0, 2).map((event) => (
-          <div
+          <EventCard
             key={event.id}
-            className={styles.allDayPill}
-            style={{ backgroundColor: event.color || '#6366f1' }}
-            onClick={(e) => {
-              e.stopPropagation()
-              openModal(undefined, undefined, event.id)
-            }}
-          >
-            <span className={styles.allDayPillText}>{event.title}</span>
-          </div>
+            event={event}
+            compact
+            onClick={() => openModal(undefined, undefined, event.id)}
+          />
         ))}
         {dayAllDayEvents.length > 2 && (
           <div className={styles.moreAllDayEvents}>+{dayAllDayEvents.length - 2} more</div>
@@ -739,19 +720,10 @@ export function WeekView(): JSX.Element {
               key={day.toISOString()}
               className={`${styles.dayHeader} ${isToday(day) ? styles.today : ''}`}
             >
-              <div className={styles.dayName}>{format(day, 'EEE')}</div>
-              <div className={styles.dayNumber}>{format(day, 'd')}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-      <div className={styles.allDayHeader}>
-        <div className={styles.weekNumberHeader} style={{ visibility: 'hidden' }}>
-          W{weekNumber}
-        </div>
-        <div className={styles.headerDays}>
-          {weekDays.map((day) => (
-            <div key={`allDay-${day.toISOString()}`} className={styles.allDayCell}>
+              <div className={styles.dayHeaderTop}>
+                <div className={styles.dayName}>{format(day, 'EEE')}</div>
+                <div className={styles.dayNumber}>{format(day, 'd')}</div>
+              </div>
               {renderAllDayPills(day)}
             </div>
           ))}

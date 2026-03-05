@@ -1,0 +1,57 @@
+# Task: All-Day Events as Pills in MonthView
+
+## Objective
+Render all-day events as horizontal pills at the top of each day cell in the MonthView calendar grid.
+
+## Current State
+- All-day events are stored with `isAllDay: boolean` flag
+- Currently rendered mixed with timed events in the main grid area
+- Events are grouped by date in a Map<string, CalendarEvent[]>
+
+## Requirements
+1. Render all-day events as horizontal pills (rounded rectangles)
+2. Pills should be at the TOP of each day cell, before timed events
+3. All-day pills should have distinct styling (color coded by calendar)
+4. Pills should span the full width of the day cell (minus padding)
+5. Click on pill should open EventModal for editing
+6. Support drag-and-drop to reschedule all-day events
+7. Show overflow indicator if too many all-day events (like "+2 more")
+
+## Implementation Details
+
+### Files to Modify
+- `src/features/calendar/components/CalendarGrid.tsx` - Main month view component
+- `src/features/calendar/components/EventCard.tsx` - May need variant for all-day style
+- `src/features/calendar/CalendarGrid.module.css` - Add styling for pills
+
+### Key Code Areas
+1. In `CalendarGrid.tsx`, around line ~486 where events are filtered:
+   - Separate all-day events from timed events
+   - Render all-day section first in each day cell
+
+2. Event grouping logic:
+   ```typescript
+   // Current: eventsMap groups all events together
+   // Change to: separate allDayEventsMap and timedEventsMap
+   ```
+
+### CSS Requirements
+- All-day pills: `border-radius: 4px`, `padding: 2px 8px`
+- Background color from event's calendar color
+- Text: white or dark depending on contrast
+- Height: ~24px fixed
+- Full width within cell padding
+
+### Edge Cases
+- Month transitions (events spanning month boundary)
+- Very long all-day event titles (truncate with ellipsis)
+- Many all-day events (limit to 2-3, show "+N more")
+- Drag and drop: should work same as current events
+
+## Acceptance Criteria
+- [ ] All-day events render as pills at top of day cells
+- [ ] Pills are visually distinct from timed events
+- [ ] Clicking pill opens EventModal
+- [ ] Drag-drop works to move to different day
+- [ ] Overflow indicator shown when too many
+- [ ] Responsive on mobile (smaller pills)

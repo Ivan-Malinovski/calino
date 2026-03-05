@@ -1,0 +1,107 @@
+# Task: Multi-Day Events as Spanning Pills
+
+## Objective
+Render multi-day events (non-all-day events spanning multiple days) as horizontal pills that span across day cells in MonthView.
+
+## Current State
+- Multi-day events are rendered as individual event cards in each day cell
+- Detected by: `!isSameDay(parseISO(event.start), parseISO(event.end))`
+- Events appear duplicated in each day they occupy
+
+## Requirements
+1. Multi-day events should render as SINGLE horizontal pill spanning multiple days
+2. Pill should be positioned ABOVE the day grid (in a separate container)
+3. Each row in the spanning area represents one "lane" for non-overlapping events
+4. Events that overlap in time should stack in different lanes
+5. Remove multi-day events from individual day cells
+
+## Implementation Details
+
+### Files to Modify
+- `src/features/calendar/components/CalendarGrid.tsx` - Major restructuring
+- `src/features/calendar/CalendarGrid.module.css` - New spanning layout styles
+
+### Key Code Areas
+
+#### 1. Event Classification (CalendarGrid.tsx ~line 486)
+```typescript
+// Current: separate all-day from timed
+// New: three-way split:
+// - allDayEvents: isAllDay === true
+// - multiDayEvents: !isAllDay && spans multiple days
+// - singleDayEvents: !isAllDay && single day
+```
+
+#### 2. Layout Structure Change
+Current:
+```
+CalendarGrid
+├── Header (weekday names)
+└── Week Rows
+    └── Day Cells
+        └── Events (mixed all-day, multi-day, single-day)
+```
+
+New:
+```
+CalendarGrid
+├── Header (weekday names)
+└── Week Rows
+    ├── Spanning Area (NEW)
+    │   └── Multi-day event pills (spanning across columns)
+    ├── All-day Pills Row (from Task 01)
+    └── Day Cells
+        └── Single-day events only
+```
+
+#### 3. Spanning Algorithm
+For each week, calculate:
+- Which multi-day events overlap with this week
+- For each event: start column, end column, lane number
+- Lane assignment: events that don't time-overlap can share a lane
+
+```typescript
+interface SpanningEvent {
+  event: CalendarEvent
+  startColumn: number // 0-6 for Mon-Sun
+  endColumn: number   // 0-6
+  lane: number        // vertical stacking
+}
+```
+
+#### 4. CSS Grid for Spanning Area
+```css
+.spanningArea {
+  display: grid;
+  grid-template-columns: 30px repeat(7, 1fr); /* Week num + 7 days */
+  grid-auto-rows: 24px; /* Height per lane */
+}
+
+.spanningEvent {
+  grid-column: start / end;
+  grid-row: lane;
+}
+```
+
+### Edge Cases
+- Events spanning week boundaries (start in prev week, end in next)
+- Events longer than 7 days (span multiple weeks)
+- Many overlapping events (need max lanes limit)
+- All-day + multi-day + single-day all present
+
+### Visual Design
+- Pills: rounded corners, calendar color
+- Height: ~22px per lane
+- Padding between lanes: 2px
+- Text: truncate with ellipsis
+- Left border accent for visual continuity
+
+## Acceptance Criteria
+- [ ] Multi-day events render as spanning pills
+- [ ] Pills span correct number of days
+- [ ] Overlapping events stack in separate lanes
+- [ ] Multi-day events removed from day cells
+- [ ] Week boundary events handled correctly
+- [ ] "+N more" if too many lanes
+- [ ] Click opens EventModal
+- [ ] Visual continuity across day boundaries

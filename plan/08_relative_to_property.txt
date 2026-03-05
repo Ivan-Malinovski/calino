@@ -1,0 +1,129 @@
+# Task: Add RELATIVE-TO Property to EventModal
+
+## Objective
+Add support for the VEVENT RELATIVE-TO property in the EventModal, allowing users to specify parent/child relationships between events.
+
+## Background
+- RELATIVE-TO is a standard iCalendar property (RFC 5545/5546)
+- Defines relationships: PARENT, CHILD, SIBLING
+- Used for linking related events (e.g., meeting → follow-up meeting)
+- Format: `RELATIVE-TO:UID` with `RELTYPE=PARENT/CHILD/SIBLING`
+
+## Current State
+- Event structure in `src/types/index.ts` has no relationship fields
+- EventModal shows basic fields: title, dates, recurrence, reminders
+- No support for event linking
+
+## Requirements
+1. Add `relativeTo` field to event data model
+2. Support relationship types: PARENT, CHILD, SIBLING
+3. Add UI in EventModal to select related event
+4. Show visual indicator of relationship in calendar views
+5. Sync with CalDAV (store in RELATED-TO property)
+
+## Data Model Changes
+
+### Update CalendarEvent type
+```typescript
+// src/types/index.ts
+export interface CalendarEvent {
+  // ... existing fields
+  
+  relationships?: {
+    relatedTo: string  // UID of related event
+    relType: 'PARENT' | 'CHILD' | 'SIBLING'
+  }[]
+}
+```
+
+### Database Schema
+Dexie schema in `src/lib/db/db.ts` may need update if relationships stored separately.
+
+## Implementation Details
+
+### Files to Create
+None - integrate into existing files
+
+### Files to Modify
+1. **src/types/index.ts** - Add relationship type
+2. **src/features/calendar/components/EventModal.tsx** - Add relationship UI
+3. **src/features/calendar/components/EventFormFields.tsx** - Add relationship field
+4. **src/features/caldav/sync/syncEngine.ts** - Handle RELATED-TO in CalDAV
+5. **src/features/caldav/client/CalDAVClient.ts** - Parse/generate RELATED-TO
+6. **src/features/calendar/components/EventCard.tsx** - Show relationship indicator
+
+### UI Design for EventModal
+
+Add new section "Relationships" in EventFormFields:
+
+```
+Relationships
+┌─────────────────────────────────────────┐
+│ [+ Add Relationship]                    │
+│                                         │
+│ Meeting with Client    [CHILD ▼]  [×]   │
+│ Follow-up Call         [SIBLING ▼] [×]  │
+└─────────────────────────────────────────┘
+```
+
+Dropdown options:
+- Type: PARENT, CHILD, SIBLING
+- Event: Search/Select from existing events
+
+### Event Selection Modal
+Create a searchable event picker:
+- Show event title + date
+- Filter by calendar
+- Search by title
+- Exclude current event
+
+### Visual Indicators
+
+In EventCard, show small icon indicating relationship:
+- Parent: ↑ arrow
+- Child: ↓ arrow  
+- Sibling: ↔ arrow
+- Hover tooltip shows related event title
+
+### CalDAV Sync
+
+Parse from server:
+```typescript
+// Parse RELATED-TO from iCalendar
+const relatedTo = vevent.getFirstPropertyValue('related-to')
+const relType = vevent.getFirstPropertyValue('reltype') || 'PARENT'
+```
+
+Send to server:
+```typescript
+// Generate RELATED-TO property
+vevent.addPropertyWithValue('related-to', relatedEventUid)
+  .setParameter('reltype', relType)
+```
+
+## Edge Cases
+- Related event deleted - show "[Deleted Event]"
+- Circular references - prevent in UI
+- Multiple relationships - support array
+- Cross-calendar relationships - allow if same account
+- Sync conflicts - merge relationship arrays
+
+## Alternative: Simpler Implementation
+For MVP, could just support single relationship:
+```typescript
+interface CalendarEvent {
+  parentEventId?: string  // Just parent reference
+}
+```
+
+UI: Single dropdown "Parent Event" instead of full relationship management.
+
+## Acceptance Criteria
+- [ ] EventModal has relationship section
+- [ ] Can add/remove relationships
+- [ ] Relationship types selectable (PARENT/CHILD/SIBLING)
+- [ ] Event picker/search works
+- [ ] Visual indicator in EventCard
+- [ ] CalDAV sync works (RELATED-TO property)
+- [ ] Handles deleted related events gracefully
+- [ ] Prevents circular references

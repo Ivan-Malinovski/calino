@@ -44,9 +44,72 @@
 }
 
 .weekRow {
-  display: grid;
-  grid-template-columns: 40px repeat(7, 1fr);
+  display: flex;
   flex: 1;
+}
+
+.weekRowInner {
+  display: grid;
+  grid-template-columns: 40px 1fr;
+  flex: 1;
+  position: relative;
+}
+
+.weekRowInner > .weekNumber {
+  grid-row: 1 / -1;
+}
+
+.daysArea {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  flex: 1;
+  position: relative;
+}
+
+.spanningGrid {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  grid-auto-rows: 22px;
+  gap: 2px;
+  padding: 2px 4px;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.spanningGrid .spanningPill {
+  pointer-events: auto;
+}
+
+.spanningPill {
+  background: var(--color-accent-light);
+  border-left: 3px solid var(--color-accent);
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  transition: opacity 0.15s ease;
+  grid-row: span 1;
+}
+
+.spanningPill:hover {
+  opacity: 0.85;
+}
+
+.spanningPillText {
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .compressedWeek {
@@ -70,6 +133,7 @@
 }
 
 .weekNumber {
+  grid-row: 1 / -1;
   padding: 8px 4px;
   text-align: center;
   font-size: 11px;
@@ -83,7 +147,6 @@
   justify-content: center;
   cursor: pointer;
   transition: background 0.15s ease;
-  height: 100%;
   min-height: var(--day-cell-height, 100px);
 }
 
@@ -182,7 +245,8 @@
 .allDayPill {
   padding: 2px 8px;
   border-radius: 4px;
-  color: white;
+  border-left: 3px solid;
+  color: var(--color-text-primary);
   font-size: 11px;
   font-weight: 500;
   cursor: pointer;

@@ -1,0 +1,137 @@
+# Task: Fix Mouse Wheel Month Change
+
+## Objective
+Fix or improve the mouse wheel functionality for changing months in MonthView.
+
+## Current State
+- `handleWheel` function exists in CalendarGrid.tsx (line 92-118)
+- Currently requires `deltaY > 20` threshold
+- Has 400ms cooldown via `scrollCooldownRef`
+- Only works when Ctrl key is NOT pressed (Ctrl+wheel is for zoom)
+- Issues reported: "Can't change months with mouse wheel"
+
+## Requirements
+1. Ensure mouse wheel reliably changes months
+2. Maintain zoom functionality (Ctrl+wheel)
+3. Prevent accidental triggers while scrolling
+4. Smooth, responsive feel
+
+## Current Implementation Analysis
+
+```typescript
+const handleWheel = useCallback(
+  (e: React.WheelEvent) => {
+    if (e.ctrlKey) return  // Allow zoom to handle this
+    if (scrollCooldownRef.current) return  // 400ms cooldown active
+    if (Math.abs(e.deltaY) < 20) return  // Threshold too high?
+    
+    // Clear existing timeout
+    if (scrollTimeoutRef.current) {
+      clearTimeout(scrollTimeoutRef.current)
+    }
+    
+    const direction = e.deltaY > 0 ? 'down' : 'up'
+    setScrollDirection(direction)  // For UI indicator
+    
+    // Set cooldown
+    scrollCooldownRef.current = setTimeout(() => {
+      scrollCooldownRef.current = null
+    }, 400)
+    
+    // Execute change immediately (timeout 0)
+    scrollTimeoutRef.current = setTimeout(() => {
+      changeMonth(direction)
+      setScrollDirection(null)
+    }, 0)
+  },
+  [changeMonth]
+)
+```
+
+## Potential Issues
+
+1. **Threshold too high (20)**: Some mouse wheels send smaller deltas
+2. **Passive event listener**: `onWheel` handler may not prevent default properly
+3. **Scrolling conflicts**: Page scroll vs month change competing
+4. **Browser differences**: Wheel events vary across browsers
+
+## Implementation Details
+
+### Files to Modify
+- `src/features/calendar/components/CalendarGrid.tsx` - Fix wheel handler
+- `src/features/calendar/CalendarGrid.module.css` - Ensure proper overflow handling
+
+### Proposed Solutions
+
+#### Fix 1: Lower Threshold
+```typescript
+if (Math.abs(e.deltaY) < 10) return  // Lower from 20 to 10
+```
+
+#### Fix 2: Prevent Default When Changing
+```typescript
+const handleWheel = useCallback(
+  (e: React.WheelEvent) => {
+    if (e.ctrlKey) return
+    
+    // Don't change if we're actually scrolling the grid
+    const container = containerRef.current
+    if (container) {
+      const { scrollTop, scrollHeight, clientHeight } = container
+      const isScrollable = scrollHeight > clientHeight
+      const atTop = scrollTop === 0
+      const atBottom = scrollTop + clientHeight >= scrollHeight
+      
+      // If scrolling down but not at bottom, allow scroll
+      if (e.deltaY > 0 && !atBottom && isScrollable) return
+      // If scrolling up but not at top, allow scroll
+      if (e.deltaY < 0 && !atTop && isScrollable) return
+    }
+    
+    if (scrollCooldownRef.current) return
+    if (Math.abs(e.deltaY) < 10) return
+    
+    e.preventDefault()  // Prevent page scroll
+    // ... rest of handler
+  },
+  [changeMonth]
+)
+```
+
+#### Fix 3: Add Wheel Zone
+Only change months when wheeling over the header area, not the grid:
+```typescript
+// Add onWheel to header only, not entire grid
+<div className={styles.header} onWheel={handleWheel}>
+```
+
+Or add a dedicated "wheel zone" indicator.
+
+#### Fix 4: Alternative - Trackpad Gesture Support
+```typescript
+// Detect trackpad vs mouse wheel
+const isTrackpad = Math.abs(e.deltaY) < 50 && e.deltaMode === 0
+
+if (isTrackpad) {
+  // Require larger cumulative delta for trackpads
+  cumulativeDeltaRef.current += e.deltaY
+  if (Math.abs(cumulativeDeltaRef.current) < 100) return
+  cumulativeDeltaRef.current = 0
+}
+```
+
+### Testing Checklist
+Test with:
+- [ ] Standard mouse wheel
+- [ ] Trackpad (2-finger scroll)
+- [ ] Different browsers (Chrome, Firefox, Safari)
+- [ ] Different OS (Windows, macOS)
+- [ ] Ensure zoom (Ctrl+wheel) still works
+- [ ] Ensure grid scrolling still works if content overflows
+
+## Acceptance Criteria
+- [ ] Mouse wheel consistently changes months
+- [ ] Ctrl+wheel still zooms
+- [ ] No accidental triggers while normal scrolling
+- [ ] Works across different input devices
+- [ ] Smooth, responsive feel (<200ms response)

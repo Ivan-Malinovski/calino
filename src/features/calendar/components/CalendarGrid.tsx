@@ -26,7 +26,12 @@ import {
   subMonths,
   isSameDay,
   isBefore,
+  isAfter,
   startOfDay,
+  isWithinInterval,
+  min,
+  max,
+  differenceInDays,
 } from 'date-fns'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
@@ -264,12 +269,106 @@ export function CalendarGrid(): JSX.Element {
     monthEvents
       .filter((event) => event.type !== 'task' && !event.isAllDay)
       .forEach((event) => {
-        const eventDate = format(parseISO(event.start), 'yyyy-MM-dd')
-        const existing = map.get(eventDate) || []
-        map.set(eventDate, [...existing, event])
+        const eventStart = parseISO(event.start)
+        const eventEnd = parseISO(event.end)
+        if (isSameDay(eventStart, eventEnd)) {
+          const eventDate = format(eventStart, 'yyyy-MM-dd')
+          const existing = map.get(eventDate) || []
+          map.set(eventDate, [...existing, event])
+        }
       })
     return map
   }, [date, events, calendars, getEventsForDateRange])
+
+  interface SpanningEvent {
+    event: CalendarEvent
+    startColumn: number
+    endColumn: number
+    lane: number
+    weekIdx: number
+  }
+
+  const multiDaySpanningEvents = useMemo((): SpanningEvent[] => {
+    const monthStart = startOfMonth(date)
+    const monthEnd = endOfMonth(date)
+    const monthEvents = getEventsForDateRange(
+      format(monthStart, 'yyyy-MM-dd'),
+      format(monthEnd, 'yyyy-MM-dd')
+    )
+
+    const multiDayEvents = monthEvents.filter((event) => {
+      if (event.type === 'task' || event.isAllDay) return false
+      const eventStart = parseISO(event.start)
+      const eventEnd = parseISO(event.end)
+      return !isSameDay(eventStart, eventEnd)
+    })
+
+    const spanningEvents: SpanningEvent[] = []
+
+    for (let weekIdx = 0; weekIdx < numWeeks; weekIdx++) {
+      const weekStart = days[weekIdx * 7]
+      const weekEnd = days[weekIdx * 7 + 6]
+
+      const weekMultiDayEvents = multiDayEvents.filter((event) => {
+        const eventStart = startOfDay(parseISO(event.start))
+        const eventEnd = startOfDay(parseISO(event.end))
+        const wStart = startOfDay(weekStart)
+        const wEnd = startOfDay(weekEnd)
+        return (
+          isWithinInterval(eventStart, { start: wStart, end: wEnd }) ||
+          isWithinInterval(eventEnd, { start: wStart, end: wEnd }) ||
+          (isBefore(eventStart, wStart) && isAfter(eventEnd, wEnd))
+        )
+      })
+
+      const lanes: SpanningEvent[] = []
+
+      weekMultiDayEvents.forEach((event) => {
+        const eventStart = startOfDay(parseISO(event.start))
+        const eventEnd = startOfDay(parseISO(event.end))
+        const wStart = startOfDay(weekStart)
+        const wEnd = startOfDay(weekEnd)
+
+        const clampedStart = eventStart < wStart ? wStart : eventStart
+        const clampedEnd = eventEnd > wEnd ? wEnd : eventEnd
+
+        const startColumn = differenceInDays(clampedStart, wStart)
+        const endColumn = differenceInDays(clampedEnd, wStart) + 1
+
+        let lane = 0
+        let foundLane = false
+        while (!foundLane) {
+          const hasConflict = lanes.some((existing) => {
+            if (existing.weekIdx !== weekIdx) return false
+            if (existing.lane !== lane) return false
+            return !(endColumn <= existing.startColumn || startColumn >= existing.endColumn)
+          })
+          if (!hasConflict) {
+            foundLane = true
+          } else {
+            lane++
+          }
+        }
+
+        lanes.push({
+          event,
+          startColumn,
+          endColumn,
+          lane,
+          weekIdx,
+        })
+        spanningEvents.push({
+          event,
+          startColumn,
+          endColumn,
+          lane,
+          weekIdx,
+        })
+      })
+    }
+
+    return spanningEvents
+  }, [date, days, numWeeks, events, calendars, getEventsForDateRange])
 
   const tasksMap = useMemo(() => {
     const map = new Map<string, CalendarEvent[]>()
@@ -375,47 +474,77 @@ export function CalendarGrid(): JSX.Element {
               const today = startOfDay(new Date())
               const isPastWeek = compressPastWeeks && isBefore(weekEnd, today)
 
+              const weekSpanningEvents = multiDaySpanningEvents.filter(
+                (se) => se.weekIdx === weekIdx
+              )
+              const maxLane =
+                weekSpanningEvents.length > 0
+                  ? Math.max(...weekSpanningEvents.map((se) => se.lane)) + 1
+                  : 0
+
               return (
                 <div
                   key={weekIdx}
                   className={`${styles.weekRow} ${isPastWeek ? styles.compressedWeek : ''}`}
                 >
-                  <div
-                    className={styles.weekNumber}
-                    onClick={() => handleWeekClick(days[weekIdx * 7])}
-                  >
-                    {weekNum}
-                  </div>
-                  {days.slice(weekIdx * 7, weekIdx * 7 + 7).map((day) => {
-                    const dateKey = format(day, 'yyyy-MM-dd')
-                    const dayAllDayEvents = allDayEventsMap.get(dateKey) || []
-                    const dayEvents = eventsMap.get(dateKey) || []
-                    const dayTasks = tasksMap.get(dateKey) || []
-                    const isCurrentMonth = isSameMonth(day, date)
-                    const isTodayDate = isToday(day)
-                    const dayOfWeek = getDay(day)
-                    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6
+                  <div className={styles.weekRowInner}>
+                    <div
+                      className={styles.weekNumber}
+                      onClick={() => handleWeekClick(days[weekIdx * 7])}
+                    >
+                      {weekNum}
+                    </div>
+                    <div className={styles.daysArea}>
+                      {maxLane > 0 && (
+                        <div className={styles.spanningGrid}>
+                          {weekSpanningEvents.map((se) => (
+                            <div
+                              key={`${se.event.id}-${weekIdx}`}
+                              className={styles.spanningPill}
+                              style={{
+                                gridColumn: se.startColumn + 1,
+                                gridRow: se.lane + 1,
+                              }}
+                              onClick={() => openModal(undefined, undefined, se.event.id)}
+                            >
+                              <span className={styles.spanningPillText}>{se.event.title}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {days.slice(weekIdx * 7, weekIdx * 7 + 7).map((day) => {
+                        const dateKey = format(day, 'yyyy-MM-dd')
+                        const dayAllDayEvents = allDayEventsMap.get(dateKey) || []
+                        const dayEvents = eventsMap.get(dateKey) || []
+                        const dayTasks = tasksMap.get(dateKey) || []
+                        const isCurrentMonth = isSameMonth(day, date)
+                        const isTodayDate = isToday(day)
+                        const dayOfWeek = getDay(day)
+                        const isWeekend = dayOfWeek === 0 || dayOfWeek === 6
 
-                    return (
-                      <DroppableDay
-                        key={dateKey}
-                        dateKey={dateKey}
-                        day={day}
-                        dayAllDayEvents={dayAllDayEvents}
-                        dayEvents={dayEvents}
-                        dayTasks={dayTasks}
-                        isCurrentMonth={isCurrentMonth}
-                        isTodayDate={isTodayDate}
-                        isWeekend={isWeekend}
-                        isPastWeek={isPastWeek}
-                        compactRecurringEvents={compactRecurringEvents}
-                        isMobile={isMobile}
-                        onDayClick={handleDayClick}
-                        onDayNumberClick={handleDayNumberClick}
-                        openModal={openModal}
-                      />
-                    )
-                  })}
+                        return (
+                          <DroppableDay
+                            key={dateKey}
+                            dateKey={dateKey}
+                            day={day}
+                            dayAllDayEvents={dayAllDayEvents}
+                            dayEvents={dayEvents}
+                            dayTasks={dayTasks}
+                            spanningLaneCount={maxLane}
+                            isCurrentMonth={isCurrentMonth}
+                            isTodayDate={isTodayDate}
+                            isWeekend={isWeekend}
+                            isPastWeek={isPastWeek}
+                            compactRecurringEvents={compactRecurringEvents}
+                            isMobile={isMobile}
+                            onDayClick={handleDayClick}
+                            onDayNumberClick={handleDayNumberClick}
+                            openModal={openModal}
+                          />
+                        )
+                      })}
+                    </div>
+                  </div>
                 </div>
               )
             })}
@@ -433,6 +562,7 @@ interface DroppableDayProps {
   dayAllDayEvents: CalendarEvent[]
   dayEvents: CalendarEvent[]
   dayTasks: CalendarEvent[]
+  spanningLaneCount: number
   isCurrentMonth: boolean
   isTodayDate: boolean
   isWeekend: boolean
@@ -450,6 +580,7 @@ function DroppableDay({
   dayAllDayEvents,
   dayEvents,
   dayTasks,
+  spanningLaneCount,
   isCurrentMonth,
   isTodayDate,
   isWeekend,
@@ -508,19 +639,12 @@ function DroppableDay({
         <div className={styles.allDayEvents}>
           <AnimatePresence>
             {dayAllDayEvents.slice(0, 2).map((event) => (
-              <div
+              <EventCard
                 key={event.id}
-                className={styles.allDayPill}
-                style={{
-                  backgroundColor: event.color || '#6366f1',
-                }}
-                onClick={(e) => {
-                  e.stopPropagation()
-                  openModal(undefined, undefined, event.id)
-                }}
-              >
-                <span className={styles.allDayPillText}>{event.title}</span>
-              </div>
+                event={event}
+                compact
+                onClick={() => openModal(undefined, undefined, event.id)}
+              />
             ))}
           </AnimatePresence>
           {dayAllDayEvents.length > 2 && (
@@ -528,7 +652,17 @@ function DroppableDay({
           )}
         </div>
       )}
-      <div className={styles.events}>
+      <div
+        className={styles.events}
+        style={
+          spanningLaneCount > 0
+            ? {
+                paddingTop: `${spanningLaneCount * 24}px`,
+                marginTop: `-${spanningLaneCount * 24}px`,
+              }
+            : undefined
+        }
+      >
         <AnimatePresence>
           {dayEvents.slice(0, 3).map((event) => {
             const isMultiDay = !isSameDay(parseISO(event.start), parseISO(event.end))

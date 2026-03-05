@@ -1,0 +1,68 @@
+# Task: All-Day Events as Pills in WeekView Header
+
+## Objective
+Render all-day events as horizontal pills in a dedicated header row at the top of WeekView, above the time grid.
+
+## Current State
+- WeekView has a sticky footer for tasks with no due date (NOT all-day events)
+- All-day events currently rendered in the main time grid
+- WeekView shows 7 days in columns
+
+## Requirements
+1. Add a header section at the TOP of WeekView for all-day events
+2. Each day column gets its own all-day pill area
+3. Pills span horizontally within their day column
+4. All-day events should NOT appear in the main time grid anymore
+5. Header should be scrollable if too many all-day events
+6. Fixed height header with overflow scroll or "+N more" indicator
+
+## Implementation Details
+
+### Files to Modify
+- `src/features/calendar/components/WeekView.tsx` - Main week view component
+- `src/features/calendar/WeekView.module.css` - Add header styling
+
+### Key Code Areas
+1. In `WeekView.tsx` around lines ~746-768 where tasks are shown:
+   - This is the sticky footer for tasks WITHOUT due dates
+   - Keep this functionality separate
+
+2. Add new header section before the time grid (around line ~400)
+   - Create `allDayHeaderRef` for the container
+   - Render all-day events grouped by day
+   - Each day column shows its all-day pills
+
+3. Filter logic around line ~274-278:
+   - Currently: `tasks.filter((t) => t.isAllDay)` goes to footer
+   - Change: Filter all-day events to header, keep no-due-date tasks in footer
+
+### Component Structure
+```
+WeekView
+├── AllDayHeader (NEW - at top)
+│   ├── DayColumn (x7)
+│   │   └── AllDayPills[]
+├── TimeGrid
+│   └── DayColumns with timed events
+└── TaskFooter (existing - bottom, for no-due-date tasks)
+```
+
+### CSS Requirements
+- AllDayHeader: `height: auto`, `max-height: 80px`, `overflow-y: auto`
+- Pills: same style as MonthView (rounded, colored)
+- Border bottom to separate from time grid
+- Sticky positioning optional (can scroll with page)
+
+### Height Management
+- Option A: Fixed max-height with internal scroll
+- Option B: Expandable height with "show more" button
+- Option C: Limit to 2-3 pills with "+N more" link
+
+## Acceptance Criteria
+- [ ] All-day header appears at top of WeekView
+- [ ] Each day shows its all-day events as pills
+- [ ] All-day events removed from main time grid
+- [ ] Existing task footer preserved for no-due-date tasks
+- [ ] Header handles overflow gracefully
+- [ ] Clicking pills opens EventModal
+- [ ] Responsive on mobile

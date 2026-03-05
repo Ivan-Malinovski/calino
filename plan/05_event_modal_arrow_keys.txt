@@ -1,0 +1,112 @@
+# Task: Fix EventModal Arrow Key Priority
+
+## Objective
+Ensure EventModal captures and handles arrow key events, preventing them from propagating to CalendarGrid which changes months.
+
+## Current State
+- EventModal does not handle arrow keys
+- CalendarGrid has global window keydown listener (line 150-164):
+  ```typescript
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent): void => {
+      if (isOverlayOpen) return  // Only checks overlay, not modal
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault()
+        changeMonth(direction)
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+  ```
+- EventModal doesn't prevent event bubbling
+
+## Requirements
+1. EventModal should capture all arrow key events
+2. Arrow keys should not change calendar month when modal is open
+3. Arrow keys in modal inputs should work normally (text cursor movement)
+4. ESC key should continue to close modal (already works)
+
+## Implementation Details
+
+### Files to Modify
+- `src/features/calendar/components/EventModal.tsx` - Add keydown handler
+- `src/features/calendar/components/CalendarGrid.tsx` - Check modal state
+
+### Solution Approach
+
+#### Option A: Check Modal State in CalendarGrid (Recommended)
+Add modal state check to CalendarGrid's keydown handler:
+
+```typescript
+// In CalendarGrid.tsx
+const isModalOpen = useCalendarStore(state => state.isModalOpen)
+
+useEffect(() => {
+  const handleKeyDown = (e: KeyboardEvent): void => {
+    if (isOverlayOpen || isModalOpen) return  // Check both
+    // ... rest of handler
+  }
+}, [isOverlayOpen, isModalOpen])
+```
+
+Requires:
+1. Add `isModalOpen` to calendarStore
+2. EventModal sets `isModalOpen = true` on mount, false on unmount
+
+#### Option B: EventModal Captures Keys
+Add keydown handler to EventModal that stops propagation:
+
+```typescript
+// In EventModal.tsx
+useEffect(() => {
+  const handleKeyDown = (e: KeyboardEvent) => {
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+      e.stopPropagation()
+    }
+  }
+  window.addEventListener('keydown', handleKeyDown, true) // capture phase
+  return () => window.removeEventListener('keydown', handleKeyDown, true)
+}, [])
+```
+
+### Implementation Steps (Option A)
+
+1. **Update calendarStore.ts:**
+   ```typescript
+   interface CalendarState {
+     // ... existing
+     isModalOpen: boolean
+     setModalOpen: (open: boolean) => void
+   }
+   ```
+
+2. **Update EventModal.tsx:**
+   ```typescript
+   useEffect(() => {
+     setModalOpen(true)
+     return () => setModalOpen(false)
+   }, [setModalOpen])
+   ```
+
+3. **Update CalendarGrid.tsx:**
+   ```typescript
+   const isModalOpen = useCalendarStore(state => state.isModalOpen)
+   
+   useEffect(() => {
+     const handleKeyDown = (e: KeyboardEvent): void => {
+       if (isOverlayOpen || isModalOpen) return
+       // ...
+     }
+   }, [isOverlayOpen, isModalOpen])
+   ```
+
+### Edge Cases
+- Modal opens from different views (Month, Week, Day)
+- Multiple modals (shouldn't happen but handle gracefully)
+- Modal closed via ESC, click outside, or save - all should reset state
+
+## Acceptance Criteria
+- [ ] Arrow keys don't change months when EventModal is open
+- [ ] Arrow keys work normally in modal form inputs
+- [ ] ESC still closes modal
+- [ ] Works from all calendar views
+- [ ] No regression to existing keyboard navigation
