@@ -62,6 +62,8 @@ export interface CalendarState {
   isOverlayOpen: boolean
   selectedEventType: EventType
   showAddCalendar: boolean
+  previewEventId: string | null
+  previewPosition: { x: number; y: number } | null
 }
 
 export interface CalendarActions {
@@ -81,6 +83,8 @@ export interface CalendarActions {
   closeModal: () => void
   setOverlayOpen: (isOpen: boolean) => void
   setShowAddCalendar: (show: boolean) => void
+  openPreview: (eventId: string, position: { x: number; y: number }) => void
+  closePreview: () => void
   getEventsForDateRange: (start: string, end: string) => CalendarEvent[]
   getVisibleEvents: () => CalendarEvent[]
 }

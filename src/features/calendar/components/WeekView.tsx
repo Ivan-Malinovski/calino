@@ -99,6 +99,7 @@ export function WeekView(): JSX.Element {
   const headerScrollRef = useRef<HTMLDivElement>(null)
   const bodyScrollRef = useRef<HTMLDivElement>(null)
   const mobileScrollRef = useRef<HTMLDivElement>(null)
+  const daysContainerRef = useRef<HTMLDivElement>(null)
   const hourHeight = BASE_HOUR_HEIGHT * scale
 
   useEffect(() => {
@@ -319,8 +320,10 @@ export function WeekView(): JSX.Element {
     (e: React.MouseEvent): void => {
       if (!isDraggingToCreate || !dragStart) return
 
-      const target = e.currentTarget as HTMLDivElement
-      const rect = target.getBoundingClientRect()
+      const daysContainer = daysContainerRef.current
+      if (!daysContainer) return
+
+      const rect = daysContainer.getBoundingClientRect()
       const x = e.clientX - rect.left
       const dayWidth = rect.width / 7
       const dayIndex = Math.floor(x / dayWidth)
@@ -337,7 +340,7 @@ export function WeekView(): JSX.Element {
       const endTime = `${format(day, 'yyyy-MM-dd')}T${timeStr}`
       setDragEnd(endTime)
     },
-    [isDraggingToCreate, dragStart, date, firstDayOfWeek, weekDays, hourHeight]
+    [isDraggingToCreate, dragStart, date, firstDayOfWeek, weekDays, hourHeight, daysContainerRef]
   )
 
   const handleMouseUp = useCallback((): void => {
@@ -583,7 +586,7 @@ export function WeekView(): JSX.Element {
             </div>
           ))}
         </div>
-        <div className={styles.daysContainer}>
+        <div ref={daysContainerRef} className={styles.daysContainer}>
           {weekDays.map((day) => {
             return (
               <div
@@ -649,7 +652,7 @@ export function WeekView(): JSX.Element {
             </div>
           ))}
         </div>
-        <div className={styles.daysContainer}>
+        <div ref={daysContainerRef} className={styles.daysContainer}>
           {weekDays.map((day) => {
             return (
               <div

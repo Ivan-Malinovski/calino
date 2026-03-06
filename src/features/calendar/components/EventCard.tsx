@@ -34,6 +34,9 @@ export function EventCard({
 }: EventCardProps): JSX.Element {
   const calendars = useCalendarStore((state) => state.calendars)
   const openModal = useCalendarStore((state) => state.openModal)
+  const openPreview = useCalendarStore((state) => state.openPreview)
+  const closePreview = useCalendarStore((state) => state.closePreview)
+  const previewEventId = useCalendarStore((state) => state.previewEventId)
   const updateEvent = useCalendarStore((state) => state.updateEvent)
   const deleteEvent = useCalendarStore((state) => state.deleteEvent)
   const duplicateEvent = useCalendarStore((state) => state.duplicateEvent)
@@ -101,10 +104,17 @@ export function EventCard({
       return
     }
     e.stopPropagation()
+
+    if (previewEventId === event.id) {
+      closePreview()
+      openModal(undefined, undefined, event.id)
+      return
+    }
+
     if (onClick) {
       onClick(event)
     } else {
-      openModal(undefined, undefined, event.id)
+      openPreview(event.id, { x: e.clientX, y: e.clientY })
     }
   }
 

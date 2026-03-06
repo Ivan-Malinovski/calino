@@ -41,6 +41,8 @@ export const useCalendarStore = create<CalendarStore>()(
       isOverlayOpen: false,
       selectedEventType: 'event',
       showAddCalendar: false,
+      previewEventId: null,
+      previewPosition: null,
 
       addEvent: (event: CalendarEvent): void => {
         set((state) => ({
@@ -161,6 +163,14 @@ export const useCalendarStore = create<CalendarStore>()(
 
       setShowAddCalendar: (show: boolean): void => {
         set({ showAddCalendar: show })
+      },
+
+      openPreview: (eventId: string, position: { x: number; y: number }): void => {
+        set({ previewEventId: eventId, previewPosition: position })
+      },
+
+      closePreview: (): void => {
+        set({ previewEventId: null, previewPosition: null })
       },
 
       getEventsForDateRange: (start: string, end: string): CalendarEvent[] => {

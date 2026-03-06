@@ -11,6 +11,7 @@ import {
   AgendaView,
   TodoView,
   EventModal,
+  EventPreviewPopup,
   Sidebar,
 } from './features/calendar'
 import { SettingsPage, PrivacyPolicy } from './features/settings'
@@ -119,6 +120,30 @@ function useViewManager(): void {
   }, [currentView, setCurrentView])
 }
 
+function extractOriginalEventId(eventId: string): string | null {
+  const isoDateMatch = eventId.match(/(.+)-(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z)$/)
+  if (isoDateMatch) {
+    return isoDateMatch[1]
+  }
+  return null
+}
+
+function PreviewPopupWrapper(): JSX.Element | null {
+  const previewEventId = useCalendarStore((state) => state.previewEventId)
+  const previewPosition = useCalendarStore((state) => state.previewPosition)
+  const events = useCalendarStore((state) => state.events)
+
+  if (!previewEventId || !previewPosition) return null
+
+  const originalId = extractOriginalEventId(previewEventId)
+  const event = events.find((e) => e.id === previewEventId || e.id === originalId)
+  if (!event) return null
+
+  return (
+    <EventPreviewPopup event={event} position={previewPosition} clickedEventId={previewEventId} />
+  )
+}
+
 function CalendarApp(): JSX.Element {
   const currentView = useCalendarStore((state) => state.currentView)
   const setOverlayOpen = useCalendarStore((state) => state.setOverlayOpen)
@@ -225,6 +250,7 @@ function CalendarApp(): JSX.Element {
         onAction={handleFabAction}
       />
       <EventModal />
+      <PreviewPopupWrapper />
       <CommandPalette
         isOpen={isCommandPaletteOpen}
         onClose={() => {

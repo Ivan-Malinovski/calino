@@ -26,13 +26,22 @@ export function AgendaView(): JSX.Element {
   const calendars = useCalendarStore((state) => state.calendars)
   const getEventsForDateRange = useCalendarStore((state) => state.getEventsForDateRange)
   const openModal = useCalendarStore((state) => state.openModal)
+  const openPreview = useCalendarStore((state) => state.openPreview)
+  const previewEventId = useCalendarStore((state) => state.previewEventId)
+  const closePreview = useCalendarStore((state) => state.closePreview)
   const timeFormat = useSettingsStore((state) => state.timeFormat)
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; day: Date } | null>(null)
 
   const date = parseISO(currentDate)
 
-  const handleEventClick = (event: CalendarEvent): void => {
-    openModal(undefined, undefined, event.id, event.type === 'task' ? 'task' : 'event')
+  const handleEventClick = (e: React.MouseEvent, event: CalendarEvent): void => {
+    e.stopPropagation()
+    if (previewEventId === event.id) {
+      closePreview()
+      openModal(undefined, undefined, event.id, event.type === 'task' ? 'task' : 'event')
+      return
+    }
+    openPreview(event.id, { x: e.clientX, y: e.clientY })
   }
 
   const handleContextMenu = (e: React.MouseEvent, day: Date): void => {
@@ -145,7 +154,7 @@ export function AgendaView(): JSX.Element {
                   <div
                     key={event.id}
                     className={`${styles.eventItem} ${event.type === 'task' ? styles.taskItem : ''}`}
-                    onClick={() => handleEventClick(event)}
+                    onMouseDown={(e) => handleEventClick(e, event)}
                   >
                     <div className={styles.eventTime}>
                       {event.type === 'task'
