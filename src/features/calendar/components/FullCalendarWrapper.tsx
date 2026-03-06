@@ -125,10 +125,19 @@ export function FullCalendarWrapper() {
   )
 
   const handleEventClick = useCallback(
-    (info: { event: { id: string } }) => {
+    (info: { event: { id: string }; el: HTMLElement; jsEvent: MouseEvent }) => {
+      const target = info.jsEvent.target as HTMLElement
+      if (target.closest('input[type="checkbox"]')) {
+        info.jsEvent.stopPropagation()
+        const event = events.find((e) => e.id === info.event.id)
+        if (event && event.type === 'task') {
+          updateEvent(info.event.id, { completed: !event.completed })
+        }
+        return
+      }
       openModal(undefined, undefined, info.event.id)
     },
-    [openModal]
+    [openModal, events, updateEvent]
   )
 
   const handleEventDrop = useCallback(
@@ -185,8 +194,8 @@ export function FullCalendarWrapper() {
       if (isTask) {
         return {
           html: `
-          <div class="fc-event-task" style="display: flex; align-items: center; gap: 6px; background: ${bgColor} !important; border-left: 3px solid ${borderColor} !important; border-radius: 4px; padding: 2px 6px; width: 100%; height: 100%;">
-            <input type="checkbox" ${completed ? 'checked' : ''} disabled style="pointer-events: auto; width: 14px; height: 14px; cursor: pointer; margin: 0;" />
+          <div class="fc-event-task" style="display: flex; align-items: center; gap: 6px; background: ${bgColor} !important; border-left: 3px solid ${borderColor} !important; border-radius: 4px; padding: 2px 6px; height: 100%;">
+            <input type="checkbox" ${completed ? 'checked' : ''} style="pointer-events: auto; width: 14px; height: 14px; cursor: pointer; margin: 0;" />
             <div style="flex: 1; min-width: 0;">
               <div style="font-size: 12px; font-weight: 500; color: var(--color-text-primary); ${completed ? 'text-decoration: line-through; opacity: 0.6;' : ''} white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${event.title}${priorityLabel}</div>
             </div>
@@ -197,7 +206,7 @@ export function FullCalendarWrapper() {
 
       return {
         html: `
-          <div style="display: flex; flex-direction: column; min-width: 0; height: 100%; background: ${bgColor} !important; border-left: 3px solid ${borderColor} !important; border-radius: 4px; padding: 2px 6px; width: 100%;">
+          <div style="display: flex; flex-direction: column; min-width: 0; height: 100%; background: ${bgColor} !important; border-left: 3px solid ${borderColor} !important; border-radius: 4px; padding: 2px 6px;">
             <div style="font-size: 12px; font-weight: 500; color: var(--color-text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
               ${timeText ? `<span style="font-weight: 400; opacity: 0.7; margin-right: 4px;">${timeText}</span>` : ''}${event.title}${priorityLabel}
             </div>
