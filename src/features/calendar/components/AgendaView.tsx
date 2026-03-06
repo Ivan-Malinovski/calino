@@ -149,7 +149,9 @@ export function AgendaView(): JSX.Element {
                   >
                     <div className={styles.eventTime}>
                       {event.type === 'task'
-                        ? 'Due'
+                        ? event.start.includes('T00:00')
+                          ? 'Due'
+                          : format(parseISO(event.start), timeFormat === '24h' ? 'HH:mm' : 'h:mm a')
                         : event.isAllDay
                           ? 'All day'
                           : format(
