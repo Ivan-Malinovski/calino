@@ -1,7 +1,6 @@
 import type { JSX } from 'react'
 import { useCallback, useEffect, useState, useRef } from 'react'
 import { BrowserRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom'
-import { v4 as uuidv4 } from 'uuid'
 import { useCalendarStore } from './store/calendarStore'
 import { useSettingsStore } from './store/settingsStore'
 import {
@@ -14,13 +13,12 @@ import {
   EventModal,
   Sidebar,
 } from './features/calendar'
-import { type NLPParseResult } from './features/nlp'
 import { SettingsPage, PrivacyPolicy } from './features/settings'
 import { CommandPalette } from './features/commandPalette'
 import { CookieConsent, ErrorBoundary } from './components/common'
 import { OnboardingModal } from './features/onboarding/OnboardingModal'
 import { ThemeProvider } from './components/ThemeProvider'
-import type { CalendarEvent, ViewType } from './types'
+import type { ViewType } from './types'
 import './App.css'
 
 const VIEW_ROUTES: Record<ViewType, string> = {
@@ -123,8 +121,6 @@ function useViewManager(): void {
 
 function CalendarApp(): JSX.Element {
   const currentView = useCalendarStore((state) => state.currentView)
-  const addEvent = useCalendarStore((state) => state.addEvent)
-  const calendars = useCalendarStore((state) => state.calendars)
   const setOverlayOpen = useCalendarStore((state) => state.setOverlayOpen)
   const setShowAddCalendar = useCalendarStore((state) => state.setShowAddCalendar)
   const openModal = useCalendarStore((state) => state.openModal)
@@ -188,26 +184,6 @@ function CalendarApp(): JSX.Element {
     }
   }
 
-  const handleQuickAdd = useCallback(
-    (result: NLPParseResult): void => {
-      const defaultCalendar = calendars.find((c) => c.isDefault) || calendars[0]
-
-      const event: CalendarEvent = {
-        id: uuidv4(),
-        calendarId: defaultCalendar?.id || 'default',
-        title: result.title,
-        location: result.location,
-        start: result.startDate.toISOString(),
-        end: result.endDate ? result.endDate.toISOString() : result.startDate.toISOString(),
-        isAllDay: result.isAllDay,
-        recurrence: result.recurrence,
-      }
-
-      addEvent(event)
-    },
-    [addEvent, calendars]
-  )
-
   const handleToggleSidebar = useCallback(() => {
     setIsSidebarOpen((prev) => !prev)
   }, [])
@@ -235,7 +211,10 @@ function CalendarApp(): JSX.Element {
 
   return (
     <div className="app">
-      <CalendarHeader onQuickAdd={handleQuickAdd} onToggleSidebar={handleToggleSidebar} />
+      <CalendarHeader
+        onToggleSidebar={handleToggleSidebar}
+        onOpenCommandPalette={handleOpenCommandPalette}
+      />
       <div className="appContent">
         <Sidebar isOpen={isSidebarOpen} onClose={handleCloseSidebar} />
         <main className="main">{renderView()}</main>

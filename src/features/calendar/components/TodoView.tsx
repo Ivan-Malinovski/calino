@@ -111,6 +111,10 @@ export function TodoView(): JSX.Element {
   const activeCount = tasks.filter((t) => !t.completed).length
   const completedCount = tasks.filter((t) => t.completed).length
 
+  const handleCreateTask = (): void => {
+    openModal(undefined, undefined, undefined, 'task')
+  }
+
   return (
     <div className={styles.container}>
       <div className={styles.header}>
@@ -120,24 +124,29 @@ export function TodoView(): JSX.Element {
             {activeCount} active, {completedCount} completed
           </span>
         </div>
-        <div className={styles.tabs}>
-          <button
-            className={`${styles.tab} ${filter === 'all' ? styles.tabActive : ''}`}
-            onClick={() => setFilter('all')}
-          >
-            All
-          </button>
-          <button
-            className={`${styles.tab} ${filter === 'active' ? styles.tabActive : ''}`}
-            onClick={() => setFilter('active')}
-          >
-            Active
-          </button>
-          <button
-            className={`${styles.tab} ${filter === 'completed' ? styles.tabActive : ''}`}
-            onClick={() => setFilter('completed')}
-          >
-            Completed
+        <div className={styles.actions}>
+          <div className={styles.tabs}>
+            <button
+              className={`${styles.tab} ${filter === 'all' ? styles.tabActive : ''}`}
+              onClick={() => setFilter('all')}
+            >
+              All
+            </button>
+            <button
+              className={`${styles.tab} ${filter === 'active' ? styles.tabActive : ''}`}
+              onClick={() => setFilter('active')}
+            >
+              Active
+            </button>
+            <button
+              className={`${styles.tab} ${filter === 'completed' ? styles.tabActive : ''}`}
+              onClick={() => setFilter('completed')}
+            >
+              Completed
+            </button>
+          </div>
+          <button className={styles.addButton} onClick={handleCreateTask}>
+            + Add task
           </button>
         </div>
       </div>
@@ -178,21 +187,17 @@ export function TodoView(): JSX.Element {
                           <span className={styles.taskDescription}>{task.description}</span>
                         )}
                       </div>
-                      {task.dueDate && (
-                        <span className={styles.taskDue}>
-                          {format(parseISO(task.dueDate), 'MMM d')}
-                        </span>
-                      )}
                     </div>
                     {task.priority && task.priority <= 3 && task.priority in PRIORITY_LABELS && (
                       <span className={styles.priority} data-priority={task.priority}>
                         {PRIORITY_LABELS[task.priority]}
                       </span>
                     )}
-                    <span
-                      className={styles.calendarDot}
-                      style={{ backgroundColor: task.calendarColor }}
-                    />
+                    {task.dueDate && (
+                      <span className={styles.taskDue}>
+                        {format(parseISO(task.dueDate), 'MMM d')}
+                      </span>
+                    )}
                   </div>
                 ))}
               </div>
