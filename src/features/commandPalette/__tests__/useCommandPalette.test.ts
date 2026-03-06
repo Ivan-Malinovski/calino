@@ -33,6 +33,8 @@ vi.mock('@/store/calendarStore', () => ({
       isOverlayOpen: false,
       selectedEventType: 'event',
       showAddCalendar: false,
+      previewEventId: null,
+      previewPosition: null,
       addEvent: vi.fn(),
       updateEvent: vi.fn(),
       deleteEvent: vi.fn(),
@@ -49,6 +51,8 @@ vi.mock('@/store/calendarStore', () => ({
       closeModal: vi.fn(),
       setOverlayOpen: vi.fn(),
       setShowAddCalendar: vi.fn(),
+      openPreview: vi.fn(),
+      closePreview: vi.fn(),
       getEventsForDateRange: vi.fn(),
       getVisibleEvents: vi.fn(),
     }
