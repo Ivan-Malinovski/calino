@@ -12,6 +12,7 @@ import {
 import { useCalendarStore } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
 import type { CalendarEvent } from '@/types'
+import { ContextMenu } from '@/components/common/ContextMenu'
 import styles from './AgendaView.module.css'
 
 interface EventWithDate {
@@ -26,8 +27,18 @@ export function AgendaView(): JSX.Element {
   const getEventsForDateRange = useCalendarStore((state) => state.getEventsForDateRange)
   const openModal = useCalendarStore((state) => state.openModal)
   const timeFormat = useSettingsStore((state) => state.timeFormat)
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; day: Date } | null>(null)
 
   const date = parseISO(currentDate)
+
+  const handleEventClick = (event: CalendarEvent): void => {
+    openModal(undefined, undefined, event.id, event.type === 'task' ? 'task' : 'event')
+  }
+
+  const handleContextMenu = (e: React.MouseEvent, day: Date): void => {
+    e.preventDefault()
+    setContextMenu({ x: e.clientX, y: e.clientY, day })
+  }
 
   const { eventsByDate, days } = useMemo(() => {
     const monthStart = startOfMonth(date)
@@ -58,6 +69,10 @@ export function AgendaView(): JSX.Element {
 
   const handleCreateEvent = (day: Date): void => {
     openModal(format(day, 'yyyy-MM-dd'))
+  }
+
+  const handleCreateTask = (day: Date): void => {
+    openModal(format(day, 'yyyy-MM-dd'), undefined, undefined, 'task')
   }
 
   const [isScrolled, setIsScrolled] = useState(false)
@@ -107,7 +122,12 @@ export function AgendaView(): JSX.Element {
         })
 
         return (
-          <div key={dateKey} className={styles.dayGroup} data-date={dateKey}>
+          <div
+            key={dateKey}
+            className={styles.dayGroup}
+            data-date={dateKey}
+            onContextMenu={(e) => handleContextMenu(e, day)}
+          >
             <div className={`${styles.dayHeader} ${isCurrentDay ? styles.today : ''}`}>
               <div className={styles.dayInfo}>
                 <span className={styles.dayName}>{format(day, 'EEEE')}</span>
@@ -125,6 +145,7 @@ export function AgendaView(): JSX.Element {
                   <div
                     key={event.id}
                     className={`${styles.eventItem} ${event.type === 'task' ? styles.taskItem : ''}`}
+                    onClick={() => handleEventClick(event)}
                   >
                     <div className={styles.eventTime}>
                       {event.type === 'task'
@@ -154,6 +175,30 @@ export function AgendaView(): JSX.Element {
           </div>
         )
       })}
+      {contextMenu && (
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          menuId="agenda-context"
+          onClose={() => setContextMenu(null)}
+          items={[
+            {
+              label: 'Create event',
+              onClick: () => {
+                handleCreateEvent(contextMenu.day)
+                setContextMenu(null)
+              },
+            },
+            {
+              label: 'Create task',
+              onClick: () => {
+                handleCreateTask(contextMenu.day)
+                setContextMenu(null)
+              },
+            },
+          ]}
+        />
+      )}
     </div>
   )
 }

@@ -112,7 +112,7 @@ export function TodoView(): JSX.Element {
   const completedCount = tasks.filter((t) => t.completed).length
 
   const handleCreateTask = (): void => {
-    openModal(undefined, undefined, undefined, 'task')
+    openModal(format(new Date(), 'yyyy-MM-dd'), undefined, undefined, 'task')
   }
 
   return (
