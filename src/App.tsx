@@ -10,6 +10,7 @@ import {
   WeekView,
   DayView,
   AgendaView,
+  TodoView,
   EventModal,
   Sidebar,
 } from './features/calendar'
@@ -27,9 +28,10 @@ const VIEW_ROUTES: Record<ViewType, string> = {
   week: '/week',
   day: '/day',
   agenda: '/agenda',
+  todo: '/todo',
 }
 
-const VIEW_ORDER: ViewType[] = ['month', 'week', 'day', 'agenda']
+const VIEW_ORDER: ViewType[] = ['month', 'week', 'day', 'agenda', 'todo']
 
 function Toast(): JSX.Element | null {
   const [message, setMessage] = useState<string | null>(null)
@@ -169,6 +171,12 @@ function CalendarApp(): JSX.Element {
         return (
           <ErrorBoundary>
             <AgendaView />
+          </ErrorBoundary>
+        )
+      case 'todo':
+        return (
+          <ErrorBoundary>
+            <TodoView />
           </ErrorBoundary>
         )
       default:

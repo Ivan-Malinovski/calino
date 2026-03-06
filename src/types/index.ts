@@ -48,7 +48,7 @@ export interface Calendar {
   isDefault: boolean
 }
 
-export type ViewType = 'month' | 'week' | 'day' | 'agenda'
+export type ViewType = 'month' | 'week' | 'day' | 'agenda' | 'todo'
 
 export interface CalendarState {
   events: CalendarEvent[]

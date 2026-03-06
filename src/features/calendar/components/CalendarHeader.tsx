@@ -1,50 +1,38 @@
 import type { JSX } from 'react'
-import { useState, useCallback, useRef, useEffect } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { format, addMonths, addWeeks, addDays, parseISO, startOfWeek, endOfWeek } from 'date-fns'
 import { useNavigate } from 'react-router-dom'
-import { motion } from 'framer-motion'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
 import { ViewSwitcher } from './ViewSwitcher'
 import { ThemeToggle } from './ThemeToggle'
-import { Search } from '@/features/search'
-import { QuickAdd } from '@/features/nlp'
 import { useGestures } from '@/hooks/useGestures'
-import type { NLPParseResult } from '@/features/nlp'
 import styles from './CalendarHeader.module.css'
 
 interface CalendarHeaderProps {
-  onQuickAdd?: (result: NLPParseResult) => void
   onToggleSidebar?: () => void
+  onOpenCommandPalette?: () => void
 }
 
-export function CalendarHeader({ onQuickAdd, onToggleSidebar }: CalendarHeaderProps): JSX.Element {
+export function CalendarHeader({
+  onToggleSidebar,
+  onOpenCommandPalette,
+}: CalendarHeaderProps): JSX.Element {
   const navigate = useNavigate()
   const currentDate = useCalendarStore((state) => state.currentDate)
   const currentView = useCalendarStore((state) => state.currentView)
   const setCurrentDate = useCalendarStore((state) => state.setCurrentDate)
-  const openModal = useCalendarStore((state) => state.openModal)
   const firstDayOfWeek = useSettingsStore((state) => state.firstDayOfWeek)
 
-  const [isQuickAddOpen, setIsQuickAddOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(
     typeof window !== 'undefined' ? window.innerWidth < 768 : false
   )
-  const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768)
     checkMobile()
     window.addEventListener('resize', checkMobile)
     return () => window.removeEventListener('resize', checkMobile)
-  }, [])
-
-  useEffect(() => {
-    return () => {
-      if (closeTimeoutRef.current) {
-        clearTimeout(closeTimeoutRef.current)
-      }
-    }
   }, [])
 
   const date = parseISO(currentDate)
@@ -65,6 +53,8 @@ export function CalendarHeader({ onQuickAdd, onToggleSidebar }: CalendarHeaderPr
         return format(date, 'EEE, MMMM d')
       case 'agenda':
         return format(date, 'MMMM')
+      case 'todo':
+        return 'Tasks'
       default:
         return format(date, 'MMMM')
     }
@@ -84,6 +74,9 @@ export function CalendarHeader({ onQuickAdd, onToggleSidebar }: CalendarHeaderPr
         break
       case 'agenda':
         newDate = direction === 'prev' ? addMonths(date, -1) : addMonths(date, 1)
+        break
+      case 'todo':
+        newDate = date
         break
       default:
         newDate = date
@@ -114,6 +107,9 @@ export function CalendarHeader({ onQuickAdd, onToggleSidebar }: CalendarHeaderPr
         case 'agenda':
           newDate = dir === 'prev' ? addMonths(date, -1) : addMonths(date, 1)
           break
+        case 'todo':
+          newDate = date
+          break
         default:
           newDate = date
       }
@@ -126,28 +122,6 @@ export function CalendarHeader({ onQuickAdd, onToggleSidebar }: CalendarHeaderPr
     onSwipe: handleSwipe,
     swipeThreshold: 50,
   })
-
-  const handleQuickAddHover = useCallback((open: boolean) => {
-    if (closeTimeoutRef.current) {
-      clearTimeout(closeTimeoutRef.current)
-      closeTimeoutRef.current = null
-    }
-    if (open) {
-      setIsQuickAddOpen(true)
-    } else {
-      closeTimeoutRef.current = setTimeout(() => {
-        setIsQuickAddOpen(false)
-      }, 150)
-    }
-  }, [])
-
-  const handleQuickAddEvent = useCallback(
-    (result: NLPParseResult) => {
-      onQuickAdd?.(result)
-      setIsQuickAddOpen(false)
-    },
-    [onQuickAdd]
-  )
 
   return (
     <div className={styles.header} {...bind}>
@@ -172,38 +146,15 @@ export function CalendarHeader({ onQuickAdd, onToggleSidebar }: CalendarHeaderPr
       </div>
       <div className={styles.right}>
         {!isMobile && (
-          <Search
-            onSelectEvent={(eventId) => {
-              openModal(undefined, undefined, eventId)
-            }}
-          />
+          <button className={styles.searchButton} onClick={onOpenCommandPalette}>
+            <SearchIcon />
+            <span>Search or commands...</span>
+            <kbd>⌘K</kbd>
+          </button>
         )}
         <ViewSwitcher className={isMobile ? styles.mobileViewSwitcher : undefined} />
         {!isMobile && (
-          <div
-            className={styles.quickAddWrapper}
-            onMouseEnter={() => handleQuickAddHover(true)}
-            onMouseLeave={() => handleQuickAddHover(false)}
-          >
-            <button className={styles.createButton}>⚡</button>
-            {isQuickAddOpen && (
-              <motion.div
-                className={styles.quickAddDropdown}
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.15 }}
-              >
-                <QuickAdd onAdd={handleQuickAddEvent} onCancel={() => setIsQuickAddOpen(false)} />
-              </motion.div>
-            )}
-          </div>
-        )}
-        {!isMobile && (
           <>
-            <button className={styles.createButton} onClick={() => openModal()}>
-              +
-            </button>
             <ThemeToggle className={`${styles.createButton} ${styles.themeToggle}`} />
             <button className={styles.createButton} onClick={() => navigate('/settings')}>
               <SettingsIcon />
@@ -253,6 +204,15 @@ function MenuIcon(): JSX.Element {
         strokeLinecap="round"
         strokeLinejoin="round"
       />
+    </svg>
+  )
+}
+
+function SearchIcon(): JSX.Element {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2" />
+      <path d="M21 21L16.65 16.65" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
     </svg>
   )
 }

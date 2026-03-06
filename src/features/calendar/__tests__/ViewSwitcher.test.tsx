@@ -16,12 +16,13 @@ describe('ViewSwitcher', () => {
     expect(screen.getByRole('button', { name: /week/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /day/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /agenda/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /tasks/i })).toBeInTheDocument()
   })
 
   it('renders as a group of buttons', () => {
     render(<ViewSwitcher />)
     const buttons = screen.getAllByRole('button')
-    expect(buttons.length).toBe(4)
+    expect(buttons.length).toBe(5)
   })
 
   it('has buttons with proper labels', () => {
@@ -30,6 +31,7 @@ describe('ViewSwitcher', () => {
     expect(screen.getByRole('button', { name: /week/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /day/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /agenda/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /tasks/i })).toBeInTheDocument()
   })
 
   it('each button is clickable', async () => {

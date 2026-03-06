@@ -10,6 +10,7 @@ const VIEWS: { value: ViewType; label: string }[] = [
   { value: 'week', label: 'Week' },
   { value: 'day', label: 'Day' },
   { value: 'agenda', label: 'Agenda' },
+  { value: 'todo', label: 'Tasks' },
 ]
 
 interface ViewSwitcherProps {

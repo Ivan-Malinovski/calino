@@ -180,6 +180,7 @@ export const VIEW_OPTIONS: { value: ViewType; label: string }[] = [
   { value: 'week', label: 'Week' },
   { value: 'day', label: 'Day' },
   { value: 'agenda', label: 'Agenda' },
+  { value: 'todo', label: 'Tasks' },
 ]
 
 export const REMINDER_OPTIONS: { value: number; label: string }[] = [

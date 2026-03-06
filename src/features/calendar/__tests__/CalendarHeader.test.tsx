@@ -40,16 +40,6 @@ describe('CalendarHeader', () => {
     expect(screen.getByRole('button', { name: /today/i })).toBeInTheDocument()
   })
 
-  it('renders create button', () => {
-    renderWithRouter(<CalendarHeader />)
-    expect(screen.getByRole('button', { name: /\+/i })).toBeInTheDocument()
-  })
-
-  it('renders quick add button', () => {
-    renderWithRouter(<CalendarHeader />)
-    expect(screen.getByRole('button', { name: /⚡/i })).toBeInTheDocument()
-  })
-
   it('renders navigation buttons', () => {
     renderWithRouter(<CalendarHeader />)
     const buttons = screen.getAllByRole('button')
