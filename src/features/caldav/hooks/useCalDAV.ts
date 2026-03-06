@@ -9,6 +9,7 @@ import { parseICALData } from '../adapter/iCalendarAdapter'
 import * as storage from '../sync/accountStorage'
 import { SyncEngine } from '../sync/syncEngine'
 import { useCalendarStore } from '@/store/calendarStore'
+import { useSettingsStore } from '@/store/settingsStore'
 
 const selectAddEvent = (state: CalendarStore) => state.addEvent
 const selectUpdateEvent = (state: CalendarStore) => state.updateEvent
@@ -17,6 +18,7 @@ const selectAddCalendar = (state: CalendarStore) => state.addCalendar
 const selectDeleteCalendar = (state: CalendarStore) => state.deleteCalendar
 const selectCalendars = (state: CalendarStore) => state.calendars
 const selectEvents = (state: CalendarStore) => state.events
+const selectCalDavDebugMode = (state: { caldavDebugMode: boolean }) => state.caldavDebugMode
 
 interface UseCalDAVReturn {
   accounts: CalDAVAccount[]
@@ -48,6 +50,7 @@ export function useCalDAV(): UseCalDAVReturn {
   const storeDeleteCalendar = useCalendarStore(selectDeleteCalendar)
   const storeCalendars = useCalendarStore(selectCalendars)
   const existingEvents = useCalendarStore(selectEvents)
+  const caldavDebugMode = useSettingsStore(selectCalDavDebugMode)
 
   useEffect(() => {
     const loadedAccounts = storage.getAllAccounts()
@@ -254,10 +257,23 @@ export function useCalDAV(): UseCalDAVReturn {
 
   const createEvent = useCallback(
     async (calendarId: string, event: CalendarEvent): Promise<void> => {
+      if (caldavDebugMode) {
+        console.log('[CalDAV] createEvent called:', { calendarId, eventId: event.id, eventTitle: event.title })
+      }
+
       const calendar = calendars.find((c) => c.id === calendarId)
       const account = accounts.find((a) => a.id === calendar?.accountId)
 
+      if (caldavDebugMode) {
+        console.log('[CalDAV] Looking up calendar:', { calendarId, foundCalendar: !!calendar, calendar, accountId: calendar?.accountId })
+        console.log('[CalDAV] Available calendars:', calendars.map(c => ({ id: c.id, accountId: c.accountId, name: c.name })))
+        console.log('[CalDAV] Available accounts:', accounts.map(a => ({ id: a.id, name: a.name })))
+      }
+
       if (!calendar || !account) {
+        if (caldavDebugMode) {
+          console.log('[CalDAV] createEvent: No calendar or account found, silently returning')
+        }
         return
       }
 
@@ -270,10 +286,21 @@ export function useCalDAV(): UseCalDAVReturn {
         const client = await createCalDAVClient(account.serverUrl, credential)
         const engine = new SyncEngine(client, calendarId)
 
+        if (caldavDebugMode) {
+          console.log('[CalDAV] Pushing event to server...')
+        }
+
         await engine.pushEvent(event)
+
+        if (caldavDebugMode) {
+          console.log('[CalDAV] Event pushed successfully!')
+        }
 
         storage.updateAccountLastSync(account.id)
       } catch (error) {
+        if (caldavDebugMode) {
+          console.log('[CalDAV] createEvent failed, adding to pending changes:', error)
+        }
         storage.addPendingChange({
           type: 'create',
           eventId: event.id,
@@ -287,15 +314,22 @@ export function useCalDAV(): UseCalDAVReturn {
         throw error
       }
     },
-    [accounts, calendars]
+    [accounts, calendars, caldavDebugMode]
   )
 
   const updateEventFn = useCallback(
     async (calendarId: string, event: CalendarEvent): Promise<void> => {
+      if (caldavDebugMode) {
+        console.log('[CalDAV] updateEvent called:', { calendarId, eventId: event.id, eventTitle: event.title })
+      }
+
       const calendar = calendars.find((c) => c.id === calendarId)
       const account = accounts.find((a) => a.id === calendar?.accountId)
 
       if (!calendar || !account) {
+        if (caldavDebugMode) {
+          console.log('[CalDAV] updateEvent: No calendar or account found, silently returning')
+        }
         return
       }
 
@@ -308,10 +342,21 @@ export function useCalDAV(): UseCalDAVReturn {
         const client = await createCalDAVClient(account.serverUrl, credential)
         const engine = new SyncEngine(client, calendarId)
 
+        if (caldavDebugMode) {
+          console.log('[CalDAV] Updating event on server...')
+        }
+
         await engine.updateEvent(event, '')
+
+        if (caldavDebugMode) {
+          console.log('[CalDAV] Event updated successfully!')
+        }
 
         storage.updateAccountLastSync(account.id)
       } catch (error) {
+        if (caldavDebugMode) {
+          console.log('[CalDAV] updateEvent failed, adding to pending changes:', error)
+        }
         storage.addPendingChange({
           type: 'update',
           eventId: event.id,
@@ -325,15 +370,22 @@ export function useCalDAV(): UseCalDAVReturn {
         throw error
       }
     },
-    [accounts, calendars]
+    [accounts, calendars, caldavDebugMode]
   )
 
   const deleteEventFn = useCallback(
     async (calendarId: string, eventId: string): Promise<void> => {
+      if (caldavDebugMode) {
+        console.log('[CalDAV] deleteEvent called:', { calendarId, eventId })
+      }
+
       const calendar = calendars.find((c) => c.id === calendarId)
       const account = accounts.find((a) => a.id === calendar?.accountId)
 
       if (!calendar || !account) {
+        if (caldavDebugMode) {
+          console.log('[CalDAV] deleteEvent: No calendar or account found, silently returning')
+        }
         return
       }
 
@@ -346,12 +398,24 @@ export function useCalDAV(): UseCalDAVReturn {
         const client = await createCalDAVClient(account.serverUrl, credential)
         const engine = new SyncEngine(client, calendarId)
 
+        if (caldavDebugMode) {
+          console.log('[CalDAV] Deleting event from server...')
+        }
+
         const eventUrl = `${calendar.url}${eventId}.ics`
         await engine.deleteEvent(eventUrl, '')
 
         storeDeleteEvent(eventId)
+
+        if (caldavDebugMode) {
+          console.log('[CalDAV] Event deleted successfully!')
+        }
+
         storage.updateAccountLastSync(account.id)
       } catch (error) {
+        if (caldavDebugMode) {
+          console.log('[CalDAV] deleteEvent failed, adding to pending changes:', error)
+        }
         storage.addPendingChange({
           type: 'delete',
           eventId,
@@ -364,7 +428,7 @@ export function useCalDAV(): UseCalDAVReturn {
         throw error
       }
     },
-    [accounts, calendars, storeDeleteEvent]
+    [accounts, calendars, storeDeleteEvent, caldavDebugMode]
   )
 
   return {

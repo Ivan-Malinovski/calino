@@ -86,6 +86,7 @@ vi.mock('@/store/settingsStore', () => ({
       themeMode: 'auto',
       lightTheme: 'default',
       darkTheme: 'default',
+      caldavDebugMode: false,
       updateSettings: vi.fn(),
       resetSettings: vi.fn(),
     }
