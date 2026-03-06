@@ -6,10 +6,7 @@ import { useCalendarStore } from './store/calendarStore'
 import { useSettingsStore } from './store/settingsStore'
 import {
   CalendarHeader,
-  CalendarGrid,
-  WeekView,
-  DayView,
-  AgendaView,
+  FullCalendarWrapper,
   EventModal,
   Sidebar,
 } from './features/calendar'
@@ -120,7 +117,6 @@ function useViewManager(): void {
 }
 
 function CalendarApp(): JSX.Element {
-  const currentView = useCalendarStore((state) => state.currentView)
   const addEvent = useCalendarStore((state) => state.addEvent)
   const calendars = useCalendarStore((state) => state.calendars)
   const setOverlayOpen = useCalendarStore((state) => state.setOverlayOpen)
@@ -146,38 +142,11 @@ function CalendarApp(): JSX.Element {
   }, [setOverlayOpen])
 
   const renderView = (): JSX.Element => {
-    switch (currentView) {
-      case 'month':
-        return (
-          <ErrorBoundary>
-            <CalendarGrid />
-          </ErrorBoundary>
-        )
-      case 'week':
-        return (
-          <ErrorBoundary>
-            <WeekView />
-          </ErrorBoundary>
-        )
-      case 'day':
-        return (
-          <ErrorBoundary>
-            <DayView />
-          </ErrorBoundary>
-        )
-      case 'agenda':
-        return (
-          <ErrorBoundary>
-            <AgendaView />
-          </ErrorBoundary>
-        )
-      default:
-        return (
-          <ErrorBoundary>
-            <CalendarGrid />
-          </ErrorBoundary>
-        )
-    }
+    return (
+      <ErrorBoundary>
+        <FullCalendarWrapper />
+      </ErrorBoundary>
+    )
   }
 
   const handleQuickAdd = useCallback(
