@@ -10,7 +10,7 @@ export function CalDAVSettings(): JSX.Element {
   const [connectionError, setConnectionError] = useState<string>('')
   const [isTesting, setIsTesting] = useState(false)
 
-  const { syncEnabled, syncIntervalMinutes, conflictResolution, updateSettings } =
+  const { syncEnabled, syncIntervalMinutes, conflictResolution, caldavDebugMode, updateSettings } =
     useSettingsStore()
 
   const { accounts, syncAccount, addAccount, removeAccount } = useCalDAV()
@@ -172,6 +172,22 @@ export function CalDAVSettings(): JSX.Element {
             </option>
           ))}
         </select>
+      </div>
+
+      <div className={styles.settingRow}>
+        <div className={styles.settingLabel}>
+          <span className={styles.settingLabelText}>Debug Mode</span>
+          <span className={styles.settingLabelHint}>
+            Log CalDAV sync operations to console
+          </span>
+        </div>
+        <button
+          className={`${styles.toggle} ${caldavDebugMode ? styles.active : ''}`}
+          onClick={() => updateSettings({ caldavDebugMode: !caldavDebugMode })}
+          aria-pressed={caldavDebugMode}
+        >
+          <span className={styles.toggleKnob} />
+        </button>
       </div>
 
       <div className={styles.settingRow}>

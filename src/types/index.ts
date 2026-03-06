@@ -116,6 +116,7 @@ export interface UserSettings {
   themeMode: ThemeMode
   lightTheme: string
   darkTheme: string
+  caldavDebugMode: boolean
 }
 
 export type SettingsState = UserSettings
