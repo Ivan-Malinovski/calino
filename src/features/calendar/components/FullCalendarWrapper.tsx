@@ -1,4 +1,4 @@
-import { useMemo, useCallback, useRef, useEffect } from 'react'
+import { useMemo, useCallback, useRef, useEffect, useState } from 'react'
 import FullCalendar from '@fullcalendar/react'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import timeGridPlugin from '@fullcalendar/timegrid'
@@ -9,6 +9,7 @@ import '@fullcalendar/core'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
 import { getEventBackgroundColor } from '../types/calendarTypes'
+import { ContextMenu } from '@/components/common/ContextMenu'
 import styles from './FullCalendarWrapper.module.css'
 
 export function FullCalendarWrapper() {
@@ -76,6 +77,11 @@ export function FullCalendarWrapper() {
 
   const calendarRef = useRef<InstanceType<typeof FullCalendar>>(null)
   const isFirstRender = useRef(true)
+  const [contextMenu, setContextMenu] = useState<{
+    x: number
+    y: number
+    date: string
+  } | null>(null)
 
   useEffect(() => {
     const calendarApi = calendarRef.current?.getApi()
@@ -179,7 +185,7 @@ export function FullCalendarWrapper() {
       if (isTask) {
         return {
           html: `
-          <div class="fc-event-task" style="display: flex; align-items: center; gap: 6px; background: ${bgColor} !important; border-left: 3px solid ${borderColor} !important; border-radius: 4px; padding: 2px 6px; width: 100%;">
+          <div class="fc-event-task" style="display: flex; align-items: center; gap: 6px; background: ${bgColor} !important; border-left: 3px solid ${borderColor} !important; border-radius: 4px; padding: 2px 6px; width: 100%; height: 100%;">
             <input type="checkbox" ${completed ? 'checked' : ''} disabled style="pointer-events: auto; width: 14px; height: 14px; cursor: pointer; margin: 0;" />
             <div style="flex: 1; min-width: 0;">
               <div style="font-size: 12px; font-weight: 500; color: var(--color-text-primary); ${completed ? 'text-decoration: line-through; opacity: 0.6;' : ''} white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${event.title}${priorityLabel}</div>
@@ -191,7 +197,7 @@ export function FullCalendarWrapper() {
 
       return {
         html: `
-          <div style="display: flex; flex-direction: column; min-width: 0; background: ${bgColor} !important; border-left: 3px solid ${borderColor} !important; border-radius: 4px; padding: 2px 6px; width: 100%;">
+          <div style="display: flex; flex-direction: column; min-width: 0; height: 100%; background: ${bgColor} !important; border-left: 3px solid ${borderColor} !important; border-radius: 4px; padding: 2px 6px; width: 100%;">
             <div style="font-size: 12px; font-weight: 500; color: var(--color-text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
               ${timeText ? `<span style="font-weight: 400; opacity: 0.7; margin-right: 4px;">${timeText}</span>` : ''}${event.title}${priorityLabel}
             </div>
@@ -203,8 +209,35 @@ export function FullCalendarWrapper() {
     []
   )
 
+  const handleEventDidMount = useCallback((arg: { el: HTMLElement }) => {
+    arg.el.addEventListener('contextmenu', (e: MouseEvent) => {
+      e.preventDefault()
+    })
+  }, [])
+
+  const handleContainerContextMenu = useCallback((e: React.MouseEvent) => {
+    const target = e.target as HTMLElement
+    const dayCell = target.closest('.fc-daygrid-day, .fc-timegrid-slot')
+
+    if (dayCell) {
+      e.preventDefault()
+      const dateStr =
+        dayCell.getAttribute('data-date') ||
+        dayCell.closest('[data-date]')?.getAttribute('data-date') ||
+        ''
+
+      if (dateStr) {
+        setContextMenu({ x: e.clientX, y: e.clientY, date: dateStr })
+      }
+    }
+  }, [])
+
   return (
-    <div className={styles.container}>
+    <div
+      className={styles.container}
+      onContextMenu={handleContainerContextMenu}
+      onClick={() => setContextMenu(null)}
+    >
       <FullCalendar
         ref={calendarRef}
         plugins={[dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin, rrulePlugin]}
@@ -229,8 +262,33 @@ export function FullCalendarWrapper() {
         eventDrop={handleEventDrop}
         eventResize={handleEventResize}
         eventContent={handleEventContent}
+        eventDidMount={handleEventDidMount}
         height="100%"
       />
+      {contextMenu && (
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          menuId="calendar-context"
+          onClose={() => setContextMenu(null)}
+          items={[
+            {
+              label: 'Create event',
+              onClick: () => {
+                openModal(contextMenu.date)
+                setContextMenu(null)
+              },
+            },
+            {
+              label: 'Create task',
+              onClick: () => {
+                openModal(contextMenu.date, undefined, undefined, 'task')
+                setContextMenu(null)
+              },
+            },
+          ]}
+        />
+      )}
     </div>
   )
 }
