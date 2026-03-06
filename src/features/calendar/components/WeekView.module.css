@@ -1,0 +1,392 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+}
+
+.header {
+  display: flex;
+  border-bottom: 1px solid var(--color-border-subtle, var(--color-border));
+  position: sticky;
+  top: 0;
+  background: var(--color-bg, var(--color-bg-secondary));
+  z-index: 10;
+  transition: box-shadow 0.2s ease;
+  flex-shrink: 0;
+}
+
+.headerDays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  flex: 1;
+}
+
+.headerShadow {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.weekNumberColumn {
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--color-border-subtle, var(--color-border));
+  background: var(--color-bg-tertiary);
+}
+
+.weekNumberHeader {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-size-day-header, 12px);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  background: var(--color-bg-tertiary);
+  border-right: 1px solid var(--color-border-subtle, var(--color-border));
+  min-height: 48px;
+  min-width: 45px;
+  max-width: 45px;
+}
+
+.timeColumn {
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--color-border-subtle, var(--color-border));
+  background: var(--color-bg-tertiary);
+  min-width: 45px;
+  max-width: 45px;
+}
+
+.timeCell {
+  min-height: var(--hour-height, 60px);
+  height: var(--hour-height, 60px);
+  padding: var(--space-1, 4px) var(--space-2, 8px);
+  font-size: var(--font-size-event-time, 11px);
+  font-weight: 500;
+  color: var(--color-text-muted);
+  text-align: center;
+  justify-content: center;
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid var(--color-border-subtle, var(--color-border));
+  box-sizing: border-box;
+}
+
+.timeGutter {
+  border-right: 1px solid var(--color-border-subtle, var(--color-border));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-size-event-time, 11px);
+  color: var(--color-text-muted);
+  font-weight: 500;
+}
+
+.dayHeader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--space-1, 4px);
+  border-right: 1px solid var(--color-border-subtle, var(--color-border));
+}
+
+.dayHeader:last-child {
+  border-right: none;
+}
+
+.dayHeader.today {
+  background: var(--color-bg-tertiary);
+}
+
+.dayHeader.today .dayNumber {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--today-badge-size, 28px);
+  height: var(--today-badge-size, 28px);
+  background: var(--color-terracotta, var(--color-accent));
+  color: white;
+  border-radius: var(--today-badge-radius, 50%);
+  font-weight: var(--font-weight-today-number, 600);
+}
+
+.dayName {
+  font-size: var(--font-size-day-header, 12px);
+  font-weight: var(--font-weight-day-header, 500);
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: var(--letter-spacing-uppercase, 0.05em);
+}
+
+.dayNumber {
+  font-size: 18px;
+  font-weight: var(--font-weight-day-number, 400);
+  color: var(--color-text-primary);
+}
+
+.body {
+  display: flex;
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: var(--color-bg-primary);
+}
+
+.daysContainer {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  flex: 1;
+}
+
+.dayColumn {
+  position: relative;
+  border-right: 1px solid var(--color-border);
+}
+
+.dayColumn:last-child {
+  border-right: none;
+}
+
+.hourCells {
+  display: flex;
+  flex-direction: column;
+}
+
+.cell {
+  min-height: var(--hour-height, 60px);
+  height: var(--hour-height, 60px);
+  border-bottom: 1px solid var(--color-border);
+  cursor: pointer;
+  transition: background 0.15s ease;
+  box-sizing: border-box;
+}
+
+.cell:hover {
+  background: var(--color-bg-hover);
+}
+
+.cell.dropTarget {
+  background: var(--color-accent-light);
+  border: 2px dashed var(--color-accent);
+}
+
+.eventsOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1440px;
+  pointer-events: none;
+}
+
+.eventPositioned {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  pointer-events: auto;
+}
+
+.selectionOverlay {
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  background: rgba(66, 133, 244, 0.3);
+  border: 2px solid var(--color-accent);
+  border-radius: 4px;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.travelBar {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  border-radius: 4px 4px 0 0;
+  cursor: pointer;
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.travelBar:hover {
+  filter: brightness(0.95);
+}
+
+.travelBarInner {
+  font-size: 10px;
+  color: rgba(0, 0, 0, 0.5);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 0 4px;
+}
+
+.tasksHeader {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  right: 2px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  z-index: 10;
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+.tasksFooter {
+  position: absolute;
+  bottom: 2px;
+  left: 2px;
+  right: 2px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 80px;
+  overflow-y: auto;
+  z-index: 10;
+}
+
+.tasksFixedFooter {
+  position: sticky;
+  bottom: 0;
+  background: var(--color-bg-tertiary);
+  border-top: 1px solid var(--color-border);
+  padding: 8px 0;
+  display: grid;
+  grid-template-columns: 60px repeat(7, 1fr);
+  gap: 0;
+  z-index: 100;
+  max-height: 100px;
+  overflow-y: auto;
+}
+
+.tasksFixedFooter > *:first-child {
+  visibility: hidden;
+}
+
+.tasksFixedFooterCol {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow-y: auto;
+  padding: 0 2px;
+}
+
+.mobileContainer {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .mobileContainer {
+    display: block;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    flex: 1;
+  }
+
+  .mobileContainer::-webkit-scrollbar {
+    display: none;
+  }
+
+  .mobileHeader {
+    display: flex;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: var(--color-bg, var(--color-bg-secondary));
+    border-bottom: 1px solid var(--color-border-subtle, var(--color-border));
+  }
+
+  .mobileBody {
+    display: flex;
+  }
+
+  .weekNumberHeader {
+    position: sticky;
+    left: 0;
+    z-index: 11;
+    min-width: 45px;
+    max-width: 45px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--font-size-day-header, 12px);
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    background: var(--color-bg-tertiary);
+    border-right: 1px solid var(--color-border-subtle, var(--color-border));
+    min-height: 48px;
+  }
+
+  .headerDays {
+    display: flex;
+    flex: 1;
+  }
+
+  .dayHeader {
+    min-width: 28vw;
+    max-width: 28vw;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: var(--space-1, 4px);
+    border-right: 1px solid var(--color-border-subtle, var(--color-border));
+  }
+
+  .dayHeader:last-child {
+    border-right: none;
+  }
+
+  .header,
+  .body {
+    display: none;
+  }
+
+  .timeColumn {
+    position: sticky;
+    left: 0;
+    z-index: 5;
+    background: var(--color-bg-tertiary);
+    min-width: 45px;
+    max-width: 45px;
+    flex-shrink: 0;
+    border-right: 1px solid var(--color-border-subtle, var(--color-border));
+  }
+
+  .timeCell {
+    min-height: var(--hour-height, 60px);
+    height: var(--hour-height, 60px);
+    padding: var(--space-1, 4px) 2px;
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--color-text-muted);
+    text-align: center;
+    justify-content: center;
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid var(--color-border-subtle, var(--color-border));
+    box-sizing: border-box;
+  }
+
+  .daysContainer {
+    display: flex;
+    flex: 1;
+    min-width: max-content;
+  }
+
+  .dayColumn {
+    width: 28vw;
+    min-width: 28vw;
+    position: relative;
+    border-right: 1px solid var(--color-border);
+  }
+
+  .dayColumn:last-child {
+    border-right: none;
+  }
+}
