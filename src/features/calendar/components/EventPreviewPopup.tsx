@@ -222,6 +222,28 @@ export function EventPreviewPopup({
             </div>
           )}
 
+          {event.travelDuration !== undefined && event.travelDuration > 0 && (
+            <div className={styles.field}>
+              <svg className={styles.icon} width="14" height="14" viewBox="0 0 14 14" fill="none">
+                <path
+                  d="M1 10L4 7L6 9L13 2"
+                  stroke="currentColor"
+                  strokeWidth="1.2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M10 2H13V5"
+                  stroke="currentColor"
+                  strokeWidth="1.2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+              <span>{Math.round(event.travelDuration)} min travel</span>
+            </div>
+          )}
+
           {isTask && event.priority !== undefined && event.priority > 0 && (
             <div className={styles.field}>
               <svg className={styles.icon} width="14" height="14" viewBox="0 0 14 14" fill="none">
