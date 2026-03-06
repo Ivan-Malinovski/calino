@@ -122,14 +122,27 @@ export function AgendaView(): JSX.Element {
                 <div className={styles.empty}>No events</div>
               ) : (
                 sortedEvents.map(({ event }) => (
-                  <div key={event.id} className={styles.eventItem}>
+                  <div
+                    key={event.id}
+                    className={`${styles.eventItem} ${event.type === 'task' ? styles.taskItem : ''}`}
+                  >
                     <div className={styles.eventTime}>
-                      {event.isAllDay
-                        ? 'All day'
-                        : format(parseISO(event.start), timeFormat === '24h' ? 'HH:mm' : 'h:mm a')}
+                      {event.type === 'task'
+                        ? 'Due'
+                        : event.isAllDay
+                          ? 'All day'
+                          : format(
+                              parseISO(event.start),
+                              timeFormat === '24h' ? 'HH:mm' : 'h:mm a'
+                            )}
                     </div>
                     <div className={styles.eventDetails}>
-                      <div className={styles.eventTitle}>{event.title}</div>
+                      <div className={styles.eventTitle}>
+                        {event.type === 'task' && (
+                          <span className={styles.taskIcon}>{event.completed ? '✓' : '○'}</span>
+                        )}
+                        {event.title}
+                      </div>
                       {event.location && (
                         <div className={styles.eventLocation}>{event.location}</div>
                       )}
