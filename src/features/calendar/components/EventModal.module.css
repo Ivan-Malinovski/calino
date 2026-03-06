@@ -9,6 +9,16 @@
   align-items: center;
   justify-content: center;
   z-index: 1000;
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @media (max-width: 768px) {
@@ -25,6 +35,18 @@
   max-height: 90vh;
   overflow: auto;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  animation: scrollUp 0.25s ease-out;
+}
+
+@keyframes scrollUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @media (max-width: 768px) {
