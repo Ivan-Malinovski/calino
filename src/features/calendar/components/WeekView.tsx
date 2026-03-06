@@ -107,7 +107,16 @@ export function WeekView(): JSX.Element {
     }
   }, [openMenuId])
 
-  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768
+  const [isMobile, setIsMobile] = useState(
+    typeof window !== 'undefined' ? window.innerWidth < 768 : false
+  )
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768)
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
 
   const handleSwipe = useCallback(
     (direction: 'left' | 'right' | 'up' | 'down') => {
