@@ -436,49 +436,34 @@ function DroppableDay({
   const [showPopup, setShowPopup] = useState(false)
   const [popupPosition, setPopupPosition] = useState({ x: 0, y: 0 })
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null)
-  const [hasOverflow, setHasOverflow] = useState(false)
   const [extraEventCount, setExtraEventCount] = useState(0)
   const [extraTaskCount, setExtraTaskCount] = useState(0)
   const moreEventsRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    const checkOverflow = (): void => {
-      const dayElement = dayRef.current
+    const calculateVisible = (): void => {
+      const dayEl = dayRef.current
+      if (!dayEl) return
 
-      if (dayElement) {
-        const isOverflowing = dayElement.scrollHeight > dayElement.clientHeight
-        setHasOverflow(isOverflowing)
+      const dayHeight = dayEl.clientHeight
+      const headerHeight = 28
+      const availableHeight = dayHeight - headerHeight - 8
+      const eventHeight = 26
 
-        const eventsContainer = dayElement.querySelector('[class*="events"]') as HTMLElement
-        const tasksContainer = dayElement.querySelector('[class*="tasks"]') as HTMLElement
+      const visibleEvents = Math.max(1, Math.floor(availableHeight / eventHeight))
+      setExtraEventCount(Math.max(0, dayEvents.length - visibleEvents))
 
-        if (eventsContainer) {
-          const visibleHeight = eventsContainer.clientHeight
-          const eventHeight = 24
-          const visibleCount = Math.floor(visibleHeight / eventHeight)
-          const maxVisible = Math.min(dayEvents.length, 10)
-          const actuallyVisible = isOverflowing ? Math.min(visibleCount, maxVisible) : maxVisible
-          setExtraEventCount(Math.max(0, dayEvents.length - actuallyVisible))
-        }
-
-        if (tasksContainer) {
-          const visibleHeight = tasksContainer.clientHeight
-          const taskHeight = 24
-          const visibleCount = Math.floor(visibleHeight / taskHeight)
-          const maxVisible = Math.min(dayTasks.length, 10)
-          const actuallyVisible = hasOverflow ? Math.min(visibleCount, maxVisible) : maxVisible
-          setExtraTaskCount(Math.max(0, dayTasks.length - actuallyVisible))
-        }
-      }
+      const visibleTasks = Math.max(1, Math.floor(availableHeight / eventHeight))
+      setExtraTaskCount(Math.max(0, dayTasks.length - visibleTasks))
     }
 
-    checkOverflow()
-    const resizeObserver = new ResizeObserver(checkOverflow)
+    calculateVisible()
+    const resizeObserver = new ResizeObserver(calculateVisible)
     if (dayRef.current) {
       resizeObserver.observe(dayRef.current)
     }
     return () => resizeObserver.disconnect()
-  }, [dayEvents.length, dayTasks.length, hasOverflow])
+  }, [dayEvents.length, dayTasks.length])
 
   const handleMoreEventsClick = (e: React.MouseEvent): void => {
     e.stopPropagation()
@@ -538,7 +523,7 @@ function DroppableDay({
             )
           })}
         </AnimatePresence>
-        {hasOverflow && extraEventCount > 0 && (
+        {extraEventCount > 0 && (
           <div ref={moreEventsRef} className={styles.moreEvents} onClick={handleMoreEventsClick}>
             +{extraEventCount} more
           </div>
@@ -551,9 +536,7 @@ function DroppableDay({
               <EventCard key={task.id} event={task} compact isMobileMonth={isMobile} />
             ))}
           </AnimatePresence>
-          {hasOverflow && extraTaskCount > 0 && (
-            <div className={styles.moreEvents}>+{extraTaskCount} more</div>
-          )}
+          {extraTaskCount > 0 && <div className={styles.moreEvents}>+{extraTaskCount} more</div>}
         </div>
       )}
       {showPopup && (
