@@ -177,6 +177,8 @@
   margin-top: var(--space-2, 8px);
   overflow: hidden;
   min-height: 24px;
+  position: relative;
+  z-index: 1;
 }
 
 .events .card {
@@ -200,6 +202,12 @@
   margin-top: var(--space-2, 8px);
   padding-top: 2px;
   border-top: 1px dashed var(--color-border-subtle, var(--color-border));
+  position: relative;
+  z-index: 0;
+}
+
+.tasks .card {
+  z-index: 0;
 }
 
 .taskCount {
