@@ -124,7 +124,8 @@
 }
 
 @media (max-width: 768px) {
-  .right > *:not(.mobileViewSwitcher):not(.createButton):not(.themeToggle) {
+  .right
+    > *:not(.mobileViewSwitcher):not(.createButton):not(.themeToggle):not(.searchButtonMobile) {
     display: none;
   }
 

@@ -146,7 +146,7 @@ export function CalendarHeader({
       </div>
       <div className={styles.right}>
         <button
-          className={styles.searchButton}
+          className={`${styles.searchButton} ${styles.searchButtonMobile}`}
           onClick={onOpenCommandPalette}
           aria-label="Search or commands"
         >
