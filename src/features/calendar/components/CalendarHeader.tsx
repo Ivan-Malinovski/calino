@@ -145,15 +145,13 @@ export function CalendarHeader({
         )}
       </div>
       <div className={styles.right}>
-        {!isMobile && (
-          <button
-            className={styles.searchButton}
-            onClick={onOpenCommandPalette}
-            aria-label="Search or commands"
-          >
-            <SearchIcon />
-          </button>
-        )}
+        <button
+          className={styles.searchButton}
+          onClick={onOpenCommandPalette}
+          aria-label="Search or commands"
+        >
+          <SearchIcon />
+        </button>
         <ViewSwitcher className={isMobile ? styles.mobileViewSwitcher : undefined} />
         {!isMobile && (
           <>

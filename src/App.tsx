@@ -223,15 +223,11 @@ function CalendarApp(): JSX.Element {
   }, [setOverlayOpen])
 
   const handleFabAction = useCallback(
-    (action: 'event' | 'task' | 'command') => {
+    (action: 'event' | 'task') => {
       setIsFabMenuOpen(false)
-      if (action === 'command') {
-        handleOpenCommandPalette()
-      } else {
-        openModal(undefined, undefined, undefined, action)
-      }
+      openModal(undefined, undefined, undefined, action)
     },
-    [openModal, handleOpenCommandPalette]
+    [openModal]
   )
 
   return (
@@ -266,7 +262,7 @@ function CalendarApp(): JSX.Element {
 interface MobileFABProps {
   onClick: () => void
   isOpen: boolean
-  onAction: (action: 'event' | 'task' | 'command') => void
+  onAction: (action: 'event' | 'task') => void
 }
 
 function MobileFAB({ onClick, isOpen, onAction }: MobileFABProps): JSX.Element {
@@ -291,16 +287,6 @@ function MobileFAB({ onClick, isOpen, onAction }: MobileFABProps): JSX.Element {
       </button>
       {isOpen && (
         <div className="mobile-fab-menu">
-          <button className="mobile-fab-option" onClick={() => onAction('command')}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-              <path
-                d="M18 3a3 3 0 00-3 3v12a3 3 0 003 3 3 3 0 003-3V6a3 3 0 00-3-3 3 3 0 00-3 3v12a3 3 0 003 3 3 3 0 003-3V6a3 3 0 00-3-3z"
-                stroke="currentColor"
-                strokeWidth="2"
-              />
-            </svg>
-            Command Palette
-          </button>
           <button className="mobile-fab-option" onClick={() => onAction('event')}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
               <rect
