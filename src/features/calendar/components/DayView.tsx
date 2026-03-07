@@ -1,4 +1,4 @@
-import type { JSX } from 'react'
+import { Fragment, type JSX } from 'react'
 import { useMemo, useState, useCallback, useRef, useLayoutEffect, useEffect } from 'react'
 import {
   DndContext,
@@ -423,7 +423,7 @@ export function DayView(): JSX.Element {
         </div>
       )
 
-      return <>{elements}</>
+      return <Fragment key={event.id}>{elements}</Fragment>
     })
   }
 
