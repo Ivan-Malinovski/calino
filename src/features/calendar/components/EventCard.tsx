@@ -188,6 +188,7 @@ export function EventCard({
       <div
         ref={setNodeRef}
         style={style}
+        data-event-card
         className={`${styles.card} ${compact ? styles.compact : ''} ${isCurrentDragging || isDragging ? styles.dragging : ''} ${isResizing ? styles.resizing : ''} ${hideTopRadius ? styles.noTopRadius : ''} ${isTask ? styles.task : ''} ${event.completed ? styles.completed : ''} ${isMobileMonth ? styles.mobileMonth : ''}`}
         onContextMenu={handleContextMenu}
         {...bind}
