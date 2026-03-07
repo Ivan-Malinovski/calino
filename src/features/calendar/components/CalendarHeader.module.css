@@ -35,14 +35,13 @@
   font-weight: var(--font-weight-month-title, 300);
   color: var(--color-text-primary);
   margin: 0;
-  width: var(--sidebar-width, 260px);
+  width: auto;
   line-height: var(--line-height-month-title, 1.1);
   height: 48px;
   display: flex;
   align-items: center;
   white-space: nowrap;
   overflow: hidden;
-  flex-shrink: 0;
 }
 
 @media (max-width: 768px) {
