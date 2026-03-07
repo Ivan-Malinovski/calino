@@ -208,23 +208,6 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps): JSX.Element 
     <>
       {isOpen && <div className={styles.overlay} onClick={onClose} />}
       <div className={sidebarClass}>
-        <div className={styles.header}>
-          <span className={styles.title}>Calendars</span>
-          <button
-            className={styles.collapseButton}
-            onClick={() => {
-              if (onClose) {
-                onClose()
-              } else {
-                setIsCollapsed(true)
-              }
-            }}
-            title="Collapse sidebar"
-          >
-            <ChevronLeft />
-          </button>
-        </div>
-
         <div className={styles.miniCalendar}>
           <div className={styles.miniHeader}>
             <button onClick={handlePrevMonth} className={styles.miniNavBtn}>
