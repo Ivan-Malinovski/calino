@@ -46,6 +46,7 @@ export interface Calendar {
   color: string
   isVisible: boolean
   isDefault: boolean
+  accountId?: string
 }
 
 export type ViewType = 'month' | 'week' | 'day' | 'agenda' | 'todo'

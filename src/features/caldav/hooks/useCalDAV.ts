@@ -67,6 +67,7 @@ export function useCalDAV(): UseCalDAVReturn {
           color: cal.color,
           isVisible: cal.isVisible,
           isDefault: cal.isDefault,
+          accountId: cal.accountId,
         })
       }
     }
@@ -114,6 +115,7 @@ export function useCalDAV(): UseCalDAVReturn {
             color: cal.color,
             isVisible: cal.isVisible,
             isDefault: cal.isDefault,
+            accountId: newAccount.id,
           })
         }
 
@@ -244,6 +246,7 @@ export function useCalDAV(): UseCalDAVReturn {
           status: 'error',
           error: error instanceof Error ? error.message : 'Sync failed',
         }))
+        throw error
       }
     },
     [existingEvents]
@@ -258,16 +261,31 @@ export function useCalDAV(): UseCalDAVReturn {
   const createEvent = useCallback(
     async (calendarId: string, event: CalendarEvent): Promise<void> => {
       if (caldavDebugMode) {
-        console.log('[CalDAV] createEvent called:', { calendarId, eventId: event.id, eventTitle: event.title })
+        console.log('[CalDAV] createEvent called:', {
+          calendarId,
+          eventId: event.id,
+          eventTitle: event.title,
+        })
       }
 
       const calendar = calendars.find((c) => c.id === calendarId)
       const account = accounts.find((a) => a.id === calendar?.accountId)
 
       if (caldavDebugMode) {
-        console.log('[CalDAV] Looking up calendar:', { calendarId, foundCalendar: !!calendar, calendar, accountId: calendar?.accountId })
-        console.log('[CalDAV] Available calendars:', calendars.map(c => ({ id: c.id, accountId: c.accountId, name: c.name })))
-        console.log('[CalDAV] Available accounts:', accounts.map(a => ({ id: a.id, name: a.name })))
+        console.log('[CalDAV] Looking up calendar:', {
+          calendarId,
+          foundCalendar: !!calendar,
+          calendar,
+          accountId: calendar?.accountId,
+        })
+        console.log(
+          '[CalDAV] Available calendars:',
+          calendars.map((c) => ({ id: c.id, accountId: c.accountId, name: c.name }))
+        )
+        console.log(
+          '[CalDAV] Available accounts:',
+          accounts.map((a) => ({ id: a.id, name: a.name }))
+        )
       }
 
       if (!calendar || !account) {
@@ -320,7 +338,11 @@ export function useCalDAV(): UseCalDAVReturn {
   const updateEventFn = useCallback(
     async (calendarId: string, event: CalendarEvent): Promise<void> => {
       if (caldavDebugMode) {
-        console.log('[CalDAV] updateEvent called:', { calendarId, eventId: event.id, eventTitle: event.title })
+        console.log('[CalDAV] updateEvent called:', {
+          calendarId,
+          eventId: event.id,
+          eventTitle: event.title,
+        })
       }
 
       const calendar = calendars.find((c) => c.id === calendarId)

@@ -328,6 +328,10 @@
   background: var(--color-bg-hover);
 }
 
+.calendarItem:hover .syncButton {
+  opacity: 1;
+}
+
 .checkbox {
   width: 16px;
   height: 16px;
@@ -343,7 +347,52 @@
   border: none;
   padding: 0;
   cursor: pointer;
-  transition: transform 0.15s;
+}
+
+.syncButton {
+  opacity: 0;
+  background: none;
+  border: none;
+  padding: 4px;
+  cursor: pointer;
+  color: var(--color-text-secondary);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: auto;
+  transition:
+    opacity 0.15s,
+    color 0.15s;
+}
+
+.syncButton:hover {
+  color: var(--color-text-primary);
+  background: var(--color-bg-tertiary);
+}
+
+.syncButton.syncing {
+  opacity: 1;
+  animation: spin 1s linear infinite;
+}
+
+.syncButton.success {
+  opacity: 1;
+  color: #22c55e;
+}
+
+.syncButton.error {
+  opacity: 1;
+  color: #ef4444;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .colorDot:hover {

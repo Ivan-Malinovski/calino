@@ -18,6 +18,7 @@ import {
 import { config } from '@/config'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
+import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
 import { AddCalendarModal } from './AddCalendarModal'
 import styles from './Sidebar.module.css'
 
@@ -52,6 +53,8 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps): JSX.Element 
   const [editName, setEditName] = useState('')
   const [showYearDropdown, setShowYearDropdown] = useState(false)
   const [showMonthDropdown, setShowMonthDropdown] = useState(false)
+  const [syncingCalendarId, setSyncingCalendarId] = useState<string | null>(null)
+  const [syncStatus, setSyncStatus] = useState<Record<string, 'success' | 'error'>>({})
   const inputRef = useRef<HTMLInputElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const currentDate = useCalendarStore((state) => state.currentDate)
@@ -62,6 +65,36 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps): JSX.Element 
   const firstDayOfWeek = useSettingsStore((state) => state.firstDayOfWeek)
   const showAddCalendar = useCalendarStore((state) => state.showAddCalendar)
   const setShowAddCalendar = useCalendarStore((state) => state.setShowAddCalendar)
+  const { syncAccount } = useCalDAV()
+
+  const handleSyncCalendar = async (calendarId: string, accountId?: string): Promise<void> => {
+    if (!accountId || syncingCalendarId) return
+    setSyncingCalendarId(calendarId)
+    setSyncStatus((prev) => {
+      const { [calendarId]: _, ...rest } = prev
+      return rest
+    })
+    try {
+      await syncAccount(accountId)
+      setSyncStatus((prev) => ({ ...prev, [calendarId]: 'success' }))
+      setTimeout(() => {
+        setSyncStatus((prev) => {
+          const { [calendarId]: _, ...rest } = prev
+          return rest
+        })
+      }, 2000)
+    } catch {
+      setSyncStatus((prev) => ({ ...prev, [calendarId]: 'error' }))
+      setTimeout(() => {
+        setSyncStatus((prev) => {
+          const { [calendarId]: _, ...rest } = prev
+          return rest
+        })
+      }, 3000)
+    } finally {
+      setSyncingCalendarId(null)
+    }
+  }
 
   const currentYear = new Date().getFullYear()
   const years = Array.from({ length: 11 }, (_, i) => currentYear - 5 + i)
@@ -329,6 +362,50 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps): JSX.Element 
                 >
                   {calendar.name}
                 </span>
+              )}
+              {calendar.accountId && (
+                <button
+                  className={`${styles.syncButton} ${syncingCalendarId === calendar.id ? styles.syncing : ''} ${syncStatus[calendar.id] === 'success' ? styles.success : ''} ${syncStatus[calendar.id] === 'error' ? styles.error : ''}`}
+                  onClick={() => handleSyncCalendar(calendar.id, calendar.accountId)}
+                  title="Sync calendar"
+                  disabled={!!syncingCalendarId}
+                >
+                  {syncStatus[calendar.id] === 'success' ? (
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
+                      <path d="M20 6L9 17l-5-5" />
+                    </svg>
+                  ) : syncStatus[calendar.id] === 'error' ? (
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
+                      <path d="M18 6L6 18M6 6l12 12" />
+                    </svg>
+                  ) : (
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
+                      <path d="M23 4v6h-6M1 20v-6h6" />
+                      <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15" />
+                    </svg>
+                  )}
+                </button>
               )}
             </label>
           ))}
