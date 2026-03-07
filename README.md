@@ -79,6 +79,32 @@ Access-Control-Allow-Headers: Authorization, Content-Type, Depth, If-Match, If-N
 Access-Control-Allow-Methods: GET, PUT, POST, DELETE, PROPFIND, PROPPATCH, REPORT, OPTIONS
 ```
 
+### Caddy example
+
+```caddy
+yourcaldav.server.com {
+    @cors method OPTIONS
+
+    handle @cors {
+        header {
+            Access-Control-Allow-Origin "*"
+            Access-Control-Allow-Methods "GET, POST, PUT, DELETE, PROPFIND, REPORT, OPTIONS"
+            Access-Control-Allow-Headers "Authorization, Content-Type, Depth, Prefer, If-None-Match, If-Match"
+        }
+        respond "" 204
+    }
+
+    header {
+        Access-Control-Allow-Origin "*"
+        Access-Control-Allow-Methods "GET, POST, PUT, DELETE, PROPFIND, REPORT, OPTIONS"
+        Access-Control-Allow-Headers "Authorization, Content-Type, Depth, Prefer, If-None-Match, If-Match"
+        -Server
+    }
+
+    reverse_proxy 192.168.1.1:89 # replace with your own address
+}
+```
+
 ## Tech Stack
 
 React 18 + TypeScript + Vite, Zustand, Dexie.js, date-fns, chrono-node, @dnd-kit, framer-motion, Fuse.js, tsdav, Vitest
