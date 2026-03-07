@@ -66,7 +66,7 @@
   font-size: 16px;
   border: none;
   outline: none;
-  background-color: rgba(var(--color-bg-secondary-rgb, 255, 255, 255), 0.5);
+  background-color: transparent;
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   color: var(--color-text-primary);
