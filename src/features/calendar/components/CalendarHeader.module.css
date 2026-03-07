@@ -57,7 +57,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-left: 40px;
+  margin-left: 16px;
 }
 
 @media (max-width: 768px) {
