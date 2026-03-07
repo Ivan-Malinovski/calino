@@ -35,7 +35,7 @@
   font-weight: var(--font-weight-month-title, 300);
   color: var(--color-text-primary);
   margin: 0;
-  width: 250px;
+  width: 180px;
   line-height: var(--line-height-month-title, 1.1);
   height: 48px;
   display: flex;
