@@ -149,4 +149,40 @@ describe('NLParser', () => {
     expect(result.title).toBe('Lunch')
     expect(result.isAllDay).toBe(false)
   })
+
+  it('detects task with todo prefix', () => {
+    const result = parseNaturalLanguage('todo buy milk tomorrow')
+    expect(result.isTask).toBe(true)
+    expect(result.title).toBe('Buy milk')
+  })
+
+  it('detects task with task prefix', () => {
+    const result = parseNaturalLanguage('task call mom')
+    expect(result.isTask).toBe(true)
+    expect(result.title).toBe('Call mom')
+  })
+
+  it('detects task with remind me to prefix', () => {
+    const result = parseNaturalLanguage('remind me to send email')
+    expect(result.isTask).toBe(true)
+    expect(result.title).toBe('Send email')
+  })
+
+  it('keeps location in title', () => {
+    const result = parseNaturalLanguage('Partying in Las Vegas at 11am')
+    expect(result.location).toBe('Las Vegas')
+    expect(result.title).toBe('Partying in Las Vegas')
+  })
+
+  it('keeps location in title with at keyword', () => {
+    const result = parseNaturalLanguage('Meeting at downtown cafe')
+    expect(result.location).toBe('downtown cafe')
+    expect(result.title).toBe('Meeting at downtown cafe')
+  })
+
+  it('keeps location in title with in keyword', () => {
+    const result = parseNaturalLanguage('climbing in hvidovre tomorrow at 12')
+    expect(result.location).toBe('hvidovre')
+    expect(result.title).toBe('Climbing in hvidovre')
+  })
 })

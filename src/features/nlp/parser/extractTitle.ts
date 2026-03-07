@@ -29,17 +29,6 @@ export function extractTitle(input: string, parsedText: string): string {
     text = text.replace(parsedText, '').trim()
   }
 
-  const locationPatterns = [
-    /\bat\s+[a-zA-Z][^onfor]*(?:\s+(?:on|for)\b|$)/i,
-    /\b@\s*[a-zA-Z][a-zA-Z\s]*(?:\s+(?:on|for)\b|$)/i,
-    /\bin\s+[a-zA-Z][^onfor]*(?:\s+(?:on|for)\b|$)/i,
-    /\blocation\s*:\s*[a-zA-Z].+$/i,
-  ]
-
-  for (const pattern of locationPatterns) {
-    text = text.replace(pattern, '').trim()
-  }
-
   text = text
     .replace(/\s+/g, ' ')
     .replace(/^[,\-\s]+|[,\-\s]+$/g, '')

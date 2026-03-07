@@ -12,6 +12,7 @@ interface CommandPaletteProps {
 
 export function CommandPalette({ isOpen, onClose }: CommandPaletteProps): JSX.Element | null {
   const inputRef = useRef<HTMLInputElement>(null)
+  const resultsRef = useRef<HTMLDivElement>(null)
   const { query, setQuery, results, selectedIndex, setSelectedIndex, executeSelected } =
     useCommandPalette({ isOpen })
 
@@ -46,6 +47,17 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps): JSX.El
   }, [isOpen])
 
   useEffect(() => {
+    if (!resultsRef.current || results.length === 0) return
+
+    const selectedElement = resultsRef.current.querySelector(
+      `[data-index="${selectedIndex}"]`
+    ) as HTMLElement | null
+    if (selectedElement?.scrollIntoView) {
+      selectedElement.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+    }
+  }, [selectedIndex, results.length])
+
+  useEffect(() => {
     const handleGlobalKeyDown = (e: globalThis.KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault()
@@ -66,8 +78,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps): JSX.El
   if (!isOpen) return null
 
   const handleItemClick = (index: number) => {
-    setSelectedIndex(index)
-    const result = executeSelected()
+    const result = executeSelected(index)
     if (result?.success && result.message) {
       window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: result.message } }))
     }
@@ -134,7 +145,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps): JSX.El
           {!query && <span className={styles.shortcut}>Esc</span>}
         </div>
 
-        <div className={styles.results}>
+        <div className={styles.results} ref={resultsRef}>
           {results.length === 0 && query && (
             <div className={styles.empty}>No results found. Try a different search term.</div>
           )}
@@ -147,6 +158,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps): JSX.El
               {items.map((result) => (
                 <CommandItem
                   key={result.index}
+                  data-index={result.index}
                   item={result.item as Parameters<typeof CommandItem>[0]['item']}
                   type={result.type as 'command' | 'event' | 'calendar' | 'quick-add'}
                   isSelected={selectedIndex === result.index}

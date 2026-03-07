@@ -10,6 +10,7 @@ interface CommandItemProps {
   isSelected: boolean
   onClick: () => void
   timeFormat: TimeFormat
+  'data-index'?: number
 }
 
 export function CommandItem({
@@ -18,6 +19,7 @@ export function CommandItem({
   isSelected,
   onClick,
   timeFormat,
+  'data-index': dataIndex,
 }: CommandItemProps): JSX.Element {
   const handleClick = (): void => {
     onClick()
@@ -71,11 +73,15 @@ export function CommandItem({
     if (type === 'quick-add') {
       const qa = item as QuickAddResult
       const confidencePercent = Math.round(qa.confidence * 100)
+      const isTaskItem = qa.isTask
       return (
         <>
-          <span className={styles.icon}>➕</span>
+          <span className={styles.icon}>{isTaskItem ? '📋' : '➕'}</span>
           <div className={styles.content}>
-            <div className={styles.label}>Create: {qa.title}</div>
+            <div className={styles.label}>
+              {isTaskItem ? 'Task: ' : 'Create: '}
+              {qa.title}
+            </div>
             <div className={styles.description}>
               {format(qa.startDate, 'EEEE, MMMM d')}
               {qa.endDate && ` ${formatTime(qa.startDate)} - ${formatTime(qa.endDate)}`}
@@ -98,6 +104,7 @@ export function CommandItem({
       onClick={handleClick}
       role="option"
       aria-selected={isSelected}
+      data-index={dataIndex}
     >
       {renderContent()}
     </div>

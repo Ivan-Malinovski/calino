@@ -212,6 +212,7 @@ export function useCommandPalette({ isOpen }: UseCommandPaletteProps) {
           endDate: nlpResult.endDate ?? undefined,
           location: nlpResult.location,
           isAllDay: nlpResult.isAllDay,
+          isTask: nlpResult.isTask,
           confidence: nlpResult.confidence,
         }
         return [
@@ -257,51 +258,71 @@ export function useCommandPalette({ isOpen }: UseCommandPaletteProps) {
     return null
   }, [query, parseInput])
 
-  const executeSelected = useCallback(() => {
-    const selected = results[selectedIndex]
-    if (!selected) return { success: false, message: '' }
+  const executeSelected = useCallback(
+    (index?: number) => {
+      const executeIndex = index ?? selectedIndex
+      const selected = results[executeIndex]
+      if (!selected) return { success: false, message: '' }
 
-    if (selected.type === 'command') {
-      const cmd = selected.item as Command
-      const message = cmd.action()
-      return { success: true, message: message || 'Executed' }
-    }
+      if (selected.type === 'command') {
+        const cmd = selected.item as Command
+        const message = cmd.action()
+        return { success: true, message: message || 'Executed' }
+      }
 
-    if (selected.type === 'event') {
-      const event = selected.item as EventResult
-      openModal(event.start, undefined, event.id)
-      return { success: true, message: `Opened: ${event.title}` }
-    }
+      if (selected.type === 'event') {
+        const event = selected.item as EventResult
+        openModal(event.start, undefined, event.id)
+        return { success: true, message: `Opened: ${event.title}` }
+      }
 
-    if (selected.type === 'calendar') {
-      const cal = selected.item as CalendarResult
-      navigate(`/settings?tab=calendars&calendar=${cal.id}`)
-      return { success: true, message: `Opened calendar: ${cal.name}` }
-    }
+      if (selected.type === 'calendar') {
+        const cal = selected.item as CalendarResult
+        navigate(`/settings?tab=calendars&calendar=${cal.id}`)
+        return { success: true, message: `Opened calendar: ${cal.name}` }
+      }
 
-    if (selected.type === 'quick-add') {
-      const qa = selected.item as QuickAddResult
-      const defaultCalendar = calendars.find((c) => c.isDefault) || calendars[0]
-      addEvent({
-        id: crypto.randomUUID(),
-        calendarId: defaultCalendar?.id || 'default',
-        title: qa.title,
-        location: qa.location,
-        start: qa.startDate.toISOString(),
-        end: qa.endDate ? qa.endDate.toISOString() : qa.startDate.toISOString(),
-        isAllDay: qa.isAllDay,
-      })
-      return { success: true, message: `Created event: ${qa.title}` }
-    }
+      if (selected.type === 'quick-add') {
+        const qa = selected.item as QuickAddResult
+        const defaultCalendar = calendars.find((c) => c.isDefault) || calendars[0]
 
-    if (selected.type === 'command') {
-      const cmd = selected.item as Command
-      const message = cmd.action()
-      return { success: true, message: message || 'Executed' }
-    }
+        if (qa.isTask) {
+          addEvent({
+            id: crypto.randomUUID(),
+            calendarId: defaultCalendar?.id || 'default',
+            title: qa.title,
+            location: qa.location,
+            start: qa.startDate.toISOString(),
+            end: qa.endDate ? qa.endDate.toISOString() : qa.startDate.toISOString(),
+            isAllDay: qa.isAllDay,
+            type: 'task',
+            dueDate: qa.startDate.toISOString(),
+          })
+          return { success: true, message: `Created task: ${qa.title}` }
+        }
 
-    return { success: false, message: '' }
-  }, [results, selectedIndex, openModal, navigate, addEvent, calendars])
+        addEvent({
+          id: crypto.randomUUID(),
+          calendarId: defaultCalendar?.id || 'default',
+          title: qa.title,
+          location: qa.location,
+          start: qa.startDate.toISOString(),
+          end: qa.endDate ? qa.endDate.toISOString() : qa.startDate.toISOString(),
+          isAllDay: qa.isAllDay,
+        })
+        return { success: true, message: `Created event: ${qa.title}` }
+      }
+
+      if (selected.type === 'command') {
+        const cmd = selected.item as Command
+        const message = cmd.action()
+        return { success: true, message: message || 'Executed' }
+      }
+
+      return { success: false, message: '' }
+    },
+    [results, selectedIndex, openModal, navigate, addEvent, calendars]
+  )
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {

@@ -19,6 +19,7 @@ export interface QuickAddResult {
   endDate?: Date
   location?: string
   isAllDay: boolean
+  isTask: boolean
   confidence: number
 }
 

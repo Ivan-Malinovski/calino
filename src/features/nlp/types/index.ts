@@ -1,18 +1,19 @@
-import type { RecurrenceRule } from '@/types';
+import type { RecurrenceRule } from '@/types'
 
 export interface NLPParseResult {
-  title: string;
-  startDate: Date;
-  endDate?: Date;
-  isAllDay: boolean;
-  duration?: number;
-  location?: string;
-  confidence: number;
-  raw: string;
-  recurrence?: RecurrenceRule;
+  title: string
+  startDate: Date
+  endDate?: Date
+  isAllDay: boolean
+  isTask: boolean
+  duration?: number
+  location?: string
+  confidence: number
+  raw: string
+  recurrence?: RecurrenceRule
 }
 
 export interface NLPParseOptions {
-  defaultDuration?: number;
-  defaultDate?: Date;
+  defaultDuration?: number
+  defaultDate?: Date
 }
