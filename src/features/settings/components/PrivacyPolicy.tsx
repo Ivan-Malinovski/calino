@@ -44,7 +44,35 @@ export function PrivacyPolicy(): JSX.Element {
         </section>
 
         <section>
-          <h2>3. Cookies & Local Storage</h2>
+          <h2>3. CORS Proxy (Optional)</h2>
+          <p>
+            If your CalDAV server does not support CORS, you can optionally use a CORS proxy to
+            enable browser access.
+          </p>
+          <p>
+            <strong>Calino-hosted proxy (proxy.calino.io):</strong> We provide a public CORS proxy
+            at <code>proxy.calino.io</code>. If you use this option:
+          </p>
+          <ul>
+            <li>We can see your IP address, country, and the URL of your CalDAV server</li>
+            <li>
+              We <strong>cannot</strong> see your username, password, or calendar event data
+            </li>
+            <li>Credentials are sent in the Authorization header (not logged)</li>
+            <li>Request/response bodies containing calendar data are not logged</li>
+          </ul>
+          <p>
+            <strong>Third-party or self-hosted proxies:</strong> The same principles apply — the
+            proxy operator sees connection metadata but not your credentials or calendar content.
+          </p>
+          <p>
+            For maximum privacy, add CORS headers directly to your CalDAV server instead of using a
+            proxy.
+          </p>
+        </section>
+
+        <section>
+          <h2>4. Cookies & Local Storage</h2>
           <p>Calino uses localStorage to store:</p>
           <ul>
             <li>Your preferences and settings</li>
@@ -57,7 +85,7 @@ export function PrivacyPolicy(): JSX.Element {
         </section>
 
         <section>
-          <h2>4. No Account Required</h2>
+          <h2>5. No Account Required</h2>
           <p>
             Calino does not require registration or an account. You can use the app immediately
             without providing any personal information.
@@ -65,7 +93,7 @@ export function PrivacyPolicy(): JSX.Element {
         </section>
 
         <section>
-          <h2>5. Contact</h2>
+          <h2>6. Contact</h2>
           <p>
             If you have questions about this privacy policy, please contact:
             <br />

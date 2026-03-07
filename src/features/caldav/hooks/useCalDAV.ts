@@ -24,7 +24,13 @@ interface UseCalDAVReturn {
   accounts: CalDAVAccount[]
   calendars: CalDAVCalendar[]
   syncState: SyncState
-  addAccount: (serverUrl: string, username: string, password: string, name: string) => Promise<void>
+  addAccount: (
+    serverUrl: string,
+    username: string,
+    password: string,
+    name: string,
+    proxyUrl?: string | null
+  ) => Promise<void>
   removeAccount: (accountId: string) => Promise<void>
   syncAccount: (accountId: string) => Promise<void>
   syncAll: () => Promise<void>
@@ -78,12 +84,19 @@ export function useCalDAV(): UseCalDAVReturn {
   }, [])
 
   const addAccount = useCallback(
-    async (serverUrl: string, username: string, password: string, name: string): Promise<void> => {
+    async (
+      serverUrl: string,
+      username: string,
+      password: string,
+      name: string,
+      proxyUrl?: string | null
+    ): Promise<void> => {
       setSyncState((prev) => ({ ...prev, status: 'syncing', error: null }))
 
       try {
-        const discoveredUrl = await discoverServerUrl(serverUrl)
-        const connected = await testConnection(discoveredUrl, { username, password })
+        const discoveredUrl = await discoverServerUrl(serverUrl, proxyUrl ?? undefined)
+
+        const connected = await testConnection(discoveredUrl, { username, password }, proxyUrl)
 
         if (!connected) {
           throw new Error('Failed to connect to server. Please check your credentials.')
@@ -95,12 +108,13 @@ export function useCalDAV(): UseCalDAVReturn {
           password,
         })
 
-        const client = await createCalDAVClient(discoveredUrl, credential)
+        const client = await createCalDAVClient(discoveredUrl, credential, proxyUrl)
         const serverCalendars = await client.fetchCalendars()
 
         const newAccount = storage.saveAccount({
           name,
           serverUrl: discoveredUrl,
+          proxyUrl: proxyUrl || null,
           username,
           credentialId: credential.id,
         })
@@ -197,7 +211,7 @@ export function useCalDAV(): UseCalDAVReturn {
           throw new Error('Credentials not found')
         }
 
-        const client = await createCalDAVClient(account.serverUrl, credential)
+        const client = await createCalDAVClient(account.serverUrl, credential, account.proxyUrl)
         const accountCalendars = storage.getCalendarsByAccountId(accountId)
 
         const start = '1970-01-01T00:00:00.000Z'
@@ -303,7 +317,7 @@ export function useCalDAV(): UseCalDAVReturn {
           throw new Error('Credentials not found')
         }
 
-        const client = await createCalDAVClient(account.serverUrl, credential)
+        const client = await createCalDAVClient(account.serverUrl, credential, account.proxyUrl)
         const engine = new SyncEngine(client, calendarId)
 
         if (caldavDebugMode) {
@@ -363,7 +377,7 @@ export function useCalDAV(): UseCalDAVReturn {
           throw new Error('Credentials not found')
         }
 
-        const client = await createCalDAVClient(account.serverUrl, credential)
+        const client = await createCalDAVClient(account.serverUrl, credential, account.proxyUrl)
         const engine = new SyncEngine(client, calendarId)
 
         if (caldavDebugMode) {
@@ -419,7 +433,7 @@ export function useCalDAV(): UseCalDAVReturn {
           throw new Error('Credentials not found')
         }
 
-        const client = await createCalDAVClient(account.serverUrl, credential)
+        const client = await createCalDAVClient(account.serverUrl, credential, account.proxyUrl)
         const engine = new SyncEngine(client, calendarId)
 
         if (caldavDebugMode) {

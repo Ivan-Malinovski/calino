@@ -71,7 +71,13 @@ pnpm build
 - Radicale
 - Any RFC 4791 compliant server
 
-**CORS note:** Most CalDAV servers don't send CORS headers by default. If you get CORS errors, add these headers to your reverse proxy:
+**CORS note:** Most CalDAV servers don't send CORS headers by default. If you get CORS errors, you have three options:
+
+1. **Add CORS headers to your server** (recommended)
+2. **Use the Calino proxy** — enter `https://proxy.calino.io` as the proxy URL in settings (we see your IP and server URL, but not credentials or data)
+3. **Self-host a proxy** — see [docs/CORS_PROXY.md](docs/CORS_PROXY.md) for setup instructions
+
+If adding headers to your server, use these:
 
 ```
 Access-Control-Allow-Origin: <your-calino-origin>

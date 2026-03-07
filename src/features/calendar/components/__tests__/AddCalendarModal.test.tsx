@@ -125,7 +125,8 @@ describe('AddCalendarModal', () => {
         'https://caldav.example.com',
         'testuser',
         'password123',
-        'testuser'
+        'testuser',
+        undefined
       )
     })
 
@@ -164,7 +165,8 @@ describe('AddCalendarModal', () => {
         'https://caldav.example.com',
         'testuser',
         'password123',
-        'My Server'
+        'My Server',
+        undefined
       )
     })
 

@@ -18,21 +18,26 @@ export function CalDAVSettings(): JSX.Element {
   const handleTestConnection = async (
     serverUrl: string,
     username: string,
-    password: string
+    password: string,
+    proxyUrl?: string
   ): Promise<boolean> => {
     setIsTesting(true)
     setConnectionStatus('idle')
     setConnectionError('')
 
     try {
-      // First, normalize the URL - try to get base URL
       let baseUrl = serverUrl
       if (serverUrl.includes('/calendars/')) {
-        // Extract base URL from calendar URL
         const match = serverUrl.match(/^https?:\/\/[^/]+/)
         if (match) {
           baseUrl = match[0] + '/dav.php'
         }
+      }
+
+      if (proxyUrl) {
+        const encodedTarget = encodeURIComponent(baseUrl)
+        const proxyBase = proxyUrl.replace(/\/$/, '')
+        baseUrl = `${proxyBase}/${encodedTarget}`
       }
 
       const response = await fetch(baseUrl, {
@@ -77,14 +82,15 @@ export function CalDAVSettings(): JSX.Element {
     const username = formData.get('username') as string
     const password = formData.get('password') as string
     const accountName = (formData.get('accountName') as string) || username
+    const proxyUrl = (formData.get('proxyUrl') as string) || undefined
 
-    const success = await handleTestConnection(serverUrl, username, password)
+    const success = await handleTestConnection(serverUrl, username, password, proxyUrl)
     if (!success) {
       return
     }
 
     try {
-      await addAccount(serverUrl, username, password, accountName)
+      await addAccount(serverUrl, username, password, accountName, proxyUrl)
       setIsAddingAccount(false)
       setConnectionStatus('idle')
       form.reset()
@@ -177,9 +183,7 @@ export function CalDAVSettings(): JSX.Element {
       <div className={styles.settingRow}>
         <div className={styles.settingLabel}>
           <span className={styles.settingLabelText}>Debug Mode</span>
-          <span className={styles.settingLabelHint}>
-            Log CalDAV sync operations to console
-          </span>
+          <span className={styles.settingLabelHint}>Log CalDAV sync operations to console</span>
         </div>
         <button
           className={`${styles.toggle} ${caldavDebugMode ? styles.active : ''}`}
@@ -264,10 +268,21 @@ export function CalDAVSettings(): JSX.Element {
                 <input
                   name="serverUrl"
                   className={styles.input}
-                  placeholder="https://caldav.example.com"
+                  placeholder="https://caldav.example.com/dav.php"
                   required
                 />
                 <span className={styles.formHint}>Enter the full URL of your CalDAV server</span>
+              </div>
+              <div className={styles.formGroup}>
+                <label className={styles.formLabel}>Proxy URL (optional)</label>
+                <input
+                  name="proxyUrl"
+                  className={styles.input}
+                  placeholder="https://caldavproxy.cf-e13.workers.dev"
+                />
+                <span className={styles.formHint}>
+                  Enter a CORS proxy URL if your server doesn't support CORS
+                </span>
               </div>
               <div className={styles.formGroup}>
                 <label className={styles.formLabel}>Username</label>

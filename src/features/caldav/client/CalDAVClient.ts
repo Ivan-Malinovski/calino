@@ -1,13 +1,52 @@
 import { createDAVClient } from 'tsdav'
 import type { CalDAVCredentials, CalDAVCalendar } from '../types'
 
+export function buildProxyUrl(proxyBase: string, targetUrl: string): string {
+  const encodedTarget = encodeURIComponent(targetUrl)
+  const proxyBaseClean = proxyBase.replace(/\/$/, '')
+  return `${proxyBaseClean}/${encodedTarget}`
+}
+
+function prefixUrlWithProxy(url: string, proxyBase: string): string {
+  if (!proxyBase) {
+    return url
+  }
+
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return buildProxyUrl(proxyBase, url)
+  }
+
+  if (url.startsWith('/')) {
+    return buildProxyUrl(proxyBase, url)
+  }
+
+  return buildProxyUrl(proxyBase, url)
+}
+
+function createProxyFetch(proxyUrl: string): typeof fetch {
+  return async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+    let url: string
+    if (typeof input === 'string') {
+      url = input
+    } else if (input instanceof Request) {
+      url = input.url
+    } else {
+      url = input.toString()
+    }
+    const proxiedUrl = prefixUrlWithProxy(url, proxyUrl)
+    return fetch(proxiedUrl, init)
+  }
+}
+
 export class CalDAVClient {
   private client: Awaited<ReturnType<typeof createDAVClient>> | null = null
   private serverUrl: string
+  private proxyUrl: string | null
   private credentials: CalDAVCredentials
 
-  constructor(serverUrl: string, credentials: CalDAVCredentials) {
+  constructor(serverUrl: string, credentials: CalDAVCredentials, proxyUrl: string | null = null) {
     this.serverUrl = serverUrl
+    this.proxyUrl = proxyUrl
     this.credentials = credentials
   }
 
@@ -20,6 +59,7 @@ export class CalDAVClient {
       },
       authMethod: 'Basic',
       defaultAccountType: 'caldav',
+      fetch: this.proxyUrl ? createProxyFetch(this.proxyUrl) : undefined,
     })
   }
 
@@ -37,7 +77,7 @@ export class CalDAVClient {
     return davCalendars.map((cal, index) => ({
       id: cal.url || `cal-${index}-${Date.now()}`,
       accountId: this.credentials.id,
-      url: cal.url || '',
+      url: this.proxyUrl ? prefixUrlWithProxy(cal.url || '', this.proxyUrl) : cal.url || '',
       name: typeof cal.displayName === 'string' ? cal.displayName : 'Unnamed Calendar',
       color: '#4285F4',
       ctag: null,
@@ -55,7 +95,11 @@ export class CalDAVClient {
     const client = this.getClient()
 
     const calendars = await client.fetchCalendars()
-    const calendar = calendars.find((c) => c.url === calendarUrl)
+    const calendar = calendars.find(
+      (c) =>
+        c.url === calendarUrl ||
+        (this.proxyUrl && prefixUrlWithProxy(c.url || '', this.proxyUrl) === calendarUrl)
+    )
 
     if (!calendar) {
       throw new Error(`Calendar not found: ${calendarUrl}`)
@@ -88,13 +132,13 @@ export class CalDAVClient {
     })
 
     const allItems = [...eventObjects, ...todoObjects]
-    
+
     // Remove duplicates by URL
     const uniqueByUrl = new Map<string, { url: string; data: string; etag?: string }>()
     for (const obj of allItems) {
       if (!uniqueByUrl.has(obj.url)) {
         uniqueByUrl.set(obj.url, {
-          url: obj.url,
+          url: this.proxyUrl ? prefixUrlWithProxy(obj.url, this.proxyUrl) : obj.url,
           data: obj.data as string,
           etag: obj.etag,
         })
@@ -112,7 +156,11 @@ export class CalDAVClient {
     const client = this.getClient()
 
     const calendars = await client.fetchCalendars()
-    const calendar = calendars.find((c) => c.url === calendarUrl)
+    const calendar = calendars.find(
+      (c) =>
+        c.url === calendarUrl ||
+        (this.proxyUrl && prefixUrlWithProxy(c.url || '', this.proxyUrl) === calendarUrl)
+    )
 
     if (!calendar) {
       throw new Error(`Calendar not found: ${calendarUrl}`)
@@ -125,7 +173,7 @@ export class CalDAVClient {
     })
 
     return {
-      url: result.url,
+      url: this.proxyUrl ? prefixUrlWithProxy(result.url, this.proxyUrl) : result.url,
       etag: '',
     }
   }
@@ -139,7 +187,11 @@ export class CalDAVClient {
     const client = this.getClient()
 
     const calendars = await client.fetchCalendars()
-    const calendar = calendars.find((c) => c.url === calendarUrl)
+    const calendar = calendars.find(
+      (c) =>
+        c.url === calendarUrl ||
+        (this.proxyUrl && prefixUrlWithProxy(c.url || '', this.proxyUrl) === calendarUrl)
+    )
 
     if (!calendar) {
       throw new Error(`Calendar not found: ${calendarUrl}`)
@@ -150,7 +202,7 @@ export class CalDAVClient {
     })
 
     return {
-      url: result.url,
+      url: this.proxyUrl ? prefixUrlWithProxy(result.url, this.proxyUrl) : result.url,
       etag: '',
     }
   }
@@ -166,13 +218,18 @@ export class CalDAVClient {
   getServerUrl(): string {
     return this.serverUrl
   }
+
+  getProxyUrl(): string | null {
+    return this.proxyUrl
+  }
 }
 
 export async function createCalDAVClient(
   serverUrl: string,
-  credentials: CalDAVCredentials
+  credentials: CalDAVCredentials,
+  proxyUrl: string | null = null
 ): Promise<CalDAVClient> {
-  const client = new CalDAVClient(serverUrl, credentials)
+  const client = new CalDAVClient(serverUrl, credentials, proxyUrl)
   await client.connect()
   return client
 }

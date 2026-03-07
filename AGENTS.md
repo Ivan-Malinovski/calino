@@ -94,3 +94,151 @@ src/
 
 - Set `VITE_SITE_URL=https://your-domain.com` in `.env`
 - See `.env.example`
+
+### CalDAV Proxy (Cloudflare Worker)
+
+```javascript
+export default {
+  async fetch(request) {
+    const url = new URL(request.url)
+
+    // Restrict to Calino production only
+    const origin = request.headers.get('Origin') || request.headers.get('Referer') || ''
+    const allowedOrigins = ['https://calino.io', 'https://www.calino.io']
+    const isAllowed = !origin || allowedOrigins.some((allowed) => origin.startsWith(allowed))
+    if (!isAllowed) {
+      return new Response('Forbidden: This proxy is only for Calino users', { status: 403 })
+    }
+
+    const pathParts = url.pathname.split('/').filter(Boolean)
+
+    if (pathParts.length === 0) {
+      return new Response('Missing target server in path', { status: 400 })
+    }
+
+    const targetBase = decodeURIComponent(pathParts[0])
+    let targetPath = '/' + pathParts.slice(1).join('/')
+
+    if (targetPath === '/.well-known/caldav') {
+      targetPath = '/dav.php'
+    }
+
+    if (request.method === 'OPTIONS') {
+      return new Response(null, {
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods':
+            'GET, POST, PUT, DELETE, PROPFIND, PROPPATCH, REPORT, OPTIONS',
+          'Access-Control-Allow-Headers':
+            'Authorization, Content-Type, Depth, Prefer, If-None-Match, If-Match',
+        },
+      })
+    }
+
+    const targetUrl = targetBase.replace(/\/$/, '') + targetPath
+    const headers = new Headers(request.headers)
+    headers.delete('host')
+
+    try {
+      const response = await fetch(targetUrl, {
+        method: request.method,
+        headers,
+        body: request.body,
+      })
+      const corsHeaders = new Headers(response.headers)
+      corsHeaders.set('Access-Control-Allow-Origin', '*')
+      corsHeaders.set(
+        'Access-Control-Allow-Methods',
+        'GET, POST, PUT, DELETE, PROPFIND, PROPPATCH, REPORT, OPTIONS'
+      )
+      corsHeaders.set(
+        'Access-Control-Allow-Headers',
+        'Authorization, Content-Type, Depth, Prefer, If-None-Match, If-Match'
+      )
+      return new Response(response.body, { status: response.status, headers: corsHeaders })
+    } catch (e) {
+      return new Response('Proxy error: ' + e.message, { status: 502 })
+    }
+  },
+}
+```
+
+**Usage:** In Calino, set CalDAV URL to:
+
+```
+https://caldavproxy.cf-e13.workers.dev/https%3A%2F%2Fcal.malinov.ski
+```
+
+### CalDAV Proxy (Cloudflare Worker)
+
+```javascript
+export default {
+  async fetch(request) {
+    const url = new URL(request.url)
+    const targetBase = url.searchParams.get('server')
+
+    if (!targetBase) {
+      return new Response('Missing server param', { status: 400 })
+    }
+
+    let targetPath = url.pathname
+
+    if (targetPath === '/' || targetPath === '') {
+      targetPath = '/dav.php'
+    }
+
+    if (targetPath === '/.well-known/caldav') {
+      return Response.redirect(`${targetBase}/dav.php`, 301)
+    }
+
+    if (request.method === 'OPTIONS') {
+      return new Response(null, {
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods':
+            'GET, POST, PUT, DELETE, PROPFIND, PROPPATCH, REPORT, OPTIONS',
+          'Access-Control-Allow-Headers':
+            'Authorization, Content-Type, Depth, Prefer, If-None-Match, If-Match',
+        },
+      })
+    }
+
+    const targetUrl = targetBase.replace(/\/$/, '') + targetPath
+
+    const headers = new Headers(request.headers)
+    headers.delete('host')
+
+    try {
+      const response = await fetch(targetUrl, {
+        method: request.method,
+        headers,
+        body: request.body,
+      })
+
+      const corsHeaders = new Headers(response.headers)
+      corsHeaders.set('Access-Control-Allow-Origin', '*')
+      corsHeaders.set(
+        'Access-Control-Allow-Methods',
+        'GET, POST, PUT, DELETE, PROPFIND, PROPPATCH, REPORT, OPTIONS'
+      )
+      corsHeaders.set(
+        'Access-Control-Allow-Headers',
+        'Authorization, Content-Type, Depth, Prefer, If-None-Match, If-Match'
+      )
+
+      return new Response(response.body, {
+        status: response.status,
+        headers: corsHeaders,
+      })
+    } catch (e) {
+      return new Response('Proxy error: ' + e.message, { status: 502 })
+    }
+  },
+}
+```
+
+**Usage:** Set CalDAV URL to:
+
+```
+https://caldavproxy.cf-e13.workers.dev?server=https://cal.malinov.ski
+```

@@ -18,7 +18,8 @@ export function AddCalendarModal({ isOpen, onClose }: AddCalendarModalProps): JS
   const handleTestConnection = async (
     serverUrl: string,
     username: string,
-    password: string
+    password: string,
+    proxyUrl?: string
   ): Promise<boolean> => {
     setIsTesting(true)
     setConnectionStatus('idle')
@@ -31,6 +32,12 @@ export function AddCalendarModal({ isOpen, onClose }: AddCalendarModalProps): JS
         if (match) {
           baseUrl = match[0] + '/dav.php'
         }
+      }
+
+      if (proxyUrl) {
+        const encodedTarget = encodeURIComponent(baseUrl)
+        const proxyBase = proxyUrl.replace(/\/$/, '')
+        baseUrl = `${proxyBase}/${encodedTarget}`
       }
 
       const response = await fetch(baseUrl, {
@@ -75,14 +82,15 @@ export function AddCalendarModal({ isOpen, onClose }: AddCalendarModalProps): JS
     const username = formData.get('username') as string
     const password = formData.get('password') as string
     const accountName = (formData.get('accountName') as string) || username
+    const proxyUrl = (formData.get('proxyUrl') as string) || undefined
 
-    const success = await handleTestConnection(serverUrl, username, password)
+    const success = await handleTestConnection(serverUrl, username, password, proxyUrl)
     if (!success) {
       return
     }
 
     try {
-      await addAccount(serverUrl, username, password, accountName)
+      await addAccount(serverUrl, username, password, accountName, proxyUrl)
       handleClose()
     } catch {
       setConnectionStatus('error')
@@ -146,6 +154,20 @@ export function AddCalendarModal({ isOpen, onClose }: AddCalendarModalProps): JS
               required
             />
             <span className={styles.formHint}>Enter the full URL of your CalDAV server</span>
+          </div>
+          <div className={styles.formGroup}>
+            <label htmlFor="proxyUrl" className={styles.formLabel}>
+              Proxy URL (optional)
+            </label>
+            <input
+              id="proxyUrl"
+              name="proxyUrl"
+              className={styles.input}
+              placeholder="https://proxy.calino.io"
+            />
+            <span className={styles.formHint}>
+              Use proxy.calino.io if your server doesn't support CORS
+            </span>
           </div>
           <div className={styles.formGroup}>
             <label htmlFor="username" className={styles.formLabel}>
