@@ -432,55 +432,53 @@ function DroppableDay({
   openModal,
 }: DroppableDayProps): JSX.Element {
   const { setNodeRef, isOver } = useDroppable({ id: dateKey })
+  const dayRef = useRef<HTMLDivElement>(null)
   const [showPopup, setShowPopup] = useState(false)
   const [popupPosition, setPopupPosition] = useState({ x: 0, y: 0 })
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null)
   const [hasOverflow, setHasOverflow] = useState(false)
   const [extraEventCount, setExtraEventCount] = useState(0)
-  const [hasTaskOverflow, setHasTaskOverflow] = useState(false)
   const [extraTaskCount, setExtraTaskCount] = useState(0)
   const moreEventsRef = useRef<HTMLDivElement>(null)
-  const eventsContainerRef = useRef<HTMLDivElement>(null)
-  const tasksContainerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const checkOverflow = (): void => {
-      const eventsContainer = eventsContainerRef.current
-      const tasksContainer = tasksContainerRef.current
+      const dayElement = dayRef.current
 
-      if (eventsContainer) {
-        const isOverflowing = eventsContainer.scrollHeight > eventsContainer.clientHeight
+      if (dayElement) {
+        const isOverflowing = dayElement.scrollHeight > dayElement.clientHeight
         setHasOverflow(isOverflowing)
-        if (isOverflowing) {
-          const visibleCount = Math.floor(eventsContainer.clientHeight / 24)
-          setExtraEventCount(Math.max(0, dayEvents.length - visibleCount))
-        } else {
-          setExtraEventCount(0)
-        }
-      }
 
-      if (tasksContainer) {
-        const isOverflowing = tasksContainer.scrollHeight > tasksContainer.clientHeight
-        setHasTaskOverflow(isOverflowing)
-        if (isOverflowing) {
-          const visibleCount = Math.floor(tasksContainer.clientHeight / 24)
-          setExtraTaskCount(Math.max(0, dayTasks.length - visibleCount))
-        } else {
-          setExtraTaskCount(0)
+        const eventsContainer = dayElement.querySelector('[class*="events"]') as HTMLElement
+        const tasksContainer = dayElement.querySelector('[class*="tasks"]') as HTMLElement
+
+        if (eventsContainer) {
+          const visibleHeight = eventsContainer.clientHeight
+          const eventHeight = 24
+          const visibleCount = Math.floor(visibleHeight / eventHeight)
+          const maxVisible = Math.min(dayEvents.length, 10)
+          const actuallyVisible = isOverflowing ? Math.min(visibleCount, maxVisible) : maxVisible
+          setExtraEventCount(Math.max(0, dayEvents.length - actuallyVisible))
+        }
+
+        if (tasksContainer) {
+          const visibleHeight = tasksContainer.clientHeight
+          const taskHeight = 24
+          const visibleCount = Math.floor(visibleHeight / taskHeight)
+          const maxVisible = Math.min(dayTasks.length, 10)
+          const actuallyVisible = hasOverflow ? Math.min(visibleCount, maxVisible) : maxVisible
+          setExtraTaskCount(Math.max(0, dayTasks.length - actuallyVisible))
         }
       }
     }
 
     checkOverflow()
     const resizeObserver = new ResizeObserver(checkOverflow)
-    if (eventsContainerRef.current) {
-      resizeObserver.observe(eventsContainerRef.current)
-    }
-    if (tasksContainerRef.current) {
-      resizeObserver.observe(tasksContainerRef.current)
+    if (dayRef.current) {
+      resizeObserver.observe(dayRef.current)
     }
     return () => resizeObserver.disconnect()
-  }, [dayEvents.length, dayTasks.length])
+  }, [dayEvents.length, dayTasks.length, hasOverflow])
 
   const handleMoreEventsClick = (e: React.MouseEvent): void => {
     e.stopPropagation()
@@ -504,7 +502,10 @@ function DroppableDay({
 
   return (
     <div
-      ref={setNodeRef}
+      ref={(node) => {
+        setNodeRef(node)
+        dayRef.current = node
+      }}
       className={`${styles.day} ${!isCurrentMonth ? styles.otherMonth : ''} ${isTodayDate ? styles.today : ''} ${isWeekend ? styles.weekend : ''} ${isOver ? styles.dropTarget : ''}`}
       onClick={() => onDayClick(day)}
       onContextMenu={handleContextMenu}
@@ -520,7 +521,7 @@ function DroppableDay({
           {format(day, 'd')}
         </span>
       </div>
-      <div ref={eventsContainerRef} className={styles.events}>
+      <div className={styles.events}>
         <AnimatePresence>
           {dayEvents.slice(0, 10).map((event) => {
             const isMultiDay = !isSameDay(parseISO(event.start), parseISO(event.end))
@@ -544,13 +545,13 @@ function DroppableDay({
         )}
       </div>
       {dayTasks.length > 0 && (
-        <div ref={tasksContainerRef} className={styles.tasks}>
+        <div className={styles.tasks}>
           <AnimatePresence>
             {dayTasks.slice(0, 10).map((task) => (
               <EventCard key={task.id} event={task} compact isMobileMonth={isMobile} />
             ))}
           </AnimatePresence>
-          {hasTaskOverflow && extraTaskCount > 0 && (
+          {hasOverflow && extraTaskCount > 0 && (
             <div className={styles.moreEvents}>+{extraTaskCount} more</div>
           )}
         </div>
