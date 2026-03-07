@@ -441,9 +441,14 @@ function DroppableDay({
   const moreEventsRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
+    let rafId: number
+
     const calculateVisible = (): void => {
       const dayEl = dayRef.current
-      if (!dayEl) return
+      if (!dayEl) {
+        rafId = requestAnimationFrame(calculateVisible)
+        return
+      }
 
       const dayHeight = dayEl.clientHeight
       const headerHeight = 28
@@ -457,12 +462,17 @@ function DroppableDay({
       setExtraTaskCount(Math.max(0, dayTasks.length - visibleTasks))
     }
 
-    calculateVisible()
-    const resizeObserver = new ResizeObserver(calculateVisible)
+    rafId = requestAnimationFrame(calculateVisible)
+    const resizeObserver = new ResizeObserver(() => {
+      rafId = requestAnimationFrame(calculateVisible)
+    })
     if (dayRef.current) {
       resizeObserver.observe(dayRef.current)
     }
-    return () => resizeObserver.disconnect()
+    return () => {
+      cancelAnimationFrame(rafId)
+      resizeObserver.disconnect()
+    }
   }, [dayEvents.length, dayTasks.length])
 
   const handleMoreEventsClick = (e: React.MouseEvent): void => {
