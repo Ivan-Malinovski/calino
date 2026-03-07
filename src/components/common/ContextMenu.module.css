@@ -7,7 +7,7 @@
     0 0 0 1px rgba(0, 0, 0, 0.05);
   padding: 4px;
   min-width: 160px;
-  z-index: 1000;
+  z-index: 10000;
   animation: fadeIn 0.1s ease;
 }
 
