@@ -70,10 +70,20 @@ function useViewManager(): void {
 
   const isMounted = useRef(false)
   const lastUrlView = useRef<ViewType | null>(null)
+  const currentViewRef = useRef(currentView)
+
+  // Keep ref in sync with state
+  useEffect(() => {
+    currentViewRef.current = currentView
+  }, [currentView])
 
   useEffect(() => {
     isMounted.current = true
   }, [])
+
+  // Check if we're in the middle of a GitHub Pages redirect
+  // The redirect URL format is /?/path or /?/path&query
+  const isRedirecting = location.search.startsWith('?/')
 
   const isCalendarRoute = VIEW_ORDER.some((view) => location.pathname === VIEW_ROUTES[view])
   const isRootRoute = location.pathname === '/'
@@ -81,16 +91,25 @@ function useViewManager(): void {
   // Sync URL -> State (only when URL changes externally)
   useEffect(() => {
     if (!isMounted.current) return
-    if (!isCalendarRoute && !isRootRoute) return
+    if (isRedirecting) return // Wait for GitHub Pages redirect to complete
+
+    // Handle root route - redirect to default view
+    if (isRootRoute) {
+      navigate('/month', { replace: true })
+      return
+    }
+
+    if (!isCalendarRoute) return
 
     const viewFromUrl = URL_TO_VIEW[location.pathname]
     if (viewFromUrl && viewFromUrl !== lastUrlView.current) {
       lastUrlView.current = viewFromUrl
-      if (viewFromUrl !== currentView) {
+      if (viewFromUrl !== currentViewRef.current) {
         setCurrentView(viewFromUrl)
       }
     }
-  }, [location.pathname, setCurrentView, isCalendarRoute, isRootRoute, currentView])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname, setCurrentView, isCalendarRoute, isRootRoute, isRedirecting, navigate])
 
   // Handle keyboard shortcuts - navigate and update state
   useEffect(() => {
