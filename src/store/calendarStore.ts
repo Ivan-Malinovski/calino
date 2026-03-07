@@ -67,19 +67,10 @@ export const useCalendarStore = create<CalendarStore>()(
         const eventToDuplicate = state.events.find((e) => e.id === id)
         if (!eventToDuplicate) return null
 
-        const startDate = parseISO(eventToDuplicate.start)
-        const endDate = parseISO(eventToDuplicate.end)
-        const durationMs = endDate.getTime() - startDate.getTime()
-
-        const newStart = new Date(startDate.getTime() + durationMs)
-        const newEnd = new Date(newStart.getTime() + durationMs)
-
         const newEvent: CalendarEvent = {
           ...eventToDuplicate,
           id: crypto.randomUUID(),
           title: `${eventToDuplicate.title} (copy)`,
-          start: newStart.toISOString(),
-          end: newEnd.toISOString(),
         }
 
         set((state) => ({
