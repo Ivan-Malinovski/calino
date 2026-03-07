@@ -31,6 +31,7 @@ import {
 } from 'date-fns'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
+import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
 import { EventCard } from './EventCard'
 import { DayEventsPopup } from './DayEventsPopup'
 import { ContextMenu } from '@/components/common/ContextMenu'
@@ -53,7 +54,7 @@ export function CalendarGrid(): JSX.Element {
   const calendars = useCalendarStore((state) => state.calendars)
   const getEventsForDateRange = useCalendarStore((state) => state.getEventsForDateRange)
   const openModal = useCalendarStore((state) => state.openModal)
-  const updateEvent = useCalendarStore((state) => state.updateEvent)
+  const storeUpdateEvent = useCalendarStore((state) => state.updateEvent)
   const setCurrentDate = useCalendarStore((state) => state.setCurrentDate)
   const setCurrentView = useCalendarStore((state) => state.setCurrentView)
   const isOverlayOpen = useCalendarStore((state) => state.isOverlayOpen)
@@ -62,6 +63,8 @@ export function CalendarGrid(): JSX.Element {
   const compactRecurringEvents = useSettingsStore((state) => state.compactRecurringEvents ?? false)
   const compressPastWeeks = useSettingsStore((state) => state.compressPastWeeks ?? false)
   const monthViewEventLimit = useSettingsStore((state) => state.monthViewEventLimit ?? 3)
+
+  const { updateEvent: caldavUpdateEvent } = useCalDAV()
 
   const { bind } = useGestures({
     onSwipe: (direction) => {
@@ -207,7 +210,7 @@ export function CalendarGrid(): JSX.Element {
     setActiveEvent(draggedEvent || null)
   }
 
-  const handleDragEnd = (event: DragEndEvent): void => {
+  const handleDragEnd = async (event: DragEndEvent): Promise<void> => {
     const { active, over } = event
     setActiveEvent(null)
 
@@ -232,11 +235,22 @@ export function CalendarGrid(): JSX.Element {
 
     const isTask = originalEvent.type === 'task'
 
-    updateEvent(active.id as string, {
+    const updates = {
       start: newStart.toISOString(),
       end: newEnd.toISOString(),
       ...(isTask && { dueDate: dayStr }),
-    })
+    }
+
+    storeUpdateEvent(active.id as string, updates)
+
+    try {
+      await caldavUpdateEvent(originalEvent.calendarId, {
+        ...originalEvent,
+        ...updates,
+      })
+    } catch (error) {
+      console.error('Failed to sync dragged event:', error)
+    }
   }
 
   const weekdays = useMemo(() => {

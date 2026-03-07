@@ -25,6 +25,7 @@ import {
 import { addWeeks, addDays } from 'date-fns'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
+import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
 import { DEFAULT_CALENDAR_COLOR } from '@/config'
 import { EventCard } from './EventCard'
 import { ContextMenu } from '@/components/common/ContextMenu'
@@ -80,13 +81,15 @@ export function WeekView(): JSX.Element {
   const calendars = useCalendarStore((state) => state.calendars)
   const getEventsForDateRange = useCalendarStore((state) => state.getEventsForDateRange)
   const openModal = useCalendarStore((state) => state.openModal)
-  const updateEvent = useCalendarStore((state) => state.updateEvent)
+  const storeUpdateEvent = useCalendarStore((state) => state.updateEvent)
   const setCurrentDate = useCalendarStore((state) => state.setCurrentDate)
   const firstDayOfWeek = useSettingsStore((state) => state.firstDayOfWeek)
   const timeFormat = useSettingsStore((state) => state.timeFormat)
   const openMenuId = useContextMenuStore((state) => state.openMenuId)
   const openMenu = useContextMenuStore((state) => state.openMenu)
   const closeMenu = useContextMenuStore((state) => state.closeMenu)
+
+  const { updateEvent: caldavUpdateEvent } = useCalDAV()
 
   const [activeEvent, setActiveEvent] = useState<CalendarEvent | null>(null)
   const [isDraggingToCreate, setIsDraggingToCreate] = useState(false)
@@ -527,7 +530,7 @@ export function WeekView(): JSX.Element {
     setActiveEvent(draggedEvent || null)
   }
 
-  const handleDragEnd = (event: DragEndEvent): void => {
+  const handleDragEnd = async (event: DragEndEvent): Promise<void> => {
     const { active, over } = event
     // Defer clearing active event to avoid scroll jump
     setTimeout(() => setActiveEvent(null), 0)
@@ -551,10 +554,21 @@ export function WeekView(): JSX.Element {
     const durationMs = originalEnd.getTime() - originalStart.getTime()
     const newEnd = new Date(newStart.getTime() + durationMs)
 
-    updateEvent(active.id as string, {
+    const updates = {
       start: newStart.toISOString(),
       end: newEnd.toISOString(),
-    })
+    }
+
+    storeUpdateEvent(active.id as string, updates)
+
+    try {
+      await caldavUpdateEvent(originalEvent.calendarId, {
+        ...originalEvent,
+        ...updates,
+      })
+    } catch (error) {
+      console.error('Failed to sync dragged event:', error)
+    }
   }
 
   const weekNumber = useMemo(() => {

@@ -21,6 +21,7 @@ import {
 } from 'date-fns'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
+import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
 import { DEFAULT_CALENDAR_COLOR } from '@/config'
 import { EventCard } from './EventCard'
 import { ContextMenu } from '@/components/common/ContextMenu'
@@ -55,7 +56,7 @@ export function DayView(): JSX.Element {
   const calendars = useCalendarStore((state) => state.calendars)
   const getEventsForDateRange = useCalendarStore((state) => state.getEventsForDateRange)
   const openModal = useCalendarStore((state) => state.openModal)
-  const updateEvent = useCalendarStore((state) => state.updateEvent)
+  const storeUpdateEvent = useCalendarStore((state) => state.updateEvent)
   const setCurrentDate = useCalendarStore((state) => state.setCurrentDate)
   const timeFormat = useSettingsStore((state) => state.timeFormat)
 
@@ -66,6 +67,9 @@ export function DayView(): JSX.Element {
   const openMenuId = useContextMenuStore((state) => state.openMenuId)
   const openMenu = useContextMenuStore((state) => state.openMenu)
   const closeMenu = useContextMenuStore((state) => state.closeMenu)
+
+  const { updateEvent: caldavUpdateEvent } = useCalDAV()
+
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null)
   const bodyRef = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -286,7 +290,7 @@ export function DayView(): JSX.Element {
     setActiveEvent(draggedEvent || null)
   }
 
-  const handleDragEnd = (dragEvent: DragEndEvent): void => {
+  const handleDragEnd = async (dragEvent: DragEndEvent): Promise<void> => {
     const { active, over } = dragEvent
     setActiveEvent(null)
 
@@ -308,10 +312,21 @@ export function DayView(): JSX.Element {
     const durationMs = originalEnd.getTime() - originalStart.getTime()
     const newEnd = new Date(newStart.getTime() + durationMs)
 
-    updateEvent(active.id as string, {
+    const updates = {
       start: newStart.toISOString(),
       end: newEnd.toISOString(),
-    })
+    }
+
+    storeUpdateEvent(active.id as string, updates)
+
+    try {
+      await caldavUpdateEvent(originalEvent.calendarId, {
+        ...originalEvent,
+        ...updates,
+      })
+    } catch (error) {
+      console.error('Failed to sync dragged event:', error)
+    }
   }
 
   const renderEvents = (): JSX.Element[] => {
