@@ -42,6 +42,12 @@
   background: var(--color-accent-hover);
 }
 
+@media (max-width: 768px) {
+  .addButton {
+    display: none;
+  }
+}
+
 .title {
   display: flex;
   align-items: baseline;
