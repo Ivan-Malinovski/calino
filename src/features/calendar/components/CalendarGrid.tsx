@@ -108,11 +108,10 @@ export function CalendarGrid(): JSX.Element {
     [setCurrentDate]
   )
 
-  const handleWheel = useCallback(
-    (e: React.WheelEvent) => {
-      if (e.ctrlKey) {
-        return
-      }
+  useEffect(() => {
+    const handleWheelMonth = (e: WheelEvent): void => {
+      if (e.ctrlKey) return
+      if (isOverlayOpen) return
 
       if (scrollCooldownRef.current) return
       if (Math.abs(e.deltaY) < 20) return
@@ -132,9 +131,20 @@ export function CalendarGrid(): JSX.Element {
         changeMonth(direction)
         setScrollDirection(null)
       }, 0)
-    },
-    [changeMonth]
-  )
+    }
+
+    window.addEventListener('wheel', handleWheelMonth, { passive: false })
+
+    return () => {
+      window.removeEventListener('wheel', handleWheelMonth)
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current)
+      }
+      if (scrollCooldownRef.current) {
+        clearTimeout(scrollCooldownRef.current)
+      }
+    }
+  }, [changeMonth, isOverlayOpen])
 
   useEffect(() => {
     const handleWheelZoom = (e: WheelEvent): void => {
@@ -334,7 +344,7 @@ export function CalendarGrid(): JSX.Element {
       const diff = touchStartY.current - touchEndY
 
       if (Math.abs(diff) > 50) {
-        changeMonth(diff > 0 ? 'up' : 'down')
+        changeMonth(diff > 0 ? 'down' : 'up')
       }
 
       touchStartY.current = null
@@ -349,7 +359,6 @@ export function CalendarGrid(): JSX.Element {
       <div
         className={styles.grid}
         ref={containerRef}
-        onWheel={handleWheel}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
         {...bind}
