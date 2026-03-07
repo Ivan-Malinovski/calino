@@ -1,5 +1,6 @@
 import type { JSX } from 'react'
 import { useState, useRef, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { format, parseISO } from 'date-fns'
 import { useDraggable } from '@dnd-kit/core'
 import { useCalendarStore } from '@/store/calendarStore'
@@ -261,44 +262,46 @@ export function EventCard({
           </>
         )}
       </div>
-      {contextMenu && (
-        <ContextMenu
-          x={contextMenu.x}
-          y={contextMenu.y}
-          menuId={menuId}
-          onClose={() => {
-            closeMenu()
-            setContextMenu(null)
-          }}
-          items={[
-            {
-              label: 'Edit',
-              onClick: () => {
-                openModal(undefined, undefined, event.id)
+      {contextMenu &&
+        createPortal(
+          <ContextMenu
+            x={contextMenu.x}
+            y={contextMenu.y}
+            menuId={menuId}
+            onClose={() => {
+              closeMenu()
+              setContextMenu(null)
+            }}
+            items={[
+              {
+                label: 'Edit',
+                onClick: () => {
+                  openModal(undefined, undefined, event.id)
+                },
+                icon: <EditIcon />,
               },
-              icon: <EditIcon />,
-            },
-            {
-              label: 'Duplicate',
-              onClick: () => duplicateEvent(event.id),
-              icon: <DuplicateIcon />,
-            },
-            {
-              label: 'Delete',
-              onClick: async () => {
-                deleteEvent(event.id)
-                try {
-                  await deleteCalDAVEvent(event.calendarId, event.id)
-                } catch {
-                  // error handled by useCalDAV
-                }
+              {
+                label: 'Duplicate',
+                onClick: () => duplicateEvent(event.id),
+                icon: <DuplicateIcon />,
               },
-              icon: <DeleteIcon />,
-              danger: true,
-            },
-          ]}
-        />
-      )}
+              {
+                label: 'Delete',
+                onClick: async () => {
+                  deleteEvent(event.id)
+                  try {
+                    await deleteCalDAVEvent(event.calendarId, event.id)
+                  } catch {
+                    // error handled by useCalDAV
+                  }
+                },
+                icon: <DeleteIcon />,
+                danger: true,
+              },
+            ]}
+          />,
+          document.body
+        )}
     </>
   )
 }
