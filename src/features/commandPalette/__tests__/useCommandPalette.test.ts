@@ -16,7 +16,14 @@ const mockEvents: CalendarEvent[] = [
 ]
 
 const mockCalendars = [
-  { id: 'cal1', name: 'Calendar 1', color: '#4285F4', isVisible: true, isDefault: true },
+  {
+    id: 'cal1',
+    name: 'Calendar 1',
+    color: '#4285F4',
+    isVisible: true,
+    isDefault: true,
+    showTasksInViews: true,
+  },
 ]
 
 vi.mock('@/store/calendarStore', () => ({
@@ -91,6 +98,7 @@ vi.mock('@/store/settingsStore', () => ({
       lightTheme: 'default',
       darkTheme: 'default',
       caldavDebugMode: false,
+      monthViewEventLimit: 3,
       updateSettings: vi.fn(),
       resetSettings: vi.fn(),
     }

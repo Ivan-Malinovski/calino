@@ -20,6 +20,7 @@ describe('Sidebar', () => {
       color: '#4285F4',
       isVisible: true,
       isDefault: true,
+      showTasksInViews: true,
     })
   })
 

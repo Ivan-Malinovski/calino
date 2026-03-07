@@ -29,7 +29,14 @@ describe('DataSettings - ICS Import', () => {
     useCalendarStore.setState({
       events: [],
       calendars: [
-        { id: 'default', name: 'My Calendar', color: '#4285F4', isVisible: true, isDefault: true },
+        {
+          id: 'default',
+          name: 'My Calendar',
+          color: '#4285F4',
+          isVisible: true,
+          isDefault: true,
+          showTasksInViews: true,
+        },
       ],
     })
   })

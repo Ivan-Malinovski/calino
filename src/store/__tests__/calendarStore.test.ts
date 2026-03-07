@@ -106,6 +106,7 @@ describe('calendarStore', () => {
         color: '#FF0000',
         isVisible: false,
         isDefault: false,
+        showTasksInViews: true,
       })
 
       store.addEvent({
@@ -160,6 +161,7 @@ describe('calendarStore', () => {
         color: '#00FF00',
         isVisible: true,
         isDefault: false,
+        showTasksInViews: true,
       })
 
       expect(useCalendarStore.getState().calendars.length).toBe(initialCount + 1)
@@ -174,6 +176,7 @@ describe('calendarStore', () => {
         color: '#000000',
         isVisible: true,
         isDefault: false,
+        showTasksInViews: true,
       })
 
       store.toggleCalendarVisibility('test-cal')
@@ -191,6 +194,7 @@ describe('calendarStore', () => {
         color: '#000000',
         isVisible: true,
         isDefault: false,
+        showTasksInViews: true,
       })
 
       store.addEvent({
