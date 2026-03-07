@@ -100,6 +100,7 @@ const createNavigationCommands = (deps: CommandFactoryDeps): Command[] => [
     icon: '📆',
     action: () => {
       deps.setCurrentView('month')
+      deps.navigate('/month')
       return 'Switched to month view'
     },
   },
@@ -112,6 +113,7 @@ const createNavigationCommands = (deps: CommandFactoryDeps): Command[] => [
     icon: '📅',
     action: () => {
       deps.setCurrentView('week')
+      deps.navigate('/week')
       return 'Switched to week view'
     },
   },
@@ -124,6 +126,7 @@ const createNavigationCommands = (deps: CommandFactoryDeps): Command[] => [
     icon: '📋',
     action: () => {
       deps.setCurrentView('day')
+      deps.navigate('/day')
       return 'Switched to day view'
     },
   },
@@ -136,6 +139,7 @@ const createNavigationCommands = (deps: CommandFactoryDeps): Command[] => [
     icon: '📝',
     action: () => {
       deps.setCurrentView('agenda')
+      deps.navigate('/agenda')
       return 'Switched to agenda view'
     },
   },

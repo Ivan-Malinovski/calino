@@ -1,5 +1,6 @@
 import type { JSX } from 'react'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import clsx from 'clsx'
 import { useCalendarStore } from '@/store/calendarStore'
 import type { ViewType } from '@/types'
@@ -13,6 +14,14 @@ const VIEWS: { value: ViewType; label: string }[] = [
   { value: 'todo', label: 'Tasks' },
 ]
 
+const VIEW_ROUTES: Record<ViewType, string> = {
+  month: '/month',
+  week: '/week',
+  day: '/day',
+  agenda: '/agenda',
+  todo: '/tasks',
+}
+
 interface ViewSwitcherProps {
   className?: string
 }
@@ -20,6 +29,7 @@ interface ViewSwitcherProps {
 export function ViewSwitcher({ className }: ViewSwitcherProps): JSX.Element {
   const currentView = useCalendarStore((state) => state.currentView)
   const setCurrentView = useCalendarStore((state) => state.setCurrentView)
+  const navigate = useNavigate()
   const [isMobile, setIsMobile] = useState(
     typeof window !== 'undefined' ? window.innerWidth < 768 : false
   )
@@ -44,6 +54,14 @@ export function ViewSwitcher({ className }: ViewSwitcherProps): JSX.Element {
     }
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [isDropdownOpen])
+
+  const handleViewChange = useCallback(
+    (view: ViewType) => {
+      setCurrentView(view)
+      navigate(VIEW_ROUTES[view], { replace: true })
+    },
+    [setCurrentView, navigate]
+  )
 
   if (isMobile) {
     return (
@@ -76,7 +94,7 @@ export function ViewSwitcher({ className }: ViewSwitcherProps): JSX.Element {
                 key={view.value}
                 className={clsx(styles.dropdownItem, currentView === view.value && styles.active)}
                 onClick={() => {
-                  setCurrentView(view.value)
+                  handleViewChange(view.value)
                   setIsDropdownOpen(false)
                 }}
               >
@@ -95,7 +113,7 @@ export function ViewSwitcher({ className }: ViewSwitcherProps): JSX.Element {
         <button
           key={view.value}
           className={clsx(styles.button, currentView === view.value && styles.active)}
-          onClick={() => setCurrentView(view.value)}
+          onClick={() => handleViewChange(view.value)}
         >
           {view.label}
         </button>

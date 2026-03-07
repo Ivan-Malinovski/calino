@@ -1,5 +1,6 @@
 import type { JSX } from 'react'
 import { useMemo, useState, useRef, useCallback, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
   DndContext,
@@ -35,8 +36,16 @@ import { DayEventsPopup } from './DayEventsPopup'
 import { ContextMenu } from '@/components/common/ContextMenu'
 import { useGestures } from '@/hooks/useGestures'
 import { hapticIfEnabled } from '@/lib/haptics'
-import type { CalendarEvent } from '@/types'
+import type { CalendarEvent, ViewType } from '@/types'
 import styles from './CalendarGrid.module.css'
+
+const VIEW_ROUTES: Record<ViewType, string> = {
+  month: '/month',
+  week: '/week',
+  day: '/day',
+  agenda: '/agenda',
+  todo: '/tasks',
+}
 
 export function CalendarGrid(): JSX.Element {
   const currentDate = useCalendarStore((state) => state.currentDate)
@@ -48,6 +57,7 @@ export function CalendarGrid(): JSX.Element {
   const setCurrentDate = useCalendarStore((state) => state.setCurrentDate)
   const setCurrentView = useCalendarStore((state) => state.setCurrentView)
   const isOverlayOpen = useCalendarStore((state) => state.isOverlayOpen)
+  const navigate = useNavigate()
   const firstDayOfWeek = useSettingsStore((state) => state.firstDayOfWeek)
   const compactRecurringEvents = useSettingsStore((state) => state.compactRecurringEvents ?? false)
   const compressPastWeeks = useSettingsStore((state) => state.compressPastWeeks ?? false)
@@ -299,11 +309,13 @@ export function CalendarGrid(): JSX.Element {
   const handleDayNumberClick = (day: Date): void => {
     setCurrentDate(format(day, 'yyyy-MM-dd'))
     setCurrentView('day')
+    navigate(VIEW_ROUTES.day, { replace: true })
   }
 
   const handleWeekClick = (weekStart: Date): void => {
     setCurrentDate(format(weekStart, 'yyyy-MM-dd'))
     setCurrentView('week')
+    navigate(VIEW_ROUTES.week, { replace: true })
   }
 
   const touchStartY = useRef<number | null>(null)

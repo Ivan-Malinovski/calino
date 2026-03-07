@@ -69,7 +69,7 @@ function useViewManager(): void {
   const setCurrentView = useCalendarStore((state) => state.setCurrentView)
 
   const isMounted = useRef(false)
-  const isInternalNavigation = useRef(false)
+  const lastUrlView = useRef<ViewType | null>(null)
 
   useEffect(() => {
     isMounted.current = true
@@ -78,52 +78,50 @@ function useViewManager(): void {
   const isCalendarRoute = VIEW_ORDER.some((view) => location.pathname === VIEW_ROUTES[view])
   const isRootRoute = location.pathname === '/'
 
+  // Sync URL -> State (only when URL changes externally)
   useEffect(() => {
     if (!isMounted.current) return
     if (!isCalendarRoute && !isRootRoute) return
-    if (isInternalNavigation.current) return
 
-    const view = URL_TO_VIEW[location.pathname]
-    if (view && VIEW_ORDER.includes(view)) {
-      setCurrentView(view)
+    const viewFromUrl = URL_TO_VIEW[location.pathname]
+    if (viewFromUrl && viewFromUrl !== lastUrlView.current) {
+      lastUrlView.current = viewFromUrl
+      if (viewFromUrl !== currentView) {
+        setCurrentView(viewFromUrl)
+      }
     }
-  }, [location.pathname, setCurrentView, isCalendarRoute, isRootRoute])
+  }, [location.pathname, setCurrentView, isCalendarRoute, isRootRoute, currentView])
 
-  useEffect(() => {
-    if (!isMounted.current) return
-
-    const targetPath = VIEW_ROUTES[currentView]
-    if (location.pathname !== targetPath) {
-      isInternalNavigation.current = true
-      navigate(targetPath, { replace: true })
-      setTimeout(() => {
-        isInternalNavigation.current = false
-      }, 0)
-    }
-  }, [currentView, navigate])
-
+  // Handle keyboard shortcuts - navigate and update state
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent): void => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
         return
       }
 
+      let newView: ViewType | null = null
       if (e.key === '<' || e.key === ',') {
         e.preventDefault()
         const currentIndex = VIEW_ORDER.indexOf(currentView)
         const prevIndex = (currentIndex - 1 + VIEW_ORDER.length) % VIEW_ORDER.length
-        setCurrentView(VIEW_ORDER[prevIndex])
+        newView = VIEW_ORDER[prevIndex]
       } else if (e.key === '>' || e.key === '.') {
         e.preventDefault()
         const currentIndex = VIEW_ORDER.indexOf(currentView)
         const nextIndex = (currentIndex + 1) % VIEW_ORDER.length
-        setCurrentView(VIEW_ORDER[nextIndex])
+        newView = VIEW_ORDER[nextIndex]
+      }
+
+      if (newView) {
+        lastUrlView.current = newView
+        setCurrentView(newView)
+        navigate(VIEW_ROUTES[newView], { replace: true })
       }
     }
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [currentView, setCurrentView])
+  }, [currentView, setCurrentView, navigate])
 }
 
 function extractOriginalEventId(eventId: string): string | null {
