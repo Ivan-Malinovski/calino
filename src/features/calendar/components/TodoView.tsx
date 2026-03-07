@@ -10,6 +10,7 @@ import {
   isWithinInterval,
 } from 'date-fns'
 import { useCalendarStore } from '@/store/calendarStore'
+import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
 import type { CalendarEvent, TaskPriority } from '@/types'
 import styles from './TodoView.module.css'
 
@@ -36,6 +37,7 @@ export function TodoView(): JSX.Element {
   const calendars = useCalendarStore((state) => state.calendars)
   const updateEvent = useCalendarStore((state) => state.updateEvent)
   const openModal = useCalendarStore((state) => state.openModal)
+  const { updateEvent: updateCalDAVEvent } = useCalDAV()
 
   const [filter, setFilter] = useState<FilterType>('active')
 
@@ -100,8 +102,15 @@ export function TodoView(): JSX.Element {
     return result
   }, [filteredTasks])
 
-  const handleToggleComplete = (taskId: string, currentCompleted: boolean): void => {
-    updateEvent(taskId, { completed: !currentCompleted })
+  const handleToggleComplete = async (taskId: string, task: CalendarEvent): Promise<void> => {
+    const newCompleted = !task.completed
+    updateEvent(taskId, { completed: newCompleted })
+    if (!task.calendarId) return
+    try {
+      await updateCalDAVEvent(task.calendarId, { ...task, completed: newCompleted })
+    } catch {
+      // error handled by useCalDAV
+    }
   }
 
   const handleTaskClick = (task: CalendarEvent): void => {
@@ -171,7 +180,7 @@ export function TodoView(): JSX.Element {
                       className={styles.checkbox}
                       onClick={(e) => {
                         e.stopPropagation()
-                        handleToggleComplete(task.id, !!task.completed)
+                        handleToggleComplete(task.id, task)
                       }}
                     >
                       {task.completed && (
