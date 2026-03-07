@@ -51,22 +51,8 @@ export function ContextMenu({ x, y, items, onClose, menuId }: ContextMenuProps):
 
   useEffect(() => {
     if (menuRef.current) {
-      const rect = menuRef.current.getBoundingClientRect()
-      const viewportWidth = window.innerWidth
-      const viewportHeight = window.innerHeight
-
-      let adjustedX = x
-      let adjustedY = y
-
-      if (x + rect.width > viewportWidth) {
-        adjustedX = viewportWidth - rect.width - 8
-      }
-      if (y + rect.height > viewportHeight) {
-        adjustedY = viewportHeight - rect.height - 8
-      }
-
-      menuRef.current.style.left = `${adjustedX}px`
-      menuRef.current.style.top = `${adjustedY}px`
+      menuRef.current.style.left = `${x}px`
+      menuRef.current.style.top = `${y}px`
     }
   }, [x, y])
 

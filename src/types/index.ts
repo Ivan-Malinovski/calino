@@ -47,6 +47,7 @@ export interface Calendar {
   isVisible: boolean
   isDefault: boolean
   accountId?: string
+  showTasksInViews: boolean
 }
 
 export type ViewType = 'month' | 'week' | 'day' | 'agenda' | 'todo'
@@ -117,6 +118,7 @@ export interface UserSettings {
   conflictResolution: 'server-wins' | 'local-wins' | 'ask'
   compactRecurringEvents: boolean
   compressPastWeeks: boolean
+  monthViewEventLimit: number
   hasCompletedOnboarding: boolean
   themeMode: ThemeMode
   lightTheme: string

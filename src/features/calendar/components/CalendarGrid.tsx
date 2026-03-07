@@ -51,6 +51,7 @@ export function CalendarGrid(): JSX.Element {
   const firstDayOfWeek = useSettingsStore((state) => state.firstDayOfWeek)
   const compactRecurringEvents = useSettingsStore((state) => state.compactRecurringEvents ?? false)
   const compressPastWeeks = useSettingsStore((state) => state.compressPastWeeks ?? false)
+  const monthViewEventLimit = useSettingsStore((state) => state.monthViewEventLimit ?? 3)
 
   const { bind } = useGestures({
     onSwipe: (direction) => {
@@ -271,8 +272,16 @@ export function CalendarGrid(): JSX.Element {
   const tasksMap = useMemo(() => {
     const map = new Map<string, CalendarEvent[]>()
     const visibleCalendarIds = calendars.filter((c) => c.isVisible).map((c) => c.id)
+    const taskCalendarsWithTasks = calendars
+      .filter((c) => c.showTasksInViews !== false)
+      .map((c) => c.id)
     events
-      .filter((event) => event.type === 'task' && visibleCalendarIds.includes(event.calendarId))
+      .filter(
+        (event) =>
+          event.type === 'task' &&
+          visibleCalendarIds.includes(event.calendarId) &&
+          taskCalendarsWithTasks.includes(event.calendarId)
+      )
       .forEach((task) => {
         const taskDate = task.dueDate
           ? format(parseISO(task.dueDate), 'yyyy-MM-dd')
@@ -390,6 +399,7 @@ export function CalendarGrid(): JSX.Element {
                         isWeekend={isWeekend}
                         isPastWeek={isPastWeek}
                         compactRecurringEvents={compactRecurringEvents}
+                        monthViewEventLimit={monthViewEventLimit}
                         isMobile={isMobile}
                         onDayClick={handleDayClick}
                         onDayNumberClick={handleDayNumberClick}
@@ -418,6 +428,7 @@ interface DroppableDayProps {
   isWeekend: boolean
   isPastWeek: boolean
   compactRecurringEvents: boolean
+  monthViewEventLimit: number
   isMobile: boolean
   onDayClick: (day: Date) => void
   onDayNumberClick: (day: Date) => void
@@ -434,6 +445,7 @@ function DroppableDay({
   isWeekend,
   isPastWeek,
   compactRecurringEvents,
+  monthViewEventLimit,
   isMobile,
   onDayClick,
   onDayNumberClick,
@@ -485,7 +497,7 @@ function DroppableDay({
       </div>
       <div className={styles.events}>
         <AnimatePresence>
-          {dayEvents.slice(0, 3).map((event) => {
+          {dayEvents.slice(0, monthViewEventLimit).map((event) => {
             const isMultiDay = !isSameDay(parseISO(event.start), parseISO(event.end))
             const shouldCompact =
               isPastWeek ||
@@ -500,21 +512,21 @@ function DroppableDay({
             )
           })}
         </AnimatePresence>
-        {dayEvents.length > 3 && (
+        {dayEvents.length > monthViewEventLimit && (
           <div ref={moreEventsRef} className={styles.moreEvents} onClick={handleMoreEventsClick}>
-            +{dayEvents.length - 3} more
+            +{dayEvents.length - monthViewEventLimit} more
           </div>
         )}
       </div>
       {dayTasks.length > 0 && (
         <div className={styles.tasks}>
           <AnimatePresence>
-            {dayTasks.slice(0, 3).map((task) => (
+            {dayTasks.slice(0, monthViewEventLimit).map((task) => (
               <EventCard key={task.id} event={task} compact isMobileMonth={isMobile} />
             ))}
           </AnimatePresence>
-          {dayTasks.length > 3 && (
-            <div className={styles.moreEvents}>+{dayTasks.length - 3} more</div>
+          {dayTasks.length > monthViewEventLimit && (
+            <div className={styles.moreEvents}>+{dayTasks.length - monthViewEventLimit} more</div>
           )}
         </div>
       )}

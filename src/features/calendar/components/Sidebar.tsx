@@ -1,6 +1,8 @@
 import type { JSX } from 'react'
 import { useMemo, useState, useRef, useEffect } from 'react'
 import { Link } from 'react-router-dom'
+import { createPortal } from 'react-dom'
+import { ContextMenu } from '@/components/common/ContextMenu'
 import {
   format,
   startOfMonth,
@@ -55,6 +57,11 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps): JSX.Element 
   const [showMonthDropdown, setShowMonthDropdown] = useState(false)
   const [syncingCalendarId, setSyncingCalendarId] = useState<string | null>(null)
   const [syncStatus, setSyncStatus] = useState<Record<string, 'success' | 'error'>>({})
+  const [contextMenu, setContextMenu] = useState<{
+    x: number
+    y: number
+    calendarId: string
+  } | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const currentDate = useCalendarStore((state) => state.currentDate)
@@ -71,7 +78,7 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps): JSX.Element 
     if (!accountId || syncingCalendarId) return
     setSyncingCalendarId(calendarId)
     setSyncStatus((prev) => {
-      const { [calendarId]: _, ...rest } = prev
+      const { [calendarId]: _, ...rest } = prev // eslint-disable-line @typescript-eslint/no-unused-vars
       return rest
     })
     try {
@@ -79,7 +86,7 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps): JSX.Element 
       setSyncStatus((prev) => ({ ...prev, [calendarId]: 'success' }))
       setTimeout(() => {
         setSyncStatus((prev) => {
-          const { [calendarId]: _, ...rest } = prev
+          const { [calendarId]: _, ...rest } = prev // eslint-disable-line @typescript-eslint/no-unused-vars
           return rest
         })
       }, 2000)
@@ -87,13 +94,22 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps): JSX.Element 
       setSyncStatus((prev) => ({ ...prev, [calendarId]: 'error' }))
       setTimeout(() => {
         setSyncStatus((prev) => {
-          const { [calendarId]: _, ...rest } = prev
+          const { [calendarId]: _, ...rest } = prev // eslint-disable-line @typescript-eslint/no-unused-vars
           return rest
         })
       }, 3000)
     } finally {
       setSyncingCalendarId(null)
     }
+  }
+
+  const handleContextMenu = (e: React.MouseEvent, calendarId: string): void => {
+    e.preventDefault()
+    setContextMenu({ x: e.clientX, y: e.clientY, calendarId })
+  }
+
+  const closeContextMenu = (): void => {
+    setContextMenu(null)
   }
 
   const currentYear = new Date().getFullYear()
@@ -332,7 +348,11 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps): JSX.Element 
             </button>
           </div>
           {calendars.map((calendar) => (
-            <label key={calendar.id} className={styles.calendarItem}>
+            <label
+              key={calendar.id}
+              className={styles.calendarItem}
+              onContextMenu={(e) => handleContextMenu(e, calendar.id)}
+            >
               <input
                 type="checkbox"
                 checked={calendar.isVisible}
@@ -426,6 +446,32 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps): JSX.Element 
         </div>
 
         <AddCalendarModal isOpen={showAddCalendar} onClose={() => setShowAddCalendar(false)} />
+        {contextMenu &&
+          createPortal(
+            <ContextMenu
+              x={contextMenu.x}
+              y={contextMenu.y}
+              items={[
+                {
+                  label: calendars.find((c) => c.id === contextMenu.calendarId)?.showTasksInViews
+                    ? 'Hide Tasks in Views'
+                    : 'Show Tasks in Views',
+                  onClick: () => {
+                    const calendar = calendars.find((c) => c.id === contextMenu.calendarId)
+                    if (calendar) {
+                      updateCalendar(contextMenu.calendarId, {
+                        showTasksInViews: !calendar.showTasksInViews,
+                      })
+                    }
+                    closeContextMenu()
+                  },
+                },
+              ]}
+              onClose={closeContextMenu}
+              menuId="calendar-context"
+            />,
+            document.body
+          )}
       </div>
     </>
   )

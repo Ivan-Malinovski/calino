@@ -115,6 +115,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   conflictResolution: 'server-wins',
   compactRecurringEvents: true,
   compressPastWeeks: true,
+  monthViewEventLimit: 3,
   hasCompletedOnboarding: false,
   themeMode: 'auto' as ThemeMode,
   lightTheme: config.defaultLightTheme,

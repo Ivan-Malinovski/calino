@@ -9,6 +9,7 @@ export function CalendarSettings(): JSX.Element {
     eventDensity,
     compactRecurringEvents,
     compressPastWeeks,
+    monthViewEventLimit,
     updateSettings,
   } = useSettingsStore()
 
@@ -101,6 +102,26 @@ export function CalendarSettings(): JSX.Element {
         >
           <span className={styles.toggleKnob} />
         </button>
+      </div>
+
+      <div className={styles.settingRow}>
+        <div className={styles.settingLabel}>
+          <span className={styles.settingLabelText}>Events Before Rollup</span>
+          <span className={styles.settingLabelHint}>
+            Number of events to show before rollup in month view
+          </span>
+        </div>
+        <select
+          className={styles.select}
+          value={monthViewEventLimit}
+          onChange={(e) => updateSettings({ monthViewEventLimit: Number(e.target.value) })}
+        >
+          <option value={2}>2</option>
+          <option value={3}>3</option>
+          <option value={4}>4</option>
+          <option value={5}>5</option>
+          <option value={6}>6</option>
+        </select>
       </div>
     </div>
   )

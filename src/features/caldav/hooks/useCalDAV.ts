@@ -68,6 +68,7 @@ export function useCalDAV(): UseCalDAVReturn {
           isVisible: cal.isVisible,
           isDefault: cal.isDefault,
           accountId: cal.accountId,
+          showTasksInViews: true,
         })
       }
     }
@@ -116,6 +117,7 @@ export function useCalDAV(): UseCalDAVReturn {
             isVisible: cal.isVisible,
             isDefault: cal.isDefault,
             accountId: newAccount.id,
+            showTasksInViews: true,
           })
         }
 

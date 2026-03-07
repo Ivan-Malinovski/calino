@@ -25,6 +25,7 @@ const DEFAULT_CALENDAR: Calendar = {
   color: DEFAULT_CALENDAR_COLOR,
   isVisible: true,
   isDefault: true,
+  showTasksInViews: true,
 }
 
 export const useCalendarStore = create<CalendarStore>()(
