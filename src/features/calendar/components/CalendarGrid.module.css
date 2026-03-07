@@ -47,7 +47,6 @@
   display: grid;
   grid-template-columns: 40px repeat(7, 1fr);
   flex: 1;
-  max-height: 25vh;
 }
 
 .compressedWeek {
@@ -95,7 +94,6 @@
 
 .day {
   min-height: var(--day-cell-height, 100px);
-  max-height: calc(25vh - 10px);
   border-right: 1px solid var(--color-border-subtle, var(--color-border));
   border-bottom: 1px solid var(--color-border-subtle, var(--color-border));
   padding: var(--space-1, 4px);
@@ -179,7 +177,6 @@
   margin-top: var(--space-2, 8px);
   overflow: hidden;
   min-height: 24px;
-  max-height: calc(25vh - 40px);
   position: relative;
   z-index: 1;
 }
@@ -207,8 +204,6 @@
   border-top: 1px dashed var(--color-border-subtle, var(--color-border));
   position: relative;
   z-index: 0;
-  overflow: hidden;
-  max-height: calc(25vh - 40px);
 }
 
 .tasks .card {

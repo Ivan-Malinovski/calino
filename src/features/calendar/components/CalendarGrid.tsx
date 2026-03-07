@@ -257,6 +257,14 @@ export function CalendarGrid(): JSX.Element {
         const existing = map.get(eventDate) || []
         map.set(eventDate, [...existing, event])
       })
+
+    map.forEach((events, dateKey) => {
+      const sorted = [...events].sort((a, b) => {
+        return new Date(a.start).getTime() - new Date(b.start).getTime()
+      })
+      map.set(dateKey, sorted)
+    })
+
     return map
   }, [date, events, calendars, getEventsForDateRange])
 
@@ -432,47 +440,10 @@ function DroppableDay({
   openModal,
 }: DroppableDayProps): JSX.Element {
   const { setNodeRef, isOver } = useDroppable({ id: dateKey })
-  const dayRef = useRef<HTMLDivElement>(null)
   const [showPopup, setShowPopup] = useState(false)
   const [popupPosition, setPopupPosition] = useState({ x: 0, y: 0 })
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null)
-  const [extraEventCount, setExtraEventCount] = useState(0)
-  const [extraTaskCount, setExtraTaskCount] = useState(0)
   const moreEventsRef = useRef<HTMLDivElement>(null)
-  const eventsRef = useRef<HTMLDivElement>(null)
-  const tasksRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    const updateCounts = (): void => {
-      const eventsEl = eventsRef.current
-      const tasksEl = tasksRef.current
-
-      if (eventsEl) {
-        const isOverflowing = eventsEl.scrollHeight > eventsEl.clientHeight
-        if (isOverflowing) {
-          const visibleHeight = eventsEl.clientHeight
-          const visibleCount = Math.floor(visibleHeight / 26)
-          setExtraEventCount(Math.max(0, dayEvents.length - Math.min(visibleCount, 10)))
-        } else {
-          setExtraEventCount(0)
-        }
-      }
-
-      if (tasksEl) {
-        const isOverflowing = tasksEl.scrollHeight > tasksEl.clientHeight
-        if (isOverflowing) {
-          const visibleHeight = tasksEl.clientHeight
-          const visibleCount = Math.floor(visibleHeight / 26)
-          setExtraTaskCount(Math.max(0, dayTasks.length - Math.min(visibleCount, 10)))
-        } else {
-          setExtraTaskCount(0)
-        }
-      }
-    }
-
-    const timeoutId = setTimeout(updateCounts, 50)
-    return () => clearTimeout(timeoutId)
-  }, [dayEvents.length, dayTasks.length])
 
   const handleMoreEventsClick = (e: React.MouseEvent): void => {
     e.stopPropagation()
@@ -496,10 +467,7 @@ function DroppableDay({
 
   return (
     <div
-      ref={(node) => {
-        setNodeRef(node)
-        dayRef.current = node
-      }}
+      ref={setNodeRef}
       className={`${styles.day} ${!isCurrentMonth ? styles.otherMonth : ''} ${isTodayDate ? styles.today : ''} ${isWeekend ? styles.weekend : ''} ${isOver ? styles.dropTarget : ''}`}
       onClick={() => onDayClick(day)}
       onContextMenu={handleContextMenu}
@@ -515,9 +483,9 @@ function DroppableDay({
           {format(day, 'd')}
         </span>
       </div>
-      <div ref={eventsRef} className={styles.events}>
+      <div className={styles.events}>
         <AnimatePresence>
-          {dayEvents.slice(0, 10).map((event) => {
+          {dayEvents.slice(0, 3).map((event) => {
             const isMultiDay = !isSameDay(parseISO(event.start), parseISO(event.end))
             const shouldCompact =
               isPastWeek ||
@@ -532,20 +500,22 @@ function DroppableDay({
             )
           })}
         </AnimatePresence>
-        {extraEventCount > 0 && (
+        {dayEvents.length > 3 && (
           <div ref={moreEventsRef} className={styles.moreEvents} onClick={handleMoreEventsClick}>
-            +{extraEventCount} more
+            +{dayEvents.length - 3} more
           </div>
         )}
       </div>
       {dayTasks.length > 0 && (
-        <div ref={tasksRef} className={styles.tasks}>
+        <div className={styles.tasks}>
           <AnimatePresence>
-            {dayTasks.slice(0, 10).map((task) => (
+            {dayTasks.slice(0, 3).map((task) => (
               <EventCard key={task.id} event={task} compact isMobileMonth={isMobile} />
             ))}
           </AnimatePresence>
-          {extraTaskCount > 0 && <div className={styles.moreEvents}>+{extraTaskCount} more</div>}
+          {dayTasks.length > 3 && (
+            <div className={styles.moreEvents}>+{dayTasks.length - 3} more</div>
+          )}
         </div>
       )}
       {showPopup && (
