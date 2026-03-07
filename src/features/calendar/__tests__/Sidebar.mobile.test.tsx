@@ -16,23 +16,20 @@ describe('Sidebar Mobile', () => {
         <Sidebar isOpen={true} onClose={() => {}} />
       </BrowserRouter>
     )
-    expect(screen.getByText('Calendars')).toBeInTheDocument()
+    expect(screen.getByText('My Calendars')).toBeInTheDocument()
   })
 
-  it('calls onClose when close button is clicked in mobile mode', () => {
+  it('calls onClose when overlay is clicked in mobile mode', () => {
     const mockClose = vi.fn()
-    render(
+    const { container } = render(
       <BrowserRouter>
         <Sidebar isOpen={true} onClose={mockClose} />
       </BrowserRouter>
     )
 
-    const closeButtons = screen.getAllByRole('button')
-    const collapseButton = closeButtons.find(
-      (btn) => btn.getAttribute('title') === 'Collapse sidebar'
-    )
-    if (collapseButton) {
-      fireEvent.click(collapseButton)
+    const overlay = container.querySelector('[class*="overlay"]')
+    if (overlay) {
+      fireEvent.click(overlay)
       expect(mockClose).toHaveBeenCalled()
     }
   })

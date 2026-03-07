@@ -286,11 +286,17 @@ export function CalDAVSettings(): JSX.Element {
               </div>
               <div className={styles.formGroup}>
                 <label className={styles.formLabel}>Username</label>
-                <input name="username" className={styles.input} required />
+                <input name="username" autoComplete="username" className={styles.input} required />
               </div>
               <div className={styles.formGroup}>
                 <label className={styles.formLabel}>Password</label>
-                <input name="password" type="password" className={styles.input} required />
+                <input
+                  name="password"
+                  type="password"
+                  autoComplete="current-password"
+                  className={styles.input}
+                  required
+                />
               </div>
               {connectionStatus === 'success' && (
                 <p style={{ color: '#34a853', fontSize: '14px', marginBottom: '16px' }}>

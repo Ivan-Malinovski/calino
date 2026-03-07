@@ -1,5 +1,6 @@
 import type { JSX } from 'react'
 import { useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
 import styles from './AddCalendarModal.module.css'
 
@@ -114,7 +115,7 @@ export function AddCalendarModal({ isOpen, onClose }: AddCalendarModalProps): JS
     return null
   }
 
-  return (
+  return createPortal(
     <div className={styles.modal} onClick={handleBackdropClick}>
       <div
         className={styles.modalContent}
@@ -173,7 +174,13 @@ export function AddCalendarModal({ isOpen, onClose }: AddCalendarModalProps): JS
             <label htmlFor="username" className={styles.formLabel}>
               Username
             </label>
-            <input id="username" name="username" className={styles.input} required />
+            <input
+              id="username"
+              name="username"
+              autoComplete="username"
+              className={styles.input}
+              required
+            />
           </div>
           <div className={styles.formGroup}>
             <label htmlFor="password" className={styles.formLabel}>
@@ -183,6 +190,7 @@ export function AddCalendarModal({ isOpen, onClose }: AddCalendarModalProps): JS
               id="password"
               name="password"
               type="password"
+              autoComplete="current-password"
               className={styles.input}
               required
             />
@@ -215,6 +223,7 @@ export function AddCalendarModal({ isOpen, onClose }: AddCalendarModalProps): JS
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
