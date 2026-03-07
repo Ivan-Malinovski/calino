@@ -42,7 +42,7 @@ export function EventCard({
   const deleteEvent = useCalendarStore((state) => state.deleteEvent)
   const duplicateEvent = useCalendarStore((state) => state.duplicateEvent)
   const timeFormat = useSettingsStore((state) => state.timeFormat)
-  const { deleteEvent: deleteCalDAVEvent } = useCalDAV()
+  const { deleteEvent: deleteCalDAVEvent, updateEvent: updateCalDAVEvent } = useCalDAV()
   const openMenuId = useContextMenuStore((state) => state.openMenuId)
   const openMenu = useContextMenuStore((state) => state.openMenu)
   const closeMenu = useContextMenuStore((state) => state.closeMenu)
@@ -179,9 +179,16 @@ export function EventCard({
     setContextMenu({ x: e.clientX, y: e.clientY })
   }
 
-  const handleCheckboxClick = (e: React.MouseEvent): void => {
+  const handleCheckboxClick = async (e: React.MouseEvent): Promise<void> => {
     e.stopPropagation()
-    updateEvent(event.id, { completed: !event.completed })
+    const newCompleted = !event.completed
+    updateEvent(event.id, { completed: newCompleted })
+    if (!event.calendarId) return
+    try {
+      await updateCalDAVEvent(event.calendarId, { ...event, completed: newCompleted })
+    } catch {
+      // error handled by useCalDAV
+    }
   }
 
   return (
