@@ -435,58 +435,44 @@ function DroppableDay({
   const [showPopup, setShowPopup] = useState(false)
   const [popupPosition, setPopupPosition] = useState({ x: 0, y: 0 })
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null)
-  const [visibleEventCount, setVisibleEventCount] = useState(3)
-  const [visibleTaskCount, setVisibleTaskCount] = useState(3)
+  const [hasOverflow, setHasOverflow] = useState(false)
+  const [extraEventCount, setExtraEventCount] = useState(0)
+  const [hasTaskOverflow, setHasTaskOverflow] = useState(false)
+  const [extraTaskCount, setExtraTaskCount] = useState(0)
   const moreEventsRef = useRef<HTMLDivElement>(null)
   const eventsContainerRef = useRef<HTMLDivElement>(null)
   const tasksContainerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    const calculateVisibleCount = (): void => {
+    const checkOverflow = (): void => {
       const eventsContainer = eventsContainerRef.current
       const tasksContainer = tasksContainerRef.current
-      const moreEventsElement = moreEventsRef.current
-      const moreEventsHeight = moreEventsElement?.offsetHeight ?? 24
 
       if (eventsContainer) {
-        const containerHeight = eventsContainer.offsetHeight
-        const eventElements = eventsContainer.querySelectorAll('[data-event-card]')
-        if (eventElements.length > 0) {
-          let totalHeight = 0
-          let visibleCount = 0
-          for (const el of eventElements) {
-            totalHeight += el.scrollHeight + 2
-            if (totalHeight + moreEventsHeight <= containerHeight) {
-              visibleCount++
-            } else {
-              break
-            }
-          }
-          setVisibleEventCount(Math.max(1, visibleCount))
+        const isOverflowing = eventsContainer.scrollHeight > eventsContainer.clientHeight
+        setHasOverflow(isOverflowing)
+        if (isOverflowing) {
+          const visibleCount = Math.floor(eventsContainer.clientHeight / 24)
+          setExtraEventCount(Math.max(0, dayEvents.length - visibleCount))
+        } else {
+          setExtraEventCount(0)
         }
       }
 
       if (tasksContainer) {
-        const containerHeight = tasksContainer.offsetHeight
-        const taskElements = tasksContainer.querySelectorAll('[data-event-card]')
-        if (taskElements.length > 0) {
-          let totalHeight = 0
-          let visibleCount = 0
-          for (const el of taskElements) {
-            totalHeight += el.scrollHeight + 2
-            if (totalHeight <= containerHeight) {
-              visibleCount++
-            } else {
-              break
-            }
-          }
-          setVisibleTaskCount(Math.max(1, visibleCount))
+        const isOverflowing = tasksContainer.scrollHeight > tasksContainer.clientHeight
+        setHasTaskOverflow(isOverflowing)
+        if (isOverflowing) {
+          const visibleCount = Math.floor(tasksContainer.clientHeight / 24)
+          setExtraTaskCount(Math.max(0, dayTasks.length - visibleCount))
+        } else {
+          setExtraTaskCount(0)
         }
       }
     }
 
-    calculateVisibleCount()
-    const resizeObserver = new ResizeObserver(calculateVisibleCount)
+    checkOverflow()
+    const resizeObserver = new ResizeObserver(checkOverflow)
     if (eventsContainerRef.current) {
       resizeObserver.observe(eventsContainerRef.current)
     }
@@ -536,7 +522,7 @@ function DroppableDay({
       </div>
       <div ref={eventsContainerRef} className={styles.events}>
         <AnimatePresence>
-          {dayEvents.slice(0, visibleEventCount).map((event) => {
+          {dayEvents.slice(0, 10).map((event) => {
             const isMultiDay = !isSameDay(parseISO(event.start), parseISO(event.end))
             const shouldCompact =
               isPastWeek ||
@@ -551,21 +537,21 @@ function DroppableDay({
             )
           })}
         </AnimatePresence>
-        {dayEvents.length > visibleEventCount && (
+        {hasOverflow && extraEventCount > 0 && (
           <div ref={moreEventsRef} className={styles.moreEvents} onClick={handleMoreEventsClick}>
-            +{dayEvents.length - visibleEventCount} more
+            +{extraEventCount} more
           </div>
         )}
       </div>
       {dayTasks.length > 0 && (
         <div ref={tasksContainerRef} className={styles.tasks}>
           <AnimatePresence>
-            {dayTasks.slice(0, visibleTaskCount).map((task) => (
+            {dayTasks.slice(0, 10).map((task) => (
               <EventCard key={task.id} event={task} compact isMobileMonth={isMobile} />
             ))}
           </AnimatePresence>
-          {dayTasks.length > visibleTaskCount && (
-            <div className={styles.moreEvents}>+{dayTasks.length - visibleTaskCount} more</div>
+          {hasTaskOverflow && extraTaskCount > 0 && (
+            <div className={styles.moreEvents}>+{extraTaskCount} more</div>
           )}
         </div>
       )}
