@@ -439,40 +439,39 @@ function DroppableDay({
   const [extraEventCount, setExtraEventCount] = useState(0)
   const [extraTaskCount, setExtraTaskCount] = useState(0)
   const moreEventsRef = useRef<HTMLDivElement>(null)
+  const eventsRef = useRef<HTMLDivElement>(null)
+  const tasksRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    let rafId: number
+    const updateCounts = (): void => {
+      const eventsEl = eventsRef.current
+      const tasksEl = tasksRef.current
 
-    const calculateVisible = (): void => {
-      const dayEl = dayRef.current
-      if (!dayEl) {
-        rafId = requestAnimationFrame(calculateVisible)
-        return
+      if (eventsEl) {
+        const isOverflowing = eventsEl.scrollHeight > eventsEl.clientHeight
+        if (isOverflowing) {
+          const visibleHeight = eventsEl.clientHeight
+          const visibleCount = Math.floor(visibleHeight / 26)
+          setExtraEventCount(Math.max(0, dayEvents.length - Math.min(visibleCount, 10)))
+        } else {
+          setExtraEventCount(0)
+        }
       }
 
-      const dayHeight = dayEl.clientHeight
-      const headerHeight = 28
-      const availableHeight = dayHeight - headerHeight - 8
-      const eventHeight = 26
-
-      const visibleEvents = Math.max(1, Math.floor(availableHeight / eventHeight))
-      setExtraEventCount(Math.max(0, dayEvents.length - visibleEvents))
-
-      const visibleTasks = Math.max(1, Math.floor(availableHeight / eventHeight))
-      setExtraTaskCount(Math.max(0, dayTasks.length - visibleTasks))
+      if (tasksEl) {
+        const isOverflowing = tasksEl.scrollHeight > tasksEl.clientHeight
+        if (isOverflowing) {
+          const visibleHeight = tasksEl.clientHeight
+          const visibleCount = Math.floor(visibleHeight / 26)
+          setExtraTaskCount(Math.max(0, dayTasks.length - Math.min(visibleCount, 10)))
+        } else {
+          setExtraTaskCount(0)
+        }
+      }
     }
 
-    rafId = requestAnimationFrame(calculateVisible)
-    const resizeObserver = new ResizeObserver(() => {
-      rafId = requestAnimationFrame(calculateVisible)
-    })
-    if (dayRef.current) {
-      resizeObserver.observe(dayRef.current)
-    }
-    return () => {
-      cancelAnimationFrame(rafId)
-      resizeObserver.disconnect()
-    }
+    const timeoutId = setTimeout(updateCounts, 50)
+    return () => clearTimeout(timeoutId)
   }, [dayEvents.length, dayTasks.length])
 
   const handleMoreEventsClick = (e: React.MouseEvent): void => {
@@ -516,7 +515,7 @@ function DroppableDay({
           {format(day, 'd')}
         </span>
       </div>
-      <div className={styles.events}>
+      <div ref={eventsRef} className={styles.events}>
         <AnimatePresence>
           {dayEvents.slice(0, 10).map((event) => {
             const isMultiDay = !isSameDay(parseISO(event.start), parseISO(event.end))
@@ -540,7 +539,7 @@ function DroppableDay({
         )}
       </div>
       {dayTasks.length > 0 && (
-        <div className={styles.tasks}>
+        <div ref={tasksRef} className={styles.tasks}>
           <AnimatePresence>
             {dayTasks.slice(0, 10).map((task) => (
               <EventCard key={task.id} event={task} compact isMobileMonth={isMobile} />
