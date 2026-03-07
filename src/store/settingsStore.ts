@@ -137,7 +137,7 @@ export const useSettingsStore = create<SettingsStore>()(
       },
     }),
     {
-      name: 'goodcal-settings',
+      name: 'calino-settings',
     }
   )
 )

@@ -260,7 +260,7 @@ export const useCalendarStore = create<CalendarStore>()(
       },
     }),
     {
-      name: 'goodcal-storage',
+      name: 'calino-storage',
       partialize: (state) => ({
         events: state.events,
         calendars: state.calendars,

@@ -2,7 +2,6 @@ import type { JSX } from 'react'
 import { useCallback, useEffect, useState, useRef } from 'react'
 import { BrowserRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom'
 import { useCalendarStore } from './store/calendarStore'
-import { useSettingsStore } from './store/settingsStore'
 import {
   CalendarHeader,
   CalendarGrid,
@@ -27,7 +26,15 @@ const VIEW_ROUTES: Record<ViewType, string> = {
   week: '/week',
   day: '/day',
   agenda: '/agenda',
-  todo: '/todo',
+  todo: '/tasks',
+}
+
+const URL_TO_VIEW: Record<string, ViewType> = {
+  '/month': 'month',
+  '/week': 'week',
+  '/day': 'day',
+  '/agenda': 'agenda',
+  '/tasks': 'todo',
 }
 
 const VIEW_ORDER: ViewType[] = ['month', 'week', 'day', 'agenda', 'todo']
@@ -60,10 +67,9 @@ function useViewManager(): void {
   const location = useLocation()
   const currentView = useCalendarStore((state) => state.currentView)
   const setCurrentView = useCalendarStore((state) => state.setCurrentView)
-  const defaultView = useSettingsStore((state) => state.defaultView)
 
   const isMounted = useRef(false)
-  const prevPath = useRef<string>(location.pathname)
+  const isInternalNavigation = useRef(false)
 
   useEffect(() => {
     isMounted.current = true
@@ -75,26 +81,26 @@ function useViewManager(): void {
   useEffect(() => {
     if (!isMounted.current) return
     if (!isCalendarRoute && !isRootRoute) return
-    const path = location.pathname === '/' ? '' : location.pathname.slice(1)
-    const view = (path as ViewType) || defaultView
-    if (VIEW_ORDER.includes(view)) {
+    if (isInternalNavigation.current) return
+
+    const view = URL_TO_VIEW[location.pathname]
+    if (view && VIEW_ORDER.includes(view)) {
       setCurrentView(view)
     }
-  }, [location.pathname, defaultView, setCurrentView, isCalendarRoute, isRootRoute])
+  }, [location.pathname, setCurrentView, isCalendarRoute, isRootRoute])
 
   useEffect(() => {
     if (!isMounted.current) return
-    if (!isCalendarRoute && !isRootRoute) return
-
-    // Don't navigate if path hasn't actually changed (prevents loops)
-    if (location.pathname === prevPath.current) return
-    prevPath.current = location.pathname
 
     const targetPath = VIEW_ROUTES[currentView]
     if (location.pathname !== targetPath) {
+      isInternalNavigation.current = true
       navigate(targetPath, { replace: true })
+      setTimeout(() => {
+        isInternalNavigation.current = false
+      }, 0)
     }
-  }, [currentView, location.pathname, navigate, isCalendarRoute, isRootRoute])
+  }, [currentView, navigate])
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent): void => {
@@ -342,6 +348,7 @@ function App(): JSX.Element {
           <Route path="/week" element={<CalendarApp />} />
           <Route path="/day" element={<CalendarApp />} />
           <Route path="/agenda" element={<CalendarApp />} />
+          <Route path="/tasks" element={<CalendarApp />} />
           <Route path="/" element={<CalendarApp />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/privacy" element={<PrivacyPolicy />} />
