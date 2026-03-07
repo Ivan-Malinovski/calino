@@ -2,7 +2,7 @@ import type { JSX } from 'react'
 import { useState } from 'react'
 import { useSettingsStore } from '@/store/settingsStore'
 import { useCalendarStore } from '@/store/calendarStore'
-import { parseICALEvent } from '@/features/caldav/adapter/iCalendarAdapter'
+import { parseICALData } from '@/features/caldav/adapter/iCalendarAdapter'
 import styles from './OnboardingModal.module.css'
 
 interface OnboardingModalProps {
@@ -45,7 +45,7 @@ export function OnboardingModal({ onAddCalendar }: OnboardingModalProps): JSX.El
       const defaultCalendar = calendars.find((c) => c.isDefault) ?? calendars[0]
       const calendarId = defaultCalendar?.id ?? 'default'
 
-      const events = parseICALEvent(icsData, calendarId)
+      const events = parseICALData(icsData, calendarId)
       events.forEach((event) => addEvent(event))
 
       updateSettings({ hasCompletedOnboarding: true })
