@@ -128,7 +128,7 @@ function parseICalDateTime(value: string): { date: string; isAllDay: boolean } {
     const year = value.substring(0, 4)
     const month = value.substring(4, 6)
     const day = value.substring(6, 8)
-    return { date: `${year}-${month}-${day}T00:00:00`, isAllDay: true }
+    return { date: `${year}-${month}-${day}`, isAllDay: true }
   }
 
   const hasTime = value.includes('T')

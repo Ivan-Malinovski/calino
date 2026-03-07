@@ -1,4 +1,5 @@
 import { useMemo, useCallback, useState, useEffect } from 'react'
+import { format } from 'date-fns'
 import { useNavigate } from 'react-router-dom'
 import {
   useCalendarStore,
@@ -296,7 +297,7 @@ export function useCommandPalette({ isOpen }: UseCommandPaletteProps) {
             end: qa.endDate ? qa.endDate.toISOString() : qa.startDate.toISOString(),
             isAllDay: qa.isAllDay,
             type: 'task',
-            dueDate: qa.startDate.toISOString(),
+            dueDate: format(qa.startDate, 'yyyy-MM-dd'),
           })
           return { success: true, message: `Created task: ${qa.title}` }
         }
