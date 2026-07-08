@@ -1,5 +1,5 @@
 # ── Stage 1: Build ───────────────────────────────────────────────
-FROM node:22-alpine3.21 AS build
+FROM node:25-alpine3.21 AS build
 
 RUN corepack enable && corepack prepare pnpm@10 --activate
 
