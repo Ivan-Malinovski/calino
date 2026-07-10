@@ -936,7 +936,7 @@ export function icalVtodoToCalendarEvent(vtodo: ICAL.Component, calendarId: stri
     .getAllProperties('related-to')
     .find((prop) => {
       const reltype = prop.getParameter('reltype')
-      return reltype === undefined || (typeof reltype === 'string' && reltype.toUpperCase() === 'PARENT')
+      return reltype === undefined || (typeof reltype === 'string' && (!reltype.trim() || reltype.toUpperCase() === 'PARENT'))
     })
     ?.getFirstValue()
 

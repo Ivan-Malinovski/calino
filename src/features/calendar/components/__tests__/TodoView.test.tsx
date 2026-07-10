@@ -160,14 +160,16 @@ describe('TodoView', () => {
     expect(screen.getByText('This is a description')).toBeInTheDocument()
   })
 
-  it('renders a subtask directly below its parent', () => {
+  it('renders nested subtasks below their root task even with different due dates', () => {
     const store = useCalendarStore.getState()
-    store.addEvent({ id: 'parent', calendarId: 'default', title: 'Parent task', start: '2024-03-15T10:00:00.000Z', end: '2024-03-15T10:00:00.000Z', isAllDay: false, type: 'task' })
-    store.addEvent({ id: 'child', calendarId: 'default', title: 'Child task', parentTaskId: 'parent', start: '2024-03-15T10:00:00.000Z', end: '2024-03-15T10:00:00.000Z', isAllDay: false, type: 'task' })
+    store.addEvent({ id: 'parent', calendarId: 'default', title: 'Parent task', dueDate: '2024-03-15', start: '2024-03-15T10:00:00.000Z', end: '2024-03-15T10:00:00.000Z', isAllDay: false, type: 'task' })
+    store.addEvent({ id: 'child', calendarId: 'default', title: 'Child task', parentTaskId: 'parent', dueDate: '2024-03-20', start: '2024-03-20T10:00:00.000Z', end: '2024-03-20T10:00:00.000Z', isAllDay: false, type: 'task' })
+    store.addEvent({ id: 'grandchild', calendarId: 'default', title: 'Grandchild task', parentTaskId: 'child', dueDate: '2024-03-25', start: '2024-03-25T10:00:00.000Z', end: '2024-03-25T10:00:00.000Z', isAllDay: false, type: 'task' })
 
     renderWithRouter(<TodoView />)
 
     expect(screen.getByText('Parent task').compareDocumentPosition(screen.getByText('Child task')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(screen.getByText('Child task').closest('[data-component="task-row"]')).toHaveAttribute('data-task-depth', '1')
+    expect(screen.getByText('Grandchild task').closest('[data-component="task-row"]')).toHaveAttribute('data-task-depth', '2')
   })
 })

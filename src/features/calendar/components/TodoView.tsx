@@ -175,12 +175,26 @@ export function TodoView(): JSX.Element {
         return parseISO(a.dueDate).getTime() - parseISO(b.dueDate).getTime()
       })
 
-      // Group by time-to-act
+      // Group a complete branch by its root task so children with a different
+      // due date still remain under their parent.
       const grouped = new Map<string, TaskWithColor[]>()
+      const taskIds = new Set(sorted.map((task) => task.id))
+      const children = new Map<string, TaskWithColor[]>()
       for (const task of sorted) {
+        if (!task.parentTaskId || !taskIds.has(task.parentTaskId)) continue
+        const siblings = children.get(task.parentTaskId) ?? []
+        siblings.push(task)
+        children.set(task.parentTaskId, siblings)
+      }
+      const appendBranch = (task: TaskWithColor, branch: TaskWithColor[]): void => {
+        branch.push(task)
+        for (const child of children.get(task.id) ?? []) appendBranch(child, branch)
+      }
+      for (const task of sorted) {
+        if (task.parentTaskId && taskIds.has(task.parentTaskId)) continue
         const group = getTaskGroup(task)
         if (!grouped.has(group)) grouped.set(group, [])
-        grouped.get(group)!.push(task)
+        appendBranch(task, grouped.get(group)!)
       }
 
       // Add groups in order
@@ -358,7 +372,7 @@ export function TodoView(): JSX.Element {
         >
           <div
             className={`${styles.taskRow} ${item.depth > 0 ? styles.taskSubtask : ''} ${task.completed ? styles.taskDone : ''} ${unstriking.has(task.id) ? styles.unstriking : ''} ${fadingOut.has(task.id) ? styles.fadingOut : ''}`}
-            style={{ '--event-color': task.calendarColor } as React.CSSProperties}
+            style={{ '--event-color': task.calendarColor, marginLeft: item.depth * 28 } as React.CSSProperties}
             data-component="task-row"
             data-task-depth={item.depth}
           >

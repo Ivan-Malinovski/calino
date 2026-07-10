@@ -673,12 +673,18 @@ SUMMARY:Task with explicit parent
 RELATED-TO;RELTYPE=PARENT:parent-explicit
 RELATED-TO;RELTYPE=CHILD:child-task
 END:VTODO
+BEGIN:VTODO
+UID:task-blank-parent
+SUMMARY:Task with blank parent relation
+RELATED-TO;RELTYPE=:parent-blank
+END:VTODO
 END:VCALENDAR`
 
         const tasks = parseICALTask(iCalData, 'cal-1')
 
         expect(tasks[0].parentTaskId).toBe('parent-default')
         expect(tasks[1].parentTaskId).toBe('parent-explicit')
+        expect(tasks[2].parentTaskId).toBe('parent-blank')
       })
     })
 
