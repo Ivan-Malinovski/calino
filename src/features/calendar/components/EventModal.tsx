@@ -985,7 +985,7 @@ export function EventModal(): JSX.Element | null {
             await Promise.all(
               cascadedTasks
                 .filter((task) => task.id !== eventId)
-                .map((task) => safeCalDAVUpdate(updateCalDAVEvent, task.calendarId, task, task))
+                .map((task) => safeCalDAVUpdate(updateCalDAVEvent, task.calendarId, task, {}))
             )
           }
         }

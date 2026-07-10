@@ -218,9 +218,9 @@ export const useCalendarStore = create<CalendarStore>()(
         }
 
         const completedAt = completed ? new Date().toISOString() : undefined
-        const updatedTasks = events
+        const updatedTasks: CalendarEvent[] = events
           .filter((event) => affectedIds.has(event.id))
-          .map((event) => ({
+          .map((event): CalendarEvent => ({
             ...event,
             completed,
             taskStatus: completed ? 'COMPLETED' : 'NEEDS-ACTION',
