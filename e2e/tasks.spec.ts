@@ -49,3 +49,26 @@ test('shows only parent tasks in the sidebar', async ({ page }) => {
   await expect(sidebarTasks.getByText('Plan trip')).toBeVisible()
   await expect(sidebarTasks.getByText('Book hotel')).not.toBeVisible()
 })
+
+test('hides tasks from disabled calendars in the sidebar', async ({ page }) => {
+  await clearState(page)
+  await page.addInitScript(() => {
+    localStorage.setItem('calino-storage', JSON.stringify({
+      state: {
+        calendars: [
+          { id: 'default', name: 'Offline calendar', color: '#4285F4', isVisible: true, isDefault: true, showTasksInViews: true },
+          { id: 'hidden', name: 'Hidden calendar', color: '#EA4335', isVisible: false, isDefault: false, showTasksInViews: true },
+        ],
+        events: [
+          { id: 'hidden-task', calendarId: 'hidden', title: 'Hidden sidebar task', type: 'task', start: '2026-07-10T09:00:00.000Z', end: '2026-07-10T09:00:00.000Z', isAllDay: false, completed: false },
+        ],
+      }, version: 1,
+    }))
+  })
+
+  await page.goto('/month')
+  const tasksHeader = page.locator('[data-component="tasks-header"]')
+  if (await tasksHeader.getAttribute('aria-expanded') === 'false') await tasksHeader.click()
+
+  await expect(page.locator('[data-component="tasks-section"]').getByText('Hidden sidebar task')).not.toBeVisible()
+})

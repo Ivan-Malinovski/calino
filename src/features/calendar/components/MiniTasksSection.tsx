@@ -18,6 +18,7 @@ interface MiniTasksSectionProps {
 export function MiniTasksSection({ isExpanded, onToggle }: MiniTasksSectionProps): JSX.Element {
   const prefersReducedMotion = useReducedMotion()
   const events = useCalendarStore((state) => state.events)
+  const calendars = useCalendarStore((state) => state.calendars)
   const completeTask = useCalendarStore((state) => state.completeTask)
   const openModal = useCalendarStore((state) => state.openModal)
   const { updateEvent: updateCalDAVEvent } = useCalDAV()
@@ -39,9 +40,10 @@ export function MiniTasksSection({ isExpanded, onToggle }: MiniTasksSectionProps
   const upcomingTasks = useMemo(() => {
     const today = startOfDay(new Date())
     const weekFromNow = addDays(today, 7)
+    const visibleCalendarIds = new Set(calendars.filter((calendar) => calendar.isVisible).map((calendar) => calendar.id))
 
     const tasks = events
-      .filter((e) => e.type === 'task' && !e.parentTaskId && !e.completed)
+      .filter((e) => e.type === 'task' && !e.parentTaskId && !e.completed && visibleCalendarIds.has(e.calendarId))
       .filter((task) => {
         if (!task.dueDate) return true // Show tasks without due date
         const dueDate = startOfDay(parseISO(task.dueDate))
@@ -56,7 +58,7 @@ export function MiniTasksSection({ isExpanded, onToggle }: MiniTasksSectionProps
       .slice(0, 8)
 
     const overdue = events
-      .filter((e) => e.type === 'task' && !e.parentTaskId && !e.completed)
+      .filter((e) => e.type === 'task' && !e.parentTaskId && !e.completed && visibleCalendarIds.has(e.calendarId))
       .filter((task) => {
         if (!task.dueDate) return false
         const dueDate = startOfDay(parseISO(task.dueDate))
@@ -69,9 +71,11 @@ export function MiniTasksSection({ isExpanded, onToggle }: MiniTasksSectionProps
       .slice(0, 5)
 
     return [...tasks, ...overdue].slice(0, 10)
-  }, [events])
+  }, [calendars, events])
 
-  const activeCount = events.filter((e) => e.type === 'task' && !e.parentTaskId && !e.completed).length
+  const activeCount = events.filter((e) =>
+    e.type === 'task' && !e.parentTaskId && !e.completed && calendars.some((calendar) => calendar.id === e.calendarId && calendar.isVisible)
+  ).length
 
   const handleToggleComplete = async (task: CalendarEvent): Promise<void> => {
     setCompletingTaskId(task.id)
