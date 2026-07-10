@@ -23,3 +23,26 @@ test('renders imported subtasks beneath their parent', async ({ page }) => {
   await expect(child).toBeVisible()
   await expect(child.locator('xpath=ancestor::*[@data-component="task-row"]')).toHaveAttribute('data-task-depth', '1')
 })
+
+test('shows only parent tasks in the sidebar', async ({ page }) => {
+  await clearState(page)
+  await page.addInitScript(() => {
+    localStorage.setItem('calino-storage', JSON.stringify({
+      state: {
+        calendars: [{ id: 'default', name: 'Offline calendar', color: '#4285F4', isVisible: true, isDefault: true, showTasksInViews: true }],
+        events: [
+          { id: 'parent', calendarId: 'default', title: 'Plan trip', type: 'task', start: '2026-07-10T09:00:00.000Z', end: '2026-07-10T09:00:00.000Z', isAllDay: false, completed: false },
+          { id: 'child', calendarId: 'default', title: 'Book hotel', parentTaskId: 'parent', type: 'task', start: '2026-07-10T09:00:00.000Z', end: '2026-07-10T09:00:00.000Z', isAllDay: false, completed: false },
+        ],
+      }, version: 1,
+    }))
+  })
+
+  await page.goto('/month')
+  const tasksHeader = page.locator('[data-component="tasks-header"]')
+  if (await tasksHeader.getAttribute('aria-expanded') === 'false') await tasksHeader.click()
+
+  const sidebarTasks = page.locator('[data-component="tasks-section"]')
+  await expect(sidebarTasks.getByText('Plan trip')).toBeVisible()
+  await expect(sidebarTasks.getByText('Book hotel')).not.toBeVisible()
+})

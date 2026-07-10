@@ -41,7 +41,7 @@ export function MiniTasksSection({ isExpanded, onToggle }: MiniTasksSectionProps
     const weekFromNow = addDays(today, 7)
 
     const tasks = events
-      .filter((e) => e.type === 'task' && !e.completed)
+      .filter((e) => e.type === 'task' && !e.parentTaskId && !e.completed)
       .filter((task) => {
         if (!task.dueDate) return true // Show tasks without due date
         const dueDate = startOfDay(parseISO(task.dueDate))
@@ -56,7 +56,7 @@ export function MiniTasksSection({ isExpanded, onToggle }: MiniTasksSectionProps
       .slice(0, 8)
 
     const overdue = events
-      .filter((e) => e.type === 'task' && !e.completed)
+      .filter((e) => e.type === 'task' && !e.parentTaskId && !e.completed)
       .filter((task) => {
         if (!task.dueDate) return false
         const dueDate = startOfDay(parseISO(task.dueDate))
@@ -71,7 +71,7 @@ export function MiniTasksSection({ isExpanded, onToggle }: MiniTasksSectionProps
     return [...tasks, ...overdue].slice(0, 10)
   }, [events])
 
-  const activeCount = events.filter((e) => e.type === 'task' && !e.completed).length
+  const activeCount = events.filter((e) => e.type === 'task' && !e.parentTaskId && !e.completed).length
 
   const handleToggleComplete = async (task: CalendarEvent): Promise<void> => {
     setCompletingTaskId(task.id)
