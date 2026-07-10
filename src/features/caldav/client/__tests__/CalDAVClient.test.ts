@@ -121,6 +121,18 @@ END:VCALENDAR`,
       expect(calendars).toHaveLength(1)
       expect(calendars[0].url).toBe(mockCalendar.url)
       expect(calendars[0].name).toBe(mockCalendar.displayName)
+      expect(calendars[0].supportedComponents).toEqual(['VEVENT', 'VTODO'])
+    })
+
+    it('keeps only supported event and task component metadata', async () => {
+      mockClientMethods.fetchCalendars.mockResolvedValue([
+        { ...mockCalendar, components: ['VTODO', 'VJOURNAL'] },
+      ])
+      await client.connect()
+
+      const calendars = await client.fetchCalendars()
+
+      expect(calendars[0].supportedComponents).toEqual(['VTODO'])
     })
 
     // Bug 14: calendar ID should use UUID, not Date.now()

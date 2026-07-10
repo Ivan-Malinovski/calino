@@ -50,6 +50,7 @@ export interface Reminder {
 }
 
 export type EventType = 'event' | 'task' | 'journal'
+export type CalendarComponent = 'VEVENT' | 'VTODO'
 export type SyncStatus = 'synced' | 'pending' | 'failed'
 export type TaskPriority = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9
 
@@ -136,6 +137,7 @@ export interface Calendar {
   isDefault: boolean
   accountId?: string
   showTasksInViews: boolean
+  supportedComponents?: CalendarComponent[]
 }
 
 export type ViewType = 'month' | 'week' | '3day' | 'day' | 'agenda' | 'todo' | 'journal' | 'contacts' | 'year'

@@ -62,6 +62,21 @@ export function EventModal(): JSX.Element | null {
     deleteEvent: deleteCalDAVEvent,
   } = useCalDAV()
 
+  const existingEvent = selectedEventId
+    ? events.find((event) => event.id === selectedEventId)
+    : undefined
+  const requiredCalendarComponent =
+    selectedEventType === 'task' || existingEvent?.type === 'task' ? 'VTODO' : 'VEVENT'
+  const compatibleCalendars = useMemo(
+    () =>
+      calendars.filter(
+        (calendar) =>
+          !calendar.supportedComponents ||
+          calendar.supportedComponents.includes(requiredCalendarComponent)
+      ),
+    [calendars, requiredCalendarComponent]
+  )
+
   const initialState = useMemo(
     () =>
       getInitialFormState(
@@ -70,10 +85,10 @@ export function EventModal(): JSX.Element | null {
         selectedDate,
         selectedEndDate,
         events,
-        calendars,
+        compatibleCalendars,
         categories
       ),
-    [isModalOpen, selectedEventId, selectedDate, selectedEndDate, events, calendars, categories]
+    [isModalOpen, selectedEventId, selectedDate, selectedEndDate, events, compatibleCalendars, categories]
   )
 
   const [title, setTitle] = useState(initialState.title)
@@ -329,9 +344,20 @@ export function EventModal(): JSX.Element | null {
       // events/calendars change in the background (e.g. during CalDAV sync).
       const state = useCalendarStore.getState()
       const currentEvents = state.events
-      const currentCalendars = state.calendars
-      const currentCategories = state.categories
       const currentSelectedEventType = state.selectedEventType
+      const currentEvent = selectedEventId
+        ? currentEvents.find((event) => event.id === selectedEventId)
+        : undefined
+      const requiredComponent =
+        currentSelectedEventType === 'task' || currentEvent?.type === 'task'
+          ? 'VTODO'
+          : 'VEVENT'
+      const currentCalendars = state.calendars.filter(
+        (calendar) =>
+          !calendar.supportedComponents ||
+          calendar.supportedComponents.includes(requiredComponent)
+      )
+      const currentCategories = state.categories
 
       const formDefaults = getInitialFormState(
         isModalOpen,
@@ -1237,7 +1263,7 @@ export function EventModal(): JSX.Element | null {
               className={styles.modalSelect}
               data-component="event-calendar-select"
             >
-              {calendars.map((cal) => (
+              {compatibleCalendars.map((cal) => (
                 <option key={cal.id} value={cal.id}>
                   {cal.name}
                 </option>
@@ -1324,7 +1350,12 @@ export function EventModal(): JSX.Element | null {
               <button
                 type="submit"
                 className={styles.modalSave}
-                disabled={!title.trim() || isTimeRangeInvalid || isSaving}
+                disabled={
+                  !title.trim() ||
+                  isTimeRangeInvalid ||
+                  isSaving ||
+                  !compatibleCalendars.some((calendar) => calendar.id === calendarId)
+                }
                 aria-busy={isSaving}
                 data-component="modal-save"
               >

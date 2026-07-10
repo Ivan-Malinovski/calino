@@ -155,18 +155,26 @@ export class CalDAVClient {
 
     this.cachedCalendars = davCalendars
 
-    return davCalendars.map((cal, index) => ({
-      id: cal.url || `cal-${index}-${uuidv4()}`,
-      // Note: accountId is NOT set here - the caller must set it
-      // this.credentials.id is the credential ID, not the account ID
-      url: cal.url || '',
-      name: typeof cal.displayName === 'string' ? cal.displayName : 'Unnamed Calendar',
-      color: normalizeColor(cal.calendarColor as string | null | undefined),
-      ctag: null,
-      syncToken: null,
-      isVisible: true,
-      isDefault: index === 0,
-    }))
+    return davCalendars.map((cal, index) => {
+      const supportedComponents = cal.components?.filter(
+        (component): component is 'VEVENT' | 'VTODO' =>
+          component === 'VEVENT' || component === 'VTODO'
+      )
+
+      return {
+        id: cal.url || `cal-${index}-${uuidv4()}`,
+        // Note: accountId is NOT set here - the caller must set it
+        // this.credentials.id is the credential ID, not the account ID
+        url: cal.url || '',
+        name: typeof cal.displayName === 'string' ? cal.displayName : 'Unnamed Calendar',
+        color: normalizeColor(cal.calendarColor as string | null | undefined),
+        ctag: null,
+        syncToken: null,
+        isVisible: true,
+        isDefault: index === 0,
+        supportedComponents: cal.components ? supportedComponents : undefined,
+      }
+    })
   }
 
   /**
@@ -452,6 +460,7 @@ export class CalDAVClient {
       syncToken: null,
       isVisible: true,
       isDefault: false,
+      supportedComponents: components,
     }
   }
 

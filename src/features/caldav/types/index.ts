@@ -19,6 +19,7 @@ export interface CalDAVCalendar {
   syncToken: string | null
   isVisible: boolean
   isDefault: boolean
+  supportedComponents?: ('VEVENT' | 'VTODO')[]
 }
 
 export interface SyncState {

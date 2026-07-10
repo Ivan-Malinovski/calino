@@ -23,6 +23,45 @@ interface RecurringEventSeed {
   interval: number
 }
 
+interface CalendarCapabilitySeed {
+  id: string
+  name: string
+  components: ('VEVENT' | 'VTODO')[]
+  isDefault?: boolean
+}
+
+export async function seedCalendarCapabilities(
+  page: Page,
+  calendars: CalendarCapabilitySeed[]
+): Promise<void> {
+  await page.addInitScript(
+    ({ calendarKey, calendars }: { calendarKey: string; calendars: CalendarCapabilitySeed[] }) => {
+      try {
+        if (sessionStorage.getItem('__calino_test_calendar_capabilities')) return
+        sessionStorage.setItem('__calino_test_calendar_capabilities', '1')
+        const raw = localStorage.getItem(calendarKey)
+        const parsed = raw ? JSON.parse(raw) : { state: {}, version: 1 }
+        parsed.state = {
+          ...(parsed.state ?? {}),
+          calendars: calendars.map((calendar, index) => ({
+            id: calendar.id,
+            name: calendar.name,
+            color: '#4285F4',
+            isVisible: true,
+            isDefault: calendar.isDefault ?? index === 0,
+            showTasksInViews: true,
+            supportedComponents: calendar.components,
+          })),
+        }
+        localStorage.setItem(calendarKey, JSON.stringify(parsed))
+      } catch {
+        /* noop */
+      }
+    },
+    { calendarKey: STORAGE_KEYS.calendar, calendars }
+  )
+}
+
 /**
  * Seed a recurring event directly into the calendar store's persistence
  * key (`calino-storage`). The store rehydrates from this on mount, so the

@@ -289,6 +289,7 @@ export function useCalDAV(): UseCalDAVReturn {
           isDefault: cal.isDefault,
           accountId: cal.accountId,
           showTasksInViews: true,
+          supportedComponents: cal.supportedComponents,
         })
       }
     }
@@ -396,6 +397,7 @@ export function useCalDAV(): UseCalDAVReturn {
               isDefault: cal.isDefault,
               accountId: newAccount.id,
               showTasksInViews: true,
+              supportedComponents: cal.supportedComponents,
             })
           }
         }
@@ -686,6 +688,26 @@ export function useCalDAV(): UseCalDAVReturn {
 
         const client = await createCalDAVClient(account.serverUrl, credential, account.proxyUrl)
         const accountCalendars = storage.getCalendarsByAccountId(accountId)
+
+        // Refresh collection capabilities so accounts saved before component
+        // support was persisted are migrated on their next normal sync.
+        try {
+          const serverCalendars = await client.fetchCalendars()
+          for (const storedCalendar of accountCalendars) {
+            const serverCalendar = serverCalendars.find((cal) => cal.url === storedCalendar.url)
+            if (!serverCalendar?.supportedComponents) continue
+
+            storage.updateCalendar(storedCalendar.id, {
+              supportedComponents: serverCalendar.supportedComponents,
+            })
+            storeUpdateCalendar(storedCalendar.id, {
+              supportedComponents: serverCalendar.supportedComponents,
+            })
+          }
+          setCalendars(storage.getAllCalendars())
+        } catch (error) {
+          console.warn('[CalDAV] Could not refresh calendar capabilities:', error)
+        }
 
         const start = '1970-01-01T00:00:00.000Z'
         const end = addDays(new Date(), 365).toISOString()
@@ -1030,6 +1052,7 @@ export function useCalDAV(): UseCalDAVReturn {
               isDefault: cal.isDefault,
               accountId,
               showTasksInViews: true,
+              supportedComponents: cal.supportedComponents,
             })
           }
         }
@@ -1471,6 +1494,7 @@ export function useCalDAV(): UseCalDAVReturn {
         isDefault: false,
         accountId,
         showTasksInViews: true,
+        supportedComponents: newCalendar.supportedComponents,
       })
 
       setCalendars(storage.getAllCalendars())
