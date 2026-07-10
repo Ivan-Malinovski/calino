@@ -111,6 +111,7 @@ test.describe('TodoView composer forwards title into modal', () => {
     const todoTask = page.locator('main').getByText('Hidden work task')
     await expect(todoTask).toBeVisible()
 
+    await page.locator('[data-component="calendar-section-toggle"]').click()
     await page.locator('label').filter({ hasText: 'Work' }).getByRole('checkbox').click()
 
     await expect(todoTask).not.toBeVisible()

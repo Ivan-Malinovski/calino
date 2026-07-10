@@ -21,6 +21,7 @@ describe('Sidebar calendar rename', () => {
       isVisible: true, isDefault: true, showTasksInViews: true,
     })
     renderWithRouter(<Sidebar />)
+    fireEvent.click(screen.getByRole('button', { name: /^calendars/i }))
     fireEvent.doubleClick(screen.getByText('My Local Cal'))
     const input = screen.getByDisplayValue('My Local Cal') as HTMLInputElement
     fireEvent.change(input, { target: { value: 'Renamed Cal' } })
@@ -38,6 +39,7 @@ describe('Sidebar calendar rename', () => {
       isVisible: true, isDefault: false, accountId: 'acct-1', showTasksInViews: true,
     })
     renderWithRouter(<Sidebar />)
+    fireEvent.click(screen.getByRole('button', { name: /^calendars/i }))
     fireEvent.doubleClick(screen.getByText('Work'))
     const input = screen.getByDisplayValue('Work') as HTMLInputElement
     fireEvent.change(input, { target: { value: 'Job' } })
