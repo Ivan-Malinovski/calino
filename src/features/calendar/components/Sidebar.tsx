@@ -60,6 +60,7 @@ export function Sidebar({ isOpen = false, onClose, isCollapsed: controlledCollap
   const showMonthDropdownRef = useRef(showMonthDropdown)
   const [isTasksExpanded, setIsTasksExpanded] = useState(false)
   const hasInitializedTasksExpandedRef = useRef(false)
+  const syncAllRequestRef = useRef<Promise<void> | null>(null)
   const [isCalendarsExpanded, setIsCalendarsExpanded] = useState(false)
   const [isCategoriesExpanded, setIsCategoriesExpanded] = useState(false)
   const [syncingCalendarId, setSyncingCalendarId] = useState<string | null>(null)
@@ -113,11 +114,27 @@ export function Sidebar({ isOpen = false, onClose, isCollapsed: controlledCollap
     }
   }, [accountIds, syncAccount])
 
+  const runSyncAll = useCallback((): Promise<void> => {
+    if (syncAllRequestRef.current) return syncAllRequestRef.current
+    const request = syncAllAccounts().finally(() => {
+      syncAllRequestRef.current = null
+    })
+    syncAllRequestRef.current = request
+    return request
+  }, [syncAllAccounts])
+
   const handleSyncAll = async (): Promise<void> => {
-    if (accountIds.length === 0 || isSyncingAll || globalSyncStatus === 'syncing') return
+    if (accountIds.length === 0 || isSyncingAll) return
+    if (globalSyncStatus === 'syncing') {
+      showToast('Calendars are already syncing.')
+      return
+    }
+    // A manual request made before the mount effect runs becomes the initial
+    // sync, avoiding a duplicate request for the same accounts.
+    hasAutoSyncedCalendars = true
     setIsSyncingAll(true)
     try {
-      await syncAllAccounts()
+      await runSyncAll()
       showToast('All calendars synced.')
     } catch (error) {
       showToast(error instanceof Error ? error.message : 'Failed to sync calendars')
@@ -129,10 +146,10 @@ export function Sidebar({ isOpen = false, onClose, isCollapsed: controlledCollap
   useEffect(() => {
     if (hasAutoSyncedCalendars || accountIds.length === 0) return
     hasAutoSyncedCalendars = true
-    syncAllAccounts().catch((error) => {
+    runSyncAll().catch((error) => {
       console.warn('[CalDAV] Automatic calendar sync failed:', error)
     })
-  }, [accountIds.length, syncAllAccounts])
+  }, [accountIds.length, runSyncAll])
 
   // Initialize miniDate from the store on first render
   useEffect(() => {
@@ -535,8 +552,7 @@ export function Sidebar({ isOpen = false, onClose, isCollapsed: controlledCollap
                 data-component="sync-all-calendars"
                 disabled={
                   accountIds.length === 0 ||
-                  isSyncingAll ||
-                  globalSyncStatus === 'syncing'
+                  isSyncingAll
                 }
               >
                 <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

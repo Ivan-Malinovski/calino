@@ -20,9 +20,10 @@ test.describe('calendar discovery sync', () => {
     const syncAll = page.locator('[data-component="sync-all-calendars"]')
     await expect(syncAll).toBeEnabled({ timeout: 10_000 })
     await syncAll.click()
-    await expect(page.getByText('All calendars synced.')).toBeVisible({ timeout: 10_000 })
+    await expect(page.getByText(/All calendars synced\.|Calendars are already syncing\./)).toBeVisible({ timeout: 10_000 })
 
     // Discovery does not rely only on the previously persisted calendar list.
+    await page.locator('[data-component="calendar-section-toggle"]').click()
     await expect(page.getByText('Personal', { exact: true })).toBeVisible({ timeout: 10_000 })
   })
 })
