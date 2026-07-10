@@ -4,6 +4,7 @@ import type { ThemeInfo } from '@/lib/themes'
 export interface ThemeContextValue {
   loadedThemes: ThemeInfo[]
   refetchThemes: () => Promise<void>
+  effectiveMode: 'light' | 'dark'
 }
 
 export const ThemeContext = createContext<ThemeContextValue | null>(null)

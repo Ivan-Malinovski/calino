@@ -110,7 +110,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
   }, [])
 
   return (
-    <ThemeContext.Provider value={{ loadedThemes, refetchThemes }}>
+    <ThemeContext.Provider value={{ loadedThemes, refetchThemes, effectiveMode }}>
       {children}
     </ThemeContext.Provider>
   )

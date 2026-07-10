@@ -31,5 +31,12 @@ test.describe('native controls follow the active theme', () => {
       .first()
     await expect(calendarOption).toHaveCSS('background-color', 'rgb(42, 40, 38)')
     await expect(calendarOption).toHaveCSS('color', 'rgb(240, 236, 230)')
+
+    await page.evaluate(async () => {
+      const { showToast } = await import('/src/lib/toast.ts')
+      showToast('Dark theme toast')
+    })
+    await expect(page.getByText('Dark theme toast')).toBeVisible()
+    await expect(page.locator('[data-sonner-toaster]')).toHaveAttribute('data-sonner-theme', 'dark')
   })
 })

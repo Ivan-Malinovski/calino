@@ -18,6 +18,7 @@ import { JournalDayModal } from './features/calendar/components/JournalDayModal'
 import { SettingsPage, PrivacyPolicy } from './features/settings'
 import { CommandPalette } from './features/commandPalette'
 import { CookieConsent, ErrorBoundary } from './components/common'
+import { useTheme } from './components/ThemeContext'
 import { CalendarSkeleton } from './components/common/Skeleton'
 import {
   MenuIcon,
@@ -599,7 +600,7 @@ function App(): JSX.Element {
     <BrowserRouter>
       <ThemeProvider>
         <GitHubPagesRedirect />
-        <Toaster richColors position="bottom-right" duration={5000} />
+        <ThemedToaster />
         <CookieConsent />
         <MasterPasswordPrompt />
         <Routes>
@@ -620,6 +621,11 @@ function App(): JSX.Element {
       </ThemeProvider>
     </BrowserRouter>
   )
+}
+
+function ThemedToaster(): JSX.Element {
+  const { effectiveMode } = useTheme()
+  return <Toaster theme={effectiveMode} richColors position="bottom-right" duration={5000} />
 }
 
 export default App
