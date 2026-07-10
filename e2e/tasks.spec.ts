@@ -18,13 +18,16 @@ test('renders imported subtasks beneath their parent', async ({ page }) => {
 
   await page.goto('/tasks')
 
-  const parent = page.getByText('Plan trip')
-  const child = page.getByText('Book hotel')
+  const parent = page.locator('main').getByText('Plan trip')
+  const child = page.locator('main').getByText('Book hotel')
   const grandchild = page.getByText('Pack bags')
   await expect(parent).toBeVisible()
   await expect(child).toBeVisible()
   await expect(child.locator('xpath=ancestor::*[@data-component="task-row"]')).toHaveAttribute('data-task-depth', '1')
   await expect(grandchild.locator('xpath=ancestor::*[@data-component="task-row"]')).toHaveAttribute('data-task-depth', '2')
+
+  await parent.click()
+  await expect(page.locator('[data-component="modal-card"]').getByRole('button', { name: 'Book hotel' })).toBeVisible()
 })
 
 test('shows only parent tasks in the sidebar', async ({ page }) => {

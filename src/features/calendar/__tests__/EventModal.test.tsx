@@ -64,6 +64,18 @@ describe('EventModal', () => {
     expect(screen.getByRole('button', { name: /delete/i })).toBeInTheDocument()
   })
 
+  it('lists direct subtasks when editing a parent task', () => {
+    const store = useCalendarStore.getState()
+    store.addEvent({ id: 'parent', calendarId: 'default', title: 'Parent task', start: '2024-03-15T10:00:00', end: '2024-03-15T10:00:00', isAllDay: false, type: 'task' })
+    store.addEvent({ id: 'child', calendarId: 'default', title: 'Child task', parentTaskId: 'parent', start: '2024-03-15T10:00:00', end: '2024-03-15T10:00:00', isAllDay: false, type: 'task' })
+    store.openModal(undefined, undefined, 'parent', 'task')
+
+    render(<EventModal />)
+
+    expect(screen.getByText('Subtasks')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Child task' })).toBeInTheDocument()
+  })
+
   it('does not show delete button when creating', () => {
     const store = useCalendarStore.getState()
     store.openModal()

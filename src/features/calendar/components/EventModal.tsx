@@ -470,6 +470,10 @@ export function EventModal(): JSX.Element | null {
     }
     return events.filter((task) => task.type === 'task' && task.calendarId === calendarId && !excludedIds.has(task.id))
   }, [calendarId, events, isTaskMode, selectedEventId])
+  const subtasks = useMemo(
+    () => events.filter((task) => task.type === 'task' && task.parentTaskId === selectedEventId),
+    [events, selectedEventId]
+  )
 
   const hasChanges = useMemo(() => {
     if (!existingEventForMode) return true
@@ -1226,6 +1230,8 @@ export function EventModal(): JSX.Element | null {
                parentTaskId={parentTaskId}
                parentTasks={parentTaskOptions}
                onParentTaskChange={setParentTaskId}
+               subtasks={subtasks}
+               onOpenSubtask={(taskId) => openModal(undefined, undefined, taskId, 'task')}
                onAddSubtask={selectedEventId ? () => openModal(undefined, undefined, undefined, 'task', undefined, selectedEventId) : undefined}
              />
           )}

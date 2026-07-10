@@ -1185,3 +1185,26 @@
   color: var(--ink-3);
   font-size: 12px;
 }
+
+.subtaskList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 4px 0 12px;
+}
+
+.subtaskItem {
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--ink-2);
+  cursor: pointer;
+  font: inherit;
+  padding: 5px 8px;
+  text-align: left;
+}
+
+.subtaskItem:hover {
+  background: var(--surface-bg);
+  color: var(--ink);
+}

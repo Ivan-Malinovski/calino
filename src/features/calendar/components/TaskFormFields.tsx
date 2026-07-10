@@ -18,6 +18,8 @@ interface TaskFormFieldsProps {
   parentTaskId?: string
   parentTasks: CalendarEvent[]
   onParentTaskChange: (parentTaskId: string | undefined) => void
+  subtasks: CalendarEvent[]
+  onOpenSubtask: (taskId: string) => void
   onAddSubtask?: () => void
 }
 
@@ -42,6 +44,8 @@ export function TaskFormFields({
   parentTaskId,
   parentTasks,
   onParentTaskChange,
+  subtasks,
+  onOpenSubtask,
   onAddSubtask,
 }: TaskFormFieldsProps): JSX.Element {
   const dueDateRef = useRef<HTMLInputElement>(null)
@@ -101,6 +105,22 @@ export function TaskFormFields({
           </div>
         )}
       </div>
+
+      {subtasks.length > 0 && (
+        <div className={styles.subtaskList}>
+          <span className={styles.label}>Subtasks</span>
+          {subtasks.map((task) => (
+            <button
+              key={task.id}
+              type="button"
+              className={styles.subtaskItem}
+              onClick={() => onOpenSubtask(task.id)}
+            >
+              {task.completed ? '✓ ' : ''}{task.title}
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className={styles.row}>
         <div className={styles.field}>
