@@ -75,3 +75,40 @@ test('hides tasks from disabled calendars in the sidebar', async ({ page }) => {
 
   await expect(page.locator('[data-component="tasks-section"]').getByText('Hidden sidebar task')).not.toBeVisible()
 })
+
+test('filters all tasks by project without changing calendar visibility', async ({ page }) => {
+  await clearState(page)
+  await page.addInitScript(() => {
+    localStorage.setItem('calino-storage', JSON.stringify({
+      state: {
+        calendars: [
+          { id: 'default', name: 'Personal', color: '#4285F4', isVisible: true, isDefault: true, showTasksInViews: true },
+          { id: 'work', name: 'Work', color: '#EA4335', isVisible: true, isDefault: false, showTasksInViews: true },
+          { id: 'events-only', name: 'Events only', color: '#34A853', isVisible: true, isDefault: false, showTasksInViews: true, supportedComponents: ['VEVENT'] },
+        ],
+        events: [
+          { id: 'personal-task', calendarId: 'default', title: 'Personal task', type: 'task', start: '2026-07-10T09:00:00.000Z', end: '2026-07-10T09:00:00.000Z', isAllDay: false, completed: false },
+          { id: 'work-task', calendarId: 'work', title: 'Work task', type: 'task', start: '2026-07-10T09:00:00.000Z', end: '2026-07-10T09:00:00.000Z', isAllDay: false, completed: false },
+        ],
+      }, version: 1,
+    }))
+  })
+
+  await page.goto('/tasks')
+  const projectFilter = page.locator('[data-component="task-project-filter"]')
+  await expect(projectFilter).toBeVisible()
+  await projectFilter.click()
+  const projectMenu = page.locator('[data-component="task-project-menu"]')
+  await expect(projectMenu.getByRole('menuitem', { name: 'Events only' })).not.toBeVisible()
+  await projectMenu.getByRole('menuitem', { name: 'Work' }).click()
+
+  const taskList = page.locator('main')
+  await expect(taskList.getByText('Work task')).toBeVisible()
+  await expect(taskList.getByText('Personal task')).not.toBeVisible()
+
+  await page.locator('[data-component="add-task-button"]').click()
+  const composer = page.getByPlaceholder('What needs doing?')
+  await composer.fill('New work task')
+  await composer.press('Enter')
+  await expect(page.locator('[data-component="event-calendar-select"]')).toHaveValue('work')
+})

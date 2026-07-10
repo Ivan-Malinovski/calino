@@ -158,6 +158,7 @@ export interface CalendarState {
   selectedDate: string | null
   selectedEndDate: string | null
   initialTitle: string | null
+  initialCalendarId: string | null
   subtaskParentId: string | null
   isOverlayOpen: boolean
   selectedEventType: EventType
@@ -218,6 +219,7 @@ export interface CalendarActions {
     mode?: EventType,
     initialTitle?: string,
     parentTaskId?: string,
+    initialCalendarId?: string,
   ) => void
   closeModal: () => void
   setOverlayOpen: (isOpen: boolean) => void

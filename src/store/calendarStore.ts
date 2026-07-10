@@ -93,6 +93,7 @@ export const useCalendarStore = create<CalendarStore>()(
       selectedDate: null,
       selectedEndDate: null,
       initialTitle: null,
+      initialCalendarId: null,
       subtaskParentId: null,
       selectedEventType: 'event',
       showAddCalendar: false,
@@ -506,7 +507,8 @@ export const useCalendarStore = create<CalendarStore>()(
         eventId?: string,
         mode?: EventType,
         initialTitle?: string,
-        parentTaskId?: string
+        parentTaskId?: string,
+        initialCalendarId?: string
       ): void => {
         set({
           isModalOpen: true,
@@ -515,6 +517,7 @@ export const useCalendarStore = create<CalendarStore>()(
           selectedEndDate: endDate ?? null,
           selectedEventType: mode ?? 'event',
           initialTitle: initialTitle ?? null,
+          initialCalendarId: initialCalendarId ?? null,
           subtaskParentId: parentTaskId ?? null,
         })
       },
@@ -526,6 +529,7 @@ export const useCalendarStore = create<CalendarStore>()(
           selectedDate: null,
           selectedEndDate: null,
           initialTitle: null,
+          initialCalendarId: null,
           subtaskParentId: null,
           selectedEventType: 'event',
         })

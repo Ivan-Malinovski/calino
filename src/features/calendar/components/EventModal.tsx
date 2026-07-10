@@ -33,6 +33,7 @@ export function EventModal(): JSX.Element | null {
   const selectedDate = useCalendarStore((state) => state.selectedDate)
   const selectedEndDate = useCalendarStore((state) => state.selectedEndDate)
   const initialTitle = useCalendarStore((state) => state.initialTitle)
+  const initialCalendarId = useCalendarStore((state) => state.initialCalendarId)
   const subtaskParentId = useCalendarStore((state) => state.subtaskParentId)
   const selectedEventType = useCalendarStore((state) => state.selectedEventType)
   const events = useCalendarStore((state) => state.events)
@@ -390,7 +391,7 @@ export function EventModal(): JSX.Element | null {
       setEndDate(formDefaults.endDate)
       setEndTime(formDefaults.endTime)
       setIsAllDay(formDefaults.isAllDay)
-      setCalendarId(requestedParent?.calendarId ?? formDefaults.calendarId)
+      setCalendarId(requestedParent?.calendarId ?? initialCalendarId ?? formDefaults.calendarId)
       setRecurring(formDefaults.recurring)
       setRecurrence(formDefaults.recurrence)
       setInterval(formDefaults.interval)
@@ -437,7 +438,7 @@ export function EventModal(): JSX.Element | null {
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally only reset on user-initiated event/date/endDate changes
-  }, [selectedEventId, selectedDate, selectedEndDate, subtaskParentId])
+  }, [selectedEventId, selectedDate, selectedEndDate, subtaskParentId, initialCalendarId])
 
   // Auto-focus title input when creating a new event
   useEffect(() => {

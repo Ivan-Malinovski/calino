@@ -59,6 +59,84 @@
   gap: 14px;
 }
 
+.tpMeta {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.projectFilter {
+  border: 0;
+  background: transparent;
+  color: var(--ink-3);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font: inherit;
+  font-size: 13px;
+  padding: 4px 0;
+}
+
+.projectFilter svg {
+  width: 14px;
+  height: 14px;
+}
+
+.projectFilter:hover {
+  color: var(--ink);
+}
+
+.projectFilter:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.projectMenu {
+  position: relative;
+}
+
+.projectMenuList {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 10;
+  min-width: 160px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--panel);
+  box-shadow: 0 4px 12px rgba(var(--ink-raw), 0.1);
+}
+
+.projectMenuItem {
+  width: 100%;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--ink-2);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font: inherit;
+  font-size: 13px;
+  padding: 7px 8px;
+  text-align: left;
+}
+
+.projectMenuItem:hover,
+.projectMenuItemSelected {
+  background: var(--surface-bg);
+  color: var(--ink);
+}
+
+.projectColor {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
 /* ---- Segmented Filter ---- */
 .segmentedControl {
   position: relative;
