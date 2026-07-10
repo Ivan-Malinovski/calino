@@ -208,6 +208,12 @@
   box-shadow: 0 2px 8px rgba(var(--ink-raw, 44, 40, 33), 0.06);
 }
 
+.taskSubtask {
+  margin-left: 28px;
+  padding-top: 9px;
+  padding-bottom: 9px;
+}
+
 .fadingOut {
   opacity: 0;
   transform: translateY(-4px) scale(0.98);

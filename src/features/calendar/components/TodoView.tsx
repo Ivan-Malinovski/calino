@@ -83,12 +83,12 @@ const GROUP_LABELS: Record<string, string> = {
 
 type VirtualItem =
   | { type: 'header'; key: string; label: string; count: number; isOverdue?: boolean }
-  | { type: 'task'; key: string; task: TaskWithColor }
+  | { type: 'task'; key: string; task: TaskWithColor; depth: number }
 
 export function TodoView(): JSX.Element {
   const events = useCalendarStore((state) => state.events)
   const calendars = useCalendarStore((state) => state.calendars)
-  const updateEvent = useCalendarStore((state) => state.updateEvent)
+  const completeTask = useCalendarStore((state) => state.completeTask)
   const openModal = useCalendarStore((state) => state.openModal)
   const { updateEvent: updateCalDAVEvent } = useCalDAV()
   const isMobile = useIsMobile()
@@ -250,10 +250,9 @@ export function TodoView(): JSX.Element {
         })
       }, 520)
     }
-    updateEvent(task.id, { completed: newCompleted })
-    if (!task.calendarId) return
+    const updatedTasks = completeTask(task.id, newCompleted)
     try {
-      await updateCalDAVEvent(task.calendarId, { ...task, completed: newCompleted })
+      await Promise.all(updatedTasks.map((updatedTask) => updateCalDAVEvent(updatedTask.calendarId, updatedTask)))
     } catch {
       // error handled by useCalDAV
     }
@@ -290,8 +289,20 @@ export function TodoView(): JSX.Element {
         count: group.tasks.length,
         isOverdue: group.isOverdue,
       })
+      const taskIds = new Set(group.tasks.map((task) => task.id))
+      const children = new Map<string, TaskWithColor[]>()
       for (const task of group.tasks) {
-        items.push({ type: 'task', key: `task-${task.id}`, task })
+        if (!task.parentTaskId || !taskIds.has(task.parentTaskId)) continue
+        const siblings = children.get(task.parentTaskId) ?? []
+        siblings.push(task)
+        children.set(task.parentTaskId, siblings)
+      }
+      const appendTask = (task: TaskWithColor, depth: number): void => {
+        items.push({ type: 'task', key: `task-${task.id}`, task, depth })
+        for (const child of children.get(task.id) ?? []) appendTask(child, depth + 1)
+      }
+      for (const task of group.tasks) {
+        if (!task.parentTaskId || !taskIds.has(task.parentTaskId)) appendTask(task, 0)
       }
     }
     return items
@@ -346,8 +357,10 @@ export function TodoView(): JSX.Element {
           }}
         >
           <div
-            className={`${styles.taskRow} ${task.completed ? styles.taskDone : ''} ${unstriking.has(task.id) ? styles.unstriking : ''} ${fadingOut.has(task.id) ? styles.fadingOut : ''}`}
+            className={`${styles.taskRow} ${item.depth > 0 ? styles.taskSubtask : ''} ${task.completed ? styles.taskDone : ''} ${unstriking.has(task.id) ? styles.unstriking : ''} ${fadingOut.has(task.id) ? styles.fadingOut : ''}`}
             style={{ '--event-color': task.calendarColor } as React.CSSProperties}
+            data-component="task-row"
+            data-task-depth={item.depth}
           >
             <button
               className={styles.taskCheck}

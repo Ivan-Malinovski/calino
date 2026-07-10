@@ -1,0 +1,25 @@
+import { test, expect } from '@playwright/test'
+import { clearState } from './fixtures/localstorage'
+
+test('renders imported subtasks beneath their parent', async ({ page }) => {
+  await clearState(page)
+  await page.addInitScript(() => {
+    localStorage.setItem('calino-storage', JSON.stringify({
+      state: {
+        calendars: [{ id: 'default', name: 'Offline calendar', color: '#4285F4', isVisible: true, isDefault: true, showTasksInViews: true }],
+        events: [
+          { id: 'parent', calendarId: 'default', title: 'Plan trip', type: 'task', start: '2026-07-10T09:00:00.000Z', end: '2026-07-10T09:00:00.000Z', isAllDay: false, completed: false },
+          { id: 'child', calendarId: 'default', title: 'Book hotel', parentTaskId: 'parent', type: 'task', start: '2026-07-10T09:00:00.000Z', end: '2026-07-10T09:00:00.000Z', isAllDay: false, completed: false },
+        ],
+      }, version: 1,
+    }))
+  })
+
+  await page.goto('/tasks')
+
+  const parent = page.getByText('Plan trip')
+  const child = page.getByText('Book hotel')
+  await expect(parent).toBeVisible()
+  await expect(child).toBeVisible()
+  await expect(child.locator('xpath=ancestor::*[@data-component="task-row"]')).toHaveAttribute('data-task-depth', '1')
+})

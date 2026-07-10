@@ -68,6 +68,7 @@ export const EventCard = React.memo(function EventCard({
   // different card doesn't re-render every EventCard in the grid.
   const isPreviewing = useCalendarStore((state) => state.previewEventId === event.id)
   const updateEvent = useCalendarStore((state) => state.updateEvent)
+  const completeTask = useCalendarStore((state) => state.completeTask)
   const deleteEvent = useCalendarStore((state) => state.deleteEvent)
   const addEvent = useCalendarStore((state) => state.addEvent)
   const duplicateEvent = useCalendarStore((state) => state.duplicateEvent)
@@ -291,14 +292,14 @@ export const EventCard = React.memo(function EventCard({
   const handleCheckboxClick = async (e: React.MouseEvent): Promise<void> => {
     e.stopPropagation()
     const newCompleted = !event.completed
-    updateEvent(event.id, { completed: newCompleted })
+    const updatedTasks = completeTask(event.id, newCompleted)
     if (!event.calendarId) return
-    await safeCalDAVUpdate(
+    await Promise.all(updatedTasks.map((updatedTask) => safeCalDAVUpdate(
       updateCalDAVEvent,
-      event.calendarId,
-      { ...event, completed: newCompleted },
-      { completed: newCompleted }
-    )
+      updatedTask.calendarId,
+      updatedTask,
+      { completed: updatedTask.completed, taskStatus: updatedTask.taskStatus, percentComplete: updatedTask.percentComplete, completedAt: updatedTask.completedAt }
+    )))
   }
 
   return (
@@ -715,4 +716,3 @@ function SyncWarningIcon(): JSX.Element {
     </svg>
   )
 }
-

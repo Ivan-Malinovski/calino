@@ -658,6 +658,28 @@ END:VCALENDAR`
 
         expect(tasks[0].sequence).toBe(4)
       })
+
+      it('parses RELATED-TO without RELTYPE or with RELTYPE=PARENT as the parent task', () => {
+        const iCalData = `BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VTODO
+UID:task-default-parent
+SUMMARY:Task with implicit parent
+RELATED-TO:parent-default
+END:VTODO
+BEGIN:VTODO
+UID:task-explicit-parent
+SUMMARY:Task with explicit parent
+RELATED-TO;RELTYPE=PARENT:parent-explicit
+RELATED-TO;RELTYPE=CHILD:child-task
+END:VTODO
+END:VCALENDAR`
+
+        const tasks = parseICALTask(iCalData, 'cal-1')
+
+        expect(tasks[0].parentTaskId).toBe('parent-default')
+        expect(tasks[1].parentTaskId).toBe('parent-explicit')
+      })
     })
 
     describe('taskToICAL', () => {
@@ -765,6 +787,23 @@ END:VCALENDAR`
         const iCal = taskToICAL(task)
 
         expect(iCal).toContain('SEQUENCE:0')
+      })
+
+      it('serializes parentTaskId as RELATED-TO with RELTYPE=PARENT', () => {
+        const task: CalendarEvent = {
+          id: 'task-child',
+          title: 'Child task',
+          start: '2024-03-20T00:00:00',
+          end: '2024-03-20T23:59:59',
+          isAllDay: true,
+          calendarId: 'cal-1',
+          type: 'task',
+          parentTaskId: 'task-parent',
+        }
+
+        const iCal = taskToICAL(task)
+
+        expect(iCal).toContain('RELATED-TO;RELTYPE=PARENT:task-parent')
       })
     })
   })

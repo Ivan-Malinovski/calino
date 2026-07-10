@@ -99,6 +99,7 @@ export interface CalendarEvent {
   type?: EventType
   dueDate?: string
   completed?: boolean
+  parentTaskId?: string
   priority?: TaskPriority
   percentComplete?: number
   transparency?: 'opaque' | 'transparent'
@@ -157,6 +158,7 @@ export interface CalendarState {
   selectedDate: string | null
   selectedEndDate: string | null
   initialTitle: string | null
+  subtaskParentId: string | null
   isOverlayOpen: boolean
   selectedEventType: EventType
   showAddCalendar: boolean
@@ -179,6 +181,7 @@ export interface CalendarState {
 export interface CalendarActions {
   addEvent: (event: CalendarEvent) => void
   updateEvent: (id: string, updates: Partial<CalendarEvent>) => void
+  completeTask: (id: string, completed: boolean) => CalendarEvent[]
   deleteEvent: (id: string) => void
   addBrokenEvent: (event: CalendarEvent, reason: string) => void
   removeBrokenEvent: (eventId: string) => void
@@ -214,6 +217,7 @@ export interface CalendarActions {
     eventId?: string,
     mode?: EventType,
     initialTitle?: string,
+    parentTaskId?: string,
   ) => void
   closeModal: () => void
   setOverlayOpen: (isOpen: boolean) => void

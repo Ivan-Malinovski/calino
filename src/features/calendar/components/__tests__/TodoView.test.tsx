@@ -41,7 +41,7 @@ describe('TodoView', () => {
     const store = useCalendarStore.getState()
     store.addEvent({
       id: 'task-1',
-      calendarId: 'cal-1',
+      calendarId: 'default',
       title: 'Test Task',
       start: '2024-03-15T10:00:00.000Z',
       end: '2024-03-15T11:00:00.000Z',
@@ -57,7 +57,7 @@ describe('TodoView', () => {
     const store = useCalendarStore.getState()
     store.addEvent({
       id: 'task-1',
-      calendarId: 'cal-1',
+      calendarId: 'default',
       title: 'Active Task',
       start: '2024-03-15T10:00:00.000Z',
       end: '2024-03-15T11:00:00.000Z',
@@ -67,7 +67,7 @@ describe('TodoView', () => {
     })
     store.addEvent({
       id: 'task-2',
-      calendarId: 'cal-1',
+      calendarId: 'default',
       title: 'Completed Task',
       start: '2024-03-15T10:00:00.000Z',
       end: '2024-03-15T11:00:00.000Z',
@@ -87,7 +87,7 @@ describe('TodoView', () => {
     const store = useCalendarStore.getState()
     store.addEvent({
       id: 'task-1',
-      calendarId: 'cal-1',
+      calendarId: 'default',
       title: 'Active Task',
       start: '2024-03-15T10:00:00.000Z',
       end: '2024-03-15T11:00:00.000Z',
@@ -97,7 +97,7 @@ describe('TodoView', () => {
     })
     store.addEvent({
       id: 'task-2',
-      calendarId: 'cal-1',
+      calendarId: 'default',
       title: 'Completed Task',
       start: '2024-03-15T10:00:00.000Z',
       end: '2024-03-15T11:00:00.000Z',
@@ -117,7 +117,7 @@ describe('TodoView', () => {
     const store = useCalendarStore.getState()
     store.addEvent({
       id: 'task-1',
-      calendarId: 'cal-1',
+      calendarId: 'default',
       title: 'Active Task',
       start: '2024-03-15T10:00:00.000Z',
       end: '2024-03-15T11:00:00.000Z',
@@ -127,7 +127,7 @@ describe('TodoView', () => {
     })
     store.addEvent({
       id: 'task-2',
-      calendarId: 'cal-1',
+      calendarId: 'default',
       title: 'Completed Task',
       start: '2024-03-15T10:00:00.000Z',
       end: '2024-03-15T11:00:00.000Z',
@@ -147,7 +147,7 @@ describe('TodoView', () => {
     const store = useCalendarStore.getState()
     store.addEvent({
       id: 'task-1',
-      calendarId: 'cal-1',
+      calendarId: 'default',
       title: 'Task with description',
       description: 'This is a description',
       start: '2024-03-15T10:00:00.000Z',
@@ -158,5 +158,16 @@ describe('TodoView', () => {
 
     renderWithRouter(<TodoView />)
     expect(screen.getByText('This is a description')).toBeInTheDocument()
+  })
+
+  it('renders a subtask directly below its parent', () => {
+    const store = useCalendarStore.getState()
+    store.addEvent({ id: 'parent', calendarId: 'default', title: 'Parent task', start: '2024-03-15T10:00:00.000Z', end: '2024-03-15T10:00:00.000Z', isAllDay: false, type: 'task' })
+    store.addEvent({ id: 'child', calendarId: 'default', title: 'Child task', parentTaskId: 'parent', start: '2024-03-15T10:00:00.000Z', end: '2024-03-15T10:00:00.000Z', isAllDay: false, type: 'task' })
+
+    renderWithRouter(<TodoView />)
+
+    expect(screen.getByText('Parent task').compareDocumentPosition(screen.getByText('Child task')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(screen.getByText('Child task').closest('[data-component="task-row"]')).toHaveAttribute('data-task-depth', '1')
   })
 })

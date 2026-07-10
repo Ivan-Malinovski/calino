@@ -1253,7 +1253,8 @@ export function useCalDAV(): UseCalDAVReturn {
           existingEvent.transparency !== event.transparency ||
           existingEvent.rruleString !== event.rruleString ||
           existingEvent.completed !== event.completed ||
-          existingEvent.priority !== event.priority ||
+           existingEvent.priority !== event.priority ||
+           existingEvent.parentTaskId !== event.parentTaskId ||
           existingEvent.dueDate !== event.dueDate ||
           existingEvent.type !== event.type ||
           JSON.stringify(existingEvent.categories ?? []) !== JSON.stringify(event.categories ?? []) ||

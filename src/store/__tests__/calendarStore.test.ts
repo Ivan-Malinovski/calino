@@ -55,6 +55,90 @@ describe('calendarStore', () => {
     })
   })
 
+  describe('completeTask', () => {
+    const addTask = (id: string, parentTaskId?: string) => {
+      useCalendarStore.getState().addEvent({
+        id,
+        calendarId: 'default',
+        title: id,
+        start: '2024-03-15T00:00:00',
+        end: '2024-03-15T00:00:00',
+        isAllDay: true,
+        type: 'task',
+        parentTaskId,
+      })
+    }
+
+    it('completes a task and every nested descendant with consistent task fields', () => {
+      addTask('parent')
+      addTask('child', 'parent')
+      addTask('grandchild', 'child')
+      addTask('unrelated')
+      useCalendarStore.getState().addEvent({
+        id: 'related-event',
+        calendarId: 'default',
+        title: 'Related event',
+        start: '2024-03-15T10:00:00',
+        end: '2024-03-15T11:00:00',
+        isAllDay: false,
+        parentTaskId: 'parent',
+      })
+
+      const updatedTasks = useCalendarStore.getState().completeTask('parent', true)
+
+      expect(updatedTasks.map((task) => task.id)).toEqual(['parent', 'child', 'grandchild'])
+      for (const task of updatedTasks) {
+        expect(task).toEqual(
+          expect.objectContaining({
+            completed: true,
+            taskStatus: 'COMPLETED',
+            percentComplete: 100,
+          })
+        )
+      }
+      expect(new Set(updatedTasks.map((task) => task.completedAt)).size).toBe(1)
+      expect(updatedTasks[0].completedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/)
+
+      const eventsById = new Map(useCalendarStore.getState().events.map((event) => [event.id, event]))
+      expect(eventsById.get('unrelated')?.completed).toBeUndefined()
+      expect(eventsById.get('related-event')?.completed).toBeUndefined()
+    })
+
+    it('uncompletes only the selected task and clears its completion metadata', () => {
+      addTask('parent')
+      addTask('child', 'parent')
+      addTask('grandchild', 'child')
+      useCalendarStore.getState().completeTask('parent', true)
+
+      const updatedTasks = useCalendarStore.getState().completeTask('parent', false)
+
+      expect(updatedTasks).toEqual([
+        expect.objectContaining({
+          id: 'parent',
+          completed: false,
+          taskStatus: 'NEEDS-ACTION',
+          percentComplete: 0,
+          completedAt: undefined,
+        }),
+      ])
+      const eventsById = new Map(useCalendarStore.getState().events.map((event) => [event.id, event]))
+      expect(eventsById.get('child')).toEqual(
+        expect.objectContaining({
+          completed: true,
+          taskStatus: 'COMPLETED',
+          percentComplete: 100,
+        })
+      )
+      expect(eventsById.get('grandchild')).toEqual(
+        expect.objectContaining({
+          completed: true,
+          taskStatus: 'COMPLETED',
+          percentComplete: 100,
+        })
+      )
+    })
+  })
+
   describe('deleteEvent', () => {
     it('removes an event from the store', () => {
       const store = useCalendarStore.getState()

@@ -18,7 +18,7 @@ interface MiniTasksSectionProps {
 export function MiniTasksSection({ isExpanded, onToggle }: MiniTasksSectionProps): JSX.Element {
   const prefersReducedMotion = useReducedMotion()
   const events = useCalendarStore((state) => state.events)
-  const updateEvent = useCalendarStore((state) => state.updateEvent)
+  const completeTask = useCalendarStore((state) => state.completeTask)
   const openModal = useCalendarStore((state) => state.openModal)
   const { updateEvent: updateCalDAVEvent } = useCalDAV()
   const [hoveredTask, setHoveredTask] = useState<string | null>(null)
@@ -78,11 +78,10 @@ export function MiniTasksSection({ isExpanded, onToggle }: MiniTasksSectionProps
 
     setTimeout(async () => {
       const newCompleted = !task.completed
-      updateEvent(task.id, { completed: newCompleted })
+      const updatedTasks = completeTask(task.id, newCompleted)
       setCompletingTaskId(null)
-      if (!task.calendarId) return
       try {
-        await updateCalDAVEvent(task.calendarId, { ...task, completed: newCompleted })
+        await Promise.all(updatedTasks.map((updatedTask) => updateCalDAVEvent(updatedTask.calendarId, updatedTask)))
       } catch {
         // error handled by useCalDAV
       }

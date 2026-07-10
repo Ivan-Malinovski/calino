@@ -93,6 +93,7 @@ export const useCalendarStore = create<CalendarStore>()(
       selectedDate: null,
       selectedEndDate: null,
       initialTitle: null,
+      subtaskParentId: null,
       selectedEventType: 'event',
       showAddCalendar: false,
       isOverlayOpen: false,
@@ -188,6 +189,51 @@ export const useCalendarStore = create<CalendarStore>()(
           events: state.events.map((e) => (e.id === id ? { ...e, ...safeUpdates } : e)),
         }))
         bumpRangeExpansionVersion()
+      },
+
+      completeTask: (id: string, completed: boolean): CalendarEvent[] => {
+        const events = get().events
+        const selectedTask = events.find((event) => event.id === id && event.type === 'task')
+        if (!selectedTask) return []
+
+        const affectedIds = new Set([id])
+        if (completed) {
+          // Walk the full task tree so nested descendants are completed too.
+          let foundDescendant = true
+          while (foundDescendant) {
+            foundDescendant = false
+            for (const event of events) {
+              if (
+                event.type === 'task' &&
+                event.parentTaskId &&
+                affectedIds.has(event.parentTaskId) &&
+                !affectedIds.has(event.id)
+              ) {
+                affectedIds.add(event.id)
+                foundDescendant = true
+              }
+            }
+          }
+        }
+
+        const completedAt = completed ? new Date().toISOString() : undefined
+        const updatedTasks = events
+          .filter((event) => affectedIds.has(event.id))
+          .map((event) => ({
+            ...event,
+            completed,
+            taskStatus: completed ? 'COMPLETED' : 'NEEDS-ACTION',
+            percentComplete: completed ? 100 : 0,
+            completedAt,
+          }))
+
+        const updatedTasksById = new Map(updatedTasks.map((task) => [task.id, task]))
+        set({
+          events: events.map((event) => updatedTasksById.get(event.id) ?? event),
+        })
+        bumpRangeExpansionVersion()
+
+        return updatedTasks
       },
 
       deleteEvent: (id: string): void => {
@@ -459,7 +505,8 @@ export const useCalendarStore = create<CalendarStore>()(
         endDate?: string,
         eventId?: string,
         mode?: EventType,
-        initialTitle?: string
+        initialTitle?: string,
+        parentTaskId?: string
       ): void => {
         set({
           isModalOpen: true,
@@ -468,6 +515,7 @@ export const useCalendarStore = create<CalendarStore>()(
           selectedEndDate: endDate ?? null,
           selectedEventType: mode ?? 'event',
           initialTitle: initialTitle ?? null,
+          subtaskParentId: parentTaskId ?? null,
         })
       },
 
@@ -478,6 +526,7 @@ export const useCalendarStore = create<CalendarStore>()(
           selectedDate: null,
           selectedEndDate: null,
           initialTitle: null,
+          subtaskParentId: null,
           selectedEventType: 'event',
         })
       },

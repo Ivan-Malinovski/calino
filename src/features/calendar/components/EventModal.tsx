@@ -33,6 +33,7 @@ export function EventModal(): JSX.Element | null {
   const selectedDate = useCalendarStore((state) => state.selectedDate)
   const selectedEndDate = useCalendarStore((state) => state.selectedEndDate)
   const initialTitle = useCalendarStore((state) => state.initialTitle)
+  const subtaskParentId = useCalendarStore((state) => state.subtaskParentId)
   const selectedEventType = useCalendarStore((state) => state.selectedEventType)
   const events = useCalendarStore((state) => state.events)
   const calendars = useCalendarStore((state) => state.calendars)
@@ -40,7 +41,9 @@ export function EventModal(): JSX.Element | null {
   const addEvent = useCalendarStore((state) => state.addEvent)
   const deleteEvent = useCalendarStore((state) => state.deleteEvent)
   const updateEvent = useCalendarStore((state) => state.updateEvent)
+  const completeTask = useCalendarStore((state) => state.completeTask)
   const closeModal = useCalendarStore((state) => state.closeModal)
+  const openModal = useCalendarStore((state) => state.openModal)
   const [isClosing, setIsClosing] = useState(false)
   // Re-entrancy guard for the async save path. The ref is the synchronous
   // trip-wire (state updates don't commit until the next render); the state
@@ -125,6 +128,7 @@ export function EventModal(): JSX.Element | null {
   const [showDescription, setShowDescription] = useState(!!initialState.description)
   const [attachments, setAttachments] = useState<CalendarAttachment[]>([])
   const [relatedTo, setRelatedTo] = useState<string[]>([])
+  const [parentTaskId, setParentTaskId] = useState<string | undefined>(undefined)
 
   // Smart defaults: track whether the user has manually overridden the
   // calendar or the event length, so learned suggestions only fill fields the
@@ -372,6 +376,9 @@ export function EventModal(): JSX.Element | null {
       calendarTouchedRef.current = false
       durationTouchedRef.current = false
 
+      const requestedParent = subtaskParentId
+        ? currentEvents.find((event) => event.id === subtaskParentId && event.type === 'task')
+        : undefined
       // Seed from formDefaults; if the caller passed an initialTitle (e.g. the
       // TodoView composer), override with that. This means the user's typed
       // text isn't lost when they press Enter in the inline composer.
@@ -383,7 +390,7 @@ export function EventModal(): JSX.Element | null {
       setEndDate(formDefaults.endDate)
       setEndTime(formDefaults.endTime)
       setIsAllDay(formDefaults.isAllDay)
-      setCalendarId(formDefaults.calendarId)
+      setCalendarId(requestedParent?.calendarId ?? formDefaults.calendarId)
       setRecurring(formDefaults.recurring)
       setRecurrence(formDefaults.recurrence)
       setInterval(formDefaults.interval)
@@ -400,6 +407,7 @@ export function EventModal(): JSX.Element | null {
       setShowDescription(!!formDefaults.description)
       setSelectedCategories(formDefaults.categories)
       setRelatedTo(formDefaults.relatedTo)
+      setParentTaskId(currentEvent?.parentTaskId ?? requestedParent?.id)
 
       const existingEvent = selectedEventId
         ? currentEvents.find((e) => e.id === selectedEventId)
@@ -415,7 +423,7 @@ export function EventModal(): JSX.Element | null {
         setCompleted(existingEvent.completed || false)
         setPriority(existingEvent.priority)
       } else if (currentSelectedEventType === 'task') {
-        setDueDate(selectedDate || format(new Date(), 'yyyy-MM-dd'))
+        setDueDate(requestedParent?.dueDate?.split('T')[0] || selectedDate || format(new Date(), 'yyyy-MM-dd'))
         setDueTime('09:00')
         setDueAllDay(true)
         setCompleted(false)
@@ -429,7 +437,7 @@ export function EventModal(): JSX.Element | null {
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally only reset on user-initiated event/date/endDate changes
-  }, [selectedEventId, selectedDate, selectedEndDate])
+  }, [selectedEventId, selectedDate, selectedEndDate, subtaskParentId])
 
   // Auto-focus title input when creating a new event
   useEffect(() => {
@@ -447,6 +455,21 @@ export function EventModal(): JSX.Element | null {
     : undefined
   const eventType = existingEventForMode?.type
   const isTaskMode = selectedEventType === 'task' || eventType === 'task'
+  const parentTaskOptions = useMemo(() => {
+    if (!isTaskMode) return []
+    const excludedIds = new Set<string>([selectedEventId ?? ''])
+    let changed = true
+    while (changed) {
+      changed = false
+      for (const task of events) {
+        if (task.parentTaskId && excludedIds.has(task.parentTaskId) && !excludedIds.has(task.id)) {
+          excludedIds.add(task.id)
+          changed = true
+        }
+      }
+    }
+    return events.filter((task) => task.type === 'task' && task.calendarId === calendarId && !excludedIds.has(task.id))
+  }, [calendarId, events, isTaskMode, selectedEventId])
 
   const hasChanges = useMemo(() => {
     if (!existingEventForMode) return true
@@ -466,6 +489,7 @@ export function EventModal(): JSX.Element | null {
         dueAllDay !== (existingEventForMode.isAllDay ?? true) ||
         completed !== (existingEventForMode.completed || false) ||
         priority !== existingEventForMode.priority ||
+        parentTaskId !== existingEventForMode.parentTaskId ||
         calendarId !== existingEventForMode.calendarId ||
         JSON.stringify(selectedCategories) !== JSON.stringify(existingEventForMode.categories || []) ||
         JSON.stringify(relatedTo) !== JSON.stringify(existingEventForMode.relatedTo || []) ||
@@ -565,6 +589,7 @@ export function EventModal(): JSX.Element | null {
     dueAllDay,
     completed,
     priority,
+    parentTaskId,
     recurring,
     recurrence,
     interval,
@@ -885,12 +910,17 @@ export function EventModal(): JSX.Element | null {
             dueDate: taskDueDate,
             completed: isTaskMode ? completed : undefined,
             priority: isTaskMode ? priority : undefined,
+            parentTaskId: isTaskMode ? parentTaskId : undefined,
             reminders: isTaskMode ? undefined : reminders,
             transparency: isTaskMode ? undefined : transparency,
             categories: selectedCategories,
             relatedTo: relatedTo.length > 0 ? relatedTo : undefined,
             attachments: attachments.length > 0 ? attachments : undefined,
           })
+          const cascadedTasks =
+            isTaskMode && completed && !events.find((event) => event.id === eventId)?.completed
+              ? completeTask(eventId!, true)
+              : []
           // Sync IndexedDB with current attachments
           if (attachments.length > 0) {
             putAttachments(eventId!, attachments).catch(() => {})
@@ -919,6 +949,7 @@ export function EventModal(): JSX.Element | null {
                 dueDate: taskDueDate,
                 completed: isTaskMode ? completed : undefined,
                 priority: isTaskMode ? priority : undefined,
+                parentTaskId: isTaskMode ? parentTaskId : undefined,
                 reminders: isTaskMode ? undefined : reminders,
                 transparency: isTaskMode ? undefined : transparency,
                 categories: selectedCategories,
@@ -938,12 +969,18 @@ export function EventModal(): JSX.Element | null {
                 dueDate: taskDueDate,
                 completed: isTaskMode ? completed : undefined,
                 priority: isTaskMode ? priority : undefined,
+                parentTaskId: isTaskMode ? parentTaskId : undefined,
                 reminders: isTaskMode ? undefined : reminders,
                 transparency: isTaskMode ? undefined : transparency,
                 categories: selectedCategories,
                 relatedTo: relatedTo.length > 0 ? relatedTo : undefined,
                 attachments: attachments.length > 0 ? attachments : undefined,
               }
+            )
+            await Promise.all(
+              cascadedTasks
+                .filter((task) => task.id !== eventId)
+                .map((task) => safeCalDAVUpdate(updateCalDAVEvent, task.calendarId, task, task))
             )
           }
         }
@@ -971,6 +1008,7 @@ export function EventModal(): JSX.Element | null {
           dueDate: taskDueDate,
           completed: isTaskMode ? completed : undefined,
           priority: isTaskMode ? priority : undefined,
+          parentTaskId: isTaskMode ? parentTaskId : undefined,
           reminders: isTaskMode ? undefined : reminders,
           transparency: isTaskMode ? undefined : transparency,
           categories: selectedCategories,
@@ -1183,9 +1221,13 @@ export function EventModal(): JSX.Element | null {
               onDueTimeChange={setDueTime}
               dueAllDay={dueAllDay}
               onDueAllDayChange={setDueAllDay}
-              priority={priority}
-              onPriorityChange={setPriority}
-            />
+               priority={priority}
+               onPriorityChange={setPriority}
+               parentTaskId={parentTaskId}
+               parentTasks={parentTaskOptions}
+               onParentTaskChange={setParentTaskId}
+               onAddSubtask={selectedEventId ? () => openModal(undefined, undefined, undefined, 'task', undefined, selectedEventId) : undefined}
+             />
           )}
 
           {!isTaskMode && (

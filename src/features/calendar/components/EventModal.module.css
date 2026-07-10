@@ -1163,3 +1163,25 @@
 .contactFormModal {
   width: 560px;
 }
+.secondaryButton {
+  align-self: end;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--panel);
+  color: var(--ink-2);
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  padding: 8px 10px;
+}
+
+.secondaryButton:hover {
+  color: var(--ink);
+  background: var(--surface-bg);
+}
+
+.helperText {
+  margin-bottom: 6px;
+  color: var(--ink-3);
+  font-size: 12px;
+}

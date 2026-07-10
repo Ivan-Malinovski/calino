@@ -932,6 +932,14 @@ export function icalVtodoToCalendarEvent(vtodo: ICAL.Component, calendarId: stri
 
   const sequence = seqProp ? parseInt(seqProp.getFirstValue() as string, 10) : undefined
 
+  const parentTaskId = vtodo
+    .getAllProperties('related-to')
+    .find((prop) => {
+      const reltype = prop.getParameter('reltype')
+      return reltype === undefined || (typeof reltype === 'string' && reltype.toUpperCase() === 'PARENT')
+    })
+    ?.getFirstValue()
+
   return {
     id: uidProp ? (uidProp.getFirstValue() as string) : uuidv4(),
     calendarId,
@@ -947,6 +955,7 @@ export function icalVtodoToCalendarEvent(vtodo: ICAL.Component, calendarId: stri
     // R2.5 — Carry the raw status and original completion timestamp.
     taskStatus,
     completedAt,
+    parentTaskId: typeof parentTaskId === 'string' ? parentTaskId : undefined,
     priority,
     percentComplete,
     sequence,
@@ -982,6 +991,11 @@ export function calendarEventToIcalVtodo(task: CalendarEvent): ICAL.Component {
 
   if (task.categories && task.categories.length > 0) {
     vtodo.updatePropertyWithValue('categories', task.categories.join(','))
+  }
+
+  if (task.parentTaskId) {
+    const relatedTo = vtodo.addPropertyWithValue('related-to', task.parentTaskId)
+    relatedTo.setParameter('reltype', 'PARENT')
   }
 
   if (task.priority) {
