@@ -688,25 +688,55 @@ export function useCalDAV(): UseCalDAVReturn {
 
         const client = await createCalDAVClient(account.serverUrl, credential, account.proxyUrl)
         const accountCalendars = storage.getCalendarsByAccountId(accountId)
+        let calendarsToSync = accountCalendars
 
-        // Refresh collection capabilities so accounts saved before component
-        // support was persisted are migrated on their next normal sync.
+        // Re-discover collections on every sync. This migrates capabilities
+        // saved by older versions and picks up calendars created elsewhere.
         try {
           const serverCalendars = await client.fetchCalendars()
-          for (const storedCalendar of accountCalendars) {
-            const serverCalendar = serverCalendars.find((cal) => cal.url === storedCalendar.url)
-            if (!serverCalendar?.supportedComponents) continue
+          const storedByUrl = new Map(accountCalendars.map((calendar) => [calendar.url, calendar]))
+          const discoveredCalendars = [...accountCalendars]
+          const caldavDebugMode = useSettingsStore.getState().caldavDebugMode
 
-            storage.updateCalendar(storedCalendar.id, {
-              supportedComponents: serverCalendar.supportedComponents,
-            })
-            storeUpdateCalendar(storedCalendar.id, {
-              supportedComponents: serverCalendar.supportedComponents,
-            })
+          for (const serverCalendar of serverCalendars) {
+            const storedCalendar = storedByUrl.get(serverCalendar.url)
+            if (storedCalendar) {
+              if (serverCalendar.supportedComponents) {
+                storage.updateCalendar(storedCalendar.id, {
+                  supportedComponents: serverCalendar.supportedComponents,
+                })
+                storeUpdateCalendar(storedCalendar.id, {
+                  supportedComponents: serverCalendar.supportedComponents,
+                })
+              }
+              continue
+            }
+
+            const newCalendar = { ...serverCalendar, accountId }
+            storage.saveCalendar(newCalendar)
+            discoveredCalendars.push(newCalendar)
+
+            const isSettingsCalendar =
+              serverCalendar.name === 'Calino Settings' ||
+              serverCalendar.url?.includes('calino-settings')
+            if (!isSettingsCalendar || caldavDebugMode) {
+              storeAddCalendar({
+                id: serverCalendar.id,
+                name: serverCalendar.name,
+                color: serverCalendar.color,
+                isVisible: serverCalendar.isVisible,
+                isDefault: serverCalendar.isDefault,
+                accountId,
+                showTasksInViews: true,
+                supportedComponents: serverCalendar.supportedComponents,
+              })
+            }
           }
+
+          calendarsToSync = discoveredCalendars
           setCalendars(storage.getAllCalendars())
         } catch (error) {
-          console.warn('[CalDAV] Could not refresh calendar capabilities:', error)
+          console.warn('[CalDAV] Could not refresh calendar collections:', error)
         }
 
         const start = '1970-01-01T00:00:00.000Z'
@@ -720,7 +750,7 @@ export function useCalDAV(): UseCalDAVReturn {
         // Re-derive duplicate-UID issues from scratch each sync (#22).
         useCalendarStore.getState().clearDuplicateUidIssues()
 
-        for (const cal of accountCalendars) {
+        for (const cal of calendarsToSync) {
           const fetchedEvents = await client.fetchEvents(cal.url, start, end)
 
           // Snapshot pending deletes AFTER the network fetch, as late as possible

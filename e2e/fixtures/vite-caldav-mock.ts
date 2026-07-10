@@ -55,23 +55,31 @@ export function caldavMockPlugin(): Plugin {
           href: string,
           props: Array<{ name: string; href?: string; value?: string; raw?: boolean }>
         ): string => {
+          const qualifiedName = (name: string): string => {
+            if (name.startsWith('DAV:')) return `D:${name.slice(4)}`
+            if (name.startsWith('CAL:')) return `C:${name.slice(4)}`
+            if (name.startsWith('http://apple.com/ns/ical/')) {
+              return `A:${name.slice('http://apple.com/ns/ical/'.length)}`
+            }
+            return name
+          }
           const propTags = props
             .map((p) => {
-              const tag = p.name.includes(':') ? p.name.split(':').pop()! : p.name
+              const tag = qualifiedName(p.name)
               if (p.href !== undefined) {
-                return `<${tag}><${p.name}><href>${esc(p.href)}</href></${p.name}></${tag}>`
+                return `<${tag}><D:href>${esc(p.href)}</D:href></${tag}>`
               }
               if (p.value === undefined || p.value === '') {
-                return `<${tag}><${p.name}/></${tag}>`
+                return `<${tag}/>`
               }
-              return `<${tag}><${p.name}>${p.raw ? p.value : esc(p.value)}</${p.name}></${tag}>`
+              return `<${tag}>${p.raw ? p.value : esc(p.value)}</${tag}>`
             })
             .join('')
-          return `<response><href>${esc(href)}</href><propstat><prop>${propTags}</prop><status>HTTP/1.1 200 OK</status></propstat></response>`
+          return `<D:response><D:href>${esc(href)}</D:href><D:propstat><D:prop>${propTags}</D:prop><D:status>HTTP/1.1 200 OK</D:status></D:propstat></D:response>`
         }
 
         const write207 = (responses: string[]) => {
-          const body = `<?xml version="1.0" encoding="utf-8"?>\n<multistatus xmlns="DAV:">\n  ${responses.join('\n  ')}\n</multistatus>`
+          const body = `<?xml version="1.0" encoding="utf-8"?>\n<D:multistatus xmlns:D="DAV:" xmlns:C="urn:ietf:params:xml:ns:caldav" xmlns:A="http://apple.com/ns/ical/">\n  ${responses.join('\n  ')}\n</D:multistatus>`
           res.writeHead(207, { 'Content-Type': 'application/xml; charset=utf-8' })
           res.end(body)
         }
@@ -101,7 +109,7 @@ export function caldavMockPlugin(): Plugin {
           return write207([
             responseTag(`${origin}/mock-caldav/dav/principals/user/`, [
               {
-                name: 'DAV:calendar-home-set',
+                name: 'CAL:calendar-home-set',
                 href: `${origin}/mock-caldav/dav/calendars/user/`,
               },
             ]),
@@ -114,13 +122,15 @@ export function caldavMockPlugin(): Plugin {
             responseTag(calendarUrl, [
               {
                 name: 'DAV:resourcetype',
-                value: '<DAV:collection/><CAL:calendar xmlns:CAL="urn:ietf:params:xml:ns:caldav"/>',
+                value: '<D:collection/><C:calendar/>',
+                raw: true,
               },
               { name: 'DAV:displayname', value: 'Personal' },
               { name: 'http://apple.com/ns/ical/calendar-color', value: '#3B82F6' },
               {
                 name: 'CAL:supported-calendar-component-set',
-                value: '<CAL:comp name="VEVENT"/><CAL:comp name="VTODO"/><CAL:comp name="VJOURNAL"/>',
+                value: '<C:comp name="VEVENT"/><C:comp name="VTODO"/><C:comp name="VJOURNAL"/>',
+                raw: true,
               },
             ]),
           ])
@@ -134,7 +144,8 @@ export function caldavMockPlugin(): Plugin {
               { name: 'http://apple.com/ns/ical/calendar-color', value: '#3B82F6' },
               {
                 name: 'CAL:supported-calendar-component-set',
-                value: '<CAL:comp name="VEVENT"/><CAL:comp name="VTODO"/><CAL:comp name="VJOURNAL"/>',
+                value: '<C:comp name="VEVENT"/><C:comp name="VTODO"/><C:comp name="VJOURNAL"/>',
+                raw: true,
               },
             ]),
           ])

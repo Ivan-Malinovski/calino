@@ -457,6 +457,12 @@
   text-transform: uppercase;
 }
 
+.calendarHeaderActions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
 .addCalendarButton {
   background: none;
   border: none;
@@ -474,6 +480,15 @@
 .addCalendarButton:hover {
   background: rgba(var(--ink-raw, 44, 40, 33), 0.06);
   color: var(--ink);
+}
+
+.addCalendarButton:disabled {
+  cursor: default;
+  opacity: 0.4;
+}
+
+.headerSyncing svg {
+  animation: spin 1s linear infinite;
 }
 
 .calendarItem {

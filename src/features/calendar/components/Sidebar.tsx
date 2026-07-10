@@ -33,6 +33,8 @@ import { EmptyState } from '@/components/common/EmptyState'
 import { MiniTasksSection } from './MiniTasksSection'
 import styles from './Sidebar.module.css'
 
+let hasAutoSyncedCalendars = false
+
 interface SidebarProps {
   isOpen?: boolean
   onClose?: () => void
@@ -79,6 +81,7 @@ export function Sidebar({ isOpen = false, onClose, isCollapsed: controlledCollap
     }
   }, [])
   const [syncingCalendarId, setSyncingCalendarId] = useState<string | null>(null)
+  const [isSyncingAll, setIsSyncingAll] = useState(false)
   const [syncStatus, setSyncStatus] = useState<Record<string, 'success' | 'error'>>({})
   const [contextMenu, setContextMenu] = useState<{
     x: number
@@ -109,8 +112,45 @@ export function Sidebar({ isOpen = false, onClose, isCollapsed: controlledCollap
   const showAddCalendar = useCalendarStore((state) => state.showAddCalendar)
   const setShowAddCalendar = useCalendarStore((state) => state.setShowAddCalendar)
   const globalSyncStatus = useCalDAVSyncStore((state) => state.status)
-  const { syncAccount, syncState, updateCalendar: updateCalDAVCalendar, deleteCalendarFromServer } = useCalDAV()
+  const { accounts, syncAccount, syncState, updateCalendar: updateCalDAVCalendar, deleteCalendarFromServer } = useCalDAV()
   const navigate = useNavigate()
+
+  const accountIds = useMemo(
+    () => [
+      ...new Set([
+        ...accounts.map((account) => account.id),
+        ...calendars.flatMap((calendar) => calendar.accountId ?? []),
+      ]),
+    ],
+    [accounts, calendars]
+  )
+
+  const syncAllAccounts = useCallback(async (): Promise<void> => {
+    for (const accountId of accountIds) {
+      await syncAccount(accountId)
+    }
+  }, [accountIds, syncAccount])
+
+  const handleSyncAll = async (): Promise<void> => {
+    if (accountIds.length === 0 || isSyncingAll || globalSyncStatus === 'syncing') return
+    setIsSyncingAll(true)
+    try {
+      await syncAllAccounts()
+      showToast('All calendars synced.')
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Failed to sync calendars')
+    } finally {
+      setIsSyncingAll(false)
+    }
+  }
+
+  useEffect(() => {
+    if (hasAutoSyncedCalendars || accountIds.length === 0) return
+    hasAutoSyncedCalendars = true
+    syncAllAccounts().catch((error) => {
+      console.warn('[CalDAV] Automatic calendar sync failed:', error)
+    })
+  }, [accountIds.length, syncAllAccounts])
 
   // Initialize miniDate from the store on first render
   useEffect(() => {
@@ -489,7 +529,24 @@ export function Sidebar({ isOpen = false, onClose, isCollapsed: controlledCollap
         <div className={styles.calendars}>
           <div className={styles.sectionTitleRow}>
             <span className={styles.sectionTitle}>Calendars</span>
-            <div className={styles.addCalendarDropdown}>
+            <div className={styles.calendarHeaderActions}>
+              <button
+                className={`${styles.addCalendarButton} ${isSyncingAll || globalSyncStatus === 'syncing' ? styles.headerSyncing : ''}`}
+                onClick={handleSyncAll}
+                title="Sync all calendars"
+                aria-label="Sync all calendars"
+                data-component="sync-all-calendars"
+                disabled={
+                  accountIds.length === 0 ||
+                  isSyncingAll ||
+                  globalSyncStatus === 'syncing'
+                }
+              >
+                <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M23 4v6h-6M1 20v-6h6" />
+                  <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15" />
+                </svg>
+              </button>
               <button
                 className={styles.addCalendarButton}
                 onClick={() => setShowAddCalendar(true)}

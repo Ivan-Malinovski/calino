@@ -29,6 +29,13 @@ describe('Sidebar', () => {
     expect(screen.getByText('Calendars')).toBeInTheDocument()
   })
 
+  it('shows the sync-all action beside the add-account action', () => {
+    renderWithRouter(<Sidebar />)
+
+    expect(screen.getByRole('button', { name: 'Sync all calendars' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Add CalDAV account' })).toBeInTheDocument()
+  })
+
   it('renders mini calendar', () => {
     renderWithRouter(<Sidebar />)
     expect(screen.getByText('March')).toBeInTheDocument()

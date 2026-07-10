@@ -29,7 +29,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: `pnpm dev --port ${PORT} --strictPort`,
+    command: `CALINO_E2E_MOCK=1 pnpm dev --port ${PORT} --strictPort`,
     url: BASE_URL,
     reuseExistingServer: !IS_CI,
     timeout: 120_000,

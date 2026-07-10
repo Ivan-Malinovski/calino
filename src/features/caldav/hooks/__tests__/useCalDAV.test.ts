@@ -1214,6 +1214,49 @@ describe('useCalDAV', () => {
       expect(result.current.syncState.status).toBe('error')
       expect(result.current.syncState.error).toBe('Credentials not found')
     })
+
+    it('discovers new remote calendars and syncs their events', async () => {
+      const newCalendar = {
+        ...mockCalendar,
+        id: 'cal-2',
+        url: 'https://caldav.example.com/cal/new/',
+        name: 'New Calendar',
+        isDefault: false,
+        supportedComponents: ['VEVENT'] as const,
+      }
+      const fetchEvents = vi.fn().mockResolvedValue([])
+
+      mockAccountStorage.getAllAccounts.mockReturnValue([mockAccount])
+      mockAccountStorage.getAllCalendars.mockReturnValue([mockCalendar])
+      mockAccountStorage.getAccountById.mockReturnValue(mockAccount)
+      mockAccountStorage.getCalendarsByAccountId.mockReturnValue([mockCalendar])
+      mockCalDAVClient.createCalDAVClient.mockResolvedValue({
+        fetchCalendars: vi.fn().mockResolvedValue([mockCalendar, newCalendar]),
+        fetchEvents,
+        createEvent: vi.fn(),
+        updateEvent: vi.fn(),
+        deleteEvent: vi.fn(),
+      } as unknown as Awaited<ReturnType<typeof CalDAVClientModule.createCalDAVClient>>)
+
+      const { result } = renderHook(() => useCalDAV())
+      await waitFor(() => expect(result.current.accounts).toHaveLength(1))
+
+      await act(async () => {
+        await result.current.syncAccount('acc-1')
+      })
+
+      expect(mockAccountStorage.saveCalendar).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'cal-2', accountId: 'acc-1' })
+      )
+      expect(useCalendarStore.getState().calendars).toContainEqual(
+        expect.objectContaining({ id: 'cal-2', name: 'New Calendar' })
+      )
+      expect(fetchEvents).toHaveBeenCalledWith(
+        'https://caldav.example.com/cal/new/',
+        expect.any(String),
+        expect.any(String)
+      )
+    })
   })
 
   // -----------------------------------------------------------------------
