@@ -148,8 +148,9 @@ export function TodoView(): JSX.Element {
 
   const tasks: TaskWithColor[] = useMemo(() => {
     const calendarMap = new Map(calendars.map((c) => [c.id, c.color]))
+    const visibleCalendarIds = new Set(calendars.filter((c) => c.isVisible).map((c) => c.id))
     return events
-      .filter((e) => e.type === 'task')
+      .filter((e) => e.type === 'task' && visibleCalendarIds.has(e.calendarId))
       .map((task) => ({
         ...task,
         calendarColor: calendarMap.get(task.calendarId) || '#888',

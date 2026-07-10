@@ -64,4 +64,55 @@ test.describe('TodoView composer forwards title into modal', () => {
 
     await expect(page.locator('[data-component="modal-card"]')).not.toBeVisible()
   })
+
+  test('hides tasks when their calendar is disabled', async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem(
+        'calino-storage',
+        JSON.stringify({
+          state: {
+            calendars: [
+              {
+                id: 'default',
+                name: 'Personal',
+                color: '#4285F4',
+                isVisible: true,
+                isDefault: true,
+                showTasksInViews: true,
+              },
+              {
+                id: 'work',
+                name: 'Work',
+                color: '#EA4335',
+                isVisible: true,
+                isDefault: false,
+                showTasksInViews: true,
+              },
+            ],
+            events: [
+              {
+                id: 'work-task',
+                calendarId: 'work',
+                title: 'Hidden work task',
+                type: 'task',
+                start: '2026-07-10T09:00:00.000Z',
+                end: '2026-07-10T09:00:00.000Z',
+                isAllDay: false,
+                completed: false,
+              },
+            ],
+          },
+          version: 1,
+        })
+      )
+    })
+
+    await page.goto('/tasks')
+    const todoTask = page.locator('main').getByText('Hidden work task')
+    await expect(todoTask).toBeVisible()
+
+    await page.locator('label').filter({ hasText: 'Work' }).getByRole('checkbox').click()
+
+    await expect(todoTask).not.toBeVisible()
+  })
 })
