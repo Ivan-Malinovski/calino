@@ -1,5 +1,6 @@
 import type { JSX } from 'react'
 import { useRef } from 'react'
+import { format } from 'date-fns'
 import type { CalendarEvent, TaskPriority } from '@/types'
 import { useScrollInput } from '@/hooks/useScrollInput'
 import styles from './EventModal.module.css'
@@ -51,6 +52,7 @@ export function TaskFormFields({
   const dueDateRef = useRef<HTMLInputElement>(null)
   const dueTimeRef = useRef<HTMLInputElement>(null)
   const parentTask = parentTasks.find((task) => task.id === parentTaskId)
+  const hasDueDate = dueDate.trim().length > 0
   useScrollInput([dueDateRef, dueTimeRef])
 
   return (
@@ -71,12 +73,28 @@ export function TaskFormFields({
           <label className={styles.checkbox}>
             <input
               type="checkbox"
-              checked={dueAllDay}
-              onChange={(e) => onDueAllDayChange(e.target.checked)}
+              checked={!hasDueDate}
+              onChange={(e) =>
+                onDueDateChange(e.target.checked ? '' : format(new Date(), 'yyyy-MM-dd'))
+              }
+              data-component="task-no-due-date"
             />
-            <span>Only due date</span>
+            <span>No due date</span>
           </label>
         </div>
+
+        {hasDueDate && (
+          <div className={styles.field}>
+            <label className={styles.checkbox}>
+              <input
+                type="checkbox"
+                checked={dueAllDay}
+                onChange={(e) => onDueAllDayChange(e.target.checked)}
+              />
+              <span>Only due date</span>
+            </label>
+          </div>
+        )}
       </div>
 
       <div className={styles.row} data-component="task-subtasks">
@@ -123,35 +141,38 @@ export function TaskFormFields({
       )}
 
       <div className={styles.row}>
-        <div className={styles.field}>
-          <label className={styles.label} htmlFor="due-date">
-            Due date
-          </label>
-          <input
-            type="date"
-            id="due-date"
-            ref={dueDateRef}
-            value={dueDate.split('T')[0]}
-            onChange={(e) => onDueDateChange(e.target.value)}
-            className={styles.input}
-            required
-          />
-        </div>
+        {hasDueDate && (
+          <>
+            <div className={styles.field}>
+              <label className={styles.label} htmlFor="due-date">
+                Due date
+              </label>
+              <input
+                type="date"
+                id="due-date"
+                ref={dueDateRef}
+                value={dueDate.split('T')[0]}
+                onChange={(e) => onDueDateChange(e.target.value)}
+                className={styles.input}
+              />
+            </div>
 
-        {!dueAllDay && (
-          <div className={styles.field}>
-            <label className={styles.label} htmlFor="due-time">
-              Due time
-            </label>
-            <input
-              type="time"
-              ref={dueTimeRef}
-              id="due-time"
-              value={dueTime}
-              onChange={(e) => onDueTimeChange(e.target.value)}
-              className={styles.input}
-            />
-          </div>
+            {!dueAllDay && (
+              <div className={styles.field}>
+                <label className={styles.label} htmlFor="due-time">
+                  Due time
+                </label>
+                <input
+                  type="time"
+                  ref={dueTimeRef}
+                  id="due-time"
+                  value={dueTime}
+                  onChange={(e) => onDueTimeChange(e.target.value)}
+                  className={styles.input}
+                />
+              </div>
+            )}
+          </>
         )}
 
         <div className={styles.field}>

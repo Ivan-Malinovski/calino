@@ -37,6 +37,24 @@ test.describe('TodoView composer forwards title into modal', () => {
     await expect(titleInput).toHaveValue('Buy milk')
   })
 
+  test('can create a task without a due date', async ({ page }) => {
+    await page.goto('/tasks')
+
+    await page.locator('[data-component="add-task-button"]').click()
+    const composer = page.getByPlaceholder('What needs doing?')
+    await composer.fill('Someday task')
+    await composer.press('Enter')
+
+    const modal = page.locator('[data-component="modal-card"]')
+    await expect(modal).toBeVisible()
+    await modal.locator('[data-component="task-no-due-date"]').check()
+    await modal.locator('[data-component="modal-save"]').click()
+
+    await expect(modal).not.toBeVisible()
+    await expect(page.locator('main').getByText('No due date')).toBeVisible()
+    await expect(page.locator('main').getByText('Someday task')).toBeVisible()
+  })
+
   test('clearing the composer input and pressing Enter does not open the modal', async ({
     page,
   }) => {

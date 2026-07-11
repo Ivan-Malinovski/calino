@@ -483,15 +483,17 @@ export function EventModal(): JSX.Element | null {
     const attachmentsChanged = JSON.stringify(attachments) !== JSON.stringify(existingAttachments)
 
     if (isTaskMode) {
-      const taskDueDate = dueDate || format(parseISO(existingEventForMode.start), 'yyyy-MM-dd')
       const taskTime = dueAllDay ? '00:00:00' : `${dueTime}:00`
-      const currentStart = `${taskDueDate}T${taskTime}`
+      const taskDueDate = dueDate ? (dueAllDay ? dueDate : `${dueDate}T${taskTime}`) : undefined
+      const currentStart = dueDate ? `${dueDate}T${taskTime}` : existingEventForMode.start
       return (
         title !== existingEventForMode.title ||
         description !== (existingEventForMode.description || '') ||
         location !== (existingEventForMode.location || '') ||
         currentStart !== existingEventForMode.start ||
-        dueAllDay !== (existingEventForMode.isAllDay ?? true) ||
+        taskDueDate !== existingEventForMode.dueDate ||
+        (dueDate ? dueAllDay : (existingEventForMode.isAllDay ?? true)) !==
+          (existingEventForMode.isAllDay ?? true) ||
         completed !== (existingEventForMode.completed || false) ||
         priority !== existingEventForMode.priority ||
         parentTaskId !== existingEventForMode.parentTaskId ||
@@ -1221,7 +1223,10 @@ export function EventModal(): JSX.Element | null {
               completed={completed}
               onCompletedChange={setCompleted}
               dueDate={dueDate}
-              onDueDateChange={setDueDate}
+              onDueDateChange={(date) => {
+                setDueDate(date)
+                if (!date) setDueAllDay(true)
+              }}
               dueTime={dueTime}
               onDueTimeChange={setDueTime}
               dueAllDay={dueAllDay}
