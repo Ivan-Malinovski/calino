@@ -701,14 +701,15 @@ export function useCalDAV(): UseCalDAVReturn {
           for (const serverCalendar of serverCalendars) {
             const storedCalendar = storedByUrl.get(serverCalendar.url)
             if (storedCalendar) {
-              if (serverCalendar.supportedComponents) {
-                storage.updateCalendar(storedCalendar.id, {
-                  supportedComponents: serverCalendar.supportedComponents,
-                })
-                storeUpdateCalendar(storedCalendar.id, {
-                  supportedComponents: serverCalendar.supportedComponents,
-                })
+              // Collection metadata is server-authoritative. Keep UI-owned
+              // visibility and default-calendar preferences intact.
+              const updates = {
+                name: serverCalendar.name,
+                color: serverCalendar.color,
+                supportedComponents: serverCalendar.supportedComponents,
               }
+              storage.updateCalendar(storedCalendar.id, updates)
+              storeUpdateCalendar(storedCalendar.id, updates)
               continue
             }
 

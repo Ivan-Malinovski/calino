@@ -42,7 +42,8 @@ export function TimeInput({
   ariaLabel,
   id,
 }: TimeInputProps): JSX.Element {
-  const formattedValue = formatTimeValue(value, timeFormat)
+  const resolvedTimeFormat: TimeFormat = timeFormat === '12h' ? '12h' : '24h'
+  const formattedValue = formatTimeValue(value, resolvedTimeFormat)
   const [draft, setDraft] = useState(formattedValue)
 
   useEffect(() => {
@@ -50,16 +51,20 @@ export function TimeInput({
   }, [formattedValue])
 
   const commit = (): void => {
-    const parsed = parseTimeValue(draft, timeFormat)
-    if (parsed) onChange(parsed)
-    setDraft(formatTimeValue(parsed ?? value, timeFormat))
+    const parsed = parseTimeValue(draft, resolvedTimeFormat)
+    setDraft(formatTimeValue(parsed ?? value, resolvedTimeFormat))
   }
 
   return (
     <input
       type="text"
       value={draft}
-      onChange={(event) => setDraft(event.target.value)}
+      onChange={(event) => {
+        const nextDraft = event.target.value
+        setDraft(nextDraft)
+        const parsed = parseTimeValue(nextDraft, resolvedTimeFormat)
+        if (parsed) onChange(parsed)
+      }}
       onBlur={commit}
       onKeyDown={(event) => {
         if (event.key === 'Enter') event.currentTarget.blur()

@@ -1257,6 +1257,53 @@ describe('useCalDAV', () => {
         expect.any(String)
       )
     })
+
+    it('refreshes remote calendar metadata while preserving local preferences', async () => {
+      const storedCalendar = {
+        ...mockCalendar,
+        name: 'Old calendar name',
+        color: '#4285F4',
+        isVisible: false,
+        supportedComponents: ['VEVENT'] as const,
+      }
+      const serverCalendar = {
+        ...storedCalendar,
+        name: 'Renamed remotely',
+        color: '#FF5722',
+        supportedComponents: ['VEVENT', 'VTODO'] as const,
+      }
+
+      mockAccountStorage.getAllAccounts.mockReturnValue([mockAccount])
+      mockAccountStorage.getAllCalendars.mockReturnValue([storedCalendar])
+      mockAccountStorage.getAccountById.mockReturnValue(mockAccount)
+      mockAccountStorage.getCalendarsByAccountId.mockReturnValue([storedCalendar])
+      mockCalDAVClient.createCalDAVClient.mockResolvedValue({
+        fetchCalendars: vi.fn().mockResolvedValue([serverCalendar]),
+        fetchEvents: vi.fn().mockResolvedValue([]),
+        createEvent: vi.fn(),
+        updateEvent: vi.fn(),
+        deleteEvent: vi.fn(),
+      } as unknown as Awaited<ReturnType<typeof CalDAVClientModule.createCalDAVClient>>)
+
+      const { result } = renderHook(() => useCalDAV())
+      await waitFor(() => expect(useCalendarStore.getState().calendars).toContainEqual(
+        expect.objectContaining({ id: 'cal-1', name: 'Old calendar name' })
+      ))
+
+      await act(async () => {
+        await result.current.syncAccount('acc-1')
+      })
+
+      const updates = {
+        name: 'Renamed remotely',
+        color: '#FF5722',
+        supportedComponents: ['VEVENT', 'VTODO'],
+      }
+      expect(mockAccountStorage.updateCalendar).toHaveBeenCalledWith('cal-1', updates)
+      expect(useCalendarStore.getState().calendars).toContainEqual(
+        expect.objectContaining({ ...updates, id: 'cal-1', isVisible: false, isDefault: true })
+      )
+    })
   })
 
   // -----------------------------------------------------------------------
