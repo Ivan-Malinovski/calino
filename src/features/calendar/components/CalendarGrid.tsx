@@ -500,15 +500,14 @@ export function CalendarGrid(): JSX.Element {
       .filter(
         (event) =>
           event.type === 'task' &&
+          !!event.dueDate &&
           visibleCalendarIds.includes(event.calendarId) &&
           taskCalendarsWithTasks.includes(event.calendarId) &&
           !(hideCompletedTasksInMonthView && event.completed) &&
           (selectedCategoryNames.length === 0 || event.categories?.some((c) => selectedCategoryNames.includes(c)))
       )
       .forEach((task) => {
-        const taskDate = task.dueDate
-          ? format(parseISO(task.dueDate), 'yyyy-MM-dd')
-          : format(parseISO(task.start), 'yyyy-MM-dd')
+        const taskDate = format(parseISO(task.dueDate!), 'yyyy-MM-dd')
         const existing = map.get(taskDate) || []
         map.set(taskDate, [...existing, task])
       })

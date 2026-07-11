@@ -352,12 +352,10 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
     events
       .filter(
         (event) =>
-          event.type === 'task' && visibleCalendarIds.includes(event.calendarId)
+          event.type === 'task' && !!event.dueDate && visibleCalendarIds.includes(event.calendarId)
       )
       .forEach((task) => {
-        const taskDate = task.dueDate
-          ? format(parseISO(task.dueDate), 'yyyy-MM-dd')
-          : format(parseISO(task.start), 'yyyy-MM-dd')
+        const taskDate = format(parseISO(task.dueDate!), 'yyyy-MM-dd')
         const existing = map.get(taskDate) || []
         map.set(taskDate, [...existing, task])
       })

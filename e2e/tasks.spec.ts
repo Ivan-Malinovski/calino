@@ -76,6 +76,30 @@ test('hides tasks from disabled calendars in the sidebar', async ({ page }) => {
   await expect(page.locator('[data-component="tasks-section"]').getByText('Hidden sidebar task')).not.toBeVisible()
 })
 
+test('keeps undated imported tasks out of calendar and agenda views', async ({ page }) => {
+  await clearState(page)
+  const today = new Date().toISOString()
+  await page.addInitScript((today) => {
+    localStorage.setItem('calino-storage', JSON.stringify({
+      state: {
+        calendars: [{ id: 'default', name: 'Offline calendar', color: '#4285F4', isVisible: true, isDefault: true, showTasksInViews: true }],
+        events: [
+          { id: 'undated', calendarId: 'default', title: 'Imported without due date', type: 'task', start: today, end: today, isAllDay: false, completed: false },
+        ],
+      }, version: 1,
+    }))
+  }, today)
+
+  await page.goto('/tasks')
+  await expect(page.locator('main').getByText('Imported without due date')).toBeVisible()
+
+  await page.goto('/month')
+  await expect(page.locator('[data-component="calendar-grid"]').getByText('Imported without due date')).not.toBeVisible()
+
+  await page.goto('/agenda')
+  await expect(page.locator('main').getByText('Imported without due date')).not.toBeVisible()
+})
+
 test('filters all tasks by project without changing calendar visibility', async ({ page }) => {
   await clearState(page)
   await page.addInitScript(() => {

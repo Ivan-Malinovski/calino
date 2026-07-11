@@ -61,7 +61,7 @@ describe('Bug #88: Timed tasks invisible in WeekView', () => {
     store.setCurrentDate('2024-03-15')
   })
 
-  it('shows timed task with only start property', () => {
+  it('does not place an undated task using its technical start property', () => {
     const store = useCalendarStore.getState()
     store.addEvent({
       id: 'task-start-only',
@@ -74,7 +74,7 @@ describe('Bug #88: Timed tasks invisible in WeekView', () => {
     })
 
     renderWithRouter(<WeekView />)
-    expect(screen.getByText('Task with Start')).toBeInTheDocument()
+    expect(screen.queryByText('Task with Start')).not.toBeInTheDocument()
   })
 
   it('shows timed task with only dueDate property', () => {
@@ -111,7 +111,7 @@ describe('Bug #88: Timed tasks invisible in WeekView', () => {
     expect(screen.getByText('Task with Both')).toBeInTheDocument()
   })
 
-  it('does not show all-day tasks as timed events', () => {
+  it('shows all-day tasks with a due date outside the time grid', () => {
     const store = useCalendarStore.getState()
     store.addEvent({
       id: 'task-allday',
@@ -121,6 +121,7 @@ describe('Bug #88: Timed tasks invisible in WeekView', () => {
       end: '2024-03-15T23:59:59',
       isAllDay: true,
       type: 'task',
+      dueDate: '2024-03-15',
     })
 
     renderWithRouter(<WeekView />)

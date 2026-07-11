@@ -95,6 +95,9 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
       if (event.type === 'journal') return
       // When embedded, skip all tasks (shown in DayView header)
       if (embedded && event.type === 'task') return
+      // Undated tasks have a technical start value from their VTODO import;
+      // only tasks with an explicit due date belong on the agenda.
+      if (event.type === 'task' && !event.dueDate) return
       const eventDate = format(parseISO(event.start), 'yyyy-MM-dd')
       // R4.6: push onto a stable array instead of spreading into a new
       // one. The previous `eventMap.set(k, [...existing, item])` was

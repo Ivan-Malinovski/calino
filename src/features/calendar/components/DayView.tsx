@@ -268,10 +268,9 @@ export function DayView({ selectedDate: propDate, onBack }: { selectedDate?: str
     return events.filter(
       (e) =>
         e.type === 'task' &&
+        !!e.dueDate &&
         visibleCalendarIds.includes(e.calendarId) &&
-        (e.dueDate
-          ? format(parseISO(e.dueDate), 'yyyy-MM-dd') === dateKey
-          : format(parseISO(e.start), 'yyyy-MM-dd') === dateKey)
+        format(parseISO(e.dueDate), 'yyyy-MM-dd') === dateKey
     )
   }, [date, events, calendars])
 
