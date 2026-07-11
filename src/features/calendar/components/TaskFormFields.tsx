@@ -3,7 +3,9 @@ import { useRef } from 'react'
 import { format } from 'date-fns'
 import type { CalendarEvent, TaskPriority } from '@/types'
 import { useScrollInput } from '@/hooks/useScrollInput'
+import { useSettingsStore } from '@/store/settingsStore'
 import styles from './EventModal.module.css'
+import { TimeInput } from './TimeInput'
 
 interface TaskFormFieldsProps {
   completed: boolean
@@ -50,10 +52,10 @@ export function TaskFormFields({
   onAddSubtask,
 }: TaskFormFieldsProps): JSX.Element {
   const dueDateRef = useRef<HTMLInputElement>(null)
-  const dueTimeRef = useRef<HTMLInputElement>(null)
+  const timeFormat = useSettingsStore((state) => state.timeFormat)
   const parentTask = parentTasks.find((task) => task.id === parentTaskId)
   const hasDueDate = dueDate.trim().length > 0
-  useScrollInput([dueDateRef, dueTimeRef])
+  useScrollInput([dueDateRef])
 
   return (
     <>
@@ -162,13 +164,14 @@ export function TaskFormFields({
                 <label className={styles.label} htmlFor="due-time">
                   Due time
                 </label>
-                <input
-                  type="time"
-                  ref={dueTimeRef}
-                  id="due-time"
+                <TimeInput
                   value={dueTime}
-                  onChange={(e) => onDueTimeChange(e.target.value)}
+                  timeFormat={timeFormat}
+                  onChange={onDueTimeChange}
                   className={styles.input}
+                  id="due-time"
+                  dataComponent="task-due-time"
+                  ariaLabel="Due time"
                 />
               </div>
             )}

@@ -7,6 +7,7 @@ import { useSettingsStore } from '@/store/settingsStore'
 import { useScrollInput } from '@/hooks/useScrollInput'
 import { pad2 } from '@/lib/datetime'
 import { AttachmentSection } from './AttachmentSection'
+import { TimeInput } from './TimeInput'
 import { getWeekdayLabels } from './weekdayLabels'
 import styles from './EventModal.module.css'
 
@@ -161,13 +162,12 @@ export function EventFormFields({
   const reminderAddBtnRef = useRef<HTMLButtonElement>(null)
   const reminderMenuRef = useRef<HTMLDivElement>(null)
   const firstDayOfWeek = useSettingsStore((state) => state.firstDayOfWeek)
+  const timeFormat = useSettingsStore((state) => state.timeFormat)
   const weekdayLabels = getWeekdayLabels(firstDayOfWeek)
 
   const startDateRef = useRef<HTMLInputElement>(null)
-  const startTimeRef = useRef<HTMLInputElement>(null)
   const endDateRef = useRef<HTMLInputElement>(null)
-  const endTimeRef = useRef<HTMLInputElement>(null)
-  useScrollInput([startDateRef, startTimeRef, endDateRef, endTimeRef])
+  useScrollInput([startDateRef, endDateRef])
 
   // Close reminder dropdown on outside click. The menu is portaled to
   // document.body, so it's outside the button's subtree — check both.
@@ -228,12 +228,10 @@ export function EventFormFields({
               required
             />
             {!isAllDay && (
-              <input
-                type="time"
-                ref={startTimeRef}
+              <TimeInput
                 value={startTime}
-                onChange={(e) => {
-                  const newStart = e.target.value
+                timeFormat={timeFormat}
+                onChange={(newStart) => {
                   onStartTimeChange(newStart)
                   if (startDate === endDate && newStart >= endTime) {
                     // Add 1 hour to the new start time
@@ -243,8 +241,8 @@ export function EventFormFields({
                   }
                 }}
                 className={styles.input}
-                data-component="event-start-time"
-                required
+                dataComponent="event-start-time"
+                ariaLabel="Start time"
               />
             )}
           </div>
@@ -263,14 +261,13 @@ export function EventFormFields({
               required
             />
             {!isAllDay && (
-              <input
-                type="time"
-                ref={endTimeRef}
+              <TimeInput
                 value={endTime}
-                onChange={(e) => onEndTimeChange(e.target.value)}
+                timeFormat={timeFormat}
+                onChange={onEndTimeChange}
                 className={styles.input}
-                data-component="event-end-time"
-                required
+                dataComponent="event-end-time"
+                ariaLabel="End time"
               />
             )}
           </div>
