@@ -882,7 +882,9 @@ export function icalVtodoToCalendarEvent(vtodo: ICAL.Component, calendarId: stri
       8: 3,
       9: 3,
     }
-    priority = priorityMap[priorityValue] ?? 2
+    // RFC 5545 defines 0 as an undefined priority. Planify serializes its
+    // "None" option as PRIORITY:0, while other clients omit the property.
+    priority = priorityMap[priorityValue]
   }
 
   let percentComplete: number | undefined

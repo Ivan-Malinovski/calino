@@ -626,6 +626,21 @@ END:VCALENDAR`
         expect(task.completed).toBe(true)
       })
 
+      it('treats PRIORITY:0 as no priority', () => {
+        const iCalData = `BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VTODO
+UID:planify-none
+SUMMARY:Planify task without priority
+PRIORITY:0
+END:VTODO
+END:VCALENDAR`
+
+        const tasks = parseICALTask(iCalData, 'cal-1')
+
+        expect(tasks[0].priority).toBeUndefined()
+      })
+
       it('handles multiple tasks', () => {
         const iCalData = `BEGIN:VCALENDAR
 VERSION:2.0
