@@ -561,7 +561,7 @@ export function CalendarHeader({
                 )
                 if (items.length === 0) return
                 const currentIndex = items.findIndex((el) => el === document.activeElement)
-                let nextIndex = currentIndex
+                let nextIndex: number
                 if (e.key === 'ArrowDown') {
                   e.preventDefault()
                   nextIndex = currentIndex < 0 ? 0 : (currentIndex + 1) % items.length

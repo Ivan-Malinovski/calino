@@ -46,7 +46,7 @@ export function useScrollInput(
       if (steps === 0) return
       const dir = steps > 0 ? -1 : 1
 
-      let newValue = ''
+      let newValue: string
 
       if (input.type === 'date') {
         const [y, m, d] = (input.value || '').split('-').map(Number)

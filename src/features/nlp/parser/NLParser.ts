@@ -118,7 +118,7 @@ export class NLParser {
     let endDate: Date | undefined
     let isAllDay = false
     let parsedText = ''
-    let confidence = 0.5
+    let confidence: number
 
     if (parsed && parsed.length > 0) {
       const firstMatch = parsed[0]
