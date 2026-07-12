@@ -53,4 +53,44 @@ test.describe('Sidebar sections', () => {
     await expect(categorySection).toHaveAttribute('aria-expanded', 'true')
     await expect(page.getByRole('button', { name: 'Work' })).toBeVisible()
   })
+
+  test('calendar color picker applies a preset color', async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem(
+        'calino-storage',
+        JSON.stringify({
+          state: {
+            calendars: [
+              {
+                id: 'default',
+                name: 'Offline calendar',
+                color: '#4285F4',
+                isVisible: true,
+                isDefault: true,
+                showTasksInViews: true,
+              },
+            ],
+          },
+          version: 1,
+        })
+      )
+    })
+
+    await page.goto('/month')
+    await page.locator('[data-component="calendar-section-toggle"]').click()
+
+    const colorButton = page.getByRole('button', { name: 'Change Offline calendar color' })
+    await colorButton.click()
+    const picker = page.locator('[data-component="calendar-color-picker"]')
+    await expect(picker).toBeVisible()
+    const customColor = picker.getByLabel('Custom color for Offline calendar').locator('..')
+    await expect(customColor).toBeVisible()
+    const firstPreset = picker.getByRole('button', { name: 'Use #4285F4 for Offline calendar' })
+    const [firstPresetBox, customColorBox] = await Promise.all([firstPreset.boundingBox(), customColor.boundingBox()])
+    expect(firstPresetBox?.y).toBe(customColorBox?.y)
+
+    await picker.getByRole('button', { name: 'Use #EA4335 for Offline calendar' }).click()
+    await expect(picker).toBeHidden()
+    await expect(colorButton).toHaveCSS('background-color', 'rgb(234, 67, 53)')
+  })
 })

@@ -19,7 +19,7 @@ import {
   subMonths,
   parseISO,
 } from 'date-fns'
-import { config, TOAST_DURATION_MS, getNextColor } from '@/config'
+import { CALENDAR_COLORS, config, TOAST_DURATION_MS } from '@/config'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
 import { useCalDAVSyncStore } from '@/store/caldavSyncStore'
@@ -35,6 +35,7 @@ import { MiniTasksSection } from './MiniTasksSection'
 import styles from './Sidebar.module.css'
 
 let hasAutoSyncedCalendars = false
+const CALENDAR_COLOR_PRESETS = [...CALENDAR_COLORS.slice(0, 4), '#7B1FA2']
 
 interface SidebarProps {
   isOpen?: boolean
@@ -64,6 +65,7 @@ export function Sidebar({ isOpen = false, onClose, isCollapsed: controlledCollap
   const syncAllRequestRef = useRef<Promise<void> | null>(null)
   const [isCalendarsExpanded, setIsCalendarsExpanded] = useState(false)
   const [isCategoriesExpanded, setIsCategoriesExpanded] = useState(false)
+  const [colorPickerCalendarId, setColorPickerCalendarId] = useState<string | null>(null)
   const [syncingCalendarId, setSyncingCalendarId] = useState<string | null>(null)
   const [isSyncingAll, setIsSyncingAll] = useState(false)
   const [syncStatus, setSyncStatus] = useState<Record<string, 'success' | 'error'>>({})
@@ -81,6 +83,7 @@ export function Sidebar({ isOpen = false, onClose, isCollapsed: controlledCollap
   const [deleteCalendarName, setDeleteCalendarName] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const colorPickerRef = useRef<HTMLDivElement>(null)
   const currentDate = useCalendarStore((state) => state.currentDate)
   const setCurrentDate = useCalendarStore((state) => state.setCurrentDate)
   const calendars = useCalendarStore((state) => state.calendars)
@@ -311,10 +314,30 @@ export function Sidebar({ isOpen = false, onClose, isCollapsed: controlledCollap
     }
   }
 
-  const handleColorClick = (calendarId: string, currentColor: string): void => {
-    const nextColor = getNextColor(currentColor)
-    updateCalendar(calendarId, { color: nextColor })
+  const handleColorChange = (calendarId: string, color: string): void => {
+    updateCalendar(calendarId, { color })
+    setColorPickerCalendarId(null)
   }
+
+  useEffect(() => {
+    if (!colorPickerCalendarId) return
+
+    const handlePointerDown = (event: PointerEvent): void => {
+      if (!colorPickerRef.current?.contains(event.target as Node)) {
+        setColorPickerCalendarId(null)
+      }
+    }
+    const handleKeyDown = (event: KeyboardEvent): void => {
+      if (event.key === 'Escape') setColorPickerCalendarId(null)
+    }
+
+    document.addEventListener('pointerdown', handlePointerDown)
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [colorPickerCalendarId])
 
   const [isResizing, setIsResizing] = useState(false)
   const COLLAPSE_THRESHOLD = 255
@@ -614,13 +637,53 @@ export function Sidebar({ isOpen = false, onClose, isCollapsed: controlledCollap
                       onChange={() => toggleCalendarVisibility(calendar.id)}
                       className={styles.checkbox}
                     />
-                    <button
-                      className={styles.colorDot}
-                      style={{ backgroundColor: calendar.color }}
-                      onClick={() => handleColorClick(calendar.id, calendar.color)}
-                      title="Click to change color"
-                      aria-label={`Change ${calendar.name} color`}
-                    />
+                    <div className={styles.colorPicker} ref={colorPickerCalendarId === calendar.id ? colorPickerRef : undefined}>
+                      <button
+                        type="button"
+                        className={styles.colorDot}
+                        style={{ backgroundColor: calendar.color }}
+                        onClick={(event) => {
+                          event.preventDefault()
+                          setColorPickerCalendarId((current) => current === calendar.id ? null : calendar.id)
+                        }}
+                        aria-label={`Change ${calendar.name} color`}
+                        aria-expanded={colorPickerCalendarId === calendar.id}
+                        aria-controls={`calendar-color-picker-${calendar.id}`}
+                      />
+                      {colorPickerCalendarId === calendar.id && (
+                        <div
+                          id={`calendar-color-picker-${calendar.id}`}
+                          className={styles.colorPickerMenu}
+                          role="group"
+                          aria-label={`Color picker for ${calendar.name}`}
+                          data-component="calendar-color-picker"
+                        >
+                          <div className={styles.colorPresets}>
+                            {CALENDAR_COLOR_PRESETS.map((color) => (
+                              <button
+                                key={color}
+                                type="button"
+                                className={`${styles.colorPreset} ${calendar.color.toLowerCase() === color.toLowerCase() ? styles.colorPresetSelected : ''}`}
+                                style={{ backgroundColor: color }}
+                                onClick={(event) => {
+                                  event.preventDefault()
+                                  handleColorChange(calendar.id, color)
+                                }}
+                                aria-label={`Use ${color} for ${calendar.name}`}
+                              />
+                            ))}
+                            <span className={`${styles.customColorPicker} ${!CALENDAR_COLOR_PRESETS.includes(calendar.color) ? styles.customColorPickerSelected : ''}`}>
+                              <input
+                                type="color"
+                                value={calendar.color}
+                                onChange={(event) => handleColorChange(calendar.id, event.target.value)}
+                                aria-label={`Custom color for ${calendar.name}`}
+                              />
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                     {editingId === calendar.id ? (
                       <input
                         ref={inputRef}
