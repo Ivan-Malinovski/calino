@@ -314,9 +314,19 @@ export function Sidebar({ isOpen = false, onClose, isCollapsed: controlledCollap
     }
   }
 
-  const handleColorChange = (calendarId: string, color: string): void => {
+  const handleColorChange = async (calendarId: string, color: string): Promise<void> => {
+    const calendar = calendars.find((item) => item.id === calendarId)
     updateCalendar(calendarId, { color })
     setColorPickerCalendarId(null)
+
+    if (calendar?.accountId) {
+      try {
+        await updateCalDAVCalendar(calendarId, { color })
+      } catch (error) {
+        const detail = error instanceof Error ? error.message : 'unknown error'
+        showToast(`Color changed locally, but the server update failed: ${detail}`)
+      }
+    }
   }
 
   useEffect(() => {
