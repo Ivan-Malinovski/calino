@@ -742,7 +742,7 @@ END:VCALENDAR`,
       )
 
       // Extract the custom fetch function and invoke it to test timeout
-      const customFetch = mockCreateDAVClient.mock.calls[0][0].fetch
+      const customFetch = mockCreateDAVClient.mock.calls[0][0].fetch!
       await customFetch('https://caldav.example.com/dav.php')
 
       // Verify fetch was called with a signal (from AbortController)
