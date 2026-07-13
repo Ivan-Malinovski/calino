@@ -17,6 +17,7 @@ vi.mock('@/features/caldav/hooks/useCalDAV', () => ({
 }))
 
 import { Sidebar } from '../components/Sidebar'
+import styles from '../components/Sidebar.module.css'
 import { useCalendarStore } from '@/store/calendarStore'
 
 function renderWithRouter(component: React.ReactElement) {
@@ -112,6 +113,20 @@ describe('Sidebar', () => {
     await user.click(screen.getByRole('button', { name: 'Use #EA4335 for Default Calendar' }))
 
     expect(mockUpdateCalDAVCalendar).toHaveBeenCalledWith('default', { color: '#EA4335' })
+  })
+
+  it('does not select the custom color swatch when a lowercase color matches a preset', async () => {
+    const user = userEvent.setup()
+    useCalendarStore.getState().updateCalendar('default', { color: '#ea4335' })
+    renderWithRouter(<Sidebar />)
+
+    await user.click(screen.getByRole('button', { name: /^calendars/i }))
+    await user.click(screen.getByRole('button', { name: 'Change Default Calendar color' }))
+
+    expect(screen.getByRole('button', { name: 'Use #EA4335 for Default Calendar' }))
+      .toHaveClass(styles.colorPresetSelected)
+    expect(screen.getByLabelText('Custom color for Default Calendar').parentElement)
+      .not.toHaveClass(styles.customColorPickerSelected)
   })
 
   it('renders weekday headers in mini calendar', () => {

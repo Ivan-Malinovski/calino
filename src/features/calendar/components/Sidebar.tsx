@@ -682,7 +682,15 @@ export function Sidebar({ isOpen = false, onClose, isCollapsed: controlledCollap
                                 aria-label={`Use ${color} for ${calendar.name}`}
                               />
                             ))}
-                            <span className={`${styles.customColorPicker} ${!CALENDAR_COLOR_PRESETS.includes(calendar.color) ? styles.customColorPickerSelected : ''}`}>
+                            <span
+                              className={`${styles.customColorPicker} ${
+                                !CALENDAR_COLOR_PRESETS.some(
+                                  (preset) => preset.toLowerCase() === calendar.color.toLowerCase()
+                                )
+                                  ? styles.customColorPickerSelected
+                                  : ''
+                              }`}
+                            >
                               <input
                                 type="color"
                                 value={calendar.color}

@@ -93,4 +93,40 @@ test.describe('Sidebar sections', () => {
     await expect(picker).toBeHidden()
     await expect(colorButton).toHaveCSS('background-color', 'rgb(234, 67, 53)')
   })
+
+  test('calendar color picker selects only the matching preset for lowercase colors', async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem(
+        'calino-storage',
+        JSON.stringify({
+          state: {
+            calendars: [
+              {
+                id: 'default',
+                name: 'Offline calendar',
+                color: '#ea4335',
+                isVisible: true,
+                isDefault: true,
+                showTasksInViews: true,
+              },
+            ],
+          },
+          version: 1,
+        })
+      )
+    })
+
+    await page.goto('/month')
+    await page.locator('[data-component="calendar-section-toggle"]').click()
+    await page.getByRole('button', { name: 'Change Offline calendar color' }).click()
+
+    const preset = page.getByRole('button', { name: 'Use #EA4335 for Offline calendar' })
+    const customColor = page.getByLabel('Custom color for Offline calendar').locator('..')
+    await expect
+      .poll(() => preset.evaluate((element) => getComputedStyle(element, '::after').content))
+      .toBe('"✓"')
+    await expect
+      .poll(() => customColor.evaluate((element) => getComputedStyle(element, '::after').content))
+      .toBe('none')
+  })
 })
