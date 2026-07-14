@@ -1,0 +1,52 @@
+import { test, expect } from '@playwright/test'
+import { clearState } from './fixtures/localstorage'
+
+async function setColorInputValue(
+  page: import('@playwright/test').Page,
+  label: string,
+  color: string
+): Promise<void> {
+  await page.getByLabel(label).evaluate((input, value) => {
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set
+    setter?.call(input, value)
+    input.dispatchEvent(new Event('input', { bubbles: true }))
+    input.dispatchEvent(new Event('change', { bubbles: true }))
+  }, color)
+}
+
+test.describe('category colors', () => {
+  test.beforeEach(async ({ page }) => {
+    await clearState(page)
+  })
+
+  test('creates a category with a custom color and preserves it when editing', async ({ page }) => {
+    await page.goto('/settings')
+    await page.getByRole('button', { name: 'Categories' }).click()
+
+    await page.locator('[data-action="add-category"]').click()
+    await page.getByLabel('New category name').fill('Personal')
+    await setColorInputValue(page, 'Custom color for new category', '#123456')
+    await page
+      .locator('[data-component="add-category-form"]')
+      .getByRole('button', { name: 'Add' })
+      .click()
+
+    const category = page.locator('[data-component="category-row"]', { hasText: 'Personal' })
+    await expect(category).toBeVisible()
+    await category.getByText('Personal', { exact: true }).click()
+    const customColor = page.getByLabel('Custom color for category Personal')
+    await expect(customColor).toHaveValue('#123456')
+    await customColor.click()
+    await customColor.dispatchEvent('focusout', { relatedTarget: null })
+    await expect(page.getByLabel('Category name')).toBeVisible()
+    await setColorInputValue(page, 'Custom color for category Personal', '#654321')
+    await expect(page.getByLabel('Category name')).toBeHidden()
+    await expect(category).toHaveAttribute('data-category-color', '#654321')
+
+    await page.reload()
+    await page.getByRole('button', { name: 'Categories' }).click()
+    const persistedCategory = page.locator('[data-component="category-row"]', { hasText: 'Personal' })
+    await persistedCategory.getByText('Personal', { exact: true }).click()
+    await expect(page.getByLabel('Custom color for category Personal')).toHaveValue('#654321')
+  })
+})

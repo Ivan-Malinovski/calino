@@ -53,7 +53,9 @@
   font-weight: 500;
   color: var(--ink-2);
   cursor: pointer;
-  transition: color 0.12s, background 0.12s;
+  transition:
+    color 0.12s,
+    background 0.12s;
 }
 
 .back:hover {
@@ -129,7 +131,9 @@
   font-size: 14px;
   color: var(--ink-2);
   cursor: pointer;
-  transition: background 0.12s, color 0.12s;
+  transition:
+    background 0.12s,
+    color 0.12s;
   user-select: none;
   border: none;
   background: none;
@@ -273,7 +277,9 @@
     color: var(--ink-2);
     cursor: pointer;
     border-radius: 6px;
-    transition: background 0.12s, color 0.12s;
+    transition:
+      background 0.12s,
+      color 0.12s;
     flex-shrink: 0;
   }
 
@@ -364,7 +370,9 @@
   border-radius: var(--radius-lg);
   margin-bottom: 28px;
   overflow: hidden;
-  box-shadow: 0 1px 2px rgba(var(--ink-raw), 0.04), 0 6px 16px rgba(var(--ink-raw), 0.03);
+  box-shadow:
+    0 1px 2px rgba(var(--ink-raw), 0.04),
+    0 6px 16px rgba(var(--ink-raw), 0.03);
 }
 
 .groupLabel {
@@ -537,7 +545,9 @@
 .segTabActive {
   background: var(--panel);
   color: var(--ink);
-  box-shadow: 0 1px 2px rgba(var(--ink-raw), 0.08), 0 0 0 1px var(--line);
+  box-shadow:
+    0 1px 2px rgba(var(--ink-raw), 0.08),
+    0 0 0 1px var(--line);
 }
 
 /* ── Theme Appearance Cards ─────────────────────────────────────────────── */
@@ -555,7 +565,9 @@
   border: 2px solid var(--line);
   overflow: hidden;
   cursor: pointer;
-  transition: border-color 0.14s, box-shadow 0.14s;
+  transition:
+    border-color 0.14s,
+    box-shadow 0.14s;
   background: none;
   padding: 0;
 }
@@ -664,7 +676,9 @@
   border-radius: var(--radius-md);
   padding: 6px;
   cursor: pointer;
-  transition: border-color 0.15s, transform 0.1s;
+  transition:
+    border-color 0.15s,
+    transform 0.1s;
   min-width: 100px;
 }
 
@@ -750,6 +764,53 @@
   outline: 2px solid var(--swatch-color);
 }
 
+.customColorPicker {
+  position: relative;
+  display: block;
+  flex: 0 0 22px;
+  width: 22px;
+  height: 22px;
+  overflow: hidden;
+  border-radius: 50%;
+  background: conic-gradient(#e85b5b, #e6c24f, #63b46d, #4fa8c9, #7468c7, #d261a4, #e85b5b);
+  cursor: pointer;
+  transition: transform 0.12s;
+}
+
+.customColorPicker:hover {
+  transform: scale(1.1);
+}
+
+.customColorPickerSelected::after {
+  content: '✓';
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+  text-shadow: 0 1px 2px rgba(var(--ink-raw), 0.65);
+  pointer-events: none;
+}
+
+.customColorPicker:focus-within {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.customColorPicker input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
 /* ── Categories List ────────────────────────────────────────────────────── */
 .catList {
   display: flex;
@@ -815,7 +876,9 @@
   font-weight: 500;
   color: var(--ink-2);
   background: rgba(var(--ink-raw), 0.06);
-  transition: color 0.12s, background 0.12s;
+  transition:
+    color 0.12s,
+    background 0.12s;
   border: none;
   cursor: pointer;
   font-family: inherit;
@@ -823,7 +886,7 @@
 
 .catBtn:hover {
   color: var(--ink);
-  background: rgba(var(--ink-raw), 0.10);
+  background: rgba(var(--ink-raw), 0.1);
 }
 
 .catBtnDanger {
@@ -923,8 +986,13 @@
 }
 
 @keyframes statusDotPulse {
-  0%, 100% { opacity: 0.35; }
-  50% { opacity: 1; }
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 1;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -958,7 +1026,7 @@
 
 .disconnect:hover,
 .rowBtn:hover {
-  background: rgba(var(--ink-raw), 0.10);
+  background: rgba(var(--ink-raw), 0.1);
 }
 
 .rowBtn:disabled {
@@ -1024,7 +1092,9 @@
   background: var(--canvas);
   color: var(--ink);
   box-shadow: 0 1px 2px rgba(var(--ink-raw), 0.04);
-  transition: background 0.12s, color 0.12s;
+  transition:
+    background 0.12s,
+    color 0.12s;
 }
 
 .actionBtn:hover {
@@ -1174,7 +1244,9 @@
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* ── Mobile (≤768px) ────────────────────────────────────────────────────── */
@@ -1332,7 +1404,11 @@
   text-align: left;
   font-size: 14px;
   font-family: inherit;
-  transition: border-color 0.15s, box-shadow 0.15s, transform 0.1s, opacity 0.15s;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s,
+    transform 0.1s,
+    opacity 0.15s;
   transform: scale(1);
   box-shadow: 0 1px 2px rgba(44, 40, 33, 0.04);
 }
