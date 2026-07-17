@@ -454,7 +454,7 @@ export function EventModal(): JSX.Element | null {
   // isCalendarReadOnly() in calendarStore.ts (store actions themselves stay
   // unguarded since sync writes to these calendars legitimately).
   const isCurrentCalendarReadOnly = calendars.find((c) => c.id === calendarId)?.readOnly === true
-  const isRecurringEvent = initialState.recurring
+  const isRecurringEvent = initialState.recurring || initialState.isRecurringInstance
   const showSuggestions = !isEditing && titleSuggestions.length > 0
   const originalEventId = initialState.originalEventId
   const existingEventForMode = selectedEventId
@@ -653,6 +653,12 @@ export function EventModal(): JSX.Element | null {
       return
     }
 
+    // Stored exceptions are already detached, so save them back as the same occurrence.
+    if (isEditing && initialState.isRecurringInstance && existingEventForMode?.recurrenceId && hasChanges) {
+      saveEvent('this')
+      return
+    }
+
     if (isEditing && isRecurringEvent && hasChanges) {
       setShowRecurrenceDialog(true)
       return
@@ -779,6 +785,7 @@ export function EventModal(): JSX.Element | null {
           }
 
           const exceptionEvent: CalendarEvent = {
+            ...(selectedStoredEvent?.recurrenceId ? selectedStoredEvent : masterEvent),
             id: `${originalEventId}-${originalOccurrenceDate}`,
             uid: masterEvent.uid || masterEvent.id,
             calendarId: masterEvent.calendarId,
@@ -792,6 +799,7 @@ export function EventModal(): JSX.Element | null {
             rruleString: undefined,
             recurrenceId: originalOccurrenceDate,
             recurrenceMasterId: originalEventId,
+            categories: selectedCategories,
             travelDuration,
             reminders,
             transparency,
@@ -1400,6 +1408,7 @@ export function EventModal(): JSX.Element | null {
                     <button
                       key={cat.id}
                       type="button"
+                      aria-pressed={selectedCategories.includes(cat.name)}
                       className={`${styles.categoryChip} ${
                         selectedCategories.includes(cat.name) ? styles.categoryChipSelected : ''
                       }`}

@@ -706,6 +706,41 @@ describe('useCalDAV', () => {
       expect(useCalendarStore.getState().events.some((event) => event.id === selected.id)).toBe(false)
       expect(useCalendarStore.getState().events.some((event) => event.id === future.id)).toBe(false)
     })
+
+    it('preserves unrelated events stored in the same CalDAV resource', async () => {
+      const resourceHref = `${mockCalendar.url}shared.ics`
+      const master: CalendarEvent = {
+        ...mockEvent, id: 'series', uid: 'series', resourceHref,
+        recurrence: { frequency: 'daily', interval: 1 },
+      }
+      const unrelated: CalendarEvent = {
+        ...mockEvent, id: 'unrelated', uid: 'unrelated', title: 'Must remain', resourceHref,
+      }
+      const exception: CalendarEvent = {
+        ...mockEvent, id: 'series-2026-04-15T09:00:00Z', uid: 'series', resourceHref,
+        recurrenceId: '2026-04-15T09:00:00Z', recurrenceMasterId: master.id, categories: ['Work'],
+      }
+      act(() => {
+        useCalendarStore.getState().addEvent(master)
+        useCalendarStore.getState().addEvent(unrelated)
+      })
+
+      const { result } = renderHook(() => useCalDAV())
+      await waitFor(() => expect(result.current.accounts.length).toBe(1))
+      await act(async () => {
+        await result.current.saveRecurrenceOverride('cal-1', master, exception)
+      })
+
+      const groupedEvents = mockSyncEngineInstance.updateEventGroup.mock.calls[0][0]
+      expect(groupedEvents).toEqual(expect.arrayContaining([
+        expect.objectContaining({ id: master.id }),
+        expect.objectContaining({ id: exception.id, categories: ['Work'] }),
+        expect.objectContaining({ id: unrelated.id, title: 'Must remain' }),
+      ]))
+      expect(useCalendarStore.getState().events.find((event) => event.id === unrelated.id)).toEqual(
+        expect.objectContaining({ resourceHref: 'https://series.ics', etag: 'group-etag' })
+      )
+    })
   })
 
   // -----------------------------------------------------------------------

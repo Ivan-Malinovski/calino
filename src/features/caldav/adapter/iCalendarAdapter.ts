@@ -151,7 +151,13 @@ export function eventsToICAL(events: CalendarEvent[]): string {
   comp.updatePropertyWithValue('calscale', 'GREGORIAN')
 
   for (const event of events) {
-    comp.addSubcomponent(calendarEventToIcalComponent(event))
+    comp.addSubcomponent(
+      event.type === 'task'
+        ? calendarEventToIcalVtodo(event)
+        : event.type === 'journal'
+          ? calendarEventToIcalVjournal(event)
+          : calendarEventToIcalComponent(event)
+    )
   }
 
   return foldICalLines(comp.toString())

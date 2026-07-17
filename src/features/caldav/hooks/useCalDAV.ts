@@ -62,6 +62,29 @@ function showToast(message: string): void {
   sonnerToast(message)
 }
 
+function withResourceSiblings(
+  events: CalendarEvent[],
+  allEvents: CalendarEvent[],
+  calendarId: string,
+  resourceHref: string | undefined,
+  excludedIds: string[] = []
+): CalendarEvent[] {
+  if (!resourceHref) return events
+
+  const includedIds = new Set(events.map((event) => event.id))
+  const excluded = new Set(excludedIds)
+  return [
+    ...events,
+    ...allEvents.filter(
+      (event) =>
+        event.calendarId === calendarId &&
+        event.resourceHref === resourceHref &&
+        !includedIds.has(event.id) &&
+        !excluded.has(event.id)
+    ),
+  ]
+}
+
 /**
  * Parse every fetched CalDAV resource into events, pairing each with the
  * resource href it came from, and cache inline attachments in IndexedDB.
@@ -256,10 +279,19 @@ export function useCalDAV(): UseCalDAVReturn {
                       (candidate.uid === uid || candidate.recurrenceMasterId === event.id)
                   )
                 : []
+              const groupedEvents = withResourceSiblings(
+                [event, ...overrides],
+                state.events,
+                change.calendarId,
+                event.resourceHref
+              )
               const { url, etag } =
-                overrides.length > 0
-                  ? await engine.updateEventGroup([event, ...overrides], event.etag || '')
+                groupedEvents.length > 1 && groupedEvents.some((candidate) => !candidate.recurrenceId)
+                  ? await engine.updateEventGroup(groupedEvents, event.etag || '')
                   : await engine.updateEvent(event, event.etag || '')
+              for (const groupedEvent of groupedEvents) {
+                storeUpdateEvent(groupedEvent.id, { resourceHref: url, etag, syncStatus: 'synced' })
+              }
               // Mark as synced in the store
               storeUpdateEvent(change.eventId, { resourceHref: url, etag, syncStatus: 'synced' })
               break
@@ -1444,10 +1476,20 @@ export function useCalDAV(): UseCalDAVReturn {
                   (candidate.uid === uid || candidate.recurrenceMasterId === eventWithSequence.id)
               )
           : []
+        const groupedEvents = withResourceSiblings(
+          [eventWithSequence, ...overrides],
+          useCalendarStore.getState().events,
+          calendarId,
+          event.resourceHref
+        )
         const { url, etag } =
-          overrides.length > 0
-            ? await engine.updateEventGroup([eventWithSequence, ...overrides], event.etag ?? '')
+          groupedEvents.length > 1 && groupedEvents.some((candidate) => !candidate.recurrenceId)
+            ? await engine.updateEventGroup(groupedEvents, event.etag ?? '')
             : await engine.updateEvent(eventWithSequence, event.etag ?? '')
+
+        for (const groupedEvent of groupedEvents) {
+          storeUpdateEvent(groupedEvent.id, { resourceHref: url, etag, syncStatus: 'synced' })
+        }
 
         if (caldavDebugMode) {
           console.log('[CalDAV] Event updated successfully!')
@@ -1535,11 +1577,18 @@ export function useCalDAV(): UseCalDAVReturn {
 
       const client = await createCalDAVClient(account.serverUrl, credential, account.proxyUrl)
       const engine = new SyncEngine(client, calendarId)
-      const { url, etag } = await engine.updateEventGroup(
+      const groupedEvents = withResourceSiblings(
         [masterWithSequence, ...existingOverrides, ...(normalizedException ? [normalizedException] : [])],
-        master.etag ?? ''
+        useCalendarStore.getState().events,
+        calendarId,
+        master.resourceHref,
+        removedExceptionIds
       )
+      const { url, etag } = await engine.updateEventGroup(groupedEvents, master.etag ?? '')
 
+      for (const groupedEvent of groupedEvents) {
+        storeUpdateEvent(groupedEvent.id, { resourceHref: url, etag, syncStatus: 'synced' })
+      }
       storeUpdateEvent(master.id, {
         ...masterWithSequence,
         resourceHref: url,
