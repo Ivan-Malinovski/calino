@@ -1,3 +1,4 @@
+import { fromZonedTime } from 'date-fns-tz'
 import { format } from 'date-fns'
 import { buildRRuleString } from '@/lib/recurrence'
 import type { CalendarEvent, RecurrenceRule } from '@/types'
@@ -11,39 +12,103 @@ export interface MasterTruncation {
 /**
  * Computes the patch to apply to a recurrence master when splitting a series at
  * a given occurrence ("This and following events"). The master keeps every
- * occurrence *before* the split by ending its recurrence the day before, and
- * excludes the split date itself (a new series takes over from there).
+ * occurrence before the split by ending immediately before that occurrence.
  *
  * Pure — it neither mutates the store nor calls CalDAV. Callers apply the
  * returned patch (via `updateEvent`) and separately create the new series.
  *
  * @param master           the recurrence master event
- * @param occurrenceDateStr the split occurrence date, `yyyy-MM-dd`
+ * @param occurrenceValue the selected occurrence's RECURRENCE-ID value
  */
 export function buildMasterTruncation(
   master: CalendarEvent,
-  occurrenceDateStr: string
+  occurrenceValue: string
 ): MasterTruncation {
-  // End the master the day before the split point, in UTC. The 'Z' literal
-  // keeps it in UTC and avoids an off-by-one from local-time interpretation.
-  const splitDate = new Date(`${occurrenceDateStr}T00:00:00Z`)
-  const dayBefore = new Date(splitDate)
-  dayBefore.setUTCDate(dayBefore.getUTCDate() - 1)
-  const masterEndDate = format(dayBefore, "yyyy-MM-dd'T'23:59:59'Z'")
+  const occurrenceDateStr = occurrenceValue.split('T')[0]
+  let masterEndDate: string
+  let untilValue: string
 
-  // R5.2 — the master is already truncated to the day before the split
-  // point (masterEndDate below), so it will not generate any occurrence
-  // on or after occurrenceDateStr. Adding occurrenceDateStr to
-  // excludedDates was a no-op that polluted the master's EXDATE list on
-  // every "this and following events" split. Drop the push; the master
-  // is correct without it.
+  if (master.isAllDay) {
+    const dayBefore = new Date(`${occurrenceDateStr}T00:00:00Z`)
+    dayBefore.setUTCDate(dayBefore.getUTCDate() - 1)
+    masterEndDate = dayBefore.toISOString().split('T')[0]
+    untilValue = masterEndDate.replaceAll('-', '')
+  } else {
+    const occurrence = parseOccurrenceValue(master, occurrenceValue)
+    const immediatelyBefore = new Date(occurrence.getTime() - 1000)
+    masterEndDate = immediatelyBefore.toISOString()
+    untilValue = masterEndDate.replace(/[-:]/g, '').replace('.000', '')
+  }
+
+  // The UNTIL boundary already excludes the selected occurrence, so adding an
+  // EXDATE would only pollute the master and is unnecessary.
   const excludedDates = master.excludedDates || []
 
   const recurrence: RecurrenceRule | undefined = master.recurrence
     ? { ...master.recurrence, endDate: masterEndDate, count: undefined, isAllDay: master.isAllDay }
     : undefined
 
-  const rruleString = recurrence ? buildRRuleString(recurrence) : undefined
+  const rruleString = recurrence
+    ? buildRRuleString(recurrence)
+    : master.rruleString
+      ? [
+          ...master.rruleString
+            .split(';')
+            .filter((part) => {
+              const normalized = part.toUpperCase()
+              return !normalized.startsWith('UNTIL=') && !normalized.startsWith('COUNT=')
+            }),
+          `UNTIL=${untilValue}`,
+        ].join(';')
+      : undefined
 
   return { excludedDates, recurrence, rruleString }
+}
+
+export function getFutureOverrideIds(
+  events: readonly CalendarEvent[],
+  master: CalendarEvent,
+  occurrenceValue: string
+): string[] {
+  const uid = master.uid || master.id
+  const boundary = master.isAllDay
+    ? occurrenceValue.split('T')[0]
+    : parseOccurrenceValue(master, occurrenceValue).getTime()
+  return events
+    .filter(
+      (event) =>
+        Boolean(event.recurrenceId) &&
+        event.calendarId === master.calendarId &&
+        (event.recurrenceMasterId === master.id || event.uid === uid) &&
+        (master.isAllDay
+          ? event.recurrenceId!.split('T')[0] >= (boundary as string)
+          : parseOccurrenceValue(master, event.recurrenceId!).getTime() >= (boundary as number))
+    )
+    .map((event) => event.id)
+}
+
+export function isFirstOccurrence(master: CalendarEvent, occurrenceValue: string): boolean {
+  if (master.isAllDay) {
+    return occurrenceValue.split('T')[0] <= master.start.split('T')[0]
+  }
+  return parseOccurrenceValue(master, occurrenceValue).getTime() <=
+    parseOccurrenceValue(master, master.start).getTime()
+}
+
+function parseOccurrenceValue(master: CalendarEvent, value: string): Date {
+  let normalized = value
+  if (!normalized.includes('T')) {
+    const masterTime = master.start.split('T')[1] || '00:00:00'
+    normalized = `${normalized}T${masterTime}`
+  }
+  if (master.timezone && master.timezone !== 'UTC') {
+    // Generated occurrence IDs use Date#toISOString even when DTSTART has a
+    // TZID. Convert them back to the browser wall clock used by expansion, then
+    // reinterpret that clock in the series timezone before writing UNTIL.
+    const wallClock = normalized.endsWith('Z')
+      ? format(new Date(normalized), "yyyy-MM-dd'T'HH:mm:ss")
+      : normalized
+    return fromZonedTime(wallClock, master.timezone)
+  }
+  return new Date(normalized)
 }

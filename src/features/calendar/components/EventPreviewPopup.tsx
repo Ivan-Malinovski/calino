@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { format, parseISO, isSameDay } from 'date-fns'
 import { v4 as uuidv4 } from 'uuid'
 import { formatTime, daysBetween, addDays } from '@/lib/datetime'
-import { buildMasterTruncation } from '@/lib/recurrenceSplit'
+import { buildMasterTruncation, getFutureOverrideIds, isFirstOccurrence } from '@/lib/recurrenceSplit'
 import { showToast } from '@/lib/toast'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
@@ -302,7 +302,7 @@ export function EventPreviewPopup({
       const newSeriesRrule = masterEvent.rruleString
       const { excludedDates, recurrence, rruleString } = buildMasterTruncation(
         masterEvent,
-        occurrenceDateStr
+        occurrenceStartISO
       )
       updateEvent(masterEvent.id, { excludedDates, recurrence, rruleString })
       safeCalDAVUpdate(
@@ -447,14 +447,17 @@ export function EventPreviewPopup({
   }
 
   const performDelete = async (mode: 'all' | 'this' | 'future'): Promise<void> => {
-    if (mode === 'this' && originalEventId) {
+    const recurringMasterId = originalEventId || event.id
+    if (mode === 'this') {
       // For 'this' occurrence: exclude the date from the master event
-      const occurrenceStartISO = clickedEventId.slice(originalEventId.length + 1)
-      const occurrenceDate = occurrenceStartISO.split('T')[0]
       const storedEvents = useCalendarStore.getState().events
-      const masterEvent = storedEvents.find((e) => e.id === originalEventId)
+      const selectedException = storedEvents.find((candidate) => candidate.id === clickedEventId)
+      const occurrenceStartISO =
+        selectedException?.recurrenceId ||
+        (originalEventId ? clickedEventId.slice(originalEventId.length + 1) : event.start)
+      const occurrenceDate = occurrenceStartISO.split('T')[0]
+      const masterEvent = storedEvents.find((e) => e.id === recurringMasterId)
       if (masterEvent) {
-        const selectedException = storedEvents.find((candidate) => candidate.id === clickedEventId)
         const exclusionValue = masterEvent.isAllDay ? occurrenceDate : occurrenceStartISO
         const excludedDates = masterEvent.excludedDates || []
         const updatedExcludedDates = excludedDates.includes(exclusionValue)
@@ -465,10 +468,42 @@ export function EventPreviewPopup({
             masterEvent.calendarId,
             { ...masterEvent, excludedDates: updatedExcludedDates },
             null,
-            selectedException?.recurrenceId ? selectedException.id : undefined
+            selectedException?.recurrenceId ? [selectedException.id] : []
           )
         } catch {
           showToast('Failed to delete this occurrence. The event was kept.')
+          return
+        }
+      }
+    } else if (mode === 'future') {
+      const storedEvents = useCalendarStore.getState().events
+      const masterEvent = storedEvents.find((candidate) => candidate.id === recurringMasterId)
+      const selectedException = storedEvents.find((candidate) => candidate.id === clickedEventId)
+      const occurrenceStart =
+        selectedException?.recurrenceId ||
+        (originalEventId ? clickedEventId.slice(originalEventId.length + 1) : event.start)
+      const occurrenceDate = occurrenceStart.split('T')[0]
+      if (masterEvent && occurrenceDate) {
+        if (isFirstOccurrence(masterEvent, occurrenceStart)) {
+          if (masterEvent.calendarId !== 'default') {
+            await safeCalDAVDelete(deleteCalDAVEvent, masterEvent.calendarId, masterEvent.id)
+          }
+          deleteEvent(masterEvent.id)
+          closePreview()
+          setShowDeleteDialog(false)
+          return
+        }
+        const truncation = buildMasterTruncation(masterEvent, occurrenceStart)
+        const removedOverrideIds = getFutureOverrideIds(storedEvents, masterEvent, occurrenceStart)
+        try {
+          await saveRecurrenceOverride(
+            masterEvent.calendarId,
+            { ...masterEvent, ...truncation },
+            null,
+            removedOverrideIds
+          )
+        } catch {
+          showToast('Failed to delete this and following events. The series was kept.')
           return
         }
       }

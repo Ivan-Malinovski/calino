@@ -154,7 +154,7 @@ interface UseCalDAVReturn {
     calendarId: string,
     master: CalendarEvent,
     exception: CalendarEvent | null,
-    removedExceptionId?: string
+    removedExceptionIds?: string[]
   ) => Promise<void>
   deleteEvent: (calendarId: string, eventId: string) => Promise<void>
   deleteEventByHref: (calendarId: string, href: string) => Promise<void>
@@ -1493,7 +1493,7 @@ export function useCalDAV(): UseCalDAVReturn {
       calendarId: string,
       master: CalendarEvent,
       exception: CalendarEvent | null,
-      removedExceptionId?: string
+      removedExceptionIds: string[] = []
     ): Promise<void> => {
       const allCalendars = storage.getAllCalendars()
       const allAccounts = storage.getAllAccounts()
@@ -1503,7 +1503,7 @@ export function useCalDAV(): UseCalDAVReturn {
       // Local-only calendars have no remote resource to update.
       if (!calendar) {
         storeUpdateEvent(master.id, master)
-        if (removedExceptionId) storeDeleteEvent(removedExceptionId)
+        for (const eventId of removedExceptionIds) storeDeleteEvent(eventId)
         if (exception) storeAddEvent(exception)
         return
       }
@@ -1518,7 +1518,7 @@ export function useCalDAV(): UseCalDAVReturn {
         .events.filter(
           (event) =>
             event.id !== exception?.id &&
-            event.id !== removedExceptionId &&
+            !removedExceptionIds.includes(event.id) &&
             event.calendarId === calendarId &&
             Boolean(event.recurrenceId) &&
             (event.uid === uid || event.recurrenceMasterId === master.id)
@@ -1546,7 +1546,7 @@ export function useCalDAV(): UseCalDAVReturn {
         etag,
         syncStatus: 'synced',
       })
-      if (removedExceptionId) storeDeleteEvent(removedExceptionId)
+      for (const eventId of removedExceptionIds) storeDeleteEvent(eventId)
       if (normalizedException) {
         storeAddEvent({
           ...normalizedException,

@@ -9,7 +9,7 @@ import { showToast } from '@/lib/toast'
 import { safeCalDAVUpdate } from '@/lib/caldavHelpers'
 import { deleteEventWithUndo } from '@/lib/deleteWithUndo'
 import { buildRRuleString } from '@/lib/recurrence'
-import { buildMasterTruncation } from '@/lib/recurrenceSplit'
+import { buildMasterTruncation, getFutureOverrideIds, isFirstOccurrence } from '@/lib/recurrenceSplit'
 import type { CalendarEvent, CalendarAttachment, RecurrenceRule, TaskPriority, Reminder } from '@/types'
 import { putAttachments, getAttachments, deleteAttachments } from '@/lib/attachmentStore'
 import { TaskFormFields } from './TaskFormFields'
@@ -840,14 +840,12 @@ export function EventModal(): JSX.Element | null {
             return
           }
 
-          const occurrenceDateStr = originalOccurrenceDate.split('T')[0]
-          // Update master: end its recurrence the day before the split and add an
-          // EXDATE for the split date (shared with the preview popup's split path).
+          // Update master so it ends immediately before the split occurrence.
           const {
             excludedDates: updatedExcludedDates,
             recurrence: masterRecurrence,
             rruleString: masterRruleString,
-          } = buildMasterTruncation(masterEvent, occurrenceDateStr)
+          } = buildMasterTruncation(masterEvent, originalOccurrenceDate)
 
           updateEvent(originalEventId, {
             excludedDates: updatedExcludedDates,
@@ -1088,14 +1086,20 @@ export function EventModal(): JSX.Element | null {
   }
 
   const performDelete = async (mode: RecurrenceEditMode): Promise<void> => {
-    if (mode === 'this' && originalEventId) {
+    const recurringMasterId = originalEventId || selectedEventId
+    if (mode === 'this' && recurringMasterId) {
       // Add the occurrence's date to excludedDates on the master - do not delete the series
       if (!selectedEventId) return
-      const occurrenceStartISO = selectedEventId.slice(originalEventId.length + 1)
+      const selectedException = events.find((event) => event.id === selectedEventId)
+      const occurrenceStartISO =
+        selectedException?.recurrenceId ||
+        (originalEventId
+          ? selectedEventId.slice(originalEventId.length + 1)
+          : selectedException?.start)
+      if (!occurrenceStartISO) return
       const occurrenceDate = occurrenceStartISO.split('T')[0]
-      const masterEvent = events.find((e) => e.id === originalEventId)
+      const masterEvent = events.find((e) => e.id === recurringMasterId)
       if (masterEvent) {
-        const selectedException = events.find((event) => event.id === selectedEventId)
         const exclusionValue = masterEvent.isAllDay ? occurrenceDate : occurrenceStartISO
         const excludedDates = masterEvent.excludedDates || []
         const updatedExcludedDates = excludedDates.includes(exclusionValue)
@@ -1106,10 +1110,47 @@ export function EventModal(): JSX.Element | null {
             calendarId,
             { ...masterEvent, excludedDates: updatedExcludedDates },
             null,
-            selectedException?.recurrenceId ? selectedException.id : undefined
+            selectedException?.recurrenceId ? [selectedException.id] : []
           )
         } catch {
           showToast('Failed to delete this occurrence. The event was kept.')
+          return
+        }
+      }
+    } else if (mode === 'future' && recurringMasterId && selectedEventId) {
+      const masterEvent = events.find((event) => event.id === recurringMasterId)
+      const selectedException = events.find((event) => event.id === selectedEventId)
+      const occurrenceStart =
+        selectedException?.recurrenceId ||
+        (originalEventId
+          ? selectedEventId.slice(originalEventId.length + 1)
+          : selectedException?.start)
+      if (!occurrenceStart) return
+      const occurrenceDate = occurrenceStart.split('T')[0]
+      if (masterEvent && occurrenceDate) {
+        if (isFirstOccurrence(masterEvent, occurrenceStart)) {
+          deleteEventWithUndo({
+            event: masterEvent,
+            deleteEvent,
+            addEvent,
+            createCalDAVEvent,
+            deleteCalDAVEvent,
+          })
+          setShowDeleteDialog(false)
+          closeModal()
+          return
+        }
+        const truncation = buildMasterTruncation(masterEvent, occurrenceStart)
+        const removedOverrideIds = getFutureOverrideIds(events, masterEvent, occurrenceStart)
+        try {
+          await saveRecurrenceOverride(
+            masterEvent.calendarId,
+            { ...masterEvent, ...truncation },
+            null,
+            removedOverrideIds
+          )
+        } catch {
+          showToast('Failed to delete this and following events. The series was kept.')
           return
         }
       }

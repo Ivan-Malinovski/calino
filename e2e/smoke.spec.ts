@@ -210,6 +210,42 @@ test.describe('smoke', () => {
     ).toBeVisible({ timeout: 5_000 })
   })
 
+  test('delete "This and following events" keeps earlier occurrences', async ({ page }) => {
+    const today = new Date()
+    const yesterday = new Date(today)
+    yesterday.setDate(yesterday.getDate() - 1)
+    const fmt = (date: Date) =>
+      `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+
+    await seedRecurringEvent(page, {
+      id: 'daily-cleanup',
+      title: 'Daily Cleanup',
+      startDate: fmt(yesterday),
+      endDate: fmt(yesterday),
+      startTime: '10:00',
+      endTime: '11:00',
+      frequency: 'daily',
+      interval: 1,
+    })
+
+    await page.goto('/day')
+    const currentOccurrence = page.getByRole('button', { name: /Daily Cleanup/ }).first()
+    await expect(currentOccurrence).toBeVisible({ timeout: 10_000 })
+    await currentOccurrence.click()
+    const preview = page.locator('[data-component="event-preview"]')
+    await preview.getByRole('button', { name: /Open event/i }).click()
+    await page.locator('[data-component="modal-card"]').getByRole('button', { name: 'Delete' }).click()
+
+    const dialog = page.getByRole('dialog').filter({ hasText: /Delete recurring event/i })
+    const futureButton = dialog.getByRole('button', { name: /This and following events/i })
+    await expect(futureButton).toBeVisible()
+    await futureButton.click()
+
+    await expect(currentOccurrence).toBeHidden()
+    await page.getByRole('button', { name: 'Previous', exact: true }).click()
+    await expect(page.getByRole('button', { name: /Daily Cleanup/ }).first()).toBeVisible()
+  })
+
   test('command palette opens via search button and a natural-language event is created', async ({
     page,
   }) => {

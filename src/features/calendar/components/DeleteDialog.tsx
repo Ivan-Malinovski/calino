@@ -57,6 +57,9 @@ export function DeleteDialog({
             <button type="button" className={styles.deleteButton} onClick={() => onConfirm('this')}>
               This event only
             </button>
+            <button type="button" className={styles.deleteButton} onClick={() => onConfirm('future')}>
+              This and following events
+            </button>
             <button type="button" className={styles.cancelButton} onClick={requestClose}>
               Cancel
             </button>

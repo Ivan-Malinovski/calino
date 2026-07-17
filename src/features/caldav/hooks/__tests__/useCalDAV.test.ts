@@ -644,6 +644,70 @@ describe('useCalDAV', () => {
     })
   })
 
+  describe('saveRecurrenceOverride', () => {
+    beforeEach(() => {
+      mockAccountStorage.getAllAccounts.mockReturnValue([mockAccount])
+      mockAccountStorage.getAllCalendars.mockReturnValue([mockCalendar])
+    })
+
+    it('removes future overrides from the grouped CalDAV resource and local store', async () => {
+      const master: CalendarEvent = {
+        ...mockEvent,
+        id: 'series',
+        uid: 'series',
+        recurrence: { frequency: 'daily', interval: 1 },
+      }
+      const past: CalendarEvent = {
+        ...mockEvent,
+        id: 'past',
+        uid: 'series',
+        recurrenceId: '2026-04-14T09:00:00Z',
+        recurrenceMasterId: master.id,
+      }
+      const selected: CalendarEvent = {
+        ...past,
+        id: 'selected',
+        recurrenceId: '2026-04-15T09:00:00Z',
+      }
+      const future: CalendarEvent = {
+        ...past,
+        id: 'future',
+        recurrenceId: '2026-04-16T09:00:00Z',
+      }
+      act(() => {
+        useCalendarStore.getState().addEvent(master)
+        useCalendarStore.getState().addEvent(past)
+        useCalendarStore.getState().addEvent(selected)
+        useCalendarStore.getState().addEvent(future)
+      })
+
+      const { result } = renderHook(() => useCalDAV())
+      await waitFor(() => expect(result.current.accounts.length).toBe(1))
+      await act(async () => {
+        await result.current.saveRecurrenceOverride(
+          'cal-1',
+          master,
+          null,
+          [selected.id, future.id]
+        )
+      })
+
+      expect(mockSyncEngineInstance.updateEventGroup).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({ id: master.id }),
+          expect.objectContaining({ id: past.id }),
+        ]),
+        ''
+      )
+      const groupedEvents = mockSyncEngineInstance.updateEventGroup.mock.calls[0][0]
+      expect(groupedEvents.map((event: CalendarEvent) => event.id)).not.toContain(selected.id)
+      expect(groupedEvents.map((event: CalendarEvent) => event.id)).not.toContain(future.id)
+      expect(useCalendarStore.getState().events.some((event) => event.id === past.id)).toBe(true)
+      expect(useCalendarStore.getState().events.some((event) => event.id === selected.id)).toBe(false)
+      expect(useCalendarStore.getState().events.some((event) => event.id === future.id)).toBe(false)
+    })
+  })
+
   // -----------------------------------------------------------------------
   // deleteEvent (direct, not via pending changes)
   // -----------------------------------------------------------------------
