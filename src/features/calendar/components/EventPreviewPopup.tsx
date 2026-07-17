@@ -203,6 +203,23 @@ export function EventPreviewPopup({
       }
     }
 
+    if (event.recurrenceId && originalEventId) {
+      const masterEvent = useCalendarStore.getState().events.find((candidate) => candidate.id === originalEventId)
+      if (!masterEvent) {
+        showToast('Master event not found. Cannot edit this occurrence.')
+        return
+      }
+      try {
+        await saveRecurrenceOverride(event.calendarId, masterEvent, { ...event, ...updates })
+      } catch {
+        showToast('Failed to update this occurrence. The original event was kept.')
+        return
+      }
+      setHasChanges(false)
+      setEditingField(null)
+      return
+    }
+
     const recurring = !!event.recurrence || !!event.rruleString || !!originalEventId
     if (recurring) {
       setPendingUpdates(updates)
@@ -433,9 +450,13 @@ export function EventPreviewPopup({
     openModal(undefined, undefined, clickedEventId)
   }
 
-  const isRecurring = !!event.recurrence || !!event.rruleString || !!originalEventId
+  const isRecurring = !event.recurrenceId && (!!event.recurrence || !!event.rruleString || !!originalEventId)
 
   const handleDelete = async (): Promise<void> => {
+    if (event.recurrenceId) {
+      await performDelete('this')
+      return
+    }
     if (isRecurring) {
       setShowDeleteDialog(true)
       return

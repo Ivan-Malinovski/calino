@@ -560,6 +560,7 @@ describe('EventModal', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Work' }))
       fireEvent.click(screen.getByRole('button', { name: /save/i }))
 
+      expect(screen.queryByText('Edit recurring event')).not.toBeInTheDocument()
       await waitFor(() => {
         const events = useCalendarStore.getState().events
         expect(events.find((event) => event.id === 'series-master')?.categories).toEqual([])

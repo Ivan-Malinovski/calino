@@ -78,11 +78,18 @@ test.describe('category colors', () => {
 
     const detached = page.getByRole('button', { name: /Detached category test/ }).first()
     await detached.click()
-    await page.locator('[data-component="event-preview"]').getByRole('button', { name: /Open event/ }).click()
+    const preview = page.locator('[data-component="event-preview"]')
+    await preview.getByText('Detached category test', { exact: true }).click()
+    await preview.locator('input[type="text"]').fill('Detached category test updated')
+    await preview.getByRole('button', { name: 'Save changes' }).click()
+    await expect(page.getByText('Edit recurring event')).toBeHidden()
+    await expect(preview.getByText('Detached category test updated', { exact: true })).toBeVisible()
+
+    await preview.getByRole('button', { name: /Open event/ }).click()
     await page.getByRole('button', { name: 'Work' }).click()
     await page.locator('[data-component="modal-save"]').click()
 
-    await detached.click()
+    await page.getByRole('button', { name: /Detached category test updated/ }).first().click()
     await page.locator('[data-component="event-preview"]').getByRole('button', { name: /Open event/ }).click()
     await expect(page.getByRole('button', { name: 'Work' })).toHaveAttribute('aria-pressed', 'true')
   })

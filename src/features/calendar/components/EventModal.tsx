@@ -454,7 +454,7 @@ export function EventModal(): JSX.Element | null {
   // isCalendarReadOnly() in calendarStore.ts (store actions themselves stay
   // unguarded since sync writes to these calendars legitimately).
   const isCurrentCalendarReadOnly = calendars.find((c) => c.id === calendarId)?.readOnly === true
-  const isRecurringEvent = initialState.recurring || initialState.isRecurringInstance
+  const isRecurringEvent = initialState.recurring
   const showSuggestions = !isEditing && titleSuggestions.length > 0
   const originalEventId = initialState.originalEventId
   const existingEventForMode = selectedEventId
@@ -1090,7 +1090,7 @@ export function EventModal(): JSX.Element | null {
       return
     }
 
-    performDelete('all')
+    performDelete(existingEventForMode?.recurrenceId ? 'this' : 'all')
   }
 
   const performDelete = async (mode: RecurrenceEditMode): Promise<void> => {
