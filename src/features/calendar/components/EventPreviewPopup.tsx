@@ -59,7 +59,12 @@ export function EventPreviewPopup({
   }, [closePreview, isClosing, prefersReducedMotion])
   const deleteEvent = useCalendarStore((state) => state.deleteEvent)
   const updateEvent = useCalendarStore((state) => state.updateEvent)
-  const { updateEvent: updateCalDAVEvent, deleteEvent: deleteCalDAVEvent } = useCalDAV()
+  const {
+    createEvent: createCalDAVEvent,
+    updateEvent: updateCalDAVEvent,
+    saveRecurrenceOverride,
+    deleteEvent: deleteCalDAVEvent,
+  } = useCalDAV()
   const originalEventId = extractOriginalEventId(clickedEventId)
   const eventIdToUse = originalEventId || event.id
 
@@ -235,15 +240,29 @@ export function EventPreviewPopup({
       )
 
       if (existingException) {
-        updateEvent(clickedEventId, pendingUpdates)
+        if (!masterEvent) {
+          showToast('Master event not found. Cannot edit single occurrence.')
+          return
+        }
+        const masterWithoutLegacyExdate = {
+          ...masterEvent,
+          excludedDates: masterEvent.excludedDates?.filter(
+            (date) => date.split('T')[0] !== occurrenceDateStr
+          ),
+        }
         try {
-          await updateCalDAVEvent(event.calendarId, { ...existingException, ...pendingUpdates })
+          await saveRecurrenceOverride(event.calendarId, masterWithoutLegacyExdate, {
+            ...existingException,
+            ...pendingUpdates,
+          })
         } catch {
-          // error handled by useCalDAV
+          showToast('Failed to update this occurrence. The original event was kept.')
+          return
         }
       } else {
         const exceptionEvent: CalendarEvent = {
           id: clickedEventId,
+          uid: masterEvent?.uid || masterEvent?.id || event.uid || event.id,
           title: pendingUpdates.title ?? event.title,
           description: pendingUpdates.description ?? event.description,
           location: pendingUpdates.location ?? event.location,
@@ -254,24 +273,24 @@ export function EventPreviewPopup({
           recurrence: undefined,
           rruleString: undefined,
           recurrenceId: occurrenceStartISO,
-        }
-        store.addEvent(exceptionEvent)
-        try {
-          await updateCalDAVEvent(event.calendarId, exceptionEvent)
-        } catch {
-          // error handled by useCalDAV
+          recurrenceMasterId: originalEventId || eventIdToUse,
         }
         if (masterEvent) {
-          const excluded = masterEvent.excludedDates || []
-          if (!excluded.includes(occurrenceDateStr)) {
-            const updatedExcludedDates = [...excluded, occurrenceDateStr]
-            updateEvent(masterEvent.id, { excludedDates: updatedExcludedDates })
-            safeCalDAVUpdate(
-              updateCalDAVEvent,
-              masterEvent.calendarId,
-              { ...masterEvent, excludedDates: updatedExcludedDates },
-              { excludedDates: updatedExcludedDates }
+          const masterWithoutLegacyExdate = {
+            ...masterEvent,
+            excludedDates: masterEvent.excludedDates?.filter(
+              (date) => date.split('T')[0] !== occurrenceDateStr
+            ),
+          }
+          try {
+            await saveRecurrenceOverride(
+              event.calendarId,
+              masterWithoutLegacyExdate,
+              exceptionEvent
             )
+          } catch {
+            showToast('Failed to update this occurrence. The original event was kept.')
+            return
           }
         }
       }
@@ -309,7 +328,7 @@ export function EventPreviewPopup({
       }
       store.addEvent(newSeriesEvent)
       try {
-        await updateCalDAVEvent(masterEvent.calendarId, newSeriesEvent)
+        await createCalDAVEvent(masterEvent.calendarId, newSeriesEvent)
       } catch {
         // error handled by useCalDAV
       }
@@ -331,7 +350,8 @@ export function EventPreviewPopup({
       }
       updateEvent(eventIdToUse, allUpdates)
       try {
-        await updateCalDAVEvent(event.calendarId, { ...event, ...allUpdates })
+        const eventToSync = masterEvent || event
+        await updateCalDAVEvent(eventToSync.calendarId, { ...eventToSync, ...allUpdates })
       } catch {
         // error handled by useCalDAV
       }
@@ -421,37 +441,44 @@ export function EventPreviewPopup({
       return
     }
     const idToDelete = originalEventId || event.id
-    deleteEvent(idToDelete)
     await safeCalDAVDelete(deleteCalDAVEvent, event.calendarId, idToDelete)
+    deleteEvent(idToDelete)
     closePreview()
   }
 
-  const performDelete = (mode: 'all' | 'this' | 'future'): void => {
+  const performDelete = async (mode: 'all' | 'this' | 'future'): Promise<void> => {
     if (mode === 'this' && originalEventId) {
       // For 'this' occurrence: exclude the date from the master event
       const occurrenceStartISO = clickedEventId.slice(originalEventId.length + 1)
       const occurrenceDate = occurrenceStartISO.split('T')[0]
-      const masterEvent = useCalendarStore.getState().events.find((e) => e.id === originalEventId)
+      const storedEvents = useCalendarStore.getState().events
+      const masterEvent = storedEvents.find((e) => e.id === originalEventId)
       if (masterEvent) {
+        const selectedException = storedEvents.find((candidate) => candidate.id === clickedEventId)
+        const exclusionValue = masterEvent.isAllDay ? occurrenceDate : occurrenceStartISO
         const excludedDates = masterEvent.excludedDates || []
-        if (!excludedDates.includes(occurrenceDate)) {
-          const updatedExcludedDates = [...excludedDates, occurrenceDate]
-          updateEvent(originalEventId, { excludedDates: updatedExcludedDates })
-          safeCalDAVUpdate(
-            updateCalDAVEvent,
+        const updatedExcludedDates = excludedDates.includes(exclusionValue)
+          ? excludedDates
+          : [...excludedDates, exclusionValue]
+        try {
+          await saveRecurrenceOverride(
             masterEvent.calendarId,
             { ...masterEvent, excludedDates: updatedExcludedDates },
-            { excludedDates: updatedExcludedDates }
+            null,
+            selectedException?.recurrenceId ? selectedException.id : undefined
           )
+        } catch {
+          showToast('Failed to delete this occurrence. The event was kept.')
+          return
         }
       }
     } else {
       // Delete entire series
       const idToDelete = originalEventId || event.id
-      deleteEvent(idToDelete)
       if (event.calendarId && event.calendarId !== 'default') {
-        safeCalDAVDelete(deleteCalDAVEvent, event.calendarId, idToDelete)
+        await safeCalDAVDelete(deleteCalDAVEvent, event.calendarId, idToDelete)
       }
+      deleteEvent(idToDelete)
     }
     closePreview()
     setShowDeleteDialog(false)

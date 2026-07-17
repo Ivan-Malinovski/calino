@@ -75,7 +75,12 @@ export const EventCard = React.memo(function EventCard({
   const addEvent = useCalendarStore((state) => state.addEvent)
   const duplicateEvent = useCalendarStore((state) => state.duplicateEvent)
   const timeFormat = useSettingsStore((state) => state.timeFormat)
-  const { deleteEvent: deleteCalDAVEvent, updateEvent: updateCalDAVEvent, createEvent: createCalDAVEvent } = useCalDAV()
+  const {
+    deleteEvent: deleteCalDAVEvent,
+    updateEvent: updateCalDAVEvent,
+    createEvent: createCalDAVEvent,
+    saveRecurrenceOverride,
+  } = useCalDAV()
   // Cross-fragment hover: a multi-day event is rendered as separate cards per
   // grid cell. Share one hover highlight by tracking the hovered id in a store.
   // Subscribe to a boolean so only the previously- and newly-hovered cards
@@ -608,21 +613,24 @@ export const EventCard = React.memo(function EventCard({
               if (mode === 'this' && originalEventId) {
                 const masterEvent = useCalendarStore.getState().events.find((e) => e.id === originalEventId)
                 if (masterEvent) {
-                  const dateMatch = event.id.match(/(\d{4}-\d{2}-\d{2})/)
-                  const dateStr = dateMatch ? dateMatch[1] : null
+                  const occurrenceStart = event.recurrenceId || event.start
+                  const dateStr = occurrenceStart.split('T')[0]
                   if (dateStr) {
+                    const exclusionValue = masterEvent.isAllDay ? dateStr : occurrenceStart
                     const excludedDates = masterEvent.excludedDates || []
-                    if (!excludedDates.includes(dateStr)) {
-                      const updatedExcludedDates = [...excludedDates, dateStr]
-                      updateEvent(originalEventId, {
-                        excludedDates: updatedExcludedDates,
-                      })
-                      await safeCalDAVUpdate(
-                        updateCalDAVEvent,
+                    const updatedExcludedDates = excludedDates.includes(exclusionValue)
+                      ? excludedDates
+                      : [...excludedDates, exclusionValue]
+                    try {
+                      await saveRecurrenceOverride(
                         masterEvent.calendarId,
                         { ...masterEvent, excludedDates: updatedExcludedDates },
-                        { excludedDates: updatedExcludedDates }
+                        null,
+                        event.recurrenceId ? event.id : undefined
                       )
+                    } catch {
+                      showToast('Failed to delete this occurrence. The event was kept.')
+                      return
                     }
                   }
                 }

@@ -158,4 +158,45 @@ describe('SyncEngine', () => {
       '"etag"'
     )
   })
+
+  it('updates a fetched event at its original CalDAV resource URL', async () => {
+    const event = makeEvent({
+      resourceHref: 'https://caldav.example.com/calendars/test/default/server-generated.ics',
+    })
+
+    await engine.updateEvent(event, '"etag"')
+
+    expect(mockClient.updateEvent).toHaveBeenCalledWith(
+      'https://caldav.example.com/calendars/test/default/',
+      event.resourceHref,
+      expect.any(String),
+      '"etag"'
+    )
+  })
+
+  it('updates a recurrence master and override in the same resource', async () => {
+    const master = makeEvent({
+      uid: 'series-uid',
+      resourceHref: 'https://caldav.example.com/calendars/test/default/series.ics',
+      rruleString: 'FREQ=WEEKLY',
+    })
+    const exception = makeEvent({
+      id: 'series-uid-2024-03-22T14:00:00.000Z',
+      uid: 'series-uid',
+      recurrenceId: '2024-03-22T14:00:00.000Z',
+      recurrenceMasterId: master.id,
+    })
+
+    await engine.updateEventGroup([master, exception], '"etag"')
+
+    expect(mockClient.updateEvent).toHaveBeenCalledWith(
+      'https://caldav.example.com/calendars/test/default/',
+      master.resourceHref,
+      expect.stringContaining('RECURRENCE-ID:20240322T140000Z'),
+      '"etag"'
+    )
+    const body = vi.mocked(mockClient.updateEvent!).mock.calls[0][2]
+    expect(body.match(/BEGIN:VEVENT/g)).toHaveLength(2)
+    expect(body.match(/UID:series-uid/g)).toHaveLength(2)
+  })
 })

@@ -1,7 +1,7 @@
 import type { CalendarEvent } from '@/types'
 import type { SyncResult, ConflictResolution } from '../types'
 import { CalDAVClient } from '../client/CalDAVClient'
-import { eventToICAL, parseICALData, taskToICAL, journalToICAL } from '../adapter/iCalendarAdapter'
+import { eventToICAL, eventsToICAL, parseICALData, taskToICAL, journalToICAL } from '../adapter/iCalendarAdapter'
 import { isUUID } from '@/lib/uuid'
 import * as storage from './accountStorage'
 import { getAttachments, putAttachments } from '@/lib/attachmentStore'
@@ -82,6 +82,7 @@ export class SyncEngine {
         parsedEvents.push({
           ...event,
           etag: serverEvent.etag,
+          resourceHref: serverEvent.url,
         })
         if (event.categories) {
           for (const cat of event.categories) {
@@ -173,9 +174,21 @@ export class SyncEngine {
     } else {
       iCalString = eventToICAL(enriched)
     }
-    const eventUrl = `${calendar.url}${eventResourceFilename(event.id)}`
+    const eventUrl = event.resourceHref || `${calendar.url}${eventResourceFilename(event.id)}`
 
     return this.client.updateEvent(calendar.url, eventUrl, iCalString, etag)
+  }
+
+  async updateEventGroup(events: CalendarEvent[], etag: string): Promise<{ url: string; etag: string }> {
+    const calendar = storage.getAllCalendars().find((c) => c.id === this.calendarId)
+    const master = events.find((event) => !event.recurrenceId)
+    if (!calendar || !master) {
+      throw new Error(`Calendar or recurrence master not found: ${this.calendarId}`)
+    }
+
+    const enriched = await Promise.all(events.map((event) => withInlineAttachments(event)))
+    const eventUrl = master.resourceHref || `${calendar.url}${eventResourceFilename(master.id)}`
+    return this.client.updateEvent(calendar.url, eventUrl, eventsToICAL(enriched), etag)
   }
 
   async deleteEvent(eventUrl: string, etag: string): Promise<void> {

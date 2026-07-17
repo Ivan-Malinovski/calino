@@ -56,6 +56,25 @@ describe('detectUidCollisions', () => {
     expect(reversed.skip.has(b)).toBe(true)
   })
 
+  it('skips overrides belonging to the losing duplicate resource', () => {
+    const keptMaster = entry(makeEvent({ id: 'shared', uid: 'shared' }), '/cal/a.ics')
+    const losingMaster = entry(makeEvent({ id: 'shared', uid: 'shared' }), '/cal/b.ics')
+    const losingOverride = entry(
+      makeEvent({
+        id: 'shared-2024-04-02T00:00:00Z',
+        uid: 'shared',
+        recurrenceId: '2024-04-02T00:00:00Z',
+      }),
+      '/cal/b.ics'
+    )
+
+    const { skip } = detectUidCollisions([keptMaster, losingMaster, losingOverride])
+
+    expect(skip.has(keptMaster)).toBe(false)
+    expect(skip.has(losingMaster)).toBe(true)
+    expect(skip.has(losingOverride)).toBe(true)
+  })
+
   it('does not flag a recurring master plus a RECURRENCE-ID override sharing a UID', () => {
     const master = entry(
       makeEvent({ id: 'birthday', rruleString: 'FREQ=YEARLY' }),

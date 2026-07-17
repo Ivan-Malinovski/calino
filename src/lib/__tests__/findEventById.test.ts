@@ -15,6 +15,8 @@ describe('findEventById', () => {
 
   it('falls back to the recurrence master for a generated instance id', () => {
     expect(findEventById(events, instanceId)).toBe(master)
+    expect(findEventById(events, 'abc-2026-03-10T15:00:00')).toBe(master)
+    expect(findEventById(events, 'abc-2026-03-10T15:00:00Z')).toBe(master)
   })
 
   // All-day recurring instances are encoded as `<masterId>-<YYYY-MM-DD>` (no

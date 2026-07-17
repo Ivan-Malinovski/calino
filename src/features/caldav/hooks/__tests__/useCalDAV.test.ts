@@ -118,6 +118,7 @@ describe('useCalDAV', () => {
   let mockSyncEngineInstance: {
     pushEvent: ReturnType<typeof vi.fn>
     updateEvent: ReturnType<typeof vi.fn>
+    updateEventGroup: ReturnType<typeof vi.fn>
     deleteEvent: ReturnType<typeof vi.fn>
   }
 
@@ -171,6 +172,7 @@ describe('useCalDAV', () => {
     mockSyncEngineInstance = {
       pushEvent: vi.fn().mockResolvedValue({ url: 'https://...', etag: 'abc' }),
       updateEvent: vi.fn().mockResolvedValue({ url: 'https://...', etag: 'def' }),
+      updateEventGroup: vi.fn().mockResolvedValue({ url: 'https://series.ics', etag: 'group-etag' }),
       deleteEvent: vi.fn().mockResolvedValue(undefined),
     }
     mockSyncEngine.SyncEngine.mockImplementation(function () {
@@ -1548,6 +1550,28 @@ describe('useCalDAV', () => {
 
       const store = useCalendarStore.getState()
       expect(store.events.find((e) => e.id === 'server-new')).toBeDefined()
+    })
+
+    it('preserves the server resource URL and etag on imported events', async () => {
+      const serverEvent: CalendarEvent = { ...mockEvent, id: 'remote-uid' }
+      const resourceHref = `${mockCalendar.url}server-generated.ics`
+      const iCalendarAdapter = await import('../../adapter/iCalendarAdapter')
+      vi.mocked(iCalendarAdapter.parseICALData).mockReturnValue([serverEvent])
+      mockCalDAVClient.createCalDAVClient.mockResolvedValue({
+        fetchEvents: vi.fn().mockResolvedValue([
+          { url: resourceHref, data: 'ical-data', etag: '"remote-etag"' },
+        ]),
+        fetchCalendars: vi.fn().mockResolvedValue([mockCalendar]),
+      } as any)
+
+      const { result } = renderHook(() => useCalDAV())
+      await waitFor(() => expect(result.current.accounts.length).toBe(1))
+      await act(async () => result.current.syncAccount(mockAccount.id))
+
+      expect(useCalendarStore.getState().events.find((event) => event.id === serverEvent.id)).toMatchObject({
+        resourceHref,
+        etag: '"remote-etag"',
+      })
     })
   })
 

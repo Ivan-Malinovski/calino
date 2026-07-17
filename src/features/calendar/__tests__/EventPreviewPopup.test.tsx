@@ -389,7 +389,7 @@ describe('EventPreviewPopup', () => {
         const events = useCalendarStore.getState().events
         const original = events.find((e) => e.id === 'series')
         expect(original?.title).toBe('Weekly Sync')
-        expect(original?.excludedDates).toContain('2024-03-15')
+        expect(original?.excludedDates ?? []).not.toContain('2024-03-15T10:00:00.000Z')
         // Exception lands on the clicked occurrence date, not the master's start.
         const exception = events.find((e) => e.id === instanceId)
         expect(exception?.title).toBe('Just This One')

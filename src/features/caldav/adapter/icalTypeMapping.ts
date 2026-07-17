@@ -571,8 +571,13 @@ export function icalEventToCalendarEvent(
     }
   }
 
+  const uid = event.uid || uuidv4()
+  const statusValue = vevent.getFirstPropertyValue('status')
+  const eventStatus = typeof statusValue === 'string' ? statusValue.toUpperCase() : undefined
+
   return {
-    id: event.uid || uuidv4(),
+    id: recurrenceId ? `${uid}-${recurrenceId}` : uid,
+    uid,
     calendarId,
     title: event.summary || 'Untitled',
     description: event.description,
@@ -592,6 +597,8 @@ export function icalEventToCalendarEvent(
     sequence,
     excludedDates: excludedDates.length > 0 ? excludedDates : undefined,
     recurrenceId,
+    recurrenceMasterId: recurrenceId ? uid : undefined,
+    eventStatus,
     attachments: attachments.length > 0 ? attachments : undefined,
   }
 }
@@ -659,9 +666,12 @@ function createAllDayDate(year: number, month: number, day: number): ICAL.Time {
 export function calendarEventToIcalComponent(event: CalendarEvent): ICAL.Component {
   const vevent = new ICAL.Component('vevent')
 
-  vevent.updatePropertyWithValue('uid', event.id)
+  vevent.updatePropertyWithValue('uid', event.uid || event.recurrenceMasterId || event.id)
   vevent.updatePropertyWithValue('dtstamp', ICAL.Time.fromJSDate(new Date(), true))
   vevent.updatePropertyWithValue('sequence', event.sequence ?? 0)
+  if (event.eventStatus) {
+    vevent.updatePropertyWithValue('status', event.eventStatus)
+  }
 
   if (event.isAllDay) {
     const startParts = event.start.split('T')[0].split('-')

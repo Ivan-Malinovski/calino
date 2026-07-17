@@ -36,28 +36,12 @@ export function parseICALEvent(iCalData: string, calendarId: string): CalendarEv
   }
 
   const vevents = comp.getAllSubcomponents('vevent')
-  const uidToIndex = new Map<string, number>()
   const events: CalendarEvent[] = []
 
   for (const vevent of vevents) {
     try {
       const event = icalEventToCalendarEvent(vevent, calendarId)
-      const uid = event.id
-
-      if (uid) {
-        const existingIndex = uidToIndex.get(uid)
-        if (existingIndex !== undefined) {
-          const existing = events[existingIndex]
-          if (!existing.rruleString && event.rruleString) {
-            events[existingIndex] = event
-          }
-        } else {
-          uidToIndex.set(uid, events.length)
-          events.push(event)
-        }
-      } else {
-        events.push(event)
-      }
+      events.push(event)
     } catch (e) {
       console.error('Failed to parse vevent:', e)
       continue
@@ -157,13 +141,18 @@ export function foldICalLines(s: string): string {
 }
 
 export function eventToICAL(event: CalendarEvent): string {
+  return eventsToICAL([event])
+}
+
+export function eventsToICAL(events: CalendarEvent[]): string {
   const comp = new ICAL.Component('vcalendar')
   comp.updatePropertyWithValue('version', '2.0')
   comp.updatePropertyWithValue('prodid', '-//Calino//EN')
   comp.updatePropertyWithValue('calscale', 'GREGORIAN')
 
-  const vevent = calendarEventToIcalComponent(event)
-  comp.addSubcomponent(vevent)
+  for (const event of events) {
+    comp.addSubcomponent(calendarEventToIcalComponent(event))
+  }
 
   return foldICalLines(comp.toString())
 }

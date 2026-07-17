@@ -415,6 +415,40 @@ END:VCALENDAR`
       expect(events[0].recurrenceId).toContain('T14:00:00')
     })
 
+    it('preserves a recurring master and its detached override with the same UID', () => {
+      const iCal = `BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+UID:shared-series
+DTSTART:20240318T090000Z
+DTEND:20240318T100000Z
+RRULE:FREQ=WEEKLY
+SUMMARY:Weekly meeting
+END:VEVENT
+BEGIN:VEVENT
+UID:shared-series
+RECURRENCE-ID:20240325T090000Z
+DTSTART:20240326T110000Z
+DTEND:20240326T120000Z
+SUMMARY:Moved meeting
+STATUS:CANCELLED
+END:VEVENT
+END:VCALENDAR`
+
+      const events = parseICALEvent(iCal, 'cal-1')
+
+      expect(events).toHaveLength(2)
+      expect(events[0]).toMatchObject({ id: 'shared-series', uid: 'shared-series' })
+      expect(events[1]).toMatchObject({
+        uid: 'shared-series',
+        recurrenceMasterId: 'shared-series',
+        eventStatus: 'CANCELLED',
+        title: 'Moved meeting',
+      })
+      expect(events[1].id).not.toBe(events[0].id)
+      expect(eventToICAL(events[1])).toContain('STATUS:CANCELLED')
+    })
+
     it('handles multiple events in one iCal', () => {
       const iCal = `BEGIN:VCALENDAR
 VERSION:2.0
@@ -1227,7 +1261,7 @@ END:VCALENDAR`
         ].join('\r\n')
 
         const events = parseICALEvent(ics, 'cal-1')
-        const exception = events.find((e) => e.id === 'exception-tzid')
+        const exception = events.find((e) => e.uid === 'exception-tzid')
         expect(exception).toBeDefined()
         expect(exception!.timezone).toBe('America/New_York')
         expect(exception!.recurrenceId).toBe('2025-07-13T15:00:00')

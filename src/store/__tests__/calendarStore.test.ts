@@ -582,6 +582,44 @@ it('closes modal', () => {
       const weeklySyncEvents = events.filter((e) => e.title === 'Weekly Sync')
       expect(weeklySyncEvents.length).toBe(2)
     })
+
+    it('does not apply an exception to another recurring series at the same time', () => {
+      const store = useCalendarStore.getState()
+      store.addEvent({ id: 'master-a', calendarId: 'default', title: 'Series A', start: '2024-03-18T09:00:00.000Z', end: '2024-03-18T10:00:00.000Z', isAllDay: false, recurrence: { frequency: 'weekly', interval: 1 } })
+      store.addEvent({ id: 'master-b', calendarId: 'default', title: 'Series B', start: '2024-03-18T09:00:00.000Z', end: '2024-03-18T10:00:00.000Z', isAllDay: false, recurrence: { frequency: 'weekly', interval: 1 } })
+      store.addEvent({ id: 'master-a-2024-03-18T09:00:00.000Z', calendarId: 'default', title: 'Edited Series A', start: '2024-03-18T11:00:00.000Z', end: '2024-03-18T12:00:00.000Z', isAllDay: false, recurrenceId: '2024-03-18T09:00:00.000Z', recurrenceMasterId: 'master-a' })
+
+      const events = store.getEventsForDateRange('2024-03-18', '2024-03-18')
+      expect(events.map((event) => event.title).sort()).toEqual(['Edited Series A', 'Series B'])
+    })
+
+    it('shows a detached occurrence in the range it was moved to', () => {
+      const store = useCalendarStore.getState()
+      store.addEvent({ id: 'moved-master', calendarId: 'default', title: 'Weekly meeting', start: '2024-03-18T09:00:00.000Z', end: '2024-03-18T10:00:00.000Z', isAllDay: false, recurrence: { frequency: 'weekly', interval: 1 } })
+      store.addEvent({ id: 'moved-master-2024-03-18T09:00:00.000Z', uid: 'moved-master', calendarId: 'default', title: 'Moved meeting', start: '2024-03-19T11:00:00.000Z', end: '2024-03-19T12:00:00.000Z', isAllDay: false, recurrenceId: '2024-03-18T09:00:00.000Z', recurrenceMasterId: 'moved-master' })
+
+      expect(store.getEventsForDateRange('2024-03-19', '2024-03-19')).toMatchObject([
+        { title: 'Moved meeting', start: '2024-03-19T11:00:00.000Z' },
+      ])
+      expect(store.getEventsForDateRange('2024-03-18', '2024-03-18')).toHaveLength(0)
+    })
+
+    it('matches a floating recurrence ID to the generated occurrence', () => {
+      const store = useCalendarStore.getState()
+      store.addEvent({ id: 'floating-master', calendarId: 'default', title: 'Original', start: '2024-03-18T09:00:00', end: '2024-03-18T10:00:00', isAllDay: false, recurrence: { frequency: 'weekly', interval: 1 } })
+      store.addEvent({ id: 'floating-master-2024-03-18T09:00:00', uid: 'floating-master', calendarId: 'default', title: 'Moved', start: '2024-03-19T11:00:00', end: '2024-03-19T12:00:00', isAllDay: false, recurrenceId: '2024-03-18T09:00:00', recurrenceMasterId: 'floating-master' })
+
+      const events = store.getEventsForDateRange('2024-03-18', '2024-03-19')
+      expect(events.map((event) => event.title)).toEqual(['Moved'])
+    })
+
+    it('suppresses a cancelled detached occurrence without rendering it', () => {
+      const store = useCalendarStore.getState()
+      store.addEvent({ id: 'cancelled-master', calendarId: 'default', title: 'Weekly', start: '2024-03-18T09:00:00.000Z', end: '2024-03-18T10:00:00.000Z', isAllDay: false, recurrence: { frequency: 'weekly', interval: 1 } })
+      store.addEvent({ id: 'cancelled-master-2024-03-18T09:00:00.000Z', uid: 'cancelled-master', calendarId: 'default', title: 'Cancelled', start: '2024-03-18T09:00:00.000Z', end: '2024-03-18T10:00:00.000Z', isAllDay: false, recurrenceId: '2024-03-18T09:00:00.000Z', recurrenceMasterId: 'cancelled-master', eventStatus: 'CANCELLED' })
+
+      expect(store.getEventsForDateRange('2024-03-18', '2024-03-18')).toHaveLength(0)
+    })
   })
 
   // ======================================================================
@@ -962,8 +1000,10 @@ it('closes modal', () => {
         end: '2024-03-25T15:00:00.000Z',
         isAllDay: false,
         recurrenceId: '2024-03-25T09:00:00.000Z',
+        recurrenceMasterId: 'master-event',
         syncStatus: 'synced',
         etag: '"abc123"',
+        resourceHref: 'https://example.com/event.ics',
         sequence: 1,
       })
 
@@ -975,10 +1015,12 @@ it('closes modal', () => {
 
       // recurrenceId should be cleared
       expect(duplicate.recurrenceId).toBeUndefined()
+      expect(duplicate.recurrenceMasterId).toBeUndefined()
       // syncStatus should be cleared
       expect(duplicate.syncStatus).toBeUndefined()
       // etag should be cleared
       expect(duplicate.etag).toBeUndefined()
+      expect(duplicate.resourceHref).toBeUndefined()
       // sequence should be cleared
       expect(duplicate.sequence).toBeUndefined()
 
@@ -1254,8 +1296,8 @@ it('closes modal', () => {
     })
   })
 
-  describe('Bug 40: excluded dates check compares date portions only', () => {
-    it('excludes occurrence when excluded date has different time suffix', () => {
+  describe('timed recurrence exclusions', () => {
+    it('does not exclude a timed occurrence when EXDATE is midnight', () => {
       const store = useCalendarStore.getState()
 
       store.addEvent({
@@ -1272,9 +1314,9 @@ it('closes modal', () => {
 
       const events = store.getEventsForDateRange('2024-03-18', '2024-04-01')
 
-      // March 25 should be excluded even though excluded date has different time
+      // RFC 5545 requires EXDATE to match the original occurrence value.
       const march25 = events.find((e) => e.start.startsWith('2024-03-25'))
-      expect(march25).toBeUndefined()
+      expect(march25).toBeDefined()
 
       // March 18 and April 1 should still appear
       const march18 = events.find((e) => e.start.startsWith('2024-03-18'))
@@ -1283,7 +1325,7 @@ it('closes modal', () => {
       expect(apr1).toBeDefined()
     })
 
-    it('excludes occurrence when excluded date is date-only string', () => {
+    it('does not exclude a timed occurrence with a date-only EXDATE', () => {
       const store = useCalendarStore.getState()
 
       store.addEvent({
@@ -1300,12 +1342,30 @@ it('closes modal', () => {
 
       const events = store.getEventsForDateRange('2024-04-01', '2024-04-05')
 
-      // April 3 should be excluded (date-only in excludedDates matches the occurrence date)
+      // A DATE value cannot exclude a DATE-TIME occurrence.
       const apr3 = events.find((e) => e.start.startsWith('2024-04-03'))
-      expect(apr3).toBeUndefined()
+      expect(apr3).toBeDefined()
 
       // Other dates should appear
-      expect(events.length).toBe(4)
+      expect(events.length).toBe(5)
+    })
+
+    it('excludes a timed occurrence when EXDATE matches its exact start', () => {
+      const store = useCalendarStore.getState()
+      store.addEvent({
+        id: 'master-exact-exdate',
+        calendarId: 'default',
+        title: 'Lunch',
+        start: '2026-07-13T15:20:00.000Z',
+        end: '2026-07-13T16:10:00.000Z',
+        isAllDay: false,
+        rruleString: 'FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR',
+        excludedDates: ['2026-07-22T15:20:00.000Z'],
+      })
+
+      const events = store.getEventsForDateRange('2026-07-22', '2026-07-23')
+      expect(events.some((event) => event.start === '2026-07-22T15:20:00.000Z')).toBe(false)
+      expect(events.some((event) => event.start === '2026-07-23T15:20:00.000Z')).toBe(true)
     })
 
     it('does not exclude occurrence when excluded date differs from occurrence date', () => {

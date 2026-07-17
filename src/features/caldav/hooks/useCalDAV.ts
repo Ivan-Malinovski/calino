@@ -109,7 +109,14 @@ async function collectParsedWithHref(
           }
         }
       }
-      result.push({ event: parsedEvent, href: eventData.url })
+      result.push({
+        event: {
+          ...parsedEvent,
+          resourceHref: eventData.url,
+          etag: eventData.etag,
+        },
+        href: eventData.url,
+      })
     }
   }
   return { items: result, hadParseFailures }
@@ -143,6 +150,12 @@ interface UseCalDAVReturn {
   syncAll: () => Promise<void>
   createEvent: (calendarId: string, event: CalendarEvent) => Promise<void>
   updateEvent: (calendarId: string, event: CalendarEvent) => Promise<void>
+  saveRecurrenceOverride: (
+    calendarId: string,
+    master: CalendarEvent,
+    exception: CalendarEvent | null,
+    removedExceptionId?: string
+  ) => Promise<void>
   deleteEvent: (calendarId: string, eventId: string) => Promise<void>
   deleteEventByHref: (calendarId: string, href: string) => Promise<void>
   retryAllFailedSyncs: () => Promise<{ succeeded: number; failed: number }>
@@ -227,31 +240,45 @@ export function useCalDAV(): UseCalDAVReturn {
           switch (change.type) {
             case 'create': {
               const event = JSON.parse(change.data || '{}') as CalendarEvent
-              await engine.pushEvent({ ...event, sequence: 0 })
-              // Mark as synced in the store
-              storeUpdateEvent(change.eventId, { syncStatus: 'synced' })
+              const { url, etag } = await engine.pushEvent({ ...event, sequence: 0 })
+              storeUpdateEvent(change.eventId, { resourceHref: url, etag, syncStatus: 'synced' })
               break
             }
             case 'update': {
               const event = JSON.parse(change.data || '{}') as CalendarEvent
-              await engine.updateEvent(event, event.etag || '')
+              const state = useCalendarStore.getState()
+              const uid = event.uid || event.id
+              const overrides = !event.recurrenceId
+                ? state.events.filter(
+                    (candidate) =>
+                      candidate.calendarId === change.calendarId &&
+                      Boolean(candidate.recurrenceId) &&
+                      (candidate.uid === uid || candidate.recurrenceMasterId === event.id)
+                  )
+                : []
+              const { url, etag } =
+                overrides.length > 0
+                  ? await engine.updateEventGroup([event, ...overrides], event.etag || '')
+                  : await engine.updateEvent(event, event.etag || '')
               // Mark as synced in the store
-              storeUpdateEvent(change.eventId, { syncStatus: 'synced' })
+              storeUpdateEvent(change.eventId, { resourceHref: url, etag, syncStatus: 'synced' })
               break
             }
             case 'delete': {
-              const eventUrl = `${calendar.url}${eventResourceFilename(change.eventId)}`
+              let pendingEvent: CalendarEvent | undefined
               // Try to get etag from pending change data first (for broken events),
               // then from the live store
               let etag = ''
               if (change.data) {
                 try {
-                  const eventData = JSON.parse(change.data) as CalendarEvent
-                  etag = eventData.etag || ''
+                  pendingEvent = JSON.parse(change.data) as CalendarEvent
+                  etag = pendingEvent.etag || ''
                 } catch {
                   /* ignore parse errors */
                 }
               }
+              const eventUrl =
+                pendingEvent?.resourceHref || `${calendar.url}${eventResourceFilename(change.eventId)}`
               if (!etag) {
                 const eventInStore = useCalendarStore
                   .getState()
@@ -1297,7 +1324,7 @@ export function useCalDAV(): UseCalDAVReturn {
           console.log('[CalDAV] Pushing event to server...')
         }
 
-        const { etag } = await engine.pushEvent(eventWithSequence)
+        const { url, etag } = await engine.pushEvent(eventWithSequence)
 
         if (caldavDebugMode) {
           console.log('[CalDAV] Event pushed successfully!')
@@ -1307,7 +1334,7 @@ export function useCalDAV(): UseCalDAVReturn {
         // sends If-Match against the current server resource. Without this
         // we'd send the empty pre-push etag and strict servers (Radicale,
         // iCloud) would reject the next update.
-        storeUpdateEvent(event.id, { etag, syncStatus: 'synced' })
+        storeUpdateEvent(event.id, { resourceHref: url, etag, syncStatus: 'synced' })
 
         storage.updateAccountLastSync(account.id)
         processPendingChanges()
@@ -1406,7 +1433,21 @@ export function useCalDAV(): UseCalDAVReturn {
           console.log('[CalDAV] Updating event on server...')
         }
 
-        const { etag } = await engine.updateEvent(eventWithSequence, event.etag ?? '')
+        const uid = eventWithSequence.uid || eventWithSequence.id
+        const overrides = !eventWithSequence.recurrenceId
+          ? useCalendarStore
+              .getState()
+              .events.filter(
+                (candidate) =>
+                  candidate.calendarId === calendarId &&
+                  Boolean(candidate.recurrenceId) &&
+                  (candidate.uid === uid || candidate.recurrenceMasterId === eventWithSequence.id)
+              )
+          : []
+        const { url, etag } =
+          overrides.length > 0
+            ? await engine.updateEventGroup([eventWithSequence, ...overrides], event.etag ?? '')
+            : await engine.updateEvent(eventWithSequence, event.etag ?? '')
 
         if (caldavDebugMode) {
           console.log('[CalDAV] Event updated successfully!')
@@ -1416,7 +1457,12 @@ export function useCalDAV(): UseCalDAVReturn {
         // sends If-Match against the current server resource. Without this
         // we'd keep using the pre-update etag and strict servers would
         // reject subsequent edits as stale.
-        storeUpdateEvent(event.id, { etag, syncStatus: 'synced' })
+        storeUpdateEvent(event.id, {
+          resourceHref: url,
+          etag,
+          sequence: eventWithSequence.sequence,
+          syncStatus: 'synced',
+        })
 
         storage.updateAccountLastSync(account.id)
         processPendingChanges()
@@ -1440,6 +1486,78 @@ export function useCalDAV(): UseCalDAVReturn {
       }
     },
     [caldavDebugMode, storeUpdateEvent]
+  )
+
+  const saveRecurrenceOverrideFn = useCallback(
+    async (
+      calendarId: string,
+      master: CalendarEvent,
+      exception: CalendarEvent | null,
+      removedExceptionId?: string
+    ): Promise<void> => {
+      const allCalendars = storage.getAllCalendars()
+      const allAccounts = storage.getAllAccounts()
+      const calendar = allCalendars.find((item) => item.id === calendarId)
+      const account = allAccounts.find((item) => item.id === calendar?.accountId)
+
+      // Local-only calendars have no remote resource to update.
+      if (!calendar) {
+        storeUpdateEvent(master.id, master)
+        if (removedExceptionId) storeDeleteEvent(removedExceptionId)
+        if (exception) storeAddEvent(exception)
+        return
+      }
+      if (!account) throw new Error('Calendar account not found')
+
+      const credential = await getCredentialById(account.credentialId)
+      if (!credential) throw new Error('Credentials not found')
+
+      const uid = master.uid || master.id
+      const existingOverrides = useCalendarStore
+        .getState()
+        .events.filter(
+          (event) =>
+            event.id !== exception?.id &&
+            event.id !== removedExceptionId &&
+            event.calendarId === calendarId &&
+            Boolean(event.recurrenceId) &&
+            (event.uid === uid || event.recurrenceMasterId === master.id)
+        )
+      const masterWithSequence = { ...master, uid, sequence: (master.sequence ?? 0) + 1 }
+      const normalizedException = exception
+        ? {
+            ...exception,
+            uid,
+            recurrenceMasterId: master.id,
+            sequence: masterWithSequence.sequence,
+          }
+        : null
+
+      const client = await createCalDAVClient(account.serverUrl, credential, account.proxyUrl)
+      const engine = new SyncEngine(client, calendarId)
+      const { url, etag } = await engine.updateEventGroup(
+        [masterWithSequence, ...existingOverrides, ...(normalizedException ? [normalizedException] : [])],
+        master.etag ?? ''
+      )
+
+      storeUpdateEvent(master.id, {
+        ...masterWithSequence,
+        resourceHref: url,
+        etag,
+        syncStatus: 'synced',
+      })
+      if (removedExceptionId) storeDeleteEvent(removedExceptionId)
+      if (normalizedException) {
+        storeAddEvent({
+          ...normalizedException,
+          resourceHref: url,
+          etag,
+          syncStatus: 'synced',
+        })
+      }
+      storage.updateAccountLastSync(account.id)
+    },
+    [storeAddEvent, storeDeleteEvent, storeUpdateEvent]
   )
 
   const deleteEventFn = useCallback(
@@ -1496,7 +1614,8 @@ export function useCalDAV(): UseCalDAVReturn {
           console.log('[CalDAV] Deleting event from server...')
         }
 
-        const eventUrl = `${calendar.url}${eventResourceFilename(eventId)}`
+        const eventUrl =
+          effectiveData?.resourceHref || `${calendar.url}${eventResourceFilename(eventId)}`
         // Bug 17 fix: use the event's etag from the store instead of empty string
         await engine.deleteEvent(eventUrl, effectiveData?.etag || '')
 
@@ -1622,12 +1741,12 @@ export function useCalDAV(): UseCalDAVReturn {
 
         if (event.etag) {
           // Event previously existed on server; update it
-          const { etag } = await engine.updateEvent(event, event.etag)
-          storeUpdateEvent(event.id, { etag, syncStatus: 'synced' })
+          const { url, etag } = await engine.updateEvent(event, event.etag)
+          storeUpdateEvent(event.id, { resourceHref: url, etag, syncStatus: 'synced' })
         } else {
           // Event is new; create it
-          const { etag } = await engine.pushEvent({ ...event, sequence: event.sequence ?? 0 })
-          storeUpdateEvent(event.id, { etag, syncStatus: 'synced' })
+          const { url, etag } = await engine.pushEvent({ ...event, sequence: event.sequence ?? 0 })
+          storeUpdateEvent(event.id, { resourceHref: url, etag, syncStatus: 'synced' })
         }
 
         succeeded++
@@ -1766,6 +1885,7 @@ export function useCalDAV(): UseCalDAVReturn {
     syncAll,
     createEvent,
     updateEvent: updateEventFn,
+    saveRecurrenceOverride: saveRecurrenceOverrideFn,
     deleteEvent: deleteEventFn,
     deleteEventByHref,
     retryAllFailedSyncs,

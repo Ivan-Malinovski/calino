@@ -83,6 +83,8 @@ export interface DuplicateUidIssue {
 
 export interface CalendarEvent {
   id: string
+  /** RFC 5545 UID. Detached recurrence instances share this with their master. */
+  uid?: string
   calendarId: string
   title: string
   description?: string
@@ -105,8 +107,14 @@ export interface CalendarEvent {
   transparency?: 'opaque' | 'transparent'
   sequence?: number
   etag?: string
+  /** Exact CalDAV object URL used for update/delete; it is not derived from UID. */
+  resourceHref?: string
   excludedDates?: string[]
   recurrenceId?: string
+  /** Local master identity for a detached recurrence occurrence. */
+  recurrenceMasterId?: string
+  /** Raw VEVENT STATUS value, including cancelled detached occurrences. */
+  eventStatus?: string
   isFragment?: boolean
   isFirstFragment?: boolean
   isLastFragment?: boolean

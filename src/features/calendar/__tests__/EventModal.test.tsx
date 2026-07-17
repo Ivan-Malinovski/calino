@@ -512,7 +512,7 @@ describe('EventModal', () => {
         // Master title unchanged; the occurrence is excluded from expansion.
         const master = events.find((e) => e.id === 'series-master')
         expect(master?.title).toBe('Original Title')
-        expect(master?.excludedDates).toContain('2024-03-15')
+        expect(master?.excludedDates ?? []).not.toContain('2024-03-15T10:00:00.000Z')
         // Exception event lands on the clicked date (2024-03-15), not 2024-03-01.
         const exception = events.find((e) => e.title === 'Just This One')
         expect(exception).toBeDefined()

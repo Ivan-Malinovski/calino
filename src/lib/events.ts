@@ -16,7 +16,7 @@
  */
 export function extractOriginalEventId(eventId: string): string | null {
   const isoTimestampMatch = eventId.match(
-    /(.+)-(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z)$/
+    /(.+)-(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z?)$/
   )
   if (isoTimestampMatch) {
     return isoTimestampMatch[1]

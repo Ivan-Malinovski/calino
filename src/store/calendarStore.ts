@@ -352,8 +352,10 @@ export const useCalendarStore = create<CalendarStore>()(
         const newEvent: CalendarEvent = {
           ...eventToDuplicate,
           id: crypto.randomUUID(),
+          uid: undefined,
           title: addCopySuffix ? `${eventToDuplicate.title} (copy)` : eventToDuplicate.title,
           recurrenceId: undefined,
+          recurrenceMasterId: undefined,
           isFragment: undefined,
           isFirstFragment: undefined,
           isLastFragment: undefined,
@@ -362,6 +364,7 @@ export const useCalendarStore = create<CalendarStore>()(
           originalEnd: undefined,
           syncStatus: undefined,
           etag: undefined,
+          resourceHref: undefined,
           sequence: undefined,
         }
 
@@ -654,11 +657,26 @@ export const useCalendarStore = create<CalendarStore>()(
         const seenIds = new Set<string>()
 
         const exceptionMap = new Map<string, CalendarEvent>()
+        const legacyExceptionMap = new Map<string, CalendarEvent>()
+        const recurringMasters = new Map(
+          state.events
+            .filter((event) => !event.recurrenceId)
+            .map((event) => [event.id, event])
+        )
         for (const event of state.events) {
           if (event.recurrenceId && visibleCalendarIds.includes(event.calendarId)) {
-            const dateKey = event.recurrenceId.split('T')[0]
-            const key = `${event.calendarId}-${dateKey}`
-            exceptionMap.set(key, event)
+            const inferredMasterId = event.id.endsWith(`-${event.recurrenceId}`)
+              ? event.id.slice(0, -(event.recurrenceId.length + 1))
+              : undefined
+            const masterId = event.recurrenceMasterId || inferredMasterId
+            if (masterId) {
+              const recurrenceKey = event.isAllDay
+                ? event.recurrenceId.split('T')[0]
+                : parseISO(event.recurrenceId).getTime()
+              exceptionMap.set(`${event.calendarId}-${masterId}-${recurrenceKey}`, event)
+            } else {
+              legacyExceptionMap.set(`${event.calendarId}-${event.recurrenceId.split('T')[0]}`, event)
+            }
           }
         }
 
@@ -687,7 +705,17 @@ export const useCalendarStore = create<CalendarStore>()(
           if (!visibleCalendarIds.includes(event.calendarId)) {
             continue
           }
-          if (selectedCategoryNames.length > 0 && !event.categories?.some((c) => selectedCategoryNames.includes(c))) {
+          if (event.eventStatus === 'CANCELLED') {
+            continue
+          }
+          const categorySource = event.recurrenceId
+            ? recurringMasters.get(event.recurrenceMasterId || event.uid || '')
+            : event
+          if (
+            selectedCategoryNames.length > 0 &&
+            categorySource &&
+            !categorySource.categories?.some((category) => selectedCategoryNames.includes(category))
+          ) {
             continue
           }
 
@@ -753,24 +781,21 @@ export const useCalendarStore = create<CalendarStore>()(
 
                 // Check for exception first — if one exists for this date, use it
                 // regardless of whether the date is also in excludedDates.
-                const exceptionKey = `${event.calendarId}-${occDateStr}`
-                const exception = exceptionMap.get(exceptionKey)
+                const recurrenceValue = event.isAllDay ? occDateStr : occ.getTime()
+                const exception =
+                  exceptionMap.get(`${event.calendarId}-${event.id}-${recurrenceValue}`) ||
+                  legacyExceptionMap.get(`${event.calendarId}-${occDateStr}`)
                 if (exception) {
-                  const occId = `${event.id}-${occKey}`
-                  if (!seenIds.has(occId)) {
-                    seenIds.add(occId)
-                    expandedEvents.push({
-                      ...exception,
-                      id: occId,
-                      start: exception.start,
-                      end: exception.end,
-                    })
-                  }
+                  // The detached instance is rendered independently at its
+                  // actual start below. Here it only suppresses the master slot.
                   continue
                 }
 
                 // No exception — honour EXDATE exclusions
-                if (excludedDates.some(d => d.split('T')[0] === occDateStr)) {
+                const isExcluded = event.isAllDay
+                  ? excludedDates.some((date) => date.split('T')[0] === occDateStr)
+                  : excludedDates.some((date) => parseISO(date).getTime() === occ.getTime())
+                if (isExcluded) {
                   continue
                 }
 
@@ -798,9 +823,6 @@ export const useCalendarStore = create<CalendarStore>()(
               }
             }
           } else {
-            if (event.recurrenceId) {
-              continue
-            }
             const eventStart = eventStartDates.get(event.id)!
             const eventEnd = eventEndDates.get(event.id)!
 

@@ -102,6 +102,12 @@ export function getInitialFormState(
   if (isEditing && selectedEventId) {
     existingEvent = events.find((e) => e.id === selectedEventId)
 
+    if (existingEvent?.recurrenceId) {
+      isRecurringInstance = true
+      originalEventId =
+        existingEvent.recurrenceMasterId || existingEvent.uid || extractOriginalEventId(selectedEventId)
+    }
+
     if (!existingEvent) {
       const originalId = extractOriginalEventId(selectedEventId)
       if (originalId) {

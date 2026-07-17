@@ -66,8 +66,9 @@ export function detectUidCollisions(items: ParsedWithHref[]): UidCollisionResult
       kept: entry === kept,
     }))
 
-    for (const entry of sorted) {
-      if (entry !== kept) skip.add(entry)
+    for (const entry of items) {
+      const entryUid = entry.event.uid || entry.event.id
+      if (entryUid === uid && entry.href !== kept.href) skip.add(entry)
     }
 
     issues.push({

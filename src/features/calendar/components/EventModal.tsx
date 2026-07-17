@@ -63,6 +63,7 @@ export function EventModal(): JSX.Element | null {
   const {
     createEvent: createCalDAVEvent,
     updateEvent: updateCalDAVEvent,
+    saveRecurrenceOverride,
     deleteEvent: deleteCalDAVEvent,
   } = useCalDAV()
 
@@ -738,10 +739,12 @@ export function EventModal(): JSX.Element | null {
         // occurrence's date, preserving the event's time-of-day and duration
         // (including any edits the user made in the form). Falls back to the form
         // date for non-instance ids (plain master edits).
+        const selectedStoredEvent = events.find((event) => event.id === selectedEventId)
+        const selectedRecurrenceId = selectedStoredEvent?.recurrenceId
         const occInstanceMatch = selectedEventId.match(
           /-(\d{4}-\d{2}-\d{2})T\d{2}:\d{2}:\d{2}\.\d{3}Z$/
         )
-        const occDateStr = occInstanceMatch ? occInstanceMatch[1] : startDate
+        const occDateStr = selectedRecurrenceId?.split('T')[0] || (occInstanceMatch ? occInstanceMatch[1] : startDate)
         const durationMs = new Date(endDateTime).getTime() - new Date(startDateTime).getTime()
         const occStartDateTime = isAllDay
           ? `${occDateStr}T00:00:00`
@@ -769,7 +772,7 @@ export function EventModal(): JSX.Element | null {
           const isoDateMatch = selectedEventId.match(
             /(.+)-(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z)$/
           )
-          const originalOccurrenceDate = isoDateMatch ? isoDateMatch[2] : null
+          const originalOccurrenceDate = selectedRecurrenceId || (isoDateMatch ? isoDateMatch[2] : null)
           if (!originalOccurrenceDate) {
             showToast('Invalid event data. Cannot edit single occurrence.')
             return
@@ -777,6 +780,7 @@ export function EventModal(): JSX.Element | null {
 
           const exceptionEvent: CalendarEvent = {
             id: `${originalEventId}-${originalOccurrenceDate}`,
+            uid: masterEvent.uid || masterEvent.id,
             calendarId: masterEvent.calendarId,
             title,
             description: description || undefined,
@@ -787,6 +791,7 @@ export function EventModal(): JSX.Element | null {
             recurrence: undefined,
             rruleString: undefined,
             recurrenceId: originalOccurrenceDate,
+            recurrenceMasterId: originalEventId,
             travelDuration,
             reminders,
             transparency,
@@ -795,31 +800,25 @@ export function EventModal(): JSX.Element | null {
             attachments: attachments.length > 0 ? attachments : undefined,
           }
 
-          addEvent(exceptionEvent)
-          // Sync IndexedDB for exception event
-          if (attachments.length > 0) {
-            putAttachments(exceptionEvent.id, attachments).catch(() => {})
+          const occurrenceDate = originalOccurrenceDate.split('T')[0]
+          const masterWithoutLegacyExdate = {
+            ...masterEvent,
+            excludedDates: masterEvent.excludedDates?.filter(
+              (date) => date.split('T')[0] !== occurrenceDate
+            ),
           }
           try {
-            await createCalDAVEvent(masterEvent.calendarId, exceptionEvent)
-          } catch {
-            showToast('Failed to sync event with CalDAV server. It will be retried.')
-          }
-
-          // Add EXDATE to master so rrule expansion skips this date and only
-          // the exception event is shown.  Without this the master would still
-          // generate an occurrence on that date, creating a visible duplicate.
-          const occurrenceDate = originalOccurrenceDate.split('T')[0]
-          const masterExcludedDates = masterEvent.excludedDates || []
-          if (!masterExcludedDates.includes(occurrenceDate)) {
-            const updatedExcludedDates = [...masterExcludedDates, occurrenceDate]
-            updateEvent(originalEventId, { excludedDates: updatedExcludedDates })
-            await safeCalDAVUpdate(
-              updateCalDAVEvent,
+            await saveRecurrenceOverride(
               masterEvent.calendarId,
-              { ...masterEvent, excludedDates: updatedExcludedDates },
-              { excludedDates: updatedExcludedDates }
-            ).catch(() => {})
+              masterWithoutLegacyExdate,
+              exceptionEvent
+            )
+          } catch {
+            showToast('Failed to update this occurrence. The original event was kept.')
+            return
+          }
+          if (attachments.length > 0) {
+            putAttachments(exceptionEvent.id, attachments).catch(() => {})
           }
         } else if (mode === 'future' && originalEventId) {
           // "This and following events": split the series at the current
@@ -835,7 +834,7 @@ export function EventModal(): JSX.Element | null {
           const isoDateMatch = selectedEventId.match(
             /(.+)-(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z)$/
           )
-          const originalOccurrenceDate = isoDateMatch ? isoDateMatch[2] : null
+          const originalOccurrenceDate = selectedRecurrenceId || (isoDateMatch ? isoDateMatch[2] : null)
           if (!originalOccurrenceDate) {
             showToast('Invalid event data. Cannot split series.')
             return
@@ -1096,16 +1095,22 @@ export function EventModal(): JSX.Element | null {
       const occurrenceDate = occurrenceStartISO.split('T')[0]
       const masterEvent = events.find((e) => e.id === originalEventId)
       if (masterEvent) {
+        const selectedException = events.find((event) => event.id === selectedEventId)
+        const exclusionValue = masterEvent.isAllDay ? occurrenceDate : occurrenceStartISO
         const excludedDates = masterEvent.excludedDates || []
-        if (!excludedDates.includes(occurrenceDate)) {
-          const updatedExcludedDates = [...excludedDates, occurrenceDate]
-          updateEvent(originalEventId, { excludedDates: updatedExcludedDates })
-          await safeCalDAVUpdate(
-            updateCalDAVEvent,
+        const updatedExcludedDates = excludedDates.includes(exclusionValue)
+          ? excludedDates
+          : [...excludedDates, exclusionValue]
+        try {
+          await saveRecurrenceOverride(
             calendarId,
             { ...masterEvent, excludedDates: updatedExcludedDates },
-            { excludedDates: updatedExcludedDates }
+            null,
+            selectedException?.recurrenceId ? selectedException.id : undefined
           )
+        } catch {
+          showToast('Failed to delete this occurrence. The event was kept.')
+          return
         }
       }
     } else {
