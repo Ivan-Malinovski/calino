@@ -40,66 +40,24 @@ jobs:
       - name: Lint
         run: pnpm lint
 
-  # ── Build, test & publish ─────────────────────────────────────
-  docker:
+  # ── Build & test (native platform, all triggers) ───────────────
+  test:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
     steps:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v4
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
 
-      # ── GHCR login (release tags only) ────────────────────────
-      # Publishing is gated to tag pushes so a release produces exactly ONE
-      # GHCR deployment. release.sh pushes both the branch (main) and the
-      # version tag (v*) for a release; if plain branch pushes also
-      # published, that would be a second, redundant deployment of the same
-      # commit (this used to happen — see ci(docker) history for the
-      # disjoint-tag-set workaround that avoided a race but didn't remove
-      # the duplicate deployment). Branch pushes and PRs still run the full
-      # build + healthcheck test below, just without pushing to GHCR.
-      - name: Log in to GHCR
-        if: startsWith(github.ref, 'refs/tags/v')
-        uses: docker/login-action@v4
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Extract metadata
-        if: startsWith(github.ref, 'refs/tags/v')
-        id: meta
-        uses: docker/metadata-action@v6
-        with:
-          # Pinned lowercase image name so every tag (semver, sha, latest, main)
-          # always lands in the single canonical GHCR package, regardless of any
-          # future repo rename or owner-casing change.
-          images: ghcr.io/ivan-malinovski/calino
-          # Only reached on a version-tag push (see the `if:` above), so this
-          # is the release's one and only tag set — no `edge`/branch tags to
-          # keep disjoint from anymore.
-          tags: |
-            type=semver,pattern={{version}}
-            type=raw,value=latest
-            type=raw,value=main
-            type=sha,prefix=sha-,format=short
-
-      # ── Test: build native platform, load, healthcheck ────────
       - name: Build for testing
         uses: docker/build-push-action@v7
         with:
           context: .
           load: true
           tags: calino:test
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=test
+          cache-to: type=gha,mode=max,scope=test
 
       - name: Start container
         run: |
@@ -166,15 +124,127 @@ jobs:
         if: always()
         run: docker rm -f calino-test
 
-      # ── Publish to GHCR (release tags only — see the login step above) ──
-      - name: Build & push
-        if: startsWith(github.ref, 'refs/tags/v')
+  # ── Publish to GHCR (release tags only, native per-arch runners) ──
+  build:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: test
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        include:
+          - platform: linux/amd64
+            runner: ubuntu-24.04
+            slug: linux-amd64
+          - platform: linux/arm64
+            runner: ubuntu-24.04-arm
+            slug: linux-arm64
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      # ── GHCR login (release tags only) ────────────────────────
+      # Publishing is gated to tag pushes so a release produces exactly ONE
+      # GHCR deployment. release.sh pushes both the branch (main) and the
+      # version tag (v*) for a release; if plain branch pushes also
+      # published, that would be a second, redundant deployment of the same
+      # commit (this used to happen — see ci(docker) history for the
+      # disjoint-tag-set workaround that avoided a race but didn't remove
+      # the duplicate deployment). Branch pushes and PRs still run the full
+      # build + healthcheck test in the `test` job above, just without
+      # pushing to GHCR. Each matrix leg here pushes an untagged image by
+      # digest only (`push-by-digest`) — tags are applied exactly once, in
+      # the `merge` job below, so the multi-arch manifest list is still a
+      # single deployment.
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build & push by digest
+        id: build
         uses: docker/build-push-action@v7
         with:
           context: .
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          platforms: ${{ matrix.platform }}
+          outputs: type=image,name=ghcr.io/ivan-malinovski/calino,push-by-digest=true,name-canonical=true,push=true
+          cache-from: type=gha,scope=build-${{ matrix.slug }}
+          cache-to: type=gha,mode=max,scope=build-${{ matrix.slug }}
+
+      - name: Export digest
+        run: |
+          mkdir -p /tmp/digests
+          digest="${{ steps.build.outputs.digest }}"
+          touch "/tmp/digests/${digest#sha256:}"
+
+      - name: Upload digest
+        uses: actions/upload-artifact@v4
+        with:
+          name: digest-${{ matrix.slug }}
+          path: /tmp/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  # ── Assemble multi-arch manifest & publish tags ─────────────────
+  merge:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Download digests
+        uses: actions/download-artifact@v4
+        with:
+          pattern: digest-*
+          merge-multiple: true
+          path: /tmp/digests
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          # Pinned lowercase image name so every tag (semver, sha, latest, main)
+          # always lands in the single canonical GHCR package, regardless of any
+          # future repo rename or owner-casing change.
+          images: ghcr.io/ivan-malinovski/calino
+          # Only reached on a version-tag push (see the `if:` above), so this
+          # is the release's one and only tag set — no `edge`/branch tags to
+          # keep disjoint from anymore.
+          tags: |
+            type=semver,pattern={{version}}
+            type=raw,value=latest
+            type=raw,value=main
+            type=sha,prefix=sha-,format=short
+
+      - name: Create manifest list & push
+        working-directory: /tmp/digests
+        run: |
+          # Word splitting is intentional: the jq output expands to separate
+          # `-t <tag>` args, and the printf glob to one digest ref per arch.
+          # shellcheck disable=SC2046
+          docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+            $(printf 'ghcr.io/ivan-malinovski/calino@sha256:%s ' *)
+        env:
+          DOCKER_METADATA_OUTPUT_JSON: ${{ steps.meta.outputs.json }}
+
+      - name: Verify manifest list
+        run: docker buildx imagetools inspect ghcr.io/ivan-malinovski/calino:${{ steps.meta.outputs.version }}
