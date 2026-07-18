@@ -56,6 +56,43 @@ done
 CURRENT_DIR=$(pwd)
 cd "$(dirname "$0")/.."
 
+# Port the container healthcheck binds on the host. Override when 8080 is
+# already spoken for: HEALTH_PORT=8081 ./scripts/release.sh --patch
+HEALTH_PORT=${HEALTH_PORT:-8080}
+
+REPO=$(git remote get-url origin | sed 's/.*github.com[:/]\(.\+\)\.git$/\1/')
+
+# ─── Version restore on abort ─────────────────────────────────────────────────
+# The bump has to happen before the build, since `pnpm build` bakes
+# __APP_VERSION__ into the bundle and the Docker image — testing an image
+# stamped with the old version would defeat the point. That means any failure
+# after the bump leaves package.json dirty at the new version, and a re-run
+# would read it and skip a version. Restore the original on any exit that
+# doesn't reach the commit.
+PKG_BACKUP=$(mktemp)
+BUMPED=false
+COMMITTED=false
+
+restore_version() {
+  if [ "$BUMPED" = true ] && [ "$COMMITTED" = false ]; then
+    cp "$PKG_BACKUP" package.json
+    warn "Aborted after the version bump — package.json restored to $CURRENT_VERSION"
+  fi
+  rm -f "$PKG_BACKUP"
+}
+trap restore_version EXIT
+
+# ─── Changelog extraction ─────────────────────────────────────────────────────
+# Pull the "## [x.y.z]" section out of CHANGELOG.md so the GitHub Release shows
+# the human-written notes rather than just a commit list.
+extract_changelog() {
+  awk -v header="## [$1]" '
+    index($0, header) == 1 { found = 1; next }
+    found && /^## \[/     { exit }
+    found                 { print }
+  ' CHANGELOG.md
+}
+
 # ─── Pre-flight checks ────────────────────────────────────────────────────────
 step "Pre-flight checks"
 
@@ -86,6 +123,10 @@ if [ -n "$BUMP" ]; then
     else console.log(major + '.' + minor + '.' + (patch+1));
   ")
   echo -e "  New version: ${GREEN}$NEW_VERSION${NC}"
+
+  if [ -z "$(extract_changelog "$NEW_VERSION")" ]; then
+    warn "CHANGELOG.md has no '## [$NEW_VERSION]' section — the release will fall back to generated notes"
+  fi
 fi
 
 # ─── Typecheck ─────────────────────────────────────────────────────────────────
@@ -95,13 +136,20 @@ ok "Typecheck passed"
 
 # ─── Lint ──────────────────────────────────────────────────────────────────────
 step "Lint"
-LINT_OUTPUT=$(pnpm lint 2>&1)
-LINT_ERRORS=$(echo "$LINT_OUTPUT" | grep -oP '\d+ errors' | grep -oP '\d+' || echo "0")
-LINT_WARNINGS=$(echo "$LINT_OUTPUT" | grep -oP '\d+ warnings' | grep -oP '\d+' || echo "0")
+# Trust eslint's exit code, not a parse of its output. The counts below are
+# only for the summary line: `grep -oP` needs a UTF-8 locale and dies under
+# others, and with a `|| echo 0` fallback that turned every lint failure into
+# a silent pass. -E is portable.
+LINT_STATUS=0
+LINT_OUTPUT=$(pnpm lint 2>&1) || LINT_STATUS=$?
+LINT_ERRORS=$(echo "$LINT_OUTPUT" | grep -oE '[0-9]+ errors' | grep -oE '[0-9]+' | head -1)
+LINT_WARNINGS=$(echo "$LINT_OUTPUT" | grep -oE '[0-9]+ warnings' | grep -oE '[0-9]+' | head -1)
+LINT_ERRORS=${LINT_ERRORS:-0}
+LINT_WARNINGS=${LINT_WARNINGS:-0}
 
-if [ "$LINT_ERRORS" -gt 0 ]; then
+if [ "$LINT_STATUS" -ne 0 ]; then
   echo "$LINT_OUTPUT"
-  fail "Lint failed with $LINT_ERRORS errors"
+  fail "Lint failed (exit $LINT_STATUS, $LINT_ERRORS errors)"
 fi
 ok "Lint passed ($LINT_ERRORS errors, $LINT_WARNINGS warnings)"
 
@@ -117,6 +165,8 @@ if [ -n "$BUMP" ]; then
   if [ "$DRY_RUN" = true ]; then
     warn "Dry run — would bump to $NEW_VERSION"
   else
+    cp package.json "$PKG_BACKUP"
+    BUMPED=true
     # Update package.json
     node -e "
       const fs = require('fs');
@@ -146,13 +196,30 @@ if [ "$SKIP_DOCKER" = false ]; then
   ok "Docker image built"
 
   step "Docker healthcheck"
-  CONTAINER_ID=$(docker run -d --name calino-release-test -p 8080:8080 calino:test)
+
+  # Always address 127.0.0.1, never "localhost": that resolves to ::1 first, so
+  # any unrelated service on IPv6 $HEALTH_PORT (a dev server, say) answers
+  # instead of the container and the check reports nonsense.
+  probe() { curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:$HEALTH_PORT$1" 2>/dev/null || true; }
+
+  # An earlier aborted run can leave the container alive and holding the port,
+  # which would otherwise trip the conflict check below with a misleading message.
+  docker rm -f calino-release-test > /dev/null 2>&1 || true
+
+  # Fail loudly on a port conflict rather than silently testing the squatter.
+  if [ "$(probe /)" != "000" ]; then
+    fail "Something is already serving on port $HEALTH_PORT. Stop it, or re-run with HEALTH_PORT=8081"
+  fi
+
+  docker run -d --name calino-release-test -p "$HEALTH_PORT:8080" calino:test > /dev/null
 
   # Wait for container to be healthy
   ATTEMPTS=0
   MAX_ATTEMPTS=15
   while [ $ATTEMPTS -lt $MAX_ATTEMPTS ]; do
-    STATUS=$(curl -sf -o /dev/null -w '%{http_code}' http://localhost:8080/ 2>/dev/null || echo "000")
+    # Assign without a `|| echo` fallback — that appends to curl's own output
+    # and produces impossible statuses like "426000".
+    STATUS=$(probe /)
     if [ "$STATUS" = "200" ]; then
       break
     fi
@@ -168,7 +235,7 @@ if [ "$SKIP_DOCKER" = false ]; then
   fi
 
   # Verify SPA routes
-  SPA_STATUS=$(curl -sf -o /dev/null -w '%{http_code}' http://localhost:8080/week 2>/dev/null || echo "000")
+  SPA_STATUS=$(probe /week)
   if [ "$SPA_STATUS" != "200" ]; then
     docker rm -f calino-release-test > /dev/null 2>&1
     docker rmi calino:test > /dev/null 2>&1
@@ -241,6 +308,7 @@ if [ -n "$BUMP" ] && [ "$DRY_RUN" = false ]; then
   step "Committing version bump"
   git add package.json
   git commit -m "chore: bump version to $CURRENT_VERSION → $NEW_VERSION"
+  COMMITTED=true
   ok "Version bump committed"
 fi
 
@@ -253,13 +321,29 @@ if [ "$SKIP_PUSH" = false ]; then
     git tag "v$NEW_VERSION"
     git push origin "v$NEW_VERSION"
 
-    # Create GitHub Release with changelog excerpt
+    # Create GitHub Release, preferring the hand-written CHANGELOG section over
+    # the generated commit list.
     step "Creating GitHub Release v$NEW_VERSION"
-    gh release create "v$NEW_VERSION" \
-      --title "v$NEW_VERSION" \
-      --generate-notes \
-      --repo "$(git remote get-url origin | sed 's/.*github.com[:/]\(.\+\)\.git$/\1/')" \
-      2>/dev/null || echo "  (release creation skipped — install gh CLI for auto-releases)"
+    NOTES_FILE=$(mktemp)
+    extract_changelog "$NEW_VERSION" > "$NOTES_FILE"
+
+    if [ -s "$NOTES_FILE" ]; then
+      printf '\n**Full Changelog**: https://github.com/%s/compare/v%s...v%s\n' \
+        "$REPO" "$CURRENT_VERSION" "$NEW_VERSION" >> "$NOTES_FILE"
+      gh release create "v$NEW_VERSION" \
+        --title "v$NEW_VERSION" \
+        --notes-file "$NOTES_FILE" \
+        --repo "$REPO" \
+        2>/dev/null || echo "  (release creation skipped — install gh CLI for auto-releases)"
+    else
+      warn "No CHANGELOG section for $NEW_VERSION — using generated notes"
+      gh release create "v$NEW_VERSION" \
+        --title "v$NEW_VERSION" \
+        --generate-notes \
+        --repo "$REPO" \
+        2>/dev/null || echo "  (release creation skipped — install gh CLI for auto-releases)"
+    fi
+    rm -f "$NOTES_FILE"
     ok "Release v$NEW_VERSION created"
   fi
 
