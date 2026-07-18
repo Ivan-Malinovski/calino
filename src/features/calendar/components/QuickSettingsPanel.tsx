@@ -11,6 +11,8 @@ interface QuickSettingsPanelProps {
    * itself. Optional — the desktop header dropdown doesn't need it.
    */
   onNavigate?: () => void
+  /** Hides the "All settings →" footer link — used where the host already has its own settings entry point. */
+  hideAllSettingsLink?: boolean
 }
 
 /**
@@ -19,7 +21,7 @@ interface QuickSettingsPanelProps {
  * reads and writes through the settings/config stores directly — so it can be
  * dropped into both the desktop header dropdown and the mobile FAB.
  */
-export function QuickSettingsPanel({ onNavigate }: QuickSettingsPanelProps): JSX.Element {
+export function QuickSettingsPanel({ onNavigate, hideAllSettingsLink }: QuickSettingsPanelProps): JSX.Element {
   const navigate = useNavigate()
   const themeMode = useSettingsStore((state) => state.themeMode)
   const showWeekNumbers = useSettingsStore((state) => state.showWeekNumbers)
@@ -80,25 +82,34 @@ export function QuickSettingsPanel({ onNavigate }: QuickSettingsPanelProps): JSX
           <span className={styles.toggleThumb} />
         </button>
       </div>
-      <div className={styles.quickSettingsDivider} />
-      <div className={styles.quickSettingsFooter}>
-        <button className={styles.quickSettingsLink} onClick={goToSettings}>
-          All settings →
-        </button>
-        {hasPreconfiguredAccounts && (
-          <button
-            className={styles.quickSettingsLock}
-            onClick={() => lock()}
-            aria-label="Lock Calino"
-            title="Lock"
+      {(!hideAllSettingsLink || hasPreconfiguredAccounts) && (
+        <>
+          <div className={styles.quickSettingsDivider} />
+          <div
+            className={styles.quickSettingsFooter}
+            style={hideAllSettingsLink ? { justifyContent: 'flex-end' } : undefined}
           >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="3" y="7" width="10" height="7" rx="2" />
-              <path d="M5 7V5a3 3 0 016 0v2" />
-            </svg>
-          </button>
-        )}
-      </div>
+            {!hideAllSettingsLink && (
+              <button className={styles.quickSettingsLink} onClick={goToSettings}>
+                All settings →
+              </button>
+            )}
+            {hasPreconfiguredAccounts && (
+              <button
+                className={styles.quickSettingsLock}
+                onClick={() => lock()}
+                aria-label="Lock Calino"
+                title="Lock"
+              >
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="7" width="10" height="7" rx="2" />
+                  <path d="M5 7V5a3 3 0 016 0v2" />
+                </svg>
+              </button>
+            )}
+          </div>
+        </>
+      )}
     </>
   )
 }

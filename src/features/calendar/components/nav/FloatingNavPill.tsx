@@ -1,7 +1,7 @@
 import type { JSX } from 'react'
-import { useState, useCallback, useRef, useLayoutEffect } from 'react'
+import { useState, useCallback, useRef, useEffect, useLayoutEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { motion } from 'framer-motion'
+import { motion, useMotionValue, animate, type PanInfo } from 'framer-motion'
 import { useCalendarStore } from '@/store/calendarStore'
 import { hapticIfEnabled } from '@/lib/haptics'
 import { VIEW_ROUTES } from '../../viewRoutes'
@@ -21,8 +21,8 @@ const BASE_VIEWS: { value: ViewType; label: string }[] = [
   { value: 'agenda', label: 'Agenda' },
 ]
 
-const PILL_TRANSITION = { duration: 0.32, ease: [0.65, 0, 0.35, 1] as const }
-const CHROME_TRANSITION = { duration: 0.25 }
+const PILL_TRANSITION = { duration: 0.24, ease: [0.65, 0, 0.35, 1] as const }
+const CHROME_TRANSITION = { duration: 0.19 }
 const INDICATOR_TRANSITION = { type: 'spring', stiffness: 500, damping: 40 } as const
 
 export function FloatingNavPill({ onToggleSidebar, onOpenSearch }: FloatingNavPillProps): JSX.Element {
@@ -36,7 +36,17 @@ export function FloatingNavPill({ onToggleSidebar, onOpenSearch }: FloatingNavPi
 
   const contentRef = useRef<HTMLDivElement>(null)
   const [measuredHeight, setMeasuredHeight] = useState<number>(0)
+  const collapsedHeightRef = useRef(0)
+  const measuredHeightRef = useRef(0)
+  const isDraggingRef = useRef(false)
+  const heightMV = useMotionValue(0)
+  const radiusMV = useMotionValue(34)
 
+  const pillRadius = createDrawerOpen ? 26 : viewSwitcherExpanded ? 30 : 34
+
+  // Passive ResizeObserver — catches content-size changes not driven by the
+  // open/create toggles below (e.g. the quick-settings panel expanding
+  // inside the view grid).
   useLayoutEffect(() => {
     const el = contentRef.current
     if (!el) return
@@ -52,6 +62,55 @@ export function FloatingNavPill({ onToggleSidebar, onOpenSearch }: FloatingNavPi
 
     return () => observer.disconnect()
   }, [])
+
+  // Force a synchronous re-measurement the instant the open/create state
+  // itself changes, so `measuredHeight` lands in the SAME commit as the new
+  // `pillRadius` instead of trailing a tick behind via the async
+  // ResizeObserver callback above. Without this, that callback and the
+  // effect below both ended up calling animate(heightMV, ...) back to back
+  // with slightly different targets, restarting the tween mid-flight and
+  // producing a visible overshoot ("stretches then snaps back").
+  useLayoutEffect(() => {
+    const el = contentRef.current
+    if (!el) return
+    setMeasuredHeight(el.getBoundingClientRect().height)
+  }, [viewSwitcherExpanded, createDrawerOpen])
+
+  useLayoutEffect(() => {
+    if (!viewSwitcherExpanded && !createDrawerOpen) {
+      collapsedHeightRef.current = measuredHeight
+    }
+  }, [measuredHeight, viewSwitcherExpanded, createDrawerOpen])
+
+  // Single source of truth for animating height + radius together, so they
+  // always start and finish in lockstep.
+  useEffect(() => {
+    measuredHeightRef.current = measuredHeight
+    if (isDraggingRef.current) return
+    const heightControls = animate(heightMV, measuredHeight, PILL_TRANSITION)
+    const radiusControls = animate(radiusMV, pillRadius, PILL_TRANSITION)
+    return () => {
+      heightControls.stop()
+      radiusControls.stop()
+    }
+  }, [measuredHeight, pillRadius, heightMV, radiusMV])
+
+  const handlePillDragProgress = useCallback(
+    (y: number) => {
+      heightMV.set(Math.max(collapsedHeightRef.current, measuredHeightRef.current - y))
+    },
+    [heightMV]
+  )
+
+  const handlePillDragActiveChange = useCallback(
+    (active: boolean) => {
+      isDraggingRef.current = active
+      if (!active) {
+        animate(heightMV, measuredHeightRef.current, PILL_TRANSITION)
+      }
+    },
+    [heightMV]
+  )
 
   const collapseAll = useCallback(() => {
     setViewSwitcherExpanded(false)
@@ -73,6 +132,16 @@ export function FloatingNavPill({ onToggleSidebar, onOpenSearch }: FloatingNavPi
     })
   }, [])
 
+  const handleBaseRowDragEnd = useCallback(
+    (_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+      if (info.offset.y < -40 || info.velocity.y < -400) {
+        setCreateDrawerOpen(false)
+        setViewSwitcherExpanded(true)
+      }
+    },
+    []
+  )
+
   const handleToggleCreate = useCallback(() => {
     setViewSwitcherExpanded(false)
     setQuickSettingsOpen(false)
@@ -92,8 +161,6 @@ export function FloatingNavPill({ onToggleSidebar, onOpenSearch }: FloatingNavPi
     (view) => currentView === view.value || (view.value === 'week' && currentView === '3day')
   )
 
-  const pillRadius = createDrawerOpen ? 26 : viewSwitcherExpanded ? 30 : 34
-
   return (
     <>
       {viewSwitcherExpanded && (
@@ -101,17 +168,26 @@ export function FloatingNavPill({ onToggleSidebar, onOpenSearch }: FloatingNavPi
       )}
       <motion.div
         className={styles.pill}
-        animate={{ height: measuredHeight, borderRadius: pillRadius }}
-        transition={PILL_TRANSITION}
+        style={{ height: heightMV, borderRadius: radiusMV }}
         data-component="floating-nav-pill"
       >
         <div ref={contentRef} className={styles.pillContent}>
-          {createDrawerOpen && <NavCreateDrawer onClose={() => setCreateDrawerOpen(false)} />}
+          {createDrawerOpen && (
+            <NavCreateDrawer
+              onClose={() => setCreateDrawerOpen(false)}
+              onDragProgress={handlePillDragProgress}
+              onDragActiveChange={handlePillDragActiveChange}
+            />
+          )}
 
-          <div
+          <motion.div
             className={
               viewSwitcherExpanded ? `${styles.baseRow} ${styles.baseRowExpanded}` : styles.baseRow
             }
+            drag={!viewSwitcherExpanded && !createDrawerOpen ? 'y' : false}
+            dragConstraints={{ top: 0, bottom: 0 }}
+            dragElastic={{ top: 0.06, bottom: 0 }}
+            onDragEnd={handleBaseRowDragEnd}
           >
             <motion.button
               type="button"
@@ -131,6 +207,8 @@ export function FloatingNavPill({ onToggleSidebar, onOpenSearch }: FloatingNavPi
                   onToggleQuickSettings={() => setQuickSettingsOpen((prev) => !prev)}
                   onOpenSearch={onOpenSearch}
                   onCollapse={collapseAll}
+                  onDragProgress={handlePillDragProgress}
+                  onDragActiveChange={handlePillDragActiveChange}
                 />
               ) : (
                 <div className={styles.switcherTrack}>
@@ -192,7 +270,7 @@ export function FloatingNavPill({ onToggleSidebar, onOpenSearch }: FloatingNavPi
                 <PlusIcon />
               </motion.span>
             </motion.button>
-          </div>
+          </motion.div>
         </div>
       </motion.div>
     </>

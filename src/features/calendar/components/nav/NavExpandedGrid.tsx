@@ -1,6 +1,6 @@
 import type { JSX } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { motion } from 'framer-motion'
+import { motion, type PanInfo } from 'framer-motion'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
 import { hapticIfEnabled } from '@/lib/haptics'
@@ -15,6 +15,8 @@ interface NavExpandedGridProps {
   onToggleQuickSettings: () => void
   onOpenSearch: () => void
   onCollapse: () => void
+  onDragProgress?: (y: number) => void
+  onDragActiveChange?: (active: boolean) => void
 }
 
 const GRID_VIEWS: { value: ViewType; label: string }[] = [
@@ -45,6 +47,8 @@ export function NavExpandedGrid({
   onToggleQuickSettings,
   onOpenSearch,
   onCollapse,
+  onDragProgress,
+  onDragActiveChange,
 }: NavExpandedGridProps): JSX.Element {
   const navigate = useNavigate()
   const currentView = useCalendarStore((state) => state.currentView)
@@ -77,8 +81,28 @@ export function NavExpandedGrid({
     onCollapse()
   }
 
+  const handleDrag = (_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo): void => {
+    onDragProgress?.(Math.max(0, info.offset.y))
+  }
+
+  const handleDragEnd = (_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo): void => {
+    const shouldClose = info.offset.y > 40 || info.velocity.y > 400
+    onDragActiveChange?.(false)
+    onDragProgress?.(0)
+    if (shouldClose) onCollapse()
+  }
+
   return (
-    <div className={styles.expanded} data-component="nav-expanded-grid">
+    <motion.div
+      className={styles.expanded}
+      data-component="nav-expanded-grid"
+      drag="y"
+      dragConstraints={{ top: 0, bottom: 0 }}
+      dragElastic={{ top: 0, bottom: 0.06 }}
+      onDragStart={() => onDragActiveChange?.(true)}
+      onDrag={handleDrag}
+      onDragEnd={handleDragEnd}
+    >
       <button type="button" className={styles.handle} onClick={onCollapse} aria-label="Collapse view switcher" />
       <div className={styles.utilityRow}>
         <button type="button" className={styles.searchTile} onClick={handleSearchClick}>
@@ -104,7 +128,7 @@ export function NavExpandedGrid({
 
       {quickSettingsOpen && (
         <div className={styles.quickSettingsCard}>
-          <QuickSettingsPanel onNavigate={onCollapse} />
+          <QuickSettingsPanel onNavigate={onCollapse} hideAllSettingsLink />
         </div>
       )}
 
@@ -141,7 +165,7 @@ export function NavExpandedGrid({
           )
         })}
       </motion.div>
-    </div>
+    </motion.div>
   )
 }
 

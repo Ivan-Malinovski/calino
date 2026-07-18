@@ -36,6 +36,25 @@
   min-height: 0;
   overflow: hidden;
 }
+
+@media (max-width: 768px) { /* sync with config.ts MOBILE_BREAKPOINT */
+  .main {
+    /* Reserve space so the last row of content isn't obscured by the
+       floating nav pill (collapsed height ~57px + its 20px bottom offset).
+       Month/agenda opt out here and add the same clearance as trailing
+       scroll padding instead, so their content runs behind the pill until
+       scrolled to the end rather than always leaving a visible gap. */
+    padding-bottom: calc(84px + var(--safe-area-bottom));
+    box-sizing: border-box;
+  }
+
+  .main[data-view='month'],
+  .main[data-view='agenda'],
+  .main[data-view='year'],
+  .main[data-view='todo'] {
+    padding-bottom: 0;
+  }
+}
 .agendaSidebar {
   position: relative;
   flex: 0 0 auto;

@@ -89,7 +89,7 @@
   width: 100%;
   background: var(--panel);
   border-radius: 14px;
-  padding: 13px 14px;
+  padding: 4px 14px 13px;
   flex-shrink: 0;
 }
 

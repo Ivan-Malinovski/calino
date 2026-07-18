@@ -10,6 +10,14 @@
   margin: 0 var(--grid-margin, 16px) 24px 0;
 }
 
+@media (max-width: 768px) { /* sync with config.ts MOBILE_BREAKPOINT */
+  /* Lets content run behind the floating nav pill until scrolled to the
+     end, instead of always reserving a visible gap (see App.css .main). */
+  .container {
+    padding-bottom: calc(84px + var(--safe-area-bottom));
+  }
+}
+
 .grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);

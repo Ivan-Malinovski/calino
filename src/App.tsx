@@ -409,6 +409,7 @@ function CalendarApp(): JSX.Element {
         <motion.main
           className="main"
           ref={mainRef}
+          data-view={currentView}
           onPanEnd={isMobile ? handleContentPanEnd : undefined}
         >
           {renderView()}

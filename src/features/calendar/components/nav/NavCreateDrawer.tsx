@@ -1,5 +1,5 @@
 import type { JSX } from 'react'
-import { motion } from 'framer-motion'
+import { motion, type PanInfo } from 'framer-motion'
 import { useCalendarStore } from '@/store/calendarStore'
 import { hapticIfEnabled } from '@/lib/haptics'
 import { CalendarIcon, TaskCheckIcon } from '@/components/common/icons'
@@ -7,6 +7,8 @@ import styles from './NavCreateDrawer.module.css'
 
 interface NavCreateDrawerProps {
   onClose: () => void
+  onDragProgress?: (y: number) => void
+  onDragActiveChange?: (active: boolean) => void
 }
 
 const rowVariants = {
@@ -19,7 +21,7 @@ const containerVariants = {
   visible: { transition: { staggerChildren: 0.02 } },
 }
 
-export function NavCreateDrawer({ onClose }: NavCreateDrawerProps): JSX.Element {
+export function NavCreateDrawer({ onClose, onDragProgress, onDragActiveChange }: NavCreateDrawerProps): JSX.Element {
   const handleNewEvent = (): void => {
     useCalendarStore.getState().openModal()
     hapticIfEnabled('light')
@@ -39,8 +41,28 @@ export function NavCreateDrawer({ onClose }: NavCreateDrawerProps): JSX.Element 
     onClose()
   }
 
+  const handleDrag = (_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo): void => {
+    onDragProgress?.(Math.max(0, info.offset.y))
+  }
+
+  const handleDragEnd = (_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo): void => {
+    const shouldClose = info.offset.y > 40 || info.velocity.y > 400
+    onDragActiveChange?.(false)
+    onDragProgress?.(0)
+    if (shouldClose) onClose()
+  }
+
   return (
-    <div className={styles.drawer} data-component="nav-create-drawer">
+    <motion.div
+      className={styles.drawer}
+      data-component="nav-create-drawer"
+      drag="y"
+      dragConstraints={{ top: 0, bottom: 0 }}
+      dragElastic={{ top: 0, bottom: 0.06 }}
+      onDragStart={() => onDragActiveChange?.(true)}
+      onDrag={handleDrag}
+      onDragEnd={handleDragEnd}
+    >
       <button type="button" className={styles.handle} onClick={onClose} aria-label="Close create menu" />
       <motion.div className={styles.rows} variants={containerVariants} initial="hidden" animate="visible">
         <motion.button type="button" className={styles.row} variants={rowVariants} onClick={handleNewEvent}>
@@ -56,7 +78,7 @@ export function NavCreateDrawer({ onClose }: NavCreateDrawerProps): JSX.Element 
           <span>New Journal Entry</span>
         </motion.button>
       </motion.div>
-    </div>
+    </motion.div>
   )
 }
 

@@ -16,6 +16,16 @@
   margin: 0 var(--grid-margin, 16px) 24px 0;
 }
 
+@media (max-width: 768px) { /* sync with config.ts MOBILE_BREAKPOINT */
+  /* Only when embedded in the mobile month view's bottom panel (has a back
+     button) — lets content run behind the floating nav pill until scrolled
+     to the end, matching the sibling AgendaView embedded state. The
+     standalone /day route keeps its clearance from App.css's .main. */
+  .container[data-embedded] {
+    padding-bottom: calc(84px + var(--safe-area-bottom));
+  }
+}
+
 @media (max-width: 950px) {
   .container {
     margin: 0 5px 0 5px;

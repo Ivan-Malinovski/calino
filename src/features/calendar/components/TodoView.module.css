@@ -12,6 +12,14 @@
   background: var(--canvas, #faf8f3);
 }
 
+@media (max-width: 768px) { /* sync with config.ts MOBILE_BREAKPOINT */
+  /* Replaces the desktop 72px with pill-safe clearance, as trailing scroll
+     padding rather than App.css .main's visible gap (see .main[data-view]). */
+  .container {
+    padding-bottom: calc(84px + var(--safe-area-bottom));
+  }
+}
+
 .tpInner {
   max-width: 860px;
   margin: 0 auto;
