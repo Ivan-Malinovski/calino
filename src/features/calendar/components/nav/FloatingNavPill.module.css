@@ -1,0 +1,159 @@
+/* ============================================================================
+   FloatingNavPill — mobile floating bottom navigation
+   ============================================================================ */
+
+.tapCatcher {
+  position: fixed;
+  inset: 0;
+  z-index: 149;
+}
+
+.pill {
+  position: fixed;
+  left: 14px;
+  right: 14px;
+  bottom: calc(20px + var(--safe-area-bottom));
+  background: var(--panel);
+  box-shadow: var(--shadow-pill);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  z-index: 150;
+}
+
+.pillContent {
+  flex-shrink: 0;
+}
+
+.baseRow {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 8px 7px 4px;
+  flex-shrink: 0;
+}
+
+.baseRowExpanded {
+  align-items: stretch;
+  padding: 0;
+}
+
+.hamburgerBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 17px;
+  border: none;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  flex-shrink: 0;
+  overflow: hidden;
+  padding: 0;
+}
+
+.hamburgerBtn:active {
+  background: var(--hover-bg);
+}
+
+.switcherSegment {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.switcherTrack {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 2px;
+  background: var(--nav-switcher-track);
+  border-radius: 20px;
+  padding: 2px;
+}
+
+.switcherBtn {
+  position: relative;
+  z-index: 1;
+  grid-row: 1;
+  height: 36px;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  border-radius: 17px;
+  cursor: pointer;
+  padding: 0;
+  overflow: hidden;
+}
+
+.switcherActiveBg {
+  position: relative;
+  z-index: 0;
+  background: var(--accent);
+  border-radius: 17px;
+}
+
+.switcherLabel {
+  position: relative;
+  z-index: 1;
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--ink-3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+}
+
+.switcherLabelActive {
+  position: relative;
+  z-index: 1;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  white-space: nowrap;
+}
+
+.createBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+  flex-shrink: 0;
+  overflow: hidden;
+  padding: 0;
+}
+
+.createBtn:active {
+  filter: brightness(0.95);
+}
+
+.createIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Hidden entirely above the mobile breakpoint — desktop keeps its own header
+   switcher/sidebar controls. */
+@media (min-width: 769px) {
+  .pill,
+  .tapCatcher {
+    display: none;
+  }
+}

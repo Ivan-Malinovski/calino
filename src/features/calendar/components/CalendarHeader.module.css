@@ -649,6 +649,26 @@
   .quickSettingsDropdown {
     display: none;
   }
+
+  /* The floating mobile nav pill (FloatingNavPill) now owns the hamburger,
+     view switching, search, and settings entry points below this breakpoint
+     — the header keeps only the title and prev/today/next navigator. */
+  .hamburger {
+    display: none;
+  }
+
+  .viewTabs,
+  .viewDropdown {
+    display: none;
+  }
+
+  .rightCluster .iconButton {
+    display: none;
+  }
+
+  .settingsWrapper {
+    display: none;
+  }
 }
 
 /* ≤500px (compact mobile): hide Today, search/settings, smaller year */

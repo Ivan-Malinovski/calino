@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body { margin: 0; background: #ece7dd; }
+a { color: #b07d4f; }
+a:hover { color: #8f6440; }
+::-webkit-scrollbar { width: 0; height: 0; }
+</style>
+</helmet>
+
+<div style="min-height:100vh; display:flex; align-items:center; justify-content:center; padding:40px; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;">
+  <div style="width:390px; height:780px; border-radius:36px; overflow:hidden; position:relative; background:#faf8f3; box-shadow:0 30px 60px rgba(44,40,33,0.28); border:1px solid rgba(44,40,33,0.10); display:flex; flex-direction:column;">
+
+    <!-- header -->
+    <div style="display:flex; align-items:center; justify-content:center; gap:10px; padding:22px 20px 8px; flex-shrink:0; position:relative;">
+      <sc-if value="{{ showChevrons }}" hint-placeholder-val="{{ true }}">
+        <button onClick="{{ goPrev }}" style="position:absolute; left:20px; width:30px; height:30px; border:none; background:none; display:flex; align-items:center; justify-content:center; color:#a39d93; cursor:pointer;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+      </sc-if>
+      <span style="font-family:Georgia,'Times New Roman',serif; font-size:24px; color:#2c2823;">{{ title }}</span>
+      <sc-if value="{{ showChevrons }}" hint-placeholder-val="{{ true }}">
+        <button onClick="{{ goNext }}" style="position:absolute; right:20px; width:30px; height:30px; border:none; background:none; display:flex; align-items:center; justify-content:center; color:#a39d93; cursor:pointer;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+      </sc-if>
+    </div>
+    <sc-if value="{{ showChevrons }}" hint-placeholder-val="{{ true }}">
+      <div style="display:flex; justify-content:center; gap:5px; margin-bottom:10px;">
+        <div style="width:5px; height:5px; border-radius:50%; background:#d8d2c6;"></div>
+        <div style="width:5px; height:5px; border-radius:50%; background:#b07d4f;"></div>
+        <div style="width:5px; height:5px; border-radius:50%; background:#d8d2c6;"></div>
+      </div>
+    </sc-if>
+
+    <!-- content -->
+    <div ref="{{ contentRef }}" onTouchStart="{{ onTouchStart }}" onTouchEnd="{{ onTouchEnd }}" style="flex:1; overflow-y:auto; overflow-x:hidden; position:relative; padding:0 16px 16px;">
+
+      <sc-if value="{{ isMonth }}" hint-placeholder-val="{{ true }}">
+        <div style="display:grid; grid-template-columns:repeat(7,1fr); gap:2px; margin-bottom:4px;">
+          <sc-for list="{{ weekdayLetters }}" as="wl" hint-placeholder-count="7">
+            <div style="text-align:center; font-size:11px; color:#a39d93; padding:4px 0;">{{ wl }}</div>
+          </sc-for>
+        </div>
+        <sc-for list="{{ monthWeeks }}" as="week" hint-placeholder-count="6">
+          <div style="display:grid; grid-template-columns:repeat(7,1fr); gap:2px; margin-bottom:2px;">
+            <sc-for list="{{ week }}" as="cell" hint-placeholder-count="7">
+              <button onClick="{{ cell.onClick }}" style="aspect-ratio:1; border:none; background:{{ cell.bg }}; border-radius:8px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; cursor:pointer; opacity:{{ cell.opacity }};">
+                <span style="font-size:13px; color:{{ cell.color }}; font-weight:{{ cell.weight }};">{{ cell.dateNum }}</span>
+                <sc-if value="{{ cell.hasDot }}" hint-placeholder-val="{{ false }}">
+                  <span style="width:5px; height:5px; border-radius:50%; background:{{ cell.dotColor }};"></span>
+                </sc-if>
+              </button>
+            </sc-for>
+          </div>
+        </sc-for>
+      </sc-if>
+
+      <sc-if value="{{ isWeek }}" hint-placeholder-val="{{ false }}">
+        <div style="display:grid; grid-template-columns:repeat(7,1fr); gap:6px; margin-top:8px;">
+          <sc-for list="{{ weekDays }}" as="d" hint-placeholder-count="7">
+            <button onClick="{{ d.onClick }}" style="border:none; background:{{ d.bg }}; border-radius:12px; padding:10px 4px; display:flex; flex-direction:column; align-items:center; gap:6px; cursor:pointer;">
+              <span style="font-size:11px; color:#a39d93;">{{ d.label }}</span>
+              <span style="font-size:15px; font-weight:600; color:{{ d.color }};">{{ d.dateNum }}</span>
+              <div style="display:flex; gap:2px; height:5px;">
+                <sc-for list="{{ d.dots }}" as="dot" hint-placeholder-count="0">
+                  <span style="width:5px; height:5px; border-radius:50%; background:{{ dot }};"></span>
+                </sc-for>
+              </div>
+            </button>
+          </sc-for>
+        </div>
+        <div style="margin-top:18px; font-size:12px; color:#a39d93; text-align:center;">Tap a day to open Day view</div>
+      </sc-if>
+
+      <sc-if value="{{ isDay }}" hint-placeholder-val="{{ false }}">
+        <div style="position:relative; margin-top:6px;">
+          <sc-for list="{{ dayHours }}" as="h" hint-placeholder-count="13">
+            <div style="display:flex; gap:10px; height:52px; border-top:1px solid rgba(44,40,33,0.06);">
+              <div style="width:44px; font-size:11px; color:#a39d93; padding-top:4px; flex-shrink:0;">{{ h }}</div>
+              <div style="flex:1;"></div>
+            </div>
+          </sc-for>
+          <sc-for list="{{ dayEvents }}" as="ev" hint-placeholder-count="0">
+            <div style="position:absolute; left:54px; right:0; top:{{ ev.top }}px; height:{{ ev.height }}px; background:{{ ev.bgSoft }}; border-left:3px solid {{ ev.color }}; border-radius:8px; padding:6px 10px; overflow:hidden;">
+              <div style="font-size:12.5px; font-weight:600; color:#2c2823;">{{ ev.title }}</div>
+              <div style="font-size:11px; color:#6f6a62;">{{ ev.time }} · {{ ev.sub }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isAgenda }}" hint-placeholder-val="{{ false }}">
+        <sc-for list="{{ agendaDays }}" as="day" hint-placeholder-count="10">
+          <div style="margin-top:14px;">
+            <div style="font-size:11.5px; letter-spacing:0.03em; color:#a39d93; text-transform:uppercase; margin-bottom:6px;">{{ day.label }}</div>
+            <sc-for list="{{ day.events }}" as="ev" hint-placeholder-count="0">
+              <div style="display:flex; gap:10px; background:#fff; border-radius:10px; box-shadow:0 1px 2px rgba(0,0,0,0.04); margin-bottom:8px; overflow:hidden;">
+                <div style="width:3px; background:{{ ev.color }}; flex-shrink:0;"></div>
+                <div style="padding:9px 10px;">
+                  <div style="font-size:12px; color:#a39d93;">{{ ev.time }}</div>
+                  <div style="font-size:13.5px; font-weight:600; color:#2c2823;">{{ ev.title }}</div>
+                  <sc-if value="{{ ev.sub }}" hint-placeholder-val="{{ false }}"><div style="font-size:12px; color:#6f6a62;">{{ ev.sub }}</div></sc-if>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </sc-for>
+      </sc-if>
+
+      <sc-if value="{{ isYear }}" hint-placeholder-val="{{ false }}">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:8px;">
+          <sc-for list="{{ yearMonths }}" as="m" hint-placeholder-count="12">
+            <button onClick="{{ m.onClick }}" style="border:none; background:#fff; border-radius:12px; box-shadow:0 1px 2px rgba(0,0,0,0.04); padding:14px 8px; text-align:center; cursor:pointer;">
+              <div style="font-size:13.5px; font-weight:600; color:#2c2823; margin-bottom:4px;">{{ m.name }}</div>
+              <div style="font-size:11px; color:#a39d93;">{{ m.count }}</div>
+            </button>
+          </sc-for>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isTasks }}" hint-placeholder-val="{{ false }}">
+        <sc-for list="{{ taskGroups }}" as="grp" hint-placeholder-count="3">
+          <div style="margin-top:16px;">
+            <div style="font-size:11.5px; letter-spacing:0.03em; color:{{ grp.color }}; text-transform:uppercase; margin-bottom:8px; font-weight:700;">{{ grp.label }}</div>
+            <sc-for list="{{ grp.items }}" as="t" hint-placeholder-count="2">
+              <div style="display:flex; align-items:flex-start; gap:10px; padding:10px 0; border-bottom:1px solid rgba(44,40,33,0.06);">
+                <button onClick="{{ t.onToggle }}" style="width:20px; height:20px; border-radius:50%; border:2px solid {{ t.borderColor }}; background:{{ t.fill }}; flex-shrink:0; margin-top:1px; cursor:pointer;"></button>
+                <div style="flex:1;">
+                  <div style="font-size:13.5px; font-weight:600; color:#2c2823; text-decoration:{{ t.strike }};">{{ t.title }}</div>
+                  <div style="font-size:12px; color:#a39d93;">{{ t.note }}</div>
+                </div>
+                <div style="font-size:11.5px; color:{{ t.dateColor }}; white-space:nowrap;">{{ t.due }}</div>
+              </div>
+            </sc-for>
+          </div>
+        </sc-for>
+      </sc-if>
+
+      <sc-if value="{{ isJournal }}" hint-placeholder-val="{{ false }}">
+        <sc-for list="{{ journalEntries }}" as="e" hint-placeholder-count="3">
+          <div style="display:flex; gap:14px; padding:16px 0; border-bottom:1px solid rgba(44,40,33,0.08);">
+            <div style="text-align:center; flex-shrink:0; width:34px;">
+              <div style="font-size:20px; font-weight:700; color:#2c2823;">{{ e.day }}</div>
+              <div style="font-size:9.5px; color:#a39d93; text-transform:uppercase;">{{ e.wk }}</div>
+            </div>
+            <div>
+              <div style="font-size:14px; font-weight:700; color:#2c2823; margin-bottom:4px;">{{ e.title }}</div>
+              <div style="font-size:12.5px; color:#6f6a62; line-height:1.5;">{{ e.body }}</div>
+            </div>
+          </div>
+        </sc-for>
+      </sc-if>
+
+      <sc-if value="{{ isContacts }}" hint-placeholder-val="{{ false }}">
+        <sc-for list="{{ contacts }}" as="c" hint-placeholder-count="4">
+          <div style="display:flex; align-items:center; gap:12px; padding:12px 0; border-bottom:1px solid rgba(44,40,33,0.06);">
+            <div style="width:38px; height:38px; border-radius:50%; background:{{ c.color }}; color:#fff; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; flex-shrink:0;">{{ c.initials }}</div>
+            <div>
+              <div style="font-size:13.5px; font-weight:600; color:#2c2823;">{{ c.name }}</div>
+              <div style="font-size:12px; color:#a39d93;">{{ c.role }}</div>
+            </div>
+          </div>
+        </sc-for>
+      </sc-if>
+
+      <sc-if value="{{ isSearch }}" hint-placeholder-val="{{ false }}">
+        <div style="margin-top:8px; display:flex; align-items:center; gap:8px; background:#fff; border-radius:12px; box-shadow:0 1px 2px rgba(0,0,0,0.04); padding:10px 12px;">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#a39d93" stroke-width="1.8"><circle cx="10.5" cy="10.5" r="6.5"/><line x1="15.5" y1="15.5" x2="20.5" y2="20.5"/></svg>
+          <span style="font-size:13.5px; color:#a39d93;">Search events, tasks, contacts…</span>
+        </div>
+        <div style="margin-top:20px; font-size:12px; color:#a39d93; text-align:center;">Type to search, or try a command like "create task"</div>
+      </sc-if>
+
+      <sc-if value="{{ isSettings }}" hint-placeholder-val="{{ false }}">
+        <div style="margin-top:8px; background:#fff; border-radius:14px; box-shadow:0 1px 2px rgba(0,0,0,0.04); padding:14px; display:flex; flex-direction:column; gap:16px;">
+          <div style="display:flex; align-items:center; justify-content:space-between;">
+            <span style="font-size:13.5px; color:#2c2823;">Theme</span>
+            <div style="display:flex; background:#f6f3ed; border-radius:10px; padding:3px; gap:2px;">
+              <button onClick="{{ setThemeSystem }}" style="width:32px; height:28px; border-radius:7px; border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; background:{{ themeSystemBg }}; color:{{ themeSystemColor }};">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="13" rx="1.5"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+              </button>
+              <button onClick="{{ setThemeLight }}" style="width:32px; height:28px; border-radius:7px; border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; background:{{ themeLightBg }}; color:{{ themeLightColor }};">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.5"/><line x1="12" y1="2" x2="12" y2="4.5"/><line x1="12" y1="19.5" x2="12" y2="22"/><line x1="2" y1="12" x2="4.5" y2="12"/><line x1="19.5" y1="12" x2="22" y2="12"/></svg>
+              </button>
+              <button onClick="{{ setThemeDark }}" style="width:32px; height:28px; border-radius:7px; border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; background:{{ themeDarkBg }}; color:{{ themeDarkColor }};">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg>
+              </button>
+            </div>
+          </div>
+          <div style="display:flex; align-items:center; justify-content:space-between;">
+            <span style="font-size:13.5px; color:#2c2823;">Week numbers</span>
+            <button onClick="{{ toggleWeekNumbers }}" style="width:40px; height:22px; border-radius:11px; border:none; background:{{ weekNumbersBg }}; position:relative; cursor:pointer; flex-shrink:0;">
+              <span style="position:absolute; top:2px; left:{{ weekNumbersKnobLeft }}px; width:18px; height:18px; border-radius:50%; background:#fff; transition:left 0.2s; box-shadow:0 1px 2px rgba(0,0,0,0.2);"></span>
+            </button>
+          </div>
+          <div style="display:flex; align-items:center; justify-content:space-between;">
+            <span style="font-size:13.5px; color:#2c2823;">Hide completed tasks</span>
+            <button onClick="{{ toggleHideCompleted }}" style="width:40px; height:22px; border-radius:11px; border:none; background:{{ hideCompletedBg }}; position:relative; cursor:pointer; flex-shrink:0;">
+              <span style="position:absolute; top:2px; left:{{ hideCompletedKnobLeft }}px; width:18px; height:18px; border-radius:50%; background:#fff; transition:left 0.2s; box-shadow:0 1px 2px rgba(0,0,0,0.2);"></span>
+            </button>
+          </div>
+        </div>
+
+        <div style="margin-top:14px; background:#fff; border-radius:14px; box-shadow:0 1px 2px rgba(0,0,0,0.04); overflow:hidden;">
+          <sc-for list="{{ settingsNavRows }}" as="sr" hint-placeholder-count="4">
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:13px 14px; border-bottom:1px solid rgba(44,40,33,0.06);">
+              <span style="font-size:13.5px; color:#2c2823;">{{ sr.label }}</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c2bcae" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+
+    </div>
+
+    <!-- tap-outside catcher: closes the widened switcher -->
+    <sc-if value="{{ moreOpen }}" hint-placeholder-val="{{ false }}">
+      <div onClick="{{ toggleMore }}" style="position:absolute; inset:0; z-index:1;"></div>
+    </sc-if>
+
+    <!-- bottom toolbar: "+" expands upward for create actions; "..." widens the switcher in place -->
+    <div style="flex-shrink:0; margin:0 14px calc(14px + env(safe-area-inset-bottom,0px)); background:#fff; border-radius:{{ toolbarRadius }}px; box-shadow:0 16px 36px rgba(44,40,33,0.20), 0 2px 10px rgba(44,40,33,0.10); position:relative; z-index:2; overflow:hidden; height:{{ toolbarHeight }}px; transition:height 0.32s cubic-bezier(0.65,0,0.35,1), border-radius 0.32s; display:flex; flex-direction:column;">
+      <sc-if value="{{ createOpen }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:8px 10px 2px; display:flex; flex-direction:column;">
+          <button onClick="{{ toggleCreate }}" style="align-self:center; width:34px; height:5px; border-radius:3px; background:#e3ddd0; border:none; padding:0; margin-bottom:6px; cursor:pointer;"></button>
+
+          <button onClick="{{ toggleCreate }}" style="display:flex; align-items:center; gap:12px; height:44px; padding:0 8px; border:none; background:none; text-align:left; font-size:14px; color:#2c2823; cursor:pointer; border-radius:10px; flex-shrink:0;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8a8377" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><rect x="3" y="4" width="18" height="17" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/></svg>
+            New Event
+          </button>
+          <button onClick="{{ toggleCreate }}" style="display:flex; align-items:center; gap:12px; height:44px; padding:0 8px; border:none; background:none; text-align:left; font-size:14px; color:#2c2823; cursor:pointer; border-radius:10px; flex-shrink:0;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8a8377" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><rect x="3" y="4" width="18" height="17" rx="2"/><polyline points="8 12.5 10.5 15 16 9"/></svg>
+            New Task
+          </button>
+          <button onClick="{{ toggleCreate }}" style="display:flex; align-items:center; gap:12px; height:44px; padding:0 8px; border:none; background:none; text-align:left; font-size:14px; color:#2c2823; cursor:pointer; border-radius:10px; flex-shrink:0;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8a8377" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><rect x="5" y="3" width="14" height="18" rx="2"/><line x1="8" y1="8" x2="16" y2="8"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="16" x2="13" y2="16"/></svg>
+            New Journal Entry
+          </button>
+        </div>
+      </sc-if>
+      <div style="flex-shrink:0; padding:6px 8px 7px 4px; display:flex; align-items:center; gap:5px;">
+        <button onClick="{{ toggleSidebar }}" style="width:{{ chromeWidth }}px; min-width:0; height:44px; border:none; background:none; padding:0; display:flex; align-items:center; justify-content:center; flex-shrink:0; cursor:pointer; opacity:{{ chromeOpacity }}; overflow:hidden; transition:all 0.25s;">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#2c2823" stroke-width="2" stroke-linecap="round" style="flex-shrink:0;"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+        <div style="flex:1; display:grid; grid-template-columns:repeat(4,1fr); gap:{{ switcherGap }}px; background:{{ switcherBg }}; border-radius:{{ switcherRadius }}px; padding:{{ switcherPadding }}px; transition:padding 0.25s;">
+          <sc-if value="{{ switcherCollapsed }}" hint-placeholder-val="{{ true }}">
+            <div style="display:contents;">
+              <sc-for list="{{ segments }}" as="seg" hint-placeholder-count="3">
+                <button onClick="{{ seg.onClick }}" style="text-align:center; padding:9px 0; border-radius:17px; font-size:11px; border:none; cursor:pointer; font-weight:{{ seg.weight }}; color:{{ seg.color }}; background:{{ seg.bg }};">{{ seg.label }}</button>
+              </sc-for>
+              <button onClick="{{ toggleMore }}" style="display:flex; align-items:center; justify-content:center; padding:9px 0; border-radius:17px; border:none; cursor:pointer; color:#8a8377; background:transparent;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>
+              </button>
+            </div>
+          </sc-if>
+          <sc-if value="{{ switcherExpanded }}" hint-placeholder-val="{{ false }}">
+            <div style="grid-column:1 / -1; display:flex; flex-direction:column; gap:8px;">
+
+              <div style="display:flex; gap:4px; background:#f0ebe1; border-radius:12px; padding:4px;">
+                <button onClick="{{ goSearch }}" style="flex:1; display:flex; align-items:center; justify-content:center; gap:6px; padding:8px 6px; border-radius:9px; border:none; cursor:pointer; background:#fff;">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2c2823" stroke-width="2" style="flex-shrink:0;"><circle cx="10.5" cy="10.5" r="6.5"/><line x1="15.5" y1="15.5" x2="20.5" y2="20.5"/></svg>
+                  <span style="font-size:11.5px; color:#2c2823;">Search</span>
+                </button>
+                <div style="flex:1.4; display:flex; align-items:stretch; background:#fff; border-radius:9px; overflow:hidden;">
+                  <button onClick="{{ goSettings }}" style="flex:1; display:flex; align-items:center; justify-content:center; gap:6px; padding:8px 4px; border:none; cursor:pointer; background:none;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2c2823" stroke-width="1.8" style="flex-shrink:0;"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8"/></svg>
+                    <span style="font-size:11.5px; color:#2c2823;">Settings</span>
+                  </button>
+                  <div style="width:1px; background:rgba(44,40,33,0.1); margin:8px 0;"></div>
+                  <button onClick="{{ toggleQuickSettings }}" style="width:30px; flex-shrink:0; display:flex; align-items:center; justify-content:center; border:none; cursor:pointer; background:{{ qsToggleBg }};">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="{{ qsToggleColor }}" stroke-width="1.8" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><circle cx="9" cy="6" r="2" fill="{{ qsToggleDot }}"/><line x1="4" y1="12" x2="20" y2="12"/><circle cx="15" cy="12" r="2" fill="{{ qsToggleDot }}"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="11" cy="18" r="2" fill="{{ qsToggleDot }}"/></svg>
+                  </button>
+                </div>
+              </div>
+
+              <sc-if value="{{ quickSettingsOpen }}" hint-placeholder-val="{{ false }}">
+                <div style="background:#fff; border-radius:14px; padding:13px 14px; display:flex; flex-direction:column; gap:12px; box-shadow:0 1px 2px rgba(44,40,33,0.05), 0 1px 0 rgba(44,40,33,0.03);">
+                  <div style="display:flex; align-items:center; justify-content:space-between;">
+                    <span style="font-size:12.5px; color:#2c2823;">Theme</span>
+                    <div style="display:flex; background:#f6f3ed; border-radius:9px; padding:3px; gap:2px;">
+                      <button onClick="{{ setThemeSystem }}" style="width:28px; height:24px; border-radius:6px; border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; background:{{ themeSystemBg }}; color:{{ themeSystemColor }};">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="13" rx="1.5"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                      </button>
+                      <button onClick="{{ setThemeLight }}" style="width:28px; height:24px; border-radius:6px; border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; background:{{ themeLightBg }}; color:{{ themeLightColor }};">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.5"/><line x1="12" y1="2" x2="12" y2="4.5"/><line x1="12" y1="19.5" x2="12" y2="22"/><line x1="2" y1="12" x2="4.5" y2="12"/><line x1="19.5" y1="12" x2="22" y2="12"/></svg>
+                      </button>
+                      <button onClick="{{ setThemeDark }}" style="width:28px; height:24px; border-radius:6px; border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; background:{{ themeDarkBg }}; color:{{ themeDarkColor }};">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg>
+                      </button>
+                    </div>
+                  </div>
+                  <div style="height:1px; background:rgba(44,40,33,0.07);"></div>
+                  <div style="display:flex; align-items:center; justify-content:space-between;">
+                    <span style="font-size:12.5px; color:#2c2823;">Week numbers</span>
+                    <button onClick="{{ toggleWeekNumbers }}" style="width:38px; height:21px; border-radius:11px; border:none; background:{{ weekNumbersBg }}; position:relative; cursor:pointer; flex-shrink:0;">
+                      <span style="position:absolute; top:2px; left:{{ weekNumbersKnobLeft }}px; width:17px; height:17px; border-radius:50%; background:#fff; transition:left 0.2s; box-shadow:0 1px 2px rgba(0,0,0,0.2);"></span>
+                    </button>
+                  </div>
+                  <div style="display:flex; align-items:center; justify-content:space-between;">
+                    <span style="font-size:12.5px; color:#2c2823;">Hide completed tasks</span>
+                    <button onClick="{{ toggleHideCompleted }}" style="width:38px; height:21px; border-radius:11px; border:none; background:{{ hideCompletedBg }}; position:relative; cursor:pointer; flex-shrink:0;">
+                      <span style="position:absolute; top:2px; left:{{ hideCompletedKnobLeft }}px; width:17px; height:17px; border-radius:50%; background:#fff; transition:left 0.2s; box-shadow:0 1px 2px rgba(0,0,0,0.2);"></span>
+                    </button>
+                  </div>
+                  <button onClick="{{ goSettings }}" style="align-self:flex-start; background:none; border:none; color:#b07d4f; font-size:12px; font-weight:600; padding:0; cursor:pointer;">All settings →</button>
+                </div>
+              </sc-if>
+
+              <div>
+                <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:5px; background:#f0ebe1; border-radius:14px; padding:5px;">
+                  <sc-for list="{{ allSegments }}" as="aseg" hint-placeholder-count="8">
+                    <button onClick="{{ aseg.onClick }}" style="text-align:center; padding:8px 2px; border-radius:10px; font-size:11px; border:none; cursor:pointer; font-weight:{{ aseg.weight }}; color:{{ aseg.color }}; background:{{ aseg.bg }}; box-shadow:{{ aseg.shadow }};">{{ aseg.label }}</button>
+                  </sc-for>
+                </div>
+              </div>
+
+            </div>
+          </sc-if>
+        </div>
+        <button onClick="{{ toggleCreate }}" style="width:{{ chromeCreateWidth }}px; min-width:0; height:38px; border-radius:50%; background:#b07d4f; border:none; padding:0; display:flex; align-items:center; justify-content:center; flex-shrink:0; cursor:pointer; opacity:{{ chromeOpacity }}; overflow:hidden; transition:all 0.25s;">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" style="flex-shrink:0; transform:rotate({{ createRotation }}deg); transition:transform 0.25s;"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- sidebar -->
+    <sc-if value="{{ sidebarOpen }}" hint-placeholder-val="{{ false }}">
+     <div style="display:contents;">
+      <div onClick="{{ toggleSidebar }}" style="position:absolute; inset:0; background:rgba(44,40,33,0.32); z-index:10;"></div>
+      <div style="position:absolute; top:0; bottom:0; left:0; width:250px; background:#faf8f3; z-index:11; box-shadow:6px 0 24px rgba(0,0,0,0.12); padding:22px 16px; overflow-y:auto; display:flex; flex-direction:column; gap:16px;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <div style="width:14px; height:14px; border-radius:50%; background:#b07d4f; flex-shrink:0;"></div>
+          <span style="font-family:Georgia,serif; font-size:19px; color:#2c2823;">Calino</span>
+        </div>
+        <div style="background:#fff; border-radius:14px; box-shadow:0 1px 2px rgba(0,0,0,0.04); padding:12px;">
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+            <span style="font-size:11px; color:#a39d93;">◀</span>
+            <span style="font-size:13.5px; font-weight:600; color:#2c2823;">{{ sidebarMonthLabel }}</span>
+            <span style="font-size:11px; color:#a39d93;">▶</span>
+          </div>
+          <div style="display:grid; grid-template-columns:repeat(7,1fr); gap:2px;">
+            <sc-for list="{{ weekdayLetters }}" as="wl2" hint-placeholder-count="7">
+              <div style="text-align:center; font-size:9.5px; color:#c2bcae;">{{ wl2 }}</div>
+            </sc-for>
+          </div>
+          <sc-for list="{{ sidebarMonthWeeks }}" as="mweek" hint-placeholder-count="6">
+            <div style="display:grid; grid-template-columns:repeat(7,1fr); gap:2px;">
+              <sc-for list="{{ mweek }}" as="mcell" hint-placeholder-count="7">
+                <button onClick="{{ mcell.onClick }}" style="aspect-ratio:1; border:none; background:{{ mcell.miniBg }}; border-radius:6px; font-size:10.5px; color:{{ mcell.color }}; opacity:{{ mcell.opacity }}; cursor:pointer;">{{ mcell.dateNum }}</button>
+              </sc-for>
+            </div>
+          </sc-for>
+          <button onClick="{{ goToday }}" style="width:100%; margin-top:8px; padding:8px 0; border-radius:10px; border:1px solid rgba(176,125,79,0.3); background:none; color:#b07d4f; font-size:12.5px; font-weight:600; cursor:pointer;">Today</button>
+        </div>
+        <div>
+          <div style="font-size:11px; letter-spacing:0.03em; color:#a39d93; text-transform:uppercase; margin-bottom:8px;">Tasks · {{ openTaskCount }}</div>
+          <sc-for list="{{ sidebarTasks }}" as="st" hint-placeholder-count="4">
+            <div style="display:flex; align-items:center; gap:8px; padding:6px 0; font-size:12.5px; color:#2c2823;">
+              <span style="width:14px; height:14px; border-radius:50%; border:1.5px solid #a39d93; flex-shrink:0;"></span>
+              <span style="flex:1;">{{ st.title }}</span>
+              <span style="color:{{ st.dateColor }}; font-size:11px;">{{ st.due }}</span>
+            </div>
+          </sc-for>
+          <button onClick="{{ goViewTasks }}" style="background:none; border:none; color:#b07d4f; font-size:12.5px; font-weight:600; padding:6px 0; cursor:pointer;">View all →</button>
+        </div>
+      </div>
+     </div>
+    </sc-if>
+
+  </div>
+</div>
+
+<template id="__bundler_thumbnail">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#faf8f3"/><rect x="30" y="15" width="40" height="70" rx="8" fill="#fff" stroke="#b07d4f" stroke-width="2"/><circle cx="50" cy="75" r="6" fill="#b07d4f"/></svg>
+</template>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const WEEKDAY_FULL = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const WEEKDAY_LETTERS = ['M','T','W','T','F','S','S'];
+const TODAY_ISO = '2026-07-18';
+
+function pad(n){ return n < 10 ? '0'+n : ''+n; }
+function toISO(d){ return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
+function addDays(d,n){ const r = new Date(d); r.setDate(r.getDate()+n); return r; }
+function addMonths(d,n){ const r = new Date(d); r.setMonth(r.getMonth()+n); return r; }
+function addYears(d,n){ const r = new Date(d); r.setFullYear(r.getFullYear()+n); return r; }
+function startOfWeekMonday(d){ const r = new Date(d); const day = (r.getDay()+6)%7; r.setDate(r.getDate()-day); return r; }
+
+const EVENTS = {
+  '2026-07-18': [{ time:'12:00', title:'Code Review Session', sub:'Online · Zoom', color:'#3fa79c' }],
+  '2026-07-20': [{ time:'All day', title:'National Day – No Work', sub:'', color:'#c99a3a', allDay:true }],
+  '2026-07-21': [
+    { time:'17:00', title:'Project Review', sub:'Meeting Room B', color:'#3fa79c' },
+    { time:'19:30', title:'Gym Session', sub:'Fitness First', color:'#5a8a5a' }
+  ],
+  '2026-07-22': [{ time:'16:00', title:'Product Planning Workshop', sub:'Innovation Lab', color:'#3fa79c' }],
+  '2026-07-23': [
+    { time:'17:00', title:'Client Call – Acme Corp', sub:'', color:'#3fa79c' },
+    { time:'19:30', title:'Gym Session', sub:'Fitness First', color:'#5a8a5a' }
+  ],
+  '2026-07-24': [{ time:'All day', title:'Family Vacation', sub:'', color:'#8b6bb0', allDay:true }]
+};
+
+const TASK_DATA = [
+  { id:'t1', title:'Submit expense report', note:"Don't forget to attach all receipts", due:'Jul 5', overdue:true },
+  { id:'t2', title:'Buy birthday gift for Sarah', note:'She mentioned wanting a new book', due:'Jul 9', overdue:true },
+  { id:'t3', title:'Book flight for conference', note:'Early bird pricing ends soon', due:'Jul 10', overdue:true },
+  { id:'t4', title:'Review Q1 goals', note:'Prepare notes for performance review', due:'Jul 15', overdue:true },
+  { id:'t5', title:'Plan weekend trip', note:'Research destinations and book accommodation', due:'Today', today:true },
+  { id:'t6', title:'Update documentation', note:'API docs need updating', due:'Mon', week:true },
+  { id:'t7', title:'Schedule dentist appointment', note:"It's been 6 months since last visit", due:'Jul 25', later:true },
+  { id:'t8', title:'Renew car insurance', note:'Current policy expires end of month', due:'Jul 28', later:true }
+];
+
+const JOURNAL_DATA = [
+  { day:'30', wk:'Thu', title:'Month-End Reflections', body:'June was a productive month. Shipped the command palette feature, fixed recurring event bugs, improved dark mode support.' },
+  { day:'25', wk:'Sat', title:'Product Ideas Brainstorm', body:'Calendar sharing with family view, quick-add natural language for tasks, dark mode theme options.' },
+  { day:'20', wk:'Mon', title:'Vacation Planning', body:'Explored options for the family trip to the lake house. Cabin rental confirmed.' }
+];
+
+const CONTACTS_DATA = [
+  { initials:'SM', name:'Sarah Miller', role:'Design', color:'#3fa79c' },
+  { initials:'JD', name:'John Doe', role:'Engineering', color:'#5a8a5a' },
+  { initials:'AK', name:'Amir Khan', role:'Product', color:'#c99a3a' },
+  { initials:'RL', name:'Rita Lopez', role:'Marketing', color:'#8b6bb0' }
+];
+
+class Component extends DCLogic {
+  state = {
+    dateISO: TODAY_ISO,
+    view: 'month',
+    sidebarOpen: false,
+    moreOpen: false,
+    createOpen: false,
+    doneTasks: {},
+    quickSettingsOpen: false,
+    themeMode: 'system',
+    weekNumbers: true,
+    hideCompleted: true
+  };
+
+  navDelta(dir) {
+    const view = this.state.view;
+    const d = new Date(this.state.dateISO + 'T00:00:00');
+    let nd;
+    if (view === 'month') nd = addMonths(d, dir);
+    else if (view === 'week' || view === 'agenda') nd = addDays(d, dir * 7);
+    else if (view === 'day') nd = addDays(d, dir);
+    else if (view === 'year') nd = addYears(d, dir);
+    else nd = d;
+    this.setState({ dateISO: toISO(nd) });
+  }
+
+  onTouchStart = (e) => { this._tx = e.touches[0].clientX; };
+  onTouchEnd = (e) => {
+    if (this._tx == null) return;
+    const dx = e.changedTouches[0].clientX - this._tx;
+    if (dx > 60) this.navDelta(-1);
+    else if (dx < -60) this.navDelta(1);
+    this._tx = null;
+  };
+
+  monthGrid(date) {
+    const year = date.getFullYear(), month = date.getMonth();
+    const first = new Date(year, month, 1);
+    const last = new Date(year, month + 1, 0);
+    const start = startOfWeekMonday(first);
+    const endWeekStart = startOfWeekMonday(last);
+    const end = addDays(endWeekStart, 6);
+    const weeks = [];
+    let cur = new Date(start);
+    while (cur <= end) {
+      const week = [];
+      for (let i = 0; i < 7; i++) {
+        const iso = toISO(cur);
+        const inMonth = cur.getMonth() === month;
+        const isToday = iso === TODAY_ISO;
+        const evs = EVENTS[iso] || [];
+        const dotColor = evs.length ? evs[0].color : null;
+        week.push({
+          dateNum: cur.getDate(), iso, hasDot: !!dotColor, dotColor: dotColor || 'transparent',
+          bg: isToday ? '#efe7db' : 'transparent',
+          color: isToday ? '#b07d4f' : (inMonth ? '#2c2823' : '#c2bcae'),
+          weight: isToday ? '700' : '400',
+          opacity: inMonth ? '1' : '0.5',
+          onClick: () => this.setState({ dateISO: iso, view: 'day' })
+        });
+        cur = addDays(cur, 1);
+      }
+      weeks.push(week);
+    }
+    return weeks;
+  }
+
+  renderVals() {
+    const view = this.state.view;
+    const date = new Date(this.state.dateISO + 'T00:00:00');
+    const monthWeeks = this.monthGrid(date);
+    const sidebarMonthLabel = MONTH_NAMES[date.getMonth()] + ' ' + date.getFullYear();
+
+    let title = '';
+    let showChevrons = true;
+    if (view === 'month') title = MONTH_NAMES[date.getMonth()];
+    else if (view === 'agenda') title = MONTH_NAMES[date.getMonth()];
+    else if (view === 'week') {
+      const s = startOfWeekMonday(date), e = addDays(s, 6);
+      title = MONTH_NAMES[s.getMonth()].slice(0,3) + ' ' + s.getDate() + ' – ' + e.getDate();
+    } else if (view === 'day') {
+      title = WEEKDAY_FULL[date.getDay()].slice(0,3) + ', ' + MONTH_NAMES[date.getMonth()] + ' ' + date.getDate();
+    } else if (view === 'year') { title = '' + date.getFullYear(); }
+    else if (view === 'tasks') { title = 'Tasks'; showChevrons = false; }
+    else if (view === 'journal') { title = 'Journal'; showChevrons = false; }
+    else if (view === 'contacts') { title = 'Contacts'; showChevrons = false; }
+    else if (view === 'search') { title = 'Search'; showChevrons = false; }
+    else if (view === 'settings') { title = 'Settings'; showChevrons = false; }
+
+    const weekStart = startOfWeekMonday(date);
+    const weekDays = [];
+    for (let i = 0; i < 7; i++) {
+      const d = addDays(weekStart, i);
+      const iso = toISO(d);
+      const isToday = iso === TODAY_ISO;
+      const evs = EVENTS[iso] || [];
+      weekDays.push({
+        label: WEEKDAY_FULL[d.getDay()].slice(0,3), dateNum: d.getDate(),
+        bg: isToday ? '#efe7db' : '#fff', color: isToday ? '#b07d4f' : '#2c2823',
+        dots: evs.map(e => e.color),
+        onClick: () => this.setState({ dateISO: iso, view: 'day' })
+      });
+    }
+
+    const dayHours = [];
+    for (let h = 9; h <= 21; h++) dayHours.push(pad(h) + ':00');
+    const dayEvents = (EVENTS[this.state.dateISO] || []).filter(e => !e.allDay).map(e => {
+      const [hh, mm] = e.time.split(':').map(Number);
+      const top = (hh - 9) * 52 + (mm / 60) * 52;
+      return { ...e, top, height: 78, bgSoft: 'color-mix(in srgb, ' + e.color + ' 12%, white)' };
+    });
+
+    const agendaDays = [];
+    for (let i = 0; i < 10; i++) {
+      const d = addDays(date, i);
+      const iso = toISO(d);
+      agendaDays.push({
+        label: WEEKDAY_FULL[d.getDay()] + ' · ' + MONTH_NAMES[d.getMonth()].slice(0,3) + ' ' + d.getDate(),
+        events: EVENTS[iso] || []
+      });
+    }
+
+    const yearMonths = MONTH_NAMES.map((name, i) => {
+      const count = Object.keys(EVENTS).filter(iso => new Date(iso + 'T00:00:00').getMonth() === i).length;
+      return {
+        name, count: count ? count + ' events' : 'No events',
+        onClick: () => this.setState({ view: 'month', dateISO: toISO(new Date(date.getFullYear(), i, 1)) })
+      };
+    });
+
+    const doneTasks = this.state.doneTasks;
+    const groupDefs = [
+      { key: 'overdue', label: 'Overdue', color: '#c2697f', filter: t => t.overdue },
+      { key: 'today', label: 'Today', color: '#8a8377', filter: t => t.today },
+      { key: 'week', label: 'This Week', color: '#8a8377', filter: t => t.week },
+      { key: 'later', label: 'Later', color: '#8a8377', filter: t => t.later }
+    ];
+    const taskGroups = groupDefs.map(g => ({
+      label: g.label, color: g.color,
+      items: TASK_DATA.filter(g.filter).map(t => {
+        const done = !!doneTasks[t.id];
+        return {
+          title: t.title, note: t.note, due: t.due,
+          dateColor: t.overdue && !done ? '#c2697f' : '#a39d93',
+          strike: done ? 'line-through' : 'none',
+          borderColor: done ? '#5a8a5a' : '#a39d93',
+          fill: done ? '#5a8a5a' : 'transparent',
+          onToggle: () => this.setState({ doneTasks: { ...doneTasks, [t.id]: !done } })
+        };
+      })
+    })).filter(g => g.items.length);
+    const openTaskCount = TASK_DATA.filter(t => !doneTasks[t.id]).length;
+
+    const segDefs = [
+      { key: 'month', label: 'Month' },
+      { key: 'week', label: 'Week' },
+      { key: 'agenda', label: 'Agenda' }
+    ];
+    const segments = segDefs.map(s => ({
+      label: s.label, weight: view === s.key ? '700' : '400',
+      color: view === s.key ? '#fff' : '#8a8377', bg: view === s.key ? '#b07d4f' : 'transparent',
+      onClick: () => this.setState({ view: s.key })
+    }));
+
+    const sidebarWeeks = monthWeeks.map(week => week.map(c => ({
+      ...c, miniBg: c.iso === this.state.dateISO ? '#b07d4f' : (c.iso === TODAY_ISO ? '#efe7db' : 'transparent'),
+      color: c.iso === this.state.dateISO ? '#fff' : c.color,
+      onClick: () => this.setState({ dateISO: c.iso, sidebarOpen: false })
+    })));
+
+    const allSegDefs = [
+      { key: 'month', label: 'Month' }, { key: 'week', label: 'Week' }, { key: 'agenda', label: 'Agenda' },
+      { key: 'year', label: 'Year' }, { key: 'day', label: 'Day' }, { key: 'tasks', label: 'Tasks' },
+      { key: 'journal', label: 'Journal' }, { key: 'contacts', label: 'Contacts' }
+    ];
+    const allSegments = allSegDefs.map(s => ({
+      label: s.label, weight: view === s.key ? '700' : '400',
+      color: view === s.key ? '#fff' : '#8a8377', bg: view === s.key ? '#b07d4f' : 'transparent',
+      shadow: view === s.key ? '0 3px 8px rgba(176,125,79,0.35)' : 'none',
+      onClick: () => this.setState({ view: s.key, moreOpen: false })
+    }));
+
+    const moreOpen = this.state.moreOpen, createOpen = this.state.createOpen;
+    const quickSettingsOpen = this.state.quickSettingsOpen;
+    const BASE_H = 57, EXPANDED_H = 138 + (quickSettingsOpen ? 169 : 0);
+    const CREATE_H = 210;
+    const toolbarHeight = createOpen ? CREATE_H : (moreOpen ? EXPANDED_H : BASE_H);
+    const toolbarRadius = createOpen ? 26 : (moreOpen ? 30 : 34);
+    const themeMode = this.state.themeMode;
+    const themeBg = (k) => themeMode === k ? '#b07d4f' : 'transparent';
+    const themeColor = (k) => themeMode === k ? '#fff' : '#8a8377';
+    const weekNumbers = this.state.weekNumbers, hideCompleted = this.state.hideCompleted;
+
+    return {
+      title, showChevrons,
+      sidebarOpen: this.state.sidebarOpen, moreOpen, createOpen,
+      isMonth: view === 'month', isWeek: view === 'week', isDay: view === 'day',
+      isAgenda: view === 'agenda', isYear: view === 'year', isTasks: view === 'tasks',
+      isJournal: view === 'journal', isContacts: view === 'contacts',
+      isSearch: view === 'search', isSettings: view === 'settings',
+      weekdayLetters: WEEKDAY_LETTERS,
+      monthWeeks, sidebarMonthWeeks: sidebarWeeks, weekDays, dayHours, dayEvents, agendaDays, yearMonths,
+      taskGroups, openTaskCount,
+      journalEntries: JOURNAL_DATA, contacts: CONTACTS_DATA,
+      segments, allSegments,
+      switcherCollapsed: !moreOpen, switcherExpanded: moreOpen,
+      switcherRadius: moreOpen ? 18 : 20,
+      switcherGap: moreOpen ? 6 : 2, switcherPadding: moreOpen ? 4 : 2,
+      switcherBg: moreOpen ? 'transparent' : '#f6f3ed',
+      qsToggleBg: quickSettingsOpen ? '#b07d4f' : '#fff',
+      qsToggleColor: quickSettingsOpen ? '#fff' : '#8a8377',
+      qsToggleDot: quickSettingsOpen ? '#b07d4f' : '#f6f3ed',
+      chromeWidth: moreOpen ? 0 : 44, chromeCreateWidth: moreOpen ? 0 : 38, chromeOpacity: moreOpen ? 0 : 1,
+      createRotation: createOpen ? 45 : 0,
+      toolbarHeight, toolbarRadius,
+      goPrev: () => this.navDelta(-1), goNext: () => this.navDelta(1),
+      onTouchStart: this.onTouchStart, onTouchEnd: this.onTouchEnd,
+      toggleSidebar: () => this.setState({ sidebarOpen: !this.state.sidebarOpen, moreOpen: false }),
+      toggleMore: () => this.setState({ moreOpen: !this.state.moreOpen, quickSettingsOpen: false }),
+      toggleCreate: () => this.setState({ createOpen: !this.state.createOpen, quickSettingsOpen: false, moreOpen: false }),
+      goToday: () => this.setState({ dateISO: TODAY_ISO, sidebarOpen: false }),
+      goViewTasks: () => this.setState({ view: 'tasks', sidebarOpen: false }),
+      sidebarMonthLabel,
+      sidebarTasks: TASK_DATA.slice(0, 4).map(t => ({ title: t.title, due: t.due, dateColor: t.overdue ? '#c2697f' : '#a39d93' })),
+      settingsNavRows: [{ label: 'Notifications' }, { label: 'Calendar & CalDAV Sync' }, { label: 'Export & Backup' }, { label: 'About Calino' }],
+      quickSettingsOpen,
+      toggleQuickSettings: (e) => { e.stopPropagation(); this.setState({ quickSettingsOpen: !quickSettingsOpen }); },
+      goSearch: () => this.setState({ view: 'search', moreOpen: false }),
+      goSettings: () => this.setState({ view: 'settings', moreOpen: false }),
+      themeSystemBg: themeBg('system'), themeSystemColor: themeColor('system'), setThemeSystem: () => this.setState({ themeMode: 'system' }),
+      themeLightBg: themeBg('light'), themeLightColor: themeColor('light'), setThemeLight: () => this.setState({ themeMode: 'light' }),
+      themeDarkBg: themeBg('dark'), themeDarkColor: themeColor('dark'), setThemeDark: () => this.setState({ themeMode: 'dark' }),
+      weekNumbersBg: weekNumbers ? '#b07d4f' : '#e3ddd0', weekNumbersKnobLeft: weekNumbers ? 20 : 2,
+      toggleWeekNumbers: () => this.setState({ weekNumbers: !weekNumbers }),
+      hideCompletedBg: hideCompleted ? '#b07d4f' : '#e3ddd0', hideCompletedKnobLeft: hideCompleted ? 20 : 2,
+      toggleHideCompleted: () => this.setState({ hideCompleted: !hideCompleted })
+    };
+  }
+}
+</script>
+</body>
+</html>
