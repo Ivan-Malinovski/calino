@@ -240,9 +240,12 @@ jobs:
         run: |
           # Word splitting is intentional: the jq output expands to separate
           # `-t <tag>` args, and the printf glob to one digest ref per arch.
+          # The hex-only glob rejects any stray file the artifact download
+          # might surface (digest filenames are sha256 — 64 lowercase hex
+          # chars), so a junk file can't silently become a phantom ref.
           # shellcheck disable=SC2046
           docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
-            $(printf 'ghcr.io/ivan-malinovski/calino@sha256:%s ' *)
+            $(printf 'ghcr.io/ivan-malinovski/calino@sha256:%s ' [0-9a-f]*) || exit 1
         env:
           DOCKER_METADATA_OUTPUT_JSON: ${{ steps.meta.outputs.json }}
 
