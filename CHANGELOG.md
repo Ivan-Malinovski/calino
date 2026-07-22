@@ -4,6 +4,11 @@ All notable changes to Calino will be documented in this file.
 
 ## [0.23.0] - 2026-07-22
 
+### Added
+
+- **Redesigned mobile navigation: a single floating bottom pill** — replaces the old mobile top-switcher and FAB. Consolidates the hamburger menu, view switcher, search/settings, and create actions into one floating pill with three states (collapsed base row, expanded view grid, create drawer). Swipe up on the collapsed pill or down on the grid/drawer to open and close it; a single-finger swipe over the calendar content pages the date, alongside the existing two-finger view-cycle gesture. Content across Month/Agenda/Day/Year/Tasks reserves clearance so the pill never obscures it. Desktop navigation is unchanged.
+- **Mobile Settings now lands on a category list** and mounts the same floating nav pill, so its Month/Week/Agenda switcher doubles as a way back to the calendar. Fixes a bug where a later media query silently re-hid the mobile back button once the category-list state existed.
+
 ### Fixed
 
 - **Mobile floating nav pill no longer hides Month/Week/Agenda off the base views** — those three buttons used to disappear on any other route (e.g. `/settings`, `/year`, `/day`), leaving only the "..." button and a duplicate Month/Week/Agenda selector buried inside its expanded menu. The buttons now stay visible everywhere, the "..." button is highlighted instead of them when you're off a base view, and the redundant duplicate selector in the expanded menu is gone.
