@@ -1,12 +1,12 @@
 import type { JSX } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { motion, type PanInfo } from 'framer-motion'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
 import { hapticIfEnabled } from '@/lib/haptics'
 import { SettingsIcon, TuneIcon } from '@/components/common/icons'
 import { QuickSettingsPanel } from '../QuickSettingsPanel'
-import { VIEW_ROUTES } from '../../viewRoutes'
+import { VIEW_ROUTES, URL_TO_VIEW } from '../../viewRoutes'
 import type { ViewType } from '@/types'
 import styles from './NavExpandedGrid.module.css'
 
@@ -51,17 +51,23 @@ export function NavExpandedGrid({
   onDragActiveChange,
 }: NavExpandedGridProps): JSX.Element {
   const navigate = useNavigate()
+  const location = useLocation()
   const currentView = useCalendarStore((state) => state.currentView)
   const setCurrentView = useCalendarStore((state) => state.setCurrentView)
   const journalEnabled = useSettingsStore((state) => state.journalEnabled)
   const contactsEnabled = useSettingsStore((state) => state.contactsEnabled)
+
+  // currentView is store state that persists across routes (e.g. it still
+  // says 'agenda' while on /settings), so the highlighted tile must be
+  // derived from the actual route, not the stale store value.
+  const activeView = URL_TO_VIEW[location.pathname]
 
   const visibleViews = GRID_VIEWS.filter(
     (v) => (journalEnabled || v.value !== 'journal') && (contactsEnabled || v.value !== 'contacts')
   )
 
   const activeTileIndex = visibleViews.findIndex(
-    (v) => currentView === v.value || (v.value === 'week' && currentView === '3day')
+    (v) => activeView === v.value || (v.value === 'week' && activeView === '3day')
   )
 
   const handleTileClick = (view: ViewType): void => {
@@ -150,7 +156,7 @@ export function NavExpandedGrid({
           />
         )}
         {visibleViews.map((view, index) => {
-          const isActive = currentView === view.value || (view.value === 'week' && currentView === '3day')
+          const isActive = activeView === view.value || (view.value === 'week' && activeView === '3day')
           return (
             <motion.button
               key={view.value}

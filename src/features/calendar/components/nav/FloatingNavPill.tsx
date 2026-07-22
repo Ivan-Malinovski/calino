@@ -1,6 +1,6 @@
 import type { JSX } from 'react'
 import { useState, useCallback, useRef, useEffect, useLayoutEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { motion, useMotionValue, animate, type PanInfo } from 'framer-motion'
 import { useCalendarStore } from '@/store/calendarStore'
 import { hapticIfEnabled } from '@/lib/haptics'
@@ -27,8 +27,19 @@ const INDICATOR_TRANSITION = { type: 'spring', stiffness: 500, damping: 40 } as 
 
 export function FloatingNavPill({ onToggleSidebar, onOpenSearch }: FloatingNavPillProps): JSX.Element {
   const navigate = useNavigate()
+  const location = useLocation()
   const currentView = useCalendarStore((state) => state.currentView)
   const setCurrentView = useCalendarStore((state) => state.setCurrentView)
+
+  // The collapsed pill shows the 3 base views (Month/Week/Agenda) inline as
+  // a quick selector. On any other route (e.g. /settings, /year, /day,
+  // /tasks, /journal, /contacts) those buttons aren't useful — the user
+  // picks a view via the "..." menu's expanded grid instead, which already
+  // lists all 8 views.
+  const isOnBaseRoute =
+    location.pathname === '/month' ||
+    location.pathname === '/week' ||
+    location.pathname === '/agenda'
 
   const [viewSwitcherExpanded, setViewSwitcherExpanded] = useState(false)
   const [quickSettingsOpen, setQuickSettingsOpen] = useState(false)
@@ -212,7 +223,7 @@ export function FloatingNavPill({ onToggleSidebar, onOpenSearch }: FloatingNavPi
                 />
               ) : (
                 <div className={styles.switcherTrack}>
-                  {activeIndex >= 0 && (
+                  {isOnBaseRoute && activeIndex >= 0 && (
                     <motion.div
                       layoutId="nav-active-indicator"
                       className={styles.switcherActiveBg}
@@ -220,9 +231,18 @@ export function FloatingNavPill({ onToggleSidebar, onOpenSearch }: FloatingNavPi
                       transition={INDICATOR_TRANSITION}
                     />
                   )}
+                  {!isOnBaseRoute && (
+                    <motion.div
+                      layoutId="nav-active-indicator"
+                      className={styles.switcherActiveBg}
+                      style={{ gridColumn: BASE_VIEWS.length + 1, gridRow: 1 }}
+                      transition={INDICATOR_TRANSITION}
+                    />
+                  )}
                   {BASE_VIEWS.map((view, index) => {
                     const isActive =
-                      currentView === view.value || (view.value === 'week' && currentView === '3day')
+                      isOnBaseRoute &&
+                      (currentView === view.value || (view.value === 'week' && currentView === '3day'))
                     return (
                       <button
                         key={view.value}
@@ -245,7 +265,7 @@ export function FloatingNavPill({ onToggleSidebar, onOpenSearch }: FloatingNavPi
                     aria-label="Show all views"
                     aria-expanded={viewSwitcherExpanded}
                   >
-                    <span className={styles.switcherLabel}>
+                    <span className={isOnBaseRoute ? styles.switcherLabel : styles.switcherLabelActive}>
                       <EllipsisIcon />
                     </span>
                   </button>
