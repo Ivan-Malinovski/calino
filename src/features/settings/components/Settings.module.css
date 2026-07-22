@@ -253,11 +253,11 @@
 
 .sectionTitle {
   font-family: var(--font-serif, 'Newsreader', Georgia, serif);
-  font-size: 40px;
+  font-size: 30px;
   font-weight: 400;
   letter-spacing: -0.018em;
   color: var(--ink);
-  margin: 0;
+  margin: 6px 0 0;
   line-height: 1;
 }
 
@@ -289,93 +289,12 @@
 
   .sectionHeader {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
+    flex-direction: column;
+    align-items: flex-start;
     gap: 6px;
-    margin-bottom: 12px;
+    margin-bottom: 18px;
+    padding: 12px 10px 0;
     position: relative;
-  }
-
-  .sectionHeader .back {
-    display: flex;
-    margin: 0;
-    padding: 0 12px;
-    font-size: 14px;
-  }
-
-  .sectionTitleGroup {
-    display: flex;
-    align-items: center;
-    gap: 2px;
-    position: relative;
-  }
-
-  .sectionChevron {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 28px;
-    height: 28px;
-    border: none;
-    background: transparent;
-    color: var(--ink-2);
-    cursor: pointer;
-    border-radius: 6px;
-    transition:
-      background 0.12s,
-      color 0.12s;
-    flex-shrink: 0;
-  }
-
-  .sectionChevron:hover {
-    background: rgba(var(--ink-raw, 44, 40, 33), 0.05);
-    color: var(--ink);
-  }
-
-  .sectionDropdownMenu {
-    position: absolute;
-    top: calc(100% + 4px);
-    left: 0;
-    min-width: 180px;
-    background: var(--popover-bg, var(--panel));
-    border: 1px solid var(--popover-border, var(--line));
-    border-radius: 10px;
-    box-shadow: var(--modal-shadow, 0 4px 12px rgba(var(--ink-raw, 44, 40, 33), 0.1));
-    z-index: 100;
-  }
-
-  .sectionDropdownItem {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    width: 100%;
-    padding: 10px 14px;
-    border: none;
-    background: transparent;
-    font-size: 14px;
-    color: var(--ink-2);
-    cursor: pointer;
-    font-family: inherit;
-    text-align: left;
-  }
-
-  .sectionDropdownItem:first-child {
-    border-radius: 10px 10px 0 0;
-  }
-
-  .sectionDropdownItem:last-child {
-    border-radius: 0 0 10px 10px;
-  }
-
-  .sectionDropdownItem:hover {
-    background: rgba(var(--ink-raw, 44, 40, 33), 0.04);
-    color: var(--ink);
-  }
-
-  .sectionDropdownItemActive {
-    background: var(--accent-soft);
-    color: var(--accent);
-    font-weight: 500;
   }
 
   /* Mobile category list (shown when no tab is selected yet) */
@@ -424,7 +343,7 @@
   }
 
   .sectionTitle {
-    font-size: 26px;
+    font-size: 22px;
   }
 }
 

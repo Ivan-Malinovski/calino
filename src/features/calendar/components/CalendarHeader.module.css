@@ -147,7 +147,6 @@
   align-items: baseline;
   gap: 6px;
   white-space: nowrap;
-  padding-top: 6px;
   padding-left: 22px;
   align-self: center;
   /* See .navigator — same flex-shrink protection for the ≤768px flex layout. */
@@ -669,6 +668,22 @@
   .settingsWrapper {
     display: none;
   }
+
+  /* Mobile visual nudge: shift the entire .navigator (segmented control
+     containing prev / today / next) 10px right + 3px up, and lift the
+     month title 10px up + 10px right.
+
+     Translating .navigator itself moves all three buttons as one unit.
+     The parent's `overflow: hidden` (which keeps the rounded corners
+     crisp) travels with the element, so the buttons stay clipped
+     correctly and the whole control visibly shifts as a block —
+     unlike translating individual buttons, which clipped at the
+     navigator's boundary and made the icon appear to drift inside a
+     stationary button. */
+  .navigator {
+    transform: translate(10px, -3px);
+  }
+
 }
 
 /* ≤500px (compact mobile): hide Today, search/settings, smaller year */

@@ -121,8 +121,6 @@ export function SettingsPage(): JSX.Element {
   })()
 
   const [activeTab, setActiveTab] = useState<SettingsTab | null>(initialTab)
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false)
-  const dropdownRef = useRef<HTMLDivElement>(null)
 
   // Settings persist immediately on change (no explicit save), so flash a
   // transient "Saved" pill whenever any setting is updated to confirm it stuck.
@@ -139,17 +137,6 @@ export function SettingsPage(): JSX.Element {
       if (savedTimerRef.current) window.clearTimeout(savedTimerRef.current)
     }
   }, [])
-
-  useEffect(() => {
-    if (!isDropdownOpen) return
-    const handleClickOutside = (e: MouseEvent): void => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setIsDropdownOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [isDropdownOpen])
 
   const renderContent = (): JSX.Element | null => {
     switch (activeTab) {
@@ -253,7 +240,7 @@ export function SettingsPage(): JSX.Element {
             </div>
           ) : (
             <>
-              <div className={styles.sectionHeader} ref={dropdownRef}>
+              <div className={styles.sectionHeader}>
                 <button
                   className={styles.back}
                   onClick={() => (isMobile ? setActiveTab(null) : navigate('/'))}
@@ -263,35 +250,7 @@ export function SettingsPage(): JSX.Element {
                   </svg>
                   Back
                 </button>
-                <div className={styles.sectionTitleGroup}>
-                  <h1 className={styles.sectionTitle}>{NAV_ITEMS.find(i => i.id === activeTab)?.label}</h1>
-                  <button
-                    className={styles.sectionChevron}
-                    onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                    aria-label="Switch settings section"
-                  >
-                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M4 5.5L7 8.5L10 5.5" />
-                    </svg>
-                  </button>
-                  {isDropdownOpen && (
-                    <div className={styles.sectionDropdownMenu}>
-                      {NAV_ITEMS.map((item) => (
-                        <button
-                          key={item.id}
-                          className={`${styles.sectionDropdownItem} ${activeTab === item.id ? styles.sectionDropdownItemActive : ''}`}
-                          onClick={() => {
-                            setActiveTab(item.id)
-                            setIsDropdownOpen(false)
-                          }}
-                        >
-                          {item.icon}
-                          {item.label}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                <h1 className={styles.sectionTitle}>{NAV_ITEMS.find(i => i.id === activeTab)?.label}</h1>
               </div>
               {renderContent()}
             </>
