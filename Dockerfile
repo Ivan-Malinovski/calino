@@ -1,5 +1,5 @@
 # ── Stage 1: Build ───────────────────────────────────────────────
-FROM node:25-alpine3.21 AS build
+FROM docker.io/library/node:25-alpine3.21 AS build
 
 RUN npm install -g corepack@latest --force && corepack enable && corepack prepare pnpm@10 --activate
 
@@ -26,7 +26,7 @@ COPY . .
 RUN pnpm build
 
 # ── Stage 2: Runtime ─────────────────────────────────────────────
-FROM caddy:2-alpine
+FROM docker.io/library/caddy:2-alpine
 
 # Inline Caddy config — no separate file needed
 RUN printf ':8080 {\n\troot * /srv\n\ttry_files {path} /index.html\n\tfile_server\n\n\trequest_body {\n\t\tmax_size 1mb\n\t}\n\n\tencode gzip\n\n\theader {\n\t\tX-Frame-Options "SAMEORIGIN"\n\t\tX-Content-Type-Options "nosniff"\n\t\tReferrer-Policy "strict-origin-when-cross-origin"\n\t\tPermissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()"\n\t\t-Server\n\t}\n\n\t@assets path /assets/*\n\theader @assets Cache-Control "public, immutable"\n\n\t@sw path /sw.js\n\theader @sw Cache-Control "no-store, no-cache, must-revalidate"\n\theader @sw Service-Worker-Allowed "/"\n\n\tlog {\n\t\toutput stdout\n\t\tformat console\n\t}\n}\n' > /etc/caddy/Caddyfile

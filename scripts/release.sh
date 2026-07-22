@@ -60,6 +60,17 @@ cd "$(dirname "$0")/.."
 # already spoken for: HEALTH_PORT=8081 ./scripts/release.sh --patch
 HEALTH_PORT=${HEALTH_PORT:-8080}
 
+# Prefer a real `docker` binary; fall back to podman (common on distros like
+# Bazzite/Fedora Atomic where `docker` is only a shell alias, which a
+# non-interactive script shell like this one never expands).
+if command -v docker > /dev/null 2>&1; then
+  ENGINE="docker"
+elif command -v podman > /dev/null 2>&1; then
+  ENGINE="podman"
+else
+  ENGINE="docker"
+fi
+
 REPO=$(git remote get-url origin | sed 's/.*github.com[:/]\(.\+\)\.git$/\1/')
 
 # ─── Version restore on abort ─────────────────────────────────────────────────
@@ -185,17 +196,17 @@ ok "Build succeeded"
 
 # ─── Docker ────────────────────────────────────────────────────────────────────
 if [ "$SKIP_DOCKER" = false ]; then
-  step "Docker build"
+  step "Docker build ($ENGINE)"
 
-  # Check if Docker is running
-  if ! docker info > /dev/null 2>&1; then
-    fail "Docker is not running. Start Docker Desktop or use --no-docker"
+  # Check if the engine is running
+  if ! $ENGINE info > /dev/null 2>&1; then
+    fail "$ENGINE is not running. Start it, or use --no-docker"
   fi
 
-  docker build -t calino:test . > /dev/null 2>&1
-  ok "Docker image built"
+  $ENGINE build -t calino:test . > /dev/null 2>&1
+  ok "Image built"
 
-  step "Docker healthcheck"
+  step "Container healthcheck"
 
   # Always address 127.0.0.1, never "localhost": that resolves to ::1 first, so
   # any unrelated service on IPv6 $HEALTH_PORT (a dev server, say) answers
@@ -204,14 +215,14 @@ if [ "$SKIP_DOCKER" = false ]; then
 
   # An earlier aborted run can leave the container alive and holding the port,
   # which would otherwise trip the conflict check below with a misleading message.
-  docker rm -f calino-release-test > /dev/null 2>&1 || true
+  $ENGINE rm -f calino-release-test > /dev/null 2>&1 || true
 
   # Fail loudly on a port conflict rather than silently testing the squatter.
   if [ "$(probe /)" != "000" ]; then
     fail "Something is already serving on port $HEALTH_PORT. Stop it, or re-run with HEALTH_PORT=8081"
   fi
 
-  docker run -d --name calino-release-test -p "$HEALTH_PORT:8080" calino:test > /dev/null
+  $ENGINE run -d --name calino-release-test -p "$HEALTH_PORT:8080" calino:test > /dev/null
 
   # Wait for container to be healthy
   ATTEMPTS=0
@@ -228,23 +239,23 @@ if [ "$SKIP_DOCKER" = false ]; then
   done
 
   if [ "$STATUS" != "200" ]; then
-    docker logs calino-release-test
-    docker rm -f calino-release-test > /dev/null 2>&1
-    docker rmi calino:test > /dev/null 2>&1
+    $ENGINE logs calino-release-test
+    $ENGINE rm -f calino-release-test > /dev/null 2>&1
+    $ENGINE rmi calino:test > /dev/null 2>&1
     fail "Container healthcheck failed (status: $STATUS)"
   fi
 
   # Verify SPA routes
   SPA_STATUS=$(probe /week)
   if [ "$SPA_STATUS" != "200" ]; then
-    docker rm -f calino-release-test > /dev/null 2>&1
-    docker rmi calino:test > /dev/null 2>&1
+    $ENGINE rm -f calino-release-test > /dev/null 2>&1
+    $ENGINE rmi calino:test > /dev/null 2>&1
     fail "SPA route /week returned $SPA_STATUS"
   fi
 
-  docker rm -f calino-release-test > /dev/null 2>&1
-  docker rmi calino:test > /dev/null 2>&1
-  ok "Docker healthcheck passed"
+  $ENGINE rm -f calino-release-test > /dev/null 2>&1
+  $ENGINE rmi calino:test > /dev/null 2>&1
+  ok "Container healthcheck passed"
 
   # Show what tags CI will generate
   echo ""
@@ -261,17 +272,17 @@ fi
 
 # ─── Docker push to GHCR ──────────────────────────────────────────────────────
 if [ "$DOCKER_PUSH" = true ]; then
-  step "Pushing Docker image to GHCR"
+  step "Pushing image to GHCR ($ENGINE)"
 
-  if ! docker info > /dev/null 2>&1; then
-    fail "Docker is not running"
+  if ! $ENGINE info > /dev/null 2>&1; then
+    fail "$ENGINE is not running"
   fi
 
   # Login to GHCR
   echo "  Logging in to ghcr.io..."
-  echo "$GITHUB_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin 2>/dev/null || {
+  echo "$GITHUB_TOKEN" | $ENGINE login ghcr.io -u "$GITHUB_ACTOR" --password-stdin 2>/dev/null || {
     # Fallback: try using existing credentials
-    docker pull ghcr.io/ivan-malinovski/calino:latest > /dev/null 2>&1 || true
+    $ENGINE pull ghcr.io/ivan-malinovski/calino:latest > /dev/null 2>&1 || true
   }
 
   VERSION_TAG="${NEW_VERSION:-$CURRENT_VERSION}"
@@ -280,21 +291,21 @@ if [ "$DOCKER_PUSH" = true ]; then
 
   # Build with all tags
   step "Building with tags: main, latest, $VERSION_TAG, $SHA_TAG"
-  docker build \
+  $ENGINE build \
     -t "$IMAGE:main" \
     -t "$IMAGE:latest" \
     -t "$IMAGE:$VERSION_TAG" \
     -t "$IMAGE:$SHA_TAG" \
-    . 
+    .
 
   # Push all tags
   step "Pushing tags"
-  docker push "$IMAGE:main"
-  docker push "$IMAGE:latest"
-  docker push "$IMAGE:$VERSION_TAG"
-  docker push "$IMAGE:$SHA_TAG"
+  $ENGINE push "$IMAGE:main"
+  $ENGINE push "$IMAGE:latest"
+  $ENGINE push "$IMAGE:$VERSION_TAG"
+  $ENGINE push "$IMAGE:$SHA_TAG"
 
-  ok "Docker image pushed to GHCR"
+  ok "Image pushed to GHCR"
   echo ""
   echo "  Tags pushed:"
   echo "    - $IMAGE:main"
