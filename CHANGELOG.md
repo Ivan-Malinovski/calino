@@ -2,6 +2,19 @@
 
 All notable changes to Calino will be documented in this file.
 
+## [0.23.0] - 2026-07-22
+
+### Fixed
+
+- **Mobile floating nav pill no longer hides Month/Week/Agenda off the base views** — those three buttons used to disappear on any other route (e.g. `/settings`, `/year`, `/day`), leaving only the "..." button and a duplicate Month/Week/Agenda selector buried inside its expanded menu. The buttons now stay visible everywhere, the "..." button is highlighted instead of them when you're off a base view, and the redundant duplicate selector in the expanded menu is gone.
+- **Expanded "..." menu could highlight the wrong view** — the highlighted tile was derived from state that doesn't reset on non-calendar routes, so e.g. `/settings` could still show "Agenda" highlighted from whatever view you'd last visited. It's now derived from the actual route.
+- **Settings mobile header alignment** — section title size now matches the calendar nav title, the dead (unused) section dropdown is removed, and the back button/title/content spacing lines up with the calendar nav pill.
+
+### Changed
+
+- **`scripts/release.sh` now works with Podman, not just Docker** — the script's `docker` calls only worked in an interactive shell where a `docker=podman` alias could expand; its own non-interactive shell never saw it, so every Docker step failed on Podman-only machines even with Podman running. It now detects whichever engine is actually available. The Dockerfile's base images are also fully-qualified (`docker.io/library/...`) to avoid Podman's short-name resolution prompt.
+- Removed the `design_handoff_navigation/` prototype directory — the nav redesign it documented has already shipped.
+
 ## [0.22.7] - 2026-07-18
 
 ### Added
