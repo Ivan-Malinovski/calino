@@ -52,7 +52,6 @@ export function NavExpandedGrid({
 }: NavExpandedGridProps): JSX.Element {
   const navigate = useNavigate()
   const location = useLocation()
-  const currentView = useCalendarStore((state) => state.currentView)
   const setCurrentView = useCalendarStore((state) => state.setCurrentView)
   const journalEnabled = useSettingsStore((state) => state.journalEnabled)
   const contactsEnabled = useSettingsStore((state) => state.contactsEnabled)
