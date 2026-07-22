@@ -20,18 +20,9 @@ import { CommandPalette } from './features/commandPalette'
 import { CookieConsent, ErrorBoundary } from './components/common'
 import { useTheme } from './components/ThemeContext'
 import { CalendarSkeleton } from './components/common/Skeleton'
-import {
-  MenuIcon,
-  CalendarIcon,
-  TaskCheckIcon,
-  SidebarIcon,
-  SearchIcon,
-  SettingsIcon,
-  TuneIcon,
-} from './components/common/icons'
+import { FloatingNavPill } from './features/calendar/components/nav/FloatingNavPill'
 import { OnboardingModal } from './features/onboarding/OnboardingModal'
 import { ShortcutsHelp } from './features/calendar/components/ShortcutsHelp'
-import { QuickSettingsPanel } from './features/calendar/components/QuickSettingsPanel'
 import { SetupPage } from './features/setup/SetupPage'
 import { MasterPasswordPrompt } from './features/settings/components/MasterPasswordPrompt'
 import { useConfigStore } from './store/configStore'
@@ -42,7 +33,11 @@ import type { ViewType } from './types'
 import { findEventById } from './lib/events'
 import { shortcutsSuppressed } from './lib/keyboard'
 import { motion, AnimatePresence } from 'framer-motion'
+import type { PanInfo } from 'framer-motion'
 import { useReducedMotion } from './hooks/useReducedMotion'
+import { VIEW_ROUTES, URL_TO_VIEW } from './features/calendar/viewRoutes'
+import { getNavigatedDate } from './features/calendar/dateNavigation'
+import { format, parseISO } from 'date-fns'
 
 import './App.css'
 
@@ -73,30 +68,6 @@ function ViewLoader({ children, viewKey }: { children: JSX.Element; viewKey: Vie
       </motion.div>
     </AnimatePresence>
   )
-}
-
-const VIEW_ROUTES: Record<ViewType, string> = {
-  month: '/month',
-  year: '/year',
-  week: '/week',
-  '3day': '/3day',
-  day: '/day',
-  agenda: '/agenda',
-  todo: '/tasks',
-  journal: '/journal',
-  contacts: '/contacts',
-}
-
-const URL_TO_VIEW: Record<string, ViewType> = {
-  '/month': 'month',
-  '/year': 'year',
-  '/week': 'week',
-  '/3day': '3day',
-  '/day': 'day',
-  '/agenda': 'agenda',
-  '/tasks': 'todo',
-  '/journal': 'journal',
-  '/contacts': 'contacts',
 }
 
 const VIEW_ORDER: ViewType[] = ['month', 'year', 'week', '3day', 'day', 'agenda', 'todo', 'journal', 'contacts']
@@ -224,7 +195,6 @@ function CalendarApp(): JSX.Element {
   const agendaSidebarOpen = useSettingsStore((state) => state.agendaSidebarOpen)
   const agendaSidebarWidth = useSettingsStore((state) => state.agendaSidebarWidth)
   const updateSettings = useSettingsStore((state) => state.updateSettings)
-  const [isFabMenuOpen, setIsFabMenuOpen] = useState(false)
   const isMobile = useIsMobile()
   const mainRef = useRef<HTMLElement>(null)
   const reducedMotion = useReducedMotion()
@@ -252,6 +222,28 @@ function CalendarApp(): JSX.Element {
     [navigate]
   )
   useTwoFingerSwipe(mainRef, { onSwipe: switchViewBy, enabled: isMobile })
+
+  // Mobile: single-finger horizontal swipe on the content area pages the
+  // current view's date by one unit (month/week/day/year, matching the
+  // header's chevron navigation). Views without date paging (todo/journal/
+  // contacts) no-op.
+  const handleContentPanEnd = useCallback(
+    (_event: PointerEvent, info: PanInfo) => {
+      if (!isMobile) return
+      const view = currentViewRef.current
+      if (view === 'todo' || view === 'journal' || view === 'contacts') return
+
+      const passedDistance = Math.abs(info.offset.x) > 60
+      const passedVelocity = Math.abs(info.velocity.x) > 500
+      if (!passedDistance && !passedVelocity) return
+
+      const direction: 'prev' | 'next' = info.offset.x < 0 ? 'next' : 'prev'
+      const state = useCalendarStore.getState()
+      const newDate = getNavigatedDate(view, parseISO(state.currentDate), direction)
+      state.setCurrentDate(format(newDate, 'yyyy-MM-dd'))
+    },
+    [isMobile]
+  )
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent): void => {
@@ -404,22 +396,6 @@ function CalendarApp(): JSX.Element {
     [updateSettings]
   )
 
-  const handleFabAction = useCallback(
-    (action: 'event' | 'task' | 'commandPalette' | 'settings' | 'sidebar') => {
-      setIsFabMenuOpen(false)
-      if (action === 'commandPalette') {
-        handleOpenCommandPalette()
-      } else if (action === 'settings') {
-        navigate('/settings')
-      } else if (action === 'sidebar') {
-        handleToggleSidebar()
-      } else {
-        openModal(undefined, undefined, undefined, action)
-      }
-    },
-    [openModal, handleOpenCommandPalette, navigate, handleToggleSidebar]
-  )
-
   return (
     <div className="app">
       <CalendarHeader
@@ -430,7 +406,14 @@ function CalendarApp(): JSX.Element {
         <ErrorBoundary fallback={null}>
           <Sidebar isOpen={isSidebarOpen} onClose={handleCloseSidebar} isCollapsed={sidebarCollapsed} onCollapsedChange={(v) => updateSettings({ sidebarCollapsed: v })} />
         </ErrorBoundary>
-        <main className="main" ref={mainRef}>{renderView()}</main>
+        <motion.main
+          className="main"
+          ref={mainRef}
+          data-view={currentView}
+          onPanEnd={isMobile ? handleContentPanEnd : undefined}
+        >
+          {renderView()}
+        </motion.main>
         <AnimatePresence>
           {agendaSidebarOpen && (
             <motion.aside
@@ -468,12 +451,7 @@ function CalendarApp(): JSX.Element {
           )}
         </AnimatePresence>
       </div>
-      <MobileFAB
-        onClick={() => setIsFabMenuOpen(!isFabMenuOpen)}
-        isOpen={isFabMenuOpen}
-        onAction={handleFabAction}
-        onClose={() => setIsFabMenuOpen(false)}
-      />
+      <FloatingNavPill onToggleSidebar={handleToggleSidebar} onOpenSearch={handleOpenCommandPalette} />
       <ErrorBoundary fallback={null}>
         <EventModal />
       </ErrorBoundary>
@@ -504,79 +482,6 @@ function CalendarApp(): JSX.Element {
         }}
       />
     </div>
-  )
-}
-
-interface MobileFABProps {
-  onClick: () => void
-  isOpen: boolean
-  onAction: (action: 'event' | 'task' | 'commandPalette' | 'settings' | 'sidebar') => void
-  onClose: () => void
-}
-
-function MobileFAB({ onClick, isOpen, onAction, onClose }: MobileFABProps): JSX.Element {
-  return (
-    <>
-      <button className="mobile-fab" onClick={onClick} aria-label="Quick actions">
-        <MenuIcon />
-      </button>
-      {isOpen && (
-        <div className="mobile-fab-menu">
-          <button className="mobile-fab-option" onClick={() => onAction('event')}>
-            <CalendarIcon />
-            Create Event
-          </button>
-          <button className="mobile-fab-option" onClick={() => onAction('task')}>
-            <TaskCheckIcon />
-            Create Task
-          </button>
-          <button className="mobile-fab-option" onClick={() => onAction('sidebar')}>
-            <SidebarIcon />
-            Calendar & CalDAV
-          </button>
-          <button className="mobile-fab-option" onClick={() => onAction('commandPalette')}>
-            <SearchIcon />
-            Search & Commands
-          </button>
-          {/* Rendered only while the menu is open, so its expanded/collapsed
-              state resets automatically each time the menu is reopened. */}
-          <FabSettingsRow onAction={onAction} onClose={onClose} />
-        </div>
-      )}
-    </>
-  )
-}
-
-function FabSettingsRow({
-  onAction,
-  onClose,
-}: {
-  onAction: MobileFABProps['onAction']
-  onClose: () => void
-}): JSX.Element {
-  const [showQuickSettings, setShowQuickSettings] = useState(false)
-  return (
-    <>
-      <div className="mobile-fab-settings-row">
-        <button className="mobile-fab-option" onClick={() => onAction('settings')}>
-          <SettingsIcon />
-          Settings
-        </button>
-        <button
-          className={`mobile-fab-subbtn ${showQuickSettings ? 'mobile-fab-subbtn-active' : ''}`}
-          onClick={() => setShowQuickSettings((v) => !v)}
-          aria-label="Quick settings"
-          aria-expanded={showQuickSettings}
-        >
-          <TuneIcon />
-        </button>
-      </div>
-      {showQuickSettings && (
-        <div className="mobile-fab-quicksettings" role="menu">
-          <QuickSettingsPanel onNavigate={onClose} />
-        </div>
-      )}
-    </>
   )
 }
 

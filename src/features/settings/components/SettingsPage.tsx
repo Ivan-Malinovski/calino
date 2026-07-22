@@ -10,6 +10,8 @@ import { CalDAVSettings } from './CalDAVSettings'
 import { CategoriesSettings } from './CategoriesSettings'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
+import { useIsMobile } from '@/hooks/useIsMobile'
+import { FloatingNavPill } from '@/features/calendar/components/nav/FloatingNavPill'
 import styles from './Settings.module.css'
 
 type SettingsTab = 'general' | 'theme' | 'calendar' | 'categories' | 'notifications' | 'caldav' | 'data'
@@ -103,19 +105,22 @@ const VALID_TABS: SettingsTab[] = ['general', 'theme', 'calendar', 'categories',
 export function SettingsPage(): JSX.Element {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
+  const isMobile = useIsMobile()
   const brokenEventsCount = useCalendarStore((state) => state.brokenEvents.length)
   const duplicateUidCount = useCalendarStore((state) => state.duplicateUidIssues.length)
   const dataIssuesCount = brokenEventsCount + duplicateUidCount
 
-  const initialTab = ((): SettingsTab => {
+  const initialTab = ((): SettingsTab | null => {
     const tabParam = searchParams.get('tab')
     if (tabParam && VALID_TABS.includes(tabParam as SettingsTab)) {
       return tabParam as SettingsTab
     }
-    return 'general'
+    // On mobile with no deep link, show the category list first instead of
+    // jumping straight into General's content.
+    return isMobile ? null : 'general'
   })()
 
-  const [activeTab, setActiveTab] = useState<SettingsTab>(initialTab)
+  const [activeTab, setActiveTab] = useState<SettingsTab | null>(initialTab)
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
@@ -146,8 +151,12 @@ export function SettingsPage(): JSX.Element {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [isDropdownOpen])
 
-  const renderContent = (): JSX.Element => {
+  const renderContent = (): JSX.Element | null => {
     switch (activeTab) {
+      case null:
+        // Mobile-only: no content is rendered here — the category list view
+        // takes over the .main area instead (see below).
+        return null
       case 'general':
         return <GeneralSettings />
       case 'theme':
@@ -203,14 +212,16 @@ export function SettingsPage(): JSX.Element {
               Saved
             </span>
           </div>
-          <div className={styles.backMobile}>
-            <button className={styles.back} onClick={() => navigate('/')}>
-              <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M9 2L4 7l5 5" />
-              </svg>
-              Back to Calendar
-            </button>
-          </div>
+          {activeTab === null && (
+            <div className={styles.backMobile}>
+              <button className={styles.back} onClick={() => navigate('/')}>
+                <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 2L4 7l5 5" />
+                </svg>
+                Back to Calendar
+              </button>
+            </div>
+          )}
           <div className={styles.header}>
             <button className={styles.back} onClick={() => navigate('/')}>
               <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
@@ -219,46 +230,75 @@ export function SettingsPage(): JSX.Element {
               Back to Calendar
             </button>
           </div>
-          <div className={styles.sectionHeader} ref={dropdownRef}>
-            <button className={styles.back} onClick={() => navigate('/')}>
-              <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M9 2L4 7l5 5" />
-              </svg>
-              Back
-            </button>
-            <div className={styles.sectionTitleGroup}>
-              <h1 className={styles.sectionTitle}>{NAV_ITEMS.find(i => i.id === activeTab)?.label}</h1>
-              <button
-                className={styles.sectionChevron}
-                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                aria-label="Switch settings section"
-              >
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M4 5.5L7 8.5L10 5.5" />
-                </svg>
-              </button>
-              {isDropdownOpen && (
-                <div className={styles.sectionDropdownMenu}>
-                  {NAV_ITEMS.map((item) => (
-                    <button
-                      key={item.id}
-                      className={`${styles.sectionDropdownItem} ${activeTab === item.id ? styles.sectionDropdownItemActive : ''}`}
-                      onClick={() => {
-                        setActiveTab(item.id)
-                        setIsDropdownOpen(false)
-                      }}
-                    >
-                      {item.icon}
-                      {item.label}
-                    </button>
-                  ))}
-                </div>
-              )}
+          {activeTab === null ? (
+            <div data-component="settings-category-list">
+              <h1 className={styles.navTitle}>Settings</h1>
+              <nav className={styles.categoryList} aria-label="Settings categories">
+                {NAV_ITEMS.map((item) => (
+                  <button
+                    key={item.id}
+                    className={styles.categoryItem}
+                    data-component="settings-category-item"
+                    data-tab={item.id}
+                    onClick={() => setActiveTab(item.id)}
+                  >
+                    {item.icon}
+                    {item.label}
+                    {item.id === 'data' && dataIssuesCount > 0 && (
+                      <span className={styles.navBadge}>{dataIssuesCount}</span>
+                    )}
+                  </button>
+                ))}
+              </nav>
             </div>
-          </div>
-          {renderContent()}
+          ) : (
+            <>
+              <div className={styles.sectionHeader} ref={dropdownRef}>
+                <button
+                  className={styles.back}
+                  onClick={() => (isMobile ? setActiveTab(null) : navigate('/'))}
+                >
+                  <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M9 2L4 7l5 5" />
+                  </svg>
+                  Back
+                </button>
+                <div className={styles.sectionTitleGroup}>
+                  <h1 className={styles.sectionTitle}>{NAV_ITEMS.find(i => i.id === activeTab)?.label}</h1>
+                  <button
+                    className={styles.sectionChevron}
+                    onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                    aria-label="Switch settings section"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M4 5.5L7 8.5L10 5.5" />
+                    </svg>
+                  </button>
+                  {isDropdownOpen && (
+                    <div className={styles.sectionDropdownMenu}>
+                      {NAV_ITEMS.map((item) => (
+                        <button
+                          key={item.id}
+                          className={`${styles.sectionDropdownItem} ${activeTab === item.id ? styles.sectionDropdownItemActive : ''}`}
+                          onClick={() => {
+                            setActiveTab(item.id)
+                            setIsDropdownOpen(false)
+                          }}
+                        >
+                          {item.icon}
+                          {item.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+              {renderContent()}
+            </>
+          )}
         </main>
       </div>
+      <FloatingNavPill onToggleSidebar={() => navigate('/')} onOpenSearch={() => navigate('/')} />
     </div>
   )
 }

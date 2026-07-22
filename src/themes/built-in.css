@@ -162,6 +162,7 @@
   --event-bg-mix: 9%;
   --event-bg-mix-hover: 12%;
   --color-error-muted: #c47068;
+  --color-success-muted: #5a8a5a;
 
   /* Modal / popover tokens */
   --modal-bg: var(--color-bg-secondary);
@@ -171,6 +172,14 @@
   --modal-border: transparent;
   --popover-border: var(--color-border);
   --modal-shadow: 0 24px 80px rgba(0, 0, 0, 0.18), 0 6px 20px rgba(0, 0, 0, 0.10);
+
+  /* Mobile floating nav pill tokens */
+  --nav-canvas-track: #f0ebe1;
+  --nav-switcher-track: var(--side);
+  --ink-4: #c2bcae;
+  --toggle-off: #e3ddd0;
+  --shadow-pill: 0 16px 36px rgba(44, 40, 33, 0.20), 0 2px 10px rgba(44, 40, 33, 0.10);
+  --shadow-tile-active: 0 3px 8px color-mix(in srgb, var(--accent) 35%, transparent);
 
   /* Layout */
   --sidebar-width: 277px;
@@ -327,6 +336,7 @@
   --event-bg-mix: 18%;
   --event-bg-mix-hover: 22%;
   --color-error-muted: #d4877f;
+  --color-success-muted: #6aaa85;
 
   /* Modal / popover tokens */
   --modal-bg: #2d2a24;
@@ -337,6 +347,14 @@
   --modal-card-border: 1px solid rgba(255, 247, 235, 0.08);
   --popover-border: rgba(255, 247, 235, 0.14);
   --modal-shadow: 0 2px 4px rgba(0, 0, 0, 0.40), 0 20px 60px rgba(0, 0, 0, 0.65);
+
+  /* Mobile floating nav pill tokens */
+  --nav-canvas-track: #312e2a;
+  --nav-switcher-track: var(--side);
+  --ink-4: #4a4744;
+  --toggle-off: #3a3733;
+  --shadow-pill: 0 16px 36px rgba(0, 0, 0, 0.45), 0 2px 10px rgba(0, 0, 0, 0.25);
+  --shadow-tile-active: 0 3px 8px color-mix(in srgb, var(--accent) 40%, transparent);
 
   /* Layout — same as light */
   --sidebar-width: 277px;

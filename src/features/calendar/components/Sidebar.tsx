@@ -478,8 +478,8 @@ export function Sidebar({ isOpen = false, onClose, isCollapsed: controlledCollap
       <div
         className={sidebarClass}
         style={{
-          width: isCollapsed && !isCompact ? undefined : sidebarWidth,
-          minWidth: isCollapsed && !isCompact ? undefined : sidebarWidth,
+          width: isCollapsed && !isCompact ? undefined : isCompact ? 250 : sidebarWidth,
+          minWidth: isCollapsed && !isCompact ? undefined : isCompact ? 250 : sidebarWidth,
         }}
         data-component="sidebar"
       >

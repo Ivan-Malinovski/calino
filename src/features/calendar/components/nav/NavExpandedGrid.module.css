@@ -1,0 +1,144 @@
+.expanded {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 8px 10px;
+}
+
+.handle {
+  width: 34px;
+  height: 5px;
+  border-radius: 3px;
+  border: none;
+  background: var(--ink-4);
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.utilityRow {
+  width: 100%;
+  display: flex;
+  gap: 4px;
+  background: var(--nav-canvas-track);
+  border-radius: 12px;
+  padding: 4px;
+  flex-shrink: 0;
+}
+
+.searchTile {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 32px;
+  border: none;
+  background: var(--panel);
+  border-radius: 9px;
+  color: var(--ink);
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.settingsTile {
+  flex: 1.4;
+  display: flex;
+  align-items: stretch;
+  background: var(--panel);
+  border-radius: 9px;
+  overflow: hidden;
+}
+
+.settingsZone {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 32px;
+  border: none;
+  border-right: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink);
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.settingsToggleZone {
+  width: 30px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--ink-3);
+  cursor: pointer;
+}
+
+.settingsToggleZoneActive {
+  background: var(--accent);
+  color: #fff;
+}
+
+.quickSettingsCard {
+  width: 100%;
+  background: var(--panel);
+  border-radius: 14px;
+  padding: 4px 14px 13px;
+  flex-shrink: 0;
+}
+
+.grid {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 5px;
+  background: var(--nav-canvas-track);
+  border-radius: 12px;
+  padding: 5px;
+  flex-shrink: 0;
+}
+
+.tile {
+  position: relative;
+  z-index: 1;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  border-radius: 9px;
+  cursor: pointer;
+  padding: 0;
+  overflow: hidden;
+}
+
+.tileActiveBg {
+  position: relative;
+  z-index: 0;
+  background: var(--accent);
+  border-radius: 9px;
+  box-shadow: var(--shadow-tile-active);
+}
+
+.tileLabel {
+  position: relative;
+  z-index: 1;
+  font-size: 11.5px;
+  font-weight: 400;
+  color: var(--ink-3);
+}
+
+.tileLabelActive {
+  position: relative;
+  z-index: 1;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #fff;
+}

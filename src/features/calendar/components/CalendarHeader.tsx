@@ -1,25 +1,14 @@
 import type { JSX } from 'react'
 import React, { useState, useCallback, useEffect, useRef, useLayoutEffect } from 'react'
-import {
-  format,
-  addMonths,
-  addWeeks,
-  addDays,
-  parseISO,
-  startOfWeek,
-  endOfWeek,
-  subMonths,
-  subWeeks,
-  subDays,
-  addYears,
-  subYears,
-} from 'date-fns'
+import { format, parseISO, startOfWeek, endOfWeek, addDays } from 'date-fns'
 import { useNavigate } from 'react-router-dom'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
 import { QuickSettingsPanel } from './QuickSettingsPanel'
 import { useGestures } from '@/hooks/useGestures'
 import { useAnimatedClose } from '@/hooks/useAnimatedClose'
+import { VIEW_ROUTES } from '../viewRoutes'
+import { getNavigatedDate } from '../dateNavigation'
 import type { ViewType } from '@/types'
 import styles from './CalendarHeader.module.css'
 
@@ -38,18 +27,6 @@ const VIEWS: { value: ViewType; label: string }[] = [
   { value: 'journal', label: 'Journal' },
   { value: 'contacts', label: 'Contacts' },
 ]
-
-const VIEW_ROUTES: Record<ViewType, string> = {
-  month: '/month',
-  year: '/year',
-  week: '/week',
-  '3day': '/3day',
-  day: '/day',
-  agenda: '/agenda',
-  todo: '/tasks',
-  journal: '/journal',
-  contacts: '/contacts',
-}
 
 export function CalendarHeader({
   onToggleSidebar,
@@ -352,38 +329,7 @@ export function CalendarHeader({
   )
 
   const handleNavigate = (direction: 'prev' | 'next'): void => {
-    let newDate: Date
-    switch (currentView) {
-      case 'month':
-        newDate = direction === 'prev' ? subMonths(date, 1) : addMonths(date, 1)
-        break
-      case 'year':
-        newDate = direction === 'prev' ? subYears(date, 1) : addYears(date, 1)
-        break
-      case 'week':
-        newDate = direction === 'prev' ? subWeeks(date, 1) : addWeeks(date, 1)
-        break
-      case '3day':
-        newDate = direction === 'prev' ? subDays(date, 3) : addDays(date, 3)
-        break
-      case 'day':
-        newDate = direction === 'prev' ? subDays(date, 1) : addDays(date, 1)
-        break
-      case 'agenda':
-        newDate = direction === 'prev' ? subMonths(date, 1) : addMonths(date, 1)
-        break
-      case 'todo':
-        newDate = date
-        break
-      case 'journal':
-        newDate = direction === 'prev' ? subMonths(date, 1) : addMonths(date, 1)
-        break
-      case 'contacts':
-        newDate = date
-        break
-      default:
-        newDate = date
-    }
+    const newDate = getNavigatedDate(currentView, date, direction)
     setCurrentDate(format(newDate, 'yyyy-MM-dd'))
   }
 
@@ -425,32 +371,7 @@ export function CalendarHeader({
       const dir = direction === 'left' ? 'next' : direction === 'right' ? 'prev' : null
       if (!dir) return
 
-      let newDate: Date
-      switch (currentView) {
-        case 'month':
-          newDate = dir === 'prev' ? subMonths(date, 1) : addMonths(date, 1)
-          break
-        case 'year':
-          newDate = dir === 'prev' ? subYears(date, 1) : addYears(date, 1)
-          break
-        case 'week':
-          newDate = dir === 'prev' ? subWeeks(date, 1) : addWeeks(date, 1)
-          break
-        case '3day':
-          newDate = dir === 'prev' ? subDays(date, 3) : addDays(date, 3)
-          break
-        case 'day':
-          newDate = dir === 'prev' ? subDays(date, 1) : addDays(date, 1)
-          break
-        case 'agenda':
-          newDate = dir === 'prev' ? subMonths(date, 1) : addMonths(date, 1)
-          break
-        case 'todo':
-          newDate = date
-          break
-        default:
-          newDate = date
-      }
+      const newDate = getNavigatedDate(currentView, date, dir)
       setCurrentDate(format(newDate, 'yyyy-MM-dd'))
     },
     [currentView, date, setCurrentDate]

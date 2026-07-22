@@ -677,6 +677,7 @@ export function DayView({ selectedDate: propDate, onBack }: { selectedDate?: str
     >
       <div
         className={styles.container}
+        data-embedded={onBack ? '' : undefined}
         ref={containerRef}
         style={{ '--hour-height': `${hourHeight}px` } as React.CSSProperties}
         onContextMenu={(e) => {
