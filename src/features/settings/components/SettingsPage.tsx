@@ -138,12 +138,8 @@ export function SettingsPage(): JSX.Element {
     }
   }, [])
 
-  const renderContent = (): JSX.Element | null => {
-    switch (activeTab) {
-      case null:
-        // Mobile-only: no content is rendered here — the category list view
-        // takes over the .main area instead (see below).
-        return null
+  const renderContent = (tab: SettingsTab): JSX.Element => {
+    switch (tab) {
       case 'general':
         return <GeneralSettings />
       case 'theme':
@@ -199,16 +195,6 @@ export function SettingsPage(): JSX.Element {
               Saved
             </span>
           </div>
-          {activeTab === null && (
-            <div className={styles.backMobile}>
-              <button className={styles.back} onClick={() => navigate('/')}>
-                <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M9 2L4 7l5 5" />
-                </svg>
-                Back to Calendar
-              </button>
-            </div>
-          )}
           <div className={styles.header}>
             <button className={styles.back} onClick={() => navigate('/')}>
               <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
@@ -217,47 +203,54 @@ export function SettingsPage(): JSX.Element {
               Back to Calendar
             </button>
           </div>
-          {activeTab === null ? (
+          {isMobile ? (
             <div data-component="settings-category-list">
-              <h1 className={styles.navTitle}>Settings</h1>
+              <h1 className={styles.mobileTitle}>Settings</h1>
               <nav className={styles.categoryList} aria-label="Settings categories">
-                {NAV_ITEMS.map((item) => (
-                  <button
-                    key={item.id}
-                    className={styles.categoryItem}
-                    data-component="settings-category-item"
-                    data-tab={item.id}
-                    onClick={() => setActiveTab(item.id)}
-                  >
-                    {item.icon}
-                    {item.label}
-                    {item.id === 'data' && dataIssuesCount > 0 && (
-                      <span className={styles.navBadge}>{dataIssuesCount}</span>
-                    )}
-                  </button>
-                ))}
+                {NAV_ITEMS.map((item) => {
+                  const isOpen = activeTab === item.id
+                  return (
+                    <div key={item.id} className={styles.accordionItem}>
+                      <button
+                        className={styles.categoryItem}
+                        data-component="settings-category-item"
+                        data-tab={item.id}
+                        aria-expanded={isOpen}
+                        onClick={() => setActiveTab(isOpen ? null : item.id)}
+                      >
+                        {item.icon}
+                        <span className={styles.categoryLabel}>{item.label}</span>
+                        <span className={styles.categoryTrailing}>
+                          {item.id === 'data' && dataIssuesCount > 0 && (
+                            <span className={styles.navBadge}>{dataIssuesCount}</span>
+                          )}
+                          <ChevronIcon className={isOpen ? styles.chevronOpen : styles.chevron} />
+                        </span>
+                      </button>
+                      {isOpen && (
+                        <div className={styles.accordionPanel} data-component="settings-accordion-panel">
+                          {renderContent(item.id)}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
               </nav>
             </div>
           ) : (
-            <>
-              <div className={styles.sectionHeader}>
-                <button
-                  className={styles.back}
-                  onClick={() => (isMobile ? setActiveTab(null) : navigate('/'))}
-                >
-                  <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M9 2L4 7l5 5" />
-                  </svg>
-                  Back
-                </button>
-                <h1 className={styles.sectionTitle}>{NAV_ITEMS.find(i => i.id === activeTab)?.label}</h1>
-              </div>
-              {renderContent()}
-            </>
+            renderContent(activeTab ?? 'general')
           )}
         </main>
       </div>
       <FloatingNavPill onToggleSidebar={() => navigate('/')} onOpenSearch={() => navigate('/')} />
     </div>
+  )
+}
+
+function ChevronIcon({ className }: { className?: string }): JSX.Element {
+  return (
+    <svg className={className} width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3.5 5.25L7 8.75l3.5-3.5" />
+    </svg>
   )
 }

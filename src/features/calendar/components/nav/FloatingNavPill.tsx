@@ -44,6 +44,8 @@ export function FloatingNavPill({ onToggleSidebar, onOpenSearch }: FloatingNavPi
     location.pathname === '/week' ||
     location.pathname === '/agenda'
 
+  const isOnSettingsRoute = location.pathname === '/settings'
+
   const [viewSwitcherExpanded, setViewSwitcherExpanded] = useState(false)
   const [quickSettingsOpen, setQuickSettingsOpen] = useState(false)
   const [createDrawerOpen, setCreateDrawerOpen] = useState(false)
@@ -239,9 +241,9 @@ export function FloatingNavPill({ onToggleSidebar, onOpenSearch }: FloatingNavPi
               onClick={handleToggleSidebarClick}
               animate={{ width: viewSwitcherExpanded ? 0 : 44, opacity: viewSwitcherExpanded ? 0 : 1 }}
               transition={CHROME_TRANSITION}
-              aria-label="Toggle sidebar"
+              aria-label={isOnSettingsRoute ? 'Back to calendar' : 'Toggle sidebar'}
             >
-              <HamburgerIcon />
+              {isOnSettingsRoute ? <BackArrowIcon /> : <HamburgerIcon />}
             </motion.button>
 
             <div className={styles.switcherSegment} data-component="nav-pill-switcher">
@@ -334,6 +336,14 @@ function HamburgerIcon(): JSX.Element {
   return (
     <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
       <path d="M3 10H17M3 6H17M3 14H17" />
+    </svg>
+  )
+}
+
+function BackArrowIcon(): JSX.Element {
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 4L6 10l6 6" />
     </svg>
   )
 }
