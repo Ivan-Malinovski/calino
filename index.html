@@ -7,7 +7,7 @@
     <meta name="theme-color" content="#faf9f7" />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; connect-src 'self' https:; img-src 'self' data:; font-src 'self' https://fonts.gstatic.com"
+      content="default-src 'self'; script-src 'self' 'sha256-Qh5qqVHNcx0NmWPlYwpmDet5mMrPYpSQ6hcLzJTT3ZM=' 'sha256-am6yAzlcRW7qKd6V78oFkolYjWok3WEYJJY8fqkSPgA='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; connect-src 'self' https:; img-src 'self' data:; font-src 'self' https://fonts.gstatic.com"
     />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -60,7 +60,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&display=swap" rel="stylesheet">
-    <script type="text/javascript">
+    <script>
       // Single Page Apps for GitHub Pages
       // MIT License
       // https://github.com/rafgraph/spa-github-pages
@@ -82,7 +82,9 @@
   </head>
   <body>
     <script>
-      // Apply theme background before React loads to prevent white flash
+      // Apply theme background before React loads to prevent white flash.
+      // Must match the `body` rule's --color-bg token (src/index.css), not
+      // --color-bg-primary — they differ slightly in light mode.
       (function() {
         try {
           var stored = JSON.parse(localStorage.getItem('calino-settings') || '{}');
@@ -91,7 +93,7 @@
           var isDark = mode === 'dark' || (mode === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
           var isMocha = isDark && settings.darkTheme === 'catppuccin-mocha';
           var mochaAccent = settings.mochaAccent || '#89b4fa';
-          var background = isMocha ? '#1e1e2e' : (isDark ? '#1a1816' : '#fafafa');
+          var background = isMocha ? '#1e1e2e' : (isDark ? '#1a1816' : '#faf8f3');
           document.documentElement.style.background = background;
           document.body.style.background = background;
           if (isMocha) {

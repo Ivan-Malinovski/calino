@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Matches src/themes/built-in.css's dark theme bg-primary color. -->
+    <color name="splashBackground">#1A1816</color>
+</resources>

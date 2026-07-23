@@ -3,7 +3,7 @@
   flex-direction: column;
   flex: 1;
   min-height: 0;
-  background: var(--color-bg-primary);
+  background: var(--color-bg, var(--color-bg-primary));
   animation: skeletonFadeIn 0.3s ease;
 }
 

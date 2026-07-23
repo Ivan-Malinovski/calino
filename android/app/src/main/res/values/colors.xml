@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Matches the body rule's bg-primary token in light mode (see
+         src/themes/built-in.css), so the native splash/window/WebView background
+         isn't a jarring flash before the page paints. -->
+    <color name="splashBackground">#FAF8F3</color>
+</resources>
