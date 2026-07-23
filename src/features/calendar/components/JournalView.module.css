@@ -904,8 +904,10 @@
   }
 
   .entry {
-    grid-template-columns: 48px 1fr;
+    grid-template-columns: 48px 1fr auto;
     gap: 0 16px;
+    margin: 0 -12px 0 -4px;
+    padding-left: 20px;
   }
 
   .dayNum {
