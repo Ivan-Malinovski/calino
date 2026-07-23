@@ -865,12 +865,26 @@ export const useCalendarStore = create<CalendarStore>()(
     {
       name: 'calino-storage',
       storage: createJSONStorage(() => safeLocalStorage),
-      version: 1,
-      migrate: (persistedState: unknown) => {
+      version: 2,
+      migrate: (persistedState: unknown, fromVersion: number) => {
         const state = (persistedState ?? {}) as Partial<CalendarStore>
+        let calendars = state.calendars ?? []
+
+        // A prior bug could leave every calendar (including a real CalDAV
+        // one) with isDefault: false while the offline calendar stayed
+        // isDefault: true, or leave no calendar marked default at all. Heal
+        // installs carrying that state forward: if a real (accountId-owned)
+        // calendar exists, it should be the default, not the offline one.
+        if (fromVersion < 2) {
+          const realCalendar = calendars.find((c) => c.accountId)
+          if (realCalendar && !realCalendar.isDefault) {
+            calendars = calendars.map((c) => ({ ...c, isDefault: c.id === realCalendar.id }))
+          }
+        }
+
         return {
           events: state.events ?? [],
-          calendars: state.calendars ?? [],
+          calendars,
           categories: state.categories ?? [],
           autoCategoryRules: state.autoCategoryRules ?? [],
           brokenEvents: state.brokenEvents ?? [],

@@ -501,7 +501,13 @@ export function useCalDAV(): UseCalDAVReturn {
 
         const storedCalendars = storage.getAllCalendars()
         const allCalendarsInStore = useCalendarStore.getState().calendars
-        if (serverCalendars.length > 0) {
+        // Exclude the hidden Calino Settings calendar — it's never added to
+        // the visible calendar store, so picking it as "first" would leave
+        // no calendar actually marked default and fall back to Offline.
+        const firstVisibleCal = serverCalendars.find(
+          (cal) => cal.name !== 'Calino Settings' && !cal.url?.includes('calino-settings')
+        )
+        if (firstVisibleCal) {
           for (const cal of allCalendarsInStore) {
             if (cal.isDefault) {
               storeUpdateCalendar(cal.id, { isDefault: false })
@@ -512,8 +518,7 @@ export function useCalDAV(): UseCalDAVReturn {
               storage.updateCalendar(cal.id, { isDefault: false })
             }
           }
-          const firstCal = serverCalendars[0]
-          const storeCalId = storedCalendars.find((c) => c.url === firstCal.url)?.id
+          const storeCalId = storedCalendars.find((c) => c.url === firstVisibleCal.url)?.id
           if (storeCalId) {
             storeUpdateCalendar(storeCalId, { isDefault: true })
             storage.updateCalendar(storeCalId, { isDefault: true })
