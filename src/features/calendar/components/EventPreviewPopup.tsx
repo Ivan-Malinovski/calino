@@ -20,6 +20,7 @@ import { matchEventBackground } from '@/lib/eventBackground'
 import { describeRecurrence } from '@/lib/recurrence'
 import { hasDueTime, extractOriginalEventId } from '@/lib/events'
 import type { CalendarEvent } from '@/types'
+import { TimeInput } from './TimeInput'
 import styles from './EventPreviewPopup.module.css'
 
 interface EventPreviewPopupProps {
@@ -657,32 +658,35 @@ export function EventPreviewPopup({
               setEditingField(null)
             }
           }}
+          onKeyDown={(e) => {
+            // TimeInput blurs itself on Enter (committing the draft), which
+            // doesn't reach the backdrop's save-on-outside-click path — save
+            // explicitly here so Enter behaves the same as it does for every
+            // other field in this popup.
+            if (e.key === 'Enter') {
+              saveChanges()
+            }
+          }}
         >
-          <input
-            type="time"
+          <TimeInput
             value={editTime}
-            onChange={(e) => handleFieldChange('time', e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                saveChanges()
-              }
-            }}
+            timeFormat={timeFormat}
+            onChange={(value) => handleFieldChange('time', value)}
             className={styles.inlineInput}
+            dataComponent="event-preview-start-time"
+            ariaLabel="Start time"
             autoFocus
           />
           {!isTask && (
             <>
               <span>-</span>
-              <input
-                type="time"
+              <TimeInput
                 value={editEndTime}
-                onChange={(e) => handleFieldChange('endTime', e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    saveChanges()
-                  }
-                }}
+                timeFormat={timeFormat}
+                onChange={(value) => handleFieldChange('endTime', value)}
                 className={styles.inlineInput}
+                dataComponent="event-preview-end-time"
+                ariaLabel="End time"
               />
             </>
           )}
@@ -768,7 +772,14 @@ export function EventPreviewPopup({
             <div
               className={styles.backdrop}
               onClick={() => {
-                if (editingField) {
+                // A blur (e.g. from clicking away from a time <input>) may have
+                // already cleared editingField by the time this click fires, so
+                // check hasChanges too — otherwise an edited-but-unsaved field
+                // gets silently discarded instead of saved (issue: time-only
+                // edits not persisting).
+                if (hasChanges) {
+                  saveChanges()
+                } else if (editingField) {
                   cancelEditingRef.current()
                 } else {
                   animateClose()

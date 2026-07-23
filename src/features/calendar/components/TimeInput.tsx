@@ -9,6 +9,7 @@ interface TimeInputProps {
   dataComponent: string
   ariaLabel: string
   id?: string
+  autoFocus?: boolean
 }
 
 function formatTimeValue(value: string, timeFormat: TimeFormat): string {
@@ -55,6 +56,7 @@ export function TimeInput({
   dataComponent,
   ariaLabel,
   id,
+  autoFocus,
 }: TimeInputProps): JSX.Element {
   const resolvedTimeFormat: TimeFormat = timeFormat === '12h' ? '12h' : '24h'
   const formattedValue = formatTimeValue(value, resolvedTimeFormat)
@@ -90,6 +92,7 @@ export function TimeInput({
       aria-label={ariaLabel}
       inputMode="text"
       autoComplete="off"
+      autoFocus={autoFocus}
       required
     />
   )
