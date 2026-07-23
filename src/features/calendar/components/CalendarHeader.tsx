@@ -1,6 +1,7 @@
 import type { JSX } from 'react'
 import React, { useState, useCallback, useEffect, useRef, useLayoutEffect } from 'react'
-import { format, parseISO, startOfWeek, endOfWeek, addDays } from 'date-fns'
+import { format, parseISO, startOfWeek, endOfWeek, addDays, isToday } from 'date-fns'
+import { AnimatePresence, motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
@@ -462,6 +463,25 @@ export function CalendarHeader({
 
       {/* Right cluster */}
       <div className={styles.rightCluster}>
+        {/* Go to today - only shown when not already on today, so the title's
+            own jump-to-today click gets a discoverable, visible counterpart */}
+        <AnimatePresence initial={false}>
+          {!isToday(date) && (
+            <motion.button
+              className={`${styles.iconButton} ${styles.todayButton}`}
+              onClick={handleToday}
+              aria-label="Go to today"
+              data-component="today-button-icon"
+              initial={{ opacity: 0, scale: 0.6 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.6 }}
+              transition={{ duration: 0.18, ease: [0.34, 1.2, 0.64, 1] }}
+            >
+              <TodayIcon />
+            </motion.button>
+          )}
+        </AnimatePresence>
+
         {/* Search - CSS handles hiding at compact mobile */}
         <button
           className={styles.iconButton}
@@ -698,6 +718,17 @@ function HamburgerIcon(): JSX.Element {
   return (
     <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
       <path d="M3 10H17M3 6H17M3 14H17" />
+    </svg>
+  )
+}
+
+function TodayIcon(): JSX.Element {
+  return (
+    <svg width="19" height="19" viewBox="0 0 24 24" fill="none">
+      <rect x="3.5" y="5" width="17" height="15.5" rx="3" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M3.5 9.5H20.5" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M8 3V6.3M16 3V6.3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      <rect x="10.1" y="12.1" width="3.8" height="3.8" rx="1" fill="currentColor" />
     </svg>
   )
 }

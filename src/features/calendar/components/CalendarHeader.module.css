@@ -661,7 +661,7 @@
     display: none;
   }
 
-  .rightCluster .iconButton {
+  .rightCluster .iconButton:not(.todayButton) {
     display: none;
   }
 
@@ -701,7 +701,7 @@
     padding-right: 12px;
   }
 
-  .iconButton {
+  .iconButton:not(.todayButton) {
     display: none;
   }
 
