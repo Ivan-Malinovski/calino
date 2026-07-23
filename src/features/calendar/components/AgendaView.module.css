@@ -31,6 +31,17 @@
   .embedded {
     padding-bottom: calc(84px + var(--safe-area-bottom));
   }
+
+  /* The rounded card look reads as clipped corners when it spans edge to
+     edge on a phone screen. Go flush instead, matching /tasks and /journal,
+     which are edge-to-edge with just a subtle top line (.tpBar / .bar's
+     border-bottom) rather than a full card border/radius/shadow. */
+  .container {
+    border-radius: 0;
+    border: none;
+    border-top: 1px solid var(--line-2, rgba(var(--ink-raw), 0.05));
+    box-shadow: none;
+  }
 }
 
 .containerShadow {
