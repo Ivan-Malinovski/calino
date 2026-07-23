@@ -207,8 +207,8 @@ export function FloatingNavPill({ onToggleSidebar, onOpenSearch }: FloatingNavPi
       ) {
         return
       }
-      const nextIndex = swipeActiveIndex + (info.offset.x < 0 ? 1 : -1)
-      if (nextIndex < 0 || nextIndex >= swipeViews.length) return
+      const nextIndex =
+        (swipeActiveIndex + (info.offset.x < 0 ? 1 : -1) + swipeViews.length) % swipeViews.length
       handleViewChange(swipeViews[nextIndex].value)
     },
     [swipeActiveIndex, swipeViews, handleViewChange]
@@ -266,7 +266,11 @@ export function FloatingNavPill({ onToggleSidebar, onOpenSearch }: FloatingNavPi
                   onDragActiveChange={handlePillDragActiveChange}
                 />
               ) : (
-                <motion.div className={styles.switcherTrack} onPanEnd={handleSwitcherPanEnd}>
+                <motion.div
+                  className={styles.switcherTrack}
+                  style={{ touchAction: 'none' }}
+                  onPanEnd={handleSwitcherPanEnd}
+                >
                   {isOnBaseRoute && activeIndex >= 0 && (
                     <motion.div
                       layoutId="nav-active-indicator"
