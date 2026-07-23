@@ -7,6 +7,7 @@ import { App as CapacitorApp } from '@capacitor/app'
 import { useIsMobile } from './hooks/useIsMobile'
 import { useTwoFingerSwipe } from './hooks/useTwoFingerSwipe'
 import { useHorizontalSwipe } from './hooks/useHorizontalSwipe'
+import { usePullToRefresh } from './hooks/usePullToRefresh'
 import { useMatchMedia } from './hooks/useMatchMedia'
 import { useCalendarStore } from './store/calendarStore'
 import { useHistoryStore } from './store/historyStore'
@@ -33,7 +34,9 @@ import { MasterPasswordPrompt } from './features/settings/components/MasterPassw
 import { useConfigStore } from './store/configStore'
 import { ThemeProvider } from './components/ThemeProvider'
 import { useCardDAV } from './features/carddav/hooks/useCardDAV'
+import { useCalDAV } from './features/caldav/hooks/useCalDAV'
 import { useNotifications } from './hooks/useNotifications'
+import { openEventDeepLink } from './lib/deepLink'
 import type { ViewType } from './types'
 
 import { findEventById } from './lib/events'
@@ -186,6 +189,7 @@ function PreviewPopupWrapper(): JSX.Element | null {
 
 function CalendarApp(): JSX.Element {
   const navigate = useNavigate()
+  const location = useLocation()
   const currentView = useCalendarStore((state) => state.currentView)
   const setOverlayOpen = useCalendarStore((state) => state.setOverlayOpen)
   const setShowAddCalendar = useCalendarStore((state) => state.setShowAddCalendar)
@@ -215,6 +219,14 @@ function CalendarApp(): JSX.Element {
   useNotifications()
 
   useViewManager()
+
+  // Mobile: pull down from the top of the current view to manually trigger
+  // a CalDAV sync.
+  const { syncAll } = useCalDAV()
+  const { pullDistance, isRefreshing } = usePullToRefresh(mainRef, {
+    onRefresh: syncAll,
+    enabled: isMobile,
+  })
 
   // Mobile: edge swipe from the left screen edge opens the sidebar drawer.
   // Attached to `document` (not the drawer itself, which is off-screen while
@@ -415,6 +427,22 @@ function CalendarApp(): JSX.Element {
     }
   }, [openModal, setOverlayOpen])
 
+  // Web: opening a reminder notification navigates to `/?date=&event=` (see
+  // showNotification's onclick handler in lib/notifications.ts) — read those
+  // params back out and open that event, then strip them so a later reload
+  // doesn't re-open the modal. The native equivalent lives in
+  // nativeReminders.ts's listenForReminderActions, which calls the same
+  // openEventDeepLink helper directly (no URL round-trip needed there).
+  useEffect(() => {
+    const params = new URLSearchParams(location.search)
+    const eventId = params.get('event')
+    const date = params.get('date')
+    if (eventId && date) {
+      openEventDeepLink(eventId, date)
+      navigate(location.pathname, { replace: true })
+    }
+  }, [location.pathname, location.search, navigate])
+
   const renderView = (): JSX.Element => {
     const viewElement = (() => {
       switch (currentView) {
@@ -496,6 +524,19 @@ function CalendarApp(): JSX.Element {
         <ErrorBoundary fallback={null}>
           <Sidebar isOpen={isSidebarOpen} onClose={handleCloseSidebar} isCollapsed={sidebarCollapsed} onCollapsedChange={(v) => updateSettings({ sidebarCollapsed: v })} />
         </ErrorBoundary>
+        {isMobile && (
+          <div
+            className="pullToRefreshIndicator"
+            data-active={isRefreshing || undefined}
+            style={{
+              transform: `translateX(-50%) translateY(${isRefreshing ? 24 : Math.min(pullDistance, 60)}px)`,
+              opacity: isRefreshing || pullDistance > 0 ? 1 : 0,
+            }}
+            aria-hidden={!isRefreshing}
+          >
+            <span className="pullToRefreshSpinner" />
+          </div>
+        )}
         <motion.main
           className="main"
           ref={mainRef}

@@ -2,6 +2,7 @@ import { LocalNotifications } from '@capacitor/local-notifications'
 import { addMinutes } from 'date-fns'
 import type { CalendarEvent } from '@/types'
 import { getEffectiveReminders } from './notifications'
+import { openEventDeepLink } from './deepLink'
 
 const REMINDER_ACTION_TYPE = 'REMINDER_ACTIONS'
 const SNOOZE_ACTION_ID = 'snooze-5'
@@ -90,10 +91,14 @@ export async function reconcileNativeReminders(
 
 export function listenForReminderActions(): () => void {
   const listenerPromise = LocalNotifications.addListener('localNotificationActionPerformed', (action) => {
-    if (action.actionId !== SNOOZE_ACTION_ID) return
-
     const extra = action.notification.extra as { eventId: string; eventDate: string } | undefined
     if (!extra) return
+
+    if (action.actionId !== SNOOZE_ACTION_ID) {
+      // Plain tap (actionId 'tap') — open the event the reminder was about.
+      openEventDeepLink(extra.eventId, extra.eventDate)
+      return
+    }
 
     void LocalNotifications.schedule({
       notifications: [
