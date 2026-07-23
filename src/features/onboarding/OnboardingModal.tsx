@@ -1,5 +1,6 @@
 import type { JSX } from 'react'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { Capacitor } from '@capacitor/core'
 import { useAnimatedClose } from '@/hooks/useAnimatedClose'
 import { useFocusTrap } from '@/hooks/useFocusTrap'
 import { useSettingsStore, EVENT_COLORS } from '@/store/settingsStore'
@@ -8,7 +9,10 @@ import { useContactStore } from '@/store/contactStore'
 import { useConfigStore } from '@/store/configStore'
 import { parseICALData } from '@/features/caldav/adapter/iCalendarAdapter'
 import { parseVCard } from '@/features/carddav/adapter/vCardAdapter'
+import { requestNativeReminderPermission } from '@/lib/nativeReminders'
 import styles from './OnboardingModal.module.css'
+
+const isNative = Capacitor.isNativePlatform()
 
 interface OnboardingModalProps {
   onAddCalendar: () => void
@@ -48,6 +52,9 @@ export function OnboardingModal({ onAddCalendar }: OnboardingModalProps): JSX.El
         // Update the setting so the closing animation runs; the hook
         // detects the open→close transition and unmounts.
         useSettingsStore.getState().updateSettings({ hasCompletedOnboarding: true })
+        if (isNative) {
+          void requestNativeReminderPermission()
+        }
       }
     }
     document.addEventListener('keydown', handleKey)
@@ -58,12 +65,25 @@ export function OnboardingModal({ onAddCalendar }: OnboardingModalProps): JSX.El
     return null
   }
 
-  const handleDismiss = (): void => {
+  // Asking here (right after the onboarding copy explaining reminders) rather
+  // than on cold app launch gives the system dialog context — Android only
+  // lets a denied permission be re-requested programmatically once, so a
+  // blank prompt with no explanation risks burning that shot on a reflexive
+  // "deny". requestNativeReminderPermission() is a no-op dialog-wise if the
+  // user already granted/denied it in a previous session.
+  const completeOnboarding = (): void => {
     updateSettings({ hasCompletedOnboarding: true })
+    if (isNative) {
+      void requestNativeReminderPermission()
+    }
+  }
+
+  const handleDismiss = (): void => {
+    completeOnboarding()
   }
 
   const handleAddCalendar = (): void => {
-    updateSettings({ hasCompletedOnboarding: true })
+    completeOnboarding()
     onAddCalendar()
   }
 
@@ -151,7 +171,7 @@ export function OnboardingModal({ onAddCalendar }: OnboardingModalProps): JSX.El
         // Sample contacts are optional, ignore errors
       }
 
-      updateSettings({ hasCompletedOnboarding: true })
+      completeOnboarding()
     } catch (error) {
       setDemoError(error instanceof Error ? error.message : 'Failed to load demo data')
     } finally {
@@ -191,6 +211,13 @@ export function OnboardingModal({ onAddCalendar }: OnboardingModalProps): JSX.El
           clear browser data. Alternatively, you can back up and transfer your data using the
           export/import feature in Settings.
         </p>
+
+        {isNative && (
+          <p className={styles.description}>
+            Calino can remind you before events start. Continuing will ask for notification
+            permission.
+          </p>
+        )}
 
         {demoError && <p className={styles.errorMessage}>{demoError}</p>}
 
