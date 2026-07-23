@@ -103,7 +103,9 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(var(--ink-raw, 44, 40, 33), 0.4);
+    background: var(--modal-scrim, rgba(0, 0, 0, 0.4));
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
     z-index: 999;
   }
 }
