@@ -112,6 +112,14 @@
   .main[data-view='todo'] {
     padding-bottom: 0;
   }
+
+  /* The pill hides itself while a text input is focused (see
+     useTextInputFocused), but this reserved clearance doesn't know that —
+     left alone it shows up as a bare strip of .main's own background
+     sitting right above the on-screen keyboard. */
+  body.text-input-focused .main {
+    padding-bottom: 0;
+  }
 }
 .agendaSidebar {
   position: relative;
