@@ -208,7 +208,7 @@ export function FloatingNavPill({ onToggleSidebar, onOpenSearch }: FloatingNavPi
         return
       }
       const nextIndex =
-        (swipeActiveIndex + (info.offset.x < 0 ? 1 : -1) + swipeViews.length) % swipeViews.length
+        (swipeActiveIndex + (info.offset.x < 0 ? -1 : 1) + swipeViews.length) % swipeViews.length
       handleViewChange(swipeViews[nextIndex].value)
     },
     [swipeActiveIndex, swipeViews, handleViewChange]
