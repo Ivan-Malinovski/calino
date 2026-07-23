@@ -664,6 +664,14 @@ export function TodoView(): JSX.Element {
         {/* Top Bar */}
         <div className={styles.tpBar}>
           <div className={styles.tpMeta}>
+            {/* Desktop keeps this to the left of the active/done counts;
+                mobile portals it into the header instead (below), where
+                there's room on the same line as the "Tasks" title. */}
+            {!isMobile && taskCalendars.length > 1 && (
+              <div className={styles.projectMenu} ref={projectMenuRef}>
+                {projectMenuContent}
+              </div>
+            )}
             <div className={styles.tpCount}>
               <span><b>{activeCount}</b> active</span>
               <span className={styles.dim} aria-hidden="true">·</span>
@@ -701,14 +709,6 @@ export function TodoView(): JSX.Element {
               </svg>
               {isMobile ? 'Add' : 'Add task'}
             </button>
-            {/* Desktop has room next to Add task; mobile portals this into
-                CalendarHeader's task-header-slot instead (below), since it
-                has nowhere to go here without overflowing. */}
-            {!isMobile && taskCalendars.length > 1 && (
-              <div className={styles.projectMenu} ref={projectMenuRef}>
-                {projectMenuContent}
-              </div>
-            )}
           </div>
         </div>
 

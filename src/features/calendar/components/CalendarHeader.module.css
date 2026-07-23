@@ -197,10 +197,13 @@
 }
 
 /* Portal target for TodoView's project filter dropdown (see task-header-slot
-   in TodoView.tsx) — empty unless the todo view is active. */
+   in TodoView.tsx) — empty unless the todo view is active. Padded on the
+   right since .header has no right padding at the mobile breakpoint (where
+   this is actually used), so the dropdown doesn't hug the screen edge. */
 .taskHeaderSlot {
   display: flex;
   align-items: center;
+  padding-right: 14px;
 }
 
 /* ---- Icon Button ---- */
