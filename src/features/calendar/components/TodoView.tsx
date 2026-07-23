@@ -1,6 +1,7 @@
 import type { JSX } from 'react'
 import { useMemo, useState, useRef, useEffect, useLayoutEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
+import { motion } from 'framer-motion'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import {
   DndContext,
@@ -242,6 +243,20 @@ export function TodoView(): JSX.Element {
   const activeCount = useMemo(() => filteredTasks.filter((task) => !task.completed).length, [filteredTasks])
   const completedCount = useMemo(() => filteredTasks.filter((task) => task.completed).length, [filteredTasks])
   const selectedProject = taskCalendars.find((calendar) => calendar.id === projectFilter)
+
+  const projectMenuContent = (
+    <>
+      <button type="button" className={styles.projectFilter} onClick={() => setIsProjectMenuOpen(!isProjectMenuOpen)} aria-expanded={isProjectMenuOpen} aria-haspopup="menu" aria-label="Filter tasks by project" data-component="task-project-filter">
+        {selectedProject && <span className={styles.projectColor} style={{ backgroundColor: selectedProject.color }} />}
+        {selectedProject?.name ?? 'All projects'}
+        <svg aria-hidden="true" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+      </button>
+      {isProjectMenuOpen && <div className={styles.projectMenuList} role="menu" data-component="task-project-menu">
+        <button type="button" role="menuitem" className={projectFilter ? styles.projectMenuItem : `${styles.projectMenuItem} ${styles.projectMenuItemSelected}`} onClick={() => { setProjectFilter(''); setIsProjectMenuOpen(false) }}>All projects</button>
+        {taskCalendars.map((calendar) => <button key={calendar.id} type="button" role="menuitem" className={projectFilter === calendar.id ? `${styles.projectMenuItem} ${styles.projectMenuItemSelected}` : styles.projectMenuItem} onClick={() => { setProjectFilter(calendar.id); setIsProjectMenuOpen(false) }}><span className={styles.projectColor} style={{ backgroundColor: calendar.color }} />{calendar.name}</button>)}
+      </div>}
+    </>
+  )
 
   // Only worth hinting "drop here to promote to root" when the dragged task
   // actually has a parent — dropping an already-root task on blank space is
@@ -686,24 +701,31 @@ export function TodoView(): JSX.Element {
               </svg>
               {isMobile ? 'Add' : 'Add task'}
             </button>
+            {/* Desktop has room next to Add task; mobile portals this into
+                CalendarHeader's task-header-slot instead (below), since it
+                has nowhere to go here without overflowing. */}
+            {!isMobile && taskCalendars.length > 1 && (
+              <div className={styles.projectMenu} ref={projectMenuRef}>
+                {projectMenuContent}
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Project filter — portaled into CalendarHeader's task-header-slot so
-            it sits on the same line as the "Tasks" title, right-aligned,
-            instead of crowding the Add button down here. */}
-        {headerSlot && taskCalendars.length > 1 && createPortal(
-          <div className={styles.projectMenu} ref={projectMenuRef}>
-            <button type="button" className={styles.projectFilter} onClick={() => setIsProjectMenuOpen(!isProjectMenuOpen)} aria-expanded={isProjectMenuOpen} aria-haspopup="menu" aria-label="Filter tasks by project" data-component="task-project-filter">
-              {selectedProject && <span className={styles.projectColor} style={{ backgroundColor: selectedProject.color }} />}
-              {selectedProject?.name ?? 'All projects'}
-              <svg aria-hidden="true" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
-            </button>
-            {isProjectMenuOpen && <div className={styles.projectMenuList} role="menu" data-component="task-project-menu">
-              <button type="button" role="menuitem" className={projectFilter ? styles.projectMenuItem : `${styles.projectMenuItem} ${styles.projectMenuItemSelected}`} onClick={() => { setProjectFilter(''); setIsProjectMenuOpen(false) }}>All projects</button>
-              {taskCalendars.map((calendar) => <button key={calendar.id} type="button" role="menuitem" className={projectFilter === calendar.id ? `${styles.projectMenuItem} ${styles.projectMenuItemSelected}` : styles.projectMenuItem} onClick={() => { setProjectFilter(calendar.id); setIsProjectMenuOpen(false) }}><span className={styles.projectColor} style={{ backgroundColor: calendar.color }} />{calendar.name}</button>)}
-            </div>}
-          </div>,
+        {/* Project filter (mobile only) — portaled into CalendarHeader's
+            task-header-slot so it sits on the same line as the "Tasks"
+            title, right-aligned, animated in the same way as the header's
+            own today-button-icon. */}
+        {isMobile && headerSlot && taskCalendars.length > 1 && createPortal(
+          <motion.div
+            className={styles.projectMenu}
+            ref={projectMenuRef}
+            initial={{ opacity: 0, scale: 0.6 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.18, ease: [0.34, 1.2, 0.64, 1] }}
+          >
+            {projectMenuContent}
+          </motion.div>,
           headerSlot
         )}
 
