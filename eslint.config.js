@@ -8,7 +8,7 @@ import { defineConfig, globalIgnores } from 'eslint/config'
 export default defineConfig([
   // .claude/ may contain nested git worktrees with their own tsconfig.json,
   // which confuses typescript-eslint's tsconfigRootDir resolution.
-  globalIgnores(['dist', '.claude']),
+  globalIgnores(['dist', '.claude', 'android/app/build']),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [
