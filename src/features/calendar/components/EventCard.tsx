@@ -379,8 +379,18 @@ export const EventCard = React.memo(function EventCard({
       } as React.CSSProperties)
 
   const handleContextMenu = (e: React.MouseEvent): void => {
+    // Always suppress the native menu — including the one Android's WebView
+    // synthesizes on its own from a long-press, entirely independently of
+    // dnd-kit/useGestures. Still preventDefault unconditionally so that native
+    // menu never flashes up, but only actually open ours for a real
+    // right-click (button 2); a touch-originated long-press reports button 0
+    // here and is already handled by the drag-end effect above once the pick
+    // up ends without movement. Without this guard, that native touch
+    // long-press event reopened the menu on top of an in-progress drag,
+    // regardless of what dnd-kit/useGestures had already decided.
     e.preventDefault()
     e.stopPropagation()
+    if (e.button !== 2) return
     openMenu(menuId)
     setContextMenu({ x: e.clientX, y: e.clientY })
   }

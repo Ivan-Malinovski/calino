@@ -101,9 +101,11 @@ describe('EventCard', () => {
 
     render(<EventCard event={mockEvent} />)
 
-    // Trigger context menu (right-click)
+    // Trigger context menu (right-click). button: 2 distinguishes a real
+    // right-click from the contextmenu event Android's WebView synthesizes
+    // from a touch long-press (button 0), which EventCard now ignores.
     const card = screen.getByText('Test Meeting')
-    fireEvent.contextMenu(card)
+    fireEvent.contextMenu(card, { button: 2 })
 
     // Click delete in context menu
     const deleteButton = screen.getByText('Delete')
