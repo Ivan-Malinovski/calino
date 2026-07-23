@@ -2,11 +2,16 @@ import type { JSX, MouseEvent as ReactMouseEvent } from 'react'
 import { useCallback, useEffect, useState, useRef, lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom'
 import { Toaster } from 'sonner'
+import { Capacitor } from '@capacitor/core'
+import { App as CapacitorApp } from '@capacitor/app'
 import { useIsMobile } from './hooks/useIsMobile'
 import { useTwoFingerSwipe } from './hooks/useTwoFingerSwipe'
+import { useHorizontalSwipe } from './hooks/useHorizontalSwipe'
+import { useMatchMedia } from './hooks/useMatchMedia'
 import { useCalendarStore } from './store/calendarStore'
 import { useHistoryStore } from './store/historyStore'
 import { showToast } from './lib/toast'
+import { hapticIfEnabled } from './lib/haptics'
 import { useSettingsStore } from './store/settingsStore'
 import {
   CalendarHeader,
@@ -28,6 +33,7 @@ import { MasterPasswordPrompt } from './features/settings/components/MasterPassw
 import { useConfigStore } from './store/configStore'
 import { ThemeProvider } from './components/ThemeProvider'
 import { useCardDAV } from './features/carddav/hooks/useCardDAV'
+import { useNotifications } from './hooks/useNotifications'
 import type { ViewType } from './types'
 
 import { findEventById } from './lib/events'
@@ -196,13 +202,32 @@ function CalendarApp(): JSX.Element {
   const agendaSidebarWidth = useSettingsStore((state) => state.agendaSidebarWidth)
   const updateSettings = useSettingsStore((state) => state.updateSettings)
   const isMobile = useIsMobile()
+  const isSidebarDrawerMode = useMatchMedia('(max-width: 950px)')
   const mainRef = useRef<HTMLElement>(null)
   const reducedMotion = useReducedMotion()
 
   // Initialize CardDAV sync
   useCardDAV()
 
+  // Fire event/task reminders (web: polling + Notification API; native:
+  // real OS-scheduled notifications). Was defined but never mounted anywhere
+  // in the app — reminders have never actually fired, on web or native.
+  useNotifications()
+
   useViewManager()
+
+  // Mobile: edge swipe from the left screen edge opens the sidebar drawer.
+  // Attached to `document` (not the drawer itself, which is off-screen while
+  // closed) — see useHorizontalSwipe's doc comment for why this isn't a real
+  // overlay element.
+  useHorizontalSwipe('document', {
+    onSwipeRight: () => {
+      setIsSidebarOpen(true)
+      hapticIfEnabled('light')
+    },
+    enabled: isSidebarDrawerMode && !isSidebarOpen,
+    edgeZonePx: 24,
+  })
 
   // Mobile: two-finger horizontal swipe cycles through views (single-finger
   // swipes stay reserved for date navigation inside each view).
@@ -324,6 +349,34 @@ function CalendarApp(): JSX.Element {
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [setOverlayOpen, navigate, openModal])
+
+  // Hardware back button (Android): close the top-most overlay, one level
+  // per press. Modals already close themselves on Escape (EventModal,
+  // JournalDayModal, CommandPalette) so a synthetic Escape keydown reuses
+  // that logic instead of duplicating close calls here.
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return
+
+    const listenerPromise = CapacitorApp.addListener('backButton', () => {
+      if (isCommandPaletteOpen || isShortcutsHelpOpen || isJournalModalOpen || useCalendarStore.getState().isModalOpen) {
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+        return
+      }
+      if (isSidebarOpen) {
+        setIsSidebarOpen(false)
+        return
+      }
+      if (window.location.pathname !== '/') {
+        navigate('/')
+        return
+      }
+      void CapacitorApp.exitApp()
+    })
+
+    return () => {
+      void listenerPromise.then((handle) => handle.remove())
+    }
+  }, [isCommandPaletteOpen, isShortcutsHelpOpen, isJournalModalOpen, isSidebarOpen, navigate])
 
   const renderView = (): JSX.Element => {
     const viewElement = (() => {

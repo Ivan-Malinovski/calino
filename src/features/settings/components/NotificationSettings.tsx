@@ -1,8 +1,14 @@
 import type { JSX } from 'react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
+import { Capacitor } from '@capacitor/core'
 import { useSettingsStore } from '@/store/settingsStore'
 import { showTestNotification, requestNotificationPermission, getNotificationPermission } from '@/lib/notifications'
+import {
+  requestNativeReminderPermission,
+  checkNativeReminderPermission,
+  scheduleTestReminder,
+} from '@/lib/nativeReminders'
 import styles from './Settings.module.css'
 
 // R3.9 — copy reused by both the toggle and the test button when the
@@ -11,17 +17,28 @@ import styles from './Settings.module.css'
 const PERMISSION_DENIED_TOAST =
   'Notifications are blocked. Update site permissions in your browser settings to enable reminders.'
 
+const isNative = Capacitor.isNativePlatform()
+
 export function NotificationSettings(): JSX.Element {
   const enableDesktopNotifications = useSettingsStore((s) => s.enableDesktopNotifications)
   const enableSoundAlerts = useSettingsStore((s) => s.enableSoundAlerts)
   const taskDueDateReminders = useSettingsStore((s) => s.taskDueDateReminders)
   const overdueTaskBadge = useSettingsStore((s) => s.overdueTaskBadge)
   const updateSettings = useSettingsStore((s) => s.updateSettings)
-  const [permissionStatus, setPermissionStatus] = useState(getNotificationPermission)
+  const [permissionStatus, setPermissionStatus] = useState(isNative ? 'default' : getNotificationPermission())
+
+  useEffect(() => {
+    if (!isNative) return
+    checkNativeReminderPermission().then((granted) => {
+      if (granted) setPermissionStatus('granted')
+    })
+  }, [])
 
   const handleEnableNotifications = async (): Promise<void> => {
     if (permissionStatus === 'default') {
-      const newPermission = await requestNotificationPermission()
+      const newPermission = isNative
+        ? (await requestNativeReminderPermission()) ? 'granted' : 'denied'
+        : await requestNotificationPermission()
       setPermissionStatus(newPermission)
       if (newPermission === 'denied') {
         toast.error(PERMISSION_DENIED_TOAST, { duration: 8000 })
@@ -40,7 +57,9 @@ export function NotificationSettings(): JSX.Element {
 
   const handleTestNotification = async (): Promise<void> => {
     if (permissionStatus === 'default') {
-      const newPermission = await requestNotificationPermission()
+      const newPermission = isNative
+        ? (await requestNativeReminderPermission()) ? 'granted' : 'denied'
+        : await requestNotificationPermission()
       setPermissionStatus(newPermission)
       if (newPermission === 'denied') {
         toast.error(PERMISSION_DENIED_TOAST, { duration: 8000 })
@@ -54,7 +73,11 @@ export function NotificationSettings(): JSX.Element {
       toast.error(PERMISSION_DENIED_TOAST, { duration: 8000 })
       return
     }
-    showTestNotification()
+    if (isNative) {
+      void scheduleTestReminder()
+    } else {
+      showTestNotification()
+    }
   }
 
   return (

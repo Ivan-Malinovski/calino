@@ -19,6 +19,9 @@
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:report": "playwright show-report",
     "preview": "vite preview",
+    "cap:sync": "cap sync android",
+    "cap:open": "cap open android",
+    "cap:run": "cap run android",
     "check": "pnpm typecheck && pnpm lint && pnpm test:run && pnpm build",
     "check:docker": "pnpm check && docker build -t calino:test . && docker run --rm -d --name calino-test -p 8080:8080 calino:test && sleep 3 && curl -sf http://localhost:8080/ > /dev/null && echo '✅ Docker build and healthcheck passed' && docker stop calino-test || (docker stop calino-test 2>/dev/null; echo '❌ Docker check failed'; exit 1)"
   },
@@ -53,6 +56,13 @@
     "zustand": "^5.0.11"
   },
   "devDependencies": {
+    "@capacitor/android": "^8.4.2",
+    "@capacitor/app": "^8.1.1",
+    "@capacitor/cli": "^8.4.2",
+    "@capacitor/core": "^8.4.2",
+    "@capacitor/haptics": "^8.0.2",
+    "@capacitor/local-notifications": "^8.2.1",
+    "@capacitor/status-bar": "^8.0.3",
     "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.61.1",
     "@testing-library/jest-dom": "^6.9.1",

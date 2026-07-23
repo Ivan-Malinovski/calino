@@ -18,6 +18,13 @@ vi.mock('@/lib/notifications', () => ({
     `calino-${eventId}-${reminderId}`,
   getDueSnoozedReminders: () => [],
   snoozeReminder: vi.fn(),
+  getEffectiveReminders: (event: CalendarEvent, defaultReminderMinutes: number) => {
+    if (event.reminders?.length) return event.reminders
+    if (event.type === 'event' || !event.type) {
+      return [{ id: 'default', minutesBefore: defaultReminderMinutes, method: 'popup' as const }]
+    }
+    return []
+  },
 }))
 
 // Minimal zustand store mock: we directly mutate the returned state references

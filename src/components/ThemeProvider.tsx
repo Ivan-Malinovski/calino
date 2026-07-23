@@ -1,4 +1,6 @@
 import { useEffect, useState, useCallback, useMemo, useRef, useLayoutEffect, type ReactNode } from 'react'
+import { Capacitor } from '@capacitor/core'
+import { StatusBar, Style } from '@capacitor/status-bar'
 import { useSettingsStore } from '@/store/settingsStore'
 import { loadThemes, getThemeCSS, type ThemeInfo } from '@/lib/themes'
 import { ThemeContext } from './ThemeContext'
@@ -79,6 +81,10 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     const metaThemeColor = document.querySelector('meta[name="theme-color"]')
     if (metaThemeColor) {
       metaThemeColor.setAttribute('content', accentColor || '#4285f4')
+    }
+
+    if (Capacitor.isNativePlatform()) {
+      void StatusBar.setStyle({ style: effectiveMode === 'dark' ? Style.Dark : Style.Light })
     }
   }, [combinedCSS, effectiveMode, themeMode, currentThemeId, isBuiltIn, mochaAccent])
 

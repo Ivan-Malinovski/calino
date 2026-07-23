@@ -1,7 +1,15 @@
 import { useEffect, useRef } from 'react'
+import { Capacitor } from '@capacitor/core'
+import { App as CapacitorApp } from '@capacitor/app'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
-import { showNotification, createNotificationId, getDueSnoozedReminders, snoozeReminder } from '@/lib/notifications'
+import { showNotification, createNotificationId, getDueSnoozedReminders, snoozeReminder, getEffectiveReminders } from '@/lib/notifications'
+import {
+  registerReminderActions,
+  reconcileNativeReminders,
+  listenForReminderActions,
+  checkNativeReminderPermission,
+} from '@/lib/nativeReminders'
 import { parseISO, isWithinInterval, addMinutes, addHours, isAfter } from 'date-fns'
 import { toast } from 'sonner'
 
@@ -23,8 +31,42 @@ export function useNotifications(): void {
   // Track previous enableNotifications to detect disable→enable transitions.
   const prevEnabledRef = useRef(enableNotifications)
 
+  // Native: real OS-scheduled notifications (fire even with the app closed),
+  // replacing the setInterval-based polling below, which only runs while the
+  // app is open and foregrounded (see the visibilitychange handling further
+  // down) — that's fine on web but useless for a backgrounded mobile app.
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform() || !enableNotifications) return
+
+    let cancelled = false
+    // The app setting being on doesn't mean the OS permission is actually
+    // granted — a fresh install/reinstall resets Android's permission state
+    // independent of the app's own persisted settings, and schedule() throws
+    // if it's not granted yet. Check for real before ever calling it.
+    const reconcileIfPermitted = async (): Promise<void> => {
+      const granted = await checkNativeReminderPermission()
+      if (granted && !cancelled) await reconcileNativeReminders(events, defaultReminderMinutes)
+    }
+
+    void registerReminderActions()
+    void reconcileIfPermitted()
+    const removeListener = listenForReminderActions()
+
+    const appStateListenerPromise = CapacitorApp.addListener('appStateChange', ({ isActive }) => {
+      if (isActive && !cancelled) void reconcileIfPermitted()
+    })
+
+    return () => {
+      cancelled = true
+      removeListener()
+      void appStateListenerPromise.then((handle) => handle.remove())
+    }
+  }, [events, enableNotifications, defaultReminderMinutes])
+
   useEffect(() => {
     prevEnabledRef.current = enableNotifications
+
+    if (Capacitor.isNativePlatform()) return
 
     if (!enableNotifications) {
       // Stop checking but do NOT clear the map — preserve already-fired
@@ -57,8 +99,7 @@ export function useNotifications(): void {
       const catchUpCutoff = addHours(now, -CATCH_UP_WINDOW_HOURS)
 
       events.forEach((event) => {
-        const reminders = event.reminders?.length ? event.reminders :
-          event.type === 'event' || !event.type ? [{ id: 'default', minutesBefore: defaultReminderMinutes, method: 'popup' as const }] : []
+        const reminders = getEffectiveReminders(event, defaultReminderMinutes)
 
         if (reminders.length === 0) return
 

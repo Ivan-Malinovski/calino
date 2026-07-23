@@ -5,6 +5,22 @@
   background: var(--color-bg, var(--color-bg-primary));
 }
 
+@media (max-width: 768px) { /* sync with config.ts MOBILE_BREAKPOINT */
+  /* Fade the bottom safe-area inset (gesture nav bar) to transparent
+     instead of a hard-edged solid strip in the app's background color. */
+  .app::after {
+    content: '';
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: var(--safe-area-bottom);
+    background: linear-gradient(to bottom, transparent, var(--color-bg, var(--color-bg-primary)));
+    pointer-events: none;
+    z-index: 140;
+  }
+}
+
 .appContent {
   display: flex;
   flex: 1;

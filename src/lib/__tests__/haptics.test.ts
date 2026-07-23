@@ -1,5 +1,16 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { Capacitor } from '@capacitor/core'
+import { Haptics } from '@capacitor/haptics'
 import { haptic, hapticIfEnabled } from '../haptics'
+
+vi.mock('@capacitor/core', () => ({
+  Capacitor: { isNativePlatform: vi.fn() },
+}))
+
+vi.mock('@capacitor/haptics', () => ({
+  Haptics: { vibrate: vi.fn(), notification: vi.fn() },
+  NotificationType: { Success: 'SUCCESS', Warning: 'WARNING', Error: 'ERROR' },
+}))
 
 describe('haptics', () => {
   let originalVibrate: Navigator['vibrate']
@@ -53,30 +64,26 @@ describe('haptics', () => {
   })
 
   describe('hapticIfEnabled', () => {
-    it('calls vibrate on mobile user agent', () => {
-      vi.stubGlobal('navigator', {
-        userAgent: 'iPhone',
-        vibrate: vi.fn(),
-      })
-      hapticIfEnabled('light')
-      expect(navigator.vibrate).toHaveBeenCalledWith(10)
+    afterEach(() => {
+      vi.clearAllMocks()
     })
 
-    it('calls vibrate on Android user agent', () => {
-      vi.stubGlobal('navigator', {
-        userAgent: 'Mozilla/5.0 (Linux; Android 14) Chrome/120.0.0.0',
-        vibrate: vi.fn(),
-      })
+    it('calls Haptics.vibrate with a short duration on native platform for impact types', () => {
+      vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true)
       hapticIfEnabled('medium')
-      expect(navigator.vibrate).toHaveBeenCalledWith(25)
+      expect(Haptics.vibrate).toHaveBeenCalledWith({ duration: 13 })
     })
 
-    it('does not call vibrate on desktop user agent', () => {
-      vi.stubGlobal('navigator', {
-        userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)',
-        vibrate: vi.fn(),
-      })
+    it('calls Haptics.notification on native platform for notification types', () => {
+      vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true)
+      hapticIfEnabled('success')
+      expect(Haptics.notification).toHaveBeenCalledWith({ type: 'SUCCESS' })
+    })
+
+    it('does not call Haptics or vibrate off native platform', () => {
+      vi.mocked(Capacitor.isNativePlatform).mockReturnValue(false)
       hapticIfEnabled('light')
+      expect(Haptics.vibrate).not.toHaveBeenCalled()
       expect(navigator.vibrate).not.toHaveBeenCalled()
     })
   })

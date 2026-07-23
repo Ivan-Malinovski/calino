@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { createPortal } from 'react-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
+import { useHorizontalSwipe } from '@/hooks/useHorizontalSwipe'
 import { ContextMenu } from '@/components/common/ContextMenu'
 import {
   format,
@@ -459,6 +460,9 @@ export function Sidebar({ isOpen = false, onClose, isCollapsed: controlledCollap
     return () => window.removeEventListener('resize', check)
   }, [])
 
+  const sidebarRef = useRef<HTMLDivElement>(null)
+  useHorizontalSwipe(sidebarRef, { onSwipeLeft: onClose, enabled: isOpen && isCompact })
+
   const sidebarClass = `${styles.sidebar}${isOpen ? ` ${styles.open}` : ''}${isCollapsed && !isCompact ? ` ${styles.sidebarCollapsed}` : ''}${isResizing ? ` ${styles.resizing}` : ''}`
 
   return (
@@ -476,6 +480,7 @@ export function Sidebar({ isOpen = false, onClose, isCollapsed: controlledCollap
         )}
       </AnimatePresence>
       <div
+        ref={sidebarRef}
         className={sidebarClass}
         style={{
           width: isCollapsed && !isCompact ? undefined : isCompact ? Math.min(340, window.innerWidth * 0.85) : sidebarWidth,

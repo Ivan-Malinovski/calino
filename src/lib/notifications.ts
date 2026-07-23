@@ -1,6 +1,17 @@
 import { parseISO, format, addMinutes } from 'date-fns'
+import type { CalendarEvent, Reminder } from '@/types'
 
 export type NotificationPermissionStatus = 'granted' | 'denied' | 'default'
+
+/** Which reminders apply to an event: its own explicit reminders, or (for
+ * plain events only, not tasks/journal entries) the default reminder. */
+export function getEffectiveReminders(event: CalendarEvent, defaultReminderMinutes: number): Reminder[] {
+  if (event.reminders?.length) return event.reminders
+  if (event.type === 'event' || !event.type) {
+    return [{ id: 'default', minutesBefore: defaultReminderMinutes, method: 'popup' }]
+  }
+  return []
+}
 
 export async function requestNotificationPermission(): Promise<NotificationPermissionStatus> {
   if (!('Notification' in window)) {
