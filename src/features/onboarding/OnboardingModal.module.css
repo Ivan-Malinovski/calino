@@ -181,3 +181,11 @@
   margin: 0 0 16px 0;
   text-align: center;
 }
+
+@media (max-width: 768px) {
+  .modalContent {
+    margin: 16px;
+    max-width: calc(100% - 32px);
+    width: 100%;
+  }
+}

@@ -647,7 +647,7 @@ function App(): JSX.Element {
       <ThemeProvider>
         <GitHubPagesRedirect />
         <ThemedToaster />
-        <CookieConsent />
+        {!Capacitor.isNativePlatform() && <CookieConsent />}
         <MasterPasswordPrompt />
         <Routes>
           <Route path="/month" element={<CalendarApp />} />
