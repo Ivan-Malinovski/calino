@@ -23,7 +23,7 @@ describe('TodoView', () => {
     renderWithRouter(<TodoView />)
     expect(screen.getByRole('button', { name: 'All' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Active' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Completed' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Done' })).toBeInTheDocument()
   })
 
   it('shows add task button', () => {
@@ -108,7 +108,7 @@ describe('TodoView', () => {
 
     renderWithRouter(<TodoView />)
 
-    await userEvent.click(screen.getByRole('button', { name: 'Completed' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Done' }))
     expect(screen.queryByText('Active Task')).not.toBeInTheDocument()
     expect(screen.getByText('Completed Task')).toBeInTheDocument()
   })

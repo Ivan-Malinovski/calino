@@ -54,7 +54,11 @@
 .segmentTab {
   position: relative;
   z-index: 1;
-  padding: 6px 14px;
+  height: 30px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
   font-size: 13px;
   font-weight: 500;
   color: var(--ink-2, #6f6a62);

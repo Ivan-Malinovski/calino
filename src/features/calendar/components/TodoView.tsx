@@ -204,20 +204,6 @@ export function TodoView(): JSX.Element {
     setHeaderSlot(document.getElementById('task-header-slot'))
   }, [])
 
-  // Sliding indicator for filter tabs
-  useLayoutEffect(() => {
-    const container = segmentedRef.current
-    const activeTab = tabRefs.current.get(filter)
-    if (container && activeTab) {
-      const containerRect = container.getBoundingClientRect()
-      const tabRect = activeTab.getBoundingClientRect()
-      setIndicatorStyle({
-        left: tabRect.left - containerRect.left,
-        width: tabRect.width,
-      })
-    }
-  }, [filter])
-
   const tasks: TaskWithColor[] = useMemo(() => {
     const calendarMap = new Map(calendars.map((c) => [c.id, c.color]))
     const visibleCalendarIds = new Set(calendars.filter((c) => c.isVisible).map((c) => c.id))
@@ -243,6 +229,23 @@ export function TodoView(): JSX.Element {
   const activeCount = useMemo(() => filteredTasks.filter((task) => !task.completed).length, [filteredTasks])
   const completedCount = useMemo(() => filteredTasks.filter((task) => task.completed).length, [filteredTasks])
   const selectedProject = taskCalendars.find((calendar) => calendar.id === projectFilter)
+
+  // Sliding indicator for filter tabs
+  useLayoutEffect(() => {
+    const container = segmentedRef.current
+    const activeTab = tabRefs.current.get(filter)
+    if (container && activeTab) {
+      const containerRect = container.getBoundingClientRect()
+      const tabRect = activeTab.getBoundingClientRect()
+      setIndicatorStyle({
+        left: tabRect.left - containerRect.left,
+        width: tabRect.width,
+      })
+    }
+    // Mobile tab labels embed the live counts (e.g. "Active (3)"), so the
+    // indicator must re-measure whenever those counts change tab width, not
+    // just when the selected filter changes.
+  }, [filter, activeCount, completedCount])
 
   const projectMenuContent = (
     <>
@@ -329,7 +332,7 @@ export function TodoView(): JSX.Element {
 
       result.push({
         key: 'done',
-        label: 'Completed',
+        label: 'Done',
         tasks: sortedDone,
       })
     }
@@ -672,11 +675,13 @@ export function TodoView(): JSX.Element {
                 {projectMenuContent}
               </div>
             )}
-            <div className={styles.tpCount}>
-              <span><b>{activeCount}</b> active</span>
-              <span className={styles.dim} aria-hidden="true">·</span>
-              <span>{completedCount} done</span>
-            </div>
+            {!isMobile && (
+              <div className={styles.tpCount}>
+                <span><b>{activeCount}</b> active</span>
+                <span className={styles.dim} aria-hidden="true">·</span>
+                <span>{completedCount} done</span>
+              </div>
+            )}
           </div>
           <div className={styles.tpControls}>
             <div className={styles.segmentedControl} ref={segmentedRef} data-component="todo-segmented">
@@ -694,13 +699,15 @@ export function TodoView(): JSX.Element {
                 onClick={() => setFilter('active')}
               >
                 Active
+                {isMobile && activeCount > 0 && <span className={styles.tabCount}>{activeCount}</span>}
               </button>
               <button
                 ref={(el) => { if (el) tabRefs.current.set('completed', el) }}
                 className={`${styles.tab} ${filter === 'completed' ? styles.tabActive : ''}`}
                 onClick={() => setFilter('completed')}
               >
-                Completed
+                Done
+                {isMobile && completedCount > 0 && <span className={styles.tabCount}>{completedCount}</span>}
               </button>
             </div>
             <button className={styles.addTask} onClick={handleCreateTask} data-component="add-task-button">

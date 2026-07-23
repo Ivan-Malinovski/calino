@@ -200,7 +200,12 @@
 .tab {
   position: relative;
   z-index: 1;
-  padding: 6px 14px;
+  height: 30px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 14px;
   font-size: 13px;
   font-weight: 500;
   color: var(--ink-2, #6f6a62);
@@ -210,6 +215,27 @@
   cursor: pointer;
   transition: color 0.14s ease;
   font-family: inherit;
+}
+
+.tabCount {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: rgba(var(--ink-raw), 0.08);
+  color: var(--ink-3, #a39d93);
+  font-size: 10.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  transition: background 0.14s ease, color 0.14s ease;
+}
+
+.tabActive .tabCount {
+  background: color-mix(in srgb, var(--accent, #b07d4f) 16%, transparent);
+  color: var(--accent, #b07d4f);
 }
 
 .tab:hover {
