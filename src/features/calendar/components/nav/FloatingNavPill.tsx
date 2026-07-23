@@ -3,8 +3,9 @@ import { useState, useCallback, useRef, useEffect, useLayoutEffect } from 'react
 import { useNavigate, useLocation } from 'react-router-dom'
 import { motion, useMotionValue, animate, type PanInfo } from 'framer-motion'
 import { useCalendarStore } from '@/store/calendarStore'
+import { useSettingsStore } from '@/store/settingsStore'
 import { hapticIfEnabled } from '@/lib/haptics'
-import { VIEW_ROUTES } from '../../viewRoutes'
+import { VIEW_ROUTES, URL_TO_VIEW, ALL_VIEWS } from '../../viewRoutes'
 import type { ViewType } from '@/types'
 import { NavExpandedGrid } from './NavExpandedGrid'
 import { NavCreateDrawer } from './NavCreateDrawer'
@@ -30,6 +31,8 @@ export function FloatingNavPill({ onToggleSidebar, onOpenSearch }: FloatingNavPi
   const location = useLocation()
   const currentView = useCalendarStore((state) => state.currentView)
   const setCurrentView = useCalendarStore((state) => state.setCurrentView)
+  const journalEnabled = useSettingsStore((state) => state.journalEnabled)
+  const contactsEnabled = useSettingsStore((state) => state.contactsEnabled)
 
   // The collapsed pill shows the 3 base views (Month/Week/Agenda) inline as
   // a quick selector. On any other route (e.g. /settings, /year, /day,
@@ -172,6 +175,36 @@ export function FloatingNavPill({ onToggleSidebar, onOpenSearch }: FloatingNavPi
     (view) => currentView === view.value || (view.value === 'week' && currentView === '3day')
   )
 
+  // Swiping the collapsed pill steps through ALL views (not just the 3 base
+  // ones shown inline), in the same order as the "..." expanded grid, and
+  // works from any route — so e.g. /agenda -> /year -> /day.
+  const swipeViews = ALL_VIEWS.filter(
+    (v) => (journalEnabled || v.value !== 'journal') && (contactsEnabled || v.value !== 'contacts')
+  )
+  const swipeActiveView = URL_TO_VIEW[location.pathname] ?? currentView
+  const swipeActiveIndex = swipeViews.findIndex(
+    (v) => swipeActiveView === v.value || (v.value === 'week' && swipeActiveView === '3day')
+  )
+
+  const handleSwitcherPanEnd = useCallback(
+    (_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+      if (swipeActiveIndex < 0) return
+      if (Math.abs(info.offset.x) < Math.abs(info.offset.y)) return
+      const SWIPE_OFFSET_THRESHOLD = 40
+      const SWIPE_VELOCITY_THRESHOLD = 400
+      if (
+        Math.abs(info.offset.x) < SWIPE_OFFSET_THRESHOLD &&
+        Math.abs(info.velocity.x) < SWIPE_VELOCITY_THRESHOLD
+      ) {
+        return
+      }
+      const nextIndex = swipeActiveIndex + (info.offset.x < 0 ? 1 : -1)
+      if (nextIndex < 0 || nextIndex >= swipeViews.length) return
+      handleViewChange(swipeViews[nextIndex].value)
+    },
+    [swipeActiveIndex, swipeViews, handleViewChange]
+  )
+
   return (
     <>
       {viewSwitcherExpanded && (
@@ -222,7 +255,7 @@ export function FloatingNavPill({ onToggleSidebar, onOpenSearch }: FloatingNavPi
                   onDragActiveChange={handlePillDragActiveChange}
                 />
               ) : (
-                <div className={styles.switcherTrack}>
+                <motion.div className={styles.switcherTrack} onPanEnd={handleSwitcherPanEnd}>
                   {isOnBaseRoute && activeIndex >= 0 && (
                     <motion.div
                       layoutId="nav-active-indicator"
@@ -269,7 +302,7 @@ export function FloatingNavPill({ onToggleSidebar, onOpenSearch }: FloatingNavPi
                       <EllipsisIcon />
                     </span>
                   </button>
-                </div>
+                </motion.div>
               )}
             </div>
 

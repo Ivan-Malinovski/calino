@@ -775,7 +775,7 @@ export function JournalView(): JSX.Element {
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                 <path d="M7 1v12M1 7h12" />
               </svg>
-              New entry
+              New<span className={styles.addEntryFull}> entry</span>
             </button>
           </div>
         </div>

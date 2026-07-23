@@ -659,37 +659,6 @@ export function CalendarGrid(): JSX.Element {
     navigate(VIEW_ROUTES.week, { replace: true })
   }
 
-  const touchStartPos = useRef<{ x: number; y: number } | null>(null)
-
-  const handleTouchStart = useCallback((e: React.TouchEvent) => {
-    if (e.touches.length === 1) {
-      touchStartPos.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }
-    }
-  }, [])
-
-  const handleTouchEnd = useCallback(
-    (e: React.TouchEvent) => {
-      if (touchStartPos.current === null) return
-
-      const touch = e.changedTouches[0]
-      const diffX = touchStartPos.current.x - touch.clientX
-      const diffY = touchStartPos.current.y - touch.clientY
-
-      // Whichever axis moved further decides the swipe direction, matching
-      // the useGestures onSwipe mapping above (left/down = next month).
-      if (Math.abs(diffX) > Math.abs(diffY)) {
-        if (Math.abs(diffX) > 50) {
-          changeMonth(diffX > 0 ? 'down' : 'up')
-        }
-      } else if (Math.abs(diffY) > 50) {
-        changeMonth(diffY > 0 ? 'up' : 'down')
-      }
-
-      touchStartPos.current = null
-    },
-    [changeMonth]
-  )
-
   const rowHeight = Math.round(100 * scale)
 
   if (isTallWindow || isCompactMobile) {
@@ -702,8 +671,6 @@ export function CalendarGrid(): JSX.Element {
               <div
                 className={styles.grid}
                 data-component="calendar-grid"
-                onTouchStart={handleTouchStart}
-                onTouchEnd={handleTouchEnd}
                 onKeyDown={handleGridKeyDown}
                 style={{ '--day-cell-height': `${rowHeight}px`, touchAction: 'none' } as React.CSSProperties}
               >
@@ -832,8 +799,6 @@ export function CalendarGrid(): JSX.Element {
         <div
           className={styles.grid}
           data-component="calendar-grid"
-          onTouchStart={handleTouchStart}
-          onTouchEnd={handleTouchEnd}
           onKeyDown={handleGridKeyDown}
           style={{ '--day-cell-height': `${rowHeight}px`, touchAction: 'none' } as React.CSSProperties}
         >

@@ -28,3 +28,17 @@ export const URL_TO_VIEW: Record<string, ViewType> = {
   '/journal': 'journal',
   '/contacts': 'contacts',
 }
+
+// Canonical ordering of all views as presented in the mobile nav pill's
+// expanded "..." grid — also used to drive swipe-to-switch-view on the
+// pill, so swiping steps through views in the same order they're laid out.
+export const ALL_VIEWS: { value: ViewType; label: string }[] = [
+  { value: 'month', label: 'Month' },
+  { value: 'week', label: 'Week' },
+  { value: 'agenda', label: 'Agenda' },
+  { value: 'year', label: 'Year' },
+  { value: 'day', label: 'Day' },
+  { value: 'todo', label: 'Tasks' },
+  { value: 'journal', label: 'Journal' },
+  { value: 'contacts', label: 'Contacts' },
+]

@@ -916,4 +916,12 @@
   .composeDay {
     font-size: 28px;
   }
+
+  .addEntry {
+    padding: 0 12px;
+  }
+
+  .addEntryFull {
+    display: none;
+  }
 }

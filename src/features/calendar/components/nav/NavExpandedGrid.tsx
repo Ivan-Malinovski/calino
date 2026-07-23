@@ -6,7 +6,7 @@ import { useSettingsStore } from '@/store/settingsStore'
 import { hapticIfEnabled } from '@/lib/haptics'
 import { SettingsIcon, TuneIcon } from '@/components/common/icons'
 import { QuickSettingsPanel } from '../QuickSettingsPanel'
-import { VIEW_ROUTES, URL_TO_VIEW } from '../../viewRoutes'
+import { VIEW_ROUTES, URL_TO_VIEW, ALL_VIEWS } from '../../viewRoutes'
 import type { ViewType } from '@/types'
 import styles from './NavExpandedGrid.module.css'
 
@@ -18,17 +18,6 @@ interface NavExpandedGridProps {
   onDragProgress?: (y: number) => void
   onDragActiveChange?: (active: boolean) => void
 }
-
-const GRID_VIEWS: { value: ViewType; label: string }[] = [
-  { value: 'month', label: 'Month' },
-  { value: 'week', label: 'Week' },
-  { value: 'agenda', label: 'Agenda' },
-  { value: 'year', label: 'Year' },
-  { value: 'day', label: 'Day' },
-  { value: 'todo', label: 'Tasks' },
-  { value: 'journal', label: 'Journal' },
-  { value: 'contacts', label: 'Contacts' },
-]
 
 const gridVariants = {
   hidden: {},
@@ -61,7 +50,7 @@ export function NavExpandedGrid({
   // derived from the actual route, not the stale store value.
   const activeView = URL_TO_VIEW[location.pathname]
 
-  const visibleViews = GRID_VIEWS.filter(
+  const visibleViews = ALL_VIEWS.filter(
     (v) => (journalEnabled || v.value !== 'journal') && (contactsEnabled || v.value !== 'contacts')
   )
 
