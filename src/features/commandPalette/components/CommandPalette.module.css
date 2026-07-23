@@ -40,6 +40,7 @@
 .modal {
   position: relative;
   width: 580px;
+  max-width: calc(100% - 32px);
   max-height: 80vh;
   display: flex;
   flex-direction: column;
@@ -360,6 +361,14 @@
   gap: var(--space-4);
   align-items: center;
   flex-shrink: 0;
+}
+
+@media (max-width: 768px) { /* sync with config.ts MOBILE_BREAKPOINT */
+  /* The ↑↓/↵/Esc hints assume a keyboard-driven desktop user — on mobile
+     there's no keyboard to hint at, and the footer just eats screen space. */
+  .footer {
+    display: none;
+  }
 }
 
 .hint {
