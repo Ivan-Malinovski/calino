@@ -15,6 +15,13 @@
      end, instead of always reserving a visible gap (see App.css .main). */
   .container {
     padding-bottom: calc(84px + var(--safe-area-bottom));
+
+    /* Desktop's asymmetric right-only margin (to clear a scrollbar) reads as
+       the whole grid hugging the left edge on a phone screen — reset to a
+       symmetric margin so the month boxes sit centered, matching /agenda's
+       subtle top line rather than a lopsided gutter. */
+    margin: 0 5px;
+    border-top: 1px solid var(--line-2, rgba(var(--ink-raw), 0.05));
   }
 }
 
