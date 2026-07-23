@@ -190,11 +190,15 @@ export const EventCard = React.memo(function EventCard({
     isCurrentDraggingRef.current = isCurrentDragging
   }, [isCurrentDragging])
 
-  const activatorEventRef = useRef<PointerEvent | null>(null)
+  // dnd-kit's TouchSensor activates from the raw `touchstart` event (a
+  // TouchEvent, not a PointerEvent — it has no `.pointerType`/`.clientX`;
+  // coordinates live in `.touches[0]`), while MouseSensor activates from a
+  // real MouseEvent. Both need their own coordinate extraction below.
+  const activatorEventRef = useRef<Event | null>(null)
   const dragMaxDistanceRef = useRef(0)
   useEffect(() => {
     if (!isCurrentDragging) return
-    if (activatorEvent) activatorEventRef.current = activatorEvent as PointerEvent
+    if (activatorEvent) activatorEventRef.current = activatorEvent
     if (transform) {
       dragMaxDistanceRef.current = Math.max(dragMaxDistanceRef.current, Math.hypot(transform.x, transform.y))
     }
@@ -212,11 +216,16 @@ export const EventCard = React.memo(function EventCard({
     const distance = dragMaxDistanceRef.current
     dragMaxDistanceRef.current = 0
     // Picked up (via TouchSensor's delay) but never actually dragged anywhere
-    // — treat it the same as the old long-press-for-menu gesture.
-    if (activator?.pointerType === 'touch' && distance < 5) {
+    // — treat it the same as the old long-press-for-menu gesture. Only for
+    // touch: a MouseSensor pickup has its own distance-based activation, so a
+    // 0-distance mouse "drag" isn't a real gesture worth treating as anything.
+    const touch = activator && 'touches' in activator
+      ? ((activator as TouchEvent).touches[0] ?? (activator as TouchEvent).changedTouches[0])
+      : null
+    if (touch && distance < 5) {
       hapticIfEnabled('medium')
       openMenu(menuId)
-      setContextMenu({ x: activator.clientX, y: activator.clientY })
+      setContextMenu({ x: touch.clientX, y: touch.clientY })
     }
   }, [isCurrentDragging])
 
