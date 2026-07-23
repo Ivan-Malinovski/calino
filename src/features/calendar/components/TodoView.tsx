@@ -1,5 +1,6 @@
 import type { JSX } from 'react'
 import { useMemo, useState, useRef, useEffect, useLayoutEffect, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import {
   DndContext,
@@ -192,6 +193,15 @@ export function TodoView(): JSX.Element {
     document.addEventListener('mousedown', closeMenu)
     return () => document.removeEventListener('mousedown', closeMenu)
   }, [isProjectMenuOpen])
+
+  // CalendarHeader renders an empty #task-header-slot div (only while the
+  // todo view is active) so the project filter can live on the same line as
+  // the "Tasks" title, right-aligned, instead of TodoView's own sub-bar. It
+  // doesn't exist yet on first render, so look it up after mount.
+  const [headerSlot, setHeaderSlot] = useState<HTMLElement | null>(null)
+  useEffect(() => {
+    setHeaderSlot(document.getElementById('task-header-slot'))
+  }, [])
 
   // Sliding indicator for filter tabs
   useLayoutEffect(() => {
@@ -644,19 +654,6 @@ export function TodoView(): JSX.Element {
               <span className={styles.dim} aria-hidden="true">·</span>
               <span>{completedCount} done</span>
             </div>
-            {taskCalendars.length > 1 && (
-              <div className={styles.projectMenu} ref={projectMenuRef}>
-                <button type="button" className={styles.projectFilter} onClick={() => setIsProjectMenuOpen(!isProjectMenuOpen)} aria-expanded={isProjectMenuOpen} aria-haspopup="menu" aria-label="Filter tasks by project" data-component="task-project-filter">
-                  {selectedProject && <span className={styles.projectColor} style={{ backgroundColor: selectedProject.color }} />}
-                  {selectedProject?.name ?? 'All projects'}
-                  <svg aria-hidden="true" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                </button>
-                {isProjectMenuOpen && <div className={styles.projectMenuList} role="menu" data-component="task-project-menu">
-                  <button type="button" role="menuitem" className={projectFilter ? styles.projectMenuItem : `${styles.projectMenuItem} ${styles.projectMenuItemSelected}`} onClick={() => { setProjectFilter(''); setIsProjectMenuOpen(false) }}>All projects</button>
-                  {taskCalendars.map((calendar) => <button key={calendar.id} type="button" role="menuitem" className={projectFilter === calendar.id ? `${styles.projectMenuItem} ${styles.projectMenuItemSelected}` : styles.projectMenuItem} onClick={() => { setProjectFilter(calendar.id); setIsProjectMenuOpen(false) }}><span className={styles.projectColor} style={{ backgroundColor: calendar.color }} />{calendar.name}</button>)}
-                </div>}
-              </div>
-            )}
           </div>
           <div className={styles.tpControls}>
             <div className={styles.segmentedControl} ref={segmentedRef} data-component="todo-segmented">
@@ -691,6 +688,24 @@ export function TodoView(): JSX.Element {
             </button>
           </div>
         </div>
+
+        {/* Project filter — portaled into CalendarHeader's task-header-slot so
+            it sits on the same line as the "Tasks" title, right-aligned,
+            instead of crowding the Add button down here. */}
+        {headerSlot && taskCalendars.length > 1 && createPortal(
+          <div className={styles.projectMenu} ref={projectMenuRef}>
+            <button type="button" className={styles.projectFilter} onClick={() => setIsProjectMenuOpen(!isProjectMenuOpen)} aria-expanded={isProjectMenuOpen} aria-haspopup="menu" aria-label="Filter tasks by project" data-component="task-project-filter">
+              {selectedProject && <span className={styles.projectColor} style={{ backgroundColor: selectedProject.color }} />}
+              {selectedProject?.name ?? 'All projects'}
+              <svg aria-hidden="true" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+            </button>
+            {isProjectMenuOpen && <div className={styles.projectMenuList} role="menu" data-component="task-project-menu">
+              <button type="button" role="menuitem" className={projectFilter ? styles.projectMenuItem : `${styles.projectMenuItem} ${styles.projectMenuItemSelected}`} onClick={() => { setProjectFilter(''); setIsProjectMenuOpen(false) }}>All projects</button>
+              {taskCalendars.map((calendar) => <button key={calendar.id} type="button" role="menuitem" className={projectFilter === calendar.id ? `${styles.projectMenuItem} ${styles.projectMenuItemSelected}` : styles.projectMenuItem} onClick={() => { setProjectFilter(calendar.id); setIsProjectMenuOpen(false) }}><span className={styles.projectColor} style={{ backgroundColor: calendar.color }} />{calendar.name}</button>)}
+            </div>}
+          </div>,
+          headerSlot
+        )}
 
         {/* Task List */}
         <DndContext

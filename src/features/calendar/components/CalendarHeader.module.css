@@ -196,6 +196,13 @@
   padding-left: 22px;
 }
 
+/* Portal target for TodoView's project filter dropdown (see task-header-slot
+   in TodoView.tsx) — empty unless the todo view is active. */
+.taskHeaderSlot {
+  display: flex;
+  align-items: center;
+}
+
 /* ---- Icon Button ---- */
 .iconButton {
   width: 40px;

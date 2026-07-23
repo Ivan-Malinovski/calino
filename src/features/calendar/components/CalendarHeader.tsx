@@ -693,6 +693,11 @@ export function CalendarHeader({
             </div>
           )}
         </div>
+
+        {/* Portal target for TodoView's project filter — rendered here so it
+            sits on the same line as the "Tasks" title instead of TodoView's
+            own sub-bar, where it used to crowd the Add button. */}
+        {currentView === 'todo' && <div id="task-header-slot" className={styles.taskHeaderSlot} />}
       </div>
     </header>
   )
