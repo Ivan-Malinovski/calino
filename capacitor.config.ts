@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from '@capacitor/cli'
 
 const config: CapacitorConfig = {
-  appId: 'ski.malinov.calino',
+  appId: 'calino.malinov.ski',
   appName: 'Calino',
   webDir: 'dist',
   server: {

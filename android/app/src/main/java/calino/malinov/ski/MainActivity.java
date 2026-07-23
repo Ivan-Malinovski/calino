@@ -1,4 +1,4 @@
-package ski.malinov.calino;
+package calino.malinov.ski;
 
 import android.os.Bundle;
 import com.getcapacitor.BridgeActivity;

@@ -1,14 +1,30 @@
 apply plugin: 'com.android.application'
 
+import groovy.json.JsonSlurper
+
+// Single source of truth for the app version is package.json — bump it there
+// (already the convention for web releases) and both Android version fields
+// follow automatically.
+def appPackageJson = new JsonSlurper().parse(file('../../package.json'))
+def appVersionName = appPackageJson.version
+def (verMajor, verMinor, verPatch) = appVersionName.tokenize('.').collect { it.toInteger() }
+def appVersionCode = verMajor * 1000000 + verMinor * 1000 + verPatch
+
+def keystorePropertiesFile = rootProject.file('keystore.properties')
+def keystoreProperties = new Properties()
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
 android {
-    namespace = "ski.malinov.calino"
+    namespace = "calino.malinov.ski"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "ski.malinov.calino"
+        applicationId "calino.malinov.ski"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode appVersionCode
+        versionName appVersionName
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -16,10 +32,23 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        release {
+            if (keystorePropertiesFile.exists()) {
+                storeFile rootProject.file(keystoreProperties['storeFile'])
+                storePassword keystoreProperties['storePassword']
+                keyAlias keystoreProperties['keyAlias']
+                keyPassword keystoreProperties['keyPassword']
+            }
+        }
+    }
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            if (keystorePropertiesFile.exists()) {
+                signingConfig signingConfigs.release
+            }
         }
     }
 }

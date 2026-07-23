@@ -392,7 +392,7 @@ function CalendarApp(): JSX.Element {
 
   // Android home-screen shortcuts (long-press app icon → New event / New task
   // / Search). Each is a static shortcut (android/app/.../res/xml/shortcuts.xml)
-  // that opens the app via the `ski.malinov.calino://<action>` custom scheme;
+  // that opens the app via the `calino.malinov.ski://<action>` custom scheme;
   // Capacitor's App plugin surfaces that as `appUrlOpen` (warm start, app
   // already running) or `getLaunchUrl()` (cold start, app was launched by it).
   useEffect(() => {

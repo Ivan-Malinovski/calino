@@ -3,7 +3,7 @@
 This directory is a generated Capacitor Gradle project — a thin native shell that loads
 the same web app built from `../src`. There is **one codebase**, not two: editing
 `src/` changes both the web app and the Android app. See root `capacitor.config.ts`
-for the Capacitor config (`appId: ski.malinov.calino`, `webDir: 'dist'`).
+for the Capacitor config (`appId: calino.malinov.ski`, `webDir: 'dist'`).
 
 Native code only needs to be touched for things the web platform genuinely cannot do
 (OS notifications, home-screen shortcuts, status bar, haptics, hardware back button).
@@ -60,6 +60,28 @@ Uses Android's **Wireless debugging** (Developer options), paired once then reco
   ```
   adb logcat -v time "Capacitor:V" "Capacitor/Console:V" "chromium:V" "*:S"
   ```
+
+## Release builds
+
+- Signing key: `android/keystore/calino-release.jks` (PKCS12, self-signed, 10000-day
+  validity), password + alias in `android/keystore.properties` — both gitignored, never
+  commit them. `android/app/build.gradle` reads `keystore.properties` if present and
+  signs the `release` build type with it; without the file, `assembleRelease` produces
+  an **unsigned** APK.
+- `versionCode`/`versionName` are derived from the root `package.json` `version` field
+  at Gradle configure time (`versionCode = major*1000000 + minor*1000 + patch`) — bump
+  the version there (e.g. via `scripts/release.sh`), don't hand-edit `build.gradle`.
+- Local signed build: `distrobox enter android-sdk -- bash -c 'cd /var/home/ivan/dev/calino/android && ./gradlew assembleRelease'`
+  → `android/app/build/outputs/apk/release/app-release.apk`.
+- **CI**: `.github/workflows/android.yml` builds and signs the release APK and attaches
+  it to the GitHub Release on every `vX.Y.Z` tag push (same trigger `docker.yml` uses,
+  and the same tag `scripts/release.sh` creates the release from). The keystore and its
+  passwords live as repo secrets (`ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`,
+  `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`) — `ANDROID_KEYSTORE_BASE64` is
+  `base64 -w0 android/keystore/calino-release.jks`. Losing the keystore means all future
+  releases sign with a different key and can't upgrade-in-place over past installs, so
+  back it up somewhere durable outside this repo (password manager, etc.).
+- Distributed via GitHub Releases only for now (no Play Store yet).
 
 ## Known OS-level gotchas (not code bugs)
 

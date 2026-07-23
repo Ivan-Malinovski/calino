@@ -8,9 +8,9 @@
         android:shortcutLongLabel="@string/shortcut_new_event_long">
         <intent
             android:action="android.intent.action.VIEW"
-            android:targetPackage="ski.malinov.calino"
-            android:targetClass="ski.malinov.calino.MainActivity"
-            android:data="ski.malinov.calino://new-event" />
+            android:targetPackage="calino.malinov.ski"
+            android:targetClass="calino.malinov.ski.MainActivity"
+            android:data="calino.malinov.ski://new-event" />
     </shortcut>
     <shortcut
         android:shortcutId="new-task"
@@ -20,9 +20,9 @@
         android:shortcutLongLabel="@string/shortcut_new_task_long">
         <intent
             android:action="android.intent.action.VIEW"
-            android:targetPackage="ski.malinov.calino"
-            android:targetClass="ski.malinov.calino.MainActivity"
-            android:data="ski.malinov.calino://new-task" />
+            android:targetPackage="calino.malinov.ski"
+            android:targetClass="calino.malinov.ski.MainActivity"
+            android:data="calino.malinov.ski://new-task" />
     </shortcut>
     <shortcut
         android:shortcutId="search"
@@ -32,8 +32,8 @@
         android:shortcutLongLabel="@string/shortcut_search_long">
         <intent
             android:action="android.intent.action.VIEW"
-            android:targetPackage="ski.malinov.calino"
-            android:targetClass="ski.malinov.calino.MainActivity"
-            android:data="ski.malinov.calino://search" />
+            android:targetPackage="calino.malinov.ski"
+            android:targetClass="calino.malinov.ski.MainActivity"
+            android:data="calino.malinov.ski://search" />
     </shortcut>
 </shortcuts>
