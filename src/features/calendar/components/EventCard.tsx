@@ -127,7 +127,10 @@ export const EventCard = React.memo(function EventCard({
   })
 
   useEffect(() => {
-    if (openMenuId !== null && openMenuId !== menuId && contextMenu) {
+    // Closes on a *different* card's menu opening (openMenuId set to another
+    // id) and on a global closeMenu() call (openMenuId set to null, e.g. from
+    // handleDragStart/handleResizeStart) — not just the "different id" case.
+    if (contextMenu && openMenuId !== menuId) {
       setContextMenu(null)
     }
   }, [openMenuId, menuId])
