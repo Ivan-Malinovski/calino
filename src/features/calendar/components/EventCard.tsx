@@ -110,6 +110,11 @@ export const EventCard = React.memo(function EventCard({
 
   const { bind } = useGestures({
     onLongPress: ({ x, y }) => {
+      // Touch long-presses are now handled by dnd-kit's TouchSensor + the
+      // useDndMonitor above; this path stays for mouse (holding the button
+      // down without moving), which dnd-kit's distance-based MouseSensor
+      // never claims.
+      if (isCurrentDraggingRef.current) return
       hapticIfEnabled('medium')
       openMenu(menuId)
       setContextMenu({ x, y })
@@ -145,19 +150,22 @@ export const EventCard = React.memo(function EventCard({
         return start.getHours() * 60 + start.getMinutes()
       })()
 
+  // Each fragment of a multi-day event shares event.id, which would give
+  // duplicate draggable ids. Encode the fragment's day so drag handling knows
+  // which day was grabbed and can move the whole span by the right offset.
+  const draggableId = event.isFragment
+    ? `${event.id}::${format(parseISO(event.start), 'yyyy-MM-dd')}`
+    : event.id
+
   const {
     attributes,
     listeners,
     setNodeRef,
     transform,
+    activatorEvent,
     isDragging: isCurrentDragging,
   } = useDraggable({
-    // Each fragment of a multi-day event shares event.id, which would give
-    // duplicate draggable ids. Encode the fragment's day so drag handling knows
-    // which day was grabbed and can move the whole span by the right offset.
-    id: event.isFragment
-      ? `${event.id}::${format(parseISO(event.start), 'yyyy-MM-dd')}`
-      : event.id,
+    id: draggableId,
     // Carry the layout variant so the DragOverlay can render a preview that
     // matches the source card (e.g. keep a compact pill looking like a pill
     // instead of expanding into a full card). `startMinutes` lets the time-grid
@@ -165,6 +173,49 @@ export const EventCard = React.memo(function EventCard({
     data: { compact, monthView, dotMode, isMobileMonth, startMinutes: dragStartMinutes },
     disabled: disableDirectEdit,
   })
+
+  // On touch, dnd-kit's TouchSensor (see DayView/WeekView/CalendarGrid) now owns
+  // the "hold to pick up" gesture so it can win the race against the browser's
+  // native long-press-to-select-text/context-menu behavior. That means by the
+  // time our own 400ms long-press timer below would fire, dnd-kit has usually
+  // already claimed the gesture — guard against opening the menu on top of an
+  // active drag below. If the touch never actually moved (a plain press-and-
+  // hold with no drag), the effect further down opens the menu instead once
+  // dnd-kit releases it, so the old context-menu gesture still works.
+  const isCurrentDraggingRef = useRef(isCurrentDragging)
+  useEffect(() => {
+    isCurrentDraggingRef.current = isCurrentDragging
+  }, [isCurrentDragging])
+
+  const activatorEventRef = useRef<PointerEvent | null>(null)
+  const dragMaxDistanceRef = useRef(0)
+  useEffect(() => {
+    if (!isCurrentDragging) return
+    if (activatorEvent) activatorEventRef.current = activatorEvent as PointerEvent
+    if (transform) {
+      dragMaxDistanceRef.current = Math.max(dragMaxDistanceRef.current, Math.hypot(transform.x, transform.y))
+    }
+  }, [isCurrentDragging, transform, activatorEvent])
+
+  const wasDraggingRef = useRef(false)
+  useEffect(() => {
+    if (isCurrentDragging) {
+      wasDraggingRef.current = true
+      return
+    }
+    if (!wasDraggingRef.current) return
+    wasDraggingRef.current = false
+    const activator = activatorEventRef.current
+    const distance = dragMaxDistanceRef.current
+    dragMaxDistanceRef.current = 0
+    // Picked up (via TouchSensor's delay) but never actually dragged anywhere
+    // — treat it the same as the old long-press-for-menu gesture.
+    if (activator?.pointerType === 'touch' && distance < 5) {
+      hapticIfEnabled('medium')
+      openMenu(menuId)
+      setContextMenu({ x: activator.clientX, y: activator.clientY })
+    }
+  }, [isCurrentDragging])
 
   const useCategoryColors = useSettingsStore((state) => state.useCategoryColors)
   const eventColor = getEventColor(event, {
@@ -226,6 +277,10 @@ export const EventCard = React.memo(function EventCard({
     // if a future code path ever wires a resize trigger to a recurring card,
     // the modal stays the only path for duration changes on recurring events.
     if (disableDirectEdit) return
+    // A card's own context menu can still be open (e.g. a long-press-hold that
+    // didn't move far enough to count as a drag) when a resize starts.
+    closeMenu()
+    setContextMenu(null)
     // Don't preventDefault and don't flip isResizing/didInteract here — let the
     // click fire if the user just taps. Both flags are flipped inside
     // handleResizeMove once the pointer has moved more than a few px.
@@ -238,6 +293,7 @@ export const EventCard = React.memo(function EventCard({
     }
     if (handleResizeEndRef.current) {
       document.removeEventListener('pointerup', handleResizeEndRef.current)
+      document.removeEventListener('pointercancel', handleResizeEndRef.current)
     }
 
     const handleResizeMove = (moveEvent: PointerEvent): void => {
@@ -265,6 +321,7 @@ export const EventCard = React.memo(function EventCard({
       resizeStartEnd.current = null
       document.removeEventListener('pointermove', handleResizeMove)
       document.removeEventListener('pointerup', handleResizeEnd)
+      document.removeEventListener('pointercancel', handleResizeEnd)
       handleResizeMoveRef.current = null
       handleResizeEndRef.current = null
     }
@@ -273,6 +330,14 @@ export const EventCard = React.memo(function EventCard({
     handleResizeEndRef.current = handleResizeEnd
     document.addEventListener('pointermove', handleResizeMove)
     document.addEventListener('pointerup', handleResizeEnd)
+    // Without touch-action: none, the browser can decide partway through a
+    // touch-resize that this is actually a scroll attempt and cancel the
+    // pointer sequence (fires pointercancel, not pointerup) — which is why
+    // resizing used to stop dead after the first ~quarter-hour of movement.
+    // touch-action: none (below, in CSS) prevents that misinterpretation; this
+    // listener is a defense-in-depth fallback that still ends resizing cleanly
+    // if a cancel ever does happen, rather than leaving stale listeners.
+    document.addEventListener('pointercancel', handleResizeEnd)
   }
 
   // Cleanup resize listeners on unmount
@@ -283,6 +348,7 @@ export const EventCard = React.memo(function EventCard({
       }
       if (handleResizeEndRef.current) {
         document.removeEventListener('pointerup', handleResizeEndRef.current)
+        document.removeEventListener('pointercancel', handleResizeEndRef.current)
       }
     }
   }, [])

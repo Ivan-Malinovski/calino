@@ -118,6 +118,14 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  /* Required for dnd-kit's TouchSensor to receive the hold-to-drag gesture
+     instead of the browser treating it as a scroll. Also suppresses the
+     native long-press callout (text-selection popup / context menu) that
+     otherwise wins the race and blocks dragging on touch. */
+  touch-action: none;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .dragContent:focus-visible {
@@ -400,6 +408,14 @@
   cursor: ns-resize;
   background: transparent;
   border-radius: 0 0 4px 4px;
+  /* Without this, the browser can decide mid-gesture that a touch-resize is
+     actually a scroll attempt and cancel the pointer sequence after a small
+     amount of movement — this is what made resizing "deselect" after only a
+     quarter hour of drag. See EventCard.tsx's handleResizeStart. */
+  touch-action: none;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .resizeHandle:hover {

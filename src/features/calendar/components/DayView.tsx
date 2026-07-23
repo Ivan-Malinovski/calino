@@ -5,7 +5,8 @@ import {
   DragOverlay,
   useSensor,
   useSensors,
-  PointerSensor,
+  MouseSensor,
+  TouchSensor,
   useDroppable,
   useDndContext,
   pointerWithin,
@@ -57,6 +58,8 @@ import styles from './DayView.module.css'
 
 
 const DRAG_ACTIVATION_CONSTRAINT = 8
+const TOUCH_DRAG_ACTIVATION_DELAY = 200
+const TOUCH_DRAG_ACTIVATION_TOLERANCE = 8
 const BASE_HOUR_HEIGHT = 60
 
 interface HourCellProps {
@@ -171,9 +174,17 @@ export function DayView({ selectedDate: propDate, onBack }: { selectedDate?: str
   })
 
   const sensors = useSensors(
-    useSensor(PointerSensor, {
+    useSensor(MouseSensor, {
+      activationConstraint: { distance: DRAG_ACTIVATION_CONSTRAINT },
+    }),
+    // Touch needs a hold delay rather than a distance threshold: distance alone
+    // races against the card's own long-press-for-context-menu timer (and the
+    // browser's native long-press-to-select-text gesture), and usually loses,
+    // which is why holding a card to drag it was acting like a right-click.
+    useSensor(TouchSensor, {
       activationConstraint: {
-        distance: DRAG_ACTIVATION_CONSTRAINT,
+        delay: TOUCH_DRAG_ACTIVATION_DELAY,
+        tolerance: TOUCH_DRAG_ACTIVATION_TOLERANCE,
       },
     })
   )
@@ -421,6 +432,10 @@ export function DayView({ selectedDate: propDate, onBack }: { selectedDate?: str
 
   const handleDragStart = (event: DragStartEvent): void => {
     hapticIfEnabled('light')
+    // A card's own context menu can still be open (e.g. a long-press-hold that
+    // didn't move far enough to count as a drag yet) when a new drag starts —
+    // close it instead of leaving it floating over the grid mid-drag.
+    useContextMenuStore.getState().closeMenu()
     const eventId = String(event.active.id)
     const draggedEvent = events.find((e) => e.id === eventId)
     setActiveEvent(draggedEvent || null)

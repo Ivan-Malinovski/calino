@@ -10,7 +10,8 @@ import {
   useDndContext,
   useSensor,
   useSensors,
-  PointerSensor,
+  MouseSensor,
+  TouchSensor,
   type DragEndEvent,
   type DragStartEvent,
 } from '@dnd-kit/core'
@@ -50,6 +51,7 @@ import { hapticIfEnabled } from '@/lib/haptics'
 import { useIsTallWindow, useIsWideWindow } from '@/hooks/useWindowHeight'
 import { useDragDuplicateModifier } from '@/hooks/useDragDuplicateModifier'
 import { useDragModifierStore } from '@/store/dragModifierStore'
+import { useContextMenuStore } from '@/store/contextMenuStore'
 import { AgendaView } from './AgendaView'
 import { DayView } from './DayView'
 import type { CalendarEvent, ViewType } from '@/types'
@@ -185,10 +187,15 @@ export function CalendarGrid(): JSX.Element {
   }, [currentDate])
 
   const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
+    useSensor(MouseSensor, {
+      activationConstraint: { distance: 8 },
+    }),
+    // Touch needs a hold delay rather than a distance threshold: distance alone
+    // races against the card's own long-press-for-context-menu timer (and the
+    // browser's native long-press-to-select-text gesture), and usually loses,
+    // which is why holding a card to drag it was acting like a right-click.
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 200, tolerance: 8 },
     })
   )
 
@@ -298,6 +305,10 @@ export function CalendarGrid(): JSX.Element {
 
   const handleDragStart = (event: DragStartEvent): void => {
     hapticIfEnabled('light')
+    // A card's own context menu can still be open (e.g. a long-press-hold that
+    // didn't move far enough to count as a drag yet) when a new drag starts —
+    // close it instead of leaving it floating over the grid mid-drag.
+    useContextMenuStore.getState().closeMenu()
     // Fragment ids are `${eventId}::${day}`; strip the day suffix to find the
     // full underlying event.
     const eventId = String(event.active.id).split('::')[0]
