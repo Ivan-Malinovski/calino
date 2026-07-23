@@ -140,11 +140,6 @@
   --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   --font-mono: 'SF Mono', 'JetBrains Mono', ui-monospace, Menlo, monospace;
 
-  /* Safe Area (iOS) */
-  --safe-area-top: 0px;
-  --safe-area-bottom: 0px;
-  --safe-area-right: 0px;
-
   /* Scrollbar */
   --scrollbar-width: thin;
 
@@ -308,11 +303,6 @@
   --font-serif: Georgia, 'Times New Roman', serif;
   --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   --font-mono: 'SF Mono', 'JetBrains Mono', ui-monospace, Menlo, monospace;
-
-  /* Safe Area (iOS) */
-  --safe-area-top: 0px;
-  --safe-area-bottom: 0px;
-  --safe-area-right: 0px;
 
   /* Scrollbar */
   --scrollbar-width: thin;

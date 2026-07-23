@@ -135,10 +135,6 @@
   /* Scrollbar */
   --scrollbar-width: auto;
 
-  /* Safe Area (iOS) */
-  --safe-area-top: 0px;
-  --safe-area-bottom: 0px;
-  --safe-area-right: 0px;
 }
 
 /* ── Component Overrides ────────────────────────────────────────── */
@@ -572,10 +568,6 @@
   /* Scrollbar */
   --scrollbar-width: auto;
 
-  /* Safe Area (iOS) */
-  --safe-area-top: 0px;
-  --safe-area-bottom: 0px;
-  --safe-area-right: 0px;
 }
 
 /* Dark mode component overrides */
