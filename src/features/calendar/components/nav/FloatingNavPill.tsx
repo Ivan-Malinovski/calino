@@ -5,6 +5,7 @@ import { motion, useMotionValue, animate, type PanInfo } from 'framer-motion'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
 import { hapticIfEnabled } from '@/lib/haptics'
+import { useTextInputFocused } from '@/hooks/useTextInputFocused'
 import { VIEW_ROUTES, URL_TO_VIEW, ALL_VIEWS } from '../../viewRoutes'
 import type { ViewType } from '@/types'
 import { NavExpandedGrid } from './NavExpandedGrid'
@@ -33,6 +34,12 @@ export function FloatingNavPill({ onToggleSidebar, onOpenSearch }: FloatingNavPi
   const setCurrentView = useCalendarStore((state) => state.setCurrentView)
   const journalEnabled = useSettingsStore((state) => state.journalEnabled)
   const contactsEnabled = useSettingsStore((state) => state.contactsEnabled)
+
+  // On-screen keyboard opening resizes the visual viewport, which drags a
+  // `position: fixed` bottom pill up the screen along with it — there's
+  // nothing useful for it to do while typing (e.g. a /journal entry), so
+  // just tuck it away instead of letting it jump around.
+  const textInputFocused = useTextInputFocused()
 
   // The collapsed pill shows the 3 base views (Month/Week/Agenda) inline as
   // a quick selector. On any other route (e.g. /settings, /year, /day,
@@ -213,8 +220,10 @@ export function FloatingNavPill({ onToggleSidebar, onOpenSearch }: FloatingNavPi
         <div className={styles.tapCatcher} onClick={collapseAll} aria-hidden="true" />
       )}
       <motion.div
-        className={styles.pill}
+        className={`${styles.pill} ${textInputFocused ? styles.pillHidden : ''}`}
         style={{ height: heightMV, borderRadius: radiusMV }}
+        animate={{ opacity: textInputFocused ? 0 : 1, y: textInputFocused ? 24 : 0 }}
+        transition={CHROME_TRANSITION}
         data-component="floating-nav-pill"
       >
         <div ref={contentRef} className={styles.pillContent}>

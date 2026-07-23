@@ -27,6 +27,10 @@
   flex-shrink: 0;
 }
 
+.pillHidden {
+  pointer-events: none;
+}
+
 .baseRow {
   display: flex;
   align-items: center;
