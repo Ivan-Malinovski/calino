@@ -542,6 +542,7 @@ function CalendarApp(): JSX.Element {
           ref={mainRef}
           data-view={currentView}
           onPanEnd={isMobile ? handleContentPanEnd : undefined}
+          style={isMobile ? { touchAction: 'pan-y' } : undefined}
         >
           {renderView()}
         </motion.main>

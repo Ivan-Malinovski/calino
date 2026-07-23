@@ -8,6 +8,7 @@
   flex-direction: column;
   min-height: 0;
   overflow: auto;
+  touch-action: pan-y;
   padding: 16px 24px;
   background: var(--canvas, #faf8f3);
   border-radius: var(--radius-lg);
