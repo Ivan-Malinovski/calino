@@ -4,4 +4,11 @@
     <string name="title_activity_main">Calino</string>
     <string name="package_name">ski.malinov.calino</string>
     <string name="custom_url_scheme">ski.malinov.calino</string>
+
+    <string name="shortcut_new_event_short">New event</string>
+    <string name="shortcut_new_event_long">Create new event</string>
+    <string name="shortcut_new_task_short">New task</string>
+    <string name="shortcut_new_task_long">Create new task</string>
+    <string name="shortcut_search_short">Search</string>
+    <string name="shortcut_search_long">Search Calino</string>
 </resources>

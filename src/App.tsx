@@ -378,6 +378,43 @@ function CalendarApp(): JSX.Element {
     }
   }, [isCommandPaletteOpen, isShortcutsHelpOpen, isJournalModalOpen, isSidebarOpen, navigate])
 
+  // Android home-screen shortcuts (long-press app icon → New event / New task
+  // / Search). Each is a static shortcut (android/app/.../res/xml/shortcuts.xml)
+  // that opens the app via the `ski.malinov.calino://<action>` custom scheme;
+  // Capacitor's App plugin surfaces that as `appUrlOpen` (warm start, app
+  // already running) or `getLaunchUrl()` (cold start, app was launched by it).
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return
+
+    const handleShortcutUrl = (url: string): void => {
+      const action = url.split('://')[1]?.split(/[/?]/)[0]
+      switch (action) {
+        case 'new-event':
+          openModal()
+          break
+        case 'new-task':
+          openModal(undefined, undefined, undefined, 'task')
+          break
+        case 'search':
+          setIsCommandPaletteOpen(true)
+          setOverlayOpen(true)
+          break
+      }
+    }
+
+    void CapacitorApp.getLaunchUrl().then((result) => {
+      if (result?.url) handleShortcutUrl(result.url)
+    })
+
+    const listenerPromise = CapacitorApp.addListener('appUrlOpen', ({ url }) => {
+      handleShortcutUrl(url)
+    })
+
+    return () => {
+      void listenerPromise.then((handle) => handle.remove())
+    }
+  }, [openModal, setOverlayOpen])
+
   const renderView = (): JSX.Element => {
     const viewElement = (() => {
       switch (currentView) {
