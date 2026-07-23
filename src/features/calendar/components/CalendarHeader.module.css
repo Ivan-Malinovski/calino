@@ -231,6 +231,15 @@
   transition-duration: 0.05s;
 }
 
+/* Desktop already has the navigator's "Today" text button — this icon only
+   earns its keep on mobile, where the navigator hides for /tasks and
+   /contacts and the title's tap-to-go-today needs a visible counterpart. */
+@media (min-width: 769px) { /* sync with config.ts MOBILE_BREAKPOINT */
+  .todayButton {
+    display: none;
+  }
+}
+
 /* ---- Quick Settings Dropdown ---- */
 .settingsWrapper {
   position: relative;
