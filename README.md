@@ -84,6 +84,11 @@ I have made it as close as possible, as to what I envision the perfect CalDAV no
 - Tasks and agenda work well on mobile
 - Optimized mobile view
 
+### Android app
+An Android APK is published on the [GitHub Releases page](https://github.com/Ivan-Malinovski/calino/releases) — not distributed via Play Store (yet). Since it isn't signed by a Play Store, Android will ask you to allow installs from your browser/file manager the first time ("install unknown apps") — this is expected.
+
+For notification reminders to actually fire reliably, some phone makers (Xiaomi/MIUI especially, also Oppo, Realme, Honor, OnePlus, and others) aggressively kill background apps to save battery, which silently breaks scheduled reminders. Check [dontkillmyapp.com](https://dontkillmyapp.com/) for your device and set Calino's battery/power mode to "No restrictions" or equivalent.
+
 ### Security
 - **App-level encryption is obfuscation, not security.** Credentials in localStorage are encrypted with a key bundled with the app. Anyone with the JS bundle can derive the same key. For stronger protection, use the master-password setup wizard (`/setup`) — the key is derived from your password and never leaves the device.
 - **No telemetry, no analytics.** Nothing leaves your browser except CalDAV traffic to your own server

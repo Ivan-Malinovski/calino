@@ -2,6 +2,25 @@
 
 All notable changes to Calino will be documented in this file.
 
+## [0.24.0] - 2026-07-23
+
+### Added
+
+- **Calino for Android** — a native wrapper (Capacitor) is now available as a signed APK on the [GitHub Releases page](https://github.com/Ivan-Malinovski/calino/releases). Not on Play Store yet, so you'll need to allow "install unknown apps" the first time. Includes home-screen app shortcuts (new event, new task, today), haptics, and a proper native status bar/splash screen.
+  - Notification permission is now requested proactively during onboarding (native only), with rationale copy shown first, instead of only reactively via Settings.
+  - **If reminders don't fire reliably**, your phone maker is probably killing Calino in the background to save battery — check [dontkillmyapp.com](https://dontkillmyapp.com/) (Xiaomi/MIUI is the worst offender, but Oppo/Realme/Honor/OnePlus and others do this too) and set Calino to "No restrictions" battery mode.
+  - Pull-to-refresh on mobile, and tapping a reminder notification now deep-links straight to that event instead of just opening the app.
+
+### Fixed
+
+- **Only the default theme had correct top safe-area insets on Android** — every custom theme's `:root` block hardcoded `--safe-area-top/bottom/right: 0px`, silently overriding the real inset values injected by Capacitor. Removed from all theme files; safe-area insets now apply regardless of theme.
+- **Mobile nav pill swipe direction was backwards** — swiping right on the collapsed pill now advances forward through views (month → week → agenda → ...), swiping left goes back, matching the intuitive direction.
+- White flash between splash screen and first paint on Android.
+- First-run onboarding modal not respecting safe-area insets on mobile; cookie banner no longer shows on Android (no cookies to consent to there).
+- CalDAV account defaulting to "Offline" instead of the calendar you just added.
+- Several mobile touch/drag fixes: agenda's horizontal swipe being hijacked by vertical scroll, event drag-to-reschedule on touch, post-drag context menu re-triggering or not closing on new drags/resizes, floating pill jumping with the on-screen keyboard.
+- Various mobile layout polish: `/year` month grid centering, tasks/journal column spacing and button wrapping, project filter placement in the header, command palette padding.
+
 ## [0.23.1] - 2026-07-23
 
 ### Added
