@@ -2,6 +2,25 @@
 
 All notable changes to Calino will be documented in this file.
 
+## [0.23.1] - 2026-07-23
+
+### Added
+
+- **"Go to today" button in the calendar header** — a small calendar icon at the top right jumps back to today, and only appears once you've navigated away from it. Mirrors the "today" cell highlight already used in the month grid, and fades/scales in and out with the date. Complements the existing (but easy to miss) shortcut of tapping the month title.
+- **Mobile Settings back-arrow pill and accordion categories** — on `/settings`, the floating pill's leading button now shows a back arrow instead of the hamburger and steps out one level at a time (section → category list → calendar). The mobile category list expands each section inline as an accordion instead of navigating to a separate page.
+- **Swipe to switch views on the mobile nav pill** — a horizontal swipe on the collapsed pill cycles through views in the same order as the expanded grid, from any route.
+
+### Fixed
+
+- **Mobile month view swiped two months at a time** instead of one — a duplicate touch handler was double-firing alongside the existing pointer gesture.
+- **Floating mobile nav pill was hard to see against the panel background**, especially in light mode — it now has a subtle ink-tinted border in both themes.
+- **`/month`'s calendar grid lost its rounded corners and border on mobile**, going edge-to-edge below 500px unlike every other view. It now keeps the same rounded, bordered, inset treatment as `/week` down to the smallest screens.
+- **Mobile sidebar overlay washed out instead of darkening** in dark mode — it used a color token that flips to a light value there; now uses one that stays dark in both themes, with a blur added for a proper drawer feel. The drawer itself now scales with viewport width instead of a fixed 250px.
+
+### Changed
+
+- Journal view's "+ New entry" button is now "+ New" on mobile; the tasks view's project filter dropdown moved into the header, right-aligned.
+
 ## [0.23.0] - 2026-07-22
 
 ### Added
