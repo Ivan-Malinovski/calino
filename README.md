@@ -31,6 +31,10 @@ Due to the browser based nature of Calino, Calino requires your CalDAV server to
 
 With that said, I urge you to either selfhost Calino or at least use your own proxy, to minimize the amount of data being sent to servers that are not your own. `proxy.calino.io` is solely for convenience, please don't rely on it. To run your own proxy, see [`docs/CORS_PROXY.md`](./docs/CORS_PROXY.md).
 
+## Android app
+
+Like Calino in your browser? You'll love it on your phone. A native Android app is now available with everything you enjoy about Calino, but better notifications and very optional LLM support (BYOK), so you can take picture of a poster, screenshot or slide, and easily add the events to your CalDAV calendar. Find the latest .apk in the [GitHub Releases page](https://github.com/Ivan-Malinovski/calino/releases).
+
 ---
 
 ## Features
