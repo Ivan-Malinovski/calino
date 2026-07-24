@@ -2,6 +2,17 @@
 
 All notable changes to Calino will be documented in this file.
 
+## [0.25.0] - 2026-07-24
+
+### Added
+
+- **AI photo-to-event import on Android** — snap or share a photo (flyer, poster, invite) and a vision-capable LLM extracts event details to prefill New Event. BYOK across Anthropic, OpenAI, or any custom OpenAI-/Anthropic-compatible endpoint (auto-detected from an `/anthropic` path segment in the base URL). Three entry points: a camera button next to New Event, Android's native share sheet for images, and a home-screen shortcut that only appears once a key is configured. A full-screen staged overlay and distinct empty-result/error messaging show progress at each step.
+- **Onboarding now mentions the Android app** with a link to the [GitHub Releases page](https://github.com/Ivan-Malinovski/calino/releases) — web-only, so people know a native app exists without the link showing up inside the app itself.
+
+### Fixed
+
+- **Agenda-below-month auto-split is now portrait-only**, divider drag position persists across reloads instead of resetting, and the split can be disabled entirely via a new Calendar setting or the command palette. Wide desktop monitors no longer trigger the split just because they're tall. Fixes [#68](https://github.com/Ivan-Malinovski/calino/issues/68).
+
 ## [0.24.0] - 2026-07-23
 
 ### Added
