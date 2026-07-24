@@ -94,6 +94,10 @@
   margin-bottom: 24px;
 }
 
+.description a {
+  color: var(--accent, #1a73e8);
+}
+
 .footer {
   display: flex;
   flex-direction: column;

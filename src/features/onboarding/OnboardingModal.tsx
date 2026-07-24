@@ -10,6 +10,7 @@ import { useConfigStore } from '@/store/configStore'
 import { parseICALData } from '@/features/caldav/adapter/iCalendarAdapter'
 import { parseVCard } from '@/features/carddav/adapter/vCardAdapter'
 import { requestNativeReminderPermission } from '@/lib/nativeReminders'
+import { config } from '@/config'
 import styles from './OnboardingModal.module.css'
 
 const isNative = Capacitor.isNativePlatform()
@@ -216,6 +217,20 @@ export function OnboardingModal({ onAddCalendar }: OnboardingModalProps): JSX.El
           <p className={styles.description}>
             Calino can remind you before events start. Continuing will ask for notification
             permission.
+          </p>
+        )}
+
+        {!isNative && (
+          <p className={styles.description}>
+            There's also an{' '}
+            <a
+              href={`https://github.com/${config.githubRepo}/releases`}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Android app
+            </a>
+            , with camera-based event import and reminder notifications.
           </p>
         )}
 
