@@ -2,6 +2,7 @@ import type { JSX } from 'react'
 import { motion, type PanInfo } from 'framer-motion'
 import { Capacitor } from '@capacitor/core'
 import { useCalendarStore } from '@/store/calendarStore'
+import { useAIVisionSettingsStore } from '@/store/aiVisionSettingsStore'
 import { useAIPhotoImport } from '@/features/aiVision/useAIPhotoImport'
 import { hapticIfEnabled } from '@/lib/haptics'
 import { CalendarIcon, TaskCheckIcon } from '@/components/common/icons'
@@ -27,6 +28,7 @@ const isNative = Capacitor.isNativePlatform()
 
 export function NavCreateDrawer({ onClose, onDragProgress, onDragActiveChange }: NavCreateDrawerProps): JSX.Element {
   const { aiState, importFromCamera } = useAIPhotoImport()
+  const hasAiApiKey = useAIVisionSettingsStore((s) => s.apiKeyEncrypted !== null)
 
   const handleNewEvent = (): void => {
     useCalendarStore.getState().openModal()
@@ -86,7 +88,7 @@ export function NavCreateDrawer({ onClose, onDragProgress, onDragActiveChange }:
             <CalendarIcon size={18} />
             <span>New Event</span>
           </button>
-          {isNative && (
+          {isNative && hasAiApiKey && (
             <button
               type="button"
               className={styles.rowAction}
