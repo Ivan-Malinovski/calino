@@ -4,6 +4,16 @@
 
 ---
 
+<div align="center">
+
+[![Latest release](https://img.shields.io/github/v/release/Ivan-Malinovski/calino?style=flat-square&logo=android&logoColor=white&label=android)](https://github.com/Ivan-Malinovski/calino/releases/latest)
+[![Docker Image](https://img.shields.io/badge/docker-ghcr.io%2Fcalino-2496ED?style=flat-square&logo=docker&logoColor=white)](https://ghcr.io/ivan-malinovski/calino)
+[![License](https://img.shields.io/github/license/Ivan-Malinovski/calino?style=flat-square)](https://github.com/Ivan-Malinovski/calino/blob/main/LICENSE)
+[![CalDAV](https://img.shields.io/badge/RFC%204791%20%2F%205459-CalDAV-blue?style=flat-square&logo=icalendar&logoColor=white)](https://datatracker.ietf.org/doc/html/rfc4791)
+[![Made with Capacitor](https://img.shields.io/badge/android-Capacitor-119EFF?style=flat-square&logo=capacitor&logoColor=white)](https://capacitorjs.com/)
+
+</div>
+
 **Calino is a browser-based CalDAV client that connects directly to your calendar server.** No other accounts required — it runs as a static page, and data stays entirely between your browser and your CalDAV server.
 
 If you've been looking for a beautiful, modern browser-based CalDAV calendar that doesn't come as part of a bloated suite, Calino has you covered.
