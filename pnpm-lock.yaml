@@ -11,6 +11,15 @@ importers:
 
   .:
     dependencies:
+      '@capacitor/camera':
+        specifier: ^8.2.1
+        version: 8.2.1(@capacitor/core@8.4.2)
+      '@capacitor/filesystem':
+        specifier: ^8.1.2
+        version: 8.1.2(@capacitor/core@8.4.2)
+      '@capgo/capacitor-share-target':
+        specifier: ^8.0.44
+        version: 8.0.44(@capacitor/core@8.4.2)
       '@dnd-kit/core':
         specifier: ^6.3.1
         version: 6.3.1(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -304,6 +313,11 @@ packages:
     peerDependencies:
       '@capacitor/core': '>=8.0.0'
 
+  '@capacitor/camera@8.2.1':
+    resolution: {integrity: sha512-yq4TbVcv9Z91JLr7C5407s3rrXr/Dmk+Pr9FAVRn65s3Jg4iYabjwG4fVKUYlQL5TiUdBbZA3LiNAbUxJNcUkw==}
+    peerDependencies:
+      '@capacitor/core': '>=8.0.0'
+
   '@capacitor/cli@8.4.2':
     resolution: {integrity: sha512-hE4HmpMdr5T8eQ++kGa1BKkdG2JLEvo1y1cj1kmFK78VB9dBp538oe1EZvzwupNGOl0ZueALotzL5wcXRD9w1Q==}
     engines: {node: '>=22.0.0'}
@@ -311,6 +325,11 @@ packages:
 
   '@capacitor/core@8.4.2':
     resolution: {integrity: sha512-fQPRb3JXRaU2pnufDUvqOjhsrYxDQeFRZyaj/sHydIUxD2NxOGHKMpmKUdI+U4OOmKuGZyvRpi7TSJU+7Bjbmg==}
+
+  '@capacitor/filesystem@8.1.2':
+    resolution: {integrity: sha512-doaaMfGoFR2hWU6aV6u83I+5ZsGyJVq+Gz4r9lMpJzUKMm1eMu0hLnFdV1aXZlU9FlK/RndFrVD8oRZfNOqWgQ==}
+    peerDependencies:
+      '@capacitor/core': '>=8.0.0'
 
   '@capacitor/haptics@8.0.2':
     resolution: {integrity: sha512-c2hZzRR5Fk1tbTvhG1jhh2XBAf3EhnIerMIb2sl7Mt41Gxx1fhBJFDa0/BI1IbY4loVepyyuqNC9820/GZuoWQ==}
@@ -324,6 +343,14 @@ packages:
 
   '@capacitor/status-bar@8.0.3':
     resolution: {integrity: sha512-csSpfNeN49Hx9JaQBSJEIiEbOLtXg3kcc2IpScq2fu5L520h3AWEvsxoH8Srk1jxfRKepaJ4S4sqSC3foI4AgA==}
+    peerDependencies:
+      '@capacitor/core': '>=8.0.0'
+
+  '@capacitor/synapse@1.0.4':
+    resolution: {integrity: sha512-/C1FUo8/OkKuAT4nCIu/34ny9siNHr9qtFezu4kxm6GY1wNFxrCFWjfYx5C1tUhVGz3fxBABegupkpjXvjCHrw==}
+
+  '@capgo/capacitor-share-target@8.0.44':
+    resolution: {integrity: sha512-0B2ZG2gO/KUj8lSmPhC3OfeH8/aLQGMK8ZaDARxJ++Ke2O8G8Jf48lur0O6v1AixbteqcqtGX4zPOExzWxrTsg==}
     peerDependencies:
       '@capacitor/core': '>=8.0.0'
 
@@ -3623,6 +3650,10 @@ snapshots:
     dependencies:
       '@capacitor/core': 8.4.2
 
+  '@capacitor/camera@8.2.1(@capacitor/core@8.4.2)':
+    dependencies:
+      '@capacitor/core': 8.4.2
+
   '@capacitor/cli@8.4.2':
     dependencies:
       '@ionic/cli-framework-output': 2.2.8
@@ -3649,6 +3680,11 @@ snapshots:
     dependencies:
       tslib: 2.8.1
 
+  '@capacitor/filesystem@8.1.2(@capacitor/core@8.4.2)':
+    dependencies:
+      '@capacitor/core': 8.4.2
+      '@capacitor/synapse': 1.0.4
+
   '@capacitor/haptics@8.0.2(@capacitor/core@8.4.2)':
     dependencies:
       '@capacitor/core': 8.4.2
@@ -3658,6 +3694,12 @@ snapshots:
       '@capacitor/core': 8.4.2
 
   '@capacitor/status-bar@8.0.3(@capacitor/core@8.4.2)':
+    dependencies:
+      '@capacitor/core': 8.4.2
+
+  '@capacitor/synapse@1.0.4': {}
+
+  '@capgo/capacitor-share-target@8.0.44(@capacitor/core@8.4.2)':
     dependencies:
       '@capacitor/core': 8.4.2
 

@@ -6,6 +6,7 @@ import com.getcapacitor.BridgeActivity;
 public class MainActivity extends BridgeActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
+        registerPlugin(DynamicShortcutsPlugin.class);
         super.onCreate(savedInstanceState);
         // The WebView's native surface is opaque white until content is actually
         // composited, regardless of what CSS/JS sets — without this, there's a

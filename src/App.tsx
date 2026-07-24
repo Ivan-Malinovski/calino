@@ -37,6 +37,8 @@ import { useCardDAV } from './features/carddav/hooks/useCardDAV'
 import { useCalDAV } from './features/caldav/hooks/useCalDAV'
 import { useNotifications } from './hooks/useNotifications'
 import { openEventDeepLink } from './lib/deepLink'
+import { AIPhotoImportRoot } from './features/aiVision/components/AIPhotoImportRoot'
+import { useAIPhotoImport } from './features/aiVision/useAIPhotoImport'
 import type { ViewType } from './types'
 
 import { findEventById } from './lib/events'
@@ -198,6 +200,7 @@ function CalendarApp(): JSX.Element {
   const journalModalDate = useCalendarStore((state) => state.journalModalDate)
   const journalStartInCompose = useCalendarStore((state) => state.journalStartInCompose)
   const closeJournalModal = useCalendarStore((state) => state.closeJournalModal)
+  const { importFromCamera } = useAIPhotoImport()
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false)
   const [isShortcutsHelpOpen, setIsShortcutsHelpOpen] = useState(false)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
@@ -390,11 +393,24 @@ function CalendarApp(): JSX.Element {
     }
   }, [isCommandPaletteOpen, isShortcutsHelpOpen, isJournalModalOpen, isSidebarOpen, navigate])
 
+  // importFromCamera is a plain function re-created every render (not
+  // useCallback-wrapped), so it can't go in the effect's dependency array
+  // without re-running the effect — and re-registering the appUrlOpen
+  // listener — on every render. Same latest-ref pattern as
+  // JournalView.tsx's handleSaveEntryRef.
+  const importFromCameraRef = useRef(importFromCamera)
+  useEffect(() => {
+    importFromCameraRef.current = importFromCamera
+  })
+
   // Android home-screen shortcuts (long-press app icon → New event / New task
-  // / Search). Each is a static shortcut (android/app/.../res/xml/shortcuts.xml)
-  // that opens the app via the `calino.malinov.ski://<action>` custom scheme;
-  // Capacitor's App plugin surfaces that as `appUrlOpen` (warm start, app
-  // already running) or `getLaunchUrl()` (cold start, app was launched by it).
+  // / Photo import / Search). "New event"/"New task"/"Search" are static
+  // shortcuts (android/app/.../res/xml/shortcuts.xml); "Photo import" is a
+  // dynamic one (DynamicShortcutsPlugin.java) only pushed once AI photo
+  // import is configured (see aiVisionSettingsStore.ts). All open the app via
+  // the `calino.malinov.ski://<action>` custom scheme; Capacitor's App plugin
+  // surfaces that as `appUrlOpen` (warm start, app already running) or
+  // `getLaunchUrl()` (cold start, app was launched by it).
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return
 
@@ -406,6 +422,9 @@ function CalendarApp(): JSX.Element {
           break
         case 'new-task':
           openModal(undefined, undefined, undefined, 'task')
+          break
+        case 'ai-photo-import':
+          void importFromCameraRef.current()
           break
         case 'search':
           setIsCommandPaletteOpen(true)
@@ -586,6 +605,9 @@ function CalendarApp(): JSX.Element {
       <FloatingNavPill onToggleSidebar={handleToggleSidebar} onOpenSearch={handleOpenCommandPalette} />
       <ErrorBoundary fallback={null}>
         <EventModal />
+      </ErrorBoundary>
+      <ErrorBoundary fallback={null}>
+        <AIPhotoImportRoot />
       </ErrorBoundary>
       {isJournalModalOpen && journalModalDate && (
         <JournalDayModal

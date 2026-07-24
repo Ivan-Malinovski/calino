@@ -1,6 +1,7 @@
 import type { JSX } from 'react'
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
+import { Capacitor } from '@capacitor/core'
 import { GeneralSettings } from './GeneralSettings'
 import { ThemeSettings } from './ThemeSettings'
 import { CalendarSettings } from './CalendarSettings'
@@ -8,13 +9,14 @@ import { NotificationSettings } from './NotificationSettings'
 import { DataSettings } from './DataSettings'
 import { CalDAVSettings } from './CalDAVSettings'
 import { CategoriesSettings } from './CategoriesSettings'
+import { AIVisionSettings } from './AIVisionSettings'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { FloatingNavPill } from '@/features/calendar/components/nav/FloatingNavPill'
 import styles from './Settings.module.css'
 
-type SettingsTab = 'general' | 'theme' | 'calendar' | 'categories' | 'notifications' | 'caldav' | 'data'
+type SettingsTab = 'general' | 'theme' | 'calendar' | 'categories' | 'notifications' | 'caldav' | 'data' | 'aiVision'
 
 interface NavItem {
   id: SettingsTab
@@ -22,7 +24,7 @@ interface NavItem {
   icon: JSX.Element
 }
 
-const NAV_ITEMS: NavItem[] = [
+const BASE_NAV_ITEMS: NavItem[] = [
   {
     id: 'general',
     label: 'General',
@@ -100,12 +102,25 @@ const NAV_ITEMS: NavItem[] = [
   },
 ]
 
-const VALID_TABS: SettingsTab[] = ['general', 'theme', 'calendar', 'categories', 'notifications', 'caldav', 'data']
+const AI_VISION_NAV_ITEM: NavItem = {
+  id: 'aiVision',
+  label: 'AI Photo Import',
+  icon: (
+    <svg className={styles.navIcon} viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="5" width="14" height="10" rx="2.5" />
+      <path d="M6 5l1-2h4l1 2" />
+      <circle cx="9" cy="10" r="2.5" />
+    </svg>
+  ),
+}
+
+const VALID_TABS: SettingsTab[] = ['general', 'theme', 'calendar', 'categories', 'notifications', 'caldav', 'data', 'aiVision']
 
 export function SettingsPage(): JSX.Element {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const isMobile = useIsMobile()
+  const NAV_ITEMS: NavItem[] = Capacitor.isNativePlatform() ? [...BASE_NAV_ITEMS, AI_VISION_NAV_ITEM] : BASE_NAV_ITEMS
   const brokenEventsCount = useCalendarStore((state) => state.brokenEvents.length)
   const duplicateUidCount = useCalendarStore((state) => state.duplicateUidIssues.length)
   const dataIssuesCount = brokenEventsCount + duplicateUidCount
@@ -154,6 +169,8 @@ export function SettingsPage(): JSX.Element {
         return <CalDAVSettings />
       case 'data':
         return <DataSettings />
+      case 'aiVision':
+        return <AIVisionSettings />
       default:
         return <GeneralSettings />
     }

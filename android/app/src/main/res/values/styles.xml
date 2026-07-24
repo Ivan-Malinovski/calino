@@ -12,11 +12,18 @@
     <style name="AppTheme.NoActionBar" parent="Theme.AppCompat.DayNight.NoActionBar">
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
-        <item name="android:background">@color/splashBackground</item>
+        <!-- windowBackground (not the generic `background` attribute) is the
+             correct theme attribute for a window's background drawable.
+             `android:background` was leaking into windows that don't set
+             their own background — including the native camera/gallery
+             chooser dialog, which inherits the Activity's theme by default —
+             making that dialog paint full-screen instead of a small sheet
+             with a dimmed scrim behind it. -->
+        <item name="android:windowBackground">@color/splashBackground</item>
     </style>
 
 
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
-        <item name="android:background">@color/splashBackground</item>
+        <item name="android:windowBackground">@color/splashBackground</item>
     </style>
 </resources>

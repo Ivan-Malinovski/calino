@@ -24,6 +24,9 @@
             android:targetClass="calino.malinov.ski.MainActivity"
             android:data="calino.malinov.ski://new-task" />
     </shortcut>
+    <!-- "ai-photo-import" is NOT declared here — it's a dynamic shortcut
+         (DynamicShortcutsPlugin.java), pushed only when AI photo import is
+         actually configured, so it's never shown as a dead end. -->
     <shortcut
         android:shortcutId="search"
         android:enabled="true"

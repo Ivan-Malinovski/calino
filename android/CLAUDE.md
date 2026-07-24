@@ -83,6 +83,16 @@ Uses Android's **Wireless debugging** (Developer options), paired once then reco
   back it up somewhere durable outside this repo (password manager, etc.).
 - Distributed via GitHub Releases only for now (no Play Store yet).
 
+## Debug vs. release signature conflict
+
+Debug builds installed via this workflow are signed with Android's auto-generated debug
+key; release APKs (local or from CI) are signed with `keystore/calino-release.jks`.
+Android refuses to install an APK over an existing app with the same `applicationId` if
+the signing certificate doesn't match ("App not installed as package conflicts with an
+existing package by the same name") — uninstalling an *older* package name doesn't help
+if a debug build under the *current* appId is still on the device. Fix: uninstall the
+existing app first (`adb uninstall calino.malinov.ski`), then install the release APK.
+
 ## Known OS-level gotchas (not code bugs)
 
 - **OEM battery optimization** (MIUI, Oppo/Realme/Honor, etc.) can silently kill

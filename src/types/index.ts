@@ -1,6 +1,7 @@
 export type RecurrenceFrequency = 'secondly' | 'minutely' | 'hourly' | 'daily' | 'weekly' | 'monthly' | 'yearly'
 
 import type { Category, AutoCategoryRule } from './categories'
+import type { ExtractedEventFields } from '@/features/aiVision/types'
 
 export type AttendeePartstat = 'ACCEPTED' | 'DECLINED' | 'TENTATIVE' | 'NEEDS-ACTION' | 'DELEGATED'
 
@@ -175,6 +176,14 @@ export interface CalendarState {
   initialTitle: string | null
   initialCalendarId: string | null
   subtaskParentId: string | null
+  pendingEventPrefill: ExtractedEventFields | null
+  /**
+   * Remaining AI-photo-import candidates still to be reviewed, when the user
+   * chose "Add all" on a photo with multiple detected events. `closeModal`
+   * pops the next one and reopens the form instead of fully closing, until
+   * the queue is empty.
+   */
+  importQueue: ExtractedEventFields[]
   isOverlayOpen: boolean
   selectedEventType: EventType
   showAddCalendar: boolean
@@ -238,6 +247,8 @@ export interface CalendarActions {
     initialCalendarId?: string,
   ) => void
   closeModal: () => void
+  setPendingEventPrefill: (fields: ExtractedEventFields | null) => void
+  startImportQueue: (candidates: ExtractedEventFields[]) => void
   setOverlayOpen: (isOpen: boolean) => void
   setShowAddCalendar: (show: boolean) => void
   openPreview: (eventId: string, position: { x: number; y: number }) => void

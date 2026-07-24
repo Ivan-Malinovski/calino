@@ -1,0 +1,47 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  background: var(--modal-scrim, rgba(0, 0, 0, 0.5));
+  backdrop-filter: var(--modal-blur, blur(3px));
+  z-index: 1300;
+  animation: overlayFadeIn 0.15s ease;
+  /* Deliberately no click handler anywhere in this tree — it must not be
+     dismissable by tapping, unlike the review modal's backdrop. */
+  touch-action: none;
+}
+
+@keyframes overlayFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #ffffff;
+  animation: overlaySpin 0.8s linear infinite;
+}
+
+@keyframes overlaySpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.label {
+  font-size: 16px;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.sublabel {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.8);
+}

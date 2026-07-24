@@ -5,6 +5,7 @@ import { format, parseISO, isWithinInterval, startOfDay, endOfDay } from 'date-f
 import { RRule } from 'rrule'
 import type { CalendarStore, CalendarEvent, Calendar, ViewType, EventType, DuplicateUidIssue } from '@/types'
 import type { Category, AutoCategoryRule } from '@/types/categories'
+import type { ExtractedEventFields } from '@/features/aiVision/types'
 import { config, DEFAULT_CALENDAR_COLOR } from '@/config'
 import { buildRRuleString } from '@/lib/recurrence'
 import { deleteAttachments } from '@/lib/attachmentStore'
@@ -106,6 +107,8 @@ export const useCalendarStore = create<CalendarStore>()(
       initialTitle: null,
       initialCalendarId: null,
       subtaskParentId: null,
+      pendingEventPrefill: null,
+      importQueue: [],
       selectedEventType: 'event',
       showAddCalendar: false,
       isOverlayOpen: false,
@@ -558,6 +561,28 @@ export const useCalendarStore = create<CalendarStore>()(
       },
 
       closeModal: (): void => {
+        // "Add all" from the AI-photo-import review picker queues the
+        // remaining candidates here. Instead of fully closing, pop the next
+        // one and re-seed the still-open form — EventModal's seeding effect
+        // re-fires because selectedDate/selectedEndDate change, so this
+        // works whether the previous candidate was saved or cancelled.
+        const nextQueue = get().importQueue
+        if (nextQueue.length > 0) {
+          const [next, ...rest] = nextQueue
+          set({
+            importQueue: rest,
+            pendingEventPrefill: next,
+            isModalOpen: true,
+            selectedEventId: null,
+            selectedDate: next.start ?? null,
+            selectedEndDate: next.end ?? null,
+            selectedEventType: 'event',
+            initialTitle: null,
+            initialCalendarId: null,
+            subtaskParentId: null,
+          })
+          return
+        }
         set({
           isModalOpen: false,
           selectedEventId: null,
@@ -567,6 +592,34 @@ export const useCalendarStore = create<CalendarStore>()(
           initialCalendarId: null,
           subtaskParentId: null,
           selectedEventType: 'event',
+        })
+      },
+
+      // One-shot value: set right before openModal() by the AI-photo-import
+      // flow, consumed and cleared by EventModal's seeding effect. Not reset
+      // by closeModal — it must survive the brief moment between
+      // setPendingEventPrefill and the modal's openModal() call reading it.
+      setPendingEventPrefill: (fields: ExtractedEventFields | null): void => {
+        set({ pendingEventPrefill: fields })
+      },
+
+      // Entry point for "Add all N events" in the AI-photo-import review
+      // picker: opens the form for the first candidate and stashes the rest
+      // in importQueue, which closeModal drains one at a time.
+      startImportQueue: (candidates: ExtractedEventFields[]): void => {
+        if (candidates.length === 0) return
+        const [first, ...rest] = candidates
+        set({
+          importQueue: rest,
+          pendingEventPrefill: first,
+          isModalOpen: true,
+          selectedEventId: null,
+          selectedDate: first.start ?? null,
+          selectedEndDate: first.end ?? null,
+          selectedEventType: 'event',
+          initialTitle: null,
+          initialCalendarId: null,
+          subtaskParentId: null,
         })
       },
 

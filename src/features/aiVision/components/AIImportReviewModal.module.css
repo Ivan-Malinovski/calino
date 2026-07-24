@@ -1,0 +1,303 @@
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--modal-scrim, rgba(0, 0, 0, 0.5));
+  backdrop-filter: var(--modal-blur, blur(3px));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1200;
+  animation: fadeIn 0.2s ease;
+}
+
+.modalContent {
+  background: var(--modal-bg, #ffffff);
+  border: 1px solid var(--modal-border, transparent);
+  box-shadow: var(--modal-shadow, 0 24px 80px rgba(0, 0, 0, 0.18), 0 6px 20px rgba(0, 0, 0, 0.10));
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  width: 100%;
+  max-width: 420px;
+  max-height: 85vh;
+  overflow-y: auto;
+  animation: slideUp 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(12px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.modal.closing {
+  animation: fadeOut 0.2s ease-in forwards;
+}
+
+@keyframes fadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+.modal.closing .modalContent {
+  animation: slideDown 0.2s ease-in forwards;
+}
+
+@keyframes slideDown {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to { opacity: 0; transform: translateY(12px) scale(0.98); }
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-text-primary, #202124);
+  margin: 0;
+}
+
+.close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 18px;
+  color: var(--color-text-secondary, #5f6368);
+  padding: var(--space-1);
+  border-radius: var(--radius-sm);
+  line-height: 1;
+}
+
+.close:hover {
+  background: var(--color-bg-hover, #f1f3f4);
+  color: var(--color-text-primary, #202124);
+}
+
+.subtitle {
+  font-size: 13px;
+  color: var(--color-text-secondary, #5f6368);
+  margin: 0 0 18px;
+  line-height: 1.4;
+}
+
+.candidateList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 55vh;
+  overflow-y: auto;
+  margin: 0 -2px;
+  padding: 2px;
+}
+
+.candidateCard {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  align-items: stretch;
+  text-align: left;
+  padding: 14px;
+  border: 1px solid var(--color-border-visible, #dadce0);
+  border-radius: var(--radius-md, 10px);
+  background: var(--color-bg-tertiary, #f8f7f5);
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.candidateCard:has(.candidateActions button:hover) {
+  border-color: var(--color-accent, #b07d4f);
+}
+
+.candidateCardSelectable {
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0;
+  cursor: pointer;
+  font: inherit;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.candidateCardSelectable:active {
+  background: var(--color-bg-hover, #f1f3f4);
+}
+
+.candidateCardSelected {
+  border-color: var(--color-accent, #b07d4f);
+  background: color-mix(in srgb, var(--color-accent, #b07d4f) 7%, var(--color-bg-tertiary, #f8f7f5));
+}
+
+.candidateCheckRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.checkbox {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  border-radius: 6px;
+  border: 1.5px solid var(--color-border-visible, #dadce0);
+  background: var(--color-surface, #ffffff);
+  color: var(--color-bg, #ffffff);
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.checkboxChecked {
+  background: var(--color-accent, #b07d4f);
+  border-color: var(--color-accent, #b07d4f);
+}
+
+.candidateTitle {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text-primary, #202124);
+  line-height: 1.3;
+  word-break: break-word;
+}
+
+.candidateMetaRow {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  color: var(--color-text-secondary, #5f6368);
+  line-height: 1.35;
+}
+
+.candidateMetaRow svg {
+  flex-shrink: 0;
+  opacity: 0.75;
+  margin-top: 1px;
+}
+
+.candidateDescription {
+  font-size: 13px;
+  color: var(--color-text-secondary, #5f6368);
+  line-height: 1.4;
+  margin-top: 2px;
+}
+
+.confidenceBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  padding: 2px 7px;
+  border-radius: 999px;
+  width: fit-content;
+  margin-top: 2px;
+}
+
+.confidenceLow {
+  color: var(--color-error, #ea4335);
+  background: color-mix(in srgb, var(--color-error, #ea4335) 12%, transparent);
+}
+
+.confidenceMedium {
+  color: var(--color-warning, #b07d4f);
+  background: color-mix(in srgb, var(--color-warning, #b07d4f) 12%, transparent);
+}
+
+.emptyNote {
+  font-size: 13px;
+  color: var(--color-text-secondary, #5f6368);
+  font-style: italic;
+}
+
+.candidateActions {
+  display: flex;
+  margin-top: 10px;
+}
+
+.candidateActions .buttonPrimary {
+  width: 100%;
+}
+
+.footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  margin-top: 20px;
+}
+
+.button {
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.buttonPrimary {
+  background: var(--color-accent);
+  color: var(--color-bg, #ffffff);
+}
+
+.buttonPrimary:hover {
+  background: var(--color-accent-hover);
+}
+
+.buttonSecondary {
+  background: var(--color-surface, #ffffff);
+  color: var(--color-accent);
+  border: 1px solid var(--color-border-visible, #dadce0);
+}
+
+.buttonSecondary:hover {
+  background: var(--color-bg-hover, #f1f3f4);
+}
+
+@media (max-width: 768px) {
+  .modal {
+    align-items: flex-end;
+  }
+
+  .modalContent {
+    max-width: 100%;
+    max-height: min(85vh, 640px);
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    padding: var(--space-5) var(--space-5) calc(var(--space-5) + env(safe-area-inset-bottom, 0px));
+    animation: slideUpSheet 0.2s ease;
+  }
+
+  .modal.closing .modalContent {
+    animation: slideDownSheet 0.2s ease-in forwards;
+  }
+
+  .candidateList {
+    max-height: none;
+  }
+}
+
+@keyframes slideUpSheet {
+  from { opacity: 0; transform: translateY(100%); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideDownSheet {
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(100%); }
+}

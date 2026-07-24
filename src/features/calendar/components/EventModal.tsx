@@ -36,6 +36,7 @@ export function EventModal(): JSX.Element | null {
   const initialTitle = useCalendarStore((state) => state.initialTitle)
   const initialCalendarId = useCalendarStore((state) => state.initialCalendarId)
   const subtaskParentId = useCalendarStore((state) => state.subtaskParentId)
+  const pendingEventPrefill = useCalendarStore((state) => state.pendingEventPrefill)
   const selectedEventType = useCalendarStore((state) => state.selectedEventType)
   const events = useCalendarStore((state) => state.events)
   const calendars = useCalendarStore((state) => state.calendars)
@@ -389,14 +390,21 @@ export function EventModal(): JSX.Element | null {
       // Seed from formDefaults; if the caller passed an initialTitle (e.g. the
       // TodoView composer), override with that. This means the user's typed
       // text isn't lost when they press Enter in the inline composer.
-      setTitle(initialTitle ?? formDefaults.title)
-      setDescription(formDefaults.description)
-      setLocation(formDefaults.location)
+      // pendingEventPrefill (from the AI photo-import flow) takes the next
+      // precedence slot below initialTitle — start/end are already seeded via
+      // selectedDate/selectedEndDate (the drawer passes extracted.start/end
+      // straight into openModal()'s existing date/endDate params).
+      const prefillTitle = pendingEventPrefill?.title
+      const prefillDescription = pendingEventPrefill?.description
+      const prefillLocation = pendingEventPrefill?.location
+      setTitle(initialTitle ?? prefillTitle ?? formDefaults.title)
+      setDescription(prefillDescription ?? formDefaults.description)
+      setLocation(prefillLocation ?? formDefaults.location)
       setStartDate(formDefaults.startDate)
       setStartTime(formDefaults.startTime)
       setEndDate(formDefaults.endDate)
       setEndTime(formDefaults.endTime)
-      setIsAllDay(formDefaults.isAllDay)
+      setIsAllDay(pendingEventPrefill?.allDay !== undefined ? pendingEventPrefill.allDay : formDefaults.isAllDay)
       setCalendarId(requestedParent?.calendarId ?? initialCalendarId ?? formDefaults.calendarId)
       setRecurring(formDefaults.recurring)
       setRecurrence(formDefaults.recurrence)
@@ -411,10 +419,14 @@ export function EventModal(): JSX.Element | null {
       setTravelDuration(formDefaults.travelDuration)
       setTransparency(formDefaults.transparency)
       setReminders(formDefaults.reminders)
-      setShowDescription(!!formDefaults.description)
+      setShowDescription(!!(prefillDescription ?? formDefaults.description))
       setSelectedCategories(formDefaults.categories)
       setRelatedTo(formDefaults.relatedTo)
       setParentTaskId(currentEvent?.parentTaskId ?? requestedParent?.id)
+
+      if (pendingEventPrefill) {
+        useCalendarStore.getState().setPendingEventPrefill(null)
+      }
 
       const existingEvent = selectedEventId
         ? currentEvents.find((e) => e.id === selectedEventId)

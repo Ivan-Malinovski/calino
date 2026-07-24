@@ -30,6 +30,7 @@
 .row {
   display: flex;
   align-items: center;
+  justify-content: flex-start;
   gap: 12px;
   height: 44px;
   width: 100%;
@@ -51,4 +52,82 @@
 .row svg {
   color: var(--ink-3);
   flex-shrink: 0;
+}
+
+/* Wrapper for the "New Event" row when it has a secondary action button
+   (AI photo import) alongside it. Unlike .row, this is a plain div, not a
+   button, so it carries no padding/height of its own — .rowMain supplies
+   that — otherwise the padding would apply twice and misalign the row
+   against the other single-button rows below it. */
+.rowWrapper {
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.rowMain {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+  height: 44px;
+  padding: 0 10px;
+  border: none;
+  background: transparent;
+  border-radius: 10px;
+  color: var(--ink);
+  font-size: 14px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.rowMain:hover,
+.rowMain:active {
+  background: var(--hover-bg);
+}
+
+.rowMain svg {
+  color: var(--ink-3);
+  flex-shrink: 0;
+}
+
+.rowAction {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  margin-right: 10px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--ink-3);
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.rowAction:hover,
+.rowAction:active {
+  background: var(--hover-bg);
+}
+
+.rowAction:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.rowActionSpinner {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  animation: rowActionSpin 0.7s linear infinite;
+}
+
+@keyframes rowActionSpin {
+  to {
+    transform: rotate(360deg);
+  }
 }
