@@ -49,6 +49,7 @@ import { useGestures } from '@/hooks/useGestures'
 import { eventCardVariants } from '../lib/eventAnimations'
 import { hapticIfEnabled } from '@/lib/haptics'
 import { useIsTallWindow, useIsWideWindow } from '@/hooks/useWindowHeight'
+import { useIsPortraitWindow } from '@/hooks/useWindow'
 import { useDragDuplicateModifier } from '@/hooks/useDragDuplicateModifier'
 import { useDragModifierStore } from '@/store/dragModifierStore'
 import { useContextMenuStore } from '@/store/contextMenuStore'
@@ -107,6 +108,10 @@ export function CalendarGrid(): JSX.Element {
     (state) => state.hideCompletedTasksInMonthView ?? true
   )
   const journalEnabled = useSettingsStore((state) => state.journalEnabled)
+  const agendaBelowMonthEnabled = useSettingsStore((state) => state.agendaBelowMonthEnabled)
+  const monthAgendaGridRatioSetting = useSettingsStore((state) => state.monthAgendaGridRatio)
+  const monthAgendaSplitRatioSetting = useSettingsStore((state) => state.monthAgendaSplitRatio)
+  const updateSettings = useSettingsStore((state) => state.updateSettings)
 
   const { updateEvent: caldavUpdateEvent } = useCalDAV()
 
@@ -160,9 +165,13 @@ export function CalendarGrid(): JSX.Element {
   const isCompactMobile = useIsCompactMobile()
   const isTallWindow = useIsTallWindow()
   const isWideWindow = useIsWideWindow()
+  const isPortraitWindow = useIsPortraitWindow()
+  const showAgendaSplit = agendaBelowMonthEnabled && ((isTallWindow && isPortraitWindow) || isCompactMobile)
   const [bottomPanelDay, setBottomPanelDay] = useState<string | null>(null)
-  const [splitRatio, setSplitRatio] = useState(0.65)
-  const [gridRatio, setGridRatio] = useState(0.4)
+  const [splitRatio, setSplitRatio] = useState(monthAgendaSplitRatioSetting)
+  const [gridRatio, setGridRatio] = useState(monthAgendaGridRatioSetting)
+  const gridRatioRef = useRef(gridRatio)
+  const splitRatioRef = useRef(splitRatio)
   const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const scrollCooldownRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const currentDateRef = useRef(currentDate)
@@ -563,12 +572,15 @@ export function CalendarGrid(): JSX.Element {
     const containerHeight = (e.currentTarget.parentElement as HTMLElement).getBoundingClientRect().height
     const onMove = (ev: MouseEvent): void => {
       const delta = (ev.clientY - startY) / containerHeight
-      setGridRatio(Math.min(0.85, Math.max(0.35, startRatio + delta)))
+      const next = Math.min(0.85, Math.max(0.35, startRatio + delta))
+      gridRatioRef.current = next
+      setGridRatio(next)
     }
     const onUp = (): void => {
       document.removeEventListener('mousemove', onMove)
       document.removeEventListener('mouseup', onUp)
       resizeCleanupRef.current = null
+      updateSettings({ monthAgendaGridRatio: gridRatioRef.current })
     }
     resizeCleanupRef.current = onUp
     document.addEventListener('mousemove', onMove)
@@ -583,12 +595,15 @@ export function CalendarGrid(): JSX.Element {
     const containerHeight = (e.currentTarget.parentElement as HTMLElement).getBoundingClientRect().height
     const onMove = (ev: TouchEvent): void => {
       const delta = (ev.touches[0].clientY - startY) / containerHeight
-      setGridRatio(Math.min(0.85, Math.max(0.35, startRatio + delta)))
+      const next = Math.min(0.85, Math.max(0.35, startRatio + delta))
+      gridRatioRef.current = next
+      setGridRatio(next)
     }
     const onEnd = (): void => {
       document.removeEventListener('touchmove', onMove)
       document.removeEventListener('touchend', onEnd)
       resizeCleanupRef.current = null
+      updateSettings({ monthAgendaGridRatio: gridRatioRef.current })
     }
     resizeCleanupRef.current = onEnd
     document.addEventListener('touchmove', onMove, { passive: false })
@@ -604,12 +619,15 @@ export function CalendarGrid(): JSX.Element {
     const containerWidth = (e.currentTarget.parentElement as HTMLElement).getBoundingClientRect().width
     const onMove = (ev: MouseEvent): void => {
       const delta = (ev.clientX - startX) / containerWidth
-      setSplitRatio(Math.min(0.85, Math.max(0.25, startRatio + delta)))
+      const next = Math.min(0.85, Math.max(0.25, startRatio + delta))
+      splitRatioRef.current = next
+      setSplitRatio(next)
     }
     const onUp = (): void => {
       document.removeEventListener('mousemove', onMove)
       document.removeEventListener('mouseup', onUp)
       resizeCleanupRef.current = null
+      updateSettings({ monthAgendaSplitRatio: splitRatioRef.current })
     }
     resizeCleanupRef.current = onUp
     document.addEventListener('mousemove', onMove)
@@ -624,12 +642,15 @@ export function CalendarGrid(): JSX.Element {
     const containerWidth = (e.currentTarget.parentElement as HTMLElement).getBoundingClientRect().width
     const onMove = (ev: TouchEvent): void => {
       const delta = (ev.touches[0].clientX - startX) / containerWidth
-      setSplitRatio(Math.min(0.85, Math.max(0.25, startRatio + delta)))
+      const next = Math.min(0.85, Math.max(0.25, startRatio + delta))
+      splitRatioRef.current = next
+      setSplitRatio(next)
     }
     const onEnd = (): void => {
       document.removeEventListener('touchmove', onMove)
       document.removeEventListener('touchend', onEnd)
       resizeCleanupRef.current = null
+      updateSettings({ monthAgendaSplitRatio: splitRatioRef.current })
     }
     resizeCleanupRef.current = onEnd
     document.addEventListener('touchmove', onMove, { passive: false })
@@ -638,7 +659,7 @@ export function CalendarGrid(): JSX.Element {
 
   const handleDayClick = (day: Date): void => {
     const dateStr = format(day, 'yyyy-MM-dd')
-    if (isTallWindow || isCompactMobile) {
+    if (showAgendaSplit) {
       setCurrentDate(dateStr)
       setBottomPanelDay((prev) => (prev === dateStr ? null : dateStr))
     } else {
@@ -653,7 +674,7 @@ export function CalendarGrid(): JSX.Element {
   }
 
   const handleDayNumberClick = (day: Date): void => {
-    if (isTallWindow || isCompactMobile) {
+    if (showAgendaSplit) {
       const dateStr = format(day, 'yyyy-MM-dd')
       setCurrentDate(dateStr)
       setBottomPanelDay((prev) => (prev === dateStr ? null : dateStr))
@@ -672,7 +693,7 @@ export function CalendarGrid(): JSX.Element {
 
   const rowHeight = Math.round(100 * scale)
 
-  if (isTallWindow || isCompactMobile) {
+  if (showAgendaSplit) {
     return (
       <>
       <div className={styles.splitContainer}>

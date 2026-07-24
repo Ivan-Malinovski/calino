@@ -135,6 +135,9 @@ const DEFAULT_SETTINGS: UserSettings = {
   overdueTaskBadge: false,
   agendaSidebarOpen: false,
   agendaSidebarWidth: 340,
+  agendaBelowMonthEnabled: true,
+  monthAgendaGridRatio: 0.4,
+  monthAgendaSplitRatio: 0.65,
 }
 
 export const useSettingsStore = create<SettingsStore>()(

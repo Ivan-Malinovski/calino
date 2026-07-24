@@ -305,6 +305,9 @@ export interface UserSettings {
   overdueTaskBadge: boolean
   agendaSidebarOpen: boolean
   agendaSidebarWidth: number
+  agendaBelowMonthEnabled: boolean
+  monthAgendaGridRatio: number
+  monthAgendaSplitRatio: number
 }
 
 export type SettingsState = UserSettings

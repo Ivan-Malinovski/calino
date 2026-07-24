@@ -11,6 +11,7 @@ export function CalendarSettings(): JSX.Element {
   const defaultView = useSettingsStore((s) => s.defaultView)
   const showWeekNumbers = useSettingsStore((s) => s.showWeekNumbers)
   const showWeekNumbersInSidebar = useSettingsStore((s) => s.showWeekNumbersInSidebar)
+  const agendaBelowMonthEnabled = useSettingsStore((s) => s.agendaBelowMonthEnabled)
   const eventDensity = useSettingsStore((s) => s.eventDensity)
   const compactRecurringEvents = useSettingsStore((s) => s.compactRecurringEvents)
   const compressPastWeeks = useSettingsStore((s) => s.compressPastWeeks)
@@ -125,6 +126,26 @@ export function CalendarSettings(): JSX.Element {
                 </button>
               ))}
             </div>
+          </div>
+        </div>
+        <div className={styles.row} data-component="setting-row" data-setting="agenda-below-month-enabled" data-value={String(agendaBelowMonthEnabled)}>
+          <div className={styles.rowInfo}>
+            <div className={styles.rowLabel}>Split Agenda Below Month View</div>
+            <div className={styles.rowDesc}>On tall, portrait-oriented screens, show an agenda panel below the month grid</div>
+          </div>
+          <div className={styles.rowControl}>
+            <label className={styles.toggle} data-component="toggle" data-setting="agenda-below-month-enabled">
+              <input
+                type="checkbox"
+                checked={agendaBelowMonthEnabled}
+                aria-label="Split agenda below month view"
+                onChange={() =>
+                  updateSettings({ agendaBelowMonthEnabled: !agendaBelowMonthEnabled })
+                }
+              />
+              <span className={styles.pill} />
+              <span className={styles.knob} />
+            </label>
           </div>
         </div>
       </div>

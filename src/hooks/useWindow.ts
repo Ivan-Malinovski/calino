@@ -62,3 +62,8 @@ export function useIsWideWindow(threshold = 1200): boolean {
 export function useIsTallWindow(threshold = 1400): boolean {
   return useMatchMedia(`(min-height: ${threshold + 1}px)`)
 }
+
+/** Returns true when the viewport is portrait-oriented (height >= width). */
+export function useIsPortraitWindow(): boolean {
+  return useMatchMedia('(orientation: portrait)')
+}

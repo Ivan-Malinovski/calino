@@ -22,6 +22,7 @@ interface CommandFactoryDeps {
   journalEnabled?: boolean
   contactsEnabled?: boolean
   showWeekNumbersInSidebar?: boolean
+  agendaBelowMonthEnabled?: boolean
   updateSettings?: (
     settings: Partial<{
       themeMode: ThemeMode
@@ -33,6 +34,7 @@ interface CommandFactoryDeps {
       journalEnabled: boolean
       contactsEnabled: boolean
       showWeekNumbersInSidebar: boolean
+      agendaBelowMonthEnabled: boolean
     }>
   ) => void
 }
@@ -406,6 +408,21 @@ const createSettingsCommands = (deps: CommandFactoryDeps): Command[] => [
       const newValue = !deps.showWeekNumbersInSidebar
       deps.updateSettings?.({ showWeekNumbersInSidebar: newValue })
       return newValue ? 'Week numbers shown in sidebar' : 'Week numbers hidden in sidebar'
+    },
+  },
+  {
+    id: 'toggle-agenda-below-month',
+    label: deps.agendaBelowMonthEnabled
+      ? 'Disable Agenda Below Month View'
+      : 'Enable Agenda Below Month View',
+    description: 'On tall, portrait-oriented screens, show an agenda panel below the month grid',
+    category: 'settings',
+    keywords: ['agenda', 'month', 'split', 'panel', 'portrait', 'layout'],
+    icon: ICONS.sidebar,
+    action: () => {
+      const newValue = !deps.agendaBelowMonthEnabled
+      deps.updateSettings?.({ agendaBelowMonthEnabled: newValue })
+      return newValue ? 'Agenda below month view enabled' : 'Agenda below month view disabled'
     },
   },
   {
