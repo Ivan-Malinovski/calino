@@ -16,6 +16,18 @@
   box-shadow: var(--shadow-card, 0 1px 2px rgba(var(--ink-raw), 0.04), 0 6px 16px rgba(var(--ink-raw), 0.03));
 }
 
+/* Wraps a month's worth of rows so they can transition in as one unit. It
+   stands in for the day blocks that used to be direct children, so it carries
+   the column layout they sat in — and grows rather than shrinks, so the empty
+   state still centres and long months scroll the container instead of being
+   squashed. */
+.monthPane {
+  display: flex;
+  flex-direction: column;
+  flex: 1 0 auto;
+  min-height: 0;
+}
+
 .embedded {
   padding: 0;
   background: transparent;
@@ -271,6 +283,7 @@
 
 .agendaTaskIcon {
   font-size: 14px;
+  order: 0;
   color: var(--ink-2, #6f6a62);
   margin-right: 8px;
   width: 16px;
@@ -279,4 +292,16 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+}
+
+/* On a phone the row is wide and mostly empty to the right of the title, so
+   the check reads better parked on the card's trailing edge — thumb-side and
+   in one column down the list — than wedged between the time and the title.
+   Desktop keeps the inline order, where rows are narrower. */
+@media (max-width: 768px) { /* sync with config.ts MOBILE_BREAKPOINT */
+  .agendaTaskIcon {
+    order: 1;
+    margin-left: auto;
+    margin-right: 0;
+  }
 }

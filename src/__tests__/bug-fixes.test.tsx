@@ -38,6 +38,17 @@ vi.mock('framer-motion', () => ({
     ),
   },
   AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  // EventModal's swipe-to-dismiss sheet drives a motion value directly; these
+  // are inert stand-ins so the component can mount under jsdom.
+  useMotionValue: (initial: number) => {
+    let value = initial
+    return {
+      get: () => value,
+      set: (next: number) => { value = next },
+      on: () => () => {},
+    }
+  },
+  animate: () => ({ stop: () => {} }),
 }))
 
 vi.mock('@/features/caldav/hooks/useCalDAV', () => ({

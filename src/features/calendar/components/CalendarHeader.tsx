@@ -325,6 +325,36 @@ export function CalendarHeader({
 
   const title = getTitle()
 
+  // Directional title transition: the label slides in from the side you're
+  // heading towards (forward → in from the right), so a month jump reads as
+  // movement along the calendar rather than a silent text swap. Keyed off the
+  // rendered label, not the date, so same-label navigation (a day step inside
+  // the current month, or "Today" when already there) stays still.
+  const titleLabel = typeof title === 'object' ? `${title.month} ${title.year}` : title
+  const prevTitleRef = useRef(titleLabel)
+  const prevDateRef = useRef(currentDate)
+  const [titleTransition, setTitleTransition] = useState<{ dir: 'next' | 'prev'; seq: number } | null>(null)
+
+  useLayoutEffect(() => {
+    if (prevTitleRef.current === titleLabel) {
+      prevDateRef.current = currentDate
+      return
+    }
+    const forward = currentDate > prevDateRef.current
+    prevTitleRef.current = titleLabel
+    prevDateRef.current = currentDate
+    setTitleTransition((prev) => ({ dir: forward ? 'next' : 'prev', seq: (prev?.seq ?? 0) + 1 }))
+  }, [titleLabel, currentDate])
+
+  // Remounting on `seq` is what replays the CSS animation; the class picks the
+  // direction. Reduced motion is handled in the stylesheet.
+  const titleAnimClass = titleTransition
+    ? titleTransition.dir === 'next'
+      ? styles.titleEnterNext
+      : styles.titleEnterPrev
+    : ''
+  const titleAnimKey = titleTransition?.seq ?? 0
+
   const visibleViews = VIEWS.filter(
     (v) => (journalEnabled || v.value !== 'journal') && (contactsEnabled || v.value !== 'contacts')
   )
@@ -450,11 +480,11 @@ export function CalendarHeader({
       >
         {typeof title === 'object' ? (
           <>
-            <h1 className={styles.monthTitle}>{title.month}</h1>
-            <span className={styles.yearTitle}>{title.year}</span>
+            <h1 key={`m${titleAnimKey}`} className={`${styles.monthTitle} ${titleAnimClass}`}>{title.month}</h1>
+            <span key={`y${titleAnimKey}`} className={`${styles.yearTitle} ${titleAnimClass}`}>{title.year}</span>
           </>
         ) : (
-          <h1 className={styles.viewTitle}>{title}</h1>
+          <h1 key={`v${titleAnimKey}`} className={`${styles.viewTitle} ${titleAnimClass}`}>{title}</h1>
         )}
       </div>
 

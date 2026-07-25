@@ -383,6 +383,17 @@
   min-height: 0;
   overflow: hidden;
   padding: 0 5px;
+  /* Only `min-height` animates, and it only changes when the month's week
+     count does — so swiping between a 5- and 6-week month eases into its new
+     height. Deliberately not `flex-basis`: that one tracks the drag handle,
+     where a transition would just feel like lag. */
+  transition: min-height 260ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gridTop {
+    transition: none;
+  }
 }
 
 .agendaBottom {
@@ -459,20 +470,34 @@
     overflow-x: hidden;
   }
 
-  /* Hide week number column */
+  /* The week-number column is the setting's to show or hide, not the
+     breakpoint's — it just gets a narrower column here than the 46px desktop
+     one. The `NoWeekNum` rules must follow the base ones to win: same
+     specificity, so order decides. */
+  .header,
+  .weekRow {
+    grid-template-columns: 22px repeat(7, 1fr);
+    border-right: none;
+  }
+
+  .headerNoWeekNum,
+  .weekRowNoWeekNum {
+    grid-template-columns: repeat(7, 1fr);
+  }
+
   .weekNumHeader,
   .weekNumber {
-    display: none;
+    font-size: 9px;
+    letter-spacing: 0;
   }
 
-  .header {
-    grid-template-columns: repeat(7, 1fr);
-    border-right: none;
-  }
-
-  .weekRow {
-    grid-template-columns: repeat(7, 1fr);
-    border-right: none;
+  .weekNumber {
+    padding-top: 6px;
+    /* The desktop cell-height floor lives on this element, and it's the only
+       thing in a row that carries one. On a phone the day cells size to a row
+       of dots, so leaving it in place forced every week to 100px and made the
+       month swallow the screen. */
+    min-height: 0;
   }
 
   .day {

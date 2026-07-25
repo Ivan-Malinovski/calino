@@ -1,5 +1,6 @@
 import type { JSX } from 'react'
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { motion } from 'framer-motion'
 import { format, parseISO } from 'date-fns'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
@@ -10,6 +11,9 @@ import { putAttachments, getAttachments, deleteAttachments } from '@/lib/attachm
 import type { CalendarEvent, CalendarAttachment } from '@/types'
 import { AttachmentSection } from './AttachmentSection'
 import { useFocusTrap } from '@/hooks/useFocusTrap'
+import { useIsMobile } from '@/hooks/useIsMobile'
+import { useReducedMotion } from '@/hooks/useReducedMotion'
+import { useSheetSwipeDismiss } from '@/hooks/useSheetSwipeDismiss'
 import styles from './JournalDayModal.module.css'
 
 interface JournalDayModalProps {
@@ -20,6 +24,9 @@ interface JournalDayModalProps {
 }
 
 type ModalMode = 'view' | 'compose' | 'edit'
+
+/** Roughly how long the mobile sheet's slide-up takes to settle. */
+const SHEET_ENTRANCE_MS = 340
 
 export function JournalDayModal({ isOpen, date, startInCompose = false, onClose }: JournalDayModalProps): JSX.Element | null {
   const events = useCalendarStore((state) => state.events)
@@ -84,12 +91,28 @@ export function JournalDayModal({ isOpen, date, startInCompose = false, onClose 
     }
   }, [isOpen, date, startInCompose])
 
-  // Focus input when entering compose/edit mode
+  // Focus input when entering compose/edit mode. When that mode change is the
+  // one that opened the sheet, the focus waits for the entrance to land:
+  // focusing mid-flight raises the keyboard, which resizes the `dvh`-sized
+  // sheet while it's still travelling and reads as a stutter. Switching modes
+  // on an already-open sheet keeps the original snappy delay.
+  const isMobile = useIsMobile()
+  const prefersReducedMotion = useReducedMotion()
+  const openedAtRef = useRef(0)
   useEffect(() => {
-    if (mode === 'compose' || mode === 'edit') {
-      setTimeout(() => titleInputRef.current?.focus(), 80)
-    }
-  }, [mode])
+    if (isOpen) openedAtRef.current = Date.now()
+  }, [isOpen])
+
+  useEffect(() => {
+    if (mode !== 'compose' && mode !== 'edit') return
+    const sinceOpen = Date.now() - openedAtRef.current
+    const animating = isMobile && !prefersReducedMotion && sinceOpen < SHEET_ENTRANCE_MS
+    const timer = setTimeout(
+      () => titleInputRef.current?.focus(),
+      animating ? SHEET_ENTRANCE_MS - sinceOpen : 80
+    )
+    return () => clearTimeout(timer)
+  }, [mode, isMobile, prefersReducedMotion])
 
   // Reset focused entry index when entries change or modal opens
   useEffect(() => {
@@ -310,12 +333,31 @@ export function JournalDayModal({ isOpen, date, startInCompose = false, onClose 
   // Close on Escape only (no click-outside — same as EventModal)
   useFocusTrap(panelRef, isOpen)
 
+  // Swipe-down-to-dismiss, matching the event modal. The panel is its own
+  // scroll container, so it doubles as the scroll region the gesture defers
+  // to while there's still content to scroll up into.
+  const sheetY = useSheetSwipeDismiss({
+    enabled: isMobile,
+    open: isOpen,
+    sheetRef: panelRef,
+    scrollRef: panelRef,
+    onDismiss: onClose,
+    reducedMotion: prefersReducedMotion,
+  })
+
   if (!isOpen) return null
 
 
   return (
     <div className={styles.scrim}>
-      <div className={styles.panel} ref={panelRef} role="dialog" aria-modal="true">
+      <motion.div
+        className={styles.panel}
+        ref={panelRef}
+        style={{ y: sheetY }}
+        role="dialog"
+        aria-modal="true"
+      >
+        <div className={styles.dragHandle} aria-hidden="true" />
         <button className={styles.close} onClick={onClose} aria-label="Close">
           <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
             <path d="M3 3l10 10M13 3L3 13" />
@@ -604,7 +646,7 @@ export function JournalDayModal({ isOpen, date, startInCompose = false, onClose 
             </button>
           )}
         </div>
-      </div>
+      </motion.div>
     </div>
   )
 }

@@ -42,6 +42,18 @@
   width: 100%;
   opacity: 1;
   transition: opacity 0.2s ease;
+  /* .sidebar clips overflow, so without this the sections past the bottom of
+     a short viewport (a long task list, many calendars) were simply
+     unreachable. */
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* Sections size to their content and scroll as a whole; the flex default
+   would squash them to fit instead, which is what made scrolling unnecessary
+   — and impossible. */
+.sidebarContent > * {
+  flex-shrink: 0;
 }
 
 .sidebarCollapsed .sidebarContent {

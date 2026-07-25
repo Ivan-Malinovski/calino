@@ -1,5 +1,5 @@
 import type { JSX } from 'react'
-import React, { useMemo, useState, useRef, useCallback, useEffect } from 'react'
+import React, { useMemo, useState, useRef, useCallback, useEffect, useLayoutEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
@@ -41,6 +41,7 @@ import { useCalendarStore } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
 import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
 import { useIsMobile, useIsCompactMobile } from '@/hooks/useIsMobile'
+import { useDateChangeMotion } from '@/hooks/useDateChangeMotion'
 import { safeCalDAVUpdate } from '@/lib/caldavHelpers'
 import { EventCard } from './EventCard'
 import { DayEventsPopup } from './DayEventsPopup'
@@ -57,7 +58,6 @@ import { AgendaView } from './AgendaView'
 import { DayView } from './DayView'
 import type { CalendarEvent, ViewType } from '@/types'
 import { getJournalDates } from '@/store/calendarStore'
-import { JournalDayModal } from './JournalDayModal'
 import styles from './CalendarGrid.module.css'
 
 const VIEW_ROUTES: Record<ViewType, string> = {
@@ -73,7 +73,6 @@ const VIEW_ROUTES: Record<ViewType, string> = {
 }
 
 export function CalendarGrid(): JSX.Element {
-  const prefersReducedMotion = useReducedMotion()
   const currentDate = useCalendarStore((state) => state.currentDate)
   const events = useCalendarStore((state) => state.events)
   const calendars = useCalendarStore((state) => state.calendars)
@@ -159,7 +158,6 @@ export function CalendarGrid(): JSX.Element {
   const [activeEvent, setActiveEvent] = useState<CalendarEvent | null>(null)
   const [activeLayout, setActiveLayout] = useState<{ compact: boolean; monthView: boolean; dotMode: boolean; isMobileMonth: boolean }>({ compact: false, monthView: false, dotMode: false, isMobileMonth: false })
   const draggedEventRef = useRef<CalendarEvent | null>(null)
-  const [scrollDirection, setScrollDirection] = useState<'up' | 'down' | null>(null)
   const [scale, setScale] = useState(1)
   const isMobile = useIsMobile()
   const isCompactMobile = useIsCompactMobile()
@@ -179,9 +177,9 @@ export function CalendarGrid(): JSX.Element {
   // Track active resize listeners for cleanup on unmount
   const resizeCleanupRef = useRef<(() => void) | null>(null)
   // Journal day modal state (from global store)
-  const isJournalModalOpen = useCalendarStore((state) => state.isJournalModalOpen)
-  const journalModalDate = useCalendarStore((state) => state.journalModalDate)
-  const journalStartInCompose = useCalendarStore((state) => state.journalStartInCompose)
+  // The journal modal itself is rendered once, globally, in App.tsx — a second
+  // copy here sat exactly on top of it and only became visible once the sheet
+  // could be dragged away from it.
   const openJournalModal = useCalendarStore((state) => state.openJournalModal)
   const closeJournalModal = useCalendarStore((state) => state.closeJournalModal)
 
@@ -251,7 +249,6 @@ export function CalendarGrid(): JSX.Element {
       }
 
       const direction = e.deltaY > 0 ? 'down' : 'up'
-      setScrollDirection(direction)
 
       scrollCooldownRef.current = setTimeout(() => {
         scrollCooldownRef.current = null
@@ -259,7 +256,6 @@ export function CalendarGrid(): JSX.Element {
 
       scrollTimeoutRef.current = setTimeout(() => {
         changeMonth(direction)
-        setScrollDirection(null)
       }, 0)
     }
 
@@ -693,14 +689,102 @@ export function CalendarGrid(): JSX.Element {
 
   const rowHeight = Math.round(100 * scale)
 
+  // Month change animation. On a phone the gesture is a horizontal swipe, so
+  // the grid travels horizontally to match the finger — the incoming month
+  // enters from the side you swiped towards. Pointer/wheel navigation on
+  // desktop stays vertical, matching the scroll that drives it.
+  // Directional transition when the calendar moves to another month.
+  const monthChangeMotion = useDateChangeMotion(currentDate.slice(0, 7))
+
+  // In the month+agenda split the grid gets a fixed share of the height, but
+  // its content doesn't: a 6-week month is a whole row taller than a 5-week
+  // one, and compressed past weeks change it again. When the share came up
+  // short the grid just scrolled (`.grid` is `overflow: auto`), hiding days.
+  // So the share becomes a floor-and-ceiling instead: never shorter than the
+  // weeks actually need, never so tall the agenda is squeezed out.
+  const AGENDA_MIN_SHARE = 0.25
+  const splitContainerRef = useRef<HTMLDivElement>(null)
+  const gridTopRef = useRef<HTMLDivElement>(null)
+  const gridScrollRef = useRef<HTMLDivElement>(null)
+  const [gridMinHeight, setGridMinHeight] = useState(0)
+  const hasMeasuredRef = useRef(false)
+  const rafRef = useRef(0)
+
+  useLayoutEffect(() => {
+    if (!showAgendaSplit) {
+      setGridMinHeight(0)
+      hasMeasuredRef.current = false
+      return
+    }
+    const measure = (): void => {
+      const top = gridTopRef.current
+      const scroller = gridScrollRef.current
+      const container = splitContainerRef.current
+      if (!top || !scroller || !container) return
+      // What the weeks need has to be read off real layout — the cells size to
+      // their content (a row of dots is nothing like a row of event chips), so
+      // deriving it from the cell-height setting badly overestimated. Drop the
+      // floor and read the overflow in one synchronous pass: `useLayoutEffect`
+      // plus the forced reflow means the collapsed state never reaches the
+      // screen, and the transition is off so it can't animate through it.
+      const restoreTransition = top.style.transition
+      const restoreMinHeight = top.style.minHeight
+      top.style.transition = 'none'
+      top.style.minHeight = '0px'
+      void top.offsetHeight
+      // Chrome around the scroll area (panel borders, margins) that the grid's
+      // own scrollHeight doesn't account for.
+      const chrome = top.offsetHeight - scroller.clientHeight
+      const needed = scroller.scrollHeight + chrome
+      top.style.minHeight = restoreMinHeight
+      // Put the old height back and commit it *before* re-enabling the
+      // transition. The forced reflow above leaves 0px as the element's
+      // committed value, so restoring the transition first made the browser
+      // animate from a collapsed grid — the divider snapping to the top and
+      // easing back down on every month change. Two reflows, one to measure
+      // and one to restore, keep the animation running old height → new.
+      void top.offsetHeight
+      top.style.transition = restoreTransition
+      // Leave the agenda a usable share even in a 6-week month.
+      const cap = container.clientHeight * (1 - AGENDA_MIN_SHARE)
+      const next = Math.min(needed, cap)
+      if (!hasMeasuredRef.current) {
+        // First run: no previous height to travel from, so don't defer.
+        hasMeasuredRef.current = true
+        setGridMinHeight(next)
+        return
+      }
+      // Applying the new height here would land in the same commit as the
+      // measurement, before the browser has painted the old one — leaving
+      // nothing to transition from, so the change was instant. Waiting a frame
+      // lets the old height paint, and the transition then runs from it.
+      cancelAnimationFrame(rafRef.current)
+      rafRef.current = requestAnimationFrame(() => setGridMinHeight(next))
+    }
+    measure()
+    const container = splitContainerRef.current
+    if (!container) return
+    const observer = new ResizeObserver(measure)
+    observer.observe(container)
+    return () => {
+      observer.disconnect()
+      cancelAnimationFrame(rafRef.current)
+    }
+  }, [showAgendaSplit, currentDate, weekNumbers, days, compressPastWeeks, rowHeight, eventsMap, tasksMap])
+
   if (showAgendaSplit) {
     return (
       <>
-      <div className={styles.splitContainer}>
-        <div className={styles.gridTop} style={{ flex: `0 0 ${gridRatio * 100}%`, maxHeight: 800 * gridRatio / 0.6 }}>
+      <div className={styles.splitContainer} ref={splitContainerRef}>
+        <div
+          ref={gridTopRef}
+          className={styles.gridTop}
+          style={{ flex: `0 0 ${gridRatio * 100}%`, minHeight: gridMinHeight || undefined, maxHeight: 800 * gridRatio / 0.6 }}
+        >
           <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
             <div className={styles.gridPanel} ref={containerRef} {...bind}>
               <div
+                ref={gridScrollRef}
                 className={styles.grid}
                 data-component="calendar-grid"
                 onKeyDown={handleGridKeyDown}
@@ -718,10 +802,7 @@ export function CalendarGrid(): JSX.Element {
                 <motion.div
                   key={currentDate}
                   className={styles.daysContainer}
-                  initial={prefersReducedMotion ? false : { opacity: 0, y: scrollDirection === 'down' ? -10 : 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: scrollDirection === 'down' ? 10 : -10 }}
-                  transition={{ duration: prefersReducedMotion ? 0 : 0.1 }}
+                  {...monthChangeMotion}
                 >
                   {weekNumbers.map((weekNum, weekIdx) => {
                     const weekEnd = days[weekIdx * 7 + 6]
@@ -812,14 +893,6 @@ export function CalendarGrid(): JSX.Element {
           )}
         </div>
       </div>
-      {isJournalModalOpen && journalModalDate && (
-        <JournalDayModal
-          isOpen={isJournalModalOpen}
-          date={journalModalDate}
-          startInCompose={journalStartInCompose}
-          onClose={closeJournalModal}
-        />
-      )}
     </>
     )
   }
@@ -846,10 +919,7 @@ export function CalendarGrid(): JSX.Element {
           <motion.div
             key={currentDate}
             className={styles.daysContainer}
-            initial={prefersReducedMotion ? false : { opacity: 0, y: scrollDirection === 'down' ? -10 : 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: scrollDirection === 'down' ? 10 : -10 }}
-            transition={{ duration: prefersReducedMotion ? 0 : 0.1 }}
+            {...monthChangeMotion}
           >
             {weekNumbers.map((weekNum, weekIdx) => {
               const weekEnd = days[weekIdx * 7 + 6]
@@ -922,14 +992,6 @@ export function CalendarGrid(): JSX.Element {
       </div>
       <DragOverlay dropAnimation={null}>{activeEvent ? <EventCard event={activeEvent} compact={activeLayout.compact} monthView={activeLayout.monthView} dotMode={activeLayout.dotMode} isMobileMonth={activeLayout.isMobileMonth} enableResize={false} /> : null}</DragOverlay>
     </DndContext>
-    {isJournalModalOpen && journalModalDate && (
-      <JournalDayModal
-        isOpen={isJournalModalOpen}
-        date={journalModalDate}
-        startInCompose={journalStartInCompose}
-        onClose={closeJournalModal}
-      />
-    )}
     </>
   )
 }

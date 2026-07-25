@@ -40,6 +40,11 @@
   to { transform: translateY(0); opacity: 1; }
 }
 
+/* Mobile sheet only — see the drag handle rule in the mobile block below. */
+.dragHandle {
+  display: none;
+}
+
 .close {
   position: absolute;
   top: 16px;
@@ -680,6 +685,7 @@
     gap: 16px 0;
   }
 
+
   .dateCol {
     flex-direction: row;
     align-items: baseline;
@@ -688,5 +694,47 @@
 
   .day {
     font-size: 36px;
+  }
+}
+
+/* Mobile sheet. 768px, not this file's 600px card block, because that's
+   MOBILE_BREAKPOINT — the same gate useIsMobile applies to the swipe-to-
+   dismiss gesture, and the sheet look and the gesture have to agree. */
+@media (max-width: 768px) {
+  /* Sit on the bottom edge and run as tall as the viewport allows, so the
+     compose field ends up close to the keyboard rather than floating in the
+     middle of the screen. `dvh` (not `vh`) is what makes this track the
+     keyboard: the sheet's bottom stays just above it. */
+  .scrim {
+    align-items: flex-end;
+  }
+
+  .panel {
+    width: 100%;
+    max-width: none;
+    max-height: calc(100dvh - 32px);
+    padding-top: 8px;
+    padding-bottom: calc(20px + var(--safe-area-bottom, 0px));
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    /* The swipe-to-dismiss gesture drives `y` on this element; a keyframe on
+       the same transform would fight it (see useSheetSwipeDismiss). */
+    animation: none;
+    will-change: transform;
+  }
+
+  /* Swipe-to-dismiss grab affordance. Spans the grid so it centres on the
+     sheet rather than on the first column. */
+  .dragHandle {
+    display: block;
+    grid-column: 1 / -1;
+    width: 36px;
+    height: 4px;
+    margin: 0 auto 4px;
+    border-radius: var(--radius-full, 9999px);
+    background: var(--color-border-visible, rgba(0, 0, 0, 0.12));
+    /* Without this, Android/Chrome can decide partway through that the drag
+       was really a page scroll and cancel the pointer sequence. */
+    touch-action: none;
   }
 }

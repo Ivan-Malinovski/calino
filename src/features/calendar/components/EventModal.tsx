@@ -1,5 +1,6 @@
 import type { JSX } from 'react'
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
+import { motion } from 'framer-motion'
 import { format, parseISO } from 'date-fns'
 import { pad2 } from '@/lib/datetime'
 import { v4 as uuidv4 } from 'uuid'
@@ -19,6 +20,8 @@ import { DeleteDialog } from './DeleteDialog'
 import { getInitialFormState, addMinutesToTimeStr } from './eventModalState'
 import { useFocusTrap } from '@/hooks/useFocusTrap'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
+import { useIsMobile } from '@/hooks/useIsMobile'
+import { useSheetSwipeDismiss } from '@/hooks/useSheetSwipeDismiss'
 import { parseNaturalLanguage } from '@/features/nlp'
 import type { NLPParseResult } from '@/features/nlp'
 import { useSmartDefaultsStore } from '@/store/smartDefaultsStore'
@@ -63,6 +66,22 @@ export function EventModal(): JSX.Element | null {
       closeModal()
     }, prefersReducedMotion ? 0 : 200)
   }, [closeModal, prefersReducedMotion])
+
+  // Swipe-down-to-dismiss plus the matching slide-up entrance, both on one
+  // motion value bound to the card's `y`. See the hook for why this owns the
+  // raw touch stream instead of using framer's `drag`.
+  const isMobile = useIsMobile()
+  const dialogRef = useRef<HTMLDivElement>(null)
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const sheetY = useSheetSwipeDismiss({
+    enabled: isMobile,
+    open: isModalOpen,
+    sheetRef: dialogRef,
+    scrollRef,
+    onDismiss: closeModal,
+    reducedMotion: prefersReducedMotion,
+  })
+
   const {
     createEvent: createCalDAVEvent,
     updateEvent: updateCalDAVEvent,
@@ -198,7 +217,6 @@ export function EventModal(): JSX.Element | null {
   const lastSelectedEventId = useRef<string | null>(null)
   const lastSelectedDate = useRef<string | null>(null)
   const titleInputRef = useRef<HTMLInputElement>(null)
-  const dialogRef = useRef<HTMLDivElement>(null)
   const closeModalRef = useRef(closeModal)
   useEffect(() => { closeModalRef.current = closeModal })
 
@@ -458,12 +476,17 @@ export function EventModal(): JSX.Element | null {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally only reset on user-initiated event/date/endDate changes
   }, [selectedEventId, selectedDate, selectedEndDate, subtaskParentId, initialCalendarId])
 
-  // Auto-focus title input when creating a new event
+  // Auto-focus title input when creating a new event. On mobile this waits
+  // for the entrance to finish: focusing mid-flight opens the soft keyboard,
+  // which resizes the `100dvh` sheet while it's still travelling and shows up
+  // as a stutter halfway through the slide.
   useEffect(() => {
     if (isModalOpen && !selectedEventId) {
-      setTimeout(() => titleInputRef.current?.focus(), 50)
+      const delay = isMobile && !prefersReducedMotion ? 340 : 50
+      const timer = setTimeout(() => titleInputRef.current?.focus(), delay)
+      return () => clearTimeout(timer)
     }
-  }, [isModalOpen, selectedEventId])
+  }, [isModalOpen, selectedEventId, isMobile, prefersReducedMotion])
 
   const isEditing = selectedEventId !== null
   // A webcal subscription's calendar — mutation is blocked, matching
@@ -1203,9 +1226,28 @@ export function EventModal(): JSX.Element | null {
 
   return (
     <div className={`${styles.modalBackdrop} ${isClosing ? styles.closing : ''}`} onClick={animateClose} data-component="modal-backdrop">
-      <div ref={dialogRef} className={`${styles.modalCard} ${isClosing ? styles.modalClosing : ''}`} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label={title || 'Event modal'} data-component="modal-card">
+      <motion.div
+        ref={dialogRef}
+        className={`${styles.modalCard} ${isClosing ? styles.modalClosing : ''}`}
+        style={{ y: sheetY }}
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-label={title || 'Event modal'}
+        data-component="modal-card"
+      >
+        {/* Entrance animation lives entirely on this inner wrapper via plain
+            CSS, deliberately with nothing to do with `sheetY`/drag above —
+            three straight attempts to drive it off the same motion value
+            used for drag (directly, then layout-effect-timed, then via
+            framer's own initial/animate) all fought the drag system in some
+            way. A plain CSS transform/opacity on a completely separate
+            element can't conflict with anything. */}
+        <div className={styles.modalEntrance} data-component="modal-entrance">
         <div className={styles.modalBand} data-component="modal-band" />
-        <div className={styles.modalHeader}>
+        <div className={styles.sheetDragRegion}>
+          <div className={styles.dragHandle} aria-hidden="true" />
+          <div className={styles.modalHeader}>
           <button
             type="button"
             className={styles.titleEditIcon}
@@ -1280,6 +1322,7 @@ export function EventModal(): JSX.Element | null {
           <button className={styles.modalClose} onClick={animateClose} aria-label="Close">
             ×
           </button>
+          </div>
         </div>
         <hr className={styles.modalDivider} />
         <form
@@ -1294,193 +1337,201 @@ export function EventModal(): JSX.Element | null {
           className={styles.modalBody}
           data-component="modal-body"
         >
-          {isTaskMode && (
-            <TaskFormFields
-              completed={completed}
-              onCompletedChange={setCompleted}
-              dueDate={dueDate}
-              onDueDateChange={(date) => {
-                setDueDate(date)
-                if (!date) setDueAllDay(true)
-              }}
-              dueTime={dueTime}
-              onDueTimeChange={setDueTime}
-              dueAllDay={dueAllDay}
-              onDueAllDayChange={setDueAllDay}
-               priority={priority}
-               onPriorityChange={setPriority}
-               parentTaskId={parentTaskId}
-               parentTasks={parentTaskOptions}
-               onParentTaskChange={setParentTaskId}
-               subtasks={subtasks}
-               onOpenSubtask={(taskId) => openModal(undefined, undefined, taskId, 'task')}
-               onAddSubtask={selectedEventId ? () => openModal(undefined, undefined, undefined, 'task', undefined, selectedEventId) : undefined}
-             />
-          )}
+          <div ref={scrollRef} className={styles.modalScroll} data-component="modal-scroll">
+            <div className={styles.modalGroup}>
+              {isTaskMode && (
+                <TaskFormFields
+                  completed={completed}
+                  onCompletedChange={setCompleted}
+                  dueDate={dueDate}
+                  onDueDateChange={(date) => {
+                    setDueDate(date)
+                    if (!date) setDueAllDay(true)
+                  }}
+                  dueTime={dueTime}
+                  onDueTimeChange={setDueTime}
+                  dueAllDay={dueAllDay}
+                  onDueAllDayChange={setDueAllDay}
+                   priority={priority}
+                   onPriorityChange={setPriority}
+                   parentTaskId={parentTaskId}
+                   parentTasks={parentTaskOptions}
+                   onParentTaskChange={setParentTaskId}
+                   subtasks={subtasks}
+                   onOpenSubtask={(taskId) => openModal(undefined, undefined, taskId, 'task')}
+                   onAddSubtask={selectedEventId ? () => openModal(undefined, undefined, undefined, 'task', undefined, selectedEventId) : undefined}
+                 />
+              )}
 
-          {!isTaskMode && (
-            <EventFormFields
-              isAllDay={isAllDay}
-              onIsAllDayChange={setIsAllDay}
-              startDate={startDate}
-              onStartDateChange={setStartDate}
-              startTime={startTime}
-              onStartTimeChange={setStartTime}
-              endDate={endDate}
-              onEndDateChange={setEndDate}
-              endTime={endTime}
-              onEndTimeChange={handleEndTimeChange}
-              recurring={recurring}
-              onRecurringChange={setRecurring}
-              recurrence={recurrence}
-              onRecurrenceChange={(freq) => {
-                setRecurrence(freq)
-                // Clear weekday/month selections that don't apply to the new frequency
-                if (freq !== 'weekly' && freq !== 'monthly' && freq !== 'yearly') {
-                  setByWeekday([])
-                }
-                if (freq !== 'monthly' && freq !== 'yearly') {
-                  setByMonthDay([])
-                  setByMonth([])
-                  setByDayOrdinals([])
-                }
-              }}
-              interval={interval}
-              onIntervalChange={setInterval}
-              byWeekday={byWeekday}
-              onByWeekdayChange={setByWeekday}
-              byMonthDay={byMonthDay}
-              onByMonthDayChange={setByMonthDay}
-              byMonth={byMonth}
-              onByMonthChange={setByMonth}
-              byDayOrdinals={byDayOrdinals}
-              onByDayOrdinalsChange={setByDayOrdinals}
-              endCondition={endCondition}
-              onEndConditionChange={setEndCondition}
-              endOnDate={endOnDate}
-              onEndOnDateChange={setEndOnDate}
-              endAfterCount={endAfterCount}
-              onEndAfterCountChange={setEndAfterCount}
-              travelDuration={travelDuration}
-              onTravelDurationChange={setTravelDuration}
-              reminders={reminders}
-              onRemindersChange={setReminders}
-              transparency={transparency}
-              onTransparencyChange={setTransparency}
-              relatedTo={relatedTo}
-              onRelatedToChange={setRelatedTo}
-              candidateEvents={candidateEvents}
-              attachments={attachments}
-              onAttachmentsChange={setAttachments}
-              attachmentEventId={selectedEventId}
-            />
-          )}
-
-          <div className={styles.modalRow2}>
-            <input
-              type="text"
-              placeholder="Location"
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              className={styles.modalInput}
-              data-component="event-location-input"
-            />
-
-            <select
-              id="calendar-select"
-              value={calendarId}
-              onChange={(e) => handleCalendarChange(e.target.value)}
-              className={styles.modalSelect}
-              data-component="event-calendar-select"
-              disabled={isCurrentCalendarReadOnly}
-            >
-              {isCurrentCalendarReadOnly &&
-                !compatibleCalendars.some((cal) => cal.id === calendarId) && (
-                  <option value={calendarId}>
-                    {calendars.find((c) => c.id === calendarId)?.name} (read-only)
-                  </option>
-                )}
-              {compatibleCalendars.map((cal) => (
-                <option key={cal.id} value={cal.id}>
-                  {cal.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {isCurrentCalendarReadOnly && (
-            <p className={styles.readOnlyNotice} data-component="readonly-calendar-notice">
-              This calendar is a read-only subscription — events sync from the source and
-              can&apos;t be edited here.
-            </p>
-          )}
-
-          {categories.length > 0 && (
-            <div className={styles.modalRow2}>
-              <div className={styles.categoriesContainer}>
-                <div className={styles.categoriesLabel}>Categories</div>
-                <div className={styles.categoriesList}>
-                  {categories.map((cat) => (
-                    <button
-                      key={cat.id}
-                      type="button"
-                      aria-pressed={selectedCategories.includes(cat.name)}
-                      className={`${styles.categoryChip} ${
-                        selectedCategories.includes(cat.name) ? styles.categoryChipSelected : ''
-                      }`}
-                      onClick={() => {
-                        if (selectedCategories.includes(cat.name)) {
-                          setSelectedCategories(selectedCategories.filter((name) => name !== cat.name))
-                        } else {
-                          setSelectedCategories([...selectedCategories, cat.name])
-                        }
-                      }}
-                    >
-                      <span
-                        className={styles.categoryChipDot}
-                        style={{ backgroundColor: cat.color }}
-                      />
-                      {cat.name}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              {!isTaskMode && (
+                <EventFormFields
+                  isAllDay={isAllDay}
+                  onIsAllDayChange={setIsAllDay}
+                  startDate={startDate}
+                  onStartDateChange={setStartDate}
+                  startTime={startTime}
+                  onStartTimeChange={setStartTime}
+                  endDate={endDate}
+                  onEndDateChange={setEndDate}
+                  endTime={endTime}
+                  onEndTimeChange={handleEndTimeChange}
+                  recurring={recurring}
+                  onRecurringChange={setRecurring}
+                  recurrence={recurrence}
+                  onRecurrenceChange={(freq) => {
+                    setRecurrence(freq)
+                    // Clear weekday/month selections that don't apply to the new frequency
+                    if (freq !== 'weekly' && freq !== 'monthly' && freq !== 'yearly') {
+                      setByWeekday([])
+                    }
+                    if (freq !== 'monthly' && freq !== 'yearly') {
+                      setByMonthDay([])
+                      setByMonth([])
+                      setByDayOrdinals([])
+                    }
+                  }}
+                  interval={interval}
+                  onIntervalChange={setInterval}
+                  byWeekday={byWeekday}
+                  onByWeekdayChange={setByWeekday}
+                  byMonthDay={byMonthDay}
+                  onByMonthDayChange={setByMonthDay}
+                  byMonth={byMonth}
+                  onByMonthChange={setByMonth}
+                  byDayOrdinals={byDayOrdinals}
+                  onByDayOrdinalsChange={setByDayOrdinals}
+                  endCondition={endCondition}
+                  onEndConditionChange={setEndCondition}
+                  endOnDate={endOnDate}
+                  onEndOnDateChange={setEndOnDate}
+                  endAfterCount={endAfterCount}
+                  onEndAfterCountChange={setEndAfterCount}
+                  travelDuration={travelDuration}
+                  onTravelDurationChange={setTravelDuration}
+                  reminders={reminders}
+                  onRemindersChange={setReminders}
+                  transparency={transparency}
+                  onTransparencyChange={setTransparency}
+                  relatedTo={relatedTo}
+                  onRelatedToChange={setRelatedTo}
+                  candidateEvents={candidateEvents}
+                  attachments={attachments}
+                  onAttachmentsChange={setAttachments}
+                  attachmentEventId={selectedEventId}
+                />
+              )}
             </div>
-          )}
 
-          {!showDescription ? (
-            <button
-              type="button"
-              className={styles.modalAddDesc}
-              onClick={() => setShowDescription(true)}
-            >
-              + Add description
-            </button>
-          ) : (
-            <div className={styles.modalField}>
-              <div className={styles.fieldHeader}>
-                <label className={styles.label}>Description</label>
+            <div className={styles.modalGroup}>
+              <div className={styles.modalRow2}>
+                <input
+                  type="text"
+                  placeholder="Location"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  className={styles.modalInput}
+                  data-component="event-location-input"
+                />
+
+                <select
+                  id="calendar-select"
+                  value={calendarId}
+                  onChange={(e) => handleCalendarChange(e.target.value)}
+                  className={styles.modalSelect}
+                  data-component="event-calendar-select"
+                  disabled={isCurrentCalendarReadOnly}
+                >
+                  {isCurrentCalendarReadOnly &&
+                    !compatibleCalendars.some((cal) => cal.id === calendarId) && (
+                      <option value={calendarId}>
+                        {calendars.find((c) => c.id === calendarId)?.name} (read-only)
+                      </option>
+                    )}
+                  {compatibleCalendars.map((cal) => (
+                    <option key={cal.id} value={cal.id}>
+                      {cal.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {isCurrentCalendarReadOnly && (
+                <p className={styles.readOnlyNotice} data-component="readonly-calendar-notice">
+                  This calendar is a read-only subscription — events sync from the source and
+                  can&apos;t be edited here.
+                </p>
+              )}
+            </div>
+
+            <div className={styles.modalGroup}>
+              {categories.length > 0 && (
+                <div className={styles.modalRow2}>
+                  <div className={styles.categoriesContainer}>
+                    <div className={styles.categoriesLabel}>Categories</div>
+                    <div className={styles.categoriesList}>
+                      {categories.map((cat) => (
+                        <button
+                          key={cat.id}
+                          type="button"
+                          aria-pressed={selectedCategories.includes(cat.name)}
+                          className={`${styles.categoryChip} ${
+                            selectedCategories.includes(cat.name) ? styles.categoryChipSelected : ''
+                          }`}
+                          onClick={() => {
+                            if (selectedCategories.includes(cat.name)) {
+                              setSelectedCategories(selectedCategories.filter((name) => name !== cat.name))
+                            } else {
+                              setSelectedCategories([...selectedCategories, cat.name])
+                            }
+                          }}
+                        >
+                          <span
+                            className={styles.categoryChipDot}
+                            style={{ backgroundColor: cat.color }}
+                          />
+                          {cat.name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {!showDescription ? (
                 <button
                   type="button"
-                  className={styles.removeFieldButton}
-                  onClick={() => {
-                    setShowDescription(false)
-                    setDescription('')
-                  }}
+                  className={styles.modalAddDesc}
+                  onClick={() => setShowDescription(true)}
                 >
-                  ×
+                  + Add description
                 </button>
-              </div>
-              <textarea
-                placeholder="Add description..."
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                className={`${styles.modalInput} ${styles.modalTextarea}`}
-                data-component="event-description-input"
-                rows={3}
-              />
+              ) : (
+                <div className={styles.modalField}>
+                  <div className={styles.fieldHeader}>
+                    <label className={styles.label}>Description</label>
+                    <button
+                      type="button"
+                      className={styles.removeFieldButton}
+                      onClick={() => {
+                        setShowDescription(false)
+                        setDescription('')
+                      }}
+                    >
+                      ×
+                    </button>
+                  </div>
+                  <textarea
+                    placeholder="Add description..."
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    className={`${styles.modalInput} ${styles.modalTextarea}`}
+                    data-component="event-description-input"
+                    rows={3}
+                  />
+                </div>
+              )}
             </div>
-          )}
+          </div>
 
           <div className={styles.modalFooter} data-component="modal-footer">
             {isEditing && !isCurrentCalendarReadOnly && (
@@ -1513,7 +1564,8 @@ export function EventModal(): JSX.Element | null {
             </div>
           </div>
         </form>
-      </div>
+        </div>
+      </motion.div>
 
       <RecurrenceDialog
         isOpen={showRecurrenceDialog}

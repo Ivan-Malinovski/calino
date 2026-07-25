@@ -1,5 +1,6 @@
 import type { JSX } from 'react'
 import { useMemo, useState, useRef, useEffect } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
 import { createPortal } from 'react-dom'
 import {
   format,
@@ -20,6 +21,7 @@ import { EmptyState } from '@/components/common/EmptyState'
 import { getEventColor } from '@/lib/eventColor'
 import { formatTime } from '@/lib/datetime'
 import { LocationLink } from './LocationLink'
+import { useDateChangeMotion } from '@/hooks/useDateChangeMotion'
 import styles from './AgendaView.module.css'
 
 interface EventWithDate {
@@ -58,6 +60,8 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
     getEventColor(event, { categories, calendars, useCategoryColors })
 
   const date = parseISO(currentDate)
+  const monthKey = currentDate.slice(0, 7)
+  const monthChangeMotion = useDateChangeMotion(monthKey)
 
   const handleEventClick = (e: React.MouseEvent, event: CalendarEvent): void => {
     if (e.button === 2) return
@@ -219,6 +223,11 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
       className={`${containerClass} ${isScrolled ? styles.containerShadow : ''}`}
       onScroll={handleScroll}
     >
+      {/* Keyed by month, not by `currentDate`: in the month+agenda split a day
+          tap also sets the date, and re-running the transition on every tap
+          would be noise. */}
+      <AnimatePresence mode="wait">
+      <motion.div key={monthKey} className={styles.monthPane} {...monthChangeMotion}>
       {allGroupsEmpty ? (
         <EmptyState
           title="Nothing scheduled this month"
@@ -346,6 +355,8 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
           </div>
         )
       })}
+      </motion.div>
+      </AnimatePresence>
       {contextMenu && (
         <ContextMenu
           x={contextMenu.x}

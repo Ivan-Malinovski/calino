@@ -53,6 +53,26 @@
   display: none;
 }
 
+/* Wraps everything inside the card. Transparent on desktop; on mobile it's
+   the actual flex layout container (header/scroll/footer stack) AND carries
+   the entrance animation — deliberately a plain CSS keyframe on `transform`/
+   `opacity` here, not anything framer touches, since it sits one level
+   inside the draggable card and can never contend with `sheetY`. */
+.modalEntrance {
+  display: contents;
+}
+
+/* Pure grouping wrapper for the swipe-to-dismiss touch handlers — no layout
+   footprint of its own on any breakpoint. */
+.sheetDragRegion {
+  display: contents;
+}
+
+/* Swipe-to-dismiss grab affordance, mobile sheet only. */
+.dragHandle {
+  display: none;
+}
+
 .modalHeader {
   display: flex;
   align-items: flex-start;
@@ -328,6 +348,14 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+}
+
+/* Desktop: transparent pass-through wrappers so .modalBody's own flex/gap
+   controls spacing exactly as before. Mobile turns these into the scrolling
+   region and the tinted field groups (see the max-width: 768px block). */
+.modalScroll,
+.modalGroup {
+  display: contents;
 }
 
 .modalInput {
@@ -852,6 +880,19 @@
     align-self: stretch;
     justify-content: space-between;
   }
+
+  /* "All day" / "Available" / "Recurring" + the More toggle don't fit on one
+     line at phone widths — wrap instead of squeezing. When More drops to its
+     own line, keep it left-aligned under the checkboxes rather than stranded
+     on the far right with nothing else on that line. */
+  .row.checksRow {
+    flex-wrap: wrap;
+    row-gap: 10px;
+  }
+
+  .row.checksRow .chevronButton {
+    margin-left: 0;
+  }
 }
 
 .textarea {
@@ -1057,10 +1098,121 @@
     align-items: flex-end;
   }
 
+  /* Anchored Sheet: full-screen takeover instead of a squeezed partial sheet.
+     Header and footer pin outside the scroll region so Create/Save stays
+     reachable even with the keyboard open. */
   .modalCard {
+    position: fixed;
+    inset: 0;
     width: 100%;
-    max-height: 95vh;
-    border-radius: 18px 18px 0 0;
+    height: 100dvh;
+    max-height: none;
+    border-radius: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    /* The desktop scale+fade keyframe (with its `forwards` fill) would
+       permanently pin `transform`, fighting the swipe-to-dismiss drag's own
+       `y` motion value forever after. `.modalEntrance` (below) carries the
+       mobile entrance instead, on a property this card itself never touches
+       again once the drag is live. */
+    animation: none;
+    /* Full-screen sheet: promote once rather than re-rasterising the whole
+       form on every frame of the slide. */
+    will-change: transform;
+  }
+
+  /* The slide itself now runs on the card's `sheetY` motion value (see
+     EventModal.tsx) so the card's own opaque full-bleed background travels
+     with its contents; translating only the contents read as a pop. All
+     that's left here is a short fade so the fields don't snap in at full
+     strength while the card is still on its way up. */
+  .modalEntrance {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    animation: modalEntranceIn 220ms ease-out;
+  }
+
+  @keyframes modalEntranceIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .modalEntrance {
+      animation: none;
+    }
+  }
+
+  .dragHandle {
+    display: block;
+    flex-shrink: 0;
+    width: 36px;
+    height: 4px;
+    border-radius: var(--radius-full, 9999px);
+    background: var(--color-border-visible, rgba(0, 0, 0, 0.12));
+    margin: calc(10px + var(--safe-area-top, 0px)) auto 6px;
+    /* Without this, Android/Chrome can decide partway through the drag that
+       it's actually a page-scroll or pull-to-refresh gesture and cancel the
+       pointer sequence — same fix used for EventCard's resize handle. */
+    touch-action: none;
+  }
+
+  .modalHeader {
+    flex-shrink: 0;
+    padding: 4px 18px 12px;
+    border-bottom: 1px solid var(--color-border-subtle);
+    touch-action: none;
+  }
+
+  /* The header's own border-bottom replaces this divider on mobile. */
+  .modalDivider {
+    display: none;
+  }
+
+  .modalBody {
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: 0;
+    gap: 0;
+  }
+
+  /* Grouped Sections: related fields cluster into tinted cards with real air
+     between them, instead of one long uniform stack of rows. */
+  .modalScroll {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 16px 18px;
+    gap: var(--space-4);
+    /* Drag-to-dismiss can now start here too (at scrollTop 0). Contain the
+       overscroll bounce instead of letting it chain up to the WebView's own
+       pull-to-refresh, which is what was cancelling the gesture before. */
+    overscroll-behavior-y: contain;
+  }
+
+  .modalGroup {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    padding: var(--space-4) var(--space-3);
+    border-radius: var(--radius-md);
+    background: color-mix(in srgb, var(--ink) 6%, transparent);
+  }
+
+  .modalFooter {
+    flex-shrink: 0;
+    padding: 14px 18px calc(14px + var(--safe-area-bottom, 0px));
+    border-top: 1px solid var(--color-border-subtle);
+    background: var(--modal-bg, #faf9f7);
   }
 }
 
