@@ -2,6 +2,12 @@
 
 All notable changes to Calino will be documented in this file.
 
+## [Unreleased]
+
+### Changed
+
+- **The AI base URL is now used exactly as you enter it.** Calino used to append `/v1` to whatever you typed, which meant an endpoint that lives somewhere else — a gateway on a subpath, or a different version prefix — couldn't be expressed at all. Enter the full API root, including `/v1`. Existing settings are migrated automatically.
+
 ## [0.25.1] - 2026-07-25
 
 ### Fixed

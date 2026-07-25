@@ -255,7 +255,7 @@ export function AIVisionSettings(): JSX.Element {
                 <div className={styles.rowLabel}>Base URL</div>
                 <div className={styles.rowDesc}>
                   {provider === 'custom'
-                    ? "OpenAI- or Anthropic-compatible endpoint — add /anthropic to the path if it speaks Anthropic's API. No trailing /v1."
+                    ? "Full OpenAI- or Anthropic-compatible API root, including /v1 — it's used exactly as entered. Add /anthropic to the path if it speaks Anthropic's API."
                     : 'Requests are sent here'}
                 </div>
               </div>
@@ -265,7 +265,7 @@ export function AIVisionSettings(): JSX.Element {
                     type="text"
                     className={styles.formInput}
                     value={baseUrl}
-                    placeholder="https://api.example.com"
+                    placeholder="https://api.example.com/v1"
                     aria-label="Base URL"
                     onChange={(e) => setBaseUrl(e.target.value)}
                   />

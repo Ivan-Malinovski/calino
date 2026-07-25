@@ -1,6 +1,7 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { useAIVisionSettingsStore } from '../aiVisionSettingsStore'
 import { DEFAULT_BASE_URLS } from '@/features/aiVision/types'
+import { createLocalStorageMock } from '@/test/storageMock'
 
 const DEFAULTS = {
   provider: 'custom' as const,
@@ -56,6 +57,40 @@ describe('aiVisionSettingsStore', () => {
     const state = useAIVisionSettingsStore.getState()
     expect(state.baseUrl).toBe('https://example.com/v1')
     expect(state.model).toBe('gpt-4-vision')
+  })
+
+  describe('persisted baseUrl migration', () => {
+    const storage = createLocalStorageMock()
+
+    beforeEach(() => storage.install())
+    afterEach(() => {
+      vi.restoreAllMocks()
+      storage.reset()
+    })
+
+    async function rehydrateFrom(persisted: unknown): Promise<string> {
+      localStorage.setItem('calino-ai-vision-settings', JSON.stringify(persisted))
+      await useAIVisionSettingsStore.persist.rehydrate()
+      return useAIVisionSettingsStore.getState().baseUrl
+    }
+
+    it('folds in the /v1 that v0 adapters used to append', async () => {
+      const baseUrl = await rehydrateFrom({ state: { ...DEFAULTS, baseUrl: 'https://api.xiaomimimo.com' } })
+      expect(baseUrl).toBe('https://api.xiaomimimo.com/v1')
+    })
+
+    it('does not double the slash when the v0 value had a trailing one', async () => {
+      const baseUrl = await rehydrateFrom({ state: { ...DEFAULTS, baseUrl: 'https://api.example.com/' } })
+      expect(baseUrl).toBe('https://api.example.com/v1')
+    })
+
+    it('leaves an already-migrated baseUrl alone', async () => {
+      const baseUrl = await rehydrateFrom({
+        state: { ...DEFAULTS, baseUrl: 'https://api.example.com/v2' },
+        version: 1,
+      })
+      expect(baseUrl).toBe('https://api.example.com/v2')
+    })
   })
 
   it('setApiKey/getApiKey round-trip through real crypto', async () => {

@@ -60,8 +60,12 @@ export class AIVisionExtractionError extends Error {
   }
 }
 
+/**
+ * Full API roots, version segment included — adapters append only the endpoint
+ * path (`/models`, `/messages`, …) and never rewrite what they are given.
+ */
 export const DEFAULT_BASE_URLS: Record<AIProvider, string> = {
-  anthropic: 'https://api.anthropic.com',
-  openai: 'https://api.openai.com',
+  anthropic: 'https://api.anthropic.com/v1',
+  openai: 'https://api.openai.com/v1',
   custom: '',
 }
