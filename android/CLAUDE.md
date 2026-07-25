@@ -33,6 +33,24 @@ Everything else is plain React work in `src/`.
 4. Install: `adb -s <device-id> install -r <apk-path>` (device-id needed if the same
    phone shows up twice in `adb devices` — see below).
 
+## Debug and release install side by side
+
+The `debug` build type sets `applicationIdSuffix ".debug"` and
+`versionNameSuffix "-debug"`, so it installs as a separate app
+(`calino.malinov.ski.debug`, "Calino Debug") alongside the release build. Android
+scopes app storage — including the WebView `localStorage` where Calino keeps settings
+and API keys — by `applicationId`, so installing a debug build no longer wipes the
+release app's data.
+
+The debug variant overrides its own resources in `app/src/debug/res/`, which shadow the
+same-named ones in `app/src/main/res/`:
+
+- `values/strings.xml` — launcher name, `package_name`, `custom_url_scheme`.
+- `mipmap-*/ic_launcher*` — white mark on a flat violet tile, so the two are trivially
+  distinguishable on the launcher. Regenerate with `scripts/gen-debug-icons.sh`
+  (ImageMagick) after any change to the release icon; it derives sizes from
+  `app/src/main/res` and never writes there.
+
 For fast iteration without a rebuild/reinstall cycle each time, point
 `capacitor.config.ts`'s `server.url` at a running `pnpm dev` server (LAN IP) — the
 installed APK then behaves like a browser tab pointed at that URL and hot-reloads.
@@ -92,6 +110,11 @@ the signing certificate doesn't match ("App not installed as package conflicts w
 existing package by the same name") — uninstalling an *older* package name doesn't help
 if a debug build under the *current* appId is still on the device. Fix: uninstall the
 existing app first (`adb uninstall calino.malinov.ski`), then install the release APK.
+
+Since the debug/release split above, the two use different `applicationId`s and can't
+collide this way — but neither can upgrade over the other, which is the point. A device
+carrying a pre-split debug install (signed with the debug key under the plain
+`calino.malinov.ski` id) still needs that one uninstalled before a release APK will go on.
 
 ## Known OS-level gotchas (not code bugs)
 

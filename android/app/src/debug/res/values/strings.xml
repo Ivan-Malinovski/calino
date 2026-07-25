@@ -1,0 +1,9 @@
+<?xml version='1.0' encoding='utf-8'?>
+<!-- Debug-variant overrides so the side-by-side debug install is
+     distinguishable from the release one on the launcher. -->
+<resources>
+    <string name="app_name">Calino Debug</string>
+    <string name="title_activity_main">Calino Debug</string>
+    <string name="package_name">calino.malinov.ski.debug</string>
+    <string name="custom_url_scheme">calino.malinov.ski.debug</string>
+</resources>

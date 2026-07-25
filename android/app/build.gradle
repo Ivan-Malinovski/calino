@@ -43,6 +43,14 @@ android {
         }
     }
     buildTypes {
+        debug {
+            // Distinct applicationId so a debug build installs side by side with
+            // the release one. Android scopes app storage (and therefore the
+            // WebView's localStorage, where settings and API keys live) by
+            // applicationId, so the two builds can no longer clobber each other.
+            applicationIdSuffix ".debug"
+            versionNameSuffix "-debug"
+        }
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
