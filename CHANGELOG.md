@@ -2,26 +2,22 @@
 
 All notable changes to Calino will be documented in this file.
 
-## [Unreleased]
-
-### Added
-
-- **Swipe down to dismiss the New Event and journal entry sheets on mobile** — from anywhere on the sheet, not just the top edge, including over the fields once the list is scrolled to the top. Both sheets now slide up as one piece instead of popping in, and the journal sheet sits on the bottom edge so the compose field stays next to the keyboard.
-- **The month title and calendar now animate in the direction you navigate** — horizontally on mobile to match the swipe, vertically on desktop to match the scroll. The agenda moves with them, so both panes of the month+agenda split travel together.
+## [0.25.1] - 2026-07-25
 
 ### Fixed
 
+- **CalDAV/CardDAV sync was broken on Android in 0.25.0** — enabling Capacitor's native HTTP bridge for AI photo import also replaced the WebView's `fetch`, routing cross-origin requests through Android's `HttpURLConnection`, which rejects every WebDAV method (`PROPFIND`, `REPORT`, `PROPPATCH`, `MKCALENDAR`, `MKCOL`, `COPY`, `MOVE`). Sync failed at the first discovery request. Android builds from 0.24.0 and earlier, and all web builds, were unaffected.
 - **Sidebar content is now scrollable** when it's taller than the window (a long task list, many calendars). Sections past the bottom were clipped and unreachable.
 - **The month+agenda split no longer hides days.** The grid's share of the height is a floor rather than a fixed size, measured from real layout, so a 6-week month can't be squeezed into a scrollbar. Height changes between months are animated.
 - **Week numbers respect the setting on mobile.** The ≤500px layout hid the column outright, ignoring the preference.
 - **Agenda task checkboxes sit on the right edge of the card on mobile**, in one column down the list.
 - **The journal modal was rendering twice** — a second copy sat exactly on top of the first, invisible until the swipe gesture separated them.
 
-- **CalDAV/CardDAV sync was broken on Android in 0.25.0** — enabling Capacitor's native HTTP bridge for AI photo import also replaced the WebView's `fetch`, routing cross-origin requests through Android's `HttpURLConnection`, which rejects every WebDAV method (`PROPFIND`, `REPORT`, `PROPPATCH`, `MKCALENDAR`, `MKCOL`, `COPY`, `MOVE`). Sync failed at the first discovery request. Android builds from 0.24.0 and earlier, and all web builds, were unaffected.
-
 ### Added
 
 - **Android no longer needs CORS headers on your CalDAV server.** DAV requests now go through a native OkHttp path instead of the WebView, so servers with no CORS configuration at all — including plain `http://` servers on your LAN — work on the phone without a proxy. The CORS requirements in the README still apply to the web app. Self-signed certificates are still rejected (system trust store).
+- **Swipe down to dismiss the New Event and journal entry sheets on mobile** — from anywhere on the sheet, not just the top edge, including over the fields once the list is scrolled to the top. Both sheets now slide up as one piece instead of popping in, and the journal sheet sits on the bottom edge so the compose field stays next to the keyboard.
+- **The month title and calendar now animate in the direction you navigate** — horizontally on mobile to match the swipe, vertically on desktop to match the scroll. The agenda moves with them, so both panes of the month+agenda split travel together.
 
 ## [0.25.0] - 2026-07-24
 
