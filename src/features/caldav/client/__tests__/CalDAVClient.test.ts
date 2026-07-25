@@ -107,6 +107,9 @@ END:VCALENDAR`,
         },
         authMethod: 'Basic',
         defaultAccountType: 'caldav',
+        // Always an explicit fetch: on native we must bypass Capacitor's
+        // patched window.fetch, which cannot send WebDAV verbs.
+        fetch: expect.any(Function),
       })
       expect(result).toBeInstanceOf(CalDAVClient)
     })

@@ -1,4 +1,5 @@
 import { createDAVClient } from 'tsdav'
+import { webFetch } from '@/lib/webFetch'
 
 const DISCOVERY_TIMEOUT_MS = 8_000
 
@@ -183,7 +184,7 @@ async function probeWellKnownDirect(
   try {
     // Use redirect:'follow' — cross-origin redirect:'manual' returns an opaque
     // response (status 0, empty headers) in browsers, even with CORS exposed headers.
-    const response = await fetch(wellKnownUrl, {
+    const response = await webFetch(wellKnownUrl, {
       method: 'GET',
       redirect: 'follow',
       signal: controller.signal,
@@ -278,7 +279,7 @@ export async function testConnection(
   proxyUrl?: string | null
 ): Promise<boolean> {
   try {
-    const fetchFn = proxyUrl ? createProxyFetch(proxyUrl) : undefined
+    const fetchFn = proxyUrl ? createProxyFetch(proxyUrl) : webFetch
 
     const client = await createDAVClient({
       serverUrl,
@@ -349,7 +350,7 @@ export async function probeConnection(
 
       const response = proxyUrl
         ? await proxyFetch(proxyUrl, url, init)
-        : await fetch(url, init)
+        : await webFetch(url, init)
 
       // 207 Multi-Status is the success case for PROPFIND.
       return { ok: response.ok || response.status === 207, status: response.status }
@@ -424,7 +425,7 @@ async function proxyFetch(
   const path = parsed.pathname + parsed.search + parsed.hash
   const proxyBase = proxyUrl.replace(/\/$/, '')
   const proxiedUrl = `${proxyBase}/${encodedOrigin}${path}`
-  return fetch(proxiedUrl, init)
+  return webFetch(proxiedUrl, init)
 }
 
 function normalizeUrl(url: string): string {

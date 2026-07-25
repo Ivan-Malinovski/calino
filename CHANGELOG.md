@@ -2,6 +2,16 @@
 
 All notable changes to Calino will be documented in this file.
 
+## [Unreleased]
+
+### Fixed
+
+- **CalDAV/CardDAV sync was broken on Android in 0.25.0** — enabling Capacitor's native HTTP bridge for AI photo import also replaced the WebView's `fetch`, routing cross-origin requests through Android's `HttpURLConnection`, which rejects every WebDAV method (`PROPFIND`, `REPORT`, `PROPPATCH`, `MKCALENDAR`, `MKCOL`, `COPY`, `MOVE`). Sync failed at the first discovery request. Android builds from 0.24.0 and earlier, and all web builds, were unaffected.
+
+### Added
+
+- **Android no longer needs CORS headers on your CalDAV server.** DAV requests now go through a native OkHttp path instead of the WebView, so servers with no CORS configuration at all — including plain `http://` servers on your LAN — work on the phone without a proxy. The CORS requirements in the README still apply to the web app. Self-signed certificates are still rejected (system trust store).
+
 ## [0.25.0] - 2026-07-24
 
 ### Added

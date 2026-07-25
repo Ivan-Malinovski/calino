@@ -2,6 +2,7 @@ import { createDAVClient } from 'tsdav'
 import type { CalDAVCredentials, CalDAVCalendar, CreateCalendarOptions, UpdateCalendarOptions } from '../types'
 import { v4 as uuidv4 } from 'uuid'
 import { decodeBase64 } from '@/lib/settingsSync'
+import { webFetch } from '@/lib/webFetch'
 
 import { DEFAULT_CALENDAR_COLOR } from '@/config'
 import { useSettingsStore } from '@/store/settingsStore'
@@ -96,7 +97,7 @@ async function fetchWithTimeout(
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), NETWORK_TIMEOUT_MS)
   try {
-    return await fetch(url, { ...init, signal: controller.signal })
+    return await webFetch(url, { ...init, signal: controller.signal })
   } finally {
     clearTimeout(timer)
   }
@@ -135,7 +136,7 @@ export class CalDAVClient {
       },
       authMethod: 'Basic',
       defaultAccountType: 'caldav',
-      fetch: this.proxyUrl ? createProxyFetch(this.proxyUrl) : undefined,
+      fetch: this.proxyUrl ? createProxyFetch(this.proxyUrl) : fetchWithTimeout,
     })
   }
 
