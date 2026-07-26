@@ -1,4 +1,4 @@
-import { useMemo, useState, useRef } from 'react'
+import { useMemo, useState, useRef, useEffect } from 'react'
 import { useIsMobile } from './useIsMobile'
 import { useReducedMotion } from './useReducedMotion'
 
@@ -34,7 +34,8 @@ export function useDateChangeMotion(marker: string): DateChangeMotion {
   const [prevMarker, setPrevMarker] = useState(marker)
   const [direction, setDirection] = useState<'next' | 'prev'>('next')
   const [isFastDesktop, setIsFastDesktop] = useState(false)
-  const lastChangeTime = useRef(Date.now())
+  const [changeCount, setChangeCount] = useState(0)
+  const lastChangeTime = useRef(0)
 
   // A mount is not a date change. The enclosing AnimatePresence doesn't set
   // `initial={false}`, so without this the slide fires when the view first
@@ -48,10 +49,22 @@ export function useDateChangeMotion(marker: string): DateChangeMotion {
     setDirection(marker > prevMarker ? 'next' : 'prev')
     setPrevMarker(marker)
     setHasChanged(true)
-    const now = Date.now()
-    setIsFastDesktop(!isMobile && now - lastChangeTime.current < 750)
-    lastChangeTime.current = now
+    setChangeCount((n) => n + 1)
   }
+
+  // The clock is read here rather than during render — render has to stay pure,
+  // and it may run more than once per change. That costs one change of latency:
+  // the interval between two changes is only known once the second has arrived,
+  // so the suppression takes effect from the change after the run-on starts,
+  // which is what holding down a chevron produces anyway.
+  useEffect(() => {
+    // A mount is not a change, and must not seed the interval.
+    if (changeCount === 0) return
+    const now = Date.now()
+    const rapid = now - lastChangeTime.current < 750
+    lastChangeTime.current = now
+    setIsFastDesktop(!isMobile && rapid)
+  }, [changeCount, isMobile])
 
   return useMemo(() => {
     const forward = direction === 'next'
