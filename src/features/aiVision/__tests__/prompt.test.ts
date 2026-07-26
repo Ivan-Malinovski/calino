@@ -20,7 +20,8 @@ describe('parseExtractedCandidates', () => {
   })
 
   it('parses multiple candidates', () => {
-    const raw = '[{"title":"Show","start":"2026-08-01T19:00"},{"title":"Show","start":"2026-08-02T19:00"}]'
+    const raw =
+      '[{"title":"Show","start":"2026-08-01T19:00"},{"title":"Show","start":"2026-08-02T19:00"}]'
     expect(parseExtractedCandidates(raw)).toEqual([
       { title: 'Show', start: '2026-08-01T19:00' },
       { title: 'Show', start: '2026-08-02T19:00' },
@@ -38,12 +39,14 @@ describe('parseExtractedCandidates', () => {
   })
 
   it('salvages a JSON array from surrounding prose', () => {
-    const raw = 'Sure, here is the JSON:\n[{"title":"Farmers Market","allDay":true}]\nHope that helps!'
+    const raw =
+      'Sure, here is the JSON:\n[{"title":"Farmers Market","allDay":true}]\nHope that helps!'
     expect(parseExtractedCandidates(raw)).toEqual([{ title: 'Farmers Market', allDay: true }])
   })
 
   it('salvages a bare JSON object from surrounding prose', () => {
-    const raw = 'Sure, here is the JSON:\n{"title":"Farmers Market","allDay":true}\nHope that helps!'
+    const raw =
+      'Sure, here is the JSON:\n{"title":"Farmers Market","allDay":true}\nHope that helps!'
     expect(parseExtractedCandidates(raw)).toEqual([{ title: 'Farmers Market', allDay: true }])
   })
 

@@ -147,7 +147,9 @@ export function useWebcalSubscriptions(): UseWebcalSubscriptionsReturn {
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Failed to refresh calendar.'
         storage.updateSubscription(id, { lastError: message })
-        setSubscriptions((prev) => prev.map((s) => (s.id === id ? { ...s, lastError: message } : s)))
+        setSubscriptions((prev) =>
+          prev.map((s) => (s.id === id ? { ...s, lastError: message } : s))
+        )
       }
     },
     [storeAddEvent, storeUpdateEvent, storeDeleteEvent]
@@ -205,7 +207,7 @@ export function useWebcalSubscriptions(): UseWebcalSubscriptionsReturn {
       }
     }
     connect()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isUnlocked, hasPreconfiguredWebcal])
 
   return { subscriptions, addSubscription, removeSubscription, syncSubscription, syncAll }

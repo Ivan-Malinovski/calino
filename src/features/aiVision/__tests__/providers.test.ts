@@ -61,7 +61,9 @@ describe('anthropic provider', () => {
   })
 
   it('listModels throws a bad-key message on 401', async () => {
-    mockedHttpRequest.mockResolvedValue(mockResponse(401, { error: { message: 'invalid x-api-key' } }))
+    mockedHttpRequest.mockResolvedValue(
+      mockResponse(401, { error: { message: 'invalid x-api-key' } })
+    )
 
     await expect(anthropicProvider.listModels(anthropicCfg)).rejects.toThrow(/api key/i)
   })
@@ -115,7 +117,12 @@ describe('openai provider', () => {
   it('listModels maps response.data.data[].id and filters non-chat models', async () => {
     mockedHttpRequest.mockResolvedValue(
       mockResponse(200, {
-        data: [{ id: 'gpt-4o' }, { id: 'text-embedding-3-small' }, { id: 'whisper-1' }, { id: 'gpt-4o-mini' }],
+        data: [
+          { id: 'gpt-4o' },
+          { id: 'text-embedding-3-small' },
+          { id: 'whisper-1' },
+          { id: 'gpt-4o-mini' },
+        ],
       })
     )
 
@@ -131,7 +138,9 @@ describe('openai provider', () => {
   })
 
   it('listModels throws a bad-key message on 401', async () => {
-    mockedHttpRequest.mockResolvedValue(mockResponse(401, { error: { message: 'Incorrect API key provided' } }))
+    mockedHttpRequest.mockResolvedValue(
+      mockResponse(401, { error: { message: 'Incorrect API key provided' } })
+    )
 
     await expect(openaiProvider.listModels(openaiCfg)).rejects.toThrow(/authentication failed/i)
   })
@@ -169,7 +178,11 @@ describe('openai provider', () => {
     mockedHttpRequest.mockResolvedValue(mockResponse(401, { error: { message: 'bad key' } }))
 
     await expect(
-      openaiProvider.sendVisionMessage(openaiCfg, { imageBase64: 'AAAA', mimeType: 'image/png', prompt: 'x' })
+      openaiProvider.sendVisionMessage(openaiCfg, {
+        imageBase64: 'AAAA',
+        mimeType: 'image/png',
+        prompt: 'x',
+      })
     ).rejects.toThrow(/authentication failed/i)
   })
 })
@@ -193,12 +206,18 @@ describe('custom provider', () => {
   it('uses the Anthropic-shaped adapter when the base URL has an /anthropic path segment', async () => {
     mockedHttpRequest.mockResolvedValue(mockResponse(200, { data: [{ id: 'claude-3-5-sonnet' }] }))
 
-    await customProvider.listModels({ ...customCfg, baseUrl: 'https://api.xiaomimimo.com/anthropic/v1' })
+    await customProvider.listModels({
+      ...customCfg,
+      baseUrl: 'https://api.xiaomimimo.com/anthropic/v1',
+    })
 
     expect(mockedHttpRequest).toHaveBeenCalledWith(
       expect.objectContaining({
         url: 'https://api.xiaomimimo.com/anthropic/v1/models',
-        headers: expect.objectContaining({ 'x-api-key': 'sk-test', 'anthropic-version': '2023-06-01' }),
+        headers: expect.objectContaining({
+          'x-api-key': 'sk-test',
+          'anthropic-version': '2023-06-01',
+        }),
       })
     )
   })
@@ -232,7 +251,9 @@ describe('custom provider', () => {
 
     it('does not match an unrelated host, query string, or malformed URL', () => {
       expect(customProvider.isAnthropicShaped('https://api.anthropic.com')).toBe(false)
-      expect(customProvider.isAnthropicShaped('https://host.com/foo?provider=anthropic')).toBe(false)
+      expect(customProvider.isAnthropicShaped('https://host.com/foo?provider=anthropic')).toBe(
+        false
+      )
       expect(customProvider.isAnthropicShaped('not a url')).toBe(false)
     })
   })

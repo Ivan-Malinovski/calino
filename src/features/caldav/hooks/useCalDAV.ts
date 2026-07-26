@@ -107,7 +107,7 @@ interface CollectParsedResult {
 
 async function collectParsedWithHref(
   fetchedEvents: { url: string; data: string; etag?: string }[],
-  calendarId: string,
+  calendarId: string
 ): Promise<CollectParsedResult> {
   const result: ParsedWithHref[] = []
   let hadParseFailures = false
@@ -286,7 +286,8 @@ export function useCalDAV(): UseCalDAVReturn {
                 event.resourceHref
               )
               const { url, etag } =
-                groupedEvents.length > 1 && groupedEvents.some((candidate) => !candidate.recurrenceId)
+                groupedEvents.length > 1 &&
+                groupedEvents.some((candidate) => !candidate.recurrenceId)
                   ? await engine.updateEventGroup(groupedEvents, event.etag || '')
                   : await engine.updateEvent(event, event.etag || '')
               for (const groupedEvent of groupedEvents) {
@@ -310,7 +311,8 @@ export function useCalDAV(): UseCalDAVReturn {
                 }
               }
               const eventUrl =
-                pendingEvent?.resourceHref || `${calendar.url}${eventResourceFilename(change.eventId)}`
+                pendingEvent?.resourceHref ||
+                `${calendar.url}${eventResourceFilename(change.eventId)}`
               if (!etag) {
                 const eventInStore = useCalendarStore
                   .getState()
@@ -846,7 +848,9 @@ export function useCalDAV(): UseCalDAVReturn {
 
           const storedByUrl = new Map(accountCalendars.map((calendar) => [calendar.url, calendar]))
           const serverUrls = new Set(serverCalendars.map((calendar) => calendar.url))
-          const discoveredCalendars = accountCalendars.filter((calendar) => serverUrls.has(calendar.url))
+          const discoveredCalendars = accountCalendars.filter((calendar) =>
+            serverUrls.has(calendar.url)
+          )
           const caldavDebugMode = useSettingsStore.getState().caldavDebugMode
 
           // A collection deleted by another CalDAV client must not remain in
@@ -916,10 +920,7 @@ export function useCalDAV(): UseCalDAVReturn {
 
           // Snapshot pending local changes after the network fetch, as late as
           // possible before reconciliation. They must win over remote state.
-          const pendingLocalChangeIds = new Set(
-            storage.getPendingChanges()
-              .map((p) => p.eventId)
-          )
+          const pendingLocalChangeIds = new Set(storage.getPendingChanges().map((p) => p.eventId))
           // Also skip events whose server DELETE is in flight right now: on the
           // happy path no pending-change tombstone is written, so without this a
           // sync racing the delete would re-add the event.
@@ -931,7 +932,10 @@ export function useCalDAV(): UseCalDAVReturn {
           const serverEventIds = new Set<string>()
           const newCategoryNames: string[] = []
 
-          const { items: parsedWithHref, hadParseFailures } = await collectParsedWithHref(fetchedEvents, cal.id)
+          const { items: parsedWithHref, hadParseFailures } = await collectParsedWithHref(
+            fetchedEvents,
+            cal.id
+          )
 
           // Detect independent events illegally sharing a UID across resources.
           // Keep one deterministically; record the rest as data issues (#22).
@@ -1583,7 +1587,11 @@ export function useCalDAV(): UseCalDAVReturn {
       const client = await createCalDAVClient(account.serverUrl, credential, account.proxyUrl)
       const engine = new SyncEngine(client, calendarId)
       const groupedEvents = withResourceSiblings(
-        [masterWithSequence, ...existingOverrides, ...(normalizedException ? [normalizedException] : [])],
+        [
+          masterWithSequence,
+          ...existingOverrides,
+          ...(normalizedException ? [normalizedException] : []),
+        ],
         useCalendarStore.getState().events,
         calendarId,
         master.resourceHref,

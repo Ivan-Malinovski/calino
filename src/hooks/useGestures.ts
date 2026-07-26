@@ -62,7 +62,17 @@ export function useGestures({
     longPressDelayRef.current = longPressDelay
     swipeThresholdRef.current = swipeThreshold
     pinchScaleRangeRef.current = pinchScaleRange
-  }, [onLongPress, onSwipe, onPinch, onTap, onDragStart, onDragEnd, longPressDelay, swipeThreshold, pinchScaleRange])
+  }, [
+    onLongPress,
+    onSwipe,
+    onPinch,
+    onTap,
+    onDragStart,
+    onDragEnd,
+    longPressDelay,
+    swipeThreshold,
+    pinchScaleRange,
+  ])
 
   // Cleanup long press timer on unmount
   useEffect(() => {
@@ -284,13 +294,16 @@ export function useGestures({
     [pinchBind]
   )
 
-  return useMemo(() => ({
-    bind: {
-      onPointerDown: handlePointerDown,
-      onPointerMove: handlePointerMove,
-      onPointerUp: handlePointerUp,
-      onWheel: handleWheel,
-    },
-    gestureState,
-  }), [handlePointerDown, handlePointerMove, handlePointerUp, handleWheel, gestureState])
+  return useMemo(
+    () => ({
+      bind: {
+        onPointerDown: handlePointerDown,
+        onPointerMove: handlePointerMove,
+        onPointerUp: handlePointerUp,
+        onWheel: handleWheel,
+      },
+      gestureState,
+    }),
+    [handlePointerDown, handlePointerMove, handlePointerUp, handleWheel, gestureState]
+  )
 }

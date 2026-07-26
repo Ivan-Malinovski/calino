@@ -210,9 +210,7 @@ describe('DayView', () => {
     })
 
     const { container } = renderWithRouter(<DayView />)
-    const beforeDelete = container.querySelectorAll(
-      '[class*="eventPositioned"]'
-    )
+    const beforeDelete = container.querySelectorAll('[class*="eventPositioned"]')
     expect(beforeDelete.length).toBeGreaterThanOrEqual(1)
 
     // Remove the event from the store. With AnimatePresence correctly
@@ -229,9 +227,7 @@ describe('DayView', () => {
     // selectors trigger re-renders, but to be explicit:)
     const { rerender } = renderWithRouter(<DayView key="post-delete" />)
     rerender(<DayView key="post-delete-2" />)
-    const afterDelete = container.querySelectorAll(
-      '[class*="eventPositioned"]'
-    )
+    const afterDelete = container.querySelectorAll('[class*="eventPositioned"]')
     // Note: this assertion is intentionally loose. The exact count
     // depends on AnimatePresence's internal "keep mounted" timing
     // (in jsdom there's no real animation, but the structural

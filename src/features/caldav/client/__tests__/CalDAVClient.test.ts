@@ -182,9 +182,7 @@ END:VCALENDAR`,
     })
 
     it('uses default color when server returns no calendarColor', async () => {
-      mockClientMethods.fetchCalendars.mockResolvedValue([
-        { ...mockCalendar, calendarColor: null },
-      ])
+      mockClientMethods.fetchCalendars.mockResolvedValue([{ ...mockCalendar, calendarColor: null }])
       await client.connect()
       const calendars = await client.fetchCalendars()
 
@@ -196,9 +194,7 @@ END:VCALENDAR`,
       onLineSpy.mockReturnValue(false)
       await client.connect()
 
-      await expect(client.fetchCalendars()).rejects.toThrow(
-        'No network connection'
-      )
+      await expect(client.fetchCalendars()).rejects.toThrow('No network connection')
     })
   })
 
@@ -251,7 +247,12 @@ END:VCALENDAR`,
         .mockResolvedValueOnce([])
         .mockResolvedValueOnce([])
 
-      await client.fetchEvents(mockCalendar.url, '2024-01-01T00:00:00Z', '2024-12-31T23:59:59Z', true)
+      await client.fetchEvents(
+        mockCalendar.url,
+        '2024-01-01T00:00:00Z',
+        '2024-12-31T23:59:59Z',
+        true
+      )
 
       expect(mockClientMethods.fetchCalendarObjects).toHaveBeenNthCalledWith(1, {
         calendar: mockCalendar,
@@ -311,7 +312,10 @@ END:VCALENDAR`,
     it('returns empty array when no events or tasks found', async () => {
       await client.connect()
 
-      mockClientMethods.fetchCalendarObjects.mockResolvedValueOnce([]).mockResolvedValueOnce([]).mockResolvedValueOnce([])
+      mockClientMethods.fetchCalendarObjects
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([])
 
       const result = await client.fetchEvents(
         mockCalendar.url,
@@ -542,7 +546,10 @@ END:VCALENDAR`,
 
       // Use a long enough base64 to exercise line folding on the ATTACH
       // value. 800 chars of base64 ≈ 600 bytes of decoded JSON.
-      const originalJson = JSON.stringify({ theme: 'dark', reminders: Array.from({ length: 12 }, (_, i) => ({ id: i, label: `pref-${i}` })) })
+      const originalJson = JSON.stringify({
+        theme: 'dark',
+        reminders: Array.from({ length: 12 }, (_, i) => ({ id: i, label: `pref-${i}` })),
+      })
       const base64 = btoa(originalJson)
 
       await client.putSettingsEvent(settingsCalendarUrl, base64, undefined, null)
@@ -611,8 +618,8 @@ END:VCALENDAR`,
     </d:propstat>
   </d:response>
 </d:multistatus>`,
-          { status: 207 },
-        ),
+          { status: 207 }
+        )
       )
 
       const result = await client.discoverSettingsCalendar(calendarHomeUrl)
@@ -634,8 +641,8 @@ END:VCALENDAR`,
     </D:propstat>
   </D:response>
 </D:multistatus>`,
-          { status: 207 },
-        ),
+          { status: 207 }
+        )
       )
 
       const result = await client.discoverSettingsCalendar(calendarHomeUrl)
@@ -657,8 +664,8 @@ END:VCALENDAR`,
     </x1:propstat>
   </x1:response>
 </x1:multistatus>`,
-          { status: 207 },
-        ),
+          { status: 207 }
+        )
       )
 
       const result = await client.discoverSettingsCalendar(calendarHomeUrl)
@@ -680,8 +687,8 @@ END:VCALENDAR`,
     </propstat>
   </response>
 </multistatus>`,
-          { status: 207 },
-        ),
+          { status: 207 }
+        )
       )
 
       const result = await client.discoverSettingsCalendar(calendarHomeUrl)
@@ -702,8 +709,8 @@ END:VCALENDAR`,
     </D:propstat>
   </D:response>
 </D:multistatus>`,
-          { status: 207 },
-        ),
+          { status: 207 }
+        )
       )
 
       const result = await client.discoverSettingsCalendar(calendarHomeUrl)
@@ -724,8 +731,8 @@ END:VCALENDAR`,
     </D:propstat>
   </D:response>
 </D:multistatus>`,
-          { status: 207 },
-        ),
+          { status: 207 }
+        )
       )
 
       const result = await client.discoverSettingsCalendar(calendarHomeUrl)
@@ -734,11 +741,11 @@ END:VCALENDAR`,
 
     it('throws a clear error on malformed XML instead of failing silently', async () => {
       fetchSpy.mockResolvedValue(
-        new Response('<D:multistatus xmlns:D="DAV:"><D:response>', { status: 207 }),
+        new Response('<D:multistatus xmlns:D="DAV:"><D:response>', { status: 207 })
       )
 
       await expect(client.discoverSettingsCalendar(calendarHomeUrl)).rejects.toThrow(
-        /Failed to parse WebDAV XML response/,
+        /Failed to parse WebDAV XML response/
       )
     })
   })
@@ -763,8 +770,8 @@ END:VCALENDAR`,
     </d:propstat>
   </d:response>
 </d:multistatus>`,
-          { status: 207 },
-        ),
+          { status: 207 }
+        )
       )
 
       const result = await client.fetchSettingsEvent(settingsCalUrl)
@@ -792,8 +799,8 @@ END:VCALENDAR`,
     </D:propstat>
   </D:response>
 </D:multistatus>`,
-          { status: 207 },
-        ),
+          { status: 207 }
+        )
       )
 
       const result = await client.fetchSettingsEvent(settingsCalUrl)
@@ -818,8 +825,8 @@ END:VCALENDAR`,
     </propstat>
   </response>
 </multistatus>`,
-          { status: 207 },
-        ),
+          { status: 207 }
+        )
       )
 
       const result = await client.fetchSettingsEvent(settingsCalUrl)
@@ -829,7 +836,7 @@ END:VCALENDAR`,
 
     it('returns null when no matching event is present', async () => {
       fetchSpy.mockResolvedValue(
-        new Response('<D:multistatus xmlns:D="DAV:"></D:multistatus>', { status: 207 }),
+        new Response('<D:multistatus xmlns:D="DAV:"></D:multistatus>', { status: 207 })
       )
 
       const result = await client.fetchSettingsEvent(settingsCalUrl)
@@ -838,11 +845,11 @@ END:VCALENDAR`,
 
     it('throws a clear error on malformed XML instead of failing silently', async () => {
       fetchSpy.mockResolvedValue(
-        new Response('<D:multistatus xmlns:D="DAV:"><D:response>', { status: 207 }),
+        new Response('<D:multistatus xmlns:D="DAV:"><D:response>', { status: 207 })
       )
 
       await expect(client.fetchSettingsEvent(settingsCalUrl)).rejects.toThrow(
-        /Failed to parse WebDAV XML response/,
+        /Failed to parse WebDAV XML response/
       )
     })
   })
@@ -907,9 +914,9 @@ END:VCALENDAR`,
       onLineSpy.mockReturnValue(false)
       await client.connect()
 
-      await expect(
-        client.deleteEvent(mockEventObject.url, mockEventObject.etag)
-      ).rejects.toThrow('No network connection')
+      await expect(client.deleteEvent(mockEventObject.url, mockEventObject.etag)).rejects.toThrow(
+        'No network connection'
+      )
     })
   })
 
@@ -928,11 +935,7 @@ END:VCALENDAR`,
         .mockResolvedValueOnce([])
         .mockResolvedValueOnce([])
 
-      await client.fetchEvents(
-        mockCalendar.url,
-        '2024-01-01T00:00:00Z',
-        '2024-12-31T23:59:59Z'
-      )
+      await client.fetchEvents(mockCalendar.url, '2024-01-01T00:00:00Z', '2024-12-31T23:59:59Z')
 
       // fetchCalendars should NOT have been called again — cached
       expect(mockClientMethods.fetchCalendars).not.toHaveBeenCalled()
@@ -983,11 +986,7 @@ END:VCALENDAR`,
         .mockResolvedValueOnce([])
         .mockResolvedValueOnce([])
 
-      await client.fetchEvents(
-        mockCalendar.url,
-        '2024-01-01T00:00:00Z',
-        '2024-12-31T23:59:59Z'
-      )
+      await client.fetchEvents(mockCalendar.url, '2024-01-01T00:00:00Z', '2024-12-31T23:59:59Z')
 
       // Should have fetched calendars once (lazy init)
       expect(mockClientMethods.fetchCalendars).toHaveBeenCalledTimes(1)
@@ -1014,9 +1013,9 @@ END:VCALENDAR`,
       )
 
       // Spy on global fetch to verify AbortController is passed
-      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-        new Response(null, { status: 200 })
-      )
+      const fetchSpy = vi
+        .spyOn(globalThis, 'fetch')
+        .mockResolvedValue(new Response(null, { status: 200 }))
 
       await proxyClient.connect()
 
@@ -1093,7 +1092,9 @@ END:VCALENDAR`,
     it('returns default for non-string values (tsdav XML object)', () => {
       // tsdav returns an object like { _attributes: { ... } } when
       // the server has no color for a calendar
-      expect(normalizeColor({ _attributes: { xmlns: 'http://apple.com/ns/ical/' } } as unknown as string)).toBe('#4285F4')
+      expect(
+        normalizeColor({ _attributes: { xmlns: 'http://apple.com/ns/ical/' } } as unknown as string)
+      ).toBe('#4285F4')
     })
 
     it('returns default for numeric values', () => {

@@ -39,10 +39,18 @@ export function MiniTasksSection({ isExpanded, onToggle }: MiniTasksSectionProps
   // current without the user having to interact with the app.
   const upcomingTasks = useMemo(() => {
     const today = startOfDay(new Date())
-    const visibleCalendarIds = new Set(calendars.filter((calendar) => calendar.isVisible).map((calendar) => calendar.id))
+    const visibleCalendarIds = new Set(
+      calendars.filter((calendar) => calendar.isVisible).map((calendar) => calendar.id)
+    )
 
     const tasks = events
-      .filter((e) => e.type === 'task' && !e.parentTaskId && !e.completed && visibleCalendarIds.has(e.calendarId))
+      .filter(
+        (e) =>
+          e.type === 'task' &&
+          !e.parentTaskId &&
+          !e.completed &&
+          visibleCalendarIds.has(e.calendarId)
+      )
       .filter((task) => {
         if (!task.dueDate) return true // Show tasks without due date
         const dueDate = startOfDay(parseISO(task.dueDate))
@@ -57,7 +65,13 @@ export function MiniTasksSection({ isExpanded, onToggle }: MiniTasksSectionProps
       .slice(0, 8)
 
     const overdue = events
-      .filter((e) => e.type === 'task' && !e.parentTaskId && !e.completed && visibleCalendarIds.has(e.calendarId))
+      .filter(
+        (e) =>
+          e.type === 'task' &&
+          !e.parentTaskId &&
+          !e.completed &&
+          visibleCalendarIds.has(e.calendarId)
+      )
       .filter((task) => {
         if (!task.dueDate) return false
         const dueDate = startOfDay(parseISO(task.dueDate))
@@ -72,8 +86,12 @@ export function MiniTasksSection({ isExpanded, onToggle }: MiniTasksSectionProps
     return [...tasks, ...overdue].slice(0, 10)
   }, [calendars, events])
 
-  const activeCount = events.filter((e) =>
-    e.type === 'task' && !e.parentTaskId && !e.completed && calendars.some((calendar) => calendar.id === e.calendarId && calendar.isVisible)
+  const activeCount = events.filter(
+    (e) =>
+      e.type === 'task' &&
+      !e.parentTaskId &&
+      !e.completed &&
+      calendars.some((calendar) => calendar.id === e.calendarId && calendar.isVisible)
   ).length
 
   // Count of incomplete descendants (children, grandchildren, ...) for each
@@ -118,7 +136,9 @@ export function MiniTasksSection({ isExpanded, onToggle }: MiniTasksSectionProps
       const updatedTasks = completeTask(task.id, newCompleted)
       setCompletingTaskId(null)
       try {
-        await Promise.all(updatedTasks.map((updatedTask) => updateCalDAVEvent(updatedTask.calendarId, updatedTask)))
+        await Promise.all(
+          updatedTasks.map((updatedTask) => updateCalDAVEvent(updatedTask.calendarId, updatedTask))
+        )
       } catch {
         // error handled by useCalDAV
       }
@@ -143,7 +163,8 @@ export function MiniTasksSection({ isExpanded, onToggle }: MiniTasksSectionProps
           <span className={styles.tasksTitle}>Tasks</span>
           {activeCount > 0 && <span className={styles.tasksCount}>{activeCount}</span>}
         </div>
-        <svg aria-hidden="true"
+        <svg
+          aria-hidden="true"
           className={`${styles.tasksChevron} ${isExpanded ? styles.tasksChevronExpanded : ''}`}
           width="16"
           height="16"
@@ -172,7 +193,15 @@ export function MiniTasksSection({ isExpanded, onToggle }: MiniTasksSectionProps
                     key={task.id}
                     initial={prefersReducedMotion ? false : { opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: -10, transition: { duration: prefersReducedMotion ? 0 : 0.15 } }}
+                    exit={
+                      prefersReducedMotion
+                        ? { opacity: 0 }
+                        : {
+                            opacity: 0,
+                            y: -10,
+                            transition: { duration: prefersReducedMotion ? 0 : 0.15 },
+                          }
+                    }
                     className={`${styles.taskRow} ${task.id === completingTaskId ? styles.taskCompleting : ''}`}
                     onMouseEnter={(e) => {
                       setHoveredTask(task.id)
@@ -199,7 +228,13 @@ export function MiniTasksSection({ isExpanded, onToggle }: MiniTasksSectionProps
                           : `Mark "${task.title}" as complete`
                       }
                     >
-                      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <svg
+                        aria-hidden="true"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                      >
                         <circle cx="12" cy="12" r="9" />
                       </svg>
                     </button>
@@ -234,7 +269,9 @@ export function MiniTasksSection({ isExpanded, onToggle }: MiniTasksSectionProps
                               : ''
                           }`}
                         >
-                          {isToday(parseISO(task.dueDate)) ? 'Today' : format(parseISO(task.dueDate), 'MMM d')}
+                          {isToday(parseISO(task.dueDate))
+                            ? 'Today'
+                            : format(parseISO(task.dueDate), 'MMM d')}
                         </span>
                       ) : (
                         <span className={styles.taskDue}>No date</span>

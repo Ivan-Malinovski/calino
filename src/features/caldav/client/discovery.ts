@@ -52,7 +52,9 @@ export function expandProviderUrl(serverUrl: string, username: string): string |
         }
       }
     }
-  } catch { /* invalid URL — ignore */ }
+  } catch {
+    /* invalid URL — ignore */
+  }
   return null
 }
 
@@ -69,7 +71,9 @@ export function suggestCalDAVUrl(serverUrl: string): string | null {
         return `For ${domain}, try entering: ${info.urlTemplate.replace('{email}', 'your-email@' + domain)}`
       }
     }
-  } catch { /* invalid URL — ignore */ }
+  } catch {
+    /* invalid URL — ignore */
+  }
   return null
 }
 
@@ -86,7 +90,9 @@ export function suggestAuthHint(serverUrl: string): string | null {
         return info.authHint
       }
     }
-  } catch { /* invalid URL — ignore */ }
+  } catch {
+    /* invalid URL — ignore */
+  }
   return null
 }
 
@@ -112,7 +118,9 @@ export async function discoverServerUrl(baseUrl: string, proxyUrl?: string): Pro
       // the real Location header — discard and fall back to the base URL.
       const wellKnownPath = '/.well-known/caldav'
       if (discovered.endsWith(wellKnownPath) || discovered.endsWith(wellKnownPath + '/')) {
-        console.log('[CalDAV] Discovery: probe returned .well-known/caldav as base — proxy likely followed redirect. Falling back.')
+        console.log(
+          '[CalDAV] Discovery: probe returned .well-known/caldav as base — proxy likely followed redirect. Falling back.'
+        )
       } else {
         console.log('[CalDAV] Discovery: well-known probe succeeded:', discovered)
         return discovered
@@ -151,10 +159,7 @@ export async function discoverServerUrl(baseUrl: string, proxyUrl?: string): Pro
  * Probe /.well-known/caldav and follow the redirect to the real CalDAV base.
  * Returns null if the server doesn't support well-known (e.g. returns 404).
  */
-async function probeWellKnown(
-  baseUrl: string,
-  proxyUrl?: string
-): Promise<string | null> {
+async function probeWellKnown(baseUrl: string, proxyUrl?: string): Promise<string | null> {
   const wellKnownUrl = new URL('/.well-known/caldav', baseUrl).href
 
   if (proxyUrl) {
@@ -175,10 +180,7 @@ function isWellKnownPath(pathname: string): boolean {
 }
 
 /** Direct fetch: follow redirect and compare final URL to detect .well-known discovery. */
-async function probeWellKnownDirect(
-  wellKnownUrl: string,
-  baseUrl: string
-): Promise<string | null> {
+async function probeWellKnownDirect(wellKnownUrl: string, baseUrl: string): Promise<string | null> {
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), DISCOVERY_TIMEOUT_MS)
   try {
@@ -272,7 +274,6 @@ function buildBaseUrl(serverBaseUrl: string, discoveredPath: string, finalOrigin
   return discoveredPath === '' || discoveredPath === '/' ? origin : `${origin}${discoveredPath}`
 }
 
-
 export async function testConnection(
   serverUrl: string,
   credentials: { username: string; password: string },
@@ -348,9 +349,7 @@ export async function probeConnection(
             </d:propfind>`,
       }
 
-      const response = proxyUrl
-        ? await proxyFetch(proxyUrl, url, init)
-        : await webFetch(url, init)
+      const response = proxyUrl ? await proxyFetch(proxyUrl, url, init) : await webFetch(url, init)
 
       // 207 Multi-Status is the success case for PROPFIND.
       return { ok: response.ok || response.status === 207, status: response.status }
@@ -364,7 +363,10 @@ export async function probeConnection(
     if (!result.ok) {
       const normalizedBase = serverUrl.replace(/\/$/, '')
       if (baseUrl !== normalizedBase) {
-        console.log('[CalDAV] Probe: discovered URL failed (' + result.status + '), trying base URL:', normalizedBase)
+        console.log(
+          '[CalDAV] Probe: discovered URL failed (' + result.status + '), trying base URL:',
+          normalizedBase
+        )
         const fallback = await attempt(normalizedBase)
         if (fallback.ok) {
           baseUrl = normalizedBase

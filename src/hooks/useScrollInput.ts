@@ -17,9 +17,7 @@ const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
  * we use the native setter + dispatch an 'input' event so React's onChange
  * is triggered correctly.
  */
-export function useScrollInput(
-  inputs: React.RefObject<HTMLInputElement | null>[]
-): void {
+export function useScrollInput(inputs: React.RefObject<HTMLInputElement | null>[]): void {
   useEffect(() => {
     const isManaged = (el: HTMLElement): boolean =>
       el.tagName === 'INPUT' && inputs.some((r) => r.current === el)

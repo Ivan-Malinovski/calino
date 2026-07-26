@@ -1,9 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import ICAL from 'ical.js'
-import {
-  icalEventToCalendarEvent,
-  calendarEventToIcalComponent,
-} from '../icalTypeMapping'
+import { icalEventToCalendarEvent, calendarEventToIcalComponent } from '../icalTypeMapping'
 import type { CalendarEvent } from '@/types'
 
 // ---------------------------------------------------------------------------
@@ -381,28 +378,28 @@ describe('Bug 27: All-day DTEND rollover', () => {
     }
   })
 
-    it('handles month with 30 days correctly (April 30)', () => {
-      const event: CalendarEvent = {
-        id: 'apr30-test',
-        calendarId: 'cal-1',
-        title: 'Apr End',
-        start: '2025-04-30',
-        end: '2025-04-30',
-        isAllDay: true,
-      }
+  it('handles month with 30 days correctly (April 30)', () => {
+    const event: CalendarEvent = {
+      id: 'apr30-test',
+      calendarId: 'cal-1',
+      title: 'Apr End',
+      start: '2025-04-30',
+      end: '2025-04-30',
+      isAllDay: true,
+    }
 
-      const vevent = calendarEventToIcalComponent(event)
-      const dtendProp = vevent.getFirstProperty('dtend')
-      const dtendValue = dtendProp?.getFirstValue()
+    const vevent = calendarEventToIcalComponent(event)
+    const dtendProp = vevent.getFirstProperty('dtend')
+    const dtendValue = dtendProp?.getFirstValue()
 
-      expect(dtendValue).toBeInstanceOf(ICAL.Time)
-      if (dtendValue instanceof ICAL.Time) {
-        expect(dtendValue.year).toBe(2025)
-        expect(dtendValue.month).toBe(5)
-        expect(dtendValue.day).toBe(1)
-      }
-    })
+    expect(dtendValue).toBeInstanceOf(ICAL.Time)
+    if (dtendValue instanceof ICAL.Time) {
+      expect(dtendValue.year).toBe(2025)
+      expect(dtendValue.month).toBe(5)
+      expect(dtendValue.day).toBe(1)
+    }
   })
+})
 
 // ---------------------------------------------------------------------------
 // Group B: rrule round-trip for BYMONTHDAY, BYMONTH, BYSETPOS, positional BYDAY

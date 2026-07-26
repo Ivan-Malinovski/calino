@@ -81,7 +81,12 @@ interface DroppableCellProps {
 // per render, which meant this React.memo never once prevented a re-render
 // (and re-ran useDroppable's registration for all 168 cells) whenever WeekView
 // rendered — during drags, that was every frame. See #73.
-const DroppableCell = React.memo(function DroppableCell({ dateKey, hourKey, onClick, onMouseDown }: DroppableCellProps): JSX.Element {
+const DroppableCell = React.memo(function DroppableCell({
+  dateKey,
+  hourKey,
+  onClick,
+  onMouseDown,
+}: DroppableCellProps): JSX.Element {
   const { setNodeRef } = useDroppable({ id: `${dateKey}-${hourKey}` })
 
   return (
@@ -106,7 +111,12 @@ interface DayHeaderProps {
 // Each day header doubles as an all-day drop target: dragging a timed event
 // onto it turns the event into an all-day event (the inverse of dragging a pill
 // down into the grid).
-const DayHeader = React.memo(function DayHeader({ day, isTodayDay, allDayEvents, activeIsTimed }: DayHeaderProps): JSX.Element {
+const DayHeader = React.memo(function DayHeader({
+  day,
+  isTodayDay,
+  allDayEvents,
+  activeIsTimed,
+}: DayHeaderProps): JSX.Element {
   const { setNodeRef, isOver } = useDroppable({ id: `allday::${format(day, 'yyyy-MM-dd')}` })
 
   return (
@@ -235,10 +245,17 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
   // Live preview of where the dragged event will land, refreshed on drag move.
   // The card itself follows the pointer freely; only this band snaps.
   const handleDragMove = (event: DragMoveEvent): void => {
-    const durationMinutes = activeEvent && !activeEvent.isAllDay
-      ? (parseISO(activeEvent.end).getTime() - parseISO(activeEvent.start).getTime()) / 60_000
-      : 60
-    const next = computeDropPreview(event.active, event.over, event.delta.y, hourHeight, durationMinutes)
+    const durationMinutes =
+      activeEvent && !activeEvent.isAllDay
+        ? (parseISO(activeEvent.end).getTime() - parseISO(activeEvent.start).getTime()) / 60_000
+        : 60
+    const next = computeDropPreview(
+      event.active,
+      event.over,
+      event.delta.y,
+      hourHeight,
+      durationMinutes
+    )
     setDropPreview((prev) => (isSameDropPreview(prev, next) ? prev : next))
   }
 
@@ -344,7 +361,9 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
             const isLast = dayKey === endKey
             const fragment: CalendarEvent = {
               ...event,
-              start: isFirst ? event.start : format(startOfDay(currentDay), "yyyy-MM-dd'T'HH:mm:ss"),
+              start: isFirst
+                ? event.start
+                : format(startOfDay(currentDay), "yyyy-MM-dd'T'HH:mm:ss"),
               end: isLast ? event.end : format(endOfDay(currentDay), "yyyy-MM-dd'T'HH:mm:ss"),
               isFragment: true,
               isFirstFragment: isFirst,
@@ -419,7 +438,8 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
         const now = new Date()
         const minutesSinceMidnight = now.getHours() * 60 + now.getMinutes()
         const fraction = minutesSinceMidnight / (24 * 60)
-        const scrollTop = fraction * bodyRef.current.scrollHeight - bodyRef.current.clientHeight * 0.3
+        const scrollTop =
+          fraction * bodyRef.current.scrollHeight - bodyRef.current.clientHeight * 0.3
         bodyRef.current.scrollTo({ top: Math.max(0, scrollTop), behavior: 'smooth' })
       } else {
         const sortedAllEvents: CalendarEvent[] = []
@@ -477,19 +497,16 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
     [openModal]
   )
 
-  const handleDragStartFromCell = useCallback(
-    (e: React.MouseEvent<HTMLDivElement>): void => {
-      if (e.button !== 0) return
-      const { date, hour } = e.currentTarget.dataset
-      if (!date || !hour) return
-      e.preventDefault()
-      const startTime = `${date}T${hour}`
-      setIsDraggingToCreate(true)
-      setDragStart(startTime)
-      setDragEnd(startTime)
-    },
-    []
-  )
+  const handleDragStartFromCell = useCallback((e: React.MouseEvent<HTMLDivElement>): void => {
+    if (e.button !== 0) return
+    const { date, hour } = e.currentTarget.dataset
+    if (!date || !hour) return
+    e.preventDefault()
+    const startTime = `${date}T${hour}`
+    setIsDraggingToCreate(true)
+    setDragStart(startTime)
+    setDragEnd(startTime)
+  }, [])
 
   const handleMouseMove = useCallback(
     (e: React.MouseEvent): void => {
@@ -766,7 +783,13 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
                     hourHeight={hourHeight}
                     openModal={openModal}
                   />
-                  {isToday(day) && <CurrentTimeIndicator hourHeight={hourHeight} timeFormat={timeFormat} showLabel={false} />}
+                  {isToday(day) && (
+                    <CurrentTimeIndicator
+                      hourHeight={hourHeight}
+                      timeFormat={timeFormat}
+                      showLabel={false}
+                    />
+                  )}
                 </div>
               </div>
             )
@@ -826,7 +849,10 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
                     openMenu('weekview')
                     const rect = e.currentTarget.getBoundingClientRect()
                     const y = e.clientY - rect.top
-                    const hourClicked = Math.max(0, Math.min(23, Math.floor((y / rect.height) * 24)))
+                    const hourClicked = Math.max(
+                      0,
+                      Math.min(23, Math.floor((y / rect.height) * 24))
+                    )
                     setContextMenu({ x: e.clientX, y: e.clientY, day, hour: hourClicked })
                   }}
                 >
@@ -846,14 +872,20 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
                       <DropPreviewBand preview={dropPreview} timeFormat={timeFormat} />
                     )}
                     <WeekDayColumn
-                    events={eventsMap.get(dayKey) ?? EMPTY_EVENTS}
-                    fragments={timedFragmentsMap.get(dayKey) ?? EMPTY_EVENTS}
-                    timedTasks={timedTasksMap.get(dayKey) ?? EMPTY_EVENTS}
-                    calendars={calendars}
-                    hourHeight={hourHeight}
-                    openModal={openModal}
-                  />
-                    {isToday(day) && <CurrentTimeIndicator hourHeight={hourHeight} timeFormat={timeFormat} showLabel={false} />}
+                      events={eventsMap.get(dayKey) ?? EMPTY_EVENTS}
+                      fragments={timedFragmentsMap.get(dayKey) ?? EMPTY_EVENTS}
+                      timedTasks={timedTasksMap.get(dayKey) ?? EMPTY_EVENTS}
+                      calendars={calendars}
+                      hourHeight={hourHeight}
+                      openModal={openModal}
+                    />
+                    {isToday(day) && (
+                      <CurrentTimeIndicator
+                        hourHeight={hourHeight}
+                        timeFormat={timeFormat}
+                        showLabel={false}
+                      />
+                    )}
                   </div>
                 </div>
               )
@@ -876,7 +908,12 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
       <div
         className={styles.container}
         ref={containerRef}
-        style={{ '--hour-height': `${60 * effectiveScale}px`, '--day-count': weekDays.length } as React.CSSProperties}
+        style={
+          {
+            '--hour-height': `${60 * effectiveScale}px`,
+            '--day-count': weekDays.length,
+          } as React.CSSProperties
+        }
         {...bind}
       >
         {isMobile ? renderMobileContent() : renderDesktopContent()}
@@ -907,7 +944,9 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
           )
         })()}
       </div>
-      <DragOverlay dropAnimation={null}>{activeEvent ? <EventCard event={activeEvent} isDragging /> : null}</DragOverlay>
+      <DragOverlay dropAnimation={null}>
+        {activeEvent ? <EventCard event={activeEvent} isDragging /> : null}
+      </DragOverlay>
       {contextMenu && (
         <ContextMenu
           x={contextMenu.x}
@@ -922,9 +961,7 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
               label: 'Create event',
               onClick: () => {
                 const hourStr =
-                  contextMenu.hour !== undefined
-                    ? `T${pad2(contextMenu.hour)}:00`
-                    : ''
+                  contextMenu.hour !== undefined ? `T${pad2(contextMenu.hour)}:00` : ''
                 openModal(`${format(contextMenu.day, 'yyyy-MM-dd')}${hourStr}`)
                 setContextMenu(null)
               },

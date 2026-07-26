@@ -21,7 +21,7 @@ type CalDAVOperations = {
  */
 export function useBrokenEventsActions(
   strategy: BrokenEventSyncStrategy,
-  caldav?: CalDAVOperations,
+  caldav?: CalDAVOperations
 ): {
   handleFix: (broken: BrokenEvent) => Promise<void> | void
   handleDelete: (broken: BrokenEvent) => Promise<void> | void
@@ -51,7 +51,7 @@ export function useBrokenEventsActions(
         })
       }
     },
-    [strategy, caldav, removeBrokenEvent, addEvent],
+    [strategy, caldav, removeBrokenEvent, addEvent]
   )
 
   const handleDelete = useCallback(
@@ -75,7 +75,7 @@ export function useBrokenEventsActions(
           })
       }
     },
-    [strategy, caldav, removeBrokenEvent],
+    [strategy, caldav, removeBrokenEvent]
   )
 
   const handleFixAll = useCallback(
@@ -84,7 +84,7 @@ export function useBrokenEventsActions(
         handleFix(broken)
       }
     },
-    [handleFix],
+    [handleFix]
   )
 
   const handleDeleteAll = useCallback(
@@ -93,7 +93,7 @@ export function useBrokenEventsActions(
         handleDelete(broken)
       }
     },
-    [handleDelete],
+    [handleDelete]
   )
 
   return { handleFix, handleDelete, handleFixAll, handleDeleteAll }

@@ -90,7 +90,8 @@ export function SearchResults({ results, onSelectEvent }: SearchResultsProps): J
     return (
       <div className={styles.resultsContainer}>
         <div className={styles.noResults}>
-          <svg aria-hidden="true"
+          <svg
+            aria-hidden="true"
             className={styles.noResultsIcon}
             viewBox="0 0 24 24"
             fill="none"
@@ -147,11 +148,10 @@ export function SearchResults({ results, onSelectEvent }: SearchResultsProps): J
                 {result.event.type === 'journal' && (
                   <span className={styles.resultType}>Journal</span>
                 )}
-                {result.event.type === 'task' && (
-                  <span className={styles.resultType}>Task</span>
-                )}
+                {result.event.type === 'task' && <span className={styles.resultType}>Task</span>}
                 <span className={styles.resultDate}>
-                  <svg aria-hidden="true"
+                  <svg
+                    aria-hidden="true"
                     width="12"
                     height="12"
                     viewBox="0 0 24 24"
@@ -179,7 +179,8 @@ export function SearchResults({ results, onSelectEvent }: SearchResultsProps): J
                     className={styles.resultLocation}
                     ariaLabel={`Open ${result.event.location} in Maps (new tab)`}
                   >
-                    <svg aria-hidden="true"
+                    <svg
+                      aria-hidden="true"
                       width="12"
                       height="12"
                       viewBox="0 0 24 24"

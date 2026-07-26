@@ -3,7 +3,11 @@ import { useCallback, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
 import { CalDAVConnectionError } from '@/features/caldav/client/errors'
-import { probeConnection, suggestCalDAVUrl, expandProviderUrl } from '@/features/caldav/client/discovery'
+import {
+  probeConnection,
+  suggestCalDAVUrl,
+  expandProviderUrl,
+} from '@/features/caldav/client/discovery'
 import { getCredentialById } from '@/features/caldav/client/credentials'
 import type { CalDAVAccount } from '@/features/caldav/types'
 import { useAnimatedClose } from '@/hooks/useAnimatedClose'
@@ -80,7 +84,9 @@ export function AddCalendarModal({
    * Read the form. In edit mode a blank password means "keep the current one",
    * so we resolve it to undefined rather than an empty string.
    */
-  const readForm = (form: HTMLFormElement): {
+  const readForm = (
+    form: HTMLFormElement
+  ): {
     serverUrl: string
     username: string
     password: string
@@ -116,7 +122,13 @@ export function AddCalendarModal({
     }
 
     const expanded = expandProviderUrl(serverUrl, username)
-    await handleTestConnection(expanded || serverUrl, username, effectivePassword, proxyUrl, serverUrl)
+    await handleTestConnection(
+      expanded || serverUrl,
+      username,
+      effectivePassword,
+      proxyUrl,
+      serverUrl
+    )
   }
 
   /** Surface a failed add/edit, preferring the probe's hint over a guess. */
@@ -182,7 +194,9 @@ export function AddCalendarModal({
       showFailure(
         error,
         serverUrl,
-        isEdit ? 'Failed to update account. Please try again.' : 'Failed to add account. Please try again.'
+        isEdit
+          ? 'Failed to update account. Please try again.'
+          : 'Failed to add account. Please try again.'
       )
     } finally {
       isSavingRef.current = false
@@ -253,7 +267,8 @@ export function AddCalendarModal({
               className={styles.chevronLabel}
               onClick={() => setShowProxyField(!showProxyField)}
             >
-              <svg aria-hidden="true"
+              <svg
+                aria-hidden="true"
                 className={styles.chevronIcon}
                 style={{ transform: showProxyField ? 'rotate(0deg)' : 'rotate(-90deg)' }}
                 width="16"
@@ -352,13 +367,7 @@ export function AddCalendarModal({
               data-component="modal-save"
             >
               {isSaving && <span className={styles.buttonSpinner} aria-hidden="true" />}
-              <span>
-                {isSaving
-                  ? 'Saving…'
-                  : isEdit
-                    ? 'Save Changes'
-                    : 'Add Calendar'}
-              </span>
+              <span>{isSaving ? 'Saving…' : isEdit ? 'Save Changes' : 'Add Calendar'}</span>
             </button>
           </div>
         </form>

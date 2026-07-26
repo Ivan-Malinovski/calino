@@ -188,10 +188,7 @@ export function findDuplicateGroups(contacts: Contact[]): DuplicateGroup[] {
 // Merge two contacts
 // ---------------------------------------------------------------------------
 
-function unionByValue<T extends { value: string }>(
-  primary: T[],
-  secondary: T[]
-): T[] {
+function unionByValue<T extends { value: string }>(primary: T[], secondary: T[]): T[] {
   const seen = new Set(primary.map((item) => item.value.toLowerCase()))
   const result = [...primary]
   for (const item of secondary) {
@@ -207,7 +204,12 @@ function preferPrimary(primary: string, secondary: string): string {
   return primary || secondary
 }
 
-function addressKey(addr: { street: string; city: string; postalCode: string; country: string }): string {
+function addressKey(addr: {
+  street: string
+  city: string
+  postalCode: string
+  country: string
+}): string {
   return [addr.street, addr.city, addr.postalCode, addr.country].join('|').toLowerCase()
 }
 

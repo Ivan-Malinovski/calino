@@ -15,12 +15,7 @@ import { useHistoryStore } from './store/historyStore'
 import { showToast } from './lib/toast'
 import { hapticIfEnabled } from './lib/haptics'
 import { useSettingsStore } from './store/settingsStore'
-import {
-  CalendarHeader,
-  Sidebar,
-  EventModal,
-  EventPreviewPopup,
-} from './features/calendar'
+import { CalendarHeader, Sidebar, EventModal, EventPreviewPopup } from './features/calendar'
 import { JournalDayModal } from './features/calendar/components/JournalDayModal'
 import { SettingsPage, PrivacyPolicy } from './features/settings'
 import { CommandPalette } from './features/commandPalette'
@@ -53,16 +48,38 @@ import { format, parseISO } from 'date-fns'
 
 import './App.css'
 
-const CalendarGrid = lazy(() => import('./features/calendar/components/CalendarGrid').then(m => ({ default: m.CalendarGrid })))
-const WeekView = lazy(() => import('./features/calendar/components/WeekView').then(m => ({ default: m.WeekView })))
-const DayView = lazy(() => import('./features/calendar/components/DayView').then(m => ({ default: m.DayView })))
-const AgendaView = lazy(() => import('./features/calendar/components/AgendaView').then(m => ({ default: m.AgendaView })))
-const TodoView = lazy(() => import('./features/calendar/components/TodoView').then(m => ({ default: m.TodoView })))
-const JournalView = lazy(() => import('./features/calendar/components/JournalView').then(m => ({ default: m.JournalView })))
-const ContactsView = lazy(() => import('./features/carddav/components/ContactsView').then(m => ({ default: m.ContactsView })))
-const YearView = lazy(() => import('./features/calendar/components/YearView').then(m => ({ default: m.YearView })))
+const CalendarGrid = lazy(() =>
+  import('./features/calendar/components/CalendarGrid').then((m) => ({ default: m.CalendarGrid }))
+)
+const WeekView = lazy(() =>
+  import('./features/calendar/components/WeekView').then((m) => ({ default: m.WeekView }))
+)
+const DayView = lazy(() =>
+  import('./features/calendar/components/DayView').then((m) => ({ default: m.DayView }))
+)
+const AgendaView = lazy(() =>
+  import('./features/calendar/components/AgendaView').then((m) => ({ default: m.AgendaView }))
+)
+const TodoView = lazy(() =>
+  import('./features/calendar/components/TodoView').then((m) => ({ default: m.TodoView }))
+)
+const JournalView = lazy(() =>
+  import('./features/calendar/components/JournalView').then((m) => ({ default: m.JournalView }))
+)
+const ContactsView = lazy(() =>
+  import('./features/carddav/components/ContactsView').then((m) => ({ default: m.ContactsView }))
+)
+const YearView = lazy(() =>
+  import('./features/calendar/components/YearView').then((m) => ({ default: m.YearView }))
+)
 
-function ViewLoader({ children, viewKey }: { children: JSX.Element; viewKey: ViewType }): JSX.Element {
+function ViewLoader({
+  children,
+  viewKey,
+}: {
+  children: JSX.Element
+  viewKey: ViewType
+}): JSX.Element {
   const reducedMotion = useReducedMotion()
   return (
     // Suspense sits OUTSIDE the animated element on purpose. When it was
@@ -81,7 +98,13 @@ function ViewLoader({ children, viewKey }: { children: JSX.Element; viewKey: Vie
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: reducedMotion ? 0 : 0.15 }}
-          style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}
+          style={{
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            minHeight: 0,
+            overflow: 'hidden',
+          }}
         >
           {children}
         </motion.div>
@@ -90,7 +113,17 @@ function ViewLoader({ children, viewKey }: { children: JSX.Element; viewKey: Vie
   )
 }
 
-const VIEW_ORDER: ViewType[] = ['month', 'year', 'week', '3day', 'day', 'agenda', 'todo', 'journal', 'contacts']
+const VIEW_ORDER: ViewType[] = [
+  'month',
+  'year',
+  'week',
+  '3day',
+  'day',
+  'agenda',
+  'todo',
+  'journal',
+  'contacts',
+]
 
 function useViewManager(): void {
   const navigate = useNavigate()
@@ -382,7 +415,12 @@ function CalendarApp(): JSX.Element {
     if (!Capacitor.isNativePlatform()) return
 
     const listenerPromise = CapacitorApp.addListener('backButton', () => {
-      if (isCommandPaletteOpen || isShortcutsHelpOpen || isJournalModalOpen || useCalendarStore.getState().isModalOpen) {
+      if (
+        isCommandPaletteOpen ||
+        isShortcutsHelpOpen ||
+        isJournalModalOpen ||
+        useCalendarStore.getState().isModalOpen
+      ) {
         document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
         return
       }
@@ -498,7 +536,11 @@ function CalendarApp(): JSX.Element {
     })()
     // Key the boundary on the view so switching views remounts a fresh
     // boundary and recovers from a crashed view without a full reload.
-    return <ErrorBoundary key={currentView}><ViewLoader viewKey={currentView}>{viewElement}</ViewLoader></ErrorBoundary>
+    return (
+      <ErrorBoundary key={currentView}>
+        <ViewLoader viewKey={currentView}>{viewElement}</ViewLoader>
+      </ErrorBoundary>
+    )
   }
 
   const handleToggleSidebar = useCallback(() => {
@@ -550,7 +592,12 @@ function CalendarApp(): JSX.Element {
       />
       <div className="appContent" data-sidebar-collapsed={sidebarCollapsed || undefined}>
         <ErrorBoundary fallback={null}>
-          <Sidebar isOpen={isSidebarOpen} onClose={handleCloseSidebar} isCollapsed={sidebarCollapsed} onCollapsedChange={(v) => updateSettings({ sidebarCollapsed: v })} />
+          <Sidebar
+            isOpen={isSidebarOpen}
+            onClose={handleCloseSidebar}
+            isCollapsed={sidebarCollapsed}
+            onCollapsedChange={(v) => updateSettings({ sidebarCollapsed: v })}
+          />
         </ErrorBoundary>
         {isMobile && (
           <div
@@ -630,7 +677,10 @@ function CalendarApp(): JSX.Element {
           )}
         </AnimatePresence>
       </div>
-      <FloatingNavPill onToggleSidebar={handleToggleSidebar} onOpenSearch={handleOpenCommandPalette} />
+      <FloatingNavPill
+        onToggleSidebar={handleToggleSidebar}
+        onOpenSearch={handleOpenCommandPalette}
+      />
       <ErrorBoundary fallback={null}>
         <EventModal />
       </ErrorBoundary>

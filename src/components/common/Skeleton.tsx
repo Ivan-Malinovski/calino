@@ -38,9 +38,7 @@ function MonthSkeleton(): JSX.Element {
               const idx = row * 7 + col
               return (
                 <div key={col} className="skeleton-cell">
-                  {show(idx, 0.6) && (
-                    <div className="skeleton-bar skeleton-bar--event" />
-                  )}
+                  {show(idx, 0.6) && <div className="skeleton-bar skeleton-bar--event" />}
                   {show(idx, 0.8) && (
                     <div className="skeleton-bar skeleton-bar--event skeleton-bar--event-short" />
                   )}
@@ -64,9 +62,7 @@ function YearSkeleton(): JSX.Element {
               const idx = row * 3 + col
               return (
                 <div key={col} className="skeleton-cell">
-                  {show(idx, 0.4) && (
-                    <div className="skeleton-bar skeleton-bar--event" />
-                  )}
+                  {show(idx, 0.4) && <div className="skeleton-bar skeleton-bar--event" />}
                 </div>
               )
             })}
@@ -119,9 +115,7 @@ function DaySkeleton(): JSX.Element {
           <div key={h} className="skeleton-day-row">
             <div className="skeleton-bar skeleton-bar--hour-label" />
             <div className="skeleton-day-cell">
-              {show(h, 0.65) && (
-                <div className="skeleton-bar skeleton-bar--day-event" />
-              )}
+              {show(h, 0.65) && <div className="skeleton-bar skeleton-bar--day-event" />}
             </div>
           </div>
         ))}
@@ -154,9 +148,7 @@ function TodoSkeleton(): JSX.Element {
           <div className="skeleton-bar skeleton-bar--todo-check" />
           <div className="skeleton-todo-item-content">
             <div className="skeleton-bar skeleton-bar--todo-title" />
-            {show(i, 0.5) && (
-              <div className="skeleton-bar skeleton-bar--todo-due" />
-            )}
+            {show(i, 0.5) && <div className="skeleton-bar skeleton-bar--todo-due" />}
           </div>
         </div>
       ))}
@@ -179,9 +171,7 @@ function JournalSkeleton(): JSX.Element {
               <div className="skeleton-bar skeleton-bar--journal-weekday" />
             </div>
             <div className="skeleton-journal-content">
-              {show(i, 0.4) && (
-                <div className="skeleton-bar skeleton-bar--journal-title" />
-              )}
+              {show(i, 0.4) && <div className="skeleton-bar skeleton-bar--journal-title" />}
               <div className="skeleton-bar skeleton-bar--journal-body" />
               {show(i, 0.6) && (
                 <div className="skeleton-bar skeleton-bar--journal-body skeleton-bar--journal-body-short" />

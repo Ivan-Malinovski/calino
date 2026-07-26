@@ -10,7 +10,12 @@ interface CommandFactoryDeps {
   navigate: (path: string) => void
   setCurrentView: (view: 'month' | 'week' | 'day' | 'agenda' | 'journal' | 'todo') => void
   setCurrentDate: (date: string) => void
-  openModal: (date?: string, endDate?: string, eventId?: string, mode?: 'event' | 'task' | 'journal') => void
+  openModal: (
+    date?: string,
+    endDate?: string,
+    eventId?: string,
+    mode?: 'event' | 'task' | 'journal'
+  ) => void
   openJournalModal: (date: string, startInCompose?: boolean) => void
   toggleSidebar?: () => void
   triggerSync?: () => void
@@ -41,25 +46,37 @@ interface CommandFactoryDeps {
 
 // 16×16 stroke SVG icons
 const ICONS = {
-  calendar: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="12" height="11" rx="2"/><path d="M2 6.5h12M5.5 1.5v2M10.5 1.5v2"/></svg>',
-  arrowRight: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h10M9 4l4 4-4 4"/></svg>',
-  arrowLeft: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 8H3M7 4L3 8l4 4"/></svg>',
+  calendar:
+    '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="12" height="11" rx="2"/><path d="M2 6.5h12M5.5 1.5v2M10.5 1.5v2"/></svg>',
+  arrowRight:
+    '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h10M9 4l4 4-4 4"/></svg>',
+  arrowLeft:
+    '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 8H3M7 4L3 8l4 4"/></svg>',
   undo: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8a5 5 0 105-5 5 5 0 00-4.5 2.8M2 3v3h3"/></svg>',
   redo: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 8a5 5 0 11-5-5 5 5 0 014.5 2.8M14 3v3h-3"/></svg>',
-  skipForward: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4l6 4-6 4V4zM11 4l2 4-2 4"/></svg>',
-  skipBack: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 4L7 8l6 4V4zM5 4L3 8l2 4"/></svg>',
-  chevronRight: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4l4 4-4 4"/></svg>',
+  skipForward:
+    '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4l6 4-6 4V4zM11 4l2 4-2 4"/></svg>',
+  skipBack:
+    '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 4L7 8l6 4V4zM5 4L3 8l2 4"/></svg>',
+  chevronRight:
+    '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4l4 4-4 4"/></svg>',
   plus: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M8 3v10M3 8h10"/></svg>',
-  circle: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="5"/></svg>',
-  settings: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="2.5"/><path d="M13.5 10a1.3 1.3 0 00.26 1.45l.05.05a1.58 1.58 0 11-2.23 2.23l-.05-.05A1.3 1.3 0 0010 13.5a1.3 1.3 0 00-.8 1.2v.1a1.58 1.58 0 01-3.16 0v-.1A1.3 1.3 0 005.28 13.5a1.3 1.3 0 00-1.45.26l-.05.05a1.58 1.58 0 11-2.23-2.23l.05-.05A1.3 1.3 0 002.5 10a1.3 1.3 0 00-1.2-.8H1.2a1.58 1.58 0 010-3.16h.1A1.3 1.3 0 002.5 5.28a1.3 1.3 0 00-.26-1.45l-.05-.05a1.58 1.58 0 112.23-2.23l.05.05A1.3 1.3 0 005.28 2.5a1.3 1.3 0 00.8-1.2V1.2a1.58 1.58 0 013.16 0v.1a1.3 1.3 0 00.8 1.2 1.3 1.3 0 001.45-.26l.05-.05a1.58 1.58 0 112.23 2.23l-.05.05A1.3 1.3 0 0013.5 5.28a1.3 1.3 0 001.2.8h.1a1.58 1.58 0 010 3.16h-.1a1.3 1.3 0 00-1.2.8z"/></svg>',
+  circle:
+    '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="5"/></svg>',
+  settings:
+    '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="2.5"/><path d="M13.5 10a1.3 1.3 0 00.26 1.45l.05.05a1.58 1.58 0 11-2.23 2.23l-.05-.05A1.3 1.3 0 0010 13.5a1.3 1.3 0 00-.8 1.2v.1a1.58 1.58 0 01-3.16 0v-.1A1.3 1.3 0 005.28 13.5a1.3 1.3 0 00-1.45.26l-.05.05a1.58 1.58 0 11-2.23-2.23l.05-.05A1.3 1.3 0 002.5 10a1.3 1.3 0 00-1.2-.8H1.2a1.58 1.58 0 010-3.16h.1A1.3 1.3 0 002.5 5.28a1.3 1.3 0 00-.26-1.45l-.05-.05a1.58 1.58 0 112.23-2.23l.05.05A1.3 1.3 0 005.28 2.5a1.3 1.3 0 00.8-1.2V1.2a1.58 1.58 0 013.16 0v.1a1.3 1.3 0 00.8 1.2 1.3 1.3 0 001.45-.26l.05-.05a1.58 1.58 0 112.23 2.23l-.05.05A1.3 1.3 0 0013.5 5.28a1.3 1.3 0 001.2.8h.1a1.58 1.58 0 010 3.16h-.1a1.3 1.3 0 00-1.2.8z"/></svg>',
   bug: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 1v2M8 13v2M3 5H1M3 11H1M13 5h2M13 11h2M5.5 2.5l-1 1M10.5 12.5l-1 1M5.5 12.5l-1-1M10.5 2.5l-1-1"/><rect x="3" y="5" width="10" height="8" rx="2"/><path d="M5 5V4a3 3 0 016 0v1"/></svg>',
-  sidebar: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="12" height="10" rx="2"/><path d="M6 3v10"/></svg>',
+  sidebar:
+    '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="12" height="10" rx="2"/><path d="M6 3v10"/></svg>',
   moon: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 8.5a5.5 5.5 0 01-7-7 5.5 5.5 0 107 7z"/></svg>',
   sun: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="3"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.5 3.5l1.4 1.4M11.1 11.1l1.4 1.4M3.5 12.5l1.4-1.4M11.1 4.9l1.4-1.4"/></svg>',
-  clock: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6"/><path d="M8 4v4l2.5 2.5"/></svg>',
-  system: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="12" height="9" rx="2"/><path d="M5 15h6M8 12v3"/></svg>',
+  clock:
+    '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6"/><path d="M8 4v4l2.5 2.5"/></svg>',
+  system:
+    '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="12" height="9" rx="2"/><path d="M5 15h6M8 12v3"/></svg>',
   sync: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 8a5.5 5.5 0 019.86-3.36M13.5 8a5.5 5.5 0 01-9.86 3.36"/><path d="M12.36 1v3.36H9M3.64 15v-3.36H7"/></svg>',
-  palette: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6"/><circle cx="8" cy="5" r="1" fill="currentColor"/><circle cx="5.5" cy="7.5" r="1" fill="currentColor"/><circle cx="10.5" cy="7.5" r="1" fill="currentColor"/><circle cx="8" cy="10.5" r="1" fill="currentColor"/></svg>',
+  palette:
+    '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6"/><circle cx="8" cy="5" r="1" fill="currentColor"/><circle cx="5.5" cy="7.5" r="1" fill="currentColor"/><circle cx="10.5" cy="7.5" r="1" fill="currentColor"/><circle cx="8" cy="10.5" r="1" fill="currentColor"/></svg>',
 } as const
 
 const createNavigationCommands = (deps: CommandFactoryDeps): Command[] => {
@@ -309,7 +326,8 @@ const createActionCommands = (deps: CommandFactoryDeps): Command[] => [
     description: `Current: ${deps.themeMode === 'auto' ? 'System' : deps.themeMode === 'dark' ? 'Dark' : 'Light'}`,
     category: 'actions',
     keywords: ['theme', 'cycle', 'light', 'dark', 'system', 'appearance', 'mode'],
-    icon: deps.themeMode === 'auto' ? ICONS.system : deps.themeMode === 'dark' ? ICONS.moon : ICONS.sun,
+    icon:
+      deps.themeMode === 'auto' ? ICONS.system : deps.themeMode === 'dark' ? ICONS.moon : ICONS.sun,
     action: () => {
       const order: ThemeMode[] = ['light', 'dark', 'auto']
       const currentIdx = order.indexOf(deps.themeMode ?? 'auto')

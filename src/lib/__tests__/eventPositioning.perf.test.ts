@@ -27,7 +27,7 @@ describe('positionEvents — R4.2 perf regression', () => {
     // accidentally reverts to the O(n²) algorithm, this test will
     // fail and surface the regression.
     const events = Array.from({ length: 30 }, (_, i) =>
-      makeEvent({ id: `e${i}`, title: `Event ${i}`, ...day(10, 15) }),
+      makeEvent({ id: `e${i}`, title: `Event ${i}`, ...day(10, 15) })
     )
 
     const t0 = performance.now()
@@ -45,7 +45,7 @@ describe('positionEvents — R4.2 perf regression', () => {
 
   it('positions 100 fully-overlapping events in well under 100ms', () => {
     const events = Array.from({ length: 100 }, (_, i) =>
-      makeEvent({ id: `e${i}`, title: `Event ${i}`, ...day(10, 10) }),
+      makeEvent({ id: `e${i}`, title: `Event ${i}`, ...day(10, 10) })
     )
 
     const t0 = performance.now()
@@ -73,7 +73,7 @@ describe('positionEvents — R4.2 perf regression', () => {
           title: `Event ${i}`,
           start: new Date(2026, 4, 27, hour, minute).toISOString(),
           end: new Date(2026, 4, 27, hour, minute + 60).toISOString(),
-        }),
+        })
       )
     }
 
@@ -85,4 +85,3 @@ describe('positionEvents — R4.2 perf regression', () => {
     expect(elapsed).toBeLessThan(100)
   })
 })
-

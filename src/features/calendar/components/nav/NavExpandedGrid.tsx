@@ -113,7 +113,12 @@ export function NavExpandedGrid({
       onDrag={handleDrag}
       onDragEnd={handleDragEnd}
     >
-      <button type="button" className={styles.handle} onClick={onCollapse} aria-label="Collapse view switcher" />
+      <button
+        type="button"
+        className={styles.handle}
+        onClick={onCollapse}
+        aria-label="Collapse view switcher"
+      />
       <div className={styles.utilityRow}>
         <button type="button" className={styles.searchTile} onClick={handleSearchClick}>
           <SearchIcon />
@@ -156,11 +161,14 @@ export function NavExpandedGrid({
               gridColumn: (activeTileIndex % 4) + 1,
               gridRow: Math.floor(activeTileIndex / 4) + 1,
             }}
-            transition={reducedMotion ? TILE_INDICATOR_TRANSITION_INSTANT : TILE_INDICATOR_TRANSITION}
+            transition={
+              reducedMotion ? TILE_INDICATOR_TRANSITION_INSTANT : TILE_INDICATOR_TRANSITION
+            }
           />
         )}
         {visibleViews.map((view, index) => {
-          const isActive = activeView === view.value || (view.value === 'week' && activeView === '3day')
+          const isActive =
+            activeView === view.value || (view.value === 'week' && activeView === '3day')
           return (
             <motion.button
               key={view.value}
@@ -170,7 +178,9 @@ export function NavExpandedGrid({
               variants={reducedMotion ? tileVariantsReduced : tileVariants}
               onClick={() => handleTileClick(view.value)}
             >
-              <span className={isActive ? styles.tileLabelActive : styles.tileLabel}>{view.label}</span>
+              <span className={isActive ? styles.tileLabelActive : styles.tileLabel}>
+                {view.label}
+              </span>
             </motion.button>
           )
         })}
@@ -181,7 +191,15 @@ export function NavExpandedGrid({
 
 function SearchIcon(): JSX.Element {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+    >
       <circle cx="11" cy="11" r="7" />
       <path d="M21 21L16.65 16.65" />
     </svg>

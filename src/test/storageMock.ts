@@ -22,14 +22,10 @@ export function createLocalStorageMock(): {
   const store = new Map<string, string>()
 
   const install = (): void => {
-    vi.mocked(localStorage.getItem).mockImplementation(
-      (key: string) => store.get(key) ?? null,
-    )
-    vi.mocked(localStorage.setItem).mockImplementation(
-      (key: string, value: string) => {
-        store.set(key, value)
-      },
-    )
+    vi.mocked(localStorage.getItem).mockImplementation((key: string) => store.get(key) ?? null)
+    vi.mocked(localStorage.setItem).mockImplementation((key: string, value: string) => {
+      store.set(key, value)
+    })
     vi.mocked(localStorage.removeItem).mockImplementation((key: string) => {
       store.delete(key)
     })

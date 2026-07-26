@@ -108,9 +108,7 @@ describe('CalendarGrid', () => {
     const cell = container.querySelector<HTMLElement>('[data-date="2024-03-15"]')!
     cell.focus()
     fireEvent.keyDown(cell, { key: 'ArrowRight' })
-    expect(document.activeElement).toBe(
-      container.querySelector('[data-date="2024-03-16"]')
-    )
+    expect(document.activeElement).toBe(container.querySelector('[data-date="2024-03-16"]'))
   })
 
   it('ArrowDown moves keyboard focus one week down without changing the month', () => {
@@ -118,9 +116,7 @@ describe('CalendarGrid', () => {
     const cell = container.querySelector<HTMLElement>('[data-date="2024-03-15"]')!
     cell.focus()
     fireEvent.keyDown(cell, { key: 'ArrowDown' })
-    expect(document.activeElement).toBe(
-      container.querySelector('[data-date="2024-03-22"]')
-    )
+    expect(document.activeElement).toBe(container.querySelector('[data-date="2024-03-22"]'))
     // Focus navigation must not trigger the window-level month change.
     expect(useCalendarStore.getState().currentDate).toBe('2024-03-15')
   })
@@ -240,7 +236,10 @@ describe('CalendarGrid', () => {
 
     const { container } = renderWithRouter(<CalendarGrid />)
     const rowsOn = (date: string) =>
-      Array.from(container.querySelector(`[data-date="${date}"]`)!.querySelector('[class*="events"]')!.children)
+      Array.from(
+        container.querySelector(`[data-date="${date}"]`)!.querySelector('[class*="events"]')!
+          .children
+      )
 
     // On the overlap days the earlier-starting span must stay above.
     ;['2024-03-06', '2024-03-07'].forEach((date) => {
@@ -289,7 +288,8 @@ describe('CalendarGrid', () => {
 
     const { container } = renderWithRouter(<CalendarGrid />)
     const rows = Array.from(
-      container.querySelector('[data-date="2024-03-07"]')!.querySelector('[class*="events"]')!.children
+      container.querySelector('[data-date="2024-03-07"]')!.querySelector('[class*="events"]')!
+        .children
     )
 
     // Without promotion lane 0 would be a blank spacer and the filler would

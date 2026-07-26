@@ -24,6 +24,11 @@ Everything else is plain React work in `src/`.
 
 ## Build / install workflow
 
+> **Note on `cap:run`:** Do not use `pnpm cap:run` (or `cap run android`). It will fail for two reasons:
+> 1. It requires Java on the host (which is deliberately only kept inside the `android-sdk` distrobox).
+> 2. Capacitor's CLI crashes with "Invalid target ID" when dealing with mDNS wireless ADB device names (e.g., `adb-... (2)._adb-tls-connect._tcp`) due to spaces and parentheses in the name.
+> Instead, always follow the manual distrobox build steps below.
+
 1. On host: `pnpm build && npx cap sync android` — copies the fresh web bundle and any
    plugin config into the native project.
 2. Build APK inside the container:

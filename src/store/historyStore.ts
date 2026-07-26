@@ -101,7 +101,9 @@ if (typeof useCalendarStore.subscribe === 'function') {
     const calendarsChanged = state.calendars !== prevState.calendars
     if (!eventsChanged && !calendarsChanged) return
     useHistoryStore.setState((h) => ({
-      past: [...h.past, { events: prevState.events, calendars: prevState.calendars }].slice(-HISTORY_LIMIT),
+      past: [...h.past, { events: prevState.events, calendars: prevState.calendars }].slice(
+        -HISTORY_LIMIT
+      ),
       future: [],
     }))
   })

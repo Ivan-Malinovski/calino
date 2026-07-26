@@ -11,19 +11,19 @@ interface AttendeeSectionProps {
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 const PARTSTAT_LABELS: Record<AttendeePartstat, string> = {
-  'ACCEPTED': 'Accepted',
-  'DECLINED': 'Declined',
-  'TENTATIVE': 'Tentative',
+  ACCEPTED: 'Accepted',
+  DECLINED: 'Declined',
+  TENTATIVE: 'Tentative',
   'NEEDS-ACTION': 'Pending',
-  'DELEGATED': 'Delegated',
+  DELEGATED: 'Delegated',
 }
 
 const PARTSTAT_CLASSES: Record<AttendeePartstat, string> = {
-  'ACCEPTED': styles.partstatAccepted,
-  'DECLINED': styles.partstatDeclined,
-  'TENTATIVE': styles.partstatTentative,
+  ACCEPTED: styles.partstatAccepted,
+  DECLINED: styles.partstatDeclined,
+  TENTATIVE: styles.partstatTentative,
   'NEEDS-ACTION': styles.partstatNeedsAction,
-  'DELEGATED': styles.partstatDelegated,
+  DELEGATED: styles.partstatDelegated,
 }
 
 function getInitials(email: string, name?: string): string {
@@ -103,9 +103,7 @@ export function AttendeeSection({
           <span className={styles.organizerName}>
             {organizer.name || getDisplayName(organizer.email, organizer.name)}
           </span>
-          <span className={styles.organizerEmail}>
-            {organizer.email}
-          </span>
+          <span className={styles.organizerEmail}>{organizer.email}</span>
         </div>
       )}
 
@@ -113,16 +111,10 @@ export function AttendeeSection({
         <div className={styles.attendeeList}>
           {attendees.map((att) => (
             <div key={att.email} className={styles.attendeeRow}>
-              <div className={styles.attendeeAvatar}>
-                {getInitials(att.email, att.name)}
-              </div>
+              <div className={styles.attendeeAvatar}>{getInitials(att.email, att.name)}</div>
               <div className={styles.attendeeInfo}>
-                <span className={styles.attendeeName}>
-                  {getDisplayName(att.email, att.name)}
-                </span>
-                <span className={styles.attendeeEmail}>
-                  {att.email}
-                </span>
+                <span className={styles.attendeeName}>{getDisplayName(att.email, att.name)}</span>
+                <span className={styles.attendeeEmail}>{att.email}</span>
               </div>
               {att.partstat && (
                 <span
@@ -165,9 +157,7 @@ export function AttendeeSection({
         </button>
       </div>
       {inputError && (
-        <div style={{ color: '#dc2626', fontSize: '12px', marginTop: '4px' }}>
-          {inputError}
-        </div>
+        <div style={{ color: '#dc2626', fontSize: '12px', marginTop: '4px' }}>{inputError}</div>
       )}
     </div>
   )

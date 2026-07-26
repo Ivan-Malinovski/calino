@@ -52,10 +52,9 @@ describe('useGestures', () => {
         onDragEnd: vi.fn(),
       }
 
-      const { rerender, result } = renderHook(
-        (props) => useGestures(props),
-        { initialProps: callbacks }
-      )
+      const { rerender, result } = renderHook((props) => useGestures(props), {
+        initialProps: callbacks,
+      })
 
       // Verify the hook renders and returns proper structure
       const bind = result.current.bind as Record<string, unknown>
@@ -104,9 +103,7 @@ describe('useGestures', () => {
       // We can't easily set the timer through the gesture library in jsdom,
       // so we verify the mountedRef pattern by checking the hook's cleanup.
       // The cleanup sets mountedRef.current = false and clears the timer.
-      const { unmount } = renderHook(() =>
-        useGestures({ onLongPress, longPressDelay: 100 })
-      )
+      const { unmount } = renderHook(() => useGestures({ onLongPress, longPressDelay: 100 }))
 
       unmount()
 
@@ -155,7 +152,9 @@ describe('useGestures', () => {
       } as unknown as React.PointerEvent
 
       act(() => {
-        const handler = result.current.bind.onPointerMove as ((...args: unknown[]) => void) | undefined
+        const handler = result.current.bind.onPointerMove as
+          | ((...args: unknown[]) => void)
+          | undefined
         handler?.(moveEvent)
       })
 
@@ -170,9 +169,7 @@ describe('useGestures', () => {
 
   describe('mounted state prevents post-unmount setState', () => {
     it('does not throw when setTimeout fires after unmount', () => {
-      const { result, unmount } = renderHook(() =>
-        useGestures({ onTap: vi.fn() })
-      )
+      const { result, unmount } = renderHook(() => useGestures({ onTap: vi.fn() }))
 
       const bind = result.current.bind as {
         onPointerDown?: (e: React.PointerEvent) => void
@@ -261,9 +258,7 @@ describe('useGestures', () => {
     it('does not fire onLongPress when timer is cleared by move', () => {
       const onLongPress = vi.fn()
 
-      const { result } = renderHook(() =>
-        useGestures({ onLongPress, longPressDelay: 100 })
-      )
+      const { result } = renderHook(() => useGestures({ onLongPress, longPressDelay: 100 }))
 
       const bind = result.current.bind as {
         onPointerDown?: (e: React.PointerEvent) => void
@@ -335,10 +330,9 @@ describe('useGestures', () => {
 
   describe('handler functions are stable', () => {
     it('bind.onPointerUp is a stable function reference', () => {
-      const { result, rerender } = renderHook(
-        ({ onTap }) => useGestures({ onTap }),
-        { initialProps: { onTap: vi.fn() } }
-      )
+      const { result, rerender } = renderHook(({ onTap }) => useGestures({ onTap }), {
+        initialProps: { onTap: vi.fn() },
+      })
 
       const bind1 = result.current.bind as Record<string, unknown>
       const onPointerUp1 = bind1.onPointerUp

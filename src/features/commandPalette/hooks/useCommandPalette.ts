@@ -44,8 +44,18 @@ const PURE_DATE_KEYWORDS = [
 const DAY_NAMES = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
 
 const MONTH_NAMES = [
-  'january', 'february', 'march', 'april', 'may', 'june',
-  'july', 'august', 'september', 'october', 'november', 'december',
+  'january',
+  'february',
+  'march',
+  'april',
+  'may',
+  'june',
+  'july',
+  'august',
+  'september',
+  'october',
+  'november',
+  'december',
 ]
 
 interface UseCommandPaletteProps {
@@ -155,7 +165,10 @@ export function useCommandPalette({ toggleSidebar, sidebarOpen }: UseCommandPale
     }
 
     // Check for event creation intent (has time or duration indicators)
-    const hasTimeIndicator = /\bat\s+\d|\bat\s+noon|\bat\s+midnight|\bat\s+lunch|\bat\s+dinner|\d{1,2}\s*(am|pm)|\d{1,2}:\d{2}/.test(trimmed)
+    const hasTimeIndicator =
+      /\bat\s+\d|\bat\s+noon|\bat\s+midnight|\bat\s+lunch|\bat\s+dinner|\d{1,2}\s*(am|pm)|\d{1,2}:\d{2}/.test(
+        trimmed
+      )
     const hasDurationIndicator = /for\s+\d+\s*(min|hour|hr)/.test(trimmed)
     const hasLocationIndicator = /\bat\s+(?!\d|noon|midnight|lunch|dinner)/.test(trimmed)
 
@@ -326,7 +339,8 @@ export function useCommandPalette({ toggleSidebar, sidebarOpen }: UseCommandPale
           const keywordMatch = cmd.keywords.some((kw) => kw.toLowerCase().includes(filter))
           // Description may be a function for live date-dependent text; resolve
           // it for filter matching.
-          const descText = typeof cmd.description === 'function' ? cmd.description() : cmd.description
+          const descText =
+            typeof cmd.description === 'function' ? cmd.description() : cmd.description
           const descMatch = descText?.toLowerCase().includes(filter)
           return labelMatch || keywordMatch || descMatch
         })
@@ -376,8 +390,6 @@ export function useCommandPalette({ toggleSidebar, sidebarOpen }: UseCommandPale
     [items]
   )
 
-
-
   return {
     query,
     setQuery,
@@ -426,10 +438,7 @@ function eventToItem(
   }
 }
 
-function calendarToItem(
-  cal: CalendarResult,
-  navigate: (path: string) => void
-): CommandPaletteItem {
+function calendarToItem(cal: CalendarResult, navigate: (path: string) => void): CommandPaletteItem {
   return {
     id: `cal-${cal.id}`,
     value: cal.name,

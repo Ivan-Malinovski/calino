@@ -3,7 +3,11 @@ import { persist, createJSONStorage, type StorageValue } from 'zustand/middlewar
 import { safeLocalStorage } from '@/lib/storage'
 import { encryptPassword, decryptPassword, type EncryptedData } from '@/lib/crypto'
 import { syncAiPhotoImportShortcut } from '@/lib/dynamicShortcuts'
-import { DEFAULT_BASE_URLS, type AIProvider, type AIVisionSettings } from '@/features/aiVision/types'
+import {
+  DEFAULT_BASE_URLS,
+  type AIProvider,
+  type AIVisionSettings,
+} from '@/features/aiVision/types'
 
 export interface AIVisionSettingsStore extends AIVisionSettings {
   setProvider: (provider: AIProvider) => void

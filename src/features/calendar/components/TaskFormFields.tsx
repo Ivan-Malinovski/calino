@@ -111,7 +111,11 @@ export function TaskFormFields({
           </label>
         </div>
 
-        <div className={styles.dueModeControl} ref={dueModeControlRef} data-component="task-due-mode">
+        <div
+          className={styles.dueModeControl}
+          ref={dueModeControlRef}
+          data-component="task-due-mode"
+        >
           <div
             className={styles.dueModeIndicator}
             style={{ left: dueModeIndicator.left, width: dueModeIndicator.width }}
@@ -135,7 +139,11 @@ export function TaskFormFields({
 
       <div className={`${styles.row} ${styles.parentTaskRow}`} data-component="task-subtasks">
         <div className={styles.field}>
-          {parentTask && <div className={styles.helperText} data-component="subtask-parent">Subtask of: {parentTask.title}</div>}
+          {parentTask && (
+            <div className={styles.helperText} data-component="subtask-parent">
+              Subtask of: {parentTask.title}
+            </div>
+          )}
           <label className={styles.label} htmlFor="parent-task-select">
             Parent task
           </label>
@@ -147,13 +155,20 @@ export function TaskFormFields({
           >
             <option value="">No parent</option>
             {parentTasks.map((task) => (
-              <option key={task.id} value={task.id}>{task.title}</option>
+              <option key={task.id} value={task.id}>
+                {task.title}
+              </option>
             ))}
           </select>
         </div>
         {onAddSubtask && (
           <div className={`${styles.field} ${styles.addSubtaskField}`}>
-            <button type="button" className={styles.secondaryButton} onClick={onAddSubtask} data-component="add-subtask">
+            <button
+              type="button"
+              className={styles.secondaryButton}
+              onClick={onAddSubtask}
+              data-component="add-subtask"
+            >
               Add subtask
             </button>
           </div>
@@ -170,7 +185,8 @@ export function TaskFormFields({
               className={styles.subtaskItem}
               onClick={() => onOpenSubtask(task.id)}
             >
-              {task.completed ? '✓ ' : ''}{task.title}
+              {task.completed ? '✓ ' : ''}
+              {task.title}
             </button>
           ))}
         </div>

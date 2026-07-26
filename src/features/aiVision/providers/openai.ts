@@ -2,7 +2,14 @@ import { httpRequest } from '../http'
 import type { ModelInfo, ProviderRequestConfig, VisionMessageInput } from '../types'
 import { endpointUrl } from './url'
 
-const NON_CHAT_PREFIXES = ['text-embedding', 'whisper', 'tts', 'dall-e', 'omni-moderation', 'text-moderation']
+const NON_CHAT_PREFIXES = [
+  'text-embedding',
+  'whisper',
+  'tts',
+  'dall-e',
+  'omni-moderation',
+  'text-moderation',
+]
 
 function authHeaders(cfg: ProviderRequestConfig): Record<string, string> {
   return {
@@ -59,7 +66,10 @@ export async function listModels(cfg: ProviderRequestConfig): Promise<ModelInfo[
     .filter((entry: ModelInfo) => !NON_CHAT_PREFIXES.some((prefix) => entry.id.startsWith(prefix)))
 }
 
-export async function sendVisionMessage(cfg: ProviderRequestConfig, input: VisionMessageInput): Promise<string> {
+export async function sendVisionMessage(
+  cfg: ProviderRequestConfig,
+  input: VisionMessageInput
+): Promise<string> {
   const response = await httpRequest({
     url: endpointUrl(cfg.baseUrl, '/chat/completions'),
     method: 'POST',
@@ -75,7 +85,10 @@ export async function sendVisionMessage(cfg: ProviderRequestConfig, input: Visio
         {
           role: 'user',
           content: [
-            { type: 'image_url', image_url: { url: `data:${input.mimeType};base64,${input.imageBase64}` } },
+            {
+              type: 'image_url',
+              image_url: { url: `data:${input.mimeType};base64,${input.imageBase64}` },
+            },
             { type: 'text', text: input.prompt },
           ],
         },

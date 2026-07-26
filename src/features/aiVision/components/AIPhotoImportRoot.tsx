@@ -18,8 +18,15 @@ import { AIImportProcessingOverlay } from './AIImportProcessingOverlay'
  *    whether the create-drawer happens to be open (it isn't, for a share).
  */
 export function AIPhotoImportRoot(): JSX.Element | null {
-  const { aiState, processingStage, reviewCandidates, processImage, confirmCandidate, confirmAllCandidates, cancelReview } =
-    useAIPhotoImport()
+  const {
+    aiState,
+    processingStage,
+    reviewCandidates,
+    processImage,
+    confirmCandidate,
+    confirmAllCandidates,
+    cancelReview,
+  } = useAIPhotoImport()
 
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return

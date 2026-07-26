@@ -236,6 +236,8 @@ describe('DataSettings — broken events section', () => {
     render(<DataSettings />)
 
     expect(screen.queryByText('Fix All')).not.toBeInTheDocument()
-    expect(screen.queryByText('Delete All', { selector: '.brokenBatchActions button' })).not.toBeInTheDocument()
+    expect(
+      screen.queryByText('Delete All', { selector: '.brokenBatchActions button' })
+    ).not.toBeInTheDocument()
   })
 })

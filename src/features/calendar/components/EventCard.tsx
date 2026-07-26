@@ -19,7 +19,11 @@ import { useDragModifierStore } from '@/store/dragModifierStore'
 import { safeCalDAVUpdate } from '@/lib/caldavHelpers'
 import { deleteEventWithUndo } from '@/lib/deleteWithUndo'
 import { showToast } from '@/lib/toast'
-import { buildMasterTruncation, getFutureOverrideIds, isFirstOccurrence } from '@/lib/recurrenceSplit'
+import {
+  buildMasterTruncation,
+  getFutureOverrideIds,
+  isFirstOccurrence,
+} from '@/lib/recurrenceSplit'
 
 import { extractOriginalEventId, hasDueTime, formatTravelDuration } from '@/lib/events'
 import { hapticIfEnabled } from '@/lib/haptics'
@@ -28,8 +32,6 @@ import { EventBackground } from '@/components/common/EventBackground'
 import { matchEventBackground } from '@/lib/eventBackground'
 import { MINUTE_SNAP_INTERVAL } from '../lib/dragSnap'
 import styles from './EventCard.module.css'
-
-
 
 interface EventCardProps {
   event: CalendarEvent
@@ -86,9 +88,7 @@ export const EventCard = React.memo(function EventCard({
   // grid cell. Share one hover highlight by tracking the hovered id in a store.
   // Subscribe to a boolean so only the previously- and newly-hovered cards
   // re-render, not every card in the grid.
-  const isSharedHovered = useHoveredEventStore(
-    (state) => state.hoveredEventId === event.id
-  )
+  const isSharedHovered = useHoveredEventStore((state) => state.hoveredEventId === event.id)
   const setHoveredEventId = useHoveredEventStore((state) => state.setHoveredEventId)
   const isDuplicateModifierHeld = useDragModifierStore((state) => state.isDuplicateModifierHeld)
   const openMenuId = useContextMenuStore((state) => state.openMenuId)
@@ -200,7 +200,10 @@ export const EventCard = React.memo(function EventCard({
     if (!isCurrentDragging) return
     if (activatorEvent) activatorEventRef.current = activatorEvent
     if (transform) {
-      dragMaxDistanceRef.current = Math.max(dragMaxDistanceRef.current, Math.hypot(transform.x, transform.y))
+      dragMaxDistanceRef.current = Math.max(
+        dragMaxDistanceRef.current,
+        Math.hypot(transform.x, transform.y)
+      )
     }
   }, [isCurrentDragging, transform, activatorEvent])
 
@@ -219,9 +222,10 @@ export const EventCard = React.memo(function EventCard({
     // — treat it the same as the old long-press-for-menu gesture. Only for
     // touch: a MouseSensor pickup has its own distance-based activation, so a
     // 0-distance mouse "drag" isn't a real gesture worth treating as anything.
-    const touch = activator && 'touches' in activator
-      ? ((activator as TouchEvent).touches[0] ?? (activator as TouchEvent).changedTouches[0])
-      : null
+    const touch =
+      activator && 'touches' in activator
+        ? ((activator as TouchEvent).touches[0] ?? (activator as TouchEvent).changedTouches[0])
+        : null
     if (touch && distance < 5) {
       hapticIfEnabled('medium')
       openMenu(menuId)
@@ -410,12 +414,16 @@ export const EventCard = React.memo(function EventCard({
     const newCompleted = !event.completed
     const updatedTasks = completeTask(event.id, newCompleted)
     if (!event.calendarId) return
-    await Promise.all(updatedTasks.map((updatedTask) => safeCalDAVUpdate(
-      updateCalDAVEvent,
-      updatedTask.calendarId,
-      updatedTask,
-      { completed: updatedTask.completed, taskStatus: updatedTask.taskStatus, percentComplete: updatedTask.percentComplete, completedAt: updatedTask.completedAt }
-    )))
+    await Promise.all(
+      updatedTasks.map((updatedTask) =>
+        safeCalDAVUpdate(updateCalDAVEvent, updatedTask.calendarId, updatedTask, {
+          completed: updatedTask.completed,
+          taskStatus: updatedTask.taskStatus,
+          percentComplete: updatedTask.percentComplete,
+          completedAt: updatedTask.completedAt,
+        })
+      )
+    )
   }
 
   return (
@@ -427,11 +435,12 @@ export const EventCard = React.memo(function EventCard({
         data-component="event-card"
         role="button"
         tabIndex={0}
-        aria-label={isTask
-          ? `${event.title}${event.completed ? ' (completed)' : ''}${event.dueDate ? ` due ${formatTime(event.dueDate, timeFormat)}` : ''}`
-          : event.isAllDay
-          ? `${event.title}, all day`
-          : `${event.title}, ${formatTime(event.start, timeFormat)} to ${formatTime(event.end, timeFormat)}`
+        aria-label={
+          isTask
+            ? `${event.title}${event.completed ? ' (completed)' : ''}${event.dueDate ? ` due ${formatTime(event.dueDate, timeFormat)}` : ''}`
+            : event.isAllDay
+              ? `${event.title}, all day`
+              : `${event.title}, ${formatTime(event.start, timeFormat)} to ${formatTime(event.end, timeFormat)}`
         }
         {...(isMultiDay ? { 'data-multi-day': '' } : {})}
         {...(isFragmentFirst ? { 'data-fragment-first': '' } : {})}
@@ -461,9 +470,7 @@ export const EventCard = React.memo(function EventCard({
         onMouseLeave={event.isFragment ? () => setHoveredEventId(null) : undefined}
         {...bind}
       >
-        {backgroundId && (
-          <EventBackground id={backgroundId} className={styles.keywordBackground} />
-        )}
+        {backgroundId && <EventBackground id={backgroundId} className={styles.keywordBackground} />}
         {isDragging && isDuplicateModifierHeld && (
           <div className={styles.duplicateBadge} title="Drop to duplicate">
             <DuplicateIcon />
@@ -477,9 +484,23 @@ export const EventCard = React.memo(function EventCard({
         {(isRecurring || (event.attachments && event.attachments.length > 0)) && (
           <div className={styles.iconGroup}>
             {event.attachments && event.attachments.length > 0 && (
-              <div className={styles.attachmentIcon} title={`${event.attachments.length} attachment${event.attachments.length !== 1 ? 's' : ''}`}>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48" strokeLinecap="round" strokeLinejoin="round" />
+              <div
+                className={styles.attachmentIcon}
+                title={`${event.attachments.length} attachment${event.attachments.length !== 1 ? 's' : ''}`}
+              >
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <path
+                    d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
                 </svg>
               </div>
             )}
@@ -520,7 +541,9 @@ export const EventCard = React.memo(function EventCard({
             {...listeners}
             {...attributes}
           >
-            <div className={styles.title} title={event.title}>{event.title}</div>
+            <div className={styles.title} title={event.title}>
+              {event.title}
+            </div>
             {!hideDueTime && hasDueTime(event) && event.dueDate && (
               <div className={styles.dueDate}>{formatTime(event.dueDate, timeFormat)}</div>
             )}
@@ -542,41 +565,46 @@ export const EventCard = React.memo(function EventCard({
               }}
               {...listeners}
               {...attributes}
-          >
-            <div className={styles.title} title={event.title}>{event.title}</div>
-            {(() => {
-              const timeText = !compact && !event.isAllDay
-                ? isFragmentFirst
-                  ? `${formatTime(event.start, timeFormat)} - ${format(parseISO(event.originalEnd || event.end), 'MMM d')}`
-                  : isFragmentMiddle
-                  ? `${format(parseISO(event.originalStart || event.start), 'MMM d')} - ${format(parseISO(event.originalEnd || event.end), 'MMM d')}`
-                  : isFragmentLast
-                  ? `${format(parseISO(event.originalStart || event.start), 'MMM d')} - ${formatTime(event.end, timeFormat)}`
-                  : `${formatTime(event.start, timeFormat)} - ${formatTime(event.end, timeFormat)}`
-                : event.isAllDay ? 'All day' : null
-              const locText = event.location || null
-              if (timeText && locText) {
-                return (
-                  <div className={styles.meta}>
-                    <span className={styles.time}>{timeText}</span>
-                    <span className={styles.metaDot}>·</span>
-                    <LocationLink location={locText} className={styles.location} />
-                  </div>
-                )
-              }
-              return (
-                <>
-                  {timeText && <div className={styles.time}>{timeText}</div>}
-                  {locText && <LocationLink location={locText} className={styles.location} />}
-                </>
-              )
-            })()}
-            {event.travelDuration && (
-              <div className={styles.travelTime}>
-                <TravelIcon />
-                <span>{formatTravelDuration(event.travelDuration)}</span>
+            >
+              <div className={styles.title} title={event.title}>
+                {event.title}
               </div>
-            )}
+              {(() => {
+                const timeText =
+                  !compact && !event.isAllDay
+                    ? isFragmentFirst
+                      ? `${formatTime(event.start, timeFormat)} - ${format(parseISO(event.originalEnd || event.end), 'MMM d')}`
+                      : isFragmentMiddle
+                        ? `${format(parseISO(event.originalStart || event.start), 'MMM d')} - ${format(parseISO(event.originalEnd || event.end), 'MMM d')}`
+                        : isFragmentLast
+                          ? `${format(parseISO(event.originalStart || event.start), 'MMM d')} - ${formatTime(event.end, timeFormat)}`
+                          : `${formatTime(event.start, timeFormat)} - ${formatTime(event.end, timeFormat)}`
+                    : event.isAllDay
+                      ? 'All day'
+                      : null
+                const locText = event.location || null
+                if (timeText && locText) {
+                  return (
+                    <div className={styles.meta}>
+                      <span className={styles.time}>{timeText}</span>
+                      <span className={styles.metaDot}>·</span>
+                      <LocationLink location={locText} className={styles.location} />
+                    </div>
+                  )
+                }
+                return (
+                  <>
+                    {timeText && <div className={styles.time}>{timeText}</div>}
+                    {locText && <LocationLink location={locText} className={styles.location} />}
+                  </>
+                )
+              })()}
+              {event.travelDuration && (
+                <div className={styles.travelTime}>
+                  <TravelIcon />
+                  <span>{formatTravelDuration(event.travelDuration)}</span>
+                </div>
+              )}
             </div>
             {enableResize && !disableDirectEdit && (
               <div
@@ -672,7 +700,8 @@ export const EventCard = React.memo(function EventCard({
                     {
                       label: 'Delete',
                       onClick: () => {
-                        const isRecurring = !!event.recurrence || !!event.rruleString || !!originalEventId
+                        const isRecurring =
+                          !!event.recurrence || !!event.rruleString || !!originalEventId
                         if (isRecurring) {
                           setShowDeleteDialog(true)
                         } else {
@@ -701,7 +730,9 @@ export const EventCard = React.memo(function EventCard({
             onConfirm={async (mode) => {
               const recurringMasterId = originalEventId || event.id
               if (mode === 'this') {
-                const masterEvent = useCalendarStore.getState().events.find((e) => e.id === recurringMasterId)
+                const masterEvent = useCalendarStore
+                  .getState()
+                  .events.find((e) => e.id === recurringMasterId)
                 if (masterEvent) {
                   const occurrenceStart = event.recurrenceId || event.start
                   const dateStr = occurrenceStart.split('T')[0]
@@ -726,7 +757,9 @@ export const EventCard = React.memo(function EventCard({
                 }
               } else if (mode === 'future') {
                 const storedEvents = useCalendarStore.getState().events
-                const masterEvent = storedEvents.find((candidate) => candidate.id === recurringMasterId)
+                const masterEvent = storedEvents.find(
+                  (candidate) => candidate.id === recurringMasterId
+                )
                 const occurrenceStart = event.recurrenceId || event.start
                 const occurrenceDate = occurrenceStart.split('T')[0]
                 if (masterEvent && occurrenceDate) {
@@ -760,7 +793,9 @@ export const EventCard = React.memo(function EventCard({
                   }
                 }
               } else if (originalEventId) {
-                const eventToDelete = useCalendarStore.getState().events.find((e) => e.id === originalEventId)
+                const eventToDelete = useCalendarStore
+                  .getState()
+                  .events.find((e) => e.id === originalEventId)
                 if (eventToDelete) {
                   deleteEventWithUndo({
                     event: eventToDelete,
@@ -842,7 +877,8 @@ function arePropsEqual(prev: EventCardProps, next: EventCardProps): boolean {
 
 function DeleteIcon(): JSX.Element {
   return (
-    <svg aria-hidden="true"
+    <svg
+      aria-hidden="true"
       width="16"
       height="16"
       viewBox="0 0 24 24"
@@ -857,7 +893,8 @@ function DeleteIcon(): JSX.Element {
 
 function DuplicateIcon(): JSX.Element {
   return (
-    <svg aria-hidden="true"
+    <svg
+      aria-hidden="true"
       width="16"
       height="16"
       viewBox="0 0 24 24"
@@ -873,7 +910,8 @@ function DuplicateIcon(): JSX.Element {
 
 function EditIcon(): JSX.Element {
   return (
-    <svg aria-hidden="true"
+    <svg
+      aria-hidden="true"
       width="16"
       height="16"
       viewBox="0 0 24 24"
@@ -889,7 +927,8 @@ function EditIcon(): JSX.Element {
 
 function TravelIcon(): JSX.Element {
   return (
-    <svg aria-hidden="true"
+    <svg
+      aria-hidden="true"
       width="14"
       height="14"
       viewBox="0 0 24 24"
@@ -909,7 +948,8 @@ function TravelIcon(): JSX.Element {
 
 function SyncWarningIcon(): JSX.Element {
   return (
-    <svg aria-hidden="true"
+    <svg
+      aria-hidden="true"
       width="12"
       height="12"
       viewBox="0 0 24 24"

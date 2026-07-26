@@ -40,7 +40,11 @@ const containerVariantsReduced = {
 
 const isNative = Capacitor.isNativePlatform()
 
-export function NavCreateDrawer({ onClose, onDragProgress, onDragActiveChange }: NavCreateDrawerProps): JSX.Element {
+export function NavCreateDrawer({
+  onClose,
+  onDragProgress,
+  onDragActiveChange,
+}: NavCreateDrawerProps): JSX.Element {
   const { aiState, importFromCamera } = useAIPhotoImport()
   const hasAiApiKey = useAIVisionSettingsStore((s) => s.apiKeyEncrypted !== null)
   const reducedMotion = useReducedMotion()
@@ -98,7 +102,12 @@ export function NavCreateDrawer({ onClose, onDragProgress, onDragActiveChange }:
       onDrag={handleDrag}
       onDragEnd={handleDragEnd}
     >
-      <button type="button" className={styles.handle} onClick={onClose} aria-label="Close create menu" />
+      <button
+        type="button"
+        className={styles.handle}
+        onClick={onClose}
+        aria-label="Close create menu"
+      />
       <motion.div className={styles.rows} variants={container} initial="hidden" animate="visible">
         <motion.div className={styles.rowWrapper} variants={rows}>
           <button type="button" className={styles.rowMain} onClick={handleNewEvent}>
@@ -121,7 +130,12 @@ export function NavCreateDrawer({ onClose, onDragProgress, onDragActiveChange }:
           <TaskCheckIcon size={18} />
           <span>New Task</span>
         </motion.button>
-        <motion.button type="button" className={styles.row} variants={rows} onClick={handleNewJournal}>
+        <motion.button
+          type="button"
+          className={styles.row}
+          variants={rows}
+          onClick={handleNewJournal}
+        >
           <JournalIcon />
           <span>New Journal Entry</span>
         </motion.button>
@@ -132,7 +146,16 @@ export function NavCreateDrawer({ onClose, onDragProgress, onDragActiveChange }:
 
 function JournalIcon(): JSX.Element {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M4 19.5A2.5 2.5 0 016.5 17H20" />
       <path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z" />
       <path d="M9 7h7M9 11h7" />
@@ -142,7 +165,16 @@ function JournalIcon(): JSX.Element {
 
 function AIPhotoIcon(): JSX.Element {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" />
       <circle cx="12" cy="13" r="4" />
       <path d="M19 2v4M17 4h4" strokeLinecap="round" />

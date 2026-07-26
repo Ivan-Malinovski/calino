@@ -4,11 +4,13 @@ import { describe, it, expect, vi } from 'vitest'
 import { AttendeeSection } from '../AttendeeSection'
 import type { CalendarAttendee, CalendarOrganizer } from '@/types'
 
-function renderAttendeeSection(overrides: {
-  attendees?: CalendarAttendee[]
-  organizer?: CalendarOrganizer
-  onAttendeesChange?: (a: CalendarAttendee[]) => void
-} = {}) {
+function renderAttendeeSection(
+  overrides: {
+    attendees?: CalendarAttendee[]
+    organizer?: CalendarOrganizer
+    onAttendeesChange?: (a: CalendarAttendee[]) => void
+  } = {}
+) {
   const defaultProps = {
     attendees: overrides.attendees ?? [],
     onAttendeesChange: overrides.onAttendeesChange ?? vi.fn(),
@@ -32,7 +34,13 @@ describe('AttendeeSection', () => {
   it('renders existing attendees', () => {
     const attendees: CalendarAttendee[] = [
       { email: 'alice@example.com', name: 'Alice', partstat: 'ACCEPTED', role: 'REQ-PARTICIPANT' },
-      { email: 'bob@example.com', name: 'Bob', partstat: 'NEEDS-ACTION', role: 'REQ-PARTICIPANT', rsvp: true },
+      {
+        email: 'bob@example.com',
+        name: 'Bob',
+        partstat: 'NEEDS-ACTION',
+        role: 'REQ-PARTICIPANT',
+        rsvp: true,
+      },
     ]
     renderAttendeeSection({ attendees })
 
@@ -104,9 +112,7 @@ describe('AttendeeSection', () => {
   it('does not add duplicate emails', async () => {
     const user = userEvent.setup()
     const onAttendeesChange = vi.fn()
-    const attendees: CalendarAttendee[] = [
-      { email: 'existing@example.com', partstat: 'ACCEPTED' },
-    ]
+    const attendees: CalendarAttendee[] = [{ email: 'existing@example.com', partstat: 'ACCEPTED' }]
     renderAttendeeSection({ attendees, onAttendeesChange })
 
     const input = screen.getByPlaceholderText('Add attendee email...')
@@ -144,9 +150,7 @@ describe('AttendeeSection', () => {
   it('removes attendee by email when no name is set', async () => {
     const user = userEvent.setup()
     const onAttendeesChange = vi.fn()
-    const attendees: CalendarAttendee[] = [
-      { email: 'noname@example.com', partstat: 'ACCEPTED' },
-    ]
+    const attendees: CalendarAttendee[] = [{ email: 'noname@example.com', partstat: 'ACCEPTED' }]
     renderAttendeeSection({ attendees, onAttendeesChange })
 
     await user.click(screen.getByLabelText('Remove noname@example.com'))
@@ -155,9 +159,7 @@ describe('AttendeeSection', () => {
   })
 
   it('shows initials from email when no name is provided', () => {
-    const attendees: CalendarAttendee[] = [
-      { email: 'test@example.com', partstat: 'ACCEPTED' },
-    ]
+    const attendees: CalendarAttendee[] = [{ email: 'test@example.com', partstat: 'ACCEPTED' }]
     renderAttendeeSection({ attendees })
 
     expect(screen.getByText('TE')).toBeInTheDocument()
@@ -173,9 +175,7 @@ describe('AttendeeSection', () => {
   })
 
   it('shows display name from email local part when no name', () => {
-    const attendees: CalendarAttendee[] = [
-      { email: 'john.doe@example.com', partstat: 'ACCEPTED' },
-    ]
+    const attendees: CalendarAttendee[] = [{ email: 'john.doe@example.com', partstat: 'ACCEPTED' }]
     renderAttendeeSection({ attendees })
 
     expect(screen.getByText('John Doe')).toBeInTheDocument()

@@ -3,7 +3,13 @@ import { Capacitor } from '@capacitor/core'
 import { App as CapacitorApp } from '@capacitor/app'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
-import { showNotification, createNotificationId, getDueSnoozedReminders, snoozeReminder, getEffectiveReminders } from '@/lib/notifications'
+import {
+  showNotification,
+  createNotificationId,
+  getDueSnoozedReminders,
+  snoozeReminder,
+  getEffectiveReminders,
+} from '@/lib/notifications'
 import {
   registerReminderActions,
   reconcileNativeReminders,
@@ -112,13 +118,17 @@ export function useNotifications(): void {
           const previousTimestamp = shownReminders.current.get(reminderId)
           const neverShown = previousTimestamp === undefined
 
-          const inLiveWindow = isWithinInterval(reminderTime, { start: checkWindowStart, end: checkWindowEnd })
+          const inLiveWindow = isWithinInterval(reminderTime, {
+            start: checkWindowStart,
+            end: checkWindowEnd,
+          })
           // R5.1 — catch-up window: trigger in (catchUpCutoff, checkWindowStart)
           // and never shown. The neverShown gate prevents re-firing on
           // app reloads if the map was already cleared or evicted; we
           // only catch up for triggers that genuinely slipped through
           // (machine was asleep).
-          const inCatchUpWindow = neverShown &&
+          const inCatchUpWindow =
+            neverShown &&
             isAfter(reminderTime, catchUpCutoff) &&
             isAfter(checkWindowStart, reminderTime)
 
@@ -130,20 +140,13 @@ export function useNotifications(): void {
           if (shouldFire) {
             shownReminders.current.set(reminderId, triggerTimestamp)
 
-            const timeStr = event.isAllDay 
-              ? 'All day' 
+            const timeStr = event.isAllDay
+              ? 'All day'
               : parseISO(event.start).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
-            
-            const body = event.isAllDay 
-              ? `Starting today` 
-              : `Starting at ${timeStr}`
 
-            showNotification(
-              event.title,
-              body,
-              event.id,
-              event.start
-            )
+            const body = event.isAllDay ? `Starting today` : `Starting at ${timeStr}`
+
+            showNotification(event.title, body, event.id, event.start)
 
             // Show in-app snooze toast
             toast(`⏰ ${event.title}`, {

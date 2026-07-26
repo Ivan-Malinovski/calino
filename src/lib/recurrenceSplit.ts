@@ -52,12 +52,10 @@ export function buildMasterTruncation(
     ? buildRRuleString(recurrence)
     : master.rruleString
       ? [
-          ...master.rruleString
-            .split(';')
-            .filter((part) => {
-              const normalized = part.toUpperCase()
-              return !normalized.startsWith('UNTIL=') && !normalized.startsWith('COUNT=')
-            }),
+          ...master.rruleString.split(';').filter((part) => {
+            const normalized = part.toUpperCase()
+            return !normalized.startsWith('UNTIL=') && !normalized.startsWith('COUNT=')
+          }),
           `UNTIL=${untilValue}`,
         ].join(';')
       : undefined
@@ -91,8 +89,10 @@ export function isFirstOccurrence(master: CalendarEvent, occurrenceValue: string
   if (master.isAllDay) {
     return occurrenceValue.split('T')[0] <= master.start.split('T')[0]
   }
-  return parseOccurrenceValue(master, occurrenceValue).getTime() <=
+  return (
+    parseOccurrenceValue(master, occurrenceValue).getTime() <=
     parseOccurrenceValue(master, master.start).getTime()
+  )
 }
 
 function parseOccurrenceValue(master: CalendarEvent, value: string): Date {

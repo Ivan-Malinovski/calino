@@ -79,7 +79,10 @@ export function CalendarHeader({
   const [isViewDropdownOpen, setIsViewDropdownOpen] = useState(false)
   const viewDropdownRef = useRef<HTMLDivElement>(null)
   const viewDropdownCloseTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const [indicatorStyle, setIndicatorStyle] = useState<{ left: number; width: number }>({ left: 0, width: 0 })
+  const [indicatorStyle, setIndicatorStyle] = useState<{ left: number; width: number }>({
+    left: 0,
+    width: 0,
+  })
   const viewTabsRef = useRef<HTMLDivElement>(null)
   const viewTabRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
 
@@ -261,10 +264,20 @@ export function CalendarHeader({
   // active view (dropdown label / title length), or sidebar geometry.
   useLayoutEffect(() => {
     evaluateSwitcherMode()
-  }, [evaluateSwitcherMode, journalEnabled, contactsEnabled, currentView, currentDate, sidebarWidth, sidebarCollapsed])
+  }, [
+    evaluateSwitcherMode,
+    journalEnabled,
+    contactsEnabled,
+    currentView,
+    currentDate,
+    sidebarWidth,
+    sidebarCollapsed,
+  ])
 
   const [showQuickSettings, setShowQuickSettings] = useState(false)
-  const quickSettingsTimeoutRef = useState(() => ({ current: undefined as ReturnType<typeof setTimeout> | undefined }))[0]
+  const quickSettingsTimeoutRef = useState(() => ({
+    current: undefined as ReturnType<typeof setTimeout> | undefined,
+  }))[0]
 
   // Animate the dropdowns out when their boolean flips false (close-on-select,
   // click-outside, hover-leave all funnel through the same exit animation).
@@ -333,7 +346,10 @@ export function CalendarHeader({
   const titleLabel = typeof title === 'object' ? `${title.month} ${title.year}` : title
   const prevTitleRef = useRef(titleLabel)
   const prevDateRef = useRef(currentDate)
-  const [titleTransition, setTitleTransition] = useState<{ dir: 'next' | 'prev'; seq: number } | null>(null)
+  const [titleTransition, setTitleTransition] = useState<{
+    dir: 'next' | 'prev'
+    seq: number
+  } | null>(null)
 
   useLayoutEffect(() => {
     if (prevTitleRef.current === titleLabel) {
@@ -414,7 +430,9 @@ export function CalendarHeader({
   })
 
   // Calculate brand column width based on sidebar state
-  const brandColumnWidth = sidebarCollapsed ? 'var(--sidebar-collapsed-width, 40px)' : `${sidebarWidth}px`
+  const brandColumnWidth = sidebarCollapsed
+    ? 'var(--sidebar-collapsed-width, 40px)'
+    : `${sidebarWidth}px`
 
   return (
     <header
@@ -431,11 +449,7 @@ export function CalendarHeader({
         <span className={styles.brandName}>Calino</span>
       </div>
       {/* Hamburger — shown by CSS when sidebar collapsed or at compact breakpoint */}
-      <button
-        className={styles.hamburger}
-        onClick={onToggleSidebar}
-        aria-label="Toggle menu"
-      >
+      <button className={styles.hamburger} onClick={onToggleSidebar} aria-label="Toggle menu">
         <HamburgerIcon />
       </button>
 
@@ -480,11 +494,17 @@ export function CalendarHeader({
       >
         {typeof title === 'object' ? (
           <>
-            <h1 key={`m${titleAnimKey}`} className={`${styles.monthTitle} ${titleAnimClass}`}>{title.month}</h1>
-            <span key={`y${titleAnimKey}`} className={`${styles.yearTitle} ${titleAnimClass}`}>{title.year}</span>
+            <h1 key={`m${titleAnimKey}`} className={`${styles.monthTitle} ${titleAnimClass}`}>
+              {title.month}
+            </h1>
+            <span key={`y${titleAnimKey}`} className={`${styles.yearTitle} ${titleAnimClass}`}>
+              {title.year}
+            </span>
           </>
         ) : (
-          <h1 key={`v${titleAnimKey}`} className={`${styles.viewTitle} ${titleAnimClass}`}>{title}</h1>
+          <h1 key={`v${titleAnimKey}`} className={`${styles.viewTitle} ${titleAnimClass}`}>
+            {title}
+          </h1>
         )}
       </div>
 
@@ -561,26 +581,26 @@ export function CalendarHeader({
                     {(openTabMenu === view.value ||
                       (tabMenu.closing && lastTabMenuView === view.value)) &&
                       tabMenuPos && (
-                      <div
-                        className={`${styles.viewTabMenu} ${tabMenu.closing ? styles.viewTabMenuClosing : ''}`}
-                        role="menu"
-                        style={{ left: tabMenuPos.left, top: tabMenuPos.top }}
-                      >
-                        {menu.map((item) => (
-                          <button
-                            key={item.label}
-                            className={styles.viewTabMenuItem}
-                            role="menuitem"
-                            onClick={() => {
-                              item.onClick()
-                              setOpenTabMenu(null)
-                            }}
-                          >
-                            {item.label}
-                          </button>
-                        ))}
-                      </div>
-                    )}
+                        <div
+                          className={`${styles.viewTabMenu} ${tabMenu.closing ? styles.viewTabMenuClosing : ''}`}
+                          role="menu"
+                          style={{ left: tabMenuPos.left, top: tabMenuPos.top }}
+                        >
+                          {menu.map((item) => (
+                            <button
+                              key={item.label}
+                              className={styles.viewTabMenuItem}
+                              role="menuitem"
+                              onClick={() => {
+                                item.onClick()
+                                setOpenTabMenu(null)
+                              }}
+                            >
+                              {item.label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                   </div>
                 ) : (
                   tabButton
@@ -630,8 +650,21 @@ export function CalendarHeader({
               data-component="view-dropdown-trigger"
             >
               {VIEWS.find((v) => v.value === currentView)?.label}
-              <svg aria-hidden="true" width="12" height="12" viewBox="0 0 12 12" fill="none" className={`${styles.viewDropdownArrow} ${isViewDropdownOpen ? styles.viewDropdownArrowOpen : ''}`}>
-                <path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              <svg
+                aria-hidden="true"
+                width="12"
+                height="12"
+                viewBox="0 0 12 12"
+                fill="none"
+                className={`${styles.viewDropdownArrow} ${isViewDropdownOpen ? styles.viewDropdownArrowOpen : ''}`}
+              >
+                <path
+                  d="M3 4.5L6 7.5L9 4.5"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
               </svg>
             </button>
           </div>
@@ -648,9 +681,9 @@ export function CalendarHeader({
                 if (e.key === 'Escape') {
                   e.preventDefault()
                   setIsViewDropdownOpen(false)
-                  viewDropdownRef.current?.querySelector<HTMLButtonElement>(
-                    'button[aria-haspopup="menu"]'
-                  )?.focus()
+                  viewDropdownRef.current
+                    ?.querySelector<HTMLButtonElement>('button[aria-haspopup="menu"]')
+                    ?.focus()
                   return
                 }
                 const items = Array.from(
@@ -666,7 +699,10 @@ export function CalendarHeader({
                   nextIndex = currentIndex < 0 ? 0 : (currentIndex + 1) % items.length
                 } else if (e.key === 'ArrowUp') {
                   e.preventDefault()
-                  nextIndex = currentIndex < 0 ? items.length - 1 : (currentIndex - 1 + items.length) % items.length
+                  nextIndex =
+                    currentIndex < 0
+                      ? items.length - 1
+                      : (currentIndex - 1 + items.length) % items.length
                 } else if (e.key === 'Home') {
                   e.preventDefault()
                   nextIndex = 0
@@ -717,8 +753,10 @@ export function CalendarHeader({
           >
             <SettingsIcon />
           </button>
-            {quickSettings.rendered && (
-            <div className={`${styles.quickSettingsDropdown} ${quickSettings.closing ? styles.quickSettingsClosing : ''}`}>
+          {quickSettings.rendered && (
+            <div
+              className={`${styles.quickSettingsDropdown} ${quickSettings.closing ? styles.quickSettingsClosing : ''}`}
+            >
               <QuickSettingsPanel />
             </div>
           )}
@@ -735,7 +773,16 @@ export function CalendarHeader({
 
 function ChevronLeft(): JSX.Element {
   return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M10 12L6 8L10 4" />
     </svg>
   )
@@ -743,7 +790,16 @@ function ChevronLeft(): JSX.Element {
 
 function ChevronRight(): JSX.Element {
   return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M6 4L10 8L6 12" />
     </svg>
   )
@@ -751,7 +807,15 @@ function ChevronRight(): JSX.Element {
 
 function HamburgerIcon(): JSX.Element {
   return (
-    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 20 20"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+    >
       <path d="M3 10H17M3 6H17M3 14H17" />
     </svg>
   )
@@ -770,7 +834,15 @@ function TodayIcon(): JSX.Element {
 
 function SearchIcon(): JSX.Element {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+    >
       <circle cx="11" cy="11" r="7" />
       <path d="M21 21L16.65 16.65" />
     </svg>
@@ -779,7 +851,16 @@ function SearchIcon(): JSX.Element {
 
 function SettingsIcon(): JSX.Element {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <circle cx="12" cy="12" r="3" />
       <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
     </svg>

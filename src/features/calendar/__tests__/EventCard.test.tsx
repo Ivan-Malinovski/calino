@@ -132,12 +132,8 @@ describe('EventCard', () => {
     })
 
     // Should have added pointermove and pointerup listeners
-    const pointermoveCallsAfterFirst = addSpy.mock.calls.filter(
-      (c) => c[0] === 'pointermove'
-    )
-    const pointerupCallsAfterFirst = addSpy.mock.calls.filter(
-      (c) => c[0] === 'pointerup'
-    )
+    const pointermoveCallsAfterFirst = addSpy.mock.calls.filter((c) => c[0] === 'pointermove')
+    const pointerupCallsAfterFirst = addSpy.mock.calls.filter((c) => c[0] === 'pointerup')
     expect(pointermoveCallsAfterFirst.length).toBeGreaterThanOrEqual(1)
     expect(pointerupCallsAfterFirst.length).toBeGreaterThanOrEqual(1)
 
@@ -159,12 +155,8 @@ describe('EventCard', () => {
     expect(removeSpy).toHaveBeenCalledWith('pointerup', firstUpHandler)
 
     // New listeners should have been added
-    const pointermoveCallsAfterSecond = addSpy.mock.calls.filter(
-      (c) => c[0] === 'pointermove'
-    )
-    const pointerupCallsAfterSecond = addSpy.mock.calls.filter(
-      (c) => c[0] === 'pointerup'
-    )
+    const pointermoveCallsAfterSecond = addSpy.mock.calls.filter((c) => c[0] === 'pointermove')
+    const pointerupCallsAfterSecond = addSpy.mock.calls.filter((c) => c[0] === 'pointerup')
     expect(pointermoveCallsAfterSecond.length).toBe(1)
     expect(pointerupCallsAfterSecond.length).toBe(1)
 

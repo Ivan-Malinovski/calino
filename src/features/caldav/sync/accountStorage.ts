@@ -30,7 +30,9 @@ export function getAllAccounts(): CalDAVAccount[] {
   try {
     return JSON.parse(stored) as CalDAVAccount[]
   } catch {
-    console.warn('[CalDAV] Failed to parse stored accounts from localStorage. Data may be corrupted.')
+    console.warn(
+      '[CalDAV] Failed to parse stored accounts from localStorage. Data may be corrupted.'
+    )
     return []
   }
 }
@@ -82,7 +84,9 @@ export function getAllCalendars(): CalDAVCalendar[] {
   try {
     return JSON.parse(stored) as CalDAVCalendar[]
   } catch {
-    console.warn('[CalDAV] Failed to parse stored calendars from localStorage. Data may be corrupted.')
+    console.warn(
+      '[CalDAV] Failed to parse stored calendars from localStorage. Data may be corrupted.'
+    )
     return []
   }
 }
@@ -134,7 +138,9 @@ export function getPendingChanges(): PendingChange[] {
   try {
     return JSON.parse(stored) as PendingChange[]
   } catch {
-    console.warn('[CalDAV] Failed to parse stored pending changes from localStorage. Data may be corrupted.')
+    console.warn(
+      '[CalDAV] Failed to parse stored pending changes from localStorage. Data may be corrupted.'
+    )
     return []
   }
 }

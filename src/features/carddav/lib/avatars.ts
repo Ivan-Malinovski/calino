@@ -16,9 +16,7 @@ export const AVATAR_COLORS: readonly string[] = [
  * Uses the same 31-multiplier hash as the original local helpers.
  */
 export function getAvatarColor(name: string): string {
-  const hash = name
-    .split('')
-    .reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 0)
+  const hash = name.split('').reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 0)
   return AVATAR_COLORS[hash % AVATAR_COLORS.length]!
 }
 
@@ -36,7 +34,5 @@ export function getInitials(name?: string | null): string {
   if (!name) return '?'
   const parts = name.trim().split(/\s+/)
   if (parts.length === 1) return parts[0]!.charAt(0).toUpperCase()
-  return (
-    parts[0]!.charAt(0) + parts[parts.length - 1]!.charAt(0)
-  ).toUpperCase()
+  return (parts[0]!.charAt(0) + parts[parts.length - 1]!.charAt(0)).toUpperCase()
 }

@@ -47,12 +47,7 @@ describe('createCommandRegistry', () => {
 
       cmd.action()
 
-      expect(mockOpenModal).toHaveBeenCalledWith(
-        undefined,
-        undefined,
-        undefined,
-        'task'
-      )
+      expect(mockOpenModal).toHaveBeenCalledWith(undefined, undefined, undefined, 'task')
     })
 
     it('Open Settings navigates to /settings', () => {

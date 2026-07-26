@@ -27,7 +27,10 @@ const db = new AttachmentDatabase()
 /**
  * Store attachments for an event. Overwrites any existing attachments.
  */
-export async function putAttachments(eventId: string, attachments: CalendarAttachment[]): Promise<void> {
+export async function putAttachments(
+  eventId: string,
+  attachments: CalendarAttachment[]
+): Promise<void> {
   await db.attachments.put({ eventId, attachments })
 }
 

@@ -33,7 +33,8 @@ if (typeof globalThis.ResizeObserver === 'undefined') {
     disconnect(): void {}
   } as unknown as typeof ResizeObserver
   ;(globalThis as { ResizeObserver: typeof ResizeObserver }).ResizeObserver = ResizeObserverMock
-  ;(window as unknown as { ResizeObserver: typeof ResizeObserver }).ResizeObserver = ResizeObserverMock
+  ;(window as unknown as { ResizeObserver: typeof ResizeObserver }).ResizeObserver =
+    ResizeObserverMock
 }
 
 // jsdom doesn't implement scrollIntoView. cmdk calls it on the selected item.

@@ -142,7 +142,7 @@ export function OnboardingModal({ onAddCalendar }: OnboardingModalProps): JSX.El
         if (vcfResponse.ok) {
           const vcfData = await vcfResponse.text()
           const vcards = vcfData.split(/(?=BEGIN:VCARD)/).filter(Boolean)
-          
+
           // Create a sample address book
           const sampleAddressBook = {
             id: 'sample-addressbook',
@@ -154,14 +154,14 @@ export function OnboardingModal({ onAddCalendar }: OnboardingModalProps): JSX.El
             isVisible: true,
           }
           addAddressBook(sampleAddressBook)
-          
+
           for (const vcard of vcards) {
             const contact = parseVCard(vcard.trim(), 'sample-addressbook', 'sample')
             if (contact) {
               addContact(contact)
             }
           }
-          
+
           // Enable contacts feature
           const { contactsEnabled } = useSettingsStore.getState()
           if (!contactsEnabled) {
@@ -186,20 +186,21 @@ export function OnboardingModal({ onAddCalendar }: OnboardingModalProps): JSX.El
     }
   }
 
-    return (
+  return (
+    <div
+      className={`${styles.modal} ${closing ? styles.closing : ''}`}
+      onClick={handleBackdropClick}
+    >
       <div
-        className={`${styles.modal} ${closing ? styles.closing : ''}`}
-        onClick={handleBackdropClick}
+        ref={contentRef}
+        className={styles.modalContent}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="onboarding-title"
       >
-        <div
-          ref={contentRef}
-          className={styles.modalContent}
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="onboarding-title"
-        >
-
-        <h2 className={styles.title} id="onboarding-title">Your calendar stays private</h2>
+        <h2 className={styles.title} id="onboarding-title">
+          Your calendar stays private
+        </h2>
 
         <p className={styles.description}>
           All your events are stored locally in your browser. Calino doesn't send any data to

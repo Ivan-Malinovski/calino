@@ -8,7 +8,12 @@ import {
   TEST_IMAGE_BASE64,
   TEST_IMAGE_MIME,
 } from './prompt'
-import type { ExtractedEventFields, ModelInfo, ProviderRequestConfig, TestConnectionResult } from './types'
+import type {
+  ExtractedEventFields,
+  ModelInfo,
+  ProviderRequestConfig,
+  TestConnectionResult,
+} from './types'
 
 export async function listModels(config: ProviderRequestConfig): Promise<ModelInfo[]> {
   return getProvider(config.provider).listModels(config)

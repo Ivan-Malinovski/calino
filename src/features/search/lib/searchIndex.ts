@@ -87,7 +87,9 @@ export function search(
       }
 
       if (filters.categoryIds && filters.categoryIds.length > 0) {
-        passesFilters = passesFilters && (event.categories ?? []).some(cat => filters.categoryIds!.includes(cat))
+        passesFilters =
+          passesFilters &&
+          (event.categories ?? []).some((cat) => filters.categoryIds!.includes(cat))
       }
 
       if (filters.dateFrom || filters.dateTo) {
@@ -201,12 +203,15 @@ function recurringEventOverlapsRange(
         MONTHLY: RRule.MONTHLY,
         YEARLY: RRule.YEARLY,
       }
-      const weekdayMap = [
-        RRule.MO, RRule.TU, RRule.WE, RRule.TH, RRule.FR, RRule.SA, RRule.SU,
-      ]
+      const weekdayMap = [RRule.MO, RRule.TU, RRule.WE, RRule.TH, RRule.FR, RRule.SA, RRule.SU]
       const weekdayCodeMap: Record<string, typeof RRule.MO> = {
-        MO: RRule.MO, TU: RRule.TU, WE: RRule.WE, TH: RRule.TH,
-        FR: RRule.FR, SA: RRule.SA, SU: RRule.SU,
+        MO: RRule.MO,
+        TU: RRule.TU,
+        WE: RRule.WE,
+        TH: RRule.TH,
+        FR: RRule.FR,
+        SA: RRule.SA,
+        SU: RRule.SU,
       }
 
       const opts: Partial<Options> = {
@@ -231,9 +236,7 @@ function recurringEventOverlapsRange(
         monthly: RRule.MONTHLY,
         yearly: RRule.YEARLY,
       }
-      const weekdayMap = [
-        RRule.MO, RRule.TU, RRule.WE, RRule.TH, RRule.FR, RRule.SA, RRule.SU,
-      ]
+      const weekdayMap = [RRule.MO, RRule.TU, RRule.WE, RRule.TH, RRule.FR, RRule.SA, RRule.SU]
       const opts: Partial<Options> = {
         dtstart: eventStart,
         freq: freqMap[frequency] ?? RRule.WEEKLY,
@@ -289,10 +292,7 @@ function overlapsBasic(
 /**
  * Filter the full Fuse collection against the given filters (no query search).
  */
-function filterCollection(
-  _instance: Fuse<CalendarEvent>,
-  filters: SearchFilters
-): SearchResult[] {
+function filterCollection(_instance: Fuse<CalendarEvent>, filters: SearchFilters): SearchResult[] {
   const allEvents = indexedEvents
 
   const filtered = allEvents.filter((event) => {
@@ -307,7 +307,7 @@ function filterCollection(
     }
 
     if (filters.categoryIds && filters.categoryIds.length > 0) {
-      passes = passes && (event.categories ?? []).some(cat => filters.categoryIds!.includes(cat))
+      passes = passes && (event.categories ?? []).some((cat) => filters.categoryIds!.includes(cat))
     }
 
     if (filters.dateFrom || filters.dateTo) {
@@ -341,10 +341,7 @@ export function getSearchInstance(): Fuse<CalendarEvent> | null {
  * `indexedEvents` (used by filter-only mode) is updated synchronously
  * and is therefore visible immediately.
  */
-export function updateSearchIndex(
-  events: CalendarEvent[],
-  options?: SearchOptions
-): Promise<void> {
+export function updateSearchIndex(events: CalendarEvent[], options?: SearchOptions): Promise<void> {
   // `indexedEvents` is read by filter-only mode and must reflect the new
   // collection synchronously, before the deferred setCollection runs.
   indexedEvents = events
@@ -361,7 +358,7 @@ export function updateSearchIndex(
             fuseInstance!.setCollection(events)
             resolve()
           },
-          { timeout: 1000 },
+          { timeout: 1000 }
         )
       } else {
         setTimeout(() => {

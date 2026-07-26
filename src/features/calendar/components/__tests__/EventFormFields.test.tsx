@@ -68,8 +68,13 @@ describe('EventFormFields', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     ;(useSettingsStore as unknown as ReturnType<typeof vi.fn>).mockImplementation(
-      (selector: (state: { firstDayOfWeek: number; timeFormat: '24h'; defaultDuration: number }) => unknown) =>
-        selector({ firstDayOfWeek: 0, timeFormat: '24h', defaultDuration: 60 })
+      (
+        selector: (state: {
+          firstDayOfWeek: number
+          timeFormat: '24h'
+          defaultDuration: number
+        }) => unknown
+      ) => selector({ firstDayOfWeek: 0, timeFormat: '24h', defaultDuration: 60 })
     )
   })
 

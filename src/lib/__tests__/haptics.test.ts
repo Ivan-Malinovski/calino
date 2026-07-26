@@ -5,7 +5,7 @@ import { useSettingsStore } from '@/store/settingsStore'
 import { haptic, hapticIfEnabled } from '../haptics'
 
 vi.mock('@capacitor/core', () => ({
-  Capacitor: { isNativePlatform: vi.fn() },
+  Capacitor: { isNativePlatform: vi.fn(), getPlatform: vi.fn() },
 }))
 
 vi.mock('@capacitor/haptics', () => ({

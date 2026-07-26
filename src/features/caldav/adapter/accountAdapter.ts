@@ -1,1 +1,1 @@
-export { parseICALEvent, eventToICAL } from './iCalendarAdapter';
+export { parseICALEvent, eventToICAL } from './iCalendarAdapter'

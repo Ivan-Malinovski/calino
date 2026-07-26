@@ -35,9 +35,9 @@ export interface EncryptedData {
 // ─── Master-password encryption (self-hosted config) ─────────────────────────
 
 export interface MasterEncryptedData {
-  ciphertext: string  // base64url
-  iv: string          // base64url
-  salt: string        // base64url
+  ciphertext: string // base64url
+  iv: string // base64url
+  salt: string // base64url
 }
 
 // ─── Shared helpers ──────────────────────────────────────────────────────────
@@ -148,10 +148,7 @@ export function isEncryptedPassword(value: unknown): value is EncryptedData {
  * Derive an AES-256-GCM key from a user-provided master password.
  * Each password has its own random salt.
  */
-async function deriveKeyFromPassword(
-  password: string,
-  salt: Uint8Array
-): Promise<CryptoKey> {
+async function deriveKeyFromPassword(password: string, salt: Uint8Array): Promise<CryptoKey> {
   const encoder = new TextEncoder()
   const keyMaterial = await crypto.subtle.importKey(
     'raw',

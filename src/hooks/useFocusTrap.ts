@@ -16,10 +16,7 @@ const FOCUSABLE_SELECTOR = [
  * Handles Tab / Shift+Tab wrapping at the focusable boundaries. Safe to use in
  * dialogs rendered via portals.
  */
-export function useFocusTrap(
-  containerRef: RefObject<HTMLElement | null>,
-  active: boolean
-): void {
+export function useFocusTrap(containerRef: RefObject<HTMLElement | null>, active: boolean): void {
   useEffect(() => {
     if (!active) return
     const container = containerRef.current

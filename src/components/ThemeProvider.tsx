@@ -1,4 +1,12 @@
-import { useEffect, useState, useCallback, useMemo, useRef, useLayoutEffect, type ReactNode } from 'react'
+import {
+  useEffect,
+  useState,
+  useCallback,
+  useMemo,
+  useRef,
+  useLayoutEffect,
+  type ReactNode,
+} from 'react'
 import { Capacitor } from '@capacitor/core'
 import { StatusBar, Style } from '@capacitor/status-bar'
 import { useSettingsStore } from '@/store/settingsStore'

@@ -14,8 +14,7 @@ vi.mock('sonner', () => ({
 
 vi.mock('@/lib/notifications', () => ({
   showNotification: (...args: unknown[]) => mockShowNotification(...args),
-  createNotificationId: (eventId: string, reminderId: string) =>
-    `calino-${eventId}-${reminderId}`,
+  createNotificationId: (eventId: string, reminderId: string) => `calino-${eventId}-${reminderId}`,
   getDueSnoozedReminders: () => [],
   snoozeReminder: vi.fn(),
   getEffectiveReminders: (event: CalendarEvent, defaultReminderMinutes: number) => {
@@ -53,11 +52,7 @@ vi.mock('@/store/settingsStore', () => ({
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
-function makeEvent(
-  id: string,
-  start: Date,
-  overrides: Partial<CalendarEvent> = {}
-): CalendarEvent {
+function makeEvent(id: string, start: Date, overrides: Partial<CalendarEvent> = {}): CalendarEvent {
   return {
     id,
     calendarId: 'cal1',
@@ -184,9 +179,7 @@ describe('useNotifications - Bug #81+90: shownReminders behavior', () => {
     renderHook(() => useNotifications())
 
     expect(mockShowNotification).toHaveBeenCalledTimes(2)
-    const ids = mockShowNotification.mock.calls.map(
-      (call: unknown[]) => call[2]
-    )
+    const ids = mockShowNotification.mock.calls.map((call: unknown[]) => call[2])
     expect(ids).toContain('evt1')
     expect(ids).toContain('evt2')
   })
@@ -288,7 +281,7 @@ describe('useNotifications - R5.1: 12h catch-up pass for never-shown reminders',
       'Event evt1',
       expect.any(String),
       'evt1',
-      eventStart.toISOString(),
+      eventStart.toISOString()
     )
   })
 

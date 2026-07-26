@@ -12,7 +12,9 @@ describe('buildRRuleString', () => {
   })
 
   it('includes INTERVAL when greater than 1', () => {
-    expect(buildRRuleString(rule({ frequency: 'weekly', interval: 2 }))).toBe('FREQ=WEEKLY;INTERVAL=2')
+    expect(buildRRuleString(rule({ frequency: 'weekly', interval: 2 }))).toBe(
+      'FREQ=WEEKLY;INTERVAL=2'
+    )
   })
 
   it('maps byWeekday numbers to BYDAY codes in order', () => {
@@ -97,7 +99,9 @@ describe('describeRecurrence', () => {
   })
 
   it('describes a structured recurrence rule', () => {
-    const text = describeRecurrence(baseEvent({ recurrence: rule({ frequency: 'daily', interval: 1 }) }))
+    const text = describeRecurrence(
+      baseEvent({ recurrence: rule({ frequency: 'daily', interval: 1 }) })
+    )
     expect(text.toLowerCase()).toContain('day')
   })
 

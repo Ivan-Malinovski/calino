@@ -52,7 +52,10 @@ export async function registerReminderActions(): Promise<void> {
 
 function reminderBody(event: CalendarEvent): string {
   if (event.isAllDay) return 'Starting today'
-  const timeStr = new Date(event.start).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+  const timeStr = new Date(event.start).toLocaleTimeString([], {
+    hour: 'numeric',
+    minute: '2-digit',
+  })
   return `Starting at ${timeStr}`
 }
 
@@ -82,7 +85,9 @@ export async function reconcileNativeReminders(
 
   const pending = await LocalNotifications.getPending()
   if (pending.notifications.length > 0) {
-    await LocalNotifications.cancel({ notifications: pending.notifications.map((n) => ({ id: n.id })) })
+    await LocalNotifications.cancel({
+      notifications: pending.notifications.map((n) => ({ id: n.id })),
+    })
   }
   if (toSchedule.length > 0) {
     await LocalNotifications.schedule({ notifications: toSchedule })
@@ -90,29 +95,32 @@ export async function reconcileNativeReminders(
 }
 
 export function listenForReminderActions(): () => void {
-  const listenerPromise = LocalNotifications.addListener('localNotificationActionPerformed', (action) => {
-    const extra = action.notification.extra as { eventId: string; eventDate: string } | undefined
-    if (!extra) return
+  const listenerPromise = LocalNotifications.addListener(
+    'localNotificationActionPerformed',
+    (action) => {
+      const extra = action.notification.extra as { eventId: string; eventDate: string } | undefined
+      if (!extra) return
 
-    if (action.actionId !== SNOOZE_ACTION_ID) {
-      // Plain tap (actionId 'tap') — open the event the reminder was about.
-      openEventDeepLink(extra.eventId, extra.eventDate)
-      return
+      if (action.actionId !== SNOOZE_ACTION_ID) {
+        // Plain tap (actionId 'tap') — open the event the reminder was about.
+        openEventDeepLink(extra.eventId, extra.eventDate)
+        return
+      }
+
+      void LocalNotifications.schedule({
+        notifications: [
+          {
+            id: hashToInt32(`snooze:${extra.eventId}:${Date.now()}`),
+            title: action.notification.title ?? 'Reminder',
+            body: action.notification.body ?? '',
+            schedule: { at: addMinutes(new Date(), 5) },
+            actionTypeId: REMINDER_ACTION_TYPE,
+            extra,
+          },
+        ],
+      })
     }
-
-    void LocalNotifications.schedule({
-      notifications: [
-        {
-          id: hashToInt32(`snooze:${extra.eventId}:${Date.now()}`),
-          title: action.notification.title ?? 'Reminder',
-          body: action.notification.body ?? '',
-          schedule: { at: addMinutes(new Date(), 5) },
-          actionTypeId: REMINDER_ACTION_TYPE,
-          extra,
-        },
-      ],
-    })
-  })
+  )
 
   return () => {
     void listenerPromise.then((handle) => handle.remove())

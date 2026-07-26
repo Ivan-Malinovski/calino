@@ -1,14 +1,6 @@
 import { useEffect, useState } from 'react'
 
-const TEXT_INPUT_TYPES = new Set([
-  'text',
-  'search',
-  'email',
-  'tel',
-  'url',
-  'password',
-  'number',
-])
+const TEXT_INPUT_TYPES = new Set(['text', 'search', 'email', 'tel', 'url', 'password', 'number'])
 
 function isTextInput(el: Element | null): boolean {
   if (!el) return false

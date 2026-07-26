@@ -18,18 +18,13 @@ describe('useScrollInput', () => {
 
   /** Helper to get the registered wheel handler */
   function getWheelHandler(): EventListener {
-    const wheelCall = addEventListenerSpy.mock.calls.find(
-      (call) => call[0] === 'wheel'
-    )
+    const wheelCall = addEventListenerSpy.mock.calls.find((call) => call[0] === 'wheel')
     expect(wheelCall).toBeDefined()
     return wheelCall![1] as EventListener
   }
 
   /** Helper to create a wheel event targeting a specific element */
-  function createWheelEvent(
-    target: HTMLElement,
-    deltaY: number
-  ): WheelEvent {
+  function createWheelEvent(target: HTMLElement, deltaY: number): WheelEvent {
     const event = new WheelEvent('wheel', {
       deltaY,
       bubbles: true,
@@ -65,9 +60,7 @@ describe('useScrollInput', () => {
         })
       )
       // Verify it was NOT a 'change' event
-      const changeCalls = eventSpy.mock.calls.filter(
-        (call: [Event]) => call[0].type === 'change'
-      )
+      const changeCalls = eventSpy.mock.calls.filter((call: [Event]) => call[0].type === 'change')
       expect(changeCalls).toHaveLength(0)
     })
 
@@ -114,11 +107,10 @@ describe('useScrollInput', () => {
 
       renderHook(() => useScrollInput([ref]))
 
-      expect(addEventListenerSpy).toHaveBeenCalledWith(
-        'wheel',
-        expect.any(Function),
-        { passive: false, capture: true }
-      )
+      expect(addEventListenerSpy).toHaveBeenCalledWith('wheel', expect.any(Function), {
+        passive: false,
+        capture: true,
+      })
     })
 
     it('removes wheel event listener on unmount', () => {
@@ -128,11 +120,9 @@ describe('useScrollInput', () => {
 
       unmount()
 
-      expect(removeEventListenerSpy).toHaveBeenCalledWith(
-        'wheel',
-        expect.any(Function),
-        { capture: true }
-      )
+      expect(removeEventListenerSpy).toHaveBeenCalledWith('wheel', expect.any(Function), {
+        capture: true,
+      })
     })
 
     it('increments date when scrolling up (negative deltaY)', () => {

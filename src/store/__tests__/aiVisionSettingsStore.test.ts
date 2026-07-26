@@ -75,12 +75,16 @@ describe('aiVisionSettingsStore', () => {
     }
 
     it('folds in the /v1 that v0 adapters used to append', async () => {
-      const baseUrl = await rehydrateFrom({ state: { ...DEFAULTS, baseUrl: 'https://api.xiaomimimo.com' } })
+      const baseUrl = await rehydrateFrom({
+        state: { ...DEFAULTS, baseUrl: 'https://api.xiaomimimo.com' },
+      })
       expect(baseUrl).toBe('https://api.xiaomimimo.com/v1')
     })
 
     it('does not double the slash when the v0 value had a trailing one', async () => {
-      const baseUrl = await rehydrateFrom({ state: { ...DEFAULTS, baseUrl: 'https://api.example.com/' } })
+      const baseUrl = await rehydrateFrom({
+        state: { ...DEFAULTS, baseUrl: 'https://api.example.com/' },
+      })
       expect(baseUrl).toBe('https://api.example.com/v1')
     })
 
@@ -128,7 +132,9 @@ describe('aiVisionSettingsStore', () => {
 
   it('clearApiKey clears both apiKeyEncrypted and lastVerified', async () => {
     await useAIVisionSettingsStore.getState().setApiKey('some-key')
-    useAIVisionSettingsStore.getState().setLastVerified({ at: Date.now(), ok: true, visionCapable: true })
+    useAIVisionSettingsStore
+      .getState()
+      .setLastVerified({ at: Date.now(), ok: true, visionCapable: true })
 
     expect(useAIVisionSettingsStore.getState().apiKeyEncrypted).not.toBeNull()
     expect(useAIVisionSettingsStore.getState().lastVerified).not.toBeNull()

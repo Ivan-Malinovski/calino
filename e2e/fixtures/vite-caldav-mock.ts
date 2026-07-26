@@ -333,7 +333,7 @@ export function caldavMockPlugin(): Plugin {
         next()
       })
 
-      // eslint-disable-next-line no-console
+       
       console.log('[calino-caldav-mock] mounted at /mock-caldav/* (dev only)')
     },
   }

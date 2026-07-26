@@ -58,15 +58,8 @@ function ContactListItem({
     >
       {isSelected && <div className={styles.selectedRail} />}
 
-      <div
-        className={styles.avatar}
-        style={{ backgroundColor: avatarColor }}
-      >
-        {contact.photo ? (
-          <img src={contact.photo} alt="" />
-        ) : (
-          initials
-        )}
+      <div className={styles.avatar} style={{ backgroundColor: avatarColor }}>
+        {contact.photo ? <img src={contact.photo} alt="" /> : initials}
       </div>
 
       <div className={styles.contactInfo}>
@@ -165,14 +158,10 @@ export function ContactList({ onNewContact, loading }: ContactListProps = {}): J
 
   const filteredContacts = useMemo(() => {
     // Filter by visible address books
-    const visibleAddressBookIds = addressBooks
-      .filter((ab) => ab.isVisible)
-      .map((ab) => ab.id)
+    const visibleAddressBookIds = addressBooks.filter((ab) => ab.isVisible).map((ab) => ab.id)
 
     // Build filter criteria
-    const filterAddressBookIds = filterAddressBookId
-      ? [filterAddressBookId]
-      : visibleAddressBookIds
+    const filterAddressBookIds = filterAddressBookId ? [filterAddressBookId] : visibleAddressBookIds
 
     if (searchQuery.trim()) {
       // Use Fuse.js search
@@ -183,29 +172,22 @@ export function ContactList({ onNewContact, loading }: ContactListProps = {}): J
     }
 
     // No search query — filter manually
-    let filtered = contacts.filter((c) =>
-      filterAddressBookIds.includes(c.addressBookId),
-    )
+    let filtered = contacts.filter((c) => filterAddressBookIds.includes(c.addressBookId))
 
     if (selectedTag) {
       filtered = filtered.filter((c) => c.categories.includes(selectedTag))
     }
 
-    return filtered.sort((a, b) =>
-      a.displayName.localeCompare(b.displayName),
-    )
+    return filtered.sort((a, b) => a.displayName.localeCompare(b.displayName))
   }, [contacts, addressBooks, searchQuery, selectedTag, filterAddressBookId])
 
-  const groups = useMemo(
-    () => groupByAlpha(filteredContacts),
-    [filteredContacts],
-  )
+  const groups = useMemo(() => groupByAlpha(filteredContacts), [filteredContacts])
 
   const handleSelect = useCallback(
     (id: string) => {
       setSelectedContactId(id)
     },
-    [setSelectedContactId],
+    [setSelectedContactId]
   )
 
   if (loading && contacts.length === 0) {
@@ -269,8 +251,7 @@ export function ContactList({ onNewContact, loading }: ContactListProps = {}): J
       {/* Meta bar: count + new button */}
       <div className={styles.metaBar}>
         <span className={styles.count}>
-          {filteredContacts.length}{' '}
-          {filteredContacts.length === 1 ? 'contact' : 'contacts'}
+          {filteredContacts.length} {filteredContacts.length === 1 ? 'contact' : 'contacts'}
         </span>
         <button type="button" className={styles.newBtn} onClick={onNewContact}>
           + New
@@ -295,9 +276,13 @@ export function ContactList({ onNewContact, loading }: ContactListProps = {}): J
             }}
           >
             <option value="">All address books</option>
-            {addressBooks.filter((ab) => ab.isVisible).map((ab) => (
-              <option key={ab.id} value={ab.id}>{ab.name}</option>
-            ))}
+            {addressBooks
+              .filter((ab) => ab.isVisible)
+              .map((ab) => (
+                <option key={ab.id} value={ab.id}>
+                  {ab.name}
+                </option>
+              ))}
           </select>
         </div>
       )}
@@ -329,9 +314,7 @@ export function ContactList({ onNewContact, loading }: ContactListProps = {}): J
             ) : (
               <>
                 <span className={styles.emptyTitle}>No contacts</span>
-                <span>
-                  Sync your CardDAV account to see contacts here.
-                </span>
+                <span>Sync your CardDAV account to see contacts here.</span>
               </>
             )}
           </div>

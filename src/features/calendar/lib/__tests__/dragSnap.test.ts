@@ -64,20 +64,22 @@ describe('parseTimeSlotId', () => {
 describe('computeDropPreview', () => {
   const timedActive = { data: { current: { startMinutes: 9 * 60 } } } as unknown as Active
   const allDayActive = { data: { current: {} } } as unknown as Active
-  const over = (id: string) => ({ id } as unknown as Over)
+  const over = (id: string) => ({ id }) as unknown as Over
 
   it('takes the day from the cell and the time from the drag delta', () => {
     // Dropped on the 10:00 cell of the next day, but only 50px below a 9:00
     // start — the snapped time (9:45) wins over the cell's hour.
-    expect(
-      computeDropPreview(timedActive, over('2026-07-10-10:00'), 50, HOUR_HEIGHT, 60)
-    ).toEqual({ dateKey: '2026-07-10', minuteOfDay: 9 * 60 + 45, durationMinutes: 60 })
+    expect(computeDropPreview(timedActive, over('2026-07-10-10:00'), 50, HOUR_HEIGHT, 60)).toEqual({
+      dateKey: '2026-07-10',
+      minuteOfDay: 9 * 60 + 45,
+      durationMinutes: 60,
+    })
   })
 
   it('falls back to the cell hour for all-day events, which have no start time', () => {
-    expect(
-      computeDropPreview(allDayActive, over('2026-07-09-14:00'), 50, HOUR_HEIGHT, 60)
-    ).toEqual({ dateKey: '2026-07-09', minuteOfDay: 14 * 60, durationMinutes: 60 })
+    expect(computeDropPreview(allDayActive, over('2026-07-09-14:00'), 50, HOUR_HEIGHT, 60)).toEqual(
+      { dateKey: '2026-07-09', minuteOfDay: 14 * 60, durationMinutes: 60 }
+    )
   })
 
   it('has no preview off the grid or over the all-day header', () => {

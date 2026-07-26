@@ -1,5 +1,10 @@
 import { createDAVClient } from 'tsdav'
-import type { CalDAVCredentials, CalDAVCalendar, CreateCalendarOptions, UpdateCalendarOptions } from '../types'
+import type {
+  CalDAVCredentials,
+  CalDAVCalendar,
+  CreateCalendarOptions,
+  UpdateCalendarOptions,
+} from '../types'
 import { v4 as uuidv4 } from 'uuid'
 import { decodeBase64 } from '@/lib/settingsSync'
 import { webFetch } from '@/lib/webFetch'
@@ -12,19 +17,21 @@ import type { CalendarEvent } from '@/types'
 const NETWORK_TIMEOUT_MS = 15_000
 
 function escapeXml(str: string): string {
-  return str
-    // Remove XML-illegal control characters (except tab, newline, carriage return)
-    .split('')
-    .filter((c) => {
-      const code = c.charCodeAt(0)
-      return code >= 0x20 || code === 0x09 || code === 0x0A || code === 0x0D
-    })
-    .join('')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&apos;')
+  return (
+    str
+      // Remove XML-illegal control characters (except tab, newline, carriage return)
+      .split('')
+      .filter((c) => {
+        const code = c.charCodeAt(0)
+        return code >= 0x20 || code === 0x09 || code === 0x0a || code === 0x0d
+      })
+      .join('')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&apos;')
+  )
 }
 
 /**
@@ -90,10 +97,7 @@ function createProxyFetch(proxyUrl: string): typeof fetch {
   }
 }
 
-async function fetchWithTimeout(
-  url: string | URL,
-  init?: RequestInit
-): Promise<Response> {
+async function fetchWithTimeout(url: string | URL, init?: RequestInit): Promise<Response> {
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), NETWORK_TIMEOUT_MS)
   try {
@@ -196,7 +200,9 @@ export class CalDAVClient {
       try {
         const decoded = decodeURIComponent(calendarUrl)
         if (decoded === c.url) return true
-      } catch { /* ignore decode errors */ }
+      } catch {
+        /* ignore decode errors */
+      }
       return false
     })
 
@@ -399,9 +405,7 @@ export class CalDAVClient {
 
     // Build the MKCALENDAR XML body
     const components = options.components || ['VEVENT', 'VTODO']
-    const componentXml = components
-      .map((comp) => `<C:comp name="${comp}"/>`)
-      .join('\n          ')
+    const componentXml = components.map((comp) => `<C:comp name="${comp}"/>`).join('\n          ')
 
     let colorXml = ''
     if (options.color) {
@@ -503,7 +507,9 @@ export class CalDAVClient {
       // Method 2 failed too
     }
 
-    throw new Error('Could not determine calendar home URL. Please check your CalDAV server configuration.')
+    throw new Error(
+      'Could not determine calendar home URL. Please check your CalDAV server configuration.'
+    )
   }
 
   private async findCalendarHomeFromPrincipal(): Promise<string | null> {
@@ -532,14 +538,14 @@ export class CalDAVClient {
     for (const path of principalPaths) {
       const baseUrl = this.serverUrl.replace(/\/$/, '')
       const testUrl = `${baseUrl}${path}${this.credentials.username}/`
-      
+
       try {
         const response = await this.proxyFetch(testUrl, {
           method: 'PROPFIND',
           headers,
           body: principalXml,
         })
-        
+
         if (response.ok || response.status === 207) {
           const text = await response.text()
           const match = text.match(/<C:calendar-home-set>\s*<d:href>([^<]+)<\/d:href>/)
@@ -551,21 +557,21 @@ export class CalDAVClient {
         // Try next path
       }
     }
-    
+
     return null
   }
 
   private async findCalendarHomeFromCalendars(): Promise<string | null> {
     const client = this.getClient()
     const calendars = await client.fetchCalendars()
-    
+
     if (calendars.length === 0 || !calendars[0].url) {
       return null
     }
 
     // Parse the first calendar's URL to derive the home
     const calendarUrlStr = calendars[0].url
-    
+
     // Handle both absolute and relative URLs
     let calendarUrl: URL
     try {
@@ -573,17 +579,17 @@ export class CalDAVClient {
     } catch {
       calendarUrl = new URL(calendarUrlStr, this.serverUrl)
     }
-    
+
     const pathParts = calendarUrl.pathname.split('/').filter(Boolean)
-    
+
     if (pathParts.length < 2) {
       return null
     }
-    
+
     // Remove the last part (calendar name) to get the home
     pathParts.pop()
     const homePath = '/' + pathParts.join('/') + '/'
-    
+
     return calendarUrl.origin + homePath
   }
 
@@ -591,7 +597,6 @@ export class CalDAVClient {
     if (!navigator.onLine) {
       throw new Error('No network connection. Please check your internet connection.')
     }
-
 
     // Build PROPPATCH XML
     let propXml = '<prop>'
@@ -695,8 +700,8 @@ export class CalDAVClient {
    * Returns the calendar object + URL when found, null otherwise.
    */
   async discoverSettingsCalendar(
-    calendarHomeUrl: string,
-  ): Promise<{ url: string; /* raw DAV calendar */ } | null> {
+    calendarHomeUrl: string
+  ): Promise<{ url: string /* raw DAV calendar */ } | null> {
     if (!navigator.onLine) {
       throw new Error('No network connection. Please check your internet connection.')
     }
@@ -740,12 +745,13 @@ export class CalDAVClient {
       // Match by dead property (preferred) or displayname + URL fragment
       const deadPropText = responseEl.getElementsByTagNameNS(
         'http://calino.app/ns/',
-        CalDAVClient.SETTINGS_DEAD_PROP,
+        CalDAVClient.SETTINGS_DEAD_PROP
       )[0]?.textContent
       const hasDeadProp = deadPropText?.trim() === '1'
 
       const displayName = this.getDavElementText(responseEl, 'displayname')
-      const hasDisplayName = displayName === CalDAVClient.SETTINGS_CAL_DISPLAY &&
+      const hasDisplayName =
+        displayName === CalDAVClient.SETTINGS_CAL_DISPLAY &&
         href.includes(CalDAVClient.SETTINGS_CAL_NAME)
 
       if (hasDeadProp || hasDisplayName) {
@@ -830,7 +836,7 @@ export class CalDAVClient {
    * Returns the raw iCal data, ETag, and object href, or null when not found.
    */
   async fetchSettingsEvent(
-    settingsCalendarUrl: string,
+    settingsCalendarUrl: string
   ): Promise<{ data: string; etag: string; href: string; dtstamp: string } | null> {
     if (!navigator.onLine) {
       throw new Error('No network connection. Please check your internet connection.')
@@ -885,7 +891,7 @@ export class CalDAVClient {
       const etag = this.getDavElementText(responseEl, 'getetag')
       const icalData = responseEl.getElementsByTagNameNS(
         'urn:ietf:params:xml:ns:caldav',
-        'calendar-data',
+        'calendar-data'
       )[0]?.textContent
 
       if (href && icalData) {
@@ -915,9 +921,7 @@ export class CalDAVClient {
     // First, unfold iCalendar lines (continuation lines start with space/tab)
     const unfolded = icalData.replace(/\r?\n[ \t]/g, '')
     // Match ATTACH;ENCODING=BASE64;FMTTYPE=app/json:<base64>
-    const attachMatch = unfolded.match(
-      /ATTACH[^:]*:([A-Za-z0-9+/=]+)/,
-    )
+    const attachMatch = unfolded.match(/ATTACH[^:]*:([A-Za-z0-9+/=]+)/)
     if (!attachMatch?.[1]) {
       console.warn('[SettingsSync] No ATTACH found in VEVENT')
       return null
@@ -939,7 +943,7 @@ export class CalDAVClient {
     settingsCalendarUrl: string,
     base64Payload: string,
     etag?: string,
-    existingEvent?: { href: string; etag: string } | null,
+    existingEvent?: { href: string; etag: string } | null
   ): Promise<string> {
     if (!navigator.onLine) {
       throw new Error('No network connection. Please check your internet connection.')
@@ -979,18 +983,17 @@ export class CalDAVClient {
     const attachLine = `ATTACH;ENCODING=BASE64;FMTTYPE=app/json:${base64Payload}`
     const extraProps = `CLASS:PRIVATE\r\nX-CALINO-VERSION:1\r\n${attachLine}`
     const icalString = foldICalLines(
-      icalBase.replace(
-        /(SUMMARY:Calino Settings\r\n)/,
-        `$1${extraProps}\r\n`,
-      ),
+      icalBase.replace(/(SUMMARY:Calino Settings\r\n)/, `$1${extraProps}\r\n`)
     )
 
     // Skip the fetch if caller already knows the existing event
     let existing: { href: string; etag: string } | null | undefined = existingEvent
     if (existing === undefined) {
-      if (useSettingsStore.getState().caldavDebugMode) console.log('[SettingsSync] putSettingsEvent: fetching existing event...')
+      if (useSettingsStore.getState().caldavDebugMode)
+        console.log('[SettingsSync] putSettingsEvent: fetching existing event...')
       existing = await this.fetchSettingsEvent(settingsCalendarUrl)
-      if (useSettingsStore.getState().caldavDebugMode) console.log('[SettingsSync] putSettingsEvent: existing =', existing?.href ?? 'null')
+      if (useSettingsStore.getState().caldavDebugMode)
+        console.log('[SettingsSync] putSettingsEvent: existing =', existing?.href ?? 'null')
     }
 
     if (existing?.href) {
@@ -999,7 +1002,13 @@ export class CalDAVClient {
       if (!useEtag) {
         throw new Error('Cannot update settings event: no ETag available')
       }
-      if (useSettingsStore.getState().caldavDebugMode) console.log('[SettingsSync] putSettingsEvent: updating existing at', existing.href, 'etag =', useEtag ? `${useEtag.slice(0, 8)}…` : useEtag)
+      if (useSettingsStore.getState().caldavDebugMode)
+        console.log(
+          '[SettingsSync] putSettingsEvent: updating existing at',
+          existing.href,
+          'etag =',
+          useEtag ? `${useEtag.slice(0, 8)}…` : useEtag
+        )
       const client = this.getClient()
       const result = await client.updateCalendarObject({
         calendarObject: {
@@ -1008,14 +1017,18 @@ export class CalDAVClient {
           data: icalString,
         },
       })
-      if (useSettingsStore.getState().caldavDebugMode) console.log('[SettingsSync] putSettingsEvent: update result status =', result.status)
+      if (useSettingsStore.getState().caldavDebugMode)
+        console.log('[SettingsSync] putSettingsEvent: update result status =', result.status)
       return result.headers?.get('etag') || useEtag
     }
 
     // No existing event found via REPORT
     // If we have a stored ETag, the event exists but REPORT failed — try update anyway
     if (etag) {
-      if (useSettingsStore.getState().caldavDebugMode) console.log('[SettingsSync] putSettingsEvent: no existing found, trying stored etag at constructed href')
+      if (useSettingsStore.getState().caldavDebugMode)
+        console.log(
+          '[SettingsSync] putSettingsEvent: no existing found, trying stored etag at constructed href'
+        )
       // Reconstruct the likely href from the calendar URL + filename
       const possibleHref = settingsCalendarUrl + CalDAVClient.SETTINGS_FILENAME
       const client = this.getClient()
@@ -1035,19 +1048,24 @@ export class CalDAVClient {
 
     // Create new
     {
-      if (useSettingsStore.getState().caldavDebugMode) console.log('[SettingsSync] putSettingsEvent: creating new event')
+      if (useSettingsStore.getState().caldavDebugMode)
+        console.log('[SettingsSync] putSettingsEvent: creating new event')
       const client = this.getClient()
       // Find the settings calendar object for tsdav
       const calendars = await client.fetchCalendars()
-      if (useSettingsStore.getState().caldavDebugMode) console.log('[SettingsSync] putSettingsEvent: found', calendars.length, 'calendars')
+      if (useSettingsStore.getState().caldavDebugMode)
+        console.log('[SettingsSync] putSettingsEvent: found', calendars.length, 'calendars')
       const settingsCal = calendars.find((c) => {
         const calUrl = c.url || ''
-        return calUrl === settingsCalendarUrl || calUrl.endsWith(CalDAVClient.SETTINGS_CAL_NAME + '/')
+        return (
+          calUrl === settingsCalendarUrl || calUrl.endsWith(CalDAVClient.SETTINGS_CAL_NAME + '/')
+        )
       })
       if (!settingsCal) {
         throw new Error('Settings calendar not found')
       }
-      if (useSettingsStore.getState().caldavDebugMode) console.log('[SettingsSync] putSettingsEvent: creating calendar object in', settingsCal.url)
+      if (useSettingsStore.getState().caldavDebugMode)
+        console.log('[SettingsSync] putSettingsEvent: creating calendar object in', settingsCal.url)
       const result = await client.createCalendarObject({
         calendar: settingsCal,
         filename,

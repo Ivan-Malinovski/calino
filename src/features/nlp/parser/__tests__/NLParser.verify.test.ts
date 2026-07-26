@@ -16,7 +16,7 @@ describe('NLP parser improvements', () => {
     expect(r.title).toBe('Meeting')
     expect(r.location).toBeUndefined()
     expect(r.startDate?.getUTCHours()).toBe(13) // 3pm CEST
-    expect(r.endDate?.getUTCHours()).toBe(15)   // 5pm CEST
+    expect(r.endDate?.getUTCHours()).toBe(15) // 5pm CEST
   })
 
   it('meeting at 3pm for 2 hours → clean title, no location', () => {
@@ -45,15 +45,15 @@ describe('NLP parser improvements', () => {
     expect(r.title).toBe('Gym')
     expect(r.location).toBeUndefined()
     expect(r.startDate?.getUTCHours()).toBe(15) // 5pm CEST
-    expect(r.endDate?.getUTCHours()).toBe(16)   // 6pm CEST
+    expect(r.endDate?.getUTCHours()).toBe(16) // 6pm CEST
   })
 
   it('standup daily at 9am to 9:30am → correct time range with recurrence', () => {
     const r = parseNaturalLanguage('standup daily at 9am to 9:30am')
     expect(r.title).toBe('Standup daily')
     expect(r.location).toBeUndefined()
-    expect(r.startDate?.getUTCHours()).toBe(7)  // 9am CEST
-    expect(r.endDate?.getUTCHours()).toBe(7)    // 9:30am CEST
+    expect(r.startDate?.getUTCHours()).toBe(7) // 9am CEST
+    expect(r.endDate?.getUTCHours()).toBe(7) // 9:30am CEST
     expect(r.endDate?.getUTCMinutes()).toBe(30)
     expect(r.recurrence?.frequency).toBe('daily')
   })

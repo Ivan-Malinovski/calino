@@ -184,17 +184,17 @@ describe('CommandPalette', () => {
     // cmdk applies the `hidden` attribute to empty groups. The heading inside
     // an empty group must not be visible to the user.
     const groups = document.querySelectorAll('[cmdk-group]')
-    const visibleHeadings = Array.from(
-      document.querySelectorAll('[cmdk-group-heading]')
-    ).filter((el) => {
-      // Walk up to the parent [cmdk-group] and check if it's hidden
-      let node: Element | null = el.parentElement
-      while (node && !node.hasAttribute('cmdk-group')) {
-        node = node.parentElement
+    const visibleHeadings = Array.from(document.querySelectorAll('[cmdk-group-heading]')).filter(
+      (el) => {
+        // Walk up to the parent [cmdk-group] and check if it's hidden
+        let node: Element | null = el.parentElement
+        while (node && !node.hasAttribute('cmdk-group')) {
+          node = node.parentElement
+        }
+        if (!node) return true
+        return !node.hasAttribute('hidden')
       }
-      if (!node) return true
-      return !node.hasAttribute('hidden')
-    })
+    )
 
     // Each visible heading should correspond to a non-empty group
     expect(visibleHeadings.length).toBeLessThanOrEqual(groups.length)
@@ -213,9 +213,7 @@ describe('CommandPalette', () => {
     await new Promise((r) => setTimeout(r, 20))
 
     // Find any group that cmdk marked hidden
-    const hiddenGroups = Array.from(
-      document.querySelectorAll('[cmdk-group][hidden]')
-    )
+    const hiddenGroups = Array.from(document.querySelectorAll('[cmdk-group][hidden]'))
     // The CSS fix ensures [hidden] wins over .group { display: flex }
     for (const g of hiddenGroups) {
       const computed = window.getComputedStyle(g).display

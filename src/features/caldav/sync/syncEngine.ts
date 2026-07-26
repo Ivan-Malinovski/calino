@@ -1,7 +1,13 @@
 import type { CalendarEvent } from '@/types'
 import type { SyncResult, ConflictResolution } from '../types'
 import { CalDAVClient } from '../client/CalDAVClient'
-import { eventToICAL, eventsToICAL, parseICALData, taskToICAL, journalToICAL } from '../adapter/iCalendarAdapter'
+import {
+  eventToICAL,
+  eventsToICAL,
+  parseICALData,
+  taskToICAL,
+  journalToICAL,
+} from '../adapter/iCalendarAdapter'
 import { isUUID } from '@/lib/uuid'
 import * as storage from './accountStorage'
 import { getAttachments, putAttachments } from '@/lib/attachmentStore'
@@ -179,7 +185,10 @@ export class SyncEngine {
     return this.client.updateEvent(calendar.url, eventUrl, iCalString, etag)
   }
 
-  async updateEventGroup(events: CalendarEvent[], etag: string): Promise<{ url: string; etag: string }> {
+  async updateEventGroup(
+    events: CalendarEvent[],
+    etag: string
+  ): Promise<{ url: string; etag: string }> {
     const calendar = storage.getAllCalendars().find((c) => c.id === this.calendarId)
     const master = events.find((event) => !event.recurrenceId)
     if (!calendar || !master) {

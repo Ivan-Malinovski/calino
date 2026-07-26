@@ -33,9 +33,7 @@ function detectDuplicate(
   for (const phone of parsed.phones) {
     const digits = phone.value.replace(/\D/g, '')
     if (digits.length < 5) continue
-    const match = existing.find((c) =>
-      c.phones.some((p) => p.value.replace(/\D/g, '') === digits)
-    )
+    const match = existing.find((c) => c.phones.some((p) => p.value.replace(/\D/g, '') === digits))
     if (match) return { isDupe: true, existingContact: match }
   }
 
@@ -87,20 +85,17 @@ export function ImportExportModal({
   const dupeCount = contactsWithDupes.filter((c) => c.isDupe).length
   const selectedCount = selectedIds.size
 
-  const toggleSelect = useCallback(
-    (id: string) => {
-      setSelectedIds((prev) => {
-        const next = new Set(prev)
-        if (next.has(id)) {
-          next.delete(id)
-        } else {
-          next.add(id)
-        }
-        return next
-      })
-    },
-    []
-  )
+  const toggleSelect = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        next.add(id)
+      }
+      return next
+    })
+  }, [])
 
   const selectAll = useCallback(() => {
     setSelectedIds(new Set(parsedContacts.map((c) => c.id)))
@@ -113,9 +108,7 @@ export function ImportExportModal({
   const skipDuplicates = useCallback(() => {
     setSelectedIds(
       new Set(
-        parsedContacts
-          .filter((c) => !detectDuplicate(c, existingContacts).isDupe)
-          .map((c) => c.id)
+        parsedContacts.filter((c) => !detectDuplicate(c, existingContacts).isDupe).map((c) => c.id)
       )
     )
   }, [parsedContacts, existingContacts])
@@ -146,9 +139,7 @@ export function ImportExportModal({
 
     // Sync in background
     const accounts = new Set(
-      parsedContacts
-        .filter((c) => selectedIds.has(c.id))
-        .map((c) => c.accountId)
+      parsedContacts.filter((c) => selectedIds.has(c.id)).map((c) => c.accountId)
     )
     for (const accountId of accounts) {
       syncAccount(accountId).catch(() => {})
@@ -189,9 +180,7 @@ export function ImportExportModal({
               </span>
             )}
           </span>
-          <span>
-            {selectedCount} selected
-          </span>
+          <span>{selectedCount} selected</span>
         </div>
 
         {/* Batch actions */}
@@ -247,10 +236,25 @@ export function ImportExportModal({
                 style={{ flexShrink: 0 }}
               />
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <div
+                  style={{
+                    fontWeight: 500,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
                   {contact.displayName || '(no name)'}
                 </div>
-                <div style={{ fontSize: 11, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <div
+                  style={{
+                    fontSize: 11,
+                    color: 'var(--text-muted)',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
                   {contact.emails[0]?.value || contact.phones[0]?.value || ''}
                   {contact.organization ? ` · ${contact.organization}` : ''}
                 </div>
@@ -282,11 +286,7 @@ export function ImportExportModal({
             </span>
           ) : (
             <>
-              <button
-                type="button"
-                className={styles.btnCancel}
-                onClick={onClose}
-              >
+              <button type="button" className={styles.btnCancel} onClick={onClose}>
                 Cancel
               </button>
               <button

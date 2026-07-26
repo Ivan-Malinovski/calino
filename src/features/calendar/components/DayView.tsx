@@ -56,7 +56,6 @@ import {
 import type { CalendarEvent } from '@/types'
 import styles from './DayView.module.css'
 
-
 const DRAG_ACTIVATION_CONSTRAINT = 8
 const TOUCH_DRAG_ACTIVATION_DELAY = 200
 const TOUCH_DRAG_ACTIVATION_TOLERANCE = 8
@@ -72,15 +71,19 @@ interface HourCellProps {
 
 // The cell is only a drop *target* — the highlight showing where the event will
 // land is drawn by DropPreviewBand, which knows the exact quarter hour.
-function HourCell({ hour, dateStr, timeFormat, onCellClick, onDragStart }: HourCellProps): JSX.Element {
+function HourCell({
+  hour,
+  dateStr,
+  timeFormat,
+  onCellClick,
+  onDragStart,
+}: HourCellProps): JSX.Element {
   const droppableId = `${dateStr}-${format(hour, 'HH:mm')}`
   const { setNodeRef } = useDroppable({ id: droppableId })
 
   return (
     <div className={styles.hourRow}>
-      <div className={styles.timeLabel}>
-        {format(hour, timeFormat === '24h' ? 'HH:mm' : 'h a')}
-      </div>
+      <div className={styles.timeLabel}>{format(hour, timeFormat === '24h' ? 'HH:mm' : 'h a')}</div>
       <div
         ref={setNodeRef}
         className={styles.cell}
@@ -91,7 +94,10 @@ function HourCell({ hour, dateStr, timeFormat, onCellClick, onDragStart }: HourC
   )
 }
 
-export function DayView({ selectedDate: propDate, onBack }: { selectedDate?: string; onBack?: () => void } = {}): JSX.Element {
+export function DayView({
+  selectedDate: propDate,
+  onBack,
+}: { selectedDate?: string; onBack?: () => void } = {}): JSX.Element {
   const storeDate = useCalendarStore((state) => state.currentDate)
   const currentDate = propDate || storeDate
   const events = useCalendarStore((state) => state.events)
@@ -199,10 +205,17 @@ export function DayView({ selectedDate: propDate, onBack }: { selectedDate?: str
   // Live preview of where the dragged event will land, refreshed on drag move.
   // The card itself follows the pointer freely; only this band snaps.
   const handleDragMove = (dragEvent: DragMoveEvent): void => {
-    const durationMinutes = activeEvent && !activeEvent.isAllDay
-      ? (parseISO(activeEvent.end).getTime() - parseISO(activeEvent.start).getTime()) / 60_000
-      : 60
-    const next = computeDropPreview(dragEvent.active, dragEvent.over, dragEvent.delta.y, hourHeight, durationMinutes)
+    const durationMinutes =
+      activeEvent && !activeEvent.isAllDay
+        ? (parseISO(activeEvent.end).getTime() - parseISO(activeEvent.start).getTime()) / 60_000
+        : 60
+    const next = computeDropPreview(
+      dragEvent.active,
+      dragEvent.over,
+      dragEvent.delta.y,
+      hourHeight,
+      durationMinutes
+    )
     setDropPreview((prev) => (isSameDropPreview(prev, next) ? prev : next))
   }
 
@@ -237,7 +250,9 @@ export function DayView({ selectedDate: propDate, onBack }: { selectedDate?: str
   })
 
   const allDayEvents = useMemo(() => {
-    return getEventsForDateRange(dateKey, dateKey).filter((e) => e.type !== 'task' && e.type !== 'journal' && e.isAllDay)
+    return getEventsForDateRange(dateKey, dateKey).filter(
+      (e) => e.type !== 'task' && e.type !== 'journal' && e.isAllDay
+    )
   }, [dateKey, getEventsForDateRange, events])
 
   const dayEvents = useMemo(() => {
@@ -281,9 +296,7 @@ export function DayView({ selectedDate: propDate, onBack }: { selectedDate?: str
   const dayTasks = useMemo(() => {
     const dateKey = format(date, 'yyyy-MM-dd')
     const visibleCalendarIds = calendars.filter((c) => c.isVisible).map((c) => c.id)
-    return getTasksDueOn(events, dateKey).filter((e) =>
-      visibleCalendarIds.includes(e.calendarId)
-    )
+    return getTasksDueOn(events, dateKey).filter((e) => visibleCalendarIds.includes(e.calendarId))
   }, [date, events, calendars])
 
   // Tasks with a due time are anchored on the timeline as pills (matching week
@@ -317,7 +330,8 @@ export function DayView({ selectedDate: propDate, onBack }: { selectedDate?: str
         const now = new Date()
         const minutesSinceMidnight = now.getHours() * 60 + now.getMinutes()
         const fraction = minutesSinceMidnight / (24 * 60)
-        const scrollTop = fraction * bodyRef.current.scrollHeight - bodyRef.current.clientHeight * 0.3
+        const scrollTop =
+          fraction * bodyRef.current.scrollHeight - bodyRef.current.clientHeight * 0.3
         bodyRef.current.scrollTo({ top: Math.max(0, scrollTop), behavior: 'smooth' })
       } else if (dayEvents.length > 0) {
         // Scroll to first event
@@ -418,10 +432,13 @@ export function DayView({ selectedDate: propDate, onBack }: { selectedDate?: str
     const end = parseISO(dragEnd)
     const startMinutes = start.getHours() * 60 + start.getMinutes()
     const endMinutes = end.getHours() * 60 + end.getMinutes()
-        return (
+    return (
       <div
         className={styles.selectionOverlay}
-        style={{ top: `calc(var(--hour-height, 60px) * ${startMinutes / 60})`, height: `calc(var(--hour-height, 60px) * ${Math.max((endMinutes - startMinutes) / 60, 0.1)})` }}
+        style={{
+          top: `calc(var(--hour-height, 60px) * ${startMinutes / 60})`,
+          height: `calc(var(--hour-height, 60px) * ${Math.max((endMinutes - startMinutes) / 60, 0.1)})`,
+        }}
       />
     )
   }, [isDraggingToCreate, dragStart, dragEnd])
@@ -571,7 +588,11 @@ export function DayView({ selectedDate: propDate, onBack }: { selectedDate?: str
     const skipExit = (id: string): boolean => activeMasterId === id
 
     for (const event of transparentEvents) {
-      const eventColor = getEventColor(event, { categories: [], calendars, useCategoryColors: false })
+      const eventColor = getEventColor(event, {
+        categories: [],
+        calendars,
+        useCategoryColors: false,
+      })
       const style = transparentEventStyle(event, 4)
 
       elements.push(
@@ -626,7 +647,11 @@ export function DayView({ selectedDate: propDate, onBack }: { selectedDate?: str
         continue
       }
 
-      const eventColor = getEventColor(event, { categories: [], calendars, useCategoryColors: false })
+      const eventColor = getEventColor(event, {
+        categories: [],
+        calendars,
+        useCategoryColors: false,
+      })
       const style = positionedEventStyle(event, column, totalColumns)
 
       if (event.travelDuration && event.travelDuration > 0) {
@@ -639,7 +664,10 @@ export function DayView({ selectedDate: propDate, onBack }: { selectedDate?: str
             exit={skipExit(event.id) ? undefined : cardExit}
             transition={enterTransition}
             className={styles.travelBar}
-            style={{ ...travelBarStyle(event, column, totalColumns), backgroundColor: `${eventColor}15` }}
+            style={{
+              ...travelBarStyle(event, column, totalColumns),
+              backgroundColor: `${eventColor}15`,
+            }}
             onClick={() => openModal(undefined, undefined, event.id)}
           >
             <span className={styles.travelBarInner}>
@@ -712,7 +740,13 @@ export function DayView({ selectedDate: propDate, onBack }: { selectedDate?: str
           {onBack && (
             <button className={styles.backButton} onClick={onBack} aria-label="Back to agenda">
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                <path d="M10 3L5 8L10 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                <path
+                  d="M10 3L5 8L10 13"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
               </svg>
             </button>
           )}
@@ -765,7 +799,9 @@ export function DayView({ selectedDate: propDate, onBack }: { selectedDate?: str
           </div>
         </div>
       </div>
-      <DragOverlay dropAnimation={null}>{activeEvent ? <EventCard event={activeEvent} isDragging /> : null}</DragOverlay>
+      <DragOverlay dropAnimation={null}>
+        {activeEvent ? <EventCard event={activeEvent} isDragging /> : null}
+      </DragOverlay>
       {contextMenu && (
         <ContextMenu
           x={contextMenu.x}
@@ -780,9 +816,7 @@ export function DayView({ selectedDate: propDate, onBack }: { selectedDate?: str
               label: 'Create event',
               onClick: () => {
                 const hourStr =
-                  contextMenu.hour !== undefined
-                    ? `T${pad2(contextMenu.hour)}:00`
-                    : ''
+                  contextMenu.hour !== undefined ? `T${pad2(contextMenu.hour)}:00` : ''
                 openModal(`${format(date, 'yyyy-MM-dd')}${hourStr}`)
                 setContextMenu(null)
               },

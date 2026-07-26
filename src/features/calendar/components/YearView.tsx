@@ -156,7 +156,9 @@ export function YearView(): JSX.Element {
                         const isOutside = !isSameMonth(day, m)
 
                         if (isOutside) {
-                          return <span key={dayKey} className={styles.emptyDay} aria-hidden="true" />
+                          return (
+                            <span key={dayKey} className={styles.emptyDay} aria-hidden="true" />
+                          )
                         }
 
                         const isTodayDate = isToday(day)

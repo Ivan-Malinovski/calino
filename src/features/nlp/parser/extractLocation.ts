@@ -85,7 +85,8 @@ export function extractLocation(input: string): string | undefined {
     }
 
     // Detect "N to N" and "N-N" time ranges — find the earliest digit
-    const rangeRe = /\b(\d{1,2})(?::(\d{2}))?\s*(?:am|pm)?\s*(?:to|-)\s*(\d{1,2})(?::(\d{2}))?\s*(?:am|pm)?\b/gi
+    const rangeRe =
+      /\b(\d{1,2})(?::(\d{2}))?\s*(?:am|pm)?\s*(?:to|-)\s*(\d{1,2})(?::(\d{2}))?\s*(?:am|pm)?\b/gi
     let rm: RegExpExecArray | null
     while ((rm = rangeRe.exec(lower)) !== null) {
       if (rm.index < earliest) {
@@ -119,9 +120,18 @@ export function extractLocation(input: string): string | undefined {
     '(?:tomorrow|yesterday|today|monday|tuesday|wednesday|thursday|friday|saturday|sunday|mon|tue|wed|thu|fri|sat|sun|at|on|for|every|each|recurring|recurs)'
 
   const patterns = [
-    new RegExp(`\\bin\\s+([a-zA-ZæøåÆØÅ]+(?:\\s+[a-zA-ZæøåÆØÅ]+)*?)\\b(?=\\s*${lookbehindWords}\\b)`, 'i'),
-    new RegExp(`\\bat\\s+([a-zA-ZæøåÆØÅ]+(?:\\s+[a-zA-ZæøåÆØÅ]+)*?)\\b(?=\\s*${lookbehindWords}\\b)`, 'i'),
-    new RegExp(`\\b@\\s*([a-zA-ZæøåÆØÅ]+(?:\\s+[a-zA-ZæøåÆØÅ]+)*?)\\b(?=\\s*${lookbehindWords}\\b)`, 'i'),
+    new RegExp(
+      `\\bin\\s+([a-zA-ZæøåÆØÅ]+(?:\\s+[a-zA-ZæøåÆØÅ]+)*?)\\b(?=\\s*${lookbehindWords}\\b)`,
+      'i'
+    ),
+    new RegExp(
+      `\\bat\\s+([a-zA-ZæøåÆØÅ]+(?:\\s+[a-zA-ZæøåÆØÅ]+)*?)\\b(?=\\s*${lookbehindWords}\\b)`,
+      'i'
+    ),
+    new RegExp(
+      `\\b@\\s*([a-zA-ZæøåÆØÅ]+(?:\\s+[a-zA-ZæøåÆØÅ]+)*?)\\b(?=\\s*${lookbehindWords}\\b)`,
+      'i'
+    ),
   ]
 
   for (const pattern of patterns) {

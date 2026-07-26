@@ -215,9 +215,7 @@ describe('settingsStore', () => {
     // fields fall back to defaults.
 
     const getMigrate = () =>
-      useSettingsStore.persist.getOptions().migrate as (
-        state: unknown,
-      ) => Record<string, unknown>
+      useSettingsStore.persist.getOptions().migrate as (state: unknown) => Record<string, unknown>
 
     it('preserves persisted user fields on version bump', () => {
       const persisted = {

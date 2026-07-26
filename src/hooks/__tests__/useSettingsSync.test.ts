@@ -61,18 +61,37 @@ describe('useSettingsSync', () => {
     vi.clearAllMocks()
     storage.install()
     useSettingsStore.getState().resetSettings()
-    vi.mocked(createCalDAVClient).mockResolvedValue(mockClient as unknown as Awaited<ReturnType<typeof createCalDAVClient>>)
+    vi.mocked(createCalDAVClient).mockResolvedValue(
+      mockClient as unknown as Awaited<ReturnType<typeof createCalDAVClient>>
+    )
     vi.mocked(getCredentialById).mockResolvedValue({
-      id: 'cred-1', serverUrl: 'https://example.com', username: 'user', password: 'pass',
+      id: 'cred-1',
+      serverUrl: 'https://example.com',
+      username: 'user',
+      password: 'pass',
     })
     vi.mocked(accountStorage.getAccountById).mockReturnValue({
-      id: 'account-1', name: 'Test', serverUrl: 'https://example.com', proxyUrl: null,
-      username: 'user', credentialId: 'cred-1', createdAt: '2025-01-01T00:00:00Z', lastSyncAt: null,
+      id: 'account-1',
+      name: 'Test',
+      serverUrl: 'https://example.com',
+      proxyUrl: null,
+      username: 'user',
+      credentialId: 'cred-1',
+      createdAt: '2025-01-01T00:00:00Z',
+      lastSyncAt: null,
     })
-    vi.mocked(accountStorage.getCalendarsByAccountId).mockReturnValue([{
-      id: 'cal-1', url: 'https://example.com/dav.php/calendars/user/cal/',
-      name: 'Cal', color: '#4285F4', ctag: null, syncToken: null, isVisible: true, isDefault: true,
-    }])
+    vi.mocked(accountStorage.getCalendarsByAccountId).mockReturnValue([
+      {
+        id: 'cal-1',
+        url: 'https://example.com/dav.php/calendars/user/cal/',
+        name: 'Cal',
+        color: '#4285F4',
+        ctag: null,
+        syncToken: null,
+        isVisible: true,
+        isDefault: true,
+      },
+    ])
     vi.mocked(accountStorage.getAllAccounts).mockReturnValue([])
   })
 
@@ -100,17 +119,23 @@ describe('useSettingsSync', () => {
     it('should clear primaryAccountId without deleting remote', async () => {
       setPrimaryAccountId('account-1')
       const { result } = renderHook(() => useSettingsSync())
-      await act(async () => { await result.current.disable(false) })
+      await act(async () => {
+        await result.current.disable(false)
+      })
       expect(result.current.enabled).toBe(false)
       expect(mockDeleteSettingsCalendar).not.toHaveBeenCalled()
     })
 
     it('should delete remote calendar when requested', async () => {
       setPrimaryAccountId('account-1')
-      mockDiscoverSettingsCalendar.mockResolvedValue({ url: 'https://example.com/dav.php/calendars/user/calino-settings/' })
+      mockDiscoverSettingsCalendar.mockResolvedValue({
+        url: 'https://example.com/dav.php/calendars/user/calino-settings/',
+      })
       mockDeleteSettingsCalendar.mockResolvedValue(undefined)
       const { result } = renderHook(() => useSettingsSync())
-      await act(async () => { await result.current.disable(true) })
+      await act(async () => {
+        await result.current.disable(true)
+      })
       expect(result.current.enabled).toBe(false)
       expect(mockDeleteSettingsCalendar).toHaveBeenCalled()
     })
@@ -119,12 +144,16 @@ describe('useSettingsSync', () => {
   describe('enable', () => {
     it('should create settings calendar and enable sync', async () => {
       mockDiscoverSettingsCalendar.mockResolvedValue(null)
-      mockCreateSettingsCalendar.mockResolvedValue('https://example.com/dav.php/calendars/user/calino-settings/')
+      mockCreateSettingsCalendar.mockResolvedValue(
+        'https://example.com/dav.php/calendars/user/calino-settings/'
+      )
       mockFetchSettingsEvent.mockResolvedValue(null)
       mockPutSettingsEvent.mockResolvedValue('"etag-1"')
 
       const { result } = renderHook(() => useSettingsSync())
-      await act(async () => { await result.current.enable('account-1') })
+      await act(async () => {
+        await result.current.enable('account-1')
+      })
 
       expect(mockCreateSettingsCalendar).toHaveBeenCalled()
       expect(result.current.enabled).toBe(true)
@@ -132,12 +161,16 @@ describe('useSettingsSync', () => {
     })
 
     it('should reuse existing settings calendar', async () => {
-      mockDiscoverSettingsCalendar.mockResolvedValue({ url: 'https://example.com/dav.php/calendars/user/calino-settings/' })
+      mockDiscoverSettingsCalendar.mockResolvedValue({
+        url: 'https://example.com/dav.php/calendars/user/calino-settings/',
+      })
       mockFetchSettingsEvent.mockResolvedValue(null)
       mockPutSettingsEvent.mockResolvedValue('"etag-1"')
 
       const { result } = renderHook(() => useSettingsSync())
-      await act(async () => { await result.current.enable('account-1') })
+      await act(async () => {
+        await result.current.enable('account-1')
+      })
 
       expect(mockCreateSettingsCalendar).not.toHaveBeenCalled()
       expect(result.current.enabled).toBe(true)
@@ -147,7 +180,11 @@ describe('useSettingsSync', () => {
       vi.mocked(accountStorage.getAccountById).mockReturnValue(undefined)
       const { result } = renderHook(() => useSettingsSync())
       await act(async () => {
-        try { await result.current.enable('nonexistent') } catch { /* expected */ }
+        try {
+          await result.current.enable('nonexistent')
+        } catch {
+          /* expected */
+        }
       })
       expect(result.current.enabled).toBe(false)
       expect(getPrimaryAccountId()).toBeNull()
@@ -157,12 +194,16 @@ describe('useSettingsSync', () => {
   describe('push', () => {
     it('should serialize and push settings', async () => {
       setPrimaryAccountId('account-1')
-      mockDiscoverSettingsCalendar.mockResolvedValue({ url: 'https://example.com/dav.php/calendars/user/calino-settings/' })
+      mockDiscoverSettingsCalendar.mockResolvedValue({
+        url: 'https://example.com/dav.php/calendars/user/calino-settings/',
+      })
       mockFetchSettingsEvent.mockResolvedValue(null)
       mockPutSettingsEvent.mockResolvedValue('"new-etag"')
 
       const { result } = renderHook(() => useSettingsSync())
-      await act(async () => { await result.current.push() })
+      await act(async () => {
+        await result.current.push()
+      })
 
       expect(mockPutSettingsEvent).toHaveBeenCalled()
       expect(getEtag()).toBe('"new-etag"')
@@ -179,7 +220,9 @@ describe('useSettingsSync', () => {
       mockDiscoverSettingsCalendar.mockResolvedValue(null)
 
       const { result } = renderHook(() => useSettingsSync())
-      await act(async () => { await result.current.push() })
+      await act(async () => {
+        await result.current.push()
+      })
 
       expect(mockPutSettingsEvent).not.toHaveBeenCalled()
       expect(result.current.error).toBe('Settings calendar not found')
@@ -189,12 +232,16 @@ describe('useSettingsSync', () => {
 
     it('should surface an error toast when putSettingsEvent throws', async () => {
       setPrimaryAccountId('account-1')
-      mockDiscoverSettingsCalendar.mockResolvedValue({ url: 'https://example.com/dav.php/calendars/user/calino-settings/' })
+      mockDiscoverSettingsCalendar.mockResolvedValue({
+        url: 'https://example.com/dav.php/calendars/user/calino-settings/',
+      })
       mockFetchSettingsEvent.mockResolvedValue(null)
       mockPutSettingsEvent.mockRejectedValue(new Error('500 Internal Server Error'))
 
       const { result } = renderHook(() => useSettingsSync())
-      await act(async () => { await result.current.push() })
+      await act(async () => {
+        await result.current.push()
+      })
 
       expect(result.current.error).toBe('500 Internal Server Error')
       expect(mockToast.error).toHaveBeenCalledTimes(1)
@@ -202,14 +249,18 @@ describe('useSettingsSync', () => {
 
     it('should not toast an error when a 412 conflict is silently recovered via retry', async () => {
       setPrimaryAccountId('account-1')
-      mockDiscoverSettingsCalendar.mockResolvedValue({ url: 'https://example.com/dav.php/calendars/user/calino-settings/' })
+      mockDiscoverSettingsCalendar.mockResolvedValue({
+        url: 'https://example.com/dav.php/calendars/user/calino-settings/',
+      })
       mockFetchSettingsEvent.mockResolvedValue(null)
       mockPutSettingsEvent
         .mockRejectedValueOnce(new Error('412 Precondition Failed'))
         .mockResolvedValueOnce('"recovered-etag"')
 
       const { result } = renderHook(() => useSettingsSync())
-      await act(async () => { await result.current.push() })
+      await act(async () => {
+        await result.current.push()
+      })
 
       expect(mockPutSettingsEvent).toHaveBeenCalledTimes(2)
       expect(result.current.error).toBeNull()
@@ -220,21 +271,30 @@ describe('useSettingsSync', () => {
   describe('pull', () => {
     it('should fetch and merge remote settings', async () => {
       setPrimaryAccountId('account-1')
-      mockDiscoverSettingsCalendar.mockResolvedValue({ url: 'https://example.com/dav.php/calendars/user/calino-settings/' })
+      mockDiscoverSettingsCalendar.mockResolvedValue({
+        url: 'https://example.com/dav.php/calendars/user/calino-settings/',
+      })
 
       const remotePayload = {
-        version: 1, syncedAt: '2099-01-01T00:00:00Z',
+        version: 1,
+        syncedAt: '2099-01-01T00:00:00Z',
         settings: { timezone: 'Pacific/Auckland' },
       }
       mockFetchSettingsEvent.mockResolvedValue({
-        data: 'BEGIN:VCALENDAR\r\n...ATTACH;ENCODING=BASE64;FMTTYPE=app/json:' + btoa(JSON.stringify(remotePayload)) + '\r\n...',
-        etag: '"remote-etag"', href: 'https://example.com/calino-settings.ics',
+        data:
+          'BEGIN:VCALENDAR\r\n...ATTACH;ENCODING=BASE64;FMTTYPE=app/json:' +
+          btoa(JSON.stringify(remotePayload)) +
+          '\r\n...',
+        etag: '"remote-etag"',
+        href: 'https://example.com/calino-settings.ics',
         dtstamp: '20990101T000000Z',
       })
       mockExtractSettingsFromVEVENT.mockReturnValue(JSON.stringify(remotePayload))
 
       const { result } = renderHook(() => useSettingsSync())
-      await act(async () => { await result.current.pull() })
+      await act(async () => {
+        await result.current.pull()
+      })
 
       const settings = useSettingsStore.getState()
       expect(settings.timezone).toBe('Pacific/Auckland')
@@ -243,12 +303,16 @@ describe('useSettingsSync', () => {
 
     it('should return early when no remote event exists', async () => {
       setPrimaryAccountId('account-1')
-      mockDiscoverSettingsCalendar.mockResolvedValue({ url: 'https://example.com/dav.php/calendars/user/calino-settings/' })
+      mockDiscoverSettingsCalendar.mockResolvedValue({
+        url: 'https://example.com/dav.php/calendars/user/calino-settings/',
+      })
       mockFetchSettingsEvent.mockResolvedValue(null)
 
       const { result } = renderHook(() => useSettingsSync())
       const originalTimezone = useSettingsStore.getState().timezone
-      await act(async () => { await result.current.pull() })
+      await act(async () => {
+        await result.current.pull()
+      })
 
       // Settings should not be modified when there's no remote event
       expect(useSettingsStore.getState().timezone).toBe(originalTimezone)
@@ -260,7 +324,9 @@ describe('useSettingsSync', () => {
       mockDiscoverSettingsCalendar.mockResolvedValue(null)
 
       const { result } = renderHook(() => useSettingsSync())
-      await act(async () => { await result.current.discoverSettings('account-1') })
+      await act(async () => {
+        await result.current.discoverSettings('account-1')
+      })
 
       expect(getPrimaryAccountId()).toBeNull()
       expect(mockToast).not.toHaveBeenCalled()
@@ -272,10 +338,14 @@ describe('useSettingsSync', () => {
     // second device to an already-syncing account) gave the user zero
     // feedback that anything had gone wrong.
     it('should surface an error toast when discovery throws', async () => {
-      mockDiscoverSettingsCalendar.mockRejectedValue(new Error('Failed to parse WebDAV XML response'))
+      mockDiscoverSettingsCalendar.mockRejectedValue(
+        new Error('Failed to parse WebDAV XML response')
+      )
 
       const { result } = renderHook(() => useSettingsSync())
-      await act(async () => { await result.current.discoverSettings('account-1') })
+      await act(async () => {
+        await result.current.discoverSettings('account-1')
+      })
 
       expect(getPrimaryAccountId()).toBeNull()
       expect(mockToast.error).toHaveBeenCalledTimes(1)

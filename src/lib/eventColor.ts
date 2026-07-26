@@ -18,7 +18,7 @@ export function getEventColor(
     categories: Category[]
     calendars: Calendar[]
     useCategoryColors: boolean
-  },
+  }
 ): string {
   if (event.color) return event.color
 

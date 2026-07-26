@@ -28,14 +28,23 @@ type ModalMode = 'view' | 'compose' | 'edit'
 /** Roughly how long the mobile sheet's slide-up takes to settle. */
 const SHEET_ENTRANCE_MS = 340
 
-export function JournalDayModal({ isOpen, date, startInCompose = false, onClose }: JournalDayModalProps): JSX.Element | null {
+export function JournalDayModal({
+  isOpen,
+  date,
+  startInCompose = false,
+  onClose,
+}: JournalDayModalProps): JSX.Element | null {
   const events = useCalendarStore((state) => state.events)
   const addEvent = useCalendarStore((state) => state.addEvent)
   const updateEvent = useCalendarStore((state) => state.updateEvent)
   const deleteEvent = useCalendarStore((state) => state.deleteEvent)
   const calendars = useCalendarStore((state) => state.calendars)
   const categories = useCalendarStore((state) => state.categories)
-  const { createEvent: createCalDAVEvent, updateEvent: updateCalDAVEvent, deleteEvent: deleteCalDAVEvent } = useCalDAV()
+  const {
+    createEvent: createCalDAVEvent,
+    updateEvent: updateCalDAVEvent,
+    deleteEvent: deleteCalDAVEvent,
+  } = useCalDAV()
 
   const [mode, setMode] = useState<ModalMode>('view')
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -56,8 +65,12 @@ export function JournalDayModal({ isOpen, date, startInCompose = false, onClose 
   // Refs for stable values used in callbacks (#9)
   const eventsRef = useRef(events)
   const calendarsRef = useRef(calendars)
-  useEffect(() => { eventsRef.current = events })
-  useEffect(() => { calendarsRef.current = calendars })
+  useEffect(() => {
+    eventsRef.current = events
+  })
+  useEffect(() => {
+    calendarsRef.current = calendars
+  })
 
   // Get journal entries for this date
   const entries = useMemo(
@@ -147,15 +160,17 @@ export function JournalDayModal({ isOpen, date, startInCompose = false, onClose 
         updateEvent(editingId, updates)
         // Sync attachments to IDB, then push to server
         if (attachments.length > 0) {
-          putAttachments(editingId, attachments).then(() => {
-            if (existing.calendarId !== 'default') {
-              updateCalDAVEvent(existing.calendarId, { ...existing, ...updates }).catch(() => {
-                showToast('Failed to sync update. It will be retried.')
-              })
-            }
-          }).catch(() => {
-            showToast('Failed to save attachments locally')
-          })
+          putAttachments(editingId, attachments)
+            .then(() => {
+              if (existing.calendarId !== 'default') {
+                updateCalDAVEvent(existing.calendarId, { ...existing, ...updates }).catch(() => {
+                  showToast('Failed to sync update. It will be retried.')
+                })
+              }
+            })
+            .catch(() => {
+              showToast('Failed to save attachments locally')
+            })
         } else {
           deleteAttachments(editingId).catch(() => {})
           if (existing.calendarId !== 'default') {
@@ -188,17 +203,19 @@ export function JournalDayModal({ isOpen, date, startInCompose = false, onClose 
       addEvent(newEntry)
       if (attachments.length > 0) {
         // Await IDB write before pushing to server (race condition fix)
-        putAttachments(newId, attachments).then(() => {
-          // Clean up the 'new' key used during composition
-          deleteAttachments('new').catch(() => {})
-          if (defaultCalendar?.id !== 'default') {
-            createCalDAVEvent(newEntry.calendarId, newEntry).catch(() => {
-              showToast('Failed to sync entry. It will be retried.')
-            })
-          }
-        }).catch(() => {
-          showToast('Failed to save attachments locally')
-        })
+        putAttachments(newId, attachments)
+          .then(() => {
+            // Clean up the 'new' key used during composition
+            deleteAttachments('new').catch(() => {})
+            if (defaultCalendar?.id !== 'default') {
+              createCalDAVEvent(newEntry.calendarId, newEntry).catch(() => {
+                showToast('Failed to sync entry. It will be retried.')
+              })
+            }
+          })
+          .catch(() => {
+            showToast('Failed to save attachments locally')
+          })
       } else {
         deleteAttachments('new').catch(() => {})
         if (defaultCalendar?.id !== 'default') {
@@ -218,11 +235,27 @@ export function JournalDayModal({ isOpen, date, startInCompose = false, onClose 
     setUrl('')
     setRelatedTo([])
     setShowAddPanel(false)
-  }, [mode, editingId, title, body, date, selectedCategories, attachments, url, relatedTo, addEvent, updateEvent, createCalDAVEvent, updateCalDAVEvent])
+  }, [
+    mode,
+    editingId,
+    title,
+    body,
+    date,
+    selectedCategories,
+    attachments,
+    url,
+    relatedTo,
+    addEvent,
+    updateEvent,
+    createCalDAVEvent,
+    updateCalDAVEvent,
+  ])
 
   // Ref for handleSave to avoid stale closure in keyboard effect (#10)
   const handleSaveRef = useRef<(() => void) | null>(null)
-  useEffect(() => { handleSaveRef.current = handleSave })
+  useEffect(() => {
+    handleSaveRef.current = handleSave
+  })
 
   const handleStartEdit = useCallback((entry: CalendarEvent): void => {
     setEditingId(entry.id)
@@ -233,11 +266,13 @@ export function JournalDayModal({ isOpen, date, startInCompose = false, onClose 
     setRelatedTo(entry.relatedTo || [])
     setMode('edit')
     // Load attachments from IndexedDB
-    getAttachments(entry.id).then((loaded) => {
-      setAttachments(loaded.length > 0 ? loaded : entry.attachments || [])
-    }).catch(() => {
-      setAttachments(entry.attachments || [])
-    })
+    getAttachments(entry.id)
+      .then((loaded) => {
+        setAttachments(loaded.length > 0 ? loaded : entry.attachments || [])
+      })
+      .catch(() => {
+        setAttachments(entry.attachments || [])
+      })
     // Always start with add panel collapsed
     setShowAddPanel(false)
   }, [])
@@ -254,42 +289,45 @@ export function JournalDayModal({ isOpen, date, startInCompose = false, onClose 
     setMode('compose')
   }, [])
 
-  const handleDelete = useCallback((entryId: string): void => {
-    if (confirmDeleteId === entryId) {
-      // Actually delete
-      const entry = eventsRef.current.find((e) => e.id === entryId)
-      // Sync CalDAV first so it can capture the etag before the local delete
-      if (entry && entry.calendarId !== 'default') {
-        deleteCalDAVEvent(entry.calendarId, entry.id).catch(() => {
-          showToast('Failed to sync deletion. It will be retried.')
-        })
-      }
-      deleteEvent(entryId)
-      setConfirmDeleteId(null)
-      setMode('view')
-      setEditingId(null)
-      setTitle('')
-      setBody('')
+  const handleDelete = useCallback(
+    (entryId: string): void => {
+      if (confirmDeleteId === entryId) {
+        // Actually delete
+        const entry = eventsRef.current.find((e) => e.id === entryId)
+        // Sync CalDAV first so it can capture the etag before the local delete
+        if (entry && entry.calendarId !== 'default') {
+          deleteCalDAVEvent(entry.calendarId, entry.id).catch(() => {
+            showToast('Failed to sync deletion. It will be retried.')
+          })
+        }
+        deleteEvent(entryId)
+        setConfirmDeleteId(null)
+        setMode('view')
+        setEditingId(null)
+        setTitle('')
+        setBody('')
 
-      // Show undo toast (#17)
-      if (entry) {
-        showToast('Entry deleted', {
-          duration: 8000,
-          onUndo: () => {
-            addEvent(entry)
-            if (entry.calendarId !== 'default') {
-              createCalDAVEvent(entry.calendarId, entry).catch(() => {
-                showToast('Failed to restore entry.')
-              })
-            }
-          },
-        })
+        // Show undo toast (#17)
+        if (entry) {
+          showToast('Entry deleted', {
+            duration: 8000,
+            onUndo: () => {
+              addEvent(entry)
+              if (entry.calendarId !== 'default') {
+                createCalDAVEvent(entry.calendarId, entry).catch(() => {
+                  showToast('Failed to restore entry.')
+                })
+              }
+            },
+          })
+        }
+      } else {
+        // First click — show confirm
+        setConfirmDeleteId(entryId)
       }
-    } else {
-      // First click — show confirm
-      setConfirmDeleteId(entryId)
-    }
-  }, [confirmDeleteId, deleteEvent, deleteCalDAVEvent, addEvent, createCalDAVEvent])
+    },
+    [confirmDeleteId, deleteEvent, deleteCalDAVEvent, addEvent, createCalDAVEvent]
+  )
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -347,7 +385,6 @@ export function JournalDayModal({ isOpen, date, startInCompose = false, onClose 
 
   if (!isOpen) return null
 
-
   return (
     <div className={styles.scrim}>
       <motion.div
@@ -359,7 +396,13 @@ export function JournalDayModal({ isOpen, date, startInCompose = false, onClose 
       >
         <div className={styles.dragHandle} aria-hidden="true" />
         <button className={styles.close} onClick={onClose} aria-label="Close">
-          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+          <svg
+            viewBox="0 0 16 16"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+          >
             <path d="M3 3l10 10M13 3L3 13" />
           </svg>
         </button>
@@ -406,7 +449,16 @@ export function JournalDayModal({ isOpen, date, startInCompose = false, onClose 
                             }}
                             aria-label="Edit entry"
                           >
-                            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" width="14" height="14">
+                            <svg
+                              viewBox="0 0 16 16"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="1.5"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              width="14"
+                              height="14"
+                            >
                               <path d="M11.5 1.5l3 3L5 14H2v-3L11.5 1.5z" />
                             </svg>
                           </button>
@@ -416,7 +468,9 @@ export function JournalDayModal({ isOpen, date, startInCompose = false, onClose 
                       {entry.categories && entry.categories.length > 0 && (
                         <div className={styles.entryCategories}>
                           {entry.categories.map((cat) => (
-                            <span key={cat} className={styles.entryCategoryTag}>{cat}</span>
+                            <span key={cat} className={styles.entryCategoryTag}>
+                              {cat}
+                            </span>
                           ))}
                         </div>
                       )}
@@ -501,13 +555,18 @@ export function JournalDayModal({ isOpen, date, startInCompose = false, onClose 
                                 style={{ '--chip-color': cat.color } as React.CSSProperties}
                                 onClick={() => {
                                   if (isSelected) {
-                                    setSelectedCategories(selectedCategories.filter((c) => c !== cat.name))
+                                    setSelectedCategories(
+                                      selectedCategories.filter((c) => c !== cat.name)
+                                    )
                                   } else {
                                     setSelectedCategories([...selectedCategories, cat.name])
                                   }
                                 }}
                               >
-                                <span className={styles.categoryDot} style={{ backgroundColor: cat.color }} />
+                                <span
+                                  className={styles.categoryDot}
+                                  style={{ backgroundColor: cat.color }}
+                                />
                                 {cat.name}
                               </button>
                             )
@@ -552,7 +611,8 @@ export function JournalDayModal({ isOpen, date, startInCompose = false, onClose 
                     {/* Related To */}
                     {(() => {
                       const sameDayEvents = events.filter(
-                        (e) => e.type !== 'journal' && e.id !== editingId && e.start.startsWith(date)
+                        (e) =>
+                          e.type !== 'journal' && e.id !== editingId && e.start.startsWith(date)
                       )
                       if (sameDayEvents.length === 0) return null
                       return (
@@ -639,7 +699,13 @@ export function JournalDayModal({ isOpen, date, startInCompose = false, onClose 
           )}
           {mode === 'view' && (
             <button className={styles.addEntry} onClick={handleStartCompose}>
-              <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+              <svg
+                viewBox="0 0 12 12"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+              >
                 <path d="M6 1v10M1 6h10" />
               </svg>
               Add entry

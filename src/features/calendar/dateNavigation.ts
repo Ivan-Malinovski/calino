@@ -15,7 +15,11 @@ import type { ViewType } from '@/types'
  * navigation, and the mobile content-area swipe gesture. Previously
  * duplicated across CalendarHeader.tsx's handleNavigate/handleSwipe.
  */
-export function getNavigatedDate(currentView: ViewType, date: Date, direction: 'prev' | 'next'): Date {
+export function getNavigatedDate(
+  currentView: ViewType,
+  date: Date,
+  direction: 'prev' | 'next'
+): Date {
   switch (currentView) {
     case 'month':
       return direction === 'prev' ? subMonths(date, 1) : addMonths(date, 1)

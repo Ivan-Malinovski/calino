@@ -9,7 +9,6 @@ import type { CalendarEvent } from '@/types'
 import { LocationLink } from './LocationLink'
 import styles from './DayEventsPopup.module.css'
 
-
 interface DayEventsPopupProps {
   date: Date
   events: CalendarEvent[]

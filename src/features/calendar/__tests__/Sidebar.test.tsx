@@ -123,10 +123,12 @@ describe('Sidebar', () => {
     await user.click(screen.getByRole('button', { name: /^calendars/i }))
     await user.click(screen.getByRole('button', { name: 'Change Default Calendar color' }))
 
-    expect(screen.getByRole('button', { name: 'Use #EA4335 for Default Calendar' }))
-      .toHaveClass(styles.colorPresetSelected)
-    expect(screen.getByLabelText('Custom color for Default Calendar').parentElement)
-      .not.toHaveClass(styles.customColorPickerSelected)
+    expect(screen.getByRole('button', { name: 'Use #EA4335 for Default Calendar' })).toHaveClass(
+      styles.colorPresetSelected
+    )
+    expect(
+      screen.getByLabelText('Custom color for Default Calendar').parentElement
+    ).not.toHaveClass(styles.customColorPickerSelected)
   })
 
   it('renders weekday headers in mini calendar', () => {

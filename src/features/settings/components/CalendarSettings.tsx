@@ -1,9 +1,5 @@
 import type { JSX } from 'react'
-import {
-  useSettingsStore,
-  DURATION_OPTIONS,
-  REMINDER_OPTIONS,
-} from '@/store/settingsStore'
+import { useSettingsStore, DURATION_OPTIONS, REMINDER_OPTIONS } from '@/store/settingsStore'
 import { useCalendarStore } from '@/store/calendarStore'
 import styles from './Settings.module.css'
 
@@ -27,12 +23,20 @@ export function CalendarSettings(): JSX.Element {
   const isCustomDuration = !DURATION_OPTIONS.some((o) => o.value === defaultDuration)
 
   return (
-    <section className={`${styles.section} ${styles.sectionActive}`} data-component="calendar-settings">
+    <section
+      className={`${styles.section} ${styles.sectionActive}`}
+      data-component="calendar-settings"
+    >
       <h1 className={styles.pageTitle}>Calendar</h1>
 
       <div className={styles.group}>
         <div className={styles.groupLabel}>Display</div>
-        <div className={styles.row} data-component="setting-row" data-setting="default-view" data-value={defaultView}>
+        <div
+          className={styles.row}
+          data-component="setting-row"
+          data-setting="default-view"
+          data-value={defaultView}
+        >
           <div className={styles.rowInfo}>
             <div className={styles.rowLabel}>Default View</div>
             <div className={styles.rowDesc}>The view shown when you open the app</div>
@@ -52,7 +56,9 @@ export function CalendarSettings(): JSX.Element {
                   aria-checked={defaultView === opt.value}
                   data-active={defaultView === opt.value ? 'true' : undefined}
                   onClick={() =>
-                    updateSettings({ defaultView: opt.value as 'month' | 'week' | 'day' | 'agenda' })
+                    updateSettings({
+                      defaultView: opt.value as 'month' | 'week' | 'day' | 'agenda',
+                    })
                   }
                   type="button"
                 >
@@ -62,13 +68,22 @@ export function CalendarSettings(): JSX.Element {
             </div>
           </div>
         </div>
-        <div className={styles.row} data-component="setting-row" data-setting="show-week-numbers" data-value={String(showWeekNumbers)}>
+        <div
+          className={styles.row}
+          data-component="setting-row"
+          data-setting="show-week-numbers"
+          data-value={String(showWeekNumbers)}
+        >
           <div className={styles.rowInfo}>
             <div className={styles.rowLabel}>Show Week Numbers</div>
             <div className={styles.rowDesc}>Display ISO week numbers on the left of each row</div>
           </div>
           <div className={styles.rowControl}>
-            <label className={styles.toggle} data-component="toggle" data-setting="show-week-numbers">
+            <label
+              className={styles.toggle}
+              data-component="toggle"
+              data-setting="show-week-numbers"
+            >
               <input
                 type="checkbox"
                 checked={showWeekNumbers}
@@ -80,13 +95,24 @@ export function CalendarSettings(): JSX.Element {
             </label>
           </div>
         </div>
-        <div className={styles.row} data-component="setting-row" data-setting="show-week-numbers-in-sidebar" data-value={String(showWeekNumbersInSidebar)}>
+        <div
+          className={styles.row}
+          data-component="setting-row"
+          data-setting="show-week-numbers-in-sidebar"
+          data-value={String(showWeekNumbersInSidebar)}
+        >
           <div className={styles.rowInfo}>
             <div className={styles.rowLabel}>Show Week Numbers in Sidebar</div>
-            <div className={styles.rowDesc}>Display ISO week numbers next to each row in the mini calendar</div>
+            <div className={styles.rowDesc}>
+              Display ISO week numbers next to each row in the mini calendar
+            </div>
           </div>
           <div className={styles.rowControl}>
-            <label className={styles.toggle} data-component="toggle" data-setting="show-week-numbers-in-sidebar">
+            <label
+              className={styles.toggle}
+              data-component="toggle"
+              data-setting="show-week-numbers-in-sidebar"
+            >
               <input
                 type="checkbox"
                 checked={showWeekNumbersInSidebar}
@@ -100,7 +126,13 @@ export function CalendarSettings(): JSX.Element {
             </label>
           </div>
         </div>
-        <div className={`${styles.row} ${styles.rowDisabled}`} data-component="setting-row" data-setting="event-density" data-value={eventDensity} title="Not available yet">
+        <div
+          className={`${styles.row} ${styles.rowDisabled}`}
+          data-component="setting-row"
+          data-setting="event-density"
+          data-value={eventDensity}
+          title="Not available yet"
+        >
           <div className={styles.rowInfo}>
             <div className={styles.rowLabel}>Event Display Density</div>
             <div className={styles.rowDesc}>How compact event chips appear in the grid</div>
@@ -128,13 +160,24 @@ export function CalendarSettings(): JSX.Element {
             </div>
           </div>
         </div>
-        <div className={styles.row} data-component="setting-row" data-setting="agenda-below-month-enabled" data-value={String(agendaBelowMonthEnabled)}>
+        <div
+          className={styles.row}
+          data-component="setting-row"
+          data-setting="agenda-below-month-enabled"
+          data-value={String(agendaBelowMonthEnabled)}
+        >
           <div className={styles.rowInfo}>
             <div className={styles.rowLabel}>Split Agenda Below Month View</div>
-            <div className={styles.rowDesc}>On tall, portrait-oriented screens, show an agenda panel below the month grid</div>
+            <div className={styles.rowDesc}>
+              On tall, portrait-oriented screens, show an agenda panel below the month grid
+            </div>
           </div>
           <div className={styles.rowControl}>
-            <label className={styles.toggle} data-component="toggle" data-setting="agenda-below-month-enabled">
+            <label
+              className={styles.toggle}
+              data-component="toggle"
+              data-setting="agenda-below-month-enabled"
+            >
               <input
                 type="checkbox"
                 checked={agendaBelowMonthEnabled}
@@ -152,13 +195,24 @@ export function CalendarSettings(): JSX.Element {
 
       <div className={styles.group}>
         <div className={styles.groupLabel}>Grid Behaviour</div>
-        <div className={styles.row} data-component="setting-row" data-setting="compact-recurring-events" data-value={String(compactRecurringEvents)}>
+        <div
+          className={styles.row}
+          data-component="setting-row"
+          data-setting="compact-recurring-events"
+          data-value={String(compactRecurringEvents)}
+        >
           <div className={styles.rowInfo}>
             <div className={styles.rowLabel}>Compact Recurring Events</div>
-            <div className={styles.rowDesc}>Show recurring events as minimal chips in month view</div>
+            <div className={styles.rowDesc}>
+              Show recurring events as minimal chips in month view
+            </div>
           </div>
           <div className={styles.rowControl}>
-            <label className={styles.toggle} data-component="toggle" data-setting="compact-recurring-events">
+            <label
+              className={styles.toggle}
+              data-component="toggle"
+              data-setting="compact-recurring-events"
+            >
               <input
                 type="checkbox"
                 checked={compactRecurringEvents}
@@ -170,13 +224,22 @@ export function CalendarSettings(): JSX.Element {
             </label>
           </div>
         </div>
-        <div className={styles.row} data-component="setting-row" data-setting="compress-past-weeks" data-value={String(compressPastWeeks)}>
+        <div
+          className={styles.row}
+          data-component="setting-row"
+          data-setting="compress-past-weeks"
+          data-value={String(compressPastWeeks)}
+        >
           <div className={styles.rowInfo}>
             <div className={styles.rowLabel}>Compact Past Weeks</div>
             <div className={styles.rowDesc}>Reduce height of rows that have already passed</div>
           </div>
           <div className={styles.rowControl}>
-            <label className={styles.toggle} data-component="toggle" data-setting="compress-past-weeks">
+            <label
+              className={styles.toggle}
+              data-component="toggle"
+              data-setting="compress-past-weeks"
+            >
               <input
                 type="checkbox"
                 checked={compressPastWeeks}
@@ -188,13 +251,22 @@ export function CalendarSettings(): JSX.Element {
             </label>
           </div>
         </div>
-        <div className={styles.row} data-component="setting-row" data-setting="hide-completed-tasks" data-value={String(hideCompletedTasksInMonthView)}>
+        <div
+          className={styles.row}
+          data-component="setting-row"
+          data-setting="hide-completed-tasks"
+          data-value={String(hideCompletedTasksInMonthView)}
+        >
           <div className={styles.rowInfo}>
             <div className={styles.rowLabel}>Hide Completed Tasks</div>
             <div className={styles.rowDesc}>Don't show done tasks in the calendar grid</div>
           </div>
           <div className={styles.rowControl}>
-            <label className={styles.toggle} data-component="toggle" data-setting="hide-completed-tasks">
+            <label
+              className={styles.toggle}
+              data-component="toggle"
+              data-setting="hide-completed-tasks"
+            >
               <input
                 type="checkbox"
                 checked={hideCompletedTasksInMonthView}
@@ -208,10 +280,17 @@ export function CalendarSettings(): JSX.Element {
             </label>
           </div>
         </div>
-        <div className={styles.row} data-component="setting-row" data-setting="month-view-event-limit" data-value={String(monthViewEventLimit)}>
+        <div
+          className={styles.row}
+          data-component="setting-row"
+          data-setting="month-view-event-limit"
+          data-value={String(monthViewEventLimit)}
+        >
           <div className={styles.rowInfo}>
             <div className={styles.rowLabel}>Events Before Rollup</div>
-            <div className={styles.rowDesc}>How many events to show per day before showing "+N more"</div>
+            <div className={styles.rowDesc}>
+              How many events to show per day before showing "+N more"
+            </div>
           </div>
           <div className={styles.rowControl}>
             <select
@@ -232,10 +311,17 @@ export function CalendarSettings(): JSX.Element {
 
       <div className={styles.group}>
         <div className={styles.groupLabel}>New Event Defaults</div>
-        <div className={styles.row} data-component="setting-row" data-setting="default-duration" data-value={String(defaultDuration)}>
+        <div
+          className={styles.row}
+          data-component="setting-row"
+          data-setting="default-duration"
+          data-value={String(defaultDuration)}
+        >
           <div className={styles.rowInfo}>
             <div className={styles.rowLabel}>Default Duration</div>
-            <div className={styles.rowDesc}>Length of a new event when created by clicking a day</div>
+            <div className={styles.rowDesc}>
+              Length of a new event when created by clicking a day
+            </div>
           </div>
           <div className={styles.rowControl}>
             <select
@@ -278,7 +364,12 @@ export function CalendarSettings(): JSX.Element {
             )}
           </div>
         </div>
-        <div className={styles.row} data-component="setting-row" data-setting="default-calendar" data-value={defaultCalendar?.id || ''}>
+        <div
+          className={styles.row}
+          data-component="setting-row"
+          data-setting="default-calendar"
+          data-value={defaultCalendar?.id || ''}
+        >
           <div className={styles.rowInfo}>
             <div className={styles.rowLabel}>Default Calendar</div>
             <div className={styles.rowDesc}>Which calendar new events are added to</div>
@@ -302,7 +393,12 @@ export function CalendarSettings(): JSX.Element {
             </select>
           </div>
         </div>
-        <div className={styles.row} data-component="setting-row" data-setting="default-reminder" data-value={String(defaultReminderMinutes)}>
+        <div
+          className={styles.row}
+          data-component="setting-row"
+          data-setting="default-reminder"
+          data-value={String(defaultReminderMinutes)}
+        >
           <div className={styles.rowInfo}>
             <div className={styles.rowLabel}>Default Reminder</div>
             <div className={styles.rowDesc}>How far ahead to send the reminder</div>

@@ -11,7 +11,7 @@ export interface ContactStore {
   filterAddressBookId: string | null
   searchQuery: string
   pendingChanges: PendingContactChange[]
-  
+
   // Actions
   addContact: (contact: Contact) => void
   updateContact: (id: string, updates: Partial<Contact>) => void
@@ -20,21 +20,21 @@ export interface ContactStore {
   setSelectedTag: (tag: string | null) => void
   setFilterAddressBookId: (id: string | null) => void
   setSearchQuery: (query: string) => void
-  
+
   // Address book actions
   addAddressBook: (addressBook: AddressBook) => void
   updateAddressBook: (id: string, updates: Partial<AddressBook>) => void
   deleteAddressBook: (id: string) => void
-  
+
   // Bulk operations
   setContacts: (contacts: Contact[]) => void
   setAddressBooks: (addressBooks: AddressBook[]) => void
-  
+
   // Pending changes
   addPendingChange: (change: PendingContactChange) => void
   removePendingChange: (changeId: string) => void
   clearPendingChanges: () => void
-  
+
   // Selectors
   getContactsForAddressBook: (addressBookId: string) => Contact[]
   getFilteredContacts: () => Contact[]
@@ -60,9 +60,7 @@ export const useContactStore = create<ContactStore>()(
 
       updateContact: (id: string, updates: Partial<Contact>): void => {
         set((state) => ({
-          contacts: state.contacts.map((c) =>
-            c.id === id ? { ...c, ...updates } : c
-          ),
+          contacts: state.contacts.map((c) => (c.id === id ? { ...c, ...updates } : c)),
         }))
       },
 
@@ -97,9 +95,7 @@ export const useContactStore = create<ContactStore>()(
 
       updateAddressBook: (id: string, updates: Partial<AddressBook>): void => {
         set((state) => ({
-          addressBooks: state.addressBooks.map((ab) =>
-            ab.id === id ? { ...ab, ...updates } : ab
-          ),
+          addressBooks: state.addressBooks.map((ab) => (ab.id === id ? { ...ab, ...updates } : ab)),
         }))
       },
 
@@ -140,36 +136,35 @@ export const useContactStore = create<ContactStore>()(
 
       getFilteredContacts: (): Contact[] => {
         const { contacts, searchQuery, selectedTag, filterAddressBookId, addressBooks } = get()
-        
+
         // Filter by visible address books
-        const visibleAddressBookIds = addressBooks
-          .filter((ab) => ab.isVisible)
-          .map((ab) => ab.id)
-        
+        const visibleAddressBookIds = addressBooks.filter((ab) => ab.isVisible).map((ab) => ab.id)
+
         let filtered = contacts.filter((c) => visibleAddressBookIds.includes(c.addressBookId))
-        
+
         // Filter by specific address book
         if (filterAddressBookId) {
           filtered = filtered.filter((c) => c.addressBookId === filterAddressBookId)
         }
-        
+
         // Filter by tag
         if (selectedTag) {
           filtered = filtered.filter((c) => c.categories.includes(selectedTag))
         }
-        
+
         // Filter by search query
         if (searchQuery.trim()) {
           const query = searchQuery.toLowerCase()
-          filtered = filtered.filter((c) =>
-            c.displayName.toLowerCase().includes(query) ||
-            c.nickname.toLowerCase().includes(query) ||
-            c.organization.toLowerCase().includes(query) ||
-            c.emails.some((e) => e.value.toLowerCase().includes(query)) ||
-            c.phones.some((p) => p.value.includes(query))
+          filtered = filtered.filter(
+            (c) =>
+              c.displayName.toLowerCase().includes(query) ||
+              c.nickname.toLowerCase().includes(query) ||
+              c.organization.toLowerCase().includes(query) ||
+              c.emails.some((e) => e.value.toLowerCase().includes(query)) ||
+              c.phones.some((p) => p.value.includes(query))
           )
         }
-        
+
         // Sort by display name
         return filtered.sort((a, b) => a.displayName.localeCompare(b.displayName))
       },

@@ -88,7 +88,14 @@ describe('historyStore', () => {
   it('undoes adding a calendar', () => {
     const store = useCalendarStore.getState()
     const before = store.calendars.length
-    store.addCalendar({ id: 'cal-1', name: 'Work', color: '#ff0000', isVisible: true, isDefault: false, showTasksInViews: false })
+    store.addCalendar({
+      id: 'cal-1',
+      name: 'Work',
+      color: '#ff0000',
+      isVisible: true,
+      isDefault: false,
+      showTasksInViews: false,
+    })
     expect(useCalendarStore.getState().calendars.length).toBe(before + 1)
 
     useHistoryStore.getState().undo()
@@ -97,7 +104,14 @@ describe('historyStore', () => {
 
   it('undoes renaming a calendar', () => {
     const store = useCalendarStore.getState()
-    store.addCalendar({ id: 'cal-rename', name: 'Original', color: '#aaa', isVisible: true, isDefault: false, showTasksInViews: false })
+    store.addCalendar({
+      id: 'cal-rename',
+      name: 'Original',
+      color: '#aaa',
+      isVisible: true,
+      isDefault: false,
+      showTasksInViews: false,
+    })
     const calId = 'cal-rename'
     store.updateCalendar(calId, { name: 'Renamed' })
     expect(useCalendarStore.getState().calendars.find((c) => c.id === calId)!.name).toBe('Renamed')
@@ -108,7 +122,14 @@ describe('historyStore', () => {
 
   it('undoes toggling calendar visibility', () => {
     const store = useCalendarStore.getState()
-    store.addCalendar({ id: 'cal-vis', name: 'Vis', color: '#bbb', isVisible: true, isDefault: false, showTasksInViews: false })
+    store.addCalendar({
+      id: 'cal-vis',
+      name: 'Vis',
+      color: '#bbb',
+      isVisible: true,
+      isDefault: false,
+      showTasksInViews: false,
+    })
     const calId = 'cal-vis'
     store.toggleCalendarVisibility(calId)
     expect(useCalendarStore.getState().calendars.find((c) => c.id === calId)!.isVisible).toBe(false)
@@ -119,7 +140,14 @@ describe('historyStore', () => {
 
   it('undoes deleting a calendar', () => {
     const store = useCalendarStore.getState()
-    store.addCalendar({ id: 'cal-del', name: 'Temp', color: '#000', isVisible: true, isDefault: false, showTasksInViews: false })
+    store.addCalendar({
+      id: 'cal-del',
+      name: 'Temp',
+      color: '#000',
+      isVisible: true,
+      isDefault: false,
+      showTasksInViews: false,
+    })
     const beforeCount = useCalendarStore.getState().calendars.length
     store.deleteCalendar('cal-del')
     expect(useCalendarStore.getState().calendars.length).toBe(beforeCount - 1)
@@ -133,7 +161,14 @@ describe('historyStore', () => {
     const eventsBefore = store.events.length
     const calsBefore = store.calendars.length
     store.addEvent(makeEvent('ev1'))
-    store.addCalendar({ id: 'cal-2', name: 'Personal', color: '#00f', isVisible: true, isDefault: false, showTasksInViews: false })
+    store.addCalendar({
+      id: 'cal-2',
+      name: 'Personal',
+      color: '#00f',
+      isVisible: true,
+      isDefault: false,
+      showTasksInViews: false,
+    })
 
     // Undo #1: reverts the calendar add — event stays, calendar removed.
     useHistoryStore.getState().undo()

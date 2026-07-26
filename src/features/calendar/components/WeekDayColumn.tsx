@@ -136,7 +136,10 @@ const WeekDayColumn = memo(function WeekDayColumn({
           exit={skipExit(event.id) ? undefined : cardExit}
           transition={enterTransition}
           className={styles.travelBar}
-          style={{ ...travelBarStyle(event, column, totalColumns), backgroundColor: `${eventColor}15` }}
+          style={{
+            ...travelBarStyle(event, column, totalColumns),
+            backgroundColor: `${eventColor}15`,
+          }}
           onClick={() => openModal(undefined, undefined, event.id)}
         >
           <span className={styles.travelBarInner}>
@@ -157,7 +160,12 @@ const WeekDayColumn = memo(function WeekDayColumn({
         className={styles.eventPositioned}
         style={positionedEventStyle(event, column, totalColumns)}
       >
-        <EventCard event={event} enableResize hideTopRadius={!!event.travelDuration} hourHeight={hourHeight} />
+        <EventCard
+          event={event}
+          enableResize
+          hideTopRadius={!!event.travelDuration}
+          hourHeight={hourHeight}
+        />
       </motion.div>
     )
   }

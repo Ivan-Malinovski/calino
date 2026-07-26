@@ -14,10 +14,7 @@ const avatarColor = getAvatarColor
 
 function formatDate(dateStr: string): string {
   try {
-    const normalized = dateStr.replace(
-      /^(\d{4})(\d{2})(\d{2})$/,
-      '$1-$2-$3',
-    )
+    const normalized = dateStr.replace(/^(\d{4})(\d{2})(\d{2})$/, '$1-$2-$3')
     const date = new Date(normalized)
     if (isNaN(date.getTime())) return dateStr
     return date.toLocaleDateString(undefined, {
@@ -32,15 +29,10 @@ function formatDate(dateStr: string): string {
 
 function getAge(birthday: string): number {
   const today = new Date()
-  const birthDate = new Date(
-    birthday.replace(/^(\d{4})(\d{2})(\d{2})$/, '$1-$2-$3'),
-  )
+  const birthDate = new Date(birthday.replace(/^(\d{4})(\d{2})(\d{2})$/, '$1-$2-$3'))
   let age = today.getFullYear() - birthDate.getFullYear()
   const monthDiff = today.getMonth() - birthDate.getMonth()
-  if (
-    monthDiff < 0 ||
-    (monthDiff === 0 && today.getDate() < birthDate.getDate())
-  ) {
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
     age--
   }
   return age
@@ -49,9 +41,7 @@ function getAge(birthday: string): number {
 function daysUntilNext(date: string): number {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
-  const birthDate = new Date(
-    date.replace(/^(\d{4})(\d{2})(\d{2})$/, '$1-$2-$3'),
-  )
+  const birthDate = new Date(date.replace(/^(\d{4})(\d{2})(\d{2})$/, '$1-$2-$3'))
   const thisYear = new Date(today.getFullYear(), birthDate.getMonth(), birthDate.getDate())
   if (thisYear < today) {
     thisYear.setFullYear(today.getFullYear() + 1)
@@ -217,9 +207,7 @@ export function ContactDetail({
               <input
                 className={`${styles.inlineInput} ${styles.heroNameInput}`}
                 value={inlineEditing.value}
-                onChange={(e) =>
-                  setInlineEditing({ ...inlineEditing, value: e.target.value })
-                }
+                onChange={(e) => setInlineEditing({ ...inlineEditing, value: e.target.value })}
                 onBlur={() => saveInlineEdit()}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') saveInlineEdit()
@@ -232,11 +220,19 @@ export function ContactDetail({
             )}
           </div>
           {roleOrg && <p className={styles.heroRole}>{roleOrg}</p>}
-          {contact.nickname && <p className={styles.heroRole} style={{ fontStyle: 'italic' }}>“{contact.nickname}”</p>}
+          {contact.nickname && (
+            <p className={styles.heroRole} style={{ fontStyle: 'italic' }}>
+              “{contact.nickname}”
+            </p>
+          )}
           {(() => {
-            const ab = useContactStore.getState().addressBooks.find(a => a.id === contact.addressBookId)
+            const ab = useContactStore
+              .getState()
+              .addressBooks.find((a) => a.id === contact.addressBookId)
             return ab && useContactStore.getState().addressBooks.length > 1 ? (
-              <p className={styles.heroRole} style={{ fontSize: 12, opacity: 0.6 }}>{ab.name}</p>
+              <p className={styles.heroRole} style={{ fontSize: 12, opacity: 0.6 }}>
+                {ab.name}
+              </p>
             ) : null
           })()}
           <div className={styles.heroActions}>
@@ -245,7 +241,19 @@ export function ContactDetail({
               className={styles.btnSecondary}
               hidden={contact.emails.length === 0}
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="4" width="20" height="16" rx="2" /><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" /></svg>
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <rect x="2" y="4" width="20" height="16" rx="2" />
+                <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+              </svg>
               Send email
             </a>
           </div>
@@ -259,7 +267,19 @@ export function ContactDetail({
             title="Edit contact"
             aria-label="Edit contact"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /><path d="m15 5 4 4" /></svg>
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+              <path d="m15 5 4 4" />
+            </svg>
           </button>
           <button
             type="button"
@@ -268,7 +288,20 @@ export function ContactDetail({
             title={confirmDelete ? 'Click again to confirm' : 'Delete contact'}
             aria-label="Delete contact"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /></svg>
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M3 6h18" />
+              <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+              <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+            </svg>
             {confirmDelete && <span className={styles.btnDeleteLabel}>Confirm?</span>}
           </button>
         </div>
@@ -363,7 +396,11 @@ export function ContactDetail({
                         {EMAIL_TYPE_LABELS[url.type] ?? url.type}
                       </span>
                       <span className={styles.infoFieldValue}>
-                        <a href={url.value.startsWith('http') ? url.value : `https://${url.value}`} target="_blank" rel="noopener noreferrer">
+                        <a
+                          href={url.value.startsWith('http') ? url.value : `https://${url.value}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
                           {url.value}
                         </a>
                       </span>
@@ -379,7 +416,9 @@ export function ContactDetail({
                   {contact.ims.map((im, i) => (
                     <div key={`im-${i}`} className={styles.infoFieldGrid}>
                       <span className={styles.infoFieldSub}>
-                        {im.protocol !== 'other' ? im.protocol.toUpperCase() : (EMAIL_TYPE_LABELS[im.type] ?? im.type)}
+                        {im.protocol !== 'other'
+                          ? im.protocol.toUpperCase()
+                          : (EMAIL_TYPE_LABELS[im.type] ?? im.type)}
                       </span>
                       <span className={styles.infoFieldValue}>{im.value}</span>
                     </div>
@@ -404,9 +443,7 @@ export function ContactDetail({
                             {formatted.split('\n').map((line, j) => (
                               <span key={j}>
                                 {line}
-                                {j < formatted.split('\n').length - 1 && (
-                                  <br />
-                                )}
+                                {j < formatted.split('\n').length - 1 && <br />}
                               </span>
                             ))}
                           </span>
@@ -453,16 +490,13 @@ export function ContactDetail({
                   <span className={styles.infoFieldLabel}>MEMBERS</span>
                   {contact.memberUids.map((uid, i) => (
                     <div key={`member-${i}`} className={styles.infoFieldGrid}>
-                      <span className={styles.infoFieldValue}>
-                        {uid.replace('urn:uuid:', '')}
-                      </span>
+                      <span className={styles.infoFieldValue}>{uid.replace('urn:uuid:', '')}</span>
                     </div>
                   ))}
                 </div>
               )}
             </div>
           )}
-
         </div>
 
         {/* Aside column */}
@@ -479,17 +513,11 @@ export function ContactDetail({
                   </span>
                 )}
                 {daysUntilNext(contact.birthday) === 0 && (
-                  <span className={styles.birthdayCountdown}>
-                    (today!)
-                  </span>
+                  <span className={styles.birthdayCountdown}>(today!)</span>
                 )}
               </div>
-              <div className={styles.birthdayDate}>
-                {formatDate(contact.birthday)}
-              </div>
-              <div className={styles.birthdayAge}>
-                {getAge(contact.birthday)} years old
-              </div>
+              <div className={styles.birthdayDate}>{formatDate(contact.birthday)}</div>
+              <div className={styles.birthdayAge}>{getAge(contact.birthday)} years old</div>
               {onAddBirthdayToCalendar && (
                 <button
                   type="button"
@@ -527,14 +555,10 @@ export function ContactDetail({
                   </span>
                 )}
                 {daysUntilNext(contact.anniversary) === 0 && (
-                  <span className={styles.birthdayCountdown}>
-                    (today!)
-                  </span>
+                  <span className={styles.birthdayCountdown}>(today!)</span>
                 )}
               </div>
-              <div className={styles.birthdayDate}>
-                {formatDate(contact.anniversary)}
-              </div>
+              <div className={styles.birthdayDate}>{formatDate(contact.anniversary)}</div>
               {onAddAnniversaryToCalendar && (
                 <button
                   type="button"
@@ -583,18 +607,20 @@ export function ContactDetail({
           {contact.xmlData && (
             <div className={styles.categoriesCard}>
               <div className={styles.asideSectionLabel}>XML DATA</div>
-              <pre style={{
-                fontSize: '11px',
-                fontFamily: 'monospace',
-                whiteSpace: 'pre-wrap',
-                wordBreak: 'break-all',
-                margin: 0,
-                padding: 'var(--space-2)',
-                background: 'var(--bg-secondary)',
-                borderRadius: 'var(--radius-sm)',
-                maxHeight: '200px',
-                overflow: 'auto',
-              }}>
+              <pre
+                style={{
+                  fontSize: '11px',
+                  fontFamily: 'monospace',
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-all',
+                  margin: 0,
+                  padding: 'var(--space-2)',
+                  background: 'var(--bg-secondary)',
+                  borderRadius: 'var(--radius-sm)',
+                  maxHeight: '200px',
+                  overflow: 'auto',
+                }}
+              >
                 {contact.xmlData}
               </pre>
             </div>
@@ -611,9 +637,7 @@ export function ContactDetail({
                   className={styles.inlineInput}
                   style={{ width: '100%', minHeight: '60px', resize: 'vertical' }}
                   value={inlineEditing.value}
-                  onChange={(e) =>
-                    setInlineEditing({ ...inlineEditing, value: e.target.value })
-                  }
+                  onChange={(e) => setInlineEditing({ ...inlineEditing, value: e.target.value })}
                   onBlur={() => saveInlineEdit()}
                   onKeyDown={(e) => {
                     if (e.key === 'Escape') cancelInlineEdit()

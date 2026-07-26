@@ -53,8 +53,11 @@ export function SearchFilters({
   const categories = useCalendarStore((state) => state.categories)
 
   const hasActiveFilters =
-    filters.dateFrom || filters.dateTo || (filters.calendarIds && filters.calendarIds.length > 0) ||
-    (filters.types && filters.types.length > 0) || (filters.categoryIds && filters.categoryIds.length > 0)
+    filters.dateFrom ||
+    filters.dateTo ||
+    (filters.calendarIds && filters.calendarIds.length > 0) ||
+    (filters.types && filters.types.length > 0) ||
+    (filters.categoryIds && filters.categoryIds.length > 0)
 
   return (
     <div className={styles.filtersContainer}>

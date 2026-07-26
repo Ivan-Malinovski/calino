@@ -17,8 +17,20 @@ export interface SmartSuggestion {
 }
 
 const STOP_WORDS = new Set([
-  'the', 'a', 'an', 'my', 'our', 'and', 'with', 'for', 'to', 'of', 'at', 'on',
-  'in', 'new',
+  'the',
+  'a',
+  'an',
+  'my',
+  'our',
+  'and',
+  'with',
+  'for',
+  'to',
+  'of',
+  'at',
+  'on',
+  'in',
+  'new',
 ])
 
 /**

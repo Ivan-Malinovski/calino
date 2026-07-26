@@ -17,8 +17,14 @@ const entry = (event: CalendarEvent, href: string): ParsedWithHref => ({ event, 
 describe('detectUidCollisions', () => {
   it('flags two independent events that share a UID across different resources', () => {
     const items = [
-      entry(makeEvent({ id: 'shared', title: 'Event A', start: '2024-04-02T00:00:00Z' }), '/cal/event-a.ics'),
-      entry(makeEvent({ id: 'shared', title: 'Event B', start: '2024-09-15T00:00:00Z' }), '/cal/event-b.ics'),
+      entry(
+        makeEvent({ id: 'shared', title: 'Event A', start: '2024-04-02T00:00:00Z' }),
+        '/cal/event-a.ics'
+      ),
+      entry(
+        makeEvent({ id: 'shared', title: 'Event B', start: '2024-09-15T00:00:00Z' }),
+        '/cal/event-b.ics'
+      ),
     ]
 
     const { issues, skip } = detectUidCollisions(items)
@@ -78,11 +84,15 @@ describe('detectUidCollisions', () => {
   it('does not flag a recurring master plus a RECURRENCE-ID override sharing a UID', () => {
     const master = entry(
       makeEvent({ id: 'birthday', rruleString: 'FREQ=YEARLY' }),
-      '/cal/birthday.ics',
+      '/cal/birthday.ics'
     )
     const override = entry(
-      makeEvent({ id: 'birthday', recurrenceId: '2025-04-02T00:00:00Z', title: 'Birthday (moved)' }),
-      '/cal/birthday-override.ics',
+      makeEvent({
+        id: 'birthday',
+        recurrenceId: '2025-04-02T00:00:00Z',
+        title: 'Birthday (moved)',
+      }),
+      '/cal/birthday-override.ics'
     )
 
     const { issues, skip } = detectUidCollisions([master, override])

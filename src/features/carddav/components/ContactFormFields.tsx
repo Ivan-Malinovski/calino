@@ -1,13 +1,7 @@
 import type { JSX } from 'react'
 import { useState, useCallback, useEffect, useRef } from 'react'
 import imageCompression from 'browser-image-compression'
-import type {
-  Contact,
-  ContactEmail,
-  ContactPhone,
-  ContactAddress,
-  ContactUrl,
-} from '../types'
+import type { Contact, ContactEmail, ContactPhone, ContactAddress, ContactUrl } from '../types'
 import styles from '@/features/calendar/components/EventModal.module.css'
 
 interface ContactFormFieldsProps {
@@ -15,10 +9,7 @@ interface ContactFormFieldsProps {
   onChange: (contact: Partial<Contact>) => void
 }
 
-export function ContactFormFields({
-  value,
-  onChange,
-}: ContactFormFieldsProps): JSX.Element {
+export function ContactFormFields({ value, onChange }: ContactFormFieldsProps): JSX.Element {
   // Local partial state derived from props
   const [local, setLocal] = useState<Partial<Contact>>(value)
   const valueRef = useRef(value)
@@ -52,10 +43,7 @@ export function ContactFormFields({
   // Email helpers
   // -------------------------------------------------------------------------
   const addEmail = useCallback(() => {
-    const emails = [
-      ...(local.emails || []),
-      { value: '', type: 'home' as const, isPrimary: false },
-    ]
+    const emails = [...(local.emails || []), { value: '', type: 'home' as const, isPrimary: false }]
     update({ emails })
   }, [local.emails, update])
 
@@ -68,11 +56,7 @@ export function ContactFormFields({
   )
 
   const updateEmail = useCallback(
-    (
-      index: number,
-      field: keyof ContactEmail,
-      fieldValue: string | boolean
-    ) => {
+    (index: number, field: keyof ContactEmail, fieldValue: string | boolean) => {
       const emails = (local.emails || []).map((e, i) =>
         i === index ? { ...e, [field]: fieldValue } : e
       )
@@ -85,10 +69,7 @@ export function ContactFormFields({
   // Phone helpers
   // -------------------------------------------------------------------------
   const addPhone = useCallback(() => {
-    const phones = [
-      ...(local.phones || []),
-      { value: '', type: 'home' as const, isPrimary: false },
-    ]
+    const phones = [...(local.phones || []), { value: '', type: 'home' as const, isPrimary: false }]
     update({ phones })
   }, [local.phones, update])
 
@@ -101,11 +82,7 @@ export function ContactFormFields({
   )
 
   const updatePhone = useCallback(
-    (
-      index: number,
-      field: keyof ContactPhone,
-      fieldValue: string | boolean
-    ) => {
+    (index: number, field: keyof ContactPhone, fieldValue: string | boolean) => {
       const phones = (local.phones || []).map((p, i) =>
         i === index ? { ...p, [field]: fieldValue } : p
       )
@@ -144,11 +121,7 @@ export function ContactFormFields({
   )
 
   const updateAddress = useCallback(
-    (
-      index: number,
-      field: keyof ContactAddress,
-      fieldValue: string | boolean
-    ) => {
+    (index: number, field: keyof ContactAddress, fieldValue: string | boolean) => {
       const addresses = (local.addresses || []).map((a, i) =>
         i === index ? { ...a, [field]: fieldValue } : a
       )
@@ -161,10 +134,7 @@ export function ContactFormFields({
   // URL helpers
   // -------------------------------------------------------------------------
   const addUrl = useCallback(() => {
-    const urls = [
-      ...(local.urls || []),
-      { value: '', type: 'home' as const, isPrimary: false },
-    ]
+    const urls = [...(local.urls || []), { value: '', type: 'home' as const, isPrimary: false }]
     update({ urls })
   }, [local.urls, update])
 
@@ -177,11 +147,7 @@ export function ContactFormFields({
   )
 
   const updateUrl = useCallback(
-    (
-      index: number,
-      field: keyof ContactUrl,
-      fieldValue: string | boolean
-    ) => {
+    (index: number, field: keyof ContactUrl, fieldValue: string | boolean) => {
       const urls = (local.urls || []).map((u, i) =>
         i === index ? { ...u, [field]: fieldValue } : u
       )
@@ -198,16 +164,17 @@ export function ContactFormFields({
     update({ langs })
   }, [local.langs, update])
 
-  const removeLang = useCallback((index: number) => {
-    const langs = (local.langs || []).filter((_, i) => i !== index)
-    update({ langs })
-  }, [local.langs, update])
+  const removeLang = useCallback(
+    (index: number) => {
+      const langs = (local.langs || []).filter((_, i) => i !== index)
+      update({ langs })
+    },
+    [local.langs, update]
+  )
 
   const updateLang = useCallback(
     (index: number, field: string, value: string | boolean) => {
-      const langs = (local.langs || []).map((l, i) =>
-        i === index ? { ...l, [field]: value } : l
-      )
+      const langs = (local.langs || []).map((l, i) => (i === index ? { ...l, [field]: value } : l))
       update({ langs })
     },
     [local.langs, update]
@@ -217,14 +184,20 @@ export function ContactFormFields({
   // RELATED helpers
   // -------------------------------------------------------------------------
   const addRelated = useCallback(() => {
-    const related = [...(local.related || []), { value: '', type: 'other' as const, isPrimary: false }]
+    const related = [
+      ...(local.related || []),
+      { value: '', type: 'other' as const, isPrimary: false },
+    ]
     update({ related })
   }, [local.related, update])
 
-  const removeRelated = useCallback((index: number) => {
-    const related = (local.related || []).filter((_, i) => i !== index)
-    update({ related })
-  }, [local.related, update])
+  const removeRelated = useCallback(
+    (index: number) => {
+      const related = (local.related || []).filter((_, i) => i !== index)
+      update({ related })
+    },
+    [local.related, update]
+  )
 
   const updateRelated = useCallback(
     (index: number, field: string, value: string | boolean) => {
@@ -305,7 +278,17 @@ export function ContactFormFields({
               style={{ width: '100%', height: '100%', objectFit: 'cover' }}
             />
           ) : (
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-muted)' }}>
+            <svg
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              style={{ color: 'var(--text-muted)' }}
+            >
               <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
               <circle cx="12" cy="13" r="4" />
             </svg>
@@ -390,9 +373,7 @@ export function ContactFormFields({
           {showMoreNames ? 'Less' : 'More name options'}
         </button>
         {showMoreNames && (
-          <div
-            className={`${styles.moreOptionsWrapper} ${styles.moreOptionsOpen}`}
-          >
+          <div className={`${styles.moreOptionsWrapper} ${styles.moreOptionsOpen}`}>
             <div className={styles.moreOptionsSection}>
               <input
                 type="text"
@@ -538,13 +519,7 @@ export function ContactFormFields({
             <div key={i} className={styles.modalFieldRow}>
               <select
                 value={email.type}
-                onChange={(e) =>
-                  updateEmail(
-                    i,
-                    'type',
-                    e.target.value as ContactEmail['type']
-                  )
-                }
+                onChange={(e) => updateEmail(i, 'type', e.target.value as ContactEmail['type'])}
                 className={styles.input}
                 style={{ flex: 0, minWidth: 100 }}
               >
@@ -571,11 +546,7 @@ export function ContactFormFields({
               </button>
             </div>
           ))}
-          <button
-            type="button"
-            className={styles.modalAddDesc}
-            onClick={addEmail}
-          >
+          <button type="button" className={styles.modalAddDesc} onClick={addEmail}>
             + Add email
           </button>
         </div>
@@ -589,13 +560,7 @@ export function ContactFormFields({
             <div key={i} className={styles.modalFieldRow}>
               <select
                 value={phone.type}
-                onChange={(e) =>
-                  updatePhone(
-                    i,
-                    'type',
-                    e.target.value as ContactPhone['type']
-                  )
-                }
+                onChange={(e) => updatePhone(i, 'type', e.target.value as ContactPhone['type'])}
                 className={styles.input}
                 style={{ flex: 0, minWidth: 100 }}
               >
@@ -624,11 +589,7 @@ export function ContactFormFields({
               </button>
             </div>
           ))}
-          <button
-            type="button"
-            className={styles.modalAddDesc}
-            onClick={addPhone}
-          >
+          <button type="button" className={styles.modalAddDesc} onClick={addPhone}>
             + Add phone
           </button>
         </div>
@@ -658,11 +619,7 @@ export function ContactFormFields({
                 <select
                   value={addr.type}
                   onChange={(e) =>
-                    updateAddress(
-                      i,
-                      'type',
-                      e.target.value as ContactAddress['type']
-                    )
+                    updateAddress(i, 'type', e.target.value as ContactAddress['type'])
                   }
                   className={styles.input}
                   style={{ flex: 0, minWidth: 100 }}
@@ -702,9 +659,7 @@ export function ContactFormFields({
                     type="text"
                     placeholder="Postal code"
                     value={addr.postalCode}
-                    onChange={(e) =>
-                      updateAddress(i, 'postalCode', e.target.value)
-                    }
+                    onChange={(e) => updateAddress(i, 'postalCode', e.target.value)}
                     className={styles.input}
                     style={{ flex: 1 }}
                   />
@@ -714,9 +669,7 @@ export function ContactFormFields({
                     type="text"
                     placeholder="Country"
                     value={addr.country}
-                    onChange={(e) =>
-                      updateAddress(i, 'country', e.target.value)
-                    }
+                    onChange={(e) => updateAddress(i, 'country', e.target.value)}
                     className={styles.input}
                     style={{ flex: 1 }}
                   />
@@ -725,11 +678,7 @@ export function ContactFormFields({
               </div>
             </div>
           ))}
-          <button
-            type="button"
-            className={styles.modalAddDesc}
-            onClick={addAddress}
-          >
+          <button type="button" className={styles.modalAddDesc} onClick={addAddress}>
             + Add address
           </button>
         </div>
@@ -743,13 +692,7 @@ export function ContactFormFields({
             <div key={i} className={styles.modalFieldRow}>
               <select
                 value={url.type}
-                onChange={(e) =>
-                  updateUrl(
-                    i,
-                    'type',
-                    e.target.value as ContactUrl['type']
-                  )
-                }
+                onChange={(e) => updateUrl(i, 'type', e.target.value as ContactUrl['type'])}
                 className={styles.input}
                 style={{ flex: 0, minWidth: 100 }}
               >
@@ -806,7 +749,9 @@ export function ContactFormFields({
 
       {/* ---- Note ---- */}
       <div className={styles.modalField}>
-        <label className={styles.label}>Note (supports <strong>markdown</strong>)</label>
+        <label className={styles.label}>
+          Note (supports <strong>markdown</strong>)
+        </label>
         <textarea
           placeholder="Write a note... (supports **bold**, *italic*, lists, etc.)"
           value={local.note || ''}
@@ -919,14 +864,25 @@ export function ContactFormFields({
       {local.isGroup && (
         <div className={styles.modalField}>
           <label className={styles.label}>Members</label>
-          <div style={{ maxHeight: 200, overflowY: 'auto', border: '1px solid var(--line)', borderRadius: 'var(--radius-md)', padding: 8 }}>
+          <div
+            style={{
+              maxHeight: 200,
+              overflowY: 'auto',
+              border: '1px solid var(--line)',
+              borderRadius: 'var(--radius-md)',
+              padding: 8,
+            }}
+          >
             <div style={{ color: 'var(--text-muted)', fontSize: 12, marginBottom: 8 }}>
               Select contacts to add as members:
             </div>
             {(local.memberUids || []).length > 0 && (
               <div style={{ marginBottom: 8 }}>
                 {(local.memberUids || []).map((uid) => (
-                  <div key={uid} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0' }}>
+                  <div
+                    key={uid}
+                    style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0' }}
+                  >
                     <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{uid}</span>
                     <button
                       type="button"

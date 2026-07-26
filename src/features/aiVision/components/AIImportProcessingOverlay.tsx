@@ -29,7 +29,12 @@ export function AIImportProcessingOverlay({
   const { label, sublabel } = COPY[stage ?? 'thinking']
 
   return createPortal(
-    <div className={styles.overlay} role="status" aria-live="polite" data-component="ai-import-processing-overlay">
+    <div
+      className={styles.overlay}
+      role="status"
+      aria-live="polite"
+      data-component="ai-import-processing-overlay"
+    >
       <div className={styles.spinner} aria-hidden="true" />
       <div className={styles.label}>{label}</div>
       <div className={styles.sublabel}>{sublabel}</div>

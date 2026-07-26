@@ -697,18 +697,22 @@ describe('contactToVCard', () => {
   })
 
   it('serializes organization and department', () => {
-    const vcard = contactToVCard(makeContact({
-      organization: 'Acme Corp',
-      department: 'Engineering',
-    }))
+    const vcard = contactToVCard(
+      makeContact({
+        organization: 'Acme Corp',
+        department: 'Engineering',
+      })
+    )
 
     expect(vcard).toContain('ORG:Acme Corp;Engineering')
   })
 
   it('serializes single-part organization without department', () => {
-    const vcard = contactToVCard(makeContact({
-      organization: 'Solo Org',
-    }))
+    const vcard = contactToVCard(
+      makeContact({
+        organization: 'Solo Org',
+      })
+    )
 
     expect(vcard).toContain('ORG:Solo Org;')
   })
@@ -720,10 +724,12 @@ describe('contactToVCard', () => {
   })
 
   it('serializes title and role', () => {
-    const vcard = contactToVCard(makeContact({
-      title: 'Engineer',
-      role: 'Developer',
-    }))
+    const vcard = contactToVCard(
+      makeContact({
+        title: 'Engineer',
+        role: 'Developer',
+      })
+    )
 
     expect(vcard).toContain('TITLE:Engineer')
     expect(vcard).toContain('ROLE:Developer')
@@ -737,119 +743,141 @@ describe('contactToVCard', () => {
   })
 
   it('serializes emails with type params', () => {
-    const vcard = contactToVCard(makeContact({
-      emails: [
-        { value: 'john@home.com', type: 'home', isPrimary: true },
-        { value: 'john@work.com', type: 'work', isPrimary: false },
-      ],
-    }))
+    const vcard = contactToVCard(
+      makeContact({
+        emails: [
+          { value: 'john@home.com', type: 'home', isPrimary: true },
+          { value: 'john@work.com', type: 'work', isPrimary: false },
+        ],
+      })
+    )
 
     expect(vcard).toContain('EMAIL;TYPE=home;TYPE=pref:john@home.com')
     expect(vcard).toContain('EMAIL;TYPE=work:john@work.com')
   })
 
   it('serializes phones with type params', () => {
-    const vcard = contactToVCard(makeContact({
-      phones: [
-        { value: '+1-555-0001', type: 'cell', isPrimary: true },
-        { value: '+1-555-0002', type: 'work', isPrimary: false },
-      ],
-    }))
+    const vcard = contactToVCard(
+      makeContact({
+        phones: [
+          { value: '+1-555-0001', type: 'cell', isPrimary: true },
+          { value: '+1-555-0002', type: 'work', isPrimary: false },
+        ],
+      })
+    )
 
     expect(vcard).toContain('TEL;TYPE=cell;TYPE=pref:+1-555-0001')
     expect(vcard).toContain('TEL;TYPE=work:+1-555-0002')
   })
 
   it('serializes addresses with semicolon-delimited value', () => {
-    const vcard = contactToVCard(makeContact({
-      addresses: [{
-        type: 'home',
-        isPrimary: true,
-        poBox: '',
-        extended: '',
-        street: '123 Main St',
-        city: 'Springfield',
-        region: 'IL',
-        postalCode: '62701',
-        country: 'USA',
-      }],
-    }))
+    const vcard = contactToVCard(
+      makeContact({
+        addresses: [
+          {
+            type: 'home',
+            isPrimary: true,
+            poBox: '',
+            extended: '',
+            street: '123 Main St',
+            city: 'Springfield',
+            region: 'IL',
+            postalCode: '62701',
+            country: 'USA',
+          },
+        ],
+      })
+    )
 
     expect(vcard).toContain('ADR;TYPE=home;TYPE=pref:;;123 Main St;Springfield;IL;62701;USA')
   })
 
   it('serializes URLs', () => {
-    const vcard = contactToVCard(makeContact({
-      urls: [
-        { value: 'https://home.com', type: 'home', isPrimary: true },
-      ],
-    }))
+    const vcard = contactToVCard(
+      makeContact({
+        urls: [{ value: 'https://home.com', type: 'home', isPrimary: true }],
+      })
+    )
 
     expect(vcard).toContain('URL;TYPE=home;TYPE=pref:https://home.com')
   })
 
   it('serializes IMs with protocol', () => {
-    const vcard = contactToVCard(makeContact({
-      ims: [
-        { value: 'johnskype', type: 'home', protocol: 'skype', isPrimary: true },
-      ],
-    }))
+    const vcard = contactToVCard(
+      makeContact({
+        ims: [{ value: 'johnskype', type: 'home', protocol: 'skype', isPrimary: true }],
+      })
+    )
 
     expect(vcard).toContain('IMPP;TYPE=home;X-SERVICE-TYPE=skype;TYPE=pref:johnskype')
   })
 
   it('serializes birthday in YYYYMMDD format', () => {
-    const vcard = contactToVCard(makeContact({
-      birthday: '1990-05-15',
-    }))
+    const vcard = contactToVCard(
+      makeContact({
+        birthday: '1990-05-15',
+      })
+    )
 
     expect(vcard).toContain('BDAY:19900515')
   })
 
   it('serializes anniversary in YYYYMMDD format', () => {
-    const vcard = contactToVCard(makeContact({
-      anniversary: '2018-06-20',
-    }))
+    const vcard = contactToVCard(
+      makeContact({
+        anniversary: '2018-06-20',
+      })
+    )
 
     expect(vcard).toContain('ANNIVERSARY:20180620')
   })
 
   it('serializes gender', () => {
-    const vcard = contactToVCard(makeContact({
-      gender: 'M',
-    }))
+    const vcard = contactToVCard(
+      makeContact({
+        gender: 'M',
+      })
+    )
 
     expect(vcard).toContain('GENDER:M')
   })
 
   it('serializes note with escaping', () => {
-    const vcard = contactToVCard(makeContact({
-      note: 'Has a cat; likes dogs\\and birds',
-    }))
+    const vcard = contactToVCard(
+      makeContact({
+        note: 'Has a cat; likes dogs\\and birds',
+      })
+    )
 
     expect(vcard).toContain('NOTE:Has a cat\\; likes dogs\\\\and birds')
   })
 
   it('serializes categories', () => {
-    const vcard = contactToVCard(makeContact({
-      categories: ['friend', 'colleague'],
-    }))
+    const vcard = contactToVCard(
+      makeContact({
+        categories: ['friend', 'colleague'],
+      })
+    )
 
     expect(vcard).toContain('CATEGORIES:friend,colleague')
   })
 
   it('serializes photo from data URI', () => {
-    const vcard = contactToVCard(makeContact({
-      photo: 'data:image/jpeg;base64,AAAA',
-    }))
+    const vcard = contactToVCard(
+      makeContact({
+        photo: 'data:image/jpeg;base64,AAAA',
+      })
+    )
 
     expect(vcard).toContain('PHOTO;ENCODING=b;TYPE=JPEG:AAAA')
   })
 
   it('serializes photo from URL', () => {
-    const vcard = contactToVCard(makeContact({
-      photo: 'https://example.com/photo.jpg',
-    }))
+    const vcard = contactToVCard(
+      makeContact({
+        photo: 'https://example.com/photo.jpg',
+      })
+    )
 
     expect(vcard).toContain('PHOTO;VALUE=URI:https://example.com/photo.jpg')
   })
@@ -879,11 +907,11 @@ describe('contactToVCard', () => {
   })
 
   it('serializes "other" type without TYPE param', () => {
-    const vcard = contactToVCard(makeContact({
-      emails: [
-        { value: 'other@example.com', type: 'other', isPrimary: false },
-      ],
-    }))
+    const vcard = contactToVCard(
+      makeContact({
+        emails: [{ value: 'other@example.com', type: 'other', isPrimary: false }],
+      })
+    )
 
     // other type should not include TYPE=other
     expect(vcard).toContain('EMAIL:other@example.com')
@@ -891,9 +919,11 @@ describe('contactToVCard', () => {
   })
 
   it('omits displayName from FN when empty', () => {
-    const vcard = contactToVCard(makeContact({
-      displayName: '',
-    }))
+    const vcard = contactToVCard(
+      makeContact({
+        displayName: '',
+      })
+    )
 
     expect(vcard).not.toContain('FN:')
   })
@@ -1318,9 +1348,7 @@ describe('new properties serialization', () => {
   it('serializes RELATED property with type params', () => {
     const contact: Contact = {
       ...makeMinimalContact('rel-ser-001'),
-      related: [
-        { value: 'urn:uuid:abc', type: 'spouse', isPrimary: true },
-      ],
+      related: [{ value: 'urn:uuid:abc', type: 'spouse', isPrimary: true }],
     }
     const vcard = contactToVCard(contact)
     expect(vcard).toContain('RELATED;TYPE=spouse;TYPE=pref:urn:uuid:abc')

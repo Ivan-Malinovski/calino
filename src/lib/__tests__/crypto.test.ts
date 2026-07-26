@@ -68,9 +68,7 @@ describe('Master-password encryption (self-hosted config)', () => {
   it('fails to decrypt with wrong master password', async () => {
     const encrypted = await encryptWithMasterPassword(caldavPassword, masterPassword)
 
-    await expect(
-      decryptWithMasterPassword(encrypted, 'wrong-password')
-    ).rejects.toThrow()
+    await expect(decryptWithMasterPassword(encrypted, 'wrong-password')).rejects.toThrow()
   })
 
   it('fails to decrypt with corrupted ciphertext', async () => {

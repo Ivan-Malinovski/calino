@@ -7,9 +7,7 @@ vi.mock('@/store/calendarStore', () => ({
   useCalendarStore: vi.fn((selector) => {
     const state = {
       currentDate: '2024-03-15',
-      calendars: [
-        { id: 'cal1', name: 'Calendar 1', color: '#4285F4', isVisible: true },
-      ],
+      calendars: [{ id: 'cal1', name: 'Calendar 1', color: '#4285F4', isVisible: true }],
       categories: [],
       events: [],
       getEventsForDateRange: vi.fn(() => []),

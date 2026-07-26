@@ -46,7 +46,12 @@ interface SidebarProps {
   onCollapsedChange?: (collapsed: boolean) => void
 }
 
-export function Sidebar({ isOpen = false, onClose, isCollapsed: controlledCollapsed, onCollapsedChange }: SidebarProps): JSX.Element {
+export function Sidebar({
+  isOpen = false,
+  onClose,
+  isCollapsed: controlledCollapsed,
+  onCollapsedChange,
+}: SidebarProps): JSX.Element {
   const prefersReducedMotion = useReducedMotion()
   const [internalCollapsed, setInternalCollapsed] = useState(false)
   const isCollapsed = controlledCollapsed ?? internalCollapsed
@@ -100,11 +105,19 @@ export function Sidebar({ isOpen = false, onClose, isCollapsed: controlledCollap
   const sidebarWidth = useSettingsStore((state) => state.sidebarWidth)
   const firstDayOfWeek = useSettingsStore((state) => state.firstDayOfWeek)
   const showWeekNumbersInSidebar = useSettingsStore((state) => state.showWeekNumbersInSidebar)
-  const hideCompletedTasksInMonthView = useSettingsStore((state) => state.hideCompletedTasksInMonthView)
+  const hideCompletedTasksInMonthView = useSettingsStore(
+    (state) => state.hideCompletedTasksInMonthView
+  )
   const showAddCalendar = useCalendarStore((state) => state.showAddCalendar)
   const setShowAddCalendar = useCalendarStore((state) => state.setShowAddCalendar)
   const globalSyncStatus = useCalDAVSyncStore((state) => state.status)
-  const { accounts, syncAccount, syncState, updateCalendar: updateCalDAVCalendar, deleteCalendarFromServer } = useCalDAV()
+  const {
+    accounts,
+    syncAccount,
+    syncState,
+    updateCalendar: updateCalDAVCalendar,
+    deleteCalendarFromServer,
+  } = useCalDAV()
   const navigate = useNavigate()
 
   const accountIds = useMemo(
@@ -355,37 +368,40 @@ export function Sidebar({ isOpen = false, onClose, isCollapsed: controlledCollap
   const [isResizing, setIsResizing] = useState(false)
   const COLLAPSE_THRESHOLD = 255
 
-  const handleSidebarResizeStart = useCallback((e: React.MouseEvent): void => {
-    e.preventDefault()
-    setIsResizing(true)
-    const startX = e.clientX
-    const startWidth = sidebarWidth
-    const onMove = (ev: MouseEvent): void => {
-      const delta = ev.clientX - startX
-      const newWidth = Math.min(500, startWidth + delta)
-      if (newWidth < COLLAPSE_THRESHOLD) {
-        setIsCollapsed(true)
+  const handleSidebarResizeStart = useCallback(
+    (e: React.MouseEvent): void => {
+      e.preventDefault()
+      setIsResizing(true)
+      const startX = e.clientX
+      const startWidth = sidebarWidth
+      const onMove = (ev: MouseEvent): void => {
+        const delta = ev.clientX - startX
+        const newWidth = Math.min(500, startWidth + delta)
+        if (newWidth < COLLAPSE_THRESHOLD) {
+          setIsCollapsed(true)
+          document.removeEventListener('mousemove', onMove)
+          document.removeEventListener('mouseup', onUp)
+          document.body.style.cursor = ''
+          document.body.style.userSelect = ''
+          setIsResizing(false)
+          return
+        }
+        updateSettings({ sidebarWidth: newWidth })
+      }
+      const onUp = (): void => {
         document.removeEventListener('mousemove', onMove)
         document.removeEventListener('mouseup', onUp)
         document.body.style.cursor = ''
         document.body.style.userSelect = ''
         setIsResizing(false)
-        return
       }
-      updateSettings({ sidebarWidth: newWidth })
-    }
-    const onUp = (): void => {
-      document.removeEventListener('mousemove', onMove)
-      document.removeEventListener('mouseup', onUp)
-      document.body.style.cursor = ''
-      document.body.style.userSelect = ''
-      setIsResizing(false)
-    }
-    document.addEventListener('mousemove', onMove)
-    document.addEventListener('mouseup', onUp)
-    document.body.style.cursor = 'col-resize'
-    document.body.style.userSelect = 'none'
-  }, [sidebarWidth, updateSettings])
+      document.addEventListener('mousemove', onMove)
+      document.addEventListener('mouseup', onUp)
+      document.body.style.cursor = 'col-resize'
+      document.body.style.userSelect = 'none'
+    },
+    [sidebarWidth, updateSettings]
+  )
 
   // Auto-collapse if stored width is below threshold
   useEffect(() => {
@@ -483,8 +499,18 @@ export function Sidebar({ isOpen = false, onClose, isCollapsed: controlledCollap
         ref={sidebarRef}
         className={sidebarClass}
         style={{
-          width: isCollapsed && !isCompact ? undefined : isCompact ? Math.min(340, window.innerWidth * 0.85) : sidebarWidth,
-          minWidth: isCollapsed && !isCompact ? undefined : isCompact ? Math.min(340, window.innerWidth * 0.85) : sidebarWidth,
+          width:
+            isCollapsed && !isCompact
+              ? undefined
+              : isCompact
+                ? Math.min(340, window.innerWidth * 0.85)
+                : sidebarWidth,
+          minWidth:
+            isCollapsed && !isCompact
+              ? undefined
+              : isCompact
+                ? Math.min(340, window.innerWidth * 0.85)
+                : sidebarWidth,
         }}
         data-component="sidebar"
       >
@@ -496,524 +522,569 @@ export function Sidebar({ isOpen = false, onClose, isCollapsed: controlledCollap
               <span className={styles.sidebarBrandName}>Calino</span>
             </div>
           )}
-        <div className={styles.miniCalendar}>
-          <div className={styles.miniHeader}>
-            <button onClick={handlePrevMonth} className={styles.miniNavBtn} aria-label="Previous month">
-              <ChevronLeft />
-            </button>
-            <div style={{ position: 'relative' }} ref={dropdownRef}>
-              <span className={styles.miniMonth}>
-                <button onClick={handleMonthClick} className={styles.miniMonthButton}>
-                  {format(effectiveMiniDate, 'MMMM')}
-                </button>
-                {showMonthDropdown && (
-                  <div className={styles.yearDropdown}>
-                    {months.map((month, index) => (
-                      <button
-                        key={month}
-                        onClick={() => handleMonthSelect(index)}
-                        className={`${styles.yearOption} ${
-                          index === effectiveMiniDate.getMonth() ? styles.yearOptionSelected : ''
-                        }`}
-                      >
-                        {month}
-                      </button>
-                    ))}
-                  </div>
-                )}
-                <button onClick={handleYearClick} className={styles.miniMonthButton}>
-                  {format(effectiveMiniDate, 'yyyy')}
-                </button>
-                {showYearDropdown && (
-                  <div className={`${styles.yearDropdown} ${styles.yearDropdownRight}`}>
-                    {years.map((year) => (
-                      <button
-                        key={year}
-                        onClick={() => handleYearSelect(year)}
-                        className={`${styles.yearOption} ${
-                          year === effectiveMiniDate.getFullYear() ? styles.yearOptionSelected : ''
-                        }`}
-                      >
-                        {year}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </span>
-            </div>
-            <button onClick={handleNextMonth} className={styles.miniNavBtn} aria-label="Next month">
-              <ChevronRight />
-            </button>
-          </div>
-          <div
-            className={`${styles.miniWeekdays} ${showWeekNumbersInSidebar ? styles.withWeekNum : ''}`}
-          >
-            {showWeekNumbersInSidebar && <span className={styles.miniWeekNumHeader} aria-hidden="true" />}
-            {weekdays.map((day, idx) => (
-              <span key={idx} className={styles.miniWeekday}>
-                {day}
-              </span>
-            ))}
-          </div>
-          <div className={styles.miniDaysWrapper}>
-            {miniWeeks.map((week, weekIdx) => (
-              <div
-                key={weekIdx}
-                className={`${styles.miniDays} ${showWeekNumbersInSidebar ? styles.withWeekNum : ''}`}
-              >
-                {showWeekNumbersInSidebar && (
-                  <span className={styles.miniWeekNumber}>{getISOWeek(week[0])}</span>
-                )}
-                {week.map((day) => {
-                  const isCurrentMonth = isSameMonth(day, effectiveMiniDate)
-                  const isSelected = isSameDay(day, parseISO(currentDate))
-                  const isTodayDate = isToday(day)
-                  return (
-                    <button
-                      key={day.toISOString()}
-                      className={`${styles.miniDay} ${!isCurrentMonth ? styles.otherMonth : ''} ${
-                        isSelected ? styles.selected : ''
-                      } ${isTodayDate ? styles.today : ''}`}
-                      onClick={() => handleDayClick(day)}
-                      onDoubleClick={() => handleDayDoubleClick(day)}
-                    >
-                      {format(day, 'd')}
-                    </button>
-                  )
-                })}
-              </div>
-            ))}
-          </div>
-          <button className={styles.todayBtn} onClick={handleToday} data-component="sidebar-today-button">
-            Today
-          </button>
-        </div>
-
-        <div className={styles.calendars}>
-          <div className={styles.sectionTitleRow}>
-            <button
-              type="button"
-              className={`${styles.sectionHeader} ${styles.calendarSectionToggle}`}
-              onClick={() => setIsCalendarsExpanded(!isCalendarsExpanded)}
-              aria-expanded={isCalendarsExpanded}
-              aria-controls="sidebar-calendars"
-              data-component="calendar-section-toggle"
-            >
-              <span className={styles.sectionTitle}>Calendars</span>
-              {calendars.length > 0 && (
-                <span className={styles.sectionCount}>
-                  {calendars.filter((calendar) => calendar.isVisible).length}/{calendars.length}
-                </span>
-              )}
-              <ChevronDown className={`${styles.chevron} ${isCalendarsExpanded ? styles.chevronExpanded : ''}`} />
-            </button>
-            <div className={styles.calendarHeaderActions}>
+          <div className={styles.miniCalendar}>
+            <div className={styles.miniHeader}>
               <button
-                className={`${styles.addCalendarButton} ${isSyncingAll || globalSyncStatus === 'syncing' ? styles.headerSyncing : ''}`}
-                onClick={handleSyncAll}
-                title="Sync all calendars"
-                aria-label="Sync all calendars"
-                data-component="sync-all-calendars"
-                disabled={
-                  accountIds.length === 0 ||
-                  isSyncingAll
-                }
+                onClick={handlePrevMonth}
+                className={styles.miniNavBtn}
+                aria-label="Previous month"
               >
-                <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M23 4v6h-6M1 20v-6h6" />
-                  <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15" />
-                </svg>
+                <ChevronLeft />
               </button>
-              <button
-                className={styles.addCalendarButton}
-                onClick={(e) => {
-                  const rect = e.currentTarget.getBoundingClientRect()
-                  setAddCalendarMenu({ x: rect.left, y: rect.bottom + 4 })
-                }}
-                title="Add calendar"
-                aria-label="Add calendar"
-              >
-                <PlusIcon />
-              </button>
-            </div>
-          </div>
-          <AnimatePresence initial={false}>
-            {isCalendarsExpanded && (
-              <motion.div
-                id="sidebar-calendars"
-                initial={prefersReducedMotion ? false : { opacity: 0, y: -5 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: -5 }}
-                transition={{ duration: prefersReducedMotion ? 0 : 0.15 }}
-                className={styles.calendarList}
-              >
-                {calendars.length === 0 && (
-                  <EmptyState
-                    title="No calendars yet"
-                    description="Add a CalDAV account to sync events, or continue offline."
-                    action={
-                      <button
-                        className={styles.addCalendarButton}
-                        onClick={() => setShowAddCalendar(true)}
-                        aria-label="Add a CalDAV account"
-                        data-component="sidebar-empty-add"
-                      >
-                        + Add a CalDAV account
-                      </button>
-                    }
-                  />
-                )}
-                {calendars.map((calendar) => (
-                  <label
-                    key={calendar.id}
-                    className={styles.calendarItem}
-                    onContextMenu={(e) => handleContextMenu(e, calendar.id)}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={calendar.isVisible}
-                      onChange={() => toggleCalendarVisibility(calendar.id)}
-                      className={styles.checkbox}
-                    />
-                    <div className={styles.colorPicker} ref={colorPickerCalendarId === calendar.id ? colorPickerRef : undefined}>
-                      <button
-                        type="button"
-                        className={styles.colorDot}
-                        style={{ backgroundColor: calendar.color }}
-                        onClick={(event) => {
-                          event.preventDefault()
-                          setColorPickerCalendarId((current) => current === calendar.id ? null : calendar.id)
-                        }}
-                        aria-label={`Change ${calendar.name} color`}
-                        aria-expanded={colorPickerCalendarId === calendar.id}
-                        aria-controls={`calendar-color-picker-${calendar.id}`}
-                      />
-                      {colorPickerCalendarId === calendar.id && (
-                        <div
-                          id={`calendar-color-picker-${calendar.id}`}
-                          className={styles.colorPickerMenu}
-                          role="group"
-                          aria-label={`Color picker for ${calendar.name}`}
-                          data-component="calendar-color-picker"
-                        >
-                          <div className={styles.colorPresets}>
-                            {CALENDAR_COLOR_PRESETS.map((color) => (
-                              <button
-                                key={color}
-                                type="button"
-                                className={`${styles.colorPreset} ${calendar.color.toLowerCase() === color.toLowerCase() ? styles.colorPresetSelected : ''}`}
-                                style={{ backgroundColor: color }}
-                                onClick={(event) => {
-                                  event.preventDefault()
-                                  handleColorChange(calendar.id, color)
-                                }}
-                                aria-label={`Use ${color} for ${calendar.name}`}
-                              />
-                            ))}
-                            <span
-                              className={`${styles.customColorPicker} ${
-                                !CALENDAR_COLOR_PRESETS.some(
-                                  (preset) => preset.toLowerCase() === calendar.color.toLowerCase()
-                                )
-                                  ? styles.customColorPickerSelected
-                                  : ''
-                              }`}
-                            >
-                              <input
-                                type="color"
-                                value={calendar.color}
-                                onChange={(event) => handleColorChange(calendar.id, event.target.value)}
-                                aria-label={`Custom color for ${calendar.name}`}
-                              />
-                            </span>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                    {editingId === calendar.id ? (
-                      <input
-                        ref={inputRef}
-                        type="text"
-                        value={editName}
-                        onChange={(e) => setEditName(e.target.value)}
-                        onBlur={handleFinishRename}
-                        onKeyDown={handleKeyDown}
-                        className={styles.renameInput}
-                      />
-                    ) : (
-                      <span
-                        className={styles.calendarName}
-                        onDoubleClick={() => handleStartRename(calendar.id, calendar.name)}
-                      >
-                        {calendar.name}
-                      </span>
-                    )}
-                    {calendar.accountId && (
-                      <button
-                        className={`${styles.syncButton} ${syncingCalendarId === calendar.id || syncState.status === 'syncing' || globalSyncStatus === 'syncing' ? styles.syncing : ''} ${syncStatus[calendar.id] === 'success' ? styles.success : ''} ${syncStatus[calendar.id] === 'error' ? styles.error : ''}`}
-                        onClick={() => handleSyncCalendar(calendar.id, calendar.accountId)}
-                        title="Sync calendar"
-                        aria-label={`Sync ${calendar.name}`}
-                        disabled={!!syncingCalendarId}
-                      >
-                        {syncStatus[calendar.id] === 'success' ? (
-                          <svg aria-hidden="true"
-                            width="14"
-                            height="14"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                          >
-                            <path d="M20 6L9 17l-5-5" />
-                          </svg>
-                        ) : syncStatus[calendar.id] === 'error' ? (
-                          <svg aria-hidden="true"
-                            width="14"
-                            height="14"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                          >
-                            <path d="M18 6L6 18M6 6l12 12" />
-                          </svg>
-                        ) : (
-                          <svg aria-hidden="true"
-                            width="14"
-                            height="14"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                          >
-                            <path d="M23 4v6h-6M1 20v-6h6" />
-                            <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15" />
-                          </svg>
-                        )}
-                      </button>
-                    )}
-                  </label>
-                ))}
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-
-        <MiniTasksSection
-          isExpanded={isTasksExpanded}
-          onToggle={() => setIsTasksExpanded(!isTasksExpanded)}
-        />
-
-        <div className={styles.stickyBottom}>
-          {categories.length > 0 && (
-            <div className={styles.categoriesWrapper}>
-              <button
-                type="button"
-                className={styles.sectionHeader}
-                onClick={() => setIsCategoriesExpanded(!isCategoriesExpanded)}
-                aria-expanded={isCategoriesExpanded}
-                aria-controls="sidebar-categories"
-                data-component="category-section-toggle"
-              >
-                <span className={styles.sectionTitle}>Categories</span>
-                <ChevronDown className={`${styles.chevron} ${isCategoriesExpanded ? styles.chevronExpanded : ''}`} />
-              </button>
-              <AnimatePresence>
-                {isCategoriesExpanded && (
-                  <motion.div
-                    id="sidebar-categories"
-                    initial={prefersReducedMotion ? false : { opacity: 0, y: 5 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 5 }}
-                    transition={{ duration: prefersReducedMotion ? 0 : 0.15 }}
-                    className={styles.categoryCard}
-                  >
-                    <div className={styles.categoryCardList}>
-                      {categories.map((category) => (
+              <div style={{ position: 'relative' }} ref={dropdownRef}>
+                <span className={styles.miniMonth}>
+                  <button onClick={handleMonthClick} className={styles.miniMonthButton}>
+                    {format(effectiveMiniDate, 'MMMM')}
+                  </button>
+                  {showMonthDropdown && (
+                    <div className={styles.yearDropdown}>
+                      {months.map((month, index) => (
                         <button
-                          key={category.id}
-                          className={`${styles.categoryItem} ${selectedCategoryIds.includes(category.id) ? styles.categoryItemSelected : ''}`}
-                          onClick={() => toggleCategoryFilter(category.id)}
+                          key={month}
+                          onClick={() => handleMonthSelect(index)}
+                          className={`${styles.yearOption} ${
+                            index === effectiveMiniDate.getMonth() ? styles.yearOptionSelected : ''
+                          }`}
                         >
-                          <span className={styles.categoryCheck}>
-                            <svg className={styles.categoryCheckSvg} viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <path d="M2 6l3 3 5-5" />
-                            </svg>
-                          </span>
-                          <span
-                            className={styles.categoryDot}
-                            style={{ backgroundColor: category.color }}
-                          />
-                          <span className={styles.categoryName}>{category.name}</span>
+                          {month}
                         </button>
                       ))}
                     </div>
-                    <div className={styles.categoryToggle}>
-                      <span className={styles.categoryToggleLabel}>Use category colors</span>
-                      <label className={styles.categoryToggleSwitch}>
-                        <input
-                          type="checkbox"
-                          checked={useCategoryColors}
-                          onChange={() => updateSettings({ useCategoryColors: !useCategoryColors })}
-                        />
-                        <span className={styles.categoryTogglePill} />
-                      </label>
+                  )}
+                  <button onClick={handleYearClick} className={styles.miniMonthButton}>
+                    {format(effectiveMiniDate, 'yyyy')}
+                  </button>
+                  {showYearDropdown && (
+                    <div className={`${styles.yearDropdown} ${styles.yearDropdownRight}`}>
+                      {years.map((year) => (
+                        <button
+                          key={year}
+                          onClick={() => handleYearSelect(year)}
+                          className={`${styles.yearOption} ${
+                            year === effectiveMiniDate.getFullYear()
+                              ? styles.yearOptionSelected
+                              : ''
+                          }`}
+                        >
+                          {year}
+                        </button>
+                      ))}
                     </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+                  )}
+                </span>
+              </div>
+              <button
+                onClick={handleNextMonth}
+                className={styles.miniNavBtn}
+                aria-label="Next month"
+              >
+                <ChevronRight />
+              </button>
             </div>
-          )}
-
-          <div className={styles.footer}>
-            <Link to="/privacy" className={styles.footerLink}>
-              Privacy
-            </Link>
-            <UpdateIndicator />
+            <div
+              className={`${styles.miniWeekdays} ${showWeekNumbersInSidebar ? styles.withWeekNum : ''}`}
+            >
+              {showWeekNumbersInSidebar && (
+                <span className={styles.miniWeekNumHeader} aria-hidden="true" />
+              )}
+              {weekdays.map((day, idx) => (
+                <span key={idx} className={styles.miniWeekday}>
+                  {day}
+                </span>
+              ))}
+            </div>
+            <div className={styles.miniDaysWrapper}>
+              {miniWeeks.map((week, weekIdx) => (
+                <div
+                  key={weekIdx}
+                  className={`${styles.miniDays} ${showWeekNumbersInSidebar ? styles.withWeekNum : ''}`}
+                >
+                  {showWeekNumbersInSidebar && (
+                    <span className={styles.miniWeekNumber}>{getISOWeek(week[0])}</span>
+                  )}
+                  {week.map((day) => {
+                    const isCurrentMonth = isSameMonth(day, effectiveMiniDate)
+                    const isSelected = isSameDay(day, parseISO(currentDate))
+                    const isTodayDate = isToday(day)
+                    return (
+                      <button
+                        key={day.toISOString()}
+                        className={`${styles.miniDay} ${!isCurrentMonth ? styles.otherMonth : ''} ${
+                          isSelected ? styles.selected : ''
+                        } ${isTodayDate ? styles.today : ''}`}
+                        onClick={() => handleDayClick(day)}
+                        onDoubleClick={() => handleDayDoubleClick(day)}
+                      >
+                        {format(day, 'd')}
+                      </button>
+                    )
+                  })}
+                </div>
+              ))}
+            </div>
+            <button
+              className={styles.todayBtn}
+              onClick={handleToday}
+              data-component="sidebar-today-button"
+            >
+              Today
+            </button>
           </div>
-        </div>
 
-        <AddCalendarModal isOpen={showAddCalendar} onClose={() => setShowAddCalendar(false)} />
-        <SubscribeCalendarModal
-          isOpen={showSubscribeCalendar}
-          onClose={() => setShowSubscribeCalendar(false)}
-        />
-        {addCalendarMenu &&
-          createPortal(
-            <ContextMenu
-              x={addCalendarMenu.x}
-              y={addCalendarMenu.y}
-              items={[
-                {
-                  label: 'Add CalDAV Account',
-                  onClick: () => setShowAddCalendar(true),
-                },
-                {
-                  label: 'Subscribe to Calendar (.ics)',
-                  onClick: () => setShowSubscribeCalendar(true),
-                },
-              ]}
-              onClose={() => setAddCalendarMenu(null)}
-              menuId="add-calendar"
-            />,
-            document.body
-          )}
-        <CreateCalendarModal
-          isOpen={showCreateCalendar}
-          onClose={() => {
-            setShowCreateCalendar(false)
-            setCreateCalendarAccountId(null)
-          }}
-          accountId={createCalendarAccountId}
-        />
-        <DeleteCalendarDialog
-          isOpen={showDeleteCalendar}
-          calendarId={deleteCalendarId}
-          calendarName={deleteCalendarName}
-          onClose={() => {
-            setShowDeleteCalendar(false)
-            setDeleteCalendarId(null)
-            setDeleteCalendarName('')
-          }}
-          onConfirm={async () => {
-            if (deleteCalendarId) {
-              try {
-                await deleteCalendarFromServer(deleteCalendarId)
-              } catch (error) {
-                showToast(error instanceof Error ? error.message : 'Failed to delete calendar')
-              }
-            }
-          }}
-        />
-        {contextMenu &&
-          createPortal(
-            <ContextMenu
-              x={contextMenu.x}
-              y={contextMenu.y}
-              items={[
-                {
-                  label: calendars.find((c) => c.id === contextMenu.calendarId)?.showTasksInViews
-                    ? 'Hide Tasks in Views'
-                    : 'Show Tasks in Views',
-                  onClick: () => {
-                    const calendar = calendars.find((c) => c.id === contextMenu.calendarId)
-                    if (calendar) {
-                      updateCalendar(contextMenu.calendarId, {
-                        showTasksInViews: !calendar.showTasksInViews,
-                      })
-                    }
-                    closeContextMenu()
-                  },
-                },
-                {
-                  label: hideCompletedTasksInMonthView
-                    ? 'Show Completed Tasks'
-                    : 'Hide Completed Tasks',
-                  onClick: () => {
-                    updateSettings({ hideCompletedTasksInMonthView: !hideCompletedTasksInMonthView })
-                    closeContextMenu()
-                  },
-                },
-                // CalDAV calendar options
-                ...calendars.find((c) => c.id === contextMenu.calendarId)?.accountId
-                  ? [
-                      {
-                        label: 'Rename',
-                        onClick: () => {
-                          const calendar = calendars.find((c) => c.id === contextMenu.calendarId)
-                          if (calendar) {
-                            setEditingId(calendar.id)
-                            setEditName(calendar.name)
-                          }
-                          closeContextMenu()
-                        },
-                      },
-                      {
-                        label: 'Create Calendar Here',
-                        onClick: () => {
-                          const calendar = calendars.find((c) => c.id === contextMenu.calendarId)
-                          if (calendar?.accountId) {
-                            setCreateCalendarAccountId(calendar.accountId)
-                            setShowCreateCalendar(true)
-                          }
-                          closeContextMenu()
-                        },
-                      },
-                      {
-                        label: 'Delete',
-                        onClick: () => {
-                          const calendar = calendars.find((c) => c.id === contextMenu.calendarId)
-                          if (calendar) {
-                            setDeleteCalendarId(calendar.id)
-                            setDeleteCalendarName(calendar.name)
-                            setShowDeleteCalendar(true)
-                          }
-                          closeContextMenu()
-                        },
-                      },
-                    ]
-                  : [
-                      {
-                        label: 'Remove',
-                        onClick: () => {
-                          deleteCalendar(contextMenu.calendarId)
-                          closeContextMenu()
-                        },
-                      },
-                    ],
-              ]}
-              onClose={closeContextMenu}
-              menuId="calendar-context"
-            />,
-            document.body
-          )}
-        {!isCompact && !isCollapsed && (
-          <div
-            className={styles.resizer}
-            onMouseDown={handleSidebarResizeStart}
+          <div className={styles.calendars}>
+            <div className={styles.sectionTitleRow}>
+              <button
+                type="button"
+                className={`${styles.sectionHeader} ${styles.calendarSectionToggle}`}
+                onClick={() => setIsCalendarsExpanded(!isCalendarsExpanded)}
+                aria-expanded={isCalendarsExpanded}
+                aria-controls="sidebar-calendars"
+                data-component="calendar-section-toggle"
+              >
+                <span className={styles.sectionTitle}>Calendars</span>
+                {calendars.length > 0 && (
+                  <span className={styles.sectionCount}>
+                    {calendars.filter((calendar) => calendar.isVisible).length}/{calendars.length}
+                  </span>
+                )}
+                <ChevronDown
+                  className={`${styles.chevron} ${isCalendarsExpanded ? styles.chevronExpanded : ''}`}
+                />
+              </button>
+              <div className={styles.calendarHeaderActions}>
+                <button
+                  className={`${styles.addCalendarButton} ${isSyncingAll || globalSyncStatus === 'syncing' ? styles.headerSyncing : ''}`}
+                  onClick={handleSyncAll}
+                  title="Sync all calendars"
+                  aria-label="Sync all calendars"
+                  data-component="sync-all-calendars"
+                  disabled={accountIds.length === 0 || isSyncingAll}
+                >
+                  <svg
+                    aria-hidden="true"
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
+                    <path d="M23 4v6h-6M1 20v-6h6" />
+                    <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15" />
+                  </svg>
+                </button>
+                <button
+                  className={styles.addCalendarButton}
+                  onClick={(e) => {
+                    const rect = e.currentTarget.getBoundingClientRect()
+                    setAddCalendarMenu({ x: rect.left, y: rect.bottom + 4 })
+                  }}
+                  title="Add calendar"
+                  aria-label="Add calendar"
+                >
+                  <PlusIcon />
+                </button>
+              </div>
+            </div>
+            <AnimatePresence initial={false}>
+              {isCalendarsExpanded && (
+                <motion.div
+                  id="sidebar-calendars"
+                  initial={prefersReducedMotion ? false : { opacity: 0, y: -5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: -5 }}
+                  transition={{ duration: prefersReducedMotion ? 0 : 0.15 }}
+                  className={styles.calendarList}
+                >
+                  {calendars.length === 0 && (
+                    <EmptyState
+                      title="No calendars yet"
+                      description="Add a CalDAV account to sync events, or continue offline."
+                      action={
+                        <button
+                          className={styles.addCalendarButton}
+                          onClick={() => setShowAddCalendar(true)}
+                          aria-label="Add a CalDAV account"
+                          data-component="sidebar-empty-add"
+                        >
+                          + Add a CalDAV account
+                        </button>
+                      }
+                    />
+                  )}
+                  {calendars.map((calendar) => (
+                    <label
+                      key={calendar.id}
+                      className={styles.calendarItem}
+                      onContextMenu={(e) => handleContextMenu(e, calendar.id)}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={calendar.isVisible}
+                        onChange={() => toggleCalendarVisibility(calendar.id)}
+                        className={styles.checkbox}
+                      />
+                      <div
+                        className={styles.colorPicker}
+                        ref={colorPickerCalendarId === calendar.id ? colorPickerRef : undefined}
+                      >
+                        <button
+                          type="button"
+                          className={styles.colorDot}
+                          style={{ backgroundColor: calendar.color }}
+                          onClick={(event) => {
+                            event.preventDefault()
+                            setColorPickerCalendarId((current) =>
+                              current === calendar.id ? null : calendar.id
+                            )
+                          }}
+                          aria-label={`Change ${calendar.name} color`}
+                          aria-expanded={colorPickerCalendarId === calendar.id}
+                          aria-controls={`calendar-color-picker-${calendar.id}`}
+                        />
+                        {colorPickerCalendarId === calendar.id && (
+                          <div
+                            id={`calendar-color-picker-${calendar.id}`}
+                            className={styles.colorPickerMenu}
+                            role="group"
+                            aria-label={`Color picker for ${calendar.name}`}
+                            data-component="calendar-color-picker"
+                          >
+                            <div className={styles.colorPresets}>
+                              {CALENDAR_COLOR_PRESETS.map((color) => (
+                                <button
+                                  key={color}
+                                  type="button"
+                                  className={`${styles.colorPreset} ${calendar.color.toLowerCase() === color.toLowerCase() ? styles.colorPresetSelected : ''}`}
+                                  style={{ backgroundColor: color }}
+                                  onClick={(event) => {
+                                    event.preventDefault()
+                                    handleColorChange(calendar.id, color)
+                                  }}
+                                  aria-label={`Use ${color} for ${calendar.name}`}
+                                />
+                              ))}
+                              <span
+                                className={`${styles.customColorPicker} ${
+                                  !CALENDAR_COLOR_PRESETS.some(
+                                    (preset) =>
+                                      preset.toLowerCase() === calendar.color.toLowerCase()
+                                  )
+                                    ? styles.customColorPickerSelected
+                                    : ''
+                                }`}
+                              >
+                                <input
+                                  type="color"
+                                  value={calendar.color}
+                                  onChange={(event) =>
+                                    handleColorChange(calendar.id, event.target.value)
+                                  }
+                                  aria-label={`Custom color for ${calendar.name}`}
+                                />
+                              </span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      {editingId === calendar.id ? (
+                        <input
+                          ref={inputRef}
+                          type="text"
+                          value={editName}
+                          onChange={(e) => setEditName(e.target.value)}
+                          onBlur={handleFinishRename}
+                          onKeyDown={handleKeyDown}
+                          className={styles.renameInput}
+                        />
+                      ) : (
+                        <span
+                          className={styles.calendarName}
+                          onDoubleClick={() => handleStartRename(calendar.id, calendar.name)}
+                        >
+                          {calendar.name}
+                        </span>
+                      )}
+                      {calendar.accountId && (
+                        <button
+                          className={`${styles.syncButton} ${syncingCalendarId === calendar.id || syncState.status === 'syncing' || globalSyncStatus === 'syncing' ? styles.syncing : ''} ${syncStatus[calendar.id] === 'success' ? styles.success : ''} ${syncStatus[calendar.id] === 'error' ? styles.error : ''}`}
+                          onClick={() => handleSyncCalendar(calendar.id, calendar.accountId)}
+                          title="Sync calendar"
+                          aria-label={`Sync ${calendar.name}`}
+                          disabled={!!syncingCalendarId}
+                        >
+                          {syncStatus[calendar.id] === 'success' ? (
+                            <svg
+                              aria-hidden="true"
+                              width="14"
+                              height="14"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                            >
+                              <path d="M20 6L9 17l-5-5" />
+                            </svg>
+                          ) : syncStatus[calendar.id] === 'error' ? (
+                            <svg
+                              aria-hidden="true"
+                              width="14"
+                              height="14"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                            >
+                              <path d="M18 6L6 18M6 6l12 12" />
+                            </svg>
+                          ) : (
+                            <svg
+                              aria-hidden="true"
+                              width="14"
+                              height="14"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                            >
+                              <path d="M23 4v6h-6M1 20v-6h6" />
+                              <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15" />
+                            </svg>
+                          )}
+                        </button>
+                      )}
+                    </label>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          <MiniTasksSection
+            isExpanded={isTasksExpanded}
+            onToggle={() => setIsTasksExpanded(!isTasksExpanded)}
           />
-        )}
+
+          <div className={styles.stickyBottom}>
+            {categories.length > 0 && (
+              <div className={styles.categoriesWrapper}>
+                <button
+                  type="button"
+                  className={styles.sectionHeader}
+                  onClick={() => setIsCategoriesExpanded(!isCategoriesExpanded)}
+                  aria-expanded={isCategoriesExpanded}
+                  aria-controls="sidebar-categories"
+                  data-component="category-section-toggle"
+                >
+                  <span className={styles.sectionTitle}>Categories</span>
+                  <ChevronDown
+                    className={`${styles.chevron} ${isCategoriesExpanded ? styles.chevronExpanded : ''}`}
+                  />
+                </button>
+                <AnimatePresence>
+                  {isCategoriesExpanded && (
+                    <motion.div
+                      id="sidebar-categories"
+                      initial={prefersReducedMotion ? false : { opacity: 0, y: 5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 5 }}
+                      transition={{ duration: prefersReducedMotion ? 0 : 0.15 }}
+                      className={styles.categoryCard}
+                    >
+                      <div className={styles.categoryCardList}>
+                        {categories.map((category) => (
+                          <button
+                            key={category.id}
+                            className={`${styles.categoryItem} ${selectedCategoryIds.includes(category.id) ? styles.categoryItemSelected : ''}`}
+                            onClick={() => toggleCategoryFilter(category.id)}
+                          >
+                            <span className={styles.categoryCheck}>
+                              <svg
+                                className={styles.categoryCheckSvg}
+                                viewBox="0 0 12 12"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              >
+                                <path d="M2 6l3 3 5-5" />
+                              </svg>
+                            </span>
+                            <span
+                              className={styles.categoryDot}
+                              style={{ backgroundColor: category.color }}
+                            />
+                            <span className={styles.categoryName}>{category.name}</span>
+                          </button>
+                        ))}
+                      </div>
+                      <div className={styles.categoryToggle}>
+                        <span className={styles.categoryToggleLabel}>Use category colors</span>
+                        <label className={styles.categoryToggleSwitch}>
+                          <input
+                            type="checkbox"
+                            checked={useCategoryColors}
+                            onChange={() =>
+                              updateSettings({ useCategoryColors: !useCategoryColors })
+                            }
+                          />
+                          <span className={styles.categoryTogglePill} />
+                        </label>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            )}
+
+            <div className={styles.footer}>
+              <Link to="/privacy" className={styles.footerLink}>
+                Privacy
+              </Link>
+              <UpdateIndicator />
+            </div>
+          </div>
+
+          <AddCalendarModal isOpen={showAddCalendar} onClose={() => setShowAddCalendar(false)} />
+          <SubscribeCalendarModal
+            isOpen={showSubscribeCalendar}
+            onClose={() => setShowSubscribeCalendar(false)}
+          />
+          {addCalendarMenu &&
+            createPortal(
+              <ContextMenu
+                x={addCalendarMenu.x}
+                y={addCalendarMenu.y}
+                items={[
+                  {
+                    label: 'Add CalDAV Account',
+                    onClick: () => setShowAddCalendar(true),
+                  },
+                  {
+                    label: 'Subscribe to Calendar (.ics)',
+                    onClick: () => setShowSubscribeCalendar(true),
+                  },
+                ]}
+                onClose={() => setAddCalendarMenu(null)}
+                menuId="add-calendar"
+              />,
+              document.body
+            )}
+          <CreateCalendarModal
+            isOpen={showCreateCalendar}
+            onClose={() => {
+              setShowCreateCalendar(false)
+              setCreateCalendarAccountId(null)
+            }}
+            accountId={createCalendarAccountId}
+          />
+          <DeleteCalendarDialog
+            isOpen={showDeleteCalendar}
+            calendarId={deleteCalendarId}
+            calendarName={deleteCalendarName}
+            onClose={() => {
+              setShowDeleteCalendar(false)
+              setDeleteCalendarId(null)
+              setDeleteCalendarName('')
+            }}
+            onConfirm={async () => {
+              if (deleteCalendarId) {
+                try {
+                  await deleteCalendarFromServer(deleteCalendarId)
+                } catch (error) {
+                  showToast(error instanceof Error ? error.message : 'Failed to delete calendar')
+                }
+              }
+            }}
+          />
+          {contextMenu &&
+            createPortal(
+              <ContextMenu
+                x={contextMenu.x}
+                y={contextMenu.y}
+                items={[
+                  {
+                    label: calendars.find((c) => c.id === contextMenu.calendarId)?.showTasksInViews
+                      ? 'Hide Tasks in Views'
+                      : 'Show Tasks in Views',
+                    onClick: () => {
+                      const calendar = calendars.find((c) => c.id === contextMenu.calendarId)
+                      if (calendar) {
+                        updateCalendar(contextMenu.calendarId, {
+                          showTasksInViews: !calendar.showTasksInViews,
+                        })
+                      }
+                      closeContextMenu()
+                    },
+                  },
+                  {
+                    label: hideCompletedTasksInMonthView
+                      ? 'Show Completed Tasks'
+                      : 'Hide Completed Tasks',
+                    onClick: () => {
+                      updateSettings({
+                        hideCompletedTasksInMonthView: !hideCompletedTasksInMonthView,
+                      })
+                      closeContextMenu()
+                    },
+                  },
+                  // CalDAV calendar options
+                  ...(calendars.find((c) => c.id === contextMenu.calendarId)?.accountId
+                    ? [
+                        {
+                          label: 'Rename',
+                          onClick: () => {
+                            const calendar = calendars.find((c) => c.id === contextMenu.calendarId)
+                            if (calendar) {
+                              setEditingId(calendar.id)
+                              setEditName(calendar.name)
+                            }
+                            closeContextMenu()
+                          },
+                        },
+                        {
+                          label: 'Create Calendar Here',
+                          onClick: () => {
+                            const calendar = calendars.find((c) => c.id === contextMenu.calendarId)
+                            if (calendar?.accountId) {
+                              setCreateCalendarAccountId(calendar.accountId)
+                              setShowCreateCalendar(true)
+                            }
+                            closeContextMenu()
+                          },
+                        },
+                        {
+                          label: 'Delete',
+                          onClick: () => {
+                            const calendar = calendars.find((c) => c.id === contextMenu.calendarId)
+                            if (calendar) {
+                              setDeleteCalendarId(calendar.id)
+                              setDeleteCalendarName(calendar.name)
+                              setShowDeleteCalendar(true)
+                            }
+                            closeContextMenu()
+                          },
+                        },
+                      ]
+                    : [
+                        {
+                          label: 'Remove',
+                          onClick: () => {
+                            deleteCalendar(contextMenu.calendarId)
+                            closeContextMenu()
+                          },
+                        },
+                      ]),
+                ]}
+                onClose={closeContextMenu}
+                menuId="calendar-context"
+              />,
+              document.body
+            )}
+          {!isCompact && !isCollapsed && (
+            <div className={styles.resizer} onMouseDown={handleSidebarResizeStart} />
+          )}
         </div>
       </div>
     </>
@@ -1101,9 +1172,7 @@ function UpdateIndicator(): JSX.Element {
                 <span className={styles.updatePopupVersion}>Calino {latestVersion}</span> is
                 available
               </p>
-              <p className={styles.updatePopupCurrent}>
-                You have {config.appVersion}
-              </p>
+              <p className={styles.updatePopupCurrent}>You have {config.appVersion}</p>
               <div className={styles.updatePopupActions}>
                 <button className={styles.updateDismissBtn} onClick={dismiss}>
                   Dismiss
@@ -1156,7 +1225,14 @@ function ChevronRight(): JSX.Element {
 
 function ChevronDown({ className }: { className?: string }): JSX.Element {
   return (
-    <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" className={className}>
+    <svg
+      aria-hidden="true"
+      width="16"
+      height="16"
+      viewBox="0 0 16 16"
+      fill="none"
+      className={className}
+    >
       <path
         d="M4 6L8 10L12 6"
         stroke="currentColor"

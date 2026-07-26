@@ -42,7 +42,9 @@ describe('useWindowDimension — rAF throttle (R4.4)', () => {
     const resizeListeners = removeSpy.mock.calls.filter(([type]: [string]) => type === 'resize')
     expect(resizeListeners).toHaveLength(0)
     unmount()
-    const resizeListenersAfter = removeSpy.mock.calls.filter(([type]: [string]) => type === 'resize')
+    const resizeListenersAfter = removeSpy.mock.calls.filter(
+      ([type]: [string]) => type === 'resize'
+    )
     expect(resizeListenersAfter).toHaveLength(1)
   })
 

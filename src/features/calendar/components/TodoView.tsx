@@ -17,11 +17,7 @@ import {
   type DragOverEvent,
   type DragStartEvent,
 } from '@dnd-kit/core'
-import {
-  format,
-  parseISO,
-  startOfDay,
-} from 'date-fns'
+import { format, parseISO, startOfDay } from 'date-fns'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { useCalendarStore, isCalendarReadOnly } from '@/store/calendarStore'
 import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
@@ -136,7 +132,10 @@ export function TodoView(): JSX.Element {
   const composerRef = useRef<HTMLInputElement>(null)
   const segmentedRef = useRef<HTMLDivElement>(null)
   const tabRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
-  const [indicatorStyle, setIndicatorStyle] = useState<{ left: number; width: number }>({ left: 0, width: 0 })
+  const [indicatorStyle, setIndicatorStyle] = useState<{ left: number; width: number }>({
+    left: 0,
+    width: 0,
+  })
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const projectMenuRef = useRef<HTMLDivElement>(null)
   const [scrollReady, setScrollReady] = useState(false)
@@ -154,10 +153,7 @@ export function TodoView(): JSX.Element {
   // Prefer the pointer location over the rect intersection for our row
   // geometry — two task rows stacked vertically share a full width, and the
   // pointer is closer to the intended drop target than the rect centroid.
-  const collisionDetection: CollisionDetection = useCallback(
-    (args) => pointerWithin(args),
-    []
-  )
+  const collisionDetection: CollisionDetection = useCallback((args) => pointerWithin(args), [])
 
   useEffect(() => {
     if (composing && composerRef.current) {
@@ -216,18 +212,26 @@ export function TodoView(): JSX.Element {
   }, [events, calendars])
 
   const taskCalendars = useMemo(
-    () => calendars.filter((calendar) =>
-      calendar.isVisible &&
-      (!calendar.supportedComponents || calendar.supportedComponents.includes('VTODO'))
-    ),
+    () =>
+      calendars.filter(
+        (calendar) =>
+          calendar.isVisible &&
+          (!calendar.supportedComponents || calendar.supportedComponents.includes('VTODO'))
+      ),
     [calendars]
   )
   const filteredTasks = useMemo(
-    () => projectFilter ? tasks.filter((task) => task.calendarId === projectFilter) : tasks,
+    () => (projectFilter ? tasks.filter((task) => task.calendarId === projectFilter) : tasks),
     [projectFilter, tasks]
   )
-  const activeCount = useMemo(() => filteredTasks.filter((task) => !task.completed).length, [filteredTasks])
-  const completedCount = useMemo(() => filteredTasks.filter((task) => task.completed).length, [filteredTasks])
+  const activeCount = useMemo(
+    () => filteredTasks.filter((task) => !task.completed).length,
+    [filteredTasks]
+  )
+  const completedCount = useMemo(
+    () => filteredTasks.filter((task) => task.completed).length,
+    [filteredTasks]
+  )
   const selectedProject = taskCalendars.find((calendar) => calendar.id === projectFilter)
 
   // Sliding indicator for filter tabs
@@ -249,15 +253,70 @@ export function TodoView(): JSX.Element {
 
   const projectMenuContent = (
     <>
-      <button type="button" className={styles.projectFilter} onClick={() => setIsProjectMenuOpen(!isProjectMenuOpen)} aria-expanded={isProjectMenuOpen} aria-haspopup="menu" aria-label="Filter tasks by project" data-component="task-project-filter">
-        {selectedProject && <span className={styles.projectColor} style={{ backgroundColor: selectedProject.color }} />}
+      <button
+        type="button"
+        className={styles.projectFilter}
+        onClick={() => setIsProjectMenuOpen(!isProjectMenuOpen)}
+        aria-expanded={isProjectMenuOpen}
+        aria-haspopup="menu"
+        aria-label="Filter tasks by project"
+        data-component="task-project-filter"
+      >
+        {selectedProject && (
+          <span
+            className={styles.projectColor}
+            style={{ backgroundColor: selectedProject.color }}
+          />
+        )}
         {selectedProject?.name ?? 'All projects'}
-        <svg aria-hidden="true" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+        <svg aria-hidden="true" viewBox="0 0 16 16" fill="none">
+          <path
+            d="M4 6l4 4 4-4"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
       </button>
-      {isProjectMenuOpen && <div className={styles.projectMenuList} role="menu" data-component="task-project-menu">
-        <button type="button" role="menuitem" className={projectFilter ? styles.projectMenuItem : `${styles.projectMenuItem} ${styles.projectMenuItemSelected}`} onClick={() => { setProjectFilter(''); setIsProjectMenuOpen(false) }}>All projects</button>
-        {taskCalendars.map((calendar) => <button key={calendar.id} type="button" role="menuitem" className={projectFilter === calendar.id ? `${styles.projectMenuItem} ${styles.projectMenuItemSelected}` : styles.projectMenuItem} onClick={() => { setProjectFilter(calendar.id); setIsProjectMenuOpen(false) }}><span className={styles.projectColor} style={{ backgroundColor: calendar.color }} />{calendar.name}</button>)}
-      </div>}
+      {isProjectMenuOpen && (
+        <div className={styles.projectMenuList} role="menu" data-component="task-project-menu">
+          <button
+            type="button"
+            role="menuitem"
+            className={
+              projectFilter
+                ? styles.projectMenuItem
+                : `${styles.projectMenuItem} ${styles.projectMenuItemSelected}`
+            }
+            onClick={() => {
+              setProjectFilter('')
+              setIsProjectMenuOpen(false)
+            }}
+          >
+            All projects
+          </button>
+          {taskCalendars.map((calendar) => (
+            <button
+              key={calendar.id}
+              type="button"
+              role="menuitem"
+              className={
+                projectFilter === calendar.id
+                  ? `${styles.projectMenuItem} ${styles.projectMenuItemSelected}`
+                  : styles.projectMenuItem
+              }
+              onClick={() => {
+                setProjectFilter(calendar.id)
+                setIsProjectMenuOpen(false)
+              }}
+            >
+              <span className={styles.projectColor} style={{ backgroundColor: calendar.color }} />
+              {calendar.name}
+            </button>
+          ))}
+        </div>
+      )}
     </>
   )
 
@@ -377,7 +436,9 @@ export function TodoView(): JSX.Element {
     }
     const updatedTasks = completeTask(task.id, newCompleted)
     try {
-      await Promise.all(updatedTasks.map((updatedTask) => updateCalDAVEvent(updatedTask.calendarId, updatedTask)))
+      await Promise.all(
+        updatedTasks.map((updatedTask) => updateCalDAVEvent(updatedTask.calendarId, updatedTask))
+      )
     } catch {
       // error handled by useCalDAV
     }
@@ -397,7 +458,15 @@ export function TodoView(): JSX.Element {
   const submitComposer = (): void => {
     const value = composerRef.current?.value.trim()
     if (!value) return
-    openModal(format(new Date(), 'yyyy-MM-dd'), undefined, undefined, 'task', value, undefined, projectFilter || undefined)
+    openModal(
+      format(new Date(), 'yyyy-MM-dd'),
+      undefined,
+      undefined,
+      'task',
+      value,
+      undefined,
+      projectFilter || undefined
+    )
     if (composerRef.current) composerRef.current.value = ''
     setComposing(false)
   }
@@ -572,7 +641,7 @@ export function TodoView(): JSX.Element {
         </div>
       </div>
     ),
-    [],
+    []
   )
 
   const renderTask = useCallback(
@@ -608,11 +677,13 @@ export function TodoView(): JSX.Element {
                 <div
                   ref={setDropRef}
                   className={rowClass}
-                  style={{
-                    ...dragStyle,
-                    '--event-color': task.calendarColor,
-                    marginLeft: item.depth * 28,
-                  } as React.CSSProperties}
+                  style={
+                    {
+                      ...dragStyle,
+                      '--event-color': task.calendarColor,
+                      marginLeft: item.depth * 28,
+                    } as React.CSSProperties
+                  }
                   data-component="task-row"
                   data-task-depth={item.depth}
                   data-task-id={task.id}
@@ -631,15 +702,20 @@ export function TodoView(): JSX.Element {
                     onPointerDown={(e) => e.stopPropagation()}
                     aria-label={task.completed ? 'Mark as incomplete' : 'Mark as complete'}
                   >
-                    <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <svg
+                      viewBox="0 0 14 14"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
                       <path d="M3 7.5l2.5 2.5L11 4" />
                     </svg>
                   </button>
                   <div className={styles.taskBody} onClick={() => handleTaskClick(task)}>
                     <div className={styles.taskTitle}>{task.title}</div>
-                    {task.description && (
-                      <div className={styles.taskNote}>{task.description}</div>
-                    )}
+                    {task.description && <div className={styles.taskNote}>{task.description}</div>}
                   </div>
                   <div className={styles.taskMeta}>
                     {task.priority && task.priority <= 3 && (
@@ -658,7 +734,7 @@ export function TodoView(): JSX.Element {
         </div>
       )
     },
-    [activeTaskId, unstriking, fadingOut, handleToggleComplete, handleTaskClick],
+    [activeTaskId, unstriking, fadingOut, handleToggleComplete, handleTaskClick]
   )
 
   return (
@@ -677,41 +753,73 @@ export function TodoView(): JSX.Element {
             )}
             {!isMobile && (
               <div className={styles.tpCount}>
-                <span><b>{activeCount}</b> active</span>
-                <span className={styles.dim} aria-hidden="true">·</span>
+                <span>
+                  <b>{activeCount}</b> active
+                </span>
+                <span className={styles.dim} aria-hidden="true">
+                  ·
+                </span>
                 <span>{completedCount} done</span>
               </div>
             )}
           </div>
           <div className={styles.tpControls}>
-            <div className={styles.segmentedControl} ref={segmentedRef} data-component="todo-segmented">
-              <div className={styles.tabIndicator} style={{ left: indicatorStyle.left, width: indicatorStyle.width }} data-component="view-switcher-indicator" />
+            <div
+              className={styles.segmentedControl}
+              ref={segmentedRef}
+              data-component="todo-segmented"
+            >
+              <div
+                className={styles.tabIndicator}
+                style={{ left: indicatorStyle.left, width: indicatorStyle.width }}
+                data-component="view-switcher-indicator"
+              />
               <button
-                ref={(el) => { if (el) tabRefs.current.set('all', el) }}
+                ref={(el) => {
+                  if (el) tabRefs.current.set('all', el)
+                }}
                 className={`${styles.tab} ${filter === 'all' ? styles.tabActive : ''}`}
                 onClick={() => setFilter('all')}
               >
                 All
               </button>
               <button
-                ref={(el) => { if (el) tabRefs.current.set('active', el) }}
+                ref={(el) => {
+                  if (el) tabRefs.current.set('active', el)
+                }}
                 className={`${styles.tab} ${filter === 'active' ? styles.tabActive : ''}`}
                 onClick={() => setFilter('active')}
               >
                 Active
-                {isMobile && activeCount > 0 && <span className={styles.tabCount}>{activeCount}</span>}
+                {isMobile && activeCount > 0 && (
+                  <span className={styles.tabCount}>{activeCount}</span>
+                )}
               </button>
               <button
-                ref={(el) => { if (el) tabRefs.current.set('completed', el) }}
+                ref={(el) => {
+                  if (el) tabRefs.current.set('completed', el)
+                }}
                 className={`${styles.tab} ${filter === 'completed' ? styles.tabActive : ''}`}
                 onClick={() => setFilter('completed')}
               >
                 Done
-                {isMobile && completedCount > 0 && <span className={styles.tabCount}>{completedCount}</span>}
+                {isMobile && completedCount > 0 && (
+                  <span className={styles.tabCount}>{completedCount}</span>
+                )}
               </button>
             </div>
-            <button className={styles.addTask} onClick={handleCreateTask} data-component="add-task-button">
-              <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <button
+              className={styles.addTask}
+              onClick={handleCreateTask}
+              data-component="add-task-button"
+            >
+              <svg
+                viewBox="0 0 14 14"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              >
                 <path d="M7 2v10M2 7h10" />
               </svg>
               {isMobile ? 'Add' : 'Add task'}
@@ -723,18 +831,21 @@ export function TodoView(): JSX.Element {
             task-header-slot so it sits on the same line as the "Tasks"
             title, right-aligned, animated in the same way as the header's
             own today-button-icon. */}
-        {isMobile && headerSlot && taskCalendars.length > 1 && createPortal(
-          <motion.div
-            className={styles.projectMenu}
-            ref={projectMenuRef}
-            initial={{ opacity: 0, scale: 0.6 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.18, ease: [0.34, 1.2, 0.64, 1] }}
-          >
-            {projectMenuContent}
-          </motion.div>,
-          headerSlot
-        )}
+        {isMobile &&
+          headerSlot &&
+          taskCalendars.length > 1 &&
+          createPortal(
+            <motion.div
+              className={styles.projectMenu}
+              ref={projectMenuRef}
+              initial={{ opacity: 0, scale: 0.6 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.18, ease: [0.34, 1.2, 0.64, 1] }}
+            >
+              {projectMenuContent}
+            </motion.div>,
+            headerSlot
+          )}
 
         {/* Task List */}
         <DndContext
@@ -744,85 +855,84 @@ export function TodoView(): JSX.Element {
           onDragOver={handleTaskDragOver}
           onDragEnd={handleTaskDragEnd}
         >
-        <div
-          className={`${styles.taskList} ${showRootDropHint ? styles.taskListRootHint : ''}`}
-          ref={scrollContainerRef}
-          data-component="todo-task-list"
-          data-root-drop-hint={showRootDropHint ? '' : undefined}
-        >
-          {/* Inline Composer */}
-          {composing && (
-            <div className={styles.inlineComposer}>
-              <button
-                type="button"
-                className={styles.composerCheck}
-                onClick={handleComposerSubmitClick}
-                onMouseDown={(e) => e.preventDefault()}
-                aria-label="Add task"
-                data-component="composer-submit"
-              />
-              <input
-                ref={composerRef}
-                type="text"
-                className={styles.composerInput}
-                placeholder="What needs doing?"
-                onKeyDown={handleComposerKeyDown}
-                onBlur={() => setComposing(false)}
-              />
-            </div>
-          )}
+          <div
+            className={`${styles.taskList} ${showRootDropHint ? styles.taskListRootHint : ''}`}
+            ref={scrollContainerRef}
+            data-component="todo-task-list"
+            data-root-drop-hint={showRootDropHint ? '' : undefined}
+          >
+            {/* Inline Composer */}
+            {composing && (
+              <div className={styles.inlineComposer}>
+                <button
+                  type="button"
+                  className={styles.composerCheck}
+                  onClick={handleComposerSubmitClick}
+                  onMouseDown={(e) => e.preventDefault()}
+                  aria-label="Add task"
+                  data-component="composer-submit"
+                />
+                <input
+                  ref={composerRef}
+                  type="text"
+                  className={styles.composerInput}
+                  placeholder="What needs doing?"
+                  onKeyDown={handleComposerKeyDown}
+                  onBlur={() => setComposing(false)}
+                />
+              </div>
+            )}
 
-          {/* Empty State */}
-          {groupedTasks.length === 0 && (
-            <div className={styles.emptyState}>
-              <span className={styles.emptyTitle}>All clear</span>
-              <p className={styles.emptyMessage}>Nothing here right now.</p>
-              <button
-                className={styles.emptyCreateBtn}
-                onClick={() => {
-                  setComposing(true)
-                  // Focus the composer input on next tick
-                  setTimeout(() => composerRef.current?.focus(), 0)
+            {/* Empty State */}
+            {groupedTasks.length === 0 && (
+              <div className={styles.emptyState}>
+                <span className={styles.emptyTitle}>All clear</span>
+                <p className={styles.emptyMessage}>Nothing here right now.</p>
+                <button
+                  className={styles.emptyCreateBtn}
+                  onClick={() => {
+                    setComposing(true)
+                    // Focus the composer input on next tick
+                    setTimeout(() => composerRef.current?.focus(), 0)
+                  }}
+                  data-component="todo-empty-create"
+                >
+                  + Create task
+                </button>
+              </div>
+            )}
+
+            {/* Virtualized Task List */}
+            {flatItems.length > 0 && scrollReady && (
+              <div
+                style={{
+                  height: virtualizer.getTotalSize(),
+                  width: '100%',
+                  position: 'relative',
                 }}
-                data-component="todo-empty-create"
               >
-                + Create task
-              </button>
-            </div>
-          )}
+                {virtualizer.getVirtualItems().map((virtualRow) => {
+                  const item = flatItems[virtualRow.index]
+                  if (item.type === 'header') {
+                    return renderHeader(item, `translateY(${virtualRow.start}px)`)
+                  }
+                  return renderTask(item, `translateY(${virtualRow.start}px)`)
+                })}
+              </div>
+            )}
 
-          {/* Virtualized Task List */}
-          {flatItems.length > 0 && scrollReady && (
-            <div
-              style={{
-                height: virtualizer.getTotalSize(),
-                width: '100%',
-                position: 'relative',
-              }}
-            >
-              {virtualizer.getVirtualItems().map((virtualRow) => {
-                const item = flatItems[virtualRow.index]
-                if (item.type === 'header') {
-                  return renderHeader(item, `translateY(${virtualRow.start}px)`)
-                }
-                return renderTask(item, `translateY(${virtualRow.start}px)`)
-              })}
-            </div>
-          )}
-
-          {/* Fallback: render all items when scroll container not ready */}
-          {flatItems.length > 0 && !scrollReady && (
-            <>
-              {flatItems.map((item) => {
-                if (item.type === 'header') {
-                  return renderHeader(item)
-                }
-                return renderTask(item)
-              })}
-            </>
-          )}
-
-        </div>
+            {/* Fallback: render all items when scroll container not ready */}
+            {flatItems.length > 0 && !scrollReady && (
+              <>
+                {flatItems.map((item) => {
+                  if (item.type === 'header') {
+                    return renderHeader(item)
+                  }
+                  return renderTask(item)
+                })}
+              </>
+            )}
+          </div>
 
           {/* DragOverlay mirrors the active row so the user can see what
               they're dragging even when the source scrolled under the
@@ -835,20 +945,30 @@ export function TodoView(): JSX.Element {
                   const activeItem = flatItems.find(
                     (item) => item.type === 'task' && item.task.id === activeTaskId
                   )
-                  const activeDepth = activeItem && activeItem.type === 'task' ? activeItem.depth : 0
+                  const activeDepth =
+                    activeItem && activeItem.type === 'task' ? activeItem.depth : 0
                   return (
                     <div
                       className={styles.taskRow}
-                      style={{
-                        '--event-color': activeTask.calendarColor,
-                        marginLeft: activeDepth * 28,
-                        cursor: 'grabbing',
-                        boxShadow: '0 6px 16px rgba(0,0,0,0.18)',
-                      } as React.CSSProperties}
+                      style={
+                        {
+                          '--event-color': activeTask.calendarColor,
+                          marginLeft: activeDepth * 28,
+                          cursor: 'grabbing',
+                          boxShadow: '0 6px 16px rgba(0,0,0,0.18)',
+                        } as React.CSSProperties
+                      }
                       data-component="task-row-active-overlay"
                     >
                       <div className={styles.taskCheck} aria-hidden="true">
-                        <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <svg
+                          viewBox="0 0 14 14"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
                           <path d="M3 7.5l2.5 2.5L11 4" />
                         </svg>
                       </div>
@@ -887,7 +1007,13 @@ interface DraggableTaskRowProps {
 }
 
 function DraggableTaskRow({ taskId, isActive, children }: DraggableTaskRowProps): JSX.Element {
-  const { attributes, listeners, setNodeRef: setDragRef, transform, isDragging } = useDraggable({ id: taskId })
+  const {
+    attributes,
+    listeners,
+    setNodeRef: setDragRef,
+    transform,
+    isDragging,
+  } = useDraggable({ id: taskId })
   const { setNodeRef: setDropRef, isOver } = useDroppable({ id: taskId })
   // Combine refs (drag and drop) onto the same row — the row is both the
   // handle that initiates the drag and the target that accepts a drop.
@@ -917,4 +1043,3 @@ function DraggableTaskRow({ taskId, isActive, children }: DraggableTaskRowProps)
     </>
   )
 }
-

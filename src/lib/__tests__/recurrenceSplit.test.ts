@@ -17,7 +17,7 @@ describe('buildMasterTruncation (R5.2: do not pollute excludedDates)', () => {
     expect(result.excludedDates).not.toContain('2026-04-15')
   })
 
-  it('preserves the master\'s existing excludedDates without appending the split date', () => {
+  it("preserves the master's existing excludedDates without appending the split date", () => {
     const master = makeEvent({
       recurrence: makeRule({ frequency: 'weekly' }),
       excludedDates: ['2026-03-01', '2026-03-08'],
@@ -145,10 +145,7 @@ describe('getFutureOverrideIds', () => {
       }),
     ]
 
-    expect(getFutureOverrideIds(events, master, '2026-04-15')).toEqual([
-      'selected',
-      'future',
-    ])
+    expect(getFutureOverrideIds(events, master, '2026-04-15')).toEqual(['selected', 'future'])
   })
 
   it('preserves earlier overrides from the same day for sub-daily recurrence', () => {

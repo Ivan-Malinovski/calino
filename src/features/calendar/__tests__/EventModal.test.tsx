@@ -67,8 +67,25 @@ describe('EventModal', () => {
 
   it('lists direct subtasks when editing a parent task', () => {
     const store = useCalendarStore.getState()
-    store.addEvent({ id: 'parent', calendarId: 'default', title: 'Parent task', start: '2024-03-15T10:00:00', end: '2024-03-15T10:00:00', isAllDay: false, type: 'task' })
-    store.addEvent({ id: 'child', calendarId: 'default', title: 'Child task', parentTaskId: 'parent', start: '2024-03-15T10:00:00', end: '2024-03-15T10:00:00', isAllDay: false, type: 'task' })
+    store.addEvent({
+      id: 'parent',
+      calendarId: 'default',
+      title: 'Parent task',
+      start: '2024-03-15T10:00:00',
+      end: '2024-03-15T10:00:00',
+      isAllDay: false,
+      type: 'task',
+    })
+    store.addEvent({
+      id: 'child',
+      calendarId: 'default',
+      title: 'Child task',
+      parentTaskId: 'parent',
+      start: '2024-03-15T10:00:00',
+      end: '2024-03-15T10:00:00',
+      isAllDay: false,
+      type: 'task',
+    })
     store.openModal(undefined, undefined, 'parent', 'task')
 
     render(<EventModal />)
@@ -549,15 +566,25 @@ describe('EventModal', () => {
       const store = useCalendarStore.getState()
       store.addCategory({ id: 'work-category', name: 'Work', color: '#4285F4' })
       store.addEvent({
-        id: 'series-master', uid: 'series-master', calendarId: 'default', title: 'Master title',
-        start: '2024-03-01T10:00:00', end: '2024-03-01T11:00:00', isAllDay: false,
+        id: 'series-master',
+        uid: 'series-master',
+        calendarId: 'default',
+        title: 'Master title',
+        start: '2024-03-01T10:00:00',
+        end: '2024-03-01T11:00:00',
+        isAllDay: false,
         recurrence: { frequency: 'weekly', interval: 1 },
       })
       store.addEvent({
-        id: 'series-master-2024-03-15T10:00:00.000Z', uid: 'series-master', calendarId: 'default',
-        title: 'Edited occurrence', start: '2024-03-15T10:00:00.000Z',
-        end: '2024-03-15T11:00:00.000Z', isAllDay: false,
-        recurrenceId: '2024-03-15T10:00:00.000Z', recurrenceMasterId: 'series-master',
+        id: 'series-master-2024-03-15T10:00:00.000Z',
+        uid: 'series-master',
+        calendarId: 'default',
+        title: 'Edited occurrence',
+        start: '2024-03-15T10:00:00.000Z',
+        end: '2024-03-15T11:00:00.000Z',
+        isAllDay: false,
+        recurrenceId: '2024-03-15T10:00:00.000Z',
+        recurrenceMasterId: 'series-master',
       })
       store.openModal(undefined, undefined, 'series-master-2024-03-15T10:00:00.000Z')
       render(<EventModal />)

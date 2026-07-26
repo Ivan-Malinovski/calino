@@ -70,23 +70,20 @@ describe('settingsSync', () => {
     it('should strip last path segment', () => {
       const result = deriveCalendarHomeUrl(
         'https://example.com/dav.php',
-        'https://example.com/dav.php/calendars/user/personal/',
+        'https://example.com/dav.php/calendars/user/personal/'
       )
       expect(result).toBe('https://example.com/dav.php/calendars/user/')
     })
 
     it('should handle root calendar', () => {
-      const result = deriveCalendarHomeUrl(
-        'https://example.com',
-        'https://example.com/cal/',
-      )
+      const result = deriveCalendarHomeUrl('https://example.com', 'https://example.com/cal/')
       expect(result).toBe('https://example.com/')
     })
 
     it('should use real server origin', () => {
       const result = deriveCalendarHomeUrl(
         'https://real.example.com',
-        'https://proxy.example.com/calendars/user/cal/',
+        'https://proxy.example.com/calendars/user/cal/'
       )
       expect(result).toBe('https://real.example.com/calendars/user/')
     })

@@ -31,7 +31,7 @@ export function toICalUTC(d: Date): string {
 export function formatTime(
   date: Date | string,
   timeFormat: TimeFormat,
-  variant: 'full' | 'hour' = 'full',
+  variant: 'full' | 'hour' = 'full'
 ): string {
   const d = typeof date === 'string' ? parseISO(date) : date
   const pattern = timeFormat === '24h' ? 'HH:mm' : variant === 'hour' ? 'h a' : 'h:mm a'
@@ -42,10 +42,7 @@ export function formatTime(
  * Long date-time format: `'MMM d, yyyy h:mm a'` (12h) or `'MMM d, yyyy HH:mm'` (24h).
  * Used primarily for broken-event display in Settings.
  */
-export function formatDateLong(
-  date: Date | string,
-  timeFormat: TimeFormat = '24h',
-): string {
+export function formatDateLong(date: Date | string, timeFormat: TimeFormat = '24h'): string {
   const d = typeof date === 'string' ? parseISO(date) : date
   const timePattern = timeFormat === '24h' ? 'HH:mm' : 'h:mm a'
   return format(d, `MMM d, yyyy ${timePattern}`)

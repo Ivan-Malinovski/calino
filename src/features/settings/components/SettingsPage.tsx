@@ -16,7 +16,15 @@ import { useIsMobile } from '@/hooks/useIsMobile'
 import { FloatingNavPill } from '@/features/calendar/components/nav/FloatingNavPill'
 import styles from './Settings.module.css'
 
-type SettingsTab = 'general' | 'theme' | 'calendar' | 'categories' | 'notifications' | 'caldav' | 'data' | 'aiVision'
+type SettingsTab =
+  | 'general'
+  | 'theme'
+  | 'calendar'
+  | 'categories'
+  | 'notifications'
+  | 'caldav'
+  | 'data'
+  | 'aiVision'
 
 interface NavItem {
   id: SettingsTab
@@ -29,7 +37,14 @@ const BASE_NAV_ITEMS: NavItem[] = [
     id: 'general',
     label: 'General',
     icon: (
-      <svg className={styles.navIcon} viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+      <svg
+        className={styles.navIcon}
+        viewBox="0 0 18 18"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      >
         <circle cx="9" cy="9" r="2.5" />
         <path d="M9 1v2M9 15v2M1 9h2M15 9h2M3.22 3.22l1.42 1.42M13.36 13.36l1.42 1.42M3.22 14.78l1.42-1.42M13.36 4.64l1.42-1.42" />
       </svg>
@@ -39,7 +54,15 @@ const BASE_NAV_ITEMS: NavItem[] = [
     id: 'theme',
     label: 'Appearance',
     icon: (
-      <svg className={styles.navIcon} viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <svg
+        className={styles.navIcon}
+        viewBox="0 0 18 18"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
         <path d="M9 2a7 7 0 100 14A4 4 0 009 2z" />
         <circle cx="6" cy="7" r="1" />
         <circle cx="11" cy="5.5" r="1" />
@@ -52,7 +75,15 @@ const BASE_NAV_ITEMS: NavItem[] = [
     id: 'calendar',
     label: 'Calendar',
     icon: (
-      <svg className={styles.navIcon} viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <svg
+        className={styles.navIcon}
+        viewBox="0 0 18 18"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
         <rect x="2" y="3" width="14" height="13" rx="3" />
         <path d="M2 7h14M6 2v2M12 2v2" />
       </svg>
@@ -62,7 +93,15 @@ const BASE_NAV_ITEMS: NavItem[] = [
     id: 'categories',
     label: 'Categories',
     icon: (
-      <svg className={styles.navIcon} viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <svg
+        className={styles.navIcon}
+        viewBox="0 0 18 18"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
         <path d="M2 4h14M2 9h14M2 14h8" />
         <circle cx="14" cy="14" r="2.5" />
         <path d="M14 12.5v1.5h1.5" />
@@ -73,7 +112,15 @@ const BASE_NAV_ITEMS: NavItem[] = [
     id: 'notifications',
     label: 'Notifications',
     icon: (
-      <svg className={styles.navIcon} viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <svg
+        className={styles.navIcon}
+        viewBox="0 0 18 18"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
         <path d="M9 2a5 5 0 00-5 5c0 3-1.5 4-1.5 4h13S14 10 14 7a5 5 0 00-5-5z" />
         <path d="M7.5 15a1.5 1.5 0 003 0" />
       </svg>
@@ -83,7 +130,15 @@ const BASE_NAV_ITEMS: NavItem[] = [
     id: 'caldav',
     label: 'Sync',
     icon: (
-      <svg className={styles.navIcon} viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <svg
+        className={styles.navIcon}
+        viewBox="0 0 18 18"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
         <path d="M3 9a6 6 0 0110.7-3.7M15 9a6 6 0 01-10.7 3.7" />
         <path d="M12.5 5l1.2 1.2-1.2 1.2M5.5 13l-1.2-1.2 1.2-1.2" />
       </svg>
@@ -93,7 +148,15 @@ const BASE_NAV_ITEMS: NavItem[] = [
     id: 'data',
     label: 'Data',
     icon: (
-      <svg className={styles.navIcon} viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <svg
+        className={styles.navIcon}
+        viewBox="0 0 18 18"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
         <ellipse cx="9" cy="5" rx="6" ry="2.5" />
         <path d="M3 5v4c0 1.4 2.7 2.5 6 2.5S15 10.4 15 9V5" />
         <path d="M3 9v4c0 1.4 2.7 2.5 6 2.5S15 14.4 15 13V9" />
@@ -106,7 +169,15 @@ const AI_VISION_NAV_ITEM: NavItem = {
   id: 'aiVision',
   label: 'AI Photo Import',
   icon: (
-    <svg className={styles.navIcon} viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      className={styles.navIcon}
+      viewBox="0 0 18 18"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <rect x="2" y="5" width="14" height="10" rx="2.5" />
       <path d="M6 5l1-2h4l1 2" />
       <circle cx="9" cy="10" r="2.5" />
@@ -114,13 +185,24 @@ const AI_VISION_NAV_ITEM: NavItem = {
   ),
 }
 
-const VALID_TABS: SettingsTab[] = ['general', 'theme', 'calendar', 'categories', 'notifications', 'caldav', 'data', 'aiVision']
+const VALID_TABS: SettingsTab[] = [
+  'general',
+  'theme',
+  'calendar',
+  'categories',
+  'notifications',
+  'caldav',
+  'data',
+  'aiVision',
+]
 
 export function SettingsPage(): JSX.Element {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const isMobile = useIsMobile()
-  const NAV_ITEMS: NavItem[] = Capacitor.isNativePlatform() ? [...BASE_NAV_ITEMS, AI_VISION_NAV_ITEM] : BASE_NAV_ITEMS
+  const NAV_ITEMS: NavItem[] = Capacitor.isNativePlatform()
+    ? [...BASE_NAV_ITEMS, AI_VISION_NAV_ITEM]
+    : BASE_NAV_ITEMS
   const brokenEventsCount = useCalendarStore((state) => state.brokenEvents.length)
   const duplicateUidCount = useCalendarStore((state) => state.duplicateUidIssues.length)
   const dataIssuesCount = brokenEventsCount + duplicateUidCount
@@ -206,7 +288,17 @@ export function SettingsPage(): JSX.Element {
               className={`${styles.savedPill} ${showSaved ? styles.savedPillVisible : ''}`}
               data-component="settings-saved-indicator"
             >
-              <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <svg
+                width="13"
+                height="13"
+                viewBox="0 0 14 14"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
                 <path d="M2.5 7.5L6 11l5.5-8" />
               </svg>
               Saved
@@ -214,7 +306,14 @@ export function SettingsPage(): JSX.Element {
           </div>
           <div className={styles.header}>
             <button className={styles.back} onClick={() => navigate('/')}>
-              <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+              <svg
+                viewBox="0 0 14 14"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
                 <path d="M9 2L4 7l5 5" />
               </svg>
               Back to Calendar
@@ -245,7 +344,10 @@ export function SettingsPage(): JSX.Element {
                         </span>
                       </button>
                       {isOpen && (
-                        <div className={styles.accordionPanel} data-component="settings-accordion-panel">
+                        <div
+                          className={styles.accordionPanel}
+                          data-component="settings-accordion-panel"
+                        >
                           {renderContent(item.id)}
                         </div>
                       )}
@@ -266,7 +368,17 @@ export function SettingsPage(): JSX.Element {
 
 function ChevronIcon({ className }: { className?: string }): JSX.Element {
   return (
-    <svg className={className} width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      className={className}
+      width="14"
+      height="14"
+      viewBox="0 0 14 14"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M3.5 5.25L7 8.75l3.5-3.5" />
     </svg>
   )

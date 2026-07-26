@@ -12,7 +12,12 @@ import {
   calendarEventToIcalVjournal,
   calendarEventToIcalVtodo,
 } from '@/features/caldav/adapter/icalTypeMapping'
-import { parseVCardFile, contactsToVCardFile, downloadFile, readFileAsText } from '@/features/carddav/lib/vCardFileUtils'
+import {
+  parseVCardFile,
+  contactsToVCardFile,
+  downloadFile,
+  readFileAsText,
+} from '@/features/carddav/lib/vCardFileUtils'
 import { showToast } from '@/lib/toast'
 import { MergeDuplicatesModal } from '@/features/carddav/components/MergeDuplicatesModal'
 import { ImportExportModal } from '@/features/carddav/components/ImportExportModal'
@@ -47,11 +52,13 @@ export function DataSettings(): JSX.Element {
   const [deletingHref, setDeletingHref] = useState<string | null>(null)
   const timeFormat = useSettingsStore((state) => state.timeFormat)
   const caldav = useCalDAV()
-  const { handleFix, handleDelete, handleFixAll, handleDeleteAll } =
-    useBrokenEventsActions('caldav', {
+  const { handleFix, handleDelete, handleFixAll, handleDeleteAll } = useBrokenEventsActions(
+    'caldav',
+    {
       updateEvent: caldav.updateEvent,
       deleteEvent: caldav.deleteEvent,
-    })
+    }
+  )
 
   const handleExportICS = async (): Promise<void> => {
     setIsExporting(true)
@@ -263,7 +270,14 @@ export function DataSettings(): JSX.Element {
             <div className={styles.rowLabel}>Export Calendar</div>
             <div className={styles.rowDesc}>Download all events as a standard .ics file</div>
           </div>
-          <button className={styles.actionBtn} onClick={handleExportICS} disabled={isExporting} data-component="action-button" data-action="export-ics" type="button">
+          <button
+            className={styles.actionBtn}
+            onClick={handleExportICS}
+            disabled={isExporting}
+            data-component="action-button"
+            data-action="export-ics"
+            type="button"
+          >
             {isExporting ? 'Exporting...' : 'Export .ics'}
           </button>
         </div>
@@ -272,25 +286,49 @@ export function DataSettings(): JSX.Element {
             <div className={styles.rowLabel}>Import Calendar</div>
             <div className={styles.rowDesc}>Add events from a .ics or .json file</div>
           </div>
-          <button className={styles.actionBtn} onClick={handleImport} disabled={isImporting} data-component="action-button" data-action="import-calendar" type="button">
+          <button
+            className={styles.actionBtn}
+            onClick={handleImport}
+            disabled={isImporting}
+            data-component="action-button"
+            data-action="import-calendar"
+            type="button"
+          >
             {isImporting ? 'Importing...' : 'Choose file…'}
           </button>
         </div>
         {importStatus && (
-          <div className={`${styles.importStatus} ${importStatus.type === 'success' ? styles.importStatusSuccess : styles.importStatusError}`} data-component="import-status">
+          <div
+            className={`${styles.importStatus} ${importStatus.type === 'success' ? styles.importStatusSuccess : styles.importStatusError}`}
+            data-component="import-status"
+          >
             {importStatus.message}
           </div>
         )}
-        <input ref={fileInputRef} type="file" accept=".json,.ics" onChange={handleFileChange} style={{ display: 'none' }} data-testid="import-calendar-input" />
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".json,.ics"
+          onChange={handleFileChange}
+          style={{ display: 'none' }}
+          data-testid="import-calendar-input"
+        />
       </div>
 
       {pendingIcsText !== null && (
         <div className={styles.modalBackdrop} data-component="ics-import-picker">
-          <div className={styles.modalPanel} role="dialog" aria-modal="true" aria-labelledby="ics-import-title">
+          <div
+            className={styles.modalPanel}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="ics-import-title"
+          >
             <h3 className={styles.modalTitle} id="ics-import-title">
               Import {pendingIcsEventCount} event{pendingIcsEventCount === 1 ? '' : 's'}
             </h3>
-            <p className={styles.modalText}>Choose which calendar these events should be added to.</p>
+            <p className={styles.modalText}>
+              Choose which calendar these events should be added to.
+            </p>
 
             <select
               className={styles.select}
@@ -377,7 +415,9 @@ export function DataSettings(): JSX.Element {
         <div className={styles.actionRow}>
           <div className={styles.rowInfo}>
             <div className={styles.rowLabel}>Merge Duplicates</div>
-            <div className={styles.rowDesc}>Find and merge contacts with the same email, phone, or name</div>
+            <div className={styles.rowDesc}>
+              Find and merge contacts with the same email, phone, or name
+            </div>
           </div>
           <button className={styles.actionBtn} onClick={() => setIsMergeOpen(true)} type="button">
             Merge…
@@ -398,73 +438,92 @@ export function DataSettings(): JSX.Element {
         <div className={styles.groupLabel}>Data Issues</div>
         {brokenEvents.length === 0 && duplicateUidIssues.length === 0 && (
           <div className={styles.rowDesc} style={{ padding: '12px 20px 16px' }}>
-            Invalid or broken events (e.g. start date after end date) will appear here, allowing you to fix or delete them.
+            Invalid or broken events (e.g. start date after end date) will appear here, allowing you
+            to fix or delete them.
           </div>
         )}
         {brokenEvents.length > 0 && (
           <>
             <p className={styles.rowDesc} style={{ padding: '12px 20px 0' }}>
-              These events have a start date after their end date and cannot be displayed.
-              You can fix them by swapping the dates, or delete them entirely.
+              These events have a start date after their end date and cannot be displayed. You can
+              fix them by swapping the dates, or delete them entirely.
             </p>
 
             <div className={styles.brokenList}>
-            {brokenEvents.map((broken) => (
-              <div key={broken.event.id} className={styles.brokenItem} data-component="broken-event-row" data-event-id={broken.event.id}>
-                <div className={styles.brokenInfo}>
-                  <div className={styles.brokenTitle}>{broken.event.title || 'Untitled Event'}</div>
-                  <div className={styles.brokenDates}>
-                    <span>Start: {formatDate(broken.event.start, timeFormat)}</span>
-                    <span className={styles.brokenArrow}>→</span>
-                    <span>End: {formatDate(broken.event.end, timeFormat)}</span>
+              {brokenEvents.map((broken) => (
+                <div
+                  key={broken.event.id}
+                  className={styles.brokenItem}
+                  data-component="broken-event-row"
+                  data-event-id={broken.event.id}
+                >
+                  <div className={styles.brokenInfo}>
+                    <div className={styles.brokenTitle}>
+                      {broken.event.title || 'Untitled Event'}
+                    </div>
+                    <div className={styles.brokenDates}>
+                      <span>Start: {formatDate(broken.event.start, timeFormat)}</span>
+                      <span className={styles.brokenArrow}>→</span>
+                      <span>End: {formatDate(broken.event.end, timeFormat)}</span>
+                    </div>
+                    <div className={styles.brokenReason}>{broken.reason}</div>
                   </div>
-                  <div className={styles.brokenReason}>{broken.reason}</div>
+                  <div className={styles.brokenActions}>
+                    <button
+                      className={styles.actionBtn}
+                      onClick={() => void handleFix(broken)}
+                      data-component="action-button"
+                      data-action="fix-broken-event"
+                      type="button"
+                    >
+                      Fix
+                    </button>
+                    <button
+                      className={`${styles.actionBtn} ${styles.actionBtnDanger}`}
+                      onClick={() => void handleDelete(broken)}
+                      data-component="action-button"
+                      data-action="delete-broken-event"
+                      type="button"
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </div>
-                <div className={styles.brokenActions}>
-                  <button
-                    className={styles.actionBtn}
-                    onClick={() => void handleFix(broken)}
-                    data-component="action-button"
-                    data-action="fix-broken-event"
-                    type="button"
-                  >
-                    Fix
-                  </button>
-                  <button
-                    className={`${styles.actionBtn} ${styles.actionBtnDanger}`}
-                    onClick={() => void handleDelete(broken)}
-                    data-component="action-button"
-                    data-action="delete-broken-event"
-                    type="button"
-                  >
-                    Delete
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {brokenEvents.length > 1 && (
-            <div className={styles.brokenBatchActions}>
-              <button className={styles.actionBtn} onClick={() => void handleFixAll(brokenEvents)} data-component="action-button" data-action="fix-all-broken" type="button">
-                Fix All ({brokenEvents.length})
-              </button>
-              <button className={`${styles.actionBtn} ${styles.actionBtnDanger}`} onClick={() => void handleDeleteAll(brokenEvents)} data-component="action-button" data-action="delete-all-broken" type="button">
-                Delete All
-              </button>
+              ))}
             </div>
-          )}
-        </>
+
+            {brokenEvents.length > 1 && (
+              <div className={styles.brokenBatchActions}>
+                <button
+                  className={styles.actionBtn}
+                  onClick={() => void handleFixAll(brokenEvents)}
+                  data-component="action-button"
+                  data-action="fix-all-broken"
+                  type="button"
+                >
+                  Fix All ({brokenEvents.length})
+                </button>
+                <button
+                  className={`${styles.actionBtn} ${styles.actionBtnDanger}`}
+                  onClick={() => void handleDeleteAll(brokenEvents)}
+                  data-component="action-button"
+                  data-action="delete-all-broken"
+                  type="button"
+                >
+                  Delete All
+                </button>
+              </div>
+            )}
+          </>
         )}
 
         {duplicateUidIssues.length > 0 && (
           <div data-component="duplicate-uid-issues">
             <p className={styles.rowDesc} style={{ padding: '16px 20px 0' }}>
-              These events share the same unique ID (UID) on your server but are
-              stored as separate items. Calino can only show one of each set — the
-              others are hidden to keep your calendar stable. This usually comes
-              from a bulk copy made in another app. To fix it, give each event a
-              unique UID on your server, then sync again.
+              These events share the same unique ID (UID) on your server but are stored as separate
+              items. Calino can only show one of each set — the others are hidden to keep your
+              calendar stable. This usually comes from a bulk copy made in another app. To fix it,
+              give each event a unique UID on your server, then sync again.
             </p>
 
             <div className={styles.brokenList}>
@@ -525,7 +584,9 @@ export function DataSettings(): JSX.Element {
         <div className={styles.actionRow}>
           <div className={styles.rowInfo}>
             <div className={styles.rowLabel}>Delete All Events</div>
-            <div className={styles.rowDesc}>Permanently remove every event from this calendar. This cannot be undone.</div>
+            <div className={styles.rowDesc}>
+              Permanently remove every event from this calendar. This cannot be undone.
+            </div>
           </div>
           <button
             className={`${styles.actionBtn} ${styles.actionBtnDanger}`}
@@ -545,9 +606,17 @@ export function DataSettings(): JSX.Element {
         <div className={styles.actionRow}>
           <div className={styles.rowInfo}>
             <div className={styles.rowLabel}>Reset Calino</div>
-            <div className={styles.rowDesc}>Erase all data, settings, and connected accounts and start fresh.</div>
+            <div className={styles.rowDesc}>
+              Erase all data, settings, and connected accounts and start fresh.
+            </div>
           </div>
-          <button className={`${styles.actionBtn} ${styles.actionBtnDanger}`} onClick={handleClearData} data-component="action-button" data-action="reset-app" type="button">
+          <button
+            className={`${styles.actionBtn} ${styles.actionBtnDanger}`}
+            onClick={handleClearData}
+            data-component="action-button"
+            data-action="reset-app"
+            type="button"
+          >
             Reset app
           </button>
         </div>
@@ -569,10 +638,7 @@ export function DataSettings(): JSX.Element {
       />
 
       {/* Merge duplicates modal */}
-      <MergeDuplicatesModal
-        isOpen={isMergeOpen}
-        onClose={() => setIsMergeOpen(false)}
-      />
+      <MergeDuplicatesModal isOpen={isMergeOpen} onClose={() => setIsMergeOpen(false)} />
     </section>
   )
 }

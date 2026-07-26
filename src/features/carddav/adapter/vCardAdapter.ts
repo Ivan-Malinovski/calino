@@ -119,7 +119,10 @@ function unescapeVCardValue(value: string): string {
  * Parse a single vCard line with property params.
  * e.g. 'EMAIL;TYPE=HOME:john@example.com' → { params: 'TYPE=HOME', value: 'john@example.com' }
  */
-function parseLineWithParams(line: string, property: string): { value: string; params: string } | null {
+function parseLineWithParams(
+  line: string,
+  property: string
+): { value: string; params: string } | null {
   const lineUpper = line.toUpperCase()
   const prefixWithSemicolon = (property + ';').toUpperCase()
   const prefixWithColon = (property + ':').toUpperCase()
@@ -235,7 +238,10 @@ function applyAppleLabel(type: string, labelValue: string): string {
 // Field extractors
 // ---------------------------------------------------------------------------
 
-function extractEmails(lines: string[], itemNMap: Map<string, { dataLine: string; labelValue: string }>): ContactEmail[] {
+function extractEmails(
+  lines: string[],
+  itemNMap: Map<string, { dataLine: string; labelValue: string }>
+): ContactEmail[] {
   const emails: ContactEmail[] = []
   const usedItemNs = new Set<string>()
 
@@ -246,7 +252,8 @@ function extractEmails(lines: string[], itemNMap: Map<string, { dataLine: string
     if (!result) continue
 
     let type = parseTypeParam(result.params)
-    const isPrimary = result.params.toUpperCase().includes('PREF') || result.params.includes('TYPE=pref')
+    const isPrimary =
+      result.params.toUpperCase().includes('PREF') || result.params.includes('TYPE=pref')
 
     // Check for itemN group with Apple label
     const itemNMatch = line.match(/^ITEM(\d+)\./i)
@@ -267,14 +274,17 @@ function extractEmails(lines: string[], itemNMap: Map<string, { dataLine: string
   }
 
   // Mark first as primary if none marked
-  if (emails.length > 0 && !emails.some(e => e.isPrimary)) {
+  if (emails.length > 0 && !emails.some((e) => e.isPrimary)) {
     emails[0].isPrimary = true
   }
 
   return emails
 }
 
-function extractPhones(lines: string[], itemNMap: Map<string, { dataLine: string; labelValue: string }>): ContactPhone[] {
+function extractPhones(
+  lines: string[],
+  itemNMap: Map<string, { dataLine: string; labelValue: string }>
+): ContactPhone[] {
   const phones: ContactPhone[] = []
   const usedItemNs = new Set<string>()
 
@@ -285,7 +295,8 @@ function extractPhones(lines: string[], itemNMap: Map<string, { dataLine: string
     if (!result) continue
 
     let type = parsePhoneTypeParam(result.params)
-    const isPrimary = result.params.toUpperCase().includes('PREF') || result.params.includes('TYPE=pref')
+    const isPrimary =
+      result.params.toUpperCase().includes('PREF') || result.params.includes('TYPE=pref')
 
     // Check for itemN group with Apple label
     const itemNMatch = line.match(/^ITEM(\d+)\./i)
@@ -306,14 +317,17 @@ function extractPhones(lines: string[], itemNMap: Map<string, { dataLine: string
   }
 
   // Mark first as primary if none marked
-  if (phones.length > 0 && !phones.some(p => p.isPrimary)) {
+  if (phones.length > 0 && !phones.some((p) => p.isPrimary)) {
     phones[0].isPrimary = true
   }
 
   return phones
 }
 
-function extractAddresses(lines: string[], itemNMap: Map<string, { dataLine: string; labelValue: string }>): ContactAddress[] {
+function extractAddresses(
+  lines: string[],
+  itemNMap: Map<string, { dataLine: string; labelValue: string }>
+): ContactAddress[] {
   const addresses: ContactAddress[] = []
   const usedItemNs = new Set<string>()
 
@@ -324,7 +338,8 @@ function extractAddresses(lines: string[], itemNMap: Map<string, { dataLine: str
     if (!result) continue
 
     let type = parseTypeParam(result.params)
-    const isPrimary = result.params.toUpperCase().includes('PREF') || result.params.includes('TYPE=pref')
+    const isPrimary =
+      result.params.toUpperCase().includes('PREF') || result.params.includes('TYPE=pref')
 
     // Check for itemN group with Apple label
     const itemNMatch = line.match(/^ITEM(\d+)\./i)
@@ -353,14 +368,17 @@ function extractAddresses(lines: string[], itemNMap: Map<string, { dataLine: str
   }
 
   // Mark first as primary if none marked
-  if (addresses.length > 0 && !addresses.some(a => a.isPrimary)) {
+  if (addresses.length > 0 && !addresses.some((a) => a.isPrimary)) {
     addresses[0].isPrimary = true
   }
 
   return addresses
 }
 
-function extractUrls(lines: string[], itemNMap: Map<string, { dataLine: string; labelValue: string }>): ContactUrl[] {
+function extractUrls(
+  lines: string[],
+  itemNMap: Map<string, { dataLine: string; labelValue: string }>
+): ContactUrl[] {
   const urls: ContactUrl[] = []
   const usedItemNs = new Set<string>()
 
@@ -371,7 +389,8 @@ function extractUrls(lines: string[], itemNMap: Map<string, { dataLine: string; 
     if (!result) continue
 
     let type = parseTypeParam(result.params)
-    const isPrimary = result.params.toUpperCase().includes('PREF') || result.params.includes('TYPE=pref')
+    const isPrimary =
+      result.params.toUpperCase().includes('PREF') || result.params.includes('TYPE=pref')
 
     // Check for itemN group with Apple label
     const itemNMatch = line.match(/^ITEM(\d+)\./i)
@@ -392,7 +411,7 @@ function extractUrls(lines: string[], itemNMap: Map<string, { dataLine: string; 
   }
 
   // Mark first as primary if none marked
-  if (urls.length > 0 && !urls.some(u => u.isPrimary)) {
+  if (urls.length > 0 && !urls.some((u) => u.isPrimary)) {
     urls[0].isPrimary = true
   }
 
@@ -410,7 +429,8 @@ function extractIMs(lines: string[]): ContactIM[] {
 
     const type = parseTypeParam(result.params)
     const protocol = parseIMProtocol(result.params)
-    const isPrimary = result.params.toUpperCase().includes('PREF') || result.params.includes('TYPE=pref')
+    const isPrimary =
+      result.params.toUpperCase().includes('PREF') || result.params.includes('TYPE=pref')
 
     ims.push({
       value: unescapeVCardValue(result.value),
@@ -421,7 +441,7 @@ function extractIMs(lines: string[]): ContactIM[] {
   }
 
   // Mark first as primary if none marked
-  if (ims.length > 0 && !ims.some(i => i.isPrimary)) {
+  if (ims.length > 0 && !ims.some((i) => i.isPrimary)) {
     ims[0].isPrimary = true
   }
 
@@ -481,7 +501,7 @@ function extractLangs(lines: string[]): ContactLang[] {
       isPrimary,
     })
   }
-  if (langs.length > 0 && !langs.some(l => l.isPrimary)) {
+  if (langs.length > 0 && !langs.some((l) => l.isPrimary)) {
     langs[0].isPrimary = true
   }
   return langs
@@ -513,7 +533,7 @@ function extractRelated(lines: string[]): ContactRelated[] {
       isPrimary,
     })
   }
-  if (related.length > 0 && !related.some(r => r.isPrimary)) {
+  if (related.length > 0 && !related.some((r) => r.isPrimary)) {
     related[0].isPrimary = true
   }
   return related
@@ -620,7 +640,6 @@ function formatVCardDate(dateStr: string): string | null {
 // Serialization helpers
 // ---------------------------------------------------------------------------
 
-
 // ---------------------------------------------------------------------------
 // Main parser
 // ---------------------------------------------------------------------------
@@ -637,7 +656,11 @@ function formatVCardDate(dateStr: string): string | null {
  * RFC 6868 caret-encoding is decoded in parameter values.
  * RFC 6350 §3.4 escapes are reversed in all property values.
  */
-export function parseVCard(vCardString: string, addressBookId: string, accountId: string): Contact | null {
+export function parseVCard(
+  vCardString: string,
+  addressBookId: string,
+  accountId: string
+): Contact | null {
   const lines = unfoldVCard(vCardString)
 
   // Process itemN. grouped properties before the opaque pass
@@ -645,17 +668,39 @@ export function parseVCard(vCardString: string, addressBookId: string, accountId
 
   // Collect opaque (unknown) lines
   const knownPrefixes = [
-    'BEGIN', 'END', 'VERSION', 'FN', 'N', 'UID', 'URL',
-    'ORG', 'TITLE', 'ROLE', 'EMAIL', 'TEL', 'ADR', 'IMPP',
-    'BDAY', 'ANNIVERSARY', 'GENDER', 'NOTE', 'CATEGORIES',
-    'PHOTO', 'CREATED', 'REV', 'PRODID',
-    'XML', 'LANG', 'RELATED', 'MEMBER',
+    'BEGIN',
+    'END',
+    'VERSION',
+    'FN',
+    'N',
+    'UID',
+    'URL',
+    'ORG',
+    'TITLE',
+    'ROLE',
+    'EMAIL',
+    'TEL',
+    'ADR',
+    'IMPP',
+    'BDAY',
+    'ANNIVERSARY',
+    'GENDER',
+    'NOTE',
+    'CATEGORIES',
+    'PHOTO',
+    'CREATED',
+    'REV',
+    'PRODID',
+    'XML',
+    'LANG',
+    'RELATED',
+    'MEMBER',
   ]
   const opaqueLines: string[] = []
 
   for (const line of lines) {
     const upper = line.toUpperCase().split(':')[0].split(';')[0]
-    const isKnown = knownPrefixes.some(p => upper.startsWith(p))
+    const isKnown = knownPrefixes.some((p) => upper.startsWith(p))
     if (!isKnown && line.trim() !== '') {
       opaqueLines.push(line)
     }
@@ -716,7 +761,10 @@ export function parseVCard(vCardString: string, addressBookId: string, accountId
 
   // Parse categories
   const categoriesStr = extractProperty(lines, 'CATEGORIES') || ''
-  const categories = categoriesStr.split(',').map(c => unescapeVCardValue(c.trim())).filter(Boolean)
+  const categories = categoriesStr
+    .split(',')
+    .map((c) => unescapeVCardValue(c.trim()))
+    .filter(Boolean)
 
   // Parse photo
   const photo = extractPhoto(lines)
@@ -829,7 +877,9 @@ export function contactToVCard(contact: Contact, targetVersion: '3.0' | '4.0' = 
     contact.additionalNames,
     contact.prefixes,
     contact.suffixes,
-  ].map(v => escapeVCardValue(v)).join(';')
+  ]
+    .map((v) => escapeVCardValue(v))
+    .join(';')
   lines.push(`N:${n}`)
 
   // Display name
@@ -839,7 +889,9 @@ export function contactToVCard(contact: Contact, targetVersion: '3.0' | '4.0' = 
 
   // Organization
   if (contact.organization || contact.department) {
-    lines.push(`ORG:${escapeVCardValue(contact.organization)};${escapeVCardValue(contact.department)}`)
+    lines.push(
+      `ORG:${escapeVCardValue(contact.organization)};${escapeVCardValue(contact.department)}`
+    )
   }
 
   // Title and role
@@ -922,7 +974,7 @@ export function contactToVCard(contact: Contact, targetVersion: '3.0' | '4.0' = 
 
   // Categories
   if (contact.categories.length > 0) {
-    lines.push(`CATEGORIES:${contact.categories.map(c => escapeVCardValue(c)).join(',')}`)
+    lines.push(`CATEGORIES:${contact.categories.map((c) => escapeVCardValue(c)).join(',')}`)
   }
 
   // Languages
@@ -979,7 +1031,7 @@ export function contactToVCard(contact: Contact, targetVersion: '3.0' | '4.0' = 
 
   // PRODID: preserve original non-Calino PRODID from opaqueLines
   const opaque = contact.opaqueLines ?? []
-  const hasOtherProdid = opaque.some(l => {
+  const hasOtherProdid = opaque.some((l) => {
     const upper = l.toUpperCase()
     return upper.startsWith('PRODID:') && !l.includes(CALINO_PRODID)
   })
@@ -997,7 +1049,7 @@ export function contactToVCard(contact: Contact, targetVersion: '3.0' | '4.0' = 
   lines.push('END:VCARD')
 
   // Fold every line
-  return lines.map(l => foldLine(l)).join('\r\n')
+  return lines.map((l) => foldLine(l)).join('\r\n')
 }
 
 // ---------------------------------------------------------------------------
@@ -1022,7 +1074,12 @@ function buildTypeParamsV(version: '3.0' | '4.0', type: string, isPrimary: boole
   return parts.length > 0 ? ';' + parts.join(';') : ''
 }
 
-function buildIMParamsV(version: '3.0' | '4.0', type: string, protocol: string, isPrimary: boolean): string {
+function buildIMParamsV(
+  version: '3.0' | '4.0',
+  type: string,
+  protocol: string,
+  isPrimary: boolean
+): string {
   const parts: string[] = []
 
   if (version === '3.0') {

@@ -182,7 +182,8 @@ export function SubscribeCalendarModal({
               className={styles.chevronLabel}
               onClick={() => setShowProxyField(!showProxyField)}
             >
-              <svg aria-hidden="true"
+              <svg
+                aria-hidden="true"
                 className={styles.chevronIcon}
                 style={{ transform: showProxyField ? 'rotate(0deg)' : 'rotate(-90deg)' }}
                 width="16"

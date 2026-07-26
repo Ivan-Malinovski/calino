@@ -11,17 +11,34 @@ const RECURRENCE_OPTIONS: { value: RecurrenceRule['frequency']; label: string }[
 ]
 
 const MONTH_SHORT = [
-  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
 ]
 
 // --- Monthly pattern helpers ---
 
 type MonthlyPattern = 'dayOfMonth' | 'nthWeekday' | 'lastWeekday'
 
-function detectMonthlyPattern(byWeekday: number[] | undefined, byDayOrdinals: number[] | undefined): MonthlyPattern {
+function detectMonthlyPattern(
+  byWeekday: number[] | undefined,
+  byDayOrdinals: number[] | undefined
+): MonthlyPattern {
   if (byWeekday && byWeekday.length > 0) {
-    if (byDayOrdinals && byDayOrdinals.length === byWeekday.length && byDayOrdinals.every((p) => p === -1)) {
+    if (
+      byDayOrdinals &&
+      byDayOrdinals.length === byWeekday.length &&
+      byDayOrdinals.every((p) => p === -1)
+    ) {
       return 'lastWeekday'
     }
     return 'nthWeekday'
@@ -70,7 +87,8 @@ function MonthlyPatternPicker({
   const daysInMonth = new Date(Date.UTC(startYear, startMonth, 0)).getUTCDate()
 
   const nthFromByWeekday = byWeekday[0] !== undefined ? byWeekday[0] : startWeekday
-  const posFromByDayOrdinals = byDayOrdinals[0] !== undefined ? byDayOrdinals[0] : Math.ceil(startDay / 7)
+  const posFromByDayOrdinals =
+    byDayOrdinals[0] !== undefined ? byDayOrdinals[0] : Math.ceil(startDay / 7)
   const dayFromByMonthDay = byMonthDay[0] !== undefined ? byMonthDay[0] : startDay
 
   const days31 = Array.from({ length: 31 }, (_, i) => i + 1)
@@ -117,7 +135,8 @@ function MonthlyPatternPicker({
           >
             {days31.map((d) => (
               <option key={d} value={d}>
-                {d}{d === daysInMonth ? ' (last day)' : ''}
+                {d}
+                {d === daysInMonth ? ' (last day)' : ''}
               </option>
             ))}
           </select>
@@ -125,7 +144,9 @@ function MonthlyPatternPicker({
       )}
 
       {(pattern === 'nthWeekday' || pattern === 'lastWeekday') && (
-        <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center', flexWrap: 'wrap' }}>
+        <div
+          style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center', flexWrap: 'wrap' }}
+        >
           {pattern === 'nthWeekday' && (
             <select
               value={posFromByDayOrdinals}
@@ -136,7 +157,15 @@ function MonthlyPatternPicker({
             >
               {[1, 2, 3, 4, 5].map((n) => (
                 <option key={n} value={n}>
-                  {n === 1 ? 'First' : n === 2 ? 'Second' : n === 3 ? 'Third' : n === 4 ? 'Fourth' : 'Fifth'}
+                  {n === 1
+                    ? 'First'
+                    : n === 2
+                      ? 'Second'
+                      : n === 3
+                        ? 'Third'
+                        : n === 4
+                          ? 'Fourth'
+                          : 'Fifth'}
                 </option>
               ))}
             </select>
@@ -151,11 +180,17 @@ function MonthlyPatternPicker({
             {Array.from({ length: 7 }, (_, i) => i).map((d) => {
               const actualWeekday = (d + firstDayOfWeek) % 7
               return (
-                <option key={actualWeekday} value={actualWeekday}>{weekdayLabels[d]}</option>
+                <option key={actualWeekday} value={actualWeekday}>
+                  {weekdayLabels[d]}
+                </option>
               )
             })}
           </select>
-          {pattern === 'lastWeekday' && <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>of the month</span>}
+          {pattern === 'lastWeekday' && (
+            <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>
+              of the month
+            </span>
+          )}
         </div>
       )}
     </div>
@@ -295,9 +330,7 @@ export function RecurrenceFields({
               <select
                 id="recurrence-select"
                 value={recurrence}
-                onChange={(e) =>
-                  onRecurrenceChange(e.target.value as RecurrenceRule['frequency'])
-                }
+                onChange={(e) => onRecurrenceChange(e.target.value as RecurrenceRule['frequency'])}
                 className={styles.select}
               >
                 {RECURRENCE_OPTIONS.map((option) => (
@@ -322,10 +355,21 @@ export function RecurrenceFields({
                 aria-label="Repeat interval"
               />
               <span style={{ fontSize: '14px', color: 'var(--color-text-secondary)' }}>
-                {recurrence === 'daily' ? (interval === 1 ? 'day' : 'days')
-                  : recurrence === 'weekly' ? (interval === 1 ? 'week' : 'weeks')
-                  : recurrence === 'monthly' ? (interval === 1 ? 'month' : 'months')
-                  : (interval === 1 ? 'year' : 'years')}
+                {recurrence === 'daily'
+                  ? interval === 1
+                    ? 'day'
+                    : 'days'
+                  : recurrence === 'weekly'
+                    ? interval === 1
+                      ? 'week'
+                      : 'weeks'
+                    : recurrence === 'monthly'
+                      ? interval === 1
+                        ? 'month'
+                        : 'months'
+                      : interval === 1
+                        ? 'year'
+                        : 'years'}
               </span>
             </div>
           </div>
@@ -357,26 +401,34 @@ export function RecurrenceFields({
         </div>
       )}
 
-      {recurring && recurrence === 'monthly' && onByMonthDayChange && onByWeekdayChange && onByDayOrdinalsChange && (
-        <div className={styles.field}>
-          <label className={styles.label} style={{ fontWeight: 600 }}>Monthly pattern</label>
-          <MonthlyPatternPicker
-            startDate={startDate}
-            weekdayLabels={weekdayLabels}
-            firstDayOfWeek={firstDayOfWeek}
-            byMonthDay={byMonthDay}
-            byWeekday={byWeekday}
-            byDayOrdinals={byDayOrdinals}
-            onByMonthDayChange={onByMonthDayChange}
-            onByWeekdayChange={onByWeekdayChange}
-            onByDayOrdinalsChange={onByDayOrdinalsChange}
-          />
-        </div>
-      )}
+      {recurring &&
+        recurrence === 'monthly' &&
+        onByMonthDayChange &&
+        onByWeekdayChange &&
+        onByDayOrdinalsChange && (
+          <div className={styles.field}>
+            <label className={styles.label} style={{ fontWeight: 600 }}>
+              Monthly pattern
+            </label>
+            <MonthlyPatternPicker
+              startDate={startDate}
+              weekdayLabels={weekdayLabels}
+              firstDayOfWeek={firstDayOfWeek}
+              byMonthDay={byMonthDay}
+              byWeekday={byWeekday}
+              byDayOrdinals={byDayOrdinals}
+              onByMonthDayChange={onByMonthDayChange}
+              onByWeekdayChange={onByWeekdayChange}
+              onByDayOrdinalsChange={onByDayOrdinalsChange}
+            />
+          </div>
+        )}
 
       {recurring && recurrence === 'yearly' && onByMonthChange && (
         <div className={styles.field}>
-          <label className={styles.label} style={{ fontWeight: 600 }}>In months</label>
+          <label className={styles.label} style={{ fontWeight: 600 }}>
+            In months
+          </label>
           <YearlyMonthPicker byMonth={byMonth} onByMonthChange={onByMonthChange} />
         </div>
       )}
@@ -387,13 +439,18 @@ export function RecurrenceFields({
             <label className={styles.label} htmlFor="end-condition-select">
               Ends
             </label>
-            <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center', flexWrap: 'wrap' }}>
+            <div
+              style={{
+                display: 'flex',
+                gap: 'var(--space-2)',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+              }}
+            >
               <select
                 id="end-condition-select"
                 value={endCondition}
-                onChange={(e) =>
-                  onEndConditionChange(e.target.value as 'never' | 'on' | 'after')
-                }
+                onChange={(e) => onEndConditionChange(e.target.value as 'never' | 'on' | 'after')}
                 className={styles.select}
               >
                 <option value="never">Never</option>

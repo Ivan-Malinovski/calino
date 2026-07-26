@@ -30,9 +30,7 @@ export function DeleteCalendarDialog({
     }
   }, [isOpen])
 
-  const eventCount = calendarId
-    ? events.filter((e) => e.calendarId === calendarId).length
-    : 0
+  const eventCount = calendarId ? events.filter((e) => e.calendarId === calendarId).length : 0
 
   const handleConfirm = (): void => {
     if (confirmText === calendarName) {
@@ -83,14 +81,15 @@ export function DeleteCalendarDialog({
 
           {eventCount > 0 && (
             <p className={styles.warning}>
-              This will permanently delete <strong>{eventCount} event{eventCount !== 1 ? 's' : ''}</strong>{' '}
+              This will permanently delete{' '}
+              <strong>
+                {eventCount} event{eventCount !== 1 ? 's' : ''}
+              </strong>{' '}
               from both Calino and the server. This action cannot be undone.
             </p>
           )}
 
-          <p className={styles.confirmLabel}>
-            Type the calendar name to confirm:
-          </p>
+          <p className={styles.confirmLabel}>Type the calendar name to confirm:</p>
           <input
             type="text"
             value={confirmText}
@@ -102,10 +101,7 @@ export function DeleteCalendarDialog({
         </div>
 
         <div className={styles.footer}>
-          <button
-            className={styles.cancelButton}
-            onClick={handleClose}
-          >
+          <button className={styles.cancelButton} onClick={handleClose}>
             Cancel
           </button>
           <button

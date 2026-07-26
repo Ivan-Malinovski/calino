@@ -19,7 +19,7 @@ export interface Contact {
   accountId: string
   url: string
   etag?: string
-  
+
   // Structured name (N property)
   familyName: string
   givenName: string
@@ -27,37 +27,37 @@ export interface Contact {
   prefixes: string
   suffixes: string
   nickname: string
-  
+
   // Display name (FN property)
   displayName: string
-  
+
   // Organization
   organization: string
   department: string
   title: string
   role: string
-  
+
   // Contact info
   emails: ContactEmail[]
   phones: ContactPhone[]
   addresses: ContactAddress[]
-  
+
   // Online presence
   urls: ContactUrl[]
   ims: ContactIM[]
-  
+
   // Personal info
   birthday: string | null
   anniversary: string | null
   gender: string
-  
+
   // Notes and categories
   note: string
   categories: string[]
-  
+
   // Photo
   photo: string | null // data URI or URL
-  
+
   // Group support
   isGroup: boolean
   memberUids: string[]
@@ -66,13 +66,13 @@ export interface Contact {
   langs: ContactLang[]
   related: ContactRelated[]
   xmlData: string | null
-  
+
   // Opaque vCard lines (round-trip preservation)
   opaqueLines: string[]
-  
+
   // Raw vCard data (for sync)
   rawVCard?: string
-  
+
   // Metadata
   createdAt: string
   lastModified: string
@@ -124,7 +124,18 @@ export interface ContactRelated {
 export interface ContactIM {
   value: string
   type: 'home' | 'work' | 'other' | 'pref'
-  protocol: 'aim' | 'email' | 'facebook' | 'google' | 'irc' | 'msn' | 'qq' | 'skype' | 'twitter' | 'xmpp' | 'other'
+  protocol:
+    | 'aim'
+    | 'email'
+    | 'facebook'
+    | 'google'
+    | 'irc'
+    | 'msn'
+    | 'qq'
+    | 'skype'
+    | 'twitter'
+    | 'xmpp'
+    | 'other'
   isPrimary: boolean
 }
 

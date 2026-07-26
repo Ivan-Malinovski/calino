@@ -13,7 +13,10 @@ export function BrokenEventsSettings(): JSX.Element {
 
   if (brokenEvents.length === 0) {
     return (
-      <section className={`${styles.section} ${styles.sectionActive}`} data-component="broken-events-settings">
+      <section
+        className={`${styles.section} ${styles.sectionActive}`}
+        data-component="broken-events-settings"
+      >
         <h1 className={styles.pageTitle}>Data Issues</h1>
         <div className={styles.group}>
           <div className={styles.emptyState}>
@@ -25,19 +28,27 @@ export function BrokenEventsSettings(): JSX.Element {
   }
 
   return (
-    <section className={`${styles.section} ${styles.sectionActive}`} data-component="broken-events-settings">
+    <section
+      className={`${styles.section} ${styles.sectionActive}`}
+      data-component="broken-events-settings"
+    >
       <h1 className={styles.pageTitle}>Data Issues</h1>
 
       <div className={styles.group}>
         <div className={styles.groupLabel}>Broken Events ({brokenEvents.length})</div>
         <p className={styles.rowDesc} style={{ padding: '12px 20px 0' }}>
-          These events have a start date after their end date and cannot be displayed.
-          You can fix them by swapping the dates, or delete them entirely.
+          These events have a start date after their end date and cannot be displayed. You can fix
+          them by swapping the dates, or delete them entirely.
         </p>
 
         <div className={styles.brokenList}>
           {brokenEvents.map((broken) => (
-            <div key={broken.event.id} className={styles.brokenItem} data-component="broken-event-row" data-event-id={broken.event.id}>
+            <div
+              key={broken.event.id}
+              className={styles.brokenItem}
+              data-component="broken-event-row"
+              data-event-id={broken.event.id}
+            >
               <div className={styles.brokenInfo}>
                 <div className={styles.brokenTitle}>{broken.event.title || 'Untitled Event'}</div>
                 <div className={styles.brokenDates}>

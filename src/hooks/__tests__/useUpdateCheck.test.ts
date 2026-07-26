@@ -13,10 +13,18 @@ const memoryStore = new Map<string, string>()
 vi.mock('@/lib/storage', () => ({
   safeLocalStorage: {
     getItem: vi.fn((key: string) => memoryStore.get(key) ?? null),
-    setItem: vi.fn((key: string, value: string) => { memoryStore.set(key, value) }),
-    removeItem: vi.fn((key: string) => { memoryStore.delete(key) }),
-    clear: vi.fn(() => { memoryStore.clear() }),
-    get length() { return memoryStore.size },
+    setItem: vi.fn((key: string, value: string) => {
+      memoryStore.set(key, value)
+    }),
+    removeItem: vi.fn((key: string) => {
+      memoryStore.delete(key)
+    }),
+    clear: vi.fn(() => {
+      memoryStore.clear()
+    }),
+    get length() {
+      return memoryStore.size
+    },
     key: vi.fn((index: number) => [...memoryStore.keys()][index] ?? null),
   },
 }))

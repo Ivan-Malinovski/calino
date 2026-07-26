@@ -10,8 +10,18 @@ import { showToast } from '@/lib/toast'
 import { safeCalDAVUpdate } from '@/lib/caldavHelpers'
 import { deleteEventWithUndo } from '@/lib/deleteWithUndo'
 import { buildRRuleString } from '@/lib/recurrence'
-import { buildMasterTruncation, getFutureOverrideIds, isFirstOccurrence } from '@/lib/recurrenceSplit'
-import type { CalendarEvent, CalendarAttachment, RecurrenceRule, TaskPriority, Reminder } from '@/types'
+import {
+  buildMasterTruncation,
+  getFutureOverrideIds,
+  isFirstOccurrence,
+} from '@/lib/recurrenceSplit'
+import type {
+  CalendarEvent,
+  CalendarAttachment,
+  RecurrenceRule,
+  TaskPriority,
+  Reminder,
+} from '@/types'
 import { putAttachments, getAttachments, deleteAttachments } from '@/lib/attachmentStore'
 import { TaskFormFields } from './TaskFormFields'
 import { EventFormFields } from './EventFormFields'
@@ -61,10 +71,13 @@ export function EventModal(): JSX.Element | null {
   const prefersReducedMotion = useReducedMotion()
   const animateClose = useCallback(() => {
     setIsClosing(true)
-    setTimeout(() => {
-      setIsClosing(false)
-      closeModal()
-    }, prefersReducedMotion ? 0 : 200)
+    setTimeout(
+      () => {
+        setIsClosing(false)
+        closeModal()
+      },
+      prefersReducedMotion ? 0 : 200
+    )
   }, [closeModal, prefersReducedMotion])
 
   // Swipe-down-to-dismiss plus the matching slide-up entrance, both on one
@@ -117,7 +130,16 @@ export function EventModal(): JSX.Element | null {
         categories,
         defaultDuration
       ),
-    [isModalOpen, selectedEventId, selectedDate, selectedEndDate, events, compatibleCalendars, categories, defaultDuration]
+    [
+      isModalOpen,
+      selectedEventId,
+      selectedDate,
+      selectedEndDate,
+      events,
+      compatibleCalendars,
+      categories,
+      defaultDuration,
+    ]
   )
 
   const [title, setTitle] = useState(initialState.title)
@@ -130,15 +152,15 @@ export function EventModal(): JSX.Element | null {
   const [isAllDay, setIsAllDay] = useState(initialState.isAllDay)
   const [calendarId, setCalendarId] = useState(initialState.calendarId)
   const [recurring, setRecurring] = useState<boolean>(initialState.recurring)
-  const [recurrence, setRecurrence] = useState<RecurrenceRule['frequency']>(
-    initialState.recurrence
-  )
+  const [recurrence, setRecurrence] = useState<RecurrenceRule['frequency']>(initialState.recurrence)
   const [interval, setInterval] = useState<number>(initialState.interval)
   const [byWeekday, setByWeekday] = useState<number[]>(initialState.byWeekday)
   const [byMonthDay, setByMonthDay] = useState<number[]>(initialState.byMonthDay)
   const [byMonth, setByMonth] = useState<number[]>(initialState.byMonth)
   const [byDayOrdinals, setByDayOrdinals] = useState<number[]>(initialState.byDayOrdinals)
-  const [endCondition, setEndCondition] = useState<'never' | 'on' | 'after'>(initialState.endCondition)
+  const [endCondition, setEndCondition] = useState<'never' | 'on' | 'after'>(
+    initialState.endCondition
+  )
   const [endOnDate, setEndOnDate] = useState<string>(initialState.endOnDate)
   const [endAfterCount, setEndAfterCount] = useState<number>(initialState.endAfterCount)
   const [travelDuration, setTravelDuration] = useState<number | undefined>(
@@ -218,7 +240,9 @@ export function EventModal(): JSX.Element | null {
   const lastSelectedDate = useRef<string | null>(null)
   const titleInputRef = useRef<HTMLInputElement>(null)
   const closeModalRef = useRef(closeModal)
-  useEffect(() => { closeModalRef.current = closeModal })
+  useEffect(() => {
+    closeModalRef.current = closeModal
+  })
 
   useFocusTrap(dialogRef, isModalOpen && !isClosing)
 
@@ -239,7 +263,8 @@ export function EventModal(): JSX.Element | null {
         const parsed = parseNaturalLanguage(val, {
           defaultDate: startDate ? parseISO(`${startDate}T00:00:00`) : new Date(),
         })
-        const strippedSomething = parsed.title.trim().length > 0 && parsed.title.trim() !== val.trim()
+        const strippedSomething =
+          parsed.title.trim().length > 0 && parsed.title.trim() !== val.trim()
         setNlpSuggestion(strippedSomething && parsed.confidence >= 0.5 ? parsed : null)
       } catch {
         setNlpSuggestion(null)
@@ -336,7 +361,11 @@ export function EventModal(): JSX.Element | null {
 
   const handleTitleKeyDown = (e: React.KeyboardEvent): void => {
     // Accept an inline NLP parse with Tab (when no history suggestion is active).
-    if (nlpSuggestion && !showSuggestions && (e.key === 'Tab' || (e.key === 'Enter' && e.shiftKey))) {
+    if (
+      nlpSuggestion &&
+      !showSuggestions &&
+      (e.key === 'Tab' || (e.key === 'Enter' && e.shiftKey))
+    ) {
       e.preventDefault()
       applyNlpSuggestion(nlpSuggestion)
       return
@@ -378,13 +407,10 @@ export function EventModal(): JSX.Element | null {
         ? currentEvents.find((event) => event.id === selectedEventId)
         : undefined
       const requiredComponent =
-        currentSelectedEventType === 'task' || currentEvent?.type === 'task'
-          ? 'VTODO'
-          : 'VEVENT'
+        currentSelectedEventType === 'task' || currentEvent?.type === 'task' ? 'VTODO' : 'VEVENT'
       const currentCalendars = state.calendars.filter(
         (calendar) =>
-          !calendar.supportedComponents ||
-          calendar.supportedComponents.includes(requiredComponent)
+          !calendar.supportedComponents || calendar.supportedComponents.includes(requiredComponent)
       )
       const currentCategories = state.categories
 
@@ -422,7 +448,11 @@ export function EventModal(): JSX.Element | null {
       setStartTime(formDefaults.startTime)
       setEndDate(formDefaults.endDate)
       setEndTime(formDefaults.endTime)
-      setIsAllDay(pendingEventPrefill?.allDay !== undefined ? pendingEventPrefill.allDay : formDefaults.isAllDay)
+      setIsAllDay(
+        pendingEventPrefill?.allDay !== undefined
+          ? pendingEventPrefill.allDay
+          : formDefaults.isAllDay
+      )
       setCalendarId(requestedParent?.calendarId ?? initialCalendarId ?? formDefaults.calendarId)
       setRecurring(formDefaults.recurring)
       setRecurrence(formDefaults.recurrence)
@@ -460,7 +490,11 @@ export function EventModal(): JSX.Element | null {
         setCompleted(existingEvent.completed || false)
         setPriority(existingEvent.priority)
       } else if (currentSelectedEventType === 'task') {
-        setDueDate(requestedParent?.dueDate?.split('T')[0] || selectedDate || format(new Date(), 'yyyy-MM-dd'))
+        setDueDate(
+          requestedParent?.dueDate?.split('T')[0] ||
+            selectedDate ||
+            format(new Date(), 'yyyy-MM-dd')
+        )
         setDueTime('09:00')
         setDueAllDay(true)
         setCompleted(false)
@@ -514,7 +548,9 @@ export function EventModal(): JSX.Element | null {
         }
       }
     }
-    return events.filter((task) => task.type === 'task' && task.calendarId === calendarId && !excludedIds.has(task.id))
+    return events.filter(
+      (task) => task.type === 'task' && task.calendarId === calendarId && !excludedIds.has(task.id)
+    )
   }, [calendarId, events, isTaskMode, selectedEventId])
   const subtasks = useMemo(
     () => events.filter((task) => task.type === 'task' && task.parentTaskId === selectedEventId),
@@ -543,7 +579,8 @@ export function EventModal(): JSX.Element | null {
         priority !== existingEventForMode.priority ||
         parentTaskId !== existingEventForMode.parentTaskId ||
         calendarId !== existingEventForMode.calendarId ||
-        JSON.stringify(selectedCategories) !== JSON.stringify(existingEventForMode.categories || []) ||
+        JSON.stringify(selectedCategories) !==
+          JSON.stringify(existingEventForMode.categories || []) ||
         JSON.stringify(relatedTo) !== JSON.stringify(existingEventForMode.relatedTo || []) ||
         attachmentsChanged
       )
@@ -565,13 +602,24 @@ export function EventModal(): JSX.Element | null {
       setPos: number[],
       eCond: string,
       eDate: string,
-      eCount: number,
-    ) => recur ? JSON.stringify({
-      frequency: freq, interval: inter, byWeekday: weekdays, byMonthDay: monthDays,
-      byMonth: months, byDayOrdinals: setPos,
-      // Only compare fields relevant to the active end condition
-      ...(eCond === 'on' ? { endOnDate: eDate } : eCond === 'after' ? { endAfterCount: eCount } : {}),
-    }) : null
+      eCount: number
+    ) =>
+      recur
+        ? JSON.stringify({
+            frequency: freq,
+            interval: inter,
+            byWeekday: weekdays,
+            byMonthDay: monthDays,
+            byMonth: months,
+            byDayOrdinals: setPos,
+            // Only compare fields relevant to the active end condition
+            ...(eCond === 'on'
+              ? { endOnDate: eDate }
+              : eCond === 'after'
+                ? { endAfterCount: eCount }
+                : {}),
+          })
+        : null
 
     // R2.4 — Existing recurrence's per-BYDAY ordinals: prefer byDayOrdinals
     // (new), fall back to bySetPos for legacy data (events persisted
@@ -592,23 +640,39 @@ export function EventModal(): JSX.Element | null {
       return []
     })()
 
-    const existingEndCondition = existingRecurrence?.endDate ? 'on' : existingRecurrence?.count ? 'after' : 'never'
+    const existingEndCondition = existingRecurrence?.endDate
+      ? 'on'
+      : existingRecurrence?.count
+        ? 'after'
+        : 'never'
     const currentRecurrenceJSON = buildRecurrenceJSON(
-      recurring, recurrence, interval, byWeekday, byMonthDay, byMonth, byDayOrdinals,
-      endCondition, endOnDate, endAfterCount,
+      recurring,
+      recurrence,
+      interval,
+      byWeekday,
+      byMonthDay,
+      byMonth,
+      byDayOrdinals,
+      endCondition,
+      endOnDate,
+      endAfterCount
     )
-    const existingRecurrenceJSON = existingRecurrence ? buildRecurrenceJSON(
-      true,
-      existingRecurrence.frequency,
-      existingRecurrence.interval ?? 1,
-      existingRecurrence.byWeekday ?? [],
-      existingRecurrence.byMonthDay ?? [],
-      existingRecurrence.byMonth ?? [],
-      existingDayOrdinals,
-      existingEndCondition,
-      existingRecurrence.endDate ? format(parseISO(existingRecurrence.endDate), 'yyyy-MM-dd') : '',
-      existingRecurrence.count ?? 10,
-    ) : null
+    const existingRecurrenceJSON = existingRecurrence
+      ? buildRecurrenceJSON(
+          true,
+          existingRecurrence.frequency,
+          existingRecurrence.interval ?? 1,
+          existingRecurrence.byWeekday ?? [],
+          existingRecurrence.byMonthDay ?? [],
+          existingRecurrence.byMonth ?? [],
+          existingDayOrdinals,
+          existingEndCondition,
+          existingRecurrence.endDate
+            ? format(parseISO(existingRecurrence.endDate), 'yyyy-MM-dd')
+            : '',
+          existingRecurrence.count ?? 10
+        )
+      : null
 
     return (
       title !== existingEventForMode.title ||
@@ -621,7 +685,8 @@ export function EventModal(): JSX.Element | null {
       currentRecurrenceJSON !== existingRecurrenceJSON ||
       travelDuration !== existingEventForMode.travelDuration ||
       calendarId !== existingEventForMode.calendarId ||
-      JSON.stringify(selectedCategories) !== JSON.stringify(existingEventForMode.categories || []) ||
+      JSON.stringify(selectedCategories) !==
+        JSON.stringify(existingEventForMode.categories || []) ||
       JSON.stringify(relatedTo) !== JSON.stringify(existingEventForMode.relatedTo || []) ||
       attachmentsChanged
     )
@@ -685,15 +750,18 @@ export function EventModal(): JSX.Element | null {
       // R3.4 — end-before-start. Toast text mirrors what saveEvent shows
       // when the same condition is hit via the recurrence-dialog path.
       showToast(
-        isAllDay
-          ? 'End date must be on or after start date'
-          : 'End time must be after start time'
+        isAllDay ? 'End date must be on or after start date' : 'End time must be after start time'
       )
       return
     }
 
     // Stored exceptions are already detached, so save them back as the same occurrence.
-    if (isEditing && initialState.isRecurringInstance && existingEventForMode?.recurrenceId && hasChanges) {
+    if (
+      isEditing &&
+      initialState.isRecurringInstance &&
+      existingEventForMode?.recurrenceId &&
+      hasChanges
+    ) {
       saveEvent('this')
       return
     }
@@ -762,19 +830,18 @@ export function EventModal(): JSX.Element | null {
       const startDateTime = isAllDay ? `${startDate}T00:00:00` : new Date(localStart).toISOString()
       const endDateTime = isAllDay ? `${endDate}T00:00:00` : new Date(localEnd).toISOString()
 
-      const recurrenceRule: RecurrenceRule | undefined =
-        recurring
-          ? {
-              frequency: recurrence,
-              interval: interval > 1 ? interval : 1,
-              byWeekday: byWeekday.length > 0 ? byWeekday : undefined,
-              byMonthDay: byMonthDay.length > 0 ? byMonthDay : undefined,
-              byMonth: byMonth.length > 0 ? byMonth : undefined,
-              byDayOrdinals: byDayOrdinals.length > 0 ? byDayOrdinals : undefined,
-              endDate: endCondition === 'on' && endOnDate ? `${endOnDate}T23:59:59` : undefined,
-              count: endCondition === 'after' ? endAfterCount : undefined,
-            }
-          : undefined
+      const recurrenceRule: RecurrenceRule | undefined = recurring
+        ? {
+            frequency: recurrence,
+            interval: interval > 1 ? interval : 1,
+            byWeekday: byWeekday.length > 0 ? byWeekday : undefined,
+            byMonthDay: byMonthDay.length > 0 ? byMonthDay : undefined,
+            byMonth: byMonth.length > 0 ? byMonth : undefined,
+            byDayOrdinals: byDayOrdinals.length > 0 ? byDayOrdinals : undefined,
+            endDate: endCondition === 'on' && endOnDate ? `${endOnDate}T23:59:59` : undefined,
+            count: endCondition === 'after' ? endAfterCount : undefined,
+          }
+        : undefined
 
       if (isEditing && selectedEventId) {
         // For recurring-instance edits ("this occurrence" / "this and following"),
@@ -789,7 +856,9 @@ export function EventModal(): JSX.Element | null {
         const occInstanceMatch = selectedEventId.match(
           /-(\d{4}-\d{2}-\d{2})T\d{2}:\d{2}:\d{2}\.\d{3}Z$/
         )
-        const occDateStr = selectedRecurrenceId?.split('T')[0] || (occInstanceMatch ? occInstanceMatch[1] : startDate)
+        const occDateStr =
+          selectedRecurrenceId?.split('T')[0] ||
+          (occInstanceMatch ? occInstanceMatch[1] : startDate)
         const durationMs = new Date(endDateTime).getTime() - new Date(startDateTime).getTime()
         const occStartDateTime = isAllDay
           ? `${occDateStr}T00:00:00`
@@ -797,7 +866,8 @@ export function EventModal(): JSX.Element | null {
         let occEndDateTime: string
         if (isAllDay) {
           const spanDays = Math.round(
-            (new Date(`${endDate}T00:00:00Z`).getTime() - new Date(`${startDate}T00:00:00Z`).getTime()) /
+            (new Date(`${endDate}T00:00:00Z`).getTime() -
+              new Date(`${startDate}T00:00:00Z`).getTime()) /
               86400000
           )
           const endD = new Date(`${occDateStr}T00:00:00Z`)
@@ -817,7 +887,8 @@ export function EventModal(): JSX.Element | null {
           const isoDateMatch = selectedEventId.match(
             /(.+)-(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z)$/
           )
-          const originalOccurrenceDate = selectedRecurrenceId || (isoDateMatch ? isoDateMatch[2] : null)
+          const originalOccurrenceDate =
+            selectedRecurrenceId || (isoDateMatch ? isoDateMatch[2] : null)
           if (!originalOccurrenceDate) {
             showToast('Invalid event data. Cannot edit single occurrence.')
             return
@@ -881,7 +952,8 @@ export function EventModal(): JSX.Element | null {
           const isoDateMatch = selectedEventId.match(
             /(.+)-(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z)$/
           )
-          const originalOccurrenceDate = selectedRecurrenceId || (isoDateMatch ? isoDateMatch[2] : null)
+          const originalOccurrenceDate =
+            selectedRecurrenceId || (isoDateMatch ? isoDateMatch[2] : null)
           if (!originalOccurrenceDate) {
             showToast('Invalid event data. Cannot split series.')
             return
@@ -986,8 +1058,14 @@ export function EventModal(): JSX.Element | null {
           }
           const existingEvent = events.find((e) => e.id === eventId)
           if (existingEvent) {
-            console.log('[EventModal] Saving event. attachments state:', JSON.stringify(attachments))
-            console.log('[EventModal] existingEvent.attachments:', JSON.stringify(existingEvent.attachments))
+            console.log(
+              '[EventModal] Saving event. attachments state:',
+              JSON.stringify(attachments)
+            )
+            console.log(
+              '[EventModal] existingEvent.attachments:',
+              JSON.stringify(existingEvent.attachments)
+            )
             await safeCalDAVUpdate(
               updateCalDAVEvent,
               calendarId,
@@ -1082,19 +1160,16 @@ export function EventModal(): JSX.Element | null {
             const mins = Math.round(diffMs / 60000)
             if (mins > 0 && mins <= 24 * 60) durationMinutes = mins
           }
-          useSmartDefaultsStore.getState().record(newEvent.title, newEvent.calendarId, durationMinutes)
+          useSmartDefaultsStore
+            .getState()
+            .record(newEvent.title, newEvent.calendarId, durationMinutes)
         }
         // Move attachments from temp 'new' key to actual event ID
         if (attachments.length > 0) {
           deleteAttachments('new').catch(() => {})
           putAttachments(newEvent.id, attachments).catch(() => {})
         }
-        await safeCalDAVUpdate(
-          createCalDAVEvent,
-          calendarId,
-          newEvent,
-          {}
-        )
+        await safeCalDAVUpdate(createCalDAVEvent, calendarId, newEvent, {})
       }
 
       setShowRecurrenceDialog(false)
@@ -1225,7 +1300,11 @@ export function EventModal(): JSX.Element | null {
   }
 
   return (
-    <div className={`${styles.modalBackdrop} ${isClosing ? styles.closing : ''}`} onClick={animateClose} data-component="modal-backdrop">
+    <div
+      className={`${styles.modalBackdrop} ${isClosing ? styles.closing : ''}`}
+      onClick={animateClose}
+      data-component="modal-backdrop"
+    >
       <motion.div
         ref={dialogRef}
         className={`${styles.modalCard} ${isClosing ? styles.modalClosing : ''}`}
@@ -1244,326 +1323,347 @@ export function EventModal(): JSX.Element | null {
             way. A plain CSS transform/opacity on a completely separate
             element can't conflict with anything. */}
         <div className={styles.modalEntrance} data-component="modal-entrance">
-        <div className={styles.modalBand} data-component="modal-band" />
-        <div className={styles.sheetDragRegion}>
-          <div className={styles.dragHandle} aria-hidden="true" />
-          <div className={styles.modalHeader}>
-          <button
-            type="button"
-            className={styles.titleEditIcon}
-            onClick={() => titleInputRef.current?.focus()}
-            aria-label="Focus title input"
-          >
-            <svg aria-hidden="true"
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-            </svg>
-          </button>
-          <div className={styles.titleInputWrapper}>
-            <input
-              ref={titleInputRef}
-              type="text"
-              placeholder={isTaskMode ? 'Task title' : 'Event title'}
-              value={title}
-              onChange={(e) => handleTitleChange(e.target.value)}
-              onKeyDown={handleTitleKeyDown}
-              className={styles.modalTitle}
-              data-component="event-title-input"
-              required
-              onInvalid={(e) => {
-                e.preventDefault()
-                showToast('Title is required')
-              }}
-            />
-            {showSuggestions && (
-              <div className={styles.titleSuggestions}>
-                {titleSuggestions.map((ev, i) => (
-                  <button
-                    key={ev.id}
-                    type="button"
-                    className={`${styles.suggestionItem} ${i === highlightedIndex ? styles.suggestionItemActive : ''}`}
-                    onClick={() => applySuggestion(ev)}
-                  >
-                    <span className={styles.suggestionTitle}>{ev.title}</span>
-                    {ev.description && (
-                      <span className={styles.suggestionDesc}>{ev.description}</span>
-                    )}
-                  </button>
-                ))}
-              </div>
-            )}
-            {nlpSuggestion && !showSuggestions && (
+          <div className={styles.modalBand} data-component="modal-band" />
+          <div className={styles.sheetDragRegion}>
+            <div className={styles.dragHandle} aria-hidden="true" />
+            <div className={styles.modalHeader}>
               <button
                 type="button"
-                className={styles.nlpChip}
-                onClick={() => applyNlpSuggestion(nlpSuggestion)}
-                data-component="nlp-suggestion"
+                className={styles.titleEditIcon}
+                onClick={() => titleInputRef.current?.focus()}
+                aria-label="Focus title input"
               >
-                <span className={styles.nlpChipIcon} aria-hidden="true">✨</span>
-                <span className={styles.nlpChipText}>
-                  {nlpSuggestion.isAllDay
-                    ? format(nlpSuggestion.startDate, 'EEE, MMM d')
-                    : format(nlpSuggestion.startDate, 'EEE, MMM d · h:mm a')}
-                  {nlpSuggestion.recurrence ? ' · repeats' : ''}
-                </span>
-                <kbd className={styles.nlpChipKbd}>Tab</kbd>
-              </button>
-            )}
-          </div>
-          <button className={styles.modalClose} onClick={animateClose} aria-label="Close">
-            ×
-          </button>
-          </div>
-        </div>
-        <hr className={styles.modalDivider} />
-        <form
-          key={`${selectedEventId}-${selectedDate}-${selectedEventType}`}
-          onClick={(e) => {
-            // Close suggestions when clicking outside the suggestions dropdown
-            if (!(e.target as HTMLElement).closest(`.${styles.titleSuggestions}`)) {
-              setTitleSuggestions([])
-            }
-          }}
-          onSubmit={handleSubmit}
-          className={styles.modalBody}
-          data-component="modal-body"
-        >
-          <div ref={scrollRef} className={styles.modalScroll} data-component="modal-scroll">
-            <div className={styles.modalGroup}>
-              {isTaskMode && (
-                <TaskFormFields
-                  completed={completed}
-                  onCompletedChange={setCompleted}
-                  dueDate={dueDate}
-                  onDueDateChange={(date) => {
-                    setDueDate(date)
-                    if (!date) setDueAllDay(true)
-                  }}
-                  dueTime={dueTime}
-                  onDueTimeChange={setDueTime}
-                  dueAllDay={dueAllDay}
-                  onDueAllDayChange={setDueAllDay}
-                   priority={priority}
-                   onPriorityChange={setPriority}
-                   parentTaskId={parentTaskId}
-                   parentTasks={parentTaskOptions}
-                   onParentTaskChange={setParentTaskId}
-                   subtasks={subtasks}
-                   onOpenSubtask={(taskId) => openModal(undefined, undefined, taskId, 'task')}
-                   onAddSubtask={selectedEventId ? () => openModal(undefined, undefined, undefined, 'task', undefined, selectedEventId) : undefined}
-                 />
-              )}
-
-              {!isTaskMode && (
-                <EventFormFields
-                  isAllDay={isAllDay}
-                  onIsAllDayChange={setIsAllDay}
-                  startDate={startDate}
-                  onStartDateChange={setStartDate}
-                  startTime={startTime}
-                  onStartTimeChange={setStartTime}
-                  endDate={endDate}
-                  onEndDateChange={setEndDate}
-                  endTime={endTime}
-                  onEndTimeChange={handleEndTimeChange}
-                  recurring={recurring}
-                  onRecurringChange={setRecurring}
-                  recurrence={recurrence}
-                  onRecurrenceChange={(freq) => {
-                    setRecurrence(freq)
-                    // Clear weekday/month selections that don't apply to the new frequency
-                    if (freq !== 'weekly' && freq !== 'monthly' && freq !== 'yearly') {
-                      setByWeekday([])
-                    }
-                    if (freq !== 'monthly' && freq !== 'yearly') {
-                      setByMonthDay([])
-                      setByMonth([])
-                      setByDayOrdinals([])
-                    }
-                  }}
-                  interval={interval}
-                  onIntervalChange={setInterval}
-                  byWeekday={byWeekday}
-                  onByWeekdayChange={setByWeekday}
-                  byMonthDay={byMonthDay}
-                  onByMonthDayChange={setByMonthDay}
-                  byMonth={byMonth}
-                  onByMonthChange={setByMonth}
-                  byDayOrdinals={byDayOrdinals}
-                  onByDayOrdinalsChange={setByDayOrdinals}
-                  endCondition={endCondition}
-                  onEndConditionChange={setEndCondition}
-                  endOnDate={endOnDate}
-                  onEndOnDateChange={setEndOnDate}
-                  endAfterCount={endAfterCount}
-                  onEndAfterCountChange={setEndAfterCount}
-                  travelDuration={travelDuration}
-                  onTravelDurationChange={setTravelDuration}
-                  reminders={reminders}
-                  onRemindersChange={setReminders}
-                  transparency={transparency}
-                  onTransparencyChange={setTransparency}
-                  relatedTo={relatedTo}
-                  onRelatedToChange={setRelatedTo}
-                  candidateEvents={candidateEvents}
-                  attachments={attachments}
-                  onAttachmentsChange={setAttachments}
-                  attachmentEventId={selectedEventId}
-                />
-              )}
-            </div>
-
-            <div className={styles.modalGroup}>
-              <div className={styles.modalRow2}>
-                <input
-                  type="text"
-                  placeholder="Location"
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                  className={styles.modalInput}
-                  data-component="event-location-input"
-                />
-
-                <select
-                  id="calendar-select"
-                  value={calendarId}
-                  onChange={(e) => handleCalendarChange(e.target.value)}
-                  className={styles.modalSelect}
-                  data-component="event-calendar-select"
-                  disabled={isCurrentCalendarReadOnly}
+                <svg
+                  aria-hidden="true"
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
                 >
-                  {isCurrentCalendarReadOnly &&
-                    !compatibleCalendars.some((cal) => cal.id === calendarId) && (
-                      <option value={calendarId}>
-                        {calendars.find((c) => c.id === calendarId)?.name} (read-only)
-                      </option>
-                    )}
-                  {compatibleCalendars.map((cal) => (
-                    <option key={cal.id} value={cal.id}>
-                      {cal.name}
-                    </option>
-                  ))}
-                </select>
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                </svg>
+              </button>
+              <div className={styles.titleInputWrapper}>
+                <input
+                  ref={titleInputRef}
+                  type="text"
+                  placeholder={isTaskMode ? 'Task title' : 'Event title'}
+                  value={title}
+                  onChange={(e) => handleTitleChange(e.target.value)}
+                  onKeyDown={handleTitleKeyDown}
+                  className={styles.modalTitle}
+                  data-component="event-title-input"
+                  required
+                  onInvalid={(e) => {
+                    e.preventDefault()
+                    showToast('Title is required')
+                  }}
+                />
+                {showSuggestions && (
+                  <div className={styles.titleSuggestions}>
+                    {titleSuggestions.map((ev, i) => (
+                      <button
+                        key={ev.id}
+                        type="button"
+                        className={`${styles.suggestionItem} ${i === highlightedIndex ? styles.suggestionItemActive : ''}`}
+                        onClick={() => applySuggestion(ev)}
+                      >
+                        <span className={styles.suggestionTitle}>{ev.title}</span>
+                        {ev.description && (
+                          <span className={styles.suggestionDesc}>{ev.description}</span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {nlpSuggestion && !showSuggestions && (
+                  <button
+                    type="button"
+                    className={styles.nlpChip}
+                    onClick={() => applyNlpSuggestion(nlpSuggestion)}
+                    data-component="nlp-suggestion"
+                  >
+                    <span className={styles.nlpChipIcon} aria-hidden="true">
+                      ✨
+                    </span>
+                    <span className={styles.nlpChipText}>
+                      {nlpSuggestion.isAllDay
+                        ? format(nlpSuggestion.startDate, 'EEE, MMM d')
+                        : format(nlpSuggestion.startDate, 'EEE, MMM d · h:mm a')}
+                      {nlpSuggestion.recurrence ? ' · repeats' : ''}
+                    </span>
+                    <kbd className={styles.nlpChipKbd}>Tab</kbd>
+                  </button>
+                )}
+              </div>
+              <button className={styles.modalClose} onClick={animateClose} aria-label="Close">
+                ×
+              </button>
+            </div>
+          </div>
+          <hr className={styles.modalDivider} />
+          <form
+            key={`${selectedEventId}-${selectedDate}-${selectedEventType}`}
+            onClick={(e) => {
+              // Close suggestions when clicking outside the suggestions dropdown
+              if (!(e.target as HTMLElement).closest(`.${styles.titleSuggestions}`)) {
+                setTitleSuggestions([])
+              }
+            }}
+            onSubmit={handleSubmit}
+            className={styles.modalBody}
+            data-component="modal-body"
+          >
+            <div ref={scrollRef} className={styles.modalScroll} data-component="modal-scroll">
+              <div className={styles.modalGroup}>
+                {isTaskMode && (
+                  <TaskFormFields
+                    completed={completed}
+                    onCompletedChange={setCompleted}
+                    dueDate={dueDate}
+                    onDueDateChange={(date) => {
+                      setDueDate(date)
+                      if (!date) setDueAllDay(true)
+                    }}
+                    dueTime={dueTime}
+                    onDueTimeChange={setDueTime}
+                    dueAllDay={dueAllDay}
+                    onDueAllDayChange={setDueAllDay}
+                    priority={priority}
+                    onPriorityChange={setPriority}
+                    parentTaskId={parentTaskId}
+                    parentTasks={parentTaskOptions}
+                    onParentTaskChange={setParentTaskId}
+                    subtasks={subtasks}
+                    onOpenSubtask={(taskId) => openModal(undefined, undefined, taskId, 'task')}
+                    onAddSubtask={
+                      selectedEventId
+                        ? () =>
+                            openModal(
+                              undefined,
+                              undefined,
+                              undefined,
+                              'task',
+                              undefined,
+                              selectedEventId
+                            )
+                        : undefined
+                    }
+                  />
+                )}
+
+                {!isTaskMode && (
+                  <EventFormFields
+                    isAllDay={isAllDay}
+                    onIsAllDayChange={setIsAllDay}
+                    startDate={startDate}
+                    onStartDateChange={setStartDate}
+                    startTime={startTime}
+                    onStartTimeChange={setStartTime}
+                    endDate={endDate}
+                    onEndDateChange={setEndDate}
+                    endTime={endTime}
+                    onEndTimeChange={handleEndTimeChange}
+                    recurring={recurring}
+                    onRecurringChange={setRecurring}
+                    recurrence={recurrence}
+                    onRecurrenceChange={(freq) => {
+                      setRecurrence(freq)
+                      // Clear weekday/month selections that don't apply to the new frequency
+                      if (freq !== 'weekly' && freq !== 'monthly' && freq !== 'yearly') {
+                        setByWeekday([])
+                      }
+                      if (freq !== 'monthly' && freq !== 'yearly') {
+                        setByMonthDay([])
+                        setByMonth([])
+                        setByDayOrdinals([])
+                      }
+                    }}
+                    interval={interval}
+                    onIntervalChange={setInterval}
+                    byWeekday={byWeekday}
+                    onByWeekdayChange={setByWeekday}
+                    byMonthDay={byMonthDay}
+                    onByMonthDayChange={setByMonthDay}
+                    byMonth={byMonth}
+                    onByMonthChange={setByMonth}
+                    byDayOrdinals={byDayOrdinals}
+                    onByDayOrdinalsChange={setByDayOrdinals}
+                    endCondition={endCondition}
+                    onEndConditionChange={setEndCondition}
+                    endOnDate={endOnDate}
+                    onEndOnDateChange={setEndOnDate}
+                    endAfterCount={endAfterCount}
+                    onEndAfterCountChange={setEndAfterCount}
+                    travelDuration={travelDuration}
+                    onTravelDurationChange={setTravelDuration}
+                    reminders={reminders}
+                    onRemindersChange={setReminders}
+                    transparency={transparency}
+                    onTransparencyChange={setTransparency}
+                    relatedTo={relatedTo}
+                    onRelatedToChange={setRelatedTo}
+                    candidateEvents={candidateEvents}
+                    attachments={attachments}
+                    onAttachmentsChange={setAttachments}
+                    attachmentEventId={selectedEventId}
+                  />
+                )}
               </div>
 
-              {isCurrentCalendarReadOnly && (
-                <p className={styles.readOnlyNotice} data-component="readonly-calendar-notice">
-                  This calendar is a read-only subscription — events sync from the source and
-                  can&apos;t be edited here.
-                </p>
-              )}
-            </div>
-
-            <div className={styles.modalGroup}>
-              {categories.length > 0 && (
+              <div className={styles.modalGroup}>
                 <div className={styles.modalRow2}>
-                  <div className={styles.categoriesContainer}>
-                    <div className={styles.categoriesLabel}>Categories</div>
-                    <div className={styles.categoriesList}>
-                      {categories.map((cat) => (
-                        <button
-                          key={cat.id}
-                          type="button"
-                          aria-pressed={selectedCategories.includes(cat.name)}
-                          className={`${styles.categoryChip} ${
-                            selectedCategories.includes(cat.name) ? styles.categoryChipSelected : ''
-                          }`}
-                          onClick={() => {
-                            if (selectedCategories.includes(cat.name)) {
-                              setSelectedCategories(selectedCategories.filter((name) => name !== cat.name))
-                            } else {
-                              setSelectedCategories([...selectedCategories, cat.name])
-                            }
-                          }}
-                        >
-                          <span
-                            className={styles.categoryChipDot}
-                            style={{ backgroundColor: cat.color }}
-                          />
-                          {cat.name}
-                        </button>
-                      ))}
+                  <input
+                    type="text"
+                    placeholder="Location"
+                    value={location}
+                    onChange={(e) => setLocation(e.target.value)}
+                    className={styles.modalInput}
+                    data-component="event-location-input"
+                  />
+
+                  <select
+                    id="calendar-select"
+                    value={calendarId}
+                    onChange={(e) => handleCalendarChange(e.target.value)}
+                    className={styles.modalSelect}
+                    data-component="event-calendar-select"
+                    disabled={isCurrentCalendarReadOnly}
+                  >
+                    {isCurrentCalendarReadOnly &&
+                      !compatibleCalendars.some((cal) => cal.id === calendarId) && (
+                        <option value={calendarId}>
+                          {calendars.find((c) => c.id === calendarId)?.name} (read-only)
+                        </option>
+                      )}
+                    {compatibleCalendars.map((cal) => (
+                      <option key={cal.id} value={cal.id}>
+                        {cal.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {isCurrentCalendarReadOnly && (
+                  <p className={styles.readOnlyNotice} data-component="readonly-calendar-notice">
+                    This calendar is a read-only subscription — events sync from the source and
+                    can&apos;t be edited here.
+                  </p>
+                )}
+              </div>
+
+              <div className={styles.modalGroup}>
+                {categories.length > 0 && (
+                  <div className={styles.modalRow2}>
+                    <div className={styles.categoriesContainer}>
+                      <div className={styles.categoriesLabel}>Categories</div>
+                      <div className={styles.categoriesList}>
+                        {categories.map((cat) => (
+                          <button
+                            key={cat.id}
+                            type="button"
+                            aria-pressed={selectedCategories.includes(cat.name)}
+                            className={`${styles.categoryChip} ${
+                              selectedCategories.includes(cat.name)
+                                ? styles.categoryChipSelected
+                                : ''
+                            }`}
+                            onClick={() => {
+                              if (selectedCategories.includes(cat.name)) {
+                                setSelectedCategories(
+                                  selectedCategories.filter((name) => name !== cat.name)
+                                )
+                              } else {
+                                setSelectedCategories([...selectedCategories, cat.name])
+                              }
+                            }}
+                          >
+                            <span
+                              className={styles.categoryChipDot}
+                              style={{ backgroundColor: cat.color }}
+                            />
+                            {cat.name}
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              {!showDescription ? (
+                {!showDescription ? (
+                  <button
+                    type="button"
+                    className={styles.modalAddDesc}
+                    onClick={() => setShowDescription(true)}
+                  >
+                    + Add description
+                  </button>
+                ) : (
+                  <div className={styles.modalField}>
+                    <div className={styles.fieldHeader}>
+                      <label className={styles.label}>Description</label>
+                      <button
+                        type="button"
+                        className={styles.removeFieldButton}
+                        onClick={() => {
+                          setShowDescription(false)
+                          setDescription('')
+                        }}
+                      >
+                        ×
+                      </button>
+                    </div>
+                    <textarea
+                      placeholder="Add description..."
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      className={`${styles.modalInput} ${styles.modalTextarea}`}
+                      data-component="event-description-input"
+                      rows={3}
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className={styles.modalFooter} data-component="modal-footer">
+              {isEditing && !isCurrentCalendarReadOnly && (
                 <button
                   type="button"
-                  className={styles.modalAddDesc}
-                  onClick={() => setShowDescription(true)}
+                  className={`${styles.modalDelete} ${confirmDelete ? styles.modalDeleteConfirm : ''}`}
+                  onClick={handleDelete}
                 >
-                  + Add description
+                  {confirmDelete ? 'Click again to confirm' : 'Delete'}
                 </button>
-              ) : (
-                <div className={styles.modalField}>
-                  <div className={styles.fieldHeader}>
-                    <label className={styles.label}>Description</label>
-                    <button
-                      type="button"
-                      className={styles.removeFieldButton}
-                      onClick={() => {
-                        setShowDescription(false)
-                        setDescription('')
-                      }}
-                    >
-                      ×
-                    </button>
-                  </div>
-                  <textarea
-                    placeholder="Add description..."
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    className={`${styles.modalInput} ${styles.modalTextarea}`}
-                    data-component="event-description-input"
-                    rows={3}
-                  />
-                </div>
               )}
+              <div className={styles.modalActions}>
+                <button type="button" className={styles.modalCancel} onClick={animateClose}>
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className={styles.modalSave}
+                  disabled={
+                    !title.trim() ||
+                    isTimeRangeInvalid ||
+                    isSaving ||
+                    isCurrentCalendarReadOnly ||
+                    !compatibleCalendars.some((calendar) => calendar.id === calendarId)
+                  }
+                  aria-busy={isSaving}
+                  data-component="modal-save"
+                >
+                  {isSaving && <span className={styles.modalSaveSpinner} aria-hidden="true" />}
+                  <span>{isSaving ? 'Saving…' : isEditing ? 'Save' : 'Create'}</span>
+                </button>
+              </div>
             </div>
-          </div>
-
-          <div className={styles.modalFooter} data-component="modal-footer">
-            {isEditing && !isCurrentCalendarReadOnly && (
-              <button type="button" className={`${styles.modalDelete} ${confirmDelete ? styles.modalDeleteConfirm : ''}`} onClick={handleDelete}>
-                {confirmDelete ? 'Click again to confirm' : 'Delete'}
-              </button>
-            )}
-            <div className={styles.modalActions}>
-              <button type="button" className={styles.modalCancel} onClick={animateClose}>
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className={styles.modalSave}
-                disabled={
-                  !title.trim() ||
-                  isTimeRangeInvalid ||
-                  isSaving ||
-                  isCurrentCalendarReadOnly ||
-                  !compatibleCalendars.some((calendar) => calendar.id === calendarId)
-                }
-                aria-busy={isSaving}
-                data-component="modal-save"
-              >
-                {isSaving && (
-                  <span className={styles.modalSaveSpinner} aria-hidden="true" />
-                )}
-                <span>{isSaving ? 'Saving…' : isEditing ? 'Save' : 'Create'}</span>
-              </button>
-            </div>
-          </div>
-        </form>
+          </form>
         </div>
       </motion.div>
 

@@ -16,7 +16,13 @@ const MOCHA_ACCENTS = [
   { label: 'Peach', value: '#fab387' },
 ]
 
-function MiniCalendarPreview({ themeId, variant }: { themeId: string; variant: 'light' | 'dark' | 'system' }): JSX.Element {
+function MiniCalendarPreview({
+  themeId,
+  variant,
+}: {
+  themeId: string
+  variant: 'light' | 'dark' | 'system'
+}): JSX.Element {
   // Extract theme colors from the theme's CSS (dynamically reflects the selected theme)
   const css = getThemePreviewCSS(themeId)
   const extract = (prop: string, fallback: string) => {
@@ -36,22 +42,25 @@ function MiniCalendarPreview({ themeId, variant }: { themeId: string; variant: '
 
   const isSystem = variant === 'system'
   const bg = isSystem ? `linear-gradient(135deg, ${canvas} 50%, #1a1816 50%)` : canvas
-  const cellBg = isSystem
-    ? `linear-gradient(135deg, ${panel} 50%, #242220 50%)`
-    : panel
+  const cellBg = isSystem ? `linear-gradient(135deg, ${panel} 50%, #242220 50%)` : panel
   const eventBg = isSystem
     ? `linear-gradient(135deg, ${accentMixLight} 50%, ${accentMixDark} 50%)`
     : accentMixLight
 
   return (
-    <div className={`${styles.themeCardPreview} ${variant === 'light' ? styles.themeCardPreviewLight : variant === 'dark' ? styles.themeCardPreviewDark : styles.themeCardPreviewSystem}`} style={{ background: bg }}>
+    <div
+      className={`${styles.themeCardPreview} ${variant === 'light' ? styles.themeCardPreviewLight : variant === 'dark' ? styles.themeCardPreviewDark : styles.themeCardPreviewSystem}`}
+      style={{ background: bg }}
+    >
       <div className={styles.tcBar} style={{ background: cellBg, width: '60%' }} />
       <div className={styles.tcGrid}>
         {Array.from({ length: 14 }, (_, i) => (
           <div
             key={i}
             className={styles.tcDay}
-            style={i === 2 || i === 5 || i === 10 ? { background: eventBg } : { background: cellBg }}
+            style={
+              i === 2 || i === 5 || i === 10 ? { background: eventBg } : { background: cellBg }
+            }
           />
         ))}
       </div>
@@ -59,7 +68,15 @@ function MiniCalendarPreview({ themeId, variant }: { themeId: string; variant: '
   )
 }
 
-function extractThemeProps(css: string): { bg: string; panel: string; accent: string; text: string; radiusSm: string; radiusMd: string; radiusLg: string } {
+function extractThemeProps(css: string): {
+  bg: string
+  panel: string
+  accent: string
+  text: string
+  radiusSm: string
+  radiusMd: string
+  radiusLg: string
+} {
   const get = (prop: string, fallback: string): string => {
     const match = css.match(new RegExp(`${prop}:\\s*([^;]+)`))
     return match ? match[1].trim() : fallback
@@ -75,7 +92,17 @@ function extractThemeProps(css: string): { bg: string; panel: string; accent: st
   }
 }
 
-function ThemePreviewCard({ name, css, isActive, onClick }: { name: string; css: string; isActive: boolean; onClick: () => void }): JSX.Element {
+function ThemePreviewCard({
+  name,
+  css,
+  isActive,
+  onClick,
+}: {
+  name: string
+  css: string
+  isActive: boolean
+  onClick: () => void
+}): JSX.Element {
   const props = useMemo(() => extractThemeProps(css), [css])
 
   return (
@@ -88,12 +115,42 @@ function ThemePreviewCard({ name, css, isActive, onClick }: { name: string; css:
       type="button"
     >
       <div className={styles.themePreviewSwatch} style={{ background: props.bg }}>
-        <div className={styles.themePreviewPanel} style={{ background: props.panel, borderRadius: props.radiusMd }}>
-          <div className={styles.themePreviewBar} style={{ background: props.accent, width: '50%', borderRadius: props.radiusSm }} />
+        <div
+          className={styles.themePreviewPanel}
+          style={{ background: props.panel, borderRadius: props.radiusMd }}
+        >
+          <div
+            className={styles.themePreviewBar}
+            style={{ background: props.accent, width: '50%', borderRadius: props.radiusSm }}
+          />
           <div className={styles.themePreviewRows}>
-            <div className={styles.themePreviewRow} style={{ background: props.text, opacity: 0.15, width: '80%', borderRadius: props.radiusSm }} />
-            <div className={styles.themePreviewRow} style={{ background: props.text, opacity: 0.1, width: '60%', borderRadius: props.radiusSm }} />
-            <div className={styles.themePreviewRow} style={{ background: props.text, opacity: 0.06, width: '70%', borderRadius: props.radiusSm }} />
+            <div
+              className={styles.themePreviewRow}
+              style={{
+                background: props.text,
+                opacity: 0.15,
+                width: '80%',
+                borderRadius: props.radiusSm,
+              }}
+            />
+            <div
+              className={styles.themePreviewRow}
+              style={{
+                background: props.text,
+                opacity: 0.1,
+                width: '60%',
+                borderRadius: props.radiusSm,
+              }}
+            />
+            <div
+              className={styles.themePreviewRow}
+              style={{
+                background: props.text,
+                opacity: 0.06,
+                width: '70%',
+                borderRadius: props.radiusSm,
+              }}
+            />
           </div>
         </div>
       </div>
@@ -119,10 +176,18 @@ export function ThemeSettings(): JSX.Element {
   const darkThemes = loadedThemes.filter((t) => t.isDark)
 
   return (
-    <section className={`${styles.section} ${styles.sectionActive}`} data-component="theme-settings">
+    <section
+      className={`${styles.section} ${styles.sectionActive}`}
+      data-component="theme-settings"
+    >
       <h1 className={styles.pageTitle}>Appearance</h1>
       <div className={styles.group}>
-        <div className={`${styles.row} ${styles.rowSubhead}`} data-component="setting-row" data-setting="theme-mode" data-value={themeMode}>
+        <div
+          className={`${styles.row} ${styles.rowSubhead}`}
+          data-component="setting-row"
+          data-setting="theme-mode"
+          data-value={themeMode}
+        >
           <div className={styles.rowInfo}>
             <div className={styles.rowLabel}>Appearance</div>
             <div className={styles.rowDesc}>Choose how Calino looks</div>
@@ -145,13 +210,28 @@ export function ThemeSettings(): JSX.Element {
                 type="button"
               >
                 <MiniCalendarPreview
-                  themeId={isLight ? lightTheme : isDark ? darkTheme : (window.matchMedia('(prefers-color-scheme: dark)').matches ? darkTheme : lightTheme)}
+                  themeId={
+                    isLight
+                      ? lightTheme
+                      : isDark
+                        ? darkTheme
+                        : window.matchMedia('(prefers-color-scheme: dark)').matches
+                          ? darkTheme
+                          : lightTheme
+                  }
                   variant={isLight ? 'light' : isDark ? 'dark' : 'system'}
                 />
                 <div className={styles.themeCardLabel}>
                   {isSystem ? 'System' : opt.label}
                   <div className={styles.tcCheck}>
-                    <svg viewBox="0 0 9 9" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+                    <svg
+                      viewBox="0 0 9 9"
+                      fill="none"
+                      stroke="#fff"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                      aria-hidden="true"
+                    >
                       <path d="M1.5 4.5l2 2L7.5 2" />
                     </svg>
                   </div>
@@ -160,7 +240,12 @@ export function ThemeSettings(): JSX.Element {
             )
           })}
         </div>
-        <div className={`${styles.row} ${styles.rowSubhead}`} data-component="setting-row" data-setting="light-theme" data-value={lightTheme}>
+        <div
+          className={`${styles.row} ${styles.rowSubhead}`}
+          data-component="setting-row"
+          data-setting="light-theme"
+          data-value={lightTheme}
+        >
           <div className={styles.rowInfo}>
             <div className={styles.rowLabel}>Light Theme</div>
             <div className={styles.rowDesc}>Color palette used in light mode</div>
@@ -177,7 +262,12 @@ export function ThemeSettings(): JSX.Element {
             />
           ))}
         </div>
-        <div className={`${styles.row} ${styles.rowSubhead}`} data-component="setting-row" data-setting="dark-theme" data-value={darkTheme}>
+        <div
+          className={`${styles.row} ${styles.rowSubhead}`}
+          data-component="setting-row"
+          data-setting="dark-theme"
+          data-value={darkTheme}
+        >
           <div className={styles.rowInfo}>
             <div className={styles.rowLabel}>Dark Theme</div>
             <div className={styles.rowDesc}>Color palette used in dark mode</div>
@@ -200,7 +290,11 @@ export function ThemeSettings(): JSX.Element {
               <div className={styles.rowLabel}>Catppuccin accent</div>
               <div className={styles.rowDesc}>Used for selection, focus, and primary actions</div>
             </div>
-            <div className={styles.mochaAccentOptions} role="group" aria-label="Catppuccin accent color">
+            <div
+              className={styles.mochaAccentOptions}
+              role="group"
+              aria-label="Catppuccin accent color"
+            >
               {MOCHA_ACCENTS.map((accent) => (
                 <button
                   key={accent.value}
@@ -216,13 +310,24 @@ export function ThemeSettings(): JSX.Element {
             </div>
           </div>
         )}
-        <div className={styles.row} data-component="setting-row" data-setting="show-event-icons" data-value={String(showEventIcons)}>
+        <div
+          className={styles.row}
+          data-component="setting-row"
+          data-setting="show-event-icons"
+          data-value={String(showEventIcons)}
+        >
           <div className={styles.rowInfo}>
             <div className={styles.rowLabel}>Event icons</div>
-            <div className={styles.rowDesc}>Show a matching icon on events based on their title (e.g. a coffee cup for "Coffee")</div>
+            <div className={styles.rowDesc}>
+              Show a matching icon on events based on their title (e.g. a coffee cup for "Coffee")
+            </div>
           </div>
           <div className={styles.rowControl}>
-            <label className={styles.toggle} data-component="toggle" data-setting="show-event-icons">
+            <label
+              className={styles.toggle}
+              data-component="toggle"
+              data-setting="show-event-icons"
+            >
               <input
                 type="checkbox"
                 checked={showEventIcons}
@@ -241,9 +346,15 @@ export function ThemeSettings(): JSX.Element {
           </div>
           <div className={styles.rowControl}>
             <div className={styles.seg}>
-              <button className={`${styles.segTab} ${styles.segTabActive}`} type="button">Small</button>
-              <button className={styles.segTab} type="button">Default</button>
-              <button className={styles.segTab} type="button">Large</button>
+              <button className={`${styles.segTab} ${styles.segTabActive}`} type="button">
+                Small
+              </button>
+              <button className={styles.segTab} type="button">
+                Default
+              </button>
+              <button className={styles.segTab} type="button">
+                Large
+              </button>
             </div>
           </div>
         </div>

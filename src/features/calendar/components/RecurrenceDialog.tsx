@@ -24,10 +24,7 @@ export function RecurrenceDialog({
   if (!rendered) return null
 
   return (
-    <div
-      className={`${styles.overlay} ${closing ? styles.closing : ''}`}
-      onClick={requestClose}
-    >
+    <div className={`${styles.overlay} ${closing ? styles.closing : ''}`} onClick={requestClose}>
       <div
         ref={modalRef}
         className={styles.modal}
@@ -54,7 +51,11 @@ export function RecurrenceDialog({
             <button type="button" className={styles.actionButton} onClick={() => onConfirm('all')}>
               All events
             </button>
-            <button type="button" className={styles.actionButton} onClick={() => onConfirm('future')}>
+            <button
+              type="button"
+              className={styles.actionButton}
+              onClick={() => onConfirm('future')}
+            >
               This and following events
             </button>
             <button type="button" className={styles.actionButton} onClick={() => onConfirm('this')}>

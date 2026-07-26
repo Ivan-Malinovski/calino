@@ -15,7 +15,9 @@ describe('normalizeWebcalUrl', () => {
   })
 
   it('trims whitespace', () => {
-    expect(normalizeWebcalUrl('  https://example.com/cal.ics  ')).toBe('https://example.com/cal.ics')
+    expect(normalizeWebcalUrl('  https://example.com/cal.ics  ')).toBe(
+      'https://example.com/cal.ics'
+    )
   })
 })
 
@@ -39,14 +41,14 @@ describe('fetchWebcalIcs', () => {
   })
 
   it('throws a friendly error on non-2xx response', async () => {
-    vi.mocked(globalThis.fetch).mockResolvedValue(
-      new Response('', { status: 404 })
-    )
+    vi.mocked(globalThis.fetch).mockResolvedValue(new Response('', { status: 404 }))
     await expect(fetchWebcalIcs('https://example.com/cal.ics')).rejects.toThrow(/status 404/)
   })
 
   it('throws on a response that is not a valid VCALENDAR', async () => {
-    vi.mocked(globalThis.fetch).mockResolvedValue(new Response('<html>not ics</html>', { status: 200 }))
+    vi.mocked(globalThis.fetch).mockResolvedValue(
+      new Response('<html>not ics</html>', { status: 200 })
+    )
     await expect(fetchWebcalIcs('https://example.com/cal.ics')).rejects.toThrow(/valid iCalendar/)
   })
 

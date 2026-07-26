@@ -67,8 +67,6 @@ export interface CommandPaletteItem {
   itemType: 'command' | 'event' | 'calendar' | 'quick-add'
 }
 
-
-
 export type DateNavigationTarget =
   | 'today'
   | 'tomorrow'

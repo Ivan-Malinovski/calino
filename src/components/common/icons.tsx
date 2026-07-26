@@ -79,7 +79,16 @@ export function SettingsIcon({ size = 20 }: IconProps = {}): JSX.Element {
 
 export function TuneIcon({ size = 20 }: IconProps = {}): JSX.Element {
   return (
-    <svg aria-hidden="true" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+    <svg
+      aria-hidden="true"
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+    >
       <line x1="4" y1="8" x2="20" y2="8" />
       <line x1="4" y1="16" x2="20" y2="16" />
       <circle cx="9" cy="8" r="2.2" fill="var(--panel, #fff)" />
@@ -90,7 +99,8 @@ export function TuneIcon({ size = 20 }: IconProps = {}): JSX.Element {
 
 export function RecurringIcon(): JSX.Element {
   return (
-    <svg aria-hidden="true"
+    <svg
+      aria-hidden="true"
       width="10"
       height="10"
       viewBox="0 0 24 24"

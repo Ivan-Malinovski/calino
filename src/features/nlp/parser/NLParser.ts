@@ -71,21 +71,25 @@ function preprocessInput(input: string, refDate: Date = new Date()): string {
       const mm1 = m1 ?? '00'
       const mm2 = m2 ?? '00'
       const suffix1 = ampm1 ? ampm1.toLowerCase() : ''
-      const suffix2 = ampm2 ? ampm2.toLowerCase() : (ampm1 ? ampm1.toLowerCase() : '')
+      const suffix2 = ampm2 ? ampm2.toLowerCase() : ampm1 ? ampm1.toLowerCase() : ''
       return `${h1}:${mm1}${suffix1}-${h2}:${mm2}${suffix2}`
-    },
+    }
   )
 
   // Fix ordinal dates: "the 15th", "15th", "the 1st", etc. -> add month reference
   // chrono-node handles "15th March" but not ordinal alone, so we add current month
   // But don't replace if preceded by a month name (e.g. "July 4th")
   const currentMonth = MONTH_NAMES[refDate.getMonth()]
-  const monthWords = 'january|february|march|april|may|june|july|august|september|october|november|december'
-  processed = processed.replace(new RegExp(`\\bthe\\s+(\\d{1,2})(st|nd|rd|th)\\b(?!\\s+(?:${monthWords}))`, 'gi'), `$1 ${currentMonth}`)
+  const monthWords =
+    'january|february|march|april|may|june|july|august|september|october|november|december'
+  processed = processed.replace(
+    new RegExp(`\\bthe\\s+(\\d{1,2})(st|nd|rd|th)\\b(?!\\s+(?:${monthWords}))`, 'gi'),
+    `$1 ${currentMonth}`
+  )
   // Replace bare ordinals: split on ordinal, check preceding word is not a month
   processed = processed.replace(/\b(\d{1,2})(st|nd|rd|th)\b/gi, (match, num, _suffix, offset) => {
     const before = processed.slice(0, offset).toLowerCase()
-    const monthBefore = MONTH_NAMES.some(m => before.endsWith(m + ' '))
+    const monthBefore = MONTH_NAMES.some((m) => before.endsWith(m + ' '))
     if (monthBefore) return match // preceded by month, don't replace
     return `${num} ${currentMonth}`
   })

@@ -43,7 +43,7 @@ export function eventTimeRange(
   day: number,
   hour = 0,
   minute = 0,
-  durationMs = 60 * 60 * 1000,
+  durationMs = 60 * 60 * 1000
 ): { start: string; end: string } {
   const start = new Date(year, month, day, hour, minute)
   const end = new Date(start.getTime() + durationMs)

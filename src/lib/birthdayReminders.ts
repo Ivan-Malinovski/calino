@@ -31,9 +31,7 @@ function annualStartDateStr(date: string): string {
 /**
  * Create an annual recurring all-day event for a contact's birthday.
  */
-export function createBirthdayEvent(
-  options: CreateBirthdayEventOptions
-): CalendarEvent {
+export function createBirthdayEvent(options: CreateBirthdayEventOptions): CalendarEvent {
   const { contactId, contactName, birthday, calendarId } = options
 
   const dateStr = annualStartDateStr(birthday)
@@ -59,19 +57,14 @@ export function createBirthdayEvent(
 /**
  * Check if a birthday event already exists for this contact.
  */
-export function hasBirthdayEvent(
-  contactId: string,
-  events: CalendarEvent[]
-): boolean {
+export function hasBirthdayEvent(contactId: string, events: CalendarEvent[]): boolean {
   return events.some((e) => e.url === `calino:contact:${contactId}`)
 }
 
 /**
  * Create an annual recurring all-day event for a contact's anniversary.
  */
-export function createAnniversaryEvent(
-  options: CreateAnniversaryEventOptions
-): CalendarEvent {
+export function createAnniversaryEvent(options: CreateAnniversaryEventOptions): CalendarEvent {
   const { contactId, contactName, anniversary, calendarId } = options
 
   const dateStr = annualStartDateStr(anniversary)
@@ -97,9 +90,6 @@ export function createAnniversaryEvent(
 /**
  * Check if an anniversary event already exists for this contact.
  */
-export function hasAnniversaryEvent(
-  contactId: string,
-  events: CalendarEvent[]
-): boolean {
+export function hasAnniversaryEvent(contactId: string, events: CalendarEvent[]): boolean {
   return events.some((e) => e.url === `calino:contact:${contactId}:anniversary`)
 }

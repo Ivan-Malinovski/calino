@@ -12,17 +12,25 @@ const BUILT_IN_THEME_ID = 'built-in'
 const BUILT_IN_DARK_THEME_ID = 'built-in-dark'
 
 // Load built-in theme CSS at build time (Vite replaces this with the file content)
-const BUILT_IN_CSS: string = (import.meta.glob('/src/themes/built-in.css', {
-  query: '?raw',
-  import: 'default',
-  eager: true,
-}) as Record<string, string>)['/src/themes/built-in.css'] ?? ''
+const BUILT_IN_CSS: string =
+  (
+    import.meta.glob('/src/themes/built-in.css', {
+      query: '?raw',
+      import: 'default',
+      eager: true,
+    }) as Record<string, string>
+  )['/src/themes/built-in.css'] ?? ''
 
 let cachedThemes: ThemeInfo[] | null = null
 const cachedCSS: Map<string, string> = new Map()
 
-export function extractThemeName(css: string, filename: string): { name: string; isDark: boolean; isBoth: boolean } {
-  const themeCommentMatch = css.match(/\/\*\s*Theme:\s*(.+?)\s*(?:\|?\s*(dark|light|both))?\s*\*\//i)
+export function extractThemeName(
+  css: string,
+  filename: string
+): { name: string; isDark: boolean; isBoth: boolean } {
+  const themeCommentMatch = css.match(
+    /\/\*\s*Theme:\s*(.+?)\s*(?:\|?\s*(dark|light|both))?\s*\*\//i
+  )
 
   if (themeCommentMatch) {
     const name = themeCommentMatch[1].trim()
@@ -51,7 +59,8 @@ export function extractCSSSection(css: string, mode: 'light' | 'dark'): string {
 
   for (const line of lines) {
     const matchesMode = line.includes(`[data-theme='${mode}']`)
-    const matchesRoot = mode === 'light' && line.includes(':root,') && !line.includes('data-theme-id')
+    const matchesRoot =
+      mode === 'light' && line.includes(':root,') && !line.includes('data-theme-id')
 
     if (matchesMode || matchesRoot) {
       inSection = true

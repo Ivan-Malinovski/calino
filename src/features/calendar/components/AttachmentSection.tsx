@@ -28,7 +28,11 @@ export function AttachmentSection({
 
   const handleRemove = (index: number): void => {
     const att = attachments[index]
-    if (window.confirm(`Remove "${att.filename || 'attachment'}" from this event? It will be deleted from the server when you save.`)) {
+    if (
+      window.confirm(
+        `Remove "${att.filename || 'attachment'}" from this event? It will be deleted from the server when you save.`
+      )
+    ) {
       const remaining = attachments.filter((_, i) => i !== index)
       onAttachmentsChange(remaining)
       if (remaining.length > 0) {
@@ -47,25 +51,28 @@ export function AttachmentSection({
         return false
       }
       if (file.size > MAX_ATTACHMENT_SIZE_BYTES) {
-        showToast(`File "${file.name}" is larger than ${MAX_ATTACHMENT_SIZE_MB}MB and may not sync properly`)
+        showToast(
+          `File "${file.name}" is larger than ${MAX_ATTACHMENT_SIZE_MB}MB and may not sync properly`
+        )
       }
       return true
     })
 
-    const readPromises = filtered.map((file) =>
-      new Promise<CalendarAttachment>((resolve, reject) => {
-        const reader = new FileReader()
-        reader.onload = () => {
-          resolve({
-            href: reader.result as string,
-            contentType: file.type || 'application/octet-stream',
-            size: file.size,
-            filename: file.name,
-          })
-        }
-        reader.onerror = () => reject(new Error(`Failed to read ${file.name}`))
-        reader.readAsDataURL(file)
-      })
+    const readPromises = filtered.map(
+      (file) =>
+        new Promise<CalendarAttachment>((resolve, reject) => {
+          const reader = new FileReader()
+          reader.onload = () => {
+            resolve({
+              href: reader.result as string,
+              contentType: file.type || 'application/octet-stream',
+              size: file.size,
+              filename: file.name,
+            })
+          }
+          reader.onerror = () => reject(new Error(`Failed to read ${file.name}`))
+          reader.readAsDataURL(file)
+        })
     )
 
     Promise.all(readPromises)
@@ -146,16 +153,9 @@ export function AttachmentSection({
         </div>
       )}
 
-      <label
-        className={compact ? styles.addAttachmentButtonCompact : styles.addAttachmentButton}
-      >
+      <label className={compact ? styles.addAttachmentButtonCompact : styles.addAttachmentButton}>
         <span>{compact ? '+ Attach' : '+ Add attachment'}</span>
-        <input
-          type="file"
-          className={styles.hiddenFileInput}
-          multiple
-          onChange={handleAdd}
-        />
+        <input type="file" className={styles.hiddenFileInput} multiple onChange={handleAdd} />
       </label>
     </div>
   )

@@ -109,7 +109,9 @@ export function useUpdateCheck(): UpdateInfo {
       } catch (err) {
         if (!cancelled) {
           setError(
-            err instanceof Error ? `Failed to check for updates: ${err.message}` : 'Failed to check for updates'
+            err instanceof Error
+              ? `Failed to check for updates: ${err.message}`
+              : 'Failed to check for updates'
           )
         }
       } finally {

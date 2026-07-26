@@ -34,15 +34,8 @@ export function CurrentTimeIndicator({
   const top = (minutesSinceMidnight / 60) * hourHeight
 
   return (
-    <div
-      className={`${styles.container} ${className ?? ''}`}
-      style={{ top: `${top}px` }}
-    >
-      {showLabel && (
-        <div className={styles.label}>
-          {formatTime(now, timeFormat)}
-        </div>
-      )}
+    <div className={`${styles.container} ${className ?? ''}`} style={{ top: `${top}px` }}>
+      {showLabel && <div className={styles.label}>{formatTime(now, timeFormat)}</div>}
       <div className={styles.line} />
     </div>
   )

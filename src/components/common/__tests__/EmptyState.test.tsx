@@ -16,10 +16,7 @@ describe('EmptyState', () => {
 
   it('renders the icon when provided', () => {
     const { container } = render(
-      <EmptyState
-        icon={<span data-testid="my-icon">📅</span>}
-        title="Empty"
-      />
+      <EmptyState icon={<span data-testid="my-icon">📅</span>} title="Empty" />
     )
     expect(screen.getByTestId('my-icon')).toBeInTheDocument()
     // icon should be hidden from assistive tech
@@ -27,12 +24,7 @@ describe('EmptyState', () => {
   })
 
   it('renders an action element when provided', () => {
-    render(
-      <EmptyState
-        title="Empty"
-        action={<button type="button">Do the thing</button>}
-      />
-    )
+    render(<EmptyState title="Empty" action={<button type="button">Do the thing</button>} />)
     expect(screen.getByRole('button', { name: /do the thing/i })).toBeInTheDocument()
   })
 

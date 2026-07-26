@@ -34,7 +34,7 @@ let cachedConfig: CalinoConfig | null | undefined
 
 const MasterEncryptedDataSchema = z.custom<MasterEncryptedData>(
   (value) => isMasterEncryptedData(value),
-  { message: 'Expected MasterEncryptedData shape' },
+  { message: 'Expected MasterEncryptedData shape' }
 )
 
 const PreconfiguredAccountSchema = z.object({

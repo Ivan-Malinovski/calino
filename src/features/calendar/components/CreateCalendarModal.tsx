@@ -12,7 +12,11 @@ interface CreateCalendarModalProps {
   accountId?: string | null
 }
 
-export function CreateCalendarModal({ isOpen, onClose, accountId }: CreateCalendarModalProps): JSX.Element | null {
+export function CreateCalendarModal({
+  isOpen,
+  onClose,
+  accountId,
+}: CreateCalendarModalProps): JSX.Element | null {
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [color, setColor] = useState<string>(EVENT_COLORS[0])
@@ -104,9 +108,7 @@ export function CreateCalendarModal({ isOpen, onClose, accountId }: CreateCalend
         <form onSubmit={handleSubmit}>
           {selectedAccount && (
             <div className={styles.formGroup}>
-              <span className={styles.formHint}>
-                Creating on: {selectedAccount.name}
-              </span>
+              <span className={styles.formHint}>Creating on: {selectedAccount.name}</span>
             </div>
           )}
           <div className={styles.formGroup}>

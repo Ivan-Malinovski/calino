@@ -30,12 +30,14 @@ vi.mock('react-router-dom', () => ({
 
 vi.mock('framer-motion', () => ({
   motion: {
-    div: React.forwardRef<HTMLDivElement, Record<string, unknown>>(
-      (props, ref) => {
-        const { children, ...rest } = props
-        return <div ref={ref} {...(rest as React.HTMLAttributes<HTMLDivElement>)}>{children as React.ReactNode}</div>
-      }
-    ),
+    div: React.forwardRef<HTMLDivElement, Record<string, unknown>>((props, ref) => {
+      const { children, ...rest } = props
+      return (
+        <div ref={ref} {...(rest as React.HTMLAttributes<HTMLDivElement>)}>
+          {children as React.ReactNode}
+        </div>
+      )
+    }),
   },
   AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   // EventModal's swipe-to-dismiss sheet drives a motion value directly; these
@@ -44,7 +46,9 @@ vi.mock('framer-motion', () => ({
     let value = initial
     return {
       get: () => value,
-      set: (next: number) => { value = next },
+      set: (next: number) => {
+        value = next
+      },
       on: () => () => {},
     }
   },
@@ -72,7 +76,14 @@ vi.mock('@/features/nlp', () => ({
   }),
 }))
 
-const DEFAULT_CALENDAR = { id: 'default', name: 'Cal', color: '#4285F4', isVisible: true, isDefault: true, showTasksInViews: true }
+const DEFAULT_CALENDAR = {
+  id: 'default',
+  name: 'Cal',
+  color: '#4285F4',
+  isVisible: true,
+  isDefault: true,
+  showTasksInViews: true,
+}
 
 // ===========================================================================
 // Bug 9: CommandPalette onClose before async
@@ -233,7 +244,11 @@ describe('Bug 11: Modal dialogs portaled as siblings', () => {
     const { EventPreviewPopup } = await import('@/features/calendar/components/EventPreviewPopup')
 
     render(
-      <EventPreviewPopup event={recurringEvent} position={{ x: 100, y: 100 }} clickedEventId="recurring-1" />
+      <EventPreviewPopup
+        event={recurringEvent}
+        position={{ x: 100, y: 100 }}
+        clickedEventId="recurring-1"
+      />
     )
 
     // Open delete dialog for recurring event
@@ -289,7 +304,11 @@ describe('Bug 12: editEndTime initialization', () => {
     const { EventPreviewPopup } = await import('@/features/calendar/components/EventPreviewPopup')
 
     render(
-      <EventPreviewPopup event={longEvent} position={{ x: 100, y: 100 }} clickedEventId="evt-time-1" />
+      <EventPreviewPopup
+        event={longEvent}
+        position={{ x: 100, y: 100 }}
+        clickedEventId="evt-time-1"
+      />
     )
 
     expect(screen.getByText('09:00 - 11:30')).toBeTruthy()
@@ -311,7 +330,11 @@ describe('Bug 12: editEndTime initialization', () => {
     const { EventPreviewPopup } = await import('@/features/calendar/components/EventPreviewPopup')
 
     render(
-      <EventPreviewPopup event={longEvent} position={{ x: 100, y: 100 }} clickedEventId="evt-time-1" />
+      <EventPreviewPopup
+        event={longEvent}
+        position={{ x: 100, y: 100 }}
+        clickedEventId="evt-time-1"
+      />
     )
 
     expect(screen.getByText('09:00 - 11:30')).toBeTruthy()
@@ -441,7 +464,9 @@ describe('Bug 59: EventModal timezone for all-day events', () => {
 
     // Ensure all-day is NOT checked
     const allDayLabel = screen.getByText('All day')
-    const allDayCheckbox = allDayLabel.closest('label')?.querySelector('input[type="checkbox"]') as HTMLInputElement
+    const allDayCheckbox = allDayLabel
+      .closest('label')
+      ?.querySelector('input[type="checkbox"]') as HTMLInputElement
     if (allDayCheckbox?.checked) {
       await act(async () => {
         fireEvent.click(allDayCheckbox)
@@ -474,7 +499,9 @@ describe('Bug 59: EventModal timezone for all-day events', () => {
     })
 
     const allDayLabel = screen.getByText('All day')
-    const allDayCheckbox = allDayLabel.closest('label')?.querySelector('input[type="checkbox"]') as HTMLInputElement
+    const allDayCheckbox = allDayLabel
+      .closest('label')
+      ?.querySelector('input[type="checkbox"]') as HTMLInputElement
     await act(async () => {
       fireEvent.click(allDayCheckbox)
     })

@@ -15,7 +15,11 @@ interface EmptyStateProps {
 export function EmptyState({ icon, title, description, action }: EmptyStateProps): JSX.Element {
   return (
     <div className={styles.empty} role="status">
-      {icon && <div className={styles.icon} aria-hidden="true">{icon}</div>}
+      {icon && (
+        <div className={styles.icon} aria-hidden="true">
+          {icon}
+        </div>
+      )}
       <h3 className={styles.title}>{title}</h3>
       {description && <p className={styles.description}>{description}</p>}
       {action && <div className={styles.action}>{action}</div>}

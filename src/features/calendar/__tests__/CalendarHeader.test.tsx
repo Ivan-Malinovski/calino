@@ -62,9 +62,7 @@ describe('CalendarHeader', () => {
     // "Today" navigator and the title group with aria-label "Go to
     // today" when in month view). Scope to the navigator via
     // data-component.
-    expect(
-      document.querySelector('[data-component="today-button"]')
-    ).toBeInTheDocument()
+    expect(document.querySelector('[data-component="today-button"]')).toBeInTheDocument()
   })
 
   it('renders navigation buttons', () => {

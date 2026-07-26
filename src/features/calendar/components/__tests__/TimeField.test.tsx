@@ -17,7 +17,15 @@ describe('TimeField', () => {
 
   it('renders TimeInput on desktop', () => {
     ;(useIsMobile as unknown as ReturnType<typeof vi.fn>).mockReturnValue(false)
-    render(<TimeField value="09:00" timeFormat="24h" onChange={() => {}} dataComponent="x" ariaLabel="X" />)
+    render(
+      <TimeField
+        value="09:00"
+        timeFormat="24h"
+        onChange={() => {}}
+        dataComponent="x"
+        ariaLabel="X"
+      />
+    )
     const input = screen.getByLabelText('X')
     expect(input).toHaveAttribute('type', 'text')
     expect(input).toBeRequired()
@@ -25,7 +33,15 @@ describe('TimeField', () => {
 
   it('renders <input type="time"> on mobile', () => {
     ;(useIsMobile as unknown as ReturnType<typeof vi.fn>).mockReturnValue(true)
-    render(<TimeField value="09:00" timeFormat="24h" onChange={() => {}} dataComponent="x" ariaLabel="X" />)
+    render(
+      <TimeField
+        value="09:00"
+        timeFormat="24h"
+        onChange={() => {}}
+        dataComponent="x"
+        ariaLabel="X"
+      />
+    )
     const input = screen.getByLabelText('X')
     expect(input).toHaveAttribute('type', 'time')
     // Native time inputs in browsers blank out the value when `required` and

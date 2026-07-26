@@ -1,9 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import {
-  keywordFromTitle,
-  recordObservation,
-  suggestFromStat,
-} from '../smartDefaults'
+import { keywordFromTitle, recordObservation, suggestFromStat } from '../smartDefaults'
 
 describe('keywordFromTitle', () => {
   it('picks the first meaningful word, lowercased', () => {

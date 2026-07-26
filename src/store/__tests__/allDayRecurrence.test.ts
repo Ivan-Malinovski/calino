@@ -13,8 +13,7 @@ describe('all-day recurrence expansion', () => {
     useCalendarStore.setState({ selectedCategoryIds: [] })
   })
 
-  const defaultCalId = () =>
-    useCalendarStore.getState().calendars.find((c) => c.isDefault)!.id
+  const defaultCalId = () => useCalendarStore.getState().calendars.find((c) => c.isDefault)!.id
 
   it('keeps a daily all-day event on its own day across a spring-forward DST boundary', () => {
     const store = useCalendarStore.getState()
@@ -29,9 +28,7 @@ describe('all-day recurrence expansion', () => {
       rruleString: 'FREQ=DAILY',
     })
 
-    const events = useCalendarStore
-      .getState()
-      .getEventsForDateRange('2026-03-06', '2026-03-11')
+    const events = useCalendarStore.getState().getEventsForDateRange('2026-03-06', '2026-03-11')
 
     // One occurrence per day, each starting at floating midnight of its own day.
     const startDays = events.map((e) => e.start.split('T')[0]).sort()
@@ -186,9 +183,7 @@ describe('all-day recurrence expansion', () => {
       rruleString: 'FREQ=WEEKLY',
     })
 
-    const events = useCalendarStore
-      .getState()
-      .getEventsForDateRange('2026-03-06', '2026-03-06')
+    const events = useCalendarStore.getState().getEventsForDateRange('2026-03-06', '2026-03-06')
 
     expect(events.length).toBe(1)
     expect(events[0].start).toBe('2026-03-06T00:00:00')

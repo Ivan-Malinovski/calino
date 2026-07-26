@@ -8,10 +8,7 @@ import { formatDateLong } from '@/lib/datetime'
  * Returns the raw ISO string on parse error.
  * Used by the broken-events and data-management settings views.
  */
-export function formatBrokenEventDate(
-  iso: string,
-  timeFormat: TimeFormat = '24h',
-): string {
+export function formatBrokenEventDate(iso: string, timeFormat: TimeFormat = '24h'): string {
   try {
     return formatDateLong(iso, timeFormat)
   } catch {

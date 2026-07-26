@@ -16,7 +16,9 @@ async function describeError(status: number, body: unknown): Promise<string> {
     return 'Authentication failed — check that your Anthropic API key is correct.'
   }
   const message = extractErrorMessage(body)
-  return message ? `Anthropic request failed (${status}): ${message}` : `Anthropic request failed with status ${status}`
+  return message
+    ? `Anthropic request failed (${status}): ${message}`
+    : `Anthropic request failed with status ${status}`
 }
 
 function extractErrorMessage(body: unknown): string | undefined {
@@ -50,7 +52,10 @@ export async function listModels(cfg: ProviderRequestConfig): Promise<ModelInfo[
   return data.map((entry: { id: string }) => ({ id: entry.id }))
 }
 
-export async function sendVisionMessage(cfg: ProviderRequestConfig, input: VisionMessageInput): Promise<string> {
+export async function sendVisionMessage(
+  cfg: ProviderRequestConfig,
+  input: VisionMessageInput
+): Promise<string> {
   const response = await httpRequest({
     url: endpointUrl(cfg.baseUrl, '/messages'),
     method: 'POST',

@@ -33,7 +33,8 @@ export function SearchBar({
   return (
     <div className={styles.searchBar}>
       <div className={styles.searchInputWrapper}>
-        <svg aria-hidden="true"
+        <svg
+          aria-hidden="true"
           className={styles.searchIcon}
           viewBox="0 0 24 24"
           fill="none"
@@ -62,7 +63,8 @@ export function SearchBar({
             onClick={onClear}
             aria-label="Clear search"
           >
-            <svg aria-hidden="true"
+            <svg
+              aria-hidden="true"
               width="14"
               height="14"
               viewBox="0 0 24 24"

@@ -19,7 +19,9 @@ function getAttempts(): number {
 function setAttempts(n: number): void {
   try {
     localStorage.setItem(ATTEMPTS_KEY, String(n))
-  } catch { /* unavailable */ }
+  } catch {
+    /* unavailable */
+  }
 }
 
 function getBlockedUntil(): number {
@@ -33,7 +35,9 @@ function getBlockedUntil(): number {
 function setBlockedUntil(ts: number): void {
   try {
     localStorage.setItem(BLOCKED_KEY, String(ts))
-  } catch { /* unavailable */ }
+  } catch {
+    /* unavailable */
+  }
 }
 
 export function MasterPasswordPrompt() {
@@ -47,9 +51,7 @@ export function MasterPasswordPrompt() {
   const [blocked, setBlocked] = useState(() => getBlockedUntil() > Date.now())
   const [remainingSeconds, setRemainingSeconds] = useState(() => {
     const blockedUntil = getBlockedUntil()
-    return blockedUntil > Date.now()
-      ? Math.ceil((blockedUntil - Date.now()) / 1000)
-      : 0
+    return blockedUntil > Date.now() ? Math.ceil((blockedUntil - Date.now()) / 1000) : 0
   })
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -96,7 +98,9 @@ export function MasterPasswordPrompt() {
         setRemainingSeconds(Math.ceil(BLOCK_DURATION_MS / 1000))
         setError(`Too many attempts. Try again in 1 minute.`)
       } else {
-        setError(`Wrong password. ${MAX_ATTEMPTS - newAttempts} attempt${MAX_ATTEMPTS - newAttempts === 1 ? '' : 's'} remaining.`)
+        setError(
+          `Wrong password. ${MAX_ATTEMPTS - newAttempts} attempt${MAX_ATTEMPTS - newAttempts === 1 ? '' : 's'} remaining.`
+        )
       }
 
       setPassword('')
@@ -128,7 +132,12 @@ export function MasterPasswordPrompt() {
   }
 
   return (
-    <div className={styles.overlay} role="dialog" aria-modal="true" aria-label="Unlock CalDAV accounts">
+    <div
+      className={styles.overlay}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Unlock CalDAV accounts"
+    >
       <div className={styles.modal}>
         <div className={styles.header}>
           <div className={styles.icon}>🔐</div>

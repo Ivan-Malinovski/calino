@@ -196,9 +196,7 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
    */
   getCredential: (accountUrl: string, username: string) => {
     const { decryptedCredentials } = get()
-    return decryptedCredentials.find(
-      (c) => c.url === accountUrl && c.username === username
-    ) ?? null
+    return decryptedCredentials.find((c) => c.url === accountUrl && c.username === username) ?? null
   },
 
   /**

@@ -81,12 +81,16 @@ function JournalComposeForm({
   // Non-journal events on the same day for linking
   const sameDayEvents = useMemo(() => {
     const dayKey = editingDate // yyyy-MM-dd
-    return events.filter((e) => e.type !== 'journal' && e.id !== editingId && e.start.startsWith(dayKey))
+    return events.filter(
+      (e) => e.type !== 'journal' && e.id !== editingId && e.start.startsWith(dayKey)
+    )
   }, [events, editingId, editingDate])
 
   const otherDayEvents = useMemo(() => {
     const dayKey = editingDate
-    return events.filter((e) => e.type !== 'journal' && e.id !== editingId && !e.start.startsWith(dayKey))
+    return events.filter(
+      (e) => e.type !== 'journal' && e.id !== editingId && !e.start.startsWith(dayKey)
+    )
   }, [events, editingId, editingDate])
 
   const [showAllRelated, setShowAllRelated] = useState(false)
@@ -134,7 +138,7 @@ function JournalComposeForm({
           onChange={(e) => onBodyChange(e.target.value)}
         />
         {/* Add panel — categories, link, attachments */}
-        {(
+        {
           <div className={styles.addPanel}>
             {!showAddPanel ? (
               <button
@@ -177,9 +181,11 @@ function JournalComposeForm({
                             key={cat.id}
                             type="button"
                             className={`${styles.categoryChip} ${isSelected ? styles.categoryChipActive : ''}`}
-                            style={{
-                              '--chip-color': cat.color,
-                            } as React.CSSProperties}
+                            style={
+                              {
+                                '--chip-color': cat.color,
+                              } as React.CSSProperties
+                            }
                             onClick={() => {
                               if (isSelected) {
                                 onCategoriesChange(selectedCategories.filter((c) => c !== cat.name))
@@ -247,7 +253,7 @@ function JournalComposeForm({
                       </button>
                     )}
                   </div>
-                  {(linkableEvents.length > 0 || (showAllRelated && otherDayEvents.length > 0)) ? (
+                  {linkableEvents.length > 0 || (showAllRelated && otherDayEvents.length > 0) ? (
                     <>
                       <div className={styles.relatedList}>
                         {linkableEvents.map((event) => {
@@ -281,7 +287,9 @@ function JournalComposeForm({
                           className={styles.relatedToggle}
                           onClick={() => setShowAllRelated(!showAllRelated)}
                         >
-                          {showAllRelated ? '↑ Hide other days' : `+ ${otherDayEvents.length} other event${otherDayEvents.length === 1 ? '' : 's'}`}
+                          {showAllRelated
+                            ? '↑ Hide other days'
+                            : `+ ${otherDayEvents.length} other event${otherDayEvents.length === 1 ? '' : 's'}`}
                         </button>
                       )}
                     </>
@@ -292,7 +300,7 @@ function JournalComposeForm({
               </div>
             )}
           </div>
-        )}
+        }
         <div className={styles.composeActions}>
           <button className={styles.btnGhost} onClick={onCancel}>
             Cancel
@@ -315,7 +323,11 @@ export function JournalView(): JSX.Element {
   const updateEvent = useCalendarStore((state) => state.updateEvent)
   const deleteEvent = useCalendarStore((state) => state.deleteEvent)
   const calendars = useCalendarStore((state) => state.calendars)
-  const { createEvent: createCalDAVEvent, updateEvent: updateCalDAVEvent, deleteEvent: deleteCalDAVEvent } = useCalDAV()
+  const {
+    createEvent: createCalDAVEvent,
+    updateEvent: updateCalDAVEvent,
+    deleteEvent: deleteCalDAVEvent,
+  } = useCalDAV()
 
   const [isComposing, setIsComposing] = useState(false)
   const [isClosing, setIsClosing] = useState(false)
@@ -332,7 +344,10 @@ export function JournalView(): JSX.Element {
   const segmentedRef = useRef<HTMLDivElement>(null)
   const pageRef = useRef<HTMLDivElement>(null)
   const tabRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
-  const [indicatorStyle, setIndicatorStyle] = useState<{ left: number; width: number }>({ left: 0, width: 0 })
+  const [indicatorStyle, setIndicatorStyle] = useState<{ left: number; width: number }>({
+    left: 0,
+    width: 0,
+  })
 
   // Use store's currentDate for month filtering
   const currentDate = useCalendarStore((state) => state.currentDate)
@@ -344,8 +359,12 @@ export function JournalView(): JSX.Element {
   const eventsRef = useRef(events)
   const calendarsRef = useRef(calendars)
   // Keep refs in sync with state
-  useEffect(() => { eventsRef.current = events })
-  useEffect(() => { calendarsRef.current = calendars })
+  useEffect(() => {
+    eventsRef.current = events
+  })
+  useEffect(() => {
+    calendarsRef.current = calendars
+  })
 
   // Group journal entries by month
   const groupedEntries = useMemo(() => {
@@ -379,9 +398,7 @@ export function JournalView(): JSX.Element {
   // Flat sorted list for virtualized 'all' mode
   const allEntries = useMemo(() => {
     if (viewMode !== 'all') return []
-    return events
-      .filter((e) => e.type === 'journal')
-      .sort((a, b) => b.start.localeCompare(a.start))
+    return events.filter((e) => e.type === 'journal').sort((a, b) => b.start.localeCompare(a.start))
   }, [events, viewMode])
 
   // Virtualizer for 'all' mode
@@ -392,10 +409,7 @@ export function JournalView(): JSX.Element {
     overscan: 5,
   })
 
-  const totalCount = useMemo(
-    () => events.filter((e) => e.type === 'journal').length,
-    [events]
-  )
+  const totalCount = useMemo(() => events.filter((e) => e.type === 'journal').length, [events])
 
   // Index events by id so related-event lookups in the entry list are O(1).
   const eventIndex = useMemo(() => buildEventIndex(events), [events])
@@ -456,15 +470,17 @@ export function JournalView(): JSX.Element {
         updateEvent(editingId, updates)
         // Sync attachments to IDB, then push to server
         if (attachments.length > 0) {
-          putAttachments(editingId, attachments).then(() => {
-            if (existing.calendarId !== 'default') {
-              updateCalDAVEvent(existing.calendarId, { ...existing, ...updates }).catch(() => {
-                showToast('Failed to sync update. It will be retried.')
-              })
-            }
-          }).catch(() => {
-            showToast('Failed to save attachments locally')
-          })
+          putAttachments(editingId, attachments)
+            .then(() => {
+              if (existing.calendarId !== 'default') {
+                updateCalDAVEvent(existing.calendarId, { ...existing, ...updates }).catch(() => {
+                  showToast('Failed to sync update. It will be retried.')
+                })
+              }
+            })
+            .catch(() => {
+              showToast('Failed to save attachments locally')
+            })
         } else {
           deleteAttachments(editingId).catch(() => {})
           if (existing.calendarId !== 'default') {
@@ -497,17 +513,19 @@ export function JournalView(): JSX.Element {
       addEvent(newEntry)
       if (attachments.length > 0) {
         // Await IDB write before pushing to server (C2 race condition fix)
-        putAttachments(newId, attachments).then(() => {
-          // Clean up the 'new' key used during composition
-          deleteAttachments('new').catch(() => {})
-          if (defaultCalendar?.id !== 'default') {
-            createCalDAVEvent(newEntry.calendarId, newEntry).catch(() => {
-              showToast('Failed to sync entry. It will be retried.')
-            })
-          }
-        }).catch(() => {
-          showToast('Failed to save attachments locally')
-        })
+        putAttachments(newId, attachments)
+          .then(() => {
+            // Clean up the 'new' key used during composition
+            deleteAttachments('new').catch(() => {})
+            if (defaultCalendar?.id !== 'default') {
+              createCalDAVEvent(newEntry.calendarId, newEntry).catch(() => {
+                showToast('Failed to sync entry. It will be retried.')
+              })
+            }
+          })
+          .catch(() => {
+            showToast('Failed to save attachments locally')
+          })
       } else {
         deleteAttachments('new').catch(() => {})
         if (defaultCalendar?.id !== 'default') {
@@ -534,7 +552,9 @@ export function JournalView(): JSX.Element {
 
   // Keyboard shortcuts — use ref for handleSaveEntry to avoid stale closure (#10)
   const handleSaveEntryRef = useRef(handleSaveEntry)
-  useEffect(() => { handleSaveEntryRef.current = handleSaveEntry })
+  useEffect(() => {
+    handleSaveEntryRef.current = handleSaveEntry
+  })
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent): void => {
@@ -568,11 +588,13 @@ export function JournalView(): JSX.Element {
     // Open add panel if entry has any extra content
     // setShowAddPanel(hasExtra) — JournalComposeForm manages its own state
     // Load attachments from IndexedDB
-    getAttachments(entry.id).then((loaded) => {
-      setAttachments(loaded.length > 0 ? loaded : entry.attachments || [])
-    }).catch(() => {
-      setAttachments(entry.attachments || [])
-    })
+    getAttachments(entry.id)
+      .then((loaded) => {
+        setAttachments(loaded.length > 0 ? loaded : entry.attachments || [])
+      })
+      .catch(() => {
+        setAttachments(entry.attachments || [])
+      })
   }, [])
 
   const handleStartCompose = useCallback((): void => {
@@ -599,27 +621,29 @@ export function JournalView(): JSX.Element {
     setIsComposing(true)
   }, [isComposing])
 
-  const handleDelete = useCallback((entryId: string): void => {
-    if (confirmDeleteId === entryId) {
-      const entry = eventsRef.current.find((e) => e.id === entryId)
-      if (entry) {
-        deleteEventWithUndo({
-          event: entry,
-          deleteEvent,
-          addEvent,
-          createCalDAVEvent,
-          deleteCalDAVEvent,
-        })
+  const handleDelete = useCallback(
+    (entryId: string): void => {
+      if (confirmDeleteId === entryId) {
+        const entry = eventsRef.current.find((e) => e.id === entryId)
+        if (entry) {
+          deleteEventWithUndo({
+            event: entry,
+            deleteEvent,
+            addEvent,
+            createCalDAVEvent,
+            deleteCalDAVEvent,
+          })
+        }
+        setConfirmDeleteId(null)
+      } else {
+        // First click — show confirm
+        setConfirmDeleteId(entryId)
       }
-      setConfirmDeleteId(null)
-    } else {
-      // First click — show confirm
-      setConfirmDeleteId(entryId)
-    }
-  }, [confirmDeleteId, deleteEvent, deleteCalDAVEvent, addEvent, createCalDAVEvent])
+    },
+    [confirmDeleteId, deleteEvent, deleteCalDAVEvent, addEvent, createCalDAVEvent]
+  )
 
   const isMac = /Mac|iPod|iPhone|iPad/.test(navigator.userAgent)
-
 
   // Format date for display in entry
   const formatEntryDate = useCallback((dateStr: string): { day: string; weekday: string } => {
@@ -692,14 +716,14 @@ export function JournalView(): JSX.Element {
           <span className={styles.weekday}>{weekday}</span>
         </div>
         <div className={styles.content}>
-          {entry.title && (
-            <div className={styles.summary}>{entry.title}</div>
-          )}
+          {entry.title && <div className={styles.summary}>{entry.title}</div>}
           <MarkdownView className={styles.body} text={entry.description || ''} />
           {entry.categories && entry.categories.length > 0 && (
             <div className={styles.entryCategories}>
               {entry.categories.map((cat) => (
-                <span key={cat} className={styles.entryCategoryTag}>{cat}</span>
+                <span key={cat} className={styles.entryCategoryTag}>
+                  {cat}
+                </span>
               ))}
             </div>
           )}
@@ -735,7 +759,14 @@ export function JournalView(): JSX.Element {
             handleDelete(entry.id)
           }}
         >
-          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <svg
+            viewBox="0 0 16 16"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
             <path d="M2 4h12" />
             <path d="M5.333 4V2.667a1.333 1.333 0 011.334-1.334h2.666a1.333 1.333 0 011.334 1.334V4" />
             <path d="M12.667 4v9.333a1.333 1.333 0 01-1.334 1.334H4.667a1.333 1.333 0 01-1.334-1.334V4" />
@@ -755,16 +786,23 @@ export function JournalView(): JSX.Element {
           </div>
           <div className={styles.barControls}>
             <div className={styles.segmentedControl} ref={segmentedRef}>
-              <div className={styles.tabIndicator} style={{ left: indicatorStyle.left, width: indicatorStyle.width }} />
+              <div
+                className={styles.tabIndicator}
+                style={{ left: indicatorStyle.left, width: indicatorStyle.width }}
+              />
               <button
-                ref={(el) => { if (el) tabRefs.current.set('month', el) }}
+                ref={(el) => {
+                  if (el) tabRefs.current.set('month', el)
+                }}
                 className={`${styles.segmentTab} ${viewMode === 'month' ? styles.segmentTabActive : ''}`}
                 onClick={() => setViewMode('month')}
               >
                 Month
               </button>
               <button
-                ref={(el) => { if (el) tabRefs.current.set('all', el) }}
+                ref={(el) => {
+                  if (el) tabRefs.current.set('all', el)
+                }}
                 className={`${styles.segmentTab} ${viewMode === 'all' ? styles.segmentTabActive : ''}`}
                 onClick={() => setViewMode('all')}
               >
@@ -772,7 +810,15 @@ export function JournalView(): JSX.Element {
               </button>
             </div>
             <button className={styles.addEntry} onClick={handleStartCompose}>
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 14 14"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              >
                 <path d="M7 1v12M1 7h12" />
               </svg>
               New<span className={styles.addEntryFull}> entry</span>

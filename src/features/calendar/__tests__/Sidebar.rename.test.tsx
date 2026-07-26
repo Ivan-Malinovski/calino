@@ -17,26 +17,37 @@ describe('Sidebar calendar rename', () => {
 
   it('persists a local calendar rename (double-click + Enter)', () => {
     useCalendarStore.getState().addCalendar({
-      id: 'local-1', name: 'My Local Cal', color: '#4285F4',
-      isVisible: true, isDefault: true, showTasksInViews: true,
+      id: 'local-1',
+      name: 'My Local Cal',
+      color: '#4285F4',
+      isVisible: true,
+      isDefault: true,
+      showTasksInViews: true,
     })
     renderWithRouter(<Sidebar />)
     fireEvent.click(screen.getByRole('button', { name: /^calendars/i }))
     fireEvent.doubleClick(screen.getByText('My Local Cal'))
     const input = screen.getByDisplayValue('My Local Cal') as HTMLInputElement
     fireEvent.change(input, { target: { value: 'Renamed Cal' } })
-    act(() => { fireEvent.keyDown(input, { key: 'Enter' }) })
-    expect(
-      useCalendarStore.getState().calendars.find((c) => c.id === 'local-1')?.name
-    ).toBe('Renamed Cal')
+    act(() => {
+      fireEvent.keyDown(input, { key: 'Enter' })
+    })
+    expect(useCalendarStore.getState().calendars.find((c) => c.id === 'local-1')?.name).toBe(
+      'Renamed Cal'
+    )
   })
 
   it('keeps a CalDAV calendar rename even when the server push fails', async () => {
     // CalDAV calendar present in the store but with no reachable account, so
     // the server PROPPATCH throws. The local rename must NOT be rolled back.
     useCalendarStore.getState().addCalendar({
-      id: 'caldav-1', name: 'Work', color: '#4285F4',
-      isVisible: true, isDefault: false, accountId: 'acct-1', showTasksInViews: true,
+      id: 'caldav-1',
+      name: 'Work',
+      color: '#4285F4',
+      isVisible: true,
+      isDefault: false,
+      accountId: 'acct-1',
+      showTasksInViews: true,
     })
     renderWithRouter(<Sidebar />)
     fireEvent.click(screen.getByRole('button', { name: /^calendars/i }))
@@ -48,9 +59,9 @@ describe('Sidebar calendar rename', () => {
       await Promise.resolve()
     })
     await waitFor(() => {
-      expect(
-        useCalendarStore.getState().calendars.find((c) => c.id === 'caldav-1')?.name
-      ).toBe('Job')
+      expect(useCalendarStore.getState().calendars.find((c) => c.id === 'caldav-1')?.name).toBe(
+        'Job'
+      )
     })
   })
 })

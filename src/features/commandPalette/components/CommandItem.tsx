@@ -22,10 +22,7 @@ export function renderCommandItemContent({
     return (
       <>
         {cmd.icon && (
-          <span
-            className={styles.icon}
-            dangerouslySetInnerHTML={{ __html: cmd.icon }}
-          />
+          <span className={styles.icon} dangerouslySetInnerHTML={{ __html: cmd.icon }} />
         )}
         <div className={styles.body}>
           <div className={styles.title}>{cmd.label}</div>
@@ -76,7 +73,8 @@ export function renderCommandItemContent({
           </div>
           <div className={styles.desc}>
             {format(qa.startDate, 'EEEE, MMMM d')}
-            {qa.endDate && ` ${formatTime(qa.startDate, timeFormat)} – ${formatTime(qa.endDate, timeFormat)}`}
+            {qa.endDate &&
+              ` ${formatTime(qa.startDate, timeFormat)} – ${formatTime(qa.endDate, timeFormat)}`}
             {!qa.endDate && !qa.isAllDay && ` ${formatTime(qa.startDate, timeFormat)}`}
             {qa.isAllDay && ' (all day)'}
             {qa.location && ` at ${qa.location}`}

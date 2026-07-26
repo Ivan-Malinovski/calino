@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { discoverServerUrl, suggestCalDAVUrl, suggestAuthHint, expandProviderUrl, probeConnection } from '../discovery'
+import {
+  discoverServerUrl,
+  suggestCalDAVUrl,
+  suggestAuthHint,
+  expandProviderUrl,
+  probeConnection,
+} from '../discovery'
 
 describe('discovery', () => {
   beforeEach(() => {
@@ -88,12 +94,7 @@ describe('discovery', () => {
   // -----------------------------------------------------------------------
   describe('well-known probe: server returns 404', () => {
     it('falls back to base URL', async () => {
-      vi.stubGlobal(
-        'fetch',
-        vi.fn().mockResolvedValue(
-          new Response(null, { status: 404 })
-        )
-      )
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(null, { status: 404 })))
 
       const result = await discoverServerUrl('https://caldav.example.com')
 
@@ -115,10 +116,7 @@ describe('discovery', () => {
         url: responseUrl,
         headers: new Headers(),
       } as unknown as Response
-      vi.stubGlobal(
-        'fetch',
-        vi.fn().mockResolvedValue(mockResponse)
-      )
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue(mockResponse))
 
       const result = await discoverServerUrl('https://caldav.example.com')
 
@@ -134,10 +132,7 @@ describe('discovery', () => {
     it('falls back to base URL', async () => {
       vi.spyOn(console, 'warn').mockImplementation(() => {})
 
-      vi.stubGlobal(
-        'fetch',
-        vi.fn().mockRejectedValue(new Error('Network failure'))
-      )
+      vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Network failure')))
 
       const result = await discoverServerUrl('https://caldav.example.com')
 
@@ -221,10 +216,7 @@ describe('discovery', () => {
         url: 'https://proxy.example.com/https%3A%2F%2Fradicale.example.com%2F.well-known%2Fcaldav',
         headers: new Headers(),
       } as unknown as Response
-      vi.stubGlobal(
-        'fetch',
-        vi.fn().mockResolvedValue(mockResponse)
-      )
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue(mockResponse))
 
       const result = await discoverServerUrl(
         'https://radicale.example.com',
@@ -292,7 +284,8 @@ describe('discovery', () => {
 
       vi.stubGlobal(
         'fetch',
-        vi.fn()
+        vi
+          .fn()
           // First call: well-known probe fails
           .mockRejectedValueOnce(new Error('Connection refused'))
           // Should not be called again, but just in case
@@ -341,10 +334,7 @@ describe('discovery', () => {
     it('does not try caldav. subdomain when it is already the hostname', async () => {
       vi.spyOn(console, 'log').mockImplementation(() => {})
 
-      vi.stubGlobal(
-        'fetch',
-        vi.fn().mockResolvedValue(new Response(null, { status: 404 }))
-      )
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(null, { status: 404 })))
 
       const result = await discoverServerUrl('https://caldav.fastmail.com/')
 
@@ -381,10 +371,7 @@ describe('discovery', () => {
     it('falls back to base URL when caldav. subdomain also fails', async () => {
       vi.spyOn(console, 'warn').mockImplementation(() => {})
 
-      vi.stubGlobal(
-        'fetch',
-        vi.fn().mockResolvedValue(new Response(null, { status: 404 }))
-      )
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(null, { status: 404 })))
 
       const result = await discoverServerUrl('https://www.example.com/dav/')
 
@@ -515,7 +502,10 @@ describe('discovery', () => {
     })
 
     it('does not expand if URL has a specific CalDAV path like /dav/calendars/', () => {
-      const result = expandProviderUrl('https://caldav.fastmail.com/dav/calendars/', 'user@fastmail.com')
+      const result = expandProviderUrl(
+        'https://caldav.fastmail.com/dav/calendars/',
+        'user@fastmail.com'
+      )
       expect(result).toBeNull()
     })
 

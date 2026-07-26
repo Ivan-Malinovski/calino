@@ -3,7 +3,11 @@ import { createPortal } from 'react-dom'
 import { format, parseISO, isSameDay } from 'date-fns'
 import { v4 as uuidv4 } from 'uuid'
 import { formatTime, daysBetween, addDays, addMinutesToTimeStr } from '@/lib/datetime'
-import { buildMasterTruncation, getFutureOverrideIds, isFirstOccurrence } from '@/lib/recurrenceSplit'
+import {
+  buildMasterTruncation,
+  getFutureOverrideIds,
+  isFirstOccurrence,
+} from '@/lib/recurrenceSplit'
 import { showToast } from '@/lib/toast'
 import { motion, AnimatePresence, animate } from 'framer-motion'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
@@ -105,7 +109,10 @@ export function EventPreviewPopup({
       ).toISOString()
     : event.end
 
-  const isMultiDay = !isSameDay(parseISO(event.originalStart || event.start), parseISO(event.originalEnd || event.end))
+  const isMultiDay = !isSameDay(
+    parseISO(event.originalStart || event.start),
+    parseISO(event.originalEnd || event.end)
+  )
   const isTask = event.type === 'task'
   const dateFormatPattern =
     dateFormat === 'MM/dd/yyyy'
@@ -227,7 +234,9 @@ export function EventPreviewPopup({
     }
 
     if (event.recurrenceId && originalEventId) {
-      const masterEvent = useCalendarStore.getState().events.find((candidate) => candidate.id === originalEventId)
+      const masterEvent = useCalendarStore
+        .getState()
+        .events.find((candidate) => candidate.id === originalEventId)
       if (!masterEvent) {
         showToast('Master event not found. Cannot edit this occurrence.')
         return
@@ -486,7 +495,8 @@ export function EventPreviewPopup({
     openModal(undefined, undefined, clickedEventId)
   }
 
-  const isRecurring = !event.recurrenceId && (!!event.recurrence || !!event.rruleString || !!originalEventId)
+  const isRecurring =
+    !event.recurrenceId && (!!event.recurrence || !!event.rruleString || !!originalEventId)
 
   const handleDelete = async (): Promise<void> => {
     if (event.recurrenceId) {
@@ -649,7 +659,14 @@ export function EventPreviewPopup({
     if (editingField === 'endDate') {
       return (
         <>
-          <span onClick={(e) => { e.stopPropagation(); startEditing('date') }}>{format(parseISO(event.originalStart || event.start), dateFormatPattern)}</span>
+          <span
+            onClick={(e) => {
+              e.stopPropagation()
+              startEditing('date')
+            }}
+          >
+            {format(parseISO(event.originalStart || event.start), dateFormatPattern)}
+          </span>
           <span> - </span>
           <input
             type="date"
@@ -667,9 +684,23 @@ export function EventPreviewPopup({
       const endDisplay = format(parseISO(event.originalEnd || event.end), dateFormatPattern)
       return (
         <>
-          <span onClick={(e) => { e.stopPropagation(); startEditing('date') }}>{startDisplay}</span>
+          <span
+            onClick={(e) => {
+              e.stopPropagation()
+              startEditing('date')
+            }}
+          >
+            {startDisplay}
+          </span>
           <span> - </span>
-          <span onClick={(e) => { e.stopPropagation(); startEditing('endDate') }}>{endDisplay}</span>
+          <span
+            onClick={(e) => {
+              e.stopPropagation()
+              startEditing('endDate')
+            }}
+          >
+            {endDisplay}
+          </span>
         </>
       )
     }
@@ -830,7 +861,9 @@ export function EventPreviewPopup({
                     ? { left: adjustedPosition.x, top: adjustedPosition.y }
                     : { y: sheetY }
                 }
-                initial={prefersReducedMotion || isMobile ? false : { opacity: 0, scale: 0.95, y: -10 }}
+                initial={
+                  prefersReducedMotion || isMobile ? false : { opacity: 0, scale: 0.95, y: -10 }
+                }
                 animate={isMobile ? { opacity: 1 } : { opacity: 1, scale: 1, y: 0 }}
                 exit={
                   prefersReducedMotion || isMobile
@@ -839,272 +872,326 @@ export function EventPreviewPopup({
                 }
                 transition={{ duration: prefersReducedMotion ? 0 : 0.15 }}
               >
-        <div
-          className={styles.header}
-          data-has-background={backgroundId ? '' : undefined}
-          style={{ ['--event-color' as string]: event.color || '#4285F4' }}
-        >
-          {/* Inside the header, not above it, so the header's tint runs all the
+                <div
+                  className={styles.header}
+                  data-has-background={backgroundId ? '' : undefined}
+                  style={{ ['--event-color' as string]: event.color || '#4285F4' }}
+                >
+                  {/* Inside the header, not above it, so the header's tint runs all the
               way to the sheet's top edge instead of leaving an untinted strip. */}
-          {isMobile && <div className={styles.dragHandle} aria-hidden="true" />}
-          {backgroundId && (
-            <EventBackground
-              id={backgroundId}
-              className={styles.keywordBackground}
-            />
-          )}
-          <div className={styles.titleRow}>
-            <div
-              className={styles.colorDot}
-              style={{ backgroundColor: event.color || '#4285F4' }}
-            />
-            {renderTitle()}
-          </div>
-          <button className={styles.closeBtn} onClick={animateClose} aria-label="Close">
-            <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <path
-                d="M12 4L4 12M4 4L12 12"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-              />
-            </svg>
-          </button>
-        </div>
+                  {isMobile && <div className={styles.dragHandle} aria-hidden="true" />}
+                  {backgroundId && (
+                    <EventBackground id={backgroundId} className={styles.keywordBackground} />
+                  )}
+                  <div className={styles.titleRow}>
+                    <div
+                      className={styles.colorDot}
+                      style={{ backgroundColor: event.color || '#4285F4' }}
+                    />
+                    {renderTitle()}
+                  </div>
+                  <button className={styles.closeBtn} onClick={animateClose} aria-label="Close">
+                    <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                      <path
+                        d="M12 4L4 12M4 4L12 12"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                  </button>
+                </div>
 
-        <div className={styles.content} ref={scrollRef}>
-          <div className={styles.field}>
-            <svg aria-hidden="true" className={styles.icon} width="14" height="14" viewBox="0 0 14 14" fill="none">
-              <rect
-                x="2"
-                y="3"
-                width="10"
-                height="9"
-                rx="1"
-                stroke="currentColor"
-                strokeWidth="1.2"
-              />
-              <path d="M2 6H12" stroke="currentColor" strokeWidth="1.2" />
-              <path
-                d="M5 1V3M9 1V3"
-                stroke="currentColor"
-                strokeWidth="1.2"
-                strokeLinecap="round"
-              />
-            </svg>
-            {renderDate()}
-            {(event.recurrence || event.rruleString) && (
-              <span
-                className={styles.recurringIcon}
-                data-tooltip={recurrenceDescription}
-              >
-                <RecurringIcon />
-              </span>
+                <div className={styles.content} ref={scrollRef}>
+                  <div className={styles.field}>
+                    <svg
+                      aria-hidden="true"
+                      className={styles.icon}
+                      width="14"
+                      height="14"
+                      viewBox="0 0 14 14"
+                      fill="none"
+                    >
+                      <rect
+                        x="2"
+                        y="3"
+                        width="10"
+                        height="9"
+                        rx="1"
+                        stroke="currentColor"
+                        strokeWidth="1.2"
+                      />
+                      <path d="M2 6H12" stroke="currentColor" strokeWidth="1.2" />
+                      <path
+                        d="M5 1V3M9 1V3"
+                        stroke="currentColor"
+                        strokeWidth="1.2"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                    {renderDate()}
+                    {(event.recurrence || event.rruleString) && (
+                      <span className={styles.recurringIcon} data-tooltip={recurrenceDescription}>
+                        <RecurringIcon />
+                      </span>
+                    )}
+                  </div>
+
+                  <div
+                    className={styles.field}
+                    onClick={() => startEditing('time')}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        startEditing('time')
+                      }
+                    }}
+                    aria-label="Edit time"
+                  >
+                    <svg
+                      aria-hidden="true"
+                      className={styles.icon}
+                      width="14"
+                      height="14"
+                      viewBox="0 0 14 14"
+                      fill="none"
+                    >
+                      <circle cx="7" cy="7" r="6" stroke="currentColor" strokeWidth="1.2" />
+                      <path
+                        d="M7 4V7L9 9"
+                        stroke="currentColor"
+                        strokeWidth="1.2"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                    {renderTime()}
+                  </div>
+
+                  {(editLocation || event.location) && (
+                    <div
+                      className={styles.field}
+                      onClick={() => startEditing('location')}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
+                          startEditing('location')
+                        }
+                      }}
+                      aria-label="Edit location"
+                    >
+                      <svg
+                        aria-hidden="true"
+                        className={styles.icon}
+                        width="14"
+                        height="14"
+                        viewBox="0 0 14 14"
+                        fill="none"
+                      >
+                        <path
+                          d="M7 6.5C8.10457 6.5 9 5.60457 9 4.5C9 3.39543 8.10457 2.5 7 2.5C5.89543 2.5 5 3.39543 5 4.5C5 5.60457 5.89543 6.5 7 6.5Z"
+                          stroke="currentColor"
+                          strokeWidth="1.2"
+                        />
+                        <path
+                          d="M7 13C7 13 12 8.5 12 4.5C12 2.019 10.104 0 7 0C3.896 0 2 2.019 2 4.5C2 8.5 7 13 7 13Z"
+                          stroke="currentColor"
+                          strokeWidth="1.2"
+                        />
+                      </svg>
+                      {renderLocation()}
+                      <LocationLink
+                        location={editLocation || event.location || ''}
+                        className={styles.locationMapLink}
+                        iconOnly
+                        ariaLabel={`Open ${editLocation || event.location} in Maps (new tab)`}
+                      />
+                    </div>
+                  )}
+
+                  {event.travelDuration !== undefined && event.travelDuration > 0 && (
+                    <div className={styles.field}>
+                      <svg
+                        aria-hidden="true"
+                        className={styles.icon}
+                        width="14"
+                        height="14"
+                        viewBox="0 0 14 14"
+                        fill="none"
+                      >
+                        <path
+                          d="M1 10L4 7L6 9L13 2"
+                          stroke="currentColor"
+                          strokeWidth="1.2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                        <path
+                          d="M10 2H13V5"
+                          stroke="currentColor"
+                          strokeWidth="1.2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                      <span>{Math.round(event.travelDuration)} min travel</span>
+                    </div>
+                  )}
+
+                  {reminderLabel && (
+                    <div className={styles.field}>
+                      <svg
+                        aria-hidden="true"
+                        className={styles.icon}
+                        width="14"
+                        height="14"
+                        viewBox="0 0 14 14"
+                        fill="none"
+                      >
+                        <path
+                          d="M7 1.5C4.51472 1.5 2.5 3.51472 2.5 6C2.5 8.48528 4.51472 10.5 7 10.5C9.48528 10.5 11.5 8.48528 11.5 6C11.5 3.51472 9.48528 1.5 7 1.5Z"
+                          stroke="currentColor"
+                          strokeWidth="1.2"
+                        />
+                        <path
+                          d="M7 3V6L9 8"
+                          stroke="currentColor"
+                          strokeWidth="1.2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                      <span>{reminderLabel}</span>
+                    </div>
+                  )}
+
+                  {isTask && event.priority !== undefined && event.priority > 0 && (
+                    <div className={styles.field}>
+                      <svg
+                        aria-hidden="true"
+                        className={styles.icon}
+                        width="14"
+                        height="14"
+                        viewBox="0 0 14 14"
+                        fill="none"
+                      >
+                        <path
+                          d="M7 1V7M7 7V13"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                        />
+                        <path
+                          d="M7 10.5H7.01"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                        />
+                      </svg>
+                      <span>Priority: {event.priority}</span>
+                    </div>
+                  )}
+
+                  {isTask && event.completed && (
+                    <div className={styles.field}>
+                      <svg
+                        aria-hidden="true"
+                        className={styles.icon}
+                        width="14"
+                        height="14"
+                        viewBox="0 0 14 14"
+                        fill="none"
+                      >
+                        <circle cx="7" cy="7" r="6" stroke="currentColor" strokeWidth="1.2" />
+                        <path
+                          d="M4 7L6 9L10 5"
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                      <span>Completed</span>
+                    </div>
+                  )}
+
+                  <div className={styles.description}>
+                    <div className={styles.descriptionLabel}>Description</div>
+                    {renderDescription()}
+                  </div>
+                </div>
+
+                <div className={styles.footer}>
+                  {hasChanges && (
+                    <button
+                      className={styles.saveBtn}
+                      onClick={saveChanges}
+                      aria-label="Save changes"
+                    >
+                      <svg
+                        aria-hidden="true"
+                        width="14"
+                        height="14"
+                        viewBox="0 0 14 14"
+                        fill="none"
+                      >
+                        <path
+                          d="M2 7L5.5 10.5L12 4"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    </button>
+                  )}
+                  <button className={styles.openBtn} onClick={handleOpen}>
+                    {isTask ? 'Open task' : 'Open event'}
+                  </button>
+                  <button className={styles.deleteBtn} onClick={handleDelete} aria-label="Delete">
+                    <svg aria-hidden="true" width="14" height="14" viewBox="0 0 14 14" fill="none">
+                      <path
+                        d="M2 4H12M5 4V2H9V4M4 4V12H10V4"
+                        stroke="currentColor"
+                        strokeWidth="1.2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </button>
+                </div>
+              </motion.div>
             )}
-          </div>
-
-          
-
-          <div
-            className={styles.field}
-            onClick={() => startEditing('time')}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault()
-                startEditing('time')
-              }
-            }}
-            aria-label="Edit time"
-          >
-            <svg aria-hidden="true" className={styles.icon} width="14" height="14" viewBox="0 0 14 14" fill="none">
-              <circle cx="7" cy="7" r="6" stroke="currentColor" strokeWidth="1.2" />
-              <path d="M7 4V7L9 9" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-            </svg>
-            {renderTime()}
-          </div>
-
-          {(editLocation || event.location) && (
-            <div
-              className={styles.field}
-              onClick={() => startEditing('location')}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault()
-                  startEditing('location')
-                }
-              }}
-              aria-label="Edit location"
-            >
-              <svg aria-hidden="true" className={styles.icon} width="14" height="14" viewBox="0 0 14 14" fill="none">
-                <path
-                  d="M7 6.5C8.10457 6.5 9 5.60457 9 4.5C9 3.39543 8.10457 2.5 7 2.5C5.89543 2.5 5 3.39543 5 4.5C5 5.60457 5.89543 6.5 7 6.5Z"
-                  stroke="currentColor"
-                  strokeWidth="1.2"
-                />
-                <path
-                  d="M7 13C7 13 12 8.5 12 4.5C12 2.019 10.104 0 7 0C3.896 0 2 2.019 2 4.5C2 8.5 7 13 7 13Z"
-                  stroke="currentColor"
-                  strokeWidth="1.2"
-                />
-              </svg>
-              {renderLocation()}
-              <LocationLink
-                location={editLocation || event.location || ''}
-                className={styles.locationMapLink}
-                iconOnly
-                ariaLabel={`Open ${editLocation || event.location} in Maps (new tab)`}
-              />
-            </div>
-          )}
-
-          {event.travelDuration !== undefined && event.travelDuration > 0 && (
-            <div className={styles.field}>
-              <svg aria-hidden="true" className={styles.icon} width="14" height="14" viewBox="0 0 14 14" fill="none">
-                <path
-                  d="M1 10L4 7L6 9L13 2"
-                  stroke="currentColor"
-                  strokeWidth="1.2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-                <path
-                  d="M10 2H13V5"
-                  stroke="currentColor"
-                  strokeWidth="1.2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-              <span>{Math.round(event.travelDuration)} min travel</span>
-            </div>
-          )}
-
-          {reminderLabel && (
-            <div className={styles.field}>
-              <svg aria-hidden="true" className={styles.icon} width="14" height="14" viewBox="0 0 14 14" fill="none">
-                <path
-                  d="M7 1.5C4.51472 1.5 2.5 3.51472 2.5 6C2.5 8.48528 4.51472 10.5 7 10.5C9.48528 10.5 11.5 8.48528 11.5 6C11.5 3.51472 9.48528 1.5 7 1.5Z"
-                  stroke="currentColor"
-                  strokeWidth="1.2"
-                />
-                <path
-                  d="M7 3V6L9 8"
-                  stroke="currentColor"
-                  strokeWidth="1.2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-              <span>{reminderLabel}</span>
-            </div>
-          )}
-
-          {isTask && event.priority !== undefined && event.priority > 0 && (
-            <div className={styles.field}>
-              <svg aria-hidden="true" className={styles.icon} width="14" height="14" viewBox="0 0 14 14" fill="none">
-                <path
-                  d="M7 1V7M7 7V13"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                />
-                <path
-                  d="M7 10.5H7.01"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                />
-              </svg>
-              <span>Priority: {event.priority}</span>
-            </div>
-          )}
-
-          {isTask && event.completed && (
-            <div className={styles.field}>
-              <svg aria-hidden="true" className={styles.icon} width="14" height="14" viewBox="0 0 14 14" fill="none">
-                <circle cx="7" cy="7" r="6" stroke="currentColor" strokeWidth="1.2" />
-                <path
-                  d="M4 7L6 9L10 5"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-              <span>Completed</span>
-            </div>
-          )}
-
-          <div className={styles.description}>
-            <div className={styles.descriptionLabel}>Description</div>
-            {renderDescription()}
-          </div>
-        </div>
-
-        <div className={styles.footer}>
-          {hasChanges && (
-            <button className={styles.saveBtn} onClick={saveChanges} aria-label="Save changes">
-              <svg aria-hidden="true" width="14" height="14" viewBox="0 0 14 14" fill="none">
-                <path
-                  d="M2 7L5.5 10.5L12 4"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </button>
-          )}
-          <button className={styles.openBtn} onClick={handleOpen}>
-            {isTask ? 'Open task' : 'Open event'}
-          </button>
-          <button className={styles.deleteBtn} onClick={handleDelete} aria-label="Delete">
-            <svg aria-hidden="true" width="14" height="14" viewBox="0 0 14 14" fill="none">
-              <path
-                d="M2 4H12M5 4V2H9V4M4 4V12H10V4"
-                stroke="currentColor"
-                strokeWidth="1.2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </button>
-        </div>
-
-            </motion.div>
-          )}
-        </AnimatePresence>
-        </>
-    ,
-    document.body
-    )}
-    {createPortal(
-      <DeleteDialog
-        key="delete-dialog"
-        isOpen={showDeleteDialog}
-        onClose={() => setShowDeleteDialog(false)}
-        onConfirm={(mode) => {
-          performDelete(mode)
-        }}
-      />,
-      document.body
-    )}
-    {createPortal(
-      <RecurrenceDialog
-        key="recurrence-dialog"
-        isOpen={showRecurrenceDialog}
-        onClose={() => {
-          setShowRecurrenceDialog(false)
-          setPendingUpdates(null)
-        }}
-        onConfirm={handleRecurrenceDialogConfirm}
-      />,
-      document.body
-    )}
+          </AnimatePresence>
+        </>,
+        document.body
+      )}
+      {createPortal(
+        <DeleteDialog
+          key="delete-dialog"
+          isOpen={showDeleteDialog}
+          onClose={() => setShowDeleteDialog(false)}
+          onConfirm={(mode) => {
+            performDelete(mode)
+          }}
+        />,
+        document.body
+      )}
+      {createPortal(
+        <RecurrenceDialog
+          key="recurrence-dialog"
+          isOpen={showRecurrenceDialog}
+          onClose={() => {
+            setShowRecurrenceDialog(false)
+            setPendingUpdates(null)
+          }}
+          onConfirm={handleRecurrenceDialogConfirm}
+        />,
+        document.body
+      )}
     </>
   )
 }

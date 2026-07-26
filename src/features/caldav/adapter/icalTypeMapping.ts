@@ -1,6 +1,12 @@
 import ICAL from 'ical.js'
 import { v4 as uuidv4 } from 'uuid'
-import type { CalendarEvent, CalendarAttachment, RecurrenceRule, Reminder, TaskPriority } from '@/types'
+import type {
+  CalendarEvent,
+  CalendarAttachment,
+  RecurrenceRule,
+  Reminder,
+  TaskPriority,
+} from '@/types'
 import { addDays } from 'date-fns'
 import { buildRRuleString } from '@/lib/recurrence'
 
@@ -27,7 +33,8 @@ function parseTravelDuration(duration: string): number | null {
   const minutes = parseInt(match[4] || '0', 10)
   const seconds = parseInt(match[5] || '0', 10)
 
-  const totalMinutes = (weeks * 7 * 24 * 60) + (days * 24 * 60) + (hours * 60) + minutes + Math.ceil(seconds / 60)
+  const totalMinutes =
+    weeks * 7 * 24 * 60 + days * 24 * 60 + hours * 60 + minutes + Math.ceil(seconds / 60)
   return totalMinutes > 0 ? totalMinutes : null
 }
 
@@ -157,54 +164,83 @@ function parseRRule(rruleString: string): RecurrenceRule | undefined {
         break
       }
       case 'BYMONTHDAY': {
-        const days = value.split(',').map((d) => parseInt(d.trim(), 10)).filter((n) => !isNaN(n))
+        const days = value
+          .split(',')
+          .map((d) => parseInt(d.trim(), 10))
+          .filter((n) => !isNaN(n))
         if (days.length > 0) byMonthDay = days
         break
       }
       case 'BYMONTH': {
-        const months = value.split(',').map((m) => parseInt(m.trim(), 10)).filter((n) => !isNaN(n))
+        const months = value
+          .split(',')
+          .map((m) => parseInt(m.trim(), 10))
+          .filter((n) => !isNaN(n))
         if (months.length > 0) byMonth = months
         break
       }
       case 'BYSETPOS': {
         // Standalone BYSETPOS is a distinct rule part from per-BYDAY
         // ordinals. The two do NOT share storage after R2.4.
-        const positions = value.split(',').map((p) => parseInt(p.trim(), 10)).filter((n) => !isNaN(n))
+        const positions = value
+          .split(',')
+          .map((p) => parseInt(p.trim(), 10))
+          .filter((n) => !isNaN(n))
         if (positions.length > 0) bySetPos = positions
         break
       }
       // R2.4 — Missing RRULE parts per RFC 5545 §3.3.10.
       case 'WKST': {
         if (
-          value === 'MO' || value === 'TU' || value === 'WE' || value === 'TH' ||
-          value === 'FR' || value === 'SA' || value === 'SU'
+          value === 'MO' ||
+          value === 'TU' ||
+          value === 'WE' ||
+          value === 'TH' ||
+          value === 'FR' ||
+          value === 'SA' ||
+          value === 'SU'
         ) {
           wkst = value
         }
         break
       }
       case 'BYHOUR': {
-        const hours = value.split(',').map((h) => parseInt(h.trim(), 10)).filter((n) => !isNaN(n))
+        const hours = value
+          .split(',')
+          .map((h) => parseInt(h.trim(), 10))
+          .filter((n) => !isNaN(n))
         if (hours.length > 0) byHour = hours
         break
       }
       case 'BYMINUTE': {
-        const minutes = value.split(',').map((m) => parseInt(m.trim(), 10)).filter((n) => !isNaN(n))
+        const minutes = value
+          .split(',')
+          .map((m) => parseInt(m.trim(), 10))
+          .filter((n) => !isNaN(n))
         if (minutes.length > 0) byMinute = minutes
         break
       }
       case 'BYSECOND': {
-        const seconds = value.split(',').map((s) => parseInt(s.trim(), 10)).filter((n) => !isNaN(n))
+        const seconds = value
+          .split(',')
+          .map((s) => parseInt(s.trim(), 10))
+          .filter((n) => !isNaN(n))
         if (seconds.length > 0) bySecond = seconds
         break
       }
       case 'BYWEEKNO': {
-        const weeks = value.split(',').map((w) => parseInt(w.trim(), 10)).filter((n) => !isNaN(n))
+        const weeks = value
+          .split(',')
+          .map((w) => parseInt(w.trim(), 10))
+          .filter((n) => !isNaN(n))
         if (weeks.length > 0) byWeekNo = weeks
         break
       }
       case 'BYYEARDAY': {
-        const days = value.split(',').map((d) => parseInt(d.trim(), 10)).filter((n) => !isNaN(n))
+        const days = value
+          .split(',')
+          .map((d) => parseInt(d.trim(), 10))
+          .filter((n) => !isNaN(n))
         if (days.length > 0) byYearDay = days
         break
       }
@@ -295,7 +331,7 @@ function createIcalDateTime(isoString: string, tzid?: string): ICAL.Time {
           second: m[6] ? parseInt(m[6], 10) : 0,
           timezone: tzid,
         },
-        ICAL.Timezone.utcTimezone,
+        ICAL.Timezone.utcTimezone
       )
     }
   }
@@ -536,7 +572,8 @@ export function icalEventToCalendarEvent(
     if (attachValue instanceof ICAL.Binary) {
       const base64Data = attachValue.decodeValue()
       const rawFmtType = attachProp.getParameter('fmttype')
-      const contentType = (typeof rawFmtType === 'string' ? rawFmtType : undefined) || 'application/octet-stream'
+      const contentType =
+        (typeof rawFmtType === 'string' ? rawFmtType : undefined) || 'application/octet-stream'
       const filename = attachProp.getParameter('filename')
       attachments.push({
         href: `data:${contentType};base64,${base64Data}`,
@@ -565,7 +602,8 @@ export function icalEventToCalendarEvent(
         attachments.push({
           href: attachValue,
           contentType: typeof fmttype === 'string' ? fmttype : 'application/octet-stream',
-          filename: typeof filename === 'string' ? filename : attachValue.split('/').pop() || 'attachment',
+          filename:
+            typeof filename === 'string' ? filename : attachValue.split('/').pop() || 'attachment',
         })
       }
     }
@@ -650,16 +688,19 @@ function parseTriggerDuration(trigger: string): number | null {
 }
 
 function createAllDayDate(year: number, month: number, day: number): ICAL.Time {
-  const time = new ICAL.Time({
-    year,
-    month,
-    day,
-    hour: 0,
-    minute: 0,
-    second: 0,
-    isDate: true,
-    timezone: 'UTC'
-  }, ICAL.Timezone.utcTimezone)
+  const time = new ICAL.Time(
+    {
+      year,
+      month,
+      day,
+      hour: 0,
+      minute: 0,
+      second: 0,
+      isDate: true,
+      timezone: 'UTC',
+    },
+    ICAL.Timezone.utcTimezone
+  )
   return time
 }
 
@@ -783,7 +824,10 @@ export function calendarEventToIcalComponent(event: CalendarEvent): ICAL.Compone
     }
   }
 
-  vevent.updatePropertyWithValue('transp', event.transparency === 'transparent' ? 'TRANSPARENT' : 'OPAQUE')
+  vevent.updatePropertyWithValue(
+    'transp',
+    event.transparency === 'transparent' ? 'TRANSPARENT' : 'OPAQUE'
+  )
 
   if (event.travelDuration) {
     addAppleTravelDuration(vevent, event.travelDuration)
@@ -797,9 +841,8 @@ export function calendarEventToIcalComponent(event: CalendarEvent): ICAL.Compone
       // §3.3.6. Always emit a negative (pre-event) trigger; the UI
       // doesn't currently distinguish post-event reminders, and
       // emitting `+PT...` would require a Reminder field refactor.
-      const action = reminder.method === 'email' ? 'EMAIL'
-        : reminder.method === 'audio' ? 'AUDIO'
-        : 'DISPLAY'
+      const action =
+        reminder.method === 'email' ? 'EMAIL' : reminder.method === 'audio' ? 'AUDIO' : 'DISPLAY'
       valarm.updatePropertyWithValue('action', action)
       valarm.updatePropertyWithValue('trigger', formatReminderTrigger(reminder.minutesBefore))
       vevent.addSubcomponent(valarm)
@@ -913,8 +956,12 @@ export function icalVtodoToCalendarEvent(vtodo: ICAL.Component, calendarId: stri
   let taskStatus: 'NEEDS-ACTION' | 'IN-PROCESS' | 'COMPLETED' | 'CANCELLED' = 'NEEDS-ACTION'
   if (statusProp) {
     const status = statusProp.getFirstValue() as string
-    if (status === 'IN-PROCESS' || status === 'COMPLETED' ||
-        status === 'CANCELLED' || status === 'NEEDS-ACTION') {
+    if (
+      status === 'IN-PROCESS' ||
+      status === 'COMPLETED' ||
+      status === 'CANCELLED' ||
+      status === 'NEEDS-ACTION'
+    ) {
       taskStatus = status
     }
     if (status === 'COMPLETED' || status === 'CANCELLED') {
@@ -931,7 +978,9 @@ export function icalVtodoToCalendarEvent(vtodo: ICAL.Component, calendarId: stri
       if (val instanceof ICAL.Time) {
         completedAt = icalTimeToISO(val).iso
       }
-    } catch { /* skip malformed */ }
+    } catch {
+      /* skip malformed */
+    }
   }
 
   const categories: string[] = []
@@ -948,7 +997,10 @@ export function icalVtodoToCalendarEvent(vtodo: ICAL.Component, calendarId: stri
     .getAllProperties('related-to')
     .find((prop) => {
       const reltype = prop.getParameter('reltype')
-      return reltype === undefined || (typeof reltype === 'string' && (!reltype.trim() || reltype.toUpperCase() === 'PARENT'))
+      return (
+        reltype === undefined ||
+        (typeof reltype === 'string' && (!reltype.trim() || reltype.toUpperCase() === 'PARENT'))
+      )
     })
     ?.getFirstValue()
 
@@ -1036,7 +1088,10 @@ export function calendarEventToIcalVtodo(task: CalendarEvent): ICAL.Component {
     // so use `fromJSDate(..., true)` (the `true` arg forces UTC `Z` form)
     // rather than `ICAL.Time.now()` which is a floating time.
     if (task.completedAt) {
-      vtodo.updatePropertyWithValue('completed', ICAL.Time.fromJSDate(new Date(task.completedAt), true))
+      vtodo.updatePropertyWithValue(
+        'completed',
+        ICAL.Time.fromJSDate(new Date(task.completedAt), true)
+      )
     } else {
       vtodo.updatePropertyWithValue('completed', ICAL.Time.fromJSDate(new Date(), true))
     }
@@ -1089,7 +1144,9 @@ export function icalVjournalToCalendarEvent(
     try {
       const val = createdProp.getFirstValue()
       if (val instanceof ICAL.Time) created = icalTimeToISO(val).iso
-    } catch { /* skip */ }
+    } catch {
+      /* skip */
+    }
   }
   // Fallback: use start date for events without CREATED property
   if (!created) {
@@ -1101,7 +1158,9 @@ export function icalVjournalToCalendarEvent(
     try {
       const val = lastModProp.getFirstValue()
       if (val instanceof ICAL.Time) lastModified = icalTimeToISO(val).iso
-    } catch { /* skip */ }
+    } catch {
+      /* skip */
+    }
   }
   // Fallback: use created date for events without LAST-MODIFIED property
   if (!lastModified) {
@@ -1117,8 +1176,8 @@ export function icalVjournalToCalendarEvent(
   // RELATED-TO (can occur multiple times)
   const relatedToProps = vjournal.getAllProperties('related-to')
   const relatedTo = relatedToProps
-    .map(p => p.getFirstValue() as string)
-    .filter(v => typeof v === 'string' && v.length > 0)
+    .map((p) => p.getFirstValue() as string)
+    .filter((v) => typeof v === 'string' && v.length > 0)
 
   // ATTACH (port from VEVENT logic)
   const attachments: CalendarAttachment[] = []
@@ -1129,7 +1188,8 @@ export function icalVjournalToCalendarEvent(
       if (attachValue instanceof ICAL.Binary) {
         const base64Data = attachValue.decodeValue()
         const rawFmtType = attachProp.getParameter('fmttype')
-        const contentType = (typeof rawFmtType === 'string' ? rawFmtType : undefined) || 'application/octet-stream'
+        const contentType =
+          (typeof rawFmtType === 'string' ? rawFmtType : undefined) || 'application/octet-stream'
         const filename = attachProp.getParameter('filename')
         attachments.push({
           href: `data:${contentType};base64,${base64Data}`,
@@ -1155,11 +1215,16 @@ export function icalVjournalToCalendarEvent(
           attachments.push({
             href: attachValue,
             contentType: typeof fmttype === 'string' ? fmttype : 'application/octet-stream',
-            filename: typeof filename === 'string' ? filename : attachValue.split('/').pop() || 'attachment',
+            filename:
+              typeof filename === 'string'
+                ? filename
+                : attachValue.split('/').pop() || 'attachment',
           })
         }
       }
-    } catch { /* skip malformed attachment */ }
+    } catch {
+      /* skip malformed attachment */
+    }
   }
 
   return {
@@ -1212,13 +1277,20 @@ export function calendarEventToIcalVjournal(entry: CalendarEvent): ICAL.Componen
   if (entry.created) {
     try {
       vjournal.updatePropertyWithValue('created', ICAL.Time.fromJSDate(new Date(entry.created)))
-    } catch { /* skip */ }
+    } catch {
+      /* skip */
+    }
   }
 
   if (entry.lastModified) {
     try {
-      vjournal.updatePropertyWithValue('last-modified', ICAL.Time.fromJSDate(new Date(entry.lastModified)))
-    } catch { /* skip */ }
+      vjournal.updatePropertyWithValue(
+        'last-modified',
+        ICAL.Time.fromJSDate(new Date(entry.lastModified))
+      )
+    } catch {
+      /* skip */
+    }
   }
 
   if (entry.url) {

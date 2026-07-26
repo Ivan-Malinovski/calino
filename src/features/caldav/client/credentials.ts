@@ -1,4 +1,4 @@
-import type { CalDAVCredentials } from '../types';
+import type { CalDAVCredentials } from '../types'
 import { v4 as uuidv4 } from 'uuid'
 import {
   encryptPassword,
@@ -121,9 +121,7 @@ export async function updateCredential(
       ...existing,
       serverUrl: updates.serverUrl ?? existing.serverUrl,
       username: updates.username ?? existing.username,
-      password: updates.password
-        ? await encryptPassword(updates.password)
-        : existing.password,
+      password: updates.password ? await encryptPassword(updates.password) : existing.password,
     }
     localStorage.setItem(CREDENTIALS_KEY, JSON.stringify(stored))
   }

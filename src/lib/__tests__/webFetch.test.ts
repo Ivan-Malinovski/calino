@@ -39,7 +39,7 @@ describe('webFetch', () => {
       globalFetch.mockRestore()
     })
 
-    it('prefers Capacitor\'s unpatched fetch when it exists', async () => {
+    it("prefers Capacitor's unpatched fetch when it exists", async () => {
       // Guards the regression this module was written for: with CapacitorHttp
       // enabled the global fetch is a shim that cannot send WebDAV verbs.
       const unpatched = vi.fn().mockResolvedValue(new Response('ok'))
@@ -99,7 +99,9 @@ describe('webFetch', () => {
     })
 
     it('omits the body on statuses that must not carry one', async () => {
-      nativeRequest.mockResolvedValue(davResponse({ status: 204, statusText: 'No Content', body: '' }))
+      nativeRequest.mockResolvedValue(
+        davResponse({ status: 204, statusText: 'No Content', body: '' })
+      )
 
       const response = await webFetch('https://dav.example.com/event.ics', { method: 'DELETE' })
 
@@ -114,7 +116,7 @@ describe('webFetch', () => {
       expect(nativeRequest.mock.calls[0][0]).not.toHaveProperty('body')
     })
 
-    it('rejects with AbortError when the caller\'s signal fires', async () => {
+    it("rejects with AbortError when the caller's signal fires", async () => {
       const controller = new AbortController()
       nativeRequest.mockReturnValue(new Promise(() => {}))
 

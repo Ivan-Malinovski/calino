@@ -25,7 +25,10 @@ function describeExtractionError(err: unknown): { message: string; isAuthError: 
     return { message: 'Your AI API key looks invalid or expired.', isAuthError: true }
   }
   if (/network|fetch|timeout|offline|failed to fetch|ECONNREFUSED/i.test(raw)) {
-    return { message: 'Could not reach the AI provider — check your connection.', isAuthError: false }
+    return {
+      message: 'Could not reach the AI provider — check your connection.',
+      isAuthError: false,
+    }
   }
   return { message: 'Could not read event details from that photo.', isAuthError: false }
 }
@@ -65,7 +68,11 @@ export function useAIPhotoImport(): {
     })
   }
 
-  const processImage = async (base64: string, mimeType: string, onDone?: () => void): Promise<void> => {
+  const processImage = async (
+    base64: string,
+    mimeType: string,
+    onDone?: () => void
+  ): Promise<void> => {
     if (!useAIVisionSettingsStore.getState().hasApiKey()) {
       promptForApiKey(onDone)
       return
@@ -88,15 +95,22 @@ export function useAIPhotoImport(): {
 
     try {
       const { provider, baseUrl, model } = useAIVisionSettingsStore.getState()
-      const candidates = await extractEventFromImage({ provider, baseUrl, apiKey, model }, base64, mimeType)
+      const candidates = await extractEventFromImage(
+        { provider, baseUrl, apiKey, model },
+        base64,
+        mimeType
+      )
 
       if (!candidates.some(hasUsableFields)) {
         hapticIfEnabled('light')
-        showToast("Couldn't find any event details in that photo. Try a clearer shot, or add it manually.", {
-          duration: 6000,
-          linkText: 'Add manually',
-          onLinkClick: () => useCalendarStore.getState().openModal(),
-        })
+        showToast(
+          "Couldn't find any event details in that photo. Try a clearer shot, or add it manually.",
+          {
+            duration: 6000,
+            linkText: 'Add manually',
+            onLinkClick: () => useCalendarStore.getState().openModal(),
+          }
+        )
         onDone?.()
         return
       }

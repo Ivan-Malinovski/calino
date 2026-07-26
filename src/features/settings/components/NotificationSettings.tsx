@@ -3,7 +3,11 @@ import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { Capacitor } from '@capacitor/core'
 import { useSettingsStore } from '@/store/settingsStore'
-import { showTestNotification, requestNotificationPermission, getNotificationPermission } from '@/lib/notifications'
+import {
+  showTestNotification,
+  requestNotificationPermission,
+  getNotificationPermission,
+} from '@/lib/notifications'
 import {
   requestNativeReminderPermission,
   checkNativeReminderPermission,
@@ -25,7 +29,9 @@ export function NotificationSettings(): JSX.Element {
   const taskDueDateReminders = useSettingsStore((s) => s.taskDueDateReminders)
   const overdueTaskBadge = useSettingsStore((s) => s.overdueTaskBadge)
   const updateSettings = useSettingsStore((s) => s.updateSettings)
-  const [permissionStatus, setPermissionStatus] = useState(isNative ? 'default' : getNotificationPermission())
+  const [permissionStatus, setPermissionStatus] = useState(
+    isNative ? 'default' : getNotificationPermission()
+  )
 
   useEffect(() => {
     if (!isNative) return
@@ -37,7 +43,9 @@ export function NotificationSettings(): JSX.Element {
   const handleEnableNotifications = async (): Promise<void> => {
     if (permissionStatus === 'default') {
       const newPermission = isNative
-        ? (await requestNativeReminderPermission()) ? 'granted' : 'denied'
+        ? (await requestNativeReminderPermission())
+          ? 'granted'
+          : 'denied'
         : await requestNotificationPermission()
       setPermissionStatus(newPermission)
       if (newPermission === 'denied') {
@@ -58,7 +66,9 @@ export function NotificationSettings(): JSX.Element {
   const handleTestNotification = async (): Promise<void> => {
     if (permissionStatus === 'default') {
       const newPermission = isNative
-        ? (await requestNativeReminderPermission()) ? 'granted' : 'denied'
+        ? (await requestNativeReminderPermission())
+          ? 'granted'
+          : 'denied'
         : await requestNotificationPermission()
       setPermissionStatus(newPermission)
       if (newPermission === 'denied') {
@@ -81,18 +91,30 @@ export function NotificationSettings(): JSX.Element {
   }
 
   return (
-    <section className={`${styles.section} ${styles.sectionActive}`} data-component="notification-settings">
+    <section
+      className={`${styles.section} ${styles.sectionActive}`}
+      data-component="notification-settings"
+    >
       <h1 className={styles.pageTitle}>Notifications</h1>
 
       <div className={styles.group}>
         <div className={styles.groupLabel}>Events</div>
-        <div className={styles.row} data-component="setting-row" data-setting="desktop-notifications" data-value={String(enableDesktopNotifications)}>
+        <div
+          className={styles.row}
+          data-component="setting-row"
+          data-setting="desktop-notifications"
+          data-value={String(enableDesktopNotifications)}
+        >
           <div className={styles.rowInfo}>
             <div className={styles.rowLabel}>Event Reminders</div>
             <div className={styles.rowDesc}>Get notified before events start</div>
           </div>
           <div className={styles.rowControl}>
-            <label className={styles.toggle} data-component="toggle" data-setting="desktop-notifications">
+            <label
+              className={styles.toggle}
+              data-component="toggle"
+              data-setting="desktop-notifications"
+            >
               <input
                 type="checkbox"
                 checked={enableDesktopNotifications}
@@ -105,7 +127,12 @@ export function NotificationSettings(): JSX.Element {
             </label>
           </div>
         </div>
-        <div className={`${styles.row} ${!enableDesktopNotifications ? styles.rowDisabled : ''}`} data-component="setting-row" data-setting="sound-alerts" data-value={String(enableSoundAlerts)}>
+        <div
+          className={`${styles.row} ${!enableDesktopNotifications ? styles.rowDisabled : ''}`}
+          data-component="setting-row"
+          data-setting="sound-alerts"
+          data-value={String(enableSoundAlerts)}
+        >
           <div className={styles.rowInfo}>
             <div className={styles.rowLabel}>Sound Alerts</div>
             <div className={styles.rowDesc}>Play a sound when events are about to start</div>
@@ -127,13 +154,22 @@ export function NotificationSettings(): JSX.Element {
 
       <div className={styles.group}>
         <div className={styles.groupLabel}>Tasks</div>
-        <div className={styles.row} data-component="setting-row" data-setting="task-due-date-reminders" data-value={String(taskDueDateReminders)}>
+        <div
+          className={styles.row}
+          data-component="setting-row"
+          data-setting="task-due-date-reminders"
+          data-value={String(taskDueDateReminders)}
+        >
           <div className={styles.rowInfo}>
             <div className={styles.rowLabel}>Task Due Date Reminders</div>
             <div className={styles.rowDesc}>Notify when a task&apos;s due date arrives</div>
           </div>
           <div className={styles.rowControl}>
-            <label className={styles.toggle} data-component="toggle" data-setting="task-due-date-reminders">
+            <label
+              className={styles.toggle}
+              data-component="toggle"
+              data-setting="task-due-date-reminders"
+            >
               <input
                 type="checkbox"
                 checked={taskDueDateReminders}
@@ -145,13 +181,22 @@ export function NotificationSettings(): JSX.Element {
             </label>
           </div>
         </div>
-        <div className={styles.row} data-component="setting-row" data-setting="overdue-task-badge" data-value={String(overdueTaskBadge)}>
+        <div
+          className={styles.row}
+          data-component="setting-row"
+          data-setting="overdue-task-badge"
+          data-value={String(overdueTaskBadge)}
+        >
           <div className={styles.rowInfo}>
             <div className={styles.rowLabel}>Overdue Task Badge</div>
             <div className={styles.rowDesc}>Show a badge on the app icon for overdue tasks</div>
           </div>
           <div className={styles.rowControl}>
-            <label className={styles.toggle} data-component="toggle" data-setting="overdue-task-badge">
+            <label
+              className={styles.toggle}
+              data-component="toggle"
+              data-setting="overdue-task-badge"
+            >
               <input
                 type="checkbox"
                 checked={overdueTaskBadge}

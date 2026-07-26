@@ -28,7 +28,10 @@ export function parseTimeSlotId(droppableId: string): TimeSlot | null {
   const lastDash = droppableId.lastIndexOf('-')
   if (lastDash < 0) return null
   const dateKey = droppableId.substring(0, lastDash)
-  const [hours, minutes] = droppableId.substring(lastDash + 1).split(':').map(Number)
+  const [hours, minutes] = droppableId
+    .substring(lastDash + 1)
+    .split(':')
+    .map(Number)
   if (!dateKey || !Number.isFinite(hours) || !Number.isFinite(minutes)) return null
   return { dateKey, minuteOfDay: hours * 60 + minutes }
 }

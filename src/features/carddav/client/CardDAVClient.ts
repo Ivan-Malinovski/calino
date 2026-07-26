@@ -86,7 +86,9 @@ function parseMultistatus(xml: string): ParsedDAVResponse[] {
         } else {
           // Success case - extract etag and address-data
           const etagMatch = /<D:getetag\b[^>]*>([^<]*)<\/D:getetag>/i.exec(propXml)
-          const addressDataMatch = /<C:address-data\b[^>]*>([\s\S]*?)<\/C:address-data>/i.exec(propXml)
+          const addressDataMatch = /<C:address-data\b[^>]*>([\s\S]*?)<\/C:address-data>/i.exec(
+            propXml
+          )
 
           responses.push({
             href,
@@ -122,10 +124,7 @@ function extractSyncTokenFromBody(xml: string): string | null {
   return match ? match[1] : null
 }
 
-async function fetchWithTimeout(
-  url: string | URL,
-  init?: RequestInit
-): Promise<Response> {
+async function fetchWithTimeout(url: string | URL, init?: RequestInit): Promise<Response> {
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), NETWORK_TIMEOUT_MS)
   try {
@@ -174,7 +173,10 @@ export class CardDAVClient {
   private proxyFetch: (url: string | URL, init?: RequestInit) => Promise<Response>
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private cachedDavAddressBooks: any[] | null = null
-  private cachedCollectionProps: Map<string, { supportedVersions?: ('3.0' | '4.0')[]; maxResourceSize?: number | null; canWrite?: boolean }> = new Map()
+  private cachedCollectionProps: Map<
+    string,
+    { supportedVersions?: ('3.0' | '4.0')[]; maxResourceSize?: number | null; canWrite?: boolean }
+  > = new Map()
 
   constructor(serverUrl: string, credentials: CalDAVCredentials, proxyUrl: string | null = null) {
     this.serverUrl = serverUrl
@@ -223,7 +225,7 @@ export class CardDAVClient {
   }
 
   private findDavAddressBook(url: string) {
-    return this.cachedDavAddressBooks?.find(ab => ab.url === url) ?? null
+    return this.cachedDavAddressBooks?.find((ab) => ab.url === url) ?? null
   }
 
   /**
@@ -270,20 +272,20 @@ export class CardDAVClient {
     if (!navigator.onLine) {
       throw new Error('No network connection. Please check your internet connection.')
     }
-    
+
     const client = this.getClient()
     const davAb = this.findDavAddressBook(addressBook.url)
-    
+
     if (!davAb) {
       throw new Error(`Address book not found: ${addressBook.url}`)
     }
-    
+
     const vcards = await client.fetchVCards({
       addressBook: davAb,
     })
-    
+
     const contacts: Contact[] = []
-    
+
     for (const vcard of vcards) {
       if (vcard.data) {
         const contact = parseVCard(vcard.data as string, addressBook.id, addressBook.accountId)
@@ -293,38 +295,35 @@ export class CardDAVClient {
         }
       }
     }
-    
+
     return contacts
   }
 
   /**
    * Fetch a single contact by URL.
    */
-  async fetchContact(
-    addressBook: AddressBook,
-    contactUrl: string
-  ): Promise<Contact | null> {
+  async fetchContact(addressBook: AddressBook, contactUrl: string): Promise<Contact | null> {
     if (!navigator.onLine) {
       throw new Error('No network connection. Please check your internet connection.')
     }
-    
+
     const client = this.getClient()
     const davAb = this.findDavAddressBook(addressBook.url)
-    
+
     if (!davAb) {
       throw new Error(`Address book not found: ${addressBook.url}`)
     }
-    
+
     const vcards = await client.fetchVCards({
       addressBook: davAb,
       objectUrls: [contactUrl],
     })
-    
+
     const vcard = vcards[0]
     if (!vcard?.data) {
       return null
     }
-    
+
     const contact = parseVCard(vcard.data as string, addressBook.id, addressBook.accountId)
     if (contact) {
       contact.url = contactUrl
@@ -354,9 +353,8 @@ export class CardDAVClient {
     const maxResourceSize = props?.maxResourceSize
 
     // Try each supported version once
-    const versionsToTry: ('3.0' | '4.0')[] = supportedVersions && supportedVersions.length > 0
-      ? supportedVersions
-      : ['3.0', '4.0']
+    const versionsToTry: ('3.0' | '4.0')[] =
+      supportedVersions && supportedVersions.length > 0 ? supportedVersions : ['3.0', '4.0']
 
     for (const targetVersion of versionsToTry) {
       const vCardString = contactToVCard(contact, targetVersion)
@@ -369,7 +367,7 @@ export class CardDAVClient {
 
       const headers: Record<string, string> = {
         'Content-Type': 'text/vcard; charset=utf-8',
-        'Authorization': `Basic ${auth}`,
+        Authorization: `Basic ${auth}`,
         'If-None-Match': '*',
       }
 
@@ -408,9 +406,11 @@ export class CardDAVClient {
 
         return { url: responseUrl, etag }
       } catch (err) {
-        if (err instanceof CardDAVConflictError ||
-            err instanceof CardDAVSizeLimitError ||
-            err instanceof CardDAVPermissionError) {
+        if (
+          err instanceof CardDAVConflictError ||
+          err instanceof CardDAVSizeLimitError ||
+          err instanceof CardDAVPermissionError
+        ) {
           throw err
         }
         // For 415 on the last version, rethrow
@@ -446,9 +446,8 @@ export class CardDAVClient {
     const maxResourceSize = props?.maxResourceSize
 
     // Try each supported version once
-    const versionsToTry: ('3.0' | '4.0')[] = supportedVersions && supportedVersions.length > 0
-      ? supportedVersions
-      : ['3.0', '4.0']
+    const versionsToTry: ('3.0' | '4.0')[] =
+      supportedVersions && supportedVersions.length > 0 ? supportedVersions : ['3.0', '4.0']
 
     for (const targetVersion of versionsToTry) {
       const vCardString = contactToVCard(contact, targetVersion)
@@ -461,7 +460,7 @@ export class CardDAVClient {
 
       const headers: Record<string, string> = {
         'Content-Type': 'text/vcard; charset=utf-8',
-        'Authorization': `Basic ${auth}`,
+        Authorization: `Basic ${auth}`,
         'If-Match': `"${etag}"`,
       }
 
@@ -475,10 +474,7 @@ export class CardDAVClient {
         if (response.status === 412) {
           // Conflict - refetch from server to get current state
           const serverContact = await this.fetchContact(addressBook, contactUrl)
-          throw new CardDAVConflictError(
-            serverContact?.etag ?? '',
-            serverContact?.rawVCard
-          )
+          throw new CardDAVConflictError(serverContact?.etag ?? '', serverContact?.rawVCard)
         }
 
         if (response.status === 415) {
@@ -504,9 +500,11 @@ export class CardDAVClient {
 
         return { url: responseUrl, etag: newEtag }
       } catch (err) {
-        if (err instanceof CardDAVConflictError ||
-            err instanceof CardDAVSizeLimitError ||
-            err instanceof CardDAVPermissionError) {
+        if (
+          err instanceof CardDAVConflictError ||
+          err instanceof CardDAVSizeLimitError ||
+          err instanceof CardDAVPermissionError
+        ) {
           throw err
         }
         // For 415 on the last version, rethrow
@@ -532,7 +530,7 @@ export class CardDAVClient {
     const auth = btoa(`${this.credentials.username}:${this.credentials.password}`)
 
     const headers: Record<string, string> = {
-      'Authorization': `Basic ${auth}`,
+      Authorization: `Basic ${auth}`,
       'If-Match': `"${etag}"`,
     }
 
@@ -624,7 +622,7 @@ export class CardDAVClient {
     const versions: ('3.0' | '4.0')[] = []
     // Match <C:address-data-type content-type="text/vcard" version="3.0"/>
     const matches = text.matchAll(
-      /<C:address-data-type[^>]*content-type="text\/vcard"[^>]*version="([\d.]+)"[^>]*\/>/gi,
+      /<C:address-data-type[^>]*content-type="text\/vcard"[^>]*version="([\d.]+)"[^>]*\/>/gi
     )
     for (const match of matches) {
       const version = match[1]
@@ -635,7 +633,7 @@ export class CardDAVClient {
     // Also try variant ordering
     if (versions.length === 0) {
       const altMatches = text.matchAll(
-        /<C:supported-address-data[\s\S]*?<\/C:supported-address-data>/gi,
+        /<C:supported-address-data[\s\S]*?<\/C:supported-address-data>/gi
       )
       for (const block of altMatches) {
         const inner = block[0]
@@ -656,7 +654,7 @@ export class CardDAVClient {
   private parseCanWrite(text: string): boolean | undefined {
     // Check for D:write privilege in current-user-privilege-set
     const writePrivMatches = text.matchAll(
-      /<D:privilege>[\s\S]*?<D:write\/>[\s\S]*?<\/D:privilege>/gi,
+      /<D:privilege>[\s\S]*?<D:write\/>[\s\S]*?<\/D:privilege>/gi
     )
     for (const _match of writePrivMatches) {
       return true
@@ -802,7 +800,7 @@ export class CardDAVClient {
 
     const headers: Record<string, string> = {
       'Content-Type': 'application/xml; charset=utf-8',
-      'Authorization': `Basic ${btoa(`${this.credentials.username}:${this.credentials.password}`)}`,
+      Authorization: `Basic ${btoa(`${this.credentials.username}:${this.credentials.password}`)}`,
     }
 
     try {
@@ -824,10 +822,11 @@ export class CardDAVClient {
       const text = await response.text()
 
       // Try to get token from headers first, then body
-      const newSyncToken = response.headers.get('X-SYNC-TOKEN') ||
-                           response.headers.get('DAV:sync-token') ||
-                           extractSyncTokenFromBody(text) ||
-                           null
+      const newSyncToken =
+        response.headers.get('X-SYNC-TOKEN') ||
+        response.headers.get('DAV:sync-token') ||
+        extractSyncTokenFromBody(text) ||
+        null
 
       const changes = this.parseSyncCollectionResponse(text)
       return { changes, newSyncToken, tokenInvalidated: false }
@@ -847,7 +846,11 @@ export class CardDAVClient {
     const changes: SyncCollectionChange[] = []
 
     for (const response of responses) {
-      if (response.status === 404 || response.href.includes('/404') || response.href.includes('%2F404')) {
+      if (
+        response.status === 404 ||
+        response.href.includes('/404') ||
+        response.href.includes('%2F404')
+      ) {
         // Contact was removed
         changes.push({
           url: response.href,
@@ -876,16 +879,13 @@ export class CardDAVClient {
    * Fetch specific contacts by URL using addressbook-multiget REPORT.
    * More efficient than individual GETs for batch fetches.
    */
-  async fetchContactsByUrls(
-    addressBook: AddressBook,
-    urls: string[]
-  ): Promise<Contact[]> {
+  async fetchContactsByUrls(addressBook: AddressBook, urls: string[]): Promise<Contact[]> {
     if (urls.length === 0) return []
 
     const davAb = this.findDavAddressBook(addressBook.url)
     if (!davAb) throw new Error(`Address book not found: ${addressBook.url}`)
 
-    const hrefs = urls.map(u => `<D:href>${escapeXml(u)}</D:href>`).join('\n    ')
+    const hrefs = urls.map((u) => `<D:href>${escapeXml(u)}</D:href>`).join('\n    ')
 
     const body = `<?xml version="1.0" encoding="UTF-8" ?>
 <C:addressbook-multiget xmlns:D="DAV:" xmlns:C="urn:ietf:params:xml:ns:carddav">
@@ -898,7 +898,7 @@ export class CardDAVClient {
 
     const headers: Record<string, string> = {
       'Content-Type': 'application/xml; charset=utf-8',
-      'Authorization': `Basic ${btoa(`${this.credentials.username}:${this.credentials.password}`)}`,
+      Authorization: `Basic ${btoa(`${this.credentials.username}:${this.credentials.password}`)}`,
     }
 
     const response = await this.proxyFetch(addressBook.url, {

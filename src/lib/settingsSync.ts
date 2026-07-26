@@ -124,7 +124,7 @@ export function deserializeSettings(json: string): {
  */
 export function mergeSettings(
   localSettings: UserSettings,
-  remoteSettings: Partial<UserSettings>,
+  remoteSettings: Partial<UserSettings>
 ): UserSettings {
   const merged = { ...localSettings }
   for (const key of SYNCABLE_SETTINGS) {
@@ -146,7 +146,7 @@ export function mergeSettings(
  */
 export function resolveConflict(
   localModified: string,
-  remoteDtstamp: string,
+  remoteDtstamp: string
 ): 'local' | 'remote' | 'equal' {
   const localTime = new Date(localModified).getTime()
   const remoteTime = new Date(remoteDtstamp).getTime()

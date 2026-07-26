@@ -28,6 +28,9 @@ export async function listModels(cfg: ProviderRequestConfig): Promise<ModelInfo[
   return adapterFor(cfg.baseUrl).listModels(cfg)
 }
 
-export async function sendVisionMessage(cfg: ProviderRequestConfig, input: VisionMessageInput): Promise<string> {
+export async function sendVisionMessage(
+  cfg: ProviderRequestConfig,
+  input: VisionMessageInput
+): Promise<string> {
   return adapterFor(cfg.baseUrl).sendVisionMessage(cfg, input)
 }

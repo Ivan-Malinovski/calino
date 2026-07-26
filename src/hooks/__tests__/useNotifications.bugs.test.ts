@@ -12,8 +12,7 @@ vi.mock('sonner', () => ({
 
 vi.mock('@/lib/notifications', () => ({
   showNotification: (...args: unknown[]) => mockShowNotification(...args),
-  createNotificationId: (eventId: string, reminderId: string) =>
-    `calino-${eventId}-${reminderId}`,
+  createNotificationId: (eventId: string, reminderId: string) => `calino-${eventId}-${reminderId}`,
   getDueSnoozedReminders: () => [],
   snoozeReminder: vi.fn(),
   getEffectiveReminders: (event: CalendarEvent, defaultReminderMinutes: number) => {
@@ -47,11 +46,7 @@ vi.mock('@/store/settingsStore', () => ({
     }),
 }))
 
-function makeEvent(
-  id: string,
-  start: Date,
-  overrides: Partial<CalendarEvent> = {}
-): CalendarEvent {
+function makeEvent(id: string, start: Date, overrides: Partial<CalendarEvent> = {}): CalendarEvent {
   return {
     id,
     calendarId: 'cal1',

@@ -13,7 +13,7 @@ const GAP = 4
 export function positionedEventStyle(
   event: CalendarEvent,
   column: number,
-  totalColumns: number,
+  totalColumns: number
 ): {
   top: string
   height: string
@@ -46,7 +46,7 @@ export function positionedEventStyle(
  */
 export function transparentEventStyle(
   event: CalendarEvent,
-  gap = 2,
+  gap = 2
 ): {
   top: string
   height: string
@@ -91,7 +91,7 @@ export const TASK_PILL_LAYOUT_MINUTES = 30
 export function taskPillStyle(
   task: CalendarEvent,
   column: number,
-  totalColumns: number,
+  totalColumns: number
 ): {
   top: string
   left: string
@@ -119,7 +119,7 @@ export function taskPillStyle(
 export function travelBarStyle(
   event: CalendarEvent,
   column: number,
-  totalColumns: number,
+  totalColumns: number
 ): {
   top: string
   height: string

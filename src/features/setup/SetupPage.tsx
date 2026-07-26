@@ -274,12 +274,16 @@ export function SetupPage(): JSX.Element {
 
         {/* Step indicator */}
         <div className={styles.steps}>
-          <div className={`${styles.step} ${step === 'accounts' ? styles.stepActive : styles.stepDone}`}>
+          <div
+            className={`${styles.step} ${step === 'accounts' ? styles.stepActive : styles.stepDone}`}
+          >
             <span className={styles.stepDot}>{step === 'accounts' ? '1' : '✓'}</span>
             <span>Accounts</span>
           </div>
           <div className={`${styles.stepSep} ${step !== 'accounts' ? styles.stepDone : ''}`} />
-          <div className={`${styles.step} ${step === 'password' ? styles.stepActive : step === 'done' ? styles.stepDone : ''}`}>
+          <div
+            className={`${styles.step} ${step === 'password' ? styles.stepActive : step === 'done' ? styles.stepDone : ''}`}
+          >
             <span className={styles.stepDot}>{step === 'done' ? '✓' : '2'}</span>
             <span>Password</span>
           </div>
@@ -309,7 +313,12 @@ export function SetupPage(): JSX.Element {
                       aria-label={`Remove ${acc.name}`}
                     >
                       <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                        <path d="M4 4L12 12M12 4L4 12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                        <path
+                          d="M4 4L12 12M12 4L4 12"
+                          stroke="currentColor"
+                          strokeWidth="1.6"
+                          strokeLinecap="round"
+                        />
                       </svg>
                     </button>
                   </div>
@@ -318,7 +327,9 @@ export function SetupPage(): JSX.Element {
             )}
 
             <div className={styles.field}>
-              <label className={styles.label} htmlFor="setup-name">Account Name</label>
+              <label className={styles.label} htmlFor="setup-name">
+                Account Name
+              </label>
               <input
                 id="setup-name"
                 className={styles.input}
@@ -330,35 +341,50 @@ export function SetupPage(): JSX.Element {
             </div>
 
             <div className={styles.field}>
-              <label className={styles.label} htmlFor="setup-url">Server URL</label>
+              <label className={styles.label} htmlFor="setup-url">
+                Server URL
+              </label>
               <input
                 id="setup-url"
                 className={styles.input}
                 value={formUrl}
-                onChange={(e) => { setFormUrl(e.target.value); setTestStatus('idle') }}
+                onChange={(e) => {
+                  setFormUrl(e.target.value)
+                  setTestStatus('idle')
+                }}
                 placeholder="https://caldav.example.com/dav.php"
               />
             </div>
 
             <div className={styles.field}>
-              <label className={styles.label} htmlFor="setup-username">Username</label>
+              <label className={styles.label} htmlFor="setup-username">
+                Username
+              </label>
               <input
                 id="setup-username"
                 className={styles.input}
                 value={formUsername}
-                onChange={(e) => { setFormUsername(e.target.value); setTestStatus('idle') }}
+                onChange={(e) => {
+                  setFormUsername(e.target.value)
+                  setTestStatus('idle')
+                }}
                 autoComplete="username"
               />
             </div>
 
             <div className={styles.field}>
-              <label className={styles.label} htmlFor="setup-password">Password</label>
+              <label className={styles.label} htmlFor="setup-password">
+                Password
+              </label>
               <input
                 id="setup-password"
                 type="password"
                 className={styles.input}
                 value={formPassword}
-                onChange={(e) => { setFormPassword(e.target.value); setTestStatus('idle') }}
+                onChange={(e) => {
+                  setFormPassword(e.target.value)
+                  setTestStatus('idle')
+                }}
                 autoComplete="current-password"
               />
             </div>
@@ -370,9 +396,18 @@ export function SetupPage(): JSX.Element {
             >
               <svg
                 style={{ transform: showProxy ? 'rotate(0deg)' : 'rotate(-90deg)' }}
-                width="16" height="16" viewBox="0 0 16 16" fill="none"
+                width="16"
+                height="16"
+                viewBox="0 0 16 16"
+                fill="none"
               >
-                <path d="M4 6L8 10L12 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                <path
+                  d="M4 6L8 10L12 6"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
               </svg>
               Proxy URL (optional)
             </button>
@@ -386,12 +421,15 @@ export function SetupPage(): JSX.Element {
                   placeholder="https://proxy.example.com"
                 />
                 <div className={styles.hint}>
-                  Requests go through this proxy. Your CalDAV credentials will be visible to the proxy provider.
+                  Requests go through this proxy. Your CalDAV credentials will be visible to the
+                  proxy provider.
                 </div>
               </div>
             )}
 
-            {testStatus === 'success' && <div className={styles.success}>✓ Connection successful</div>}
+            {testStatus === 'success' && (
+              <div className={styles.success}>✓ Connection successful</div>
+            )}
             {testStatus === 'error' && <div className={styles.error}>✕ {testError}</div>}
 
             <div className={styles.actions}>
@@ -413,7 +451,13 @@ export function SetupPage(): JSX.Element {
               </button>
             </div>
 
-            <hr style={{ margin: '24px 0', border: 'none', borderTop: '1px solid var(--modal-border, #e0e0e0)' }} />
+            <hr
+              style={{
+                margin: '24px 0',
+                border: 'none',
+                borderTop: '1px solid var(--modal-border, #e0e0e0)',
+              }}
+            />
             <h3 style={{ marginBottom: 12 }}>Calendar Subscriptions (.ics)</h3>
 
             {webcalSubscriptions.length > 0 && (
@@ -432,7 +476,12 @@ export function SetupPage(): JSX.Element {
                       aria-label={`Remove ${sub.name}`}
                     >
                       <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                        <path d="M4 4L12 12M12 4L4 12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                        <path
+                          d="M4 4L12 12M12 4L4 12"
+                          stroke="currentColor"
+                          strokeWidth="1.6"
+                          strokeLinecap="round"
+                        />
                       </svg>
                     </button>
                   </div>
@@ -441,7 +490,9 @@ export function SetupPage(): JSX.Element {
             )}
 
             <div className={styles.field}>
-              <label className={styles.label} htmlFor="setup-webcal-name">Name</label>
+              <label className={styles.label} htmlFor="setup-webcal-name">
+                Name
+              </label>
               <input
                 id="setup-webcal-name"
                 className={styles.input}
@@ -452,7 +503,9 @@ export function SetupPage(): JSX.Element {
             </div>
 
             <div className={styles.field}>
-              <label className={styles.label} htmlFor="setup-webcal-url">Calendar URL</label>
+              <label className={styles.label} htmlFor="setup-webcal-url">
+                Calendar URL
+              </label>
               <input
                 id="setup-webcal-url"
                 className={styles.input}
@@ -463,7 +516,9 @@ export function SetupPage(): JSX.Element {
             </div>
 
             <div className={styles.field}>
-              <label className={styles.label} htmlFor="setup-webcal-refresh">Refresh interval (minutes)</label>
+              <label className={styles.label} htmlFor="setup-webcal-refresh">
+                Refresh interval (minutes)
+              </label>
               <input
                 id="setup-webcal-refresh"
                 type="number"
@@ -481,9 +536,18 @@ export function SetupPage(): JSX.Element {
             >
               <svg
                 style={{ transform: showWebcalProxy ? 'rotate(0deg)' : 'rotate(-90deg)' }}
-                width="16" height="16" viewBox="0 0 16 16" fill="none"
+                width="16"
+                height="16"
+                viewBox="0 0 16 16"
+                fill="none"
               >
-                <path d="M4 6L8 10L12 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                <path
+                  d="M4 6L8 10L12 6"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
               </svg>
               Proxy URL (optional)
             </button>
@@ -531,23 +595,32 @@ export function SetupPage(): JSX.Element {
         {step === 'password' && (
           <>
             <div className={styles.field}>
-              <label className={styles.label} htmlFor="setup-master">Master Password</label>
+              <label className={styles.label} htmlFor="setup-master">
+                Master Password
+              </label>
               <input
                 id="setup-master"
                 type="password"
                 className={`${styles.input} ${passwordError ? styles.inputError : ''}`}
                 value={masterPassword}
-                onChange={(e) => { setMasterPassword(e.target.value); setPasswordError('') }}
+                onChange={(e) => {
+                  setMasterPassword(e.target.value)
+                  setPasswordError('')
+                }}
                 placeholder="Choose a strong password"
                 autoFocus
               />
               {masterPassword.length > 0 && (
                 <div className={styles.strengthBar}>
-                  <div className={`${styles.strengthFill} ${
-                    getPasswordStrength(masterPassword) === 'weak' ? styles.strengthWeak :
-                    getPasswordStrength(masterPassword) === 'medium' ? styles.strengthMedium :
-                    styles.strengthStrong
-                  }`} />
+                  <div
+                    className={`${styles.strengthFill} ${
+                      getPasswordStrength(masterPassword) === 'weak'
+                        ? styles.strengthWeak
+                        : getPasswordStrength(masterPassword) === 'medium'
+                          ? styles.strengthMedium
+                          : styles.strengthStrong
+                    }`}
+                  />
                 </div>
               )}
               <div className={styles.hint}>
@@ -556,13 +629,18 @@ export function SetupPage(): JSX.Element {
             </div>
 
             <div className={styles.field}>
-              <label className={styles.label} htmlFor="setup-confirm">Confirm Password</label>
+              <label className={styles.label} htmlFor="setup-confirm">
+                Confirm Password
+              </label>
               <input
                 id="setup-confirm"
                 type="password"
                 className={`${styles.input} ${passwordError ? styles.inputError : ''}`}
                 value={masterConfirm}
-                onChange={(e) => { setMasterConfirm(e.target.value); setPasswordError('') }}
+                onChange={(e) => {
+                  setMasterConfirm(e.target.value)
+                  setPasswordError('')
+                }}
                 placeholder="Type it again"
               />
             </div>
@@ -597,20 +675,30 @@ export function SetupPage(): JSX.Element {
                 <li>
                   Rebuild: <code>docker compose up -d --build</code>
                 </li>
-                <li>
-                  Open Calino and enter your master password
-                </li>
+                <li>Open Calino and enter your master password</li>
               </ol>
               <div className={styles.warn}>
-                ⚠️ The config is baked into the JS bundle at build time. You must rebuild for changes to take effect.
+                ⚠️ The config is baked into the JS bundle at build time. You must rebuild for
+                changes to take effect.
               </div>
             </div>
 
             <div className={styles.actions}>
-              <button type="button" className={styles.btn} onClick={() => { setStep('accounts'); setConfigJson(null) }}>
+              <button
+                type="button"
+                className={styles.btn}
+                onClick={() => {
+                  setStep('accounts')
+                  setConfigJson(null)
+                }}
+              >
                 ← Start Over
               </button>
-              <button type="button" className={styles.btn} onClick={() => configJson && downloadConfig(configJson)}>
+              <button
+                type="button"
+                className={styles.btn}
+                onClick={() => configJson && downloadConfig(configJson)}
+              >
                 Download Again
               </button>
               <button

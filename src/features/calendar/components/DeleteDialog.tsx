@@ -24,10 +24,7 @@ export function DeleteDialog({
   if (!rendered) return null
 
   return (
-    <div
-      className={`${styles.overlay} ${closing ? styles.closing : ''}`}
-      onClick={requestClose}
-    >
+    <div className={`${styles.overlay} ${closing ? styles.closing : ''}`} onClick={requestClose}>
       <div
         ref={modalRef}
         className={styles.modal}
@@ -57,7 +54,11 @@ export function DeleteDialog({
             <button type="button" className={styles.deleteButton} onClick={() => onConfirm('this')}>
               This event only
             </button>
-            <button type="button" className={styles.deleteButton} onClick={() => onConfirm('future')}>
+            <button
+              type="button"
+              className={styles.deleteButton}
+              onClick={() => onConfirm('future')}
+            >
               This and following events
             </button>
             <button type="button" className={styles.cancelButton} onClick={requestClose}>

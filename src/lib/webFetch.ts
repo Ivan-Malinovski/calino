@@ -68,7 +68,8 @@ async function nativeFetch(input: RequestInfo | URL, init?: RequestInit): Promis
     headers[key] = value
   })
 
-  const body = request.method === 'GET' || request.method === 'HEAD' ? undefined : await request.text()
+  const body =
+    request.method === 'GET' || request.method === 'HEAD' ? undefined : await request.text()
 
   const pending = DavHttp.request({
     url: request.url,

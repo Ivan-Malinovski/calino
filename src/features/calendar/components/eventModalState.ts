@@ -41,7 +41,6 @@ export type InitialFormStateWithMeta = InitialFormState & {
   originalEventId: string | null
 }
 
-
 export function makeDefaultState(
   overrides: Partial<InitialFormStateWithMeta> = {}
 ): InitialFormStateWithMeta {
@@ -110,7 +109,9 @@ export function getInitialFormState(
     if (existingEvent?.recurrenceId) {
       isRecurringInstance = true
       originalEventId =
-        existingEvent.recurrenceMasterId || existingEvent.uid || extractOriginalEventId(selectedEventId)
+        existingEvent.recurrenceMasterId ||
+        existingEvent.uid ||
+        extractOriginalEventId(selectedEventId)
     }
 
     if (!existingEvent) {

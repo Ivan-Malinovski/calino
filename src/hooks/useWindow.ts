@@ -6,9 +6,7 @@ import { useMatchMedia } from './useMatchMedia'
  * SSR-safe: returns `0` on the server.
  */
 export function useWindowDimension(dimension: 'innerWidth' | 'innerHeight'): number {
-  const [value, setValue] = useState(
-    typeof window !== 'undefined' ? window[dimension] : 0,
-  )
+  const [value, setValue] = useState(typeof window !== 'undefined' ? window[dimension] : 0)
 
   useEffect(() => {
     // R4.4: rAF-throttle resize. Browsers fire `resize` on every frame

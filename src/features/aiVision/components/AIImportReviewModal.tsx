@@ -42,25 +42,53 @@ function formatDateRange(fields: ExtractedEventFields, timeFormat: TimeFormat): 
   if (!end) return startLabel
 
   const sameDay = format(start, 'yyyy-MM-dd') === format(end, 'yyyy-MM-dd')
-  const endLabel = sameDay ? formatTime(end, timeFormat) : `${format(end, dateFmt)} · ${formatTime(end, timeFormat)}`
+  const endLabel = sameDay
+    ? formatTime(end, timeFormat)
+    : `${format(end, dateFmt)} · ${formatTime(end, timeFormat)}`
 
   return `${startLabel} – ${endLabel}`
 }
 
 function CheckIcon(): JSX.Element {
   return (
-    <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
       <path d="M3 8.5l3.2 3.2L13 4.5" />
     </svg>
   )
 }
 
-function CandidateDetails({ fields, dateLabel }: { fields: ExtractedEventFields; dateLabel: string | null }): JSX.Element {
+function CandidateDetails({
+  fields,
+  dateLabel,
+}: {
+  fields: ExtractedEventFields
+  dateLabel: string | null
+}): JSX.Element {
   return (
     <>
       {dateLabel && (
         <div className={styles.candidateMetaRow}>
-          <svg width="13" height="13" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <svg
+            width="13"
+            height="13"
+            viewBox="0 0 18 18"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
             <rect x="2" y="3" width="14" height="13" rx="3" />
             <path d="M2 7h14M6 2v2M12 2v2" />
           </svg>
@@ -69,16 +97,30 @@ function CandidateDetails({ fields, dateLabel }: { fields: ExtractedEventFields;
       )}
       {fields.location && (
         <div className={styles.candidateMetaRow}>
-          <svg width="13" height="13" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <svg
+            width="13"
+            height="13"
+            viewBox="0 0 18 18"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
             <path d="M9 16s5.5-4.9 5.5-9A5.5 5.5 0 003.5 7c0 4.1 5.5 9 5.5 9z" />
             <circle cx="9" cy="7" r="2" />
           </svg>
           {fields.location}
         </div>
       )}
-      {fields.description && <div className={styles.candidateDescription}>{fields.description}</div>}
+      {fields.description && (
+        <div className={styles.candidateDescription}>{fields.description}</div>
+      )}
       {fields.confidence && fields.confidence !== 'high' && (
-        <span className={`${styles.confidenceBadge} ${fields.confidence === 'low' ? styles.confidenceLow : styles.confidenceMedium}`}>
+        <span
+          className={`${styles.confidenceBadge} ${fields.confidence === 'low' ? styles.confidenceLow : styles.confidenceMedium}`}
+        >
           {fields.confidence} confidence
         </span>
       )}
@@ -106,7 +148,12 @@ function CandidateCard({
       <div className={styles.candidateTitle}>{fields.title || 'Untitled event'}</div>
       <CandidateDetails fields={fields} dateLabel={dateLabel} />
       <div className={styles.candidateActions}>
-        <button type="button" className={`${styles.button} ${styles.buttonPrimary}`} onClick={onUse} data-action="use-candidate">
+        <button
+          type="button"
+          className={`${styles.button} ${styles.buttonPrimary}`}
+          onClick={onUse}
+          data-action="use-candidate"
+        >
           Use this
         </button>
       </div>
@@ -138,7 +185,10 @@ function SelectableCandidateCard({
       data-selected={selected}
     >
       <div className={styles.candidateCheckRow}>
-        <span className={`${styles.checkbox} ${selected ? styles.checkboxChecked : ''}`} aria-hidden="true">
+        <span
+          className={`${styles.checkbox} ${selected ? styles.checkboxChecked : ''}`}
+          aria-hidden="true"
+        >
           {selected && <CheckIcon />}
         </span>
         <div className={styles.candidateTitle}>{fields.title || 'Untitled event'}</div>
@@ -214,7 +264,10 @@ export function AIImportReviewModal({
         : `Add ${selectedCount} selected`
 
   return createPortal(
-    <div className={`${styles.modal} ${closing ? styles.closing : ''}`} onClick={handleBackdropClick}>
+    <div
+      className={`${styles.modal} ${closing ? styles.closing : ''}`}
+      onClick={handleBackdropClick}
+    >
       <div
         ref={dialogRef}
         className={styles.modalContent}
@@ -247,12 +300,22 @@ export function AIImportReviewModal({
                 onToggle={() => toggleSelected(index)}
               />
             ) : (
-              <CandidateCard key={index} fields={candidate} timeFormat={timeFormat} onUse={() => onConfirm(candidate)} />
+              <CandidateCard
+                key={index}
+                fields={candidate}
+                timeFormat={timeFormat}
+                onUse={() => onConfirm(candidate)}
+              />
             )
           )}
         </div>
         <div className={styles.footer}>
-          <button type="button" className={`${styles.button} ${styles.buttonSecondary}`} onClick={requestClose} data-action="cancel-import">
+          <button
+            type="button"
+            className={`${styles.button} ${styles.buttonSecondary}`}
+            onClick={requestClose}
+            data-action="cancel-import"
+          >
             Cancel
           </button>
           {isMultiple && (

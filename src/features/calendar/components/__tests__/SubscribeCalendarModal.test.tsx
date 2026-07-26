@@ -79,7 +79,9 @@ describe('SubscribeCalendarModal', () => {
 
   it('surfaces an error when addSubscription fails', async () => {
     const user = userEvent.setup()
-    mockAddSubscription.mockRejectedValue(new Error('That URL did not return a valid iCalendar (.ics) file.'))
+    mockAddSubscription.mockRejectedValue(
+      new Error('That URL did not return a valid iCalendar (.ics) file.')
+    )
 
     render(<SubscribeCalendarModal isOpen={true} onClose={() => {}} />)
 

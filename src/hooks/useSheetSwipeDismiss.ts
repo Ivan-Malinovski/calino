@@ -88,7 +88,13 @@ export function useSheetSwipeDismiss({
       // A live text selection has drag handles of its own — a touch that starts
       // on one is the user adjusting the selection, not dismissing the sheet.
       const selection = window.getSelection()
-      if (selection && !selection.isCollapsed && selection.anchorNode && sheet.contains(selection.anchorNode)) return
+      if (
+        selection &&
+        !selection.isCollapsed &&
+        selection.anchorNode &&
+        sheet.contains(selection.anchorNode)
+      )
+        return
       // Inside a scroll region a swipe is only ours when there's nothing left
       // to scroll up into — otherwise this is an ordinary scroll.
       const scroller = scrollRef?.current

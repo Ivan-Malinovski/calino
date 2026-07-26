@@ -82,8 +82,8 @@ export function PrivacyPolicy(): JSX.Element {
             <li>
               CalDAV account credentials, obfuscated with a key stored in the app itself. This
               protects against casual inspection of localStorage (e.g. another site or extension
-              accessing it by mistake), but is not strong encryption against someone with access
-              to both the app source and your browser storage.
+              accessing it by mistake), but is not strong encryption against someone with access to
+              both the app source and your browser storage.
             </li>
           </ul>
           <p>

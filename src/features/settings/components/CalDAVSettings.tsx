@@ -116,7 +116,10 @@ export function CalDAVSettings(): JSX.Element {
   }
 
   return (
-    <section className={`${styles.section} ${styles.sectionActive}`} data-component="caldav-settings">
+    <section
+      className={`${styles.section} ${styles.sectionActive}`}
+      data-component="caldav-settings"
+    >
       <h1 className={styles.pageTitle}>Sync</h1>
 
       <div className={styles.group} data-component="connected-accounts">
@@ -125,14 +128,26 @@ export function CalDAVSettings(): JSX.Element {
           const test = testStates[account.id]
           return (
             <div key={account.id} data-component="account-row-wrapper">
-              <div className={styles.accountRow} data-component="account-row" data-account-id={account.id} data-account-name={account.name}>
+              <div
+                className={styles.accountRow}
+                data-component="account-row"
+                data-account-id={account.id}
+                data-account-name={account.name}
+              >
                 <div
                   className={styles.accountIcon}
                   style={{ background: 'color-mix(in srgb, var(--accent) 10%, var(--canvas))' }}
                 >
                   <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
                     <rect width="20" height="20" rx="5" fill="var(--accent)" opacity="0.8" />
-                    <text x="10" y="14" textAnchor="middle" fontSize="11" fill="white" fontFamily="sans-serif">
+                    <text
+                      x="10"
+                      y="14"
+                      textAnchor="middle"
+                      fontSize="11"
+                      fill="white"
+                      fontFamily="sans-serif"
+                    >
                       {account.name.charAt(0)}
                     </text>
                   </svg>
@@ -187,7 +202,14 @@ export function CalDAVSettings(): JSX.Element {
           data-action="add-account"
           type="button"
         >
-          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden="true">
+          <svg
+            viewBox="0 0 16 16"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.6"
+            strokeLinecap="round"
+            aria-hidden="true"
+          >
             <path d="M8 2v12M2 8h12" />
           </svg>
           Add calendar account
@@ -210,7 +232,14 @@ export function CalDAVSettings(): JSX.Element {
               >
                 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
                   <rect width="20" height="20" rx="5" fill="var(--accent)" opacity="0.8" />
-                  <text x="10" y="14" textAnchor="middle" fontSize="11" fill="white" fontFamily="sans-serif">
+                  <text
+                    x="10"
+                    y="14"
+                    textAnchor="middle"
+                    fontSize="11"
+                    fill="white"
+                    fontFamily="sans-serif"
+                  >
                     {subscription.name.charAt(0)}
                   </text>
                 </svg>
@@ -262,7 +291,14 @@ export function CalDAVSettings(): JSX.Element {
           data-action="subscribe-calendar"
           type="button"
         >
-          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden="true">
+          <svg
+            viewBox="0 0 16 16"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.6"
+            strokeLinecap="round"
+            aria-hidden="true"
+          >
             <path d="M8 2v12M2 8h12" />
           </svg>
           Subscribe to calendar (.ics)

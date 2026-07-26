@@ -104,11 +104,7 @@ export function ContactFormModal({
     const displayName = title.trim() || formState.displayName || ''
 
     // Validate: at least one of displayName, givenName, or familyName must be non-empty
-    if (
-      !displayName &&
-      !formState.givenName?.trim() &&
-      !formState.familyName?.trim()
-    ) {
+    if (!displayName && !formState.givenName?.trim() && !formState.familyName?.trim()) {
       // Could show a validation error here; for now, force givenName as fallback
       setFormState((prev) => ({ ...prev, displayName: 'New Contact' }))
       setTitle('New Contact')
@@ -185,16 +181,9 @@ export function ContactFormModal({
   }
 
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      className={eventModalStyles.contactFormModal}
-    >
+    <Modal isOpen={isOpen} onClose={onClose} className={eventModalStyles.contactFormModal}>
       {/* Header */}
-      <div
-        className={eventModalStyles.modalHeader}
-        style={{ padding: '20px 22px 14px' }}
-      >
+      <div className={eventModalStyles.modalHeader} style={{ padding: '20px 22px 14px' }}>
         <div className={eventModalStyles.titleInputWrapper} style={{ flex: 1 }}>
           <input
             type="text"
@@ -222,34 +211,19 @@ export function ContactFormModal({
       </div>
 
       {/* Footer */}
-      <div
-        className={eventModalStyles.modalFooter}
-        style={{ padding: '12px 22px' }}
-      >
+      <div className={eventModalStyles.modalFooter} style={{ padding: '12px 22px' }}>
         <div style={{ flex: 1 }}>
           {isEditMode && onDelete && (
-            <button
-              type="button"
-              className={eventModalStyles.modalDelete}
-              onClick={handleDelete}
-            >
+            <button type="button" className={eventModalStyles.modalDelete} onClick={handleDelete}>
               Delete
             </button>
           )}
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button
-            type="button"
-            className={eventModalStyles.modalCancel}
-            onClick={handleCancel}
-          >
+          <button type="button" className={eventModalStyles.modalCancel} onClick={handleCancel}>
             Cancel
           </button>
-          <button
-            type="button"
-            className={eventModalStyles.modalSave}
-            onClick={handleSave}
-          >
+          <button type="button" className={eventModalStyles.modalSave} onClick={handleSave}>
             Save
           </button>
         </div>
