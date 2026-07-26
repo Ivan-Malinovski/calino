@@ -1,4 +1,4 @@
-import { useEffect, useRef, type RefObject } from 'react'
+import { useEffect, useRef, type RefObject, useLayoutEffect } from 'react'
 
 interface UseHorizontalSwipeOptions {
   onSwipeLeft?: () => void
@@ -24,11 +24,18 @@ interface UseHorizontalSwipeOptions {
  */
 export function useHorizontalSwipe(
   target: RefObject<HTMLElement | null> | 'document',
-  { onSwipeLeft, onSwipeRight, enabled = true, threshold = 50, edgeZonePx }: UseHorizontalSwipeOptions
+  {
+    onSwipeLeft,
+    onSwipeRight,
+    enabled = true,
+    threshold = 50,
+    edgeZonePx,
+  }: UseHorizontalSwipeOptions
 ): void {
   const callbacksRef = useRef({ onSwipeLeft, onSwipeRight })
-  callbacksRef.current = { onSwipeLeft, onSwipeRight }
-
+  useLayoutEffect(() => {
+    callbacksRef.current = { onSwipeLeft, onSwipeRight }
+  }, [onSwipeLeft, onSwipeRight])
   useEffect(() => {
     const el = target === 'document' ? document : target.current
     if (!el || !enabled) return
@@ -87,6 +94,5 @@ export function useHorizontalSwipe(
     // onSwipeLeft/onSwipeRight are read via refs (updated above on every
     // render) so the listeners don't need to re-attach on every parent
     // re-render. Excluding them from deps is intentional.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [target, enabled, threshold, edgeZonePx])
 }

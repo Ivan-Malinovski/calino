@@ -432,7 +432,7 @@ export function CalendarGrid(): JSX.Element {
   const days = useMemo(() => {
     const monthStart = startOfMonth(date)
     const calendarStart = startOfWeek(monthStart, { weekStartsOn: firstDayOfWeek })
-    let calendarEnd = endOfWeek(endOfMonth(date), { weekStartsOn: firstDayOfWeek })
+    const calendarEnd = endOfWeek(endOfMonth(date), { weekStartsOn: firstDayOfWeek })
 
     const currentDays = eachDayOfInterval({ start: calendarStart, end: calendarEnd })
 
