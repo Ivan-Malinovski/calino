@@ -4,9 +4,30 @@ All notable changes to Calino will be documented in this file.
 
 ## [Unreleased]
 
+## [0.25.2] - 2026-07-26
+
+### Fixed
+
+- **The calendar no longer gets slower as you store more events.** Every view switch, month navigation and edit rebuilt the entire event index from scratch — four full passes over every event you have — so the cost of moving around scaled with your whole calendar rather than with what's on screen. It's now built once per change and range queries binary-search their window. On twelve month queries with 20,000 events: 1088ms → 2.8ms. Partially addresses [#73](https://github.com/Ivan-Malinovski/calino/issues/73).
+- **The agenda view is virtualized**, so a long month renders only the rows in view instead of every card at once.
+- **Month and week views stopped re-rendering everything on every interaction** — several props were being rebuilt each render, defeating the memoization meant to prevent exactly that.
+- **View switches and the view-switcher pill are smooth again.** Switching into month or agenda played the date-change slide on top of the view's own first render, and the pill's sliding selector was measured on the main thread every frame — so both stuttered exactly when the app was busiest. The slide no longer fires on mount, and the selector now animates on the compositor.
+- **Deleting a contact now actually deletes it on the server.** The DELETE was never issued, so the contact reappeared on the next sync. Undo still works, before or after the change reaches the server. Fixes [#75](https://github.com/Ivan-Malinovski/calino/issues/75).
+- **Contacts work with more than one address book again** — "+ New" appeared to do nothing (the address-book picker was rendering off-screen), the picked book was discarded so contacts landed in the wrong one, and edits to a book outside the first one never reached the server. Fixes [#74](https://github.com/Ivan-Malinovski/calino/issues/74).
+- **Events with an end before their start are no longer dropped** from range queries.
+- **Pull-to-refresh ignores horizontal swipes**, so paging between months no longer triggers a refresh.
+- **Mobile date/time pickers use the native Android picker** in the preview sheet, and no longer leave a dimmed backdrop behind when the app goes to the background.
+- Month-change layout shift, split-pane resizing, the grid height transition after first mount, agenda scroll stutter on app start, and mobile week-number alignment.
+
+### Added
+
+- **The event preview is a bottom sheet on mobile.** It used to be a fixed 300px card anchored to the tap point, which landed half off-screen on a phone; it now pins to the bottom edge full width, scrolls its content, and swipes down to dismiss. The desktop popup is unchanged. Fixes [#70](https://github.com/Ivan-Malinovski/calino/issues/70).
+- **A haptic feedback toggle** in Settings → General on Android. It's a per-device setting and isn't synced, since the phone that feels sluggish isn't necessarily every phone on your account.
+
 ### Changed
 
 - **The AI base URL is now used exactly as you enter it.** Calino used to append `/v1` to whatever you typed, which meant an endpoint that lives somewhere else — a gateway on a subpath, or a different version prefix — couldn't be expressed at all. Enter the full API root, including `/v1`. Existing settings are migrated automatically.
+- **Desktop month transitions skip the animation when you navigate rapidly**, so holding the chevron or spinning the wheel doesn't strobe.
 
 ## [0.25.1] - 2026-07-25
 
