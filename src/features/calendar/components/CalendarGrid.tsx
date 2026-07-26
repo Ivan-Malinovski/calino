@@ -811,6 +811,11 @@ export function CalendarGrid(): JSX.Element {
         top.style.transition = 'none'
         top.style.minHeight = `${next}px`
         setGridMinHeight(next)
+        
+        // Restore CSS transition after the initial paint
+        requestAnimationFrame(() => {
+          top.style.transition = ''
+        })
         return
       }
       // Applying the new height here would land in the same commit as the
