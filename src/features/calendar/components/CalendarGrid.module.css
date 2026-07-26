@@ -522,6 +522,10 @@
     letter-spacing: 0;
   }
 
+  .weekNumHeader {
+    padding: 8px 1px;
+  }
+
   .weekNumber {
     padding-top: 6px;
     /* The desktop cell-height floor lives on this element, and it's the only
