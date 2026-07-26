@@ -9,6 +9,14 @@
   flex: 1;
   background: var(--panel);
   overflow: auto;
+  /* Hide scrollbar visually to prevent horizontal layout squish on month change, 
+     while still allowing mousewheel/trackpad scrolling */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+.grid::-webkit-scrollbar {
+  display: none; /* Chrome, Safari and Opera */
 }
 
 /* ---- Panel Container ---- */
@@ -135,6 +143,29 @@
   overflow: visible;
   cursor: pointer;
   transition: background var(--dur-fast);
+}
+
+/* ---- Month Change Animations ---- */
+.dayContentSlide {
+  animation: daySlideIn var(--dur-medium, 0.18s) cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  will-change: transform, opacity;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dayContentSlide {
+    animation-duration: 0.01s; /* Practically instant, but still runs lifecycle if needed */
+  }
+}
+
+@keyframes daySlideIn {
+  from {
+    opacity: 0;
+    transform: translate(var(--slide-x, 0px), var(--slide-y, 0px));
+  }
+  to {
+    opacity: 1;
+    transform: translate(0px, 0px);
+  }
 }
 
 .events + .tasks {

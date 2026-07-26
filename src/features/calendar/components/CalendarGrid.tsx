@@ -41,7 +41,7 @@ import { useCalendarStore } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
 import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
 import { useIsMobile, useIsCompactMobile } from '@/hooks/useIsMobile'
-import { useDateChangeMotion } from '@/hooks/useDateChangeMotion'
+import { useDateChangeMotion, type DateChangeMotion } from '@/hooks/useDateChangeMotion'
 import { safeCalDAVUpdate } from '@/lib/caldavHelpers'
 import { EventCard } from './EventCard'
 import { DayEventsPopup } from './DayEventsPopup'
@@ -78,12 +78,11 @@ export function CalendarGrid(): JSX.Element {
   const calendars = useCalendarStore((state) => state.calendars)
   const categories = useCalendarStore((state) => state.categories)
   const selectedCategoryIds = useCalendarStore((state) => state.selectedCategoryIds)
-  const selectedCategoryNames = useMemo(() =>
-    selectedCategoryIds.length > 0
-      ? categories
-          .filter((c) => selectedCategoryIds.includes(c.id))
-          .map((c) => c.name)
-      : [],
+  const selectedCategoryNames = useMemo(
+    () =>
+      selectedCategoryIds.length > 0
+        ? categories.filter((c) => selectedCategoryIds.includes(c.id)).map((c) => c.name)
+        : [],
     [selectedCategoryIds, categories]
   )
   const getEventsForDateRange = useCalendarStore((state) => state.getEventsForDateRange)
@@ -135,7 +134,8 @@ export function CalendarGrid(): JSX.Element {
   // week. Enter/Space (handled on each cell) opens the focused day.
   const handleGridKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
     const { key } = e
-    if (key !== 'ArrowLeft' && key !== 'ArrowRight' && key !== 'ArrowUp' && key !== 'ArrowDown') return
+    if (key !== 'ArrowLeft' && key !== 'ArrowRight' && key !== 'ArrowUp' && key !== 'ArrowDown')
+      return
     const active = document.activeElement as HTMLElement | null
     const cell = active?.closest('[data-date]') as HTMLElement | null
     if (!cell || !e.currentTarget.contains(cell)) return
@@ -156,7 +156,12 @@ export function CalendarGrid(): JSX.Element {
   }, [])
 
   const [activeEvent, setActiveEvent] = useState<CalendarEvent | null>(null)
-  const [activeLayout, setActiveLayout] = useState<{ compact: boolean; monthView: boolean; dotMode: boolean; isMobileMonth: boolean }>({ compact: false, monthView: false, dotMode: false, isMobileMonth: false })
+  const [activeLayout, setActiveLayout] = useState<{
+    compact: boolean
+    monthView: boolean
+    dotMode: boolean
+    isMobileMonth: boolean
+  }>({ compact: false, monthView: false, dotMode: false, isMobileMonth: false })
   const draggedEventRef = useRef<CalendarEvent | null>(null)
   const [scale, setScale] = useState(1)
   const isMobile = useIsMobile()
@@ -164,7 +169,8 @@ export function CalendarGrid(): JSX.Element {
   const isTallWindow = useIsTallWindow()
   const isWideWindow = useIsWideWindow()
   const isPortraitWindow = useIsPortraitWindow()
-  const showAgendaSplit = agendaBelowMonthEnabled && ((isTallWindow && isPortraitWindow) || isCompactMobile)
+  const showAgendaSplit =
+    agendaBelowMonthEnabled && ((isTallWindow && isPortraitWindow) || isCompactMobile)
   const [bottomPanelDay, setBottomPanelDay] = useState<string | null>(null)
   const [splitRatio, setSplitRatio] = useState(monthAgendaSplitRatioSetting)
   const [gridRatio, setGridRatio] = useState(monthAgendaGridRatioSetting)
@@ -321,7 +327,9 @@ export function CalendarGrid(): JSX.Element {
     draggedEventRef.current = draggedEvent || null
     setActiveEvent(draggedEvent || null)
     markDragStart(event.activatorEvent)
-    const data = event.active.data.current as { compact?: boolean; monthView?: boolean; dotMode?: boolean; isMobileMonth?: boolean } | undefined
+    const data = event.active.data.current as
+      | { compact?: boolean; monthView?: boolean; dotMode?: boolean; isMobileMonth?: boolean }
+      | undefined
     setActiveLayout({
       compact: !!data?.compact,
       monthView: !!data?.monthView,
@@ -424,9 +432,11 @@ export function CalendarGrid(): JSX.Element {
   const days = useMemo(() => {
     const monthStart = startOfMonth(date)
     const calendarStart = startOfWeek(monthStart, { weekStartsOn: firstDayOfWeek })
-    const calendarEnd = endOfWeek(endOfMonth(date), { weekStartsOn: firstDayOfWeek })
+    let calendarEnd = endOfWeek(endOfMonth(date), { weekStartsOn: firstDayOfWeek })
 
-    return eachDayOfInterval({ start: calendarStart, end: calendarEnd })
+    const currentDays = eachDayOfInterval({ start: calendarStart, end: calendarEnd })
+
+    return currentDays
   }, [date, firstDayOfWeek])
 
   const numWeeks = Math.floor(days.length / 7)
@@ -447,7 +457,9 @@ export function CalendarGrid(): JSX.Element {
     )
 
     const map = new Map<string, CalendarEvent[]>()
-    const gridEvents = visibleEvents.filter((event) => event.type !== 'task' && event.type !== 'journal')
+    const gridEvents = visibleEvents.filter(
+      (event) => event.type !== 'task' && event.type !== 'journal'
+    )
 
     // A multi-day event is split into one fragment per day, and each day cell
     // stacks its own fragments top-to-bottom. Without a row reserved for the
@@ -529,7 +541,15 @@ export function CalendarGrid(): JSX.Element {
     })
 
     return map
-  }, [date, firstDayOfWeek, events, rangeExpansionVersion, calendars, selectedCategoryNames, getEventsForDateRange])
+  }, [
+    date,
+    firstDayOfWeek,
+    events,
+    rangeExpansionVersion,
+    calendars,
+    selectedCategoryNames,
+    getEventsForDateRange,
+  ])
 
   // Looks tasks up per visible day via the store's shared due-date index
   // instead of re-filtering the entire event array. The old version scanned
@@ -548,7 +568,8 @@ export function CalendarGrid(): JSX.Element {
           visibleCalendarIds.includes(event.calendarId) &&
           taskCalendarsWithTasks.includes(event.calendarId) &&
           !(hideCompletedTasksInMonthView && event.completed) &&
-          (selectedCategoryNames.length === 0 || event.categories?.some((c) => selectedCategoryNames.includes(c)))
+          (selectedCategoryNames.length === 0 ||
+            event.categories?.some((c) => selectedCategoryNames.includes(c)))
       )
       if (dayTasks.length > 0) map.set(dayKey, dayTasks)
     }
@@ -565,7 +586,8 @@ export function CalendarGrid(): JSX.Element {
     resizeCleanupRef.current?.()
     const startY = e.clientY
     const startRatio = gridRatio
-    const containerHeight = (e.currentTarget.parentElement as HTMLElement).getBoundingClientRect().height
+    const containerHeight = (e.currentTarget.parentElement as HTMLElement).getBoundingClientRect()
+      .height
     const onMove = (ev: MouseEvent): void => {
       const delta = (ev.clientY - startY) / containerHeight
       const next = Math.min(0.85, Math.max(0.35, startRatio + delta))
@@ -588,7 +610,8 @@ export function CalendarGrid(): JSX.Element {
     resizeCleanupRef.current?.()
     const startY = e.touches[0].clientY
     const startRatio = gridRatio
-    const containerHeight = (e.currentTarget.parentElement as HTMLElement).getBoundingClientRect().height
+    const containerHeight = (e.currentTarget.parentElement as HTMLElement).getBoundingClientRect()
+      .height
     const onMove = (ev: TouchEvent): void => {
       const delta = (ev.touches[0].clientY - startY) / containerHeight
       const next = Math.min(0.85, Math.max(0.35, startRatio + delta))
@@ -612,7 +635,8 @@ export function CalendarGrid(): JSX.Element {
     resizeCleanupRef.current?.()
     const startX = e.clientX
     const startRatio = splitRatio
-    const containerWidth = (e.currentTarget.parentElement as HTMLElement).getBoundingClientRect().width
+    const containerWidth = (e.currentTarget.parentElement as HTMLElement).getBoundingClientRect()
+      .width
     const onMove = (ev: MouseEvent): void => {
       const delta = (ev.clientX - startX) / containerWidth
       const next = Math.min(0.85, Math.max(0.25, startRatio + delta))
@@ -635,7 +659,8 @@ export function CalendarGrid(): JSX.Element {
     resizeCleanupRef.current?.()
     const startX = e.touches[0].clientX
     const startRatio = splitRatio
-    const containerWidth = (e.currentTarget.parentElement as HTMLElement).getBoundingClientRect().width
+    const containerWidth = (e.currentTarget.parentElement as HTMLElement).getBoundingClientRect()
+      .width
     const onMove = (ev: TouchEvent): void => {
       const delta = (ev.touches[0].clientX - startX) / containerWidth
       const next = Math.min(0.85, Math.max(0.25, startRatio + delta))
@@ -749,14 +774,22 @@ export function CalendarGrid(): JSX.Element {
       // screen, and the transition is off so it can't animate through it.
       const restoreTransition = top.style.transition
       const restoreMinHeight = top.style.minHeight
+      const restoreSlideX = scroller.style.getPropertyValue('--slide-x')
+      const restoreSlideY = scroller.style.getPropertyValue('--slide-y')
+
       top.style.transition = 'none'
       top.style.minHeight = '0px'
+      scroller.style.setProperty('--slide-x', '0px')
+      scroller.style.setProperty('--slide-y', '0px')
       void top.offsetHeight
       // Chrome around the scroll area (panel borders, margins) that the grid's
       // own scrollHeight doesn't account for.
       const chrome = top.offsetHeight - scroller.clientHeight
       const needed = scroller.scrollHeight + chrome
+      
       top.style.minHeight = restoreMinHeight
+      scroller.style.setProperty('--slide-x', restoreSlideX)
+      scroller.style.setProperty('--slide-y', restoreSlideY)
       // Put the old height back and commit it *before* re-enabling the
       // transition. The forced reflow above leaves 0px as the element's
       // committed value, so restoring the transition first made the browser
@@ -765,9 +798,11 @@ export function CalendarGrid(): JSX.Element {
       // and one to restore, keep the animation running old height → new.
       void top.offsetHeight
       top.style.transition = restoreTransition
+      
       // Leave the agenda a usable share even in a 6-week month.
       const cap = container.clientHeight * (1 - AGENDA_MIN_SHARE)
       const next = Math.min(needed, cap)
+      
       if (!hasMeasuredRef.current) {
         // First run: no previous height to travel from, so don't defer.
         hasMeasuredRef.current = true
@@ -790,217 +825,303 @@ export function CalendarGrid(): JSX.Element {
       observer.disconnect()
       cancelAnimationFrame(rafRef.current)
     }
-  }, [showAgendaSplit, currentDate, weekNumbers, days, compressPastWeeks, rowHeight, eventsMap, tasksMap])
+  }, [
+    showAgendaSplit,
+    currentDate,
+    weekNumbers,
+    days,
+    compressPastWeeks,
+    rowHeight,
+    eventsMap,
+    tasksMap,
+  ])
 
   if (showAgendaSplit) {
     return (
       <>
-      <div className={styles.splitContainer} ref={splitContainerRef}>
-        <div
-          ref={gridTopRef}
-          className={styles.gridTop}
-          style={{ flex: `0 0 ${gridRatio * 100}%`, minHeight: gridMinHeight || undefined, maxHeight: 800 * gridRatio / 0.6 }}
-        >
-          <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-            <div className={styles.gridPanel} ref={containerRef} {...bind}>
-              <div
-                ref={gridScrollRef}
-                className={styles.grid}
-                data-component="calendar-grid"
-                onKeyDown={handleGridKeyDown}
-                style={{ '--day-cell-height': `${rowHeight}px`, touchAction: 'none' } as React.CSSProperties}
-              >
-              <div className={`${styles.header} ${!showWeekNumbers ? styles.headerNoWeekNum : ''}`}>
-                {showWeekNumbers && <div className={styles.weekNumHeader}>W#</div>}
-                {weekdays.map((day) => (
-                  <div key={day} className={styles.weekday}>
-                    {day}
-                  </div>
-                ))}
-              </div>
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={currentDate}
-                  className={styles.daysContainer}
-                  {...monthChangeMotion}
+        <div className={styles.splitContainer} ref={splitContainerRef}>
+          <div
+            ref={gridTopRef}
+            className={styles.gridTop}
+            style={{
+              flex: `0 0 ${gridRatio * 100}%`,
+              minHeight: gridMinHeight || undefined,
+              maxHeight: (800 * gridRatio) / 0.6,
+            }}
+          >
+            <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+              <div className={styles.gridPanel} ref={containerRef} {...bind}>
+                <div
+                  ref={gridScrollRef}
+                  className={styles.grid}
+                  data-component="calendar-grid"
+                  onKeyDown={handleGridKeyDown}
+                  style={
+                    {
+                      '--day-cell-height': `${rowHeight}px`,
+                      '--slide-x': monthChangeMotion.initial ? `${monthChangeMotion.initial.x || 0}px` : '0px',
+                      '--slide-y': monthChangeMotion.initial ? `${monthChangeMotion.initial.y || 0}px` : '0px',
+                      touchAction: 'none',
+                    } as React.CSSProperties
+                  }
                 >
-                  {weekNumbers.map((weekNum, weekIdx) => {
-                    const weekEnd = days[weekIdx * 7 + 6]
-                    const today = startOfDay(new Date())
-                    const isPastWeek = compressPastWeeks && isBefore(weekEnd, today)
-
-                    return (
-                      <div
-                        key={weekIdx}
-                        className={`${styles.weekRow} ${!showWeekNumbers ? styles.weekRowNoWeekNum : ''} ${isPastWeek ? styles.compressedWeek : ''}`}
-                      >
-                        {showWeekNumbers && (
-                          <div
-                            className={styles.weekNumber}
-                            onClick={() => handleWeekClick(days[weekIdx * 7])}
-                          >
-                            {weekNum}
-                          </div>
-                        )}
-                        {days.slice(weekIdx * 7, weekIdx * 7 + 7).map((day) => {
-                          const dateKey = format(day, 'yyyy-MM-dd')
-                          const dayEvents = eventsMap.get(dateKey) || []
-                          const dayTasks = tasksMap.get(dateKey) || []
-                          const isCurrentMonth = isSameMonth(day, date)
-                          const isTodayDate = isToday(day)
-                          const dayOfWeek = getDay(day)
-                          const isWeekend = dayOfWeek === 0 || dayOfWeek === 6
-
-                          return (
-                            <DroppableDay
-                              key={dateKey}
-                              dateKey={dateKey}
-                              day={day}
-                              dayEvents={dayEvents}
-                              dayTasks={dayTasks}
-                              hasJournal={journalDates.has(dateKey)}
-                              journalEnabled={journalEnabled}
-                              isCurrentMonth={isCurrentMonth}
-                              isTodayDate={isTodayDate}
-                              isFocusAnchor={dateKey === currentDate}
-                              isWeekend={isWeekend}
-                              isPastWeek={isPastWeek}
-                              compactRecurringEvents={compactRecurringEvents}
-                              monthViewEventLimit={monthViewEventLimit}
-                              isMobile={isMobile}
-                              isCompactMobile={isCompactMobile}
-                              onDayClick={handleDayClick}
-                              onDayDoubleClick={handleDayDoubleClick}
-                              onDayNumberClick={handleDayNumberClick}
-                              onJournalIndicatorClick={handleJournalIndicatorClick}
-                              onOpenJournalModal={handleOpenJournalModal}
-                              openModal={openModal}
-                            />
-                          )
-                        })}
+                  <div
+                    className={`${styles.header} ${!showWeekNumbers ? styles.headerNoWeekNum : ''}`}
+                  >
+                    {showWeekNumbers && <div className={styles.weekNumHeader}>W#</div>}
+                    {weekdays.map((day) => (
+                      <div key={day} className={styles.weekday}>
+                        {day}
                       </div>
-                    )
-                  })}
-                </motion.div>
-              </AnimatePresence>
-            </div>
-            </div>
-            <DragOverlay dropAnimation={null}>{activeEvent ? <EventCard event={activeEvent} compact={activeLayout.compact} monthView={activeLayout.monthView} dotMode={activeLayout.dotMode} isMobileMonth={activeLayout.isMobileMonth} enableResize={false} /> : null}</DragOverlay>
-          </DndContext>
-        </div>
-        <div className={styles.splitHandleH} onMouseDown={handleGridResizeStart} onTouchStart={handleGridResizeTouchStart} />
-        <div className={styles.agendaBottom} style={{ flex: 1 }}>
-          {bottomPanelDay ? (
-            isWideWindow ? (
-              <>
-                <div className={styles.splitDay} style={{ flex: `0 0 ${splitRatio * 100}%` }}><DayView key={bottomPanelDay} selectedDate={bottomPanelDay} /></div>
-                <div className={styles.splitHandle} onMouseDown={handleResizeStart} onTouchStart={handleResizeTouchStart} />
-                <div className={styles.splitAgenda} style={{ flex: 1 }}><AgendaView embedded /></div>
-              </>
+                    ))}
+                  </div>
+                  <div className={styles.daysContainer}>
+                    {weekNumbers.map((weekNum, weekIdx) => {
+                      const weekEnd = days[weekIdx * 7 + 6]
+                      const today = startOfDay(new Date())
+                      const isPastWeek = compressPastWeeks && isBefore(weekEnd, today)
+
+                      return (
+                        <div
+                          key={weekIdx}
+                          className={`${styles.weekRow} ${!showWeekNumbers ? styles.weekRowNoWeekNum : ''} ${isPastWeek ? styles.compressedWeek : ''}`}
+                        >
+                            {showWeekNumbers && (
+                              <div
+                                className={styles.weekNumber}
+                                onClick={() => handleWeekClick(days[weekIdx * 7])}
+                              >
+                                <div
+                                  key={weekNum}
+                                  className={styles.dayContentSlide}
+                                  style={{
+                                    width: '100%',
+                                    height: '100%',
+                                    display: 'flex',
+                                    justifyContent: 'center',
+                                    alignItems: 'flex-start',
+                                    '--slide-x': monthChangeMotion.initial ? `${monthChangeMotion.initial.x || 0}px` : '0px',
+                                    '--slide-y': monthChangeMotion.initial ? `${monthChangeMotion.initial.y || 0}px` : '0px',
+                                  } as React.CSSProperties}
+                                >
+                                  {weekNum}
+                                </div>
+                              </div>
+                            )}
+                            {days.slice(weekIdx * 7, weekIdx * 7 + 7).map((day, idx) => {
+                              const dateKey = format(day, 'yyyy-MM-dd')
+                              const dayEvents = eventsMap.get(dateKey) || []
+                              const dayTasks = tasksMap.get(dateKey) || []
+                              const isCurrentMonth = isSameMonth(day, date)
+                              const isTodayDate = isToday(day)
+                              const dayOfWeek = getDay(day)
+                              const isWeekend = dayOfWeek === 0 || dayOfWeek === 6
+
+                              return (
+                                <DroppableDay
+                                  key={idx}
+                                  dateKey={dateKey}
+                                  day={day}
+                                  monthChangeMotion={monthChangeMotion}
+                                  dayEvents={dayEvents}
+                                  dayTasks={dayTasks}
+                                  hasJournal={journalDates.has(dateKey)}
+                                  journalEnabled={journalEnabled}
+                                  isCurrentMonth={isCurrentMonth}
+                                  isTodayDate={isTodayDate}
+                                  isFocusAnchor={dateKey === currentDate}
+                                  isWeekend={isWeekend}
+                                  isPastWeek={isPastWeek}
+                                  compactRecurringEvents={compactRecurringEvents}
+                                  monthViewEventLimit={monthViewEventLimit}
+                                  isMobile={isMobile}
+                                  isCompactMobile={isCompactMobile}
+                                  onDayClick={handleDayClick}
+                                  onDayDoubleClick={handleDayDoubleClick}
+                                  onDayNumberClick={handleDayNumberClick}
+                                  onJournalIndicatorClick={handleJournalIndicatorClick}
+                                  onOpenJournalModal={handleOpenJournalModal}
+                                  openModal={openModal}
+                                />
+                              )
+                            })}
+                          </div>
+                        )
+                      })}
+                  </div>
+                </div>
+              </div>
+              <DragOverlay dropAnimation={null}>
+                {activeEvent ? (
+                  <EventCard
+                    event={activeEvent}
+                    compact={activeLayout.compact}
+                    monthView={activeLayout.monthView}
+                    dotMode={activeLayout.dotMode}
+                    isMobileMonth={activeLayout.isMobileMonth}
+                    enableResize={false}
+                  />
+                ) : null}
+              </DragOverlay>
+            </DndContext>
+          </div>
+          <div
+            className={styles.splitHandleH}
+            onMouseDown={handleGridResizeStart}
+            onTouchStart={handleGridResizeTouchStart}
+          />
+          <div className={styles.agendaBottom} style={{ flex: 1 }}>
+            {bottomPanelDay ? (
+              isWideWindow ? (
+                <>
+                  <div className={styles.splitDay} style={{ flex: `0 0 ${splitRatio * 100}%` }}>
+                    <DayView key={bottomPanelDay} selectedDate={bottomPanelDay} />
+                  </div>
+                  <div
+                    className={styles.splitHandle}
+                    onMouseDown={handleResizeStart}
+                    onTouchStart={handleResizeTouchStart}
+                  />
+                  <div className={styles.splitAgenda} style={{ flex: 1 }}>
+                    <AgendaView embedded />
+                  </div>
+                </>
+              ) : (
+                <DayView
+                  key={bottomPanelDay}
+                  selectedDate={bottomPanelDay}
+                  onBack={isCompactMobile ? () => setBottomPanelDay(null) : undefined}
+                />
+              )
             ) : (
-              <DayView key={bottomPanelDay} selectedDate={bottomPanelDay} onBack={isCompactMobile ? () => setBottomPanelDay(null) : undefined} />
-            )
-          ) : (
-            <AgendaView embedded />
-          )}
+              <AgendaView embedded />
+            )}
+          </div>
         </div>
-      </div>
-    </>
+      </>
     )
   }
 
   return (
     <>
-    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-      <div className={styles.gridPanel} ref={containerRef} {...bind}>
-        <div
-          className={styles.grid}
-          data-component="calendar-grid"
-          onKeyDown={handleGridKeyDown}
-          style={{ '--day-cell-height': `${rowHeight}px`, touchAction: 'none' } as React.CSSProperties}
-        >
-        <div className={`${styles.header} ${!showWeekNumbers ? styles.headerNoWeekNum : ''}`}>
-          {showWeekNumbers && <div className={styles.weekNumHeader}>W#</div>}
-          {weekdays.map((day) => (
-            <div key={day} className={styles.weekday}>
-              {day}
-            </div>
-          ))}
-        </div>
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={currentDate}
-            className={styles.daysContainer}
-            {...monthChangeMotion}
+      <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+        <div className={styles.gridPanel} ref={containerRef} {...bind}>
+          <div
+            className={styles.grid}
+            data-component="calendar-grid"
+            onKeyDown={handleGridKeyDown}
+            style={
+              { 
+                '--day-cell-height': `${rowHeight}px`, 
+                '--slide-x': monthChangeMotion.initial ? `${monthChangeMotion.initial.x || 0}px` : '0px',
+                '--slide-y': monthChangeMotion.initial ? `${monthChangeMotion.initial.y || 0}px` : '0px',
+                touchAction: 'none' 
+              } as React.CSSProperties
+            }
           >
-            {weekNumbers.map((weekNum, weekIdx) => {
-              const weekEnd = days[weekIdx * 7 + 6]
-              const today = startOfDay(new Date())
-              const isPastWeek = compressPastWeeks && isBefore(weekEnd, today)
-
-              return (
-                <div
-                  key={weekIdx}
-                  className={`${styles.weekRow} ${!showWeekNumbers ? styles.weekRowNoWeekNum : ''} ${isPastWeek ? styles.compressedWeek : ''}`}
-                >
-                  {showWeekNumbers && (
-                    <div
-                      className={styles.weekNumber}
-                      onClick={() => handleWeekClick(days[weekIdx * 7])}
-                    >
-                      {weekNum}
-                    </div>
-                  )}
-                  {days.slice(weekIdx * 7, weekIdx * 7 + 7).map((day) => {
-                    const dateKey = format(day, 'yyyy-MM-dd')
-                    const dayEvents = eventsMap.get(dateKey) || []
-                    const dayTasks = tasksMap.get(dateKey) || []
-                    const isCurrentMonth = isSameMonth(day, date)
-                    const isTodayDate = isToday(day)
-                    const dayOfWeek = getDay(day)
-                    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6
-
-                    return (
-                      <DroppableDay
-                        key={dateKey}
-                        dateKey={dateKey}
-                        day={day}
-                        dayEvents={dayEvents}
-                        dayTasks={dayTasks}
-                        hasJournal={journalDates.has(dateKey)}
-                        journalEnabled={journalEnabled}
-                        isCurrentMonth={isCurrentMonth}
-                        isTodayDate={isTodayDate}
-                        isFocusAnchor={dateKey === currentDate}
-                        isWeekend={isWeekend}
-                        isPastWeek={isPastWeek}
-                        compactRecurringEvents={compactRecurringEvents}
-                        monthViewEventLimit={monthViewEventLimit}
-                        isMobile={isMobile}
-                        isCompactMobile={isCompactMobile}
-                        onDayClick={handleDayClick}
-                        onDayDoubleClick={handleDayDoubleClick}
-                        onDayNumberClick={handleDayNumberClick}
-                        onJournalIndicatorClick={handleJournalIndicatorClick}
-                        onOpenJournalModal={handleOpenJournalModal}
-                        openModal={openModal}
-                      />
-                    )
-                  })}
+            <div className={`${styles.header} ${!showWeekNumbers ? styles.headerNoWeekNum : ''}`}>
+              {showWeekNumbers && <div className={styles.weekNumHeader}>W#</div>}
+              {weekdays.map((day) => (
+                <div key={day} className={styles.weekday}>
+                  {day}
                 </div>
-              )
-            })}
-          </motion.div>
-        </AnimatePresence>
-      </div>
-      </div>
-      <DragOverlay dropAnimation={null}>{activeEvent ? <EventCard event={activeEvent} compact={activeLayout.compact} monthView={activeLayout.monthView} dotMode={activeLayout.dotMode} isMobileMonth={activeLayout.isMobileMonth} enableResize={false} /> : null}</DragOverlay>
-    </DndContext>
+              ))}
+            </div>
+            <div className={styles.daysContainer}>
+              {weekNumbers.map((weekNum, weekIdx) => {
+                const weekEnd = days[weekIdx * 7 + 6]
+                const today = startOfDay(new Date())
+                const isPastWeek = compressPastWeeks && isBefore(weekEnd, today)
+
+                return (
+                  <div
+                    key={weekIdx}
+                    className={`${styles.weekRow} ${!showWeekNumbers ? styles.weekRowNoWeekNum : ''} ${isPastWeek ? styles.compressedWeek : ''}`}
+                  >
+                      {showWeekNumbers && (
+                        <div
+                          className={styles.weekNumber}
+                          onClick={() => handleWeekClick(days[weekIdx * 7])}
+                        >
+                          <AnimatePresence>
+                            <motion.div
+                              key={weekNum}
+                              {...monthChangeMotion}
+                              style={{
+                                width: '100%',
+                                height: '100%',
+                                display: 'flex',
+                                justifyContent: 'center',
+                                alignItems: 'flex-start',
+                              }}
+                            >
+                              {weekNum}
+                            </motion.div>
+                          </AnimatePresence>
+                        </div>
+                      )}
+                      {days.slice(weekIdx * 7, weekIdx * 7 + 7).map((day, idx) => {
+                        const dateKey = format(day, 'yyyy-MM-dd')
+                        const dayEvents = eventsMap.get(dateKey) || []
+                        const dayTasks = tasksMap.get(dateKey) || []
+                        const isCurrentMonth = isSameMonth(day, date)
+                        const isTodayDate = isToday(day)
+                        const dayOfWeek = getDay(day)
+                        const isWeekend = dayOfWeek === 0 || dayOfWeek === 6
+
+                        return (
+                          <DroppableDay
+                            key={idx}
+                            dateKey={dateKey}
+                            day={day}
+                            monthChangeMotion={monthChangeMotion}
+                            dayEvents={dayEvents}
+                            dayTasks={dayTasks}
+                            hasJournal={journalDates.has(dateKey)}
+                            journalEnabled={journalEnabled}
+                            isCurrentMonth={isCurrentMonth}
+                            isTodayDate={isTodayDate}
+                            isFocusAnchor={dateKey === currentDate}
+                            isWeekend={isWeekend}
+                            isPastWeek={isPastWeek}
+                            compactRecurringEvents={compactRecurringEvents}
+                            monthViewEventLimit={monthViewEventLimit}
+                            isMobile={isMobile}
+                            isCompactMobile={isCompactMobile}
+                            onDayClick={handleDayClick}
+                            onDayDoubleClick={handleDayDoubleClick}
+                            onDayNumberClick={handleDayNumberClick}
+                            onJournalIndicatorClick={handleJournalIndicatorClick}
+                            onOpenJournalModal={handleOpenJournalModal}
+                            openModal={openModal}
+                          />
+                        )
+                      })}
+                    </div>
+                  )
+                })}
+            </div>
+          </div>
+        </div>
+        <DragOverlay dropAnimation={null}>
+          {activeEvent ? (
+            <EventCard
+              event={activeEvent}
+              compact={activeLayout.compact}
+              monthView={activeLayout.monthView}
+              dotMode={activeLayout.dotMode}
+              isMobileMonth={activeLayout.isMobileMonth}
+              enableResize={false}
+            />
+          ) : null}
+        </DragOverlay>
+      </DndContext>
     </>
   )
 }
 
 interface DroppableDayProps {
+  monthChangeMotion: DateChangeMotion
   dateKey: string
   day: Date
   dayEvents: CalendarEvent[]
@@ -1027,6 +1148,7 @@ interface DroppableDayProps {
 const DroppableDay = React.memo(function DroppableDay({
   dateKey,
   day,
+  monthChangeMotion,
   dayEvents,
   dayTasks,
   hasJournal,
@@ -1061,7 +1183,7 @@ const DroppableDay = React.memo(function DroppableDay({
     const fragmentByLane = new Map<number, CalendarEvent>()
     const singles: CalendarEvent[] = []
     visible.forEach((event) => {
-      const lane = event.isFragment ? event.laneIndex ?? -1 : -1
+      const lane = event.isFragment ? (event.laneIndex ?? -1) : -1
       if (lane >= 0) fragmentByLane.set(lane, event)
       else singles.push(event)
     })
@@ -1072,7 +1194,8 @@ const DroppableDay = React.memo(function DroppableDay({
     for (let lane = 0; lane <= maxLane; lane++) {
       const fragment = fragmentByLane.get(lane)
       if (fragment) slots.push({ event: fragment, forceCompact: true })
-      else if (nextSingle < singles.length) slots.push({ event: singles[nextSingle++], forceCompact: true })
+      else if (nextSingle < singles.length)
+        slots.push({ event: singles[nextSingle++], forceCompact: true })
       else slots.push({ spacerKey: `${dateKey}-spacer-${lane}` })
     }
     singles.slice(nextSingle).forEach((event) => slots.push({ event, forceCompact: false }))
@@ -1086,11 +1209,14 @@ const DroppableDay = React.memo(function DroppableDay({
   // to 0ms when the user prefers reduced motion (matches the view-
   // transition pattern below).
   const prefersReducedMotion = useReducedMotion()
-  const eventCardTransition = { duration: prefersReducedMotion ? 0 : 0.18, ease: 'easeOut' as const }
+  const eventCardTransition = {
+    duration: prefersReducedMotion ? 0 : 0.18,
+    ease: 'easeOut' as const,
+  }
   // Reduced-motion handling matches the DayView / WeekDayColumn pattern:
   // skip `initial` entirely and use an opacity-only exit (no scale).
-  const cardInitial = prefersReducedMotion ? false : 'initial'
-  const cardExit = prefersReducedMotion ? { opacity: 0 } : 'exit'
+  const cardInitial = prefersReducedMotion ? false : { opacity: 0, scale: 0.95 }
+  const cardExit = prefersReducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.95 }
   // Skip the exit animation when this event is the active drag — the
   // DragOverlay already shows the move visually, and the source exit
   // reads as a ghostly "jump back" to the original position. Multi-day
@@ -1121,7 +1247,7 @@ const DroppableDay = React.memo(function DroppableDay({
   }
 
   return (
-    <div
+    <motion.div
       ref={setNodeRef}
       className={`${styles.day} ${!isCurrentMonth ? styles.otherMonth : ''} ${isTodayDate ? styles.today : ''} ${isWeekend ? styles.weekend : ''} ${isOver ? styles.dropTarget : ''}`}
       {...(isTodayDate ? { 'data-today': '' } : {})}
@@ -1142,97 +1268,122 @@ const DroppableDay = React.memo(function DroppableDay({
       }}
       onContextMenu={handleContextMenu}
     >
-      <div className={styles.dayHeader}>
-        <button
-          className={styles.dayNumber}
-          onClick={(e) => {
-            e.stopPropagation()
-            onDayNumberClick(day)
-          }}
-          aria-label={`Open ${format(day, 'EEEE, MMMM d')} in day view`}
-        >
-          {format(day, 'd')}
-        </button>
-        {journalEnabled && hasJournal && (
-          <button
-            className={styles.journalIndicator}
-            title="View journal entries"
-            aria-label={`View journal entries for ${format(day, 'MMMM d')}`}
-            onClick={(e) => {
-              e.stopPropagation()
-              onJournalIndicatorClick(day)
-            }}
-          >
-            <span className={styles.journalIndicatorDot} />
-            <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M9.5 2.5l2 2L4 12H2v-2L9.5 2.5z" />
-              <path d="M7.5 4.5l2 2" />
-            </svg>
-          </button>
-        )}
-      </div>
-      {isCompactMobile ? (
-        <div className={styles.dotRow}>
-          <AnimatePresence initial={false}>
-            {dayEvents.slice(0, monthViewEventLimit).map((event) => {
-              const isMultiDay = !isSameDay(parseISO(event.start), parseISO(event.end))
-              const shouldCompact =
-                isPastWeek ||
-                (compactRecurringEvents && (!!event.rruleString || !!event.recurrence || event.isAllDay || isMultiDay)) ||
-                event.isFragment
-              return (
-                <motion.div
-                  key={event.id}
-                  variants={eventCardVariants}
-                  initial={cardInitial}
-                  animate="animate"
-                  exit={skipExit(event.id) ? undefined : cardExit}
-                  transition={eventCardTransition}
-                >
-                  <EventCard
-                    event={event}
-                    compact={shouldCompact}
-                    isMobileMonth={isMobile}
-                    dotMode
-                    enableResize={false}
-                    monthView
-                  />
-                </motion.div>
-              )
-            })}
-            {dayTasks.slice(0, monthViewEventLimit).map((task) => (
-              <motion.div
-                key={task.id}
-                variants={eventCardVariants}
-                initial={cardInitial}
-                animate="animate"
-                exit={skipExit(task.id) ? undefined : cardExit}
-                transition={eventCardTransition}
-              >
-                <EventCard
-                  event={task}
-                  compact
-                  isMobileMonth={isMobile}
-                  dotMode
-                  enableResize={false}
-                  monthView
-                />
-              </motion.div>
-            ))}
-          </AnimatePresence>
-          {(dayEvents.length > monthViewEventLimit || dayTasks.length > monthViewEventLimit) && (
+      <div
+        key={dateKey}
+        className={styles.dayContentSlide}
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          flex: 1,
+          minWidth: 0,
+          height: '100%',
+        }}
+      >
+          <div className={styles.dayHeader}>
             <button
-              ref={moreEventsRef}
-              className={styles.moreEvents}
-              onClick={handleMoreEventsClick}
+              className={styles.dayNumber}
+              onClick={(e) => {
+                e.stopPropagation()
+                onDayNumberClick(day)
+              }}
+              aria-label={`Open ${format(day, 'EEEE, MMMM d')} in day view`}
             >
-              +{Math.max(0, dayEvents.length - monthViewEventLimit) + Math.max(0, dayTasks.length - monthViewEventLimit)}
+              {format(day, 'd')}
             </button>
-          )}
-        </div>
-      ) : (
-        <>
-          {/*
+            {journalEnabled && hasJournal && (
+              <button
+                className={styles.journalIndicator}
+                title="View journal entries"
+                aria-label={`View journal entries for ${format(day, 'MMMM d')}`}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onJournalIndicatorClick(day)
+                }}
+              >
+                <span className={styles.journalIndicatorDot} />
+                <svg
+                  viewBox="0 0 14 14"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M9.5 2.5l2 2L4 12H2v-2L9.5 2.5z" />
+                  <path d="M7.5 4.5l2 2" />
+                </svg>
+              </button>
+            )}
+          </div>
+          {isCompactMobile ? (
+            <div className={styles.dotRow}>
+              <AnimatePresence initial={false}>
+                {dayEvents.slice(0, monthViewEventLimit).map((event) => {
+                  const isMultiDay = !isSameDay(parseISO(event.start), parseISO(event.end))
+                  const shouldCompact =
+                    isPastWeek ||
+                    (compactRecurringEvents &&
+                      (!!event.rruleString ||
+                        !!event.recurrence ||
+                        event.isAllDay ||
+                        isMultiDay)) ||
+                    event.isFragment
+                  return (
+                    <motion.div
+                      key={event.id}
+                      variants={eventCardVariants}
+                      initial={monthChangeMotion.initial ? false : cardInitial}
+                      animate="animate"
+                      exit={skipExit(event.id) ? undefined : cardExit}
+                      transition={eventCardTransition}
+                    >
+                      <EventCard
+                        event={event}
+                        compact={shouldCompact}
+                        isMobileMonth={isMobile}
+                        dotMode
+                        enableResize={false}
+                        monthView
+                      />
+                    </motion.div>
+                  )
+                })}
+                {dayTasks.slice(0, monthViewEventLimit).map((task) => (
+                  <motion.div
+                    key={task.id}
+                    variants={eventCardVariants}
+                    initial={cardInitial}
+                    animate="animate"
+                    exit={skipExit(task.id) ? undefined : cardExit}
+                    transition={eventCardTransition}
+                  >
+                    <EventCard
+                      event={task}
+                      compact
+                      isMobileMonth={isMobile}
+                      dotMode
+                      enableResize={false}
+                      monthView
+                    />
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+              {(dayEvents.length > monthViewEventLimit ||
+                dayTasks.length > monthViewEventLimit) && (
+                <button
+                  ref={moreEventsRef}
+                  className={styles.moreEvents}
+                  onClick={handleMoreEventsClick}
+                >
+                  +
+                  {Math.max(0, dayEvents.length - monthViewEventLimit) +
+                    Math.max(0, dayTasks.length - monthViewEventLimit)}
+                </button>
+              )}
+            </div>
+          ) : (
+            <>
+              {/*
             IMPORTANT: these wrappers must always render, even when
             dayEvents / dayTasks is empty. If we wrapped them in
             `{dayEvents.length > 0 && ...}`, deleting the LAST event
@@ -1245,76 +1396,83 @@ const DroppableDay = React.memo(function DroppableDay({
             The `+more` overflow button stays conditional so empty
             days don't show a stale "+0 more".
           */}
-          <div className={styles.events}>
-            <AnimatePresence initial={false}>
-              {eventSlots.map((slot) => {
-                if ('spacerKey' in slot) {
-                  return <div key={slot.spacerKey} className={styles.eventSpacer} aria-hidden />
-                }
-                const { event } = slot
-                const isMultiDay = !isSameDay(parseISO(event.start), parseISO(event.end))
-                const shouldCompact =
-                  slot.forceCompact ||
-                  isPastWeek ||
-                  (compactRecurringEvents && (!!event.rruleString || !!event.recurrence || event.isAllDay || isMultiDay)) ||
-                  event.isFragment
-                return (
-                  <motion.div
-                    key={event.id}
-                    variants={eventCardVariants}
-                    initial={cardInitial}
-                    animate="animate"
-                    exit={skipExit(event.id) ? undefined : cardExit}
-                    transition={eventCardTransition}
+              <div className={styles.events}>
+                <AnimatePresence initial={false}>
+                  {eventSlots.map((slot) => {
+                    if ('spacerKey' in slot) {
+                      return <div key={slot.spacerKey} className={styles.eventSpacer} aria-hidden />
+                    }
+                    const { event } = slot
+                    const isMultiDay = !isSameDay(parseISO(event.start), parseISO(event.end))
+                    const shouldCompact =
+                      slot.forceCompact ||
+                      isPastWeek ||
+                      (compactRecurringEvents &&
+                        (!!event.rruleString ||
+                          !!event.recurrence ||
+                          event.isAllDay ||
+                          isMultiDay)) ||
+                      event.isFragment
+                    return (
+                      <motion.div
+                        key={event.id}
+                        variants={eventCardVariants}
+                        initial={cardInitial}
+                        animate="animate"
+                        exit={skipExit(event.id) ? undefined : cardExit}
+                        transition={eventCardTransition}
+                      >
+                        <EventCard
+                          event={event}
+                          compact={shouldCompact}
+                          isMobileMonth={isMobile}
+                          enableResize={false}
+                          monthView
+                        />
+                      </motion.div>
+                    )
+                  })}
+                </AnimatePresence>
+                {dayEvents.length > monthViewEventLimit && (
+                  <button
+                    ref={moreEventsRef}
+                    className={styles.moreEvents}
+                    onClick={handleMoreEventsClick}
                   >
-                    <EventCard
-                      event={event}
-                      compact={shouldCompact}
-                      isMobileMonth={isMobile}
-                      enableResize={false}
-                      monthView
-                    />
-                  </motion.div>
-                )
-              })}
-            </AnimatePresence>
-            {dayEvents.length > monthViewEventLimit && (
-              <button
-                ref={moreEventsRef}
-                className={styles.moreEvents}
-                onClick={handleMoreEventsClick}
-              >
-                +{dayEvents.length - monthViewEventLimit} more
-              </button>
-            )}
-          </div>
-          <div className={styles.tasks} data-component="day-tasks">
-            <AnimatePresence initial={false}>
-              {dayTasks.slice(0, monthViewEventLimit).map((task) => (
-                <motion.div
-                  key={task.id}
-                  variants={eventCardVariants}
-                  initial={cardInitial}
-                  animate="animate"
-                  exit={skipExit(task.id) ? undefined : cardExit}
-                  transition={eventCardTransition}
-                >
-                  <EventCard
-                    event={task}
-                    compact
-                    isMobileMonth={isMobile}
-                    enableResize={false}
-                    monthView
-                  />
-                </motion.div>
-              ))}
-            </AnimatePresence>
-            {dayTasks.length > monthViewEventLimit && (
-              <div className={styles.moreEvents}>+{dayTasks.length - monthViewEventLimit} more</div>
-            )}
-          </div>
-        </>
-      )}
+                    +{dayEvents.length - monthViewEventLimit} more
+                  </button>
+                )}
+              </div>
+              <div className={styles.tasks} data-component="day-tasks">
+                <AnimatePresence initial={false}>
+                  {dayTasks.slice(0, monthViewEventLimit).map((task) => (
+                    <motion.div
+                      key={task.id}
+                      variants={eventCardVariants}
+                      initial={monthChangeMotion.initial ? false : cardInitial}
+                      animate="animate"
+                      exit={skipExit(task.id) ? undefined : cardExit}
+                      transition={eventCardTransition}
+                    >
+                      <EventCard
+                        event={task}
+                        compact
+                        isMobileMonth={isMobile}
+                        enableResize={false}
+                        monthView
+                      />
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+                {dayTasks.length > monthViewEventLimit && (
+                  <div className={styles.moreEvents}>
+                    +{dayTasks.length - monthViewEventLimit} more
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+        </div>
       {showPopup && (
         <DayEventsPopup
           date={day}
@@ -1359,6 +1517,6 @@ const DroppableDay = React.memo(function DroppableDay({
           ]}
         />
       )}
-    </div>
+    </motion.div>
   )
 })
