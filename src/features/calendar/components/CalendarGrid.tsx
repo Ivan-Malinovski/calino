@@ -805,7 +805,11 @@ export function CalendarGrid(): JSX.Element {
       
       if (!hasMeasuredRef.current) {
         // First run: no previous height to travel from, so don't defer.
+        // Apply immediately to the DOM to prevent a FOUC/mount animation
+        // that stutters the AgendaView's initial smooth-scroll.
         hasMeasuredRef.current = true
+        top.style.transition = 'none'
+        top.style.minHeight = `${next}px`
         setGridMinHeight(next)
         return
       }
