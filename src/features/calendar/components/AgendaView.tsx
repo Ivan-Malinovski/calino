@@ -207,11 +207,24 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
   const virtualizer = useVirtualizer({
     count: allGroupsEmpty ? 0 : dayGroups.length,
     getScrollElement: () => containerRef.current,
-    // A day header plus a single event card and its divider is a little under
-    // 100px; skip rows and empty days are smaller, busy days much larger.
-    // measureElement corrects it, so this only needs to be the right order of
-    // magnitude to keep the initial scrollbar and scrollToIndex sane.
-    estimateSize: () => 96,
+    // Dynamic estimation prevents scroll stuttering when scrolling backwards
+    // from a jumped-to index (like Today), as the virtualizer doesn't have
+    // to aggressively adjust scroll offsets for unmeasured rows.
+    estimateSize: (index) => {
+      const group = dayGroups[index]
+      if (group.type === 'skip') return 32
+      if (!group.hasEvents) return 46
+      
+      const dateKey = format(group.days[0], 'yyyy-MM-dd')
+      const sortedEvents = eventsByDate.get(dateKey) || []
+      
+      let h = 46
+      for (let i = 0; i < sortedEvents.length; i++) {
+        const hasLocation = !!sortedEvents[i].event.location
+        h += hasLocation ? 62 : 44
+      }
+      return h
+    },
     overscan: 4,
   })
 
