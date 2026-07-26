@@ -17,6 +17,19 @@
   overflow: hidden;
 }
 
+/* The popup is animated with opacity/scale/y on open and close. Re-compositing
+   a blurred backdrop on every frame of that is very expensive on mid-tier
+   mobile GPUs, so drop the blur below the mobile breakpoint and fall back to
+   an opaque panel background — the popup still has to stay legible over the
+   calendar content behind it. */
+@media (max-width: 768px) {
+  .popup {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: var(--popover-bg, var(--panel, #fff));
+  }
+}
+
 .header {
   display: flex;
   justify-content: space-between;

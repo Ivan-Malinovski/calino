@@ -5,6 +5,7 @@ import { useCalendarStore } from '@/store/calendarStore'
 import { useAIVisionSettingsStore } from '@/store/aiVisionSettingsStore'
 import { useAIPhotoImport } from '@/features/aiVision/useAIPhotoImport'
 import { hapticIfEnabled } from '@/lib/haptics'
+import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { CalendarIcon, TaskCheckIcon } from '@/components/common/icons'
 import styles from './NavCreateDrawer.module.css'
 
@@ -24,11 +25,27 @@ const containerVariants = {
   visible: { transition: { staggerChildren: 0.02 } },
 }
 
+// framer-motion animates via JS, so the global `prefers-reduced-motion` rule
+// in src/index.css (CSS animation/transition durations only) does not reach
+// these — the reduced-motion variants have to be supplied explicitly.
+const rowVariantsReduced = {
+  hidden: { opacity: 1, y: 0 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0 } },
+}
+
+const containerVariantsReduced = {
+  hidden: {},
+  visible: { transition: { staggerChildren: 0 } },
+}
+
 const isNative = Capacitor.isNativePlatform()
 
 export function NavCreateDrawer({ onClose, onDragProgress, onDragActiveChange }: NavCreateDrawerProps): JSX.Element {
   const { aiState, importFromCamera } = useAIPhotoImport()
   const hasAiApiKey = useAIVisionSettingsStore((s) => s.apiKeyEncrypted !== null)
+  const reducedMotion = useReducedMotion()
+  const rows = reducedMotion ? rowVariantsReduced : rowVariants
+  const container = reducedMotion ? containerVariantsReduced : containerVariants
 
   const handleNewEvent = (): void => {
     useCalendarStore.getState().openModal()
@@ -82,8 +99,8 @@ export function NavCreateDrawer({ onClose, onDragProgress, onDragActiveChange }:
       onDragEnd={handleDragEnd}
     >
       <button type="button" className={styles.handle} onClick={onClose} aria-label="Close create menu" />
-      <motion.div className={styles.rows} variants={containerVariants} initial="hidden" animate="visible">
-        <motion.div className={styles.rowWrapper} variants={rowVariants}>
+      <motion.div className={styles.rows} variants={container} initial="hidden" animate="visible">
+        <motion.div className={styles.rowWrapper} variants={rows}>
           <button type="button" className={styles.rowMain} onClick={handleNewEvent}>
             <CalendarIcon size={18} />
             <span>New Event</span>
@@ -100,11 +117,11 @@ export function NavCreateDrawer({ onClose, onDragProgress, onDragActiveChange }:
             </button>
           )}
         </motion.div>
-        <motion.button type="button" className={styles.row} variants={rowVariants} onClick={handleNewTask}>
+        <motion.button type="button" className={styles.row} variants={rows} onClick={handleNewTask}>
           <TaskCheckIcon size={18} />
           <span>New Task</span>
         </motion.button>
-        <motion.button type="button" className={styles.row} variants={rowVariants} onClick={handleNewJournal}>
+        <motion.button type="button" className={styles.row} variants={rows} onClick={handleNewJournal}>
           <JournalIcon />
           <span>New Journal Entry</span>
         </motion.button>

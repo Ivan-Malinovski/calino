@@ -6,6 +6,7 @@ import { useCalendarStore } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
 import { hapticIfEnabled } from '@/lib/haptics'
 import { useTextInputFocused } from '@/hooks/useTextInputFocused'
+import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { VIEW_ROUTES, URL_TO_VIEW, ALL_VIEWS } from '../../viewRoutes'
 import type { ViewType } from '@/types'
 import { NavExpandedGrid } from './NavExpandedGrid'
@@ -23,9 +24,13 @@ const BASE_VIEWS: { value: ViewType; label: string }[] = [
   { value: 'agenda', label: 'Agenda' },
 ]
 
-const PILL_TRANSITION = { duration: 0.24, ease: [0.65, 0, 0.35, 1] as const }
+const PILL_EASE = [0.65, 0, 0.35, 1] as const
+const PILL_TRANSITION = { duration: 0.24, ease: PILL_EASE }
+const PILL_TRANSITION_INSTANT = { duration: 0, ease: PILL_EASE }
 const CHROME_TRANSITION = { duration: 0.19 }
+const CHROME_TRANSITION_INSTANT = { duration: 0 }
 const INDICATOR_TRANSITION = { type: 'spring', stiffness: 500, damping: 40 } as const
+const INDICATOR_TRANSITION_INSTANT = { duration: 0 } as const
 
 export function FloatingNavPill({ onToggleSidebar, onOpenSearch }: FloatingNavPillProps): JSX.Element {
   const navigate = useNavigate()
@@ -40,6 +45,15 @@ export function FloatingNavPill({ onToggleSidebar, onOpenSearch }: FloatingNavPi
   // nothing useful for it to do while typing (e.g. a /journal entry), so
   // just tuck it away instead of letting it jump around.
   const textInputFocused = useTextInputFocused()
+  const reducedMotion = useReducedMotion()
+
+  // framer-motion drives styles from JS, so the global
+  // `prefers-reduced-motion` escape hatch in src/index.css (which only zeroes
+  // CSS animation/transition durations) does NOT reach these — they have to
+  // be zeroed explicitly.
+  const pillTransition = reducedMotion ? PILL_TRANSITION_INSTANT : PILL_TRANSITION
+  const chromeTransition = reducedMotion ? CHROME_TRANSITION_INSTANT : CHROME_TRANSITION
+  const indicatorTransition = reducedMotion ? INDICATOR_TRANSITION_INSTANT : INDICATOR_TRANSITION
 
   // The collapsed pill shows the 3 base views (Month/Week/Agenda) inline as
   // a quick selector. On any other route (e.g. /settings, /year, /day,
@@ -63,9 +77,23 @@ export function FloatingNavPill({ onToggleSidebar, onOpenSearch }: FloatingNavPi
   const measuredHeightRef = useRef(0)
   const isDraggingRef = useRef(false)
   const heightMV = useMotionValue(0)
-  const radiusMV = useMotionValue(34)
 
-  const pillRadius = createDrawerOpen ? 26 : viewSwitcherExpanded ? 30 : 34
+  // `will-change: height` is only worth its memory cost while the pill is
+  // actually resizing — this element is mounted for the whole session, so the
+  // hint must never be left on permanently. It is switched on by the
+  // interaction handlers (expand / create / drag) and switched off again when
+  // the height tween settles.
+  const [pillAnimating, setPillAnimating] = useState(false)
+
+  // border-radius is no longer a MotionValue: it is a pure function of state,
+  // so a CSS class + `transition: border-radius` gets it off the rAF loop
+  // entirely (one fewer JS-driven style write per frame, one fewer animate()
+  // per interaction).
+  const pillRadiusClass = createDrawerOpen
+    ? styles.pillRadiusCreate
+    : viewSwitcherExpanded
+      ? styles.pillRadiusExpanded
+      : ''
 
   // Passive ResizeObserver — catches content-size changes not driven by the
   // open/create toggles below (e.g. the quick-settings panel expanding
@@ -105,18 +133,32 @@ export function FloatingNavPill({ onToggleSidebar, onOpenSearch }: FloatingNavPi
     }
   }, [measuredHeight, viewSwitcherExpanded, createDrawerOpen])
 
-  // Single source of truth for animating height + radius together, so they
-  // always start and finish in lockstep.
+  // Single source of truth for animating the pill height. Radius is no longer
+  // tweened here — it rides a CSS `transition: border-radius` with the exact
+  // same duration/easing, driven by the state class, so the two still start
+  // and finish in lockstep without a second animate() fighting for frames.
+  //
+  // The overshoot bug guarded against above ("stretches then snaps back") was
+  // caused by two animate(heightMV, ...) calls with different targets racing.
+  // That risk is unchanged here: this is still the ONLY place height is
+  // tweened, and the layout effect above still lands `measuredHeight` in the
+  // same commit as the state change. A CSS transition cannot overshoot — it
+  // always interpolates to the current computed value, so re-targeting
+  // mid-flight resolves cleanly rather than restarting a spring.
   useEffect(() => {
     measuredHeightRef.current = measuredHeight
     if (isDraggingRef.current) return
-    const heightControls = animate(heightMV, measuredHeight, PILL_TRANSITION)
-    const radiusControls = animate(radiusMV, pillRadius, PILL_TRANSITION)
+    const heightControls = animate(heightMV, measuredHeight, pillTransition)
+    void heightControls.then(() => setPillAnimating(false))
     return () => {
       heightControls.stop()
-      radiusControls.stop()
     }
-  }, [measuredHeight, pillRadius, heightMV, radiusMV])
+    // NB: the cleanup deliberately does NOT clear `pillAnimating`. This effect
+    // re-runs on the very commit that starts an interaction (measuredHeight
+    // changes), so clearing here would drop `will-change` immediately after a
+    // handler set it — i.e. exactly while the tween needs it. Whichever tween
+    // ends last resolves it via the `.then` above.
+  }, [measuredHeight, heightMV, pillTransition])
 
   const handlePillDragProgress = useCallback(
     (y: number) => {
@@ -128,14 +170,17 @@ export function FloatingNavPill({ onToggleSidebar, onOpenSearch }: FloatingNavPi
   const handlePillDragActiveChange = useCallback(
     (active: boolean) => {
       isDraggingRef.current = active
+      setPillAnimating(true)
       if (!active) {
-        animate(heightMV, measuredHeightRef.current, PILL_TRANSITION)
+        const controls = animate(heightMV, measuredHeightRef.current, pillTransition)
+        void controls.then(() => setPillAnimating(false))
       }
     },
-    [heightMV]
+    [heightMV, pillTransition]
   )
 
   const collapseAll = useCallback(() => {
+    setPillAnimating(true)
     setViewSwitcherExpanded(false)
     setQuickSettingsOpen(false)
     setCreateDrawerOpen(false)
@@ -147,6 +192,7 @@ export function FloatingNavPill({ onToggleSidebar, onOpenSearch }: FloatingNavPi
   }, [collapseAll, onToggleSidebar])
 
   const handleToggleSwitcher = useCallback(() => {
+    setPillAnimating(true)
     setCreateDrawerOpen(false)
     setViewSwitcherExpanded((prev) => {
       const next = !prev
@@ -158,6 +204,7 @@ export function FloatingNavPill({ onToggleSidebar, onOpenSearch }: FloatingNavPi
   const handleBaseRowDragEnd = useCallback(
     (_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
       if (info.offset.y < -40 || info.velocity.y < -400) {
+        setPillAnimating(true)
         setCreateDrawerOpen(false)
         setViewSwitcherExpanded(true)
       }
@@ -166,6 +213,7 @@ export function FloatingNavPill({ onToggleSidebar, onOpenSearch }: FloatingNavPi
   )
 
   const handleToggleCreate = useCallback(() => {
+    setPillAnimating(true)
     setViewSwitcherExpanded(false)
     setQuickSettingsOpen(false)
     setCreateDrawerOpen((prev) => !prev)
@@ -220,10 +268,10 @@ export function FloatingNavPill({ onToggleSidebar, onOpenSearch }: FloatingNavPi
         <div className={styles.tapCatcher} onClick={collapseAll} aria-hidden="true" />
       )}
       <motion.div
-        className={`${styles.pill} ${textInputFocused ? styles.pillHidden : ''}`}
-        style={{ height: heightMV, borderRadius: radiusMV }}
+        className={`${styles.pill} ${pillRadiusClass} ${pillAnimating ? styles.pillAnimating : ''} ${textInputFocused ? styles.pillHidden : ''}`}
+        style={{ height: heightMV }}
         animate={{ opacity: textInputFocused ? 0 : 1, y: textInputFocused ? 24 : 0 }}
-        transition={CHROME_TRANSITION}
+        transition={chromeTransition}
         data-component="floating-nav-pill"
       >
         <div ref={contentRef} className={styles.pillContent}>
@@ -244,22 +292,35 @@ export function FloatingNavPill({ onToggleSidebar, onOpenSearch }: FloatingNavPi
             dragElastic={{ top: 0.06, bottom: 0 }}
             onDragEnd={handleBaseRowDragEnd}
           >
-            <motion.button
-              type="button"
-              className={styles.hamburgerBtn}
-              onClick={handleToggleSidebarClick}
-              animate={{ width: viewSwitcherExpanded ? 0 : 44, opacity: viewSwitcherExpanded ? 0 : 1 }}
-              transition={CHROME_TRANSITION}
-              aria-label={isOnSettingsRoute ? 'Back to calendar' : 'Toggle sidebar'}
+            {/* Fixed-width slot: the slot's width is switched by a class (a
+                single layout pass on state change) while the button itself
+                animates out with transform + opacity only, so the 190ms
+                collapse costs zero per-frame layout. */}
+            <div
+              className={`${styles.chromeSlot} ${styles.chromeSlotHamburger} ${viewSwitcherExpanded ? styles.chromeSlotCollapsed : ''}`}
             >
-              {isOnSettingsRoute ? <BackArrowIcon /> : <HamburgerIcon />}
-            </motion.button>
+              <motion.button
+                type="button"
+                className={styles.hamburgerBtn}
+                onClick={handleToggleSidebarClick}
+                animate={{ scaleX: viewSwitcherExpanded ? 0 : 1, opacity: viewSwitcherExpanded ? 0 : 1 }}
+                transition={chromeTransition}
+                tabIndex={viewSwitcherExpanded ? -1 : undefined}
+                aria-hidden={viewSwitcherExpanded || undefined}
+                aria-label={isOnSettingsRoute ? 'Back to calendar' : 'Toggle sidebar'}
+              >
+                {isOnSettingsRoute ? <BackArrowIcon /> : <HamburgerIcon />}
+              </motion.button>
+            </div>
 
             <div className={styles.switcherSegment} data-component="nav-pill-switcher">
               {viewSwitcherExpanded ? (
                 <NavExpandedGrid
                   quickSettingsOpen={quickSettingsOpen}
-                  onToggleQuickSettings={() => setQuickSettingsOpen((prev) => !prev)}
+                  onToggleQuickSettings={() => {
+                    setPillAnimating(true)
+                    setQuickSettingsOpen((prev) => !prev)
+                  }}
                   onOpenSearch={onOpenSearch}
                   onCollapse={collapseAll}
                   onDragProgress={handlePillDragProgress}
@@ -276,7 +337,7 @@ export function FloatingNavPill({ onToggleSidebar, onOpenSearch }: FloatingNavPi
                       layoutId="nav-active-indicator"
                       className={styles.switcherActiveBg}
                       style={{ gridColumn: activeIndex + 1, gridRow: 1 }}
-                      transition={INDICATOR_TRANSITION}
+                      transition={indicatorTransition}
                     />
                   )}
                   {!isOnBaseRoute && (
@@ -284,7 +345,7 @@ export function FloatingNavPill({ onToggleSidebar, onOpenSearch }: FloatingNavPi
                       layoutId="nav-active-indicator"
                       className={styles.switcherActiveBg}
                       style={{ gridColumn: BASE_VIEWS.length + 1, gridRow: 1 }}
-                      transition={INDICATOR_TRANSITION}
+                      transition={indicatorTransition}
                     />
                   )}
                   {BASE_VIEWS.map((view, index) => {
@@ -321,23 +382,32 @@ export function FloatingNavPill({ onToggleSidebar, onOpenSearch }: FloatingNavPi
               )}
             </div>
 
-            <motion.button
-              type="button"
-              className={styles.createBtn}
-              onClick={handleToggleCreate}
-              animate={{ width: viewSwitcherExpanded ? 0 : 38, opacity: viewSwitcherExpanded ? 0 : 1 }}
-              transition={CHROME_TRANSITION}
-              aria-label={createDrawerOpen ? 'Close create menu' : 'Create'}
-              aria-expanded={createDrawerOpen}
+            <div
+              className={`${styles.chromeSlot} ${styles.chromeSlotCreate} ${viewSwitcherExpanded ? styles.chromeSlotCollapsed : ''}`}
             >
-              <motion.span
-                className={styles.createIcon}
-                animate={{ rotate: createDrawerOpen ? 45 : 0 }}
-                transition={CHROME_TRANSITION}
+              <motion.button
+                type="button"
+                className={styles.createBtn}
+                onClick={handleToggleCreate}
+                // Uniform `scale`, not `scaleX`: this button is a circle with a
+                // plus glyph in it, and squashing only the x-axis reads as a
+                // distortion rather than a dismissal.
+                animate={{ scale: viewSwitcherExpanded ? 0 : 1, opacity: viewSwitcherExpanded ? 0 : 1 }}
+                transition={chromeTransition}
+                tabIndex={viewSwitcherExpanded ? -1 : undefined}
+                aria-hidden={viewSwitcherExpanded || undefined}
+                aria-label={createDrawerOpen ? 'Close create menu' : 'Create'}
+                aria-expanded={createDrawerOpen}
               >
-                <PlusIcon />
-              </motion.span>
-            </motion.button>
+                <motion.span
+                  className={styles.createIcon}
+                  animate={{ rotate: createDrawerOpen ? 45 : 0 }}
+                  transition={chromeTransition}
+                >
+                  <PlusIcon />
+                </motion.span>
+              </motion.button>
+            </div>
           </motion.div>
         </div>
       </motion.div>

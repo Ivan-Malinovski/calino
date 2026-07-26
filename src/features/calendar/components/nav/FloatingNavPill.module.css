@@ -21,6 +21,34 @@
   flex-direction: column;
   justify-content: flex-end;
   z-index: 150;
+
+  /* The pill's height is written from a MotionValue every frame during the
+     open/close tween and during drag. Containment scopes that layout+paint
+     work to this subtree instead of letting it invalidate the whole page.
+     Safe here: the element is already `position: fixed` with
+     `overflow: hidden`, and nothing rendered inside it (NavExpandedGrid,
+     NavCreateDrawer, QuickSettingsPanel) uses `position: fixed` or otherwise
+     needs to escape the pill's bounds. */
+  contain: layout paint style;
+
+  /* Radius is state-driven, not rAF-driven — same duration/easing as the
+     height tween in FloatingNavPill.tsx so the two stay in lockstep. */
+  border-radius: 34px;
+  transition: border-radius 0.24s cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+.pillRadiusExpanded {
+  border-radius: 30px;
+}
+
+.pillRadiusCreate {
+  border-radius: 26px;
+}
+
+/* Applied only while a height tween or drag is in flight — never permanently,
+   because this element is mounted for the entire session. */
+.pillAnimating {
+  will-change: height;
 }
 
 .pillContent {
@@ -44,7 +72,33 @@
   padding: 0;
 }
 
+/* Fixed-width slots for the two chrome buttons. The slot width flips between
+   its natural size and 0 via a class (one layout pass on state change, no
+   per-frame layout); the button inside animates out with transform + opacity.
+   `overflow: visible` is deliberate so the shrink/fade is actually visible —
+   the pill's own `overflow: hidden` still contains it. */
+.chromeSlot {
+  flex-shrink: 0;
+  overflow: visible;
+  display: flex;
+  align-items: center;
+}
+
+.chromeSlotHamburger {
+  width: 44px;
+}
+
+.chromeSlotCreate {
+  width: 38px;
+}
+
+.chromeSlotCollapsed {
+  width: 0;
+  pointer-events: none;
+}
+
 .hamburgerBtn {
+  transform-origin: left center;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -129,6 +183,7 @@
 }
 
 .createBtn {
+  transform-origin: right center;
   display: flex;
   align-items: center;
   justify-content: center;
