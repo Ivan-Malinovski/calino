@@ -2,6 +2,24 @@ import { test, expect } from '@playwright/test'
 import { clearState, seedAccount } from './fixtures/localstorage'
 
 test.describe('calendar discovery sync', () => {
+  // Every test here shares one CalDAV collection on the mock server, whose
+  // event store is a single Map living as long as the Vite dev server (and
+  // `reuseExistingServer` keeps that alive across local runs). These tests
+  // PUT fixed hrefs and assert on whole-collection REPORT output, so they
+  // cannot run against each other's leftovers — serial + reset gives each
+  // one an empty collection to start from.
+  //
+  // The reset is scoped to `personal/` so it does not disturb the
+  // settings-sync spec, which owns the `calino-settings/` collection and may
+  // be running in parallel in another worker.
+  test.describe.configure({ mode: 'serial' })
+
+  test.beforeEach(async ({ page, baseURL }) => {
+    await page.request.post(
+      `${baseURL!}/mock-caldav/__test__/reset?prefix=${encodeURIComponent('/dav/calendars/user/personal/')}`
+    )
+  })
+
   test('reload discovers remote calendars and the header action syncs all accounts', async ({
     page,
     baseURL,
@@ -156,6 +174,20 @@ END:VCALENDAR`,
     await recurrenceDialog.getByRole('button', { name: /All events/i }).click()
     await expect(page.getByText('Remote recurring event updated').first()).toBeVisible()
 
+    await expect
+      .poll(
+        async () => {
+          const r = await page.request.fetch(calendarUrl, {
+            method: 'REPORT',
+            data: '<calendar-query xmlns="urn:ietf:params:xml:ns:caldav"/>',
+            headers: { Depth: '1', 'Content-Type': 'application/xml' },
+          })
+          return await r.text()
+        },
+        { timeout: 10_000 }
+      )
+      .toContain('SUMMARY:Remote recurring event updated')
+
     const report = await page.request.fetch(calendarUrl, {
       method: 'REPORT',
       data: '<calendar-query xmlns="urn:ietf:params:xml:ns:caldav"/>',
@@ -163,7 +195,6 @@ END:VCALENDAR`,
     })
     const body = await report.text()
     expect(body).toContain('server-generated-name.ics')
-    expect(body).toContain('SUMMARY:Remote recurring event updated')
     expect(body.match(/UID:recurring-remote-uid/g)).toHaveLength(1)
   })
 
@@ -300,8 +331,12 @@ END:VCALENDAR`,
       .locator('[data-component="event-preview"]')
       .getByRole('button', { name: 'Delete' })
       .click()
-    const deleteDialog = page.getByRole('dialog').filter({ hasText: /Delete recurring event/i })
-    await deleteDialog.getByRole('button', { name: /This event only/i }).click()
+    // No recurrence dialog here, deliberately. Once the override has been
+    // round-tripped through CalDAV it comes back as a VEVENT carrying
+    // RECURRENCE-ID, so `event.recurrenceId` is set and EventPreviewPopup's
+    // handleDelete takes the single-occurrence path directly — there is no
+    // "which occurrence?" question to ask about an event that already *is*
+    // one occurrence. The dialog only appears for a master/series.
     await expect(importedOverride).toBeHidden()
 
     const reportAfterDelete = await page.request.fetch(calendarUrl, {

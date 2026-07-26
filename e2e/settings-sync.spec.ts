@@ -91,7 +91,12 @@ test.describe('CalDAV settings sync', () => {
   test.describe.configure({ mode: 'serial' })
 
   test.beforeEach(async ({ page, baseURL }) => {
-    await page.request.post(`${baseURL!}/mock-caldav/__test__/reset`)
+    // Scoped to this spec's own collection — an unscoped reset would clear
+    // the `personal/` calendar that calendar-sync.spec.ts is using in a
+    // parallel worker.
+    await page.request.post(
+      `${baseURL!}/mock-caldav/__test__/reset?prefix=${encodeURIComponent('/dav/calendars/user/calino-settings/')}`
+    )
     await clearState(page)
   })
 
