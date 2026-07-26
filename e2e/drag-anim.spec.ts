@@ -53,7 +53,7 @@ async function seedTwoWeekEvents(page: Page): Promise<{ monday: string; friday: 
         if (sessionStorage.getItem('__calino_test_drag_anim_regression')) return
         sessionStorage.setItem('__calino_test_drag_anim_regression', '1')
         const raw = localStorage.getItem(calendarKey)
-        const parsed = raw ? JSON.parse(raw) : { state: {}, version: 1 }
+        const parsed = raw ? JSON.parse(raw) : { state: {}, version: 2 }
         const existing = parsed.state?.events ?? []
         existing.push(...events)
         parsed.state = { ...(parsed.state ?? {}), events: existing }

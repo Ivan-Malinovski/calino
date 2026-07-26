@@ -26,7 +26,7 @@ async function seedOneTask(page: Page): Promise<void> {
       if (sessionStorage.getItem('__calino_test_todo_row_align')) return
       sessionStorage.setItem('__calino_test_todo_row_align', '1')
       const raw = localStorage.getItem('calino-storage')
-      const parsed = raw ? JSON.parse(raw) : { state: {}, version: 1 }
+      const parsed = raw ? JSON.parse(raw) : { state: {}, version: 2 }
       const events = parsed.state?.events ?? []
       events.push({
         id: 'align-1',
