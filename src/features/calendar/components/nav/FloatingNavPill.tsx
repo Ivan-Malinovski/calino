@@ -32,7 +32,10 @@ const CHROME_TRANSITION_INSTANT = { duration: 0 }
 const INDICATOR_TRANSITION = { type: 'spring', stiffness: 500, damping: 40 } as const
 const INDICATOR_TRANSITION_INSTANT = { duration: 0 } as const
 
-export function FloatingNavPill({ onToggleSidebar, onOpenSearch }: FloatingNavPillProps): JSX.Element {
+export function FloatingNavPill({
+  onToggleSidebar,
+  onOpenSearch,
+}: FloatingNavPillProps): JSX.Element {
   const navigate = useNavigate()
   const location = useLocation()
   const currentView = useCalendarStore((state) => state.currentView)
@@ -84,6 +87,54 @@ export function FloatingNavPill({ onToggleSidebar, onOpenSearch }: FloatingNavPi
   // interaction handlers (expand / create / drag) and switched off again when
   // the height tween settles.
   const [pillAnimating, setPillAnimating] = useState(false)
+  const pillAnimatingTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Turning the hint ON is a handler's decision; turning it OFF cannot be,
+  // because the settle signal (`animate().then`) only ever arrives if a tween
+  // actually starts. An interaction that sets the flag without changing the
+  // measured height starts no tween — `collapseAll()` when nothing is open is
+  // the reachable case, via the expanded grid's search/settings buttons and
+  // the create-drawer items — and framer's `.stop()` does not resolve the
+  // promise either. Either path would otherwise strand `will-change: height`
+  // on for the rest of the session, which is the exact thing this flag exists
+  // to prevent. So every "on" arms a watchdog that guarantees an "off".
+  const beginPillAnimation = useCallback(() => {
+    setPillAnimating(true)
+    if (pillAnimatingTimer.current) clearTimeout(pillAnimatingTimer.current)
+    pillAnimatingTimer.current = setTimeout(
+      () => {
+        pillAnimatingTimer.current = null
+        setPillAnimating(false)
+      },
+      PILL_TRANSITION.duration * 1000 + 120
+    )
+  }, [])
+
+  // A drag has no bounded duration, so it holds the hint on with no watchdog
+  // and relies on the drag-end tween (or the next `beginPillAnimation`) to
+  // release it.
+  const holdPillAnimation = useCallback(() => {
+    setPillAnimating(true)
+    if (pillAnimatingTimer.current) {
+      clearTimeout(pillAnimatingTimer.current)
+      pillAnimatingTimer.current = null
+    }
+  }, [])
+
+  const endPillAnimation = useCallback(() => {
+    if (pillAnimatingTimer.current) {
+      clearTimeout(pillAnimatingTimer.current)
+      pillAnimatingTimer.current = null
+    }
+    setPillAnimating(false)
+  }, [])
+
+  useEffect(
+    () => () => {
+      if (pillAnimatingTimer.current) clearTimeout(pillAnimatingTimer.current)
+    },
+    []
+  )
 
   // border-radius is no longer a MotionValue: it is a pure function of state,
   // so a CSS class + `transition: border-radius` gets it off the rAF loop
@@ -149,7 +200,7 @@ export function FloatingNavPill({ onToggleSidebar, onOpenSearch }: FloatingNavPi
     measuredHeightRef.current = measuredHeight
     if (isDraggingRef.current) return
     const heightControls = animate(heightMV, measuredHeight, pillTransition)
-    void heightControls.then(() => setPillAnimating(false))
+    void heightControls.then(endPillAnimation)
     return () => {
       heightControls.stop()
     }
@@ -158,7 +209,7 @@ export function FloatingNavPill({ onToggleSidebar, onOpenSearch }: FloatingNavPi
     // changes), so clearing here would drop `will-change` immediately after a
     // handler set it — i.e. exactly while the tween needs it. Whichever tween
     // ends last resolves it via the `.then` above.
-  }, [measuredHeight, heightMV, pillTransition])
+  }, [measuredHeight, heightMV, pillTransition, endPillAnimation])
 
   const handlePillDragProgress = useCallback(
     (y: number) => {
@@ -170,21 +221,23 @@ export function FloatingNavPill({ onToggleSidebar, onOpenSearch }: FloatingNavPi
   const handlePillDragActiveChange = useCallback(
     (active: boolean) => {
       isDraggingRef.current = active
-      setPillAnimating(true)
-      if (!active) {
+      if (active) {
+        holdPillAnimation()
+      } else {
+        beginPillAnimation()
         const controls = animate(heightMV, measuredHeightRef.current, pillTransition)
-        void controls.then(() => setPillAnimating(false))
+        void controls.then(endPillAnimation)
       }
     },
-    [heightMV, pillTransition]
+    [heightMV, pillTransition, holdPillAnimation, beginPillAnimation, endPillAnimation]
   )
 
   const collapseAll = useCallback(() => {
-    setPillAnimating(true)
+    beginPillAnimation()
     setViewSwitcherExpanded(false)
     setQuickSettingsOpen(false)
     setCreateDrawerOpen(false)
-  }, [])
+  }, [beginPillAnimation])
 
   const handleToggleSidebarClick = useCallback(() => {
     collapseAll()
@@ -192,32 +245,32 @@ export function FloatingNavPill({ onToggleSidebar, onOpenSearch }: FloatingNavPi
   }, [collapseAll, onToggleSidebar])
 
   const handleToggleSwitcher = useCallback(() => {
-    setPillAnimating(true)
+    beginPillAnimation()
     setCreateDrawerOpen(false)
     setViewSwitcherExpanded((prev) => {
       const next = !prev
       if (!next) setQuickSettingsOpen(false)
       return next
     })
-  }, [])
+  }, [beginPillAnimation])
 
   const handleBaseRowDragEnd = useCallback(
     (_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
       if (info.offset.y < -40 || info.velocity.y < -400) {
-        setPillAnimating(true)
+        beginPillAnimation()
         setCreateDrawerOpen(false)
         setViewSwitcherExpanded(true)
       }
     },
-    []
+    [beginPillAnimation]
   )
 
   const handleToggleCreate = useCallback(() => {
-    setPillAnimating(true)
+    beginPillAnimation()
     setViewSwitcherExpanded(false)
     setQuickSettingsOpen(false)
     setCreateDrawerOpen((prev) => !prev)
-  }, [])
+  }, [beginPillAnimation])
 
   const handleViewChange = useCallback(
     (view: ViewType) => {
@@ -303,7 +356,10 @@ export function FloatingNavPill({ onToggleSidebar, onOpenSearch }: FloatingNavPi
                 type="button"
                 className={styles.hamburgerBtn}
                 onClick={handleToggleSidebarClick}
-                animate={{ scaleX: viewSwitcherExpanded ? 0 : 1, opacity: viewSwitcherExpanded ? 0 : 1 }}
+                animate={{
+                  scaleX: viewSwitcherExpanded ? 0 : 1,
+                  opacity: viewSwitcherExpanded ? 0 : 1,
+                }}
                 transition={chromeTransition}
                 tabIndex={viewSwitcherExpanded ? -1 : undefined}
                 aria-hidden={viewSwitcherExpanded || undefined}
@@ -318,7 +374,7 @@ export function FloatingNavPill({ onToggleSidebar, onOpenSearch }: FloatingNavPi
                 <NavExpandedGrid
                   quickSettingsOpen={quickSettingsOpen}
                   onToggleQuickSettings={() => {
-                    setPillAnimating(true)
+                    beginPillAnimation()
                     setQuickSettingsOpen((prev) => !prev)
                   }}
                   onOpenSearch={onOpenSearch}
@@ -351,7 +407,8 @@ export function FloatingNavPill({ onToggleSidebar, onOpenSearch }: FloatingNavPi
                   {BASE_VIEWS.map((view, index) => {
                     const isActive =
                       isOnBaseRoute &&
-                      (currentView === view.value || (view.value === 'week' && currentView === '3day'))
+                      (currentView === view.value ||
+                        (view.value === 'week' && currentView === '3day'))
                     return (
                       <button
                         key={view.value}
@@ -360,7 +417,9 @@ export function FloatingNavPill({ onToggleSidebar, onOpenSearch }: FloatingNavPi
                         style={{ gridColumn: index + 1 }}
                         onClick={() => handleViewChange(view.value)}
                       >
-                        <span className={isActive ? styles.switcherLabelActive : styles.switcherLabel}>
+                        <span
+                          className={isActive ? styles.switcherLabelActive : styles.switcherLabel}
+                        >
                           {view.label}
                         </span>
                       </button>
@@ -374,7 +433,9 @@ export function FloatingNavPill({ onToggleSidebar, onOpenSearch }: FloatingNavPi
                     aria-label="Show all views"
                     aria-expanded={viewSwitcherExpanded}
                   >
-                    <span className={isOnBaseRoute ? styles.switcherLabel : styles.switcherLabelActive}>
+                    <span
+                      className={isOnBaseRoute ? styles.switcherLabel : styles.switcherLabelActive}
+                    >
                       <EllipsisIcon />
                     </span>
                   </button>
@@ -392,7 +453,10 @@ export function FloatingNavPill({ onToggleSidebar, onOpenSearch }: FloatingNavPi
                 // Uniform `scale`, not `scaleX`: this button is a circle with a
                 // plus glyph in it, and squashing only the x-axis reads as a
                 // distortion rather than a dismissal.
-                animate={{ scale: viewSwitcherExpanded ? 0 : 1, opacity: viewSwitcherExpanded ? 0 : 1 }}
+                animate={{
+                  scale: viewSwitcherExpanded ? 0 : 1,
+                  opacity: viewSwitcherExpanded ? 0 : 1,
+                }}
                 transition={chromeTransition}
                 tabIndex={viewSwitcherExpanded ? -1 : undefined}
                 aria-hidden={viewSwitcherExpanded || undefined}
@@ -417,7 +481,15 @@ export function FloatingNavPill({ onToggleSidebar, onOpenSearch }: FloatingNavPi
 
 function HamburgerIcon(): JSX.Element {
   return (
-    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 20 20"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+    >
       <path d="M3 10H17M3 6H17M3 14H17" />
     </svg>
   )
@@ -425,7 +497,16 @@ function HamburgerIcon(): JSX.Element {
 
 function BackArrowIcon(): JSX.Element {
   return (
-    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 20 20"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M12 4L6 10l6 6" />
     </svg>
   )
@@ -443,7 +524,15 @@ function EllipsisIcon(): JSX.Element {
 
 function PlusIcon(): JSX.Element {
   return (
-    <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 20 20"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+    >
       <path d="M10 3V17M3 10H17" />
     </svg>
   )
