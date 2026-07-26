@@ -13,7 +13,7 @@ import type {
 } from '@/types'
 import type { Category, AutoCategoryRule } from '@/types/categories'
 import type { ExtractedEventFields } from '@/features/aiVision/types'
-import { config, DEFAULT_CALENDAR_COLOR } from '@/config'
+import { DEFAULT_CALENDAR_COLOR } from '@/config'
 import { buildRRuleString } from '@/lib/recurrence'
 import { deleteAttachments } from '@/lib/attachmentStore'
 import { useSettingsStore } from '@/store/settingsStore'
