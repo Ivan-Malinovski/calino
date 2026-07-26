@@ -1,12 +1,17 @@
 import type { JSX } from 'react'
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { v4 as uuidv4 } from 'uuid'
 import { useContactStore } from '@/store/contactStore'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useCardDAV } from '@/features/carddav/hooks/useCardDAV'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { deleteContactWithUndo } from '@/lib/deleteContactWithUndo'
-import { createBirthdayEvent, hasBirthdayEvent, createAnniversaryEvent, hasAnniversaryEvent } from '@/lib/birthdayReminders'
+import {
+  createBirthdayEvent,
+  hasBirthdayEvent,
+  createAnniversaryEvent,
+  hasAnniversaryEvent,
+} from '@/lib/birthdayReminders'
 import { showToast } from '@/lib/toast'
 import type { Contact } from '../types'
 import { ContactList } from './ContactList'
@@ -23,6 +28,7 @@ export function ContactsView(): JSX.Element {
   const deleteContact = useContactStore((s) => s.deleteContact)
   const addressBooks = useContactStore((s) => s.addressBooks)
   const addPendingChange = useContactStore((s) => s.addPendingChange)
+  const removePendingChange = useContactStore((s) => s.removePendingChange)
 
   const calendars = useCalendarStore((s) => s.calendars)
   const addEvent = useCalendarStore((s) => s.addEvent)
@@ -35,6 +41,7 @@ export function ContactsView(): JSX.Element {
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [editingContact, setEditingContact] = useState<Contact | null>(null)
   const [pendingAccountId, setPendingAccountId] = useState<string>('')
+  const [pendingAddressBookId, setPendingAddressBookId] = useState<string>('')
 
   // Address book picker for "+ New" when >1 books
   const [showPicker, setShowPicker] = useState(false)
@@ -44,11 +51,13 @@ export function ContactsView(): JSX.Element {
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const confirmDeleteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const visibleAddressBooks = addressBooks.filter((ab) => ab.isVisible)
+  // Fall back to all books if none are flagged visible, so "+ New" is never a no-op
+  const visibleAddressBooks = useMemo(() => {
+    const visible = addressBooks.filter((ab) => ab.isVisible)
+    return visible.length > 0 ? visible : addressBooks
+  }, [addressBooks])
 
-  const selectedContact = selectedContactId
-    ? getContactById(selectedContactId)
-    : null
+  const selectedContact = selectedContactId ? getContactById(selectedContactId) : null
 
   const showDetail = isMobile && selectedContact !== null
 
@@ -56,34 +65,60 @@ export function ContactsView(): JSX.Element {
     setSelectedContactId(null)
   }
 
-  // "+ New" — if 1 address book go straight to form, if >1 show picker
-  const handleNewClick = (): void => {
-    if (visibleAddressBooks.length === 1) {
-      const [ab] = visibleAddressBooks
-      setEditingContact(null)
-      setPendingAccountId(ab.accountId)
-      setIsFormOpen(true)
-      setShowPicker(false)
-    } else {
-      setShowPicker((prev) => !prev)
-    }
-  }
-
-  const handlePickAddressBook = (_addressBookId: string, accountId: string): void => {
+  const openFormFor = (addressBookId: string, accountId: string): void => {
     setEditingContact(null)
+    setPendingAddressBookId(addressBookId)
     setPendingAccountId(accountId)
     setIsFormOpen(true)
     setShowPicker(false)
   }
 
-  const handleEdit = useCallback(
-    (contact: Contact): void => {
-      setEditingContact(contact)
-      setPendingAccountId(contact.accountId)
-      setIsFormOpen(true)
-    },
-    []
-  )
+  // "+ New" — if 1 address book go straight to form, if >1 show picker
+  const handleNewClick = (): void => {
+    if (visibleAddressBooks.length === 0) {
+      showToast('No address book available')
+      return
+    }
+    if (visibleAddressBooks.length === 1) {
+      const [ab] = visibleAddressBooks
+      openFormFor(ab.id, ab.accountId)
+    } else {
+      // Always open — the outside-click/Escape handler below is what closes it
+      setShowPicker(true)
+    }
+  }
+
+  const handlePickAddressBook = (addressBookId: string, accountId: string): void => {
+    openFormFor(addressBookId, accountId)
+  }
+
+  const handleEdit = useCallback((contact: Contact): void => {
+    setEditingContact(contact)
+    setPendingAddressBookId(contact.addressBookId)
+    setPendingAccountId(contact.accountId)
+    setIsFormOpen(true)
+  }, [])
+
+  // Close the address book picker on outside click or Escape
+  useEffect(() => {
+    if (!showPicker) return
+
+    const handlePointerDown = (e: MouseEvent): void => {
+      if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) {
+        setShowPicker(false)
+      }
+    }
+    const handleKeyDown = (e: KeyboardEvent): void => {
+      if (e.key === 'Escape') setShowPicker(false)
+    }
+
+    document.addEventListener('mousedown', handlePointerDown)
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [showPicker])
 
   const handleDelete = useCallback(
     async (contact: Contact): Promise<void> => {
@@ -95,15 +130,16 @@ export function ContactsView(): JSX.Element {
         }
         setConfirmDeleteId(null)
 
-        const ab = addressBooks.find((a) => a.id === contact.addressBookId)
-
         // Delete with undo toast
         deleteContactWithUndo({
           contact,
           deleteContact,
           addContact,
           addPendingChange,
-          syncAccount: ab?.accountId ? syncAccount : undefined,
+          hasPendingChange: (changeId) =>
+            useContactStore.getState().pendingChanges.some((c) => c.id === changeId),
+          removePendingChange,
+          syncAccount,
           onAfterDelete: () => {
             if (selectedContactId === contact.id) {
               setSelectedContactId(null)
@@ -125,12 +161,22 @@ export function ContactsView(): JSX.Element {
         confirmDeleteTimerRef.current = null
       }, 3000)
     },
-    [addressBooks, deleteContact, addContact, addPendingChange, selectedContactId, setSelectedContactId, syncAccount, confirmDeleteId]
+    [
+      deleteContact,
+      addContact,
+      addPendingChange,
+      removePendingChange,
+      selectedContactId,
+      setSelectedContactId,
+      syncAccount,
+      confirmDeleteId,
+    ]
   )
 
   const handleFieldSave = useCallback(
     async (contact: Contact, field: string, value: unknown): Promise<void> => {
       const ab = addressBooks.find((a) => a.id === contact.addressBookId)
+      const accountId = contact.accountId || ab?.accountId
       const now = new Date().toISOString()
 
       // Update store optimistically
@@ -147,8 +193,8 @@ export function ContactsView(): JSX.Element {
       })
 
       // Sync the account
-      if (ab?.accountId) {
-        await syncAccount(ab.accountId)
+      if (accountId) {
+        await syncAccount(accountId)
       }
     },
     [addressBooks, updateContact, addPendingChange, syncAccount]
@@ -200,7 +246,14 @@ export function ContactsView(): JSX.Element {
       setIsFormOpen(false)
       setEditingContact(null)
     },
-    [addContact, updateContact, addPendingChange, setSelectedContactId, syncAccount, pendingAccountId]
+    [
+      addContact,
+      updateContact,
+      addPendingChange,
+      setSelectedContactId,
+      syncAccount,
+      pendingAccountId,
+    ]
   )
 
   const handleAddBirthdayToCalendar = useCallback(
@@ -264,42 +317,34 @@ export function ContactsView(): JSX.Element {
   }
 
   return (
-    <div
-      className={`${styles.contactsPage} ${showDetail ? styles.showDetail : ''}`}
-    >
+    <div className={`${styles.contactsPage} ${showDetail ? styles.showDetail : ''}`}>
       {/* Left panel */}
       <div className={styles.clist}>
-        <ContactList
-          onNewContact={handleNewClick}
-          loading={syncState.status === 'syncing'}
-        />
-      </div>
+        <ContactList onNewContact={handleNewClick} loading={syncState.status === 'syncing'} />
 
-      {/* Address book picker dropdown */}
-      {showPicker && visibleAddressBooks.length > 1 && (
-        <div className={styles.addressBookPicker} ref={pickerRef}>
-          <div className={styles.addressBookPickerLabel}>Choose address book</div>
-          {visibleAddressBooks.map((ab) => (
-            <button
-              key={ab.id}
-              type="button"
-              className={styles.addressBookPickerItem}
-              onClick={() => handlePickAddressBook(ab.id, ab.accountId)}
-            >
-              {ab.name}
-            </button>
-          ))}
-        </div>
-      )}
+        {/* Address book picker dropdown — anchored to the list panel, which is
+            position: relative, so it lands under the "+ New" button */}
+        {showPicker && visibleAddressBooks.length > 1 && (
+          <div className={styles.addressBookPicker} ref={pickerRef}>
+            <div className={styles.addressBookPickerLabel}>Choose address book</div>
+            {visibleAddressBooks.map((ab) => (
+              <button
+                key={ab.id}
+                type="button"
+                className={styles.addressBookPickerItem}
+                onClick={() => handlePickAddressBook(ab.id, ab.accountId)}
+              >
+                {ab.name}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Right panel */}
       <div className={styles.cdetail}>
         {showDetail && (
-          <button
-            type="button"
-            className={styles.mobileBack}
-            onClick={handleBack}
-          >
+          <button type="button" className={styles.mobileBack} onClick={handleBack}>
             <svg
               viewBox="0 0 24 24"
               fill="none"
@@ -364,7 +409,9 @@ export function ContactsView(): JSX.Element {
         isOpen={isFormOpen}
         onClose={handleFormClose}
         contact={editingContact}
-        addressBookId={editingContact?.addressBookId ?? visibleAddressBooks[0]?.id ?? ''}
+        addressBookId={
+          editingContact?.addressBookId || pendingAddressBookId || visibleAddressBooks[0]?.id || ''
+        }
         accountId={pendingAccountId}
         onSave={handleFormSave}
         onDelete={editingContact ? (c) => handleDelete(c) : undefined}

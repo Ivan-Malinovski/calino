@@ -738,16 +738,19 @@
    ============================================================================ */
 
 .addressBookPicker {
+  /* Anchored to .clist (position: relative), sitting just under the
+     search bar + meta bar row that holds the "+ New" button. */
   position: absolute;
-  top: calc(100% + 4px);
-  right: 0;
+  top: 84px;
+  right: 14px;
   z-index: 100;
   min-width: 180px;
+  max-height: 260px;
+  overflow-y: auto;
   background: var(--panel, #ffffff);
   border: 1px solid var(--line, rgba(0, 0, 0, 0.09));
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-card);
-  overflow: hidden;
   animation: fadeSlideIn 0.15s ease-out;
 }
 
