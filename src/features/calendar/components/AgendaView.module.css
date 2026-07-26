@@ -86,6 +86,20 @@
   color: var(--ink-3, #a39d93);
 }
 
+.agendaDayHeader.isToday .agendaDow,
+.agendaDayHeader.isEmpty.isToday .agendaDow {
+  color: var(--accent, #b07d4f);
+}
+
+.agendaDayHeader.isToday .agendaDate,
+.agendaDayHeader.isEmpty.isToday .agendaDate {
+  color: var(--panel, #ffffff);
+  background: var(--accent, #b07d4f);
+  padding: 2px 6px;
+  border-radius: var(--radius-sm, 6px);
+  font-weight: 500;
+}
+
 .agendaDate {
   font-size: 12px;
   color: var(--ink-3, #a39d93);

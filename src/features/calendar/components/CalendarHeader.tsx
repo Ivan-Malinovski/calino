@@ -382,6 +382,7 @@ export function CalendarHeader({
 
   const handleToday = (): void => {
     setCurrentDate(format(new Date(), 'yyyy-MM-dd'))
+    window.dispatchEvent(new CustomEvent('calino:jumpToToday'))
   }
 
   // Clicking the header title takes you back to month view from anywhere else;

@@ -30,32 +30,32 @@ describe('haptics', () => {
   describe('haptic', () => {
     it('calls navigator.vibrate with light pattern', () => {
       haptic('light')
-      expect(navigator.vibrate).toHaveBeenCalledWith(10)
+      expect(navigator.vibrate).toHaveBeenCalledWith(1)
     })
 
     it('calls navigator.vibrate with medium pattern', () => {
       haptic('medium')
-      expect(navigator.vibrate).toHaveBeenCalledWith(25)
+      expect(navigator.vibrate).toHaveBeenCalledWith(3)
     })
 
     it('calls navigator.vibrate with heavy pattern', () => {
       haptic('heavy')
-      expect(navigator.vibrate).toHaveBeenCalledWith(50)
+      expect(navigator.vibrate).toHaveBeenCalledWith(5)
     })
 
     it('calls navigator.vibrate with success pattern', () => {
       haptic('success')
-      expect(navigator.vibrate).toHaveBeenCalledWith([0, 30, 50, 30])
+      expect(navigator.vibrate).toHaveBeenCalledWith([0, 3, 5, 3])
     })
 
     it('calls navigator.vibrate with warning pattern', () => {
       haptic('warning')
-      expect(navigator.vibrate).toHaveBeenCalledWith([0, 30, 30, 30])
+      expect(navigator.vibrate).toHaveBeenCalledWith([0, 3, 3, 3])
     })
 
     it('calls navigator.vibrate with error pattern', () => {
       haptic('error')
-      expect(navigator.vibrate).toHaveBeenCalledWith([0, 50, 50, 50])
+      expect(navigator.vibrate).toHaveBeenCalledWith([0, 5, 5, 5])
     })
 
     it('does not throw when vibrate is not available', () => {
@@ -77,7 +77,7 @@ describe('haptics', () => {
     it('calls Haptics.vibrate with a short duration on native platform for impact types', () => {
       vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true)
       hapticIfEnabled('medium')
-      expect(Haptics.vibrate).toHaveBeenCalledWith({ duration: 13 })
+      expect(Haptics.vibrate).toHaveBeenCalledWith({ duration: 2 })
     })
 
     it('calls Haptics.notification on native platform for notification types', () => {
@@ -110,7 +110,7 @@ describe('haptics', () => {
 
       useSettingsStore.setState({ enableHaptics: true })
       hapticIfEnabled('medium')
-      expect(Haptics.vibrate).toHaveBeenCalledWith({ duration: 13 })
+      expect(Haptics.vibrate).toHaveBeenCalledWith({ duration: 2 })
     })
   })
 })

@@ -137,6 +137,8 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
       })
     })
 
+    const todayKey = format(new Date(), 'yyyy-MM-dd')
+
     const groups: DayGroup[] = []
     let i = 0
     while (i < daysList.length) {
@@ -144,9 +146,10 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
       const dateKey = format(day, 'yyyy-MM-dd')
       const dayEvents = eventMap.get(dateKey) || []
       const hasEvents = dayEvents.length > 0
+      const isToday = dateKey === todayKey
 
-      if (hasEvents) {
-        groups.push({ type: 'day', days: [day], hasEvents: true })
+      if (hasEvents || isToday) {
+        groups.push({ type: 'day', days: [day], hasEvents })
         i++
       } else {
         const run: Date[] = [day]
@@ -154,7 +157,8 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
         while (j < daysList.length) {
           const nextDay = daysList[j]
           const nextKey = format(nextDay, 'yyyy-MM-dd')
-          if (eventMap.get(nextKey)?.length ?? 0 > 0) break
+          if ((eventMap.get(nextKey)?.length ?? 0) > 0) break
+          if (nextKey === todayKey) break
           run.push(nextDay)
           j++
         }
@@ -180,7 +184,7 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
 
   const [isScrolled, setIsScrolled] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
-  const hasScrolledRef = useRef(false)
+  const scrolledMonthRef = useRef<string | null>(null)
 
   const handleScroll = (): void => {
     if (containerRef.current) {
@@ -212,26 +216,45 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
   })
 
   useEffect(() => {
-    if (containerRef.current && !hasScrolledRef.current) {
+    if (containerRef.current) {
       const today = startOfDay(new Date())
       const viewDate = parseISO(currentDate)
       const monthStart = startOfMonth(viewDate)
       const monthEnd = endOfMonth(viewDate)
+      const viewMonthKey = format(monthStart, 'yyyy-MM')
 
       if (today >= monthStart && today <= monthEnd) {
-        // Can't query the DOM for today's row any more — with virtualization it
-        // may not be mounted yet. Scroll by index instead.
-        const todayKey = format(today, 'yyyy-MM-dd')
-        const index = dayGroups.findIndex(
-          (g) => g.type === 'day' && format(g.days[0], 'yyyy-MM-dd') === todayKey
-        )
-        if (index !== -1) {
-          virtualizer.scrollToIndex(index, { align: 'start', behavior: 'auto' })
-          hasScrolledRef.current = true
+        if (scrolledMonthRef.current !== viewMonthKey) {
+          const todayKey = format(today, 'yyyy-MM-dd')
+          const index = dayGroups.findIndex(
+            (g) => g.type === 'day' && format(g.days[0], 'yyyy-MM-dd') === todayKey
+          )
+          if (index !== -1) {
+            virtualizer.scrollToIndex(index, { align: 'start', behavior: 'auto' })
+            scrolledMonthRef.current = viewMonthKey
+          }
         }
+      } else {
+        scrolledMonthRef.current = null
       }
     }
   }, [currentDate, dayGroups, virtualizer])
+
+  useEffect(() => {
+    const onJumpToToday = () => {
+      const today = startOfDay(new Date())
+      const todayKey = format(today, 'yyyy-MM-dd')
+      const index = dayGroups.findIndex(
+        (g) => g.type === 'day' && format(g.days[0], 'yyyy-MM-dd') === todayKey
+      )
+      if (index !== -1) {
+        virtualizer.scrollToIndex(index, { align: 'start', behavior: 'auto' })
+        scrolledMonthRef.current = format(startOfMonth(today), 'yyyy-MM')
+      }
+    }
+    window.addEventListener('calino:jumpToToday', onJumpToToday)
+    return () => window.removeEventListener('calino:jumpToToday', onJumpToToday)
+  }, [dayGroups, virtualizer])
 
   const renderSkipRow = (group: DayGroup): JSX.Element => {
     const first = group.days[0]
@@ -296,6 +319,7 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
                   const dateKey = firstKey
                   const sortedEvents = eventsByDate.get(dateKey) || []
                   const isEmpty = !group.hasEvents
+                  const isToday = dateKey === format(new Date(), 'yyyy-MM-dd')
 
                   return (
                     <div
@@ -303,7 +327,7 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
                       data-date={dateKey}
                       onContextMenu={(e) => handleContextMenu(e, day)}
                     >
-                      <div className={`${styles.agendaDayHeader} ${isEmpty ? styles.isEmpty : ''}`}>
+                      <div className={`${styles.agendaDayHeader} ${isEmpty ? styles.isEmpty : ''} ${isToday ? styles.isToday : ''}`}>
                         <div className={styles.agendaDayLabel}>
                           <span className={styles.agendaDow}>{format(day, 'EEEE')}</span>
                           <span className={styles.agendaDate}>{format(day, 'MMM d, yyyy')}</span>
