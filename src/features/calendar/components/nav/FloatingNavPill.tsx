@@ -1,4 +1,4 @@
-import type { JSX } from 'react'
+import type { JSX, CSSProperties } from 'react'
 import { useState, useCallback, useRef, useEffect, useLayoutEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { motion, useMotionValue, animate, type PanInfo } from 'framer-motion'
@@ -29,8 +29,6 @@ const PILL_TRANSITION = { duration: 0.24, ease: PILL_EASE }
 const PILL_TRANSITION_INSTANT = { duration: 0, ease: PILL_EASE }
 const CHROME_TRANSITION = { duration: 0.19 }
 const CHROME_TRANSITION_INSTANT = { duration: 0 }
-const INDICATOR_TRANSITION = { type: 'spring', stiffness: 500, damping: 40 } as const
-const INDICATOR_TRANSITION_INSTANT = { duration: 0 } as const
 
 export function FloatingNavPill({
   onToggleSidebar,
@@ -56,7 +54,6 @@ export function FloatingNavPill({
   // be zeroed explicitly.
   const pillTransition = reducedMotion ? PILL_TRANSITION_INSTANT : PILL_TRANSITION
   const chromeTransition = reducedMotion ? CHROME_TRANSITION_INSTANT : CHROME_TRANSITION
-  const indicatorTransition = reducedMotion ? INDICATOR_TRANSITION_INSTANT : INDICATOR_TRANSITION
 
   // The collapsed pill shows the 3 base views (Month/Week/Agenda) inline as
   // a quick selector. On any other route (e.g. /settings, /year, /day,
@@ -285,6 +282,11 @@ export function FloatingNavPill({
     (view) => currentView === view.value || (view.value === 'week' && currentView === '3day')
   )
 
+  // Which column the selector sits in: the matching base view, or the trailing
+  // "..." slot on any other route. A single element slides between the two
+  // cases, so leaving a base route reads as one continuous move.
+  const indicatorIndex = isOnBaseRoute ? (activeIndex >= 0 ? activeIndex : null) : BASE_VIEWS.length
+
   // Swiping the collapsed pill steps through ALL views (not just the 3 base
   // ones shown inline), in the same order as the "..." expanded grid, and
   // works from any route — so e.g. /agenda -> /year -> /day.
@@ -388,20 +390,10 @@ export function FloatingNavPill({
                   style={{ touchAction: 'none' }}
                   onPanEnd={handleSwitcherPanEnd}
                 >
-                  {isOnBaseRoute && activeIndex >= 0 && (
-                    <motion.div
-                      layoutId="nav-active-indicator"
+                  {indicatorIndex !== null && (
+                    <div
                       className={styles.switcherActiveBg}
-                      style={{ gridColumn: activeIndex + 1, gridRow: 1 }}
-                      transition={indicatorTransition}
-                    />
-                  )}
-                  {!isOnBaseRoute && (
-                    <motion.div
-                      layoutId="nav-active-indicator"
-                      className={styles.switcherActiveBg}
-                      style={{ gridColumn: BASE_VIEWS.length + 1, gridRow: 1 }}
-                      transition={indicatorTransition}
+                      style={{ '--switcher-index': indicatorIndex } as CSSProperties}
                     />
                   )}
                   {BASE_VIEWS.map((view, index) => {

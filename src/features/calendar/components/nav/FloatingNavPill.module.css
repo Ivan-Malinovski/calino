@@ -154,11 +154,32 @@
   overflow: hidden;
 }
 
+/* The selector used to be two framer `layoutId` elements, which animate by
+   measuring bounding boxes on the main thread every frame — so it stuttered
+   exactly when the tapped view was mounting and had the main thread busy.
+   The track is `repeat(4, 1fr)` with a uniform gap, so the slide is expressible
+   as one absolutely-positioned element translating by whole column steps: a
+   compositor-only transform that a busy main thread cannot drop frames from.
+   `--switcher-index` is the column, set inline. */
 .switcherActiveBg {
-  position: relative;
+  position: absolute;
   z-index: 0;
+  top: 2px;
+  bottom: 2px;
+  left: 2px;
+  /* Track padding (2px each side) plus the three 2px gaps, split four ways. */
+  width: calc((100% - 4px - 6px) / 4);
   background: var(--accent);
   border-radius: 17px;
+  /* One step is the element's own width plus the gap it has to cross. */
+  transform: translateX(calc(var(--switcher-index, 0) * (100% + 2px)));
+  transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .switcherActiveBg {
+    transition: none;
+  }
 }
 
 .switcherLabel {
