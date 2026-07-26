@@ -906,10 +906,10 @@ export function CalendarGrid(): JSX.Element {
                                   className={monthChangeMotion.initial ? styles.dayContentSlide : undefined}
                                   style={{
                                     width: '100%',
-                                    height: '100%',
+                                    height: '28px',
                                     display: 'flex',
                                     justifyContent: 'center',
-                                    alignItems: 'flex-start',
+                                    alignItems: 'center',
                                     '--slide-x': monthChangeMotion.initial ? `${monthChangeMotion.initial.x || 0}px` : '0px',
                                     '--slide-y': monthChangeMotion.initial ? `${monthChangeMotion.initial.y || 0}px` : '0px',
                                     '--slide-duration': `${monthChangeMotion.transition.duration}s`,
@@ -1061,10 +1061,10 @@ export function CalendarGrid(): JSX.Element {
                               {...monthChangeMotion}
                               style={{
                                 width: '100%',
-                                height: '100%',
+                                height: '28px',
                                 display: 'flex',
                                 justifyContent: 'center',
-                                alignItems: 'flex-start',
+                                alignItems: 'center',
                               }}
                             >
                               {weekNum}

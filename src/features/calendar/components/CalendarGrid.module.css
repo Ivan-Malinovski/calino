@@ -109,7 +109,7 @@
 .weekNumber {
   display: flex;
   justify-content: center;
-  padding-top: 14px;
+  padding-top: 5px;
   font-size: 10.5px;
   font-weight: 600;
   letter-spacing: 0.04em;
@@ -526,7 +526,7 @@
   }
 
   .weekNumber {
-    padding-top: 6px;
+    padding-top: 2px;
     /* The desktop cell-height floor lives on this element, and it's the only
        thing in a row that carries one. On a phone the day cells size to a row
        of dots, so leaving it in place forced every week to 100px and made the
