@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import type { JSX } from 'react'
+import { Capacitor } from '@capacitor/core'
 import {
   useSettingsStore,
   TIMEZONE_OPTIONS,
@@ -9,6 +10,11 @@ import {
 } from '@/store/settingsStore'
 import { useSettingsSync } from '@/hooks/useSettingsSync'
 import styles from './Settings.module.css'
+
+// Haptics are a native-only capability, and `enableHaptics` is deliberately
+// kept out of SYNCABLE_SETTINGS — it's a per-device preference, since the
+// device that stutters isn't necessarily every device on the account.
+const isNative = Capacitor.isNativePlatform()
 
 /** Format a sync error into a friendly, helpful message. */
 function formatSyncError(error: string): JSX.Element {
@@ -21,31 +27,65 @@ function formatSyncError(error: string): JSX.Element {
         Your server is blocking the connection. This usually means CORS headers aren't configured.
         Check that your CalDAV server has these headers set via PROPPATCH or your web server config:
         <br />
-        <code style={{
-          display: 'block', marginTop: 6, padding: '6px 10px',
-          borderRadius: 'var(--radius-sm)', background: 'rgba(44,40,33,0.04)', fontSize: 12,
-          fontFamily: 'monospace', lineHeight: 1.5, whiteSpace: 'pre-wrap',
-        }}>{`Access-Control-Allow-Origin: *
+        <code
+          style={{
+            display: 'block',
+            marginTop: 6,
+            padding: '6px 10px',
+            borderRadius: 'var(--radius-sm)',
+            background: 'rgba(44,40,33,0.04)',
+            fontSize: 12,
+            fontFamily: 'monospace',
+            lineHeight: 1.5,
+            whiteSpace: 'pre-wrap',
+          }}
+        >{`Access-Control-Allow-Origin: *
 Access-Control-Allow-Methods: GET, POST, PUT, DELETE, PROPFIND, PROPPATCH, REPORT, OPTIONS, MKCOL, COPY, MOVE
 Access-Control-Allow-Headers: Authorization, Content-Type, Depth, Prefer, If-Match`}</code>
-        <span style={{ marginTop: 6, display: 'block' }}>See <a href="https://github.com/nickvdyck/baikal#cors" target="_blank" rel="noreferrer" style={{ color: 'var(--accent)' }}>Baikal CORS docs</a> for help.</span>
+        <span style={{ marginTop: 6, display: 'block' }}>
+          See{' '}
+          <a
+            href="https://github.com/nickvdyck/baikal#cors"
+            target="_blank"
+            rel="noreferrer"
+            style={{ color: 'var(--accent)' }}
+          >
+            Baikal CORS docs
+          </a>{' '}
+          for help.
+        </span>
       </>
     )
   }
 
   // Network errors
   if (lower.includes('network') || lower.includes('fetch') || lower.includes('failed to fetch')) {
-    return <>Couldn't reach your CalDAV server. Check your internet connection and make sure the server is online.</>
+    return (
+      <>
+        Couldn't reach your CalDAV server. Check your internet connection and make sure the server
+        is online.
+      </>
+    )
   }
 
   // Auth errors
-  if (lower.includes('401') || lower.includes('403') || lower.includes('unauthorized') || lower.includes('forbidden')) {
+  if (
+    lower.includes('401') ||
+    lower.includes('403') ||
+    lower.includes('unauthorized') ||
+    lower.includes('forbidden')
+  ) {
     return <>Authentication failed. Please check your CalDAV username and password.</>
   }
 
   // Not found
   if (lower.includes('404') || lower.includes('not found')) {
-    return <>The settings calendar wasn't found on your server. It may have been deleted. Try disabling and re-enabling sync.</>
+    return (
+      <>
+        The settings calendar wasn't found on your server. It may have been deleted. Try disabling
+        and re-enabling sync.
+      </>
+    )
   }
 
   // Default
@@ -60,8 +100,9 @@ export function GeneralSettings(): JSX.Element {
   const mapProvider = useSettingsStore((s) => s.mapProvider)
   const journalEnabled = useSettingsStore((s) => s.journalEnabled)
   const contactsEnabled = useSettingsStore((s) => s.contactsEnabled)
+  const enableHaptics = useSettingsStore((s) => s.enableHaptics)
   const updateSettings = useSettingsStore((s) => s.updateSettings)
-  
+
   // Settings sync
   const {
     enabled: syncEnabled,
@@ -91,10 +132,18 @@ export function GeneralSettings(): JSX.Element {
   }, [showAccountPicker, showDisableConfirm])
 
   return (
-    <section className={`${styles.section} ${styles.sectionActive}`} data-component="general-settings">
+    <section
+      className={`${styles.section} ${styles.sectionActive}`}
+      data-component="general-settings"
+    >
       <h1 className={styles.pageTitle}>General</h1>
       <div className={styles.group}>
-        <div className={styles.row} data-component="setting-row" data-setting="timezone" data-value={timezone}>
+        <div
+          className={styles.row}
+          data-component="setting-row"
+          data-setting="timezone"
+          data-value={timezone}
+        >
           <div className={styles.rowInfo}>
             <div className={styles.rowLabel}>Timezone</div>
             <div className={styles.rowDesc}>All events will be displayed in this timezone</div>
@@ -114,7 +163,12 @@ export function GeneralSettings(): JSX.Element {
             </select>
           </div>
         </div>
-        <div className={styles.row} data-component="setting-row" data-setting="date-format" data-value={dateFormat}>
+        <div
+          className={styles.row}
+          data-component="setting-row"
+          data-setting="date-format"
+          data-value={dateFormat}
+        >
           <div className={styles.rowInfo}>
             <div className={styles.rowLabel}>Date Format</div>
             <div className={styles.rowDesc}>How dates appear throughout the app</div>
@@ -138,7 +192,12 @@ export function GeneralSettings(): JSX.Element {
             </select>
           </div>
         </div>
-        <div className={styles.row} data-component="setting-row" data-setting="map-provider" data-value={mapProvider}>
+        <div
+          className={styles.row}
+          data-component="setting-row"
+          data-setting="map-provider"
+          data-value={mapProvider}
+        >
           <div className={styles.rowInfo}>
             <div className={styles.rowLabel}>Map Provider</div>
             <div className={styles.rowDesc}>Service used to open event locations</div>
@@ -162,7 +221,12 @@ export function GeneralSettings(): JSX.Element {
             </select>
           </div>
         </div>
-        <div className={styles.row} data-component="setting-row" data-setting="time-format" data-value={timeFormat}>
+        <div
+          className={styles.row}
+          data-component="setting-row"
+          data-setting="time-format"
+          data-value={timeFormat}
+        >
           <div className={styles.rowInfo}>
             <div className={styles.rowLabel}>Time Format</div>
             <div className={styles.rowDesc}>12-hour or 24-hour time display</div>
@@ -184,29 +248,30 @@ export function GeneralSettings(): JSX.Element {
             </div>
           </div>
         </div>
-        <div className={styles.row} data-component="setting-row" data-setting="first-day-of-week" data-value={String(firstDayOfWeek)}>
+        <div
+          className={styles.row}
+          data-component="setting-row"
+          data-setting="first-day-of-week"
+          data-value={String(firstDayOfWeek)}
+        >
           <div className={styles.rowInfo}>
             <div className={styles.rowLabel}>First Day of Week</div>
             <div className={styles.rowDesc}>Start of the week in week and day views</div>
           </div>
           <div className={styles.rowControl}>
             <div className={styles.seg} role="radiogroup" aria-label="First day of week">
-              {(
-                [
-                  { value: 6 as const, label: 'Saturday' },
-                  { value: 0 as const, label: 'Sunday' },
-                  { value: 1 as const, label: 'Monday' },
-                ]
-              ).map((opt) => (
+              {[
+                { value: 6 as const, label: 'Saturday' },
+                { value: 0 as const, label: 'Sunday' },
+                { value: 1 as const, label: 'Monday' },
+              ].map((opt) => (
                 <button
                   key={opt.value}
                   className={`${styles.segTab} ${firstDayOfWeek === opt.value ? styles.segTabActive : ''}`}
                   role="radio"
                   aria-checked={firstDayOfWeek === opt.value}
                   data-active={firstDayOfWeek === opt.value ? 'true' : undefined}
-                  onClick={() =>
-                    updateSettings({ firstDayOfWeek: opt.value })
-                  }
+                  onClick={() => updateSettings({ firstDayOfWeek: opt.value })}
                 >
                   {opt.label}
                 </button>
@@ -214,7 +279,12 @@ export function GeneralSettings(): JSX.Element {
             </div>
           </div>
         </div>
-        <div className={styles.row} data-component="setting-row" data-setting="language" data-value="en">
+        <div
+          className={styles.row}
+          data-component="setting-row"
+          data-setting="language"
+          data-value="en"
+        >
           <div className={styles.rowInfo}>
             <div className={styles.rowLabel}>Language</div>
             <div className={styles.rowDesc}>Interface language</div>
@@ -225,7 +295,12 @@ export function GeneralSettings(): JSX.Element {
             </select>
           </div>
         </div>
-        <div className={styles.row} data-component="setting-row" data-setting="journal" data-value={String(journalEnabled)}>
+        <div
+          className={styles.row}
+          data-component="setting-row"
+          data-setting="journal"
+          data-value={String(journalEnabled)}
+        >
           <div className={styles.rowInfo}>
             <div className={styles.rowLabel}>Journal</div>
             <div className={styles.rowDesc}>Attach freeform notes to days in your calendar</div>
@@ -243,7 +318,12 @@ export function GeneralSettings(): JSX.Element {
             </label>
           </div>
         </div>
-        <div className={styles.row} data-component="setting-row" data-setting="contacts" data-value={String(contactsEnabled)}>
+        <div
+          className={styles.row}
+          data-component="setting-row"
+          data-setting="contacts"
+          data-value={String(contactsEnabled)}
+        >
           <div className={styles.rowInfo}>
             <div className={styles.rowLabel}>Contacts</div>
             <div className={styles.rowDesc}>Manage your address book with CardDAV sync</div>
@@ -261,12 +341,44 @@ export function GeneralSettings(): JSX.Element {
             </label>
           </div>
         </div>
+        {isNative && (
+          <div
+            className={styles.row}
+            data-component="setting-row"
+            data-setting="haptics"
+            data-value={String(enableHaptics)}
+          >
+            <div className={styles.rowInfo}>
+              <div className={styles.rowLabel}>Haptic Feedback</div>
+              <div className={styles.rowDesc}>
+                Vibrate on taps, swipes and long presses. Turn off if it feels sluggish.
+              </div>
+            </div>
+            <div className={styles.rowControl}>
+              <label className={styles.toggle} data-component="toggle" data-setting="haptics">
+                <input
+                  type="checkbox"
+                  checked={enableHaptics}
+                  aria-label="Haptic feedback"
+                  onChange={(e) => updateSettings({ enableHaptics: e.target.checked })}
+                />
+                <span className={styles.pill} />
+                <span className={styles.knob} />
+              </label>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* CalDAV Settings Sync */}
       <div className={styles.groupLabel}>Sync</div>
       <div className={styles.group}>
-        <div className={styles.row} data-component="setting-row" data-setting="settings-sync" data-value={String(syncEnabled)}>
+        <div
+          className={styles.row}
+          data-component="setting-row"
+          data-setting="settings-sync"
+          data-value={String(syncEnabled)}
+        >
           <div className={styles.rowInfo}>
             <div className={styles.rowLabel}>CalDAV Settings Sync</div>
             <div className={styles.rowDesc}>
@@ -295,7 +407,11 @@ export function GeneralSettings(): JSX.Element {
                     Synced {new Date(lastSyncAt).toLocaleTimeString()}
                   </span>
                 )}
-                <label className={styles.toggle} data-component="toggle" data-setting="settings-sync-toggle">
+                <label
+                  className={styles.toggle}
+                  data-component="toggle"
+                  data-setting="settings-sync-toggle"
+                >
                   <input
                     type="checkbox"
                     checked={syncEnabled}
@@ -360,14 +476,16 @@ export function GeneralSettings(): JSX.Element {
               Enable Settings Sync
             </h3>
             <p className={styles.modalText}>
-              This will create a <strong>Calino Settings</strong> calendar on your CalDAV server. It contains a single event that stores your preferences (theme, first day of week, etc.) as JSON data.
+              This will create a <strong>Calino Settings</strong> calendar on your CalDAV server. It
+              contains a single event that stores your preferences (theme, first day of week, etc.)
+              as JSON data.
             </p>
             <p className={styles.modalTextSmall}>
-              The calendar is hidden from Calino's sidebar but may be visible in other CalDAV clients. It does not affect your other calendars and can be deleted at any time from settings.
+              The calendar is hidden from Calino's sidebar but may be visible in other CalDAV
+              clients. It does not affect your other calendars and can be deleted at any time from
+              settings.
             </p>
-            <p className={styles.modalText}>
-              Choose an account to sync with:
-            </p>
+            <p className={styles.modalText}>Choose an account to sync with:</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {syncAccounts.map((account) => {
                 const isLoading = enablingAccountId === account.id
@@ -397,17 +515,12 @@ export function GeneralSettings(): JSX.Element {
                         <span className={styles.accountPickerBtnLoadingText}>Setting up…</span>
                       )}
                     </div>
-                    <div className={styles.accountPickerBtnServer}>
-                      {account.serverUrl}
-                    </div>
+                    <div className={styles.accountPickerBtnServer}>{account.serverUrl}</div>
                   </button>
                 )
               })}
             </div>
-            <button
-              className={styles.modalCancelBtn}
-              onClick={() => setShowAccountPicker(false)}
-            >
+            <button className={styles.modalCancelBtn} onClick={() => setShowAccountPicker(false)}>
               Cancel
             </button>
           </div>
@@ -434,7 +547,8 @@ export function GeneralSettings(): JSX.Element {
               Disable Settings Sync?
             </h3>
             <p className={styles.modalText}>
-              Your settings will no longer sync across devices. Would you also like to delete the settings file from your server?
+              Your settings will no longer sync across devices. Would you also like to delete the
+              settings file from your server?
             </p>
             <div className={styles.modalFooter}>
               <button

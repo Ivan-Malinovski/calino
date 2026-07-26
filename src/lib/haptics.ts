@@ -1,5 +1,6 @@
 import { Capacitor } from '@capacitor/core'
 import { Haptics, NotificationType } from '@capacitor/haptics'
+import { useSettingsStore } from '@/store/settingsStore'
 
 export type HapticType = 'light' | 'medium' | 'heavy' | 'success' | 'warning' | 'error'
 
@@ -35,6 +36,9 @@ export function haptic(type: HapticType): void {
 
 export function hapticIfEnabled(type: HapticType): void {
   if (!Capacitor.isNativePlatform()) return
+  // Read at call time rather than subscribing: this is called from event
+  // handlers and gesture callbacks, not from render.
+  if (!useSettingsStore.getState().enableHaptics) return
 
   if (type === 'success' || type === 'warning' || type === 'error') {
     void Haptics.notification({ type: NOTIFICATION_TYPES[type] })
