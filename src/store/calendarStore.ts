@@ -3,7 +3,14 @@ import { persist, createJSONStorage } from 'zustand/middleware'
 import { safeLocalStorage } from '@/lib/storage'
 import { format, parseISO, isWithinInterval, startOfDay, endOfDay } from 'date-fns'
 import { RRule } from 'rrule'
-import type { CalendarStore, CalendarEvent, Calendar, ViewType, EventType, DuplicateUidIssue } from '@/types'
+import type {
+  CalendarStore,
+  CalendarEvent,
+  Calendar,
+  ViewType,
+  EventType,
+  DuplicateUidIssue,
+} from '@/types'
 import type { Category, AutoCategoryRule } from '@/types/categories'
 import type { ExtractedEventFields } from '@/features/aiVision/types'
 import { config, DEFAULT_CALENDAR_COLOR } from '@/config'
@@ -69,11 +76,19 @@ interface IndexedEvent {
   order: number
   start: Date
   end: Date
-  startMs: number
   /**
-   * max(start, end) in ms — used only for range candidacy, so that a malformed
-   * event whose end precedes its start still can't be filtered out early.
+   * min(start, end) and max(start, end) in ms — the event's interval with its
+   * endpoints normalized. Used only for range candidacy, never as output.
+   *
+   * Both bounds have to be normalized, not just the end. A malformed event
+   * whose end precedes its start would otherwise be sorted and binary-searched
+   * on a `start` that sits outside its own interval, so a range containing the
+   * (earlier) end but not the (later) start would never even consider it — the
+   * pre-index full scan matched that case on the raw end and returned it.
+   * `addEvent`/`updateEvent` divert `start > end` into `brokenEvents`, but the
+   * `isAllDay` bypass and already-persisted data can still reach here.
    */
+  spanStartMs: number
   spanEndMs: number
 }
 
@@ -145,7 +160,7 @@ function getEventIndex(events: CalendarEvent[]): EventIndex {
       order,
       start,
       end,
-      startMs: start.getTime(),
+      spanStartMs: Math.min(start.getTime(), end.getTime()),
       spanEndMs: Math.max(start.getTime(), end.getTime()),
     }
 
@@ -187,7 +202,7 @@ function getEventIndex(events: CalendarEvent[]): EventIndex {
     }
   }
 
-  plain.sort((a, b) => a.startMs - b.startMs)
+  plain.sort((a, b) => a.spanStartMs - b.spanStartMs)
   const prefixMaxEnd = new Array<number>(plain.length)
   let runningMax = -Infinity
   for (let i = 0; i < plain.length; i++) {
@@ -209,7 +224,7 @@ function getEventIndex(events: CalendarEvent[]): EventIndex {
 }
 
 /**
- * Index of the last entry in `plain` whose startMs is <= `ms`, or -1.
+ * Index of the last entry in `plain` whose spanStartMs is <= `ms`, or -1.
  */
 function lastStartingAtOrBefore(plain: IndexedEvent[], ms: number): number {
   let lo = 0
@@ -217,7 +232,7 @@ function lastStartingAtOrBefore(plain: IndexedEvent[], ms: number): number {
   let result = -1
   while (lo <= hi) {
     const mid = (lo + hi) >> 1
-    if (plain[mid].startMs <= ms) {
+    if (plain[mid].spanStartMs <= ms) {
       result = mid
       lo = mid + 1
     } else {
@@ -313,23 +328,30 @@ export const useCalendarStore = create<CalendarStore>()(
           const reason = `start (${event.start}) > end (${event.end})`
           console.warn(
             `[Calendar] Broken event detected:\n` +
-            `  id: ${event.id}\n` +
-            `  title: ${event.title}\n` +
-            `  calendar: ${event.calendarId}\n` +
-            `  start: ${event.start}\n` +
-            `  end: ${event.end}`
+              `  id: ${event.id}\n` +
+              `  title: ${event.title}\n` +
+              `  calendar: ${event.calendarId}\n` +
+              `  start: ${event.start}\n` +
+              `  end: ${event.end}`
           )
           // Store as broken event (deduplicate by id)
           const existingBroken = get().brokenEvents.find((be) => be.event.id === event.id)
           if (!existingBroken) {
             set((state) => ({
-              brokenEvents: [...state.brokenEvents, { event, reason, detectedAt: new Date().toISOString() }],
+              brokenEvents: [
+                ...state.brokenEvents,
+                { event, reason, detectedAt: new Date().toISOString() },
+              ],
             }))
           }
           return
         }
         const state = get()
-        const autoCategoryNames = applyAutoCategories(event.title, state.autoCategoryRules, state.categories)
+        const autoCategoryNames = applyAutoCategories(
+          event.title,
+          state.autoCategoryRules,
+          state.categories
+        )
         const existingCategories = event.categories || []
         const finalEvent = {
           ...event,
@@ -363,7 +385,10 @@ export const useCalendarStore = create<CalendarStore>()(
               if (!existingBroken) {
                 set((state) => ({
                   events: state.events.filter((e) => e.id !== id),
-                  brokenEvents: [...state.brokenEvents, { event: mergedEvent, reason, detectedAt: new Date().toISOString() }],
+                  brokenEvents: [
+                    ...state.brokenEvents,
+                    { event: mergedEvent, reason, detectedAt: new Date().toISOString() },
+                  ],
                 }))
               }
             }
@@ -382,7 +407,10 @@ export const useCalendarStore = create<CalendarStore>()(
               if (!existingBroken) {
                 set((state) => ({
                   events: state.events.filter((e) => e.id !== id),
-                  brokenEvents: [...state.brokenEvents, { event: mergedEvent, reason, detectedAt: new Date().toISOString() }],
+                  brokenEvents: [
+                    ...state.brokenEvents,
+                    { event: mergedEvent, reason, detectedAt: new Date().toISOString() },
+                  ],
                 }))
               }
               return
@@ -393,7 +421,11 @@ export const useCalendarStore = create<CalendarStore>()(
         if (safeUpdates.title) {
           const existingEvent = state.events.find((e) => e.id === id)
           if (existingEvent) {
-            const autoCategoryNames = applyAutoCategories(safeUpdates.title, state.autoCategoryRules, state.categories)
+            const autoCategoryNames = applyAutoCategories(
+              safeUpdates.title,
+              state.autoCategoryRules,
+              state.categories
+            )
             const existingCategories = safeUpdates.categories || existingEvent.categories || []
             safeUpdates.categories = [...new Set([...existingCategories, ...autoCategoryNames])]
           }
@@ -432,13 +464,15 @@ export const useCalendarStore = create<CalendarStore>()(
         const completedAt = completed ? new Date().toISOString() : undefined
         const updatedTasks: CalendarEvent[] = events
           .filter((event) => affectedIds.has(event.id))
-          .map((event): CalendarEvent => ({
-            ...event,
-            completed,
-            taskStatus: completed ? 'COMPLETED' : 'NEEDS-ACTION',
-            percentComplete: completed ? 100 : 0,
-            completedAt,
-          }))
+          .map(
+            (event): CalendarEvent => ({
+              ...event,
+              completed,
+              taskStatus: completed ? 'COMPLETED' : 'NEEDS-ACTION',
+              percentComplete: completed ? 100 : 0,
+              completedAt,
+            })
+          )
 
         const updatedTasksById = new Map(updatedTasks.map((task) => [task.id, task]))
         set({
@@ -462,7 +496,10 @@ export const useCalendarStore = create<CalendarStore>()(
         const existing = get().brokenEvents.find((be) => be.event.id === event.id)
         if (!existing) {
           set((state) => ({
-            brokenEvents: [...state.brokenEvents, { event, reason, detectedAt: new Date().toISOString() }],
+            brokenEvents: [
+              ...state.brokenEvents,
+              { event, reason, detectedAt: new Date().toISOString() },
+            ],
           }))
         }
       },
@@ -709,9 +746,8 @@ export const useCalendarStore = create<CalendarStore>()(
       toggleCategoryFilter: (categoryId: string): void => {
         const current = get().selectedCategoryIds
         const index = current.indexOf(categoryId)
-        const newValue = index === -1
-          ? [...current, categoryId]
-          : current.filter((id) => id !== categoryId)
+        const newValue =
+          index === -1 ? [...current, categoryId] : current.filter((id) => id !== categoryId)
         set({ selectedCategoryIds: newValue })
         bumpRangeExpansionVersion()
       },
@@ -829,7 +865,11 @@ export const useCalendarStore = create<CalendarStore>()(
       },
 
       openJournalModal: (date: string, startInCompose: boolean = false): void => {
-        set({ isJournalModalOpen: true, journalModalDate: date, journalStartInCompose: startInCompose })
+        set({
+          isJournalModalOpen: true,
+          journalModalDate: date,
+          journalStartInCompose: startInCompose,
+        })
       },
 
       closeJournalModal: (): void => {
@@ -853,11 +893,10 @@ export const useCalendarStore = create<CalendarStore>()(
 
         const visibleCalendarIds = state.calendars.filter((c) => c.isVisible).map((c) => c.id)
         const selectedCategoryIds = state.selectedCategoryIds
-        const selectedCategoryNames = selectedCategoryIds.length > 0
-          ? state.categories
-              .filter((c) => selectedCategoryIds.includes(c.id))
-              .map((c) => c.name)
-          : []
+        const selectedCategoryNames =
+          selectedCategoryIds.length > 0
+            ? state.categories.filter((c) => selectedCategoryIds.includes(c.id)).map((c) => c.name)
+            : []
 
         const parseDate = parseISO(start)
         const parseDateEnd = parseISO(end)
@@ -874,9 +913,17 @@ export const useCalendarStore = create<CalendarStore>()(
         let endDate: Date
         if (isDateOnlyStart && start.endsWith('Z')) {
           // UTC date-only: use UTC start of day
-          startDate = new Date(Date.UTC(
-            parseDate.getUTCFullYear(), parseDate.getUTCMonth(), parseDate.getUTCDate(), 0, 0, 0, 0
-          ))
+          startDate = new Date(
+            Date.UTC(
+              parseDate.getUTCFullYear(),
+              parseDate.getUTCMonth(),
+              parseDate.getUTCDate(),
+              0,
+              0,
+              0,
+              0
+            )
+          )
         } else if (isDateOnlyStart) {
           startDate = startOfDay(parseDate)
         } else {
@@ -886,9 +933,17 @@ export const useCalendarStore = create<CalendarStore>()(
 
         if (isDateOnlyEnd && end.endsWith('Z')) {
           // UTC date-only: use UTC end of day
-          endDate = new Date(Date.UTC(
-            parseDateEnd.getUTCFullYear(), parseDateEnd.getUTCMonth(), parseDateEnd.getUTCDate(), 23, 59, 59, 999
-          ))
+          endDate = new Date(
+            Date.UTC(
+              parseDateEnd.getUTCFullYear(),
+              parseDateEnd.getUTCMonth(),
+              parseDateEnd.getUTCDate(),
+              23,
+              59,
+              59,
+              999
+            )
+          )
         } else if (isDateOnlyEnd) {
           endDate = endOfDay(parseDateEnd)
         } else {
@@ -1185,10 +1240,7 @@ function applyAutoCategories(
 
 // ── Journal helpers ─────────────────────────────────────────────────────
 
-export function getJournalEntriesForDate(
-  events: CalendarEvent[],
-  date: string
-): CalendarEvent[] {
+export function getJournalEntriesForDate(events: CalendarEvent[], date: string): CalendarEvent[] {
   return events.filter((e) => e.type === 'journal' && e.start === date)
 }
 
@@ -1203,9 +1255,7 @@ export function getJournalEntriesForMonth(
     .sort((a, b) => b.start.localeCompare(a.start))
 }
 
-export function getJournalDates(
-  events: CalendarEvent[]
-): Set<string> {
+export function getJournalDates(events: CalendarEvent[]): Set<string> {
   const dates = new Set<string>()
   for (const e of events) {
     if (e.type === 'journal') dates.add(e.start)
