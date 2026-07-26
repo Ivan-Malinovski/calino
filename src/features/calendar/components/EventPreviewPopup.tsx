@@ -22,7 +22,7 @@ import { matchEventBackground } from '@/lib/eventBackground'
 import { describeRecurrence } from '@/lib/recurrence'
 import { hasDueTime, extractOriginalEventId } from '@/lib/events'
 import type { CalendarEvent } from '@/types'
-import { TimeInput } from './TimeInput'
+import { TimeField } from './TimeField'
 import styles from './EventPreviewPopup.module.css'
 
 interface EventPreviewPopupProps {
@@ -697,7 +697,7 @@ export function EventPreviewPopup({
             }
           }}
         >
-          <TimeInput
+          <TimeField
             value={editTime}
             timeFormat={timeFormat}
             onChange={(value) => handleFieldChange('time', value)}
@@ -709,7 +709,7 @@ export function EventPreviewPopup({
           {!isTask && (
             <>
               <span>-</span>
-              <TimeInput
+              <TimeField
                 value={editEndTime}
                 timeFormat={timeFormat}
                 onChange={(value) => handleFieldChange('endTime', value)}
