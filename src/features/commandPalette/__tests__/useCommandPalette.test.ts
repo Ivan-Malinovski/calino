@@ -150,7 +150,7 @@ vi.mock('@/store/settingsStore', () => ({
       agendaBelowMonthEnabled: true,
       monthAgendaGridRatio: 0.4,
       monthAgendaSplitRatio: 0.65,
-      fadePastDaysInAgenda: false,
+      fadePastDaysInAgenda: 'never',
       useCategoryColors: true,
       showEventIcons: true,
       journalEnabled: false,

@@ -879,7 +879,6 @@ describe('calendarStore', () => {
         autoCategoryRules: [{ id: 'r1', pattern: 'meet', categoryId: 'cat1' }],
         brokenEvents: [{ event: { id: 'b1' }, reason: 'bad', detectedAt: '2024-01-01' }],
         currentDate: '2024-06-15',
-        currentView: 'week',
         selectedCategoryIds: ['cat1'],
       }
       const result = getMigrate()(persisted)
@@ -889,7 +888,7 @@ describe('calendarStore', () => {
       expect(result.autoCategoryRules).toHaveLength(1)
       expect(result.brokenEvents).toHaveLength(1)
       expect(result.currentDate).toBe('2024-06-15')
-      expect(result.currentView).toBe('week')
+      expect(result.currentView).toBe('month')
       expect(result.selectedCategoryIds).toEqual(['cat1'])
     })
 

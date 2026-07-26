@@ -16,6 +16,7 @@ import type { ExtractedEventFields } from '@/features/aiVision/types'
 import { config, DEFAULT_CALENDAR_COLOR } from '@/config'
 import { buildRRuleString } from '@/lib/recurrence'
 import { deleteAttachments } from '@/lib/attachmentStore'
+import { useSettingsStore } from '@/store/settingsStore'
 
 // Memo cache for getEventsForDateRange. Keyed by the range; a cached result is
 // reused only when its stored `version` matches the current
@@ -299,7 +300,7 @@ export const useCalendarStore = create<CalendarStore>()(
       autoCategoryRules: [],
       selectedCategoryIds: [],
       currentDate: format(new Date(), 'yyyy-MM-dd'),
-      currentView: config.defaultView,
+      currentView: useSettingsStore.getState().defaultView,
       // Bumped by every mutation that affects getEventsForDateRange results.
       // Excluded from persistence (see partialize below) so it stays in sync
       // with the module-level rangeExpansionCache, which is also non-persistent.
@@ -1179,7 +1180,7 @@ export const useCalendarStore = create<CalendarStore>()(
           brokenEvents: state.brokenEvents ?? [],
           duplicateUidIssues: state.duplicateUidIssues ?? [],
           currentDate: state.currentDate ?? format(new Date(), 'yyyy-MM-dd'),
-          currentView: state.currentView ?? 'month',
+          currentView: useSettingsStore.getState().defaultView,
           selectedCategoryIds: state.selectedCategoryIds ?? [],
         }
       },
@@ -1202,7 +1203,6 @@ export const useCalendarStore = create<CalendarStore>()(
         categories: state.categories,
         autoCategoryRules: state.autoCategoryRules,
         currentDate: state.currentDate,
-        currentView: state.currentView,
       }),
     }
   )
