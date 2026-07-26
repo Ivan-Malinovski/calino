@@ -681,6 +681,26 @@ export function CalendarGrid(): JSX.Element {
     navigate(VIEW_ROUTES.day, { replace: true })
   }
 
+  // Hoisted out of the day-cell JSX: these were rebuilt per render and handed
+  // to all 42 memoized DroppableDays, so their memo never held. See #73.
+  const handleJournalIndicatorClick = useCallback(
+    (day: Date): void => {
+      openJournalModal(format(day, 'yyyy-MM-dd'))
+    },
+    [openJournalModal]
+  )
+
+  const handleOpenJournalModal = useCallback(
+    (date: string): void => {
+      // Force reset: close first, then reopen on next tick (#24)
+      closeJournalModal()
+      requestAnimationFrame(() => {
+        openJournalModal(date, true)
+      })
+    },
+    [closeJournalModal, openJournalModal]
+  )
+
   const handleWeekClick = (weekStart: Date): void => {
     setCurrentDate(format(weekStart, 'yyyy-MM-dd'))
     setCurrentView('week')
@@ -852,16 +872,8 @@ export function CalendarGrid(): JSX.Element {
                               onDayClick={handleDayClick}
                               onDayDoubleClick={handleDayDoubleClick}
                               onDayNumberClick={handleDayNumberClick}
-                              onJournalIndicatorClick={(day) => {
-                                openJournalModal(format(day, 'yyyy-MM-dd'))
-                              }}
-                              onOpenJournalModal={(date) => {
-                                // Force reset: close first, then reopen on next tick (#24)
-                                closeJournalModal()
-                                requestAnimationFrame(() => {
-                                  openJournalModal(date, true)
-                                })
-                              }}
+                              onJournalIndicatorClick={handleJournalIndicatorClick}
+                              onOpenJournalModal={handleOpenJournalModal}
                               openModal={openModal}
                             />
                           )
@@ -969,16 +981,8 @@ export function CalendarGrid(): JSX.Element {
                         onDayClick={handleDayClick}
                         onDayDoubleClick={handleDayDoubleClick}
                         onDayNumberClick={handleDayNumberClick}
-                        onJournalIndicatorClick={(day) => {
-                          openJournalModal(format(day, 'yyyy-MM-dd'))
-                        }}
-                        onOpenJournalModal={(date) => {
-                          // Force reset: close first, then reopen on next tick (#24)
-                          closeJournalModal()
-                          requestAnimationFrame(() => {
-                            openJournalModal(date, true)
-                          })
-                        }}
+                        onJournalIndicatorClick={handleJournalIndicatorClick}
+                        onOpenJournalModal={handleOpenJournalModal}
                         openModal={openModal}
                       />
                     )
@@ -1285,7 +1289,7 @@ const DroppableDay = React.memo(function DroppableDay({
             )}
           </div>
           <div className={styles.tasks} data-component="day-tasks">
-            <AnimatePresence mode="popLayout" initial={false}>
+            <AnimatePresence initial={false}>
               {dayTasks.slice(0, monthViewEventLimit).map((task) => (
                 <motion.div
                   key={task.id}

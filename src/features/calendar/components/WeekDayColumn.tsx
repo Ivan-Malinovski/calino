@@ -1,4 +1,4 @@
-import { memo } from 'react'
+import { memo, useMemo } from 'react'
 import type { JSX } from 'react'
 import { addMinutes, format, parseISO } from 'date-fns'
 import { AnimatePresence, motion } from 'framer-motion'
@@ -51,13 +51,37 @@ const WeekDayColumn = memo(function WeekDayColumn({
   const activeMasterId = active ? active.id.toString().split('::')[0] : null
   const skipExit = (id: string): boolean => activeMasterId === id
 
-  const allDayEvents = [...events, ...fragments]
+  // Concatenating, sorting and running the overlap-positioning algorithm used
+  // to happen on every render pass, including the ones driven by drag state
+  // that can't change the layout. Only the data props affect it, so memoize on
+  // exactly those — the JSX below still rebuilds, since it depends on the
+  // active drag and reduced-motion. See #73.
+  const { transparentEvents, taskById, positionedEvents } = useMemo(() => {
+    const sorted = [...events, ...fragments].sort(
+      (a, b) => parseISO(a.start).getTime() - parseISO(b.start).getTime()
+    )
 
-  const sortedEvents = [...allDayEvents].sort(
-    (a, b) => parseISO(a.start).getTime() - parseISO(b.start).getTime()
-  )
+    // Timed tasks share the event column algorithm so overlapping items sit
+    // side by side. They have zero duration, so `positionEvents` (strict
+    // overlap test) would never collide them — give each a nominal interval
+    // matching the pill's visual footprint for layout purposes only, and
+    // render the original task.
+    const byId = new Map(timedTasks.map((task) => [task.id, task]))
+    const taskLayoutItems = timedTasks.map((task) => ({
+      ...task,
+      end: format(
+        addMinutes(parseISO(task.start), TASK_PILL_LAYOUT_MINUTES),
+        "yyyy-MM-dd'T'HH:mm:ss"
+      ),
+    }))
 
-  const transparentEvents = sortedEvents.filter((e) => e.transparency === 'transparent')
+    return {
+      transparentEvents: sorted.filter((e) => e.transparency === 'transparent'),
+      taskById: byId,
+      positionedEvents: positionEvents([...sorted, ...taskLayoutItems]),
+    }
+  }, [events, fragments, timedTasks])
+
   const elements: JSX.Element[] = []
 
   for (const event of transparentEvents) {
@@ -79,21 +103,6 @@ const WeekDayColumn = memo(function WeekDayColumn({
       </motion.div>
     )
   }
-
-  // Timed tasks share the event column algorithm so overlapping items sit side
-  // by side. They have zero duration, so `positionEvents` (strict overlap test)
-  // would never collide them — give each a nominal interval matching the pill's
-  // visual footprint for layout purposes only, and render the original task.
-  const taskById = new Map(timedTasks.map((task) => [task.id, task]))
-  const taskLayoutItems = timedTasks.map((task) => ({
-    ...task,
-    end: format(
-      addMinutes(parseISO(task.start), TASK_PILL_LAYOUT_MINUTES),
-      "yyyy-MM-dd'T'HH:mm:ss"
-    ),
-  }))
-
-  const positionedEvents = positionEvents([...sortedEvents, ...taskLayoutItems])
 
   for (const { event, column, totalColumns } of positionedEvents) {
     const task = taskById.get(event.id)
