@@ -31,7 +31,7 @@ import {
 import { pad2 } from '@/lib/datetime'
 import { hasDueTime } from '@/lib/events'
 import type { CalendarEvent } from '@/types'
-import { useCalendarStore } from '@/store/calendarStore'
+import { useCalendarStore, getTasksDueOn } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
 import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
 import { safeCalDAVUpdate } from '@/lib/caldavHelpers'
@@ -355,21 +355,20 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
     // catch a regression if either were removed. R4.1/R4.3 review fix.
   }, [rangeStart, rangeEnd, calendars, getEventsForDateRange, events, rangeExpansionVersion])
 
+  // Per-visible-day lookups into the store's shared due-date index, rather
+  // than a full scan of every stored event on every mutation. See #73.
   const tasksMap = useMemo(() => {
     const map = new Map<string, CalendarEvent[]>()
     const visibleCalendarIds = calendars.filter((c) => c.isVisible).map((c) => c.id)
-    events
-      .filter(
-        (event) =>
-          event.type === 'task' && !!event.dueDate && visibleCalendarIds.includes(event.calendarId)
+    for (const day of weekDays) {
+      const dayKey = format(day, 'yyyy-MM-dd')
+      const dayTasks = getTasksDueOn(events, dayKey).filter((event) =>
+        visibleCalendarIds.includes(event.calendarId)
       )
-      .forEach((task) => {
-        const taskDate = format(parseISO(task.dueDate!), 'yyyy-MM-dd')
-        const existing = map.get(taskDate) || []
-        map.set(taskDate, [...existing, task])
-      })
+      if (dayTasks.length > 0) map.set(dayKey, dayTasks)
+    }
     return map
-  }, [events, calendars, rangeExpansionVersion])
+  }, [weekDays, events, calendars, rangeExpansionVersion])
 
   const bodyRef = useRef<HTMLDivElement>(null)
   const lastDateRef = useRef(date.toISOString())

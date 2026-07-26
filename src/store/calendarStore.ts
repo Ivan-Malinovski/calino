@@ -47,6 +47,195 @@ const bumpRangeExpansionVersion = (): void => {
   useCalendarStore.setState({ rangeExpansionVersion })
 }
 
+// ---------------------------------------------------------------------------
+// Derived event index
+// ---------------------------------------------------------------------------
+// getEventsForDateRange used to do four full passes over `state.events` on
+// every cache miss — and a miss happens on every view switch, every month
+// navigation and every mutation. Three of those passes (parsing every event's
+// start AND end, building the recurring-master map, building the exception
+// maps) depend only on `events`, not on the requested range, so they were
+// being recomputed identically for every distinct range. On a large synced
+// calendar that is the dominant cost of a view transition, and it scales with
+// total stored events rather than with what's actually on screen — which is
+// exactly the symptom reported in #73 (smooth on fast silicon, choppy on a
+// Pixel 8 Pro).
+//
+// So: build it once per `rangeExpansionVersion` and let every range query
+// reuse it.
+interface IndexedEvent {
+  event: CalendarEvent
+  /** Position in `state.events`, used to restore the original output order. */
+  order: number
+  start: Date
+  end: Date
+  startMs: number
+  /**
+   * max(start, end) in ms — used only for range candidacy, so that a malformed
+   * event whose end precedes its start still can't be filtered out early.
+   */
+  spanEndMs: number
+}
+
+interface EventIndex {
+  /**
+   * The exact `events` array this index was built from. Everything below
+   * derives purely from it, so reference equality is the whole invalidation
+   * contract — deliberately NOT tied to `rangeExpansionVersion`, which also
+   * bumps for calendar-visibility changes that cannot affect the index.
+   */
+  events: CalendarEvent[]
+  /** Non-recurring events sorted by start time. */
+  plain: IndexedEvent[]
+  /**
+   * prefixMaxEnd[i] = max(plain[0..i].spanEndMs). Lets a range query walk back from
+   * the last event that starts before the range end and stop as soon as no
+   * earlier event can possibly still be running — so the scan is proportional
+   * to the events near the window, not to the whole store.
+   */
+  prefixMaxEnd: number[]
+  /** Events carrying an rrule; always candidates, since occurrences can land anywhere. */
+  recurring: IndexedEvent[]
+  /** Every event without a recurrenceId, by id — the category source for detached instances. */
+  masters: Map<string, CalendarEvent>
+  exceptions: Map<string, CalendarEvent>
+  legacyExceptions: Map<string, CalendarEvent>
+  /** Tasks bucketed by their dueDate day key (`yyyy-MM-dd`). */
+  tasksByDueDate: Map<string, CalendarEvent[]>
+}
+
+let eventIndex: EventIndex | null = null
+
+// RRule construction is expensive and the rules themselves are immutable, so
+// this cache lives at module scope and survives across queries (it used to be
+// rebuilt per call, which meant it only ever helped within a single range).
+const rruleCache = new Map<string, RRule>()
+const MAX_RRULE_CACHE = 512
+
+function getOrCreateRRule(rruleStr: string, eventStart: Date): RRule {
+  const key = `${rruleStr}|${eventStart.getTime()}`
+  let rule = rruleCache.get(key)
+  if (!rule) {
+    const options = RRule.parseString(rruleStr)
+    rule = new RRule({ ...options, dtstart: eventStart })
+    if (rruleCache.size > MAX_RRULE_CACHE) rruleCache.clear()
+    rruleCache.set(key, rule)
+  }
+  return rule
+}
+
+function getEventIndex(events: CalendarEvent[]): EventIndex {
+  if (eventIndex && eventIndex.events === events) {
+    return eventIndex
+  }
+
+  const plain: IndexedEvent[] = []
+  const recurring: IndexedEvent[] = []
+  const masters = new Map<string, CalendarEvent>()
+  const exceptions = new Map<string, CalendarEvent>()
+  const legacyExceptions = new Map<string, CalendarEvent>()
+  const tasksByDueDate = new Map<string, CalendarEvent[]>()
+
+  for (let order = 0; order < events.length; order++) {
+    const event = events[order]
+    const start = parseISO(event.start)
+    const end = parseISO(event.end)
+    const indexed: IndexedEvent = {
+      event,
+      order,
+      start,
+      end,
+      startMs: start.getTime(),
+      spanEndMs: Math.max(start.getTime(), end.getTime()),
+    }
+
+    if (event.rruleString || event.recurrence) {
+      recurring.push(indexed)
+    } else {
+      plain.push(indexed)
+    }
+
+    if (!event.recurrenceId) {
+      masters.set(event.id, event)
+    } else {
+      // Built without a calendar-visibility filter (it used to be filtered at
+      // build time). Equivalent, because the key is scoped by calendarId and
+      // lookups only happen while walking an event that is already known to be
+      // on a visible calendar.
+      const inferredMasterId = event.id.endsWith(`-${event.recurrenceId}`)
+        ? event.id.slice(0, -(event.recurrenceId.length + 1))
+        : undefined
+      const masterId = event.recurrenceMasterId || inferredMasterId
+      if (masterId) {
+        const recurrenceKey = event.isAllDay
+          ? event.recurrenceId.split('T')[0]
+          : parseISO(event.recurrenceId).getTime()
+        exceptions.set(`${event.calendarId}-${masterId}-${recurrenceKey}`, event)
+      } else {
+        legacyExceptions.set(`${event.calendarId}-${event.recurrenceId.split('T')[0]}`, event)
+      }
+    }
+
+    if (event.type === 'task' && event.dueDate) {
+      const dayKey = format(parseISO(event.dueDate), 'yyyy-MM-dd')
+      let bucket = tasksByDueDate.get(dayKey)
+      if (!bucket) {
+        bucket = []
+        tasksByDueDate.set(dayKey, bucket)
+      }
+      bucket.push(event)
+    }
+  }
+
+  plain.sort((a, b) => a.startMs - b.startMs)
+  const prefixMaxEnd = new Array<number>(plain.length)
+  let runningMax = -Infinity
+  for (let i = 0; i < plain.length; i++) {
+    if (plain[i].spanEndMs > runningMax) runningMax = plain[i].spanEndMs
+    prefixMaxEnd[i] = runningMax
+  }
+
+  eventIndex = {
+    events,
+    plain,
+    prefixMaxEnd,
+    recurring,
+    masters,
+    exceptions,
+    legacyExceptions,
+    tasksByDueDate,
+  }
+  return eventIndex
+}
+
+/**
+ * Index of the last entry in `plain` whose startMs is <= `ms`, or -1.
+ */
+function lastStartingAtOrBefore(plain: IndexedEvent[], ms: number): number {
+  let lo = 0
+  let hi = plain.length - 1
+  let result = -1
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1
+    if (plain[mid].startMs <= ms) {
+      result = mid
+      lo = mid + 1
+    } else {
+      hi = mid - 1
+    }
+  }
+  return result
+}
+
+/**
+ * Tasks due on a given `yyyy-MM-dd`, in stored order. Shared by the month,
+ * week and day views, which each used to re-filter the entire event array.
+ * Callers still apply their own visibility/category/completed filtering.
+ */
+export function getTasksDueOn(events: CalendarEvent[], dayKey: string): CalendarEvent[] {
+  return getEventIndex(events).tasksByDueDate.get(dayKey) ?? []
+}
+
 export const selectOpenModal = (state: CalendarStore) => state.openModal
 export const selectOpenJournalModal = (state: CalendarStore) => state.openJournalModal
 export const selectAddEvent = (state: CalendarStore) => state.addEvent
@@ -706,55 +895,35 @@ export const useCalendarStore = create<CalendarStore>()(
           // Has explicit time component — use as-is
           endDate = parseDateEnd
         }
-        const expandedEvents: CalendarEvent[] = []
+        const index = getEventIndex(state.events)
+        const {
+          masters: recurringMasters,
+          exceptions: exceptionMap,
+          legacyExceptions: legacyExceptionMap,
+        } = index
+
+        // Collected with the event's position in `state.events` so the final
+        // result keeps the original ordering, even though we no longer visit
+        // events in array order.
+        const collected: { order: number; event: CalendarEvent }[] = []
         const seenIds = new Set<string>()
 
-        const exceptionMap = new Map<string, CalendarEvent>()
-        const legacyExceptionMap = new Map<string, CalendarEvent>()
-        const recurringMasters = new Map(
-          state.events
-            .filter((event) => !event.recurrenceId)
-            .map((event) => [event.id, event])
-        )
-        for (const event of state.events) {
-          if (event.recurrenceId && visibleCalendarIds.includes(event.calendarId)) {
-            const inferredMasterId = event.id.endsWith(`-${event.recurrenceId}`)
-              ? event.id.slice(0, -(event.recurrenceId.length + 1))
-              : undefined
-            const masterId = event.recurrenceMasterId || inferredMasterId
-            if (masterId) {
-              const recurrenceKey = event.isAllDay
-                ? event.recurrenceId.split('T')[0]
-                : parseISO(event.recurrenceId).getTime()
-              exceptionMap.set(`${event.calendarId}-${masterId}-${recurrenceKey}`, event)
-            } else {
-              legacyExceptionMap.set(`${event.calendarId}-${event.recurrenceId.split('T')[0]}`, event)
-            }
-          }
+        const startMs = startDate.getTime()
+        const endMs = endDate.getTime()
+
+        // Candidates: every recurring event (an occurrence can land anywhere),
+        // plus the window of non-recurring events that can overlap the range.
+        const candidates: IndexedEvent[] = index.recurring.slice()
+        const upper = lastStartingAtOrBefore(index.plain, endMs)
+        for (let i = upper; i >= 0; i--) {
+          // Nothing at or before i can still be running when the range opens,
+          // so the rest of the array is irrelevant.
+          if (index.prefixMaxEnd[i] < startMs) break
+          if (index.plain[i].spanEndMs >= startMs) candidates.push(index.plain[i])
         }
 
-        // Pre-parse all event dates once to avoid repeated parseISO calls
-        const eventStartDates = new Map<string, Date>()
-        const eventEndDates = new Map<string, Date>()
-        for (const event of state.events) {
-          eventStartDates.set(event.id, parseISO(event.start))
-          eventEndDates.set(event.id, parseISO(event.end))
-        }
-
-        // Cache RRule objects keyed by rrule string to avoid re-parsing
-        const rruleCache = new Map<string, RRule>()
-        const getOrCreateRRule = (rruleStr: string, eventStart: Date): RRule => {
-          const cacheKey = `${rruleStr}|${eventStart.toISOString()}`
-          let rule = rruleCache.get(cacheKey)
-          if (!rule) {
-            const options = RRule.parseString(rruleStr)
-            rule = new RRule({ ...options, dtstart: eventStart })
-            rruleCache.set(cacheKey, rule)
-          }
-          return rule
-        }
-
-        for (const event of state.events) {
+        for (const indexed of candidates) {
+          const event = indexed.event
           if (!visibleCalendarIds.includes(event.calendarId)) {
             continue
           }
@@ -785,8 +954,8 @@ export const useCalendarStore = create<CalendarStore>()(
               if (!rruleString) {
                 throw new Error('No rrule string')
               }
-              const eventStart = eventStartDates.get(event.id)!
-              const eventEnd = eventEndDates.get(event.id)!
+              const eventStart = indexed.start
+              const eventEnd = indexed.end
 
               const rule = getOrCreateRRule(rruleString, eventStart)
 
@@ -854,16 +1023,19 @@ export const useCalendarStore = create<CalendarStore>()(
 
                 const occId = `${event.id}-${occKey}`
                 seenIds.add(occId)
-                expandedEvents.push({
-                  ...event,
-                  id: occId,
-                  start: occStartStr,
-                  end: occEndStr,
+                collected.push({
+                  order: indexed.order,
+                  event: {
+                    ...event,
+                    id: occId,
+                    start: occStartStr,
+                    end: occEndStr,
+                  },
                 })
               }
             } catch {
-              const eventStart = eventStartDates.get(event.id)!
-              const eventEnd = eventEndDates.get(event.id)!
+              const eventStart = indexed.start
+              const eventEnd = indexed.end
               if (
                 isWithinInterval(eventStart, { start: startDate, end: endDate }) ||
                 isWithinInterval(eventEnd, { start: startDate, end: endDate }) ||
@@ -871,13 +1043,13 @@ export const useCalendarStore = create<CalendarStore>()(
               ) {
                 if (!seenIds.has(event.id)) {
                   seenIds.add(event.id)
-                  expandedEvents.push(event)
+                  collected.push({ order: indexed.order, event })
                 }
               }
             }
           } else {
-            const eventStart = eventStartDates.get(event.id)!
-            const eventEnd = eventEndDates.get(event.id)!
+            const eventStart = indexed.start
+            const eventEnd = indexed.end
 
             if (
               isWithinInterval(eventStart, { start: startDate, end: endDate }) ||
@@ -886,11 +1058,20 @@ export const useCalendarStore = create<CalendarStore>()(
             ) {
               if (!seenIds.has(event.id)) {
                 seenIds.add(event.id)
-                expandedEvents.push(event)
+                collected.push({ order: indexed.order, event })
               }
             }
           }
         }
+
+        // Restore `state.events` ordering. The scan above visits recurring
+        // events first and then walks the non-recurring window backwards, so
+        // without this the result order would depend on the index layout
+        // rather than on the stored order that callers have always seen.
+        // Array.prototype.sort is stable, so an event's own occurrences keep
+        // the order rrule produced them in.
+        collected.sort((a, b) => a.order - b.order)
+        const expandedEvents = collected.map((entry) => entry.event)
 
         // Cap the cache so a session that pans across many ranges can't grow it
         // unbounded; entries are cheap to recompute.

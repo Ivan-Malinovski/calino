@@ -57,7 +57,7 @@ import { useContextMenuStore } from '@/store/contextMenuStore'
 import { AgendaView } from './AgendaView'
 import { DayView } from './DayView'
 import type { CalendarEvent, ViewType } from '@/types'
-import { getJournalDates } from '@/store/calendarStore'
+import { getJournalDates, getTasksDueOn } from '@/store/calendarStore'
 import styles from './CalendarGrid.module.css'
 
 const VIEW_ROUTES: Record<ViewType, string> = {
@@ -531,29 +531,29 @@ export function CalendarGrid(): JSX.Element {
     return map
   }, [date, firstDayOfWeek, events, rangeExpansionVersion, calendars, selectedCategoryNames, getEventsForDateRange])
 
+  // Looks tasks up per visible day via the store's shared due-date index
+  // instead of re-filtering the entire event array. The old version scanned
+  // every stored event on every mutation, so its cost scaled with total
+  // history rather than with the 42 cells actually on screen (issue #73).
   const tasksMap = useMemo(() => {
     const map = new Map<string, CalendarEvent[]>()
     const visibleCalendarIds = calendars.filter((c) => c.isVisible).map((c) => c.id)
     const taskCalendarsWithTasks = calendars
       .filter((c) => c.showTasksInViews !== false)
       .map((c) => c.id)
-    events
-      .filter(
+    for (const day of days) {
+      const dayKey = format(day, 'yyyy-MM-dd')
+      const dayTasks = getTasksDueOn(events, dayKey).filter(
         (event) =>
-          event.type === 'task' &&
-          !!event.dueDate &&
           visibleCalendarIds.includes(event.calendarId) &&
           taskCalendarsWithTasks.includes(event.calendarId) &&
           !(hideCompletedTasksInMonthView && event.completed) &&
           (selectedCategoryNames.length === 0 || event.categories?.some((c) => selectedCategoryNames.includes(c)))
       )
-      .forEach((task) => {
-        const taskDate = format(parseISO(task.dueDate!), 'yyyy-MM-dd')
-        const existing = map.get(taskDate) || []
-        map.set(taskDate, [...existing, task])
-      })
+      if (dayTasks.length > 0) map.set(dayKey, dayTasks)
+    }
     return map
-  }, [events, calendars, hideCompletedTasksInMonthView, selectedCategoryNames])
+  }, [days, events, calendars, hideCompletedTasksInMonthView, selectedCategoryNames])
 
   // `events` and `rangeExpansionVersion` are both kept as deps for
   // defense-in-depth (see WeekView for the rationale). R4.1/R4.3 review fix.

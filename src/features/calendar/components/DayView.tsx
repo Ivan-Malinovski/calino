@@ -17,7 +17,7 @@ import {
   type DragStartEvent,
 } from '@dnd-kit/core'
 import { format, startOfDay, endOfDay, parseISO, isToday, addDays, addMinutes } from 'date-fns'
-import { useCalendarStore } from '@/store/calendarStore'
+import { useCalendarStore, getTasksDueOn } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
 import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
 import { getEventColor } from '@/lib/eventColor'
@@ -276,15 +276,13 @@ export function DayView({ selectedDate: propDate, onBack }: { selectedDate?: str
     return fragmentedEvents
   }, [dateKey, date, getEventsForDateRange, events])
 
+  // Single lookup into the store's shared due-date index instead of scanning
+  // every stored event to find one day's tasks. See #73.
   const dayTasks = useMemo(() => {
     const dateKey = format(date, 'yyyy-MM-dd')
     const visibleCalendarIds = calendars.filter((c) => c.isVisible).map((c) => c.id)
-    return events.filter(
-      (e) =>
-        e.type === 'task' &&
-        !!e.dueDate &&
-        visibleCalendarIds.includes(e.calendarId) &&
-        format(parseISO(e.dueDate), 'yyyy-MM-dd') === dateKey
+    return getTasksDueOn(events, dateKey).filter((e) =>
+      visibleCalendarIds.includes(e.calendarId)
     )
   }, [date, events, calendars])
 

@@ -187,6 +187,86 @@ describe('calendarStore', () => {
   })
 
   describe('getEventsForDateRange', () => {
+    // The derived index (added for #73) no longer visits events in array
+    // order — it walks recurring events first, then the non-recurring window
+    // backwards — so the result is explicitly re-sorted back into stored
+    // order. Callers have always seen that ordering; lock it in.
+    it('returns events in stored order regardless of their start times', () => {
+      const store = useCalendarStore.getState()
+
+      // Added latest-first, so stored order is the reverse of chronological.
+      store.addEvent({
+        id: 'order-c',
+        calendarId: 'default',
+        title: 'C',
+        start: '2024-05-20T10:00:00',
+        end: '2024-05-20T11:00:00',
+        isAllDay: false,
+      })
+      store.addEvent({
+        id: 'order-a',
+        calendarId: 'default',
+        title: 'A',
+        start: '2024-05-10T10:00:00',
+        end: '2024-05-10T11:00:00',
+        isAllDay: false,
+      })
+      store.addEvent({
+        id: 'order-b',
+        calendarId: 'default',
+        title: 'B',
+        start: '2024-05-15T10:00:00',
+        end: '2024-05-15T11:00:00',
+        isAllDay: false,
+      })
+
+      const storedOrder = useCalendarStore
+        .getState()
+        .events.filter((e) => e.id.startsWith('order-'))
+        .map((e) => e.id)
+
+      const result = useCalendarStore
+        .getState()
+        .getEventsForDateRange('2024-05-01', '2024-05-31')
+        .filter((e) => e.id.startsWith('order-'))
+        .map((e) => e.id)
+
+      expect(result).toEqual(storedOrder)
+    })
+
+    it('finds a long-running event whose start precedes the queried range', () => {
+      // The non-recurring scan narrows by start time, so an event that began
+      // well before the window but is still running has to survive the
+      // early-termination check.
+      const store = useCalendarStore.getState()
+
+      store.addEvent({
+        id: 'long-runner',
+        calendarId: 'default',
+        title: 'Long runner',
+        start: '2024-01-01T00:00:00',
+        end: '2024-12-31T23:59:59',
+        isAllDay: false,
+      })
+      // Later-starting short events sit between it and the query window.
+      for (let i = 0; i < 5; i++) {
+        store.addEvent({
+          id: `filler-${i}`,
+          calendarId: 'default',
+          title: `Filler ${i}`,
+          start: `2024-03-0${i + 1}T10:00:00`,
+          end: `2024-03-0${i + 1}T11:00:00`,
+          isAllDay: false,
+        })
+      }
+
+      const result = useCalendarStore
+        .getState()
+        .getEventsForDateRange('2024-08-01', '2024-08-07')
+
+      expect(result.map((e) => e.id)).toContain('long-runner')
+    })
+
     it('returns events within a date range', () => {
       const store = useCalendarStore.getState()
 
