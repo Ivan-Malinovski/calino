@@ -5,8 +5,10 @@ import { v4 as uuidv4 } from 'uuid'
 import { formatTime, daysBetween, addDays, addMinutesToTimeStr } from '@/lib/datetime'
 import { buildMasterTruncation, getFutureOverrideIds, isFirstOccurrence } from '@/lib/recurrenceSplit'
 import { showToast } from '@/lib/toast'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence, animate } from 'framer-motion'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
+import { useIsMobile } from '@/hooks/useIsMobile'
+import { useSheetSwipeDismiss } from '@/hooks/useSheetSwipeDismiss'
 import { useSettingsStore } from '@/store/settingsStore'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
@@ -20,7 +22,7 @@ import { matchEventBackground } from '@/lib/eventBackground'
 import { describeRecurrence } from '@/lib/recurrence'
 import { hasDueTime, extractOriginalEventId } from '@/lib/events'
 import type { CalendarEvent } from '@/types'
-import { TimeInput } from './TimeInput'
+import { TimeField } from './TimeField'
 import styles from './EventPreviewPopup.module.css'
 
 interface EventPreviewPopupProps {
@@ -54,11 +56,30 @@ export function EventPreviewPopup({
   const closePreview = useCalendarStore((state) => state.closePreview)
   const [isClosing, setIsClosing] = useState(false)
   const prefersReducedMotion = useReducedMotion()
+  const isMobile = useIsMobile()
+  const scrollRef = useRef<HTMLDivElement>(null)
+  // On mobile the popup is a bottom sheet: it slides up on open and can be
+  // swiped back down, both driven by this one motion value bound to its `y`.
+  const sheetY = useSheetSwipeDismiss({
+    enabled: isMobile,
+    open: !isClosing,
+    sheetRef: popupRef,
+    scrollRef,
+    onDismiss: closePreview,
+    reducedMotion: prefersReducedMotion,
+  })
   const animateClose = useCallback(() => {
     if (isClosing) return
     setIsClosing(true)
+    // The sheet leaves the way it arrived — sliding down — rather than fading
+    // in place, which reads as the panel blinking out on a phone.
+    if (isMobile && !prefersReducedMotion) {
+      animate(sheetY, window.innerHeight, { duration: 0.18, ease: 'easeIn' })
+      setTimeout(() => closePreview(), 180)
+      return
+    }
     setTimeout(() => closePreview(), prefersReducedMotion ? 0 : 150)
-  }, [closePreview, isClosing, prefersReducedMotion])
+  }, [closePreview, isClosing, isMobile, prefersReducedMotion, sheetY])
   const deleteEvent = useCalendarStore((state) => state.deleteEvent)
   const updateEvent = useCalendarStore((state) => state.updateEvent)
   const {
@@ -555,7 +576,10 @@ export function EventPreviewPopup({
     setShowDeleteDialog(false)
   }
 
+  // On mobile the popup is a full-width bottom sheet, so the click point is
+  // irrelevant — CSS pins it and these coordinates are left unset.
   const adjustedPosition = (() => {
+    if (isMobile) return null
     const popupWidth = 320
     const popupHeight = 420
     const padding = 10
@@ -568,11 +592,16 @@ export function EventPreviewPopup({
       y = window.innerHeight - popupHeight - padding
     }
 
-    return { x, y }
+    return { x: Math.max(padding, x), y: Math.max(padding, y) }
   })()
 
+  // A right-click elsewhere on the calendar opens a context menu, so the
+  // preview steps aside. Events raised from *inside* the popup are not that:
+  // on Android a long-press (and the double-tap selection callout) fires
+  // `contextmenu`, so selecting a word in the sheet was dismissing it.
   useEffect(() => {
-    const handleContextMenu = (): void => {
+    const handleContextMenu = (e: MouseEvent): void => {
+      if (popupRef.current?.contains(e.target as Node)) return
       closePreview()
     }
     document.addEventListener('contextmenu', handleContextMenu)
@@ -668,7 +697,7 @@ export function EventPreviewPopup({
             }
           }}
         >
-          <TimeInput
+          <TimeField
             value={editTime}
             timeFormat={timeFormat}
             onChange={(value) => handleFieldChange('time', value)}
@@ -680,7 +709,7 @@ export function EventPreviewPopup({
           {!isTask && (
             <>
               <span>-</span>
-              <TimeInput
+              <TimeField
                 value={editEndTime}
                 timeFormat={timeFormat}
                 onChange={(value) => handleFieldChange('endTime', value)}
@@ -771,6 +800,7 @@ export function EventPreviewPopup({
           {!showDeleteDialog && !showRecurrenceDialog && (
             <div
               className={styles.backdrop}
+              data-sheet={isMobile ? '' : undefined}
               onClick={() => {
                 // A blur (e.g. from clicking away from a time <input>) may have
                 // already cleared editingField by the time this click fires, so
@@ -794,10 +824,19 @@ export function EventPreviewPopup({
                 ref={popupRef}
                 className={styles.popup}
                 data-component="event-preview"
-                style={{ left: adjustedPosition.x, top: adjustedPosition.y }}
-                initial={prefersReducedMotion ? false : { opacity: 0, scale: 0.95, y: -10 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.95, y: -10 }}
+                data-sheet={isMobile ? '' : undefined}
+                style={
+                  adjustedPosition
+                    ? { left: adjustedPosition.x, top: adjustedPosition.y }
+                    : { y: sheetY }
+                }
+                initial={prefersReducedMotion || isMobile ? false : { opacity: 0, scale: 0.95, y: -10 }}
+                animate={isMobile ? { opacity: 1 } : { opacity: 1, scale: 1, y: 0 }}
+                exit={
+                  prefersReducedMotion || isMobile
+                    ? { opacity: 0 }
+                    : { opacity: 0, scale: 0.95, y: -10 }
+                }
                 transition={{ duration: prefersReducedMotion ? 0 : 0.15 }}
               >
         <div
@@ -805,6 +844,9 @@ export function EventPreviewPopup({
           data-has-background={backgroundId ? '' : undefined}
           style={{ ['--event-color' as string]: event.color || '#4285F4' }}
         >
+          {/* Inside the header, not above it, so the header's tint runs all the
+              way to the sheet's top edge instead of leaving an untinted strip. */}
+          {isMobile && <div className={styles.dragHandle} aria-hidden="true" />}
           {backgroundId && (
             <EventBackground
               id={backgroundId}
@@ -830,7 +872,7 @@ export function EventPreviewPopup({
           </button>
         </div>
 
-        <div className={styles.content}>
+        <div className={styles.content} ref={scrollRef}>
           <div className={styles.field}>
             <svg aria-hidden="true" className={styles.icon} width="14" height="14" viewBox="0 0 14 14" fill="none">
               <rect

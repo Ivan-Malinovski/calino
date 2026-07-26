@@ -9,6 +9,14 @@
   flex: 1;
   background: var(--panel);
   overflow: auto;
+  /* Hide scrollbar visually to prevent horizontal layout squish on month change, 
+     while still allowing mousewheel/trackpad scrolling */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+.grid::-webkit-scrollbar {
+  display: none; /* Chrome, Safari and Opera */
 }
 
 /* ---- Panel Container ---- */
@@ -101,7 +109,7 @@
 .weekNumber {
   display: flex;
   justify-content: center;
-  padding-top: 14px;
+  padding-top: 5px;
   font-size: 10.5px;
   font-weight: 600;
   letter-spacing: 0.04em;
@@ -135,6 +143,28 @@
   overflow: visible;
   cursor: pointer;
   transition: background var(--dur-fast);
+}
+
+.dayContentSlide {
+  animation: daySlideIn var(--slide-duration, 0.18s) cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  will-change: transform, opacity;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dayContentSlide {
+    animation-duration: 0.01s; /* Practically instant, but still runs lifecycle if needed */
+  }
+}
+
+@keyframes daySlideIn {
+  from {
+    opacity: 0;
+    transform: translate(var(--slide-x, 0px), var(--slide-y, 0px));
+  }
+  to {
+    opacity: 1;
+    transform: translate(0px, 0px);
+  }
 }
 
 .events + .tasks {
@@ -491,8 +521,12 @@
     letter-spacing: 0;
   }
 
+  .weekNumHeader {
+    padding: 8px 1px;
+  }
+
   .weekNumber {
-    padding-top: 6px;
+    padding-top: 2px;
     /* The desktop cell-height floor lives on this element, and it's the only
        thing in a row that carries one. On a phone the day cells size to a row
        of dots, so leaving it in place forced every week to 100px and made the

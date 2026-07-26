@@ -4,6 +4,7 @@ import { motion, type PanInfo } from 'framer-motion'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
 import { hapticIfEnabled } from '@/lib/haptics'
+import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { SettingsIcon, TuneIcon } from '@/components/common/icons'
 import { QuickSettingsPanel } from '../QuickSettingsPanel'
 import { VIEW_ROUTES, URL_TO_VIEW, ALL_VIEWS } from '../../viewRoutes'
@@ -24,12 +25,26 @@ const gridVariants = {
   visible: { transition: { staggerChildren: 0.018 } },
 }
 
+// framer-motion animates via JS, so the global `prefers-reduced-motion` rule
+// in src/index.css (CSS animation/transition durations only) does not reach
+// these — the reduced-motion variants have to be supplied explicitly.
+const gridVariantsReduced = {
+  hidden: {},
+  visible: { transition: { staggerChildren: 0 } },
+}
+
 const tileVariants = {
   hidden: { opacity: 0, scale: 0.9 },
   visible: { opacity: 1, scale: 1 },
 }
 
+const tileVariantsReduced = {
+  hidden: { opacity: 1, scale: 1 },
+  visible: { opacity: 1, scale: 1, transition: { duration: 0 } },
+}
+
 const TILE_INDICATOR_TRANSITION = { type: 'spring', stiffness: 500, damping: 40 } as const
+const TILE_INDICATOR_TRANSITION_INSTANT = { duration: 0 } as const
 
 export function NavExpandedGrid({
   quickSettingsOpen,
@@ -44,6 +59,7 @@ export function NavExpandedGrid({
   const setCurrentView = useCalendarStore((state) => state.setCurrentView)
   const journalEnabled = useSettingsStore((state) => state.journalEnabled)
   const contactsEnabled = useSettingsStore((state) => state.contactsEnabled)
+  const reducedMotion = useReducedMotion()
 
   // currentView is store state that persists across routes (e.g. it still
   // says 'agenda' while on /settings), so the highlighted tile must be
@@ -128,7 +144,7 @@ export function NavExpandedGrid({
 
       <motion.div
         className={styles.grid}
-        variants={gridVariants}
+        variants={reducedMotion ? gridVariantsReduced : gridVariants}
         initial="hidden"
         animate="visible"
       >
@@ -140,7 +156,7 @@ export function NavExpandedGrid({
               gridColumn: (activeTileIndex % 4) + 1,
               gridRow: Math.floor(activeTileIndex / 4) + 1,
             }}
-            transition={TILE_INDICATOR_TRANSITION}
+            transition={reducedMotion ? TILE_INDICATOR_TRANSITION_INSTANT : TILE_INDICATOR_TRANSITION}
           />
         )}
         {visibleViews.map((view, index) => {
@@ -151,7 +167,7 @@ export function NavExpandedGrid({
               type="button"
               className={styles.tile}
               style={{ gridColumn: (index % 4) + 1, gridRow: Math.floor(index / 4) + 1 }}
-              variants={tileVariants}
+              variants={reducedMotion ? tileVariantsReduced : tileVariants}
               onClick={() => handleTileClick(view.value)}
             >
               <span className={isActive ? styles.tileLabelActive : styles.tileLabel}>{view.label}</span>

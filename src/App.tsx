@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState, useRef, lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom'
 import { Toaster } from 'sonner'
 import { Capacitor } from '@capacitor/core'
+import type { PluginListenerHandle } from '@capacitor/core'
 import { App as CapacitorApp } from '@capacitor/app'
 import { useIsMobile } from './hooks/useIsMobile'
 import { useTwoFingerSwipe } from './hooks/useTwoFingerSwipe'
@@ -64,20 +65,28 @@ const YearView = lazy(() => import('./features/calendar/components/YearView').th
 function ViewLoader({ children, viewKey }: { children: JSX.Element; viewKey: ViewType }): JSX.Element {
   const reducedMotion = useReducedMotion()
   return (
-    <AnimatePresence mode="wait">
-      <motion.div
-        key={viewKey}
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        transition={{ duration: reducedMotion ? 0 : 0.15 }}
-        style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}
-      >
-        <Suspense fallback={<CalendarSkeleton view={viewKey} />}>
+    // Suspense sits OUTSIDE the animated element on purpose. When it was
+    // inside, the opacity fade started the moment the motion.div mounted —
+    // i.e. while the lazy chunk was still evaluating and the view was still
+    // doing its first (expensive) render — so the fade competed with the
+    // mount for the main thread and visibly stuttered. With the boundary
+    // outside, the skeleton holds the slot while the chunk loads and the
+    // motion.div only mounts once the real view is ready to paint, so the
+    // fade has the frame budget to itself.
+    <Suspense fallback={<CalendarSkeleton view={viewKey} />}>
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={viewKey}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: reducedMotion ? 0 : 0.15 }}
+          style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}
+        >
           {children}
-        </Suspense>
-      </motion.div>
-    </AnimatePresence>
+        </motion.div>
+      </AnimatePresence>
+    </Suspense>
   )
 }
 
@@ -567,37 +576,56 @@ function CalendarApp(): JSX.Element {
         </motion.main>
         <AnimatePresence>
           {agendaSidebarOpen && (
+            // The panel used to animate `width: 0 -> agendaSidebarWidth`,
+            // which relayouts this (large, lazily-mounting) subtree on every
+            // frame. Now the outer <aside> is a fixed-width `overflow: hidden`
+            // wrapper that takes its final width in a single layout pass, and
+            // only the inner panel moves, via a compositor-friendly transform.
             <motion.aside
+              key="agenda-sidebar"
               className="agendaSidebar"
-              initial={{ width: 0, opacity: 0 }}
-              animate={{ width: agendaSidebarWidth, opacity: 1 }}
-              exit={{ width: 0, opacity: 0 }}
-              transition={{ duration: reducedMotion ? 0 : 0.2, ease: [0.32, 0.72, 0, 1] }}
+              style={{ width: agendaSidebarWidth }}
             >
-              <div
-                className="agendaSidebarResizer"
-                onMouseDown={handleAgendaResizeStart}
-                role="separator"
-                aria-orientation="vertical"
-                aria-label="Resize agenda panel"
-              />
-              <div className="agendaSidebarHeader">
-                <span>Agenda</span>
-                <button
-                  className="agendaSidebarClose"
-                  onClick={() => updateSettings({ agendaSidebarOpen: false })}
-                  aria-label="Close agenda panel"
-                >
-                  ×
-                </button>
-              </div>
-              <div className="agendaSidebarBody">
-                <ErrorBoundary fallback={null}>
-                  <Suspense fallback={null}>
-                    <AgendaView embedded />
-                  </Suspense>
-                </ErrorBoundary>
-              </div>
+              <motion.div
+                className="agendaSidebarPanel"
+                style={{
+                  position: 'relative',
+                  width: agendaSidebarWidth,
+                  height: '100%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  minHeight: 0,
+                }}
+                initial={{ x: '100%', opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: '100%', opacity: 0 }}
+                transition={{ duration: reducedMotion ? 0 : 0.2, ease: [0.32, 0.72, 0, 1] }}
+              >
+                <div
+                  className="agendaSidebarResizer"
+                  onMouseDown={handleAgendaResizeStart}
+                  role="separator"
+                  aria-orientation="vertical"
+                  aria-label="Resize agenda panel"
+                />
+                <div className="agendaSidebarHeader">
+                  <span>Agenda</span>
+                  <button
+                    className="agendaSidebarClose"
+                    onClick={() => updateSettings({ agendaSidebarOpen: false })}
+                    aria-label="Close agenda panel"
+                  >
+                    ×
+                  </button>
+                </div>
+                <div className="agendaSidebarBody">
+                  <ErrorBoundary fallback={null}>
+                    <Suspense fallback={null}>
+                      <AgendaView embedded />
+                    </Suspense>
+                  </ErrorBoundary>
+                </div>
+              </motion.div>
             </motion.aside>
           )}
         </AnimatePresence>
@@ -663,6 +691,40 @@ function App(): JSX.Element {
   useEffect(() => {
     loadConfigFile()
   }, [loadConfigFile])
+
+  // Fix for Android native time picker backdrop remaining after app switch
+  useEffect(() => {
+    const blurNativePickers = (): void => {
+      const active = document.activeElement as HTMLElement
+      if (active?.tagName === 'INPUT') {
+        const type = (active as HTMLInputElement).type
+        if (type === 'time' || type === 'date' || type === 'datetime-local') {
+          active.blur()
+        }
+      }
+    }
+
+    const handleVisibilityChange = (): void => {
+      if (document.visibilityState === 'hidden') blurNativePickers()
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    let capListener: PluginListenerHandle | null = null
+    if (Capacitor.isNativePlatform()) {
+      CapacitorApp.addListener('appStateChange', ({ isActive }) => {
+        if (!isActive) blurNativePickers()
+      })
+        .then((listener) => {
+          capListener = listener
+        })
+        .catch(() => {})
+    }
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      if (capListener) capListener.remove()
+    }
+  }, [])
 
   return (
     <BrowserRouter>

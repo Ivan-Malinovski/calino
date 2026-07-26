@@ -1,5 +1,6 @@
 import type { JSX } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useIsMobile } from '@/hooks/useIsMobile'
 import { useSettingsStore } from '@/store/settingsStore'
 import { useConfigStore } from '@/store/configStore'
 import styles from './QuickSettingsPanel.module.css'
@@ -29,6 +30,7 @@ export function QuickSettingsPanel({ onNavigate, hideAllSettingsLink }: QuickSet
   const updateSettings = useSettingsStore((state) => state.updateSettings)
   const hasPreconfiguredAccounts = useConfigStore((state) => state.hasPreconfiguredAccounts)
   const lock = useConfigStore((state) => state.lock)
+  const isMobile = useIsMobile()
 
   const goToSettings = (): void => {
     navigate('/settings')
@@ -57,7 +59,13 @@ export function QuickSettingsPanel({ onNavigate, hideAllSettingsLink }: QuickSet
               title={mode === 'auto' ? 'Auto' : mode === 'light' ? 'Light' : 'Dark'}
               aria-label={mode === 'auto' ? 'Auto' : mode === 'light' ? 'Light' : 'Dark'}
             >
-              {mode === 'auto' ? <ThemeAutoIcon /> : mode === 'light' ? <ThemeLightIcon /> : <ThemeDarkIcon />}
+              {mode === 'auto' ? (
+                <ThemeAutoIcon mobile={isMobile} />
+              ) : mode === 'light' ? (
+                <ThemeLightIcon />
+              ) : (
+                <ThemeDarkIcon />
+              )}
             </button>
           ))}
         </div>
@@ -114,7 +122,15 @@ export function QuickSettingsPanel({ onNavigate, hideAllSettingsLink }: QuickSet
   )
 }
 
-function ThemeAutoIcon(): JSX.Element {
+function ThemeAutoIcon({ mobile }: { mobile: boolean }): JSX.Element {
+  if (mobile) {
+    return (
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="6" y="2" width="12" height="20" rx="2.5" />
+        <path d="M10.5 18.5h3" />
+      </svg>
+    )
+  }
   return (
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
       <rect x="2" y="4" width="20" height="13" rx="2" />

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { Capacitor } from '@capacitor/core'
 import { Haptics } from '@capacitor/haptics'
+import { useSettingsStore } from '@/store/settingsStore'
 import { haptic, hapticIfEnabled } from '../haptics'
 
 vi.mock('@capacitor/core', () => ({
@@ -64,8 +65,13 @@ describe('haptics', () => {
   })
 
   describe('hapticIfEnabled', () => {
+    beforeEach(() => {
+      useSettingsStore.setState({ enableHaptics: true })
+    })
+
     afterEach(() => {
       vi.clearAllMocks()
+      useSettingsStore.setState({ enableHaptics: true })
     })
 
     it('calls Haptics.vibrate with a short duration on native platform for impact types', () => {
@@ -85,6 +91,26 @@ describe('haptics', () => {
       hapticIfEnabled('light')
       expect(Haptics.vibrate).not.toHaveBeenCalled()
       expect(navigator.vibrate).not.toHaveBeenCalled()
+    })
+
+    it('does nothing when haptics are disabled in settings', () => {
+      vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true)
+      useSettingsStore.setState({ enableHaptics: false })
+      hapticIfEnabled('medium')
+      hapticIfEnabled('success')
+      expect(Haptics.vibrate).not.toHaveBeenCalled()
+      expect(Haptics.notification).not.toHaveBeenCalled()
+    })
+
+    it('reads the setting at call time, not at import time', () => {
+      vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true)
+      useSettingsStore.setState({ enableHaptics: false })
+      hapticIfEnabled('medium')
+      expect(Haptics.vibrate).not.toHaveBeenCalled()
+
+      useSettingsStore.setState({ enableHaptics: true })
+      hapticIfEnabled('medium')
+      expect(Haptics.vibrate).toHaveBeenCalledWith({ duration: 13 })
     })
   })
 })

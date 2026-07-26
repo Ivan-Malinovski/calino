@@ -13,6 +13,7 @@ interface TimeFieldProps {
   dataComponent: string
   ariaLabel: string
   id?: string
+  autoFocus?: boolean
 }
 
 /**
@@ -37,6 +38,7 @@ export function TimeField({
   dataComponent,
   ariaLabel,
   id,
+  autoFocus,
 }: TimeFieldProps): JSX.Element {
   const isMobile = useIsMobile()
   const ref = useRef<HTMLInputElement>(null)
@@ -54,6 +56,7 @@ export function TimeField({
         data-component={dataComponent}
         aria-label={ariaLabel}
         required={false}
+        autoFocus={autoFocus}
       />
     )
   }
@@ -67,6 +70,7 @@ export function TimeField({
       dataComponent={dataComponent}
       ariaLabel={ariaLabel}
       id={id}
+      autoFocus={autoFocus}
     />
   )
 }

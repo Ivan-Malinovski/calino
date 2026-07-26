@@ -47,7 +47,7 @@ async function seedEvent(page: Page): Promise<void> {
         if (sessionStorage.getItem('__calino_test_quarter_snap')) return
         sessionStorage.setItem('__calino_test_quarter_snap', '1')
         const raw = localStorage.getItem(calendarKey)
-        const parsed = raw ? JSON.parse(raw) : { state: {}, version: 1 }
+        const parsed = raw ? JSON.parse(raw) : { state: {}, version: 2 }
         const events = parsed.state?.events ?? []
         events.push(event)
         parsed.state = { ...(parsed.state ?? {}), events }

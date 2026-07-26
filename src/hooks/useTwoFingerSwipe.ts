@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useLayoutEffect } from 'react'
 
 interface UseTwoFingerSwipeOptions {
   /** Fired once per gesture when a horizontal two-finger swipe is detected. */
@@ -26,8 +26,9 @@ export function useTwoFingerSwipe(
   // callback without forcing the effect to re-bind the touch listeners
   // every time the parent passes a new onSwipe (the canonical
   // "latest ref" pattern from the React docs).
-  onSwipeRef.current = onSwipe
-
+  useLayoutEffect(() => {
+    onSwipeRef.current = onSwipe
+  }, [onSwipe])
   useEffect(() => {
     const el = ref.current
     if (!el || !enabled) return
@@ -90,6 +91,5 @@ export function useTwoFingerSwipe(
     // onSwipe is read via onSwipeRef.current (updated on every render at
     // line 27) so the touch listeners don't need to re-attach on every
     // parent re-render. Excluding it from deps is intentional.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ref, enabled, threshold])
 }

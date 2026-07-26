@@ -1,4 +1,11 @@
-export type RecurrenceFrequency = 'secondly' | 'minutely' | 'hourly' | 'daily' | 'weekly' | 'monthly' | 'yearly'
+export type RecurrenceFrequency =
+  | 'secondly'
+  | 'minutely'
+  | 'hourly'
+  | 'daily'
+  | 'weekly'
+  | 'monthly'
+  | 'yearly'
 
 import type { Category, AutoCategoryRule } from './categories'
 import type { ExtractedEventFields } from '@/features/aiVision/types'
@@ -56,10 +63,10 @@ export type SyncStatus = 'synced' | 'pending' | 'failed'
 export type TaskPriority = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9
 
 export interface CalendarAttachment {
-  href: string        // URL or data URI for inline attachments
+  href: string // URL or data URI for inline attachments
   contentType: string // MIME type
-  size?: number       // bytes
-  filename?: string   // display name
+  size?: number // bytes
+  filename?: string // display name
 }
 
 export interface BrokenEvent {
@@ -157,7 +164,16 @@ export interface Calendar {
   readOnly?: boolean
 }
 
-export type ViewType = 'month' | 'week' | '3day' | 'day' | 'agenda' | 'todo' | 'journal' | 'contacts' | 'year'
+export type ViewType =
+  | 'month'
+  | 'week'
+  | '3day'
+  | 'day'
+  | 'agenda'
+  | 'todo'
+  | 'journal'
+  | 'contacts'
+  | 'year'
 
 export interface CalendarState {
   events: CalendarEvent[]
@@ -244,7 +260,7 @@ export interface CalendarActions {
     mode?: EventType,
     initialTitle?: string,
     parentTaskId?: string,
-    initialCalendarId?: string,
+    initialCalendarId?: string
   ) => void
   closeModal: () => void
   setPendingEventPrefill: (fields: ExtractedEventFields | null) => void
@@ -284,6 +300,7 @@ export interface UserSettings {
   defaultEventColor: string
   enableDesktopNotifications: boolean
   enableSoundAlerts: boolean
+  enableHaptics: boolean
   conflictResolution: 'server-wins' | 'local-wins' | 'ask'
   compactRecurringEvents: boolean
   compressPastWeeks: boolean

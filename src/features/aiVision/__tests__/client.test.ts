@@ -21,7 +21,7 @@ function mockResponse(status: number, body: unknown) {
 
 const cfg: ProviderRequestConfig = {
   provider: 'openai',
-  baseUrl: 'https://api.openai.com',
+  baseUrl: 'https://api.openai.com/v1',
   apiKey: 'sk-test',
   model: 'gpt-4o',
 }

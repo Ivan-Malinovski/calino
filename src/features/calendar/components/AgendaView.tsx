@@ -1,15 +1,9 @@
 import type { JSX } from 'react'
 import { useMemo, useState, useRef, useEffect } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
+import { useVirtualizer } from '@tanstack/react-virtual'
 import { createPortal } from 'react-dom'
-import {
-  format,
-  startOfMonth,
-  endOfMonth,
-  eachDayOfInterval,
-  parseISO,
-  startOfDay,
-} from 'date-fns'
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, parseISO, startOfDay } from 'date-fns'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
 import { useContextMenuStore } from '@/store/contextMenuStore'
@@ -52,7 +46,11 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
   const { deleteEvent: deleteCalDAVEvent, createEvent: createCalDAVEvent } = useCalDAV()
   const closeMenu = useContextMenuStore((state) => state.closeMenu)
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; day: Date } | null>(null)
-  const [eventContextMenu, setEventContextMenu] = useState<{ x: number; y: number; event: CalendarEvent } | null>(null)
+  const [eventContextMenu, setEventContextMenu] = useState<{
+    x: number
+    y: number
+    event: CalendarEvent
+  } | null>(null)
 
   const useCategoryColors = useSettingsStore((state) => state.useCategoryColors)
 
@@ -127,6 +125,18 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
       }
     })
 
+    // R4.7: sort each day's events once here rather than in the render body.
+    // The render used to do `[...dayEvents].sort(...)` for every day-group on
+    // every render; the order only depends on the data, so it belongs in the
+    // memo. Semantics are unchanged: all-day events first, then by start time.
+    eventMap.forEach((arr) => {
+      arr.sort((a, b) => {
+        if (a.event.isAllDay && !b.event.isAllDay) return -1
+        if (!a.event.isAllDay && b.event.isAllDay) return 1
+        return parseISO(a.event.start).getTime() - parseISO(b.event.start).getTime()
+      })
+    })
+
     const groups: DayGroup[] = []
     let i = 0
     while (i < daysList.length) {
@@ -178,6 +188,29 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
     }
   }
 
+  // R3.11 — top-level empty state when the entire month has no events
+  // (or all events have been filtered out by category/calendar). Render
+  // a single EmptyState instead of N day headers, each saying "no events".
+  const allGroupsEmpty = dayGroups.every((g) => !g.hasEvents)
+
+  // R4.7: windowed rows. A month with many events used to mount every
+  // day-group at once; now only the visible slice is in the DOM. Row heights
+  // vary wildly (a 12-event day vs. a one-line skip row), so heights come from
+  // `measureElement` rather than being computed — same pattern as JournalView.
+  // `embedded` is virtualized too: the split view still scrolls in this same
+  // container (`.container` keeps `overflow: auto` with a bounded height in
+  // both modes), only its chrome/padding differs.
+  const virtualizer = useVirtualizer({
+    count: allGroupsEmpty ? 0 : dayGroups.length,
+    getScrollElement: () => containerRef.current,
+    // A day header plus a single event card and its divider is a little under
+    // 100px; skip rows and empty days are smaller, busy days much larger.
+    // measureElement corrects it, so this only needs to be the right order of
+    // magnitude to keep the initial scrollbar and scrollToIndex sane.
+    estimateSize: () => 96,
+    overscan: 4,
+  })
+
   useEffect(() => {
     if (containerRef.current && !hasScrolledRef.current) {
       const today = startOfDay(new Date())
@@ -186,16 +219,19 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
       const monthEnd = endOfMonth(viewDate)
 
       if (today >= monthStart && today <= monthEnd) {
-        const todayElement = containerRef.current.querySelector(
-          `[data-date="${format(today, 'yyyy-MM-dd')}"]`
+        // Can't query the DOM for today's row any more — with virtualization it
+        // may not be mounted yet. Scroll by index instead.
+        const todayKey = format(today, 'yyyy-MM-dd')
+        const index = dayGroups.findIndex(
+          (g) => g.type === 'day' && format(g.days[0], 'yyyy-MM-dd') === todayKey
         )
-        if (todayElement) {
-          todayElement.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        if (index !== -1) {
+          virtualizer.scrollToIndex(index, { align: 'start', behavior: 'auto' })
           hasScrolledRef.current = true
         }
       }
     }
-  }, [currentDate, dayGroups])
+  }, [currentDate, dayGroups, virtualizer])
 
   const renderSkipRow = (group: DayGroup): JSX.Element => {
     const first = group.days[0]
@@ -212,11 +248,6 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
     )
   }
 
-  // R3.11 — top-level empty state when the entire month has no events
-  // (or all events have been filtered out by category/calendar). Render
-  // a single EmptyState instead of N day headers, each saying "no events".
-  const allGroupsEmpty = dayGroups.every((g) => !g.hasEvents)
-
   return (
     <div
       ref={containerRef}
@@ -227,135 +258,177 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
           tap also sets the date, and re-running the transition on every tap
           would be noise. */}
       <AnimatePresence mode="wait">
-      <motion.div key={monthKey} className={styles.monthPane} {...monthChangeMotion}>
-      {allGroupsEmpty ? (
-        <EmptyState
-          title="Nothing scheduled this month"
-          description="Your agenda is clear. Add an event to get started."
-          action={
-            <button
-              className={styles.agendaAdd}
-              onClick={() => handleCreateEvent(new Date())}
-              data-component="agenda-empty-add"
-            >
-              + Create event
-            </button>
-          }
-        />
-      ) : dayGroups.map((group) => {
-        if (group.type === 'skip') {
-          return renderSkipRow(group)
-        }
-
-        const day = group.days[0]
-        const dateKey = format(day, 'yyyy-MM-dd')
-        const dayEvents = eventsByDate.get(dateKey) || []
-        const isEmpty = !group.hasEvents
-
-        const sortedEvents = [...dayEvents].sort((a, b) => {
-          if (a.event.isAllDay && !b.event.isAllDay) return -1
-          if (!a.event.isAllDay && b.event.isAllDay) return 1
-          return parseISO(a.event.start).getTime() - parseISO(b.event.start).getTime()
-        })
-
-        return (
-          <div key={dateKey} data-date={dateKey} onContextMenu={(e) => handleContextMenu(e, day)}>
-            <div className={`${styles.agendaDayHeader} ${isEmpty ? styles.isEmpty : ''}`}>
-              <div className={styles.agendaDayLabel}>
-                <span className={styles.agendaDow}>{format(day, 'EEEE')}</span>
-                <span className={styles.agendaDate}>{format(day, 'MMM d, yyyy')}</span>
-              </div>
-              {!isEmpty && (
-                <button className={styles.agendaAdd} onClick={() => handleCreateEvent(day)}>
-                  + Add
+        <motion.div key={monthKey} className={styles.monthPane} {...monthChangeMotion}>
+          {allGroupsEmpty ? (
+            <EmptyState
+              title="Nothing scheduled this month"
+              description="Your agenda is clear. Add an event to get started."
+              action={
+                <button
+                  className={styles.agendaAdd}
+                  onClick={() => handleCreateEvent(new Date())}
+                  data-component="agenda-empty-add"
+                >
+                  + Create event
                 </button>
-              )}
-            </div>
+              }
+            />
+          ) : (
+            // flexShrink: 0 — .monthPane is a flex column, and this spacer's height
+            // is the virtual list's total size, not something to compress.
+            <div
+              style={{
+                position: 'relative',
+                flexShrink: 0,
+                height: `${virtualizer.getTotalSize()}px`,
+              }}
+            >
+              {virtualizer.getVirtualItems().map((virtualRow) => {
+                const group = dayGroups[virtualRow.index]
+                const firstKey = format(group.days[0], 'yyyy-MM-dd')
 
-            {!isEmpty && (
-              <>
-                {sortedEvents.map(({ event }) => {
-                  if (event.type === 'task') {
-                    return (
-                      <div
-                        key={event.id}
-                        className={`${styles.agendaTask} ${
-                          event.completed ? styles.agendaTaskCompleted : ''
-                        }`}
-                        role="button"
-                        tabIndex={0}
-                        onClick={(e) => handleEventClick(e, event)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault()
-                            handleEventClick(e as unknown as React.MouseEvent, event)
-                          }
-                        }}
-                        onContextMenu={(e) => handleEventContextMenu(e, event)}
-                      >
-                        <div className={styles.agendaTaskBar} />
-                        <div className={styles.agendaTaskBody}>
-                          <div className={styles.agendaTaskMain}>
-                            <span className={styles.agendaTaskTime}>
-                              {event.start.includes('T00:00') ? 'Due' : formatTime(event.start, timeFormat)}
-                            </span>
-                            <span className={styles.agendaTaskIcon}>
-                              {event.completed ? '✓' : '○'}
-                            </span>
-                            <span className={styles.agendaTaskTitle}>{event.title}</span>
-                          </div>
-                          {event.location && (
-                            <div className={styles.agendaEventSub}>{event.location}</div>
-                          )}
-                        </div>
-                      </div>
-                    )
+                const row = ((): JSX.Element => {
+                  if (group.type === 'skip') {
+                    return renderSkipRow(group)
                   }
+
+                  const day = group.days[0]
+                  const dateKey = firstKey
+                  const sortedEvents = eventsByDate.get(dateKey) || []
+                  const isEmpty = !group.hasEvents
 
                   return (
                     <div
-                      key={event.id}
-                      className={styles.agendaEvent}
-                      role="button"
-                      tabIndex={0}
-                      onClick={(e) => handleEventClick(e, event)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault()
-                          handleEventClick(e as unknown as React.MouseEvent, event)
-                        }
-                      }}
-                      onContextMenu={(e) => handleEventContextMenu(e, event)}
+                      key={dateKey}
+                      data-date={dateKey}
+                      onContextMenu={(e) => handleContextMenu(e, day)}
                     >
-                      <div className={styles.agendaEventBar} style={{ background: getEventBarColor(event) }} />
-                      <div className={styles.agendaEventBody}>
-                        <div className={styles.agendaEventMain}>
-                          <span className={styles.agendaEventTime}>
-                            {event.isAllDay
-                              ? 'All day'
-                              : formatTime(event.start, timeFormat)
-                            }
-                          </span>
-                          <span className={styles.agendaEventTitle}>{event.title}</span>
+                      <div className={`${styles.agendaDayHeader} ${isEmpty ? styles.isEmpty : ''}`}>
+                        <div className={styles.agendaDayLabel}>
+                          <span className={styles.agendaDow}>{format(day, 'EEEE')}</span>
+                          <span className={styles.agendaDate}>{format(day, 'MMM d, yyyy')}</span>
                         </div>
-                        {event.location && (
-                          <div className={styles.agendaEventSub}>
-                            <LocationLink location={event.location} className={styles.agendaLocationLink} />
-                          </div>
+                        {!isEmpty && (
+                          <button
+                            className={styles.agendaAdd}
+                            onClick={() => handleCreateEvent(day)}
+                          >
+                            + Add
+                          </button>
                         )}
                       </div>
+
+                      {!isEmpty && (
+                        <>
+                          {sortedEvents.map(({ event }) => {
+                            if (event.type === 'task') {
+                              return (
+                                <div
+                                  key={event.id}
+                                  className={`${styles.agendaTask} ${
+                                    event.completed ? styles.agendaTaskCompleted : ''
+                                  }`}
+                                  role="button"
+                                  tabIndex={0}
+                                  onClick={(e) => handleEventClick(e, event)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter' || e.key === ' ') {
+                                      e.preventDefault()
+                                      handleEventClick(e as unknown as React.MouseEvent, event)
+                                    }
+                                  }}
+                                  onContextMenu={(e) => handleEventContextMenu(e, event)}
+                                >
+                                  <div className={styles.agendaTaskBar} />
+                                  <div className={styles.agendaTaskBody}>
+                                    <div className={styles.agendaTaskMain}>
+                                      <span className={styles.agendaTaskTime}>
+                                        {event.start.includes('T00:00')
+                                          ? 'Due'
+                                          : formatTime(event.start, timeFormat)}
+                                      </span>
+                                      <span className={styles.agendaTaskIcon}>
+                                        {event.completed ? '✓' : '○'}
+                                      </span>
+                                      <span className={styles.agendaTaskTitle}>{event.title}</span>
+                                    </div>
+                                    {event.location && (
+                                      <div className={styles.agendaEventSub}>{event.location}</div>
+                                    )}
+                                  </div>
+                                </div>
+                              )
+                            }
+
+                            return (
+                              <div
+                                key={event.id}
+                                className={styles.agendaEvent}
+                                role="button"
+                                tabIndex={0}
+                                onClick={(e) => handleEventClick(e, event)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault()
+                                    handleEventClick(e as unknown as React.MouseEvent, event)
+                                  }
+                                }}
+                                onContextMenu={(e) => handleEventContextMenu(e, event)}
+                              >
+                                <div
+                                  className={styles.agendaEventBar}
+                                  style={{ background: getEventBarColor(event) }}
+                                />
+                                <div className={styles.agendaEventBody}>
+                                  <div className={styles.agendaEventMain}>
+                                    <span className={styles.agendaEventTime}>
+                                      {event.isAllDay
+                                        ? 'All day'
+                                        : formatTime(event.start, timeFormat)}
+                                    </span>
+                                    <span className={styles.agendaEventTitle}>{event.title}</span>
+                                  </div>
+                                  {event.location && (
+                                    <div className={styles.agendaEventSub}>
+                                      <LocationLink
+                                        location={event.location}
+                                        className={styles.agendaLocationLink}
+                                      />
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            )
+                          })}
+                          <div className={styles.agendaDivider} />
+                        </>
+                      )}
+
+                      {isEmpty && <div className={styles.agendaDivider} />}
                     </div>
                   )
-                })}
-                <div className={styles.agendaDivider} />
-              </>
-            )}
+                })()
 
-            {isEmpty && <div className={styles.agendaDivider} />}
-          </div>
-        )
-      })}
-      </motion.div>
+                return (
+                  <div
+                    key={group.type === 'skip' ? `skip-${firstKey}` : firstKey}
+                    ref={virtualizer.measureElement}
+                    data-index={virtualRow.index}
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      transform: `translateY(${virtualRow.start}px)`,
+                    }}
+                  >
+                    {row}
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </motion.div>
       </AnimatePresence>
       {contextMenu && (
         <ContextMenu
@@ -395,7 +468,12 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
               {
                 label: 'Edit',
                 onClick: () => {
-                  openModal(undefined, undefined, eventContextMenu.event.id, eventContextMenu.event.type === 'task' ? 'task' : 'event')
+                  openModal(
+                    undefined,
+                    undefined,
+                    eventContextMenu.event.id,
+                    eventContextMenu.event.type === 'task' ? 'task' : 'event'
+                  )
                   setEventContextMenu(null)
                 },
               },

@@ -123,6 +123,18 @@
   }
 }
 
+/* This scrim fades in/out with the sidebar, so on phones the blurred backdrop
+   would be re-composited every frame of that fade. Drop the blur and lean on a
+   slightly stronger scrim instead — same "content is behind a veil" read, none
+   of the per-frame GPU cost. */
+@media (max-width: 768px) {
+  .overlay {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: var(--modal-scrim, rgba(0, 0, 0, 0.4));
+  }
+}
+
 /* ---- Brand (shown in mobile sidebar) ---- */
 .sidebarBrand {
   display: flex;
@@ -338,6 +350,17 @@
   cursor: pointer;
   font-variant-numeric: tabular-nums;
   transition: background var(--dur-fast);
+
+  /* Mini-calendar day: a leaf <button> containing only its date text. Nothing
+     is positioned outside it, so containment keeps a hover/selection restyle
+     from invalidating the other 41 cells in the grid. Focus ring made inset
+     because `contain: paint` clips the outset UA default. */
+  contain: layout paint;
+}
+
+.miniDay:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
 }
 
 /* Hover only on devices that actually hover — otherwise a tap on mobile
@@ -1276,6 +1299,20 @@
   width: 100%;
   font-size: 14px;
   color: var(--ink);
+}
+
+/* Self-contained list row: a <button> whose only children are inline spans
+   (check, dot, name) — no popovers, tooltips or drag previews escape it — so
+   style/layout invalidation from one row can safely be scoped to that row.
+   The explicit inset focus ring replaces the UA default, which `contain: paint`
+   would otherwise clip. */
+.categoryItem {
+  contain: layout paint;
+}
+
+.categoryItem:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
 }
 
 .categoryItem:hover {

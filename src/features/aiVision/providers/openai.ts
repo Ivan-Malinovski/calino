@@ -1,5 +1,6 @@
 import { httpRequest } from '../http'
 import type { ModelInfo, ProviderRequestConfig, VisionMessageInput } from '../types'
+import { endpointUrl } from './url'
 
 const NON_CHAT_PREFIXES = ['text-embedding', 'whisper', 'tts', 'dall-e', 'omni-moderation', 'text-moderation']
 
@@ -41,7 +42,7 @@ async function safeJson(response: { json: () => Promise<unknown> }): Promise<unk
 
 export async function listModels(cfg: ProviderRequestConfig): Promise<ModelInfo[]> {
   const response = await httpRequest({
-    url: `${cfg.baseUrl}/v1/models`,
+    url: endpointUrl(cfg.baseUrl, '/models'),
     method: 'GET',
     headers: authHeaders(cfg),
   })
@@ -60,7 +61,7 @@ export async function listModels(cfg: ProviderRequestConfig): Promise<ModelInfo[
 
 export async function sendVisionMessage(cfg: ProviderRequestConfig, input: VisionMessageInput): Promise<string> {
   const response = await httpRequest({
-    url: `${cfg.baseUrl}/v1/chat/completions`,
+    url: endpointUrl(cfg.baseUrl, '/chat/completions'),
     method: 'POST',
     headers: {
       ...authHeaders(cfg),

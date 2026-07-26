@@ -126,7 +126,9 @@ describe('calendarStore', () => {
       expect(new Set(updatedTasks.map((task) => task.completedAt)).size).toBe(1)
       expect(updatedTasks[0].completedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/)
 
-      const eventsById = new Map(useCalendarStore.getState().events.map((event) => [event.id, event]))
+      const eventsById = new Map(
+        useCalendarStore.getState().events.map((event) => [event.id, event])
+      )
       expect(eventsById.get('unrelated')?.completed).toBeUndefined()
       expect(eventsById.get('related-event')?.completed).toBeUndefined()
     })
@@ -148,7 +150,9 @@ describe('calendarStore', () => {
           completedAt: undefined,
         }),
       ])
-      const eventsById = new Map(useCalendarStore.getState().events.map((event) => [event.id, event]))
+      const eventsById = new Map(
+        useCalendarStore.getState().events.map((event) => [event.id, event])
+      )
       expect(eventsById.get('child')).toEqual(
         expect.objectContaining({
           completed: true,
@@ -187,6 +191,108 @@ describe('calendarStore', () => {
   })
 
   describe('getEventsForDateRange', () => {
+    // The derived index (added for #73) no longer visits events in array
+    // order — it walks recurring events first, then the non-recurring window
+    // backwards — so the result is explicitly re-sorted back into stored
+    // order. Callers have always seen that ordering; lock it in.
+    it('returns events in stored order regardless of their start times', () => {
+      const store = useCalendarStore.getState()
+
+      // Added latest-first, so stored order is the reverse of chronological.
+      store.addEvent({
+        id: 'order-c',
+        calendarId: 'default',
+        title: 'C',
+        start: '2024-05-20T10:00:00',
+        end: '2024-05-20T11:00:00',
+        isAllDay: false,
+      })
+      store.addEvent({
+        id: 'order-a',
+        calendarId: 'default',
+        title: 'A',
+        start: '2024-05-10T10:00:00',
+        end: '2024-05-10T11:00:00',
+        isAllDay: false,
+      })
+      store.addEvent({
+        id: 'order-b',
+        calendarId: 'default',
+        title: 'B',
+        start: '2024-05-15T10:00:00',
+        end: '2024-05-15T11:00:00',
+        isAllDay: false,
+      })
+
+      const storedOrder = useCalendarStore
+        .getState()
+        .events.filter((e) => e.id.startsWith('order-'))
+        .map((e) => e.id)
+
+      const result = useCalendarStore
+        .getState()
+        .getEventsForDateRange('2024-05-01', '2024-05-31')
+        .filter((e) => e.id.startsWith('order-'))
+        .map((e) => e.id)
+
+      expect(result).toEqual(storedOrder)
+    })
+
+    it('finds a long-running event whose start precedes the queried range', () => {
+      // The non-recurring scan narrows by start time, so an event that began
+      // well before the window but is still running has to survive the
+      // early-termination check.
+      const store = useCalendarStore.getState()
+
+      store.addEvent({
+        id: 'long-runner',
+        calendarId: 'default',
+        title: 'Long runner',
+        start: '2024-01-01T00:00:00',
+        end: '2024-12-31T23:59:59',
+        isAllDay: false,
+      })
+      // Later-starting short events sit between it and the query window.
+      for (let i = 0; i < 5; i++) {
+        store.addEvent({
+          id: `filler-${i}`,
+          calendarId: 'default',
+          title: `Filler ${i}`,
+          start: `2024-03-0${i + 1}T10:00:00`,
+          end: `2024-03-0${i + 1}T11:00:00`,
+          isAllDay: false,
+        })
+      }
+
+      const result = useCalendarStore.getState().getEventsForDateRange('2024-08-01', '2024-08-07')
+
+      expect(result.map((e) => e.id)).toContain('long-runner')
+    })
+
+    it('finds a malformed event whose end precedes its start', () => {
+      // addEvent/updateEvent divert `start > end` into brokenEvents, but the
+      // isAllDay bypass and already-persisted data can still put one in the
+      // array — so seed it directly, the way rehydration would. The index
+      // sorts and binary-searches on min(start, end) precisely so that a
+      // range containing the earlier endpoint still considers the event.
+      useCalendarStore.setState({
+        events: [
+          {
+            id: 'inverted',
+            calendarId: 'default',
+            title: 'Inverted',
+            start: '2024-06-20T10:00:00',
+            end: '2024-06-05T11:00:00',
+            isAllDay: false,
+          },
+        ],
+      })
+
+      const result = useCalendarStore.getState().getEventsForDateRange('2024-06-01', '2024-06-10')
+
+      expect(result.map((e) => e.id)).toContain('inverted')
+    })
+
     it('returns events within a date range', () => {
       const store = useCalendarStore.getState()
 
@@ -369,7 +475,7 @@ describe('calendarStore', () => {
       expect(useCalendarStore.getState().selectedDate).toBeNull()
     })
 
-it('closes modal', () => {
+    it('closes modal', () => {
       const store = useCalendarStore.getState()
       store.openModal('2024-03-15')
       store.closeModal()
@@ -403,7 +509,7 @@ it('closes modal', () => {
       store.openModal('2024-03-15')
 
       expect(useCalendarStore.getState().initialTitle).toBeNull()
-})
+    })
   })
 
   describe('recurring event expansion with timezone', () => {
@@ -585,9 +691,34 @@ it('closes modal', () => {
 
     it('does not apply an exception to another recurring series at the same time', () => {
       const store = useCalendarStore.getState()
-      store.addEvent({ id: 'master-a', calendarId: 'default', title: 'Series A', start: '2024-03-18T09:00:00.000Z', end: '2024-03-18T10:00:00.000Z', isAllDay: false, recurrence: { frequency: 'weekly', interval: 1 } })
-      store.addEvent({ id: 'master-b', calendarId: 'default', title: 'Series B', start: '2024-03-18T09:00:00.000Z', end: '2024-03-18T10:00:00.000Z', isAllDay: false, recurrence: { frequency: 'weekly', interval: 1 } })
-      store.addEvent({ id: 'master-a-2024-03-18T09:00:00.000Z', calendarId: 'default', title: 'Edited Series A', start: '2024-03-18T11:00:00.000Z', end: '2024-03-18T12:00:00.000Z', isAllDay: false, recurrenceId: '2024-03-18T09:00:00.000Z', recurrenceMasterId: 'master-a' })
+      store.addEvent({
+        id: 'master-a',
+        calendarId: 'default',
+        title: 'Series A',
+        start: '2024-03-18T09:00:00.000Z',
+        end: '2024-03-18T10:00:00.000Z',
+        isAllDay: false,
+        recurrence: { frequency: 'weekly', interval: 1 },
+      })
+      store.addEvent({
+        id: 'master-b',
+        calendarId: 'default',
+        title: 'Series B',
+        start: '2024-03-18T09:00:00.000Z',
+        end: '2024-03-18T10:00:00.000Z',
+        isAllDay: false,
+        recurrence: { frequency: 'weekly', interval: 1 },
+      })
+      store.addEvent({
+        id: 'master-a-2024-03-18T09:00:00.000Z',
+        calendarId: 'default',
+        title: 'Edited Series A',
+        start: '2024-03-18T11:00:00.000Z',
+        end: '2024-03-18T12:00:00.000Z',
+        isAllDay: false,
+        recurrenceId: '2024-03-18T09:00:00.000Z',
+        recurrenceMasterId: 'master-a',
+      })
 
       const events = store.getEventsForDateRange('2024-03-18', '2024-03-18')
       expect(events.map((event) => event.title).sort()).toEqual(['Edited Series A', 'Series B'])
@@ -595,8 +726,26 @@ it('closes modal', () => {
 
     it('shows a detached occurrence in the range it was moved to', () => {
       const store = useCalendarStore.getState()
-      store.addEvent({ id: 'moved-master', calendarId: 'default', title: 'Weekly meeting', start: '2024-03-18T09:00:00.000Z', end: '2024-03-18T10:00:00.000Z', isAllDay: false, recurrence: { frequency: 'weekly', interval: 1 } })
-      store.addEvent({ id: 'moved-master-2024-03-18T09:00:00.000Z', uid: 'moved-master', calendarId: 'default', title: 'Moved meeting', start: '2024-03-19T11:00:00.000Z', end: '2024-03-19T12:00:00.000Z', isAllDay: false, recurrenceId: '2024-03-18T09:00:00.000Z', recurrenceMasterId: 'moved-master' })
+      store.addEvent({
+        id: 'moved-master',
+        calendarId: 'default',
+        title: 'Weekly meeting',
+        start: '2024-03-18T09:00:00.000Z',
+        end: '2024-03-18T10:00:00.000Z',
+        isAllDay: false,
+        recurrence: { frequency: 'weekly', interval: 1 },
+      })
+      store.addEvent({
+        id: 'moved-master-2024-03-18T09:00:00.000Z',
+        uid: 'moved-master',
+        calendarId: 'default',
+        title: 'Moved meeting',
+        start: '2024-03-19T11:00:00.000Z',
+        end: '2024-03-19T12:00:00.000Z',
+        isAllDay: false,
+        recurrenceId: '2024-03-18T09:00:00.000Z',
+        recurrenceMasterId: 'moved-master',
+      })
 
       expect(store.getEventsForDateRange('2024-03-19', '2024-03-19')).toMatchObject([
         { title: 'Moved meeting', start: '2024-03-19T11:00:00.000Z' },
@@ -606,8 +755,26 @@ it('closes modal', () => {
 
     it('matches a floating recurrence ID to the generated occurrence', () => {
       const store = useCalendarStore.getState()
-      store.addEvent({ id: 'floating-master', calendarId: 'default', title: 'Original', start: '2024-03-18T09:00:00', end: '2024-03-18T10:00:00', isAllDay: false, recurrence: { frequency: 'weekly', interval: 1 } })
-      store.addEvent({ id: 'floating-master-2024-03-18T09:00:00', uid: 'floating-master', calendarId: 'default', title: 'Moved', start: '2024-03-19T11:00:00', end: '2024-03-19T12:00:00', isAllDay: false, recurrenceId: '2024-03-18T09:00:00', recurrenceMasterId: 'floating-master' })
+      store.addEvent({
+        id: 'floating-master',
+        calendarId: 'default',
+        title: 'Original',
+        start: '2024-03-18T09:00:00',
+        end: '2024-03-18T10:00:00',
+        isAllDay: false,
+        recurrence: { frequency: 'weekly', interval: 1 },
+      })
+      store.addEvent({
+        id: 'floating-master-2024-03-18T09:00:00',
+        uid: 'floating-master',
+        calendarId: 'default',
+        title: 'Moved',
+        start: '2024-03-19T11:00:00',
+        end: '2024-03-19T12:00:00',
+        isAllDay: false,
+        recurrenceId: '2024-03-18T09:00:00',
+        recurrenceMasterId: 'floating-master',
+      })
 
       const events = store.getEventsForDateRange('2024-03-18', '2024-03-19')
       expect(events.map((event) => event.title)).toEqual(['Moved'])
@@ -615,8 +782,27 @@ it('closes modal', () => {
 
     it('suppresses a cancelled detached occurrence without rendering it', () => {
       const store = useCalendarStore.getState()
-      store.addEvent({ id: 'cancelled-master', calendarId: 'default', title: 'Weekly', start: '2024-03-18T09:00:00.000Z', end: '2024-03-18T10:00:00.000Z', isAllDay: false, recurrence: { frequency: 'weekly', interval: 1 } })
-      store.addEvent({ id: 'cancelled-master-2024-03-18T09:00:00.000Z', uid: 'cancelled-master', calendarId: 'default', title: 'Cancelled', start: '2024-03-18T09:00:00.000Z', end: '2024-03-18T10:00:00.000Z', isAllDay: false, recurrenceId: '2024-03-18T09:00:00.000Z', recurrenceMasterId: 'cancelled-master', eventStatus: 'CANCELLED' })
+      store.addEvent({
+        id: 'cancelled-master',
+        calendarId: 'default',
+        title: 'Weekly',
+        start: '2024-03-18T09:00:00.000Z',
+        end: '2024-03-18T10:00:00.000Z',
+        isAllDay: false,
+        recurrence: { frequency: 'weekly', interval: 1 },
+      })
+      store.addEvent({
+        id: 'cancelled-master-2024-03-18T09:00:00.000Z',
+        uid: 'cancelled-master',
+        calendarId: 'default',
+        title: 'Cancelled',
+        start: '2024-03-18T09:00:00.000Z',
+        end: '2024-03-18T10:00:00.000Z',
+        isAllDay: false,
+        recurrenceId: '2024-03-18T09:00:00.000Z',
+        recurrenceMasterId: 'cancelled-master',
+        eventStatus: 'CANCELLED',
+      })
 
       expect(store.getEventsForDateRange('2024-03-18', '2024-03-18')).toHaveLength(0)
     })
@@ -683,9 +869,7 @@ it('closes modal', () => {
     // and selectedCategoryIds. These tests pin the new behavior: persisted state
     // survives a version bump across every key partialize() saves.
     const getMigrate = () =>
-      useCalendarStore.persist.getOptions().migrate as (
-        state: unknown,
-      ) => Record<string, unknown>
+      useCalendarStore.persist.getOptions().migrate as (state: unknown) => Record<string, unknown>
 
     it('preserves all partialize() keys on version bump', () => {
       const persisted = {
@@ -1159,7 +1343,9 @@ it('closes modal', () => {
       // Event should be moved from events to brokenEvents
       const event = useCalendarStore.getState().events.find((e) => e.id === 'update-bad')
       expect(event).toBeUndefined()
-      const brokenEvent = useCalendarStore.getState().brokenEvents.find((be) => be.event.id === 'update-bad')
+      const brokenEvent = useCalendarStore
+        .getState()
+        .brokenEvents.find((be) => be.event.id === 'update-bad')
       expect(brokenEvent).toBeDefined()
       expect(brokenEvent?.event.start).toBe('2024-03-15T12:00:00')
       expect(brokenEvent?.event.end).toBe('2024-03-15T10:00:00')
@@ -1184,7 +1370,9 @@ it('closes modal', () => {
       // Event should be moved to brokenEvents
       const event = useCalendarStore.getState().events.find((e) => e.id === 'update-start-only')
       expect(event).toBeUndefined()
-      const brokenEvent = useCalendarStore.getState().brokenEvents.find((be) => be.event.id === 'update-start-only')
+      const brokenEvent = useCalendarStore
+        .getState()
+        .brokenEvents.find((be) => be.event.id === 'update-start-only')
       expect(brokenEvent).toBeDefined()
     })
 
@@ -1207,7 +1395,9 @@ it('closes modal', () => {
       // Event should be moved to brokenEvents
       const event = useCalendarStore.getState().events.find((e) => e.id === 'update-end-only')
       expect(event).toBeUndefined()
-      const brokenEvent = useCalendarStore.getState().brokenEvents.find((be) => be.event.id === 'update-end-only')
+      const brokenEvent = useCalendarStore
+        .getState()
+        .brokenEvents.find((be) => be.event.id === 'update-end-only')
       expect(brokenEvent).toBeDefined()
     })
 

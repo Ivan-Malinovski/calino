@@ -23,14 +23,14 @@ function mockResponse(status: number, body: unknown) {
 
 const anthropicCfg: ProviderRequestConfig = {
   provider: 'anthropic',
-  baseUrl: 'https://api.anthropic.com',
+  baseUrl: 'https://api.anthropic.com/v1',
   apiKey: 'sk-ant-test',
   model: 'claude-sonnet',
 }
 
 const openaiCfg: ProviderRequestConfig = {
   provider: 'openai',
-  baseUrl: 'https://api.openai.com',
+  baseUrl: 'https://api.openai.com/v1',
   apiKey: 'sk-test',
   model: 'gpt-4o',
 }
@@ -180,7 +180,7 @@ describe('custom provider', () => {
   it('uses the OpenAI-shaped adapter for a plain host', async () => {
     mockedHttpRequest.mockResolvedValue(mockResponse(200, { data: [{ id: 'gpt-4o' }] }))
 
-    await customProvider.listModels({ ...customCfg, baseUrl: 'https://api.xiaomimimo.com' })
+    await customProvider.listModels({ ...customCfg, baseUrl: 'https://api.xiaomimimo.com/v1' })
 
     expect(mockedHttpRequest).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -193,13 +193,33 @@ describe('custom provider', () => {
   it('uses the Anthropic-shaped adapter when the base URL has an /anthropic path segment', async () => {
     mockedHttpRequest.mockResolvedValue(mockResponse(200, { data: [{ id: 'claude-3-5-sonnet' }] }))
 
-    await customProvider.listModels({ ...customCfg, baseUrl: 'https://api.xiaomimimo.com/anthropic' })
+    await customProvider.listModels({ ...customCfg, baseUrl: 'https://api.xiaomimimo.com/anthropic/v1' })
 
     expect(mockedHttpRequest).toHaveBeenCalledWith(
       expect.objectContaining({
         url: 'https://api.xiaomimimo.com/anthropic/v1/models',
         headers: expect.objectContaining({ 'x-api-key': 'sk-test', 'anthropic-version': '2023-06-01' }),
       })
+    )
+  })
+
+  it('uses the base URL verbatim — no version segment is added', async () => {
+    mockedHttpRequest.mockResolvedValue(mockResponse(200, { data: [] }))
+
+    await customProvider.listModels({ ...customCfg, baseUrl: 'https://gw.example.com/openai/v3' })
+
+    expect(mockedHttpRequest).toHaveBeenCalledWith(
+      expect.objectContaining({ url: 'https://gw.example.com/openai/v3/models' })
+    )
+  })
+
+  it('does not double the slash when the base URL has a trailing one', async () => {
+    mockedHttpRequest.mockResolvedValue(mockResponse(200, { data: [] }))
+
+    await customProvider.listModels({ ...customCfg, baseUrl: 'https://api.example.com/v1/' })
+
+    expect(mockedHttpRequest).toHaveBeenCalledWith(
+      expect.objectContaining({ url: 'https://api.example.com/v1/models' })
     )
   })
 

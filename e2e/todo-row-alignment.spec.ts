@@ -2,14 +2,13 @@
  * Visual alignment of the completion checkbox with the task title.
  *
  * Background: the row uses `align-items: start` so multi-line rows (title +
- * description) keep the checkbox anchored to the first line. The title gets
- * `transform: translateY(-4px)` on `.taskTitle` so the visible glyph rides
- * ~2px above the checkbox's geometric center — that lifts the cap-height
- * midline out of the descender space Western fonts leave below the line-box
- * center, and the user reads it as "the title lines up with the circle".
+ * description) keep the checkbox anchored to the first line. `.taskTitle`
+ * carries `position: relative; top: -3px` so the visible glyph rides just
+ * above the checkbox's geometric center — that lifts the cap-height midline
+ * out of the descender space Western fonts leave below the line-box center,
+ * and the user reads it as "the title lines up with the circle".
  *
- * This spec asserts the resulting layout is consistent: the title's
- * visible top sits at or slightly above the checkbox's geometric top.
+ * This spec asserts the resulting layout stays in that tuned band.
  * Allowances:
  *   - Newsreader / serif (used in TodoView) has a slight ascender that
  *     pushes the visible glyph top above the line-box top by ~1–2 px.
@@ -26,7 +25,7 @@ async function seedOneTask(page: Page): Promise<void> {
       if (sessionStorage.getItem('__calino_test_todo_row_align')) return
       sessionStorage.setItem('__calino_test_todo_row_align', '1')
       const raw = localStorage.getItem('calino-storage')
-      const parsed = raw ? JSON.parse(raw) : { state: {}, version: 1 }
+      const parsed = raw ? JSON.parse(raw) : { state: {}, version: 2 }
       const events = parsed.state?.events ?? []
       events.push({
         id: 'align-1',
@@ -72,6 +71,13 @@ test.describe('/tasks — checkbox aligns with title visually', () => {
     const row = page.locator('[data-component="task-row"]').first()
     await expect(row).toBeVisible()
 
+    // Wait for webfonts before measuring. `.taskTitle` resolves to
+    // Newsreader, which is fetched from Google Fonts with `display=swap`,
+    // so the first paint uses the Georgia fallback and the box shifts by
+    // ~1px when the real face arrives. Measuring without this wait races
+    // that swap and the assertion below flips on timing alone.
+    await page.evaluate(() => document.fonts.ready)
+
     // Bounding boxes drive the assertion — they reflect the post-CSS-
     // applied translateY. We allow a 1.5px tolerance because:
     //   1. Subpixel rounding at high DPR varies ±0.5px across browsers.
@@ -89,30 +95,35 @@ test.describe('/tasks — checkbox aligns with title visually', () => {
       }
     })
 
-    // The title gets a -4px translateY on `.taskTitle` so the visible
-    // glyph midline lands ~2px ABOVE the checkbox geometric center
-    // (Western fonts put most of the glyph above the line-box center, so
-    // shifting the box up counteracts that and lets the visible glyph
-    // sit right where the user expects — centered on, or just above, the
-    // circle). The line-box itself doesn't move with the transformed
-    // glyph, so reading `getBoundingClientRect()` on the title gives us
-    // the *post-transform* box — its top is the visible text top.
+    // `.taskTitle` is offset with `position: relative; top: -3px`, which
+    // moves the box itself (unlike a transform), so the title's
+    // `getBoundingClientRect().top` is the visible text top.
     //
-    // We assert the title's visible top is 0–4 px above the checkbox's
-    // geometric top (a generous band that catches both "perfectly
-    // aligned" and "title nudged 1–2 px up", and rejects a regression to
-    // the original misalignment where the title sat below the checkbox).
+    // With that 3px lift the title's box top lands ~1px BELOW the
+    // checkbox's geometric top, and that is the optically-correct result:
+    // Western fonts leave ascender space above the cap height, so a box
+    // top slightly below the circle's top puts the *glyph* right on it.
+    //
+    // The band is centred on that measured value with a couple of px of
+    // slack for cross-platform font metrics and subpixel rounding. It
+    // still rejects the misalignment this spec was written to catch,
+    // where the title sat several px below the circle.
+    //
+    // NB: an earlier revision asserted a 0–5px band and described a
+    // `transform: translateY(-4px)` that this stylesheet has never had —
+    // it went `margin-top: -2px` → `top: -3px` in a9db966, a deliberate
+    // retune that left the test behind. Keep this in step with
+    // TodoView.module.css if the offset moves again.
     const titleVisibleTop = data.titleBoxRect.top
     const checkboxTop = data.checkRect.top
-    // title visible top should sit higher (smaller y) than the checkbox
-    // geometric top. Allow up to 4 px of headroom; flag anything below.
+    const delta = checkboxTop - titleVisibleTop
     expect(
-      checkboxTop - titleVisibleTop,
-      `title visible top (${titleVisibleTop}) vs checkbox top (${checkboxTop}) — title should sit slightly above the circle`
-    ).toBeGreaterThanOrEqual(0)
+      delta,
+      `title visible top (${titleVisibleTop}) vs checkbox top (${checkboxTop}) — title dropped too far below the circle`
+    ).toBeGreaterThanOrEqual(-3)
     expect(
-      checkboxTop - titleVisibleTop,
+      delta,
       `title visible top (${titleVisibleTop}) vs checkbox top (${checkboxTop}) — title rose too far above the circle`
-    ).toBeLessThanOrEqual(5)
+    ).toBeLessThanOrEqual(1)
   })
 })

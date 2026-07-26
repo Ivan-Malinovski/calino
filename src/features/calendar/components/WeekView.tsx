@@ -31,7 +31,7 @@ import {
 import { pad2 } from '@/lib/datetime'
 import { hasDueTime } from '@/lib/events'
 import type { CalendarEvent } from '@/types'
-import { useCalendarStore } from '@/store/calendarStore'
+import { useCalendarStore, getTasksDueOn } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
 import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
 import { safeCalDAVUpdate } from '@/lib/caldavHelpers'
@@ -59,23 +59,37 @@ import styles from './WeekView.module.css'
 
 const BASE_HOUR_HEIGHT = 60
 
+/** `HH:mm` for each of the 24 hour slots — stable, so cells can key off strings. */
+const HOUR_KEYS = HOURS.map((hour) => format(hour, 'HH:mm'))
+
+/** Shared empty array so days with no events keep a stable prop reference. */
+const EMPTY_EVENTS: CalendarEvent[] = []
+
 interface DroppableCellProps {
-  day: Date
-  hour: Date
-  onClick: () => void
-  onMouseDown: (e: React.MouseEvent) => void
+  dateKey: string
+  hourKey: string
+  onClick: (e: React.MouseEvent<HTMLDivElement>) => void
+  onMouseDown: (e: React.MouseEvent<HTMLDivElement>) => void
 }
 
 // The cell is only a drop *target* — the highlight showing where the event will
 // land is drawn by DropPreviewBand, which knows the exact quarter hour.
-const DroppableCell = React.memo(function DroppableCell({ day, hour, onClick, onMouseDown }: DroppableCellProps): JSX.Element {
-  const droppableId = `${format(day, 'yyyy-MM-dd')}-${format(hour, 'HH:mm')}`
-  const { setNodeRef } = useDroppable({ id: droppableId })
+//
+// The day/hour this cell represents travels via data attributes rather than
+// closures, so the parent can hand every one of the 7x24 cells the SAME two
+// handler references. Previously each cell got a freshly built arrow function
+// per render, which meant this React.memo never once prevented a re-render
+// (and re-ran useDroppable's registration for all 168 cells) whenever WeekView
+// rendered — during drags, that was every frame. See #73.
+const DroppableCell = React.memo(function DroppableCell({ dateKey, hourKey, onClick, onMouseDown }: DroppableCellProps): JSX.Element {
+  const { setNodeRef } = useDroppable({ id: `${dateKey}-${hourKey}` })
 
   return (
     <div
       ref={setNodeRef}
       className={styles.cell}
+      data-date={dateKey}
+      data-hour={hourKey}
       onClick={onClick}
       onMouseDown={onMouseDown}
     />
@@ -355,21 +369,30 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
     // catch a regression if either were removed. R4.1/R4.3 review fix.
   }, [rangeStart, rangeEnd, calendars, getEventsForDateRange, events, rangeExpansionVersion])
 
-  const tasksMap = useMemo(() => {
+  // Per-visible-day lookups into the store's shared due-date index, rather
+  // than a full scan of every stored event on every mutation. See #73.
+  //
+  // `timedTasksMap` pre-applies the hasDueTime filter that the day columns
+  // need, so each column can be handed an array reference that only changes
+  // when its contents actually do — filtering at the call site minted a fresh
+  // array per render and defeated WeekDayColumn's memo.
+  const { tasksMap, timedTasksMap } = useMemo(() => {
     const map = new Map<string, CalendarEvent[]>()
+    const timedMap = new Map<string, CalendarEvent[]>()
     const visibleCalendarIds = calendars.filter((c) => c.isVisible).map((c) => c.id)
-    events
-      .filter(
-        (event) =>
-          event.type === 'task' && !!event.dueDate && visibleCalendarIds.includes(event.calendarId)
+    for (const day of weekDays) {
+      const dayKey = format(day, 'yyyy-MM-dd')
+      const dayTasks = getTasksDueOn(events, dayKey).filter((event) =>
+        visibleCalendarIds.includes(event.calendarId)
       )
-      .forEach((task) => {
-        const taskDate = format(parseISO(task.dueDate!), 'yyyy-MM-dd')
-        const existing = map.get(taskDate) || []
-        map.set(taskDate, [...existing, task])
-      })
-    return map
-  }, [events, calendars, rangeExpansionVersion])
+      if (dayTasks.length > 0) {
+        map.set(dayKey, dayTasks)
+        const timed = dayTasks.filter((t) => hasDueTime(t))
+        if (timed.length > 0) timedMap.set(dayKey, timed)
+      }
+    }
+    return { tasksMap: map, timedTasksMap: timedMap }
+  }, [weekDays, events, calendars, rangeExpansionVersion])
 
   const bodyRef = useRef<HTMLDivElement>(null)
   const lastDateRef = useRef(date.toISOString())
@@ -443,17 +466,24 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
     setIsScrolled(e.currentTarget.scrollTop > 0)
   }
 
-  const handleCellClick = (day: Date, hour: Date): void => {
-    const hourStr = format(hour, 'HH:mm')
-    openModal(`${format(day, 'yyyy-MM-dd')}T${hourStr}`)
-  }
+  // Both read their slot off the cell's data attributes, so a single handler
+  // identity serves all 168 cells and DroppableCell's memo actually holds.
+  const handleCellClick = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>): void => {
+      const { date, hour } = e.currentTarget.dataset
+      if (!date || !hour) return
+      openModal(`${date}T${hour}`)
+    },
+    [openModal]
+  )
 
   const handleDragStartFromCell = useCallback(
-    (day: Date, hour: Date, e: React.MouseEvent): void => {
+    (e: React.MouseEvent<HTMLDivElement>): void => {
       if (e.button !== 0) return
+      const { date, hour } = e.currentTarget.dataset
+      if (!date || !hour) return
       e.preventDefault()
-      const hourStr = format(hour, 'HH:mm')
-      const startTime = `${format(day, 'yyyy-MM-dd')}T${hourStr}`
+      const startTime = `${date}T${hour}`
       setIsDraggingToCreate(true)
       setDragStart(startTime)
       setDragEnd(startTime)
@@ -549,18 +579,6 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
       />
     )
   }, [isDraggingToCreate, dragStart, dragEnd, weekDays])
-
-  const dayColumnProps = useMemo(() => {
-    return weekDays.map((day) => {
-      const dateKey = format(day, 'yyyy-MM-dd')
-      return {
-        day,
-        events: eventsMap.get(dateKey) || [],
-        fragments: timedFragmentsMap.get(dateKey) || [],
-        timedTasks: (tasksMap.get(dateKey) || []).filter((t) => hasDueTime(t)),
-      }
-    })
-  }, [weekDays, eventsMap, timedFragmentsMap, tasksMap])
 
   const { markDragStart, markDragEnd } = useDragDuplicateModifier()
 
@@ -710,7 +728,8 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
         </div>
         <div ref={daysContainerRef} className={styles.daysContainer}>
           {selectionOverlay}
-          {weekDays.map((day, idx) => {
+          {weekDays.map((day) => {
+            const dayKey = format(day, 'yyyy-MM-dd')
             return (
               <div
                 key={day.toISOString()}
@@ -725,21 +744,28 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
                 }}
               >
                 <div className={styles.hourCells}>
-                  {HOURS.map((hour) => (
+                  {HOUR_KEYS.map((hourKey) => (
                     <DroppableCell
-                      key={`${day.toISOString()}-${hour.toISOString()}`}
-                      day={day}
-                      hour={hour}
-                      onClick={() => handleCellClick(day, hour)}
-                      onMouseDown={(e) => handleDragStartFromCell(day, hour, e)}
+                      key={`${dayKey}-${hourKey}`}
+                      dateKey={dayKey}
+                      hourKey={hourKey}
+                      onClick={handleCellClick}
+                      onMouseDown={handleDragStartFromCell}
                     />
                   ))}
                 </div>
                 <div className={styles.eventsOverlay}>
-                  {dropPreview?.dateKey === format(day, 'yyyy-MM-dd') && (
+                  {dropPreview?.dateKey === dayKey && (
                     <DropPreviewBand preview={dropPreview} timeFormat={timeFormat} />
                   )}
-                  <WeekDayColumn {...dayColumnProps[idx]} calendars={calendars} hourHeight={hourHeight} openModal={openModal} />
+                  <WeekDayColumn
+                    events={eventsMap.get(dayKey) ?? EMPTY_EVENTS}
+                    fragments={timedFragmentsMap.get(dayKey) ?? EMPTY_EVENTS}
+                    timedTasks={timedTasksMap.get(dayKey) ?? EMPTY_EVENTS}
+                    calendars={calendars}
+                    hourHeight={hourHeight}
+                    openModal={openModal}
+                  />
                   {isToday(day) && <CurrentTimeIndicator hourHeight={hourHeight} timeFormat={timeFormat} showLabel={false} />}
                 </div>
               </div>
@@ -789,7 +815,8 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
           </div>
           <div ref={daysContainerRef} className={styles.daysContainer}>
             {selectionOverlay}
-            {weekDays.map((day, idx) => {
+            {weekDays.map((day) => {
+              const dayKey = format(day, 'yyyy-MM-dd')
               return (
                 <div
                   key={day.toISOString()}
@@ -804,21 +831,28 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
                   }}
                 >
                   <div className={styles.hourCells}>
-                    {HOURS.map((hour) => (
+                    {HOUR_KEYS.map((hourKey) => (
                       <DroppableCell
-                        key={`${day.toISOString()}-${hour.toISOString()}`}
-                        day={day}
-                        hour={hour}
-                        onClick={() => handleCellClick(day, hour)}
-                        onMouseDown={(e) => handleDragStartFromCell(day, hour, e)}
+                        key={`${dayKey}-${hourKey}`}
+                        dateKey={dayKey}
+                        hourKey={hourKey}
+                        onClick={handleCellClick}
+                        onMouseDown={handleDragStartFromCell}
                       />
                     ))}
                   </div>
                   <div className={styles.eventsOverlay}>
-                    {dropPreview?.dateKey === format(day, 'yyyy-MM-dd') && (
+                    {dropPreview?.dateKey === dayKey && (
                       <DropPreviewBand preview={dropPreview} timeFormat={timeFormat} />
                     )}
-                    <WeekDayColumn {...dayColumnProps[idx]} calendars={calendars} hourHeight={hourHeight} openModal={openModal} />
+                    <WeekDayColumn
+                    events={eventsMap.get(dayKey) ?? EMPTY_EVENTS}
+                    fragments={timedFragmentsMap.get(dayKey) ?? EMPTY_EVENTS}
+                    timedTasks={timedTasksMap.get(dayKey) ?? EMPTY_EVENTS}
+                    calendars={calendars}
+                    hourHeight={hourHeight}
+                    openModal={openModal}
+                  />
                     {isToday(day) && <CurrentTimeIndicator hourHeight={hourHeight} timeFormat={timeFormat} showLabel={false} />}
                   </div>
                 </div>

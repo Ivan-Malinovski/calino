@@ -21,6 +21,34 @@
   flex-direction: column;
   justify-content: flex-end;
   z-index: 150;
+
+  /* The pill's height is written from a MotionValue every frame during the
+     open/close tween and during drag. Containment scopes that layout+paint
+     work to this subtree instead of letting it invalidate the whole page.
+     Safe here: the element is already `position: fixed` with
+     `overflow: hidden`, and nothing rendered inside it (NavExpandedGrid,
+     NavCreateDrawer, QuickSettingsPanel) uses `position: fixed` or otherwise
+     needs to escape the pill's bounds. */
+  contain: layout paint style;
+
+  /* Radius is state-driven, not rAF-driven — same duration/easing as the
+     height tween in FloatingNavPill.tsx so the two stay in lockstep. */
+  border-radius: 34px;
+  transition: border-radius 0.24s cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+.pillRadiusExpanded {
+  border-radius: 30px;
+}
+
+.pillRadiusCreate {
+  border-radius: 26px;
+}
+
+/* Applied only while a height tween or drag is in flight — never permanently,
+   because this element is mounted for the entire session. */
+.pillAnimating {
+  will-change: height;
 }
 
 .pillContent {
@@ -44,7 +72,33 @@
   padding: 0;
 }
 
+/* Fixed-width slots for the two chrome buttons. The slot width flips between
+   its natural size and 0 via a class (one layout pass on state change, no
+   per-frame layout); the button inside animates out with transform + opacity.
+   `overflow: visible` is deliberate so the shrink/fade is actually visible —
+   the pill's own `overflow: hidden` still contains it. */
+.chromeSlot {
+  flex-shrink: 0;
+  overflow: visible;
+  display: flex;
+  align-items: center;
+}
+
+.chromeSlotHamburger {
+  width: 44px;
+}
+
+.chromeSlotCreate {
+  width: 38px;
+}
+
+.chromeSlotCollapsed {
+  width: 0;
+  pointer-events: none;
+}
+
 .hamburgerBtn {
+  transform-origin: left center;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -100,11 +154,32 @@
   overflow: hidden;
 }
 
+/* The selector used to be two framer `layoutId` elements, which animate by
+   measuring bounding boxes on the main thread every frame — so it stuttered
+   exactly when the tapped view was mounting and had the main thread busy.
+   The track is `repeat(4, 1fr)` with a uniform gap, so the slide is expressible
+   as one absolutely-positioned element translating by whole column steps: a
+   compositor-only transform that a busy main thread cannot drop frames from.
+   `--switcher-index` is the column, set inline. */
 .switcherActiveBg {
-  position: relative;
+  position: absolute;
   z-index: 0;
+  top: 2px;
+  bottom: 2px;
+  left: 2px;
+  /* Track padding (2px each side) plus the three 2px gaps, split four ways. */
+  width: calc((100% - 4px - 6px) / 4);
   background: var(--accent);
   border-radius: 17px;
+  /* One step is the element's own width plus the gap it has to cross. */
+  transform: translateX(calc(var(--switcher-index, 0) * (100% + 2px)));
+  transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .switcherActiveBg {
+    transition: none;
+  }
 }
 
 .switcherLabel {
@@ -129,6 +204,7 @@
 }
 
 .createBtn {
+  transform-origin: right center;
   display: flex;
   align-items: center;
   justify-content: center;

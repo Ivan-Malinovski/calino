@@ -6,6 +6,7 @@ import { useCardDAV } from '@/features/carddav/hooks/useCardDAV'
 import { v4 as uuidv4 } from 'uuid'
 import { findDuplicateGroups, mergeContacts, type DuplicateGroup } from '../lib/mergeContacts'
 import { showToast } from '@/lib/toast'
+import type { PendingDeleteSnapshot } from '@/lib/deleteContactWithUndo'
 import { getInitials } from '../lib/avatars'
 import styles from '@/features/calendar/components/EventModal.module.css'
 
@@ -32,10 +33,7 @@ export function MergeDuplicatesModal({
 
   const [mergedIds, setMergedIds] = useState<Set<string>>(new Set())
 
-  const groups = useMemo(
-    () => (isOpen ? findDuplicateGroups(contacts) : []),
-    [isOpen, contacts]
-  )
+  const groups = useMemo(() => (isOpen ? findDuplicateGroups(contacts) : []), [isOpen, contacts])
 
   const visibleGroups = useMemo(
     () => groups.filter((g) => !g.contacts.every((c) => mergedIds.has(c.id))),
@@ -58,11 +56,20 @@ export function MergeDuplicatesModal({
       // Delete secondaries
       for (const secondary of secondaries) {
         deleteContact(secondary.id)
+        // Snapshot url/etag/account — the contact is gone from the store by the
+        // time the pending change is replayed.
+        const snapshot: PendingDeleteSnapshot = {
+          url: secondary.url,
+          etag: secondary.etag,
+          addressBookId: secondary.addressBookId,
+          accountId: secondary.accountId,
+        }
         addPendingChange({
           id: uuidv4(),
           type: 'delete',
           contactId: secondary.id,
           addressBookId: secondary.addressBookId,
+          data: JSON.stringify(snapshot),
           timestamp: new Date().toISOString(),
           retryCount: 0,
         })
@@ -135,9 +142,7 @@ export function MergeDuplicatesModal({
                   >
                     {group.confidence.toUpperCase()}
                   </span>
-                  <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                    {group.reason}
-                  </span>
+                  <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{group.reason}</span>
                 </div>
 
                 {/* Contact cards */}
@@ -174,10 +179,24 @@ export function MergeDuplicatesModal({
                         {getInitials(contact.displayName)}
                       </div>
                       <div style={{ minWidth: 0 }}>
-                        <div style={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <div
+                          style={{
+                            fontWeight: 500,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
                           {contact.displayName || '(no name)'}
                         </div>
-                        <div style={{ color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <div
+                          style={{
+                            color: 'var(--text-muted)',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
                           {contact.emails[0]?.value || contact.phones[0]?.value || ''}
                         </div>
                       </div>

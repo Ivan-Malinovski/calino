@@ -61,6 +61,8 @@ export function usePullToRefresh(
     let tracking = false
     let hapticFired = false
     let startY = 0
+    let startX = 0
+    let axisLocked = false
 
     const handleTouchStart = (e: TouchEvent): void => {
       if (isRefreshingRef.current || e.touches.length !== 1 || findScrollTop(e.target, el) > 0) {
@@ -69,12 +71,26 @@ export function usePullToRefresh(
       }
       tracking = true
       hapticFired = false
+      axisLocked = false
       startY = e.touches[0].clientY
+      startX = e.touches[0].clientX
     }
 
     const handleTouchMove = (e: TouchEvent): void => {
       if (!tracking || e.touches.length !== 1) return
+      
+      const dx = e.touches[0].clientX - startX
       const dy = e.touches[0].clientY - startY
+      
+      if (!axisLocked && (Math.abs(dx) > 10 || Math.abs(dy) > 10)) {
+        if (Math.abs(dx) > Math.abs(dy)) {
+          tracking = false
+          setPullDistance(0)
+          return
+        }
+        axisLocked = true
+      }
+      
       if (dy <= 0) {
         setPullDistance(0)
         return

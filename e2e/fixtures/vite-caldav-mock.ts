@@ -117,8 +117,20 @@ export function caldavMockPlugin(): Plugin {
         // a fixed literal (`calino-settings`, by design — see R1.22), any
         // two tests that exercise settings sync write to the exact same
         // stored path. Tests must call this before seeding state.
+        //
+        // `?prefix=` restricts the clear to one collection. Playwright runs
+        // `fullyParallel`, so an unscoped clear will happily delete a
+        // concurrently-running spec's fixtures out from under it — pass the
+        // prefix unless you genuinely mean "wipe everything".
         if (path === '/__test__/reset' && method === 'POST') {
-          eventStore.clear()
+          const prefix = new URL(req.url ?? '', 'http://localhost').searchParams.get('prefix')
+          if (prefix) {
+            for (const storedPath of [...eventStore.keys()]) {
+              if (storedPath.startsWith(prefix)) eventStore.delete(storedPath)
+            }
+          } else {
+            eventStore.clear()
+          }
           res.writeHead(204)
           res.end()
           return

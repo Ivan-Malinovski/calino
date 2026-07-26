@@ -1,5 +1,6 @@
 import { httpRequest } from '../http'
 import type { ModelInfo, ProviderRequestConfig, VisionMessageInput } from '../types'
+import { endpointUrl } from './url'
 
 const ANTHROPIC_VERSION = '2023-06-01'
 
@@ -34,7 +35,7 @@ function extractErrorMessage(body: unknown): string | undefined {
 
 export async function listModels(cfg: ProviderRequestConfig): Promise<ModelInfo[]> {
   const response = await httpRequest({
-    url: `${cfg.baseUrl}/v1/models`,
+    url: endpointUrl(cfg.baseUrl, '/models'),
     method: 'GET',
     headers: authHeaders(cfg),
   })
@@ -51,7 +52,7 @@ export async function listModels(cfg: ProviderRequestConfig): Promise<ModelInfo[
 
 export async function sendVisionMessage(cfg: ProviderRequestConfig, input: VisionMessageInput): Promise<string> {
   const response = await httpRequest({
-    url: `${cfg.baseUrl}/v1/messages`,
+    url: endpointUrl(cfg.baseUrl, '/messages'),
     method: 'POST',
     headers: {
       ...authHeaders(cfg),

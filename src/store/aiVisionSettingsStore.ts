@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { persist, createJSONStorage } from 'zustand/middleware'
+import { persist, createJSONStorage, type StorageValue } from 'zustand/middleware'
 import { safeLocalStorage } from '@/lib/storage'
 import { encryptPassword, decryptPassword, type EncryptedData } from '@/lib/crypto'
 import { syncAiPhotoImportShortcut } from '@/lib/dynamicShortcuts'
@@ -16,11 +16,26 @@ export interface AIVisionSettingsStore extends AIVisionSettings {
   hasApiKey: () => boolean
 }
 
+type JSONStorage<T> = NonNullable<ReturnType<typeof createJSONStorage<T>>>
+
+function versionedStorage<T>(inner: JSONStorage<T> | undefined): JSONStorage<T> | undefined {
+  if (!inner) return inner
+  const stamp = (v: StorageValue<T> | null): StorageValue<T> | null =>
+    v && typeof v.version !== 'number' ? { ...v, version: 0 } : v
+  return {
+    ...inner,
+    getItem: (name) => {
+      const value = inner.getItem(name)
+      return value instanceof Promise ? value.then(stamp) : stamp(value)
+    },
+  }
+}
+
 const DEFAULT_AI_VISION_SETTINGS: AIVisionSettings = {
   provider: 'custom',
-  // Bare host, no trailing /v1 — the OpenAI-compatible adapter appends
-  // /v1/... itself (see providers/openai.ts), same as DEFAULT_BASE_URLS.
-  baseUrl: 'https://api.xiaomimimo.com',
+  // The complete API root. Adapters append only the endpoint path, so the
+  // version segment belongs here (see providers/url.ts).
+  baseUrl: 'https://api.xiaomimimo.com/v1',
   model: 'mimo-v2.5',
   apiKeyEncrypted: null,
   lastVerified: null,
@@ -79,7 +94,22 @@ export const useAIVisionSettingsStore = create<AIVisionSettingsStore>()(
     }),
     {
       name: 'calino-ai-vision-settings',
-      storage: createJSONStorage(() => safeLocalStorage),
+      // zustand only runs `migrate` when the stored blob carries a numeric
+      // `version`, and v0 was persisted before this store had one — so stamp
+      // the absent version as 0 on read, otherwise the migration below never
+      // fires for exactly the installs that need it.
+      storage: versionedStorage(createJSONStorage(() => safeLocalStorage)),
+      version: 1,
+      // v0 stored a bare API host because the adapters appended "/v1"
+      // themselves. They no longer touch the URL, so fold that segment into
+      // the stored value — otherwise every existing install starts requesting
+      // the API root and 404s.
+      migrate: (persisted, version) => {
+        const state = persisted as Partial<AIVisionSettings> | undefined
+        if (version >= 1 || !state) return state as AIVisionSettings
+        const baseUrl = state.baseUrl?.replace(/\/+$/, '')
+        return { ...state, ...(baseUrl ? { baseUrl: `${baseUrl}/v1` } : {}) } as AIVisionSettings
+      },
       onRehydrateStorage: () => (state) => {
         if (state?.hasApiKey()) {
           syncAiPhotoImportShortcut(true)
