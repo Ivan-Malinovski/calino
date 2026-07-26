@@ -28,6 +28,142 @@
     -webkit-backdrop-filter: none;
     background: var(--popover-bg, var(--panel, #fff));
   }
+
+  /* Bottom sheet: a 300px card anchored to the tap point spends most of its
+     life half off-screen on a phone, and its 13px rows and 24px close button
+     are below the comfortable touch floor. Pin it to the bottom edge full
+     width instead, where the thumb already is. */
+  .popup[data-sheet] {
+    left: 0;
+    right: 0;
+    top: auto;
+    bottom: 0;
+    width: 100%;
+    max-height: 85dvh;
+    display: flex;
+    flex-direction: column;
+    border-radius: var(--radius-lg, 16px) var(--radius-lg, 16px) 0 0;
+    border-bottom: none;
+    box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.18);
+    /* Promote once rather than re-rasterising the sheet on every frame of the
+       slide-up and the swipe that follows. */
+    will-change: transform;
+  }
+
+  /* The sheet sits over the calendar it came from; dim it so the sheet reads
+     as the foreground layer rather than a card floating in the grid. */
+  .backdrop[data-sheet] {
+    background: rgba(0, 0, 0, 0.32);
+  }
+
+  /* Floated over the header rather than stacked above it, so it doesn't push
+     the header's background down off the sheet's top edge. */
+  .dragHandle {
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 2;
+    width: 36px;
+    height: 4px;
+    border-radius: var(--radius-full, 9999px);
+    background: var(--color-border-visible, rgba(0, 0, 0, 0.14));
+    /* Without this, Android/Chrome can decide partway through that the drag is
+       really a page scroll and cancel the pointer sequence. */
+    touch-action: none;
+  }
+
+  /* Wins over .header[data-has-background]'s own padding, so the tinted and
+     untinted headers keep the same handle clearance. */
+  .popup[data-sheet] .header {
+    position: relative;
+    padding: 22px 18px 16px;
+    touch-action: none;
+  }
+
+  .popup[data-sheet] .title,
+  .popup[data-sheet] .titleInput {
+    font-size: 17px;
+  }
+
+  /* 44px is the minimum comfortable touch target; 16px is what stops mobile
+     browsers zooming the page when an input takes focus. */
+  .popup[data-sheet] .closeBtn {
+    width: 44px;
+    height: 44px;
+    margin: -10px -10px -10px 0;
+  }
+
+  .popup[data-sheet] .content {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    /* Contain the overscroll bounce instead of letting it chain up to the
+       WebView's pull-to-refresh, which would cancel the swipe gesture. */
+    overscroll-behavior-y: contain;
+    padding: 12px 18px;
+    gap: 4px;
+  }
+
+  .popup[data-sheet] .field {
+    min-height: 44px;
+    gap: 12px;
+    font-size: 15px;
+    padding: 4px;
+  }
+
+  .popup[data-sheet] .icon {
+    width: 16px;
+    height: 16px;
+  }
+
+  .popup[data-sheet] .inlineInput,
+  .popup[data-sheet] .descriptionInput,
+  .popup[data-sheet] .descriptionText,
+  .popup[data-sheet] .addDescription {
+    font-size: 16px;
+  }
+
+  .popup[data-sheet] .inlineInput {
+    min-height: 36px;
+  }
+
+  .popup[data-sheet] .inlineTimeInputs .inlineInput {
+    width: 86px;
+  }
+
+  .popup[data-sheet] .footer {
+    padding: 12px 18px calc(12px + var(--safe-area-bottom, 0px));
+  }
+
+  .popup[data-sheet] .openBtn {
+    min-height: 48px;
+    font-size: 15px;
+  }
+
+  .popup[data-sheet] .deleteBtn,
+  .popup[data-sheet] .saveBtn {
+    width: 48px;
+    height: 48px;
+  }
+
+  /* Hover styling is meaningless on touch and leaves rows looking stuck in a
+     pressed state after a tap — trade it for a real press state. */
+  .popup[data-sheet] .field:hover,
+  .popup[data-sheet] .descriptionText:hover,
+  .popup[data-sheet] .addDescription:hover,
+  .popup[data-sheet] .title:hover,
+  .popup[data-sheet] .closeBtn:hover {
+    background: transparent;
+  }
+
+  .popup[data-sheet] .field:active,
+  .popup[data-sheet] .descriptionText:active,
+  .popup[data-sheet] .addDescription:active,
+  .popup[data-sheet] .title:active {
+    background: var(--color-border-subtle, #e8eaed);
+  }
 }
 
 .header {
