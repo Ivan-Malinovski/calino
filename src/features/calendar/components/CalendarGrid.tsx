@@ -870,6 +870,7 @@ export function CalendarGrid(): JSX.Element {
                       '--day-cell-height': `${rowHeight}px`,
                       '--slide-x': monthChangeMotion.initial ? `${monthChangeMotion.initial.x || 0}px` : '0px',
                       '--slide-y': monthChangeMotion.initial ? `${monthChangeMotion.initial.y || 0}px` : '0px',
+                      '--slide-duration': `${monthChangeMotion.transition.duration}s`,
                       touchAction: 'none',
                     } as React.CSSProperties
                   }
@@ -902,7 +903,7 @@ export function CalendarGrid(): JSX.Element {
                               >
                                 <div
                                   key={weekNum}
-                                  className={styles.dayContentSlide}
+                                  className={monthChangeMotion.initial ? styles.dayContentSlide : undefined}
                                   style={{
                                     width: '100%',
                                     height: '100%',
@@ -911,6 +912,7 @@ export function CalendarGrid(): JSX.Element {
                                     alignItems: 'flex-start',
                                     '--slide-x': monthChangeMotion.initial ? `${monthChangeMotion.initial.x || 0}px` : '0px',
                                     '--slide-y': monthChangeMotion.initial ? `${monthChangeMotion.initial.y || 0}px` : '0px',
+                                    '--slide-duration': `${monthChangeMotion.transition.duration}s`,
                                   } as React.CSSProperties}
                                 >
                                   {weekNum}
@@ -1024,6 +1026,7 @@ export function CalendarGrid(): JSX.Element {
                 '--day-cell-height': `${rowHeight}px`, 
                 '--slide-x': monthChangeMotion.initial ? `${monthChangeMotion.initial.x || 0}px` : '0px',
                 '--slide-y': monthChangeMotion.initial ? `${monthChangeMotion.initial.y || 0}px` : '0px',
+                '--slide-duration': `${monthChangeMotion.transition.duration}s`,
                 touchAction: 'none' 
               } as React.CSSProperties
             }
@@ -1279,7 +1282,7 @@ const DroppableDay = React.memo(function DroppableDay({
     >
       <div
         key={dateKey}
-        className={styles.dayContentSlide}
+        className={monthChangeMotion.initial ? styles.dayContentSlide : undefined}
         style={{
           display: 'flex',
           flexDirection: 'column',

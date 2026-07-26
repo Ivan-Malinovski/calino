@@ -145,9 +145,8 @@
   transition: background var(--dur-fast);
 }
 
-/* ---- Month Change Animations ---- */
 .dayContentSlide {
-  animation: daySlideIn var(--dur-medium, 0.18s) cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation: daySlideIn var(--slide-duration, 0.18s) cubic-bezier(0.22, 1, 0.36, 1) forwards;
   will-change: transform, opacity;
 }
 
