@@ -29,6 +29,47 @@ interface DayGroup {
   hasEvents: boolean
 }
 
+function MonthScrollRestorer({
+  currentDate,
+  dayGroups,
+  virtualizer,
+  scrolledMonthRef,
+}: {
+  currentDate: string
+  dayGroups: DayGroup[]
+  virtualizer: any
+  scrolledMonthRef: React.MutableRefObject<string | null>
+}) {
+  useEffect(() => {
+    const today = startOfDay(new Date())
+    const viewDate = parseISO(currentDate)
+    const monthStart = startOfMonth(viewDate)
+    const monthEnd = endOfMonth(viewDate)
+    const viewMonthKey = format(monthStart, 'yyyy-MM')
+
+    if (today >= monthStart && today <= monthEnd) {
+      if (scrolledMonthRef.current !== viewMonthKey) {
+        const todayKey = format(today, 'yyyy-MM-dd')
+        const index = dayGroups.findIndex(
+          (g) => g.type === 'day' && format(g.days[0], 'yyyy-MM-dd') === todayKey
+        )
+        if (index !== -1) {
+          // Delaying by one frame ensures the DOM has updated its scrollHeight
+          // for the new month, avoiding scroll clamping by the browser.
+          requestAnimationFrame(() => {
+            virtualizer.scrollToIndex(index, { align: 'start', behavior: 'auto' })
+            scrolledMonthRef.current = viewMonthKey
+          })
+        }
+      }
+    } else {
+      scrolledMonthRef.current = null
+    }
+  }, [currentDate, dayGroups, virtualizer, scrolledMonthRef])
+
+  return null
+}
+
 export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): JSX.Element {
   const containerClass = `${styles.container} ${embedded ? styles.embedded : ''}`
   const currentDate = useCalendarStore((state) => state.currentDate)
@@ -228,30 +269,7 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
     overscan: 4,
   })
 
-  useEffect(() => {
-    if (containerRef.current) {
-      const today = startOfDay(new Date())
-      const viewDate = parseISO(currentDate)
-      const monthStart = startOfMonth(viewDate)
-      const monthEnd = endOfMonth(viewDate)
-      const viewMonthKey = format(monthStart, 'yyyy-MM')
 
-      if (today >= monthStart && today <= monthEnd) {
-        if (scrolledMonthRef.current !== viewMonthKey) {
-          const todayKey = format(today, 'yyyy-MM-dd')
-          const index = dayGroups.findIndex(
-            (g) => g.type === 'day' && format(g.days[0], 'yyyy-MM-dd') === todayKey
-          )
-          if (index !== -1) {
-            virtualizer.scrollToIndex(index, { align: 'start', behavior: 'auto' })
-            scrolledMonthRef.current = viewMonthKey
-          }
-        }
-      } else {
-        scrolledMonthRef.current = null
-      }
-    }
-  }, [currentDate, dayGroups, virtualizer])
 
   useEffect(() => {
     const onJumpToToday = () => {
@@ -295,6 +313,12 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
           would be noise. */}
       <AnimatePresence mode="wait">
         <motion.div key={monthKey} className={styles.monthPane} {...monthChangeMotion}>
+          <MonthScrollRestorer
+            currentDate={currentDate}
+            dayGroups={dayGroups}
+            virtualizer={virtualizer}
+            scrolledMonthRef={scrolledMonthRef}
+          />
           {allGroupsEmpty ? (
             <EmptyState
               title="Nothing scheduled this month"
