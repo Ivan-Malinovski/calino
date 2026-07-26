@@ -47,8 +47,8 @@ function MonthScrollRestorer({
     const monthEnd = endOfMonth(viewDate)
     const viewMonthKey = format(monthStart, 'yyyy-MM')
 
-    if (today >= monthStart && today <= monthEnd) {
-      if (scrolledMonthRef.current !== viewMonthKey) {
+    if (scrolledMonthRef.current !== viewMonthKey) {
+      if (today >= monthStart && today <= monthEnd) {
         const todayKey = format(today, 'yyyy-MM-dd')
         const index = dayGroups.findIndex(
           (g) => g.type === 'day' && format(g.days[0], 'yyyy-MM-dd') === todayKey
@@ -61,9 +61,12 @@ function MonthScrollRestorer({
             scrolledMonthRef.current = viewMonthKey
           })
         }
+      } else {
+        requestAnimationFrame(() => {
+          virtualizer.scrollToIndex(0, { align: 'start', behavior: 'auto' })
+          scrolledMonthRef.current = viewMonthKey
+        })
       }
-    } else {
-      scrolledMonthRef.current = null
     }
   }, [currentDate, dayGroups, virtualizer, scrolledMonthRef])
 
