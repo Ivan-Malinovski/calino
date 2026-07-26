@@ -36,9 +36,18 @@ export function useDateChangeMotion(marker: string): DateChangeMotion {
   const [isFastDesktop, setIsFastDesktop] = useState(false)
   const lastChangeTime = useRef(Date.now())
 
+  // A mount is not a date change. The enclosing AnimatePresence doesn't set
+  // `initial={false}`, so without this the slide fires when the view first
+  // mounts — i.e. on every switch INTO month or agenda, where it ran on top of
+  // ViewLoader's cross-fade and the view's own (expensive) first render, three
+  // things contending for the same frames. Nothing has moved yet at that
+  // point, so there is no direction of travel to lean into.
+  const [hasChanged, setHasChanged] = useState(false)
+
   if (prevMarker !== marker) {
     setDirection(marker > prevMarker ? 'next' : 'prev')
     setPrevMarker(marker)
+    setHasChanged(true)
     const now = Date.now()
     setIsFastDesktop(!isMobile && now - lastChangeTime.current < 750)
     lastChangeTime.current = now
@@ -47,7 +56,7 @@ export function useDateChangeMotion(marker: string): DateChangeMotion {
   return useMemo(() => {
     const forward = direction === 'next'
     const exit = { opacity: 0, transition: { duration: 0 } }
-    if (prefersReducedMotion || (isFastDesktop && !isMobile)) {
+    if (!hasChanged || prefersReducedMotion || (isFastDesktop && !isMobile)) {
       return {
         initial: false,
         animate: { opacity: 1, x: 0, y: 0 },
@@ -74,6 +83,6 @@ export function useDateChangeMotion(marker: string): DateChangeMotion {
       exit,
       transition: { duration: 0.3, ease: [0.22, 1, 0.36, 1] as const },
     }
-  }, [direction, isMobile, prefersReducedMotion, isFastDesktop])
+  }, [direction, isMobile, prefersReducedMotion, isFastDesktop, hasChanged])
 }
 
