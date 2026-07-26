@@ -319,3 +319,8 @@
     margin-right: 0;
   }
 }
+
+/* ---- Faded Past Days ---- */
+.isPast {
+  opacity: 0.5;
+}

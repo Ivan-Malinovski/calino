@@ -96,6 +96,7 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
     event: CalendarEvent
   } | null>(null)
 
+  const fadePastDaysInAgenda = useSettingsStore((state) => state.fadePastDaysInAgenda)
   const useCategoryColors = useSettingsStore((state) => state.useCategoryColors)
 
   const getEventBarColor = (event: CalendarEvent): string =>
@@ -104,6 +105,13 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
   const date = parseISO(currentDate)
   const monthKey = currentDate.slice(0, 7)
   const monthChangeMotion = useDateChangeMotion(monthKey)
+
+  const isCurrentMonthView = useMemo(() => {
+    const today = startOfDay(new Date())
+    const monthStart = startOfMonth(date)
+    const monthEnd = endOfMonth(date)
+    return today >= monthStart && today <= monthEnd
+  }, [date])
 
   const handleEventClick = (e: React.MouseEvent, event: CalendarEvent): void => {
     if (e.button === 2) return
@@ -473,11 +481,17 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
                   )
                 })()
 
+                const isPast =
+                  isCurrentMonthView &&
+                  fadePastDaysInAgenda &&
+                  group.days[group.days.length - 1] < startOfDay(new Date())
+
                 return (
                   <div
                     key={group.type === 'skip' ? `skip-${firstKey}` : firstKey}
                     ref={virtualizer.measureElement}
                     data-index={virtualRow.index}
+                    className={isPast ? styles.isPast : ''}
                     style={{
                       position: 'absolute',
                       top: 0,

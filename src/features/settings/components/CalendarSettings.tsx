@@ -254,6 +254,33 @@ export function CalendarSettings(): JSX.Element {
         <div
           className={styles.row}
           data-component="setting-row"
+          data-setting="fade-past-days-in-agenda"
+          data-value={String(useSettingsStore((s) => s.fadePastDaysInAgenda))}
+        >
+          <div className={styles.rowInfo}>
+            <div className={styles.rowLabel}>Fade Past Days in Agenda</div>
+            <div className={styles.rowDesc}>Make past days in the current month look slightly faded out</div>
+          </div>
+          <div className={styles.rowControl}>
+            <label
+              className={styles.toggle}
+              data-component="toggle"
+              data-setting="fade-past-days-in-agenda"
+            >
+              <input
+                type="checkbox"
+                checked={useSettingsStore((s) => s.fadePastDaysInAgenda)}
+                aria-label="Fade past days in agenda"
+                onChange={() => updateSettings({ fadePastDaysInAgenda: !useSettingsStore.getState().fadePastDaysInAgenda })}
+              />
+              <span className={styles.pill} />
+              <span className={styles.knob} />
+            </label>
+          </div>
+        </div>
+        <div
+          className={styles.row}
+          data-component="setting-row"
           data-setting="hide-completed-tasks"
           data-value={String(hideCompletedTasksInMonthView)}
         >
