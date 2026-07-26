@@ -139,7 +139,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   agendaBelowMonthEnabled: true,
   monthAgendaGridRatio: 0.4,
   monthAgendaSplitRatio: 0.65,
-  fadePastDaysInAgenda: false,
+  fadePastDaysInAgenda: 'never',
 }
 
 export const useSettingsStore = create<SettingsStore>()(

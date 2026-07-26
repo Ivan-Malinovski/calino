@@ -255,27 +255,36 @@ export function CalendarSettings(): JSX.Element {
           className={styles.row}
           data-component="setting-row"
           data-setting="fade-past-days-in-agenda"
-          data-value={String(useSettingsStore((s) => s.fadePastDaysInAgenda))}
+          data-value={useSettingsStore((s) => s.fadePastDaysInAgenda)}
         >
           <div className={styles.rowInfo}>
             <div className={styles.rowLabel}>Fade Past Days in Agenda</div>
-            <div className={styles.rowDesc}>Make past days in the current month look slightly faded out</div>
+            <div className={styles.rowDesc}>Make past days look slightly faded out</div>
           </div>
           <div className={styles.rowControl}>
-            <label
-              className={styles.toggle}
-              data-component="toggle"
-              data-setting="fade-past-days-in-agenda"
-            >
-              <input
-                type="checkbox"
-                checked={useSettingsStore((s) => s.fadePastDaysInAgenda)}
-                aria-label="Fade past days in agenda"
-                onChange={() => updateSettings({ fadePastDaysInAgenda: !useSettingsStore.getState().fadePastDaysInAgenda })}
-              />
-              <span className={styles.pill} />
-              <span className={styles.knob} />
-            </label>
+            <div className={styles.seg} role="radiogroup" aria-label="Fade past days">
+              {[
+                { value: 'never', label: 'Never' },
+                { value: 'current', label: 'Current month' },
+                { value: 'all', label: 'All' },
+              ].map((opt) => (
+                <button
+                  key={opt.value}
+                  className={`${styles.segTab} ${useSettingsStore((s) => s.fadePastDaysInAgenda) === opt.value ? styles.segTabActive : ''}`}
+                  role="radio"
+                  aria-checked={useSettingsStore((s) => s.fadePastDaysInAgenda) === opt.value}
+                  data-active={useSettingsStore((s) => s.fadePastDaysInAgenda) === opt.value ? 'true' : undefined}
+                  onClick={() =>
+                    updateSettings({
+                      fadePastDaysInAgenda: opt.value as 'never' | 'current' | 'all',
+                    })
+                  }
+                  type="button"
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
         <div

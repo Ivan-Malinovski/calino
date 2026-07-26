@@ -481,10 +481,13 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
                   )
                 })()
 
-                const isPast =
-                  isCurrentMonthView &&
-                  fadePastDaysInAgenda &&
-                  group.days[group.days.length - 1] < startOfDay(new Date())
+                const isPast = (() => {
+                  if (fadePastDaysInAgenda === 'never') return false
+                  const isDayPast = group.days[group.days.length - 1] < startOfDay(new Date())
+                  if (!isDayPast) return false
+                  if (fadePastDaysInAgenda === 'all') return true
+                  return isCurrentMonthView
+                })()
 
                 return (
                   <div

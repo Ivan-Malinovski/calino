@@ -325,7 +325,7 @@ export interface UserSettings {
   agendaBelowMonthEnabled: boolean
   monthAgendaGridRatio: number
   monthAgendaSplitRatio: number
-  fadePastDaysInAgenda: boolean
+  fadePastDaysInAgenda: 'never' | 'current' | 'all'
 }
 
 export type SettingsState = UserSettings
