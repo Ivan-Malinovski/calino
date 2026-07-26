@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState, useRef, lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom'
 import { Toaster } from 'sonner'
 import { Capacitor } from '@capacitor/core'
+import type { PluginListenerHandle } from '@capacitor/core'
 import { App as CapacitorApp } from '@capacitor/app'
 import { useIsMobile } from './hooks/useIsMobile'
 import { useTwoFingerSwipe } from './hooks/useTwoFingerSwipe'
@@ -690,6 +691,40 @@ function App(): JSX.Element {
   useEffect(() => {
     loadConfigFile()
   }, [loadConfigFile])
+
+  // Fix for Android native time picker backdrop remaining after app switch
+  useEffect(() => {
+    const blurNativePickers = (): void => {
+      const active = document.activeElement as HTMLElement
+      if (active?.tagName === 'INPUT') {
+        const type = (active as HTMLInputElement).type
+        if (type === 'time' || type === 'date' || type === 'datetime-local') {
+          active.blur()
+        }
+      }
+    }
+
+    const handleVisibilityChange = (): void => {
+      if (document.visibilityState === 'hidden') blurNativePickers()
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    let capListener: PluginListenerHandle | null = null
+    if (Capacitor.isNativePlatform()) {
+      CapacitorApp.addListener('appStateChange', ({ isActive }) => {
+        if (!isActive) blurNativePickers()
+      })
+        .then((listener) => {
+          capListener = listener
+        })
+        .catch(() => {})
+    }
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      if (capListener) capListener.remove()
+    }
+  }, [])
 
   return (
     <BrowserRouter>
