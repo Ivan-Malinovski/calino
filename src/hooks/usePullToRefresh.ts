@@ -33,6 +33,14 @@ function findScrollTop(target: EventTarget | null, boundary: HTMLElement): numbe
   return 0
 }
 
+/** Elements that own a competing vertical drag gesture (e.g. the month/agenda
+ * split resize handles) opt out by setting `data-no-pull-refresh`. Without
+ * this, dragging such a handle downwards also pulls the whole view and fires
+ * a sync on release. */
+function isOptedOut(target: EventTarget | null): boolean {
+  return target instanceof Element && target.closest('[data-no-pull-refresh]') !== null
+}
+
 /**
  * Pull-to-refresh via raw touch events, in the same raw-listener style as
  * useTwoFingerSwipe/useHorizontalSwipe rather than a gesture library. Unlike
@@ -63,9 +71,20 @@ export function usePullToRefresh(
     let startY = 0
     let startX = 0
     let axisLocked = false
+    let currentPull = 0
+
+    const setPull = (value: number): void => {
+      currentPull = value
+      setPullDistance(value)
+    }
 
     const handleTouchStart = (e: TouchEvent): void => {
-      if (isRefreshingRef.current || e.touches.length !== 1 || findScrollTop(e.target, el) > 0) {
+      if (
+        isRefreshingRef.current ||
+        e.touches.length !== 1 ||
+        isOptedOut(e.target) ||
+        findScrollTop(e.target, el) > 0
+      ) {
         tracking = false
         return
       }
@@ -85,18 +104,18 @@ export function usePullToRefresh(
       if (!axisLocked && (Math.abs(dx) > 10 || Math.abs(dy) > 10)) {
         if (Math.abs(dx) > Math.abs(dy)) {
           tracking = false
-          setPullDistance(0)
+          setPull(0)
           return
         }
         axisLocked = true
       }
       
       if (dy <= 0) {
-        setPullDistance(0)
+        setPull(0)
         return
       }
       const damped = Math.min(dy * RESISTANCE, MAX_PULL_DISTANCE)
-      setPullDistance(damped)
+      setPull(damped)
       if (damped >= threshold && !hapticFired) {
         hapticFired = true
         hapticIfEnabled('light')
@@ -107,22 +126,21 @@ export function usePullToRefresh(
       if (!tracking) return
       tracking = false
 
-      setPullDistance((current) => {
-        if (current >= threshold) {
-          isRefreshingRef.current = true
-          setIsRefreshing(true)
-          void onRefreshRef
-            .current()
-            .catch(() => {
-              toast.error('Sync failed')
-            })
-            .finally(() => {
-              isRefreshingRef.current = false
-              setIsRefreshing(false)
-            })
-        }
-        return 0
-      })
+      const pulled = currentPull
+      setPull(0)
+      if (pulled >= threshold && !isRefreshingRef.current) {
+        isRefreshingRef.current = true
+        setIsRefreshing(true)
+        void onRefreshRef
+          .current()
+          .catch(() => {
+            toast.error('Sync failed')
+          })
+          .finally(() => {
+            isRefreshingRef.current = false
+            setIsRefreshing(false)
+          })
+      }
     }
 
     el.addEventListener('touchstart', handleTouchStart, { passive: true })

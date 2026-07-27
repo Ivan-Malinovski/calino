@@ -37,6 +37,22 @@
   }
 }
 
+/* Month without the agenda split below it: nothing else in the view reserves
+   room for the floating nav pill (`.main` opts month out of its clearance in
+   App.css, because the split's agenda pane normally absorbs it as trailing
+   scroll padding). Keep the same gap the other views get from `.main`. */
+@media (max-width: 768px) { /* sync with config.ts MOBILE_BREAKPOINT */
+  .gridPanelStandalone {
+    margin-bottom: calc(84px + var(--safe-area-bottom));
+  }
+
+  /* Matches `.main`'s behaviour: the pill hides while a text input is
+     focused, so the reserved strip would otherwise float above the keyboard. */
+  :global(body.text-input-focused) .gridPanelStandalone {
+    margin-bottom: 0;
+  }
+}
+
 /* ---- Header Row ---- */
 .header {
   display: grid;

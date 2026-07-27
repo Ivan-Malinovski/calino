@@ -978,6 +978,7 @@ export function CalendarGrid(): JSX.Element {
           </div>
           <div
             className={styles.splitHandleH}
+            data-no-pull-refresh
             onMouseDown={handleGridResizeStart}
             onTouchStart={handleGridResizeTouchStart}
           />
@@ -990,6 +991,7 @@ export function CalendarGrid(): JSX.Element {
                   </div>
                   <div
                     className={styles.splitHandle}
+                    data-no-pull-refresh
                     onMouseDown={handleResizeStart}
                     onTouchStart={handleResizeTouchStart}
                   />
@@ -1016,7 +1018,11 @@ export function CalendarGrid(): JSX.Element {
   return (
     <>
       <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-        <div className={styles.gridPanel} ref={containerRef} {...bind}>
+        <div
+          className={`${styles.gridPanel} ${styles.gridPanelStandalone}`}
+          ref={containerRef}
+          {...bind}
+        >
           <div
             className={styles.grid}
             data-component="calendar-grid"
