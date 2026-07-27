@@ -22,6 +22,8 @@ export interface PendingDeleteSnapshot {
   etag?: string
   addressBookId: string
   accountId: string
+  /** Kept so a failure can be reported by name after the contact left the store */
+  displayName?: string
 }
 
 export function deleteContactWithUndo({
@@ -49,6 +51,7 @@ export function deleteContactWithUndo({
     etag: contact.etag,
     addressBookId: contact.addressBookId,
     accountId: contact.accountId,
+    displayName: contact.displayName,
   }
   addPendingChange({
     id: changeId,

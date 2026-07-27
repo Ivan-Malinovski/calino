@@ -13,6 +13,9 @@ export function ContactFormFields({ value, onChange }: ContactFormFieldsProps): 
   // Local partial state derived from props
   const [local, setLocal] = useState<Partial<Contact>>(value)
   const valueRef = useRef(value)
+  // Mirrors `local` so `update` can compute the next state without a state updater
+  const localRef = useRef(local)
+  localRef.current = local
 
   // Reset local state when value prop changes (e.g. when modal opens with a different contact)
   // Use ref to avoid re-triggering on every parent render
@@ -25,11 +28,13 @@ export function ContactFormFields({ value, onChange }: ContactFormFieldsProps): 
 
   const update = useCallback(
     (partial: Partial<Contact>) => {
-      setLocal((prev) => {
-        const next = { ...prev, ...partial }
-        onChange(next)
-        return next
-      })
+      // Compute the next value outside of setLocal: React runs a state updater during the
+      // render phase, so calling the parent's onChange from inside one triggers
+      // "Cannot update a component while rendering a different component".
+      const next = { ...localRef.current, ...partial }
+      localRef.current = next
+      setLocal(next)
+      onChange(next)
     },
     [onChange]
   )

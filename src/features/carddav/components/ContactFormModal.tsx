@@ -1,9 +1,10 @@
 import type { JSX } from 'react'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { v4 as uuidv4 } from 'uuid'
 import type { Contact } from '../types'
 import { Modal } from '@/components/common/Modal'
 import { ContactFormFields } from './ContactFormFields'
+import { deriveDisplayName } from '../adapter/vCardAdapter'
 import eventModalStyles from '@/features/calendar/components/EventModal.module.css'
 
 interface ContactFormModalProps {
@@ -12,7 +13,7 @@ interface ContactFormModalProps {
   contact: Contact | null
   addressBookId: string
   accountId: string
-  onSave: (contact: Contact) => void
+  onSave: (contact: Contact) => void | Promise<void>
   onDelete?: (contact: Contact) => void
 }
 
@@ -58,10 +59,16 @@ export function ContactFormModal({
 }: ContactFormModalProps): JSX.Element {
   const [formState, setFormState] = useState<Partial<Contact>>(EMPTY_CONTACT)
   const [title, setTitle] = useState('')
+  const [isSaving, setIsSaving] = useState(false)
+  const isSavingRef = useRef(false)
 
   // Initialize form state when modal opens or contact changes
   useEffect(() => {
     if (isOpen) {
+      // Clear the double-submit latch from the previous save
+      isSavingRef.current = false
+      setIsSaving(false)
+
       if (contact) {
         setFormState({ ...contact })
         setTitle(contact.displayName || '')
@@ -99,16 +106,39 @@ export function ContactFormModal({
     }
   }
 
-  const handleSave = (): void => {
+  const handleSave = async (): Promise<void> => {
+    // Guard against a double click creating two contacts: this mints a fresh uuid on every
+    // call, so two clicks used to produce two distinct contacts rather than one.
+    if (isSavingRef.current) return
+    isSavingRef.current = true
+    setIsSaving(true)
+
+    let saved = false
+    try {
+      saved = await saveContact()
+    } finally {
+      // Only release the guard when nothing was saved (a validation early-return). On the
+      // happy path the modal animates out over ~200ms and stays clickable the whole time,
+      // so releasing here would let the second half of a double click through. The guard
+      // is reset when the modal reopens.
+      if (!saved) {
+        isSavingRef.current = false
+        setIsSaving(false)
+      }
+    }
+  }
+
+  /** Returns true when the contact was handed to `onSave`. */
+  const saveContact = async (): Promise<boolean> => {
     // Merge title into formState as displayName
-    const displayName = title.trim() || formState.displayName || ''
+    const enteredName = title.trim() || formState.displayName || ''
 
     // Validate: at least one of displayName, givenName, or familyName must be non-empty
-    if (!displayName && !formState.givenName?.trim() && !formState.familyName?.trim()) {
+    if (!enteredName && !formState.givenName?.trim() && !formState.familyName?.trim()) {
       // Could show a validation error here; for now, force givenName as fallback
       setFormState((prev) => ({ ...prev, displayName: 'New Contact' }))
       setTitle('New Contact')
-      return
+      return false
     }
 
     const now = new Date().toISOString()
@@ -127,7 +157,9 @@ export function ContactFormModal({
       suffixes: formState.suffixes ?? '',
       nickname: formState.nickname ?? '',
 
-      displayName: displayName,
+      // Never store an empty display name — FN is mandatory in vCard and strict servers
+      // reject a card without it (Radicale answers 400).
+      displayName: deriveDisplayName({ ...formState, displayName: enteredName }),
 
       organization: formState.organization ?? '',
       department: formState.department ?? '',
@@ -165,8 +197,9 @@ export function ContactFormModal({
       syncStatus: 'pending',
     }
 
-    onSave(completeContact)
+    await onSave(completeContact)
     onClose()
+    return true
   }
 
   const handleDelete = (): void => {
@@ -223,7 +256,14 @@ export function ContactFormModal({
           <button type="button" className={eventModalStyles.modalCancel} onClick={handleCancel}>
             Cancel
           </button>
-          <button type="button" className={eventModalStyles.modalSave} onClick={handleSave}>
+          <button
+            type="button"
+            className={eventModalStyles.modalSave}
+            onClick={handleSave}
+            disabled={isSaving}
+            aria-busy={isSaving}
+          >
+            {isSaving && <span className={eventModalStyles.modalSaveSpinner} aria-hidden="true" />}
             Save
           </button>
         </div>

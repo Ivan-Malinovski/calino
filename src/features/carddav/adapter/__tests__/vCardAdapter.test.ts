@@ -577,7 +577,11 @@ END:VCARD`
 
       const contact = parseVCard(vcard, ADDRESS_BOOK_ID, ACCOUNT_ID)
 
-      expect(contact!.url).toBe('https://example.com')
+      // The website belongs in `urls`; `url` is the CardDAV resource href, which only the
+      // client can supply. Conflating the two meant contacts without a website had no href
+      // at all, so their deletes were silently skipped.
+      expect(contact!.urls[0]!.value).toBe('https://example.com')
+      expect(contact!.url).toBe('')
     })
 
     it('handles empty categories string', () => {
@@ -918,14 +922,49 @@ describe('contactToVCard', () => {
     expect(vcard).not.toContain('TYPE=other')
   })
 
-  it('omits displayName from FN when empty', () => {
+  // FN is mandatory in vCard 3.0 and 4.0; strict servers (Radicale) answer 400 without it.
+  it('falls back to the structured name for FN when displayName is empty', () => {
+    const vcard = contactToVCard(makeContact({ displayName: '' }))
+
+    expect(vcard).toContain('FN:John Doe')
+  })
+
+  it('falls back to organization for FN when there is no name', () => {
     const vcard = contactToVCard(
       makeContact({
         displayName: '',
+        givenName: '',
+        familyName: '',
+        organization: 'Acme Corp',
       })
     )
 
-    expect(vcard).not.toContain('FN:')
+    expect(vcard).toContain('FN:Acme Corp')
+  })
+
+  it('falls back to the first email, then a placeholder, for FN', () => {
+    const withEmail = contactToVCard(
+      makeContact({
+        displayName: '',
+        givenName: '',
+        familyName: '',
+        organization: '',
+        emails: [{ value: 'nobody@example.com', type: 'home', isPrimary: false }],
+      })
+    )
+    expect(withEmail).toContain('FN:nobody@example.com')
+
+    const withNothing = contactToVCard(
+      makeContact({
+        displayName: '',
+        givenName: '',
+        familyName: '',
+        organization: '',
+        emails: [],
+        phones: [],
+      })
+    )
+    expect(withNothing).toContain('FN:Unnamed')
   })
 })
 

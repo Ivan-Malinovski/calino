@@ -100,6 +100,7 @@ describe('deleteContactWithUndo', () => {
       etag: contact.etag,
       addressBookId: contact.addressBookId,
       accountId: contact.accountId,
+      displayName: contact.displayName,
     })
   })
 

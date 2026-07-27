@@ -25,6 +25,27 @@ function parseDeleteSnapshot(change: PendingContactChange): PendingDeleteSnapsho
   }
 }
 
+/**
+ * How many times a pending change may fail before it is retired. Mirrors the CalDAV side
+ * (`MAX_RETRIES` in useCalDAV).
+ */
+const MAX_REPLAY_RETRIES = 3
+
+/**
+ * In-flight syncs, keyed by account. Module-level so that separate `useCardDAV` consumers
+ * (and a sync fired by a delete while a periodic sync is already running) coalesce instead
+ * of racing: each run snapshots the contact list, so the slower one used to finish last and
+ * write its stale snapshot back, resurrecting just-deleted contacts.
+ */
+const inFlightSyncs = new Map<string, Promise<void>>()
+
+/**
+ * At most one follow-up sync per account. A sync requested while another is running cannot
+ * just piggyback on it: that run already passed its replay step, so a change queued after
+ * it started would never be pushed. Instead we run exactly one more pass afterwards.
+ */
+const queuedSyncs = new Map<string, Promise<void>>()
+
 /** Module-level client cache: accountId → connected client */
 const clientCache = new Map<string, CardDAVClient>()
 
@@ -63,7 +84,6 @@ export function useCardDAV(): UseCardDAVReturn {
   const storeContacts = useContactStore((state) => state.contacts)
   const pendingChanges = useContactStore((state) => state.pendingChanges)
   const setAddressBooks = useContactStore((state) => state.setAddressBooks)
-  const setContacts = useContactStore((state) => state.setContacts)
   const removePendingChange = useContactStore((state) => state.removePendingChange)
 
   // Keep syncState.pendingChanges in sync with store
@@ -125,7 +145,9 @@ export function useCardDAV(): UseCardDAVReturn {
             const addressBookId = snapshot?.addressBookId ?? change.addressBookId
             const ab = getLiveState().addressBooks.find((a) => a.id === addressBookId)
 
-            if (url && etag && ab) {
+            if (url && ab) {
+              // etag may legitimately be missing (server never exposed it through CORS);
+              // deleteContact then issues an unconditional DELETE.
               await client.deleteContact(ab, url, etag)
             }
             // If there is nothing to delete on the server (never synced, or the book
@@ -143,7 +165,7 @@ export function useCardDAV(): UseCardDAVReturn {
               })
             }
           } else if (change.type === 'update' && contact) {
-            if (contact.url && contact.etag) {
+            if (contact.url) {
               const ab = getLiveState().addressBooks.find((a) => a.id === contact.addressBookId)
               if (ab) {
                 const result = await client.updateContact(ab, contact, contact.url, contact.etag)
@@ -158,22 +180,26 @@ export function useCardDAV(): UseCardDAVReturn {
           replayedIds.push(change.id)
         } catch (err) {
           console.warn(`[CardDAV] Failed to replay change ${change.id}:`, err)
+          useContactStore.getState().updateContact(change.contactId, { syncStatus: 'failed' })
+          useContactStore.getState().incrementRetryCount(change.id)
+
           const updated = useContactStore.getState().pendingChanges.find((c) => c.id === change.id)
-          if (updated && updated.retryCount >= 2) {
-            useContactStore.getState().updateContact(change.contactId, { syncStatus: 'failed' })
+          if (updated && updated.retryCount >= MAX_REPLAY_RETRIES) {
+            // Retire the change instead of replaying it on every sync forever. A change the
+            // server keeps rejecting (a malformed card, a revoked permission) is a poison
+            // pill: while it sits in the queue its contact is also exempt from merge and
+            // prune, so it freezes that contact against the server indefinitely.
+            useContactStore.getState().removePendingChange(change.id)
+
             const contact = useContactStore
               .getState()
               .contacts.find((c) => c.id === change.contactId)
-            const label = contact?.displayName ?? 'Contact'
-            if (change.type === 'create') {
-              showToast(`Failed to create "${label}" on server. Will retry.`)
-            } else if (change.type === 'update') {
-              showToast(`Failed to update "${label}" on server. Will retry.`)
-            } else if (change.type === 'delete') {
-              showToast(`Failed to delete "${label}" on server. Will retry.`)
-            }
-          } else {
-            useContactStore.getState().updateContact(change.contactId, { syncStatus: 'failed' })
+            const snapshot = parseDeleteSnapshot(change)
+            const label = contact?.displayName ?? snapshot?.displayName ?? 'Contact'
+            const reason = err instanceof Error ? err.message : String(err)
+            const verb =
+              change.type === 'create' ? 'create' : change.type === 'update' ? 'update' : 'delete'
+            showToast(`Couldn't ${verb} "${label}" on the server: ${reason}`)
           }
         }
       }
@@ -184,12 +210,17 @@ export function useCardDAV(): UseCardDAVReturn {
   )
 
   // Sync contacts from a CalDAV account
-  const syncAccount = useCallback(
+  const runSync = useCallback(
     async (accountId: string): Promise<void> => {
       const account = storage.getAccountById(accountId)
       if (!account) return
 
       setSyncState((prev) => ({ ...prev, status: 'syncing', error: null }))
+
+      // Declared out here so the `finally` can always drain them: a change that was
+      // applied to the server must never be replayed again, even if a later step of the
+      // sync throws.
+      let replayedChangeIds: string[] = []
 
       try {
         const client = await getClientForAccount(accountId)
@@ -197,7 +228,7 @@ export function useCardDAV(): UseCardDAVReturn {
         // Replay any pending offline changes first
         // Returns IDs of successfully replayed changes — we remove them AFTER the sync loop
         // so the hasPending check still protects those contacts from being overwritten
-        const replayedChangeIds = await replayPendingChanges(client, accountId)
+        replayedChangeIds = await replayPendingChanges(client, accountId)
 
         const serverAddressBooks = await client.fetchAddressBooks()
 
@@ -230,7 +261,6 @@ export function useCardDAV(): UseCardDAVReturn {
         setAddressBooks(mergedAddressBooks)
 
         // Incremental sync: use sync-collection (RFC 6578) if token available, otherwise ctag
-        const existingContacts = useContactStore.getState().contacts
         const allContacts: Contact[] = []
         let skippedBooks = 0
         const updatedSyncTokens: { url: string; syncToken: string | null }[] = []
@@ -321,58 +351,10 @@ export function useCardDAV(): UseCardDAVReturn {
 
         setAddressBooks(mergedAddressBooks)
 
-        // Merge with existing contacts, with conflict detection
-        const mergedContacts = [...existingContacts]
-        const localUrlsByAccount = new Map<string, Set<string>>()
-        for (const c of existingContacts) {
-          if (c.accountId === accountId && c.url) {
-            if (!localUrlsByAccount.has(c.addressBookId)) {
-              localUrlsByAccount.set(c.addressBookId, new Set())
-            }
-            localUrlsByAccount.get(c.addressBookId)!.add(c.url)
-          }
-        }
-
-        for (const newContact of allContacts) {
-          const existingIndex = mergedContacts.findIndex((c) => c.id === newContact.id)
-          if (existingIndex >= 0) {
-            const existing = mergedContacts[existingIndex]
-
-            // Skip if this contact has pending local changes
-            const hasPending = useContactStore
-              .getState()
-              .pendingChanges.some((p) => p.contactId === existing.id)
-            if (hasPending) {
-              continue
-            }
-
-            // Conflict detection: if etag differs and local lastModified is newer, warn
-            if (existing.etag && newContact.etag && existing.etag !== newContact.etag) {
-              const localModified = new Date(existing.lastModified).getTime()
-              const serverModified = new Date(newContact.lastModified).getTime()
-
-              if (localModified > serverModified) {
-                console.warn(
-                  `[CardDAV] Conflict on contact ${existing.id}: local modified after server. Server wins.`
-                )
-                showToast(`Conflict on "${existing.displayName}" — server version kept`)
-              }
-            }
-
-            // Server wins: overwrite local with server version
-            mergedContacts[existingIndex] = {
-              ...newContact,
-              syncStatus: 'synced',
-            }
-          } else {
-            // New contact from server
-            mergedContacts.push({
-              ...newContact,
-              syncStatus: 'synced',
-            })
-          }
-        }
-
+        // Merge with existing contacts, with conflict detection.
+        // Read the store *now*, after all network I/O: anything the user did while the
+        // fetches were in flight (most importantly a delete) must not be undone by a
+        // snapshot taken before them.
         // Remove contacts that no longer exist on the server
         // For books with sync tokens, we can remove contacts that were reported as removed
         // For books without sync tokens, use ctag-based pruning
@@ -384,22 +366,76 @@ export function useCardDAV(): UseCardDAVReturn {
           .map((ab) => ab.id)
 
         const serverContactIds = new Set(allContacts.map((c) => c.id))
+        const conflicts: string[] = []
 
-        const prunedContacts = mergedContacts.filter((c) => {
-          // Don't prune contacts from books we didn't sync
-          if (fullySyncedBookIds.includes(c.addressBookId)) return true
-          // Don't prune contacts with pending changes
-          if (useContactStore.getState().pendingChanges.some((p) => p.contactId === c.id))
-            return true
-          // Keep if server had it or if it's from a different account
-          return serverContactIds.has(c.id) || c.accountId !== accountId
+        // The merge runs *inside* the store updater so that it reads and writes the contact
+        // list in one atomic step. Computing it from a separate read leaves a window in
+        // which the user can delete a contact and have this write put it straight back —
+        // which is exactly what deleting two contacts in quick succession used to hit.
+        useContactStore.setState((state) => {
+          const pendingDeleteIds = new Set(
+            state.pendingChanges.filter((p) => p.type === 'delete').map((p) => p.contactId)
+          )
+          const hasPending = (contactId: string): boolean =>
+            state.pendingChanges.some((p) => p.contactId === contactId)
+
+          const mergedContacts = [...state.contacts]
+
+          for (const newContact of allContacts) {
+            const existingIndex = mergedContacts.findIndex((c) => c.id === newContact.id)
+            if (existingIndex >= 0) {
+              const existing = mergedContacts[existingIndex]
+
+              // Skip if this contact has pending local changes
+              if (hasPending(existing.id)) {
+                continue
+              }
+
+              // Conflict detection: if etag differs and local lastModified is newer, warn
+              if (existing.etag && newContact.etag && existing.etag !== newContact.etag) {
+                const localModified = new Date(existing.lastModified).getTime()
+                const serverModified = new Date(newContact.lastModified).getTime()
+
+                if (localModified > serverModified) {
+                  console.warn(
+                    `[CardDAV] Conflict on contact ${existing.id}: local modified after server. Server wins.`
+                  )
+                  conflicts.push(existing.displayName)
+                }
+              }
+
+              // Server wins: overwrite local with server version
+              mergedContacts[existingIndex] = {
+                ...newContact,
+                syncStatus: 'synced',
+              }
+            } else {
+              // New contact from server — unless we have a delete queued for it, in which
+              // case it is only still on the server because the DELETE hasn't landed yet.
+              if (pendingDeleteIds.has(newContact.id)) {
+                continue
+              }
+              mergedContacts.push({
+                ...newContact,
+                syncStatus: 'synced',
+              })
+            }
+          }
+
+          return {
+            contacts: mergedContacts.filter((c) => {
+              // Don't prune contacts from books we didn't sync
+              if (fullySyncedBookIds.includes(c.addressBookId)) return true
+              // Don't prune contacts with pending changes
+              if (hasPending(c.id)) return true
+              // Keep if server had it or if it's from a different account
+              return serverContactIds.has(c.id) || c.accountId !== accountId
+            }),
+          }
         })
 
-        setContacts(prunedContacts)
-
-        // Now safe to remove successfully replayed pending changes
-        for (const changeId of replayedChangeIds) {
-          removePendingChange(changeId)
+        for (const displayName of conflicts) {
+          showToast(`Conflict on "${displayName}" — server version kept`)
         }
 
         setSyncState((prev) => ({
@@ -424,9 +460,48 @@ export function useCardDAV(): UseCardDAVReturn {
         if (syncState.lastSyncAt) {
           showToast(`Contacts sync failed: ${msg}`)
         }
+      } finally {
+        // Now safe to remove successfully replayed pending changes
+        for (const changeId of replayedChangeIds) {
+          removePendingChange(changeId)
+        }
       }
     },
-    [setAddressBooks, setContacts, removePendingChange, replayPendingChanges, syncState.lastSyncAt]
+    [setAddressBooks, removePendingChange, replayPendingChanges, syncState.lastSyncAt]
+  )
+
+  /**
+   * Public entry point. Serializes syncs of the same account so two overlapping passes
+   * cannot write conflicting contact lists, while still guaranteeing that every caller's
+   * changes get a replay pass: a request made mid-sync is answered by one trailing run.
+   */
+  const syncAccount = useCallback(
+    (accountId: string): Promise<void> => {
+      const start = (): Promise<void> => {
+        const run = runSync(accountId).finally(() => {
+          inFlightSyncs.delete(accountId)
+        })
+        inFlightSyncs.set(accountId, run)
+        return run
+      }
+
+      const inFlight = inFlightSyncs.get(accountId)
+      if (!inFlight) return start()
+
+      // Coalesce every mid-flight request onto a single trailing run
+      const queued = queuedSyncs.get(accountId)
+      if (queued) return queued
+
+      const follow = inFlight
+        .catch(() => {})
+        .then(() => {
+          queuedSyncs.delete(accountId)
+          return start()
+        })
+      queuedSyncs.set(accountId, follow)
+      return follow
+    },
+    [runSync]
   )
 
   // Auto-sync contacts from all accounts on mount

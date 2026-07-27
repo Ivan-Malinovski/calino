@@ -712,7 +712,12 @@ export function parseVCard(
   const nParts = n.split(';')
 
   const uid = extractProperty(lines, 'UID') || crypto.randomUUID()
-  const url = extractProperty(lines, 'URL') || ''
+  // NB: `Contact.url` is the CardDAV *resource href*, not the contact's website — the
+  // website lives in `contact.urls`. Only the client knows the href, so it fills this in
+  // after parsing. Deriving it from the vCard's URL property left every contact without a
+  // website with an empty href (so deletes were silently skipped and the contact came back
+  // on the next fetch), and pointed the rest at the person's homepage.
+  const url = ''
 
   // Parse structured name
   const familyName = unescapeVCardValue(nParts[0] || '')
@@ -845,6 +850,36 @@ export function parseVCard(
 const CALINO_PRODID = '-//Calino//Calino 0.15//EN'
 
 /**
+ * Derive a non-empty display name for a contact.
+ *
+ * FN is mandatory in both vCard 3.0 (RFC 2426 §3.1.1) and 4.0 (RFC 6350 §6.2.1), and
+ * strict servers (Radicale) reject a card without it with 400 Bad Request. Contacts can
+ * legitimately reach us with an empty `displayName` — e.g. the user filled in only a
+ * first name — so fall back through the other identifying fields.
+ */
+export function deriveDisplayName(contact: Partial<Contact>): string {
+  const displayName = contact.displayName?.trim()
+  if (displayName) return displayName
+
+  const fullName = [contact.givenName, contact.familyName]
+    .map((p) => p?.trim())
+    .filter(Boolean)
+    .join(' ')
+  if (fullName) return fullName
+
+  const organization = contact.organization?.trim()
+  if (organization) return organization
+
+  const email = contact.emails?.find((e) => e.value.trim())?.value.trim()
+  if (email) return email
+
+  const phone = contact.phones?.find((p) => p.value.trim())?.value.trim()
+  if (phone) return phone
+
+  return 'Unnamed'
+}
+
+/**
  * Serialize a Contact object into a vCard string.
  *
  * @param contact     - The contact to serialize
@@ -882,10 +917,8 @@ export function contactToVCard(contact: Contact, targetVersion: '3.0' | '4.0' = 
     .join(';')
   lines.push(`N:${n}`)
 
-  // Display name
-  if (contact.displayName) {
-    lines.push(`FN:${escapeVCardValue(contact.displayName)}`)
-  }
+  // Display name — FN is mandatory, never omit it (see deriveDisplayName)
+  lines.push(`FN:${escapeVCardValue(deriveDisplayName(contact))}`)
 
   // Organization
   if (contact.organization || contact.department) {

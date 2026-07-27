@@ -33,6 +33,7 @@ export interface ContactStore {
   // Pending changes
   addPendingChange: (change: PendingContactChange) => void
   removePendingChange: (changeId: string) => void
+  incrementRetryCount: (changeId: string) => void
   clearPendingChanges: () => void
 
   // Selectors
@@ -114,9 +115,47 @@ export const useContactStore = create<ContactStore>()(
         set({ addressBooks })
       },
 
+      /**
+       * Queue a change, collapsing it against anything already queued for the same contact.
+       *
+       * Without this the queue grows one entry per keystroke-save and replays redundant
+       * writes; worse, a create followed by a delete would push a card to the server just to
+       * delete it again (or fail, since the delete has no url to work with).
+       */
       addPendingChange: (change: PendingContactChange): void => {
+        set((state) => {
+          const others = state.pendingChanges.filter((c) => c.contactId !== change.contactId)
+          const forContact = state.pendingChanges.filter((c) => c.contactId === change.contactId)
+
+          if (change.type === 'delete') {
+            const queuedCreate = forContact.find((c) => c.type === 'create')
+            if (queuedCreate) {
+              // Never reached the server — creating and deleting cancel out entirely.
+              return { pendingChanges: others }
+            }
+            return { pendingChanges: [...others, change] }
+          }
+
+          if (change.type === 'update') {
+            const queuedCreate = forContact.find((c) => c.type === 'create')
+            if (queuedCreate) {
+              // The create replays from the live contact, so it already carries this edit.
+              return { pendingChanges: [...others, queuedCreate] }
+            }
+            // Supersede any earlier update; replay reads the live contact anyway.
+            const queuedDeletes = forContact.filter((c) => c.type === 'delete')
+            return { pendingChanges: [...others, ...queuedDeletes, change] }
+          }
+
+          return { pendingChanges: [...others, change] }
+        })
+      },
+
+      incrementRetryCount: (changeId: string): void => {
         set((state) => ({
-          pendingChanges: [...state.pendingChanges, change],
+          pendingChanges: state.pendingChanges.map((c) =>
+            c.id === changeId ? { ...c, retryCount: c.retryCount + 1 } : c
+          ),
         }))
       },
 

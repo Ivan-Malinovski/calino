@@ -42,6 +42,22 @@ interface ParsedDAVResponse {
 }
 
 /**
+ * Strip the transport syntax off an entity tag so we store the bare value.
+ *
+ * Servers hand out etags quoted (`"abc"`, or `W/"abc"` for weak validators). Storing them
+ * as-is and then emitting `If-Match: "${etag}"` produces a doubled-up `""abc""`, which no
+ * server matches — every conditional delete and update comes back 412. Normalize on the way
+ * in and add exactly one pair of quotes on the way out.
+ */
+function normalizeEtag(raw: string | null | undefined): string {
+  if (!raw) return ''
+  return raw
+    .trim()
+    .replace(/^W\//i, '')
+    .replace(/^"|"$/g, '')
+}
+
+/**
  * Parse a DAV:multistatus XML response into individual D:response blocks.
  * Each D:response contains a D:href and either a D:propstat with properties
  * or a D:status.
@@ -93,7 +109,7 @@ function parseMultistatus(xml: string): ParsedDAVResponse[] {
           responses.push({
             href,
             status: 200,
-            etag: etagMatch ? etagMatch[1].replace(/^"|"$/g, '') : undefined,
+            etag: etagMatch ? normalizeEtag(etagMatch[1]) : undefined,
             addressData: addressDataMatch ? addressDataMatch[1].trim() : undefined,
           })
         }
@@ -290,7 +306,9 @@ export class CardDAVClient {
       if (vcard.data) {
         const contact = parseVCard(vcard.data as string, addressBook.id, addressBook.accountId)
         if (contact) {
-          contact.etag = vcard.etag || undefined
+          contact.etag = normalizeEtag(vcard.etag) || undefined
+          // The resource href — without it we cannot update or delete this contact later
+          contact.url = this.absoluteHref(vcard.url)
           contacts.push(contact)
         }
       }
@@ -327,7 +345,7 @@ export class CardDAVClient {
     const contact = parseVCard(vcard.data as string, addressBook.id, addressBook.accountId)
     if (contact) {
       contact.url = contactUrl
-      contact.etag = vcard.etag || undefined
+      contact.etag = normalizeEtag(vcard.etag) || undefined
     }
     return contact
   }
@@ -378,8 +396,10 @@ export class CardDAVClient {
           body: vCardString,
         })
 
-        if (response.status === 412) {
-          // Conflict - contact already exists
+        if (response.status === 412 || response.status === 409) {
+          // 412: something already lives at this href.
+          // 409 <no-uid-conflict>: a card with this UID exists under a *different* href
+          // (Radicale enforces UID uniqueness per collection).
           throw new CardDAVConflictError('', undefined)
         }
 
@@ -397,12 +417,14 @@ export class CardDAVClient {
         }
 
         if (!response.ok && response.status !== 201 && response.status !== 204) {
-          throw new Error(`Failed to create contact: ${response.status} ${response.statusText}`)
+          throw new Error(
+            `Failed to create contact: ${await CardDAVClient.describeFailure(response)}`
+          )
         }
 
         // Extract URL from Location header or use target URL
         const responseUrl = response.headers.get('Location') || targetUrl
-        const etag = response.headers.get('etag') || ''
+        const etag = await this.resolveWrittenEtag(response, responseUrl)
 
         return { url: responseUrl, etag }
       } catch (err) {
@@ -432,7 +454,7 @@ export class CardDAVClient {
     addressBook: AddressBook,
     contact: Contact,
     contactUrl: string,
-    etag: string
+    etag: string | undefined
   ): Promise<{ url: string; etag: string }> {
     if (!navigator.onLine) {
       throw new Error('No network connection. Please check your internet connection.')
@@ -461,7 +483,11 @@ export class CardDAVClient {
       const headers: Record<string, string> = {
         'Content-Type': 'text/vcard; charset=utf-8',
         Authorization: `Basic ${auth}`,
-        'If-Match': `"${etag}"`,
+      }
+      // Only make the write conditional when we actually know the current etag. An
+      // unconditional overwrite beats silently dropping the user's edit.
+      if (etag) {
+        headers['If-Match'] = `"${normalizeEtag(etag)}"`
       }
 
       try {
@@ -491,12 +517,14 @@ export class CardDAVClient {
         }
 
         if (!response.ok && response.status !== 200 && response.status !== 204) {
-          throw new Error(`Failed to update contact: ${response.status} ${response.statusText}`)
+          throw new Error(
+            `Failed to update contact: ${await CardDAVClient.describeFailure(response)}`
+          )
         }
 
         // Extract URL from Location header or use contact URL
         const responseUrl = response.headers.get('Location') || contactUrl
-        const newEtag = response.headers.get('etag') || etag
+        const newEtag = (await this.resolveWrittenEtag(response, responseUrl)) || etag || ''
 
         return { url: responseUrl, etag: newEtag }
       } catch (err) {
@@ -522,7 +550,11 @@ export class CardDAVClient {
   /**
    * Delete a contact.
    */
-  async deleteContact(addressBook: AddressBook, contactUrl: string, etag: string): Promise<void> {
+  async deleteContact(
+    addressBook: AddressBook,
+    contactUrl: string,
+    etag: string | undefined
+  ): Promise<void> {
     if (!navigator.onLine) {
       throw new Error('No network connection. Please check your internet connection.')
     }
@@ -531,7 +563,12 @@ export class CardDAVClient {
 
     const headers: Record<string, string> = {
       Authorization: `Basic ${auth}`,
-      'If-Match': `"${etag}"`,
+    }
+    // Guard against a lost update only when we know the etag. When we don't — e.g. the
+    // server never exposed one through CORS — delete unconditionally rather than skipping
+    // the request, which used to leave the contact alive on the server forever.
+    if (etag) {
+      headers['If-Match'] = `"${normalizeEtag(etag)}"`
     }
 
     const response = await this.proxyFetch(contactUrl, {
@@ -562,7 +599,7 @@ export class CardDAVClient {
 
     // 404 means already deleted, which is fine
     if (!response.ok && response.status !== 404) {
-      throw new Error(`Failed to delete contact: ${response.status} ${response.statusText}`)
+      throw new Error(`Failed to delete contact: ${await CardDAVClient.describeFailure(response)}`)
     }
   }
 
@@ -616,6 +653,85 @@ export class CardDAVClient {
     } catch {
       return { supportedVersions: undefined, maxResourceSize: undefined, canWrite: undefined }
     }
+  }
+
+  /**
+   * Resolve a DAV href against the server URL. Multistatus responses carry path-only hrefs
+   * (`/user/contacts/x.vcf`); issuing a request against one of those would hit the app's own
+   * origin instead of the server.
+   */
+  private absoluteHref(href: string | undefined): string {
+    if (!href) return ''
+    try {
+      return new URL(href, this.serverUrl).toString()
+    } catch {
+      return href
+    }
+  }
+
+  /**
+   * Read the ETag of a single resource via PROPFIND.
+   *
+   * Needed because `ETag` is not a CORS-safelisted response header: unless the server sends
+   * `Access-Control-Expose-Headers: ETag`, `response.headers.get('etag')` is null in the
+   * browser even though the server did send it. Without a fallback we would store an empty
+   * etag and later conditional requests would be built on nothing.
+   */
+  private async fetchEtagForHref(url: string): Promise<string> {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/xml; charset=utf-8',
+      Authorization: this.authHeader,
+      Depth: '0',
+    }
+
+    const propfindBody = `<?xml version="1.0" encoding="UTF-8" ?>
+<D:propfind xmlns:D="DAV:">
+  <D:prop>
+    <D:getetag/>
+  </D:prop>
+</D:propfind>`
+
+    try {
+      const response = await this.proxyFetch(url, {
+        method: 'PROPFIND',
+        headers,
+        body: propfindBody,
+      })
+
+      if (!response.ok && response.status !== 207) return ''
+
+      const text = await response.text()
+      const match = text.match(/<(?:[a-z0-9]+:)?getetag[^>]*>([\s\S]*?)<\/(?:[a-z0-9]+:)?getetag>/i)
+      return match ? normalizeEtag(match[1]) : ''
+    } catch {
+      return ''
+    }
+  }
+
+  /**
+   * Resolve the etag for a resource we just wrote: prefer the response header, fall back to
+   * a PROPFIND when CORS hides it.
+   */
+  private async resolveWrittenEtag(response: Response, url: string): Promise<string> {
+    const headerEtag = normalizeEtag(response.headers.get('etag'))
+    if (headerEtag) return headerEtag
+    return this.fetchEtagForHref(url)
+  }
+
+  /**
+   * Read a failed response's body for diagnostics. Servers explain 4xx here (Radicale
+   * answers "Bad Request" for a vCard it cannot parse) and without it a failure is just a
+   * bare status code.
+   */
+  private static async describeFailure(response: Response): Promise<string> {
+    let body = ''
+    try {
+      body = (await response.text()).trim().slice(0, 200)
+    } catch {
+      // body already consumed or unreadable — status alone will have to do
+    }
+    const status = `${response.status} ${response.statusText}`.trim()
+    return body ? `${status} — ${body}` : status
   }
 
   private parseSupportedAddressData(text: string): ('3.0' | '4.0')[] | undefined {
@@ -926,7 +1042,8 @@ export class CardDAVClient {
       if (response.status === 200 && response.addressData) {
         const contact = parseVCard(response.addressData, addressBookId, accountId)
         if (contact) {
-          contact.etag = response.etag
+          contact.etag = normalizeEtag(response.etag) || undefined
+          contact.url = this.absoluteHref(response.href)
           contacts.push(contact)
         }
       }
