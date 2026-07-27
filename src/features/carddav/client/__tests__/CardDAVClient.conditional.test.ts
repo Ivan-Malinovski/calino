@@ -19,7 +19,12 @@ const BOOK: AddressBook = {
 const CONTACT_URL = 'https://dav.example/book/alice.vcf'
 
 function makeClient(): CardDAVClient {
-  return new CardDAVClient('https://dav.example/', { username: 'u', password: 'p' })
+  return new CardDAVClient('https://dav.example/', {
+    id: 'acct',
+    serverUrl: 'https://dav.example/',
+    username: 'u',
+    password: 'p',
+  })
 }
 
 function headersOf(callIndex = 0): Record<string, string> {

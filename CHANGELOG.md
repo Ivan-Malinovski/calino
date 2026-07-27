@@ -4,6 +4,25 @@ All notable changes to Calino will be documented in this file.
 
 ## [Unreleased]
 
+## [0.25.3] - 2026-07-27
+
+### Fixed
+
+- **Deleting a contact really does delete it this time.** The fix in 0.25.2 addressed the wrong layer: the DELETE was still being aimed at nothing, so the contact came back on the next sync — most visibly after adding a contact and then deleting a different, older one. Three separate faults had to line up, and all three are now fixed. The address Calino stored for a contact on the server was being read out of the contact's *website* field, so anyone without a website had no address at all (the delete was quietly dropped and marked done) and anyone with one had their homepage stored instead. Server revision tags were double-quoted when sent back, which every conditional delete and edit rejected with a 412. And creating a contact by filling in a name but leaving the title blank produced a card with no display name, which strict servers reject outright with a 400. Re-fixes [#75](https://github.com/Ivan-Malinovski/calino/issues/75).
+- **A write the server refuses is now reported instead of retried forever.** Rejected changes were replayed on every sync indefinitely, and the affected contact was frozen — it would neither update from the server nor disappear. Calino now gives up after three attempts and tells you what the server said, by name: *Couldn't delete "Bob" on the server: 400 Bad Request*.
+- **Two syncs of the same account no longer race.** The slower one used to write back a contact list it had read before the other finished, restoring contacts you had just deleted. Syncs now run one at a time, and a change made while a sync is in flight still gets its own pass rather than being skipped.
+- **Double-clicking Save when creating a contact no longer creates two of them.**
+- **Contacts sync with servers that don't expose revision tags to the browser** (a CORS default that affects many reverse-proxy setups). Previously the delete or edit was silently skipped.
+- **The agenda scrolls where you'd expect.** It jumps to today when you press Today or navigate into the current month, and to the top of the list for any other month — before, it could land mid-month or be clamped to the wrong position mid-transition. Long months also scroll without stuttering.
+- **Month view leaves room for the navigation pill again** when the agenda split is off, and gets out of the way while you're typing so the pill doesn't float over the keyboard.
+- **Dragging the split-view divider downwards no longer triggers a pull-to-refresh**, and a pull can't start a second refresh while one is already running.
+- **Calino opens in the default view you chose in Settings**, instead of whichever view you happened to be in last time.
+- **Haptics on Android are immediate and much gentler.** Feedback was queued through a bridge that delayed it by 5–10 seconds, which made it feel broken rather than responsive. **Haptics are now off by default** — turn them on in Settings → General. Fixes [#76](https://github.com/Ivan-Malinovski/calino/issues/76).
+
+### Added
+
+- **Past days in the agenda can be faded out** — Settings → Calendar, with three choices: Never, Current month, or All.
+
 ## [0.25.2] - 2026-07-26
 
 ### Fixed

@@ -1,7 +1,7 @@
 import type { JSX } from 'react'
 import { useMemo, useState, useRef, useEffect } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { useVirtualizer } from '@tanstack/react-virtual'
+import { useVirtualizer, type Virtualizer } from '@tanstack/react-virtual'
 import { createPortal } from 'react-dom'
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, parseISO, startOfDay } from 'date-fns'
 import { useCalendarStore } from '@/store/calendarStore'
@@ -37,7 +37,7 @@ function MonthScrollRestorer({
 }: {
   currentDate: string
   dayGroups: DayGroup[]
-  virtualizer: any
+  virtualizer: Virtualizer<HTMLDivElement, Element>
   scrolledMonthRef: React.MutableRefObject<string | null>
 }) {
   useEffect(() => {

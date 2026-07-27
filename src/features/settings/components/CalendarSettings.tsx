@@ -13,6 +13,7 @@ export function CalendarSettings(): JSX.Element {
   const compressPastWeeks = useSettingsStore((s) => s.compressPastWeeks)
   const monthViewEventLimit = useSettingsStore((s) => s.monthViewEventLimit)
   const hideCompletedTasksInMonthView = useSettingsStore((s) => s.hideCompletedTasksInMonthView)
+  const fadePastDaysInAgenda = useSettingsStore((s) => s.fadePastDaysInAgenda)
   const defaultDuration = useSettingsStore((s) => s.defaultDuration)
   const defaultReminderMinutes = useSettingsStore((s) => s.defaultReminderMinutes)
   const updateSettings = useSettingsStore((s) => s.updateSettings)
@@ -255,7 +256,7 @@ export function CalendarSettings(): JSX.Element {
           className={styles.row}
           data-component="setting-row"
           data-setting="fade-past-days-in-agenda"
-          data-value={useSettingsStore((s) => s.fadePastDaysInAgenda)}
+          data-value={fadePastDaysInAgenda}
         >
           <div className={styles.rowInfo}>
             <div className={styles.rowLabel}>Fade Past Days in Agenda</div>
@@ -270,10 +271,10 @@ export function CalendarSettings(): JSX.Element {
               ].map((opt) => (
                 <button
                   key={opt.value}
-                  className={`${styles.segTab} ${useSettingsStore((s) => s.fadePastDaysInAgenda) === opt.value ? styles.segTabActive : ''}`}
+                  className={`${styles.segTab} ${fadePastDaysInAgenda === opt.value ? styles.segTabActive : ''}`}
                   role="radio"
-                  aria-checked={useSettingsStore((s) => s.fadePastDaysInAgenda) === opt.value}
-                  data-active={useSettingsStore((s) => s.fadePastDaysInAgenda) === opt.value ? 'true' : undefined}
+                  aria-checked={fadePastDaysInAgenda === opt.value}
+                  data-active={fadePastDaysInAgenda === opt.value ? 'true' : undefined}
                   onClick={() =>
                     updateSettings({
                       fadePastDaysInAgenda: opt.value as 'never' | 'current' | 'all',
