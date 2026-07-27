@@ -61,6 +61,17 @@ graphify-out/
 feedback.txt
 scripts/rrule_test.mjs
 
+# impeccable design tooling — local runtime state only (session logs, caches,
+# locks, server handles) plus the files it injects into the source tree while
+# live editing. Previously in .git/info/exclude, which is per-clone and so left
+# these as untracked noise for everyone else.
+.impeccable/
+.impeccable-live.json
+.impeccable-live/
+**/.impeccable-live/
+src/lib/impeccable/
+**/impeccable-live.client.ts
+
 # Media files
 *.mp4
 *.mp3
