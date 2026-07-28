@@ -490,6 +490,11 @@
   height: 3px;
   cursor: row-resize;
   flex-shrink: 0;
+  /* The drag owns the gesture. React attaches `onTouchStart` passively at the
+     root, so the handler's `preventDefault()` was a no-op that only logged a
+     warning — the page kept scrolling under the finger, which read as the
+     divider lagging. Declaring it here is what actually stops the browser. */
+  touch-action: none;
   background: transparent;
   transition: background 0.2s;
 }

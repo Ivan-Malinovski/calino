@@ -605,6 +605,29 @@ export function CalendarGrid(): JSX.Element {
     [events, calendars, rangeExpansionVersion]
   )
 
+  // Drive the drag straight to the DOM instead of through state. `gridRatio`
+  // only feeds two inline styles on `gridTop`, but setting it re-renders the
+  // whole grid — 42 cells and their event cards — on every pointer sample. On
+  // compact mobile that was enough to make the divider stutter, while the same
+  // height change on a month switch stayed smooth because it happens once.
+  // Committing to React state is deferred to drag end, where one re-render is
+  // free; `applyGridRatio` must keep producing the same values as the JSX.
+  const applyGridRatio = (ratio: number): void => {
+    const top = gridTopRef.current
+    if (!top) return
+    top.style.flex = `0 0 ${ratio * 100}%`
+    top.style.maxHeight = `${(800 * ratio) / 0.6}px`
+  }
+
+  // A re-render from anywhere else mid-drag (a store update, the height
+  // measurement) rewrites both inline styles from the stale `gridRatio` and
+  // snaps the divider back. Re-assert the live value after every commit while
+  // a drag is in flight.
+  const isDraggingGridRef = useRef(false)
+  useLayoutEffect(() => {
+    if (isDraggingGridRef.current) applyGridRatio(gridRatioRef.current)
+  })
+
   const handleGridResizeStart = (e: React.MouseEvent): void => {
     e.preventDefault()
     // Clean up any previous resize
@@ -613,16 +636,19 @@ export function CalendarGrid(): JSX.Element {
     const startRatio = gridRatio
     const containerHeight = (e.currentTarget.parentElement as HTMLElement).getBoundingClientRect()
       .height
+    isDraggingGridRef.current = true
     const onMove = (ev: MouseEvent): void => {
       const delta = (ev.clientY - startY) / containerHeight
       const next = Math.min(0.85, Math.max(0.35, startRatio + delta))
       gridRatioRef.current = next
-      setGridRatio(next)
+      applyGridRatio(next)
     }
     const onUp = (): void => {
       document.removeEventListener('mousemove', onMove)
       document.removeEventListener('mouseup', onUp)
+      isDraggingGridRef.current = false
       resizeCleanupRef.current = null
+      setGridRatio(gridRatioRef.current)
       updateSettings({ monthAgendaGridRatio: gridRatioRef.current })
     }
     resizeCleanupRef.current = onUp
@@ -631,22 +657,26 @@ export function CalendarGrid(): JSX.Element {
   }
 
   const handleGridResizeTouchStart = (e: React.TouchEvent): void => {
-    e.preventDefault()
+    // No `preventDefault()` here — React registers touch handlers passively, so
+    // it never worked. `.splitHandleH { touch-action: none }` does the job.
     resizeCleanupRef.current?.()
     const startY = e.touches[0].clientY
     const startRatio = gridRatio
     const containerHeight = (e.currentTarget.parentElement as HTMLElement).getBoundingClientRect()
       .height
+    isDraggingGridRef.current = true
     const onMove = (ev: TouchEvent): void => {
       const delta = (ev.touches[0].clientY - startY) / containerHeight
       const next = Math.min(0.85, Math.max(0.35, startRatio + delta))
       gridRatioRef.current = next
-      setGridRatio(next)
+      applyGridRatio(next)
     }
     const onEnd = (): void => {
       document.removeEventListener('touchmove', onMove)
       document.removeEventListener('touchend', onEnd)
+      isDraggingGridRef.current = false
       resizeCleanupRef.current = null
+      setGridRatio(gridRatioRef.current)
       updateSettings({ monthAgendaGridRatio: gridRatioRef.current })
     }
     resizeCleanupRef.current = onEnd
