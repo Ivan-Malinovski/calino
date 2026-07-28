@@ -371,9 +371,27 @@ function CalendarApp(): JSX.Element {
   // current view's date by one unit (month/week/day/year, matching the
   // header's chevron navigation). Views without date paging (todo/journal/
   // contacts) no-op.
+  // A pan that starts on a resize handle belongs to that handle. `motion.main`
+  // wraps the whole view, so dragging the month/agenda divider with any
+  // sideways wander cleared the 60px threshold here and paged the date out from
+  // under the drag. The handles stop propagation of nothing — framer-motion
+  // tracks the pointer at the container — so the start target is what has to be
+  // checked. Recorded on pan start because by pan end the event has retargeted
+  // to whatever is under the finger.
+  const panStartedOnHandleRef = useRef(false)
+  const handleContentPanStart = useCallback((event: PointerEvent) => {
+    const target = event.target
+    panStartedOnHandleRef.current =
+      target instanceof Element && target.closest('[data-resize-handle]') !== null
+  }, [])
+
   const handleContentPanEnd = useCallback(
     (_event: PointerEvent, info: PanInfo) => {
       if (!isMobile) return
+      if (panStartedOnHandleRef.current) {
+        panStartedOnHandleRef.current = false
+        return
+      }
       const view = currentViewRef.current
       if (view === 'todo' || view === 'journal' || view === 'contacts') return
 
@@ -678,6 +696,7 @@ function CalendarApp(): JSX.Element {
           className="main"
           ref={mainRef}
           data-view={currentView}
+          onPanStart={isMobile ? handleContentPanStart : undefined}
           onPanEnd={isMobile ? handleContentPanEnd : undefined}
           style={isMobile ? { touchAction: 'pan-y' } : undefined}
         >

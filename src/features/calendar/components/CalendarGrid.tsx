@@ -674,6 +674,9 @@ export function CalendarGrid(): JSX.Element {
     const onEnd = (): void => {
       document.removeEventListener('touchmove', onMove)
       document.removeEventListener('touchend', onEnd)
+      // A cancelled touch never fires `touchend`, so without this the move
+      // listener stays attached and the divider keeps tracking the finger.
+      document.removeEventListener('touchcancel', onEnd)
       isDraggingGridRef.current = false
       resizeCleanupRef.current = null
       setGridRatio(gridRatioRef.current)
@@ -682,6 +685,7 @@ export function CalendarGrid(): JSX.Element {
     resizeCleanupRef.current = onEnd
     document.addEventListener('touchmove', onMove, { passive: false })
     document.addEventListener('touchend', onEnd)
+    document.addEventListener('touchcancel', onEnd)
   }
 
   const handleResizeStart = (e: React.MouseEvent): void => {
@@ -725,12 +729,16 @@ export function CalendarGrid(): JSX.Element {
     const onEnd = (): void => {
       document.removeEventListener('touchmove', onMove)
       document.removeEventListener('touchend', onEnd)
+      // A cancelled touch never fires `touchend`, so without this the move
+      // listener stays attached and the divider keeps tracking the finger.
+      document.removeEventListener('touchcancel', onEnd)
       resizeCleanupRef.current = null
       updateSettings({ monthAgendaSplitRatio: splitRatioRef.current })
     }
     resizeCleanupRef.current = onEnd
     document.addEventListener('touchmove', onMove, { passive: false })
     document.addEventListener('touchend', onEnd)
+    document.addEventListener('touchcancel', onEnd)
   }
 
   const handleDayNumberClick = (day: Date): void => {
@@ -1043,6 +1051,7 @@ export function CalendarGrid(): JSX.Element {
           <div
             className={styles.splitHandleH}
             data-no-pull-refresh
+            data-resize-handle
             onMouseDown={handleGridResizeStart}
             onTouchStart={handleGridResizeTouchStart}
           />
@@ -1056,6 +1065,7 @@ export function CalendarGrid(): JSX.Element {
                   <div
                     className={styles.splitHandle}
                     data-no-pull-refresh
+                    data-resize-handle
                     onMouseDown={handleResizeStart}
                     onTouchStart={handleResizeTouchStart}
                   />
