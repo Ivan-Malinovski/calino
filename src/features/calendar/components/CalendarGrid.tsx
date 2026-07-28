@@ -60,6 +60,22 @@ import type { CalendarEvent, ViewType } from '@/types'
 import { getJournalDates, getTasksDueOn } from '@/store/calendarStore'
 import styles from './CalendarGrid.module.css'
 
+// Shared by the button and span forms of the journal indicator (see the
+// compact-mobile branch in DroppableDay).
+const journalIndicatorIcon = (
+  <svg
+    viewBox="0 0 14 14"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.5"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M9.5 2.5l2 2L4 12H2v-2L9.5 2.5z" />
+    <path d="M7.5 4.5l2 2" />
+  </svg>
+)
+
 const VIEW_ROUTES: Record<ViewType, string> = {
   month: '/month',
   year: '/year',
@@ -171,6 +187,12 @@ export function CalendarGrid(): JSX.Element {
   const isPortraitWindow = useIsPortraitWindow()
   const showAgendaSplit =
     agendaBelowMonthEnabled && ((isTallWindow && isPortraitWindow) || isCompactMobile)
+  // #79: `compressPastWeeks` shrinks a week row to make room by trading away
+  // event-card detail. On compact mobile there is no detail to trade — the
+  // cells are rows of dots — so compressing buys nothing and just leaves past
+  // weeks cramped and unevenly sized. Row height only; `isPastWeek` still
+  // drives card compactness at the render sites.
+  const compressWeekRows = compressPastWeeks && !isCompactMobile
   const [bottomPanelDay, setBottomPanelDay] = useState<string | null>(null)
   const [splitRatio, setSplitRatio] = useState(monthAgendaSplitRatioSetting)
   const [gridRatio, setGridRatio] = useState(monthAgendaGridRatioSetting)
@@ -681,7 +703,28 @@ export function CalendarGrid(): JSX.Element {
     document.addEventListener('touchend', onEnd)
   }
 
+  const handleDayNumberClick = (day: Date): void => {
+    if (showAgendaSplit) {
+      const dateStr = format(day, 'yyyy-MM-dd')
+      setCurrentDate(dateStr)
+      setBottomPanelDay((prev) => (prev === dateStr ? null : dateStr))
+      return
+    }
+    setCurrentDate(format(day, 'yyyy-MM-dd'))
+    setCurrentView('day')
+    navigate(VIEW_ROUTES.day, { replace: true })
+  }
+
   const handleDayClick = (day: Date): void => {
+    // #79: on compact mobile a day cell is a single target. Tapping anywhere in
+    // it — the number, empty space, or an event dot (whose own click is
+    // disabled there, so the tap bubbles to here) — does what the number
+    // already did. Wider viewports keep tap-to-create; on compact mobile that
+    // lives on the long-press menu.
+    if (isCompactMobile) {
+      handleDayNumberClick(day)
+      return
+    }
     const dateStr = format(day, 'yyyy-MM-dd')
     if (showAgendaSplit) {
       setCurrentDate(dateStr)
@@ -692,18 +735,6 @@ export function CalendarGrid(): JSX.Element {
   }
 
   const handleDayDoubleClick = (day: Date): void => {
-    setCurrentDate(format(day, 'yyyy-MM-dd'))
-    setCurrentView('day')
-    navigate(VIEW_ROUTES.day, { replace: true })
-  }
-
-  const handleDayNumberClick = (day: Date): void => {
-    if (showAgendaSplit) {
-      const dateStr = format(day, 'yyyy-MM-dd')
-      setCurrentDate(dateStr)
-      setBottomPanelDay((prev) => (prev === dateStr ? null : dateStr))
-      return
-    }
     setCurrentDate(format(day, 'yyyy-MM-dd'))
     setCurrentView('day')
     navigate(VIEW_ROUTES.day, { replace: true })
@@ -842,7 +873,7 @@ export function CalendarGrid(): JSX.Element {
     currentDate,
     weekNumbers,
     days,
-    compressPastWeeks,
+    compressWeekRows,
     rowHeight,
     eventsMap,
     tasksMap,
@@ -897,7 +928,7 @@ export function CalendarGrid(): JSX.Element {
                       return (
                         <div
                           key={weekIdx}
-                          className={`${styles.weekRow} ${!showWeekNumbers ? styles.weekRowNoWeekNum : ''} ${isPastWeek ? styles.compressedWeek : ''}`}
+                          className={`${styles.weekRow} ${!showWeekNumbers ? styles.weekRowNoWeekNum : ''} ${compressWeekRows && isPastWeek ? styles.compressedWeek : ''}`}
                         >
                             {showWeekNumbers && (
                               <div
@@ -1057,7 +1088,7 @@ export function CalendarGrid(): JSX.Element {
                 return (
                   <div
                     key={weekIdx}
-                    className={`${styles.weekRow} ${!showWeekNumbers ? styles.weekRowNoWeekNum : ''} ${isPastWeek ? styles.compressedWeek : ''}`}
+                    className={`${styles.weekRow} ${!showWeekNumbers ? styles.weekRowNoWeekNum : ''} ${compressWeekRows && isPastWeek ? styles.compressedWeek : ''}`}
                   >
                       {showWeekNumbers && (
                         <div
@@ -1222,6 +1253,12 @@ const DroppableDay = React.memo(function DroppableDay({
     singles.slice(nextSingle).forEach((event) => slots.push({ event, forceCompact: false }))
     return slots
   }, [dayEvents, monthViewEventLimit, dateKey])
+  // Compact-mobile counterpart to `eventSlots`: the same truncation, split into
+  // a multi-day bar row and a single-day dot row at the render site.
+  const visibleDayEvents = useMemo(
+    () => dayEvents.slice(0, monthViewEventLimit),
+    [dayEvents, monthViewEventLimit]
+  )
   const [showPopup, setShowPopup] = useState(false)
   const [popupPosition, setPopupPosition] = useState({ x: 0, y: 0 })
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null)
@@ -1311,97 +1348,147 @@ const DroppableDay = React.memo(function DroppableDay({
             >
               {format(day, 'd')}
             </button>
-            {journalEnabled && hasJournal && (
-              <button
-                className={styles.journalIndicator}
-                title="View journal entries"
-                aria-label={`View journal entries for ${format(day, 'MMMM d')}`}
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onJournalIndicatorClick(day)
-                }}
-              >
-                <span className={styles.journalIndicatorDot} />
-                <svg
-                  viewBox="0 0 14 14"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
+            {journalEnabled &&
+              hasJournal &&
+              // #79: on compact mobile this is an indicator, not a control —
+              // same call as the event dots. A span (rather than a button with
+              // its click removed) keeps it out of the tab order and off the
+              // a11y tree as a control, and lets the tap reach the day cell.
+              (isCompactMobile ? (
+                <span
+                  className={styles.journalIndicator}
+                  role="img"
+                  aria-label={`Has journal entries for ${format(day, 'MMMM d')}`}
                 >
-                  <path d="M9.5 2.5l2 2L4 12H2v-2L9.5 2.5z" />
-                  <path d="M7.5 4.5l2 2" />
-                </svg>
-              </button>
-            )}
+                  <span className={styles.journalIndicatorDot} />
+                  {journalIndicatorIcon}
+                </span>
+              ) : (
+                <button
+                  className={styles.journalIndicator}
+                  title="View journal entries"
+                  aria-label={`View journal entries for ${format(day, 'MMMM d')}`}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onJournalIndicatorClick(day)
+                  }}
+                >
+                  <span className={styles.journalIndicatorDot} />
+                  {journalIndicatorIcon}
+                </button>
+              ))}
           </div>
           {isCompactMobile ? (
-            <div className={styles.dotRow}>
-              <AnimatePresence initial={false}>
-                {dayEvents.slice(0, monthViewEventLimit).map((event) => {
-                  const isMultiDay = !isSameDay(parseISO(event.start), parseISO(event.end))
-                  const shouldCompact =
-                    isPastWeek ||
-                    (compactRecurringEvents &&
-                      (!!event.rruleString ||
-                        !!event.recurrence ||
-                        event.isAllDay ||
-                        isMultiDay)) ||
-                    event.isFragment
-                  return (
+            <>
+              {/*
+                #79: multi-day bars get their own row above the single-day
+                dots. Grouping by kind conveys the distinction by position,
+                which reads at a glance in a way a few px of width never did.
+
+                The `monthViewEventLimit` slice still happens once across all
+                of dayEvents, before the partition — so which events survive
+                truncation, and the `+N` math below, are unchanged. Only where
+                the survivors get drawn is different.
+
+                Like the wrappers in the non-compact branch, this row always
+                renders: gating it on the bar count would unmount the
+                AnimatePresence before the last bar's exit animation could run.
+              */}
+              <div className={styles.barRow}>
+                <AnimatePresence initial={false}>
+                  {visibleDayEvents
+                    .filter((event) => event.isFragment)
+                    .map((event) => (
+                      <motion.div
+                        key={event.id}
+                        variants={eventCardVariants}
+                        initial={monthChangeMotion.initial ? false : cardInitial}
+                        animate="animate"
+                        exit={skipExit(event.id) ? undefined : cardExit}
+                        transition={eventCardTransition}
+                      >
+                        <EventCard
+                          event={event}
+                          compact
+                          isMobileMonth={isMobile}
+                          dotMode
+                          enableResize={false}
+                          monthView
+                          clickDisabled
+                        />
+                      </motion.div>
+                    ))}
+                </AnimatePresence>
+              </div>
+              <div className={styles.dotRow}>
+                <AnimatePresence initial={false}>
+                  {visibleDayEvents
+                    .filter((event) => !event.isFragment)
+                    .map((event) => {
+                    const isMultiDay = !isSameDay(parseISO(event.start), parseISO(event.end))
+                    const shouldCompact =
+                      isPastWeek ||
+                      (compactRecurringEvents &&
+                        (!!event.rruleString ||
+                          !!event.recurrence ||
+                          event.isAllDay ||
+                          isMultiDay))
+                    return (
+                      <motion.div
+                        key={event.id}
+                        variants={eventCardVariants}
+                        initial={monthChangeMotion.initial ? false : cardInitial}
+                        animate="animate"
+                        exit={skipExit(event.id) ? undefined : cardExit}
+                        transition={eventCardTransition}
+                      >
+                        <EventCard
+                          event={event}
+                          compact={shouldCompact}
+                          isMobileMonth={isMobile}
+                          dotMode
+                          enableResize={false}
+                          monthView
+                          clickDisabled
+                        />
+                      </motion.div>
+                    )
+                  })}
+                  {dayTasks.slice(0, monthViewEventLimit).map((task) => (
                     <motion.div
-                      key={event.id}
+                      key={task.id}
                       variants={eventCardVariants}
-                      initial={monthChangeMotion.initial ? false : cardInitial}
+                      initial={cardInitial}
                       animate="animate"
-                      exit={skipExit(event.id) ? undefined : cardExit}
+                      exit={skipExit(task.id) ? undefined : cardExit}
                       transition={eventCardTransition}
                     >
                       <EventCard
-                        event={event}
-                        compact={shouldCompact}
+                        event={task}
+                        compact
                         isMobileMonth={isMobile}
                         dotMode
                         enableResize={false}
                         monthView
+                        clickDisabled
                       />
                     </motion.div>
-                  )
-                })}
-                {dayTasks.slice(0, monthViewEventLimit).map((task) => (
-                  <motion.div
-                    key={task.id}
-                    variants={eventCardVariants}
-                    initial={cardInitial}
-                    animate="animate"
-                    exit={skipExit(task.id) ? undefined : cardExit}
-                    transition={eventCardTransition}
+                  ))}
+                </AnimatePresence>
+                {(dayEvents.length > monthViewEventLimit ||
+                  dayTasks.length > monthViewEventLimit) && (
+                  <button
+                    ref={moreEventsRef}
+                    className={styles.moreEvents}
+                    onClick={handleMoreEventsClick}
                   >
-                    <EventCard
-                      event={task}
-                      compact
-                      isMobileMonth={isMobile}
-                      dotMode
-                      enableResize={false}
-                      monthView
-                    />
-                  </motion.div>
-                ))}
-              </AnimatePresence>
-              {(dayEvents.length > monthViewEventLimit ||
-                dayTasks.length > monthViewEventLimit) && (
-                <button
-                  ref={moreEventsRef}
-                  className={styles.moreEvents}
-                  onClick={handleMoreEventsClick}
-                >
-                  +
-                  {Math.max(0, dayEvents.length - monthViewEventLimit) +
-                    Math.max(0, dayTasks.length - monthViewEventLimit)}
-                </button>
-              )}
-            </div>
+                    +
+                    {Math.max(0, dayEvents.length - monthViewEventLimit) +
+                      Math.max(0, dayTasks.length - monthViewEventLimit)}
+                  </button>
+                )}
+              </div>
+            </>
           ) : (
             <>
               {/*

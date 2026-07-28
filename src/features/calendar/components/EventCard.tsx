@@ -44,6 +44,11 @@ interface EventCardProps {
   /** Suppress the task's due-time line. Used by week/day view, where the
    *  card's position on the timeline already conveys the time. */
   hideDueTime?: boolean
+  /** Make a tap on the card a no-op and let it bubble to whatever is behind
+   *  it. Used by the compact-mobile month view, where the dots are density
+   *  indicators rather than targets and the tap belongs to the day cell.
+   *  Drag, resize and the long-press context menu are unaffected. */
+  clickDisabled?: boolean
 }
 
 export const EventCard = React.memo(function EventCard({
@@ -59,6 +64,7 @@ export const EventCard = React.memo(function EventCard({
   hourHeight = 60,
   dotMode = false,
   hideDueTime = false,
+  clickDisabled = false,
 }: EventCardProps): JSX.Element {
   const calendars = useCalendarStore((state) => state.calendars)
   const categories = useCalendarStore((state) => state.categories)
@@ -261,6 +267,11 @@ export const EventCard = React.memo(function EventCard({
       setDidInteract(false)
       return
     }
+
+    // Deliberately before the stopPropagation below: the tap has to reach the
+    // day cell underneath for the cell to handle it.
+    if (clickDisabled) return
+
     e.stopPropagation()
 
     // Ctrl/Cmd+click is a shortcut for the context menu's "Duplicate" action.
@@ -764,7 +775,8 @@ function arePropsEqual(prev: EventCardProps, next: EventCardProps): boolean {
     prev.transparent !== next.transparent ||
     prev.hourHeight !== next.hourHeight ||
     prev.dotMode !== next.dotMode ||
-    prev.hideDueTime !== next.hideDueTime
+    prev.hideDueTime !== next.hideDueTime ||
+    prev.clickDisabled !== next.clickDisabled
   ) {
     return false
   }

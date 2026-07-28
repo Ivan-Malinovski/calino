@@ -551,8 +551,18 @@
   }
 
   .day {
-    padding: 2px;
+    /* #79: extra bottom padding leaves the indicator rows some room to sit in
+       rather than running up against the cell edge. Pairs with the tightened
+       .dayHeader margin below, which pulls them up under the day number. */
+    padding: 2px 2px 6px;
     border-right: none;
+  }
+
+  /* Close the gap between the day number and the indicator rows, so bars and
+     dots read as a band belonging to the number above them. Compact mobile
+     only — the desktop cell has full event chips and needs the 6px. */
+  .dayHeader {
+    margin-bottom: 2px;
   }
 
   /* Vertical dividers via left border on every cell except first */
@@ -614,6 +624,26 @@
     height: 12px;
     background: transparent;
   }
+}
+
+/* Multi-day bars, on their own line above .dotRow. The row always reserves
+   one bar's height even when empty, so the dot row below starts at the same
+   offset in every cell and the dots read as a single row across the month —
+   that alignment is the whole point of splitting the rows. See #79.
+
+   min-height, not height: `monthViewEventLimit` goes up to 5, and 5 bars
+   don't fit a ~53px cell at a 375px viewport. Reserving exactly one line
+   would need overflow:hidden and would silently clip them. This way the
+   common case stays aligned and the rare overflowing day wraps and pushes
+   its own dots down instead of hiding events. */
+.barRow {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 2px;
+  justify-content: center;
+  align-items: center;
+  min-height: 6px;
 }
 
 /* Dot row — single merged row for events+tasks dots in compact mobile */

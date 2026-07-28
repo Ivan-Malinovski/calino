@@ -645,16 +645,24 @@
   flex-shrink: 0;
 }
 
-/* Fragment styles: wider pill dots in dot mode (always spanning events) */
+/* Fragment styles: bar dots in dot mode (always spanning events).
+   The shape has to differ from the single-day dot in kind, not degree — at
+   6px tall a 3px radius is a fully rounded end, so the old 10px pill read as
+   a stretched circle rather than a bar. 2px corners plus a 2.5:1 ratio makes
+   it a distinct shape without relying on color (already spoken for by the
+   calendar) or on size (these are density indicators, not touch targets).
+   Position does most of the work — these sit in their own .barRow above the
+   dots — so the width here only has to not crowd a ~53px cell at a 375px
+   viewport; .barRow wraps if it does. See #79. */
 .dot.fragmentFirst,
 .dot.fragmentMiddle,
 .dot.fragmentLast {
   margin: 0 !important;
   padding: 0 !important;
   border-left: none !important;
-  border-radius: 3px !important;
-  width: 10px !important;
-  min-width: 10px !important;
+  border-radius: 2px !important;
+  width: 15px !important;
+  min-width: 15px !important;
   clip-path: none !important;
 }
 
