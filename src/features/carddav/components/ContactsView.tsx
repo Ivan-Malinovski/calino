@@ -4,6 +4,9 @@ import { v4 as uuidv4 } from 'uuid'
 import { useContactStore } from '@/store/contactStore'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useCardDAV } from '@/features/carddav/hooks/useCardDAV'
+import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
+import { safeCalDAVUpdate, safeCalDAVDelete } from '@/lib/caldavHelpers'
+import type { CalendarEvent } from '@/types'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { deleteContactWithUndo } from '@/lib/deleteContactWithUndo'
 import {
@@ -35,6 +38,7 @@ export function ContactsView(): JSX.Element {
   const events = useCalendarStore((s) => s.events)
 
   const { syncAccount, syncState } = useCardDAV()
+  const { createEvent: createCalDAVEvent, deleteEvent: deleteCalDAVEvent } = useCalDAV()
   const isMobile = useIsMobile()
 
   // Form modal state
@@ -256,8 +260,27 @@ export function ContactsView(): JSX.Element {
     ]
   )
 
+  // Adding to the local store alone leaves the event invisible to the server,
+  // and the next sync pass overwrites the store with server truth — so the
+  // event vanished even within the session. Push it to CalDAV like the event
+  // editor does, and undo has to retract it from the server too.
+  const addContactEventToCalendar = useCallback(
+    async (event: CalendarEvent, toastMessage: string): Promise<void> => {
+      addEvent(event)
+      showToast(toastMessage, {
+        duration: 8000,
+        onUndo: () => {
+          useCalendarStore.getState().deleteEvent(event.id)
+          void safeCalDAVDelete(deleteCalDAVEvent, event.calendarId, event.id)
+        },
+      })
+      await safeCalDAVUpdate(createCalDAVEvent, event.calendarId, event, {})
+    },
+    [addEvent, createCalDAVEvent, deleteCalDAVEvent]
+  )
+
   const handleAddBirthdayToCalendar = useCallback(
-    (contact: Contact): void => {
+    async (contact: Contact): Promise<void> => {
       if (!contact.birthday) return
       const defaultCalendar = calendars.find((c) => c.isDefault) ?? calendars[0]
       if (!defaultCalendar) {
@@ -272,19 +295,13 @@ export function ContactsView(): JSX.Element {
         calendarId: defaultCalendar.id,
       })
 
-      addEvent(event)
-      showToast('Birthday added to calendar', {
-        duration: 8000,
-        onUndo: () => {
-          useCalendarStore.getState().deleteEvent(event.id)
-        },
-      })
+      await addContactEventToCalendar(event, 'Birthday added to calendar')
     },
-    [calendars, addEvent]
+    [calendars, addContactEventToCalendar]
   )
 
   const handleAddAnniversaryToCalendar = useCallback(
-    (contact: Contact): void => {
+    async (contact: Contact): Promise<void> => {
       if (!contact.anniversary) return
       const defaultCalendar = calendars.find((c) => c.isDefault) ?? calendars[0]
       if (!defaultCalendar) {
@@ -299,15 +316,9 @@ export function ContactsView(): JSX.Element {
         calendarId: defaultCalendar.id,
       })
 
-      addEvent(event)
-      showToast('Anniversary added to calendar', {
-        duration: 8000,
-        onUndo: () => {
-          useCalendarStore.getState().deleteEvent(event.id)
-        },
-      })
+      await addContactEventToCalendar(event, 'Anniversary added to calendar')
     },
-    [calendars, addEvent]
+    [calendars, addContactEventToCalendar]
   )
 
   const handleFormClose = (): void => {
@@ -369,7 +380,7 @@ export function ContactsView(): JSX.Element {
             confirmDelete={confirmDeleteId === selectedContact.id}
             onAddBirthdayToCalendar={
               selectedContact.birthday
-                ? () => handleAddBirthdayToCalendar(selectedContact)
+                ? () => void handleAddBirthdayToCalendar(selectedContact)
                 : undefined
             }
             hasBirthdayEvent={
@@ -377,7 +388,7 @@ export function ContactsView(): JSX.Element {
             }
             onAddAnniversaryToCalendar={
               selectedContact.anniversary
-                ? () => handleAddAnniversaryToCalendar(selectedContact)
+                ? () => void handleAddAnniversaryToCalendar(selectedContact)
                 : undefined
             }
             hasAnniversaryEvent={

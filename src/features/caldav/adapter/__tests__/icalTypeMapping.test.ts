@@ -531,3 +531,52 @@ describe('rrule round-trip for new BY* parts', () => {
     expect(rrule.getComponent('BYMONTH')).toEqual([3])
   })
 })
+
+// ---------------------------------------------------------------------------
+// Issue 84: birthday/anniversary contact marker must survive CalDAV round-trip
+// ---------------------------------------------------------------------------
+describe('Issue 84: VEVENT URL round-trip', () => {
+  it('parses URL off a VEVENT', () => {
+    const iCalStr = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'BEGIN:VEVENT',
+      'UID:birthday-1',
+      'SUMMARY:Birthday',
+      'DTSTART;VALUE=DATE:20250615',
+      'DTEND;VALUE=DATE:20250616',
+      'URL:calino:contact:abc-123',
+      'END:VEVENT',
+      'END:VCALENDAR',
+    ].join('\r\n')
+
+    const event = icalEventToCalendarEvent(createVevent(iCalStr), 'cal-1')
+    expect(event.url).toBe('calino:contact:abc-123')
+  })
+
+  it('serializes URL onto a VEVENT', () => {
+    const event: CalendarEvent = {
+      id: 'birthday-2',
+      calendarId: 'cal-1',
+      title: "Ada's birthday",
+      start: '2025-06-15T00:00:00',
+      end: '2025-06-15T00:00:00',
+      isAllDay: true,
+      url: 'calino:contact:abc-123',
+    }
+    const vevent = calendarEventToIcalComponent(event)
+    expect(vevent.getFirstProperty('url')?.getFirstValue()).toBe('calino:contact:abc-123')
+  })
+
+  it('omits URL when the event has none', () => {
+    const event: CalendarEvent = {
+      id: 'plain-1',
+      calendarId: 'cal-1',
+      title: 'Plain',
+      start: '2025-06-15T10:00:00Z',
+      end: '2025-06-15T11:00:00Z',
+      isAllDay: false,
+    }
+    expect(calendarEventToIcalComponent(event).getFirstProperty('url')).toBeNull()
+  })
+})
