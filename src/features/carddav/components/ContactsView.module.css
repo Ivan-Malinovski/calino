@@ -785,3 +785,45 @@
 .addressBookPickerItem:active {
   background: var(--color-bg-tertiary, #f3f2f0);
 }
+
+/* Calendar picker shown when a contact's birthday/anniversary could go into
+   more than one writable calendar. */
+.calendarPickerList {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.calendarPickerItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 11px 12px;
+  text-align: left;
+  background: none;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--ink, #2c2823);
+  cursor: pointer;
+  transition: background 0.12s;
+}
+
+.calendarPickerItem:hover {
+  background: var(--canvas, #faf8f3);
+}
+
+.calendarPickerItem:active {
+  background: var(--color-bg-tertiary, #f3f2f0);
+}
+
+.calendarPickerDot {
+  flex-shrink: 0;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}

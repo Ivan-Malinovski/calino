@@ -6,6 +6,7 @@ import { useCalendarStore } from '@/store/calendarStore'
 import { useCardDAV } from '@/features/carddav/hooks/useCardDAV'
 import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
 import { safeCalDAVUpdate, safeCalDAVDelete } from '@/lib/caldavHelpers'
+import { Modal } from '@/components/common/Modal'
 import type { CalendarEvent } from '@/types'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { deleteContactWithUndo } from '@/lib/deleteContactWithUndo'
@@ -21,6 +22,13 @@ import { ContactList } from './ContactList'
 import { ContactDetail } from './ContactDetail'
 import { ContactFormModal } from './ContactFormModal'
 import styles from './ContactsView.module.css'
+
+type ContactEventKind = 'birthday' | 'anniversary'
+
+const ADD_TO_CALENDAR_TOAST: Record<ContactEventKind, string> = {
+  birthday: 'Birthday added to calendar',
+  anniversary: 'Anniversary added to calendar',
+}
 
 export function ContactsView(): JSX.Element {
   const selectedContactId = useContactStore((s) => s.selectedContactId)
@@ -47,6 +55,12 @@ export function ContactsView(): JSX.Element {
   const [pendingAccountId, setPendingAccountId] = useState<string>('')
   const [pendingAddressBookId, setPendingAddressBookId] = useState<string>('')
 
+  // Calendar picker for "Add to calendar" when >1 writable calendar
+  const [calendarPicker, setCalendarPicker] = useState<{
+    kind: ContactEventKind
+    contact: Contact
+  } | null>(null)
+
   // Address book picker for "+ New" when >1 books
   const [showPicker, setShowPicker] = useState(false)
   const pickerRef = useRef<HTMLDivElement>(null)
@@ -54,6 +68,9 @@ export function ContactsView(): JSX.Element {
   // Delete confirmation state
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const confirmDeleteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Webcal subscriptions can't be written to, so they're never a valid target.
+  const targetCalendars = useMemo(() => calendars.filter((c) => !c.readOnly), [calendars])
 
   // Fall back to all books if none are flagged visible, so "+ New" is never a no-op
   const visibleAddressBooks = useMemo(() => {
@@ -279,46 +296,60 @@ export function ContactsView(): JSX.Element {
     [addEvent, createCalDAVEvent, deleteCalDAVEvent]
   )
 
-  const handleAddBirthdayToCalendar = useCallback(
-    async (contact: Contact): Promise<void> => {
-      if (!contact.birthday) return
-      const defaultCalendar = calendars.find((c) => c.isDefault) ?? calendars[0]
-      if (!defaultCalendar) {
-        showToast('No calendar available')
-        return
+  const buildContactEvent = useCallback(
+    (kind: ContactEventKind, contact: Contact, calendarId: string): CalendarEvent | null => {
+      if (kind === 'birthday') {
+        if (!contact.birthday) return null
+        return createBirthdayEvent({
+          contactId: contact.id,
+          contactName: contact.displayName,
+          birthday: contact.birthday,
+          calendarId,
+        })
       }
-
-      const event = createBirthdayEvent({
-        contactId: contact.id,
-        contactName: contact.displayName,
-        birthday: contact.birthday,
-        calendarId: defaultCalendar.id,
-      })
-
-      await addContactEventToCalendar(event, 'Birthday added to calendar')
-    },
-    [calendars, addContactEventToCalendar]
-  )
-
-  const handleAddAnniversaryToCalendar = useCallback(
-    async (contact: Contact): Promise<void> => {
-      if (!contact.anniversary) return
-      const defaultCalendar = calendars.find((c) => c.isDefault) ?? calendars[0]
-      if (!defaultCalendar) {
-        showToast('No calendar available')
-        return
-      }
-
-      const event = createAnniversaryEvent({
+      if (!contact.anniversary) return null
+      return createAnniversaryEvent({
         contactId: contact.id,
         contactName: contact.displayName,
         anniversary: contact.anniversary,
-        calendarId: defaultCalendar.id,
+        calendarId,
       })
-
-      await addContactEventToCalendar(event, 'Anniversary added to calendar')
     },
-    [calendars, addContactEventToCalendar]
+    []
+  )
+
+  // One calendar means there's nothing to ask about — create straight away.
+  // With several, let the user say where it goes rather than silently picking
+  // whichever calendar the server happened to list first (#84).
+  const handleAddContactEventToCalendar = useCallback(
+    async (kind: ContactEventKind, contact: Contact): Promise<void> => {
+      if (targetCalendars.length === 0) {
+        showToast('No calendar available')
+        return
+      }
+      if (targetCalendars.length > 1) {
+        setCalendarPicker({ kind, contact })
+        return
+      }
+
+      const event = buildContactEvent(kind, contact, targetCalendars[0].id)
+      if (!event) return
+      await addContactEventToCalendar(event, ADD_TO_CALENDAR_TOAST[kind])
+    },
+    [targetCalendars, buildContactEvent, addContactEventToCalendar]
+  )
+
+  const handlePickCalendar = useCallback(
+    async (calendarId: string): Promise<void> => {
+      if (!calendarPicker) return
+      const { kind, contact } = calendarPicker
+      setCalendarPicker(null)
+
+      const event = buildContactEvent(kind, contact, calendarId)
+      if (!event) return
+      await addContactEventToCalendar(event, ADD_TO_CALENDAR_TOAST[kind])
+    },
+    [calendarPicker, buildContactEvent, addContactEventToCalendar]
   )
 
   const handleFormClose = (): void => {
@@ -380,7 +411,7 @@ export function ContactsView(): JSX.Element {
             confirmDelete={confirmDeleteId === selectedContact.id}
             onAddBirthdayToCalendar={
               selectedContact.birthday
-                ? () => void handleAddBirthdayToCalendar(selectedContact)
+                ? () => void handleAddContactEventToCalendar('birthday', selectedContact)
                 : undefined
             }
             hasBirthdayEvent={
@@ -388,7 +419,7 @@ export function ContactsView(): JSX.Element {
             }
             onAddAnniversaryToCalendar={
               selectedContact.anniversary
-                ? () => void handleAddAnniversaryToCalendar(selectedContact)
+                ? () => void handleAddContactEventToCalendar('anniversary', selectedContact)
                 : undefined
             }
             hasAnniversaryEvent={
@@ -427,6 +458,26 @@ export function ContactsView(): JSX.Element {
         onSave={handleFormSave}
         onDelete={editingContact ? (c) => handleDelete(c) : undefined}
       />
+
+      <Modal
+        isOpen={calendarPicker !== null}
+        onClose={() => setCalendarPicker(null)}
+        title={calendarPicker?.kind === 'anniversary' ? 'Add anniversary to' : 'Add birthday to'}
+      >
+        <div className={styles.calendarPickerList}>
+          {targetCalendars.map((cal) => (
+            <button
+              key={cal.id}
+              type="button"
+              className={styles.calendarPickerItem}
+              onClick={() => void handlePickCalendar(cal.id)}
+            >
+              <span className={styles.calendarPickerDot} style={{ background: cal.color }} />
+              {cal.name}
+            </button>
+          ))}
+        </div>
+      </Modal>
     </div>
   )
 }
