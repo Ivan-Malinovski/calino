@@ -6,7 +6,8 @@
   border-radius: var(--radius-sm);
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background-color var(--transition-normal), color var(--transition-normal),
+    border-color var(--transition-normal), opacity var(--transition-normal);
 }
 
 .button:disabled {
@@ -43,17 +44,21 @@
   background-color: var(--color-bg-hover);
 }
 
+/* min-height keeps every size at or above the 44px touch target. */
 .sm {
   padding: 6px 12px;
   font-size: 13px;
+  min-height: 36px;
 }
 
 .md {
   padding: 8px 16px;
   font-size: 14px;
+  min-height: 44px;
 }
 
 .lg {
   padding: 12px 24px;
   font-size: 16px;
+  min-height: 48px;
 }

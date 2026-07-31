@@ -575,7 +575,7 @@
   }
 
   .detailContent {
-    padding: 16px 16px 48px;
+    padding: 16px 16px calc(84px + var(--safe-area-bottom));
   }
 
   .hero {

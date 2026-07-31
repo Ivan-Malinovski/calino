@@ -279,7 +279,9 @@
     max-width: 100%;
     max-height: min(85vh, 640px);
     border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-    padding: var(--space-5) var(--space-5) calc(var(--space-5) + env(safe-area-inset-bottom, 0px));
+    /* --safe-area-bottom, not env(): env() is never populated under Capacitor,
+       and this flow is Android-only. See index.css. */
+    padding: var(--space-5) var(--space-5) calc(var(--space-5) + var(--safe-area-bottom));
     animation: slideUpSheet 0.2s ease;
   }
 

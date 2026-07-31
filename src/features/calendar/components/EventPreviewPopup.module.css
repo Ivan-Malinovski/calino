@@ -479,7 +479,7 @@
   height: 36px;
   padding: 0;
   color: #fff;
-  background: #34a853;
+  background: var(--color-accent);
   border: none;
   border-radius: 6px;
   cursor: pointer;
@@ -488,7 +488,7 @@
 }
 
 .saveBtn:hover {
-  background: #2e8b47;
+  background: var(--color-accent-hover);
 }
 
 .openBtn {

@@ -175,7 +175,7 @@ export function ImportExportModal({
           <span>
             {parsedContacts.length} contacts found
             {dupeCount > 0 && (
-              <span style={{ color: 'var(--warning, #e6a817)', marginLeft: 8 }}>
+              <span style={{ color: 'var(--color-warning)', marginLeft: 8 }}>
                 {dupeCount} duplicate{dupeCount !== 1 ? 's' : ''}
               </span>
             )}
@@ -265,7 +265,7 @@ export function ImportExportModal({
                     fontSize: 10,
                     padding: '1px 6px',
                     borderRadius: 'var(--radius-sm)',
-                    background: 'var(--warning, #e6a817)',
+                    background: 'var(--color-warning)',
                     color: '#000',
                     fontWeight: 600,
                     flexShrink: 0,

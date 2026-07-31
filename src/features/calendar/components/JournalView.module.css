@@ -955,8 +955,10 @@
 
 /* Responsive: stack date column on mobile */
 @media (max-width: 600px) {
+  /* Clear the floating nav pill, matching the other views' trailing scroll
+     padding (see CalendarGrid/TodoView/AgendaView). */
   .page {
-    padding: 4px 0 60px;
+    padding: 4px 0 calc(84px + var(--safe-area-bottom));
   }
 
   .entry {

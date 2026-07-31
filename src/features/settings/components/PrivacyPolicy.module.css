@@ -1,11 +1,17 @@
+/* The route renders outside the app shell, so it paints its own canvas rather
+   than depending on `body`. The page scrolls, not the card inside it — the card
+   used to be the scroll container, which forced it to full viewport height. */
 .container {
   display: flex;
   flex-direction: column;
   height: 100vh;
   height: 100dvh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   max-width: 640px;
   margin: 0 auto;
   padding: var(--space-6);
+  background: var(--color-bg);
 }
 
 @media (max-width: 768px) {
@@ -26,39 +32,42 @@
 .backButton {
   background: none;
   border: none;
-  color: #6b7280;
+  color: var(--color-text-secondary);
   cursor: pointer;
   font-size: 14px;
   padding: 8px 12px;
-  border-radius: 6px;
-  transition: background-color 0.15s;
+  border-radius: var(--radius-md);
+  transition: background-color var(--transition-fast);
 }
 
 .backButton:hover {
-  background: #f3f4f6;
-  color: #111827;
+  background: var(--color-bg-hover);
+  color: var(--color-text-primary);
 }
 
 .header h1 {
+  font-family: var(--font-serif);
   font-size: 24px;
-  font-weight: 600;
-  color: #111827;
+  font-weight: 500;
+  color: var(--color-text-primary);
   margin: 0;
 }
 
+/* Sizes to its content instead of flex: 1 — stretched to the full viewport the
+   panel stopped reading as a card and just looked like an unstyled white page. */
 .content {
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: var(--radius-md);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
   padding: var(--space-6);
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
+  margin-bottom: var(--space-6);
+  /* Keep its natural height in the flex column — the container is what scrolls. */
+  flex-shrink: 0;
 }
 
 .lastUpdated {
-  color: #6b7280;
+  color: var(--color-text-secondary);
   font-size: 14px;
   margin-bottom: 24px;
 }
@@ -74,14 +83,14 @@
 .content h2 {
   font-size: 16px;
   font-weight: 600;
-  color: #111827;
+  color: var(--color-text-primary);
   margin-bottom: 8px;
 }
 
 .content p {
   font-size: 14px;
   line-height: 1.6;
-  color: #374151;
+  color: var(--color-text);
   margin: 0;
 }
 
@@ -93,12 +102,12 @@
 .content li {
   font-size: 14px;
   line-height: 1.6;
-  color: #374151;
+  color: var(--color-text);
   margin-bottom: 4px;
 }
 
 .content a {
-  color: #4285f4;
+  color: var(--color-accent);
   text-decoration: none;
 }
 

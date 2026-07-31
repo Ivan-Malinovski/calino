@@ -14,7 +14,10 @@
   padding: 10px 12px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
-  font-size: 14px;
+  /* 16px, not 14px: anything smaller makes iOS Safari zoom on focus.
+     min-height keeps it at the 44px touch target. (Same rule as EventModal.) */
+  font-size: 16px;
+  min-height: 44px;
   color: var(--color-text-primary);
   background: var(--color-bg-secondary);
   transition:

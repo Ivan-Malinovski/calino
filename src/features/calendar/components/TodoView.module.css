@@ -337,11 +337,11 @@
 
 /* ---- Overdue Group Variant ---- */
 .overdueGroup .groupTitle {
-  color: #bb5d6e;
+  color: var(--color-error-muted);
 }
 
 .overdueGroup .groupCount {
-  color: #bb5d6e;
+  color: var(--color-error-muted);
   background: var(--error-bg);
 }
 
@@ -538,7 +538,7 @@
 }
 
 .dueOverdue {
-  color: #bb5d6e;
+  color: var(--color-error-muted);
 }
 
 .dueToday {
@@ -599,7 +599,7 @@
   color: var(--ink-2, #6f6a62);
   font-weight: 500;
   margin-bottom: 4px;
-  font-family: "Newsreader", Georgia, serif;
+  font-family: var(--font-serif);
   font-size: 19px;
 }
 

@@ -306,6 +306,11 @@
 
 /* ---- Responsive ---- */
 @media (max-width: 768px) {
+  /* Clear the floating nav pill so the last contact isn't hidden under it. */
+  .list {
+    padding-bottom: calc(84px + var(--safe-area-bottom));
+  }
+
   .searchBar {
     margin: 8px 10px 0;
     height: 34px;
