@@ -63,6 +63,118 @@ async function syncAll(page: Page): Promise<void> {
   ).toBeVisible({ timeout: 15_000 })
 }
 
+/** VJOURNAL seeded directly onto the mock server, dated in the current month. */
+const MOVE_VJOURNAL = (title: string, description: string): string =>
+  `BEGIN:VCALENDAR\r\nVERSION:2.0\r\n` +
+  `BEGIN:VJOURNAL\r\nUID:j-move-uid\r\nDTSTART;VALUE=DATE:${day(15).replaceAll('-', '')}\r\n` +
+  `SUMMARY:${title}\r\nDESCRIPTION:${description}\r\n` +
+  `END:VJOURNAL\r\nEND:VCALENDAR\r\n`
+
+/** Account + resets for the move tests. The j-* collections are baked into
+ * the mock fixture (see vite-caldav-mock.ts) and owned by this spec. */
+async function seedMoveAccount(page: Page, baseURL: string): Promise<void> {
+  await seedAccount(page, {
+    id: 'journal-move-account',
+    name: 'Journal Mock',
+    serverUrl: `${baseURL}/mock-caldav/dav/`,
+    username: 'user',
+    password: 'pass',
+    calendars: [
+      { id: 'j-work', name: 'Journal Work', path: 'calendars/user/j-work/', isDefault: true },
+      { id: 'j-personal', name: 'Journal Personal', path: 'calendars/user/j-personal/' },
+    ],
+  })
+  for (const prefix of [J_WORK, J_PERSONAL]) {
+    await page.request.post(
+      `${baseURL}/mock-caldav/__test__/reset?prefix=${encodeURIComponent(prefix)}`
+    )
+  }
+}
+
+/**
+ * Store calendars (so the picker sees them, including the Offline calendar —
+ * part of real store state) + journalEnabled (the view is hidden until it
+ * flips on). Optional local-only entry for the promote test. seedJournal
+ * can't be reused: it overwrites the calendars, dropping the account link.
+ */
+async function seedJournalMoveStore(
+  page: Page,
+  localEntry?: { id: string; title: string; body: string; date: string }
+): Promise<void> {
+  await page.addInitScript(
+    ({
+      calendarKey,
+      settingsKey,
+      localEntry,
+    }: {
+      calendarKey: string
+      settingsKey: string
+      localEntry?: { id: string; title: string; body: string; date: string }
+    }) => {
+      try {
+        if (sessionStorage.getItem('__calino_test_journal_move')) return
+        sessionStorage.setItem('__calino_test_journal_move', '1')
+        const raw = localStorage.getItem(calendarKey)
+        const parsed = raw ? JSON.parse(raw) : { state: {}, version: 1 }
+        const now = new Date().toISOString()
+        parsed.state = {
+          ...(parsed.state ?? {}),
+          calendars: [
+            {
+              id: 'j-work',
+              name: 'Journal Work',
+              color: '#4285F4',
+              isVisible: true,
+              isDefault: true,
+              showTasksInViews: true,
+              supportedComponents: ['VEVENT', 'VTODO', 'VJOURNAL'],
+            },
+            {
+              id: 'j-personal',
+              name: 'Journal Personal',
+              color: '#E8710A',
+              isVisible: true,
+              showTasksInViews: true,
+              supportedComponents: ['VEVENT', 'VTODO', 'VJOURNAL'],
+            },
+            {
+              id: 'default',
+              name: 'Offline calendar',
+              color: '#9CA3AF',
+              isVisible: true,
+              showTasksInViews: true,
+            },
+          ],
+          events: localEntry
+            ? [
+                {
+                  id: localEntry.id,
+                  calendarId: 'default',
+                  title: localEntry.title,
+                  description: localEntry.body,
+                  start: localEntry.date,
+                  end: localEntry.date,
+                  isAllDay: true,
+                  type: 'journal',
+                  created: now,
+                  lastModified: now,
+                },
+              ]
+            : [],
+        }
+        localStorage.setItem(calendarKey, JSON.stringify(parsed))
+        const settingsRaw = localStorage.getItem(settingsKey)
+        const settings = settingsRaw ? JSON.parse(settingsRaw) : { state: {}, version: 1 }
+        settings.state = { ...(settings.state ?? {}), journalEnabled: true }
+        localStorage.setItem(settingsKey, JSON.stringify(settings))
+      } catch {
+        /* noop */
+      }
+    },
+    { calendarKey: STORAGE_KEYS.calendar, settingsKey: STORAGE_KEYS.settings, localEntry }
+  )
+}
+
 test.describe('Journal view', () => {
   test.beforeEach(async ({ page }) => {
     await clearState(page)
@@ -119,8 +231,24 @@ test.describe('Journal view', () => {
     await expect(select.locator('option')).toHaveText(['Work', 'Personal'])
     await select.selectOption('personal')
 
-    await page.getByPlaceholder('Title (optional)').fill('Filed elsewhere')
-    await page.getByPlaceholder('Write something…').fill('Should land in Personal.')
+    const titleField = page.getByPlaceholder('Title (optional)')
+    const bodyField = page.getByPlaceholder('Write something…')
+    await titleField.fill('Filed elsewhere')
+    // Under parallel load the app can transiently misroute an input event to
+    // the previous field (a React 19 controlled-input race seen in traces:
+    // the body fill's text lands in the title, leaving the body empty and the
+    // save aborted). Wait for the title to land, then re-fill the body until
+    // it sticks.
+    await expect(titleField).toHaveValue('Filed elsewhere')
+    await expect
+      .poll(async () => {
+        const value = await bodyField.inputValue().catch(() => '')
+        if (value === 'Should land in Personal.') return true
+        await bodyField.fill('Should land in Personal.')
+        return false
+      })
+      .toBe(true)
+
     await page.getByRole('button', { name: 'Save entry' }).click()
 
     await expect(page.getByText('Filed elsewhere')).toBeVisible()
@@ -131,79 +259,20 @@ test.describe('Journal view', () => {
     await expect(page.getByText('Filed elsewhere')).toBeHidden()
   })
 
-  test('editing an entry can move it to another calendar', async ({ page, baseURL }) => {
+  // The three move tests share collections on the process-wide mock store
+  // (resets + PUTs to j-work/), so they must not run against each other's
+  // leftovers — same constraint event-move.spec.ts documents for its own
+  // dedicated collections.
+  test.describe('moving entries between calendars', () => {
+    test.describe.configure({ mode: 'serial' })
+
+    test('editing an entry can move it to another calendar', async ({ page, baseURL }) => {
     await clearState(page)
-    // Account-linked calendars so create/move reach the mock server. The j-*
-    // collections are baked into the mock (see vite-caldav-mock.ts) and owned
-    // by this spec, like event-move owns move-source/.
-    await seedAccount(page, {
-      id: 'journal-move-account',
-      name: 'Journal Mock',
-      serverUrl: `${baseURL}/mock-caldav/dav/`,
-      username: 'user',
-      password: 'pass',
-      calendars: [
-        { id: 'j-work', name: 'Journal Work', path: 'calendars/user/j-work/', isDefault: true },
-        { id: 'j-personal', name: 'Journal Personal', path: 'calendars/user/j-personal/' },
-      ],
-    })
-    for (const prefix of [J_WORK, J_PERSONAL]) {
-      await page.request.post(
-        `${baseURL!}/mock-caldav/__test__/reset?prefix=${encodeURIComponent(prefix)}`
-      )
-    }
-    // A VJOURNAL on the server, dated inside the current month so the journal
-    // list (month mode) shows it. The app imports it on the first sync.
+    await seedMoveAccount(page, baseURL!)
     await page.request.put(`${baseURL}/mock-caldav${J_WORK}j-move-entry.ics`, {
-      data:
-        `BEGIN:VCALENDAR\r\nVERSION:2.0\r\n` +
-        `BEGIN:VJOURNAL\r\nUID:j-move-uid\r\nDTSTART;VALUE=DATE:${day(15).replaceAll('-', '')}\r\n` +
-        `SUMMARY:Relocatable entry\r\nDESCRIPTION:Should move to Journal Personal.\r\n` +
-        `END:VJOURNAL\r\nEND:VCALENDAR\r\n`,
+      data: MOVE_VJOURNAL('Relocatable entry', 'Should move to Journal Personal.'),
     })
-    // Store calendars (so the picker sees both) + journalEnabled (the view is
-    // hidden until it flips on). seedJournal can't be reused: it overwrites
-    // the calendars, dropping the account link.
-    await page.addInitScript(
-      ({ calendarKey, settingsKey }: { calendarKey: string; settingsKey: string }) => {
-        try {
-          if (sessionStorage.getItem('__calino_test_journal_move')) return
-          sessionStorage.setItem('__calino_test_journal_move', '1')
-          const raw = localStorage.getItem(calendarKey)
-          const parsed = raw ? JSON.parse(raw) : { state: {}, version: 1 }
-          parsed.state = {
-            ...(parsed.state ?? {}),
-            calendars: [
-              {
-                id: 'j-work',
-                name: 'Journal Work',
-                color: '#4285F4',
-                isVisible: true,
-                isDefault: true,
-                showTasksInViews: true,
-                supportedComponents: ['VEVENT', 'VTODO', 'VJOURNAL'],
-              },
-              {
-                id: 'j-personal',
-                name: 'Journal Personal',
-                color: '#E8710A',
-                isVisible: true,
-                showTasksInViews: true,
-                supportedComponents: ['VEVENT', 'VTODO', 'VJOURNAL'],
-              },
-            ],
-          }
-          localStorage.setItem(calendarKey, JSON.stringify(parsed))
-          const settingsRaw = localStorage.getItem(settingsKey)
-          const settings = settingsRaw ? JSON.parse(settingsRaw) : { state: {}, version: 1 }
-          settings.state = { ...(settings.state ?? {}), journalEnabled: true }
-          localStorage.setItem(settingsKey, JSON.stringify(settings))
-        } catch {
-          /* noop */
-        }
-      },
-      { calendarKey: STORAGE_KEYS.calendar, settingsKey: STORAGE_KEYS.settings }
-    )
+    await seedJournalMoveStore(page)
 
     await page.goto('/journal')
     await syncAll(page)
@@ -241,5 +310,71 @@ test.describe('Journal view', () => {
     await expect(page.getByText('Relocatable entry').first()).toBeVisible()
     await hideCalendar(page, 'j-personal')
     await expect(page.getByText('Relocatable entry').first()).toBeHidden()
+  })
+
+  test('moving an entry to the Offline calendar keeps it locally and removes it from the server', async ({
+    page,
+    baseURL,
+  }) => {
+    await clearState(page)
+    await seedMoveAccount(page, baseURL!)
+    await page.request.put(`${baseURL}/mock-caldav${J_WORK}j-move-entry.ics`, {
+      data: MOVE_VJOURNAL('Relocatable entry', 'Should move to the Offline calendar.'),
+    })
+    await seedJournalMoveStore(page)
+
+    await page.goto('/journal')
+    await syncAll(page)
+    await expect(page.getByText('Relocatable entry').first()).toBeVisible()
+
+    await page.getByText('Relocatable entry').first().dblclick()
+    const select = page.locator('[data-component="journal-calendar-select"]')
+    await expect(select).toBeVisible()
+    await select.selectOption('default')
+    await page.getByRole('button', { name: 'Save changes' }).click()
+
+    // The server copy is gone…
+    await expect
+      .poll(async () => Object.keys((await dump(page, baseURL!, J_WORK)) ?? {}).length, {
+        timeout: 15_000,
+      })
+      .toBe(0)
+    // …but the entry survives locally in the Offline calendar. A regression
+    // here deleted it everywhere (deleteCalDAVEvent also removes the store
+    // record on success).
+    await expect(page.getByText('Relocatable entry').first()).toBeVisible()
+  })
+
+  test('moving a local-only entry into a server calendar creates it there', async ({
+    page,
+    baseURL,
+  }) => {
+    await clearState(page)
+    await seedMoveAccount(page, baseURL!)
+    await seedJournalMoveStore(page, {
+      id: 'local-entry',
+      title: 'Offline thought',
+      body: 'Written before any account existed.',
+      date: day(15),
+    })
+
+    await page.goto('/journal')
+    await expect(page.getByText('Offline thought').first()).toBeVisible()
+
+    await page.getByText('Offline thought').first().dblclick()
+    const select = page.locator('[data-component="journal-calendar-select"]')
+    await expect(select).toBeVisible()
+    await select.selectOption('j-work')
+    await page.getByRole('button', { name: 'Save changes' }).click()
+
+    // The VJOURNAL now exists on the server under j-work/.
+    await expect
+      .poll(async () => Object.keys((await dump(page, baseURL!, J_WORK)) ?? {}).length, {
+        timeout: 15_000,
+      })
+      .toBe(1)
+    const workIcs = Object.values((await dump(page, baseURL!, J_WORK)) ?? {}).join('\n')
+    expect(workIcs).toContain('Offline thought')
+  })
   })
 })

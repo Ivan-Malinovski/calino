@@ -13,6 +13,7 @@ import { buildEventIndex } from '@/lib/events'
 import { putAttachments, getAttachments, deleteAttachments } from '@/lib/attachmentStore'
 import type { Calendar, CalendarEvent, CalendarAttachment } from '@/types'
 import { AttachmentSection } from './AttachmentSection'
+import { syncJournalEntryToServer } from '../lib/journalSync'
 import styles from './JournalView.module.css'
 
 // ── Shared compose form ──────────────────────────────────────────────────────
@@ -360,6 +361,7 @@ export function JournalView(): JSX.Element {
     createEvent: createCalDAVEvent,
     updateEvent: updateCalDAVEvent,
     deleteEvent: deleteCalDAVEvent,
+    deleteEventByHref: deleteCalDAVEventByHref,
   } = useCalDAV()
 
   const [isComposing, setIsComposing] = useState(false)
@@ -521,26 +523,20 @@ export function JournalView(): JSX.Element {
         }
         updateEvent(editingId, updates)
 
-        // Push to the server, routing by where the entry came from and where
-        // it is going: real↔real moves go through the #86 CalDAV move (which
-        // covers VJOURNALs), while the offline-calendar transitions create or
-        // delete — the offline calendar has no CalDAV resource to move.
         const syncedEntry: CalendarEvent = { ...existing, ...updates }
-        const syncToServer = (): void => {
-          if (existing.calendarId !== 'default' && calendarId !== 'default') {
-            updateCalDAVEvent(calendarId, syncedEntry).catch(() => {
-              showToast('Failed to sync update. It will be retried.')
-            })
-          } else if (existing.calendarId === 'default' && calendarId !== 'default') {
-            createCalDAVEvent(calendarId, syncedEntry).catch(() => {
-              showToast('Failed to sync entry. It will be retried.')
-            })
-          } else if (existing.calendarId !== 'default' && calendarId === 'default') {
-            deleteCalDAVEvent(existing.calendarId, existing.id).catch(() => {
-              showToast('Failed to sync update. It will be retried.')
-            })
-          }
-        }
+        // Push to the server, routing by where the entry came from and where
+        // it is going (see syncJournalEntryToServer — shared with
+        // JournalDayModal so the branches can't drift apart).
+        const syncToServer = (): void =>
+          syncJournalEntryToServer({
+            existing,
+            targetCalendarId: calendarId,
+            syncedEntry,
+            updateCalDAVEvent,
+            createCalDAVEvent,
+            deleteCalDAVEventByHref,
+            showToast,
+          })
 
         // Sync attachments to IDB, then push to server
         if (attachments.length > 0) {
