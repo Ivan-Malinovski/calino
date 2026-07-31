@@ -1,5 +1,32 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, type Page } from '@playwright/test'
 import { clearState, seedAccount } from './fixtures/localstorage'
+
+/**
+ * REPORT the calendar's resources and return the raw response body.
+ *
+ * The mock CalDAV server shares a dev server with the whole suite; under
+ * parallel load that server can occasionally reset a connection mid-request
+ * (ECONNRESET). One-shot REPORTs used to fail the whole test on such a blip
+ * (and a throw inside expect.poll skips retrying entirely), so retry briefly
+ * before giving up.
+ */
+async function reportCalendar(page: Page, calendarUrl: string): Promise<string> {
+  let lastError: unknown
+  for (let attempt = 0; attempt < 5; attempt++) {
+    try {
+      const r = await page.request.fetch(calendarUrl, {
+        method: 'REPORT',
+        data: '<calendar-query xmlns="urn:ietf:params:xml:ns:caldav"/>',
+        headers: { Depth: '1', 'Content-Type': 'application/xml' },
+      })
+      return await r.text()
+    } catch (err) {
+      lastError = err
+      await page.waitForTimeout(250)
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error('REPORT failed 5 times')
+}
 
 test.describe('calendar discovery sync', () => {
   // Every test here shares one CalDAV collection on the mock server, whose
@@ -136,12 +163,8 @@ END:VCALENDAR`,
       data: `BEGIN:VCALENDAR\r\nVERSION:2.0\r\nBEGIN:VEVENT\r\nUID:recurring-remote-uid\r\nDTSTART:${day}T120000Z\r\nDTEND:${day}T130000Z\r\nRRULE:FREQ=WEEKLY\r\nSUMMARY:Remote recurring event\r\nSEQUENCE:0\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n`,
     })
 
-    const seededReport = await page.request.fetch(calendarUrl, {
-      method: 'REPORT',
-      data: '<calendar-query xmlns="urn:ietf:params:xml:ns:caldav"/>',
-      headers: { Depth: '1', 'Content-Type': 'application/xml' },
-    })
-    expect(await seededReport.text()).toContain('Remote recurring event')
+    const seededReport = await reportCalendar(page, calendarUrl)
+    expect(seededReport).toContain('Remote recurring event')
 
     await page.goto('/month')
     await page.locator('[data-component="sync-all-calendars"]').click()
@@ -177,23 +200,24 @@ END:VCALENDAR`,
     await expect
       .poll(
         async () => {
-          const r = await page.request.fetch(calendarUrl, {
-            method: 'REPORT',
-            data: '<calendar-query xmlns="urn:ietf:params:xml:ns:caldav"/>',
-            headers: { Depth: '1', 'Content-Type': 'application/xml' },
-          })
-          return await r.text()
+          // Transient connection resets under parallel load used to throw out
+          // of the poll and fail the test instantly; retry instead.
+          try {
+            const r = await page.request.fetch(calendarUrl, {
+              method: 'REPORT',
+              data: '<calendar-query xmlns="urn:ietf:params:xml:ns:caldav"/>',
+              headers: { Depth: '1', 'Content-Type': 'application/xml' },
+            })
+            return await r.text()
+          } catch {
+            return ''
+          }
         },
         { timeout: 10_000 }
       )
       .toContain('SUMMARY:Remote recurring event updated')
 
-    const report = await page.request.fetch(calendarUrl, {
-      method: 'REPORT',
-      data: '<calendar-query xmlns="urn:ietf:params:xml:ns:caldav"/>',
-      headers: { Depth: '1', 'Content-Type': 'application/xml' },
-    })
-    const body = await report.text()
+    const body = await reportCalendar(page, calendarUrl)
     expect(body).toContain('server-generated-name.ics')
     expect(body.match(/UID:recurring-remote-uid/g)).toHaveLength(1)
   })
@@ -312,12 +336,7 @@ END:VCALENDAR`,
         .first()
     ).toBeVisible({ timeout: 10_000 })
 
-    const report = await page.request.fetch(calendarUrl, {
-      method: 'REPORT',
-      data: '<calendar-query xmlns="urn:ietf:params:xml:ns:caldav"/>',
-      headers: { Depth: '1', 'Content-Type': 'application/xml' },
-    })
-    const body = await report.text()
+    const body = await reportCalendar(page, calendarUrl)
     expect(body.match(/UID:atomic-series/g)).toHaveLength(2)
     expect(body).toContain('RECURRENCE-ID:')
     expect(body).toContain('SUMMARY:Atomic recurring override')
@@ -348,12 +367,7 @@ END:VCALENDAR`,
     // one occurrence. The dialog only appears for a master/series.
     await expect(importedOverride).toBeHidden()
 
-    const reportAfterDelete = await page.request.fetch(calendarUrl, {
-      method: 'REPORT',
-      data: '<calendar-query xmlns="urn:ietf:params:xml:ns:caldav"/>',
-      headers: { Depth: '1', 'Content-Type': 'application/xml' },
-    })
-    const bodyAfterDelete = await reportAfterDelete.text()
+    const bodyAfterDelete = await reportCalendar(page, calendarUrl)
     expect(bodyAfterDelete.match(/UID:atomic-series/g)).toHaveLength(1)
     expect(bodyAfterDelete).not.toContain('SUMMARY:Atomic recurring override')
     expect(bodyAfterDelete).toContain('EXDATE:')

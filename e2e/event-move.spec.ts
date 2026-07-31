@@ -88,11 +88,33 @@ async function seedAccountA(page: Page, baseURL: string): Promise<void> {
   })
 }
 
-async function dump(page: Page, baseURL: string, prefix: string): Promise<Record<string, string>> {
-  const response = await page.request.get(
-    `${baseURL}/mock-caldav/__test__/dump?prefix=${encodeURIComponent(prefix)}`
-  )
-  return (await response.json()) as Record<string, string>
+/**
+ * Snapshot the mock's stored resources under a collection prefix.
+ *
+ * The mock CalDAV server shares a dev server with the whole suite, and under
+ * parallel load that server can reset a connection mid-request (ECONNRESET).
+ * A raw throw inside expect.poll fails the test instantly instead of retrying,
+ * so this absorbs transient resets and returns null when the connection never
+ * came back — every poll matcher treats null as "not the target state yet"
+ * and tries again. Callers coerce with `?? {}`.
+ */
+async function dump(
+  page: Page,
+  baseURL: string,
+  prefix: string
+): Promise<Record<string, string> | null> {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const response = await page.request.get(
+        `${baseURL}/mock-caldav/__test__/dump?prefix=${encodeURIComponent(prefix)}`
+      )
+      return (await response.json()) as Record<string, string>
+    } catch {
+      if (attempt === 2) return null
+      await page.waitForTimeout(250)
+    }
+  }
+  return null
 }
 
 const icalStamp = (date: Date) => date.toISOString().replace(/[-:]/g, '').replace('.000', '')
@@ -164,19 +186,31 @@ test.describe('moving events between calendars', () => {
     // Server-side placement is the assertion that matters: the ICS must be
     // under `work/` and gone from the source collection.
     await expect
-      .poll(async () => Object.keys(await dump(page, baseURL!, WORK)).length, { timeout: 15_000 })
+      .poll(async () => Object.keys((await dump(page, baseURL!, WORK)) ?? {}).length, { timeout: 15_000 })
       .toBe(1)
-    const workDump = await dump(page, baseURL!, WORK)
+    const workDump = (await dump(page, baseURL!, WORK)) ?? {}
     expect(Object.values(workDump).join('')).toContain('UID:simple-move')
-    expect(await dump(page, baseURL!, SOURCE)).toEqual({})
+    // Source cleanup follows the destination write, so poll for it rather
+    // than sampling mid-flight (the race that flaked the series test).
+    await expect
+      .poll(async () => Object.keys((await dump(page, baseURL!, SOURCE)) ?? {}).length, {
+        timeout: 15_000,
+      })
+      .toBe(0)
 
     // And it survives a full sync round-trip, rendered exactly once.
     await syncAll(page)
     await expect(
       page.locator('[data-component="event-card"]').filter({ hasText: 'Movable event' })
     ).toHaveCount(1, { timeout: 15_000 })
-    expect(Object.keys(await dump(page, baseURL!, WORK))).toHaveLength(1)
-    expect(await dump(page, baseURL!, SOURCE)).toEqual({})
+    expect(Object.keys((await dump(page, baseURL!, WORK)) ?? {})).toHaveLength(1)
+    // Polled rather than one-shot: a transient connection reset makes dump
+    // return null (coerced to {}), which would false-pass a toEqual({}).
+    await expect
+      .poll(async () => Object.keys((await dump(page, baseURL!, SOURCE)) ?? {}).length, {
+        timeout: 15_000,
+      })
+      .toBe(0)
   })
 
   test('moves a recurring series together with its detached override', async ({
@@ -213,20 +247,40 @@ test.describe('moving events between calendars', () => {
     await page.locator('[data-component="modal-save"]').click()
 
     const recurrenceDialog = page.getByRole('dialog').filter({ hasText: /Edit recurring event/i })
-    if (await recurrenceDialog.isVisible().catch(() => false)) {
+    // The dialog is rendered by React after save, so it can lag a click under
+    // load — waiting on an instant isVisible() check raced the render and
+    // skipped 'All events', moving a single occurrence instead of the series.
+    // It only ever appears when the modal opened on the recurring master;
+    // opening on a detached occurrence saves directly, so fall back silently.
+    try {
+      await recurrenceDialog.waitFor({ state: 'visible', timeout: 5_000 })
       await recurrenceDialog.getByRole('button', { name: /All events/i }).click()
+    } catch {
+      /* occurrence-only path: the save already proceeded */
     }
 
+    // Wait for the FULL end state on both sides: the old poll settled on the
+    // first resource landing in work/, while the series' second occurrence
+    // and the source delete were still in flight — flaky under suite load.
     await expect
-      .poll(async () => Object.keys(await dump(page, baseURL!, WORK)).length, { timeout: 15_000 })
-      .toBeGreaterThan(0)
+      .poll(
+        async () =>
+          Object.values((await dump(page, baseURL!, WORK)) ?? {})
+            .join('\n')
+            .match(/UID:series-move/g)?.length ?? 0,
+        { timeout: 15_000 }
+      )
+      .toBe(2)
 
-    const workIcs = Object.values(await dump(page, baseURL!, WORK)).join('\n')
+    const workIcs = Object.values((await dump(page, baseURL!, WORK)) ?? {}).join('\n')
     // The master AND its detached override must both land in `work/`.
-    expect(workIcs.match(/UID:series-move/g) ?? []).toHaveLength(2)
     expect(workIcs).toContain('RECURRENCE-ID:')
     expect(workIcs).toContain('RRULE:FREQ=WEEKLY')
-    expect(await dump(page, baseURL!, SOURCE)).toEqual({})
+    await expect
+      .poll(async () => Object.keys((await dump(page, baseURL!, SOURCE)) ?? {}).length, {
+        timeout: 15_000,
+      })
+      .toBe(0)
   })
 
   test('moves an event across accounts', async ({ page, baseURL }) => {
@@ -268,14 +322,18 @@ test.describe('moving events between calendars', () => {
     await page.locator('[data-component="modal-save"]').click()
 
     await expect
-      .poll(async () => Object.keys(await dump(page, baseURL!, B_PERSONAL)).length, {
+      .poll(async () => Object.keys((await dump(page, baseURL!, B_PERSONAL)) ?? {}).length, {
         timeout: 15_000,
       })
       .toBe(1)
-    expect(Object.values(await dump(page, baseURL!, B_PERSONAL)).join('')).toContain(
+    expect(Object.values((await dump(page, baseURL!, B_PERSONAL)) ?? {}).join('')).toContain(
       'UID:cross-account'
     )
-    expect(await dump(page, baseURL!, SOURCE)).toEqual({})
+    await expect
+      .poll(async () => Object.keys((await dump(page, baseURL!, SOURCE)) ?? {}).length, {
+        timeout: 15_000,
+      })
+      .toBe(0)
   })
 
   test('a failed cleanup DELETE never leaves the event in two calendars', async ({
@@ -309,7 +367,7 @@ test.describe('moving events between calendars', () => {
     await page.locator('[data-component="modal-save"]').click()
 
     await expect
-      .poll(async () => Object.keys(await dump(page, baseURL!, WORK)).length, { timeout: 15_000 })
+      .poll(async () => Object.keys((await dump(page, baseURL!, WORK)) ?? {}).length, { timeout: 15_000 })
       .toBe(1)
 
     await syncAll(page)
@@ -320,11 +378,11 @@ test.describe('moving events between calendars', () => {
     await expect(
       page.locator('[data-component="event-card"]').filter({ hasText: 'Flaky cleanup event' })
     ).toHaveCount(1, { timeout: 15_000 })
-    expect(Object.keys(await dump(page, baseURL!, WORK))).toHaveLength(1)
+    expect(Object.keys((await dump(page, baseURL!, WORK)) ?? {})).toHaveLength(1)
     // The stale source copy is removed by the retried cleanup; poll because
     // the retry is chained through syncAccount's processPendingChanges call.
     await expect
-      .poll(async () => Object.keys(await dump(page, baseURL!, SOURCE)).length, {
+      .poll(async () => Object.keys((await dump(page, baseURL!, SOURCE)) ?? {}).length, {
         timeout: 15_000,
       })
       .toBe(0)
@@ -362,15 +420,15 @@ test.describe('moving events between calendars', () => {
     await syncAll(page)
 
     await expect
-      .poll(async () => Object.keys(await dump(page, baseURL!, WORK)).length, {
+      .poll(async () => Object.keys((await dump(page, baseURL!, WORK)) ?? {}).length, {
         timeout: 15_000,
       })
       .toBe(1)
-    expect(Object.values(await dump(page, baseURL!, WORK)).join('')).toContain(
+    expect(Object.values((await dump(page, baseURL!, WORK)) ?? {}).join('')).toContain(
       'UID:flaky-destination'
     )
     await expect
-      .poll(async () => Object.keys(await dump(page, baseURL!, SOURCE)).length, {
+      .poll(async () => Object.keys((await dump(page, baseURL!, SOURCE)) ?? {}).length, {
         timeout: 15_000,
       })
       .toBe(0)
@@ -419,26 +477,37 @@ test.describe('moving events between calendars', () => {
     await page.locator('[data-component="modal-save"]').click()
 
     const recurrenceDialog = page.getByRole('dialog').filter({ hasText: /Edit recurring event/i })
-    if (await recurrenceDialog.isVisible().catch(() => false)) {
+    // Same dialog race as the live series test: wait for it instead of
+    // checking isVisible() the instant after save.
+    try {
+      await recurrenceDialog.waitFor({ state: 'visible', timeout: 5_000 })
       await recurrenceDialog.getByRole('button', { name: /All events/i }).click()
+    } catch {
+      /* occurrence-only path: the save already proceeded */
     }
 
     await syncAll(page)
 
+    // The queued move's replay lands the whole group; wait for both VEVENTs
+    // rather than the first resource (same flake class as the live series test).
     await expect
-      .poll(async () => Object.keys(await dump(page, baseURL!, WORK)).length, {
-        timeout: 15_000,
-      })
-      .toBeGreaterThan(0)
+      .poll(
+        async () =>
+          Object.values((await dump(page, baseURL!, WORK)) ?? {})
+            .join('\n')
+            .match(/UID:series-flaky-destination/g)?.length ?? 0,
+        { timeout: 15_000 }
+      )
+      .toBe(2)
 
-    const workIcs = Object.values(await dump(page, baseURL!, WORK)).join('\n')
+    const workIcs = Object.values((await dump(page, baseURL!, WORK)) ?? {}).join('\n')
     // Master AND its detached override must both land — a queued move that
     // dropped the overrides would write a single VEVENT here.
     expect(workIcs.match(/UID:series-flaky-destination/g) ?? []).toHaveLength(2)
     expect(workIcs).toContain('RECURRENCE-ID:')
     expect(workIcs).toContain('RRULE:FREQ=WEEKLY')
     await expect
-      .poll(async () => Object.keys(await dump(page, baseURL!, SOURCE)).length, {
+      .poll(async () => Object.keys((await dump(page, baseURL!, SOURCE)) ?? {}).length, {
         timeout: 15_000,
       })
       .toBe(0)
