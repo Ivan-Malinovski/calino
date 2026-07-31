@@ -92,41 +92,41 @@ test.describe('month-view — event delete animation', () => {
     // xpath to walk up one level.
     const wrapper = card.locator('xpath=..')
 
-    // Sample the wrapper's computed opacity over a 300ms window
-    // starting immediately after the click. With the fix, the exit
-    // animation runs and opacity drops below 1 for at least one
-    // frame. Without the fix, the motion.div is unmounted
+    // Sample the wrapper's computed opacity across the exit animation.
+    // With the fix, the animation runs and opacity drops below 1 for at
+    // least one frame. Without the fix, the motion.div is unmounted
     // synchronously and we never see an intermediate opacity.
-    const opacities: number[] = []
-    const stopAt = Date.now() + 300
-    const sampling = (async (): Promise<void> => {
-      while (Date.now() < stopAt) {
-        const opacity = await wrapper
-          .evaluate((el) => {
-            // If the element is still in the DOM, read the computed
-            // style (framer-motion animates opacity via inline style).
-            const cs = window.getComputedStyle(el as HTMLElement)
-            const v = parseFloat(cs.opacity)
-            return Number.isFinite(v) ? v : -1
-          })
-          .catch(() => -1)
-        opacities.push(opacity)
-        await page.waitForTimeout(16)
+    //
+    // The sampling loop lives in the page and is driven by rAF rather than
+    // by per-sample round-trips from the test: under parallel workers a
+    // round-trip can take longer than the whole ~200ms animation, so the
+    // old version could miss every intermediate frame and fail spuriously.
+    // It is armed *before* the click so no frames are lost to click latency,
+    // and it stops as soon as the element leaves the DOM.
+    await wrapper.evaluate((el) => {
+      const samples: number[] = []
+      ;(window as unknown as { __exitOpacitySamples: number[] }).__exitOpacitySamples = samples
+      const deadline = performance.now() + 2000
+      const tick = (): void => {
+        if (!el.isConnected || performance.now() > deadline) return
+        const v = parseFloat(window.getComputedStyle(el as HTMLElement).opacity)
+        if (Number.isFinite(v)) samples.push(v)
+        requestAnimationFrame(tick)
       }
-    })()
-    await menuDeleteButton.click()
-    await sampling
+      requestAnimationFrame(tick)
+    })
 
-    // Filter to samples taken while the element was still in the DOM
-    // (opacity is a number 0..1, -1 means "element gone").
-    const liveSamples = opacities.filter((o) => o >= 0)
+    await menuDeleteButton.click()
+    // Wait for the element to actually leave the DOM, which is what ends the
+    // sampling loop — no fixed sleep, so a slow machine just samples longer.
+    await expect(wrapper).toHaveCount(0, { timeout: 5000 })
+
+    const liveSamples = await page.evaluate(
+      () => (window as unknown as { __exitOpacitySamples: number[] }).__exitOpacitySamples
+    )
     expect(
       liveSamples.some((o) => o < 0.99),
       `expected exit animation to drop opacity below 1; samples: ${JSON.stringify(liveSamples)}`
     ).toBe(true)
-
-    // Eventually the motion.div should be gone entirely (after the
-    // exit animation completes).
-    await expect(wrapper).toHaveCount(0, { timeout: 1000 })
   })
 })

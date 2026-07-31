@@ -237,7 +237,15 @@ END:VCALENDAR`,
       password: 'pass',
     })
 
+    // Anchor the series to the 1st/2nd of next month rather than today/tomorrow.
+    // The agenda renders one month at a time, so a series starting on the last
+    // day of a month puts its second occurrence outside the view and the count
+    // below can never reach 2 (it failed exactly this way on Jul 31). Starting
+    // on the 1st also keeps both occurrences at the top of the virtualised list,
+    // which is where the agenda scrolls when the view month isn't the current one.
     const first = new Date()
+    first.setUTCDate(1)
+    first.setUTCMonth(first.getUTCMonth() + 1)
     first.setUTCHours(15, 20, 0, 0)
     const second = new Date(first)
     second.setUTCDate(second.getUTCDate() + 1)
@@ -251,6 +259,7 @@ END:VCALENDAR`,
 
     await page.goto('/agenda')
     await page.locator('[data-component="sync-all-calendars"]').click()
+    await page.getByRole('button', { name: 'Next', exact: true }).click()
 
     await expect(
       page.locator('main').getByText('Timed EXDATE regression', { exact: true })
