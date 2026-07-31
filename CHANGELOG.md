@@ -4,6 +4,17 @@ All notable changes to Calino will be documented in this file.
 
 ## [Unreleased]
 
+## [0.25.4] - 2026-07-31
+
+### Fixed
+
+- **Contact relations entered as a UUID now show the contact they point at.** The relation field invited you to enter a UUID and saved it correctly, but then displayed it back as a raw `urn:uuid:…` string forever — it was never matched up with the contact. Relations now resolve to the contact's name and are clickable, including when the contact lives in a different address book. Fixes [#87](https://github.com/Ivan-Malinovski/calino/issues/87).
+- **A contact whose only extra detail was a relation, a language or group membership showed an empty page.** The whole details section was hidden unless there was also an email, phone, address, website or messaging handle.
+
+### Changed
+
+- **Relations and group members are chosen from a searchable list** instead of being typed by hand, so there's no need to hunt down a UUID. You can still type a free-form name for a relation to someone who isn't in your address book.
+
 ## [0.25.3] - 2026-07-27
 
 ### Fixed

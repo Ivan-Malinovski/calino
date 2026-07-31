@@ -2,6 +2,8 @@ import type { JSX } from 'react'
 import { useState, useCallback, useEffect, useRef } from 'react'
 import imageCompression from 'browser-image-compression'
 import type { Contact, ContactEmail, ContactPhone, ContactAddress, ContactUrl } from '../types'
+import { ContactPicker, MemberName } from './ContactPicker'
+import { normalizeContactRef } from '../lib/contactRefs'
 import styles from '@/features/calendar/components/EventModal.module.css'
 
 interface ContactFormFieldsProps {
@@ -829,13 +831,13 @@ export function ContactFormFields({ value, onChange }: ContactFormFieldsProps): 
                 <option value="emergency">Emergency</option>
                 <option value="other">Other</option>
               </select>
-              <input
-                type="text"
-                placeholder="Name or URN:uuid:..."
+              <ContactPicker
                 value={rel.value}
-                onChange={(e) => updateRelated(i, 'value', e.target.value)}
-                className={styles.input}
-                style={{ flex: 1 }}
+                onChange={(v) => updateRelated(i, 'value', v)}
+                excludeIds={local.id ? [local.id] : []}
+                allowFreeText
+                placeholder="Search contacts, or type a name"
+                data-component="related-contact-picker"
               />
               <button
                 type="button"
@@ -888,7 +890,7 @@ export function ContactFormFields({ value, onChange }: ContactFormFieldsProps): 
                     key={uid}
                     style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0' }}
                   >
-                    <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{uid}</span>
+                    <MemberName uid={uid} />
                     <button
                       type="button"
                       className={styles.removeFieldButton}
@@ -904,19 +906,25 @@ export function ContactFormFields({ value, onChange }: ContactFormFieldsProps): 
                 ))}
               </div>
             )}
-            <input
-              type="text"
-              placeholder="Add member URN:uuid:..."
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && e.currentTarget.value.trim()) {
-                  const uid = e.currentTarget.value.trim()
-                  if (!(local.memberUids || []).includes(uid)) {
-                    update({ memberUids: [...(local.memberUids || []), uid] })
-                  }
-                  e.currentTarget.value = ''
-                }
+            {/*
+              Picker-only: unlike RELATED, a MEMBER that doesn't reference a real
+              contact is meaningless, so free text isn't accepted here. Selecting
+              a contact appends it and resets the picker via the bumped key.
+            */}
+            <ContactPicker
+              key={`member-picker-${(local.memberUids || []).length}`}
+              value=""
+              onChange={(v) => {
+                if (!v) return
+                const memberUids = local.memberUids || []
+                if (!memberUids.includes(v)) update({ memberUids: [...memberUids, v] })
               }}
-              className={styles.input}
+              excludeIds={[
+                ...(local.id ? [local.id] : []),
+                ...(local.memberUids || []).map(normalizeContactRef),
+              ]}
+              placeholder="Add a member…"
+              data-component="member-contact-picker"
             />
           </div>
         </div>

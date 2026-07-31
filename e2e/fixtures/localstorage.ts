@@ -10,8 +10,24 @@ export const STORAGE_KEYS = {
   accounts: 'calino_caldav_accounts',
   caldavCalendars: 'calino_caldav_calendars',
   calendar: 'calino-storage',
+  contacts: 'calino-contacts',
   cookieConsent: 'calino_cookie_notice',
 } as const
+
+interface ContactSeed {
+  /** vCard UID. `Contact.id` IS the UID, so this is what RELATED/MEMBER reference. */
+  id: string
+  displayName: string
+  addressBookId: string
+  related?: Array<{ value: string; type: string; isPrimary?: boolean }>
+  isGroup?: boolean
+  memberUids?: string[]
+}
+
+interface AddressBookSeed {
+  id: string
+  name: string
+}
 
 interface RecurringEventSeed {
   id: string
@@ -138,6 +154,85 @@ export async function clearState(page: Page): Promise<void> {
       /* noop */
     }
   }, STORAGE_KEYS)
+}
+
+/**
+ * Seed contacts and address books into `calino-contacts` so contact specs can
+ * start from a populated address book. Fills in the `Contact` fields the store
+ * and UI require but that individual specs rarely care about.
+ *
+ * Uses the same one-shot sessionStorage flag pattern as the other seeders so
+ * the data survives a reload within one test.
+ */
+export async function seedContacts(
+  page: Page,
+  addressBooks: AddressBookSeed[],
+  contacts: ContactSeed[]
+): Promise<void> {
+  await page.addInitScript(
+    ({ key, addressBooks: books, contacts: seeds }) => {
+      try {
+        if (sessionStorage.getItem('__calino_test_contacts_seeded')) return
+        sessionStorage.setItem('__calino_test_contacts_seeded', '1')
+        const now = new Date().toISOString()
+        const state = {
+          addressBooks: books.map((b) => ({
+            id: b.id,
+            accountId: 'contacts-account-1',
+            url: `https://dav.example/${b.id}/`,
+            name: b.name,
+            description: '',
+            ctag: null,
+            syncToken: null,
+            isVisible: true,
+          })),
+          contacts: seeds.map((c) => ({
+            id: c.id,
+            addressBookId: c.addressBookId,
+            accountId: 'contacts-account-1',
+            url: `https://dav.example/${c.addressBookId}/${c.id}.vcf`,
+            displayName: c.displayName,
+            familyName: c.displayName.split(' ').slice(1).join(' '),
+            givenName: c.displayName.split(' ')[0],
+            additionalNames: '',
+            prefixes: '',
+            suffixes: '',
+            nickname: '',
+            organization: '',
+            department: '',
+            title: '',
+            note: '',
+            categories: [],
+            photo: null,
+            birthday: '',
+            anniversary: '',
+            emails: [],
+            phones: [],
+            addresses: [],
+            urls: [],
+            ims: [],
+            langs: [],
+            related: (c.related ?? []).map((r) => ({
+              value: r.value,
+              type: r.type,
+              isPrimary: r.isPrimary ?? false,
+            })),
+            isGroup: c.isGroup ?? false,
+            memberUids: c.memberUids ?? [],
+            xmlData: null,
+            opaqueLines: [],
+            createdAt: now,
+            updatedAt: now,
+          })),
+          pendingChanges: [],
+        }
+        localStorage.setItem(key, JSON.stringify({ state, version: 2 }))
+      } catch {
+        /* noop */
+      }
+    },
+    { key: STORAGE_KEYS.contacts, addressBooks, contacts }
+  )
 }
 
 /**
