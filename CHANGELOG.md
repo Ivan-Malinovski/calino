@@ -4,6 +4,14 @@ All notable changes to Calino will be documented in this file.
 
 ## [Unreleased]
 
+## [0.26.1] - 2026-07-31
+
+### Fixed
+
+- **Journal entries respect the sidebar's calendar visibility checkboxes.** Hiding a calendar now hides its entries everywhere — the Journal list, the day sheet and the month-grid dots — exactly like events and tasks already did. Fixes [#88](https://github.com/Ivan-Malinovski/calino/issues/88).
+- **A new journal entry can be filed into the calendar of your choice.** Composing an entry shows a calendar selector (hidden when there's only one writable calendar), defaulting to your default calendar. Fixes [#89](https://github.com/Ivan-Malinovski/calino/issues/89).
+- **Journal entries show their month and year.** The list has no month headings and All mode spans every year on record, so the bare day number could not place an entry; the date gutter now carries the month and year. Fixes [#85](https://github.com/Ivan-Malinovski/calino/issues/85).
+
 ## [0.26.0] - 2026-07-31
 
 ### Added
