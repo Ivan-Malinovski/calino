@@ -559,6 +559,12 @@ export function icalEventToCalendarEvent(
     }
   }
 
+  // URL round-trips like it already does for VJOURNAL. Birthday/anniversary
+  // events created from a contact carry their `calino:contact:<id>` marker
+  // here; dropping it on parse made them look un-added after every sync.
+  const urlProp = vevent.getFirstProperty('url')
+  const url = urlProp ? (urlProp.getFirstValue() as string) : undefined
+
   const sequenceProp = vevent.getFirstProperty('sequence')
   const sequence = sequenceProp ? parseInt(sequenceProp.getFirstValue() as string, 10) : undefined
 
@@ -627,6 +633,7 @@ export function icalEventToCalendarEvent(
     // serializer can re-emit the TZID form on the wall-clock time.
     timezone,
     categories: categories.length > 0 ? categories : undefined,
+    url,
     recurrence,
     reminders: reminders.length > 0 ? reminders : undefined,
     rruleString,
@@ -761,6 +768,10 @@ export function calendarEventToIcalComponent(event: CalendarEvent): ICAL.Compone
 
   if (event.location) {
     vevent.updatePropertyWithValue('location', event.location)
+  }
+
+  if (event.url) {
+    vevent.updatePropertyWithValue('url', event.url)
   }
 
   if (event.categories && event.categories.length > 0) {
