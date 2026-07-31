@@ -3,7 +3,7 @@ import React, { useState, useMemo, useCallback, useRef, useEffect, useLayoutEffe
 import { format, parseISO } from 'date-fns'
 // useNavigate removed — unused
 import { useVirtualizer } from '@tanstack/react-virtual'
-import { useCalendarStore } from '@/store/calendarStore'
+import { useCalendarStore, isJournalEntryVisible } from '@/store/calendarStore'
 import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
 import { v4 as uuidv4 } from 'uuid'
 import { MarkdownView } from '@/lib/markdown'
@@ -11,7 +11,7 @@ import { showToast } from '@/lib/toast'
 import { deleteEventWithUndo } from '@/lib/deleteWithUndo'
 import { buildEventIndex } from '@/lib/events'
 import { putAttachments, getAttachments, deleteAttachments } from '@/lib/attachmentStore'
-import type { CalendarEvent, CalendarAttachment } from '@/types'
+import type { Calendar, CalendarEvent, CalendarAttachment } from '@/types'
 import { AttachmentSection } from './AttachmentSection'
 import styles from './JournalView.module.css'
 
@@ -30,7 +30,11 @@ interface JournalComposeFormProps {
   bodyRef: React.RefObject<HTMLTextAreaElement | null>
   saveHint: string
   closing?: boolean
-  formatEntryDate: (dateStr: string) => { day: string; weekday: string }
+  formatEntryDate: (dateStr: string) => { day: string; weekday: string; monthYear: string }
+  /** Calendars the entry may be saved into (writable only). */
+  writableCalendars: Calendar[]
+  calendarId: string
+  onCalendarChange: (calendarId: string) => void
   onTitleChange: (value: string) => void
   onBodyChange: (value: string) => void
   onDateChange: (value: string) => void
@@ -56,6 +60,9 @@ function JournalComposeForm({
   // saveHint available but not rendered in compose form currently
   closing,
   formatEntryDate,
+  writableCalendars,
+  calendarId,
+  onCalendarChange,
   onTitleChange,
   onBodyChange,
   onDateChange,
@@ -70,7 +77,12 @@ function JournalComposeForm({
   const events = useCalendarStore((state) => state.events)
   const [showDatePicker, setShowDatePicker] = useState(false)
   const [showAddPanel, setShowAddPanel] = useState(false)
-  const { day, weekday } = formatEntryDate(editingDate)
+  const { day, weekday, monthYear } = formatEntryDate(editingDate)
+  // Which calendar an existing entry lives in is not editable here: moving a
+  // saved entry between collections needs the CalDAV move that issue #86
+  // tracks, and offering the control before that lands would silently revert
+  // on the next sync.
+  const showCalendarPicker = !editingId && writableCalendars.length > 1
 
   // Determine which add sections have content
   const hasCategories = selectedCategories.length > 0
@@ -119,6 +131,7 @@ function JournalComposeForm({
           >
             <span className={styles.composeDay}>{day}</span>
             <span className={styles.composeWeekday}>{weekday}</span>
+            <span className={styles.composeMonthYear}>{monthYear}</span>
           </button>
         )}
       </div>
@@ -137,6 +150,26 @@ function JournalComposeForm({
           value={body}
           onChange={(e) => onBodyChange(e.target.value)}
         />
+        {showCalendarPicker && (
+          <div className={styles.calendarRow}>
+            <label className={styles.calendarLabel} htmlFor="journal-calendar-select">
+              Calendar
+            </label>
+            <select
+              id="journal-calendar-select"
+              className={styles.calendarSelect}
+              data-component="journal-calendar-select"
+              value={calendarId}
+              onChange={(e) => onCalendarChange(e.target.value)}
+            >
+              {writableCalendars.map((cal) => (
+                <option key={cal.id} value={cal.id}>
+                  {cal.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
         {/* Add panel — categories, link, attachments */}
         {
           <div className={styles.addPanel}>
@@ -341,6 +374,7 @@ export function JournalView(): JSX.Element {
   const [relatedTo, setRelatedTo] = useState<string[]>([])
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<'month' | 'all'>('month')
+  const [calendarId, setCalendarId] = useState<string>('')
   const segmentedRef = useRef<HTMLDivElement>(null)
   const pageRef = useRef<HTMLDivElement>(null)
   const tabRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
@@ -366,9 +400,26 @@ export function JournalView(): JSX.Element {
     calendarsRef.current = calendars
   })
 
+  // Entries live in calendars, so the sidebar's visibility checkboxes gate them
+  // exactly like events and tasks (issue #88).
+  const visibleCalendarIds = useMemo(
+    () => new Set(calendars.filter((c) => c.isVisible).map((c) => c.id)),
+    [calendars]
+  )
+  const visibleJournalEntries = useMemo(
+    () => events.filter((e) => isJournalEntryVisible(e, visibleCalendarIds)),
+    [events, visibleCalendarIds]
+  )
+
+  const writableCalendars = useMemo(() => calendars.filter((c) => !c.readOnly), [calendars])
+  const defaultCalendarId = useMemo(() => {
+    const preferred = writableCalendars.find((c) => c.isDefault) ?? writableCalendars[0]
+    return preferred?.id ?? 'default'
+  }, [writableCalendars])
+
   // Group journal entries by month
   const groupedEntries = useMemo(() => {
-    const journalEntries = events.filter((e) => e.type === 'journal')
+    const journalEntries = visibleJournalEntries
 
     let filtered: typeof journalEntries
     if (viewMode === 'month') {
@@ -393,13 +444,13 @@ export function JournalView(): JSX.Element {
         monthKey,
         entries: entries.sort((a, b) => b.start.localeCompare(a.start)),
       }))
-  }, [events, currentDate, viewMode])
+  }, [visibleJournalEntries, currentDate, viewMode])
 
   // Flat sorted list for virtualized 'all' mode
   const allEntries = useMemo(() => {
     if (viewMode !== 'all') return []
-    return events.filter((e) => e.type === 'journal').sort((a, b) => b.start.localeCompare(a.start))
-  }, [events, viewMode])
+    return [...visibleJournalEntries].sort((a, b) => b.start.localeCompare(a.start))
+  }, [visibleJournalEntries, viewMode])
 
   // Virtualizer for 'all' mode
   const virtualizer = useVirtualizer({
@@ -409,7 +460,7 @@ export function JournalView(): JSX.Element {
     overscan: 5,
   })
 
-  const totalCount = useMemo(() => events.filter((e) => e.type === 'journal').length, [events])
+  const totalCount = visibleJournalEntries.length
 
   // Index events by id so related-event lookups in the entry list are O(1).
   const eventIndex = useMemo(() => buildEventIndex(events), [events])
@@ -491,8 +542,12 @@ export function JournalView(): JSX.Element {
         }
       }
     } else {
-      // Create new entry
-      const defaultCalendar = currentCalendars.find((c) => c.isDefault) || currentCalendars[0]
+      // Create new entry — honour the picker, falling back to the default
+      // calendar when it was never shown (single writable calendar).
+      const defaultCalendar =
+        currentCalendars.find((c) => c.id === calendarId) ??
+        currentCalendars.find((c) => c.isDefault) ??
+        currentCalendars[0]
       const newId = uuidv4()
       const newEntry: CalendarEvent = {
         id: newId,
@@ -578,6 +633,7 @@ export function JournalView(): JSX.Element {
 
   const handleStartEdit = useCallback((entry: CalendarEvent): void => {
     setEditingId(entry.id)
+    setCalendarId(entry.calendarId)
     setTitle(entry.title || '')
     setBody(entry.description || '')
     setEditingDate(entry.start)
@@ -618,8 +674,9 @@ export function JournalView(): JSX.Element {
     setAttachments([])
     setUrl('')
     setRelatedTo([])
+    setCalendarId(defaultCalendarId)
     setIsComposing(true)
-  }, [isComposing])
+  }, [isComposing, defaultCalendarId])
 
   const handleDelete = useCallback(
     (entryId: string): void => {
@@ -645,14 +702,20 @@ export function JournalView(): JSX.Element {
 
   const isMac = /Mac|iPod|iPhone|iPad/.test(navigator.userAgent)
 
-  // Format date for display in entry
-  const formatEntryDate = useCallback((dateStr: string): { day: string; weekday: string } => {
-    const d = parseISO(dateStr)
-    return {
-      day: format(d, 'd'),
-      weekday: format(d, 'EEE').toUpperCase(),
-    }
-  }, [])
+  // Format date for display in entry. The month/year line is what tells apart
+  // two entries on the same day number — the list has no month headings, and
+  // in 'all' mode it spans every year on record (issue #85).
+  const formatEntryDate = useCallback(
+    (dateStr: string): { day: string; weekday: string; monthYear: string } => {
+      const d = parseISO(dateStr)
+      return {
+        day: format(d, 'd'),
+        weekday: format(d, 'EEE').toUpperCase(),
+        monthYear: format(d, 'MMM yyyy').toUpperCase(),
+      }
+    },
+    []
+  )
 
   const handleCancel = useCallback(() => {
     setIsClosing(true)
@@ -674,7 +737,7 @@ export function JournalView(): JSX.Element {
   // via CSS :last-child since 'all' mode wraps each entry in its own
   // virtualized container, which would make :last-child match every entry.
   const renderEntryCard = (entry: CalendarEvent, isLast = false): JSX.Element => {
-    const { day, weekday } = formatEntryDate(entry.start)
+    const { day, weekday, monthYear } = formatEntryDate(entry.start)
 
     if (editingId === entry.id) {
       return (
@@ -691,6 +754,9 @@ export function JournalView(): JSX.Element {
           bodyRef={bodyInputRef}
           saveHint={`${isMac ? '⌘' : 'Ctrl+'} Return to save · Esc to cancel`}
           formatEntryDate={formatEntryDate}
+          writableCalendars={writableCalendars}
+          calendarId={calendarId}
+          onCalendarChange={setCalendarId}
           onTitleChange={setTitle}
           onBodyChange={setBody}
           onDateChange={setEditingDate}
@@ -714,6 +780,7 @@ export function JournalView(): JSX.Element {
         <div className={styles.dateCol}>
           <span className={styles.dayNum}>{day}</span>
           <span className={styles.weekday}>{weekday}</span>
+          <span className={styles.monthYear}>{monthYear}</span>
         </div>
         <div className={styles.content}>
           {entry.title && <div className={styles.summary}>{entry.title}</div>}
@@ -795,6 +862,7 @@ export function JournalView(): JSX.Element {
                   if (el) tabRefs.current.set('month', el)
                 }}
                 className={`${styles.segmentTab} ${viewMode === 'month' ? styles.segmentTabActive : ''}`}
+                data-component="journal-mode-month"
                 onClick={() => setViewMode('month')}
               >
                 Month
@@ -804,12 +872,17 @@ export function JournalView(): JSX.Element {
                   if (el) tabRefs.current.set('all', el)
                 }}
                 className={`${styles.segmentTab} ${viewMode === 'all' ? styles.segmentTabActive : ''}`}
+                data-component="journal-mode-all"
                 onClick={() => setViewMode('all')}
               >
                 All
               </button>
             </div>
-            <button className={styles.addEntry} onClick={handleStartCompose}>
+            <button
+              className={styles.addEntry}
+              data-component="journal-new-entry"
+              onClick={handleStartCompose}
+            >
               <svg
                 width="14"
                 height="14"
@@ -842,6 +915,9 @@ export function JournalView(): JSX.Element {
             saveHint={`${isMac ? '⌘' : 'Ctrl+'} Return to save · Esc to cancel`}
             closing={isClosing}
             formatEntryDate={formatEntryDate}
+            writableCalendars={writableCalendars}
+            calendarId={calendarId}
+            onCalendarChange={setCalendarId}
             onTitleChange={setTitle}
             onBodyChange={setBody}
             onDateChange={setEditingDate}

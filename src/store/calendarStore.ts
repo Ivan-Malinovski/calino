@@ -1240,25 +1240,47 @@ function applyAutoCategories(
 
 // ── Journal helpers ─────────────────────────────────────────────────────
 
-export function getJournalEntriesForDate(events: CalendarEvent[], date: string): CalendarEvent[] {
-  return events.filter((e) => e.type === 'journal' && e.start === date)
+/**
+ * True when a journal entry should be shown for the given calendar selection.
+ * `visibleCalendarIds` is optional so existing callers that have no calendar
+ * context (tests, exports) keep seeing every entry; pass it from any view that
+ * honours the sidebar checkboxes, which is all of them.
+ */
+export function isJournalEntryVisible(
+  event: CalendarEvent,
+  visibleCalendarIds?: Set<string>
+): boolean {
+  if (event.type !== 'journal') return false
+  return !visibleCalendarIds || visibleCalendarIds.has(event.calendarId)
+}
+
+export function getJournalEntriesForDate(
+  events: CalendarEvent[],
+  date: string,
+  visibleCalendarIds?: Set<string>
+): CalendarEvent[] {
+  return events.filter((e) => isJournalEntryVisible(e, visibleCalendarIds) && e.start === date)
 }
 
 export function getJournalEntriesForMonth(
   events: CalendarEvent[],
   year: number,
-  month: number
+  month: number,
+  visibleCalendarIds?: Set<string>
 ): CalendarEvent[] {
   const prefix = `${year}-${String(month + 1).padStart(2, '0')}`
   return events
-    .filter((e) => e.type === 'journal' && e.start.startsWith(prefix))
+    .filter((e) => isJournalEntryVisible(e, visibleCalendarIds) && e.start.startsWith(prefix))
     .sort((a, b) => b.start.localeCompare(a.start))
 }
 
-export function getJournalDates(events: CalendarEvent[]): Set<string> {
+export function getJournalDates(
+  events: CalendarEvent[],
+  visibleCalendarIds?: Set<string>
+): Set<string> {
   const dates = new Set<string>()
   for (const e of events) {
-    if (e.type === 'journal') dates.add(e.start)
+    if (isJournalEntryVisible(e, visibleCalendarIds)) dates.add(e.start)
   }
   return dates
 }

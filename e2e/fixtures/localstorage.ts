@@ -111,6 +111,77 @@ export async function seedRecurringEvent(
   )
 }
 
+interface JournalSeed {
+  /** Calendars to install, in sidebar order. First is the default. */
+  calendars: { id: string; name: string }[]
+  /** Journal entries, each pinned to one of the seeded calendars. */
+  entries: { id: string; title: string; body: string; date: string; calendarId: string }[]
+}
+
+/**
+ * Seed calendars plus journal entries and turn the Journal view on.
+ *
+ * Journal entries are ordinary events with `type: 'journal'`, so they go into
+ * the same `calino-storage` bucket; the extra work here is flipping
+ * `journalEnabled` in settings, since the view is hidden until the first
+ * VJOURNAL arrives from a server.
+ */
+export async function seedJournal(page: Page, seed: JournalSeed): Promise<void> {
+  const now = new Date().toISOString()
+  const calendars = seed.calendars.map((calendar, index) => ({
+    id: calendar.id,
+    name: calendar.name,
+    color: index === 0 ? '#4285F4' : '#E8710A',
+    isVisible: true,
+    isDefault: index === 0,
+    showTasksInViews: true,
+  }))
+  const events = seed.entries.map((entry) => ({
+    id: entry.id,
+    calendarId: entry.calendarId,
+    title: entry.title,
+    description: entry.body,
+    start: entry.date,
+    end: entry.date,
+    isAllDay: true,
+    type: 'journal',
+    created: now,
+    lastModified: now,
+  }))
+
+  await page.addInitScript(
+    ({
+      calendarKey,
+      settingsKey,
+      calendars,
+      events,
+    }: {
+      calendarKey: string
+      settingsKey: string
+      calendars: unknown[]
+      events: unknown[]
+    }) => {
+      try {
+        if (sessionStorage.getItem('__calino_test_journal')) return
+        sessionStorage.setItem('__calino_test_journal', '1')
+
+        const raw = localStorage.getItem(calendarKey)
+        const parsed = raw ? JSON.parse(raw) : { state: {}, version: 2 }
+        parsed.state = { ...(parsed.state ?? {}), calendars, events }
+        localStorage.setItem(calendarKey, JSON.stringify(parsed))
+
+        const settingsRaw = localStorage.getItem(settingsKey)
+        const settings = settingsRaw ? JSON.parse(settingsRaw) : { state: {}, version: 1 }
+        settings.state = { ...(settings.state ?? {}), journalEnabled: true }
+        localStorage.setItem(settingsKey, JSON.stringify(settings))
+      } catch {
+        /* noop */
+      }
+    },
+    { calendarKey: STORAGE_KEYS.calendar, settingsKey: STORAGE_KEYS.settings, calendars, events }
+  )
+}
+
 /**
  * Wipes Calino state and dismisses onboarding + cookie consent.
  *

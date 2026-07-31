@@ -522,6 +522,38 @@
   border-color: var(--accent);
 }
 
+.calendarRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.calendarLabel {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.calendarSelect {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-family: inherit;
+  background: var(--panel);
+  color: var(--ink);
+  transition: border-color 0.12s;
+}
+
+.calendarSelect:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
 .relatedList {
   display: flex;
   flex-direction: column;

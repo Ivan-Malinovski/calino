@@ -723,6 +723,9 @@ export function Sidebar({
                         checked={calendar.isVisible}
                         onChange={() => toggleCalendarVisibility(calendar.id)}
                         className={styles.checkbox}
+                        data-component="calendar-visibility-toggle"
+                        data-calendar-id={calendar.id}
+                        aria-label={`Show ${calendar.name}`}
                       />
                       <div
                         className={styles.colorPicker}
