@@ -99,6 +99,13 @@ export function ContactsView(): JSX.Element {
     setIsFormOpen(true)
   }, [])
 
+  const handleSelectRelated = useCallback(
+    (contactId: string): void => {
+      setSelectedContactId(contactId)
+    },
+    [setSelectedContactId],
+  )
+
   // Close the address book picker on outside click or Escape
   useEffect(() => {
     if (!showPicker) return
@@ -383,6 +390,7 @@ export function ContactsView(): JSX.Element {
             hasAnniversaryEvent={
               selectedContact.anniversary != null && hasAnniversaryEvent(selectedContact.id, events)
             }
+            onSelectRelated={handleSelectRelated}
           />
         ) : (
           !isMobile && (

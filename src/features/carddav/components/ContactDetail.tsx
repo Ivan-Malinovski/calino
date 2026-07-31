@@ -4,6 +4,7 @@ import type { Contact } from '../types'
 import { useContactStore } from '@/store/contactStore'
 import { MarkdownView } from '@/lib/markdown'
 import { getInitials, getAvatarColor } from '../lib/avatars'
+import { resolveRelatedInAddressBook, isUrnUuid } from '../lib/resolveRelated'
 import styles from './ContactsView.module.css'
 
 // ---------------------------------------------------------------------------
@@ -123,6 +124,7 @@ interface ContactDetailProps {
   hasBirthdayEvent?: boolean
   onAddAnniversaryToCalendar?: () => void
   hasAnniversaryEvent?: boolean
+  onSelectRelated?: (contactId: string) => void
 }
 
 export function ContactDetail({
@@ -135,6 +137,7 @@ export function ContactDetail({
   hasBirthdayEvent = false,
   onAddAnniversaryToCalendar,
   hasAnniversaryEvent = false,
+  onSelectRelated,
 }: ContactDetailProps): JSX.Element {
   const [inlineEditing, setInlineEditing] = useState<InlineEdit | null>(null)
 
@@ -473,14 +476,36 @@ export function ContactDetail({
               {contact.related && contact.related.length > 0 && (
                 <div className={styles.infoField}>
                   <span className={styles.infoFieldLabel}>RELATED</span>
-                  {contact.related.map((rel, i) => (
-                    <div key={`rel-${i}`} className={styles.infoFieldGrid}>
-                      <span className={styles.infoFieldSub}>
-                        {RELATED_TYPE_LABELS[rel.type] ?? rel.type}
-                      </span>
-                      <span className={styles.infoFieldValue}>{rel.value}</span>
-                    </div>
-                  ))}
+                  {(() => {
+                    const allContacts = useContactStore.getState().contacts
+                    return contact.related.map((rel, i) => {
+                      const resolved = resolveRelatedInAddressBook(rel, contact, allContacts)
+                      return (
+                        <div key={`rel-${i}`} className={styles.infoFieldGrid}>
+                          <span className={styles.infoFieldSub}>
+                            {RELATED_TYPE_LABELS[rel.type] ?? rel.type}
+                          </span>
+                          <span className={styles.infoFieldValue}>
+                            {resolved ? (
+                              <button
+                                type="button"
+                                className={styles.relatedLink}
+                                onClick={() => onSelectRelated?.(resolved.id)}
+                              >
+                                {resolved.displayName}
+                              </button>
+                            ) : isUrnUuid(rel.value) ? (
+                              <span className={styles.relatedBroken}>
+                                Unresolved ({rel.value.replace('urn:uuid:', '')})
+                              </span>
+                            ) : (
+                              rel.value
+                            )}
+                          </span>
+                        </div>
+                      )
+                    })
+                  })()}
                 </div>
               )}
 
