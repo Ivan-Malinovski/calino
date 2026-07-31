@@ -105,6 +105,22 @@ const ACCOUNTS: MockAccount[] = [
         components: ['VEVENT', 'VTODO', 'VJOURNAL'],
       },
       {
+        // Dedicated collections for the journal-move test in `journal.spec.ts`
+        // (editing an entry's calendar). Owned by that spec outright, like
+        // event-move owns move-source/ — its resets never race the specs that
+        // share `personal/`.
+        path: '/dav/calendars/user/j-work/',
+        displayName: 'Journal Work',
+        color: '#4285F4',
+        components: ['VEVENT', 'VTODO', 'VJOURNAL'],
+      },
+      {
+        path: '/dav/calendars/user/j-personal/',
+        displayName: 'Journal Personal',
+        color: '#E8710A',
+        components: ['VEVENT', 'VTODO', 'VJOURNAL'],
+      },
+      {
         path: '/dav/calendars/user/calino-settings/',
         displayName: 'Calino Settings',
         components: ['VEVENT'],
