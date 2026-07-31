@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { SyncEngine, createSyncEngine, eventResourceFilename } from '../syncEngine'
+import {
+  SyncEngine,
+  createSyncEngine,
+  eventResourceFilename,
+  resourceIsInCollection,
+} from '../syncEngine'
 import type { CalendarEvent } from '@/types'
 import type { CalDAVClient } from '../../client/CalDAVClient'
 import * as storage from '../accountStorage'
@@ -198,5 +203,143 @@ describe('SyncEngine', () => {
     const body = vi.mocked(mockClient.updateEvent!).mock.calls[0][2]
     expect(body.match(/BEGIN:VEVENT/g)).toHaveLength(2)
     expect(body.match(/UID:series-uid/g)).toHaveLength(2)
+  })
+})
+
+describe('resourceIsInCollection', () => {
+  const collection = 'https://caldav.example.com/calendars/test/personal/'
+
+  it('accepts a resource inside the collection', () => {
+    expect(
+      resourceIsInCollection(`${collection}event.ics`, collection)
+    ).toBe(true)
+  })
+
+  it('accepts an origin-relative href', () => {
+    expect(resourceIsInCollection('/calendars/test/personal/event.ics', collection)).toBe(true)
+  })
+
+  it('rejects a resource in a sibling collection', () => {
+    expect(
+      resourceIsInCollection('https://caldav.example.com/calendars/test/work/event.ics', collection)
+    ).toBe(false)
+  })
+
+  it('rejects a resource on another origin', () => {
+    expect(
+      resourceIsInCollection('https://other.example.com/calendars/test/personal/event.ics', collection)
+    ).toBe(false)
+  })
+
+  it('tolerates a collection url without a trailing slash', () => {
+    expect(
+      resourceIsInCollection(`${collection}event.ics`, collection.slice(0, -1))
+    ).toBe(true)
+  })
+
+  it('does not treat a prefix-sharing sibling as inside the collection', () => {
+    // `.../personal-archive/` starts with `.../personal` as a raw string.
+    expect(
+      resourceIsInCollection(
+        'https://caldav.example.com/calendars/test/personal-archive/event.ics',
+        collection
+      )
+    ).toBe(false)
+  })
+
+  it('returns false rather than throwing when the collection url is unusable', () => {
+    expect(resourceIsInCollection(`${collection}event.ics`, 'not-a-url')).toBe(false)
+  })
+})
+
+describe('SyncEngine — writes stay inside the target collection (#86)', () => {
+  let engine: SyncEngine
+  let mockClient: Partial<CalDAVClient>
+  const workUrl = 'https://caldav.example.com/calendars/test/work/'
+  const personalHref = 'https://caldav.example.com/calendars/test/personal/moved.ics'
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockGetAllCalendars.mockReturnValue([
+      {
+        id: 'cal-work',
+        accountId: 'acc-1',
+        url: workUrl,
+        name: 'Work',
+        color: '#EF4444',
+        ctag: null,
+        syncToken: null,
+        isVisible: true,
+        isDefault: false,
+      },
+    ])
+    mockClient = {
+      createEvent: vi.fn().mockResolvedValue({ url: 'x', etag: '1' }),
+      updateEvent: vi.fn().mockResolvedValue({ url: 'x', etag: '2' }),
+      deleteEvent: vi.fn().mockResolvedValue(undefined),
+    }
+    engine = createSyncEngine(mockClient as CalDAVClient, 'cal-work')
+  })
+
+  it('updateEvent ignores an href belonging to a different calendar', async () => {
+    // This is the reported bug: the event was reassigned to Work, but the PUT
+    // went to its old Personal href, so the next sync pulled it back.
+    const event = makeEvent({ id: 'moved', calendarId: 'cal-work', resourceHref: personalHref })
+
+    await engine.updateEvent(event, '"etag"')
+
+    const [, targetUrl] = vi.mocked(mockClient.updateEvent!).mock.calls[0]
+    expect(targetUrl).toBe(`${workUrl}${eventResourceFilename('moved')}`)
+    expect(targetUrl).not.toBe(personalHref)
+  })
+
+  it('updateEventGroup ignores an href belonging to a different calendar', async () => {
+    const master = makeEvent({
+      id: 'series',
+      uid: 'series',
+      calendarId: 'cal-work',
+      resourceHref: 'https://caldav.example.com/calendars/test/personal/series.ics',
+      rruleString: 'FREQ=WEEKLY',
+    })
+    const override = makeEvent({
+      id: 'series-2024-03-22T14:00:00.000Z',
+      uid: 'series',
+      recurrenceId: '2024-03-22T14:00:00.000Z',
+      recurrenceMasterId: master.id,
+    })
+
+    await engine.updateEventGroup([master, override], '"etag"')
+
+    const [, targetUrl] = vi.mocked(mockClient.updateEvent!).mock.calls[0]
+    expect(targetUrl).toBe(`${workUrl}${eventResourceFilename('series')}`)
+  })
+
+  it('putEventGroup writes at the target collection with no If-Match', async () => {
+    // An empty etag is what makes a retried move idempotent: tsdav drops a
+    // falsy If-Match, so re-running the move overwrites its own partial result.
+    const event = makeEvent({ id: 'moved', resourceHref: personalHref })
+
+    await engine.putEventGroup([event])
+
+    const [collectionUrl, targetUrl, , etag] = vi.mocked(mockClient.updateEvent!).mock.calls[0]
+    expect(collectionUrl).toBe(workUrl)
+    expect(targetUrl).toBe(`${workUrl}${eventResourceFilename('moved')}`)
+    expect(etag).toBe('')
+  })
+
+  it('putEventGroup serializes a whole recurrence group into one resource', async () => {
+    const master = makeEvent({ id: 'series', uid: 'series', rruleString: 'FREQ=WEEKLY' })
+    const override = makeEvent({
+      id: 'series-2024-03-22T14:00:00.000Z',
+      uid: 'series',
+      recurrenceId: '2024-03-22T14:00:00.000Z',
+      recurrenceMasterId: master.id,
+    })
+
+    await engine.putEventGroup([master, override])
+
+    const body = vi.mocked(mockClient.updateEvent!).mock.calls[0][2]
+    expect(body.match(/BEGIN:VEVENT/g)).toHaveLength(2)
+    expect(body).toContain('RECURRENCE-ID:20240322T140000Z')
   })
 })

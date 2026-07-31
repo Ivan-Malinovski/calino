@@ -23,6 +23,36 @@ export function eventResourceFilename(eventId: string): string {
     .replaceAll('%', '~')}.ics`
 }
 
+/**
+ * True when `href` names a resource inside `calendarUrl`'s collection.
+ *
+ * Used to reject a stale `resourceHref` when an event has been reassigned to a
+ * different calendar: `CalDAVClient.updateEvent` PUTs to the href and treats the
+ * collection URL as validation only, so writing to an href from another
+ * collection silently puts the event back where it came from (issue #86).
+ *
+ * `resourceHref` may be origin-relative, so both sides are resolved against the
+ * collection URL before comparing paths.
+ */
+export function resourceIsInCollection(href: string, calendarUrl: string): boolean {
+  try {
+    const withSlash = (p: string): string => (p.endsWith('/') ? p : `${p}/`)
+    const collection = new URL(calendarUrl)
+    const resource = new URL(href, calendarUrl)
+    if (resource.origin !== collection.origin) return false
+    return resource.pathname.startsWith(withSlash(collection.pathname))
+  } catch {
+    return false
+  }
+}
+
+/** Serialize one event with the representation its type requires. */
+function serializeEvent(event: CalendarEvent): string {
+  if (event.type === 'task') return taskToICAL(event)
+  if (event.type === 'journal') return journalToICAL(event)
+  return eventToICAL(event)
+}
+
 /** Enrich an event with attachment data from IndexedDB before serializing. */
 async function withInlineAttachments(event: CalendarEvent): Promise<CalendarEvent> {
   if (!event.attachments || event.attachments.length === 0) return event
@@ -151,14 +181,7 @@ export class SyncEngine {
     }
 
     const enriched = await withInlineAttachments(event)
-    let iCalString: string
-    if (enriched.type === 'task') {
-      iCalString = taskToICAL(enriched)
-    } else if (enriched.type === 'journal') {
-      iCalString = journalToICAL(enriched)
-    } else {
-      iCalString = eventToICAL(enriched)
-    }
+    const iCalString = serializeEvent(enriched)
     const filename = eventResourceFilename(event.id)
 
     return this.client.createEvent(calendar.url, iCalString, filename)
@@ -172,15 +195,13 @@ export class SyncEngine {
     }
 
     const enriched = await withInlineAttachments(event)
-    let iCalString: string
-    if (enriched.type === 'task') {
-      iCalString = taskToICAL(enriched)
-    } else if (enriched.type === 'journal') {
-      iCalString = journalToICAL(enriched)
-    } else {
-      iCalString = eventToICAL(enriched)
-    }
-    const eventUrl = event.resourceHref || `${calendar.url}${eventResourceFilename(event.id)}`
+    const iCalString = serializeEvent(enriched)
+    // Never write to an href outside this calendar's collection: that's how a
+    // reassigned event used to be PUT straight back into its old calendar (#86).
+    const eventUrl =
+      event.resourceHref && resourceIsInCollection(event.resourceHref, calendar.url)
+        ? event.resourceHref
+        : `${calendar.url}${eventResourceFilename(event.id)}`
 
     return this.client.updateEvent(calendar.url, eventUrl, iCalString, etag)
   }
@@ -196,8 +217,34 @@ export class SyncEngine {
     }
 
     const enriched = await Promise.all(events.map((event) => withInlineAttachments(event)))
-    const eventUrl = master.resourceHref || `${calendar.url}${eventResourceFilename(master.id)}`
+    // Same collection guard as updateEvent — see #86.
+    const eventUrl =
+      master.resourceHref && resourceIsInCollection(master.resourceHref, calendar.url)
+        ? master.resourceHref
+        : `${calendar.url}${eventResourceFilename(master.id)}`
     return this.client.updateEvent(calendar.url, eventUrl, eventsToICAL(enriched), etag)
+  }
+
+  /**
+   * Write an event (or a whole recurrence group) into this engine's calendar at
+   * the href derived from the master's id, ignoring any existing `resourceHref`.
+   *
+   * This is the destination half of a move. It deliberately sends an EMPTY etag:
+   * tsdav drops a falsy `If-Match`, so a retried move overwrites its own partial
+   * result instead of failing. `createEvent` can't be used for this because
+   * tsdav hardcodes `If-None-Match: *` on creates, which would 412 on retry.
+   */
+  async putEventGroup(events: CalendarEvent[]): Promise<{ url: string; etag: string }> {
+    const calendar = storage.getAllCalendars().find((c) => c.id === this.calendarId)
+    const master = events.find((event) => !event.recurrenceId) ?? events[0]
+    if (!calendar || !master) {
+      throw new Error(`Calendar or recurrence master not found: ${this.calendarId}`)
+    }
+
+    const enriched = await Promise.all(events.map((event) => withInlineAttachments(event)))
+    const iCalString = enriched.length > 1 ? eventsToICAL(enriched) : serializeEvent(enriched[0])
+    const eventUrl = `${calendar.url}${eventResourceFilename(master.id)}`
+    return this.client.updateEvent(calendar.url, eventUrl, iCalString, '')
   }
 
   async deleteEvent(eventUrl: string, etag: string): Promise<void> {

@@ -32,12 +32,38 @@ export interface SyncState {
 
 export interface PendingChange {
   id: string
-  type: 'create' | 'update' | 'delete'
+  /**
+   * `move` — an event changed calendars; `data` is a MovePendingData and
+   * `calendarId` is the TARGET. Distinct from `update` because a replayed
+   * update writes to the event's stored href, which is exactly the bug in #86.
+   *
+   * `delete-href` — remove one leftover resource after a move whose cleanup
+   * DELETE failed; `calendarId` is the SOURCE. Distinct from `delete` because
+   * that one also removes the event from the local store, which would discard
+   * the copy we just successfully moved.
+   */
+  type: 'create' | 'update' | 'delete' | 'move' | 'delete-href'
   eventId: string
   calendarId: string
   data?: string
   timestamp: string
   retryCount: number
+}
+
+/** Payload of a `move` pending change (JSON-encoded in `PendingChange.data`). */
+export interface MovePendingData {
+  events: unknown[]
+  sourceCalendarId: string
+  sourceHref?: string
+  sourceEtag?: string
+}
+
+/** Payload of a `delete-href` pending change (JSON-encoded in `PendingChange.data`). */
+export interface DeleteHrefPendingData {
+  href: string
+  etag?: string
+  /** Every event that now lives at the moved-to resource; guarded from sync overwrite. */
+  memberIds: string[]
 }
 
 export interface CalDAVCredentials {

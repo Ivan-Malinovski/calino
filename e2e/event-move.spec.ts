@@ -113,8 +113,11 @@ async function syncAll(page: Page): Promise<void> {
   const syncButton = page.locator('[data-component="sync-all-calendars"]')
   await expect(syncButton).toBeEnabled({ timeout: 15_000 })
   await syncButton.click()
+  // `.first()`: a move whose cleanup DELETE failed also raises its own warning
+  // toast, so more than one toast can be on screen and a bare locator trips
+  // strict mode.
   await expect(
-    page.getByText(/All calendars synced\.|Calendars are already syncing\.|Sync failed/)
+    page.getByText(/All calendars synced\.|Calendars are already syncing\.|Sync failed/).first()
   ).toBeVisible({ timeout: 15_000 })
 }
 
