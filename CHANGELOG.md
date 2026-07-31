@@ -4,59 +4,26 @@ All notable changes to Calino will be documented in this file.
 
 ## [Unreleased]
 
-## [0.27.1] - 2026-07-31
-
-### Fixed
-
-- **A failed event move can no longer lose a series' exceptions.** When a move hit a duplicate-UID server (source deleted, destination write failed) the recovery queued a re-create of the master only, permanently dropping every detached override (`RECURRENCE-ID`). The recovery now re-creates the whole group — master and exceptions — in one resource.
-- **Moving an event to a read-only/shared calendar no longer deletes it from its old one.** A bare HTTP 403 on the destination write was misread as a duplicate-UID conflict, so the source was deleted and the move fell into a lost-source loop. 403 now counts as a conflict only when the body carries the `<C:no-uid-conflict/>` precondition (iCloud/Google style); otherwise the move aborts with the source untouched.
-- **Contact birthdays/anniversaries parsed on the wrong day west of UTC.** `new Date('YYYY-MM-DD')` is UTC midnight, so `.getMonth()`/`.getDate()` in a negative-offset timezone shifted birthdays (and the countdown/age) back a day. Date-only values are now constructed from explicit local parts.
-- **Deleting a contact removes its birthday/anniversary events from CalDAV.** The `calino:contact:<id>` VEVENTs used to be orphaned on the server; they are now deleted with the contact (and restored if you undo the deletion).
-- **Moving a journal entry to the Offline calendar no longer leaves stale server links.** The local entry kept its deleted resource's `href`/`etag`/`syncStatus`; it is now a clean local-only record, so a later move back to CalDAV cannot trip over a dangling reference.
-- **Updated events pick up a fresh ETag when the server omits the header.** `updateEvent` kept the stale pre-update etag (which 412s the next update on Google/iCloud); it now re-fetches it with a PROPFIND like `createEvent` already did.
-
-### Changed
-
-- **Faster journal entry lists.** Entry cards are memoized, so typing in the compose form no longer re-renders every card (and its Markdown) on each keystroke.
-- **Contact relation rendering is O(M) per contact instead of O(M×N).** Related/member values resolve against a single memoized id→contact map instead of each scanning the whole contacts array, and a dangling `urn:uuid:…` reference renders as "Unknown Contact" rather than the raw URI.
-## [0.27.0] - 2026-07-31
-
-### Fixed
-
-- **Birthday and anniversary events from contacts now persist to CalDAV.** "Add to calendar" wrote to the local store only, so the next sync pass replaced the store with server truth and the event vanished — even mid-session. The create now goes through the CalDAV client (and undo retracts it from the server too), and the `calino:contact:<id>` marker that powers "On calendar" round-trips on VEVENT instead of being dropped on parse, so the button stays honest across reloads and a second click can't create a duplicate. Fixes [#84](https://github.com/Ivan-Malinovski/calino/issues/84).
-
-### Added
-
-- **"Add to calendar" asks which calendar a birthday/anniversary goes into.** With more than one writable calendar, a picker appears instead of silently choosing whichever calendar the server happened to list first. Webcal subscriptions are excluded — they can't be written to.
-## [0.26.1] - 2026-07-31
-
-### Fixed
-
-- **Journal entries respect the sidebar's calendar visibility checkboxes.** Hiding a calendar now hides its entries everywhere — the Journal list, the day sheet and the month-grid dots — exactly like events and tasks already did. Fixes [#88](https://github.com/Ivan-Malinovski/calino/issues/88).
-- **A journal entry can be filed into the calendar of your choice — and moved afterwards.** Composing an entry shows a calendar selector (hidden when there's only one writable calendar), defaulting to your default calendar, and editing an existing entry can retarget its calendar: the VJOURNAL is moved on the server through the same machinery that moves events, so it stays put across syncs instead of snapping back. Fixes [#89](https://github.com/Ivan-Malinovski/calino/issues/89).
-- **Journal entries show their month and year.** The list has no month headings and All mode spans every year on record, so the bare day number could not place an entry; the date gutter now carries the month and year. Fixes [#85](https://github.com/Ivan-Malinovski/calino/issues/85).
-
-## [0.26.0] - 2026-07-31
-
-### Added
-
-- **Events move between calendars instead of snapping back.** Changing an event's calendar in the editor now moves the event on the server — previously Calino rewrote it into its old calendar on the next sync, so the change looked applied until it wasn't. Recurring series move together with their individual exceptions, and moves work across accounts. Fixes [#86](https://github.com/Ivan-Malinovski/calino/issues/86).
-
-### Fixed
-
-- **A move whose cleanup delete fails no longer leaves the event in two calendars.** The stale copy used to survive every retry and reappear on the next sync. Cleanup is now retried — including 5xx responses, which were previously indistinguishable from success — and a cleanup that can't land after ten attempts tells you the old copy may still exist.
-- **A server that rejects a write no longer silently "succeeds" in the sync layer.** PUT and DELETE responses were never checked for errors, so a failed destination write could make a move delete the source and lose the event from both calendars. Non-2xx responses now surface as errors and are retried.
-
 ## [0.25.4] - 2026-07-31
 
+### Added
+
+- **Events move between calendars — for real this time.** Changing an event's calendar used to look like it worked until the next sync quietly put it back; the move now happens on the server, so events stay where you put them — including recurring series with their individual exceptions, and even across accounts. Fixes [#86](https://github.com/Ivan-Malinovski/calino/issues/86).
+- **Contact birthdays & anniversaries actually land on your calendar.** "Add to calendar" used to write only locally, so the event vanished at the next sync; it is now saved to the server, survives reloads, and — with more than one writable calendar — you get to choose where it goes. Undo removes it everywhere, and deleting the contact cleans up its birthday events too. Fixes [#84](https://github.com/Ivan-Malinovski/calino/issues/84).
+- **Journal entries can be filed into the calendar of your choice** — and moved between calendars (or back to the Offline calendar) any time you edit one. Fixes [#89](https://github.com/Ivan-Malinovski/calino/issues/89).
+- **Journal entries show their month and year**, so a June 5th entry can't be confused with an April 5th one. Fixes [#85](https://github.com/Ivan-Malinovski/calino/issues/85).
+- **Hiding a calendar in the sidebar now hides its journal entries everywhere** — the list, the day sheet and the month-grid dots — exactly like events and tasks. Fixes [#88](https://github.com/Ivan-Malinovski/calino/issues/88).
+- **Contact relations resolve to the person they point at.** A relation entered as a UUID used to display as a raw `urn:uuid:…` string forever; it now shows the contact's name, is clickable, and works across address books. Relations and group members are picked from a searchable list instead of typed by hand. Fixes [#87](https://github.com/Ivan-Malinovski/calino/issues/87).
+
 ### Fixed
 
-- **Contact relations entered as a UUID now show the contact they point at.** The relation field invited you to enter a UUID and saved it correctly, but then displayed it back as a raw `urn:uuid:…` string forever — it was never matched up with the contact. Relations now resolve to the contact's name and are clickable, including when the contact lives in a different address book. Fixes [#87](https://github.com/Ivan-Malinovski/calino/issues/87).
-- **A contact whose only extra detail was a relation, a language or group membership showed an empty page.** The whole details section was hidden unless there was also an email, phone, address, website or messaging handle.
+- **Birthdays and anniversaries could show the wrong day** (age off by one) in timezones west of UTC — a birthday on July 1st was sometimes counted as June 30th.
+- **Editing an event twice in a row could fail to save** on some calendar servers; consecutive edits now save reliably.
+- **A contact whose only extra detail was a relation, a language or group membership showed an empty page** — the whole details section was hidden unless there was also an email, phone, address, website or messaging handle.
 
 ### Changed
 
-- **Relations and group members are chosen from a searchable list** instead of being typed by hand, so there's no need to hunt down a UUID. You can still type a free-form name for a relation to someone who isn't in your address book.
+- **Typing in the journal and opening contact details are noticeably snappier** with long lists.
 
 ## [0.25.3] - 2026-07-27
 
