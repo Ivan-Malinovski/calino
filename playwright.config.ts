@@ -1,6 +1,11 @@
 import { defineConfig, devices } from '@playwright/test'
 
-const PORT = Number(process.env.E2E_PORT ?? 5173)
+// Deliberately NOT vite's default 5173. `reuseExistingServer` is on locally, so
+// sharing a port with `pnpm dev` means Playwright silently attaches to a plain
+// dev server that was started without CALINO_E2E_MOCK=1 — the mock CalDAV
+// backend is then absent and the sync specs fail in ways that look like flakes.
+// Its own port keeps the suite self-contained and lets `pnpm dev` keep running.
+const PORT = Number(process.env.E2E_PORT ?? 5199)
 const BASE_URL = `http://localhost:${PORT}`
 const IS_CI = !!process.env.CI
 

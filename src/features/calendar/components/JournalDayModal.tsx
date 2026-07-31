@@ -2,7 +2,7 @@ import type { JSX } from 'react'
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import { format, parseISO } from 'date-fns'
-import { useCalendarStore } from '@/store/calendarStore'
+import { useCalendarStore, getJournalEntriesForDate } from '@/store/calendarStore'
 import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
 import { v4 as uuidv4 } from 'uuid'
 import { MarkdownView } from '@/lib/markdown'
@@ -57,6 +57,7 @@ export function JournalDayModal({
   const [relatedTo, setRelatedTo] = useState<string[]>([])
   const [showAddPanel, setShowAddPanel] = useState(false)
   const [focusedEntryIndex, setFocusedEntryIndex] = useState<number>(-1)
+  const [calendarId, setCalendarId] = useState<string>('')
 
   const panelRef = useRef<HTMLDivElement>(null)
   const titleInputRef = useRef<HTMLInputElement>(null)
@@ -72,11 +73,22 @@ export function JournalDayModal({
     calendarsRef.current = calendars
   })
 
-  // Get journal entries for this date
-  const entries = useMemo(
-    () => events.filter((e) => e.type === 'journal' && e.start === date),
-    [events, date]
+  // Get journal entries for this date, scoped to the calendars the user has
+  // ticked in the sidebar — same rule as events and tasks (issue #88).
+  const visibleCalendarIds = useMemo(
+    () => new Set(calendars.filter((c) => c.isVisible).map((c) => c.id)),
+    [calendars]
   )
+  const entries = useMemo(
+    () => getJournalEntriesForDate(events, date, visibleCalendarIds),
+    [events, date, visibleCalendarIds]
+  )
+
+  const writableCalendars = useMemo(() => calendars.filter((c) => !c.readOnly), [calendars])
+  const defaultCalendarId = useMemo(() => {
+    const preferred = writableCalendars.find((c) => c.isDefault) ?? writableCalendars[0]
+    return preferred?.id ?? 'default'
+  }, [writableCalendars])
 
   // Parse the date for display
   const dateObj = parseISO(date)
@@ -99,10 +111,11 @@ export function JournalDayModal({
       setAttachments([])
       setUrl('')
       setRelatedTo([])
+      setCalendarId(defaultCalendarId)
       setShowAddPanel(false)
       setConfirmDeleteId(null)
     }
-  }, [isOpen, date, startInCompose])
+  }, [isOpen, date, startInCompose, defaultCalendarId])
 
   // Focus input when entering compose/edit mode. When that mode change is the
   // one that opened the sheet, the focus waits for the entrance to land:
@@ -181,8 +194,12 @@ export function JournalDayModal({
         }
       }
     } else {
-      // Create new entry
-      const defaultCalendar = currentCalendars.find((c) => c.isDefault) || currentCalendars[0]
+      // Create new entry — honour the picker, falling back to the default
+      // calendar when it was never shown (single writable calendar).
+      const defaultCalendar =
+        currentCalendars.find((c) => c.id === calendarId) ??
+        currentCalendars.find((c) => c.isDefault) ??
+        currentCalendars[0]
       const newId = uuidv4()
       const newEntry: CalendarEvent = {
         id: newId,
@@ -245,6 +262,7 @@ export function JournalDayModal({
     attachments,
     url,
     relatedTo,
+    calendarId,
     addEvent,
     updateEvent,
     createCalDAVEvent,
@@ -259,6 +277,7 @@ export function JournalDayModal({
 
   const handleStartEdit = useCallback((entry: CalendarEvent): void => {
     setEditingId(entry.id)
+    setCalendarId(entry.calendarId)
     setTitle(entry.title || '')
     setBody(entry.description || '')
     setSelectedCategories(entry.categories || [])
@@ -285,9 +304,10 @@ export function JournalDayModal({
     setAttachments([])
     setUrl('')
     setRelatedTo([])
+    setCalendarId(defaultCalendarId)
     setShowAddPanel(false)
     setMode('compose')
-  }, [])
+  }, [defaultCalendarId])
 
   const handleDelete = useCallback(
     (entryId: string): void => {
@@ -509,6 +529,30 @@ export function JournalDayModal({
                 value={body}
                 onChange={(e) => setBody(e.target.value)}
               />
+              {/* Which calendar an existing entry lives in is not editable
+                  here: moving a saved entry between collections needs the
+                  CalDAV move that issue #86 tracks, and offering the control
+                  before that lands would silently revert on the next sync. */}
+              {mode === 'compose' && writableCalendars.length > 1 && (
+                <div className={styles.calendarRow}>
+                  <label className={styles.calendarLabel} htmlFor="journal-day-calendar-select">
+                    Calendar
+                  </label>
+                  <select
+                    id="journal-day-calendar-select"
+                    className={styles.calendarSelect}
+                    data-component="journal-day-calendar-select"
+                    value={calendarId}
+                    onChange={(e) => setCalendarId(e.target.value)}
+                  >
+                    {writableCalendars.map((cal) => (
+                      <option key={cal.id} value={cal.id}>
+                        {cal.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
               {/* Add panel — categories, link, attachments */}
               <div className={styles.addPanel}>
                 {!showAddPanel ? (
