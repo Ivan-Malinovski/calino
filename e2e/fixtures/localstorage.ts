@@ -161,12 +161,27 @@ export async function seedAccount(
     serverUrl: string
     username: string
     password: string
+    /**
+     * Collections to seed for this account. Defaults to the single
+     * `Personal` calendar every existing spec relies on — pass this only
+     * when a spec needs more than one collection (e.g. a move target).
+     */
+    calendars?: Array<{
+      id?: string
+      name: string
+      path: string
+      isDefault?: boolean
+      color?: string
+      supportedComponents?: string[]
+    }>
   }
 ): Promise<string> {
   const accountId = account.id ?? cryptoRandomId()
   const credentialId = cryptoRandomId()
-  const calendarId = cryptoRandomId()
   const createdAt = new Date().toISOString()
+  const calendarSeeds = account.calendars ?? [
+    { name: 'Personal', path: 'calendars/user/personal/', isDefault: true },
+  ]
 
   await page.addInitScript(
     ({
@@ -189,9 +204,23 @@ export async function seedAccount(
       try {
         if (sessionStorage.getItem(flagKey)) return
         sessionStorage.setItem(flagKey, '1')
-        localStorage.setItem(accountKey, accountsJson)
-        localStorage.setItem(credKey, credsJson)
-        localStorage.setItem(calendarKey, calendarsJson)
+        // Append rather than overwrite so a spec can seed more than one
+        // account (cross-account flows). Single-account specs are
+        // unaffected — the keys start empty after `clearState`.
+        const append = (key: string, json: string) => {
+          let existing: unknown[] = []
+          try {
+            const raw = localStorage.getItem(key)
+            const parsed = raw ? JSON.parse(raw) : []
+            if (Array.isArray(parsed)) existing = parsed
+          } catch {
+            /* noop */
+          }
+          localStorage.setItem(key, JSON.stringify([...existing, ...JSON.parse(json)]))
+        }
+        append(accountKey, accountsJson)
+        append(credKey, credsJson)
+        append(calendarKey, calendarsJson)
       } catch {
         /* noop */
       }
@@ -221,20 +250,20 @@ export async function seedAccount(
           password: account.password,
         },
       ]),
-      calendarsJson: JSON.stringify([
-        {
-          id: calendarId,
+      calendarsJson: JSON.stringify(
+        calendarSeeds.map((calendar, index) => ({
+          id: calendar.id ?? cryptoRandomId(),
           accountId,
-          url: `${account.serverUrl}calendars/user/personal/`,
-          name: 'Personal',
-          color: '#4285F4',
+          url: `${account.serverUrl}${calendar.path}`,
+          name: calendar.name,
+          color: calendar.color ?? '#4285F4',
           ctag: null,
           syncToken: null,
           isVisible: true,
-          isDefault: true,
-          supportedComponents: ['VEVENT'],
-        },
-      ]),
+          isDefault: calendar.isDefault ?? index === 0,
+          supportedComponents: calendar.supportedComponents ?? ['VEVENT'],
+        }))
+      ),
     }
   )
   return accountId
