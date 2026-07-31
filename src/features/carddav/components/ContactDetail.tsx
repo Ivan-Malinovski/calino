@@ -4,6 +4,7 @@ import type { Contact } from '../types'
 import { useContactStore } from '@/store/contactStore'
 import { MarkdownView } from '@/lib/markdown'
 import { getInitials, getAvatarColor } from '../lib/avatars'
+import { resolveContactRef } from '../lib/contactRefs'
 import styles from './ContactsView.module.css'
 
 // ---------------------------------------------------------------------------
@@ -25,6 +26,54 @@ function formatDate(dateStr: string): string {
   } catch {
     return dateStr
   }
+}
+
+/**
+ * A RELATED / MEMBER value.
+ *
+ * vCard lets these be either a plain name or a UID reference (`urn:uuid:…`).
+ * When it's a reference we resolve it to the contact and render a link;
+ * otherwise we fall back to showing the value as typed. Resolution is not
+ * scoped to the current address book — see lib/contactRefs.
+ */
+function RelationValue({ value, siblingOf }: { value: string; siblingOf: Contact }): JSX.Element {
+  const contacts = useContactStore((s) => s.contacts)
+  const addressBooks = useContactStore((s) => s.addressBooks)
+  const setSelectedContactId = useContactStore((s) => s.setSelectedContactId)
+
+  const target = resolveContactRef(value, contacts)
+  if (!target) {
+    return <span className={styles.infoFieldValue}>{value}</span>
+  }
+
+  const otherBook =
+    target.addressBookId !== siblingOf.addressBookId
+      ? addressBooks.find((a) => a.id === target.addressBookId)
+      : undefined
+
+  return (
+    <button
+      type="button"
+      data-component="contact-relation-link"
+      data-contact-id={target.id}
+      className={styles.infoFieldValue}
+      onClick={() => setSelectedContactId(target.id)}
+      style={{
+        background: 'none',
+        border: 'none',
+        padding: 0,
+        font: 'inherit',
+        color: 'var(--accent)',
+        cursor: 'pointer',
+        textAlign: 'left',
+      }}
+    >
+      {target.displayName}
+      {otherBook && (
+        <span style={{ color: 'var(--text-muted)', fontSize: 12 }}> · {otherBook.name}</span>
+      )}
+    </button>
+  )
 }
 
 function getAge(birthday: string): number {
@@ -184,7 +233,13 @@ export function ContactDetail({
     contact.phones.length > 0 ||
     contact.addresses.length > 0 ||
     contact.urls.length > 0 ||
-    contact.ims.length > 0
+    contact.ims.length > 0 ||
+    // The same block renders LANGUAGE / RELATED / MEMBERS, so a contact whose
+    // only extra data is a relation or group membership must not be treated as
+    // having no info — that hid the section entirely.
+    (contact.langs?.length ?? 0) > 0 ||
+    (contact.related?.length ?? 0) > 0 ||
+    (contact.isGroup && contact.memberUids.length > 0)
 
   return (
     <div className={styles.detailContent}>
@@ -478,7 +533,7 @@ export function ContactDetail({
                       <span className={styles.infoFieldSub}>
                         {RELATED_TYPE_LABELS[rel.type] ?? rel.type}
                       </span>
-                      <span className={styles.infoFieldValue}>{rel.value}</span>
+                      <RelationValue value={rel.value} siblingOf={contact} />
                     </div>
                   ))}
                 </div>
@@ -490,7 +545,7 @@ export function ContactDetail({
                   <span className={styles.infoFieldLabel}>MEMBERS</span>
                   {contact.memberUids.map((uid, i) => (
                     <div key={`member-${i}`} className={styles.infoFieldGrid}>
-                      <span className={styles.infoFieldValue}>{uid.replace('urn:uuid:', '')}</span>
+                      <RelationValue value={uid} siblingOf={contact} />
                     </div>
                   ))}
                 </div>
