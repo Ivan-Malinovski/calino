@@ -69,6 +69,42 @@ export function ContactsView(): JSX.Element {
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const confirmDeleteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  // In-flight promise for calendar-event deletes tied to a contact, so an
+  // undo can never restore an event that is still being removed (2.3).
+  const contactEventDeletesRef = useRef<Promise<void> | null>(null)
+
+  /**
+   * Snapshot the birthday/anniversary events for a contact and start deleting
+   * them (store + server). Returns the snapshot synchronously for undo.
+   */
+  const deleteContactCalendarEvents = useCallback(
+    (contactId: string): CalendarEvent[] => {
+      const store = useCalendarStore.getState()
+      const events = store.events.filter((e) => e.url === `calino:contact:${contactId}`)
+      if (events.length > 0) {
+        // deleteCalDAVEvent removes the server resource AND the local record.
+        contactEventDeletesRef.current = Promise.all(
+          events.map((e) => safeCalDAVDelete(deleteCalDAVEvent, e.calendarId, e.id))
+        ).then(() => undefined)
+      }
+      return events
+    },
+    [deleteCalDAVEvent]
+  )
+
+  /** Re-add previously deleted contact events (local + server) on undo. */
+  const restoreContactCalendarEvents = useCallback(
+    async (events: CalendarEvent[]): Promise<void> => {
+      // Never race a pending delete: wait for it to finish first.
+      await contactEventDeletesRef.current
+      for (const event of events) {
+        useCalendarStore.getState().addEvent({ ...event, syncStatus: 'pending' })
+        await safeCalDAVUpdate(createCalDAVEvent, event.calendarId, event, {})
+      }
+    },
+    [createCalDAVEvent]
+  )
+
   // Webcal subscriptions can't be written to, so they're never a valid target.
   const targetCalendars = useMemo(() => calendars.filter((c) => !c.readOnly), [calendars])
 
@@ -161,6 +197,8 @@ export function ContactsView(): JSX.Element {
             useContactStore.getState().pendingChanges.some((c) => c.id === changeId),
           removePendingChange,
           syncAccount,
+          deleteCalendarEvents: deleteContactCalendarEvents,
+          restoreCalendarEvents: restoreContactCalendarEvents,
           onAfterDelete: () => {
             if (selectedContactId === contact.id) {
               setSelectedContactId(null)
@@ -191,6 +229,8 @@ export function ContactsView(): JSX.Element {
       setSelectedContactId,
       syncAccount,
       confirmDeleteId,
+      deleteContactCalendarEvents,
+      restoreContactCalendarEvents,
     ]
   )
 

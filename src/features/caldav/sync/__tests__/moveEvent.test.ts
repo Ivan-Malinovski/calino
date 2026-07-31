@@ -248,5 +248,53 @@ describe('moveEventGroup', () => {
         moveEventGroup([makeEvent()], { targetEngine, sourceEngine: null })
       ).rejects.toThrow('Conflict')
     })
+
+    it('aborts on a bare 403 without deleting the source (permission denied)', async () => {
+      // A read-only/shared destination answers 403 Forbidden. That is NOT a
+      // UID conflict — deleting the source would lose the event for nothing.
+      const { targetEngine, sourceEngine } = makeEngines()
+      vi.mocked(targetEngine.putEventGroup).mockRejectedValue(
+        Object.assign(new Error('Forbidden'), { status: 403 })
+      )
+
+      await expect(
+        moveEventGroup([makeEvent()], {
+          targetEngine,
+          sourceEngine,
+          sourceHref: SOURCE_HREF,
+        })
+      ).rejects.toThrow('Forbidden')
+
+      // Source untouched, no delete, no retry.
+      expect(sourceEngine.deleteEvent).not.toHaveBeenCalled()
+      expect(targetEngine.putEventGroup).toHaveBeenCalledOnce()
+    })
+
+    it('treats a 403 carrying the no-uid-conflict precondition as a UID conflict', async () => {
+      // Some servers (iCloud, Google) express the duplicate-UID precondition
+      // through a 403 with the C:no-uid-conflict marker in the body.
+      const { targetEngine, sourceEngine, order } = makeEngines()
+      vi.mocked(targetEngine.putEventGroup)
+        .mockImplementationOnce(async () => {
+          order.push('put')
+          throw Object.assign(new Error('Forbidden'), {
+            status: 403,
+            body: '<?xml version="1.0"?><C:no-uid-conflict xmlns:C="urn:ietf:params:xml:ns:caldav"/>',
+          })
+        })
+        .mockImplementationOnce(async () => {
+          order.push('put')
+          return { url: 'https://dav.example/work/event-1.ics', etag: '"new"' }
+        })
+
+      const result = await moveEventGroup([makeEvent()], {
+        targetEngine,
+        sourceEngine,
+        sourceHref: SOURCE_HREF,
+      })
+
+      expect(order).toEqual(['put', 'delete', 'put'])
+      expect(result.sourceDeleted).toBe(true)
+    })
   })
 })

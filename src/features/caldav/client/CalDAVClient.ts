@@ -310,7 +310,7 @@ export class CalDAVClient {
       filename,
       iCalString,
     })
-    this.assertResponseOk(result, 'PUT', calendarUrl)
+    await this.assertResponseOk(result, 'PUT', calendarUrl)
 
     // Extract ETag from response headers
     let etag = result.headers?.get('etag') || ''
@@ -378,14 +378,22 @@ export class CalDAVClient {
     const result = await client.updateCalendarObject({
       calendarObject: { url: eventUrl, etag, data: iCalString },
     })
-    this.assertResponseOk(result, 'PUT', eventUrl)
+    await this.assertResponseOk(result, 'PUT', eventUrl)
 
-    // Extract ETag from response headers
-    const newEtag = result.headers?.get('etag') || etag
+    // Extract ETag from response headers; if the server omits it (Google,
+    // iCloud), re-fetch it with a PROPFIND instead of keeping the stale
+    // pre-update etag — the old one will 412 the next update. Mirrors the
+    // createEvent fallback. Never throw: a missing etag must not fail the
+    // update, and a fresh etag is preferred over the stale one but either is
+    // accepted.
+    let newEtag = result.headers?.get('etag') || ''
+    if (!newEtag && result.url) {
+      newEtag = await this.fetchEtag(result.url)
+    }
 
     return {
       url: result.url,
-      etag: newEtag,
+      etag: newEtag || etag,
     }
   }
 
@@ -399,7 +407,7 @@ export class CalDAVClient {
       calendarObject: { url: eventUrl, etag },
     })
     // 404/410 mean the resource is already gone — the outcome a delete wants.
-    this.assertResponseOk(response, 'DELETE', eventUrl, true)
+    await this.assertResponseOk(response, 'DELETE', eventUrl, true)
   }
 
   /**
@@ -410,22 +418,29 @@ export class CalDAVClient {
    * instead of believing a failed write landed. `tolerateGone` additionally
    * treats 404/410 as success — the outcome a DELETE wants.
    */
-  private assertResponseOk(
+  private async assertResponseOk(
     response: Response | undefined | null,
     method: string,
     url: string,
     tolerateGone = false
-  ): void {
+  ): Promise<void> {
     if (!response) return
     // Only a real fetch Response carries `ok`/`status`; mock or unknown shapes
     // must not be misread as failures.
     if (response.ok === undefined && response.status === undefined) return
     if (response.ok) return
     if (tolerateGone && (response.status === 404 || response.status === 410)) return
+    // Carry the response body on the error: some servers (iCloud, Google)
+    // express a CalDAV precondition such as <C:no-uid-conflict/> through a
+    // non-409 status (403), and callers need the body to tell a "duplicate
+    // UID" from a plain permission denial — the two demand opposite recovery
+    // (delete-source-and-retry vs. abort and leave the source untouched).
+    const body = await response.text().catch(() => '')
     const error = new Error(
-      `${method} ${url} failed: HTTP ${response.status}`
-    ) as Error & { status: number }
+      `${method} ${url} failed: HTTP ${response.status}${body ? `: ${body.slice(0, 200)}` : ''}`
+    ) as Error & { status: number; body?: string }
     error.status = response.status
+    if (body) error.body = body
     throw error
   }
 
@@ -1048,7 +1063,7 @@ export class CalDAVClient {
           data: icalString,
         },
       })
-      this.assertResponseOk(result, 'PUT', existing.href)
+      await this.assertResponseOk(result, 'PUT', existing.href)
       if (useSettingsStore.getState().caldavDebugMode)
         console.log('[SettingsSync] putSettingsEvent: update result status =', result.status)
       return result.headers?.get('etag') || useEtag
@@ -1072,7 +1087,7 @@ export class CalDAVClient {
             data: icalString,
           },
         })
-        this.assertResponseOk(result, 'PUT', possibleHref)
+        await this.assertResponseOk(result, 'PUT', possibleHref)
         return result.headers?.get('etag') || etag
       } catch {
         // If that also fails, the event might have been deleted — fall through to create
@@ -1104,7 +1119,7 @@ export class CalDAVClient {
         filename,
         iCalString: icalString,
       })
-      this.assertResponseOk(result, 'PUT', settingsCal.url)
+      await this.assertResponseOk(result, 'PUT', settingsCal.url)
       return result.headers?.get('etag') || ''
     }
   }
@@ -1123,7 +1138,7 @@ export class CalDAVClient {
       calendarObject: { url: existing.href, etag: existing.etag },
     })
     // 404/410 mean the settings event is already gone — that is the goal.
-    this.assertResponseOk(response, 'DELETE', existing.href, true)
+    await this.assertResponseOk(response, 'DELETE', existing.href, true)
   }
 
   /**

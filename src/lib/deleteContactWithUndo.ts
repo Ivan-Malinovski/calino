@@ -1,4 +1,5 @@
 import type { Contact, PendingContactChange } from '@/features/carddav/types'
+import type { CalendarEvent } from '@/types'
 import { showToast } from './toast'
 
 interface DeleteContactWithUndoOptions {
@@ -11,6 +12,16 @@ interface DeleteContactWithUndoOptions {
   removePendingChange?: (changeId: string) => void
   syncAccount?: (accountId: string) => Promise<void>
   onAfterDelete?: () => void
+  /**
+   * Snapshot + start deleting calendar events tied to the contact (birthday /
+   * anniversary VEVENTs carrying the `calino:contact:<id>` marker). The
+   * snapshot is returned synchronously so undo can restore them; deletion is
+   * fire-and-forget (the caller keeps the in-flight promise and awaits it in
+   * the restore callback so an undo can never race a pending delete).
+   */
+  deleteCalendarEvents?: (contactId: string) => CalendarEvent[]
+  /** Re-add previously deleted calendar events (local + server). */
+  restoreCalendarEvents?: (events: CalendarEvent[]) => Promise<void>
 }
 
 /**
@@ -35,9 +46,16 @@ export function deleteContactWithUndo({
   removePendingChange,
   syncAccount,
   onAfterDelete,
+  deleteCalendarEvents,
+  restoreCalendarEvents,
 }: DeleteContactWithUndoOptions): void {
   // Save full contact for potential restore
   const savedContact = { ...contact }
+
+  // Snapshot + start deleting any birthday/anniversary events tied to this
+  // contact. Deletion runs async; undo restores them (awaiting the in-flight
+  // delete so it can never resurrect an event that is still being removed).
+  const removedCalendarEvents = deleteCalendarEvents?.(contact.id) ?? []
 
   // Optimistic local delete
   deleteContact(contact.id)
@@ -76,6 +94,7 @@ export function deleteContactWithUndo({
       if (stillQueued && removePendingChange) {
         removePendingChange(changeId)
         addContact(savedContact)
+        void restoreCalendarEvents?.(removedCalendarEvents)
         return
       }
 
@@ -87,6 +106,7 @@ export function deleteContactWithUndo({
         syncStatus: 'pending',
       }
       addContact(restored)
+      void restoreCalendarEvents?.(removedCalendarEvents)
 
       addPendingChange({
         id: crypto.randomUUID(),

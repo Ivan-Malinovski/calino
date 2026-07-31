@@ -376,5 +376,51 @@ test.describe('Journal view', () => {
     const workIcs = Object.values((await dump(page, baseURL!, J_WORK)) ?? {}).join('\n')
     expect(workIcs).toContain('Offline thought')
   })
+
+  test('an entry can round-trip Offline and back without stale server links', async ({
+    page,
+    baseURL,
+  }) => {
+    await clearState(page)
+    await seedMoveAccount(page, baseURL!)
+    await page.request.put(`${baseURL}/mock-caldav${J_WORK}j-roundtrip.ics`, {
+      data: MOVE_VJOURNAL('Round trip', 'Lands back on the server.'),
+    })
+    await seedJournalMoveStore(page)
+
+    await page.goto('/journal')
+    await syncAll(page)
+    await expect(page.getByText('Round trip').first()).toBeVisible()
+
+    // CalDAV → Offline: the server copy is deleted, the entry stays local.
+    await page.getByText('Round trip').first().dblclick()
+    const select = page.locator('[data-component="journal-calendar-select"]')
+    await expect(select).toBeVisible()
+    await select.selectOption('default')
+    await page.getByRole('button', { name: 'Save changes' }).click()
+    await expect
+      .poll(async () => Object.keys((await dump(page, baseURL!, J_WORK)) ?? {}).length, {
+        timeout: 15_000,
+      })
+      .toBe(0)
+    await expect(page.getByText('Round trip').first()).toBeVisible()
+
+    // Offline → CalDAV: the entry must be re-created as a fresh resource — a
+    // stale resourceHref/etag from the deleted copy must not be reused (the
+    // pre-fix entry kept them, leaving a dangling link to a 404).
+    await page.getByText('Round trip').first().dblclick()
+    const select2 = page.locator('[data-component="journal-calendar-select"]')
+    await expect(select2).toBeVisible()
+    await select2.selectOption('j-work')
+    await page.getByRole('button', { name: 'Save changes' }).click()
+    await expect
+      .poll(async () => Object.keys((await dump(page, baseURL!, J_WORK)) ?? {}).length, {
+        timeout: 15_000,
+      })
+      .toBe(1)
+    const roundtripIcs = Object.values((await dump(page, baseURL!, J_WORK)) ?? {}).join('\n')
+    expect(roundtripIcs).toContain('Round trip')
+    expect(roundtripIcs).toContain('Lands back on the server.')
+  })
   })
 })

@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import type { JSX } from 'react'
 import type { Contact } from '../types'
 import { useContactStore } from '@/store/contactStore'
 import { MarkdownView } from '@/lib/markdown'
 import { getInitials, getAvatarColor } from '../lib/avatars'
-import { resolveContactRef } from '../lib/contactRefs'
+import { isContactRef, resolveContactRef, buildContactLookup } from '../lib/contactRefs'
+import * as contactDates from '../lib/contactDates'
 import styles from './ContactsView.module.css'
 
 // ---------------------------------------------------------------------------
@@ -15,9 +16,8 @@ const avatarColor = getAvatarColor
 
 function formatDate(dateStr: string): string {
   try {
-    const normalized = dateStr.replace(/^(\d{4})(\d{2})(\d{2})$/, '$1-$2-$3')
-    const date = new Date(normalized)
-    if (isNaN(date.getTime())) return dateStr
+    const date = contactDates.parseDateOnly(dateStr)
+    if (!date) return dateStr
     return date.toLocaleDateString(undefined, {
       year: 'numeric',
       month: 'long',
@@ -36,14 +36,29 @@ function formatDate(dateStr: string): string {
  * otherwise we fall back to showing the value as typed. Resolution is not
  * scoped to the current address book — see lib/contactRefs.
  */
-function RelationValue({ value, siblingOf }: { value: string; siblingOf: Contact }): JSX.Element {
-  const contacts = useContactStore((s) => s.contacts)
+function RelationValue({
+  value,
+  siblingOf,
+  contactLookup,
+}: {
+  value: string
+  siblingOf: Contact
+  /** Memoized id → contact map, built once in the parent (see #2.2). */
+  contactLookup: Map<string, Contact>
+}): JSX.Element {
   const addressBooks = useContactStore((s) => s.addressBooks)
   const setSelectedContactId = useContactStore((s) => s.setSelectedContactId)
 
-  const target = resolveContactRef(value, contacts)
+  const target = resolveContactRef(value, contactLookup)
   if (!target) {
-    return <span className={styles.infoFieldValue}>{value}</span>
+    // A plain name is a legal RELATED/MEMBER value and renders as-is; only a
+    // UID-shaped reference that failed to resolve gets the friendly fallback
+    // instead of a raw urn:uuid:… URI (deleted contact, pending sync).
+    return (
+      <span className={styles.infoFieldValue}>
+        {isContactRef(value) ? 'Unknown Contact' : value}
+      </span>
+    )
   }
 
   const otherBook =
@@ -77,25 +92,11 @@ function RelationValue({ value, siblingOf }: { value: string; siblingOf: Contact
 }
 
 function getAge(birthday: string): number {
-  const today = new Date()
-  const birthDate = new Date(birthday.replace(/^(\d{4})(\d{2})(\d{2})$/, '$1-$2-$3'))
-  let age = today.getFullYear() - birthDate.getFullYear()
-  const monthDiff = today.getMonth() - birthDate.getMonth()
-  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-    age--
-  }
-  return age
+  return contactDates.getAge(birthday)
 }
 
 function daysUntilNext(date: string): number {
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const birthDate = new Date(date.replace(/^(\d{4})(\d{2})(\d{2})$/, '$1-$2-$3'))
-  const thisYear = new Date(today.getFullYear(), birthDate.getMonth(), birthDate.getDate())
-  if (thisYear < today) {
-    thisYear.setFullYear(today.getFullYear() + 1)
-  }
-  return Math.ceil((thisYear.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+  return contactDates.daysUntilNext(date)
 }
 
 function formatAddress(addr: Contact['addresses'][0]): string {
@@ -186,6 +187,13 @@ export function ContactDetail({
   hasAnniversaryEvent = false,
 }: ContactDetailProps): JSX.Element {
   const [inlineEditing, setInlineEditing] = useState<InlineEdit | null>(null)
+
+  // One subscription + one O(N) pass, memoized: every RelationValue renders
+  // against this map instead of each subscribing to the whole contacts array
+  // and scanning it per relation (O(M×N) and a re-render of every relation on
+  // any contact change — see review finding 2.2).
+  const allContacts = useContactStore((s) => s.contacts)
+  const contactLookup = useMemo(() => buildContactLookup(allContacts), [allContacts])
 
   function startInlineEdit(field: string, currentValue: string) {
     setInlineEditing({ field, original: currentValue, value: currentValue })
@@ -533,7 +541,7 @@ export function ContactDetail({
                       <span className={styles.infoFieldSub}>
                         {RELATED_TYPE_LABELS[rel.type] ?? rel.type}
                       </span>
-                      <RelationValue value={rel.value} siblingOf={contact} />
+                      <RelationValue value={rel.value} siblingOf={contact} contactLookup={contactLookup} />
                     </div>
                   ))}
                 </div>
@@ -545,7 +553,7 @@ export function ContactDetail({
                   <span className={styles.infoFieldLabel}>MEMBERS</span>
                   {contact.memberUids.map((uid, i) => (
                     <div key={`member-${i}`} className={styles.infoFieldGrid}>
-                      <RelationValue value={uid} siblingOf={contact} />
+                      <RelationValue value={uid} siblingOf={contact} contactLookup={contactLookup} />
                     </div>
                   ))}
                 </div>

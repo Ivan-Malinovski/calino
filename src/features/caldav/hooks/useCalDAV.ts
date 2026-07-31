@@ -325,9 +325,25 @@ export function useCalDAV(): UseCalDAVReturn {
 
           switch (change.type) {
             case 'create': {
-              const event = JSON.parse(change.data || '{}') as CalendarEvent
-              const { url, etag } = await engine.pushEvent({ ...event, sequence: 0 })
+              // Payload may be a bare event (legacy) or a { events: [...] }
+              // group from the MoveLostSourceError recovery — a re-created
+              // recurrence series must write every member in one resource or
+              // its detached overrides are dropped.
+              const raw = JSON.parse(change.data || '{}')
+              const events = (Array.isArray(raw?.events) ? raw.events : [raw]) as CalendarEvent[]
+              const event = events[0]
+              const { url, etag } =
+                events.length > 1
+                  ? await engine.putEventGroup(events.map((e) => ({ ...e, sequence: 0 })))
+                  : await engine.pushEvent({ ...event, sequence: 0 })
               storeUpdateEvent(change.eventId, { resourceHref: url, etag, syncStatus: 'synced' })
+              for (const groupedEvent of events.slice(1)) {
+                storeUpdateEvent(groupedEvent.id, {
+                  resourceHref: url,
+                  etag,
+                  syncStatus: 'synced',
+                })
+              }
               break
             }
             case 'update': {
@@ -389,12 +405,17 @@ export function useCalDAV(): UseCalDAVReturn {
                   // nothing to move. Re-create at the destination instead (the
                   // same recovery the live path uses) and consume this change
                   // so the doomed move stops retrying.
-                  const master = events[0]
+                  // Serialise the WHOLE group (master + detached overrides),
+                  // not just the master: a series with RECURRENCE-ID
+                  // exceptions must be re-created as one resource or its
+                  // overrides are lost forever.
                   storage.addPendingChange({
                     type: 'create',
                     eventId: change.eventId,
                     calendarId: change.calendarId,
-                    data: JSON.stringify({ ...master, resourceHref: undefined, etag: undefined }),
+                    data: JSON.stringify({
+                      events: events.map((e) => ({ ...e, resourceHref: undefined, etag: undefined })),
+                    }),
                   })
                   storeUpdateEvent(change.eventId, { syncStatus: 'failed' })
                   break
@@ -1737,12 +1758,16 @@ export function useCalDAV(): UseCalDAVReturn {
 
         if (error instanceof MoveLostSourceError) {
           // The source resource is already gone, so replaying a move would have
-          // nothing to move. Re-create at the destination instead.
+          // nothing to move. Re-create at the destination instead — the full
+          // group (master + detached overrides), never just the master: a
+          // series' exceptions must survive the recovery or they are lost.
           storage.addPendingChange({
             type: 'create',
             eventId: event.id,
             calendarId,
-            data: JSON.stringify({ ...event, resourceHref: undefined, etag: undefined }),
+            data: JSON.stringify({
+              events: groupedEvents.map((e) => ({ ...e, resourceHref: undefined, etag: undefined })),
+            }),
           })
         } else if (sourceCalendarForRetry && sourceCalendarForRetry.id !== calendarId) {
           // Queue a move, NOT an update: an update replays against the stored

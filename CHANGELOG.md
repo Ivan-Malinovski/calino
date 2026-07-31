@@ -4,6 +4,21 @@ All notable changes to Calino will be documented in this file.
 
 ## [Unreleased]
 
+## [0.27.1] - 2026-07-31
+
+### Fixed
+
+- **A failed event move can no longer lose a series' exceptions.** When a move hit a duplicate-UID server (source deleted, destination write failed) the recovery queued a re-create of the master only, permanently dropping every detached override (`RECURRENCE-ID`). The recovery now re-creates the whole group — master and exceptions — in one resource.
+- **Moving an event to a read-only/shared calendar no longer deletes it from its old one.** A bare HTTP 403 on the destination write was misread as a duplicate-UID conflict, so the source was deleted and the move fell into a lost-source loop. 403 now counts as a conflict only when the body carries the `<C:no-uid-conflict/>` precondition (iCloud/Google style); otherwise the move aborts with the source untouched.
+- **Contact birthdays/anniversaries parsed on the wrong day west of UTC.** `new Date('YYYY-MM-DD')` is UTC midnight, so `.getMonth()`/`.getDate()` in a negative-offset timezone shifted birthdays (and the countdown/age) back a day. Date-only values are now constructed from explicit local parts.
+- **Deleting a contact removes its birthday/anniversary events from CalDAV.** The `calino:contact:<id>` VEVENTs used to be orphaned on the server; they are now deleted with the contact (and restored if you undo the deletion).
+- **Moving a journal entry to the Offline calendar no longer leaves stale server links.** The local entry kept its deleted resource's `href`/`etag`/`syncStatus`; it is now a clean local-only record, so a later move back to CalDAV cannot trip over a dangling reference.
+- **Updated events pick up a fresh ETag when the server omits the header.** `updateEvent` kept the stale pre-update etag (which 412s the next update on Google/iCloud); it now re-fetches it with a PROPFIND like `createEvent` already did.
+
+### Changed
+
+- **Faster journal entry lists.** Entry cards are memoized, so typing in the compose form no longer re-renders every card (and its Markdown) on each keystroke.
+- **Contact relation rendering is O(M) per contact instead of O(M×N).** Related/member values resolve against a single memoized id→contact map instead of each scanning the whole contacts array, and a dangling `urn:uuid:…` reference renders as "Unknown Contact" rather than the raw URI.
 ## [0.27.0] - 2026-07-31
 
 ### Fixed

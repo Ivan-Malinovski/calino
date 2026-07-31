@@ -699,6 +699,73 @@ describe('useCalDAV', () => {
 
       expect(mockSyncEngineInstance.updateEvent).not.toHaveBeenCalled()
     })
+
+    it('re-creates the WHOLE group, not just the master, when a move loses its source', async () => {
+      // Regression: the MoveLostSourceError recovery (source deleted to satisfy
+      // a UID-conflict server, then the destination write failed) used to
+      // queue a create carrying only the master, permanently dropping a
+      // series' detached overrides.
+      const sourceCalendar = {
+        ...mockCalendar,
+        id: 'cal-2',
+        url: 'https://caldav.example.com/cal/source/',
+      }
+      mockAccountStorage.getAllCalendars.mockReturnValue([mockCalendar, sourceCalendar])
+
+      const href = 'https://caldav.example.com/cal/source/series.ics'
+      const master: CalendarEvent = {
+        ...mockEvent,
+        id: 'series',
+        uid: 'series',
+        calendarId: 'cal-2',
+        resourceHref: href,
+        recurrence: { frequency: 'weekly', interval: 1 },
+      }
+      const override: CalendarEvent = {
+        ...mockEvent,
+        id: 'override-1',
+        uid: 'series',
+        calendarId: 'cal-2',
+        resourceHref: href,
+        recurrenceId: '2026-08-10T10:00:00',
+        recurrenceMasterId: 'series',
+      }
+      act(() => {
+        useCalendarStore.getState().addEvent(master)
+        useCalendarStore.getState().addEvent(override)
+      })
+
+      // UID conflict on the destination → source gets deleted… then the
+      // destination write fails again → MoveLostSourceError.
+      mockSyncEngineInstance.putEventGroup
+        .mockRejectedValueOnce(Object.assign(new Error('Conflict'), { status: 409 }))
+        .mockRejectedValueOnce(new Error('destination unavailable'))
+      mockSyncEngineInstance.deleteEvent.mockResolvedValue(undefined)
+
+      const { result } = renderHook(() => useCalDAV())
+      await waitFor(() => expect(result.current.accounts.length).toBe(1))
+
+      await act(async () => {
+        await expect(result.current.updateEvent('cal-1', master)).rejects.toThrow(
+          'Move lost its source'
+        )
+      })
+
+      const createCall = mockAccountStorage.addPendingChange.mock.calls.find(
+        (call) => (call[0] as { type?: string }).type === 'create'
+      )
+      expect(createCall).toBeDefined()
+      const parsed = JSON.parse((createCall?.[0] as { data?: string }).data ?? '{}') as {
+        events?: CalendarEvent[]
+      }
+      // The full group survives the recovery, with the dead source hrefs
+      // cleared so the replay writes fresh resources.
+      expect(parsed.events?.map((e) => e.id)).toEqual(['series', 'override-1'])
+      for (const event of parsed.events ?? []) {
+        expect(event.resourceHref).toBeUndefined()
+        expect(event.etag).toBeUndefined()
+      }
+    })
   })
 
   describe('saveRecurrenceOverride', () => {
@@ -918,6 +985,58 @@ describe('useCalDAV', () => {
 
       // After successful processing, the change is removed
       expect(mockAccountStorage.removePendingChange).toHaveBeenCalledWith('pc-1')
+    })
+
+    it('replays a grouped create through putEventGroup, preserving overrides', async () => {
+      // The MoveLostSourceError recovery queues { events: [...] }; replaying
+      // it must write the whole group in one resource, not just the master.
+      mockAccountStorage.getAllAccounts.mockReturnValue([mockAccount])
+      mockAccountStorage.getAllCalendars.mockReturnValue([mockCalendar])
+      const master = { ...mockEvent, id: 'series', uid: 'series' }
+      const override = {
+        ...mockEvent,
+        id: 'override-1',
+        uid: 'series',
+        recurrenceId: '2026-08-10T10:00:00',
+        recurrenceMasterId: 'series',
+      }
+      mockAccountStorage.getPendingChanges.mockReturnValue([
+        {
+          id: 'pc-group',
+          type: 'create',
+          eventId: 'series',
+          calendarId: 'cal-1',
+          data: JSON.stringify({
+            events: [
+              { ...master, resourceHref: undefined, etag: undefined },
+              { ...override, resourceHref: undefined, etag: undefined },
+            ],
+          }),
+          timestamp: '2025-01-01T00:00:00Z',
+          retryCount: 0,
+        },
+      ] as any)
+      act(() => {
+        useCalendarStore.getState().addEvent(master)
+        useCalendarStore.getState().addEvent(override)
+      })
+
+      renderHook(() => useCalDAV())
+
+      await waitFor(() => {
+        expect(mockSyncEngineInstance.putEventGroup).toHaveBeenCalledWith(
+          expect.arrayContaining([expect.objectContaining({ id: 'series' })])
+        )
+      })
+      expect(mockSyncEngineInstance.pushEvent).not.toHaveBeenCalled()
+      const group = mockSyncEngineInstance.putEventGroup.mock.calls[0][0]
+      expect(group.map((e: CalendarEvent) => e.id)).toEqual(['series', 'override-1'])
+      // Both members are marked synced at the new href.
+      expect(mockAccountStorage.removePendingChange).toHaveBeenCalledWith('pc-group')
+      const series = useCalendarStore.getState().events.find((e) => e.id === 'series')
+      const ovr = useCalendarStore.getState().events.find((e) => e.id === 'override-1')
+      expect(series?.syncStatus).toBe('synced')
+      expect(ovr?.syncStatus).toBe('synced')
     })
 
     it('processes pending updates on mount', async () => {

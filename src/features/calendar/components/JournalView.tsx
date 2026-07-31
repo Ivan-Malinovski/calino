@@ -1,5 +1,5 @@
 import type { JSX } from 'react'
-import React, { useState, useMemo, useCallback, useRef, useEffect, useLayoutEffect } from 'react'
+import React, { useState, useMemo, useCallback, useRef, useEffect, useLayoutEffect, memo } from 'react'
 import { format, parseISO } from 'date-fns'
 // useNavigate removed — unused
 import { useVirtualizer } from '@tanstack/react-virtual'
@@ -348,6 +348,107 @@ function JournalComposeForm({
   )
 }
 
+// ── Entry card ───────────────────────────────────────────────────────────────
+
+interface JournalEntryCardProps {
+  entry: CalendarEvent
+  isLast: boolean
+  confirmDeleteId: string | null
+  formatEntryDate: (dateStr: string) => { day: string; weekday: string; monthYear: string }
+  eventIndex: Map<string, CalendarEvent>
+  onDoubleClick: (entry: CalendarEvent) => void
+  onDelete: (entryId: string) => void
+}
+
+/**
+ * One journal entry in the list. Memoized so that typing in the compose form
+ * (which re-renders the parent JournalView on every keystroke) does not
+ * re-render every rendered entry card and its Markdown body — the props are
+ * stable unless the entry itself, the delete-confirm state, or the callbacks
+ * change (finding 3.1).
+ */
+const JournalEntryCard = memo(function JournalEntryCard({
+  entry,
+  isLast,
+  confirmDeleteId,
+  formatEntryDate,
+  eventIndex,
+  onDoubleClick,
+  onDelete,
+}: JournalEntryCardProps): JSX.Element {
+  const { day, weekday, monthYear } = formatEntryDate(entry.start)
+  return (
+    <article
+      className={`${styles.entry} ${isLast ? styles.entryNoBorder : ''}`}
+      data-date={entry.start}
+      onDoubleClick={() => onDoubleClick(entry)}
+    >
+      <div className={styles.dateCol}>
+        <span className={styles.dayNum}>{day}</span>
+        <span className={styles.weekday}>{weekday}</span>
+        <span className={styles.monthYear}>{monthYear}</span>
+      </div>
+      <div className={styles.content}>
+        {entry.title && <div className={styles.summary}>{entry.title}</div>}
+        <MarkdownView className={styles.body} text={entry.description || ''} />
+        {entry.categories && entry.categories.length > 0 && (
+          <div className={styles.entryCategories}>
+            {entry.categories.map((cat) => (
+              <span key={cat} className={styles.entryCategoryTag}>
+                {cat}
+              </span>
+            ))}
+          </div>
+        )}
+        {entry.url && (
+          <a
+            href={entry.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={styles.entryLink}
+          >
+            🔗 {entry.url}
+          </a>
+        )}
+        {entry.relatedTo && entry.relatedTo.length > 0 && (
+          <div className={styles.entryRelated}>
+            {entry.relatedTo.map((relId) => {
+              const relatedEvent = eventIndex.get(relId)
+              if (!relatedEvent) return null
+              return (
+                <span key={relId} className={styles.entryRelatedTag}>
+                  ↗ {relatedEvent.title || '(untitled)'}
+                </span>
+              )
+            })}
+          </div>
+        )}
+      </div>
+      <button
+        className={`${styles.deleteBtn} ${confirmDeleteId === entry.id ? styles.deleteBtnConfirm : ''}`}
+        title={confirmDeleteId === entry.id ? 'Click to confirm delete' : 'Delete entry'}
+        onClick={(e) => {
+          e.stopPropagation()
+          onDelete(entry.id)
+        }}
+      >
+        <svg
+          viewBox="0 0 16 16"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M2 4h12" />
+          <path d="M5.333 4V2.667a1.333 1.333 0 011.334-1.334h2.666a1.333 1.333 0 011.334 1.334V4" />
+          <path d="M12.667 4v9.333a1.333 1.333 0 01-1.334 1.334H4.667a1.333 1.333 0 01-1.334-1.334V4" />
+        </svg>
+      </button>
+    </article>
+  )
+})
+
 // ── Main component ───────────────────────────────────────────────────────────
 
 export function JournalView(): JSX.Element {
@@ -520,6 +621,12 @@ export function JournalView(): JSX.Element {
           url: url || undefined,
           attachments: attachments.length > 0 ? attachments : undefined,
           relatedTo: relatedTo.length > 0 ? relatedTo : undefined,
+          // Moving to the Offline calendar deletes the server resource; drop
+          // the now-stale server metadata so the entry is a clean local-only
+          // record (no dangling href/etag/syncStatus pointing at a 404).
+          ...(calendarId === 'default'
+            ? { resourceHref: undefined, etag: undefined, syncStatus: undefined }
+            : {}),
         }
         updateEvent(editingId, updates)
 
@@ -746,8 +853,6 @@ export function JournalView(): JSX.Element {
   // via CSS :last-child since 'all' mode wraps each entry in its own
   // virtualized container, which would make :last-child match every entry.
   const renderEntryCard = (entry: CalendarEvent, isLast = false): JSX.Element => {
-    const { day, weekday, monthYear } = formatEntryDate(entry.start)
-
     if (editingId === entry.id) {
       return (
         <JournalComposeForm
@@ -780,75 +885,16 @@ export function JournalView(): JSX.Element {
     }
 
     return (
-      <article
+      <JournalEntryCard
         key={entry.id}
-        className={`${styles.entry} ${isLast ? styles.entryNoBorder : ''}`}
-        data-date={entry.start}
-        onDoubleClick={() => handleStartEdit(entry)}
-      >
-        <div className={styles.dateCol}>
-          <span className={styles.dayNum}>{day}</span>
-          <span className={styles.weekday}>{weekday}</span>
-          <span className={styles.monthYear}>{monthYear}</span>
-        </div>
-        <div className={styles.content}>
-          {entry.title && <div className={styles.summary}>{entry.title}</div>}
-          <MarkdownView className={styles.body} text={entry.description || ''} />
-          {entry.categories && entry.categories.length > 0 && (
-            <div className={styles.entryCategories}>
-              {entry.categories.map((cat) => (
-                <span key={cat} className={styles.entryCategoryTag}>
-                  {cat}
-                </span>
-              ))}
-            </div>
-          )}
-          {entry.url && (
-            <a
-              href={entry.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={styles.entryLink}
-            >
-              🔗 {entry.url}
-            </a>
-          )}
-          {entry.relatedTo && entry.relatedTo.length > 0 && (
-            <div className={styles.entryRelated}>
-              {entry.relatedTo.map((relId) => {
-                const relatedEvent = eventIndex.get(relId)
-                if (!relatedEvent) return null
-                return (
-                  <span key={relId} className={styles.entryRelatedTag}>
-                    ↗ {relatedEvent.title || '(untitled)'}
-                  </span>
-                )
-              })}
-            </div>
-          )}
-        </div>
-        <button
-          className={`${styles.deleteBtn} ${confirmDeleteId === entry.id ? styles.deleteBtnConfirm : ''}`}
-          title={confirmDeleteId === entry.id ? 'Click to confirm delete' : 'Delete entry'}
-          onClick={(e) => {
-            e.stopPropagation()
-            handleDelete(entry.id)
-          }}
-        >
-          <svg
-            viewBox="0 0 16 16"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M2 4h12" />
-            <path d="M5.333 4V2.667a1.333 1.333 0 011.334-1.334h2.666a1.333 1.333 0 011.334 1.334V4" />
-            <path d="M12.667 4v9.333a1.333 1.333 0 01-1.334 1.334H4.667a1.333 1.333 0 01-1.334-1.334V4" />
-          </svg>
-        </button>
-      </article>
+        entry={entry}
+        isLast={isLast}
+        confirmDeleteId={confirmDeleteId}
+        formatEntryDate={formatEntryDate}
+        eventIndex={eventIndex}
+        onDoubleClick={handleStartEdit}
+        onDelete={handleDelete}
+      />
     )
   }
 

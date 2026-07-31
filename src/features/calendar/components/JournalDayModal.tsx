@@ -172,6 +172,12 @@ export function JournalDayModal({
           url: url || undefined,
           attachments: attachments.length > 0 ? attachments : undefined,
           relatedTo: relatedTo.length > 0 ? relatedTo : undefined,
+          // Moving to the Offline calendar deletes the server resource; drop
+          // the now-stale server metadata so the entry is a clean local-only
+          // record (no dangling href/etag/syncStatus pointing at a 404).
+          ...(calendarId === 'default'
+            ? { resourceHref: undefined, etag: undefined, syncStatus: undefined }
+            : {}),
         }
         updateEvent(editingId, updates)
 

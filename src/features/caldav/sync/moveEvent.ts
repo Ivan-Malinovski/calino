@@ -65,10 +65,23 @@ function isAlreadyGone(err: unknown): boolean {
   return status === 404 || status === 410
 }
 
-/** Server refuses a second copy of this UID while the first still exists. */
+/**
+ * Server refuses a second copy of this UID while the first still exists.
+ *
+ * 409 is the RFC 4791 §5.3.2.1 response for a duplicate UID, but some
+ * servers (iCloud, Google) express the same <C:no-uid-conflict/> precondition
+ * through a 403. A bare 403 is far more likely to mean "permission denied" —
+ * a read-only or shared destination — and treating that as a UID conflict
+ * would DELETE the source event for no benefit, losing data. So 403 counts
+ * only when the response body actually carries the precondition marker;
+ * otherwise the move aborts with the source untouched.
+ */
 function isUidConflict(err: unknown): boolean {
   const status = statusOf(err)
-  return status === 403 || status === 409
+  if (status === 409) return true
+  if (status !== 403) return false
+  const maybe = err as { body?: unknown }
+  return typeof maybe.body === 'string' && /no-uid-conflict/i.test(maybe.body)
 }
 
 /**

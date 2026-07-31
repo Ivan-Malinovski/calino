@@ -216,4 +216,42 @@ test.describe('contact birthday → calendar (#84)', () => {
       .toBe(true)
     await expect(page.getByRole('button', { name: /Add to calendar/ })).toBeVisible()
   })
+
+  test('deleting the contact also removes its birthday from the server', async ({
+    page,
+    baseURL,
+  }) => {
+    await seedAllCalendars(page, baseURL!)
+    await seedContacts(
+      page,
+      [{ id: 'ab1', name: 'Work' }],
+      [{ id: 'c4', displayName: 'Mary Jackson', addressBookId: 'ab1', birthday: '1921-04-09' }]
+    )
+
+    await page.goto('/contacts')
+    await page.getByRole('button', { name: 'Mary Jackson' }).click()
+    await addBirthdayTo(page, 'Personal')
+    await expect
+      .poll(
+        async () => dumpHasMarker(await dump(page, baseURL!, PERSONAL), BIRTHDAY_MARKER('c4')),
+        { timeout: 15_000 }
+      )
+      .toBe(true)
+
+    // Delete the contact: the first click arms a 3 s confirm window (the
+    // button's title flips to "Click again to confirm"; its aria-label stays
+    // "Delete contact"), the second commits the delete.
+    await page.getByRole('button', { name: 'Delete contact' }).click()
+    await expect(page.getByTitle('Click again to confirm')).toBeVisible()
+    await page.getByTitle('Click again to confirm').click()
+
+    // The orphaned birthday VEVENT must go too — before this fix deleting a
+    // contact left `calino:contact:c4` on the server forever.
+    await expect
+      .poll(
+        async () => !dumpHasMarker(await dump(page, baseURL!, PERSONAL), BIRTHDAY_MARKER('c4')),
+        { timeout: 15_000 }
+      )
+      .toBe(true)
+  })
 })
