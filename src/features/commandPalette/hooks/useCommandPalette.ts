@@ -41,6 +41,9 @@ const PURE_DATE_KEYWORDS = [
   'next weekend',
 ]
 
+/** How many matching events the palette shows. Also bounds the search scan. */
+const MAX_EVENT_RESULTS = 5
+
 const DAY_NAMES = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
 
 const MONTH_NAMES = [
@@ -245,19 +248,26 @@ export function useCommandPalette({ toggleSidebar, sidebarOpen }: UseCommandPale
       if (!searchQuery.trim()) return []
 
       const lowerQuery = searchQuery.toLowerCase()
-      return events
-        .filter(
-          (event) =>
-            event.title.toLowerCase().includes(lowerQuery) ||
-            (event.location && event.location.toLowerCase().includes(lowerQuery))
-        )
-        .slice(0, 5)
-        .map((event) => ({
-          id: event.id,
-          title: event.title,
-          start: event.start,
-          calendarId: event.calendarId,
-        }))
+      // Explicit loop with an early exit rather than .filter().slice(0, 5):
+      // filter runs the whole corpus to completion before slicing, so on a
+      // large calendar every keystroke scanned every event and allocated two
+      // lowercased strings per event. We only ever show 5.
+      const results: EventResult[] = []
+      for (const event of events) {
+        if (
+          event.title.toLowerCase().includes(lowerQuery) ||
+          event.location?.toLowerCase().includes(lowerQuery)
+        ) {
+          results.push({
+            id: event.id,
+            title: event.title,
+            start: event.start,
+            calendarId: event.calendarId,
+          })
+          if (results.length === MAX_EVENT_RESULTS) break
+        }
+      }
+      return results
     },
     [events]
   )

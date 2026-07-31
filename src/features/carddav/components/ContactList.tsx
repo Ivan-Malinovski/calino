@@ -151,9 +151,22 @@ export function ContactList({ onNewContact, loading }: ContactListProps = {}): J
 
   const inputRef = useRef<HTMLInputElement>(null)
 
-  // Rebuild search index when contacts change
+  // Rebuild the Fuse index when contacts change, deferred to idle time.
+  //
+  // Building it synchronously in the effect blocked the commit on every
+  // contact mutation — during a CardDAV sync that's once per contact written,
+  // each rebuild walking the whole collection. The index is only read by
+  // searchContacts below, so a frame of staleness is invisible: a search
+  // issued in that window falls back to the previous collection and is
+  // corrected as soon as the rebuild lands.
   useEffect(() => {
-    initializeContactSearchIndex(contacts)
+    const build = (): void => initializeContactSearchIndex(contacts)
+    if (typeof globalThis.requestIdleCallback === 'function') {
+      const handle = globalThis.requestIdleCallback(build, { timeout: 1000 })
+      return () => globalThis.cancelIdleCallback(handle)
+    }
+    const handle = setTimeout(build, 0)
+    return () => clearTimeout(handle)
   }, [contacts])
 
   const filteredContacts = useMemo(() => {

@@ -19,6 +19,8 @@ import {
 } from '@dnd-kit/core'
 import { format, parseISO, startOfDay } from 'date-fns'
 import { useIsMobile } from '@/hooks/useIsMobile'
+import { useReducedMotion } from '@/hooks/useReducedMotion'
+import { DUR_FAST, EASE_POP } from '@/lib/motion'
 import { useCalendarStore, isCalendarReadOnly } from '@/store/calendarStore'
 import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
 import type { CalendarEvent } from '@/types'
@@ -112,6 +114,7 @@ export function TodoView(): JSX.Element {
   const updateEvent = useCalendarStore((state) => state.updateEvent)
   const { updateEvent: updateCalDAVEvent } = useCalDAV()
   const isMobile = useIsMobile()
+  const prefersReducedMotion = useReducedMotion()
 
   const [filter, setFilter] = useState<FilterType>('active')
   const [projectFilter, setProjectFilter] = useState('')
@@ -838,9 +841,9 @@ export function TodoView(): JSX.Element {
             <motion.div
               className={styles.projectMenu}
               ref={projectMenuRef}
-              initial={{ opacity: 0, scale: 0.6 }}
+              initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.6 }}
               animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.18, ease: [0.34, 1.2, 0.64, 1] }}
+              transition={{ duration: prefersReducedMotion ? 0 : DUR_FAST, ease: EASE_POP }}
             >
               {projectMenuContent}
             </motion.div>,

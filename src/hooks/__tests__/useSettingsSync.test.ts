@@ -207,7 +207,9 @@ describe('useSettingsSync', () => {
 
       expect(mockPutSettingsEvent).toHaveBeenCalled()
       expect(getEtag()).toBe('"new-etag"')
-      expect(mockToast).toHaveBeenCalledWith('Settings saved to server.')
+      // Asserted on the message only: this now routes through the shared
+      // showToast in lib/toast, which always passes an options object.
+      expect(mockToast.mock.calls[0][0]).toBe('Settings saved to server.')
       expect(mockToast.error).not.toHaveBeenCalled()
     })
 

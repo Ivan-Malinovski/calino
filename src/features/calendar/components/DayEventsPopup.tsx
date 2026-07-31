@@ -4,6 +4,8 @@ import { format } from 'date-fns'
 import { formatTime } from '@/lib/datetime'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
+import { useModalDismiss } from '@/hooks/useModalDismiss'
+import { DUR_FAST } from '@/lib/motion'
 import { useSettingsStore } from '@/store/settingsStore'
 import type { CalendarEvent } from '@/types'
 import { LocationLink } from './LocationLink'
@@ -29,20 +31,8 @@ export function DayEventsPopup({
   const prefersReducedMotion = useReducedMotion()
   const dateLabel = format(date, 'EEEE, MMMM d')
 
-  // Focus the popup on mount for accessibility
-  useEffect(() => {
-    if (popupRef.current) {
-      popupRef.current.focus()
-    }
-  }, [])
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape') onClose()
-    }
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [onClose])
+  // Focus trap + Escape + focus restore, shared with every other dialog.
+  useModalDismiss(popupRef, true, onClose)
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent): void => {
@@ -61,12 +51,13 @@ export function DayEventsPopup({
         className={styles.popup}
         style={{ left: position.x, top: position.y }}
         role="dialog"
+        aria-modal="true"
         aria-label={`Events for ${dateLabel}`}
         tabIndex={-1}
         initial={prefersReducedMotion ? false : { opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.95 }}
-        transition={{ duration: prefersReducedMotion ? 0 : 0.15 }}
+        transition={{ duration: prefersReducedMotion ? 0 : DUR_FAST }}
       >
         <div className={styles.header}>
           <span className={styles.date}>{format(date, 'EEEE, MMMM d')}</span>
@@ -91,7 +82,7 @@ export function DayEventsPopup({
             >
               <div
                 className={styles.colorDot}
-                style={{ backgroundColor: event.color || '#4285F4' }}
+                style={{ backgroundColor: event.color || 'var(--color-accent)' }}
               />
               <div className={styles.eventDetails}>
                 <div className={styles.eventTitle}>{event.title}</div>

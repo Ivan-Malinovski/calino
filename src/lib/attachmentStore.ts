@@ -49,23 +49,3 @@ export async function deleteAttachments(eventId: string): Promise<void> {
   await db.attachments.delete(eventId)
 }
 
-/**
- * Bulk delete attachments for all events in a calendar.
- * Requires iterating all records since we index by eventId, not calendarId.
- */
-export async function deleteAttachmentsByCalendar(
-  calendarId: string,
-  getEventCalendarId: (eventId: string) => string | undefined
-): Promise<void> {
-  await db.attachments
-    .filter((record) => getEventCalendarId(record.eventId) === calendarId)
-    .delete()
-}
-
-/**
- * Get all event IDs that have attachments in IndexedDB.
- * Useful for migration or cleanup.
- */
-export async function getAllEventIds(): Promise<string[]> {
-  return (await db.attachments.toCollection().primaryKeys()) as string[]
-}

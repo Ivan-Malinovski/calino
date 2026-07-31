@@ -225,7 +225,7 @@ export const CONFLICT_OPTIONS: { value: 'server-wins' | 'local-wins' | 'ask'; la
 ]
 
 let _timezoneOptions: { value: string; label: string }[] | null = null
-export function getTimezoneOptions(): { value: string; label: string }[] {
+function getTimezoneOptions(): { value: string; label: string }[] {
   if (!_timezoneOptions) {
     _timezoneOptions = generateTimezoneOptions()
   }

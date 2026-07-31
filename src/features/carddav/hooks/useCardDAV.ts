@@ -26,8 +26,12 @@ function parseDeleteSnapshot(change: PendingContactChange): PendingDeleteSnapsho
 }
 
 /**
- * How many times a pending change may fail before it is retired. Mirrors the CalDAV side
- * (`MAX_RETRIES` in useCalDAV).
+ * How many times a pending change may fail before it is retired.
+ *
+ * Intentionally lower than the CalDAV side (`MAX_RETRIES = 10` in useCalDAV):
+ * a contact write that has failed three times is far more likely to be a
+ * malformed vCard the server keeps rejecting than a transient outage. The two
+ * used to claim to mirror each other while holding different values.
  */
 const MAX_REPLAY_RETRIES = 3
 

@@ -32,10 +32,21 @@ let currentEvents: CalendarEvent[] = []
 let currentEnableNotifications = true
 let currentDefaultReminderMinutes = 15
 
-vi.mock('@/store/calendarStore', () => ({
-  useCalendarStore: (selector: (s: { events: CalendarEvent[] }) => unknown) =>
-    selector({ events: currentEvents }),
-}))
+// The hook schedules reminders against the store's *expanded* occurrences
+// (getEventsForDateRange), not the raw event list — a recurring master would
+// otherwise only ever produce one reminder. `currentExpandedEvents` lets a test
+// stand in an expansion; by default it mirrors the raw list, which is exactly
+// what the real store does for non-recurring events.
+let currentExpandedEvents: CalendarEvent[] | null = null
+
+vi.mock('@/store/calendarStore', () => {
+  const useCalendarStore = (selector: (s: { events: CalendarEvent[] }) => unknown) =>
+    selector({ events: currentEvents })
+  useCalendarStore.getState = () => ({
+    getEventsForDateRange: () => currentExpandedEvents ?? currentEvents,
+  })
+  return { useCalendarStore }
+})
 
 vi.mock('@/store/settingsStore', () => ({
   useSettingsStore: (
@@ -73,6 +84,7 @@ describe('useNotifications - Bug #81+90: shownReminders behavior', () => {
     vi.useFakeTimers()
     vi.clearAllMocks()
     currentEvents = []
+    currentExpandedEvents = null
     currentEnableNotifications = true
     currentDefaultReminderMinutes = 15
     mockToast.mockClear()
@@ -228,6 +240,46 @@ describe('useNotifications - Bug #81+90: shownReminders behavior', () => {
 
     expect(mockShowNotification).toHaveBeenCalledTimes(1)
   })
+
+  it('reminds on a recurring occurrence, not just the series DTSTART', () => {
+    const now = new Date()
+    // The stored event is the master, with a start well in the past — the
+    // reminder path used to read this directly, so the reminder was already
+    // expired and a recurring series never notified again.
+    const masterStart = new Date(now.getTime() - 30 * 24 * 60 * 60_000)
+    const master = makeEvent('daily1', masterStart)
+    currentEvents = [master]
+
+    // What the store's expansion actually hands back: an occurrence due in 15m.
+    const occurrenceStart = new Date(now.getTime() + 15 * 60_000)
+    currentExpandedEvents = [
+      { ...master, id: `daily1-${occurrenceStart.toISOString()}`, start: occurrenceStart.toISOString() },
+    ]
+
+    renderHook(() => useNotifications())
+
+    expect(mockShowNotification).toHaveBeenCalledTimes(1)
+    expect(mockShowNotification.mock.calls[0][2]).toBe(`daily1-${occurrenceStart.toISOString()}`)
+  })
+
+  it('gives each occurrence of a series its own reminder', () => {
+    const now = new Date()
+    const master = makeEvent('daily1', new Date(now.getTime() - 30 * 24 * 60 * 60_000))
+    currentEvents = [master]
+
+    // Two occurrences both entering the check window.
+    const first = new Date(now.getTime() + 15 * 60_000)
+    const second = new Date(now.getTime() + 15 * 60_000 + 1000)
+    currentExpandedEvents = [
+      { ...master, id: `daily1-${first.toISOString()}`, start: first.toISOString() },
+      { ...master, id: `daily1-${second.toISOString()}`, start: second.toISOString() },
+    ]
+
+    renderHook(() => useNotifications())
+
+    // Distinct ids per occurrence — they must not collapse onto one another.
+    expect(mockShowNotification).toHaveBeenCalledTimes(2)
+  })
 })
 
 describe('useNotifications - R5.1: 12h catch-up pass for never-shown reminders', () => {
@@ -245,6 +297,7 @@ describe('useNotifications - R5.1: 12h catch-up pass for never-shown reminders',
     vi.useFakeTimers()
     vi.clearAllMocks()
     currentEvents = []
+    currentExpandedEvents = null
     currentEnableNotifications = true
     currentDefaultReminderMinutes = 15
     mockToast.mockClear()

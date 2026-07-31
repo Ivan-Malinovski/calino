@@ -6,6 +6,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { useHorizontalSwipe } from '@/hooks/useHorizontalSwipe'
 import { ContextMenu } from '@/components/common/ContextMenu'
+import { ChevronLeft, ChevronRight } from '@/components/common/icons'
 import {
   format,
   startOfMonth,
@@ -195,6 +196,12 @@ export function Sidebar({
 
   const handleSyncCalendar = async (calendarId: string, accountId?: string): Promise<void> => {
     if (!accountId || syncingCalendarId) return
+    // Same guard handleSyncAll applies: a per-calendar sync must not overlap a
+    // sync-all already in flight for the same account.
+    if (globalSyncStatus === 'syncing') {
+      showToast('Calendars are already syncing.')
+      return
+    }
     setSyncingCalendarId(calendarId)
     setSyncStatus((prev) => {
       const { [calendarId]: _, ...rest } = prev // eslint-disable-line @typescript-eslint/no-unused-vars
@@ -1195,34 +1202,6 @@ function UpdateIndicator(): JSX.Element {
         document.body
       )}
     </>
-  )
-}
-
-function ChevronLeft(): JSX.Element {
-  return (
-    <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none">
-      <path
-        d="M10 12L6 8L10 4"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  )
-}
-
-function ChevronRight(): JSX.Element {
-  return (
-    <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none">
-      <path
-        d="M6 4L10 8L6 12"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
   )
 }
 

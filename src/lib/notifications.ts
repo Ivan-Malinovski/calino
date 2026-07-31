@@ -1,4 +1,4 @@
-import { parseISO, format, addMinutes } from 'date-fns'
+import { format, addMinutes } from 'date-fns'
 import type { CalendarEvent, Reminder } from '@/types'
 
 export type NotificationPermissionStatus = 'granted' | 'denied' | 'default'
@@ -39,14 +39,6 @@ export function getNotificationPermission(): NotificationPermissionStatus {
     return 'denied'
   }
   return Notification.permission as NotificationPermissionStatus
-}
-
-export function formatEventTime(startIso: string, isAllDay: boolean): string {
-  if (isAllDay) {
-    return 'All day'
-  }
-  const date = parseISO(startIso)
-  return format(date, 'h:mm a')
 }
 
 export function createNotificationId(eventId: string, reminderId: string): string {
@@ -111,11 +103,6 @@ export function snoozeReminder(
   const filtered = existing.filter((r) => r.eventId !== eventId)
   saveSnoozedReminders([...filtered, snoozed])
   return snoozed
-}
-
-export function removeSnoozedReminder(eventId: string): void {
-  const existing = getSnoozedReminders()
-  saveSnoozedReminders(existing.filter((r) => r.eventId !== eventId))
 }
 
 export function getDueSnoozedReminders(): SnoozedReminder[] {

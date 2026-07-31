@@ -28,10 +28,17 @@ let currentEvents: CalendarEvent[] = []
 let currentEnableNotifications = true
 let currentDefaultReminderMinutes = 15
 
-vi.mock('@/store/calendarStore', () => ({
-  useCalendarStore: (selector: (s: { events: CalendarEvent[] }) => unknown) =>
-    selector({ events: currentEvents }),
-}))
+// The hook reads the store's expanded occurrences via getEventsForDateRange.
+// None of the events here recur, so mirroring the raw list matches what the
+// real store returns.
+vi.mock('@/store/calendarStore', () => {
+  const useCalendarStore = (selector: (s: { events: CalendarEvent[] }) => unknown) =>
+    selector({ events: currentEvents })
+  useCalendarStore.getState = () => ({
+    getEventsForDateRange: () => currentEvents,
+  })
+  return { useCalendarStore }
+})
 
 vi.mock('@/store/settingsStore', () => ({
   useSettingsStore: (

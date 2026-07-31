@@ -8,19 +8,16 @@ import { useCalendarStore } from '@/store/calendarStore'
 import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
 import { showToast } from '@/lib/toast'
 import { safeCalDAVUpdate } from '@/lib/caldavHelpers'
-import { deleteEventWithUndo } from '@/lib/deleteWithUndo'
 import { buildRRuleString } from '@/lib/recurrence'
-import {
-  buildMasterTruncation,
-  getFutureOverrideIds,
-  isFirstOccurrence,
-} from '@/lib/recurrenceSplit'
+import { buildMasterTruncation } from '@/lib/recurrenceSplit'
+import { deleteRecurringOccurrence } from '@/lib/recurrenceDelete'
 import type {
   CalendarEvent,
   CalendarAttachment,
   RecurrenceRule,
   TaskPriority,
   Reminder,
+  RecurrenceEditMode,
 } from '@/types'
 import { putAttachments, getAttachments, deleteAttachments } from '@/lib/attachmentStore'
 import { TaskFormFields } from './TaskFormFields'
@@ -39,7 +36,6 @@ import { useSettingsStore } from '@/store/settingsStore'
 
 import styles from './EventModal.module.css'
 
-type RecurrenceEditMode = 'all' | 'future' | 'this'
 
 export function EventModal(): JSX.Element | null {
   const isModalOpen = useCalendarStore((state) => state.isModalOpen)
@@ -194,29 +190,39 @@ export function EventModal(): JSX.Element | null {
     setCalendarId(val)
   }, [])
 
-  // Load attachments from IndexedDB when modal opens with existing event
+  // Load attachments from IndexedDB when modal opens with existing event.
+  //
+  // `fallback` is read into a local before the await so the async paths don't
+  // close over a stale `initialState`, and `cancelled` stops a slow IndexedDB
+  // read for event A from landing after the user has already switched to
+  // event B — which used to paint A's attachments onto B.
   useEffect(() => {
-    if (!isModalOpen || !initialState.attachments || initialState.attachments.length === 0) {
+    const fallback = initialState.attachments
+    if (!isModalOpen || !fallback || fallback.length === 0) {
       setAttachments([])
       return
     }
     if (!selectedEventId) {
-      setAttachments(initialState.attachments)
+      setAttachments(fallback)
       return
     }
+
+    let cancelled = false
     getAttachments(selectedEventId)
       .then((loaded) => {
-        if (loaded.length > 0) {
-          setAttachments(loaded)
-        } else {
-          // No IndexedDB data yet (migrated from localStorage), use zustand metadata
-          setAttachments(initialState.attachments!)
-        }
+        if (cancelled) return
+        // No IndexedDB data yet (migrated from localStorage), use zustand metadata
+        setAttachments(loaded.length > 0 ? loaded : fallback)
       })
       .catch(() => {
-        setAttachments(initialState.attachments!)
+        if (cancelled) return
+        setAttachments(fallback)
       })
-  }, [isModalOpen, selectedEventId])
+
+    return () => {
+      cancelled = true
+    }
+  }, [isModalOpen, selectedEventId, initialState.attachments])
 
   // Close on Escape
   useEffect(() => {
@@ -1208,89 +1214,19 @@ export function EventModal(): JSX.Element | null {
   }
 
   const performDelete = async (mode: RecurrenceEditMode): Promise<void> => {
-    const recurringMasterId = originalEventId || selectedEventId
-    if (mode === 'this' && recurringMasterId) {
-      // Add the occurrence's date to excludedDates on the master - do not delete the series
-      if (!selectedEventId) return
-      const selectedException = events.find((event) => event.id === selectedEventId)
-      const occurrenceStartISO =
-        selectedException?.recurrenceId ||
-        (originalEventId
-          ? selectedEventId.slice(originalEventId.length + 1)
-          : selectedException?.start)
-      if (!occurrenceStartISO) return
-      const occurrenceDate = occurrenceStartISO.split('T')[0]
-      const masterEvent = events.find((e) => e.id === recurringMasterId)
-      if (masterEvent) {
-        const exclusionValue = masterEvent.isAllDay ? occurrenceDate : occurrenceStartISO
-        const excludedDates = masterEvent.excludedDates || []
-        const updatedExcludedDates = excludedDates.includes(exclusionValue)
-          ? excludedDates
-          : [...excludedDates, exclusionValue]
-        try {
-          await saveRecurrenceOverride(
-            calendarId,
-            { ...masterEvent, excludedDates: updatedExcludedDates },
-            null,
-            selectedException?.recurrenceId ? [selectedException.id] : []
-          )
-        } catch {
-          showToast('Failed to delete this occurrence. The event was kept.')
-          return
-        }
-      }
-    } else if (mode === 'future' && recurringMasterId && selectedEventId) {
-      const masterEvent = events.find((event) => event.id === recurringMasterId)
-      const selectedException = events.find((event) => event.id === selectedEventId)
-      const occurrenceStart =
-        selectedException?.recurrenceId ||
-        (originalEventId
-          ? selectedEventId.slice(originalEventId.length + 1)
-          : selectedException?.start)
-      if (!occurrenceStart) return
-      const occurrenceDate = occurrenceStart.split('T')[0]
-      if (masterEvent && occurrenceDate) {
-        if (isFirstOccurrence(masterEvent, occurrenceStart)) {
-          deleteEventWithUndo({
-            event: masterEvent,
-            deleteEvent,
-            addEvent,
-            createCalDAVEvent,
-            deleteCalDAVEvent,
-          })
-          setShowDeleteDialog(false)
-          closeModal()
-          return
-        }
-        const truncation = buildMasterTruncation(masterEvent, occurrenceStart)
-        const removedOverrideIds = getFutureOverrideIds(events, masterEvent, occurrenceStart)
-        try {
-          await saveRecurrenceOverride(
-            masterEvent.calendarId,
-            { ...masterEvent, ...truncation },
-            null,
-            removedOverrideIds
-          )
-        } catch {
-          showToast('Failed to delete this and following events. The series was kept.')
-          return
-        }
-      }
-    } else {
-      const eventIdToDelete = originalEventId || selectedEventId
-      if (eventIdToDelete) {
-        const eventToDelete = events.find((e) => e.id === eventIdToDelete)
-        if (eventToDelete) {
-          deleteEventWithUndo({
-            event: eventToDelete,
-            deleteEvent,
-            addEvent,
-            createCalDAVEvent,
-            deleteCalDAVEvent,
-          })
-        }
-      }
-    }
+    if (!selectedEventId) return
+    const ok = await deleteRecurringOccurrence({
+      mode,
+      clickedEventId: selectedEventId,
+      originalEventId,
+      events,
+      saveRecurrenceOverride,
+      deleteEvent,
+      addEvent,
+      createCalDAVEvent,
+      deleteCalDAVEvent,
+    })
+    if (!ok) return
     setShowDeleteDialog(false)
     closeModal()
   }

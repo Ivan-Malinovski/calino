@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useConfigStore } from '../../../store/configStore'
+import { useFocusTrap } from '@/hooks/useFocusTrap'
 import styles from './MasterPasswordPrompt.module.css'
 
 const MAX_ATTEMPTS = 5
@@ -54,6 +55,7 @@ export function MasterPasswordPrompt() {
     return blockedUntil > Date.now() ? Math.ceil((blockedUntil - Date.now()) / 1000) : 0
   })
   const inputRef = useRef<HTMLInputElement>(null)
+  const overlayRef = useRef<HTMLDivElement>(null)
 
   // Focus input on mount
   useEffect(() => {
@@ -127,12 +129,20 @@ export function MasterPasswordPrompt() {
   )
 
   // Don't show if no preconfigured accounts, already unlocked, or on /setup
-  if (!hasPreconfiguredAccounts || isUnlocked || location.pathname === '/setup') {
+  const isOpen = hasPreconfiguredAccounts && !isUnlocked && location.pathname !== '/setup'
+
+  // This gate is deliberately non-dismissable (Escape is a no-op above), so it
+  // uses the focus trap directly rather than useModalDismiss. Without it, Tab
+  // walks straight out of the prompt into an app the user hasn't unlocked.
+  useFocusTrap(overlayRef, isOpen)
+
+  if (!isOpen) {
     return null
   }
 
   return (
     <div
+      ref={overlayRef}
       className={styles.overlay}
       role="dialog"
       aria-modal="true"

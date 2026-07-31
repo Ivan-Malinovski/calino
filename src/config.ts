@@ -33,7 +33,6 @@ export const EVENT_COLORS = [...CALENDAR_COLORS, '#9334E6'] as const
 
 export const MOBILE_BREAKPOINT = 768
 export const COMPACT_MOBILE_BREAKPOINT = 500
-export const TABLET_BREAKPOINT = 1220
 export const TOAST_DURATION_MS = 5000
 
 export type AppConfig = typeof config

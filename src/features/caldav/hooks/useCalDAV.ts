@@ -1,8 +1,7 @@
 import { useState, useCallback, useEffect } from 'react'
 import { addDays } from 'date-fns'
-import { toast as sonnerToast } from 'sonner'
 import type { CalendarEvent } from '@/types'
-import { showBrokenEventsNotification, showDuplicateUidNotification } from '@/lib/toast'
+import { showToast, showBrokenEventsNotification, showDuplicateUidNotification } from '@/lib/toast'
 import type {
   CalDAVAccount,
   CalDAVCalendar,
@@ -60,12 +59,15 @@ let autoConnectDone = false
 // just deleted (the pending-change tombstone only exists on the failure path,
 // so the happy path had a resurrection window). Shared across hook instances.
 const inFlightDeletes = new Set<string>()
+// Module-level guard: in-flight syncs keyed by account id. syncAccount snapshots
+// the store's events before its network fetch and then runs an authoritative
+// delete-reconciliation pass against that snapshot, so two overlapping runs for
+// the same account each reconcile against stale state. Callers get the existing
+// promise instead of starting a second run.
+const inFlightSyncs = new Map<string, Promise<void>>()
 
 const MAX_RETRIES = 10
 
-function showToast(message: string): void {
-  sonnerToast(message)
-}
 
 /**
  * Build a SyncEngine bound to `calendar`, reusing `sameAccountClient` when the
@@ -711,16 +713,28 @@ export function useCalDAV(): UseCalDAVReturn {
         // Fresh connect — re-derive duplicate-UID issues from scratch (#22).
         useCalendarStore.getState().clearDuplicateUidIssues()
 
-        for (const cal of serverCalendars) {
-          console.log('[CalDAV] addAccount: fetching events for', cal.name, cal.url)
-          const fetchedEvents = await client.fetchEvents(cal.url, start, end)
-          console.log(
-            '[CalDAV] addAccount: got',
-            fetchedEvents.length,
-            'event objects for',
-            cal.name
-          )
+        // Fetch every calendar in parallel before processing any of them. This
+        // is a fresh connect, so unlike syncAccount there are no pending local
+        // changes to snapshot between fetch and reconcile — nothing depends on
+        // the fetches being interleaved with the store writes below. Serially
+        // this was one full round-trip per calendar.
+        const fetchedPerCalendar = await Promise.all(
+          serverCalendars.map(async (cal) => {
+            console.log('[CalDAV] addAccount: fetching events for', cal.name, cal.url)
+            const fetchedEvents = await client.fetchEvents(cal.url, start, end)
+            console.log(
+              '[CalDAV] addAccount: got',
+              fetchedEvents.length,
+              'event objects for',
+              cal.name
+            )
+            return { cal, fetchedEvents }
+          })
+        )
 
+        // Store writes stay serial and in calendar order, so the
+        // already-seen-this-pass dedup below behaves exactly as before.
+        for (const { cal, fetchedEvents } of fetchedPerCalendar) {
           const { items: parsedWithHref } = await collectParsedWithHref(fetchedEvents, cal.id)
 
           // Detect independent events illegally sharing a UID across resources.
@@ -976,7 +990,7 @@ export function useCalDAV(): UseCalDAVReturn {
     }
   }, [])
 
-  const syncAccount = useCallback(
+  const runSyncAccount = useCallback(
     async (accountId: string): Promise<void> => {
       const account = storage.getAccountById(accountId)
       if (!account) {
@@ -1324,6 +1338,19 @@ export function useCalDAV(): UseCalDAVReturn {
       }
     },
     [conflictResolution]
+  )
+
+  const syncAccount = useCallback(
+    (accountId: string): Promise<void> => {
+      const existing = inFlightSyncs.get(accountId)
+      if (existing) return existing
+      const run = runSyncAccount(accountId).finally(() => {
+        inFlightSyncs.delete(accountId)
+      })
+      inFlightSyncs.set(accountId, run)
+      return run
+    },
+    [runSyncAccount]
   )
 
   /** Probe an existing account's stored credentials. Read-only — persists nothing. */

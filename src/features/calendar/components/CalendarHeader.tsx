@@ -6,8 +6,11 @@ import { useNavigate } from 'react-router-dom'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
 import { QuickSettingsPanel } from './QuickSettingsPanel'
+import { ChevronLeft, ChevronRight } from '@/components/common/icons'
 import { useGestures } from '@/hooks/useGestures'
 import { useAnimatedClose } from '@/hooks/useAnimatedClose'
+import { useReducedMotion } from '@/hooks/useReducedMotion'
+import { DUR_FAST, EASE_POP } from '@/lib/motion'
 import { VIEW_ROUTES } from '../viewRoutes'
 import { getNavigatedDate } from '../dateNavigation'
 import type { ViewType } from '@/types'
@@ -34,6 +37,7 @@ export function CalendarHeader({
   onOpenCommandPalette,
 }: CalendarHeaderProps): JSX.Element {
   const navigate = useNavigate()
+  const prefersReducedMotion = useReducedMotion()
   const currentDate = useCalendarStore((state) => state.currentDate)
   const currentView = useCalendarStore((state) => state.currentView)
   const setCurrentDate = useCalendarStore((state) => state.setCurrentDate)
@@ -523,10 +527,10 @@ export function CalendarHeader({
               onClick={handleToday}
               aria-label="Go to today"
               data-component="today-button-icon"
-              initial={{ opacity: 0, scale: 0.6 }}
+              initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.6 }}
               animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.6 }}
-              transition={{ duration: 0.18, ease: [0.34, 1.2, 0.64, 1] }}
+              exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.6 }}
+              transition={{ duration: prefersReducedMotion ? 0 : DUR_FAST, ease: EASE_POP }}
             >
               <TodayIcon />
             </motion.button>
@@ -769,40 +773,6 @@ export function CalendarHeader({
         {currentView === 'todo' && <div id="task-header-slot" className={styles.taskHeaderSlot} />}
       </div>
     </header>
-  )
-}
-
-function ChevronLeft(): JSX.Element {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 16 16"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M10 12L6 8L10 4" />
-    </svg>
-  )
-}
-
-function ChevronRight(): JSX.Element {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 16 16"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M6 4L10 8L6 12" />
-    </svg>
   )
 }
 

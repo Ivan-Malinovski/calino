@@ -336,3 +336,10 @@ export interface SettingsActions {
 }
 
 export type SettingsStore = SettingsState & SettingsActions
+
+/**
+ * Which slice of a recurring series an edit or delete applies to. Shared by
+ * RecurrenceDialog, DeleteDialog, EventModal and the recurrenceDelete helper —
+ * it used to be redeclared in each of them.
+ */
+export type RecurrenceEditMode = 'all' | 'future' | 'this'

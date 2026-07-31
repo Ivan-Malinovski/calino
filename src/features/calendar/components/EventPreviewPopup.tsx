@@ -3,11 +3,7 @@ import { createPortal } from 'react-dom'
 import { format, parseISO, isSameDay } from 'date-fns'
 import { v4 as uuidv4 } from 'uuid'
 import { formatTime, daysBetween, addDays, addMinutesToTimeStr } from '@/lib/datetime'
-import {
-  buildMasterTruncation,
-  getFutureOverrideIds,
-  isFirstOccurrence,
-} from '@/lib/recurrenceSplit'
+import { buildMasterTruncation } from '@/lib/recurrenceSplit'
 import { showToast } from '@/lib/toast'
 import { motion, AnimatePresence, animate } from 'framer-motion'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
@@ -16,7 +12,7 @@ import { useSheetSwipeDismiss } from '@/hooks/useSheetSwipeDismiss'
 import { useSettingsStore } from '@/store/settingsStore'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
-import { safeCalDAVUpdate, safeCalDAVDelete } from '@/lib/caldavHelpers'
+import { safeCalDAVUpdate } from '@/lib/caldavHelpers'
 import { DeleteDialog } from './DeleteDialog'
 import { RecurrenceDialog } from './RecurrenceDialog'
 import { LocationLink } from './LocationLink'
@@ -25,7 +21,9 @@ import { EventBackground } from '@/components/common/EventBackground'
 import { matchEventBackground } from '@/lib/eventBackground'
 import { describeRecurrence } from '@/lib/recurrence'
 import { hasDueTime, extractOriginalEventId } from '@/lib/events'
-import type { CalendarEvent } from '@/types'
+import type { CalendarEvent, RecurrenceEditMode } from '@/types'
+import { deleteRecurringOccurrence } from '@/lib/recurrenceDelete'
+import { deleteEventWithUndo } from '@/lib/deleteWithUndo'
 import { TimeField } from './TimeField'
 import styles from './EventPreviewPopup.module.css'
 
@@ -85,6 +83,7 @@ export function EventPreviewPopup({
     setTimeout(() => closePreview(), prefersReducedMotion ? 0 : 150)
   }, [closePreview, isClosing, isMobile, prefersReducedMotion, sheetY])
   const deleteEvent = useCalendarStore((state) => state.deleteEvent)
+  const addEvent = useCalendarStore((state) => state.addEvent)
   const updateEvent = useCalendarStore((state) => state.updateEvent)
   const {
     createEvent: createCalDAVEvent,
@@ -507,81 +506,34 @@ export function EventPreviewPopup({
       setShowDeleteDialog(true)
       return
     }
+    // Undo, same as the other delete entry points (EventCard, EventModal) —
+    // this path used to delete outright with no way back.
     const idToDelete = originalEventId || event.id
-    await safeCalDAVDelete(deleteCalDAVEvent, event.calendarId, idToDelete)
-    deleteEvent(idToDelete)
+    const eventToDelete =
+      useCalendarStore.getState().events.find((e) => e.id === idToDelete) ?? event
+    deleteEventWithUndo({
+      event: eventToDelete,
+      deleteEvent,
+      addEvent,
+      createCalDAVEvent,
+      deleteCalDAVEvent,
+    })
     closePreview()
   }
 
-  const performDelete = async (mode: 'all' | 'this' | 'future'): Promise<void> => {
-    const recurringMasterId = originalEventId || event.id
-    if (mode === 'this') {
-      // For 'this' occurrence: exclude the date from the master event
-      const storedEvents = useCalendarStore.getState().events
-      const selectedException = storedEvents.find((candidate) => candidate.id === clickedEventId)
-      const occurrenceStartISO =
-        selectedException?.recurrenceId ||
-        (originalEventId ? clickedEventId.slice(originalEventId.length + 1) : event.start)
-      const occurrenceDate = occurrenceStartISO.split('T')[0]
-      const masterEvent = storedEvents.find((e) => e.id === recurringMasterId)
-      if (masterEvent) {
-        const exclusionValue = masterEvent.isAllDay ? occurrenceDate : occurrenceStartISO
-        const excludedDates = masterEvent.excludedDates || []
-        const updatedExcludedDates = excludedDates.includes(exclusionValue)
-          ? excludedDates
-          : [...excludedDates, exclusionValue]
-        try {
-          await saveRecurrenceOverride(
-            masterEvent.calendarId,
-            { ...masterEvent, excludedDates: updatedExcludedDates },
-            null,
-            selectedException?.recurrenceId ? [selectedException.id] : []
-          )
-        } catch {
-          showToast('Failed to delete this occurrence. The event was kept.')
-          return
-        }
-      }
-    } else if (mode === 'future') {
-      const storedEvents = useCalendarStore.getState().events
-      const masterEvent = storedEvents.find((candidate) => candidate.id === recurringMasterId)
-      const selectedException = storedEvents.find((candidate) => candidate.id === clickedEventId)
-      const occurrenceStart =
-        selectedException?.recurrenceId ||
-        (originalEventId ? clickedEventId.slice(originalEventId.length + 1) : event.start)
-      const occurrenceDate = occurrenceStart.split('T')[0]
-      if (masterEvent && occurrenceDate) {
-        if (isFirstOccurrence(masterEvent, occurrenceStart)) {
-          if (masterEvent.calendarId !== 'default') {
-            await safeCalDAVDelete(deleteCalDAVEvent, masterEvent.calendarId, masterEvent.id)
-          }
-          deleteEvent(masterEvent.id)
-          closePreview()
-          setShowDeleteDialog(false)
-          return
-        }
-        const truncation = buildMasterTruncation(masterEvent, occurrenceStart)
-        const removedOverrideIds = getFutureOverrideIds(storedEvents, masterEvent, occurrenceStart)
-        try {
-          await saveRecurrenceOverride(
-            masterEvent.calendarId,
-            { ...masterEvent, ...truncation },
-            null,
-            removedOverrideIds
-          )
-        } catch {
-          showToast('Failed to delete this and following events. The series was kept.')
-          return
-        }
-      }
-    } else {
-      // Delete entire series
-      const idToDelete = originalEventId || event.id
-      if (event.calendarId && event.calendarId !== 'default') {
-        await safeCalDAVDelete(deleteCalDAVEvent, event.calendarId, idToDelete)
-      }
-      deleteEvent(idToDelete)
-    }
+  const performDelete = async (mode: RecurrenceEditMode): Promise<void> => {
+    const ok = await deleteRecurringOccurrence({
+      mode,
+      clickedEventId,
+      originalEventId,
+      events: useCalendarStore.getState().events,
+      saveRecurrenceOverride,
+      deleteEvent,
+      addEvent,
+      createCalDAVEvent,
+      deleteCalDAVEvent,
+    })
+    if (!ok) return
     closePreview()
     setShowDeleteDialog(false)
   }

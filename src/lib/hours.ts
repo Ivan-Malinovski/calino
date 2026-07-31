@@ -5,7 +5,7 @@ import { addHours, startOfDay } from 'date-fns'
  * eachHourOfInterval can produce 23 or 25 entries on DST transition days,
  * so we use a fixed count instead.
  */
-export function getHoursForDay(date: Date = new Date()): Date[] {
+function getHoursForDay(date: Date = new Date()): Date[] {
   const dayStart = startOfDay(date)
   return Array.from({ length: 24 }, (_, i) => addHours(dayStart, i))
 }

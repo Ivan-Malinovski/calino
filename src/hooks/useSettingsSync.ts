@@ -10,6 +10,7 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { toast as sonnerToast } from 'sonner'
+import { showToast } from '@/lib/toast'
 import { useSettingsStore } from '@/store/settingsStore'
 import {
   serializeSettings,
@@ -35,9 +36,6 @@ import type { CalDAVAccount } from '@/features/caldav/types'
 
 // ─── Toast helper ─────────────────────────────────────────────────────────────
 
-function showToast(message: string): void {
-  sonnerToast(message)
-}
 
 /**
  * Turn a raw sync error message into a short, user-facing toast string.

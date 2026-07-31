@@ -216,7 +216,7 @@ describe('DayEventsPopup', () => {
     expect(dialog).toHaveAttribute('aria-label', 'Events for Friday, March 15')
   })
 
-  it('focuses the popup on mount (Bug #65)', () => {
+  it('moves focus into the popup on mount (Bug #65)', () => {
     render(
       <DayEventsPopup
         date={mockDate}
@@ -227,7 +227,10 @@ describe('DayEventsPopup', () => {
       />
     )
 
+    // useFocusTrap focuses the first focusable descendant (the first event row)
+    // rather than the container itself, so Tab wraps within the dialog.
     const dialog = screen.getByRole('dialog')
-    expect(dialog).toHaveFocus()
+    expect(dialog).toContainElement(document.activeElement as HTMLElement)
+    expect(document.activeElement).not.toBe(dialog)
   })
 })

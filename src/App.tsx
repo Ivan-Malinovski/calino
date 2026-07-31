@@ -6,6 +6,7 @@ import { Capacitor } from '@capacitor/core'
 import type { PluginListenerHandle } from '@capacitor/core'
 import { App as CapacitorApp } from '@capacitor/app'
 import { useIsMobile } from './hooks/useIsMobile'
+import { DUR_FAST } from './lib/motion'
 import { useTwoFingerSwipe } from './hooks/useTwoFingerSwipe'
 import { useHorizontalSwipe } from './hooks/useHorizontalSwipe'
 import { usePullToRefresh } from './hooks/usePullToRefresh'
@@ -97,7 +98,7 @@ function ViewLoader({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: reducedMotion ? 0 : 0.15 }}
+          transition={{ duration: reducedMotion ? 0 : DUR_FAST }}
           style={{
             flex: 1,
             display: 'flex',
@@ -737,9 +738,13 @@ function GitHubPagesRedirect(): null {
 function App(): JSX.Element {
   const loadConfigFile = useConfigStore((state) => state.loadConfigFile)
 
-  // Load self-hosted config on mount
+  // Load self-hosted config on mount. Explicitly caught: a missing or malformed
+  // config file is a non-fatal condition (the app falls back to defaults), and
+  // an uncaught rejection here would surface as an unhandled promise rejection.
   useEffect(() => {
-    loadConfigFile()
+    loadConfigFile().catch((err) => {
+      console.warn('[config] Failed to load config file:', err)
+    })
   }, [loadConfigFile])
 
   // Fix for Android native time picker backdrop remaining after app switch
@@ -759,20 +764,30 @@ function App(): JSX.Element {
     }
     document.addEventListener('visibilitychange', handleVisibilityChange)
 
+    // `cancelled` matters because addListener resolves asynchronously: if
+    // cleanup runs first (StrictMode's double-mount, fast route churn), the
+    // handle arrives after we'd already tried to remove it and the listener
+    // would leak — one per mount.
+    let cancelled = false
     let capListener: PluginListenerHandle | null = null
     if (Capacitor.isNativePlatform()) {
       CapacitorApp.addListener('appStateChange', ({ isActive }) => {
         if (!isActive) blurNativePickers()
       })
         .then((listener) => {
+          if (cancelled) {
+            void listener.remove()
+            return
+          }
           capListener = listener
         })
         .catch(() => {})
     }
 
     return () => {
+      cancelled = true
       document.removeEventListener('visibilitychange', handleVisibilityChange)
-      if (capListener) capListener.remove()
+      if (capListener) void capListener.remove()
     }
   }, [])
 
@@ -805,7 +820,20 @@ function App(): JSX.Element {
 
 function ThemedToaster(): JSX.Element {
   const { effectiveMode } = useTheme()
-  return <Toaster theme={effectiveMode} richColors position="bottom-right" duration={5000} />
+  const isMobile = useIsMobile()
+  return (
+    <Toaster
+      theme={effectiveMode}
+      // No richColors: saturated red/green is off-palette for a system with a
+      // single accent. Toasts inherit the theme surface instead.
+      position={isMobile ? 'bottom-center' : 'bottom-right'}
+      duration={5000}
+      // On mobile the floating nav pill owns the bottom of the screen, so lift
+      // the toasts (including the Undo affordance) clear of it.
+      offset={isMobile ? 'calc(88px + var(--safe-area-bottom))' : undefined}
+      mobileOffset={{ bottom: 'calc(88px + var(--safe-area-bottom))' }}
+    />
+  )
 }
 
 export default App

@@ -2,9 +2,9 @@ import type { JSX } from 'react'
 import { useRef } from 'react'
 import { useAnimatedClose } from '@/hooks/useAnimatedClose'
 import { useModalDismiss } from '@/hooks/useModalDismiss'
+import type { RecurrenceEditMode } from '@/types'
 import styles from './RecurrenceDialog.module.css'
 
-type RecurrenceEditMode = 'all' | 'future' | 'this'
 
 interface RecurrenceDialogProps {
   isOpen: boolean

@@ -590,15 +590,3 @@ export const createCommandRegistry = (deps: CommandFactoryDeps): Command[] => [
   ...createSettingsCommands(deps),
 ]
 
-export const getCommandsByCategory = (commands: Command[]): Record<CommandCategory, Command[]> => {
-  return commands.reduce(
-    (acc, cmd) => {
-      if (!acc[cmd.category]) {
-        acc[cmd.category] = []
-      }
-      acc[cmd.category].push(cmd)
-      return acc
-    },
-    {} as Record<CommandCategory, Command[]>
-  )
-}

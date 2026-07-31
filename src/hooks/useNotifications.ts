@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { Capacitor } from '@capacitor/core'
 import { App as CapacitorApp } from '@capacitor/app'
 import { useCalendarStore } from '@/store/calendarStore'
@@ -16,10 +16,20 @@ import {
   listenForReminderActions,
   checkNativeReminderPermission,
 } from '@/lib/nativeReminders'
-import { parseISO, isWithinInterval, addMinutes, addHours, isAfter } from 'date-fns'
+import { parseISO, isWithinInterval, addMinutes, addHours, addDays, isAfter } from 'date-fns'
 import { toast } from 'sonner'
+import type { CalendarEvent } from '@/types'
 
 const CHECK_INTERVAL_MS = 60 * 1000
+// How far ahead to expand recurring series when scheduling reminders. Reminders
+// used to be read straight off the stored event, which for a recurring series is
+// the master DTSTART — so a weekly standup got exactly one reminder ever, and
+// none at all once that first occurrence was in the past.
+const REMINDER_HORIZON_DAYS = 30
+// Coalesce reconciliation while a sync is streaming events in. Each
+// reconcile cancels and reschedules every pending OS notification, so running
+// it once per stored event turns a sync into hundreds of bridge round-trips.
+const RECONCILE_DEBOUNCE_MS = 1500
 // R5.1 — when the page is closed (laptop sleep, app backgrounded, etc.)
 // and then reopened, also fire reminders whose trigger time was in the
 // last 12 hours but never recorded as shown. The 12h window matches the
@@ -27,8 +37,28 @@ const CHECK_INTERVAL_MS = 60 * 1000
 // long-idle browsers.
 const CATCH_UP_WINDOW_HOURS = 12
 
+/**
+ * The events reminders should actually be scheduled against: recurring series
+ * expanded into individual occurrences across the reminder horizon.
+ *
+ * Each occurrence carries the synthetic `${masterId}-${occurrenceKey}` id from
+ * the store's expansion, so occurrences get distinct notification ids and don't
+ * collapse onto one another.
+ */
+function useReminderOccurrences(events: CalendarEvent[]): CalendarEvent[] {
+  return useMemo(() => {
+    const now = new Date()
+    // Reach back over the catch-up window so a missed occurrence can still fire.
+    const from = addHours(now, -CATCH_UP_WINDOW_HOURS).toISOString()
+    const to = addDays(now, REMINDER_HORIZON_DAYS).toISOString()
+    return useCalendarStore.getState().getEventsForDateRange(from, to)
+    // `events` is the invalidation signal for the store's expansion cache.
+  }, [events])
+}
+
 export function useNotifications(): void {
   const events = useCalendarStore((state) => state.events)
+  const reminderEvents = useReminderOccurrences(events)
   const enableNotifications = useSettingsStore((state) => state.enableDesktopNotifications)
   const defaultReminderMinutes = useSettingsStore((state) => state.defaultReminderMinutes)
   // Track reminder ID → scheduled trigger timestamp so we can re-fire
@@ -45,29 +75,42 @@ export function useNotifications(): void {
     if (!Capacitor.isNativePlatform() || !enableNotifications) return
 
     let cancelled = false
+    let debounceId: ReturnType<typeof setTimeout> | undefined
     // The app setting being on doesn't mean the OS permission is actually
     // granted — a fresh install/reinstall resets Android's permission state
     // independent of the app's own persisted settings, and schedule() throws
     // if it's not granted yet. Check for real before ever calling it.
     const reconcileIfPermitted = async (): Promise<void> => {
       const granted = await checkNativeReminderPermission()
-      if (granted && !cancelled) await reconcileNativeReminders(events, defaultReminderMinutes)
+      if (granted && !cancelled)
+        await reconcileNativeReminders(reminderEvents, defaultReminderMinutes)
+    }
+    // Debounced because this effect re-runs on every event mutation, and a sync
+    // writes events one at a time.
+    const scheduleReconcile = (): void => {
+      clearTimeout(debounceId)
+      debounceId = setTimeout(() => {
+        if (!cancelled) void reconcileIfPermitted()
+      }, RECONCILE_DEBOUNCE_MS)
     }
 
     void registerReminderActions()
-    void reconcileIfPermitted()
+    scheduleReconcile()
     const removeListener = listenForReminderActions()
 
     const appStateListenerPromise = CapacitorApp.addListener('appStateChange', ({ isActive }) => {
+      // Returning to the foreground is a user-visible moment, not a write
+      // storm — reconcile immediately rather than waiting out the debounce.
       if (isActive && !cancelled) void reconcileIfPermitted()
     })
 
     return () => {
       cancelled = true
+      clearTimeout(debounceId)
       removeListener()
       void appStateListenerPromise.then((handle) => handle.remove())
     }
-  }, [events, enableNotifications, defaultReminderMinutes])
+  }, [reminderEvents, enableNotifications, defaultReminderMinutes])
 
   useEffect(() => {
     prevEnabledRef.current = enableNotifications
@@ -104,7 +147,7 @@ export function useNotifications(): void {
       // the two `isAfter` checks in the inner loop to bound the window.
       const catchUpCutoff = addHours(now, -CATCH_UP_WINDOW_HOURS)
 
-      events.forEach((event) => {
+      reminderEvents.forEach((event) => {
         const reminders = getEffectiveReminders(event, defaultReminderMinutes)
 
         if (reminders.length === 0) return
@@ -209,44 +252,5 @@ export function useNotifications(): void {
       clearInterval(intervalId)
       document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
-  }, [events, enableNotifications, defaultReminderMinutes])
-}
-
-export function useRequestNotificationPermission(): {
-  permission: NotificationPermission
-  request: () => Promise<NotificationPermission>
-} {
-  const enableNotifications = useSettingsStore((state) => state.enableDesktopNotifications)
-  const updateSettings = useSettingsStore((state) => state.updateSettings)
-
-  useEffect(() => {
-    if (enableNotifications && 'Notification' in window) {
-      if (Notification.permission === 'default') {
-        Notification.requestPermission().then((permission) => {
-          if (permission === 'denied') {
-            // R3.9 — surface the cause instead of silently flipping the
-            // setting off. Without this, the user flips the toggle on,
-            // nothing happens, and they assume the app is broken.
-            updateSettings({ enableDesktopNotifications: false })
-            toast.error(
-              'Notifications are blocked. Update site permissions in your browser settings to enable reminders.',
-              { duration: 8000 }
-            )
-          }
-        })
-      } else if (Notification.permission === 'denied') {
-        // Permission was previously denied — sync the setting
-        updateSettings({ enableDesktopNotifications: false })
-        toast.error(
-          'Notifications are blocked. Update site permissions in your browser settings to enable reminders.',
-          { duration: 8000 }
-        )
-      }
-    }
-  }, [enableNotifications, updateSettings])
-
-  return {
-    permission: 'Notification' in window ? Notification.permission : 'denied',
-    request: () => Notification.requestPermission(),
-  }
+  }, [reminderEvents, enableNotifications, defaultReminderMinutes])
 }

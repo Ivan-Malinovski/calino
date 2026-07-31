@@ -267,7 +267,6 @@ export const selectAddCategory = (state: CalendarStore) => state.addCategory
 export const selectCategories = (state: CalendarStore) => state.categories
 export const selectSetCurrentView = (state: CalendarStore) => state.setCurrentView
 export const selectSetCurrentDate = (state: CalendarStore) => state.setCurrentDate
-export const selectRangeExpansionVersion = (state: CalendarStore) => state.rangeExpansionVersion
 
 /**
  * True for calendars backed by a webcal subscription — user-initiated
@@ -667,6 +666,12 @@ export const useCalendarStore = create<CalendarStore>()(
       },
 
       addCategory: (category: Category): void => {
+        // Dedupe by name. Sync auto-creates categories per calendar from a
+        // snapshot taken before the loop, so two calendars sharing a category
+        // name would otherwise each create their own "Work" with a different
+        // UUID and a random colour.
+        const existing = get().categories.find((c) => c.name === category.name)
+        if (existing) return
         set((state) => ({
           categories: [...state.categories, category],
         }))

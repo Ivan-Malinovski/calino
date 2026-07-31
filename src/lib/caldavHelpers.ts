@@ -9,7 +9,9 @@ export async function safeCalDAVUpdate(
   caldavUpdateEvent: CalDAVUpdateFn,
   calendarId: string,
   event: CalendarEvent,
-  updates: Record<string, unknown>,
+  // Partial<CalendarEvent>, not Record<string, unknown>: the loose type let a
+  // misspelled field name through the compiler and straight onto the server.
+  updates: Partial<CalendarEvent>,
   errorMessage = 'Failed to sync with CalDAV server. It will be retried.'
 ): Promise<boolean> {
   try {

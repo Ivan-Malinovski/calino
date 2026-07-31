@@ -22,13 +22,6 @@ export function decodeCaretEncoding(s: string): string {
   return s.replace(/\^n/gi, '\n').replace(/\^\^/g, '^').replace(/\^'/g, '"')
 }
 
-/**
- * Encode a string for RFC 6868 format (for parameter values).
- */
-export function encodeCaretEncoding(s: string): string {
-  return s.replace(/\^/g, '^^').replace(/'/g, "^'").replace(/\n/g, '^n')
-}
-
 // ---------------------------------------------------------------------------
 // Line unfolding / folding
 // RFC 6350 §3.2: lines longer than 75 octets should be folded.

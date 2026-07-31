@@ -35,18 +35,6 @@ export function initializeContactSearchIndex(contacts: Contact[]): void {
 }
 
 /**
- * Update the search index incrementally (e.g. after a single contact changes).
- */
-export function updateContactSearchIndex(contacts: Contact[]): void {
-  indexedContacts = contacts
-  if (fuseInstance) {
-    fuseInstance.setCollection(contacts)
-  } else {
-    initializeContactSearchIndex(contacts)
-  }
-}
-
-/**
  * Search contacts using Fuse.js fuzzy matching with optional filters.
  * Special case: if the query is all digits (≥3 chars), also does digit-only
  * matching against phone numbers.

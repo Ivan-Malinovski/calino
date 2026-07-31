@@ -4,14 +4,29 @@ interface IconProps {
   size?: number
 }
 
-export function MenuIcon({ size = 24 }: IconProps = {}): JSX.Element {
+export function ChevronLeft({ size = 16 }: IconProps = {}): JSX.Element {
   return (
-    <svg aria-hidden="true" width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <svg aria-hidden="true" width={size} height={size} viewBox="0 0 16 16" fill="none">
       <path
-        d="M4 7h16M4 12h16M4 17h16"
+        d="M10 12L6 8L10 4"
         stroke="currentColor"
-        strokeWidth="2.5"
+        strokeWidth="1.5"
         strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
+export function ChevronRight({ size = 16 }: IconProps = {}): JSX.Element {
+  return (
+    <svg aria-hidden="true" width={size} height={size} viewBox="0 0 16 16" fill="none">
+      <path
+        d="M6 4L10 8L6 12"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
       />
     </svg>
   )
@@ -42,15 +57,6 @@ export function TaskCheckIcon({ size = 20 }: IconProps = {}): JSX.Element {
         strokeWidth="2"
         strokeLinecap="round"
       />
-    </svg>
-  )
-}
-
-export function SidebarIcon({ size = 20 }: IconProps = {}): JSX.Element {
-  return (
-    <svg aria-hidden="true" width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="2" />
-      <path d="M9 3v18" stroke="currentColor" strokeWidth="2" />
     </svg>
   )
 }
