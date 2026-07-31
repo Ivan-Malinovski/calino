@@ -56,6 +56,25 @@ describe('pendingGuardedEventIds', () => {
     expect(ids).toEqual(new Set(['series', 'series-override-1']))
   })
 
+  it('guards every member of a queued group create (move recovery)', () => {
+    // The MoveLostSourceError recovery re-creates the whole recurrence group;
+    // a sync racing the replay must not treat the local overrides as remotely
+    // deleted just because the source collection no longer lists them.
+    const ids = pendingGuardedEventIds([
+      change({
+        eventId: 'series',
+        type: 'create',
+        data: JSON.stringify({
+          events: [
+            { id: 'series', resourceHref: undefined, etag: undefined },
+            { id: 'series-override-1', resourceHref: undefined, etag: undefined },
+          ],
+        }),
+      }),
+    ])
+    expect(ids).toEqual(new Set(['series', 'series-override-1']))
+  })
+
   it('falls back to the master id when the payload is malformed', () => {
     const ids = pendingGuardedEventIds([
       change({ eventId: 'series', type: 'move', data: 'not json' }),

@@ -33,6 +33,17 @@ export function pendingGuardedEventIds(changes: PendingChange[]): Set<string> {
       } else if (change.type === 'delete-href') {
         const parsed = JSON.parse(change.data) as DeleteHrefPendingData
         for (const id of parsed.memberIds ?? []) ids.add(id)
+      } else if (change.type === 'create') {
+        // The MoveLostSourceError recovery queues a group create
+        // ({ events: [...] }) — guard every member, not just the master:
+        // the source collection's resources were already deleted, so a sync
+        // racing the replay would otherwise treat the local overrides as
+        // remotely deleted and drop them from the store.
+        const parsed = JSON.parse(change.data) as { events?: CalendarEvent[] }
+        for (const event of parsed.events ?? []) {
+          const id = (event as CalendarEvent | undefined)?.id
+          if (id) ids.add(id)
+        }
       }
     } catch {
       // A malformed payload must not break the sync — the master id is already
