@@ -4,6 +4,15 @@ All notable changes to Calino will be documented in this file.
 
 ## [Unreleased]
 
+## [0.27.0] - 2026-07-31
+
+### Fixed
+
+- **Birthday and anniversary events from contacts now persist to CalDAV.** "Add to calendar" wrote to the local store only, so the next sync pass replaced the store with server truth and the event vanished — even mid-session. The create now goes through the CalDAV client (and undo retracts it from the server too), and the `calino:contact:<id>` marker that powers "On calendar" round-trips on VEVENT instead of being dropped on parse, so the button stays honest across reloads and a second click can't create a duplicate. Fixes [#84](https://github.com/Ivan-Malinovski/calino/issues/84).
+
+### Added
+
+- **"Add to calendar" asks which calendar a birthday/anniversary goes into.** With more than one writable calendar, a picker appears instead of silently choosing whichever calendar the server happened to list first. Webcal subscriptions are excluded — they can't be written to.
 ## [0.26.1] - 2026-07-31
 
 ### Fixed

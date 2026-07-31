@@ -19,6 +19,10 @@ interface ContactSeed {
   id: string
   displayName: string
   addressBookId: string
+  /** ISO date (YYYY-MM-DD) for the birthday card's "Add to calendar" flow. */
+  birthday?: string
+  /** ISO date (YYYY-MM-DD) for the anniversary card's "Add to calendar" flow. */
+  anniversary?: string
   related?: Array<{ value: string; type: string; isPrimary?: boolean }>
   isGroup?: boolean
   memberUids?: string[]
@@ -275,8 +279,8 @@ export async function seedContacts(
             note: '',
             categories: [],
             photo: null,
-            birthday: '',
-            anniversary: '',
+            birthday: c.birthday ?? '',
+            anniversary: c.anniversary ?? '',
             emails: [],
             phones: [],
             addresses: [],
@@ -303,6 +307,52 @@ export async function seedContacts(
       }
     },
     { key: STORAGE_KEYS.contacts, addressBooks, contacts }
+  )
+}
+
+/**
+ * Seed the calendar STORE (`calino-storage`) with calendars whose ids match
+ * `seedAccount`'s calendar records. The account storage holds the CalDAV
+ * plumbing (url, accountId, credential); the store holds the UI side
+ * (visibility, color, default) that components like ContactsView read for
+ * `targetCalendars` — without it, "Add to calendar" sees zero writable
+ * calendars and refuses to create.
+ */
+export async function seedStoreCalendars(
+  page: Page,
+  calendars: Array<{
+    id: string
+    name: string
+    color?: string
+    isDefault?: boolean
+    /** Mark the calendar read-only (webcal-style) so writable-target UIs skip it. */
+    readOnly?: boolean
+  }>
+): Promise<void> {
+  const seeds = calendars.map((calendar, index) => ({
+    id: calendar.id,
+    name: calendar.name,
+    color: calendar.color ?? (index === 0 ? '#4285F4' : '#E8710A'),
+    isVisible: true,
+    isDefault: calendar.isDefault ?? index === 0,
+    showTasksInViews: true,
+    ...(calendar.readOnly ? { readOnly: true } : {}),
+  }))
+
+  await page.addInitScript(
+    ({ key, calendars: seeds }) => {
+      try {
+        if (sessionStorage.getItem('__calino_test_store_calendars')) return
+        sessionStorage.setItem('__calino_test_store_calendars', '1')
+        const raw = localStorage.getItem(key)
+        const parsed = raw ? JSON.parse(raw) : { state: {}, version: 2 }
+        parsed.state = { ...(parsed.state ?? {}), calendars: seeds }
+        localStorage.setItem(key, JSON.stringify(parsed))
+      } catch {
+        /* noop */
+      }
+    },
+    { key: STORAGE_KEYS.calendar, calendars: seeds }
   )
 }
 
