@@ -111,6 +111,57 @@ describe('moveEventGroup', () => {
     expect(result.url).toBe('https://dav.example/work/event-1.ics')
   })
 
+  it('does not misread a bare 3-digit number in an error message as an HTTP status', async () => {
+    // The message mentions "404" but not as an HTTP status. statusOf must not
+    // classify this as already-gone, or the cleanup would never be queued.
+    const { targetEngine, sourceEngine } = makeEngines()
+    vi.mocked(sourceEngine.deleteEvent).mockRejectedValue(
+      new Error('Recurrence master cal-404 not found')
+    )
+
+    const result = await moveEventGroup([makeEvent()], {
+      targetEngine,
+      sourceEngine,
+      sourceHref: SOURCE_HREF,
+    })
+
+    expect(result.sourceDeleted).toBe(false)
+  })
+
+  it('recognizes an HTTP status embedded in an error message', async () => {
+    // axios-style message: no .status field, but "status code 404" is an
+    // unambiguous HTTP signal and must count as already-gone.
+    const { targetEngine, sourceEngine } = makeEngines()
+    vi.mocked(sourceEngine.deleteEvent).mockRejectedValue(
+      new Error('Request failed with status code 404')
+    )
+
+    const result = await moveEventGroup([makeEvent()], {
+      targetEngine,
+      sourceEngine,
+      sourceHref: SOURCE_HREF,
+    })
+
+    expect(result.sourceDeleted).toBe(true)
+  })
+
+  it('reads the status from err.response.status (axios-style error objects)', async () => {
+    const { targetEngine, sourceEngine } = makeEngines()
+    vi.mocked(sourceEngine.deleteEvent).mockRejectedValue(
+      Object.assign(new Error('gone'), {
+        response: { status: 410 },
+      })
+    )
+
+    const result = await moveEventGroup([makeEvent()], {
+      targetEngine,
+      sourceEngine,
+      sourceHref: SOURCE_HREF,
+    })
+
+    expect(result.sourceDeleted).toBe(true)
+  })
+
   it('skips the delete when the source was local-only', async () => {
     const { targetEngine } = makeEngines()
 

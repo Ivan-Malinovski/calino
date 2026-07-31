@@ -397,6 +397,21 @@ END:VCALENDAR`,
       expect(result.url).toBe(mockEventObject.url)
     })
 
+    // Same silent-swallow class as deleteEvent: tsdav's createObject returns
+    // the raw Response without checking res.ok, so a 5xx must be surfaced
+    // here or a failed destination write looks like success (which would let
+    // a move delete its source after the write never landed).
+    it('throws when the server responds with a non-2xx status', async () => {
+      await client.connect()
+      mockClientMethods.createCalendarObject.mockResolvedValue(
+        new Response('oops', { status: 500 })
+      )
+
+      await expect(
+        client.createEvent(mockCalendar.url, mockEventObject.data, 'event-1.ics')
+      ).rejects.toThrow(/HTTP 500/)
+    })
+
     // Bug 16: returned URL should be raw
     it('returns raw URL without proxy prefix', async () => {
       const proxyClient = new CalDAVClient(
@@ -879,6 +894,26 @@ END:VCALENDAR`,
       expect(result.url).toBe(mockEventObject.url)
     })
 
+    // Same silent-swallow class as deleteEvent: tsdav's updateObject returns
+    // the raw Response without checking res.ok, so a 5xx must be surfaced
+    // here or a failed destination write looks like success (which would let
+    // a move delete its source after the write never landed).
+    it('throws when the server responds with a non-2xx status', async () => {
+      await client.connect()
+      mockClientMethods.updateCalendarObject.mockResolvedValue(
+        new Response('oops', { status: 500 })
+      )
+
+      await expect(
+        client.updateEvent(
+          mockCalendar.url,
+          mockEventObject.url,
+          mockEventObject.data,
+          mockEventObject.etag
+        )
+      ).rejects.toThrow(/HTTP 500/)
+    })
+
     // Bug 20: offline detection
     it('throws when offline', async () => {
       onLineSpy.mockReturnValue(false)
@@ -907,6 +942,44 @@ END:VCALENDAR`,
           etag: mockEventObject.etag,
         },
       })
+    })
+
+    // tsdav's deleteObject returns the raw Response without checking `res.ok`,
+    // so a 5xx resolves silently. moveEventGroup depends on a failed cleanup
+    // DELETE being observable to queue its delete-href retry (#86).
+    it('throws when the server responds with a non-2xx status', async () => {
+      await client.connect()
+      mockClientMethods.deleteCalendarObject.mockResolvedValue(new Response('oops', { status: 500 }))
+
+      await expect(client.deleteEvent(mockEventObject.url, mockEventObject.etag)).rejects.toThrow(
+        /HTTP 500/
+      )
+    })
+
+    it('attaches the HTTP status to the thrown error so callers can classify it', async () => {
+      await client.connect()
+      mockClientMethods.deleteCalendarObject.mockResolvedValue(new Response('oops', { status: 502 }))
+
+      const error = await client
+        .deleteEvent(mockEventObject.url, mockEventObject.etag)
+        .catch((e: unknown) => e)
+      expect((error as Error).message).toContain('HTTP 502')
+      expect((error as { status?: number }).status).toBe(502)
+    })
+
+    // 404/410 mean the resource is already gone — the outcome a delete wants.
+    it('treats 404 as success (resource already gone)', async () => {
+      await client.connect()
+      mockClientMethods.deleteCalendarObject.mockResolvedValue(new Response('gone', { status: 404 }))
+
+      await expect(client.deleteEvent(mockEventObject.url, mockEventObject.etag)).resolves.toBeUndefined()
+    })
+
+    it('treats 410 as success (resource already gone)', async () => {
+      await client.connect()
+      mockClientMethods.deleteCalendarObject.mockResolvedValue(new Response('gone', { status: 410 }))
+
+      await expect(client.deleteEvent(mockEventObject.url, mockEventObject.etag)).resolves.toBeUndefined()
     })
 
     // Bug 20: offline detection

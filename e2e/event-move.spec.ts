@@ -321,6 +321,126 @@ test.describe('moving events between calendars', () => {
       page.locator('[data-component="event-card"]').filter({ hasText: 'Flaky cleanup event' })
     ).toHaveCount(1, { timeout: 15_000 })
     expect(Object.keys(await dump(page, baseURL!, WORK))).toHaveLength(1)
-    expect(await dump(page, baseURL!, SOURCE)).toEqual({})
+    // The stale source copy is removed by the retried cleanup; poll because
+    // the retry is chained through syncAccount's processPendingChanges call.
+    await expect
+      .poll(async () => Object.keys(await dump(page, baseURL!, SOURCE)).length, {
+        timeout: 15_000,
+      })
+      .toBe(0)
+  })
+
+  test('a failed destination write never deletes the source copy', async ({ page, baseURL }) => {
+    await clearState(page)
+    await seedAccountA(page, baseURL!)
+    await seedStoreCalendars(page, [
+      { id: CAL_SOURCE, name: 'Move Source', color: '#8B5CF6', isDefault: true },
+      { id: CAL_WORK, name: 'Work', color: '#EF4444' },
+    ])
+
+    const start = new Date()
+    start.setUTCHours(15, 0, 0, 0)
+    await page.request.put(`${baseURL}/mock-caldav${SOURCE}flaky-destination.ics`, {
+      data: `BEGIN:VCALENDAR\r\nVERSION:2.0\r\nBEGIN:VEVENT\r\nUID:flaky-destination\r\nDTSTART:${icalStamp(start)}\r\nDTEND:${icalStamp(new Date(start.getTime() + 3_600_000))}\r\nSUMMARY:Flaky destination event\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n`,
+    })
+
+    await page.goto('/month')
+    await syncAll(page)
+
+    // Arm the fault injector: the destination PUT fails once. Without a
+    // res.ok check on PUT this "succeeds" silently and the move would delete
+    // the source — losing the event from BOTH calendars.
+    await page.request.post(
+      `${baseURL}/mock-caldav/__test__/fail?method=PUT&prefix=${encodeURIComponent(WORK)}&count=1`
+    )
+
+    await openEventModal(page, 'Flaky destination event')
+    await page.locator('[data-component="event-calendar-select"]').selectOption(CAL_WORK)
+    await page.locator('[data-component="modal-save"]').click()
+
+    // The queued move is replayed by the next sync's processPendingChanges.
+    await syncAll(page)
+
+    await expect
+      .poll(async () => Object.keys(await dump(page, baseURL!, WORK)).length, {
+        timeout: 15_000,
+      })
+      .toBe(1)
+    expect(Object.values(await dump(page, baseURL!, WORK)).join('')).toContain(
+      'UID:flaky-destination'
+    )
+    await expect
+      .poll(async () => Object.keys(await dump(page, baseURL!, SOURCE)).length, {
+        timeout: 15_000,
+      })
+      .toBe(0)
+
+    await syncAll(page)
+    await expect(
+      page.locator('[data-component="event-card"]').filter({ hasText: 'Flaky destination event' })
+    ).toHaveCount(1, { timeout: 15_000 })
+  })
+
+  test('a failed destination write still moves a recurring series with its detached override', async ({
+    page,
+    baseURL,
+  }) => {
+    await clearState(page)
+    await seedAccountA(page, baseURL!)
+    await seedStoreCalendars(page, [
+      { id: CAL_SOURCE, name: 'Move Source', color: '#8B5CF6', isDefault: true },
+      { id: CAL_WORK, name: 'Work', color: '#EF4444' },
+    ])
+
+    const first = new Date()
+    first.setUTCHours(10, 0, 0, 0)
+    const second = new Date(first)
+    second.setUTCDate(second.getUTCDate() + 7)
+    const overrideStart = new Date(second)
+    overrideStart.setUTCHours(12, 0, 0, 0)
+
+    await page.request.put(`${baseURL}/mock-caldav${SOURCE}series-flaky-destination.ics`, {
+      data:
+        `BEGIN:VCALENDAR\r\nVERSION:2.0\r\n` +
+        `BEGIN:VEVENT\r\nUID:series-flaky-destination\r\nDTSTART:${icalStamp(first)}\r\nDTEND:${icalStamp(new Date(first.getTime() + 3_600_000))}\r\nRRULE:FREQ=WEEKLY\r\nSUMMARY:Weekly flaky\r\nEND:VEVENT\r\n` +
+        `BEGIN:VEVENT\r\nUID:series-flaky-destination\r\nRECURRENCE-ID:${icalStamp(second)}\r\nDTSTART:${icalStamp(overrideStart)}\r\nDTEND:${icalStamp(new Date(overrideStart.getTime() + 3_600_000))}\r\nSUMMARY:Weekly flaky (moved week)\r\nEND:VEVENT\r\n` +
+        `END:VCALENDAR\r\n`,
+    })
+
+    await page.goto('/month')
+    await syncAll(page)
+
+    await page.request.post(
+      `${baseURL}/mock-caldav/__test__/fail?method=PUT&prefix=${encodeURIComponent(WORK)}&count=1`
+    )
+
+    await openEventModal(page, 'Weekly flaky')
+    await page.locator('[data-component="event-calendar-select"]').selectOption(CAL_WORK)
+    await page.locator('[data-component="modal-save"]').click()
+
+    const recurrenceDialog = page.getByRole('dialog').filter({ hasText: /Edit recurring event/i })
+    if (await recurrenceDialog.isVisible().catch(() => false)) {
+      await recurrenceDialog.getByRole('button', { name: /All events/i }).click()
+    }
+
+    await syncAll(page)
+
+    await expect
+      .poll(async () => Object.keys(await dump(page, baseURL!, WORK)).length, {
+        timeout: 15_000,
+      })
+      .toBeGreaterThan(0)
+
+    const workIcs = Object.values(await dump(page, baseURL!, WORK)).join('\n')
+    // Master AND its detached override must both land — a queued move that
+    // dropped the overrides would write a single VEVENT here.
+    expect(workIcs.match(/UID:series-flaky-destination/g) ?? []).toHaveLength(2)
+    expect(workIcs).toContain('RECURRENCE-ID:')
+    expect(workIcs).toContain('RRULE:FREQ=WEEKLY')
+    await expect
+      .poll(async () => Object.keys(await dump(page, baseURL!, SOURCE)).length, {
+        timeout: 15_000,
+      })
+      .toBe(0)
   })
 })

@@ -119,6 +119,7 @@ describe('useCalDAV', () => {
     pushEvent: ReturnType<typeof vi.fn>
     updateEvent: ReturnType<typeof vi.fn>
     updateEventGroup: ReturnType<typeof vi.fn>
+    putEventGroup: ReturnType<typeof vi.fn>
     deleteEvent: ReturnType<typeof vi.fn>
   }
 
@@ -175,6 +176,7 @@ describe('useCalDAV', () => {
       updateEventGroup: vi
         .fn()
         .mockResolvedValue({ url: 'https://series.ics', etag: 'group-etag' }),
+      putEventGroup: vi.fn().mockResolvedValue({ url: 'https://series.ics', etag: 'group-etag' }),
       deleteEvent: vi.fn().mockResolvedValue(undefined),
     }
     mockSyncEngine.SyncEngine.mockImplementation(function () {
@@ -626,6 +628,62 @@ describe('useCalDAV', () => {
       })
 
       expect(result.current.syncState.pendingChanges).toBe(1)
+    })
+
+    it('queues a move carrying the whole recurrence group when a move fails', async () => {
+      // Regression: a failed live move used to queue only the master, so a
+      // replayed move silently stripped a series' detached overrides.
+      const sourceCalendar = {
+        ...mockCalendar,
+        id: 'cal-2',
+        url: 'https://caldav.example.com/cal/source/',
+      }
+      mockAccountStorage.getAllCalendars.mockReturnValue([mockCalendar, sourceCalendar])
+
+      const href = 'https://caldav.example.com/cal/source/series.ics'
+      const master: CalendarEvent = {
+        ...mockEvent,
+        id: 'series',
+        uid: 'series',
+        calendarId: 'cal-2',
+        resourceHref: href,
+        recurrence: { frequency: 'weekly', interval: 1 },
+      }
+      const override: CalendarEvent = {
+        ...mockEvent,
+        id: 'override-1',
+        uid: 'series',
+        calendarId: 'cal-2',
+        resourceHref: href,
+        recurrenceId: '2026-08-10T10:00:00',
+        recurrenceMasterId: 'series',
+      }
+      act(() => {
+        useCalendarStore.getState().addEvent(master)
+        useCalendarStore.getState().addEvent(override)
+      })
+
+      mockSyncEngineInstance.putEventGroup.mockRejectedValue(new Error('destination unavailable'))
+
+      const { result } = renderHook(() => useCalDAV())
+      await waitFor(() => expect(result.current.accounts.length).toBe(1))
+
+      await act(async () => {
+        await expect(result.current.updateEvent('cal-1', master)).rejects.toThrow(
+          'destination unavailable'
+        )
+      })
+
+      expect(mockAccountStorage.addPendingChange).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'move', eventId: 'series', calendarId: 'cal-1' })
+      )
+      const moveCall = mockAccountStorage.addPendingChange.mock.calls.find(
+        (call) => (call[0] as { type?: string }).type === 'move'
+      )
+      const parsed = JSON.parse((moveCall?.[0] as { data?: string }).data ?? '{}') as {
+        events?: CalendarEvent[]
+      }
+      expect(parsed.events?.map((e) => e.id)).toEqual(['series', 'override-1'])
     })
 
     it('gracefully handles missing calendar on update', async () => {

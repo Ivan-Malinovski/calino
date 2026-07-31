@@ -310,6 +310,7 @@ export class CalDAVClient {
       filename,
       iCalString,
     })
+    this.assertResponseOk(result, 'PUT', calendarUrl)
 
     // Extract ETag from response headers
     let etag = result.headers?.get('etag') || ''
@@ -377,6 +378,7 @@ export class CalDAVClient {
     const result = await client.updateCalendarObject({
       calendarObject: { url: eventUrl, etag, data: iCalString },
     })
+    this.assertResponseOk(result, 'PUT', eventUrl)
 
     // Extract ETag from response headers
     const newEtag = result.headers?.get('etag') || etag
@@ -393,9 +395,38 @@ export class CalDAVClient {
     }
     const client = this.getClient()
 
-    await client.deleteCalendarObject({
+    const response = await client.deleteCalendarObject({
       calendarObject: { url: eventUrl, etag },
     })
+    // 404/410 mean the resource is already gone — the outcome a delete wants.
+    this.assertResponseOk(response, 'DELETE', eventUrl, true)
+  }
+
+  /**
+   * tsdav's createObject/updateObject/deleteObject return the raw fetch
+   * `Response` without ever checking `res.ok` — a 5xx (or any non-2xx)
+   * resolves silently and is indistinguishable from success. Central check:
+   * throw a status-carrying error on non-2xx so callers can classify and retry
+   * instead of believing a failed write landed. `tolerateGone` additionally
+   * treats 404/410 as success — the outcome a DELETE wants.
+   */
+  private assertResponseOk(
+    response: Response | undefined | null,
+    method: string,
+    url: string,
+    tolerateGone = false
+  ): void {
+    if (!response) return
+    // Only a real fetch Response carries `ok`/`status`; mock or unknown shapes
+    // must not be misread as failures.
+    if (response.ok === undefined && response.status === undefined) return
+    if (response.ok) return
+    if (tolerateGone && (response.status === 404 || response.status === 410)) return
+    const error = new Error(
+      `${method} ${url} failed: HTTP ${response.status}`
+    ) as Error & { status: number }
+    error.status = response.status
+    throw error
   }
 
   async createCalendar(options: CreateCalendarOptions): Promise<CalDAVCalendar> {
@@ -1017,6 +1048,7 @@ export class CalDAVClient {
           data: icalString,
         },
       })
+      this.assertResponseOk(result, 'PUT', existing.href)
       if (useSettingsStore.getState().caldavDebugMode)
         console.log('[SettingsSync] putSettingsEvent: update result status =', result.status)
       return result.headers?.get('etag') || useEtag
@@ -1040,6 +1072,7 @@ export class CalDAVClient {
             data: icalString,
           },
         })
+        this.assertResponseOk(result, 'PUT', possibleHref)
         return result.headers?.get('etag') || etag
       } catch {
         // If that also fails, the event might have been deleted — fall through to create
@@ -1071,6 +1104,7 @@ export class CalDAVClient {
         filename,
         iCalString: icalString,
       })
+      this.assertResponseOk(result, 'PUT', settingsCal.url)
       return result.headers?.get('etag') || ''
     }
   }
@@ -1085,9 +1119,11 @@ export class CalDAVClient {
     const existing = await this.fetchSettingsEvent(settingsCalendarUrl)
     if (!existing?.href) return
     const client = this.getClient()
-    await client.deleteCalendarObject({
+    const response = await client.deleteCalendarObject({
       calendarObject: { url: existing.href, etag: existing.etag },
     })
+    // 404/410 mean the settings event is already gone — that is the goal.
+    this.assertResponseOk(response, 'DELETE', existing.href, true)
   }
 
   /**

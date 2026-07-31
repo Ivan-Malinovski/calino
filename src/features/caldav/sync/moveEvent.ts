@@ -45,11 +45,17 @@ export class MoveLostSourceError extends Error {
 }
 
 function statusOf(err: unknown): number | undefined {
-  const status = (err as { status?: number; statusCode?: number } | undefined)?.status
-  const statusCode = (err as { statusCode?: number } | undefined)?.statusCode
-  if (typeof status === 'number') return status
-  if (typeof statusCode === 'number') return statusCode
-  const match = /\b(\d{3})\b/.exec(err instanceof Error ? err.message : String(err ?? ''))
+  const maybe = err as { status?: number; statusCode?: number; response?: { status?: number } }
+  if (typeof maybe.status === 'number') return maybe.status
+  if (typeof maybe.statusCode === 'number') return maybe.statusCode
+  if (typeof maybe.response?.status === 'number') return maybe.response.status
+  // Last resort: parse an HTTP-ish status out of the message. Deliberately
+  // narrow — requires "HTTP" or "status code" next to the number — so a bare
+  // 3-digit sequence in an error message (event ids, dates, ports) can never
+  // be misread as an HTTP status.
+  const match = /\b(?:HTTP|status\s*code)\D{0,20}(\d{3})\b/i.exec(
+    err instanceof Error ? err.message : String(err ?? '')
+  )
   return match ? Number(match[1]) : undefined
 }
 

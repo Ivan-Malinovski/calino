@@ -28,6 +28,7 @@ import { putAttachments } from '@/lib/attachmentStore'
 import * as storage from '../sync/accountStorage'
 import { SyncEngine, eventResourceFilename, resourceIsInCollection } from '../sync/syncEngine'
 import { moveEventGroup, MoveLostSourceError } from '../sync/moveEvent'
+import type { MoveResult } from '../sync/moveEvent'
 import { pendingGuardedEventIds } from '../sync/pendingChanges'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
@@ -280,6 +281,22 @@ export function useCalDAV(): UseCalDAVReturn {
                 staleCalendar ? ` from ${staleCalendar.name}` : ''
               }. It may show up twice — delete the duplicate manually.`
             )
+          } else if (change.type === 'move') {
+            // A move that never lands leaves the event stranded in its old
+            // calendar with a 'failed' sync status and no explanation. Say so.
+            let title = ''
+            try {
+              const parsed = JSON.parse(change.data || '{}') as MovePendingData
+              title = (parsed.events?.[0] as CalendarEvent | undefined)?.title ?? ''
+            } catch {
+              /* malformed payload — still toast, just without a title */
+            }
+            const targetCalendar = allCalendars.find((c) => c.id === change.calendarId)
+            showToast(
+              `Couldn't move "${title || 'event'}"${
+                targetCalendar ? ` to ${targetCalendar.name}` : ''
+              }. It may still be in its old calendar.`
+            )
           }
           storage.removePendingChange(change.id)
           failed++
@@ -357,12 +374,33 @@ export function useCalDAV(): UseCalDAVReturn {
               }
               const sourceEngine = await engineForCalendar(sourceCalendar, client, account.id)
 
-              const result = await moveEventGroup(events, {
-                targetEngine: engine,
-                sourceEngine,
-                sourceHref: parsed.sourceHref,
-                sourceEtag: parsed.sourceEtag,
-              })
+              let result: MoveResult
+              try {
+                result = await moveEventGroup(events, {
+                  targetEngine: engine,
+                  sourceEngine,
+                  sourceHref: parsed.sourceHref,
+                  sourceEtag: parsed.sourceEtag,
+                })
+              } catch (err) {
+                if (err instanceof MoveLostSourceError) {
+                  // The source was deleted to satisfy a UID-conflict server but
+                  // the destination write then failed: replaying a move has
+                  // nothing to move. Re-create at the destination instead (the
+                  // same recovery the live path uses) and consume this change
+                  // so the doomed move stops retrying.
+                  const master = events[0]
+                  storage.addPendingChange({
+                    type: 'create',
+                    eventId: change.eventId,
+                    calendarId: change.calendarId,
+                    data: JSON.stringify({ ...master, resourceHref: undefined, etag: undefined }),
+                  })
+                  storeUpdateEvent(change.eventId, { syncStatus: 'failed' })
+                  break
+                }
+                throw err
+              }
               for (const id of result.memberIds) {
                 storeUpdateEvent(id, {
                   calendarId: change.calendarId,
@@ -392,7 +430,12 @@ export function useCalDAV(): UseCalDAVReturn {
               const parsed = JSON.parse(change.data || '{}') as DeleteHrefPendingData
               if (!parsed.href) break
               try {
-                await engine.deleteEvent(parsed.href, parsed.etag ?? '')
+                // Unconditional DELETE: the href belongs to the moved event's
+                // own old resource, and replaying the pre-move etag would 412
+                // forever on a strict server that touched it meanwhile — an
+                // unrecoverable death-loop. A conditional delete buys nothing
+                // when the resource is being discarded anyway.
+                await engine.deleteEvent(parsed.href, '')
               } catch (err) {
                 const status = (err as { status?: number } | undefined)?.status
                 // Already gone is the outcome we wanted.
@@ -1532,6 +1575,11 @@ export function useCalDAV(): UseCalDAVReturn {
         return
       }
 
+      // Computed inside the try (needs the store + client), but consumed by the
+      // catch: a failed move must re-queue the WHOLE recurrence group, not just
+      // the master, or a replayed move silently strips the series' overrides.
+      let groupedEvents: CalendarEvent[] = []
+
       try {
         const credential = await getCredentialById(account.credentialId)
         if (!credential) {
@@ -1600,7 +1648,7 @@ export function useCalDAV(): UseCalDAVReturn {
                   (candidate.uid === uid || candidate.recurrenceMasterId === eventWithSequence.id)
               )
           : []
-        const groupedEvents = withResourceSiblings(
+        groupedEvents = withResourceSiblings(
           [eventWithSequence, ...overrides],
           useCalendarStore.getState().events,
           event.resourceHref
@@ -1704,7 +1752,10 @@ export function useCalDAV(): UseCalDAVReturn {
             eventId: event.id,
             calendarId,
             data: JSON.stringify({
-              events: [event],
+              // The full group, not just the master: a replayed move writes
+              // every member, so a series' detached overrides survive a
+              // failed first attempt.
+              events: groupedEvents.length > 0 ? groupedEvents : [event],
               sourceCalendarId: sourceCalendarForRetry.id,
               sourceHref: event.resourceHref,
               sourceEtag: event.etag,
