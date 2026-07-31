@@ -78,11 +78,11 @@ function JournalComposeForm({
   const [showDatePicker, setShowDatePicker] = useState(false)
   const [showAddPanel, setShowAddPanel] = useState(false)
   const { day, weekday, monthYear } = formatEntryDate(editingDate)
-  // Which calendar an existing entry lives in is not editable here: moving a
-  // saved entry between collections needs the CalDAV move that issue #86
-  // tracks, and offering the control before that lands would silently revert
-  // on the next sync.
-  const showCalendarPicker = !editingId && writableCalendars.length > 1
+  // #89: the picker appears when composing AND when editing an existing
+  // entry. Moving an entry between collections works end-to-end now — the
+  // CalDAV move machinery from #86 serialises VJOURNALs through the same
+  // engine as events — so an edit may retarget the entry's calendar too.
+  const showCalendarPicker = writableCalendars.length > 1
 
   // Determine which add sections have content
   const hasCategories = selectedCategories.length > 0
@@ -513,32 +513,45 @@ export function JournalView(): JSX.Element {
           start: editingDate,
           end: editingDate,
           lastModified: now,
+          calendarId,
           categories: selectedCategories.length > 0 ? selectedCategories : undefined,
           url: url || undefined,
           attachments: attachments.length > 0 ? attachments : undefined,
           relatedTo: relatedTo.length > 0 ? relatedTo : undefined,
         }
         updateEvent(editingId, updates)
+
+        // Push to the server, routing by where the entry came from and where
+        // it is going: real↔real moves go through the #86 CalDAV move (which
+        // covers VJOURNALs), while the offline-calendar transitions create or
+        // delete — the offline calendar has no CalDAV resource to move.
+        const syncedEntry: CalendarEvent = { ...existing, ...updates }
+        const syncToServer = (): void => {
+          if (existing.calendarId !== 'default' && calendarId !== 'default') {
+            updateCalDAVEvent(calendarId, syncedEntry).catch(() => {
+              showToast('Failed to sync update. It will be retried.')
+            })
+          } else if (existing.calendarId === 'default' && calendarId !== 'default') {
+            createCalDAVEvent(calendarId, syncedEntry).catch(() => {
+              showToast('Failed to sync entry. It will be retried.')
+            })
+          } else if (existing.calendarId !== 'default' && calendarId === 'default') {
+            deleteCalDAVEvent(existing.calendarId, existing.id).catch(() => {
+              showToast('Failed to sync update. It will be retried.')
+            })
+          }
+        }
+
         // Sync attachments to IDB, then push to server
         if (attachments.length > 0) {
           putAttachments(editingId, attachments)
-            .then(() => {
-              if (existing.calendarId !== 'default') {
-                updateCalDAVEvent(existing.calendarId, { ...existing, ...updates }).catch(() => {
-                  showToast('Failed to sync update. It will be retried.')
-                })
-              }
-            })
+            .then(() => syncToServer())
             .catch(() => {
               showToast('Failed to save attachments locally')
             })
         } else {
           deleteAttachments(editingId).catch(() => {})
-          if (existing.calendarId !== 'default') {
-            updateCalDAVEvent(existing.calendarId, { ...existing, ...updates }).catch(() => {
-              showToast('Failed to sync update. It will be retried.')
-            })
-          }
+          syncToServer()
         }
       }
     } else {

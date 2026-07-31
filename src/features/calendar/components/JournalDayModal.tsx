@@ -165,32 +165,45 @@ export function JournalDayModal({
           title: trimmedTitle,
           description: trimmedBody,
           lastModified: now,
+          calendarId,
           categories: selectedCategories.length > 0 ? selectedCategories : undefined,
           url: url || undefined,
           attachments: attachments.length > 0 ? attachments : undefined,
           relatedTo: relatedTo.length > 0 ? relatedTo : undefined,
         }
         updateEvent(editingId, updates)
+
+        // Push to the server, routing by where the entry came from and where
+        // it is going: real↔real moves go through the #86 CalDAV move (which
+        // covers VJOURNALs), while the offline-calendar transitions create or
+        // delete — the offline calendar has no CalDAV resource to move.
+        const syncedEntry: CalendarEvent = { ...existing, ...updates }
+        const syncToServer = (): void => {
+          if (existing.calendarId !== 'default' && calendarId !== 'default') {
+            updateCalDAVEvent(calendarId, syncedEntry).catch(() => {
+              showToast('Failed to sync update. It will be retried.')
+            })
+          } else if (existing.calendarId === 'default' && calendarId !== 'default') {
+            createCalDAVEvent(calendarId, syncedEntry).catch(() => {
+              showToast('Failed to sync entry. It will be retried.')
+            })
+          } else if (existing.calendarId !== 'default' && calendarId === 'default') {
+            deleteCalDAVEvent(existing.calendarId, existing.id).catch(() => {
+              showToast('Failed to sync update. It will be retried.')
+            })
+          }
+        }
+
         // Sync attachments to IDB, then push to server
         if (attachments.length > 0) {
           putAttachments(editingId, attachments)
-            .then(() => {
-              if (existing.calendarId !== 'default') {
-                updateCalDAVEvent(existing.calendarId, { ...existing, ...updates }).catch(() => {
-                  showToast('Failed to sync update. It will be retried.')
-                })
-              }
-            })
+            .then(() => syncToServer())
             .catch(() => {
               showToast('Failed to save attachments locally')
             })
         } else {
           deleteAttachments(editingId).catch(() => {})
-          if (existing.calendarId !== 'default') {
-            updateCalDAVEvent(existing.calendarId, { ...existing, ...updates }).catch(() => {
-              showToast('Failed to sync update. It will be retried.')
-            })
-          }
+          syncToServer()
         }
       }
     } else {
@@ -529,11 +542,10 @@ export function JournalDayModal({
                 value={body}
                 onChange={(e) => setBody(e.target.value)}
               />
-              {/* Which calendar an existing entry lives in is not editable
-                  here: moving a saved entry between collections needs the
-                  CalDAV move that issue #86 tracks, and offering the control
-                  before that lands would silently revert on the next sync. */}
-              {mode === 'compose' && writableCalendars.length > 1 && (
+              {/* #89: the picker appears when composing AND when editing an
+                  existing entry — moving an entry between collections works
+                  end-to-end via the #86 CalDAV move machinery. */}
+              {writableCalendars.length > 1 && (
                 <div className={styles.calendarRow}>
                   <label className={styles.calendarLabel} htmlFor="journal-day-calendar-select">
                     Calendar
