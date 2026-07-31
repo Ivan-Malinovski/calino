@@ -4,6 +4,17 @@ All notable changes to Calino will be documented in this file.
 
 ## [Unreleased]
 
+## [0.26.0] - 2026-07-31
+
+### Added
+
+- **Events move between calendars instead of snapping back.** Changing an event's calendar in the editor now moves the event on the server — previously Calino rewrote it into its old calendar on the next sync, so the change looked applied until it wasn't. Recurring series move together with their individual exceptions, and moves work across accounts. Fixes [#86](https://github.com/Ivan-Malinovski/calino/issues/86).
+
+### Fixed
+
+- **A move whose cleanup delete fails no longer leaves the event in two calendars.** The stale copy used to survive every retry and reappear on the next sync. Cleanup is now retried — including 5xx responses, which were previously indistinguishable from success — and a cleanup that can't land after ten attempts tells you the old copy may still exist.
+- **A server that rejects a write no longer silently "succeeds" in the sync layer.** PUT and DELETE responses were never checked for errors, so a failed destination write could make a move delete the source and lose the event from both calendars. Non-2xx responses now surface as errors and are retried.
+
 ## [0.25.4] - 2026-07-31
 
 ### Fixed
