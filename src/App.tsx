@@ -289,24 +289,33 @@ function CalendarApp(): JSX.Element {
     void initContactPhotos()
   }, [])
 
-  // Mount the palette on its first open and leave it mounted thereafter.
+  // Mount the palette (closed) as soon as its chunk lands, one frame after the
+  // first paint.
+  //
+  // Mounting is the expensive part, not fetching: the palette builds its
+  // command list and scans every event and contact in useMemo on first render.
+  // Before it was code-split it was always mounted with isOpen={false}, so that
+  // work happened during startup and opening was instant. Deferring the mount
+  // to the first ⌘K moved all of it onto that keypress — which is why merely
+  // preloading the chunk didn't help. Mounting it closed, off the critical
+  // path, restores the old timing while keeping it out of the entry bundle.
+  useEffect(() => {
+    let cancelled = false
+    const frame = requestAnimationFrame(() => {
+      void import('./features/commandPalette/components/CommandPalette').then(() => {
+        if (!cancelled) setPaletteMounted(true)
+      })
+    })
+    return () => {
+      cancelled = true
+      cancelAnimationFrame(frame)
+    }
+  }, [])
+
+  // Safety net for an open that beats the preload — Suspense covers the gap.
   useEffect(() => {
     if (isCommandPaletteOpen) setPaletteMounted(true)
   }, [isCommandPaletteOpen])
-
-  // Warm its chunk as soon as the first frame is on screen, so splitting it out
-  // doesn't put a fetch-and-parse between pressing ⌘K and seeing the palette.
-  //
-  // This deliberately does NOT wait for requestIdleCallback: startup here isn't
-  // idle for a while (stores rehydrate, CalDAV and CardDAV sync kick off), so
-  // the callback landed seconds late and the first open paid the full load.
-  // One rAF is enough to stay off the critical path for the initial paint.
-  useEffect(() => {
-    const frame = requestAnimationFrame(() => {
-      void import('./features/commandPalette/components/CommandPalette')
-    })
-    return () => cancelAnimationFrame(frame)
-  }, [])
 
   // Fire event/task reminders (web: polling + Notification API; native:
   // real OS-scheduled notifications). Was defined but never mounted anywhere

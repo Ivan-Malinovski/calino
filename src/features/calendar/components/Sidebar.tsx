@@ -2,7 +2,7 @@ import type { JSX } from 'react'
 import { useMemo, useState, useRef, useEffect, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { createPortal } from 'react-dom'
-import { AnimatePresence, motion } from 'framer-motion'
+import { AnimatePresence, motion, useMotionValue } from 'framer-motion'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { useDrawerDrag } from '@/hooks/useDrawerDrag'
 import { ContextMenu } from '@/components/common/ContextMenu'
@@ -484,10 +484,12 @@ export function Sidebar({
   }, [])
 
   const sidebarRef = useRef<HTMLDivElement>(null)
-  const overlayRef = useRef<HTMLDivElement>(null)
+  // Owned by framer so the drag and the exit animation write the same value —
+  // see useDrawerDrag's scrimOpacity doc for why a plain ref flashes.
+  const scrimOpacity = useMotionValue(1)
   useDrawerDrag(sidebarRef, {
     onClose,
-    overlayRef,
+    scrimOpacity,
     draggingClass: styles.dragging,
     enabled: isOpen && isCompact,
   })
@@ -499,8 +501,8 @@ export function Sidebar({
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            ref={overlayRef}
             className={styles.overlay}
+            style={{ opacity: scrimOpacity }}
             onClick={onClose}
             initial={prefersReducedMotion ? false : { opacity: 0 }}
             animate={{ opacity: 1 }}
