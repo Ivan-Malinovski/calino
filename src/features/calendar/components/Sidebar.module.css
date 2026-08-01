@@ -102,6 +102,12 @@
   .sidebar.open {
     transform: translateX(0);
   }
+
+  /* While a finger is on the panel it's positioned frame by frame, so any
+     transition would lag the touch. Re-enabled on release to settle. */
+  .sidebar.dragging {
+    transition: none;
+  }
 }
 
 .overlay {
@@ -140,7 +146,12 @@
   display: flex;
   align-items: center;
   gap: 11px;
-  padding: 12px 0 4px 0;
+  /* The diamond's 4px glow spreads outside its box, and .sidebarContent is a
+     scroll container, so flush against the left edge the ring was clipped and
+     the mark looked shaved. Inset by the spread; the glow's outer edge then
+     lines up with the cards below, which is the correct optical alignment
+     anyway. */
+  padding: 12px 0 4px 4px;
 }
 
 .sidebarBrandDiamond {
@@ -589,6 +600,14 @@
   opacity: 1;
 }
 
+/* Without a hover state there is no way to reveal this, so per-calendar sync
+   was simply unreachable on touch. Show it outright instead. */
+@media (hover: none) {
+  .calendarItem .syncButton {
+    opacity: 1;
+  }
+}
+
 .checkbox {
   appearance: none;
   width: 17px;
@@ -856,6 +875,12 @@
 
 .calRow:hover .syncButton {
   opacity: 1;
+}
+
+@media (hover: none) {
+  .calRow .syncButton {
+    opacity: 1;
+  }
 }
 
 .syncButton:hover {

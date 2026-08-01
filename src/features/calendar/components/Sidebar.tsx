@@ -4,7 +4,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { createPortal } from 'react-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
-import { useHorizontalSwipe } from '@/hooks/useHorizontalSwipe'
+import { useDrawerDrag } from '@/hooks/useDrawerDrag'
 import { ContextMenu } from '@/components/common/ContextMenu'
 import { ChevronLeft, ChevronRight } from '@/components/common/icons'
 import {
@@ -484,7 +484,13 @@ export function Sidebar({
   }, [])
 
   const sidebarRef = useRef<HTMLDivElement>(null)
-  useHorizontalSwipe(sidebarRef, { onSwipeLeft: onClose, enabled: isOpen && isCompact })
+  const overlayRef = useRef<HTMLDivElement>(null)
+  useDrawerDrag(sidebarRef, {
+    onClose,
+    overlayRef,
+    draggingClass: styles.dragging,
+    enabled: isOpen && isCompact,
+  })
 
   const sidebarClass = `${styles.sidebar}${isOpen ? ` ${styles.open}` : ''}${isCollapsed && !isCompact ? ` ${styles.sidebarCollapsed}` : ''}${isResizing ? ` ${styles.resizing}` : ''}`
 
@@ -493,6 +499,7 @@ export function Sidebar({
       <AnimatePresence>
         {isOpen && (
           <motion.div
+            ref={overlayRef}
             className={styles.overlay}
             onClick={onClose}
             initial={prefersReducedMotion ? false : { opacity: 0 }}
@@ -523,7 +530,11 @@ export function Sidebar({
       >
         {/* Sidebar content — hidden when collapsed via CSS */}
         <div className={styles.sidebarContent}>
-          {isOpen && (
+          {/* Keyed off isCompact, not isOpen: unmounting on close yanked ~50px
+              out of the layout while the panel was still sliding off-screen,
+              so the whole sidebar visibly jumped upward mid-exit. Off-screen
+              it costs nothing to keep mounted. */}
+          {isCompact && (
             <div className={styles.sidebarBrand}>
               <div className={styles.sidebarBrandDiamond} />
               <span className={styles.sidebarBrandName}>Calino</span>

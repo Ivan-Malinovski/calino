@@ -1021,6 +1021,13 @@
   opacity: 1;
 }
 
+/* Editing or deleting a category was unreachable without a hover state. */
+@media (hover: none) {
+  .catRow .catActions {
+    opacity: 1;
+  }
+}
+
 .catBtn {
   height: 28px;
   padding: 0 10px;

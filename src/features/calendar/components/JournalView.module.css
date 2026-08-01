@@ -432,6 +432,14 @@
   opacity: 1;
 }
 
+/* No hover means no way to reveal it — deleting an entry was impossible on
+   touch. Show it outright there. */
+@media (hover: none) {
+  .entry .deleteBtn {
+    opacity: 1;
+  }
+}
+
 .deleteBtn:hover {
   background: rgba(196, 112, 104, 0.1);
   color: var(--color-error-muted, #c47068);
