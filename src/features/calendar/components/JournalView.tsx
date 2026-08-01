@@ -1,5 +1,13 @@
 import type { JSX } from 'react'
-import React, { useState, useMemo, useCallback, useRef, useEffect, useLayoutEffect, memo } from 'react'
+import React, {
+  useState,
+  useMemo,
+  useCallback,
+  useRef,
+  useEffect,
+  useLayoutEffect,
+  memo,
+} from 'react'
 import { format, parseISO } from 'date-fns'
 // useNavigate removed — unused
 import { useVirtualizer } from '@tanstack/react-virtual'
@@ -152,23 +160,38 @@ function JournalComposeForm({
           onChange={(e) => onBodyChange(e.target.value)}
         />
         {showCalendarPicker && (
-          <div className={styles.calendarRow}>
-            <label className={styles.calendarLabel} htmlFor="journal-calendar-select">
-              Calendar
-            </label>
-            <select
-              id="journal-calendar-select"
-              className={styles.calendarSelect}
-              data-component="journal-calendar-select"
-              value={calendarId}
-              onChange={(e) => onCalendarChange(e.target.value)}
-            >
-              {writableCalendars.map((cal) => (
-                <option key={cal.id} value={cal.id}>
+          /* Chips rather than a <select>: the writable calendars are few (this
+             only renders past one), and a full-width OS dropdown was the
+             heaviest thing on a page built out of hairlines. Same idiom as the
+             category picker below, so the colour dot reads the same way. */
+          <div
+            className={styles.calendarRow}
+            role="radiogroup"
+            aria-label="Calendar"
+            data-component="journal-calendar-select"
+          >
+            {writableCalendars.map((cal) => {
+              const isSelected = cal.id === calendarId
+              return (
+                <button
+                  key={cal.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={isSelected}
+                  className={`${styles.calendarChip} ${isSelected ? styles.calendarChipActive : ''}`}
+                  style={{ '--chip-color': cal.color } as React.CSSProperties}
+                  data-component="journal-calendar-chip"
+                  data-calendar-id={cal.id}
+                  onClick={() => onCalendarChange(cal.id)}
+                >
+                  <span
+                    className={styles.calendarDot}
+                    style={{ backgroundColor: isSelected ? cal.color : 'transparent' }}
+                  />
                   {cal.name}
-                </option>
-              ))}
-            </select>
+                </button>
+              )
+            })}
           </div>
         )}
         {/* Add panel — categories, link, attachments */}
@@ -180,7 +203,7 @@ function JournalComposeForm({
                 className={styles.addToggle}
                 onClick={() => setShowAddPanel(true)}
               >
-                + Add
+                + More
               </button>
             ) : (
               <div className={styles.addPanelContent}>

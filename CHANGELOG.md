@@ -10,6 +10,10 @@ All notable changes to Calino will be documented in this file.
 - **Pinch the week view on a phone to fit more days on screen.** It compresses the day columns rather than zooming, down to about five days at once. Vertical zoom stays a desktop gesture. Pinch had previously never worked on touch at all — the gesture library's touch handlers were never actually bound.
 - **The divider in the tab strip is now yours to place.** It's an element you drag like any tab, rather than a fixed boundary between "calendar" and "everything else", so you can group the tabs however makes sense to you.
 
+### Changed
+
+- **Picking which calendar a journal entry goes into is now a row of chips** with each calendar's colour, instead of a full-width dropdown — the choices are visible without opening anything, and it matches the category picker. The entry form's `+ Add` is now `+ More`.
+
 ### Fixed
 
 - **The view switcher, the mobile grid and view cycling now agree on one order.** They were each built from a separate hardcoded list that had drifted apart, so the tabs read Month, Year, Week… while the mobile grid read Month, Week, Agenda… and swiping stepped through a third order again.

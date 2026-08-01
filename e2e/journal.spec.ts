@@ -23,6 +23,20 @@ const J_WORK = '/dav/calendars/user/j-work/'
 const J_PERSONAL = '/dav/calendars/user/j-personal/'
 
 /**
+ * File the open compose form into a calendar. The picker is a row of chips
+ * rather than a <select>, so this clicks the one carrying the calendar id and
+ * waits for it to report itself checked.
+ */
+async function pickJournalCalendar(page: Page, calendarId: string): Promise<void> {
+  const chip = page.locator(
+    `[data-component="journal-calendar-chip"][data-calendar-id="${calendarId}"]`
+  )
+  await expect(chip).toBeVisible()
+  await chip.click()
+  await expect(chip).toHaveAttribute('aria-checked', 'true')
+}
+
+/**
  * Snapshot the mock's stored resources under a collection prefix. Returns
  * null on a transient connection reset (the shared dev server can drop a
  * request under parallel load) so expect.poll retries instead of dying.
@@ -227,9 +241,11 @@ test.describe('Journal view', () => {
     await page.goto('/journal')
     await page.locator('[data-component="journal-new-entry"]').click()
 
-    const select = page.locator('[data-component="journal-calendar-select"]')
-    await expect(select.locator('option')).toHaveText(['Work', 'Personal'])
-    await select.selectOption('personal')
+    await expect(page.locator('[data-component="journal-calendar-chip"]')).toHaveText([
+      'Work',
+      'Personal',
+    ])
+    await pickJournalCalendar(page, 'personal')
 
     const titleField = page.getByPlaceholder('Title (optional)')
     const bodyField = page.getByPlaceholder('Write something…')
@@ -267,160 +283,150 @@ test.describe('Journal view', () => {
     test.describe.configure({ mode: 'serial' })
 
     test('editing an entry can move it to another calendar', async ({ page, baseURL }) => {
-    await clearState(page)
-    await seedMoveAccount(page, baseURL!)
-    await page.request.put(`${baseURL}/mock-caldav${J_WORK}j-move-entry.ics`, {
-      data: MOVE_VJOURNAL('Relocatable entry', 'Should move to Journal Personal.'),
-    })
-    await seedJournalMoveStore(page)
-
-    await page.goto('/journal')
-    await syncAll(page)
-    await expect(page.getByText('Relocatable entry').first()).toBeVisible()
-    await expect
-      .poll(async () => Object.keys((await dump(page, baseURL!, J_WORK)) ?? {}).length, {
-        timeout: 15_000,
+      await clearState(page)
+      await seedMoveAccount(page, baseURL!)
+      await page.request.put(`${baseURL}/mock-caldav${J_WORK}j-move-entry.ics`, {
+        data: MOVE_VJOURNAL('Relocatable entry', 'Should move to Journal Personal.'),
       })
-      .toBe(1)
+      await seedJournalMoveStore(page)
 
-    // Edit it: the calendar picker now appears on existing entries too (#89).
-    await page.getByText('Relocatable entry').first().dblclick()
-    const select = page.locator('[data-component="journal-calendar-select"]')
-    await expect(select).toBeVisible()
-    await select.selectOption('j-personal')
-    await page.getByRole('button', { name: 'Save changes' }).click()
+      await page.goto('/journal')
+      await syncAll(page)
+      await expect(page.getByText('Relocatable entry').first()).toBeVisible()
+      await expect
+        .poll(async () => Object.keys((await dump(page, baseURL!, J_WORK)) ?? {}).length, {
+          timeout: 15_000,
+        })
+        .toBe(1)
 
-    // The VJOURNAL moved on the server: j-personal has it, j-work is empty.
-    await expect
-      .poll(async () => Object.keys((await dump(page, baseURL!, J_PERSONAL)) ?? {}).length, {
-        timeout: 15_000,
-      })
-      .toBe(1)
-    const personalIcs = Object.values((await dump(page, baseURL!, J_PERSONAL)) ?? {}).join('\n')
-    expect(personalIcs).toContain('Relocatable entry')
-    await expect
-      .poll(async () => Object.keys((await dump(page, baseURL!, J_WORK)) ?? {}).length, {
-        timeout: 15_000,
-      })
-      .toBe(0)
+      // Edit it: the calendar picker now appears on existing entries too (#89).
+      await page.getByText('Relocatable entry').first().dblclick()
+      await pickJournalCalendar(page, 'j-personal')
+      await page.getByRole('button', { name: 'Save changes' }).click()
 
-    // And the UI tracks it: hiding the source calendar keeps the entry,
-    // hiding the target takes it away.
-    await hideCalendar(page, 'j-work')
-    await expect(page.getByText('Relocatable entry').first()).toBeVisible()
-    await hideCalendar(page, 'j-personal')
-    await expect(page.getByText('Relocatable entry').first()).toBeHidden()
-  })
+      // The VJOURNAL moved on the server: j-personal has it, j-work is empty.
+      await expect
+        .poll(async () => Object.keys((await dump(page, baseURL!, J_PERSONAL)) ?? {}).length, {
+          timeout: 15_000,
+        })
+        .toBe(1)
+      const personalIcs = Object.values((await dump(page, baseURL!, J_PERSONAL)) ?? {}).join('\n')
+      expect(personalIcs).toContain('Relocatable entry')
+      await expect
+        .poll(async () => Object.keys((await dump(page, baseURL!, J_WORK)) ?? {}).length, {
+          timeout: 15_000,
+        })
+        .toBe(0)
 
-  test('moving an entry to the Offline calendar keeps it locally and removes it from the server', async ({
-    page,
-    baseURL,
-  }) => {
-    await clearState(page)
-    await seedMoveAccount(page, baseURL!)
-    await page.request.put(`${baseURL}/mock-caldav${J_WORK}j-move-entry.ics`, {
-      data: MOVE_VJOURNAL('Relocatable entry', 'Should move to the Offline calendar.'),
-    })
-    await seedJournalMoveStore(page)
-
-    await page.goto('/journal')
-    await syncAll(page)
-    await expect(page.getByText('Relocatable entry').first()).toBeVisible()
-
-    await page.getByText('Relocatable entry').first().dblclick()
-    const select = page.locator('[data-component="journal-calendar-select"]')
-    await expect(select).toBeVisible()
-    await select.selectOption('default')
-    await page.getByRole('button', { name: 'Save changes' }).click()
-
-    // The server copy is gone…
-    await expect
-      .poll(async () => Object.keys((await dump(page, baseURL!, J_WORK)) ?? {}).length, {
-        timeout: 15_000,
-      })
-      .toBe(0)
-    // …but the entry survives locally in the Offline calendar. A regression
-    // here deleted it everywhere (deleteCalDAVEvent also removes the store
-    // record on success).
-    await expect(page.getByText('Relocatable entry').first()).toBeVisible()
-  })
-
-  test('moving a local-only entry into a server calendar creates it there', async ({
-    page,
-    baseURL,
-  }) => {
-    await clearState(page)
-    await seedMoveAccount(page, baseURL!)
-    await seedJournalMoveStore(page, {
-      id: 'local-entry',
-      title: 'Offline thought',
-      body: 'Written before any account existed.',
-      date: day(15),
+      // And the UI tracks it: hiding the source calendar keeps the entry,
+      // hiding the target takes it away.
+      await hideCalendar(page, 'j-work')
+      await expect(page.getByText('Relocatable entry').first()).toBeVisible()
+      await hideCalendar(page, 'j-personal')
+      await expect(page.getByText('Relocatable entry').first()).toBeHidden()
     })
 
-    await page.goto('/journal')
-    await expect(page.getByText('Offline thought').first()).toBeVisible()
-
-    await page.getByText('Offline thought').first().dblclick()
-    const select = page.locator('[data-component="journal-calendar-select"]')
-    await expect(select).toBeVisible()
-    await select.selectOption('j-work')
-    await page.getByRole('button', { name: 'Save changes' }).click()
-
-    // The VJOURNAL now exists on the server under j-work/.
-    await expect
-      .poll(async () => Object.keys((await dump(page, baseURL!, J_WORK)) ?? {}).length, {
-        timeout: 15_000,
+    test('moving an entry to the Offline calendar keeps it locally and removes it from the server', async ({
+      page,
+      baseURL,
+    }) => {
+      await clearState(page)
+      await seedMoveAccount(page, baseURL!)
+      await page.request.put(`${baseURL}/mock-caldav${J_WORK}j-move-entry.ics`, {
+        data: MOVE_VJOURNAL('Relocatable entry', 'Should move to the Offline calendar.'),
       })
-      .toBe(1)
-    const workIcs = Object.values((await dump(page, baseURL!, J_WORK)) ?? {}).join('\n')
-    expect(workIcs).toContain('Offline thought')
-  })
+      await seedJournalMoveStore(page)
 
-  test('an entry can round-trip Offline and back without stale server links', async ({
-    page,
-    baseURL,
-  }) => {
-    await clearState(page)
-    await seedMoveAccount(page, baseURL!)
-    await page.request.put(`${baseURL}/mock-caldav${J_WORK}j-roundtrip.ics`, {
-      data: MOVE_VJOURNAL('Round trip', 'Lands back on the server.'),
+      await page.goto('/journal')
+      await syncAll(page)
+      await expect(page.getByText('Relocatable entry').first()).toBeVisible()
+
+      await page.getByText('Relocatable entry').first().dblclick()
+      await pickJournalCalendar(page, 'default')
+      await page.getByRole('button', { name: 'Save changes' }).click()
+
+      // The server copy is gone…
+      await expect
+        .poll(async () => Object.keys((await dump(page, baseURL!, J_WORK)) ?? {}).length, {
+          timeout: 15_000,
+        })
+        .toBe(0)
+      // …but the entry survives locally in the Offline calendar. A regression
+      // here deleted it everywhere (deleteCalDAVEvent also removes the store
+      // record on success).
+      await expect(page.getByText('Relocatable entry').first()).toBeVisible()
     })
-    await seedJournalMoveStore(page)
 
-    await page.goto('/journal')
-    await syncAll(page)
-    await expect(page.getByText('Round trip').first()).toBeVisible()
-
-    // CalDAV → Offline: the server copy is deleted, the entry stays local.
-    await page.getByText('Round trip').first().dblclick()
-    const select = page.locator('[data-component="journal-calendar-select"]')
-    await expect(select).toBeVisible()
-    await select.selectOption('default')
-    await page.getByRole('button', { name: 'Save changes' }).click()
-    await expect
-      .poll(async () => Object.keys((await dump(page, baseURL!, J_WORK)) ?? {}).length, {
-        timeout: 15_000,
+    test('moving a local-only entry into a server calendar creates it there', async ({
+      page,
+      baseURL,
+    }) => {
+      await clearState(page)
+      await seedMoveAccount(page, baseURL!)
+      await seedJournalMoveStore(page, {
+        id: 'local-entry',
+        title: 'Offline thought',
+        body: 'Written before any account existed.',
+        date: day(15),
       })
-      .toBe(0)
-    await expect(page.getByText('Round trip').first()).toBeVisible()
 
-    // Offline → CalDAV: the entry must be re-created as a fresh resource — a
-    // stale resourceHref/etag from the deleted copy must not be reused (the
-    // pre-fix entry kept them, leaving a dangling link to a 404).
-    await page.getByText('Round trip').first().dblclick()
-    const select2 = page.locator('[data-component="journal-calendar-select"]')
-    await expect(select2).toBeVisible()
-    await select2.selectOption('j-work')
-    await page.getByRole('button', { name: 'Save changes' }).click()
-    await expect
-      .poll(async () => Object.keys((await dump(page, baseURL!, J_WORK)) ?? {}).length, {
-        timeout: 15_000,
+      await page.goto('/journal')
+      await expect(page.getByText('Offline thought').first()).toBeVisible()
+
+      await page.getByText('Offline thought').first().dblclick()
+      await pickJournalCalendar(page, 'j-work')
+      await page.getByRole('button', { name: 'Save changes' }).click()
+
+      // The VJOURNAL now exists on the server under j-work/.
+      await expect
+        .poll(async () => Object.keys((await dump(page, baseURL!, J_WORK)) ?? {}).length, {
+          timeout: 15_000,
+        })
+        .toBe(1)
+      const workIcs = Object.values((await dump(page, baseURL!, J_WORK)) ?? {}).join('\n')
+      expect(workIcs).toContain('Offline thought')
+    })
+
+    test('an entry can round-trip Offline and back without stale server links', async ({
+      page,
+      baseURL,
+    }) => {
+      await clearState(page)
+      await seedMoveAccount(page, baseURL!)
+      await page.request.put(`${baseURL}/mock-caldav${J_WORK}j-roundtrip.ics`, {
+        data: MOVE_VJOURNAL('Round trip', 'Lands back on the server.'),
       })
-      .toBe(1)
-    const roundtripIcs = Object.values((await dump(page, baseURL!, J_WORK)) ?? {}).join('\n')
-    expect(roundtripIcs).toContain('Round trip')
-    expect(roundtripIcs).toContain('Lands back on the server.')
-  })
+      await seedJournalMoveStore(page)
+
+      await page.goto('/journal')
+      await syncAll(page)
+      await expect(page.getByText('Round trip').first()).toBeVisible()
+
+      // CalDAV → Offline: the server copy is deleted, the entry stays local.
+      await page.getByText('Round trip').first().dblclick()
+      await pickJournalCalendar(page, 'default')
+      await page.getByRole('button', { name: 'Save changes' }).click()
+      await expect
+        .poll(async () => Object.keys((await dump(page, baseURL!, J_WORK)) ?? {}).length, {
+          timeout: 15_000,
+        })
+        .toBe(0)
+      await expect(page.getByText('Round trip').first()).toBeVisible()
+
+      // Offline → CalDAV: the entry must be re-created as a fresh resource — a
+      // stale resourceHref/etag from the deleted copy must not be reused (the
+      // pre-fix entry kept them, leaving a dangling link to a 404).
+      await page.getByText('Round trip').first().dblclick()
+      await pickJournalCalendar(page, 'j-work')
+      await page.getByRole('button', { name: 'Save changes' }).click()
+      await expect
+        .poll(async () => Object.keys((await dump(page, baseURL!, J_WORK)) ?? {}).length, {
+          timeout: 15_000,
+        })
+        .toBe(1)
+      const roundtripIcs = Object.values((await dump(page, baseURL!, J_WORK)) ?? {}).join('\n')
+      expect(roundtripIcs).toContain('Round trip')
+      expect(roundtripIcs).toContain('Lands back on the server.')
+    })
   })
 })

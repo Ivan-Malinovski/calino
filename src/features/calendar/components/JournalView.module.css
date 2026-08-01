@@ -87,9 +87,13 @@
   top: 4px;
   height: 30px;
   background: var(--panel, #ffffff);
-  box-shadow: 0 1px 2px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.08 * var(--shadow-opacity, 1))), 0 0 0 1px var(--line, rgba(var(--shadow-rgb, 0, 0, 0), calc(0.09 * var(--shadow-opacity, 1))));
+  box-shadow:
+    0 1px 2px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.08 * var(--shadow-opacity, 1))),
+    0 0 0 1px var(--line, rgba(var(--shadow-rgb, 0, 0, 0), calc(0.09 * var(--shadow-opacity, 1))));
   border-radius: var(--view-switcher-indicator-radius, 9px);
-  transition: left 0.25s cubic-bezier(0.4, 0, 0.2, 1), width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  transition:
+    left 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+    width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   z-index: 0;
 }
 
@@ -103,7 +107,9 @@
   font-weight: 500;
   font-family: inherit;
   cursor: pointer;
-  transition: background 0.12s, color 0.12s;
+  transition:
+    background 0.12s,
+    color 0.12s;
 }
 
 .todayBtn:hover {
@@ -141,7 +147,9 @@
   border: none;
   cursor: pointer;
   box-shadow: 0 1px 2px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.14 * var(--shadow-opacity, 1)));
-  transition: background 0.14s, transform 0.04s;
+  transition:
+    background 0.14s,
+    transform 0.04s;
   font-family: inherit;
 }
 
@@ -171,7 +179,10 @@
   border-radius: var(--radius-sm);
   cursor: pointer;
   font-family: inherit;
-  transition: background 0.12s, color 0.12s, border-color 0.12s;
+  transition:
+    background 0.12s,
+    color 0.12s,
+    border-color 0.12s;
 }
 
 .loadMore:hover {
@@ -324,7 +335,8 @@
   margin: 8px 0;
 }
 
-.body ul, .body ol {
+.body ul,
+.body ol {
   padding-left: 20px;
   margin: 8px 0;
 }
@@ -341,16 +353,24 @@
   margin: 16px 0;
 }
 
-.body h1, .body h2, .body h3 {
+.body h1,
+.body h2,
+.body h3 {
   font-family: var(--font-serif, 'Newsreader', Georgia, serif);
   color: var(--ink);
   margin-top: 16px;
   margin-bottom: 4px;
 }
 
-.body h1 { font-size: 20px; }
-.body h2 { font-size: 17px; }
-.body h3 { font-size: 15px; }
+.body h1 {
+  font-size: 20px;
+}
+.body h2 {
+  font-size: 17px;
+}
+.body h3 {
+  font-size: 15px;
+}
 
 /* Entry categories and link */
 .entryCategories {
@@ -419,7 +439,11 @@
   background: transparent;
   cursor: pointer;
   opacity: 0;
-  transition: opacity 0.15s, background 0.14s, color 0.14s, transform 0.1s;
+  transition:
+    opacity 0.15s,
+    background 0.14s,
+    color 0.14s,
+    transform 0.1s;
   align-self: center;
 }
 
@@ -449,7 +473,10 @@
   opacity: 1 !important;
   background: var(--color-error-muted, #c47068);
   color: #fff;
-  transition: background 0.2s, color 0.2s, transform 0.1s;
+  transition:
+    background 0.2s,
+    color 0.2s,
+    transform 0.1s;
 }
 
 .deleteBtnConfirm:active {
@@ -538,34 +565,55 @@
 
 .calendarRow {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-2);
+  gap: 6px;
 }
 
-.calendarLabel {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--ink-3);
-}
-
-.calendarSelect {
-  flex: 1;
-  min-width: 0;
-  padding: 6px 10px;
+/* Mirrors .categoryChip so the two pickers read as one family; kept separate
+   because the calendar is a single choice and shows a hollow dot when off. */
+.calendarChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: var(--radius-md);
   border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  font-size: 13px;
-  font-family: inherit;
   background: var(--panel);
-  color: var(--ink);
-  transition: border-color 0.12s;
+  color: var(--ink-3);
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  transition:
+    background 0.12s,
+    border-color 0.12s,
+    color 0.12s;
 }
 
-.calendarSelect:focus {
-  outline: none;
-  border-color: var(--accent);
+.calendarChip:hover {
+  background: var(--accent-soft, rgba(196, 168, 154, 0.08));
+  color: var(--ink-2);
+}
+
+.calendarChip:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.calendarChipActive {
+  border-color: var(--chip-color, var(--accent));
+  color: var(--ink);
+  font-weight: 500;
+}
+
+.calendarDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  /* Hollow when unselected, filled (inline background) when selected. */
+  border: 1.5px solid var(--chip-color, var(--accent));
+  box-sizing: border-box;
 }
 
 .composeFields {
@@ -659,7 +707,9 @@
   font-size: 12px;
   font-family: inherit;
   cursor: pointer;
-  transition: background 0.12s, border-color 0.12s;
+  transition:
+    background 0.12s,
+    border-color 0.12s;
 }
 
 .categoryChip:hover {
@@ -799,7 +849,9 @@
   text-align: left;
   font-size: 13px;
   color: var(--ink);
-  transition: border-color 0.12s, background 0.12s;
+  transition:
+    border-color 0.12s,
+    background 0.12s;
 }
 
 .relatedChip:hover {
@@ -863,7 +915,9 @@
   border-radius: 6px;
   padding: 2px 4px;
   cursor: pointer;
-  transition: border-color 0.14s, background 0.14s;
+  transition:
+    border-color 0.14s,
+    background 0.14s;
 }
 
 .dateButton:hover {
@@ -894,7 +948,9 @@
 .dateInput:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--focus-ring), 0 4px 12px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.15 * var(--shadow-opacity, 1)));
+  box-shadow:
+    0 0 0 3px var(--focus-ring),
+    0 4px 12px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.15 * var(--shadow-opacity, 1)));
 }
 
 .btnAccent {
