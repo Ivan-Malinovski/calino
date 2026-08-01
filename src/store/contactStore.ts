@@ -215,7 +215,7 @@ export const useContactStore = create<ContactStore>()(
     {
       name: 'calino-contacts',
       storage: createJSONStorage(() => safeLocalStorage),
-      version: 2,
+      version: 3,
       migrate: (persistedState: unknown) => {
         const state = persistedState as Record<string, unknown> | undefined
         const contacts = (state?.contacts ?? []) as Contact[]
@@ -227,6 +227,8 @@ export const useContactStore = create<ContactStore>()(
           xmlData: c.xmlData ?? null,
         }))
         return {
+          // Photos survive: initContactPhotos() copies any still-inline photo
+          // into IndexedDB before the first persist rewrites this blob.
           contacts: migratedContacts,
           addressBooks: state?.addressBooks ?? [],
           pendingChanges: state?.pendingChanges ?? [],
@@ -236,7 +238,21 @@ export const useContactStore = create<ContactStore>()(
         }
       },
       partialize: (state) => ({
-        contacts: state.contacts,
+        // Contacts are the biggest thing we persist, and photos used to be in
+        // here twice — once as `photo`, once more embedded in `rawVCard` — which
+        // is what pushed installs with a few hundred contacts past the
+        // localStorage quota. Both are dropped: photo data lives in IndexedDB
+        // (see lib/contactPhotoStore), and rawVCard is regenerated on parse.
+        contacts: state.contacts.map((contact) => {
+          const persisted = {
+            ...contact,
+            // Keep external URLs (they round-trip as PHOTO;VALUE=URI), clear
+            // inline data URIs.
+            photo: contact.photo?.startsWith('data:') ? null : contact.photo,
+          }
+          delete persisted.rawVCard
+          return persisted
+        }),
         addressBooks: state.addressBooks,
         pendingChanges: state.pendingChanges,
       }),

@@ -31,6 +31,7 @@ import { MasterPasswordPrompt } from './features/settings/components/MasterPassw
 import { useConfigStore } from './store/configStore'
 import { ThemeProvider } from './components/ThemeProvider'
 import { useCardDAV } from './features/carddav/hooks/useCardDAV'
+import { initContactPhotos } from './lib/contactPhotoSync'
 import { useCalDAV } from './features/caldav/hooks/useCalDAV'
 import { useNotifications } from './hooks/useNotifications'
 import { openEventDeepLink } from './lib/deepLink'
@@ -258,6 +259,12 @@ function CalendarApp(): JSX.Element {
 
   // Initialize CardDAV sync
   useCardDAV()
+
+  // Contact photos live in IndexedDB, not in the persisted contact blob — put
+  // them back on the live contacts and mirror later edits out.
+  useEffect(() => {
+    void initContactPhotos()
+  }, [])
 
   // Fire event/task reminders (web: polling + Notification API; native:
   // real OS-scheduled notifications). Was defined but never mounted anywhere
