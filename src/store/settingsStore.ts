@@ -119,7 +119,8 @@ const DEFAULT_SETTINGS: UserSettings = {
   conflictResolution: 'server-wins',
   compactRecurringEvents: true,
   compressPastWeeks: true,
-  monthViewEventLimit: 3,
+  // 0 = Auto: the day cell's height decides. See `useMonthEventCapacity`.
+  monthViewEventLimit: 0,
   hasCompletedOnboarding: false,
   themeMode: 'auto' as ThemeMode,
   lightTheme: config.defaultLightTheme,

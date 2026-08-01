@@ -326,7 +326,8 @@ export function CalendarSettings(): JSX.Element {
           <div className={styles.rowInfo}>
             <div className={styles.rowLabel}>Events Before Rollup</div>
             <div className={styles.rowDesc}>
-              How many events to show per day before showing "+N more"
+              How many events to show per day before showing "+N more". Auto fits as many as the day
+              cell has room for, and follows the window as it resizes.
             </div>
           </div>
           <div className={styles.rowControl}>
@@ -337,6 +338,7 @@ export function CalendarSettings(): JSX.Element {
               aria-label="Events before rollup"
               onChange={(e) => updateSettings({ monthViewEventLimit: Number(e.target.value) })}
             >
+              <option value={0}>Auto</option>
               <option value={2}>2</option>
               <option value={3}>3</option>
               <option value={4}>4</option>

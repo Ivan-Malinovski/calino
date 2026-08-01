@@ -8,6 +8,7 @@ All notable changes to Calino will be documented in this file.
 
 - **Arrange the view switcher however you like.** Long-press a tile in the mobile view grid and drag it where you want it; on desktop, drag a tab along the strip. Your arrangement is remembered, and everything follows it — the tabs, the mobile grid, and the order that swiping and the `<`/`>` shortcuts step through. Reordering is also available from the keyboard with Alt+←/→ on a focused tab.
 - **Pinch the week view on a phone to fit more days on screen.** It compresses the day columns rather than zooming, down to about five days at once. Vertical zoom stays a desktop gesture. Pinch had previously never worked on touch at all — the gesture library's touch handlers were never actually bound.
+- **The month view can now decide for itself how many events a day shows.** "Events Before Rollup" in Calendar settings has a new **Auto** option — now the default — which fits as many cards as the day cell physically has room for and rolls the rest into "+N more". Resize the window and the count follows: shrink it and cards move into the rollup, grow it and they come back. Compressed past weeks get proportionally fewer, and tasks keep a row of their own. A fixed 2–5 is still there if you prefer a count that never moves.
 - **The divider in the tab strip is now yours to place.** It's an element you drag like any tab, rather than a fixed boundary between "calendar" and "everything else", so you can group the tabs however makes sense to you.
 
 ### Changed
@@ -16,6 +17,7 @@ All notable changes to Calino will be documented in this file.
 
 ### Fixed
 
+- **The "+N more" popup stays on screen.** Opened from a day late in the week it ran off the right edge, and from the last row of the month off the bottom — it now settles inside the window, and a long list scrolls rather than hanging past the edge.
 - **The icons in the event preview are no longer shaved off at the top** (#93). They were drawn hard against the edge of their own canvas — the calendar's tick marks and the clock face lost their rounded tops, and the location pin was drawn past the edge outright and clipped flat.
 - **The view switcher, the mobile grid and view cycling now agree on one order.** They were each built from a separate hardcoded list that had drifted apart, so the tabs read Month, Year, Week… while the mobile grid read Month, Week, Agenda… and swiping stepped through a third order again.
 - **Cycling views no longer stops on Journal or Contacts when they're switched off.** The `<`/`>` shortcuts and the two-finger swipe visited them regardless.
