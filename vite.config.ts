@@ -21,6 +21,10 @@ if (existsSync(configPath)) {
   }
 }
 
+// Unset (the default) keeps the dev server localhost-only; see the SECURITY
+// note on `server.host` below before setting it.
+const devHost = process.env.CALINO_DEV_HOST
+
 export default defineConfig({
   base: '/',
   define: {
@@ -36,12 +40,25 @@ export default defineConfig({
     // local network can read source files via the dev WebSocket. Set
     // CALINO_DEV_HOST=0.0.0.0 only when you actually need LAN access
     // (e.g. testing on a phone).
-    host: process.env.CALINO_DEV_HOST ?? 'localhost',
-    allowedHosts: ['jankyboi', 'localhost'],
-    hmr: {
-      host: process.env.CALINO_DEV_HOST ?? 'localhost',
-      port: 8080,
-    },
+    host: devHost ?? 'localhost',
+    // Guards against DNS rebinding, so this is a hostname allowlist — bare IPs
+    // are permitted by Vite already. Add whatever name you reach the dev box by
+    // (plus CALINO_DEV_ALLOWED_HOSTS for one-offs that don't belong in git).
+    allowedHosts: [
+      'jankyboi',
+      'desktop',
+      'desktop.camel-vibe.ts.net',
+      'localhost',
+      ...(process.env.CALINO_DEV_ALLOWED_HOSTS?.split(',').map((h) => h.trim()) ?? []),
+    ].filter(Boolean),
+    // `hmr.host`/`hmr.port` describe what the *browser* dials, not what we
+    // bind. Pinning the host to the bind address breaks every other route (a
+    // 0.0.0.0 bind told clients to open ws://0.0.0.0:8080); pinning a separate
+    // port breaks reverse proxies like `tailscale serve`, which only forwards
+    // the main one. Off localhost, share the server's port and let the client
+    // infer the origin from window.location — that also keeps the socket
+    // same-origin, so strict extension CSPs allow it under 'self'.
+    hmr: devHost ? true : { host: 'localhost', port: 8080 },
   },
   resolve: {
     alias: {
