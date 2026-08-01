@@ -369,12 +369,24 @@
     position: sticky;
     top: 0;
     z-index: 10;
+    /* The day columns are fixed-width and overflow this row, but a block-level
+       box is only as wide as the container — so the background stopped at the
+       first screenful and everything scrolled into view was transparent.
+       Sizing to the content makes the background span the whole strip. */
+    width: max-content;
+    min-width: 100%;
     background: var(--panel, #ffffff);
     border-bottom: 1px solid var(--line, rgba(var(--ink-raw), 0.09));
   }
 
   .mobileBody {
     display: flex;
+    /* As with .mobileHeader: the day columns overflow a container-width box.
+       A `position: sticky` child is clamped to its containing block, so the
+       time column stopped being pinned partway across and scrolled off the
+       left edge. Sizing to the content keeps it stuck for the whole strip. */
+    width: max-content;
+    min-width: 100%;
   }
 
   .weekNumberHeader {

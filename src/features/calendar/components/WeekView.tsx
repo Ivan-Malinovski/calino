@@ -720,8 +720,12 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
   }, [date, firstDayOfWeek])
 
   const renderMobileContent = () => (
-    <div ref={mobileScrollRef} className={styles.mobileContainer}>
-      <div className={styles.mobileHeader}>
+    <div
+      ref={mobileScrollRef}
+      className={styles.mobileContainer}
+      data-component="week-mobile-scroll"
+    >
+      <div className={styles.mobileHeader} data-component="week-mobile-header">
         <div className={styles.weekNumberHeader}>W{weekNumber}</div>
         <div className={styles.headerDays}>
           {weekDays.map((day) => (
@@ -735,8 +739,8 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
           ))}
         </div>
       </div>
-      <div className={styles.mobileBody}>
-        <div className={styles.timeColumn}>
+      <div className={styles.mobileBody} data-component="week-mobile-body">
+        <div className={styles.timeColumn} data-component="week-mobile-time-column">
           {HOURS.map((hour) => (
             <div key={hour.toISOString()} className={styles.timeCell}>
               {format(hour, timeFormat === '24h' ? 'HH:mm' : 'h a')}
