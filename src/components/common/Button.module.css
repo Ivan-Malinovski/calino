@@ -44,7 +44,9 @@
   background-color: var(--color-bg-hover);
 }
 
-/* min-height keeps every size at or above the 44px touch target. */
+/* min-height pins the height so padding alone can't shrink a button. `md` and
+   `lg` clear the 44px touch target; `sm` deliberately doesn't — it's for dense
+   inline rows, so keep it off primary touch actions. */
 .sm {
   padding: 6px 12px;
   font-size: 13px;

@@ -121,7 +121,7 @@
 }
 
 .heroName {
-  font-family: 'Newsreader', Georgia, serif;
+  font-family: var(--font-serif, 'Newsreader', Georgia, serif);
   font-size: 30px;
   font-weight: 400;
   letter-spacing: -0.018em;
@@ -382,7 +382,7 @@
 .notesCard .notesText h2,
 .notesCard .notesText h3,
 .notesCard .notesText h4 {
-  font-family: 'Newsreader', Georgia, serif;
+  font-family: var(--font-serif, 'Newsreader', Georgia, serif);
   font-weight: 500;
   margin: 12px 0 6px;
   line-height: 1.3;
@@ -692,7 +692,7 @@
 
 /* Hero name inline input */
 .heroNameInput {
-  font-family: 'Newsreader', Georgia, serif;
+  font-family: var(--font-serif, 'Newsreader', Georgia, serif);
   font-size: 30px;
   font-weight: 400;
   letter-spacing: -0.018em;

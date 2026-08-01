@@ -58,7 +58,7 @@
 }
 
 .item.danger {
-  color: var(--color-danger, #dc3545);
+  color: var(--color-error, #ea4335);
 }
 
 .item.danger:hover {
