@@ -50,6 +50,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import type { PanInfo } from 'framer-motion'
 import { useReducedMotion } from './hooks/useReducedMotion'
 import { VIEW_ROUTES, URL_TO_VIEW } from './features/calendar/viewRoutes'
+import { useViewCycleOrder } from './features/calendar/useOrderedViews'
 import { getNavigatedDate } from './features/calendar/dateNavigation'
 import { format, parseISO } from 'date-fns'
 
@@ -134,18 +135,6 @@ function ViewLoader({
   )
 }
 
-const VIEW_ORDER: ViewType[] = [
-  'month',
-  'year',
-  'week',
-  '3day',
-  'day',
-  'agenda',
-  'todo',
-  'journal',
-  'contacts',
-]
-
 function useViewManager(): void {
   const navigate = useNavigate()
   const location = useLocation()
@@ -156,6 +145,14 @@ function useViewManager(): void {
   const isMounted = useRef(false)
   const lastUrlView = useRef<ViewType | null>(null)
   const currentViewRef = useRef(currentView)
+
+  // Cycling follows the user's own switcher arrangement. Held in a ref so
+  // reordering doesn't tear down and re-register the keydown listener.
+  const cycleOrder = useViewCycleOrder()
+  const cycleOrderRef = useRef(cycleOrder)
+  useEffect(() => {
+    cycleOrderRef.current = cycleOrder
+  }, [cycleOrder])
 
   // Keep ref in sync with state
   useEffect(() => {
@@ -170,7 +167,10 @@ function useViewManager(): void {
   // The redirect URL format is /?/path or /?/path&query
   const isRedirecting = location.search.startsWith('?/')
 
-  const isCalendarRoute = VIEW_ORDER.some((view) => location.pathname === VIEW_ROUTES[view])
+  // Any path that maps to a view is a calendar route — including views the
+  // user has switched off, whose routes still resolve if navigated to
+  // directly.
+  const isCalendarRoute = URL_TO_VIEW[location.pathname] !== undefined
   const isRootRoute = location.pathname === '/'
 
   // Sync URL -> State (only when URL changes externally)
@@ -212,17 +212,18 @@ function useViewManager(): void {
       // Ignore if Ctrl or Cmd is held (browser shortcuts like Ctrl+< etc.)
       if (e.ctrlKey || e.metaKey) return
 
+      const cycle = cycleOrderRef.current
       let newView: ViewType | null = null
       if (e.key === '<' || e.key === ',') {
         e.preventDefault()
-        const currentIndex = VIEW_ORDER.indexOf(currentViewRef.current)
-        const prevIndex = (currentIndex - 1 + VIEW_ORDER.length) % VIEW_ORDER.length
-        newView = VIEW_ORDER[prevIndex]
+        const currentIndex = cycle.indexOf(currentViewRef.current)
+        const prevIndex = (currentIndex - 1 + cycle.length) % cycle.length
+        newView = cycle[prevIndex]
       } else if (e.key === '>' || e.key === '.') {
         e.preventDefault()
-        const currentIndex = VIEW_ORDER.indexOf(currentViewRef.current)
-        const nextIndex = (currentIndex + 1) % VIEW_ORDER.length
-        newView = VIEW_ORDER[nextIndex]
+        const currentIndex = cycle.indexOf(currentViewRef.current)
+        const nextIndex = (currentIndex + 1) % cycle.length
+        newView = cycle[nextIndex]
       }
 
       if (newView) {
@@ -354,16 +355,17 @@ function CalendarApp(): JSX.Element {
   useEffect(() => {
     currentViewRef.current = currentView
   }, [currentView])
+  const cycleOrder = useViewCycleOrder()
   const switchViewBy = useCallback(
     (direction: 'left' | 'right') => {
-      const currentIndex = VIEW_ORDER.indexOf(currentViewRef.current)
+      const currentIndex = cycleOrder.indexOf(currentViewRef.current)
       const delta = direction === 'left' ? 1 : -1
-      const nextIndex = (currentIndex + delta + VIEW_ORDER.length) % VIEW_ORDER.length
-      const newView = VIEW_ORDER[nextIndex]
+      const nextIndex = (currentIndex + delta + cycleOrder.length) % cycleOrder.length
+      const newView = cycleOrder[nextIndex]
       useCalendarStore.getState().setCurrentView(newView)
       navigate(VIEW_ROUTES[newView], { replace: true })
     },
-    [navigate]
+    [navigate, cycleOrder]
   )
   useTwoFingerSwipe(mainRef, { onSwipe: switchViewBy, enabled: isMobile })
 

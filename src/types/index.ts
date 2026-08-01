@@ -326,6 +326,14 @@ export interface UserSettings {
   monthAgendaGridRatio: number
   monthAgendaSplitRatio: number
   fadePastDaysInAgenda: 'never' | 'current' | 'all'
+  /** User's arrangement of the view switcher. Reconciled against ALL_VIEWS
+   *  on read — see `useOrderedViews` — so it tolerates views being added to
+   *  or removed from the app between releases. */
+  viewOrder: ViewType[]
+  /** The view the desktop tab-strip divider sits directly after, or null
+   *  when it sits before everything. Stored by view rather than by index so
+   *  it survives reordering and views being switched off. */
+  viewDividerAfter: ViewType | null
 }
 
 export type SettingsState = UserSettings

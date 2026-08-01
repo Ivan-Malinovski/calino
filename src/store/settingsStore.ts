@@ -14,6 +14,7 @@ import type {
   MapProvider,
 } from '@/types'
 import { config, DEFAULT_CALENDAR_COLOR, EVENT_COLORS as _EVENT_COLORS_FROM_CONFIG } from '@/config'
+import { ALL_VIEWS, DEFAULT_DIVIDER_AFTER } from '@/features/calendar/viewRoutes'
 
 export const selectThemeMode = (state: SettingsStore) => state.themeMode
 export const selectUpdateSettings = (state: SettingsStore) => state.updateSettings
@@ -140,6 +141,10 @@ const DEFAULT_SETTINGS: UserSettings = {
   monthAgendaGridRatio: 0.4,
   monthAgendaSplitRatio: 0.65,
   fadePastDaysInAgenda: 'never',
+  viewOrder: ALL_VIEWS.map((v) => v.value),
+  // Divider defaults to the boundary between the calendar views and the
+  // tools, which is what the groups encode.
+  viewDividerAfter: DEFAULT_DIVIDER_AFTER,
 }
 
 export const useSettingsStore = create<SettingsStore>()(
@@ -158,7 +163,11 @@ export const useSettingsStore = create<SettingsStore>()(
     {
       name: 'calino-settings',
       storage: createJSONStorage(() => safeLocalStorage),
-      version: 1,
+      version: 2,
+      // Blind spread: any key the persisted state carries wins, including
+      // ones from a newer version after a downgrade. That is safe for
+      // viewOrder specifically because it is reconciled against ALL_VIEWS on
+      // every read rather than trusted as-is.
       migrate: (persistedState: unknown) => ({
         ...DEFAULT_SETTINGS,
         ...(persistedState as Partial<UserSettings>),

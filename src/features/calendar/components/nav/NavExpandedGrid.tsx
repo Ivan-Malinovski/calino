@@ -1,13 +1,15 @@
 import type { JSX } from 'react'
+
 import { useNavigate, useLocation } from 'react-router-dom'
 import { motion, type PanInfo } from 'framer-motion'
 import { useCalendarStore } from '@/store/calendarStore'
-import { useSettingsStore } from '@/store/settingsStore'
 import { hapticIfEnabled } from '@/lib/haptics'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { SettingsIcon, TuneIcon } from '@/components/common/icons'
 import { QuickSettingsPanel } from '../QuickSettingsPanel'
-import { VIEW_ROUTES, URL_TO_VIEW, ALL_VIEWS } from '../../viewRoutes'
+import { VIEW_ROUTES, URL_TO_VIEW } from '../../viewRoutes'
+import { useVisibleViews, useReorderViews } from '../../useOrderedViews'
+import { useGridReorder } from './useGridReorder'
 import type { ViewType } from '@/types'
 import styles from './NavExpandedGrid.module.css'
 
@@ -57,8 +59,6 @@ export function NavExpandedGrid({
   const navigate = useNavigate()
   const location = useLocation()
   const setCurrentView = useCalendarStore((state) => state.setCurrentView)
-  const journalEnabled = useSettingsStore((state) => state.journalEnabled)
-  const contactsEnabled = useSettingsStore((state) => state.contactsEnabled)
   const reducedMotion = useReducedMotion()
 
   // currentView is store state that persists across routes (e.g. it still
@@ -66,15 +66,28 @@ export function NavExpandedGrid({
   // derived from the actual route, not the stale store value.
   const activeView = URL_TO_VIEW[location.pathname]
 
-  const visibleViews = ALL_VIEWS.filter(
-    (v) => (journalEnabled || v.value !== 'journal') && (contactsEnabled || v.value !== 'contacts')
-  )
+  const visibleViews = useVisibleViews()
+  const reorderViews = useReorderViews()
+  const {
+    reorderMode,
+    draggingIndex,
+    dragDelta,
+    registerGrid,
+    exitReorderMode,
+    consumeDragClick,
+  } = useGridReorder(visibleViews.length, reorderViews)
 
   const activeTileIndex = visibleViews.findIndex(
     (v) => activeView === v.value || (v.value === 'week' && activeView === '3day')
   )
 
   const handleTileClick = (view: ViewType): void => {
+    // The click that ends a long-press-drag must not also navigate.
+    if (consumeDragClick()) return
+    if (reorderMode) {
+      exitReorderMode()
+      return
+    }
     setCurrentView(view)
     navigate(VIEW_ROUTES[view])
     hapticIfEnabled('light')
@@ -91,11 +104,31 @@ export function NavExpandedGrid({
     onCollapse()
   }
 
+  // Swipe-to-dismiss must stand down while reordering. Setting `drag={false}`
+  // is not enough on its own: framer starts the sheet's drag session on
+  // pointerdown, which happens ~350ms *before* the long-press arms reorder
+  // mode, and changing the prop mid-gesture doesn't cancel the session
+  // already in flight. Dragging a tile down to the second row would then
+  // release with offset.y past the dismiss threshold and close the sheet
+  // out from under the reorder. Guarding the handlers covers both.
+  const handleDragStart = (): void => {
+    if (reorderMode) return
+    onDragActiveChange?.(true)
+  }
+
   const handleDrag = (_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo): void => {
+    if (reorderMode) return
     onDragProgress?.(Math.max(0, info.offset.y))
   }
 
   const handleDragEnd = (_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo): void => {
+    if (reorderMode) {
+      // Leave the sheet exactly where it is, and reset anything the gesture
+      // reported before reorder mode took over.
+      onDragActiveChange?.(false)
+      onDragProgress?.(0)
+      return
+    }
     const shouldClose = info.offset.y > 40 || info.velocity.y > 400
     onDragActiveChange?.(false)
     onDragProgress?.(0)
@@ -106,10 +139,13 @@ export function NavExpandedGrid({
     <motion.div
       className={styles.expanded}
       data-component="nav-expanded-grid"
-      drag="y"
+      data-reorder-mode={reorderMode || undefined}
+      // Swipe-to-dismiss has to yield while reordering, or dragging a tile
+      // upwards would fight the sheet for the same gesture.
+      drag={reorderMode ? false : 'y'}
       dragConstraints={{ top: 0, bottom: 0 }}
       dragElastic={{ top: 0, bottom: 0.06 }}
-      onDragStart={() => onDragActiveChange?.(true)}
+      onDragStart={handleDragStart}
       onDrag={handleDrag}
       onDragEnd={handleDragEnd}
     >
@@ -147,8 +183,18 @@ export function NavExpandedGrid({
         </div>
       )}
 
+      {reorderMode && (
+        <div className={styles.reorderBar}>
+          <span>Drag to rearrange</span>
+          <button type="button" className={styles.reorderDone} onClick={exitReorderMode}>
+            Done
+          </button>
+        </div>
+      )}
+
       <motion.div
         className={styles.grid}
+        ref={registerGrid}
         variants={reducedMotion ? gridVariantsReduced : gridVariants}
         initial="hidden"
         animate="visible"
@@ -169,12 +215,30 @@ export function NavExpandedGrid({
         {visibleViews.map((view, index) => {
           const isActive =
             activeView === view.value || (view.value === 'week' && activeView === '3day')
+          const isHeld = draggingIndex === index
           return (
             <motion.button
               key={view.value}
               type="button"
-              className={styles.tile}
-              style={{ gridColumn: (index % 4) + 1, gridRow: Math.floor(index / 4) + 1 }}
+              data-tile-index={index}
+              data-held={isHeld || undefined}
+              className={`${styles.tile} ${reorderMode ? styles.tileReordering : ''} ${
+                isHeld ? styles.tileHeld : ''
+              }`}
+              style={{
+                gridColumn: (index % 4) + 1,
+                gridRow: Math.floor(index / 4) + 1,
+                // The held tile is pinned to the finger; everything else
+                // animates between cells via `layout`.
+                x: isHeld ? dragDelta.x : 0,
+                y: isHeld ? dragDelta.y : 0,
+                zIndex: isHeld ? 3 : 1,
+              }}
+              // Layout animation would fight the pointer on the held tile.
+              layout={!isHeld && !reducedMotion}
+              transition={
+                reducedMotion ? TILE_INDICATOR_TRANSITION_INSTANT : TILE_INDICATOR_TRANSITION
+              }
               variants={reducedMotion ? tileVariantsReduced : tileVariants}
               onClick={() => handleTileClick(view.value)}
             >

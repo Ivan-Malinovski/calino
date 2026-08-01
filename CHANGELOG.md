@@ -4,6 +4,19 @@ All notable changes to Calino will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- **Arrange the view switcher however you like.** Long-press a tile in the mobile view grid and drag it where you want it; on desktop, drag a tab along the strip. Your arrangement is remembered, and everything follows it — the tabs, the mobile grid, and the order that swiping and the `<`/`>` shortcuts step through. Reordering is also available from the keyboard with Alt+←/→ on a focused tab.
+- **The divider in the tab strip is now yours to place.** It's an element you drag like any tab, rather than a fixed boundary between "calendar" and "everything else", so you can group the tabs however makes sense to you.
+
+### Fixed
+
+- **The view switcher, the mobile grid and view cycling now agree on one order.** They were each built from a separate hardcoded list that had drifted apart, so the tabs read Month, Year, Week… while the mobile grid read Month, Week, Agenda… and swiping stepped through a third order again.
+- **Cycling views no longer stops on Journal or Contacts when they're switched off.** The `<`/`>` shortcuts and the two-finger swipe visited them regardless.
+- **Dragging a tile more than one place now moves the tile you're actually holding.** Each cell crossed during a drag was worked out from the arrangement as it stood when the drag began, so every step overwrote the one before it and only the last one survived — dragging across the row left your tile where it started and shuffled two others instead.
+- **The view grid no longer closes underneath you mid-drag.** Dragging a tile downwards was also read as a swipe-to-dismiss on the sheet, which shut the whole panel on release.
+- **Long-pressing a tile no longer selects its label** or raises the text-selection popup over it.
+
 ## [0.25.5] - 2026-08-01
 
 ### Added

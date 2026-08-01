@@ -151,6 +151,8 @@ vi.mock('@/store/settingsStore', () => ({
       monthAgendaGridRatio: 0.4,
       monthAgendaSplitRatio: 0.65,
       fadePastDaysInAgenda: 'never',
+      viewOrder: ['month', 'week', 'agenda', 'year', 'day', 'todo', 'journal', 'contacts'],
+      viewDividerAfter: 'day',
       useCategoryColors: true,
       showEventIcons: true,
       journalEnabled: false,

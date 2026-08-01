@@ -11,7 +11,9 @@ import { useGestures } from '@/hooks/useGestures'
 import { useAnimatedClose } from '@/hooks/useAnimatedClose'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { DUR_FAST, EASE_POP } from '@/lib/motion'
-import { VIEW_ROUTES } from '../viewRoutes'
+import { VIEW_ROUTES, ALL_VIEWS } from '../viewRoutes'
+import { useVisibleViews, useSwitcherItems, useReorderSwitcher } from '../useOrderedViews'
+import { useTabReorder } from './useTabReorder'
 import { getNavigatedDate } from '../dateNavigation'
 import type { ViewType } from '@/types'
 import styles from './CalendarHeader.module.css'
@@ -20,17 +22,6 @@ interface CalendarHeaderProps {
   onToggleSidebar?: () => void
   onOpenCommandPalette?: () => void
 }
-
-const VIEWS: { value: ViewType; label: string }[] = [
-  { value: 'month', label: 'Month' },
-  { value: 'year', label: 'Year' },
-  { value: 'week', label: 'Week' },
-  { value: 'day', label: 'Day' },
-  { value: 'agenda', label: 'Agenda' },
-  { value: 'todo', label: 'Tasks' },
-  { value: 'journal', label: 'Journal' },
-  { value: 'contacts', label: 'Contacts' },
-]
 
 export function CalendarHeader({
   onToggleSidebar,
@@ -375,9 +366,33 @@ export function CalendarHeader({
     : ''
   const titleAnimKey = titleTransition?.seq ?? 0
 
-  const visibleViews = VIEWS.filter(
-    (v) => (journalEnabled || v.value !== 'journal') && (contactsEnabled || v.value !== 'contacts')
+  const visibleViews = useVisibleViews()
+  const switcherItems = useSwitcherItems()
+  const reorderSwitcher = useReorderSwitcher()
+
+  // Screen-reader feedback for keyboard reordering, which has no visual
+  // "picked up / dropped" cue of its own.
+  const [reorderAnnouncement, setReorderAnnouncement] = useState('')
+  const tabReorder = useTabReorder(
+    switcherItems,
+    viewTabRefs,
+    reorderSwitcher,
+    // Reordering by drag only makes sense while the tabs are actually
+    // rendered; in dropdown mode the strip is collapsed.
+    !useDropdownSwitcher,
+    setReorderAnnouncement
   )
+  const activeTabIndex = visibleViews.findIndex(
+    (v) => currentView === v.value || (v.value === 'week' && currentView === '3day')
+  )
+
+  // Reordering moves tabs without resizing them, so the ResizeObserver above
+  // never fires — but every tab's offsetLeft has changed, which is exactly
+  // what the indicator is positioned from. Re-measure whenever the order does.
+  const viewOrderKey = visibleViews.map((v) => v.value).join(',')
+  useLayoutEffect(() => {
+    measureIndicator()
+  }, [viewOrderKey, measureIndicator])
 
   const handleNavigate = (direction: 'prev' | 'next'): void => {
     const newDate = getNavigatedDate(currentView, date, direction)
@@ -557,6 +572,12 @@ export function CalendarHeader({
           <SearchIcon />
         </button>
 
+        {/* Keyboard reordering (Alt+Arrow) has no visual pick-up cue, so the
+            resulting position is announced instead. */}
+        <div className={styles.srOnly} role="status" aria-live="polite">
+          {reorderAnnouncement}
+        </div>
+
         {/* View Tabs - shown when they fit (see useDropdownSwitcher) */}
         <div
           className={`${styles.viewTabs} ${useDropdownSwitcher ? styles.viewTabsCollapsed : ''}`}
@@ -565,32 +586,92 @@ export function CalendarHeader({
         >
           <div
             className={styles.viewTabIndicator}
-            style={{ left: indicatorStyle.left, width: indicatorStyle.width }}
+            style={{
+              left: indicatorStyle.left,
+              width: indicatorStyle.width,
+              // The indicator is positioned from the active tab's layout box,
+              // which drag transforms don't move — so it has to be shifted by
+              // the same amount to stay under its tab.
+              transform: `translateX(${tabReorder.shiftFor(activeTabIndex)}px)`,
+            }}
             data-component="view-switcher-indicator"
           />
-          {visibleViews.map((view, index) => {
+          {switcherItems.map((item, index) => {
+            const isDragging = tabReorder.draggingId === item.id
+            const shift = tabReorder.shiftFor(index)
+
+            if (item.kind === 'divider') {
+              return (
+                <button
+                  key="divider"
+                  type="button"
+                  ref={(el) => {
+                    if (el) viewTabRefs.current.set('divider', el)
+                    else viewTabRefs.current.delete('divider')
+                  }}
+                  className={`${styles.viewTabDivider} ${isDragging ? styles.viewTabDividerDragging : ''}`}
+                  style={{
+                    transform: shift === 0 ? undefined : `translateX(${shift}px)`,
+                    transition: isDragging ? 'none' : undefined,
+                    zIndex: isDragging ? 2 : undefined,
+                  }}
+                  data-component="view-switcher-divider"
+                  aria-label="Tab group divider — drag, or use Alt+arrow keys, to move"
+                  onPointerDown={(e) => tabReorder.onTabPointerDown(e, index)}
+                  onKeyDown={(e) => tabReorder.onTabKeyDown(e, index)}
+                  // It only exists to be repositioned; a click does nothing.
+                  onClick={() => tabReorder.consumeDragClick()}
+                />
+              )
+            }
+
+            const view = item.view
             const isActive =
               currentView === view.value || (view.value === 'week' && currentView === '3day')
             const menu = tabMenus[view.value]
+            // The dragged tab tracks the pointer directly; its neighbours
+            // animate into the gap it leaves.
+            const dragStyle: React.CSSProperties = {
+              transform: shift === 0 ? undefined : `translateX(${shift}px)`,
+              transition: isDragging ? 'none' : undefined,
+              zIndex: isDragging ? 2 : undefined,
+              position: isDragging ? 'relative' : undefined,
+            }
             const tabButton = (
               <button
                 ref={(el) => {
                   if (el) viewTabRefs.current.set(view.value, el)
                   else viewTabRefs.current.delete(view.value)
                 }}
-                className={`${styles.viewTab} ${isActive ? styles.viewTabActive : ''}`}
-                onClick={() => handleViewChange(view.value)}
+                className={`${styles.viewTab} ${isActive ? styles.viewTabActive : ''} ${
+                  isDragging ? styles.viewTabDragging : ''
+                }`}
+                style={menu ? undefined : dragStyle}
+                data-view={view.value}
+                onPointerDown={(e) => tabReorder.onTabPointerDown(e, index)}
+                onKeyDown={(e) => tabReorder.onTabKeyDown(e, index)}
+                onClick={() => {
+                  // A drag ends with a click on the same button; don't let it
+                  // double as a view switch.
+                  if (tabReorder.consumeDragClick()) return
+                  handleViewChange(view.value)
+                }}
               >
                 {view.label}
               </button>
             )
             return (
               <React.Fragment key={view.value}>
-                {index === 4 && <div className={styles.viewTabDivider} />}
                 {menu ? (
                   <div
                     className={styles.viewTabItem}
-                    onMouseEnter={(e) => openTabMenuFor(view.value, e.currentTarget)}
+                    style={dragStyle}
+                    onMouseEnter={(e) => {
+                      // Hovering mid-drag would pop a menu open under the
+                      // pointer.
+                      if (tabReorder.draggingId) return
+                      openTabMenuFor(view.value, e.currentTarget)
+                    }}
                     onMouseLeave={scheduleTabMenuClose}
                   >
                     {tabButton}
@@ -665,7 +746,7 @@ export function CalendarHeader({
               aria-controls="view-dropdown-menu"
               data-component="view-dropdown-trigger"
             >
-              {VIEWS.find((v) => v.value === currentView)?.label}
+              {ALL_VIEWS.find((v) => v.value === currentView)?.label}
               <svg
                 aria-hidden="true"
                 width="12"

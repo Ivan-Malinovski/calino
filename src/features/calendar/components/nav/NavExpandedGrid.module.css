@@ -105,6 +105,17 @@
 }
 
 .tile {
+  /* Must be set before the gesture starts, not when reorder mode turns on:
+     the browser latches touch-action at pointerdown, so applying it later
+     leaves the first finger-move to be claimed as a pan, which cancels the
+     pointer and kills the drag. Swipe-to-dismiss is unaffected — framer
+     implements that in JS over pointer events rather than native panning. */
+  touch-action: none;
+  /* A long-press is the reorder gesture, so it must not also start a text
+     selection or raise the Android text-selection callout over the label. */
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
   position: relative;
   z-index: 1;
   height: 40px;
@@ -117,6 +128,66 @@
   cursor: pointer;
   padding: 0;
   overflow: hidden;
+}
+
+/* Reorder mode ------------------------------------------------------- */
+
+.reorderBar {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 6px;
+  font-size: 11.5px;
+  color: var(--ink-3);
+  flex-shrink: 0;
+}
+
+.reorderDone {
+  border: none;
+  background: transparent;
+  color: var(--accent);
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 6px;
+}
+
+.tileReordering {
+  animation: tileJiggle 0.34s ease-in-out infinite;
+}
+
+/* Neighbouring tiles fall out of phase, so the grid reads as restless
+   rather than as one block pivoting in unison. */
+.tileReordering:nth-child(even) {
+  animation-delay: -0.17s;
+}
+
+.tileHeld {
+  animation: none;
+  background: var(--panel);
+  box-shadow: 0 6px 16px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.22 * var(--shadow-opacity, 1)));
+  /* Lifted off the grid; the label shouldn't clip while it travels. */
+  overflow: visible;
+}
+
+@keyframes tileJiggle {
+  0%,
+  100% {
+    rotate: -1.1deg;
+  }
+  50% {
+    rotate: 1.1deg;
+  }
+}
+
+/* framer drives the tiles' transform via `x`/`y`, so the jiggle uses the
+   standalone `rotate` property to avoid clobbering it. Reduced motion drops
+   the jiggle but keeps reordering fully usable. */
+@media (prefers-reduced-motion: reduce) {
+  .tileReordering {
+    animation: none;
+  }
 }
 
 .tileActiveBg {
