@@ -2,6 +2,9 @@ import { test, expect, type Page } from '@playwright/test'
 import { clearState, STORAGE_KEYS } from './fixtures/localstorage'
 
 const SWITCHER = '[data-component="view-switcher"]'
+// Tabs and the divider only. The strip also contains hover sub-menu buttons
+// (Week -> 3-day, Agenda -> Sidebar), which are not items in the ordering.
+const ITEMS = `${SWITCHER} button[data-view], ${SWITCHER} button[data-component="view-switcher-divider"]`
 
 /** Labels of the desktop tabs, in the order they are rendered. */
 async function tabOrder(page: Page): Promise<string[]> {
@@ -126,7 +129,7 @@ test.describe('View switcher — reordering', () => {
     // Index of the divider among all strip children.
     const dividerIndex = async (): Promise<number> =>
       page
-        .locator(`${SWITCHER} button`)
+        .locator(ITEMS)
         .evaluateAll((els) =>
           els.findIndex((el) => el.getAttribute('data-component') === 'view-switcher-divider')
         )
@@ -153,7 +156,7 @@ test.describe('View switcher — reordering', () => {
 
     const idsInOrder = async (): Promise<string[]> =>
       page
-        .locator(`${SWITCHER} button`)
+        .locator(ITEMS)
         .evaluateAll((els) =>
           els.map(
             (el) =>
@@ -173,6 +176,117 @@ test.describe('View switcher — reordering', () => {
     expect(after.indexOf(before[dividerAt - 1])).toBeGreaterThan(after.indexOf('|'))
     // And no views were lost in the swap.
     expect([...after].sort()).toEqual([...before].sort())
+  })
+
+  test('a tab dropped after travelling one slot lands exactly one place along', async ({ page }) => {
+    // Where a drag lands has to agree with the gap the neighbours open up.
+    // Tabs are label-width and the divider is a narrow item, so a rule based
+    // on the neighbours' own widths drifted — consistently leftwards — from
+    // the position being shown.
+    await page.goto('/month')
+    await expect(page.locator(SWITCHER)).toBeVisible()
+
+    const geometry = async (): Promise<{ ids: string[]; lefts: number[] }> =>
+      page.locator(ITEMS).evaluateAll((els) => ({
+        ids: els.map(
+          (el) =>
+            el.getAttribute('data-view') ??
+            (el.getAttribute('data-component') === 'view-switcher-divider' ? '|' : '?')
+        ),
+        lefts: els.map((el) => (el as HTMLElement).offsetLeft),
+      }))
+
+    const { ids, lefts } = await geometry()
+    const from = 1
+    // Distance the tab must travel to sit at index `from + 1`: the slot it
+    // passes over.
+    const travel = lefts[from + 2] - lefts[from + 1]
+    expect(travel).toBeGreaterThan(0)
+
+    const box = await page.locator(ITEMS).nth(from).boundingBox()
+    if (!box) throw new Error('tab has no box')
+    const y = box.y + box.height / 2
+
+    await page.mouse.move(box.x + box.width / 2, y)
+    await page.mouse.down()
+    await page.mouse.move(box.x + box.width / 2 + travel, y, { steps: 12 })
+    await page.mouse.up()
+
+    const expected = [...ids]
+    expected.splice(from + 1, 0, expected.splice(from, 1)[0])
+    await expect.poll(async () => (await geometry()).ids).toEqual(expected)
+  })
+
+  test('a tab dragged across several slots lands where it was released', async ({ page }) => {
+    // The case where a double-applied drop showed up as a shift rather than
+    // cancelling out: committing twice moved the tab, then moved whatever
+    // had taken its old index, leaving it one place left of the drop.
+    await page.goto('/month')
+    await expect(page.locator(SWITCHER)).toBeVisible()
+
+    const geometry = async (): Promise<{ ids: string[]; lefts: number[] }> =>
+      page.locator(ITEMS).evaluateAll((els) => ({
+        ids: els.map(
+          (el) =>
+            el.getAttribute('data-view') ??
+            (el.getAttribute('data-component') === 'view-switcher-divider' ? '|' : '?')
+        ),
+        lefts: els.map((el) => (el as HTMLElement).offsetLeft),
+      }))
+
+    const { ids, lefts } = await geometry()
+    const from = 0
+    const to = 3
+    // Travel to land at `to`: the slots passed over on the way.
+    const travel = lefts[to + 1] - lefts[from + 1]
+
+    const box = await page.locator(ITEMS).nth(from).boundingBox()
+    if (!box) throw new Error('tab has no box')
+    const y = box.y + box.height / 2
+
+    await page.mouse.move(box.x + box.width / 2, y)
+    await page.mouse.down()
+    await page.mouse.move(box.x + box.width / 2 + travel, y, { steps: 16 })
+    await page.mouse.up()
+
+    const expected = [...ids]
+    expected.splice(to, 0, expected.splice(from, 1)[0])
+    await expect.poll(async () => (await geometry()).ids).toEqual(expected)
+  })
+
+  test('a tab dragged less than half a slot stays where it is', async ({ page }) => {
+    await page.goto('/month')
+    await expect(page.locator(SWITCHER)).toBeVisible()
+
+    const idsOf = async (): Promise<string[]> =>
+      page
+        .locator(ITEMS)
+        .evaluateAll((els) =>
+          els.map(
+            (el) =>
+              el.getAttribute('data-view') ??
+              (el.getAttribute('data-component') === 'view-switcher-divider' ? '|' : '?')
+          )
+        )
+
+    const lefts = await page
+      .locator(ITEMS)
+      .evaluateAll((els) => els.map((el) => (el as HTMLElement).offsetLeft))
+
+    const before = await idsOf()
+    const from = 1
+    const travel = lefts[from + 2] - lefts[from + 1]
+
+    const box = await page.locator(ITEMS).nth(from).boundingBox()
+    if (!box) throw new Error('tab has no box')
+    const y = box.y + box.height / 2
+
+    await page.mouse.move(box.x + box.width / 2, y)
+    await page.mouse.down()
+    await page.mouse.move(box.x + box.width / 2 + travel * 0.3, y, { steps: 8 })
+    await page.mouse.up()
+
+    expect(await idsOf()).toEqual(before)
   })
 
   test('an unknown view in stored settings is ignored rather than rendered', async ({ page }) => {

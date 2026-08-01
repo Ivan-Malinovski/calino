@@ -53,8 +53,14 @@ export function useTabReorder(
     dragging: boolean
     pointerId: number
     element: HTMLElement
+    /** Distance the dragged tab travels to land at each index, measured once
+     *  when the drag starts. Index `fromIndex` is 0. */
+    offsets: number[]
   } | null>(null)
   const didDrag = useRef(false)
+  /** Mirrors `state.targetIndex`. Committing the drop reads this rather than
+   *  the state, so the commit can happen outside a setState updater. */
+  const targetRef = useRef<number | null>(null)
 
   // Width one tab occupies including the gap to the next — the distance a
   // neighbour shifts to make room. Measured from real geometry rather than
@@ -74,13 +80,19 @@ export function useTabReorder(
 
   const finish = useCallback(() => {
     const g = gesture.current
+    const target = targetRef.current
     gesture.current = null
-    setState((prev) => {
-      if (g?.dragging && prev.targetIndex !== null && prev.targetIndex !== g.fromIndex) {
-        onReorder(g.fromIndex, prev.targetIndex)
-      }
-      return { draggingId: null, targetIndex: null, dragOffset: 0 }
-    })
+    targetRef.current = null
+
+    // Committed outside the state updater. React runs updaters twice in
+    // development, and a reorder is a side effect — applied twice against
+    // freshly-read state it compounds, so a drop one place along cancelled
+    // itself out and a longer drag landed one place to the left of where it
+    // was released.
+    if (g?.dragging && target !== null && target !== g.fromIndex) {
+      onReorder(g.fromIndex, target)
+    }
+    setState({ draggingId: null, targetIndex: null, dragOffset: 0 })
   }, [onReorder])
 
   const onTabPointerDown = useCallback(
@@ -96,6 +108,7 @@ export function useTabReorder(
         dragging: false,
         pointerId: event.pointerId,
         element,
+        offsets: [],
       }
       didDrag.current = false
 
@@ -109,27 +122,46 @@ export function useTabReorder(
           g.dragging = true
           didDrag.current = true
           g.element.setPointerCapture(g.pointerId)
-        }
 
-        // Walk outwards from the origin, accumulating slot widths until the
-        // travelled distance no longer covers the next neighbour.
-        let target = g.fromIndex
-        if (dx > 0) {
-          let covered = 0
+          // Measured once, at rest: from here on the tabs carry transforms,
+          // and only the layout box (offsetLeft) is meaningful anyway.
+          const widths = items.map((_, i) => slotWidth(i))
+          const offsets = new Array<number>(items.length)
+          offsets[g.fromIndex] = 0
           for (let i = g.fromIndex + 1; i < items.length; i++) {
-            covered += slotWidth(i)
-            if (dx > covered - slotWidth(i) / 2) target = i
-            else break
+            offsets[i] = offsets[i - 1] + widths[i]
           }
-        } else {
-          let covered = 0
           for (let i = g.fromIndex - 1; i >= 0; i--) {
-            covered += slotWidth(i)
-            if (-dx > covered - slotWidth(i) / 2) target = i
-            else break
+            offsets[i] = offsets[i + 1] - widths[i]
+          }
+          g.offsets = offsets
+        }
+
+        // Land wherever the tab would actually come to rest — the drop index
+        // whose resulting position is nearest to where the tab is being held.
+        //
+        // The earlier rule compared travelled distance against half of each
+        // *neighbour's* width, while the neighbours make room by shifting
+        // the *dragged* tab's width. Those only agree when every tab is the
+        // same width, and these are label-width — plus the divider is a 9px
+        // item — so the drop drifted away from the gap the eye was following.
+        //
+        // `offsets[t]` is how far the tab travels if it lands at index t:
+        // moving right it clears the slots it passes, moving left it gives
+        // back the slots that shift across. Picking the nearest is symmetric,
+        // so there is no directional bias.
+        const offsets = g.offsets
+        let target = g.fromIndex
+        let bestDistance = Infinity
+        for (let t = 0; t < offsets.length; t++) {
+          const distance = Math.abs(dx - offsets[t])
+          if (distance < bestDistance) {
+            bestDistance = distance
+            target = t
           }
         }
 
+        targetRef.current = target
         setState({ draggingId: items[g.fromIndex].id, targetIndex: target, dragOffset: dx })
       }
 

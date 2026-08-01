@@ -16,6 +16,7 @@ All notable changes to Calino will be documented in this file.
 - **Dragging a tile more than one place now moves the tile you're actually holding.** Each cell crossed during a drag was worked out from the arrangement as it stood when the drag began, so every step overwrote the one before it and only the last one survived — dragging across the row left your tile where it started and shuffled two others instead.
 - **The view grid no longer closes underneath you mid-drag.** Dragging a tile downwards was also read as a swipe-to-dismiss on the sheet, which shut the whole panel on release.
 - **Long-pressing a tile no longer selects its label** or raises the text-selection popup over it.
+- **A dragged tab lands where you drop it.** The move was being applied twice, so releasing a tab one place along undid itself and a longer drag settled one place to the left of where you let go. Where it lands is also worked out from where the tab would actually come to rest now, rather than from the widths of the tabs it passes — those disagree once labels differ in width.
 
 ## [0.25.5] - 2026-08-01
 
