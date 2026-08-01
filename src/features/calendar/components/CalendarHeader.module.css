@@ -149,6 +149,12 @@
   white-space: nowrap;
   padding-left: 22px;
   align-self: center;
+  /* Nudged down rather than padded: the header measures this group's width to
+     decide whether the full view-switcher fits, and an offset keeps that
+     measurement untouched. `line-height: 1` on an ascent-heavy serif leaves the
+     glyphs sitting visually high in their box; 3px puts them back on centre. */
+  position: relative;
+  top: 5px;
   /* See .navigator — same flex-shrink protection for the ≤768px flex layout. */
   flex-shrink: 0;
 }
@@ -360,8 +366,9 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  /* Extra bottom padding nudges the centered label up ~1px */
-  padding: 0 14px 2px;
+  /* Symmetric: the label sits on the true centre of the 32px box. Leaning it
+     either way by a pixel is visible against the indicator pill. */
+  padding: 0 14px;
   border-radius: var(--radius-sm);
   font-size: 13px;
   font-weight: 500;
