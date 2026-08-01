@@ -17,8 +17,10 @@ fail() { echo -e "${RED}❌ $1${NC}"; exit 1; }
 BUMP=""
 SKIP_DOCKER=false
 SKIP_PUSH=false
+SKIP_E2E=false
 DRY_RUN=false
 DOCKER_PUSH=false
+RELEASE_CURRENT=false
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -26,6 +28,8 @@ while [[ $# -gt 0 ]]; do
     --minor)    BUMP="minor"; shift ;;
     --major)    BUMP="major"; shift ;;
     --no-docker) SKIP_DOCKER=true; shift ;;
+    --no-e2e)   SKIP_E2E=true; shift ;;
+    --release-current) RELEASE_CURRENT=true; shift ;;
     --no-push)  SKIP_PUSH=true; shift ;;
     --docker-push) DOCKER_PUSH=true; shift ;;
     --dry-run)  DRY_RUN=true; SKIP_PUSH=true; shift ;;
@@ -37,6 +41,10 @@ while [[ $# -gt 0 ]]; do
       echo "  --minor       Bump minor version (0.10.2 → 0.11.0)"
       echo "  --major       Bump major version (0.10.2 → 1.0.0)"
       echo "  --no-docker   Skip Docker build & test"
+      echo "  --no-e2e      Skip the end-to-end suite (it runs by default)"
+      echo "  --release-current"
+      echo "                Tag & release the version already in package.json,"
+      echo "                without bumping (use when the bump was done by hand)"
       echo "  --no-push     Bump & commit locally, but don't push to GitHub"
       echo "  --docker-push Build, tag, and push Docker image to GHCR"
       echo "  --dry-run     Full check only — no version bump, no commit, no push"
@@ -51,6 +59,7 @@ while [[ $# -gt 0 ]]; do
       echo "  ./scripts/release.sh --minor --dry-run # Bump minor, check only"
       echo "  ./scripts/release.sh --docker-push     # Build & push Docker to GHCR"
       echo "  ./scripts/release.sh                   # Just check, no version bump"
+      echo "  ./scripts/release.sh --release-current # Tag & release the current version"
       exit 0
       ;;
     *) echo "Unknown option: $1"; exit 1 ;;
@@ -111,15 +120,26 @@ REPO=$(git remote get-url origin | sed 's/.*github.com[:/]\(.\+\)\.git$/\1/')
 # would read it and skip a version. Restore the original on any exit that
 # doesn't reach the commit.
 PKG_BACKUP=$(mktemp)
+CHANGELOG_BACKUP=$(mktemp)
 BUMPED=false
+CHANGELOG_PROMOTED=false
 COMMITTED=false
 
 restore_version() {
-  if [ "$BUMPED" = true ] && [ "$COMMITTED" = false ]; then
-    cp "$PKG_BACKUP" package.json
-    warn "Aborted after the version bump — package.json restored to $CURRENT_VERSION"
+  if [ "$COMMITTED" = false ]; then
+    if [ "$BUMPED" = true ]; then
+      cp "$PKG_BACKUP" package.json
+      warn "Aborted after the version bump — package.json restored to $CURRENT_VERSION"
+    fi
+    # The changelog is rewritten in the same breath as the bump, so it has to
+    # be rolled back on the same terms — otherwise a failed run leaves the
+    # Unreleased section consumed by a release that never happened.
+    if [ "$CHANGELOG_PROMOTED" = true ]; then
+      cp "$CHANGELOG_BACKUP" CHANGELOG.md
+      warn "CHANGELOG.md restored — '## [Unreleased]' put back"
+    fi
   fi
-  rm -f "$PKG_BACKUP"
+  rm -f "$PKG_BACKUP" "$CHANGELOG_BACKUP"
 }
 trap restore_version EXIT
 
@@ -165,8 +185,44 @@ if [ -n "$BUMP" ]; then
   ")
   echo -e "  New version: ${GREEN}$NEW_VERSION${NC}"
 
-  if [ -z "$(extract_changelog "$NEW_VERSION")" ]; then
-    warn "CHANGELOG.md has no '## [$NEW_VERSION]' section — the release will fall back to generated notes"
+fi
+
+if [ "$RELEASE_CURRENT" = true ] && [ -n "$BUMP" ]; then
+  fail "--release-current releases the version already in package.json; it cannot be combined with a bump"
+fi
+
+# The version this run will tag and release, if any. Bumping implies it;
+# --release-current covers the case where the bump was made by hand (which
+# otherwise left no way to cut the release at all — tagging was gated on a
+# bump happening in this same run).
+RELEASE_VERSION=""
+if [ -n "$BUMP" ]; then
+  RELEASE_VERSION="$NEW_VERSION"
+elif [ "$RELEASE_CURRENT" = true ]; then
+  RELEASE_VERSION="$CURRENT_VERSION"
+  echo "  Releasing current version: $RELEASE_VERSION"
+fi
+
+# What the release notes compare against. With a bump that is the version
+# being replaced; releasing the current version it is the newest tag, since
+# package.json already holds the version being released.
+PREV_VERSION="$CURRENT_VERSION"
+if [ "$RELEASE_CURRENT" = true ]; then
+  PREV_VERSION=$(git tag --list 'v*' --sort=-v:refname | head -1 | sed 's/^v//')
+  PREV_VERSION=${PREV_VERSION:-$CURRENT_VERSION}
+fi
+
+if [ -n "$RELEASE_VERSION" ]; then
+  if [ -n "$(extract_changelog "$RELEASE_VERSION")" ]; then
+    :
+  elif [ -n "$(extract_changelog 'Unreleased')" ]; then
+    echo "  CHANGELOG: '## [Unreleased]' will become '## [$RELEASE_VERSION]'"
+  else
+    warn "CHANGELOG.md has no '## [$RELEASE_VERSION]' or '## [Unreleased]' section — the release will fall back to generated notes"
+  fi
+
+  if git rev-parse "v$RELEASE_VERSION" > /dev/null 2>&1; then
+    fail "Tag v$RELEASE_VERSION already exists"
   fi
 fi
 
@@ -199,6 +255,18 @@ step "Tests"
 pnpm test:run
 ok "All tests passed"
 
+# ─── End-to-end tests ──────────────────────────────────────────────────────────
+# The unit suite cannot see wiring: a gesture bound to handlers nothing spreads,
+# a CSS variable that never reaches the rule using it, a drop committed twice.
+# Those only fail in a browser, so a release check without e2e is not a check.
+if [ "$SKIP_E2E" = false ]; then
+  step "End-to-end tests"
+  pnpm test:e2e
+  ok "End-to-end tests passed"
+else
+  warn "Skipping end-to-end tests (--no-e2e)"
+fi
+
 # ─── Version bump ──────────────────────────────────────────────────────────────
 if [ -n "$BUMP" ]; then
   step "Bumping version: $CURRENT_VERSION → $NEW_VERSION"
@@ -219,6 +287,40 @@ if [ -n "$BUMP" ]; then
   fi
 fi
 
+# ─── Changelog promotion ───────────────────────────────────────────────────────
+# Notes are written under "## [Unreleased]" as work lands, but the release
+# reads "## [<version>]" — so every release used to need a hand edit first,
+# and forgetting it silently shipped generated commit-list notes instead of
+# the ones actually written.
+if [ -n "$RELEASE_VERSION" ] && [ -z "$(extract_changelog "$RELEASE_VERSION")" ] \
+   && [ -n "$(extract_changelog 'Unreleased')" ]; then
+  step "Promoting CHANGELOG '## [Unreleased]' → '## [$RELEASE_VERSION]'"
+
+  if [ "$DRY_RUN" = true ]; then
+    warn "Dry run — would rewrite the Unreleased heading"
+  else
+    cp CHANGELOG.md "$CHANGELOG_BACKUP"
+    CHANGELOG_PROMOTED=true
+    RELEASE_DATE=$(date +%Y-%m-%d)
+    node -e "
+      const fs = require('fs');
+      const text = fs.readFileSync('CHANGELOG.md', 'utf8');
+      // Only the heading changes; a fresh empty Unreleased section is left
+      // above it so the next cycle has somewhere to write.
+      const replaced = text.replace(
+        /^## \[Unreleased\][^\n]*$/m,
+        '## [Unreleased]\n\n## [$RELEASE_VERSION] - $RELEASE_DATE'
+      );
+      if (replaced === text) {
+        console.error('CHANGELOG.md: no Unreleased heading matched');
+        process.exit(1);
+      }
+      fs.writeFileSync('CHANGELOG.md', replaced);
+    "
+    ok "CHANGELOG.md now has a [$RELEASE_VERSION] section"
+  fi
+fi
+
 # ─── Build ─────────────────────────────────────────────────────────────────────
 step "Build"
 pnpm build
@@ -233,7 +335,15 @@ if [ "$SKIP_DOCKER" = false ]; then
     fail "$ENGINE is not running. Start it, or use --no-docker"
   fi
 
-  $ENGINE build -t calino:test . > /dev/null 2>&1
+  # Output is captured rather than discarded: `set -e` would otherwise abort
+  # the whole release on a build failure having printed nothing at all, which
+  # is the least useful way to learn the Dockerfile broke.
+  BUILD_STATUS=0
+  BUILD_OUTPUT=$($ENGINE build -t calino:test . 2>&1) || BUILD_STATUS=$?
+  if [ "$BUILD_STATUS" -ne 0 ]; then
+    echo "$BUILD_OUTPUT"
+    fail "$ENGINE build failed (exit $BUILD_STATUS)"
+  fi
   ok "Image built"
 
   step "Container healthcheck"
@@ -295,11 +405,7 @@ if [ "$SKIP_DOCKER" = false ]; then
   echo "  Docker tags (CI will generate):"
   echo "    - ghcr.io/ivan-malinovski/calino:main"
   echo "    - ghcr.io/ivan-malinovski/calino:latest"
-  if [ -n "$NEW_VERSION" ]; then
-    echo "    - ghcr.io/ivan-malinovski/calino:$NEW_VERSION"
-  else
-    echo "    - ghcr.io/ivan-malinovski/calino:$CURRENT_VERSION"
-  fi
+  echo "    - ghcr.io/ivan-malinovski/calino:${RELEASE_VERSION:-$CURRENT_VERSION}"
   echo "    - ghcr.io/ivan-malinovski/calino:sha-$(git rev-parse --short HEAD)"
 fi
 
@@ -318,7 +424,7 @@ if [ "$DOCKER_PUSH" = true ]; then
     $ENGINE pull ghcr.io/ivan-malinovski/calino:latest > /dev/null 2>&1 || true
   }
 
-  VERSION_TAG="${NEW_VERSION:-$CURRENT_VERSION}"
+  VERSION_TAG="${RELEASE_VERSION:-$CURRENT_VERSION}"
   SHA_TAG="sha-$(git rev-parse --short HEAD)"
   IMAGE="ghcr.io/ivan-malinovski/calino"
 
@@ -348,47 +454,65 @@ if [ "$DOCKER_PUSH" = true ]; then
 fi
 
 # ─── Commit & push ─────────────────────────────────────────────────────────────
-if [ -n "$BUMP" ] && [ "$DRY_RUN" = false ]; then
-  step "Committing version bump"
-  git add package.json
-  git commit -m "chore: bump version to $CURRENT_VERSION → $NEW_VERSION"
+if [ "$DRY_RUN" = false ] && { [ "$BUMPED" = true ] || [ "$CHANGELOG_PROMOTED" = true ]; }; then
+  step "Committing release preparation"
+  [ "$BUMPED" = true ] && git add package.json
+  [ "$CHANGELOG_PROMOTED" = true ] && git add CHANGELOG.md
+  if [ "$BUMPED" = true ]; then
+    git commit -m "chore(release): $CURRENT_VERSION → $NEW_VERSION"
+  else
+    git commit -m "chore(release): prepare $RELEASE_VERSION"
+  fi
   COMMITTED=true
-  ok "Version bump committed"
+  ok "Release preparation committed"
 fi
 
 if [ "$SKIP_PUSH" = false ]; then
   step "Pushing to $BRANCH"
   git push origin "$BRANCH"
 
-  # Also push the version tag and create GitHub Release if we bumped
-  if [ -n "$BUMP" ]; then
-    git tag "v$NEW_VERSION"
-    git push origin "v$NEW_VERSION"
+  # Also push the version tag and create the GitHub Release. Driven by
+  # RELEASE_VERSION rather than by whether this run did the bump, so a version
+  # bumped by hand can still be released.
+  if [ -n "$RELEASE_VERSION" ]; then
+    git tag "v$RELEASE_VERSION"
+    git push origin "v$RELEASE_VERSION"
 
     # Create GitHub Release, preferring the hand-written CHANGELOG section over
     # the generated commit list.
-    step "Creating GitHub Release v$NEW_VERSION"
+    step "Creating GitHub Release v$RELEASE_VERSION"
     NOTES_FILE=$(mktemp)
-    extract_changelog "$NEW_VERSION" > "$NOTES_FILE"
+    extract_changelog "$RELEASE_VERSION" > "$NOTES_FILE"
 
+    # `gh`'s stderr is kept, and its exit code decides what gets reported.
+    # Previously any failure was silenced and the script announced the release
+    # as created regardless — so a release that never existed looked fine, and
+    # the tag was already pushed by then.
+    RELEASE_STATUS=0
     if [ -s "$NOTES_FILE" ]; then
       printf '\n**Full Changelog**: https://github.com/%s/compare/v%s...v%s\n' \
-        "$REPO" "$CURRENT_VERSION" "$NEW_VERSION" >> "$NOTES_FILE"
-      gh release create "v$NEW_VERSION" \
-        --title "v$NEW_VERSION" \
+        "$REPO" "$PREV_VERSION" "$RELEASE_VERSION" >> "$NOTES_FILE"
+      gh release create "v$RELEASE_VERSION" \
+        --title "v$RELEASE_VERSION" \
         --notes-file "$NOTES_FILE" \
-        --repo "$REPO" \
-        2>/dev/null || echo "  (release creation skipped — install gh CLI for auto-releases)"
+        --repo "$REPO" || RELEASE_STATUS=$?
     else
-      warn "No CHANGELOG section for $NEW_VERSION — using generated notes"
-      gh release create "v$NEW_VERSION" \
-        --title "v$NEW_VERSION" \
+      warn "No CHANGELOG section for $RELEASE_VERSION — using generated notes"
+      gh release create "v$RELEASE_VERSION" \
+        --title "v$RELEASE_VERSION" \
         --generate-notes \
-        --repo "$REPO" \
-        2>/dev/null || echo "  (release creation skipped — install gh CLI for auto-releases)"
+        --repo "$REPO" || RELEASE_STATUS=$?
     fi
     rm -f "$NOTES_FILE"
-    ok "Release v$NEW_VERSION created"
+
+    if [ "$RELEASE_STATUS" -eq 0 ]; then
+      ok "Release v$RELEASE_VERSION created"
+    else
+      # Not fatal: the tag is pushed, so CI has already been triggered and the
+      # release can be created by hand. But it must not be reported as done.
+      warn "Release creation failed (exit $RELEASE_STATUS) — tag v$RELEASE_VERSION is pushed, so CI is running"
+      warn "Create it manually: gh release create v$RELEASE_VERSION --repo $REPO"
+    fi
   fi
 
   ok "Pushed to $BRANCH"
@@ -400,8 +524,12 @@ echo -e "${GREEN}═════════════════════
 echo -e "${GREEN}  Release check complete!${NC}"
 if [ -n "$BUMP" ]; then
   echo -e "${GREEN}  Version: $CURRENT_VERSION → $NEW_VERSION${NC}"
+elif [ -n "$RELEASE_VERSION" ]; then
+  echo -e "${GREEN}  Version: $RELEASE_VERSION${NC}"
 fi
-if [ "$SKIP_PUSH" = true ]; then
+if [ "$DRY_RUN" = true ]; then
+  echo -e "${YELLOW}  (dry run — nothing bumped, committed or pushed)${NC}"
+elif [ "$SKIP_PUSH" = true ]; then
   echo -e "${YELLOW}  (not pushed — use without --no-push to push)${NC}"
 fi
 echo -e "${GREEN}═══════════════════════════════════════════════════════════════${NC}"
