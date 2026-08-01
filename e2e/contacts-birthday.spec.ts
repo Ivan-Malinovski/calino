@@ -26,7 +26,11 @@ import {
   seedStoreCalendars,
 } from './fixtures/localstorage'
 
-const PERSONAL = '/dav/calendars/user/personal/'
+// A collection of this spec's own. It asserts the exact number of copies on
+// the server, so it cannot share one with a spec that resets it — and
+// `calendar-sync.spec.ts` resets `personal/` in its beforeEach, which under
+// `fullyParallel` deleted the birthday this spec had just written.
+const BIRTHDAYS = '/dav/calendars/user/birthdays/'
 const WORK = '/dav/calendars/user/work/'
 const BIRTHDAY_MARKER = (contactId: string) => `calino:contact:${contactId}`
 
@@ -80,7 +84,7 @@ async function seedAllCalendars(page: Page, baseURL: string): Promise<void> {
     username: 'test',
     password: 'test',
     calendars: [
-      { id: 'cal-personal', name: 'Personal', path: 'calendars/user/personal/' },
+      { id: 'cal-birthdays', name: 'Birthdays', path: 'calendars/user/birthdays/' },
       ...extras.map((c) => ({
         id: `${baseURL}/mock-caldav/dav/${c.path}`,
         name: c.name,
@@ -124,18 +128,18 @@ test.describe('contact birthday → calendar (#84)', () => {
 
     await page.goto('/contacts')
     await page.getByRole('button', { name: 'Ada Lovelace' }).click()
-    await addBirthdayTo(page, 'Personal')
+    await addBirthdayTo(page, 'Birthdays')
 
     // Server-side proof: the VEVENT must actually land on the CalDAV mock,
     // recurring (RRULE), carrying the contact marker that "On calendar" keys on.
     await expect
       .poll(
-        async () => dumpHasMarker(await dump(page, baseURL!, PERSONAL), BIRTHDAY_MARKER('c1')),
+        async () => dumpHasMarker(await dump(page, baseURL!, BIRTHDAYS), BIRTHDAY_MARKER('c1')),
         { timeout: 15_000 }
       )
       .toBe(true)
-    const personal = (await dump(page, baseURL!, PERSONAL)) ?? {}
-    const landed = Object.values(personal).find((ics) => ics.includes(BIRTHDAY_MARKER('c1')))
+    const birthdays = (await dump(page, baseURL!, BIRTHDAYS)) ?? {}
+    const landed = Object.values(birthdays).find((ics) => ics.includes(BIRTHDAY_MARKER('c1')))
     expect(landed).toContain('RRULE')
 
     // After a reload the app rehydrates from localStorage + syncs from the
@@ -148,7 +152,7 @@ test.describe('contact birthday → calendar (#84)', () => {
     await expect(page.getByRole('button', { name: /On calendar/ })).toBeVisible()
 
     // And exactly one copy on the server — no duplicate from the second visit.
-    const afterReload = (await dump(page, baseURL!, PERSONAL)) ?? {}
+    const afterReload = (await dump(page, baseURL!, BIRTHDAYS)) ?? {}
     const copies = Object.values(afterReload).filter((ics) => ics.includes(BIRTHDAY_MARKER('c1')))
     expect(copies).toHaveLength(1)
   })
@@ -176,8 +180,8 @@ test.describe('contact birthday → calendar (#84)', () => {
         { timeout: 15_000 }
       )
       .toBe(true)
-    const personal = (await dump(page, baseURL!, PERSONAL)) ?? {}
-    expect(dumpHasMarker(personal, BIRTHDAY_MARKER('c2'))).toBe(false)
+    const birthdays = (await dump(page, baseURL!, BIRTHDAYS)) ?? {}
+    expect(dumpHasMarker(birthdays, BIRTHDAY_MARKER('c2'))).toBe(false)
   })
 
   test('undo removes the birthday from the server, not just the store', async ({
@@ -193,13 +197,13 @@ test.describe('contact birthday → calendar (#84)', () => {
 
     await page.goto('/contacts')
     await page.getByRole('button', { name: 'Katherine Johnson' }).click()
-    await addBirthdayTo(page, 'Personal')
+    await addBirthdayTo(page, 'Birthdays')
 
     // Let the create PUT land before undoing — otherwise the undo's DELETE
     // can race the create and 404, leaving the resource on the server.
     await expect
       .poll(
-        async () => dumpHasMarker(await dump(page, baseURL!, PERSONAL), BIRTHDAY_MARKER('c3')),
+        async () => dumpHasMarker(await dump(page, baseURL!, BIRTHDAYS), BIRTHDAY_MARKER('c3')),
         { timeout: 15_000 }
       )
       .toBe(true)
@@ -210,7 +214,7 @@ test.describe('contact birthday → calendar (#84)', () => {
     // local store record, so a later sync would resurrect the event).
     await expect
       .poll(
-        async () => !dumpHasMarker(await dump(page, baseURL!, PERSONAL), BIRTHDAY_MARKER('c3')),
+        async () => !dumpHasMarker(await dump(page, baseURL!, BIRTHDAYS), BIRTHDAY_MARKER('c3')),
         { timeout: 15_000 }
       )
       .toBe(true)
@@ -230,10 +234,10 @@ test.describe('contact birthday → calendar (#84)', () => {
 
     await page.goto('/contacts')
     await page.getByRole('button', { name: 'Mary Jackson' }).click()
-    await addBirthdayTo(page, 'Personal')
+    await addBirthdayTo(page, 'Birthdays')
     await expect
       .poll(
-        async () => dumpHasMarker(await dump(page, baseURL!, PERSONAL), BIRTHDAY_MARKER('c4')),
+        async () => dumpHasMarker(await dump(page, baseURL!, BIRTHDAYS), BIRTHDAY_MARKER('c4')),
         { timeout: 15_000 }
       )
       .toBe(true)
@@ -249,7 +253,7 @@ test.describe('contact birthday → calendar (#84)', () => {
     // contact left `calino:contact:c4` on the server forever.
     await expect
       .poll(
-        async () => !dumpHasMarker(await dump(page, baseURL!, PERSONAL), BIRTHDAY_MARKER('c4')),
+        async () => !dumpHasMarker(await dump(page, baseURL!, BIRTHDAYS), BIRTHDAY_MARKER('c4')),
         { timeout: 15_000 }
       )
       .toBe(true)

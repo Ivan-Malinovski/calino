@@ -105,6 +105,17 @@ const ACCOUNTS: MockAccount[] = [
         components: ['VEVENT', 'VTODO', 'VJOURNAL'],
       },
       {
+        // Dedicated collection for `contacts-birthday.spec.ts`, which asserts
+        // exactly how many copies of a birthday sit on the server. It used to
+        // write into `personal/`, which `calendar-sync.spec.ts` resets in its
+        // beforeEach — under `fullyParallel` that wiped the birthday mid-test
+        // and the copy count came back 0.
+        path: '/dav/calendars/user/birthdays/',
+        displayName: 'Birthdays',
+        color: '#10B981',
+        components: ['VEVENT', 'VTODO', 'VJOURNAL'],
+      },
+      {
         // Dedicated collections for the journal-move test in `journal.spec.ts`
         // (editing an entry's calendar). Owned by that spec outright, like
         // event-move owns move-source/ — its resets never race the specs that
