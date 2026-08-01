@@ -7,7 +7,7 @@ All notable changes to Calino will be documented in this file.
 ### Added
 
 - **Arrange the view switcher however you like.** Long-press a tile in the mobile view grid and drag it where you want it; on desktop, drag a tab along the strip. Your arrangement is remembered, and everything follows it — the tabs, the mobile grid, and the order that swiping and the `<`/`>` shortcuts step through. Reordering is also available from the keyboard with Alt+←/→ on a focused tab.
-- **Pinch the week view on a phone to fit more days on screen.** It compresses the day columns rather than zooming, down to about five days at once. Vertical zoom stays a desktop gesture.
+- **Pinch the week view on a phone to fit more days on screen.** It compresses the day columns rather than zooming, down to about five days at once. Vertical zoom stays a desktop gesture. Pinch had previously never worked on touch at all — the gesture library's touch handlers were never actually bound.
 - **The divider in the tab strip is now yours to place.** It's an element you drag like any tab, rather than a fixed boundary between "calendar" and "everything else", so you can group the tabs however makes sense to you.
 
 ### Fixed

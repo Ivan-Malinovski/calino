@@ -40,6 +40,7 @@ import WeekDayColumn from './WeekDayColumn'
 import { ContextMenu } from '@/components/common/ContextMenu'
 import { useGestures } from '@/hooks/useGestures'
 import { useIsMobile } from '@/hooks/useIsMobile'
+import { usePinchScale } from '@/hooks/usePinchScale'
 import { useContextMenuStore } from '@/store/contextMenuStore'
 import { useWindowHeight } from '@/hooks/useWindowHeight'
 import { useDragDuplicateModifier } from '@/hooks/useDragDuplicateModifier'
@@ -55,7 +56,7 @@ import {
   isSameDropPreview,
   type DropPreview,
 } from '../lib/dragSnap'
-import { shouldPageOnSwipe } from './weekViewGestures'
+import { SWIPE_SCROLLER_ATTR } from '../swipePaging'
 import styles from './WeekView.module.css'
 
 const BASE_HOUR_HEIGHT = 60
@@ -199,15 +200,6 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
       let newDate: Date
 
       if (direction === 'left' || direction === 'right') {
-        // On mobile the day columns scroll horizontally under the same
-        // gesture, so a flick that was only meant to bring the next day into
-        // view also changed the week. Page only from the edge the swipe is
-        // heading towards — until then the flick belongs to the scroller.
-        //
-        // Skipped entirely when there is nothing to scroll (a narrow enough
-        // day count, or a wide screen), so swiping still pages immediately.
-        if (!shouldPageOnSwipe(direction, mobileScrollRef.current)) return
-
         newDate =
           dayCount === 7
             ? direction === 'left'
@@ -225,30 +217,35 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
     [currentDate, setCurrentDate, dayCount]
   )
 
+  const handlePinch = useCallback((scaleValue: number) => {
+    setScale(scaleValue)
+  }, [])
+
   // On mobile a pinch compresses the days horizontally so more of the week
   // fits, rather than scaling the hour height. Vertical zoom stays a desktop
   // gesture (ctrl+wheel): on a phone the useful axis is how many days you can
   // see, and driving both from one pinch would make neither controllable.
-  const handlePinch = useCallback(
-    (scaleValue: number) => {
-      if (isMobile) setDayScale(scaleValue)
-      else setScale(scaleValue)
-    },
-    [isMobile]
-  )
-
-  // Pinching in is a *reduction*, so the mobile range runs below 1 — the
-  // desktop range starts at 1 because there it magnifies the hour height.
-  const pinchRange = useMemo(
-    () => (isMobile ? { min: MIN_DAY_SCALE, max: 1 } : { min: 1, max: 1.5 }),
-    [isMobile]
-  )
+  //
+  // Bound with its own touch listeners rather than through useGestures, whose
+  // pinch never fires on touch — see usePinchScale's doc comment.
+  const dayScaleAtPinchStart = useRef(1)
+  const handlePinchStart = useCallback(() => {
+    dayScaleAtPinchStart.current = dayScale
+  }, [dayScale])
+  const handleDayPinch = useCallback((ratio: number) => {
+    setDayScale(Math.min(1, Math.max(MIN_DAY_SCALE, dayScaleAtPinchStart.current * ratio)))
+  }, [])
+  usePinchScale(mobileScrollRef, {
+    onPinchStart: handlePinchStart,
+    onPinch: handleDayPinch,
+    enabled: isMobile,
+  })
 
   const { bind } = useGestures({
     onSwipe: handleSwipe,
     onPinch: handlePinch,
     swipeThreshold: 50,
-    pinchScaleRange: pinchRange,
+    pinchScaleRange: { min: 1, max: 1.5 },
   })
 
   const sensors = useSensors(
@@ -753,6 +750,7 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
       ref={mobileScrollRef}
       className={styles.mobileContainer}
       data-component="week-mobile-scroll"
+      {...{ [SWIPE_SCROLLER_ATTR]: true }}
     >
       <div className={styles.mobileHeader} data-component="week-mobile-header">
         <div className={styles.weekNumberHeader}>W{weekNumber}</div>

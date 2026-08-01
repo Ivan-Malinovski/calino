@@ -9,6 +9,7 @@ import { useIsMobile } from './hooks/useIsMobile'
 import { DUR_FAST } from './lib/motion'
 import { useTwoFingerSwipe } from './hooks/useTwoFingerSwipe'
 import { useHorizontalSwipe } from './hooks/useHorizontalSwipe'
+import { shouldPageOnSwipe, SWIPE_SCROLLER_ATTR } from './features/calendar/swipePaging'
 import { usePullToRefresh } from './hooks/usePullToRefresh'
 import { useMatchMedia } from './hooks/useMatchMedia'
 import { useCalendarStore } from './store/calendarStore'
@@ -402,6 +403,16 @@ function CalendarApp(): JSX.Element {
       if (!passedDistance && !passedVelocity) return
 
       const direction: 'prev' | 'next' = info.offset.x < 0 ? 'next' : 'prev'
+
+      // A view can carry a horizontally-scrolling strip directly under this
+      // pan — the mobile week view's day columns do. Those get first claim:
+      // page only once the strip is already at the edge the swipe is heading
+      // towards, otherwise a flick meant to reveal the next day jumped a
+      // whole week.
+      if (!shouldPageOnSwipe(direction, document.querySelector(`[${SWIPE_SCROLLER_ATTR}]`))) {
+        return
+      }
+
       const state = useCalendarStore.getState()
       const newDate = getNavigatedDate(view, parseISO(state.currentDate), direction)
       state.setCurrentDate(format(newDate, 'yyyy-MM-dd'))

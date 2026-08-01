@@ -162,3 +162,113 @@ test.describe('Week view — pinch to fit more days', () => {
     expect(after).toBeGreaterThanOrEqual(4.5)
   })
 })
+
+test.describe('Week view — swipe paging vs. the day strip', () => {
+  test.beforeEach(async ({ page }) => {
+    await clearState(page)
+    await page.goto('/week')
+    await expect(page.locator(SCROLL)).toBeVisible()
+  })
+
+  /** The week number shown in the corner of the grid — a direct read of which
+   *  week is displayed, without depending on the header's date formatting. */
+  const weekLabel = (page: import('@playwright/test').Page) =>
+    page.locator(`${HEADER} > div`).first().innerText()
+
+  /** A horizontal drag on the content area. Paging is a framer-motion pan on
+   *  `motion.main`, so this has to be a real pointer drag rather than a
+   *  synthetic event — driving the wrong layer is exactly how the first
+   *  attempt at this fix ended up in dead code. */
+  async function panHorizontally(
+    page: import('@playwright/test').Page,
+    dx: number
+  ): Promise<void> {
+    const box = await page.locator(SCROLL).boundingBox()
+    if (!box) throw new Error('no scroll box')
+    const y = box.y + box.height / 2
+    const startX = box.x + box.width / 2
+    await page.mouse.move(startX, y)
+    await page.mouse.down()
+    await page.mouse.move(startX + dx, y, { steps: 12 })
+    await page.mouse.up()
+  }
+
+  test('a swipe mid-week scrolls the days instead of changing week', async ({ page }) => {
+    // The reported bug: any quick flick jumped a whole week.
+    await page.locator(SCROLL).evaluate((el) => {
+      el.scrollLeft = Math.floor((el.scrollWidth - el.clientWidth) / 2)
+    })
+
+    const before = await weekLabel(page)
+    await panHorizontally(page, -120)
+    await page.waitForTimeout(300)
+    expect(await weekLabel(page)).toBe(before)
+  })
+
+  test('a swipe from the end of the strip does change week', async ({ page }) => {
+    // ...and the feature still has to work once the strip is used up.
+    await page.locator(SCROLL).evaluate((el) => {
+      el.scrollLeft = el.scrollWidth
+    })
+
+    const before = await weekLabel(page)
+    await panHorizontally(page, -120)
+    await expect.poll(() => weekLabel(page)).not.toBe(before)
+  })
+})
+
+test.describe('Week view — pinch gesture wiring', () => {
+  test.beforeEach(async ({ page }) => {
+    await clearState(page)
+    await page.goto('/week')
+    await expect(page.locator(SCROLL)).toBeVisible()
+  })
+
+  test('pinching in with two fingers compresses the days', async ({ page }) => {
+    // Drives real touch events on the element, because the failure this
+    // covers was purely one of binding: the previous pinch went through
+    // @use-gesture, which with `pointer: { touch: true }` returns onTouch*
+    // handlers that were never spread onto anything — so on a phone the
+    // gesture did nothing at all while every unit test still passed.
+    const before = await page
+      .locator(DAY_COLUMN)
+      .first()
+      .evaluate((el) => el.getBoundingClientRect().width)
+
+    await page.locator(SCROLL).evaluate((el) => {
+      const box = el.getBoundingClientRect()
+      const y = box.top + box.height / 2
+      const mid = box.left + box.width / 2
+
+      const touch = (id: number, x: number): Touch =>
+        new Touch({ identifier: id, target: el, clientX: x, clientY: y })
+
+      const fire = (type: string, xs: [number, number]): void => {
+        const touches = [touch(0, xs[0]), touch(1, xs[1])]
+        el.dispatchEvent(
+          new TouchEvent(type, {
+            touches,
+            targetTouches: touches,
+            changedTouches: touches,
+            bubbles: true,
+            cancelable: true,
+          })
+        )
+      }
+
+      fire('touchstart', [mid - 100, mid + 100])
+      // Fingers coming together — spread halves.
+      fire('touchmove', [mid - 50, mid + 50])
+      fire('touchend', [mid - 50, mid + 50])
+    })
+
+    await expect
+      .poll(() =>
+        page
+          .locator(DAY_COLUMN)
+          .first()
+          .evaluate((el) => el.getBoundingClientRect().width)
+      )
+      .toBeLessThan(before)
+  })
+})
