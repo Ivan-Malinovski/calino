@@ -14,6 +14,7 @@ dependencies {
     implementation project(':capgo-capacitor-share-target')
     implementation project(':capacitor-app')
     implementation project(':capacitor-haptics')
+    implementation project(':capacitor-keyboard')
     implementation project(':capacitor-local-notifications')
     implementation project(':capacitor-status-bar')
 

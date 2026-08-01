@@ -33,6 +33,7 @@ import { ThemeProvider } from './components/ThemeProvider'
 import { useCardDAV } from './features/carddav/hooks/useCardDAV'
 import { initContactPhotos } from './lib/contactPhotoSync'
 import { useCalDAV } from './features/caldav/hooks/useCalDAV'
+import { useNativeKeyboard } from './hooks/useNativeKeyboard'
 import { useNotifications } from './hooks/useNotifications'
 import { openEventDeepLink } from './lib/deepLink'
 import { AIPhotoImportRoot } from './features/aiVision/components/AIPhotoImportRoot'
@@ -270,6 +271,9 @@ function CalendarApp(): JSX.Element {
   // real OS-scheduled notifications). Was defined but never mounted anywhere
   // in the app — reminders have never actually fired, on web or native.
   useNotifications()
+
+  // Keep the focused field above the Android on-screen keyboard.
+  useNativeKeyboard()
 
   useViewManager()
 

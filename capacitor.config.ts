@@ -1,4 +1,5 @@
 import type { CapacitorConfig } from '@capacitor/cli'
+import { KeyboardResize } from '@capacitor/keyboard'
 
 const config: CapacitorConfig = {
   appId: 'calino.malinov.ski',
@@ -15,6 +16,14 @@ const config: CapacitorConfig = {
     // src/lib/webFetch.ts. See the comment there before changing this.
     CapacitorHttp: {
       enabled: true,
+    },
+    // `Native` resizes the WebView window itself, so `100dvh` and the
+    // bottom-anchored sheets shrink with the keyboard instead of sitting
+    // underneath it. `resizeOnFullScreen` is the Android-only workaround for
+    // the platform bug where an edge-to-edge activity reports no inset at all.
+    Keyboard: {
+      resize: KeyboardResize.Native,
+      resizeOnFullScreen: true,
     },
   },
 }
