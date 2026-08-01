@@ -86,7 +86,7 @@
 }
 
 .headerShadow {
-  box-shadow: 0 2px 8px rgba(var(--ink-raw, 44, 40, 33), 0.05);
+  box-shadow: 0 2px 8px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.05 * var(--shadow-opacity, 1)));
 }
 
 .body {

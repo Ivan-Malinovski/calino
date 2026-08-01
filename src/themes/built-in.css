@@ -141,6 +141,11 @@
   --shadow-inset: inset 0 1px 2px rgba(0, 0, 0, 0.06);
 
   /* Event card theming */
+  /* Shadows are always cast in black — never in --ink-raw, which is the *text*
+     colour and so inverts to cream in dark mode, turning every drop shadow into
+     a glow. --shadow-opacity scales them all from one place. */
+  --shadow-rgb: 0, 0, 0;
+  --shadow-opacity: 1;
   --ink-raw: 0, 0, 0;
   --hover-bg: color-mix(in srgb, var(--accent) 6%, transparent);
   --selected-bg: color-mix(in srgb, var(--accent) 10%, transparent);
@@ -308,6 +313,11 @@
   --shadow-inset: inset 0 1px 2px rgba(0, 0, 0, 0.2);
 
   /* Event card theming */
+  /* Dark surfaces don't read a drop shadow as depth — they read it as haze, and
+     the layering here is carried by borders and surface steps anyway. Set this
+     above 0 to bring them back; they'll be black, not cream. */
+  --shadow-rgb: 0, 0, 0;
+  --shadow-opacity: 0;
   --ink-raw: 240, 236, 230;
   --hover-bg: color-mix(in srgb, var(--accent) 8%, transparent);
   --selected-bg: color-mix(in srgb, var(--accent) 14%, transparent);

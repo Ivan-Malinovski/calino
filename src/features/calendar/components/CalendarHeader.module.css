@@ -72,7 +72,7 @@
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
-  box-shadow: 0 1px 2px rgba(var(--ink-raw, 44, 40, 33), 0.05);
+  box-shadow: 0 1px 2px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.05 * var(--shadow-opacity, 1)));
   overflow: hidden;
   height: 38px;
   opacity: 1;
@@ -280,7 +280,7 @@
   background: var(--popover-bg, var(--panel));
   border: 1px solid var(--popover-border, var(--line));
   border-radius: var(--radius-md);
-  box-shadow: var(--modal-shadow, 0 4px 16px rgba(var(--ink-raw, 44, 40, 33), 0.12));
+  box-shadow: var(--modal-shadow, 0 4px 16px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.12 * var(--shadow-opacity, 1))));
   padding: 8px 0;
   min-width: 200px;
   z-index: 1000;
@@ -394,7 +394,7 @@
   top: 4px;
   height: var(--view-switcher-indicator-height, 32px);
   background: var(--view-switcher-indicator-bg, var(--panel));
-  box-shadow: var(--view-switcher-indicator-shadow, 0 1px 2px rgba(var(--ink-raw, 44, 40, 33), 0.08), 0 0 0 1px var(--line));
+  box-shadow: var(--view-switcher-indicator-shadow, 0 1px 2px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.08 * var(--shadow-opacity, 1))), 0 0 0 1px var(--line));
   border-radius: var(--view-switcher-indicator-radius, 9px);
   transition: left 0.25s cubic-bezier(0.4, 0, 0.2, 1), width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   z-index: 0;
@@ -422,7 +422,7 @@
   background: var(--popover-bg, var(--panel));
   border: 1px solid var(--popover-border, var(--line));
   border-radius: var(--radius-md);
-  box-shadow: var(--modal-shadow, 0 4px 12px rgba(var(--ink-raw, 44, 40, 33), 0.1));
+  box-shadow: var(--modal-shadow, 0 4px 12px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.1 * var(--shadow-opacity, 1))));
   overflow: hidden;
   z-index: 200;
   min-width: max-content;
@@ -522,7 +522,7 @@
   background: var(--popover-bg, var(--panel));
   border: 1px solid var(--popover-border, var(--line));
   border-radius: var(--radius-md);
-  box-shadow: var(--modal-shadow, 0 4px 12px rgba(var(--ink-raw, 44, 40, 33), 0.1));
+  box-shadow: var(--modal-shadow, 0 4px 12px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.1 * var(--shadow-opacity, 1))));
   overflow: hidden;
   z-index: 100;
   min-width: 120px;

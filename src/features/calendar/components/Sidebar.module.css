@@ -198,7 +198,7 @@
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   padding: 16px 16px 18px;
-  box-shadow: 0 1px 2px rgba(var(--ink-raw, 44, 40, 33), 0.04), 0 6px 16px rgba(var(--ink-raw, 44, 40, 33), 0.03);
+  box-shadow: 0 1px 2px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.04 * var(--shadow-opacity, 1))), 0 6px 16px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.03 * var(--shadow-opacity, 1)));
 }
 
 /* Plain sections (no card) */
@@ -214,7 +214,7 @@
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   padding: 16px 16px 18px;
-  box-shadow: 0 1px 2px rgba(var(--ink-raw, 44, 40, 33), 0.04), 0 6px 16px rgba(var(--ink-raw, 44, 40, 33), 0.03);
+  box-shadow: 0 1px 2px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.04 * var(--shadow-opacity, 1))), 0 6px 16px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.03 * var(--shadow-opacity, 1)));
 }
 
 /* Tasks section card */
@@ -225,7 +225,7 @@
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   padding: 16px 16px 3px;
-  box-shadow: 0 1px 2px rgba(var(--ink-raw, 44, 40, 33), 0.04), 0 6px 16px rgba(var(--ink-raw, 44, 40, 33), 0.03);
+  box-shadow: 0 1px 2px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.04 * var(--shadow-opacity, 1))), 0 6px 16px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.03 * var(--shadow-opacity, 1)));
 }
 
 .miniHeader {
@@ -430,7 +430,7 @@
   background: var(--popover-bg, var(--panel));
   border: 1px solid var(--popover-border, var(--line));
   border-radius: var(--radius-sm);
-  box-shadow: var(--modal-shadow, 0 4px 12px rgba(var(--ink-raw, 44, 40, 33), 0.1));
+  box-shadow: var(--modal-shadow, 0 4px 12px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.1 * var(--shadow-opacity, 1))));
   max-height: 200px;
   overflow-y: auto;
   z-index: 100;
@@ -670,7 +670,7 @@
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
-  box-shadow: 0 4px 12px rgba(var(--ink-raw), 0.1);
+  box-shadow: 0 4px 12px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.1 * var(--shadow-opacity, 1)));
 }
 
 .colorPresets {
@@ -1107,7 +1107,7 @@
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
-  box-shadow: 0 4px 12px rgba(var(--ink-raw, 44, 40, 33), 0.1);
+  box-shadow: 0 4px 12px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.1 * var(--shadow-opacity, 1)));
   margin-bottom: 8px;
   max-height: 200px;
   overflow-y: auto;
@@ -1170,7 +1170,7 @@
   height: 16px;
   border-radius: 50%;
   background: #fff;
-  box-shadow: 0 1px 3px rgba(var(--ink-raw), 0.25);
+  box-shadow: 0 1px 3px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.25 * var(--shadow-opacity, 1)));
 }
 
 .categoryToggleSwitch .categoryTogglePill::after {
@@ -1182,7 +1182,7 @@
   height: 16px;
   border-radius: 50%;
   background: #fff;
-  box-shadow: 0 1px 3px rgba(var(--ink-raw), 0.25);
+  box-shadow: 0 1px 3px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.25 * var(--shadow-opacity, 1)));
   transition: transform 0.2s;
 }
 
@@ -1259,7 +1259,7 @@
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   padding: 16px 16px 18px;
-  box-shadow: 0 1px 2px rgba(var(--ink-raw, 44, 40, 33), 0.04), 0 6px 16px rgba(var(--ink-raw, 44, 40, 33), 0.03);
+  box-shadow: 0 1px 2px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.04 * var(--shadow-opacity, 1))), 0 6px 16px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.03 * var(--shadow-opacity, 1)));
 }
 
 /* ---- Year/Month Dropdowns ---- */
@@ -1270,7 +1270,7 @@
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
-  box-shadow: 0 4px 12px rgba(var(--ink-raw, 44, 40, 33), 0.1);
+  box-shadow: 0 4px 12px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.1 * var(--shadow-opacity, 1)));
   max-height: 200px;
   overflow-y: auto;
   z-index: 100;
@@ -1463,7 +1463,7 @@
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
   padding: 14px;
-  box-shadow: 0 4px 16px rgba(var(--ink-raw, 44, 40, 33), 0.12);
+  box-shadow: 0 4px 16px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.12 * var(--shadow-opacity, 1)));
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -1545,7 +1545,7 @@
   padding: 6px 8px;
   min-width: 150px;
   max-width: 250px;
-  box-shadow: 0 4px 12px rgba(var(--ink-raw, 44, 40, 33), 0.1);
+  box-shadow: 0 4px 12px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.1 * var(--shadow-opacity, 1)));
   white-space: normal;
   pointer-events: none;
 }

@@ -16,7 +16,7 @@
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
-  box-shadow: 0 24px 80px rgba(var(--ink-raw), 0.08), 0 6px 20px rgba(var(--ink-raw), 0.05);
+  box-shadow: 0 24px 80px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.08 * var(--shadow-opacity, 1))), 0 6px 20px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.05 * var(--shadow-opacity, 1)));
   width: 100%;
   max-width: 520px;
   padding: 32px;

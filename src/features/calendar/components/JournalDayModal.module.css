@@ -632,7 +632,7 @@
   font-weight: 500;
   font-family: inherit;
   cursor: pointer;
-  box-shadow: var(--shadow-event, 0 1px 3px rgba(var(--ink-raw), 0.08));
+  box-shadow: var(--shadow-event, 0 1px 3px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.08 * var(--shadow-opacity, 1))));
   margin-right: auto;
   transition: background 0.14s, color 0.14s;
 }
@@ -668,7 +668,7 @@
   font-weight: 500;
   font-family: inherit;
   cursor: pointer;
-  box-shadow: var(--shadow-event, 0 1px 3px rgba(var(--ink-raw), 0.08));
+  box-shadow: var(--shadow-event, 0 1px 3px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.08 * var(--shadow-opacity, 1))));
   transition: background 0.14s, color 0.14s;
 }
 
@@ -693,7 +693,7 @@
   font-weight: 500;
   font-family: inherit;
   cursor: pointer;
-  box-shadow: var(--shadow-event, 0 1px 3px rgba(var(--ink-raw), 0.08));
+  box-shadow: var(--shadow-event, 0 1px 3px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.08 * var(--shadow-opacity, 1))));
   transition: background-color 0.15s, color 0.15s;
 }
 

@@ -13,7 +13,7 @@
   background: var(--canvas, #faf8f3);
   border-radius: var(--radius-lg);
   border: 1px solid var(--line, rgba(var(--ink-raw), 0.09));
-  box-shadow: var(--shadow-card, 0 1px 2px rgba(var(--ink-raw), 0.04), 0 6px 16px rgba(var(--ink-raw), 0.03));
+  box-shadow: var(--shadow-card, 0 1px 2px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.04 * var(--shadow-opacity, 1))), 0 6px 16px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.03 * var(--shadow-opacity, 1))));
 }
 
 /* Wraps a month's worth of rows so they can transition in as one unit. It
@@ -58,7 +58,7 @@
 }
 
 .containerShadow {
-  box-shadow: inset 0 -2px 4px rgba(var(--ink-raw), 0.05);
+  box-shadow: inset 0 -2px 4px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.05 * var(--shadow-opacity, 1)));
 }
 
 /* ---- Day Header ---- */
@@ -136,21 +136,21 @@
   border-radius: var(--radius-sm);
   background: var(--panel, #ffffff);
   border: 1px solid var(--line, rgba(var(--ink-raw), 0.09));
-  box-shadow: var(--shadow-event, 0 1px 2px rgba(var(--ink-raw), 0.04));
+  box-shadow: var(--shadow-event, 0 1px 2px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.04 * var(--shadow-opacity, 1))));
   overflow: hidden;
   cursor: pointer;
   transition: box-shadow 0.14s, transform 0.14s;
 }
 
 .agendaEvent:hover {
-  box-shadow: 0 4px 12px rgba(var(--ink-raw), 0.08);
+  box-shadow: 0 4px 12px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.08 * var(--shadow-opacity, 1)));
   transform: translateY(-1px);
 }
 
 .agendaEvent:focus-visible {
   outline: 2px solid var(--accent, #b07d4f);
   outline-offset: 1px;
-  box-shadow: 0 4px 12px rgba(var(--ink-raw), 0.08);
+  box-shadow: 0 4px 12px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.08 * var(--shadow-opacity, 1)));
   transform: translateY(-1px);
 }
 
@@ -240,21 +240,21 @@
   border-radius: var(--radius-sm);
   background: var(--panel, #ffffff);
   border: 1px solid var(--line, rgba(var(--ink-raw), 0.09));
-  box-shadow: var(--shadow-event, 0 1px 2px rgba(var(--ink-raw), 0.04));
+  box-shadow: var(--shadow-event, 0 1px 2px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.04 * var(--shadow-opacity, 1))));
   overflow: hidden;
   cursor: pointer;
   transition: box-shadow 0.14s, transform 0.14s;
 }
 
 .agendaTask:hover {
-  box-shadow: 0 4px 12px rgba(var(--ink-raw), 0.08);
+  box-shadow: 0 4px 12px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.08 * var(--shadow-opacity, 1)));
   transform: translateY(-1px);
 }
 
 .agendaTask:focus-visible {
   outline: 2px solid var(--accent, #b07d4f);
   outline-offset: 1px;
-  box-shadow: 0 4px 12px rgba(var(--ink-raw), 0.08);
+  box-shadow: 0 4px 12px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.08 * var(--shadow-opacity, 1)));
   transform: translateY(-1px);
 }
 

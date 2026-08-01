@@ -87,7 +87,7 @@
   top: 4px;
   height: 30px;
   background: var(--panel, #ffffff);
-  box-shadow: 0 1px 2px rgba(var(--ink-raw), 0.08), 0 0 0 1px var(--line, rgba(var(--ink-raw), 0.09));
+  box-shadow: 0 1px 2px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.08 * var(--shadow-opacity, 1))), 0 0 0 1px var(--line, rgba(var(--shadow-rgb, 0, 0, 0), calc(0.09 * var(--shadow-opacity, 1))));
   border-radius: var(--view-switcher-indicator-radius, 9px);
   transition: left 0.25s cubic-bezier(0.4, 0, 0.2, 1), width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   z-index: 0;
@@ -140,7 +140,7 @@
   font-weight: 500;
   border: none;
   cursor: pointer;
-  box-shadow: 0 1px 2px rgba(var(--ink-raw), 0.14);
+  box-shadow: 0 1px 2px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.14 * var(--shadow-opacity, 1)));
   transition: background 0.14s, transform 0.04s;
   font-family: inherit;
 }
@@ -887,14 +887,14 @@
   cursor: pointer;
   z-index: 10;
   position: relative;
-  box-shadow: 0 4px 12px rgba(var(--ink-raw), 0.15);
+  box-shadow: 0 4px 12px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.15 * var(--shadow-opacity, 1)));
   min-width: 180px;
 }
 
 .dateInput:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--focus-ring), 0 4px 12px rgba(var(--ink-raw), 0.15);
+  box-shadow: 0 0 0 3px var(--focus-ring), 0 4px 12px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.15 * var(--shadow-opacity, 1)));
 }
 
 .btnAccent {

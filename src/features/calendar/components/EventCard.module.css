@@ -93,7 +93,7 @@
 .card:hover,
 .card.hovered {
   background: color-mix(in srgb, var(--event-color, var(--accent)) var(--event-bg-mix-hover, 12%), var(--canvas));
-  box-shadow: var(--shadow-event-hover, 0 2px 8px rgba(var(--ink-raw, 44, 40, 33), 0.08));
+  box-shadow: var(--shadow-event-hover, 0 2px 8px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.08 * var(--shadow-opacity, 1))));
   transform: translateY(-1px);
 }
 
@@ -388,7 +388,7 @@
 /* ---- Dragging State ---- */
 .dragging {
   opacity: 0.9;
-  box-shadow: 0 4px 12px rgba(var(--ink-raw, 44, 40, 33), 0.15);
+  box-shadow: 0 4px 12px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.15 * var(--shadow-opacity, 1)));
   transform: scale(1.02);
   z-index: 1000;
 }
