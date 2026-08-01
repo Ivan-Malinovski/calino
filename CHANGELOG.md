@@ -19,6 +19,7 @@ All notable changes to Calino will be documented in this file.
 - **Tapping a day in month view does one thing.** Compact mobile layouts had overlapping tap targets, so a tap could select a day and open the day sheet at once. Fixes [#79](https://github.com/Ivan-Malinovski/calino/issues/79).
 - **Dragging the month/agenda divider no longer changes the date** under your finger, and no longer stutters.
 - **The screen stopped flashing** when swiping the sidebar closed, and the dimmer now fades out continuously rather than snapping back to full strength for a frame.
+- **The view switcher stays put when you open Tasks.** The Tasks view adds a project filter to the header, and the switcher used to shift sideways to make room for it.
 - **Form fields no longer zoom the page on iOS** when focused.
 - **Muted text in dark mode meets WCAG AA contrast.**
 

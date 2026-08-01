@@ -1,6 +1,6 @@
 # Calino - AI Agent Guidelines
 
-**Version:** 0.20.0 (follows semver, still pre-1.0: bump minor for features, patch for fixes.)
+**Versioning:** semver, and still pre-1.0 — bump minor for features, patch for fixes. The current version lives in `package.json`.
 
 React 19 + TypeScript + Vite calendar app with CalDAV sync, NLP event creation, and PWA support.
 
