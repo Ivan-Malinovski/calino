@@ -294,18 +294,18 @@ function CalendarApp(): JSX.Element {
     if (isCommandPaletteOpen) setPaletteMounted(true)
   }, [isCommandPaletteOpen])
 
-  // Warm its chunk once the app is idle, so splitting it out doesn't put a
-  // network round-trip between pressing ⌘K and seeing the palette.
+  // Warm its chunk as soon as the first frame is on screen, so splitting it out
+  // doesn't put a fetch-and-parse between pressing ⌘K and seeing the palette.
+  //
+  // This deliberately does NOT wait for requestIdleCallback: startup here isn't
+  // idle for a while (stores rehydrate, CalDAV and CardDAV sync kick off), so
+  // the callback landed seconds late and the first open paid the full load.
+  // One rAF is enough to stay off the critical path for the initial paint.
   useEffect(() => {
-    const warm = (): void => {
+    const frame = requestAnimationFrame(() => {
       void import('./features/commandPalette/components/CommandPalette')
-    }
-    if (typeof requestIdleCallback !== 'function') {
-      const timer = setTimeout(warm, 2000)
-      return () => clearTimeout(timer)
-    }
-    const handle = requestIdleCallback(warm)
-    return () => cancelIdleCallback(handle)
+    })
+    return () => cancelAnimationFrame(frame)
   }, [])
 
   // Fire event/task reminders (web: polling + Notification API; native:

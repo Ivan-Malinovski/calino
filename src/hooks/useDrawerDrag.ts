@@ -58,6 +58,8 @@ export function useDrawerDrag(
     let axis: 'none' | 'horizontal' | 'vertical' = 'none'
     let tracking = false
     let settleTimer: ReturnType<typeof setTimeout> | undefined
+    /** Set once a gesture commits to closing, so teardown leaves the scrim faded. */
+    let committedClose = false
 
     const overlay = (): HTMLElement | null => overlayRef?.current ?? null
 
@@ -74,6 +76,13 @@ export function useDrawerDrag(
       tracking = false
       axis = 'none'
       panel.classList.remove(draggingClass)
+    }
+
+    /** Hand both nodes back to CSS/framer. Only safe when the drawer stays open. */
+    const settle = (): void => {
+      panel.style.transform = ''
+      const scrim = overlay()
+      if (scrim) scrim.style.opacity = ''
     }
 
     const handleTouchStart = (e: TouchEvent): void => {
@@ -129,26 +138,30 @@ export function useDrawerDrag(
         // Carry the panel the rest of the way out under its own CSS transition,
         // then unmount. Clearing the inline transform first would snap it back
         // to open for a frame.
+        committedClose = true
         panel.style.transform = 'translateX(-100%)'
         const scrim = overlay()
         if (scrim) scrim.style.opacity = '0'
         settleTimer = setTimeout(() => {
+          // The scrim's inline opacity is deliberately left at 0. Clearing it
+          // hands the property back to framer-motion, whose current value is
+          // still 1 — and since the scrim is a full-screen dimmer, that reads
+          // as the entire screen flashing before the exit animation starts.
+          // The node is unmounted by AnimatePresence, so the inline style goes
+          // with it. The panel's transform is safe to clear: it is not
+          // animated by framer, and the closed `.sidebar` rule is already
+          // translateX(-100%), so it resolves to the same place.
           panel.style.transform = ''
-          if (scrim) scrim.style.opacity = ''
           onCloseRef.current?.()
         }, SETTLE_MS)
       } else {
-        panel.style.transform = ''
-        const scrim = overlay()
-        if (scrim) scrim.style.opacity = ''
+        settle()
       }
     }
 
     const handleTouchCancel = (): void => {
       release()
-      panel.style.transform = ''
-      const scrim = overlay()
-      if (scrim) scrim.style.opacity = ''
+      settle()
     }
 
     panel.addEventListener('touchstart', handleTouchStart, { passive: true })
@@ -160,8 +173,13 @@ export function useDrawerDrag(
       if (settleTimer) clearTimeout(settleTimer)
       panel.classList.remove(draggingClass)
       panel.style.transform = ''
-      const scrim = overlay()
-      if (scrim) scrim.style.opacity = ''
+      // Closing flips `enabled`, so this runs on the way out too — and restoring
+      // the scrim here would produce exactly the full-screen flash the commit
+      // path takes care to avoid. Only reset it when the drawer is staying put.
+      if (!committedClose) {
+        const scrim = overlay()
+        if (scrim) scrim.style.opacity = ''
+      }
       panel.removeEventListener('touchstart', handleTouchStart)
       panel.removeEventListener('touchmove', handleTouchMove)
       panel.removeEventListener('touchend', handleTouchEnd)
