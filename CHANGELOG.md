@@ -16,6 +16,7 @@ All notable changes to Calino will be documented in this file.
 
 ### Fixed
 
+- **The icons in the event preview are no longer shaved off at the top** (#93). They were drawn hard against the edge of their own canvas — the calendar's tick marks and the clock face lost their rounded tops, and the location pin was drawn past the edge outright and clipped flat.
 - **The view switcher, the mobile grid and view cycling now agree on one order.** They were each built from a separate hardcoded list that had drifted apart, so the tabs read Month, Year, Week… while the mobile grid read Month, Week, Agenda… and swiping stepped through a third order again.
 - **Cycling views no longer stops on Journal or Contacts when they're switched off.** The `<`/`>` shortcuts and the two-finger swipe visited them regardless.
 - **Dragging a tile more than one place now moves the tile you're actually holding.** Each cell crossed during a drag was worked out from the arrangement as it stood when the drag began, so every step overwrote the one before it and only the last one survived — dragging across the row left your tile where it started and shuffled two others instead.

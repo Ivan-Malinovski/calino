@@ -866,16 +866,16 @@ export function EventPreviewPopup({
                     >
                       <rect
                         x="2"
-                        y="3"
+                        y="3.5"
                         width="10"
                         height="9"
                         rx="1"
                         stroke="currentColor"
                         strokeWidth="1.2"
                       />
-                      <path d="M2 6H12" stroke="currentColor" strokeWidth="1.2" />
+                      <path d="M2 6.5H12" stroke="currentColor" strokeWidth="1.2" />
                       <path
-                        d="M5 1V3M9 1V3"
+                        d="M5 1.5V3.5M9 1.5V3.5"
                         stroke="currentColor"
                         strokeWidth="1.2"
                         strokeLinecap="round"
@@ -910,7 +910,7 @@ export function EventPreviewPopup({
                       viewBox="0 0 14 14"
                       fill="none"
                     >
-                      <circle cx="7" cy="7" r="6" stroke="currentColor" strokeWidth="1.2" />
+                      <circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeWidth="1.2" />
                       <path
                         d="M7 4V7L9 9"
                         stroke="currentColor"
@@ -943,16 +943,23 @@ export function EventPreviewPopup({
                         viewBox="0 0 14 14"
                         fill="none"
                       >
-                        <path
-                          d="M7 6.5C8.10457 6.5 9 5.60457 9 4.5C9 3.39543 8.10457 2.5 7 2.5C5.89543 2.5 5 3.39543 5 4.5C5 5.60457 5.89543 6.5 7 6.5Z"
-                          stroke="currentColor"
-                          strokeWidth="1.2"
-                        />
-                        <path
-                          d="M7 13C7 13 12 8.5 12 4.5C12 2.019 10.104 0 7 0C3.896 0 2 2.019 2 4.5C2 8.5 7 13 7 13Z"
-                          stroke="currentColor"
-                          strokeWidth="1.2"
-                        />
+                        {/* The pin is drawn 13 units tall from y=0, so its stroke
+                            painted above the viewBox and the browser clipped the
+                            dome flat. Scaled about the centre and nudged down to
+                            sit inside; strokeWidth is pre-divided by the scale so
+                            the line still renders at 1.2. */}
+                        <g transform="matrix(0.86 0 0 0.86 0.98 1.33)">
+                          <path
+                            d="M7 6.5C8.10457 6.5 9 5.60457 9 4.5C9 3.39543 8.10457 2.5 7 2.5C5.89543 2.5 5 3.39543 5 4.5C5 5.60457 5.89543 6.5 7 6.5Z"
+                            stroke="currentColor"
+                            strokeWidth="1.4"
+                          />
+                          <path
+                            d="M7 13C7 13 12 8.5 12 4.5C12 2.019 10.104 0 7 0C3.896 0 2 2.019 2 4.5C2 8.5 7 13 7 13Z"
+                            stroke="currentColor"
+                            strokeWidth="1.4"
+                          />
+                        </g>
                       </svg>
                       {renderLocation()}
                       <LocationLink
@@ -1031,13 +1038,13 @@ export function EventPreviewPopup({
                         fill="none"
                       >
                         <path
-                          d="M7 1V7M7 7V13"
+                          d="M7 2.5V8"
                           stroke="currentColor"
                           strokeWidth="2"
                           strokeLinecap="round"
                         />
                         <path
-                          d="M7 10.5H7.01"
+                          d="M7 11H7.01"
                           stroke="currentColor"
                           strokeWidth="2"
                           strokeLinecap="round"
@@ -1057,7 +1064,7 @@ export function EventPreviewPopup({
                         viewBox="0 0 14 14"
                         fill="none"
                       >
-                        <circle cx="7" cy="7" r="6" stroke="currentColor" strokeWidth="1.2" />
+                        <circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeWidth="1.2" />
                         <path
                           d="M4 7L6 9L10 5"
                           stroke="currentColor"
