@@ -80,8 +80,15 @@ describe('isContactRef', () => {
     expect(isContactRef('')).toBe(false)
   })
 
-  it('rejects a malformed uuid', () => {
-    expect(isContactRef('urn:uuid:not-a-uuid')).toBe(false)
+  it('accepts a schemed reference whose uid is not RFC 4122 hex', () => {
+    // Radicale and friends mint readable UIDs and still wrap them in
+    // urn:uuid:. The scheme is the signal that this is a reference.
+    expect(isContactRef('urn:uuid:contact-carlos-mendez-04')).toBe(true)
+    expect(isContactRef('uuid:not-a-uuid')).toBe(true)
+  })
+
+  it('rejects a bare non-uuid value', () => {
+    // No scheme and not UUID-shaped: indistinguishable from a name.
     expect(isContactRef(ALICE_UID.slice(0, -1))).toBe(false)
   })
 })
@@ -109,6 +116,15 @@ describe('resolveContactRef', () => {
     // resolve. This must not be "fixed" by scoping the lookup to one book.
     expect(alice.addressBookId).not.toBe(bob.addressBookId)
     expect(resolveContactRef(`urn:uuid:${BOB_UID}`, contacts)).toBe(bob)
+  })
+
+  it('resolves a schemed reference to a server-minted readable uid', () => {
+    // Regression guard: this rendered as the raw `urn:uuid:…` URI because the
+    // lookup demanded RFC 4122 hex. See isContactRef.
+    const carlos = makeContact('contact-carlos-mendez-04', 'Carlos Mendez', 'book-personal')
+    expect(resolveContactRef('urn:uuid:contact-carlos-mendez-04', [...contacts, carlos])).toBe(
+      carlos
+    )
   })
 
   it('returns undefined for a plain name', () => {

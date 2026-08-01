@@ -31,9 +31,18 @@ export function normalizeContactRef(value: string): string {
   return value.trim().replace(UUID_SCHEME_RE, '')
 }
 
-/** True when a RELATED/MEMBER value references a contact by UID rather than by name. */
+/**
+ * True when a RELATED/MEMBER value references a contact by UID rather than by name.
+ *
+ * An explicit `urn:uuid:` scheme counts on its own, whatever it wraps. RFC 6350
+ * only requires UID to be a URI, so plenty of servers (Radicale among them) mint
+ * human-readable UIDs like `contact-carlos-mendez-04` and still write them as
+ * `urn:uuid:…`. Insisting on RFC 4122 hex here meant those references rendered
+ * as the raw URI. A bare value still has to look like a UUID — without a scheme,
+ * "Jane Doe" and a UID are indistinguishable, and a name must stay a name.
+ */
 export function isContactRef(value: string): boolean {
-  return UUID_RE.test(normalizeContactRef(value))
+  return UUID_SCHEME_RE.test(value.trim()) || UUID_RE.test(normalizeContactRef(value))
 }
 
 /**
@@ -43,18 +52,17 @@ export function isContactRef(value: string): boolean {
  * Map<string, Contact> for hot paths — callers rendering many relations at
  * once should pass a map built once with `buildContactLookup`.
  *
- * Returns undefined when the value isn't UID-shaped (a plain name such as
- * "Jane Doe" is a legal RELATED value and should keep rendering as text), or
+ * Returns undefined when the value isn't a reference at all (a plain name such
+ * as "Jane Doe" is a legal RELATED value and should keep rendering as text), or
  * when no contact with that UID is loaded.
  */
 export function resolveContactRef(
   value: string,
   contacts: Contact[] | ReadonlyMap<string, Contact>
 ): Contact | undefined {
-  const uid = normalizeContactRef(value)
-  if (!UUID_RE.test(uid)) return undefined
-  // UUID hex case varies between servers, so compare case-insensitively.
-  const needle = uid.toLowerCase()
+  if (!isContactRef(value)) return undefined
+  // UID case varies between servers, so compare case-insensitively.
+  const needle = normalizeContactRef(value).toLowerCase()
   if (Array.isArray(contacts)) {
     return contacts.find((c) => c.id.toLowerCase() === needle)
   }

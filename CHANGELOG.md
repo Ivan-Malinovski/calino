@@ -4,6 +4,28 @@ All notable changes to Calino will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- **Swipe the sidebar closed on mobile.** The panel follows your finger and either completes its exit or springs back when you let go, instead of waiting for a threshold and then jumping.
+- **Controls that only appeared on hover are now reachable on touch** — on a phone there is no hover, so they were simply invisible.
+
+### Fixed
+
+- **Contact relations pointing at a server-generated ID now resolve to a name.** Relations only resolved when the underlying ID happened to be a canonical UUID; servers that mint readable IDs (Radicale among them) left you looking at a raw `urn:uuid:…` string. Group member lists get the same fix. A relation whose contact isn't loaded now reads *Unknown Contact*, with the ID kept on hover.
+- **Contacts no longer fill up the browser's storage.** Photos moved into a proper database and the raw card data is no longer kept twice, so a large address book stops throwing *QuotaExceededError* — which had also been breaking task and event saves, since every part of Calino shares that storage. Fixes [#91](https://github.com/Ivan-Malinovski/calino/issues/91).
+- **The on-screen keyboard no longer covers what you're typing on Android.** The app now resizes to sit above it.
+- **Tapping a day in month view does one thing.** Compact mobile layouts had overlapping tap targets, so a tap could select a day and open the day sheet at once. Fixes [#79](https://github.com/Ivan-Malinovski/calino/issues/79).
+- **Dragging the month/agenda divider no longer changes the date** under your finger, and no longer stutters.
+- **The screen stopped flashing** when swiping the sidebar closed, and the dimmer now fades out continuously rather than snapping back to full strength for a frame.
+- **Form fields no longer zoom the page on iOS** when focused.
+- **Muted text in dark mode meets WCAG AA contrast.**
+
+### Changed
+
+- **Calino starts faster.** Settings, the privacy page and the command palette now load on demand instead of riding along in the initial download.
+- **Typography and colour cleanup**: the display typeface is now the intended one, light-mode neutrals are warmer, shadows are cast in black (and dropped entirely in dark mode), and colours that had drifted off the palette were brought back onto it.
+- **Header alignment**: the month title and view-switcher labels sit on their true vertical centre.
+
 ## [0.25.4] - 2026-07-31
 
 ### Added

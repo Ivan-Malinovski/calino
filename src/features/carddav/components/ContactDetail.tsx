@@ -52,11 +52,14 @@ function RelationValue({
   const target = resolveContactRef(value, contactLookup)
   if (!target) {
     // A plain name is a legal RELATED/MEMBER value and renders as-is; only a
-    // UID-shaped reference that failed to resolve gets the friendly fallback
-    // instead of a raw urn:uuid:… URI (deleted contact, pending sync).
+    // reference that failed to resolve gets the friendly fallback instead of a
+    // raw urn:uuid:… URI (deleted contact, pending sync). The UID stays on the
+    // title so a dangling reference is still diagnosable without the raw URI
+    // taking over the row.
+    const unresolvedRef = isContactRef(value)
     return (
-      <span className={styles.infoFieldValue}>
-        {isContactRef(value) ? 'Unknown Contact' : value}
+      <span className={styles.infoFieldValue} title={unresolvedRef ? value : undefined}>
+        {unresolvedRef ? 'Unknown Contact' : value}
       </span>
     )
   }
