@@ -7,6 +7,7 @@ All notable changes to Calino will be documented in this file.
 ### Added
 
 - **Arrange the view switcher however you like.** Long-press a tile in the mobile view grid and drag it where you want it; on desktop, drag a tab along the strip. Your arrangement is remembered, and everything follows it — the tabs, the mobile grid, and the order that swiping and the `<`/`>` shortcuts step through. Reordering is also available from the keyboard with Alt+←/→ on a focused tab.
+- **Pinch the week view on a phone to fit more days on screen.** It compresses the day columns rather than zooming, down to about five days at once. Vertical zoom stays a desktop gesture.
 - **The divider in the tab strip is now yours to place.** It's an element you drag like any tab, rather than a fixed boundary between "calendar" and "everything else", so you can group the tabs however makes sense to you.
 
 ### Fixed
@@ -16,6 +17,7 @@ All notable changes to Calino will be documented in this file.
 - **Dragging a tile more than one place now moves the tile you're actually holding.** Each cell crossed during a drag was worked out from the arrangement as it stood when the drag began, so every step overwrote the one before it and only the last one survived — dragging across the row left your tile where it started and shuffled two others instead.
 - **The view grid no longer closes underneath you mid-drag.** Dragging a tile downwards was also read as a swipe-to-dismiss on the sheet, which shut the whole panel on release.
 - **Long-pressing a tile no longer selects its label** or raises the text-selection popup over it.
+- **A quick horizontal flick in the week view no longer jumps a whole week.** The day columns scroll under the same gesture, so any flick meant to bring the next day into view also paged. Swiping now scrolls the days first and only changes week once the strip is already at that end.
 - **The week grid's day headers stay opaque as you scroll sideways on mobile.** The header strip was only ever as wide as the screen while the day columns ran on past it, so the days you scrolled into view had nothing painted behind them. The same fault also unpinned the hour column, which slid off the left edge partway through the week instead of staying put.
 - **A dragged tab lands where you drop it.** The move was being applied twice, so releasing a tab one place along undid itself and a longer drag settled one place to the left of where you let go. Where it lands is also worked out from where the tab would actually come to rest now, rather than from the widths of the tabs it passes — those disagree once labels differ in width.
 

@@ -353,6 +353,10 @@
 
 @media (max-width: 768px) {
   .mobileContainer {
+    /* Pinching compresses the days horizontally so more of the week fits.
+       `--day-scale` is set inline by the pinch handler; the fallback keeps
+       the columns at their normal width when it has never been touched. */
+    --mobile-day-width: calc(28vw * var(--day-scale, 1));
     display: block;
     overflow: auto;
     -webkit-overflow-scrolling: touch;
@@ -415,8 +419,8 @@
   }
 
   .dayHeader {
-    min-width: 28vw;
-    max-width: 28vw;
+    min-width: var(--mobile-day-width);
+    max-width: var(--mobile-day-width);
     flex-shrink: 0;
     display: flex;
     flex-direction: column;
@@ -469,8 +473,8 @@
   }
 
   .dayColumn {
-    width: 28vw;
-    min-width: 28vw;
+    width: var(--mobile-day-width);
+    min-width: var(--mobile-day-width);
     min-height: calc(24 * var(--hour-height, 60px));
     height: 100%;
     position: relative;

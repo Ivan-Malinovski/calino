@@ -55,10 +55,14 @@ import {
   isSameDropPreview,
   type DropPreview,
 } from '../lib/dragSnap'
+import { shouldPageOnSwipe } from './weekViewGestures'
 import styles from './WeekView.module.css'
 
 const BASE_HOUR_HEIGHT = 60
-
+/** Narrowest the mobile day columns compress to, as a fraction of their normal
+ *  28vw. Around 0.6 fits five days on a phone; much below that and event
+ *  titles stop being readable, which defeats the point of seeing more days. */
+const MIN_DAY_SCALE = 0.6
 /** `HH:mm` for each of the 24 hour slots — stable, so cells can key off strings. */
 const HOUR_KEYS = HOURS.map((hour) => format(hour, 'HH:mm'))
 
@@ -170,6 +174,7 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
   const [dragEnd, setDragEnd] = useState<string | null>(null)
   const [isScrolled, setIsScrolled] = useState(false)
   const [scale, setScale] = useState(1)
+  const [dayScale, setDayScale] = useState(1)
   const windowHeight = useWindowHeight()
   const stretchFactor = windowHeight > 1570 ? windowHeight / 1570 : 1
   const effectiveScale = scale * stretchFactor
@@ -194,6 +199,15 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
       let newDate: Date
 
       if (direction === 'left' || direction === 'right') {
+        // On mobile the day columns scroll horizontally under the same
+        // gesture, so a flick that was only meant to bring the next day into
+        // view also changed the week. Page only from the edge the swipe is
+        // heading towards — until then the flick belongs to the scroller.
+        //
+        // Skipped entirely when there is nothing to scroll (a narrow enough
+        // day count, or a wide screen), so swiping still pages immediately.
+        if (!shouldPageOnSwipe(direction, mobileScrollRef.current)) return
+
         newDate =
           dayCount === 7
             ? direction === 'left'
@@ -211,15 +225,30 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
     [currentDate, setCurrentDate, dayCount]
   )
 
-  const handlePinch = useCallback((scaleValue: number) => {
-    setScale(scaleValue)
-  }, [])
+  // On mobile a pinch compresses the days horizontally so more of the week
+  // fits, rather than scaling the hour height. Vertical zoom stays a desktop
+  // gesture (ctrl+wheel): on a phone the useful axis is how many days you can
+  // see, and driving both from one pinch would make neither controllable.
+  const handlePinch = useCallback(
+    (scaleValue: number) => {
+      if (isMobile) setDayScale(scaleValue)
+      else setScale(scaleValue)
+    },
+    [isMobile]
+  )
+
+  // Pinching in is a *reduction*, so the mobile range runs below 1 — the
+  // desktop range starts at 1 because there it magnifies the hour height.
+  const pinchRange = useMemo(
+    () => (isMobile ? { min: MIN_DAY_SCALE, max: 1 } : { min: 1, max: 1.5 }),
+    [isMobile]
+  )
 
   const { bind } = useGestures({
     onSwipe: handleSwipe,
     onPinch: handlePinch,
     swipeThreshold: 50,
-    pinchScaleRange: { min: 1, max: 1.5 },
+    pinchScaleRange: pinchRange,
   })
 
   const sensors = useSensors(
@@ -732,6 +761,7 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
             <div
               key={day.toISOString()}
               className={`${styles.dayHeader} ${isToday(day) ? styles.today : ''}`}
+              data-component="week-mobile-day-header"
             >
               <div className={styles.dayName}>{format(day, 'EEE')}</div>
               <div className={styles.dayNumber}>{format(day, 'd')}</div>
@@ -755,6 +785,7 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
               <div
                 key={day.toISOString()}
                 className={`${styles.dayColumn} ${isToday(day) ? styles.todayColumn : ''}`}
+                data-component="week-mobile-day-column"
                 onContextMenu={(e) => {
                   e.preventDefault()
                   openMenu('weekview')
@@ -916,6 +947,7 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
           {
             '--hour-height': `${60 * effectiveScale}px`,
             '--day-count': weekDays.length,
+            '--day-scale': dayScale,
           } as React.CSSProperties
         }
         {...bind}
