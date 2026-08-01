@@ -16,10 +16,14 @@ import { useHistoryStore } from './store/historyStore'
 import { showToast } from './lib/toast'
 import { hapticIfEnabled } from './lib/haptics'
 import { useSettingsStore } from './store/settingsStore'
-import { CalendarHeader, Sidebar, EventModal, EventPreviewPopup } from './features/calendar'
+// Imported from their modules rather than through a features/calendar barrel:
+// the barrel also re-exported YearView, so pulling these four in eagerly
+// dragged YearView along and silently cancelled its lazy() split below.
+import { CalendarHeader } from './features/calendar/components/CalendarHeader'
+import { Sidebar } from './features/calendar/components/Sidebar'
+import { EventModal } from './features/calendar/components/EventModal'
+import { EventPreviewPopup } from './features/calendar/components/EventPreviewPopup'
 import { JournalDayModal } from './features/calendar/components/JournalDayModal'
-import { SettingsPage, PrivacyPolicy } from './features/settings'
-import { CommandPalette } from './features/commandPalette'
 import { CookieConsent, ErrorBoundary } from './components/common'
 import { useTheme } from './components/ThemeContext'
 import { CalendarSkeleton } from './components/common/Skeleton'
@@ -74,6 +78,20 @@ const ContactsView = lazy(() =>
 )
 const YearView = lazy(() =>
   import('./features/calendar/components/YearView').then((m) => ({ default: m.YearView }))
+)
+
+// Whole routes of their own — nothing here is needed to paint a calendar, so
+// they stay out of the initial bundle.
+const SettingsPage = lazy(() =>
+  import('./features/settings/components/SettingsPage').then((m) => ({ default: m.SettingsPage }))
+)
+const PrivacyPolicy = lazy(() =>
+  import('./features/settings/components/PrivacyPolicy').then((m) => ({ default: m.PrivacyPolicy }))
+)
+const CommandPalette = lazy(() =>
+  import('./features/commandPalette/components/CommandPalette').then((m) => ({
+    default: m.CommandPalette,
+  }))
 )
 
 function ViewLoader({
@@ -247,6 +265,10 @@ function CalendarApp(): JSX.Element {
   const closeJournalModal = useCalendarStore((state) => state.closeJournalModal)
   const { importFromCamera } = useAIPhotoImport()
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false)
+  // The palette is a lazy chunk, so it can't be mounted from the start. Once
+  // it has been opened it stays mounted, because it plays its own close
+  // animation off the isOpen prop and unmounting would cut that short.
+  const [paletteMounted, setPaletteMounted] = useState(false)
   const [isShortcutsHelpOpen, setIsShortcutsHelpOpen] = useState(false)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const sidebarCollapsed = useSettingsStore((state) => state.sidebarCollapsed)
@@ -265,6 +287,25 @@ function CalendarApp(): JSX.Element {
   // them back on the live contacts and mirror later edits out.
   useEffect(() => {
     void initContactPhotos()
+  }, [])
+
+  // Mount the palette on its first open and leave it mounted thereafter.
+  useEffect(() => {
+    if (isCommandPaletteOpen) setPaletteMounted(true)
+  }, [isCommandPaletteOpen])
+
+  // Warm its chunk once the app is idle, so splitting it out doesn't put a
+  // network round-trip between pressing ⌘K and seeing the palette.
+  useEffect(() => {
+    const warm = (): void => {
+      void import('./features/commandPalette/components/CommandPalette')
+    }
+    if (typeof requestIdleCallback !== 'function') {
+      const timer = setTimeout(warm, 2000)
+      return () => clearTimeout(timer)
+    }
+    const handle = requestIdleCallback(warm)
+    return () => cancelIdleCallback(handle)
   }, [])
 
   // Fire event/task reminders (web: polling + Notification API; native:
@@ -708,15 +749,19 @@ function CalendarApp(): JSX.Element {
         />
       )}
       <PreviewPopupWrapper />
-      <CommandPalette
-        isOpen={isCommandPaletteOpen}
-        onClose={() => {
-          setIsCommandPaletteOpen(false)
-          setOverlayOpen(false)
-        }}
-        toggleSidebar={handleToggleSidebar}
-        sidebarOpen={window.innerWidth <= 950 ? isSidebarOpen : !sidebarCollapsed}
-      />
+      {paletteMounted && (
+        <Suspense fallback={null}>
+          <CommandPalette
+            isOpen={isCommandPaletteOpen}
+            onClose={() => {
+              setIsCommandPaletteOpen(false)
+              setOverlayOpen(false)
+            }}
+            toggleSidebar={handleToggleSidebar}
+            sidebarOpen={window.innerWidth <= 950 ? isSidebarOpen : !sidebarCollapsed}
+          />
+        </Suspense>
+      )}
       <OnboardingModal onAddCalendar={() => setShowAddCalendar(true)} />
       <ShortcutsHelp
         isOpen={isShortcutsHelpOpen}
@@ -820,8 +865,24 @@ function App(): JSX.Element {
           <Route path="/journal" element={<CalendarApp />} />
           <Route path="/contacts" element={<CalendarApp />} />
           <Route path="/" element={<CalendarApp />} />
-          <Route path="/settings" element={<SettingsPage />} />
-          <Route path="/privacy" element={<PrivacyPolicy />} />
+          {/* No fallback: these are whole-page routes, and a spinner that
+              flashes for one frame on a warm cache reads as a glitch. */}
+          <Route
+            path="/settings"
+            element={
+              <Suspense fallback={null}>
+                <SettingsPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path="/privacy"
+            element={
+              <Suspense fallback={null}>
+                <PrivacyPolicy />
+              </Suspense>
+            }
+          />
           <Route path="/setup" element={<SetupPage />} />
         </Routes>
       </ThemeProvider>
