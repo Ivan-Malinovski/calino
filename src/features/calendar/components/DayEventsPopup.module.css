@@ -1,5 +1,9 @@
 .popup {
   position: fixed;
+  /* Column layout so a viewport-capped height lands on the list, which
+     scrolls, rather than clipping the events off the bottom. */
+  display: flex;
+  flex-direction: column;
   z-index: 1000;
   min-width: 280px;
   max-width: 320px;
@@ -32,6 +36,8 @@
 }
 
 .eventList {
+  flex: 1 1 auto;
+  min-height: 0;
   max-height: 300px;
   overflow-y: auto;
 }
