@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 
 /**
  * How many event rows a month-view day cell can physically hold.
@@ -26,17 +26,22 @@ const COMPRESSED_WEEK_FLEX = 0.5
 const CELL_CHROME = 45
 
 /**
- * One event row: an `EventCard` (3+4 padding, 1px border twice, one 13px/1.3
- * line) plus the 3px `.events` gap above it. Cards that render compact are
- * shorter, so this errs towards leaving a gap rather than overflowing.
+ * One event row: a month-view `EventCard` (42px measured — title and time on
+ * their own lines) plus the 3px `.events` gap above it. Derived from the
+ * rendered card rather than added up from the CSS, which came out at 29 and
+ * badly overestimated how many fit. Compact cards and dots are shorter, so
+ * this errs towards leaving a gap rather than overflowing the cell.
  */
-const ROW_HEIGHT = 29
+const ROW_HEIGHT = 45
 
 /** The `.events` gap, which the last row in a cell doesn't pay for. */
 const ROW_GAP = 3
 
-/** The `.moreEvents` button: 11.5px/normal text with 2px padding twice. */
+/** The `.moreEvents` button (16px measured) and the gap above it. */
 const MORE_ROW_HEIGHT = 19
+
+/** How long the grid has to hold a new size before the count follows it. */
+const RESIZE_SETTLE_MS = 150
 
 /** Rows a cell fits, with and without a "+N more" line to make room for. */
 export interface MonthCellCapacity {
@@ -80,7 +85,7 @@ export function useMonthEventCapacity({
 
   const measure = useCallback((): void => {
     const grid = gridRef.current
-    if (!grid || weekCount <= 0) return
+    if (!enabled || !grid || weekCount <= 0) return
     const header = grid.querySelector<HTMLElement>(headerSelector)
     const available = grid.clientHeight - (header?.offsetHeight ?? 0)
     if (available <= 0) return
@@ -108,31 +113,41 @@ export function useMonthEventCapacity({
         ? prev
         : next
     )
-  }, [gridRef, headerSelector, weekCount, compressedWeekCount])
+  }, [enabled, gridRef, headerSelector, weekCount, compressedWeekCount])
 
-  const rafRef = useRef(0)
+  const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+
+  // The first measurement has to land before the browser paints. Taking it
+  // from the ResizeObserver's initial callback instead let the grid paint once
+  // at the fallback count and then reflow, which moves every card in the month
+  // a frame after it appears — enough to make a click that was already in
+  // flight land on a card that has since moved or been replaced.
+  useLayoutEffect(measure, [measure])
 
   useEffect(() => {
     const grid = gridRef.current
     if (!enabled || !grid || typeof ResizeObserver === 'undefined') return
-    // ResizeObserver fires once on observe, which is the first measurement —
-    // taken straight through so the grid doesn't paint a frame of the fallback
-    // count first. Later ones coalesce to a frame: dragging a window edge
-    // fires the observer far more often than the row count can change.
-    let measured = false
+    // Skip the callback `observe` fires immediately — the layout effect above
+    // already took that one.
+    //
+    // Later ones settle before being acted on. Dragging a window edge fires
+    // the observer far more often than the row count can change, and more
+    // importantly a transient shift (a banner appearing, a scrollbar coming
+    // and going) would otherwise re-lay-out every card in the month for a
+    // frame — which yanks cards out from under a click already in flight.
+    let seenInitialCallback = false
     const observer = new ResizeObserver(() => {
-      if (!measured) {
-        measured = true
-        measure()
+      if (!seenInitialCallback) {
+        seenInitialCallback = true
         return
       }
-      cancelAnimationFrame(rafRef.current)
-      rafRef.current = requestAnimationFrame(measure)
+      clearTimeout(timerRef.current)
+      timerRef.current = setTimeout(measure, RESIZE_SETTLE_MS)
     })
     observer.observe(grid)
     return () => {
       observer.disconnect()
-      cancelAnimationFrame(rafRef.current)
+      clearTimeout(timerRef.current)
     }
   }, [enabled, gridRef, measure])
 

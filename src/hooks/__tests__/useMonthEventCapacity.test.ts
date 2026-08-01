@@ -46,7 +46,10 @@ describe('useMonthEventCapacity', () => {
     vi.stubGlobal(
       'ResizeObserver',
       class {
-        constructor(private cb: ResizeCallback) {}
+        cb: ResizeCallback
+        constructor(cb: ResizeCallback) {
+          this.cb = cb
+        }
         observe(): void {
           observers.push(this.cb)
         }
@@ -63,33 +66,33 @@ describe('useMonthEventCapacity', () => {
   })
 
   it('fits more events into a taller grid', () => {
-    // 5 weeks over 730px of rows → ~146px cells: 45px of chrome leaves 101px,
-    // and 29px rows (the last paying no 3px gap) fit three. At 570px the same
-    // cells are 114px and only two fit.
-    const short = measured(makeGrid(600))
-    const tall = measured(makeGrid(760))
+    // 5 weeks over 1000px of rows → 200px cells: 45px of chrome leaves 155px,
+    // and 45px rows (the last paying no 3px gap) fit three. At 750px the same
+    // cells are 150px and only two fit.
+    const short = measured(makeGrid(780))
+    const tall = measured(makeGrid(1030))
 
     expect(short.result.current?.full.rows).toBe(2)
     expect(tall.result.current?.full.rows).toBe(3)
   })
 
   it('re-measures when the grid resizes', async () => {
-    const grid = makeGrid(600)
+    const grid = makeGrid(780)
     const { result } = measured(grid)
     expect(result.current?.full.rows).toBe(2)
 
-    Object.defineProperty(grid, 'clientHeight', { value: 1030, configurable: true })
+    Object.defineProperty(grid, 'clientHeight', { value: 1380, configurable: true })
     await act(async () => {
       observers.forEach((fire) => fire())
-      // Measurements after the first are deferred a frame.
-      await new Promise((resolve) => requestAnimationFrame(() => resolve(null)))
+      // Measurements after the first wait for the size to settle.
+      await new Promise((resolve) => setTimeout(resolve, 200))
     })
     expect(result.current?.full.rows).toBe(5)
   })
 
   it('holds a row back to make room for the "+N more" line', () => {
-    // 760px of rows fits three cards, but not three and a rollup line.
-    const { result } = measured(makeGrid(760))
+    // 900px of rows fits three cards, but not three and a rollup line.
+    const { result } = measured(makeGrid(930))
     expect(result.current?.full.rows).toBe(3)
     expect(result.current?.full.rowsWithMore).toBe(2)
   })
@@ -107,7 +110,7 @@ describe('useMonthEventCapacity', () => {
   })
 
   it('reports nothing when disabled, so callers fall back to the setting', () => {
-    const { result } = measured(makeGrid(760), { enabled: false })
+    const { result } = measured(makeGrid(930), { enabled: false })
     expect(result.current).toBeNull()
   })
 })
