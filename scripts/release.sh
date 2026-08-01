@@ -42,6 +42,10 @@ while [[ $# -gt 0 ]]; do
       echo "  --dry-run     Full check only — no version bump, no commit, no push"
       echo "  -h, --help    Show this help"
       echo ""
+      echo "Environment:"
+      echo "  HEALTH_PORT   Host port for the container healthcheck"
+      echo "                (default: first free port from 8080 up)"
+      echo ""
       echo "Examples:"
       echo "  ./scripts/release.sh --patch          # Bump patch, check, push"
       echo "  ./scripts/release.sh --minor --dry-run # Bump minor, check only"
@@ -56,9 +60,35 @@ done
 CURRENT_DIR=$(pwd)
 cd "$(dirname "$0")/.."
 
-# Port the container healthcheck binds on the host. Override when 8080 is
-# already spoken for: HEALTH_PORT=8081 ./scripts/release.sh --patch
-HEALTH_PORT=${HEALTH_PORT:-8080}
+# Port the container healthcheck binds on the host. Defaults to the first free
+# port at or above 8080; pin it explicitly with
+# HEALTH_PORT=8081 ./scripts/release.sh --patch
+#
+# "Free" has to mean free on *both* families: the container runtime publishes a
+# port by binding the wildcard address, so a dev server listening on nothing but
+# [::1] is still enough to make `podman run -p` fail. Node's default listen is
+# dual-stack, which is exactly the bind we need to test.
+port_free() {
+  node -e "
+    const net = require('net');
+    const s = net.createServer();
+    s.once('error', () => process.exit(1));
+    s.listen($1, () => s.close(() => process.exit(0)));
+  " > /dev/null 2>&1
+}
+
+if [ -z "$HEALTH_PORT" ]; then
+  HEALTH_PORT=8080
+  while ! port_free "$HEALTH_PORT"; do
+    HEALTH_PORT=$((HEALTH_PORT + 1))
+    if [ "$HEALTH_PORT" -gt 8180 ]; then
+      fail "No free port found in 8080-8180 for the container healthcheck"
+    fi
+  done
+  if [ "$HEALTH_PORT" != "8080" ]; then
+    AUTO_PORT_NOTE="port 8080 was busy"
+  fi
+fi
 
 # Prefer a real `docker` binary; fall back to podman (common on distros like
 # Bazzite/Fedora Atomic where `docker` is only a shell alias, which a
@@ -207,6 +237,9 @@ if [ "$SKIP_DOCKER" = false ]; then
   ok "Image built"
 
   step "Container healthcheck"
+  if [ -n "$AUTO_PORT_NOTE" ]; then
+    echo "  Using port $HEALTH_PORT ($AUTO_PORT_NOTE)"
+  fi
 
   # Always address 127.0.0.1, never "localhost": that resolves to ::1 first, so
   # any unrelated service on IPv6 $HEALTH_PORT (a dev server, say) answers
@@ -219,7 +252,7 @@ if [ "$SKIP_DOCKER" = false ]; then
 
   # Fail loudly on a port conflict rather than silently testing the squatter.
   if [ "$(probe /)" != "000" ]; then
-    fail "Something is already serving on port $HEALTH_PORT. Stop it, or re-run with HEALTH_PORT=8081"
+    fail "Something is already serving on port $HEALTH_PORT. Stop it, or pin another port with HEALTH_PORT=..."
   fi
 
   $ENGINE run -d --name calino-release-test -p "$HEALTH_PORT:8080" calino:test > /dev/null
