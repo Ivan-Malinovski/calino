@@ -1938,3 +1938,17 @@
   align-items: center;
   gap: var(--space-3);
 }
+
+/* iOS Safari zooms the page when a focused field's text is under 16px, and
+   never zooms back out. These sizes are deliberate for dense pointer
+   layouts, so they only lift on touch — where the extra size helps anyway.
+   Kept here, last in the file, so source order settles the tie. */
+@media (pointer: coarse) {
+  .select,
+  .numberInput,
+  .keywordField,
+  .formInput,
+  .catEditInput {
+    font-size: 16px;
+  }
+}

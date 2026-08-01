@@ -393,3 +393,13 @@
   width: 100%;
   background: var(--color-success, #34a853);
 }
+
+/* iOS Safari zooms the page when a focused field's text is under 16px, and
+   never zooms back out. These sizes are deliberate for dense pointer
+   layouts, so they only lift on touch — where the extra size helps anyway.
+   Kept here, last in the file, so source order settles the tie. */
+@media (pointer: coarse) {
+  .input {
+    font-size: 16px;
+  }
+}

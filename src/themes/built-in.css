@@ -197,7 +197,9 @@
   --side: #2a2826;
   --ink: #f0ece6;
   --ink-2: #a39d93;
-  --ink-3: #6f6a62;
+  /* 4.66:1 on --side, the lightest dark surface; #6f6a62 was 2.74:1 and
+     failed WCAG AA everywhere. Still a clear step below --ink-2 (#a39d93). */
+  --ink-3: #989086;
   --line: rgba(240, 236, 230, 0.09);
   --line-2: rgba(240, 236, 230, 0.05);
   --accent: #c9956a;
@@ -206,9 +208,9 @@
   /* Text */
   --color-text-primary: #f0ece6;
   --color-text-secondary: #a39d93;
-  --color-text-muted: #6f6a62;
+  --color-text-muted: #989086;
   --color-text: #f0ece6;
-  --color-text-tertiary: #6f6a62;
+  --color-text-tertiary: #989086;
 
   /* Borders */
   --color-border: rgba(240, 236, 230, 0.09);
