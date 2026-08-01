@@ -4,6 +4,8 @@ All notable changes to Calino will be documented in this file.
 
 ## [Unreleased]
 
+## [0.25.5] - 2026-08-01
+
 ### Added
 
 - **Swipe the sidebar closed on mobile.** The panel follows your finger and either completes its exit or springs back when you let go, instead of waiting for a threshold and then jumping.
