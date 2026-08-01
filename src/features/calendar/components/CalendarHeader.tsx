@@ -513,8 +513,19 @@ export function CalendarHeader({
         )}
       </div>
 
-      {/* Spacer */}
-      <div className={styles.spacer} />
+      {/* Spacer. Also hosts the task filter — see #task-header-slot below. */}
+      <div className={styles.spacer}>
+        {/* Portal target for TodoView's project filter — rendered here so it
+            sits on the same line as the "Tasks" title instead of TodoView's
+            own sub-bar, where it used to crowd the Add button.
+
+            It lives in the spacer, not the right cluster, on purpose. The
+            cluster is right-anchored, so anything added to it widens it
+            leftwards and drags the view switcher along — the switcher visibly
+            jumped left on entering Tasks. The spacer absorbs the width
+            instead, leaving the switcher fixed. */}
+        {currentView === 'todo' && <div id="task-header-slot" className={styles.taskHeaderSlot} />}
+      </div>
 
       {/* Right cluster */}
       <div className={styles.rightCluster}>
@@ -766,11 +777,6 @@ export function CalendarHeader({
             </div>
           )}
         </div>
-
-        {/* Portal target for TodoView's project filter — rendered here so it
-            sits on the same line as the "Tasks" title instead of TodoView's
-            own sub-bar, where it used to crowd the Add button. */}
-        {currentView === 'todo' && <div id="task-header-slot" className={styles.taskHeaderSlot} />}
       </div>
     </header>
   )

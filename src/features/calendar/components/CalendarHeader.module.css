@@ -218,8 +218,16 @@
 
 /* ---- Spacer ---- */
 .spacer {
+  /* Below its content's width on purpose: the task filter lives in here (see
+     #task-header-slot), and this track must stay free to shrink so a wide
+     filter is clipped rather than pushing the right cluster off its edge. */
   min-width: 0;
   flex: 1;
+  display: flex;
+  align-items: center;
+  /* Hard against the right cluster, so the filter reads as part of the header's
+     trailing group rather than floating in the middle of the empty span. */
+  justify-content: flex-end;
 }
 
 /* ---- Right Cluster ---- */
@@ -231,13 +239,13 @@
 }
 
 /* Portal target for TodoView's project filter dropdown (see task-header-slot
-   in TodoView.tsx) — empty unless the todo view is active. Padded on the
-   right since .header has no right padding at the mobile breakpoint (where
-   this is actually used), so the dropdown doesn't hug the screen edge. */
+   in TodoView.tsx) — empty unless the todo view is active. It sits at the end
+   of .spacer, so .rightCluster's own padding-left provides the separation that
+   an explicit padding-right used to. */
 .taskHeaderSlot {
   display: flex;
   align-items: center;
-  padding-right: 14px;
+  min-width: 0;
 }
 
 /* ---- Icon Button ---- */
