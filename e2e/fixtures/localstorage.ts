@@ -91,10 +91,7 @@ export async function seedCalendarCapabilities(
  * Uses a sessionStorage one-shot flag so reloads within the same test
  * don't re-seed (which would duplicate events).
  */
-export async function seedRecurringEvent(
-  page: Page,
-  seed: RecurringEventSeed
-): Promise<void> {
+export async function seedRecurringEvent(page: Page, seed: RecurringEventSeed): Promise<void> {
   const flagKey = `__calino_test_event_${seed.id}`
   const event = {
     id: seed.id,
@@ -222,7 +219,16 @@ export async function clearState(page: Page): Promise<void> {
       // boots straight into the calendar.
       const settingsRaw = localStorage.getItem(keys.settings)
       const parsed = settingsRaw ? JSON.parse(settingsRaw) : { state: {}, version: 1 }
-      parsed.state = { ...(parsed.state ?? {}), hasCompletedOnboarding: true }
+      // Pin the month view to a fixed three events per day. The default is
+      // "Auto", which fits the cards to the cell — at the 720px-tall test
+      // viewport that is one row, so a day that picks up a stray event from
+      // another worker's run hides the card a spec is about to click behind
+      // "+N more". Specs that care about the rollup set their own value.
+      parsed.state = {
+        ...(parsed.state ?? {}),
+        hasCompletedOnboarding: true,
+        monthViewEventLimit: 3,
+      }
       localStorage.setItem(keys.settings, JSON.stringify(parsed))
       localStorage.setItem(keys.cookieConsent, 'dismissed')
     } catch {
