@@ -13,10 +13,12 @@ All notable changes to Calino will be documented in this file.
 
 ### Changed
 
+- **The "+N more" popup now has the same glass, border and shadow as the event preview**, so it reads as a card floating over the month rather than part of the grid.
 - **Picking which calendar a journal entry goes into is now a row of chips** with each calendar's colour, instead of a full-width dropdown — the choices are visible without opening anything, and it matches the category picker. The entry form's `+ Add` is now `+ More`.
 
 ### Fixed
 
+- **Clicking an event in the "+N more" popup opens that event.** It opened an empty modal instead, as if you were creating a new event: the popup is drawn outside the day cell but its clicks still travelled through it, so the cell's own "new event on this day" fired on top of the one you asked for.
 - **The "+N more" popup stays on screen.** Opened from a day late in the week it ran off the right edge, and from the last row of the month off the bottom — it now settles inside the window, and a long list scrolls rather than hanging past the edge.
 - **The icons in the event preview are no longer shaved off at the top** (#93). They were drawn hard against the edge of their own canvas — the calendar's tick marks and the clock face lost their rounded tops, and the location pin was drawn past the edge outright and clipped flat.
 - **The view switcher, the mobile grid and view cycling now agree on one order.** They were each built from a separate hardcoded list that had drifted apart, so the tabs read Month, Year, Week… while the mobile grid read Month, Week, Agenda… and swiping stepped through a third order again.

@@ -112,6 +112,14 @@ export function DayEventsPopup({
         className={styles.popup}
         style={placement}
         data-component="day-events-popup"
+        /* The popup is portaled into <body>, but React events still bubble
+           along the tree it was declared in — the day cell. So a click on an
+           event here also reached the cell's own handler, which opened the
+           "new event on this day" modal on top of the one we just asked for,
+           blanking it. Stop at the dialog's edge. */
+        onClick={(e) => e.stopPropagation()}
+        onDoubleClick={(e) => e.stopPropagation()}
+        onContextMenu={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
         aria-label={`Events for ${dateLabel}`}
