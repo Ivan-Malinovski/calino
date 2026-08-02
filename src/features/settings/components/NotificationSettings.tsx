@@ -19,6 +19,7 @@ import {
   requestCalendarMirrorPermission,
 } from '@/lib/calendarMirror'
 import { useCalendarMirrorStore } from '@/store/calendarMirrorStore'
+import { Modal } from '@/components/common/Modal'
 import styles from './Settings.module.css'
 
 // R3.9 — copy reused by both the toggle and the test button when the
@@ -45,6 +46,7 @@ export function NotificationSettings(): JSX.Element {
   const [permissionStatus, setPermissionStatus] = useState(
     isNative ? 'default' : getNotificationPermission()
   )
+  const [showMirrorInfo, setShowMirrorInfo] = useState(false)
 
   useEffect(() => {
     if (!isNative) return
@@ -191,7 +193,7 @@ export function NotificationSettings(): JSX.Element {
             data-value={String(enableCalendarMirror)}
           >
             <div className={styles.rowInfo}>
-              <div className={styles.rowLabel}>Sync to Android Calendar</div>
+              <div className={styles.rowLabel}>Sync to Android Calendar (beta)</div>
               <div className={styles.rowDesc}>
                 {!enableCalendarMirror
                   ? 'Copy your events into the device calendar so Android delivers reminders even when Calino is closed, and widgets, Wear OS and Android Auto can see them. Read-only — nothing is written back to your CalDAV server.'
@@ -211,7 +213,7 @@ export function NotificationSettings(): JSX.Element {
                 <input
                   type="checkbox"
                   checked={enableCalendarMirror}
-                  aria-label="Sync to Android Calendar"
+                  aria-label="Sync to Android Calendar (beta)"
                   onChange={handleToggleCalendarMirror}
                 />
                 <span className={styles.pill} />
@@ -219,8 +221,99 @@ export function NotificationSettings(): JSX.Element {
               </label>
             </div>
           </div>
+          <div
+            className={styles.row}
+            data-component="setting-row"
+            data-setting="calendar-mirror-info"
+          >
+            <div className={styles.rowInfo}>
+              <div className={styles.rowLabel}>How this works</div>
+              <div className={styles.rowDesc}>
+                What gets copied, who delivers your reminders, and what to expect in beta
+              </div>
+            </div>
+            <div className={styles.rowControl}>
+              <button
+                className={styles.actionBtn}
+                onClick={() => setShowMirrorInfo(true)}
+                data-component="action-button"
+                data-action="calendar-mirror-info"
+                type="button"
+              >
+                Learn more
+              </button>
+            </div>
+          </div>
         </div>
       )}
+
+      <Modal
+        isOpen={showMirrorInfo}
+        onClose={() => setShowMirrorInfo(false)}
+        title="Sync to Android Calendar"
+      >
+        <div className={styles.infoBody}>
+          <p>
+            Calino copies your events into Android&apos;s own calendar database — the same one your
+            calendar widget, Wear OS watch and Android Auto read from. Those apps can&apos;t see
+            Calino&apos;s storage, so this is what makes your events show up in them.
+          </p>
+
+          <div className={styles.infoSection}>
+            <h3>Why it makes reminders more reliable</h3>
+            <p>
+              On its own, Calino can only schedule a reminder while it&apos;s running. Android
+              schedules reminders for events in its calendar whether or not Calino has been opened,
+              so while this is on, Android delivers them and Calino stands down — you won&apos;t get
+              two notifications for the same event.
+            </p>
+            <p>
+              This needs a calendar app installed to actually raise the notification. If you
+              don&apos;t have one, Calino says so above and keeps handling reminders itself.
+            </p>
+          </div>
+
+          <div className={styles.infoSection}>
+            <h3>It only goes one way</h3>
+            <ul>
+              <li>
+                The mirrored calendars are read-only. Calino stays the only thing that writes to
+                your CalDAV server, and nothing you do in another calendar app comes back.
+              </li>
+              <li>Only calendars you&apos;ve set to visible are copied.</li>
+              <li>
+                Turning this off deletes the mirrored calendars again, leaving your other calendars
+                untouched.
+              </li>
+            </ul>
+          </div>
+
+          <div className={styles.infoSection}>
+            <h3>Staying up to date</h3>
+            <p>
+              About once an hour Calino checks your server in the background, so an event you add on
+              another device gets to your phone and reminds you even if you haven&apos;t opened
+              Calino since. Nothing is sent anywhere new — it&apos;s the same connection to your own
+              server that the app already uses.
+            </p>
+          </div>
+
+          <div className={styles.infoSection}>
+            <h3>Why it&apos;s in beta</h3>
+            <p>
+              The background check is at the mercy of your phone&apos;s battery settings. Xiaomi,
+              Samsung, OPPO, OnePlus and Huawei devices in particular freeze background apps
+              aggressively, and will silently skip it. If your events seem stale, set Calino to{' '}
+              <strong>No restrictions</strong> in Android&apos;s battery settings for the app.
+            </p>
+            <p>
+              If a mirrored calendar doesn&apos;t appear in your calendar app, it&apos;s usually
+              hidden rather than missing — new calendars often arrive unticked in that app&apos;s
+              own list of calendars to display.
+            </p>
+          </div>
+        </div>
+      </Modal>
 
       <div className={styles.group}>
         <div className={styles.groupLabel}>Tasks</div>

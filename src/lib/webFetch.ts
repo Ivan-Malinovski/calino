@@ -1,4 +1,5 @@
 import { Capacitor, registerPlugin } from '@capacitor/core'
+import { getHeadlessBridge, isHeadless } from './headlessBridge'
 
 /**
  * The fetch used for all CalDAV/CardDAV traffic.
@@ -59,7 +60,33 @@ function abortError(): Error {
   return new DOMException('The operation was aborted.', 'AbortError')
 }
 
-async function nativeFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+/** Same shape as DavHttpPlugin.request, whichever side performs it. */
+type DavTransport = (options: {
+  url: string
+  method: string
+  headers: Record<string, string>
+  body?: string
+}) => Promise<DavHttpResponse>
+
+/**
+ * The background sync page has no Capacitor bridge, so DAV traffic goes over
+ * the worker's `@JavascriptInterface` instead. Same OkHttp call underneath —
+ * both land in `DavHttp.java`.
+ */
+const headlessTransport: DavTransport = async (options) => {
+  const bridge = getHeadlessBridge()!
+  const result = JSON.parse(bridge.davRequest(JSON.stringify(options))) as
+    | { ok: true; response: DavHttpResponse }
+    | { ok: false; error: string }
+  if (!result.ok) throw new Error(result.error)
+  return result.response
+}
+
+async function nativeFetch(
+  input: RequestInfo | URL,
+  init: RequestInit | undefined,
+  transport: DavTransport
+): Promise<Response> {
   // Normalize through Request so a Request input, a URL, and init overrides all
   // collapse to one representation — same as the platform would.
   const request = new Request(input, init)
@@ -71,7 +98,7 @@ async function nativeFetch(input: RequestInfo | URL, init?: RequestInit): Promis
   const body =
     request.method === 'GET' || request.method === 'HEAD' ? undefined : await request.text()
 
-  const pending = DavHttp.request({
+  const pending = transport({
     url: request.url,
     method: request.method,
     headers,
@@ -81,7 +108,16 @@ async function nativeFetch(input: RequestInfo | URL, init?: RequestInit): Promis
   // Callers wrap requests in AbortController timeouts. The native call can't be
   // cancelled mid-flight (it has its own timeout), but the caller must still see
   // an AbortError on schedule rather than waiting on the longer native timeout.
-  const result = await (init?.signal ? raceAbort(pending, init.signal) : pending)
+  //
+  // Except in the background worker, where honouring the signal is worse than
+  // useless. That transport is synchronous, so the timer physically cannot fire
+  // while a request is in flight — but Android freezes background processes,
+  // and a frozen-then-thawed worker fires every elapsed timer at once,
+  // aborting requests that were about to succeed. Observed on MIUI: a pass
+  // frozen for nine minutes failed every account with "timeout" the instant it
+  // resumed. Nothing is waiting on this page, and OkHttp has its own timeout.
+  const abortable = init?.signal && !isHeadless()
+  const result = await (abortable ? raceAbort(pending, init.signal!) : pending)
 
   // 204/304 must not carry a body or the Response constructor throws.
   const hasBody = result.status !== 204 && result.status !== 304
@@ -98,8 +134,13 @@ async function nativeFetch(input: RequestInfo | URL, init?: RequestInit): Promis
 }
 
 export function webFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  // Checked before the Capacitor test: the headless page is a plain WebView, so
+  // `isNativePlatform()` is false there even though we very much are on device.
+  if (isHeadless()) {
+    return nativeFetch(input, init, headlessTransport)
+  }
   if (Capacitor.isNativePlatform()) {
-    return nativeFetch(input, init)
+    return nativeFetch(input, init, (options) => DavHttp.request(options))
   }
   return unpatchedFetch()(input, init)
 }

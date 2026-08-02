@@ -14,4 +14,5 @@ ext {
     androidxEspressoCoreVersion = '3.7.0'
     cordovaAndroidVersion = '14.0.1'
     okhttpVersion = '4.12.0'
+    androidxWorkVersion = '2.10.0'
 }

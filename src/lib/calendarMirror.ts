@@ -56,6 +56,8 @@ interface CalendarMirrorPlugin {
     events: MirrorEventPayload[]
   }): Promise<{ calendars: number; written: number; removed: number }>
   clear(): Promise<{ removed?: number }>
+  scheduleBackgroundSync(options?: { intervalMinutes?: number }): Promise<void>
+  cancelBackgroundSync(): Promise<void>
 }
 
 const CalendarMirror = registerPlugin<CalendarMirrorPlugin>('CalendarMirror')
@@ -69,8 +71,8 @@ const CalendarMirror = registerPlugin<CalendarMirrorPlugin>('CalendarMirror')
  * and because a year of history is what makes the mirrored calendar useful to
  * browse in another app rather than looking mysteriously empty.
  */
-const MIRROR_PAST_DAYS = 365
-const MIRROR_FUTURE_DAYS = 730
+export const MIRROR_PAST_DAYS = 365
+export const MIRROR_FUTURE_DAYS = 730
 
 const DAY_MS = 24 * 60 * 60 * 1000
 
@@ -105,6 +107,23 @@ export async function hasCalendarApp(): Promise<boolean> {
 export async function clearCalendarMirror(): Promise<void> {
   if (!isCalendarMirrorSupported()) return
   await CalendarMirror.clear()
+}
+
+/**
+ * Starts the periodic background refresh (`HeadlessSyncWorker`).
+ *
+ * Without it the mirror only holds what Calino saw while it was open, so an
+ * event created on another device never reaches the provider and never alarms
+ * — which would leave the mirror solving only half the problem it exists for.
+ */
+export async function scheduleBackgroundSync(): Promise<void> {
+  if (!isCalendarMirrorSupported()) return
+  await CalendarMirror.scheduleBackgroundSync()
+}
+
+export async function cancelBackgroundSync(): Promise<void> {
+  if (!isCalendarMirrorSupported()) return
+  await CalendarMirror.cancelBackgroundSync()
 }
 
 // ------------------------------------------------------------------ mapping

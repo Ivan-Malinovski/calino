@@ -153,6 +153,39 @@ payload mapping and the content hash live in `src/lib/calendarMirror.ts`.
 - Package visibility: the `<queries>` block for `ACTION_INSERT` + `vnd.android.cursor.dir/event`
   is required on Android 11+, otherwise `hasCalendarApp()` always reports false.
 
+The reconcile itself lives in `CalendarMirrorWriter`, deliberately free of Capacitor types so
+both the plugin and the background worker below drive the same code. `DavHttp` is split out of
+`DavHttpPlugin` for the same reason.
+
+## Background sync (`HeadlessSyncWorker`)
+
+The mirror alone only solves half the problem: the OS reliably alarms whatever is in
+`CalendarContract`, but nothing puts an event created on *another* device there until Calino
+next opens. This worker is the other half — a WorkManager periodic job (hourly, network
+required), scheduled when `enableCalendarMirror` goes on and cancelled when it goes off.
+
+- **It runs the real TypeScript engine in a bare WebView.** Reimplementing CalDAV and
+  iCalendar parsing in Java would mean two engines to keep in step, against the one-codebase
+  premise. `src/headless.ts` is the entry point, built as a second Vite entry
+  (`headless.html`, see `vite.config.ts`).
+- **There is no Capacitor here, and there cannot be.** `Bridge` requires an
+  `AppCompatActivity` (check its constructor before assuming otherwise), a worker has none,
+  and Android 10+ forbids starting an activity from the background. So the worker serves the
+  page itself via `shouldInterceptRequest` and injects a plain `@JavascriptInterface`
+  (`CalinoHeadless`) exposing just DAV HTTP and the provider write. `src/lib/webFetch.ts`
+  checks for that bridge *before* `Capacitor.isNativePlatform()`, which is false on this page.
+- **The page must be served from `https://localhost`** — byte for byte the origin Capacitor
+  uses. That is the whole trick: same origin means the same `localStorage`, so the worker
+  reads the accounts, credentials and calendar visibility the app already stored. Change the
+  origin and it silently syncs nothing, because it sees no accounts.
+- **The headless page never writes `localStorage`.** The foreground app holds its own
+  in-memory zustand copy and rehydrates only at startup, so a background write would race it.
+  The provider is the only thing the worker mutates; the app re-mirrors from its own state
+  when it next opens and the two converge. There is a test pinning this.
+- Its reconcile is `partial`: authoritative only for the calendars it actually fetched, so it
+  cannot delete webcal-derived rows it never syncs. It also refuses to write an empty payload
+  — with nothing fetched, "no events" is indistinguishable from a network failure.
+
 ## Known OS-level gotchas (not code bugs)
 
 - **A mirrored calendar that "doesn't appear" is usually a display preference, not a sync
@@ -163,9 +196,24 @@ payload mapping and the content hash live in `src/lib/calendarMirror.ts`.
   `adb shell "content query --uri content://com.android.calendar/calendars --projection _id:name:visible:sync_events"`
   — if our rows are there with `visible=1`, the mirror is fine and it's the app's list.
   Same command with `/events` (`--where "calendar_id=N"`) and `/reminders` confirms the rest.
+- **WorkManager refuses to force-run periodic work before its first slot.**
+  `adb shell cmd jobscheduler run -f -n androidx.work.systemjobscheduler <pkg> <id>` reports
+  "Running job [FORCED]" and then logs *"Delaying execution … because it is being executed
+  before schedule"* — the run does not happen. To actually observe a background sync, build
+  with `DEFAULT_INTERVAL_MINUTES` at WorkManager's 15-minute floor and wait. Note the job id
+  changes every time the app re-enqueues on launch, so re-read it from `dumpsys jobscheduler`
+  rather than reusing one.
 - **OEM battery optimization** (MIUI, Oppo/Realme/Honor, etc.) can silently kill
   background alarms/notifications even when correctly scheduled via AlarmManager. Fix is
   a phone-side setting (set the app's battery/power mode to "No restrictions"), not code.
+  This bites `HeadlessSyncWorker` hardest, and the symptom is easy to misread as a code bug:
+  on the test Xiaomi, a job that cold-starts the process gets the process **frozen** before
+  `doWork()` runs, so *nothing at all* is logged — not even the first line of the method —
+  while `dumpsys jobscheduler` cheerfully reports "Running job [FORCED]". Bring the app to
+  the foreground and the frozen worker resumes from exactly where it stopped. A worker that
+  is frozen mid-pass also thaws with every elapsed timer firing at once, which is why the
+  headless DAV transport ignores abort signals (see `webFetch.ts`). If you need to observe a
+  run, keep the process warm: `adb shell svc power stayon true` plus a foreground launch.
 - A fresh install/reinstall resets Android's OS-level permission grants (e.g.
   `POST_NOTIFICATIONS`) independent of the app's own persisted settings — always check
   real permission state before relying on it, don't just trust an app setting.

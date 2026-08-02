@@ -9,6 +9,8 @@ import {
   hasCalendarApp,
   syncCalendarMirror,
   clearCalendarMirror,
+  scheduleBackgroundSync,
+  cancelBackgroundSync,
 } from '@/lib/calendarMirror'
 
 /** Matches the reminder reconcile debounce — a sync stores events one at a
@@ -34,10 +36,24 @@ export function useCalendarMirror(): void {
   const runIdRef = useRef(0)
 
   // Tear down when the setting goes off, so we never leave orphaned calendars
-  // sitting in the user's calendar app.
+  // sitting in the user's calendar app — or an unowned worker still waking the
+  // device to refresh a mirror that no longer exists.
   useEffect(() => {
-    if (!isCalendarMirrorSupported() || enableCalendarMirror) return
+    if (!isCalendarMirrorSupported()) return
+
+    if (enableCalendarMirror) {
+      // The periodic refresh is what keeps the provider alarming events Calino
+      // has never seen in the foreground; without it the mirror is only as
+      // fresh as the last time the app was open.
+      void scheduleBackgroundSync().catch(() => {
+        // A missing background refresh degrades freshness, not correctness, and
+        // every foreground sync re-arms it.
+      })
+      return
+    }
+
     setStatus('off')
+    void cancelBackgroundSync().catch(() => {})
     void clearCalendarMirror().catch(() => {
       // Nothing actionable — the calendars are only reachable via our own
       // account, and the next enable/disable cycle retries.

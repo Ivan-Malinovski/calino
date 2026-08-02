@@ -8,6 +8,8 @@ const mockSync = vi.fn()
 const mockClear = vi.fn()
 const mockCheckPermission = vi.fn()
 const mockHasCalendarApp = vi.fn()
+const mockScheduleBackgroundSync = vi.fn()
+const mockCancelBackgroundSync = vi.fn()
 
 vi.mock('@/lib/calendarMirror', () => ({
   isCalendarMirrorSupported: () => true,
@@ -15,6 +17,8 @@ vi.mock('@/lib/calendarMirror', () => ({
   hasCalendarApp: () => mockHasCalendarApp(),
   syncCalendarMirror: (...args: unknown[]) => mockSync(...args),
   clearCalendarMirror: () => mockClear(),
+  scheduleBackgroundSync: () => mockScheduleBackgroundSync(),
+  cancelBackgroundSync: () => mockCancelBackgroundSync(),
 }))
 
 vi.mock('@capacitor/app', () => ({
@@ -56,6 +60,8 @@ describe('useCalendarMirror', () => {
     mockClear.mockReset().mockResolvedValue(undefined)
     mockCheckPermission.mockReset().mockResolvedValue(true)
     mockHasCalendarApp.mockReset().mockResolvedValue(true)
+    mockScheduleBackgroundSync.mockReset().mockResolvedValue(undefined)
+    mockCancelBackgroundSync.mockReset().mockResolvedValue(undefined)
     useCalendarMirrorStore.setState({ status: 'off', lastError: null })
   })
 
@@ -129,5 +135,17 @@ describe('useCalendarMirror', () => {
     renderHook(() => useCalendarMirror())
     await waitFor(() => expect(mockClear).toHaveBeenCalled())
     expect(useCalendarMirrorStore.getState().status).toBe('off')
+    // The worker would otherwise keep waking the device to refresh a mirror
+    // that no longer exists.
+    expect(mockCancelBackgroundSync).toHaveBeenCalled()
+    expect(mockScheduleBackgroundSync).not.toHaveBeenCalled()
+  })
+
+  it('starts the background refresh while the mirror is on', async () => {
+    // Without it the mirror only holds what Calino saw in the foreground, so
+    // an event created elsewhere never reaches the provider to be alarmed.
+    renderHook(() => useCalendarMirror())
+    await waitFor(() => expect(mockScheduleBackgroundSync).toHaveBeenCalled())
+    expect(mockCancelBackgroundSync).not.toHaveBeenCalled()
   })
 })

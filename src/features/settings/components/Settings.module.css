@@ -1918,6 +1918,41 @@
   box-shadow: none;
 }
 
+/* ── Feature explainer modal ─────────────────────────────────────────── */
+.infoBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--ink-2);
+}
+
+.infoBody h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.infoBody p,
+.infoBody ul {
+  margin: 0;
+}
+
+.infoBody ul {
+  padding-left: 1.15em;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.infoSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
 /* Toggle with label text */
 .toggleRow {
   display: flex;

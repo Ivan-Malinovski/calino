@@ -65,6 +65,18 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  build: {
+    rollupOptions: {
+      // Second entry for the Android background sync worker, which loads
+      // headless.html in an offscreen WebView at the same origin as the app so
+      // it can read the stored accounts. It shares the app's modules, so this
+      // costs a small extra chunk, not a second copy. See src/headless.ts.
+      input: {
+        main: path.resolve(__dirname, 'index.html'),
+        headless: path.resolve(__dirname, 'headless.html'),
+      },
+    },
+  },
   test: {
     globals: true,
     environment: 'jsdom',
