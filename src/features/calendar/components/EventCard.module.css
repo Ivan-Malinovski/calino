@@ -160,7 +160,7 @@
 .time {
   font-size: 11.5px;
   font-weight: 400;
-  color: var(--ink-2);
+  color: var(--event-ink-2, var(--ink-2));
   margin-top: 1px;
   line-height: 1.3;
   font-variant-numeric: tabular-nums;
@@ -184,7 +184,7 @@
 .metaDot {
   flex-shrink: 0;
   font-size: 11px;
-  color: var(--ink-3);
+  color: var(--event-ink-3, var(--ink-3));
 }
 
 .meta .location {
@@ -197,7 +197,7 @@
   display: inline-block;
   max-width: 100%;
   font-size: 11px;
-  color: var(--ink-2);
+  color: var(--event-ink-2, var(--ink-2));
   margin-top: -2px;
   white-space: nowrap;
   overflow: hidden;
@@ -212,7 +212,7 @@
 /* ---- Travel Time ---- */
 .travelTime {
   font-size: 11px;
-  color: var(--ink-2);
+  color: var(--event-ink-2, var(--ink-2));
   margin-top: 1px;
   display: flex;
   align-items: center;
@@ -239,7 +239,7 @@
   position: absolute;
   top: 4px;
   right: 6px;
-  color: var(--ink-3);
+  color: var(--event-ink-3, var(--ink-3));
   display: flex;
   align-items: center;
   gap: 2px;
@@ -569,13 +569,13 @@
 /* ---- Completed State ---- */
 .isDone .title {
   text-decoration: line-through;
-  color: var(--ink-3);
+  color: var(--event-ink-3, var(--ink-3));
 }
 
 /* ---- Due Date ---- */
 .dueDate {
   font-size: 10px;
-  color: var(--ink-2);
+  color: var(--event-ink-2, var(--ink-2));
   margin-top: 2px;
   font-variant-numeric: tabular-nums;
 }

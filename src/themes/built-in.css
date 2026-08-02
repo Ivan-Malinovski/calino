@@ -175,8 +175,15 @@
   --error-bg: color-mix(in srgb, var(--color-error, #c2697f) 8%, transparent);
   --error-bg-strong: color-mix(in srgb, var(--color-error, #c2697f) 14%, transparent);
   --error-border: color-mix(in srgb, var(--color-error, #c2697f) 22%, transparent);
+  /* Event tint strength. Higher = easier to tell calendars apart at a glance,
+     but the tint eats into the contrast of the text sitting on it, so the two
+     move together: --event-ink-* are the card-local secondary inks that keep
+     time/location at AA on the *most saturated* calendar colour at this mix.
+     See docs/event-tint.md for the measured pairings. */
   --event-bg-mix: 9%;
   --event-bg-mix-hover: 12%;
+  --event-ink-2: #655f57;
+  --event-ink-3: #655f57;
   /* "Muted" here means desaturated, not low-contrast — these are used as text
      (overdue todos, destructive labels), so they still have to clear AA. */
   --color-error-muted: #a9544b;
@@ -358,6 +365,8 @@
   --error-border: color-mix(in srgb, var(--color-error, #d4877f) 30%, transparent);
   --event-bg-mix: 18%;
   --event-bg-mix-hover: 22%;
+  --event-ink-2: #b0aaa0;
+  --event-ink-3: #b0aaa0;
   --color-error-muted: #d4877f;
   --color-success-muted: #6aaa85;
 

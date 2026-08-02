@@ -31,6 +31,15 @@ import { CalendarSkeleton } from './components/common/Skeleton'
 import { FloatingNavPill } from './features/calendar/components/nav/FloatingNavPill'
 import { OnboardingModal } from './features/onboarding/OnboardingModal'
 import { ShortcutsHelp } from './features/calendar/components/ShortcutsHelp'
+// TEMPORARY — prototype for issue #31. Lazy + DEV-gated so it never reaches a
+// production bundle. Remove with the feature directory once a tint is chosen.
+const EventTintPrototype = import.meta.env.DEV
+  ? lazy(() =>
+      import('./features/devtools/EventTintPrototype').then((m) => ({
+        default: m.EventTintPrototype,
+      })),
+    )
+  : null
 import { SetupPage } from './features/setup/SetupPage'
 import { MasterPasswordPrompt } from './features/settings/components/MasterPasswordPrompt'
 import { useConfigStore } from './store/configStore'
@@ -775,6 +784,11 @@ function CalendarApp(): JSX.Element {
         onToggleSidebar={handleToggleSidebar}
         onOpenSearch={handleOpenCommandPalette}
       />
+      {EventTintPrototype && (
+        <Suspense fallback={null}>
+          <EventTintPrototype />
+        </Suspense>
+      )}
       <ErrorBoundary fallback={null}>
         <EventModal />
       </ErrorBoundary>
