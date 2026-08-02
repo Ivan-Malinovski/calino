@@ -217,7 +217,6 @@
   display: flex;
   align-items: center;
   gap: var(--space-1);
-  opacity: 0.8;
 }
 
 .travelTime svg {
@@ -241,7 +240,6 @@
   top: 4px;
   right: 6px;
   color: var(--ink-3);
-  opacity: 0.7;
   display: flex;
   align-items: center;
   gap: 2px;
@@ -285,7 +283,7 @@
   position: absolute;
   top: 4px;
   right: 22px;
-  color: var(--color-warning);
+  color: var(--color-warning-text, var(--color-warning));
   z-index: 2;
   display: flex;
   align-items: center;
@@ -294,8 +292,8 @@
 }
 
 @keyframes syncFailedPulse {
-  0%, 100% { opacity: 0.9; }
-  50% { opacity: 0.5; }
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
 }
 
 /* ---- Checkbox (for tasks) ---- */

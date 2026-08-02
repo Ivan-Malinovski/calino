@@ -139,7 +139,7 @@
 
 .weekNumber:hover {
   background: rgba(var(--ink-raw, 44, 40, 33), 0.03);
-  color: var(--accent);
+  color: var(--accent-strong, var(--accent));
 }
 
 .weekNumber:active {
@@ -217,9 +217,11 @@
   background: var(--day-cell-other-month-bg, rgba(var(--ink-raw, 44, 40, 33), 0.02));
 }
 
+/* Dimmed on purpose, but these are still real, clickable dates — 0.6 put them
+   at 1.96:1, below even the 3:1 floor for non-text UI. */
 .otherMonth .dayNumber {
   color: var(--ink-3);
-  opacity: 0.6;
+  opacity: 0.85;
 }
 
 /* ---- Today ---- */
@@ -229,7 +231,7 @@
 }
 
 .today .dayNumber {
-  background: var(--accent);
+  background: var(--accent-strong, var(--accent));
   color: var(--accent-contrast, #fff);
   font-weight: 600;
 }
@@ -321,7 +323,7 @@
 
 .journalIndicator:hover {
   background: var(--selected-bg);
-  color: var(--accent);
+  color: var(--accent-strong, var(--accent));
 }
 
 /* Always show dot on mobile (no hover) */

@@ -140,8 +140,8 @@
   height: 36px;
   padding: 0 15px;
   border-radius: var(--radius-sm);
-  background: var(--accent);
-  color: #fff;
+  background: var(--accent-strong, var(--accent));
+  color: var(--accent-contrast, #fff);
   font-size: 13.5px;
   font-weight: 500;
   border: none;
@@ -398,7 +398,7 @@
   gap: var(--space-1);
   margin-top: 4px;
   padding: 2px 0;
-  color: var(--accent);
+  color: var(--accent-strong, var(--accent));
   font-size: 12px;
   text-decoration: none;
   word-break: break-all;
@@ -422,7 +422,7 @@
   padding: 2px 8px;
   border-radius: 6px;
   background: var(--accent-soft, rgba(196, 168, 154, 0.08));
-  color: var(--accent);
+  color: var(--accent-strong, var(--accent));
   white-space: nowrap;
 }
 
@@ -536,7 +536,7 @@
   font-family: var(--font-serif, 'Newsreader', Georgia, serif);
   font-size: 38px;
   font-weight: 400;
-  color: var(--accent);
+  color: var(--accent-strong, var(--accent));
   line-height: 1;
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
@@ -547,7 +547,7 @@
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--accent);
+  color: var(--accent-strong, var(--accent));
   opacity: 0.65;
   margin-top: 5px;
 }
@@ -557,7 +557,7 @@
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--accent);
+  color: var(--accent-strong, var(--accent));
   opacity: 0.5;
   margin-top: 2px;
   white-space: nowrap;
@@ -692,7 +692,7 @@
 }
 
 .addCategories:hover {
-  color: var(--accent);
+  color: var(--accent-strong, var(--accent));
 }
 
 .categoryChip {
@@ -763,7 +763,7 @@
 }
 
 .addToggle:hover {
-  color: var(--accent);
+  color: var(--accent-strong, var(--accent));
 }
 
 .addPanelContent {
@@ -893,7 +893,7 @@
   width: 100%;
   text-align: center;
   font-size: 11px;
-  color: var(--accent);
+  color: var(--accent-strong, var(--accent));
   background: transparent;
   border: none;
   padding: 6px 0 2px;
@@ -933,7 +933,7 @@
   font-family: var(--font-serif, 'Newsreader', Georgia, serif);
   font-size: 20px;
   font-weight: 400;
-  color: var(--accent);
+  color: var(--accent-strong, var(--accent));
   border: 2px solid var(--accent);
   border-radius: var(--radius-sm);
   padding: 6px 10px;
@@ -957,8 +957,8 @@
   height: 32px;
   padding: 0 15px;
   border-radius: var(--radius-sm);
-  background: var(--accent);
-  color: #fff;
+  background: var(--accent-strong, var(--accent));
+  color: var(--accent-contrast, #fff);
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;

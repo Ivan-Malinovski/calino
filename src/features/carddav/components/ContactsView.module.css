@@ -151,8 +151,8 @@
   padding: 0 14px;
   border: none;
   border-radius: var(--radius-sm);
-  background: var(--accent, #b07d4f);
-  color: #fff;
+  background: var(--accent-strong, var(--accent, #b07d4f));
+  color: var(--accent-contrast, #fff);
   font-size: 13px;
   font-weight: 500;
   font-family: inherit;
@@ -334,7 +334,7 @@
 }
 
 .infoFieldValue a {
-  color: var(--accent, #b07d4f);
+  color: var(--accent-strong, var(--accent, #b07d4f));
   text-decoration: none;
   transition: color 0.14s;
 }
@@ -429,7 +429,7 @@
 }
 
 .notesCard .notesText a {
-  color: var(--accent, #b07d4f);
+  color: var(--accent-strong, var(--accent, #b07d4f));
   text-decoration: underline;
   text-decoration-color: color-mix(in srgb, var(--accent, #b07d4f) 30%, transparent);
 }
@@ -488,7 +488,7 @@
 .birthdayCountdown {
   font-size: 10.5px;
   font-weight: 500;
-  color: var(--accent, #b07d4f);
+  color: var(--accent-strong, var(--accent, #b07d4f));
   letter-spacing: 0;
   text-transform: none;
 }
@@ -713,7 +713,7 @@
     padding: 10px 16px;
     border: none;
     background: transparent;
-    color: var(--accent, #b07d4f);
+    color: var(--accent-strong, var(--accent, #b07d4f));
     font-size: 14px;
     font-weight: 500;
     cursor: pointer;

@@ -107,7 +107,7 @@
 }
 
 .content a {
-  color: var(--color-accent);
+  color: var(--accent-strong, var(--color-accent));
   text-decoration: none;
 }
 

@@ -67,7 +67,14 @@
   --color-border-glass: var(--line);    /* legacy alias — ignore */
 
   /* Accent */
-  --accent: #b07d4f;              /* canonical — buttons, links, highlights */
+  --accent: #b07d4f;              /* canonical — fills, rails, dots, borders */
+  /* Optional. The accent as *text*, and as a fill behind --accent-contrast.
+     Set this if --accent is too light to read on --canvas (aim for 4.5:1).
+     Falls back to --accent when omitted. */
+  --accent-strong: #8d643f;
+  /* Text/icon colour on an --accent-strong fill (the "today" pill, primary
+     buttons). Use whichever of white/ink contrasts better with your accent. */
+  --accent-contrast: #ffffff;
   --accent-soft: rgba(176, 125, 79, 0.12); /* canonical — chip/badge fills */
 
   --color-accent: var(--accent);        /* legacy alias — ignore */
@@ -81,6 +88,9 @@
   --color-success: #5d9a78;
   --color-success-light: rgba(93, 154, 120, 0.12);
   --color-warning: #bf944e;
+  /* Optional. Used where the warning colour carries text or an icon rather
+     than a fill; yellows usually need to be much darker there. */
+  --color-warning-text: #8d6902;
   --color-error: #c2697f;
   --color-error-muted: #c47068;
   --color-danger: #c2697f;
@@ -231,7 +241,9 @@
   --color-border-glass: var(--line);     /* legacy alias — ignore */
 
   /* Accent */
-  --accent: #c9956a;             /* canonical — buttons, links, highlights */
+  --accent: #c9956a;             /* canonical — fills, rails, dots, borders */
+  --accent-strong: #c9956a;      /* light enough to read as-is on dark canvas */
+  --accent-contrast: #1a1816;    /* ink, not white — see the light block above */
   --accent-soft: rgba(201, 149, 106, 0.12); /* canonical — chip/badge fills */
 
   --color-accent: var(--accent);        /* legacy alias — ignore */

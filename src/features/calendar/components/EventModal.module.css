@@ -172,7 +172,7 @@
   width: 100%;
   text-align: center;
   font-size: 12px;
-  color: var(--accent);
+  color: var(--accent-strong, var(--accent));
   background: transparent;
   border: none;
   padding: 10px 0;
@@ -226,7 +226,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: var(--color-accent, #1a73e8);
+  color: var(--accent-strong, var(--color-accent, #1a73e8));
   cursor: pointer;
   background: none;
   border: none;
@@ -277,7 +277,7 @@
 
 .addAttachmentButton:hover {
   border-color: var(--color-accent, #1a73e8);
-  color: var(--color-accent, #1a73e8);
+  color: var(--accent-strong, var(--color-accent, #1a73e8));
   background: var(--color-accent-light, rgba(26, 115, 232, 0.04));
 }
 
@@ -339,7 +339,7 @@
 
 .addAttachmentButtonCompact:hover {
   border-color: var(--color-accent, #1a73e8);
-  color: var(--color-accent, #1a73e8);
+  color: var(--accent-strong, var(--color-accent, #1a73e8));
   background: var(--color-accent-light, rgba(26, 115, 232, 0.04));
 }
 
@@ -625,8 +625,8 @@
   padding: 7px 22px;
   border-radius: var(--radius-sm);
   border: none;
-  background: var(--color-accent);
-  color: #fff;
+  background: var(--accent-strong, var(--color-accent));
+  color: var(--accent-contrast, #fff);
   font-size: 13px;
   font-weight: 500;
   font-family: var(--font-sans, 'Inter', sans-serif);
@@ -1049,8 +1049,8 @@
 }
 
 .weekdayBtn.excluded {
-  background: var(--color-accent);
-  color: #fff;
+  background: var(--accent-strong, var(--color-accent));
+  color: var(--accent-contrast, #fff);
   border-color: var(--color-accent);
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
 }
@@ -1261,7 +1261,7 @@
 .categoryChip.categoryChipSelected {
   border-color: var(--color-accent);
   background: var(--color-accent-light);
-  color: var(--color-accent);
+  color: var(--accent-strong, var(--color-accent));
 }
 
 .categoryChipDot {
@@ -1290,7 +1290,7 @@
   background: var(--color-accent-light, rgba(59, 130, 246, 0.08));
   font-size: 12px;
   font-family: var(--font-sans, 'Inter', sans-serif);
-  color: var(--color-accent, #3b82f6);
+  color: var(--accent-strong, var(--color-accent, #3b82f6));
   line-height: 1;
 }
 
@@ -1304,7 +1304,7 @@
   border: none;
   border-radius: 50%;
   background: transparent;
-  color: var(--color-accent, #3b82f6);
+  color: var(--accent-strong, var(--color-accent, #3b82f6));
   font-size: 13px;
   line-height: 1;
   cursor: pointer;
@@ -1314,8 +1314,8 @@
 
 .reminderChipRemove:hover {
   opacity: 1;
-  background: var(--color-accent, #3b82f6);
-  color: #fff;
+  background: var(--accent-strong, var(--color-accent, #3b82f6));
+  color: var(--accent-contrast, #fff);
 }
 
 .reminderAddWrapper {
@@ -1339,7 +1339,7 @@
 
 .reminderAddBtn:hover {
   border-color: var(--color-accent, #3b82f6);
-  color: var(--color-accent, #3b82f6);
+  color: var(--accent-strong, var(--color-accent, #3b82f6));
   background: var(--color-accent-light, rgba(59, 130, 246, 0.08));
 }
 

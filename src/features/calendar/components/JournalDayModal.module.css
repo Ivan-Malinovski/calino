@@ -311,7 +311,7 @@
   gap: var(--space-1);
   margin-top: 4px;
   padding: 2px 0;
-  color: var(--accent);
+  color: var(--accent-strong, var(--accent));
   font-size: 12px;
   text-decoration: none;
   word-break: break-all;
@@ -389,7 +389,7 @@
 }
 
 .addCategories:hover {
-  color: var(--accent);
+  color: var(--accent-strong, var(--accent));
 }
 
 .categoryChip {
@@ -457,7 +457,7 @@
 }
 
 .addToggle:hover {
-  color: var(--accent);
+  color: var(--accent-strong, var(--accent));
 }
 
 .addPanelContent {
@@ -605,8 +605,8 @@
 .btnAccent {
   padding: 7px 22px;
   border-radius: var(--radius-sm);
-  background: var(--accent);
-  color: #fff;
+  background: var(--accent-strong, var(--accent));
+  color: var(--accent-contrast, #fff);
   font-size: 13px;
   font-weight: 500;
   font-family: inherit;
@@ -680,7 +680,7 @@
 
 .addEntry:hover {
   background: var(--accent-soft, var(--selected-bg));
-  color: var(--accent);
+  color: var(--accent-strong, var(--accent));
 }
 
 .btnDelete {

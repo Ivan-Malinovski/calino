@@ -81,8 +81,8 @@
 }
 
 .settingsToggleZoneActive {
-  background: var(--accent);
-  color: #fff;
+  background: var(--accent-strong, var(--accent));
+  color: var(--accent-contrast, #fff);
 }
 
 .quickSettingsCard {
@@ -146,7 +146,7 @@
 .reorderDone {
   border: none;
   background: transparent;
-  color: var(--accent);
+  color: var(--accent-strong, var(--accent));
   font-size: 11.5px;
   font-weight: 600;
   cursor: pointer;

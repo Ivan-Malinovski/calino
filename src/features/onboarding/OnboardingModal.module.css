@@ -95,7 +95,7 @@
 }
 
 .description a {
-  color: var(--accent, #1a73e8);
+  color: var(--accent-strong, var(--accent, #1a73e8));
 }
 
 .footer {
@@ -112,8 +112,8 @@
   cursor: pointer;
   transition: all 0.15s ease;
   border: none;
-  background: var(--color-accent, #1a73e8);
-  color: #ffffff;
+  background: var(--accent-strong, var(--color-accent, #1a73e8));
+  color: var(--accent-contrast, #ffffff);
 }
 
 .addButton:hover {

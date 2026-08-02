@@ -235,7 +235,7 @@
 
 .tabActive .tabCount {
   background: color-mix(in srgb, var(--accent, #b07d4f) 16%, transparent);
-  color: var(--accent, #b07d4f);
+  color: var(--accent-strong, var(--accent, #b07d4f));
 }
 
 .tab:hover {
@@ -266,8 +266,8 @@
   height: 36px;
   padding: 0 15px;
   border-radius: var(--radius-sm);
-  background: var(--accent, #b07d4f);
-  color: #fff;
+  background: var(--accent-strong, var(--accent, #b07d4f));
+  color: var(--accent-contrast, #fff);
   font-size: 13.5px;
   font-weight: 500;
   display: flex;
@@ -542,7 +542,7 @@
 }
 
 .dueToday {
-  color: var(--accent, #b07d4f);
+  color: var(--accent-strong, var(--accent, #b07d4f));
   font-weight: 600;
 }
 
@@ -613,8 +613,8 @@
   height: 36px;
   padding: 0 16px;
   border-radius: var(--radius-sm);
-  background: var(--accent, #b07d4f);
-  color: #fff;
+  background: var(--accent-strong, var(--accent, #b07d4f));
+  color: var(--accent-contrast, #fff);
   font-size: 13.5px;
   font-weight: 500;
   border: none;

@@ -67,7 +67,7 @@
 }
 
 .stepActive {
-  color: var(--accent);
+  color: var(--accent-strong, var(--accent));
   font-weight: 500;
 }
 
@@ -91,8 +91,8 @@
 
 .stepActive .stepDot {
   border-color: var(--accent);
-  background: var(--accent);
-  color: #fff;
+  background: var(--accent-strong, var(--accent));
+  color: var(--accent-contrast, #fff);
 }
 
 .stepDone .stepDot {
@@ -214,8 +214,8 @@
   justify-content: center;
   font-size: 14px;
   font-weight: 600;
-  color: #fff;
-  background: var(--accent);
+  color: var(--accent-contrast, #fff);
+  background: var(--accent-strong, var(--accent));
   flex-shrink: 0;
 }
 
@@ -291,8 +291,8 @@
 }
 
 .btnPrimary {
-  background: var(--accent);
-  color: #fff;
+  background: var(--accent-strong, var(--accent));
+  color: var(--accent-contrast, #fff);
   border-color: var(--accent);
 }
 
@@ -351,7 +351,7 @@
   background: rgba(var(--ink-raw), 0.06);
   padding: 2px 6px;
   border-radius: var(--radius-sm);
-  color: var(--accent);
+  color: var(--accent-strong, var(--accent));
 }
 
 .instructions .warn {

@@ -355,7 +355,7 @@
 
 .locationMapLink:hover {
   opacity: 1;
-  color: var(--accent, #b07d4f);
+  color: var(--accent-strong, var(--accent, #b07d4f));
   background-color: var(--accent-soft, #efe7db);
 }
 
@@ -478,8 +478,8 @@
   width: 36px;
   height: 36px;
   padding: 0;
-  color: #fff;
-  background: var(--color-accent);
+  color: var(--accent-contrast, #fff);
+  background: var(--accent-strong, var(--color-accent));
   border: none;
   border-radius: 6px;
   cursor: pointer;
@@ -496,8 +496,8 @@
   padding: 10px 16px;
   font-size: 13px;
   font-weight: 500;
-  color: #fff;
-  background: var(--color-accent);
+  color: var(--accent-contrast, #fff);
+  background: var(--accent-strong, var(--color-accent));
   border: none;
   border-radius: 6px;
   cursor: pointer;

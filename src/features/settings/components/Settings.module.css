@@ -154,7 +154,7 @@
 
 .navItemActive {
   background: var(--accent-soft);
-  color: var(--accent);
+  color: var(--accent-strong, var(--accent));
   font-weight: 500;
 }
 
@@ -212,8 +212,8 @@
   margin-right: -16px;
   padding: 5px 12px;
   border-radius: 999px;
-  background: var(--accent);
-  color: #fff;
+  background: var(--accent-strong, var(--accent));
+  color: var(--accent-contrast, #fff);
   font-size: 13px;
   font-weight: 500;
   box-shadow: 0 2px 10px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.18 * var(--shadow-opacity, 1)));
@@ -743,7 +743,7 @@
 }
 
 .themeCardActive .themeCardLabel {
-  color: var(--accent);
+  color: var(--accent-strong, var(--accent));
 }
 
 .tcCheck {
@@ -1076,7 +1076,7 @@
 }
 
 .catAdd:hover {
-  color: var(--accent);
+  color: var(--accent-strong, var(--accent));
 }
 
 .catAdd svg {
@@ -1218,7 +1218,7 @@
 }
 
 .connectBtn:hover {
-  color: var(--accent);
+  color: var(--accent-strong, var(--accent));
 }
 
 .connectBtn svg {
@@ -1632,7 +1632,7 @@
 
 .accountPickerBtnLoadingText {
   font-size: 12px;
-  color: var(--accent);
+  color: var(--accent-strong, var(--accent));
 }
 
 .accountPickerBtnServer {
@@ -1704,7 +1704,7 @@
   padding: 2px 8px;
   border-radius: var(--radius-sm);
   background: var(--accent-soft);
-  color: var(--accent);
+  color: var(--accent-strong, var(--accent));
   font-size: 12px;
   font-weight: 500;
 }
@@ -1779,7 +1779,7 @@
   padding: 2px 8px;
   border-radius: var(--radius-sm);
   background: var(--accent-soft);
-  color: var(--accent);
+  color: var(--accent-strong, var(--accent));
   font-size: 12px;
   font-weight: 500;
 }
@@ -1794,7 +1794,7 @@
   padding: 2px 8px;
   border-radius: var(--radius-sm);
   background: var(--accent-soft);
-  color: var(--accent);
+  color: var(--accent-strong, var(--accent));
   font-size: 12px;
   font-weight: 500;
   white-space: nowrap;

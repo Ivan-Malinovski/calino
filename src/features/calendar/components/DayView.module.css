@@ -126,7 +126,7 @@
   justify-content: center;
   width: 28px;
   height: 28px;
-  background: var(--accent, #b07d4f);
+  background: var(--accent-strong, var(--accent, #b07d4f));
   color: var(--accent-contrast, #fff);
   border-radius: 50%;
   font-weight: 600;

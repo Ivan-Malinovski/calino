@@ -88,7 +88,7 @@
 
 .agendaDayHeader.isToday .agendaDow,
 .agendaDayHeader.isEmpty.isToday .agendaDow {
-  color: var(--accent, #b07d4f);
+  color: var(--accent-strong, var(--accent, #b07d4f));
 }
 
 .agendaDayHeader.isToday .agendaDate,

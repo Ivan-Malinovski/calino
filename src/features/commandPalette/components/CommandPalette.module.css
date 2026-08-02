@@ -284,7 +284,7 @@
 }
 
 .item[aria-selected='true'] .icon {
-  color: var(--accent, #b07d4f);
+  color: var(--accent-strong, var(--accent, #b07d4f));
 }
 
 .item:hover:not([aria-selected='true']) .icon {
@@ -322,7 +322,7 @@
 }
 
 .item .confidence {
-  color: var(--accent, #b07d4f);
+  color: var(--accent-strong, var(--accent, #b07d4f));
   font-weight: 500;
 }
 
@@ -350,7 +350,7 @@
 .item[aria-selected='true'] kbd {
   border-color: var(--tag-border);
   background: color-mix(in srgb, var(--accent, #b07d4f) 6%, var(--popover-bg, var(--panel, #fff)));
-  color: var(--accent, #b07d4f);
+  color: var(--accent-strong, var(--accent, #b07d4f));
 }
 
 .footer {

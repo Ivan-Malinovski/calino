@@ -61,8 +61,8 @@
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background: var(--color-accent, #4a90d9);
-  color: #fff;
+  background: var(--accent-strong, var(--color-accent, #4a90d9));
+  color: var(--accent-contrast, #fff);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -177,8 +177,8 @@
 
 .addAttendeeButton {
   padding: 6px 12px;
-  background: var(--color-accent, #4a90d9);
-  color: #fff;
+  background: var(--accent-strong, var(--color-accent, #4a90d9));
+  color: var(--accent-contrast, #fff);
   border: none;
   border-radius: 6px;
   font-size: 13px;

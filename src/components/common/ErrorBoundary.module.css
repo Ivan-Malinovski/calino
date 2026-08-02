@@ -28,8 +28,8 @@
 .retry {
   margin-top: 0.5rem;
   padding: var(--space-2, 8px) var(--space-4, 16px);
-  background: var(--color-accent, #4285f4);
-  color: white;
+  background: var(--accent-strong, var(--color-accent, #4285f4));
+  color: var(--accent-contrast, white);
   border: none;
   border-radius: var(--radius-md, 6px);
   cursor: pointer;

@@ -197,8 +197,8 @@
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-3) var(--space-5);
-  background-color: var(--color-accent);
-  color: white;
+  background-color: var(--accent-strong, var(--color-accent));
+  color: var(--accent-contrast, white);
   font-size: 14px;
   font-weight: 500;
   border-radius: var(--radius-md);

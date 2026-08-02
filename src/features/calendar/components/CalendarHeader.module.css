@@ -133,7 +133,7 @@
 
 .navToday:hover {
   background: var(--hover-bg);
-  color: var(--accent);
+  color: var(--accent-strong, var(--accent));
 }
 
 .navToday:active {
@@ -654,7 +654,7 @@
 
 .viewDropdownItemActive {
   background: var(--accent-soft);
-  color: var(--accent);
+  color: var(--accent-strong, var(--accent));
   font-weight: 500;
 }
 

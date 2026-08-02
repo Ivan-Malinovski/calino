@@ -212,8 +212,8 @@
   height: 38px;
   border-radius: 50%;
   border: none;
-  background: var(--accent);
-  color: #fff;
+  background: var(--accent-strong, var(--accent));
+  color: var(--accent-contrast, #fff);
   cursor: pointer;
   flex-shrink: 0;
   overflow: hidden;

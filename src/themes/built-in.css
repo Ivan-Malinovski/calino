@@ -30,19 +30,28 @@
   --panel: #ffffff;
   --side: #f6f3ed;
   --ink: #2c2823;
-  --ink-2: #6f6a62;
-  --ink-3: #8a8378;
+  /* The grey ramp is tuned so every step clears WCAG AA (4.5:1) as body text on
+     --canvas, --panel and --side. #6f6a62 / #8a8378 were 5.06 / 3.53 — ink-3
+     failed everywhere, and the two were too close to darken ink-3 alone. */
+  --ink-2: #655f57;
+  --ink-3: #756d62;
   --line: rgba(44, 40, 33, 0.09);
   --line-2: rgba(44, 40, 33, 0.05);
   --accent: #b07d4f;
+  /* Same hue and saturation as --accent, lightness 0.50 → 0.40. --accent is
+     3.36:1 on --canvas: fine for rails, dots, borders and tints, but too light
+     to carry text. Use --accent-strong wherever the accent has to be *read*,
+     including as a fill behind --accent-contrast. */
+  --accent-strong: #8d643f;
+  --accent-contrast: #ffffff;
   --accent-soft: #efe7db;
 
   /* Text */
   --color-text-primary: #2c2823;
-  --color-text-secondary: #6f6a62;
-  --color-text-muted: #8a8378;
+  --color-text-secondary: #655f57;
+  --color-text-muted: #756d62;
   --color-text: #2c2823;
-  --color-text-tertiary: #8a8378;
+  --color-text-tertiary: #756d62;
 
   /* Borders */
   --color-border: #e8e3d9;
@@ -53,18 +62,26 @@
   /* Accent / Primary — aligned with --accent (warm brown) */
   --color-accent: #b07d4f;
   --color-primary: #b07d4f;
-  --color-primary-hover: #996442;
+  /* A step darker than --accent-strong (#8d643f), so hover on a filled button
+     still reads as "pressed toward" rather than lighting up. */
+  --color-primary-hover: #785536;
   --color-primary-light: rgba(176, 125, 79, 0.10);
-  --color-accent-hover: #996442;
+  --color-accent-hover: #785536;
+  --accent-hover: #785536;
   --color-accent-light: #efe7db;
 
-  /* Status colors */
-  --color-success: #34a853;
+  /* Status colors — darkened from the raw Google palette, which was tuned for
+     white and washes out on cream (#34a853 was 2.88:1, #ea4335 3.70:1). These
+     values clear AA as text *and* improve white-on-fill for solid buttons. */
+  --color-success: #277d3e;
   --color-success-light: rgba(45, 125, 70, 0.10);
   --color-danger-bg: rgba(234, 67, 53, 0.08);
+  /* Yellow is the exception: darkening it far enough to read (#8d6902) turns it
+     olive, so the fill keeps its brightness and text/icons use the -text pair. */
   --color-warning: #fbbc04;
-  --color-error: #ea4335;
-  --color-info: #b07d4f;
+  --color-warning-text: #8d6902;
+  --color-error: #c8351f;
+  --color-info: #8d643f;
 
   /* Overlay */
   --color-overlay: rgba(0, 0, 0, 0.5);
@@ -160,8 +177,10 @@
   --error-border: color-mix(in srgb, var(--color-error, #c2697f) 22%, transparent);
   --event-bg-mix: 9%;
   --event-bg-mix-hover: 12%;
-  --color-error-muted: #c47068;
-  --color-success-muted: #5a8a5a;
+  /* "Muted" here means desaturated, not low-contrast — these are used as text
+     (overdue todos, destructive labels), so they still have to clear AA. */
+  --color-error-muted: #a9544b;
+  --color-success-muted: #4a7a4f;
 
   /* Modal / popover tokens */
   --modal-bg: var(--color-bg-secondary);
@@ -208,6 +227,11 @@
   --line: rgba(240, 236, 230, 0.09);
   --line-2: rgba(240, 236, 230, 0.05);
   --accent: #c9956a;
+  /* Dark mode's accent is already light enough to read on --canvas (6.74:1), so
+     --accent-strong is the accent itself. --accent-contrast has to flip to ink:
+     white on #c9956a is 2.63:1, near-black is 6.74:1. */
+  --accent-strong: #c9956a;
+  --accent-contrast: #1a1816;
   --accent-soft: rgba(201, 149, 106, 0.18);
 
   /* Text */
@@ -229,6 +253,7 @@
   --color-primary-hover: #d4a575;
   --color-primary-light: rgba(201, 149, 106, 0.12);
   --color-accent-hover: #d4a575;
+  --accent-hover: #d4a575;
   --color-accent-light: rgba(201, 149, 106, 0.12);
 
   /* Status */
@@ -236,6 +261,7 @@
   --color-success-light: rgba(106, 170, 133, 0.12);
   --color-danger-bg: rgba(212, 135, 127, 0.10);
   --color-warning: #d4a54f;
+  --color-warning-text: #d4a54f;
   --color-error: #d4877f;
   --color-info: #c9956a;
 

@@ -80,7 +80,7 @@
 }
 
 .monthHeader:hover {
-  color: var(--accent, #b07d4f);
+  color: var(--accent-strong, var(--accent, #b07d4f));
 }
 
 .weekdayRow {
@@ -133,7 +133,7 @@
 
 .weekNum:hover {
   background: var(--panel-hover, var(--hover-bg, rgba(0, 0, 0, 0.05)));
-  color: var(--accent, #b07d4f);
+  color: var(--accent-strong, var(--accent, #b07d4f));
 }
 
 .day,
@@ -167,13 +167,13 @@
 }
 
 .today {
-  background: var(--accent, #b07d4f);
+  background: var(--accent-strong, var(--accent, #b07d4f));
   color: var(--accent-contrast, #fff);
   font-weight: 600;
 }
 
 .today:hover {
-  background: var(--accent, #b07d4f);
+  background: var(--accent-strong, var(--accent, #b07d4f));
   transform: scale(1.12);
 }
 
