@@ -13,6 +13,12 @@ import {
   checkNativeReminderPermission,
   scheduleTestReminder,
 } from '@/lib/nativeReminders'
+import {
+  isCalendarMirrorSupported,
+  checkCalendarMirrorPermission,
+  requestCalendarMirrorPermission,
+} from '@/lib/calendarMirror'
+import { useCalendarMirrorStore } from '@/store/calendarMirrorStore'
 import styles from './Settings.module.css'
 
 // R3.9 — copy reused by both the toggle and the test button when the
@@ -22,9 +28,16 @@ const PERMISSION_DENIED_TOAST =
   'Notifications are blocked. Update site permissions in your browser settings to enable reminders.'
 
 const isNative = Capacitor.isNativePlatform()
+const supportsCalendarMirror = isCalendarMirrorSupported()
+
+const CALENDAR_PERMISSION_DENIED_TOAST =
+  'Calendar access is blocked. Grant it in Android app settings to sync events to your device calendar.'
 
 export function NotificationSettings(): JSX.Element {
   const enableDesktopNotifications = useSettingsStore((s) => s.enableDesktopNotifications)
+  const enableCalendarMirror = useSettingsStore((s) => s.enableCalendarMirror)
+  const mirrorStatus = useCalendarMirrorStore((s) => s.status)
+  const mirrorError = useCalendarMirrorStore((s) => s.lastError)
   const enableSoundAlerts = useSettingsStore((s) => s.enableSoundAlerts)
   const taskDueDateReminders = useSettingsStore((s) => s.taskDueDateReminders)
   const overdueTaskBadge = useSettingsStore((s) => s.overdueTaskBadge)
@@ -61,6 +74,22 @@ export function NotificationSettings(): JSX.Element {
       return
     }
     updateSettings({ enableDesktopNotifications: !enableDesktopNotifications })
+  }
+
+  const handleToggleCalendarMirror = async (): Promise<void> => {
+    if (enableCalendarMirror) {
+      // Turning it off tears the mirrored calendars back down — see
+      // useCalendarMirror. No permission needed to stop.
+      updateSettings({ enableCalendarMirror: false })
+      return
+    }
+    const granted =
+      (await checkCalendarMirrorPermission()) || (await requestCalendarMirrorPermission())
+    if (!granted) {
+      toast.error(CALENDAR_PERMISSION_DENIED_TOAST, { duration: 8000 })
+      return
+    }
+    updateSettings({ enableCalendarMirror: true })
   }
 
   const handleTestNotification = async (): Promise<void> => {
@@ -151,6 +180,47 @@ export function NotificationSettings(): JSX.Element {
           </div>
         </div>
       </div>
+
+      {supportsCalendarMirror && (
+        <div className={styles.group}>
+          <div className={styles.groupLabel}>Device calendar</div>
+          <div
+            className={styles.row}
+            data-component="setting-row"
+            data-setting="calendar-mirror"
+            data-value={String(enableCalendarMirror)}
+          >
+            <div className={styles.rowInfo}>
+              <div className={styles.rowLabel}>Sync to Android Calendar</div>
+              <div className={styles.rowDesc}>
+                {!enableCalendarMirror
+                  ? 'Copy your events into the device calendar so Android delivers reminders even when Calino is closed, and widgets, Wear OS and Android Auto can see them. Read-only — nothing is written back to your CalDAV server.'
+                  : mirrorStatus === 'active'
+                    ? 'Android is delivering your reminders. Events are visible to widgets, Wear OS and Android Auto.'
+                    : mirrorStatus === 'no-calendar-app'
+                      ? 'Events are synced, but no calendar app is installed to raise reminders — Calino is still handling those itself.'
+                      : mirrorStatus === 'denied'
+                        ? 'Calendar access is unavailable. Re-grant it in Android app settings.'
+                        : mirrorStatus === 'failed'
+                          ? `Could not write to the device calendar${mirrorError ? `: ${mirrorError}` : '.'}`
+                          : 'Syncing…'}
+              </div>
+            </div>
+            <div className={styles.rowControl}>
+              <label className={styles.toggle} data-component="toggle" data-setting="calendar-mirror">
+                <input
+                  type="checkbox"
+                  checked={enableCalendarMirror}
+                  aria-label="Sync to Android Calendar"
+                  onChange={handleToggleCalendarMirror}
+                />
+                <span className={styles.pill} />
+                <span className={styles.knob} />
+              </label>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className={styles.group}>
         <div className={styles.groupLabel}>Tasks</div>

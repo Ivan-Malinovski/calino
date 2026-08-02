@@ -121,8 +121,48 @@ collide this way — but neither can upgrade over the other, which is the point.
 carrying a pre-split debug install (signed with the debug key under the plain
 `calino.malinov.ski` id) still needs that one uninstalled before a release APK will go on.
 
+## Calendar mirror (`CalendarMirrorPlugin`)
+
+One-way, read-only export of Calino's events into `CalendarContract`, behind the
+`enableCalendarMirror` setting (off by default). Driven from `src/hooks/useCalendarMirror.ts`;
+payload mapping and the content hash live in `src/lib/calendarMirror.ts`.
+
+- **Not a sync adapter.** No account authenticator, nothing flows back. We pass
+  `CALLER_IS_SYNCADAPTER=true` only because the provider restricts calendar creation and
+  the `ACCOUNT_TYPE`/`OWNER_ACCOUNT`/`CALENDAR_ACCESS_LEVEL` columns to that caller, and
+  because sync-adapter deletes actually remove rows rather than tombstoning them.
+  Calendars use `ACCOUNT_TYPE_LOCAL` with account name `Calino`.
+- **Ownership is `_SYNC_ID`.** Mirrored calendars carry the Calino calendar id, mirrored
+  events the Calino event id, and every query/delete is scoped to our own account name —
+  the plugin can't touch the user's Google or Exchange data. `SYNC_DATA1` holds a hash
+  computed in TS so reconcile skips unchanged events instead of rewriting (and re-alarming)
+  the whole mirror each sync.
+- **Reminders are the point.** `@capacitor/local-notifications` only schedules while the app
+  is alive. But the provider *stores* reminders without posting them — in AOSP the calendar
+  **app** raises the notification off the provider's broadcast. So `hasCalendarApp()` gates
+  this: only when a calendar app is present does `calendarMirrorStore` go `active`, and only
+  then does `useNotifications` stand its own scheduling down. With no calendar app the status
+  is `no-calendar-app` and Calino keeps scheduling locally. Don't remove that check — it's the
+  difference between reliable reminders and silent ones.
+- **Provider constraints worth remembering:** a recurring event must carry `DURATION` and no
+  `DTEND`; all-day events need `DTSTART` at midnight *UTC* with `EVENT_TIMEZONE` = `UTC`;
+  `ALLOWED_REMINDERS` must list `METHOD_ALERT` or some calendar apps ignore our reminder rows.
+- Detached recurrence instances are flattened — mirrored as standalone events, with their
+  `RECURRENCE-ID` added to the master's `EXDATE` — rather than using the provider's
+  `ORIGINAL_INSTANCE_TIME` exception model, which buys nothing for a read-only mirror.
+- Package visibility: the `<queries>` block for `ACTION_INSERT` + `vnd.android.cursor.dir/event`
+  is required on Android 11+, otherwise `hasCalendarApp()` always reports false.
+
 ## Known OS-level gotchas (not code bugs)
 
+- **A mirrored calendar that "doesn't appear" is usually a display preference, not a sync
+  failure.** Calendar apps keep their own "calendars to display" list, and a calendar they
+  have never seen before arrives unticked. Disabling the mirror deletes our calendars and
+  re-enabling mints new rows with fresh `_id`s, so every reset orphans that preference and
+  the calendars look missing again. Verify against the provider before debugging code:
+  `adb shell "content query --uri content://com.android.calendar/calendars --projection _id:name:visible:sync_events"`
+  — if our rows are there with `visible=1`, the mirror is fine and it's the app's list.
+  Same command with `/events` (`--where "calendar_id=N"`) and `/reminders` confirms the rest.
 - **OEM battery optimization** (MIUI, Oppo/Realme/Honor, etc.) can silently kill
   background alarms/notifications even when correctly scheduled via AlarmManager. Fix is
   a phone-side setting (set the app's battery/power mode to "No restrictions"), not code.

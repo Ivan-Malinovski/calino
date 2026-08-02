@@ -10,6 +10,7 @@ public class MainActivity extends BridgeActivity {
     public void onCreate(Bundle savedInstanceState) {
         registerPlugin(DynamicShortcutsPlugin.class);
         registerPlugin(DavHttpPlugin.class);
+        registerPlugin(CalendarMirrorPlugin.class);
         super.onCreate(savedInstanceState);
         // The WebView's native surface is opaque white until content is actually
         // composited, regardless of what CSS/JS sets — without this, there's a

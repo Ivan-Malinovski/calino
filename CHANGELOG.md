@@ -2,6 +2,12 @@
 
 All notable changes to Calino will be documented in this file.
 
+## [Unreleased]
+
+### Added
+
+- **Android: your events can now live in the device calendar too.** A new **Sync to Android Calendar** switch in Notification settings copies your CalDAV events into Android's own calendar, which means the system delivers your reminders — they arrive on time whether or not Calino has been opened recently, instead of only for events the app already knew about last time it ran. It also puts your calendar in front of everything else on the phone that reads it: home-screen calendar widgets, Wear OS, Android Auto and Assistant. The copy is one-way and read-only: Calino stays the only thing that writes to your CalDAV server, and turning the switch off removes the mirrored calendars again. Off by default, and it asks for calendar permission when you turn it on.
+
 ## [0.26.0] - 2026-08-02
 
 ### Added
