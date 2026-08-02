@@ -435,3 +435,63 @@
     inset 0 1px 0 rgba(255, 255, 255, 0.9),
     var(--modal-shadow);
 }
+
+/* ── Event tint strength (default theme only) ────────────────
+   How much of a calendar's colour shows through its event cards. Raised in
+   response to issue #31: at "subtle" the cards read as cream first and colour
+   second, which makes calendars hard to tell apart at a glance.
+
+   The tint sits behind each event's time and location, so every step up costs
+   contrast there — which is why --event-ink-* moves with it. Each pairing is
+   measured to keep that text at WCAG AA (4.5:1) against the most saturated
+   colour in Google's default calendar palette (Tomato in light, Banana in dark)
+   at BOTH the resting and the hover mix — hover is the tighter of the two, and
+   is easy to forget. Worst case per level is noted alongside.
+
+   ThemeProvider only sets data-event-tint while a built-in theme is active, so
+   custom themes never match these rules and keep whatever they define. */
+
+/* subtle — the default, and the shipped look. 5.07 light / 5.13 dark */
+:root[data-event-tint='subtle'] {
+  --event-bg-mix: 9%;
+  --event-bg-mix-hover: 12%;
+  --event-ink-2: #655f57;
+  --event-ink-3: #655f57;
+}
+
+:root[data-theme='dark'][data-event-tint='subtle'] {
+  --event-bg-mix: 18%;
+  --event-bg-mix-hover: 22%;
+  --event-ink-2: #b0aaa0;
+  --event-ink-3: #b0aaa0;
+}
+
+/* balanced — same character, colour more present. 4.82 light / 5.10 dark */
+:root[data-event-tint='balanced'] {
+  --event-bg-mix: 15%;
+  --event-bg-mix-hover: 19%;
+  --event-ink-2: #5c564e;
+  --event-ink-3: #5c564e;
+}
+
+:root[data-theme='dark'][data-event-tint='balanced'] {
+  --event-bg-mix: 24%;
+  --event-bg-mix-hover: 29%;
+  --event-ink-2: #cac4ba;
+  --event-ink-3: #cac4ba;
+}
+
+/* vivid — colour is the first thing you see. 4.68 light / 4.51 dark */
+:root[data-event-tint='vivid'] {
+  --event-bg-mix: 22%;
+  --event-bg-mix-hover: 27%;
+  --event-ink-2: #544e46;
+  --event-ink-3: #544e46;
+}
+
+:root[data-theme='dark'][data-event-tint='vivid'] {
+  --event-bg-mix: 30%;
+  --event-bg-mix-hover: 36%;
+  --event-ink-2: #d1cbc1;
+  --event-ink-3: #d1cbc1;
+}

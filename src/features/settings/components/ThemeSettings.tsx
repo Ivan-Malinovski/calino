@@ -3,7 +3,7 @@ import type { CSSProperties, JSX } from 'react'
 import { useSettingsStore, THEME_MODE_OPTIONS } from '@/store/settingsStore'
 import { useTheme } from '@/components/ThemeContext'
 import { getThemePreviewCSS } from '@/lib/themes'
-import type { ThemeMode } from '@/types'
+import type { ThemeMode, EventTint } from '@/types'
 import styles from './Settings.module.css'
 
 const MOCHA_ACCENTS = [
@@ -164,6 +164,7 @@ export function ThemeSettings(): JSX.Element {
   const lightTheme = useSettingsStore((s) => s.lightTheme)
   const darkTheme = useSettingsStore((s) => s.darkTheme)
   const mochaAccent = useSettingsStore((s) => s.mochaAccent)
+  const eventTint = useSettingsStore((s) => s.eventTint)
   const updateSettings = useSettingsStore((s) => s.updateSettings)
   const showEventIcons = useSettingsStore((s) => s.showEventIcons)
   const { loadedThemes, refetchThemes } = useTheme()
@@ -171,6 +172,11 @@ export function ThemeSettings(): JSX.Element {
   useEffect(() => {
     refetchThemes()
   }, [refetchThemes])
+
+  // The tint levels live in built-in.css, so the setting only bites while a
+  // built-in theme is actually in use. Show it if either slot uses one — which
+  // slot is live depends on the current mode.
+  const usesBuiltInTheme = lightTheme === 'built-in' || darkTheme === 'built-in-dark'
 
   const lightThemes = loadedThemes.filter((t) => !t.isDark)
   const darkThemes = loadedThemes.filter((t) => t.isDark)
@@ -307,6 +313,35 @@ export function ThemeSettings(): JSX.Element {
                   type="button"
                 />
               ))}
+            </div>
+          </div>
+        )}
+        {usesBuiltInTheme && (
+          <div
+            className={styles.row}
+            data-component="setting-row"
+            data-setting="event-tint"
+            data-value={eventTint}
+          >
+            <div className={styles.rowInfo}>
+              <div className={styles.rowLabel}>Event colour strength</div>
+              <div className={styles.rowDesc}>
+                How much of a calendar&rsquo;s colour shows on its events. Stronger settings make
+                calendars easier to tell apart at a glance.
+              </div>
+            </div>
+            <div className={styles.rowControl}>
+              <select
+                className={styles.select}
+                style={{ minWidth: '120px' }}
+                value={eventTint}
+                aria-label="Event colour strength"
+                onChange={(e) => updateSettings({ eventTint: e.target.value as EventTint })}
+              >
+                <option value="subtle">Subtle</option>
+                <option value="balanced">Balanced</option>
+                <option value="vivid">Vivid</option>
+              </select>
             </div>
           </div>
         )}

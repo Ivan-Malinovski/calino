@@ -283,6 +283,8 @@ export type FirstDayOfWeek = 0 | 1 | 2 | 3 | 4 | 5 | 6
 export type EventDensity = 'comfortable' | 'compact'
 export type DefaultDuration = number
 export type ThemeMode = 'light' | 'dark' | 'auto'
+/** Strength of a calendar's colour on its event cards — default theme only. */
+export type EventTint = 'subtle' | 'balanced' | 'vivid'
 export type MapProvider = 'google' | 'apple' | 'osm' | 'mapy' | 'geo'
 
 export interface UserSettings {
@@ -310,6 +312,7 @@ export interface UserSettings {
   lightTheme: string
   darkTheme: string
   mochaAccent: string
+  eventTint: EventTint
   caldavDebugMode: boolean
   hideCompletedTasksInMonthView: boolean
   useCategoryColors: boolean

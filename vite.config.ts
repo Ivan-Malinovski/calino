@@ -74,5 +74,11 @@ export default defineConfig({
     // repo; without excluding it, vitest resolves duplicate React/component
     // modules from those worktrees and tests fail with "Invalid hook call".
     exclude: [...configDefaults.exclude, 'e2e/**', '.claude/**'],
+    // CSS imports are stubbed to empty by default, which also swallows `?raw`.
+    // The contrast tests parse built-in.css as text to re-derive its ratios, so
+    // that one file has to come through intact. Scoped deliberately: enabling
+    // CSS wholesale would make CSS-module imports return real class names
+    // instead of the proxy other tests rely on.
+    css: { include: [/built-in\.css/] },
   },
 })

@@ -125,6 +125,9 @@ const DEFAULT_SETTINGS: UserSettings = {
   themeMode: 'auto' as ThemeMode,
   lightTheme: config.defaultLightTheme,
   darkTheme: config.defaultDarkTheme,
+  // Matches the look Calino has always shipped; see issue #31 for the
+  // stronger options and why they move --event-ink-* with them.
+  eventTint: 'subtle',
   mochaAccent: '#89b4fa',
   caldavDebugMode: false,
   hideCompletedTasksInMonthView: true,

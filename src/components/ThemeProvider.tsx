@@ -22,6 +22,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
   const lightTheme = useSettingsStore((s) => s.lightTheme)
   const darkTheme = useSettingsStore((s) => s.darkTheme)
   const mochaAccent = useSettingsStore((s) => s.mochaAccent)
+  const eventTint = useSettingsStore((s) => s.eventTint)
   const [loadedThemes, setLoadedThemes] = useState<ThemeInfo[]>([])
   const [, setTick] = useState(0)
 
@@ -83,6 +84,14 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     } else {
       document.documentElement.removeAttribute('data-theme-id')
     }
+    // Only while a built-in theme is active: the tint levels are defined in
+    // built-in.css, which is always injected, so leaving the attribute set
+    // would let them override a custom theme's own event colours.
+    if (isBuiltIn) {
+      document.documentElement.setAttribute('data-event-tint', eventTint)
+    } else {
+      document.documentElement.removeAttribute('data-event-tint')
+    }
 
     const style = getComputedStyle(document.documentElement)
     const accentColor = style.getPropertyValue('--color-accent').trim()
@@ -94,7 +103,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     if (Capacitor.isNativePlatform()) {
       void StatusBar.setStyle({ style: effectiveMode === 'dark' ? Style.Dark : Style.Light })
     }
-  }, [combinedCSS, effectiveMode, themeMode, currentThemeId, isBuiltIn, mochaAccent])
+  }, [combinedCSS, effectiveMode, themeMode, currentThemeId, isBuiltIn, mochaAccent, eventTint])
 
   const themeModeRef = useRef(themeMode)
   useEffect(() => {
