@@ -2,17 +2,22 @@
 
 All notable changes to Calino will be documented in this file.
 
-## [Unreleased]
+## [0.26.0] - 2026-08-02
 
 ### Added
 
 - **Arrange the view switcher however you like.** Long-press a tile in the mobile view grid and drag it where you want it; on desktop, drag a tab along the strip. Your arrangement is remembered, and everything follows it — the tabs, the mobile grid, and the order that swiping and the `<`/`>` shortcuts step through. Reordering is also available from the keyboard with Alt+←/→ on a focused tab.
 - **Pinch the week view on a phone to fit more days on screen.** It compresses the day columns rather than zooming, down to about five days at once. Vertical zoom stays a desktop gesture. Pinch had previously never worked on touch at all — the gesture library's touch handlers were never actually bound.
 - **The month view can now decide for itself how many events a day shows.** "Events Before Rollup" in Calendar settings has a new **Auto** option — now the default — which fits as many cards as the day cell physically has room for and rolls the rest into "+N more". Resize the window and the count follows: shrink it and cards move into the rollup, grow it and they come back. Compressed past weeks get proportionally fewer, and tasks keep a row of their own. A fixed 2–5 is still there if you prefer a count that never moves.
+- **Event colour strength is now yours to set.** Under Appearance, when you're on the default theme, **Subtle / Balanced / Vivid** controls how much of a calendar's colour shows on its events. Subtle is the default and looks exactly as Calino always has; the stronger settings make it easier to tell calendars apart at a glance without changing anything else about the design. Raised in [#31](https://github.com/Ivan-Malinovski/calino/issues/31).
 - **The divider in the tab strip is now yours to place.** It's an element you drag like any tab, rather than a fixed boundary between "calendar" and "everything else", so you can group the tabs however makes sense to you.
 
 ### Changed
 
+- **The default theme is now legible throughout.** Text that was too faint to read comfortably has been darkened across the app — secondary labels, weekday headers, week numbers, the time and location on an event, out-of-month dates, and the muted greys generally. Every one of them now meets the WCAG AA contrast standard on every surface, in both light and dark mode.
+- **Today's date, and every primary button, can actually be read.** White text on the warm brown accent was well below the readable threshold — worse still in dark mode. The accent keeps its exact colour wherever you see it as a rail, dot or tint; where it has to carry text it now uses a deeper shade of the same brown, and dark mode switches to dark text on the accent instead of white.
+- **Status colours are readable rather than decorative.** Green, red and amber were the stock palette, tuned for a white page and washed out on Calino's cream one — the sync-failure icon in particular was near-invisible and faded further as it pulsed.
+- **Primary buttons in the Catppuccin theme use its own contrast colour** instead of always being white, which was close to unreadable on its light blue accent. Other custom themes are unchanged.
 - **The "+N more" popup now has the same glass, border and shadow as the event preview**, so it reads as a card floating over the month rather than part of the grid.
 - **Picking which calendar a journal entry goes into is now a row of chips** with each calendar's colour, instead of a full-width dropdown — the choices are visible without opening anything, and it matches the category picker. The entry form's `+ Add` is now `+ More`.
 
