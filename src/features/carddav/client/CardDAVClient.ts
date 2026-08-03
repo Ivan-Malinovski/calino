@@ -140,7 +140,9 @@ function extractSyncTokenFromBody(xml: string): string | null {
   return match ? match[1] : null
 }
 
-async function fetchWithTimeout(url: string | URL, init?: RequestInit): Promise<Response> {
+// Takes the full `fetch` input type, not just `string | URL`: tsdav types its
+// `fetch` option as `typeof fetch`, so a narrower parameter is not assignable.
+async function fetchWithTimeout(url: RequestInfo | URL, init?: RequestInit): Promise<Response> {
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), NETWORK_TIMEOUT_MS)
   try {
