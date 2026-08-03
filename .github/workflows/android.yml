@@ -68,7 +68,7 @@ jobs:
         run: cp android/app/build/outputs/apk/release/app-release.apk "calino-${{ github.ref_name }}.apk"
 
       - name: Attach APK to GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ github.ref_name }}
           files: calino-*.apk
