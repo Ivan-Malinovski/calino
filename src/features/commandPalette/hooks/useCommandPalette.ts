@@ -1,6 +1,6 @@
 import { useMemo, useCallback, useState } from 'react'
 import { format } from 'date-fns'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router'
 import {
   useCalendarStore,
   selectOpenModal,

@@ -1,6 +1,6 @@
 import type { JSX, MouseEvent as ReactMouseEvent } from 'react'
 import { useCallback, useEffect, useState, useRef, lazy, Suspense } from 'react'
-import { BrowserRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, useNavigate, useLocation } from 'react-router'
 import { Toaster } from 'sonner'
 import { Capacitor } from '@capacitor/core'
 import type { PluginListenerHandle } from '@capacitor/core'

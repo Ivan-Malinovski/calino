@@ -23,7 +23,7 @@ import { useSettingsStore } from '@/store/settingsStore'
 // Mocks
 // ---------------------------------------------------------------------------
 
-vi.mock('react-router-dom', () => ({
+vi.mock('react-router', () => ({
   useNavigate: () => vi.fn(),
   BrowserRouter: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }))

@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router'
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useAIVisionSettingsStore } from '@/store/aiVisionSettingsStore'

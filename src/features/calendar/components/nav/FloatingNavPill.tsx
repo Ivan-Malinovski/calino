@@ -1,6 +1,6 @@
 import type { JSX, CSSProperties } from 'react'
 import { useState, useCallback, useRef, useEffect, useLayoutEffect } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router'
 import { motion, useMotionValue, animate, type PanInfo } from 'framer-motion'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
