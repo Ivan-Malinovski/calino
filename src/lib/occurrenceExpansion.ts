@@ -1,7 +1,7 @@
 import { parseISO } from 'date-fns'
 import { RRule } from 'rrule'
 import { buildRRuleString } from './recurrence'
-import type { CalendarEvent } from '@/types/calendar'
+import type { CalendarEvent } from '@/types'
 
 /**
  * R2.7 — Shared per-occurrence math for recurring VEVENTs and VTODOs.
