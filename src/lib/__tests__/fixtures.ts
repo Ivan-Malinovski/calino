@@ -33,6 +33,41 @@ export function makeRule(overrides: Partial<RecurrenceRule> = {}): RecurrenceRul
 }
 
 /**
+ * Build an all-day VTODO-shaped {@link CalendarEvent}.
+ *
+ * Tasks reuse the event fields: `start` is DTSTART, `end` is DUE, and
+ * `dueDate` mirrors `end` — see the R2.7 data model.
+ */
+export function makeTask(overrides: Partial<CalendarEvent> = {}): CalendarEvent {
+  const start = overrides.start ?? '2026-03-03T00:00:00'
+  return {
+    id: 'task1',
+    uid: 'task1',
+    calendarId: 'cal1',
+    title: 'Test task',
+    start,
+    end: start,
+    dueDate: start,
+    isAllDay: true,
+    type: 'task',
+    completed: false,
+    taskStatus: 'NEEDS-ACTION',
+    ...overrides,
+  }
+}
+
+/**
+ * Build a recurring task master. `rruleString` is set rather than
+ * `recurrence` so the test exercises the same path CalDAV-parsed data takes.
+ */
+export function makeRecurringTask(
+  rruleString = 'FREQ=WEEKLY;BYDAY=TU',
+  overrides: Partial<CalendarEvent> = {}
+): CalendarEvent {
+  return makeTask({ rruleString, ...overrides })
+}
+
+/**
  * Build a `{start, end}` ISO-string pair on a given calendar day
  * (local time). Used by the event-positioning tests which need to
  * place events at specific local times.

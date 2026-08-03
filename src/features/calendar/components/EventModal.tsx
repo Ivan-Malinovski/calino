@@ -36,7 +36,6 @@ import { useSettingsStore } from '@/store/settingsStore'
 
 import styles from './EventModal.module.css'
 
-
 export function EventModal(): JSX.Element | null {
   const isModalOpen = useCalendarStore((state) => state.isModalOpen)
   const selectedEventId = useCalendarStore((state) => state.selectedEventId)
@@ -563,6 +562,26 @@ export function EventModal(): JSX.Element | null {
     [events, selectedEventId]
   )
 
+  // R2.7 — When a task may not recur, and why.
+  //
+  // A due date is required because it is what Calino writes as DTSTART, and
+  // RFC 5545 §3.6.2 has nothing to anchor a recurrence set to without one.
+  // The RELATED-TO cases are a product decision rather than a spec limit: the
+  // parent/child link has no per-occurrence form, so a recurring parent would
+  // have to either share one set of subtasks across every occurrence or
+  // silently fan them out — neither is representable in a way other clients
+  // would read back correctly.
+  const taskRecurrenceDisabledReason = !isTaskMode
+    ? undefined
+    : !dueDate
+      ? 'needs a due date'
+      : parentTaskId
+        ? 'subtasks cannot repeat'
+        : subtasks.length > 0
+          ? 'tasks with subtasks cannot repeat'
+          : undefined
+  const recurrenceAllowed = !isTaskMode || !taskRecurrenceDisabledReason
+
   const hasChanges = useMemo(() => {
     if (!existingEventForMode) return true
 
@@ -849,6 +868,11 @@ export function EventModal(): JSX.Element | null {
           }
         : undefined
 
+      // R2.7 — Tasks now carry recurrence like events do. What stays forced off
+      // for a task is the rest of the "More" panel (reminders, travel time,
+      // transparency), which has no VTODO meaning in the current scope.
+      const effectiveRecurrence = recurrenceAllowed ? recurrenceRule : undefined
+
       if (isEditing && selectedEventId) {
         // For recurring-instance edits ("this occurrence" / "this and following"),
         // the clicked occurrence's date is encoded in the instance id as
@@ -1039,7 +1063,11 @@ export function EventModal(): JSX.Element | null {
             end: eventEnd,
             isAllDay: isTaskMode ? dueAllDay : isAllDay,
             calendarId,
-            recurrence: isTaskMode ? undefined : recurrenceRule,
+            recurrence: effectiveRecurrence,
+            // Keep the raw RRULE in step with the structured rule. The
+            // serializer prefers `rruleString` when both are present, so a
+            // stale one would silently outvote the edit just made.
+            rruleString: effectiveRecurrence ? buildRRuleString(effectiveRecurrence) : undefined,
             travelDuration: isTaskMode ? undefined : travelDuration,
             type: isTaskMode ? 'task' : 'event',
             dueDate: taskDueDate,
@@ -1084,7 +1112,10 @@ export function EventModal(): JSX.Element | null {
                 end: eventEnd,
                 isAllDay: isTaskMode ? dueAllDay : isAllDay,
                 calendarId,
-                recurrence: isTaskMode ? undefined : recurrenceRule,
+                recurrence: effectiveRecurrence,
+                rruleString: effectiveRecurrence
+                  ? buildRRuleString(effectiveRecurrence)
+                  : undefined,
                 travelDuration: isTaskMode ? undefined : travelDuration,
                 type: isTaskMode ? 'task' : 'event',
                 dueDate: taskDueDate,
@@ -1104,7 +1135,10 @@ export function EventModal(): JSX.Element | null {
                 end: eventEnd,
                 isAllDay: isTaskMode ? dueAllDay : isAllDay,
                 calendarId,
-                recurrence: isTaskMode ? undefined : recurrenceRule,
+                recurrence: effectiveRecurrence,
+                rruleString: effectiveRecurrence
+                  ? buildRRuleString(effectiveRecurrence)
+                  : undefined,
                 travelDuration: isTaskMode ? undefined : travelDuration,
                 type: isTaskMode ? 'task' : 'event',
                 dueDate: taskDueDate,
@@ -1143,7 +1177,8 @@ export function EventModal(): JSX.Element | null {
           end: eventEnd,
           isAllDay: isTaskMode ? dueAllDay : isAllDay,
           calendarId,
-          recurrence: isTaskMode ? undefined : recurrenceRule,
+          recurrence: effectiveRecurrence,
+          rruleString: effectiveRecurrence ? buildRRuleString(effectiveRecurrence) : undefined,
           travelDuration: isTaskMode ? undefined : travelDuration,
           type: isTaskMode ? 'task' : 'event',
           dueDate: taskDueDate,
@@ -1376,6 +1411,39 @@ export function EventModal(): JSX.Element | null {
                     parentTasks={parentTaskOptions}
                     onParentTaskChange={setParentTaskId}
                     subtasks={subtasks}
+                    recurrence={{
+                      recurring: recurring && recurrenceAllowed,
+                      onRecurringChange: setRecurring,
+                      disabledReason: taskRecurrenceDisabledReason,
+                      recurrence,
+                      onRecurrenceChange: (freq) => {
+                        setRecurrence(freq)
+                        if (freq !== 'weekly' && freq !== 'monthly' && freq !== 'yearly') {
+                          setByWeekday([])
+                        }
+                        if (freq !== 'monthly' && freq !== 'yearly') {
+                          setByMonthDay([])
+                          setByMonth([])
+                          setByDayOrdinals([])
+                        }
+                      },
+                      interval,
+                      onIntervalChange: setInterval,
+                      byWeekday,
+                      onByWeekdayChange: setByWeekday,
+                      byMonthDay,
+                      onByMonthDayChange: setByMonthDay,
+                      byMonth,
+                      onByMonthChange: setByMonth,
+                      byDayOrdinals,
+                      onByDayOrdinalsChange: setByDayOrdinals,
+                      endCondition,
+                      onEndConditionChange: setEndCondition,
+                      endOnDate,
+                      onEndOnDateChange: setEndOnDate,
+                      endAfterCount,
+                      onEndAfterCountChange: setEndAfterCount,
+                    }}
                     onOpenSubtask={(taskId) => openModal(undefined, undefined, taskId, 'task')}
                     onAddSubtask={
                       selectedEventId

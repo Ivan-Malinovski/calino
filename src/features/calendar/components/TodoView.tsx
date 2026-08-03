@@ -22,6 +22,7 @@ import { useIsMobile } from '@/hooks/useIsMobile'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { DUR_FAST, EASE_POP } from '@/lib/motion'
 import { useCalendarStore, isCalendarReadOnly } from '@/store/calendarStore'
+import { nextOpenOccurrence } from '@/lib/occurrenceExpansion'
 import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
 import type { CalendarEvent } from '@/types'
 import styles from './TodoView.module.css'
@@ -30,6 +31,14 @@ type FilterType = 'all' | 'active' | 'completed'
 
 interface TaskWithColor extends CalendarEvent {
   calendarColor: string
+  /**
+   * R2.7 — Set only on the single collapsed row that stands in for a recurring
+   * series. It is the DTSTART of the occurrence the row currently shows, and
+   * therefore the RECURRENCE-ID to write when the row is ticked. Its presence
+   * is what routes completion through the override path instead of mutating
+   * the master.
+   */
+  occurrenceStart?: string
 }
 
 interface TaskGroup {
@@ -110,9 +119,10 @@ export function TodoView(): JSX.Element {
   const events = useCalendarStore((state) => state.events)
   const calendars = useCalendarStore((state) => state.calendars)
   const completeTask = useCalendarStore((state) => state.completeTask)
+  const completeTaskOccurrence = useCalendarStore((state) => state.completeTaskOccurrence)
   const openModal = useCalendarStore((state) => state.openModal)
   const updateEvent = useCalendarStore((state) => state.updateEvent)
-  const { updateEvent: updateCalDAVEvent } = useCalDAV()
+  const { updateEvent: updateCalDAVEvent, saveRecurrenceOverride } = useCalDAV()
   const isMobile = useIsMobile()
   const prefersReducedMotion = useReducedMotion()
 
@@ -206,12 +216,55 @@ export function TodoView(): JSX.Element {
   const tasks: TaskWithColor[] = useMemo(() => {
     const calendarMap = new Map(calendars.map((c) => [c.id, c.color]))
     const visibleCalendarIds = new Set(calendars.filter((c) => c.isVisible).map((c) => c.id))
-    return events
-      .filter((e) => e.type === 'task' && visibleCalendarIds.has(e.calendarId))
-      .map((task) => ({
-        ...task,
-        calendarColor: calendarMap.get(task.calendarId) || '#888',
-      }))
+    const allTasks = events.filter((e) => e.type === 'task' && visibleCalendarIds.has(e.calendarId))
+
+    // R2.7 — Group a recurring series' components by their shared UID so the
+    // list can collapse them to one row. Overrides stay in the array in their
+    // own right: a completed occurrence is a real, dated task and belongs under
+    // the Completed filter, it just must not also appear as an open row.
+    const overridesByMaster = new Map<string, Map<string, CalendarEvent>>()
+    for (const task of allTasks) {
+      if (!task.recurrenceId) continue
+      const key = task.recurrenceMasterId || task.uid || ''
+      let group = overridesByMaster.get(key)
+      if (!group) {
+        group = new Map()
+        overridesByMaster.set(key, group)
+      }
+      group.set(task.recurrenceId, task)
+    }
+
+    const withColor = (task: CalendarEvent): TaskWithColor => ({
+      ...task,
+      calendarColor: calendarMap.get(task.calendarId) || '#888',
+    })
+
+    return allTasks.map((task) => {
+      const isRecurringMaster = Boolean((task.rruleString || task.recurrence) && !task.recurrenceId)
+      if (!isRecurringMaster) return withColor(task)
+
+      const overrides =
+        overridesByMaster.get(task.id) ??
+        overridesByMaster.get(task.uid || '') ??
+        new Map<string, CalendarEvent>()
+      const next = nextOpenOccurrence(task, overrides)
+      if (!next) {
+        // Series exhausted — every occurrence has been dealt with. Show the row
+        // as completed rather than stranding an undated master in the list.
+        return withColor({ ...task, completed: true, taskStatus: 'COMPLETED' })
+      }
+      // Keep the master's own id so the subtask tree and drag/re-parent logic,
+      // which key off task ids, keep resolving.
+      return {
+        ...withColor(task),
+        start: next.occStartStr,
+        end: next.occEndStr,
+        dueDate: next.occEndStr,
+        completed: false,
+        taskStatus: 'NEEDS-ACTION',
+        occurrenceStart: next.occStartStr,
+      }
+    })
   }, [events, calendars])
 
   const taskCalendars = useMemo(
@@ -437,6 +490,37 @@ export function TodoView(): JSX.Element {
         })
       }, 520)
     }
+    // R2.7 — A recurring row completes ONE occurrence: write a detached
+    // override and leave the master's RRULE alone, so the series carries on and
+    // the row advances to the next date. Un-ticking a completed override
+    // removes it, restoring the occurrence to what the master says.
+    const recurringTarget = task.occurrenceStart
+      ? { masterId: task.id, occurrenceStart: task.occurrenceStart }
+      : task.recurrenceId && task.recurrenceMasterId
+        ? { masterId: task.recurrenceMasterId, occurrenceStart: task.recurrenceId }
+        : null
+
+    if (recurringTarget) {
+      const plan = completeTaskOccurrence(
+        recurringTarget.masterId,
+        recurringTarget.occurrenceStart,
+        newCompleted
+      )
+      if (plan) {
+        try {
+          await saveRecurrenceOverride(
+            plan.master.calendarId,
+            plan.master,
+            plan.override,
+            plan.removedOverrideIds
+          )
+        } catch {
+          // error handled by useCalDAV
+        }
+      }
+      return
+    }
+
     const updatedTasks = completeTask(task.id, newCompleted)
     try {
       await Promise.all(

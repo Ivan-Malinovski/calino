@@ -286,7 +286,7 @@ export function RecurrenceToggle({
   )
 }
 
-interface RecurrenceFieldsProps {
+export interface RecurrenceFieldsProps {
   recurring: boolean
   recurrence: RecurrenceRule['frequency']
   onRecurrenceChange: (recurrence: RecurrenceRule['frequency']) => void

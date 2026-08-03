@@ -68,7 +68,6 @@ const inFlightSyncs = new Map<string, Promise<void>>()
 
 const MAX_RETRIES = 10
 
-
 /**
  * Build a SyncEngine bound to `calendar`, reusing `sameAccountClient` when the
  * calendar belongs to `sameAccountId` so a same-account move doesn't open a
@@ -116,11 +115,28 @@ function withResourceSiblings(
     ...events,
     ...allEvents.filter(
       (event) =>
-        event.resourceHref === resourceHref &&
-        !includedIds.has(event.id) &&
-        !excluded.has(event.id)
+        event.resourceHref === resourceHref && !includedIds.has(event.id) && !excluded.has(event.id)
     ),
   ]
+}
+
+/**
+ * R2.7 — Find the master component a detached override belongs to.
+ *
+ * Matches on the local `recurrenceMasterId` first, falling back to the shared
+ * UID. The UID fallback is what makes Nextcloud Tasks' split-resource writes
+ * work: it PUTs the exception to a *separate* href, so the pair can arrive with
+ * no href in common and only the UID to tie them together.
+ */
+function findRecurrenceMaster(override: CalendarEvent): CalendarEvent | undefined {
+  return useCalendarStore
+    .getState()
+    .events.find(
+      (candidate) =>
+        !candidate.recurrenceId &&
+        (candidate.id === override.recurrenceMasterId ||
+          (Boolean(override.uid) && candidate.uid === override.uid))
+    )
 }
 
 /**
@@ -416,7 +432,11 @@ export function useCalDAV(): UseCalDAVReturn {
                     eventId: change.eventId,
                     calendarId: change.calendarId,
                     data: JSON.stringify({
-                      events: events.map((e) => ({ ...e, resourceHref: undefined, etag: undefined })),
+                      events: events.map((e) => ({
+                        ...e,
+                        resourceHref: undefined,
+                        etag: undefined,
+                      })),
                     }),
                   })
                   storeUpdateEvent(change.eventId, { syncStatus: 'failed' })
@@ -1125,6 +1145,18 @@ export function useCalDAV(): UseCalDAVReturn {
             useCalendarStore.getState().addDuplicateUidIssue(issue)
           }
 
+          // R2.7 — UIDs whose *master* VTODO is cancelled. A cancelled master
+          // takes its whole series with it, overrides included, per RFC 5545
+          // §3.8.1.11: STATUS applies to the component it appears on, and the
+          // master defines the recurrence set the overrides belong to.
+          const cancelledTaskUids = new Set<string>()
+          for (const item of parsedWithHref) {
+            const e = item.event
+            if (e.type === 'task' && !e.recurrenceId && e.taskStatus === 'CANCELLED') {
+              cancelledTaskUids.add(e.uid || e.id)
+            }
+          }
+
           for (const item of parsedWithHref) {
             const parsedEvent = item.event
 
@@ -1142,7 +1174,20 @@ export function useCalDAV(): UseCalDAVReturn {
             // Some CalDAV task clients retain deleted VTODO resources with
             // STATUS:CANCELLED instead of issuing DELETE. Treat that as a
             // remote deletion so the task does not remain in Calino.
+            //
+            // R2.7 — but only for a *master*. A cancelled detached override is
+            // the RFC-blessed way to cancel a single occurrence of a recurring
+            // task; dropping it here would let the master regenerate that
+            // occurrence, so the cancellation would silently undo itself on
+            // every sync. Overrides only go when their master goes.
             if (parsedEvent.type === 'task' && parsedEvent.taskStatus === 'CANCELLED') {
+              if (!parsedEvent.recurrenceId) continue
+            }
+            if (
+              parsedEvent.type === 'task' &&
+              parsedEvent.recurrenceId &&
+              cancelledTaskUids.has(parsedEvent.uid || parsedEvent.recurrenceMasterId || '')
+            ) {
               continue
             }
 
@@ -1595,6 +1640,88 @@ export function useCalDAV(): UseCalDAVReturn {
     [caldavDebugMode, storeUpdateEvent]
   )
 
+  const saveRecurrenceOverrideFn = useCallback(
+    async (
+      calendarId: string,
+      master: CalendarEvent,
+      exception: CalendarEvent | null,
+      removedExceptionIds: string[] = []
+    ): Promise<void> => {
+      const allCalendars = storage.getAllCalendars()
+      const allAccounts = storage.getAllAccounts()
+      const calendar = allCalendars.find((item) => item.id === calendarId)
+      const account = allAccounts.find((item) => item.id === calendar?.accountId)
+
+      // Local-only calendars have no remote resource to update.
+      if (!calendar) {
+        storeUpdateEvent(master.id, master)
+        for (const eventId of removedExceptionIds) storeDeleteEvent(eventId)
+        if (exception) storeAddEvent(exception)
+        return
+      }
+      if (!account) throw new Error('Calendar account not found')
+
+      const credential = await getCredentialById(account.credentialId)
+      if (!credential) throw new Error('Credentials not found')
+
+      const uid = master.uid || master.id
+      const existingOverrides = useCalendarStore
+        .getState()
+        .events.filter(
+          (event) =>
+            event.id !== exception?.id &&
+            !removedExceptionIds.includes(event.id) &&
+            event.calendarId === calendarId &&
+            Boolean(event.recurrenceId) &&
+            (event.uid === uid || event.recurrenceMasterId === master.id)
+        )
+      const masterWithSequence = { ...master, uid, sequence: (master.sequence ?? 0) + 1 }
+      const normalizedException = exception
+        ? {
+            ...exception,
+            uid,
+            recurrenceMasterId: master.id,
+            sequence: masterWithSequence.sequence,
+          }
+        : null
+
+      const client = await createCalDAVClient(account.serverUrl, credential, account.proxyUrl)
+      const engine = new SyncEngine(client, calendarId)
+      const groupedEvents = withResourceSiblings(
+        [
+          masterWithSequence,
+          ...existingOverrides,
+          ...(normalizedException ? [normalizedException] : []),
+        ],
+        useCalendarStore.getState().events,
+        master.resourceHref,
+        removedExceptionIds
+      )
+      const { url, etag } = await engine.updateEventGroup(groupedEvents, master.etag ?? '')
+
+      for (const groupedEvent of groupedEvents) {
+        storeUpdateEvent(groupedEvent.id, { resourceHref: url, etag, syncStatus: 'synced' })
+      }
+      storeUpdateEvent(master.id, {
+        ...masterWithSequence,
+        resourceHref: url,
+        etag,
+        syncStatus: 'synced',
+      })
+      for (const eventId of removedExceptionIds) storeDeleteEvent(eventId)
+      if (normalizedException) {
+        storeAddEvent({
+          ...normalizedException,
+          resourceHref: url,
+          etag,
+          syncStatus: 'synced',
+        })
+      }
+      storage.updateAccountLastSync(account.id)
+    },
+    [storeAddEvent, storeDeleteEvent, storeUpdateEvent]
+  )
+
   const updateEventFn = useCallback(
     async (calendarId: string, event: CalendarEvent): Promise<void> => {
       if (caldavDebugMode) {
@@ -1603,6 +1730,21 @@ export function useCalDAV(): UseCalDAVReturn {
           eventId: event.id,
           eventTitle: event.title,
         })
+      }
+
+      // R2.7 — Never PUT a task override as a standalone resource. RFC 4791
+      // §4.1 requires every component sharing a UID to live in one calendar
+      // object resource; splitting them orphans the override on its own href
+      // and trips detectUidCollisions. Route it through the group write, which
+      // rebuilds the master's resource with every override in it. (VEVENT
+      // overrides reach the same place via withResourceSiblings below, since
+      // they already carry the master's resourceHref.)
+      if (event.type === 'task' && event.recurrenceId) {
+        const master = findRecurrenceMaster(event)
+        if (master) {
+          await saveRecurrenceOverrideFn(calendarId, master, event, [])
+          return
+        }
       }
 
       const allCalendars = storage.getAllCalendars()
@@ -1683,18 +1825,16 @@ export function useCalDAV(): UseCalDAVReturn {
 
         const uid = eventWithSequence.uid || eventWithSequence.id
         const overrides = !eventWithSequence.recurrenceId
-          ? useCalendarStore
-              .getState()
-              .events.filter(
-                (candidate) =>
-                  // Mid-move the master already carries the target calendarId
-                  // while its overrides still carry the source's, so accept
-                  // either side — otherwise the series loses its exceptions.
-                  (candidate.calendarId === calendarId ||
-                    (isMove && candidate.calendarId === sourceCalendar?.id)) &&
-                  Boolean(candidate.recurrenceId) &&
-                  (candidate.uid === uid || candidate.recurrenceMasterId === eventWithSequence.id)
-              )
+          ? useCalendarStore.getState().events.filter(
+              (candidate) =>
+                // Mid-move the master already carries the target calendarId
+                // while its overrides still carry the source's, so accept
+                // either side — otherwise the series loses its exceptions.
+                (candidate.calendarId === calendarId ||
+                  (isMove && candidate.calendarId === sourceCalendar?.id)) &&
+                Boolean(candidate.recurrenceId) &&
+                (candidate.uid === uid || candidate.recurrenceMasterId === eventWithSequence.id)
+            )
           : []
         groupedEvents = withResourceSiblings(
           [eventWithSequence, ...overrides],
@@ -1793,7 +1933,11 @@ export function useCalDAV(): UseCalDAVReturn {
             eventId: event.id,
             calendarId,
             data: JSON.stringify({
-              events: groupedEvents.map((e) => ({ ...e, resourceHref: undefined, etag: undefined })),
+              events: groupedEvents.map((e) => ({
+                ...e,
+                resourceHref: undefined,
+                etag: undefined,
+              })),
             }),
           })
         } else if (sourceCalendarForRetry && sourceCalendarForRetry.id !== calendarId) {
@@ -1830,89 +1974,7 @@ export function useCalDAV(): UseCalDAVReturn {
         throw error
       }
     },
-    [caldavDebugMode, storeUpdateEvent]
-  )
-
-  const saveRecurrenceOverrideFn = useCallback(
-    async (
-      calendarId: string,
-      master: CalendarEvent,
-      exception: CalendarEvent | null,
-      removedExceptionIds: string[] = []
-    ): Promise<void> => {
-      const allCalendars = storage.getAllCalendars()
-      const allAccounts = storage.getAllAccounts()
-      const calendar = allCalendars.find((item) => item.id === calendarId)
-      const account = allAccounts.find((item) => item.id === calendar?.accountId)
-
-      // Local-only calendars have no remote resource to update.
-      if (!calendar) {
-        storeUpdateEvent(master.id, master)
-        for (const eventId of removedExceptionIds) storeDeleteEvent(eventId)
-        if (exception) storeAddEvent(exception)
-        return
-      }
-      if (!account) throw new Error('Calendar account not found')
-
-      const credential = await getCredentialById(account.credentialId)
-      if (!credential) throw new Error('Credentials not found')
-
-      const uid = master.uid || master.id
-      const existingOverrides = useCalendarStore
-        .getState()
-        .events.filter(
-          (event) =>
-            event.id !== exception?.id &&
-            !removedExceptionIds.includes(event.id) &&
-            event.calendarId === calendarId &&
-            Boolean(event.recurrenceId) &&
-            (event.uid === uid || event.recurrenceMasterId === master.id)
-        )
-      const masterWithSequence = { ...master, uid, sequence: (master.sequence ?? 0) + 1 }
-      const normalizedException = exception
-        ? {
-            ...exception,
-            uid,
-            recurrenceMasterId: master.id,
-            sequence: masterWithSequence.sequence,
-          }
-        : null
-
-      const client = await createCalDAVClient(account.serverUrl, credential, account.proxyUrl)
-      const engine = new SyncEngine(client, calendarId)
-      const groupedEvents = withResourceSiblings(
-        [
-          masterWithSequence,
-          ...existingOverrides,
-          ...(normalizedException ? [normalizedException] : []),
-        ],
-        useCalendarStore.getState().events,
-        master.resourceHref,
-        removedExceptionIds
-      )
-      const { url, etag } = await engine.updateEventGroup(groupedEvents, master.etag ?? '')
-
-      for (const groupedEvent of groupedEvents) {
-        storeUpdateEvent(groupedEvent.id, { resourceHref: url, etag, syncStatus: 'synced' })
-      }
-      storeUpdateEvent(master.id, {
-        ...masterWithSequence,
-        resourceHref: url,
-        etag,
-        syncStatus: 'synced',
-      })
-      for (const eventId of removedExceptionIds) storeDeleteEvent(eventId)
-      if (normalizedException) {
-        storeAddEvent({
-          ...normalizedException,
-          resourceHref: url,
-          etag,
-          syncStatus: 'synced',
-        })
-      }
-      storage.updateAccountLastSync(account.id)
-    },
-    [storeAddEvent, storeDeleteEvent, storeUpdateEvent]
+    [caldavDebugMode, storeUpdateEvent, saveRecurrenceOverrideFn]
   )
 
   const deleteEventFn = useCallback(
@@ -1929,6 +1991,18 @@ export function useCalDAV(): UseCalDAVReturn {
         ? null
         : useCalendarStore.getState().brokenEvents.find((be) => be.event.id === eventId)
       const effectiveData = eventData ?? brokenData?.event
+
+      // R2.7 — Deleting a task override must not DELETE its resource: that href
+      // holds the master too, so the whole series would vanish. Rewrite the
+      // group without this override instead, which is also what "restore this
+      // occurrence to what the master says" means in RFC 5545 terms.
+      if (effectiveData?.type === 'task' && effectiveData.recurrenceId) {
+        const master = findRecurrenceMaster(effectiveData)
+        if (master && master.resourceHref === effectiveData.resourceHref) {
+          await saveRecurrenceOverrideFn(calendarId, master, null, [eventId])
+          return
+        }
+      }
 
       const allCalendars = storage.getAllCalendars()
       const allAccounts = storage.getAllAccounts()
@@ -2013,7 +2087,7 @@ export function useCalDAV(): UseCalDAVReturn {
         inFlightDeletes.delete(eventId)
       }
     },
-    [caldavDebugMode, storeDeleteEvent, storeAddEvent]
+    [caldavDebugMode, storeDeleteEvent, storeAddEvent, saveRecurrenceOverrideFn]
   )
 
   // Delete a specific CalDAV resource by its raw href rather than by local

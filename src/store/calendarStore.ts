@@ -10,11 +10,20 @@ import type {
   ViewType,
   EventType,
   DuplicateUidIssue,
+  TaskOccurrencePlan,
 } from '@/types'
 import type { Category, AutoCategoryRule } from '@/types/categories'
 import type { ExtractedEventFields } from '@/features/aiVision/types'
 import { DEFAULT_CALENDAR_COLOR } from '@/config'
-import { buildRRuleString } from '@/lib/recurrence'
+import {
+  shapeOccurrence,
+  occurrenceRecurrenceValue,
+  isOccurrenceExcluded,
+  resolveRRuleString,
+  materializeOccurrence,
+  rruleAnchor,
+  rruleWindow,
+} from '@/lib/occurrenceExpansion'
 import { deleteAttachments } from '@/lib/attachmentStore'
 import { useSettingsStore } from '@/store/settingsStore'
 
@@ -116,8 +125,16 @@ interface EventIndex {
   masters: Map<string, CalendarEvent>
   exceptions: Map<string, CalendarEvent>
   legacyExceptions: Map<string, CalendarEvent>
-  /** Tasks bucketed by their dueDate day key (`yyyy-MM-dd`). */
+  /**
+   * Non-recurring tasks bucketed by their dueDate day key (`yyyy-MM-dd`).
+   * R2.7 — recurring masters are deliberately excluded: they have no single
+   * due day, and bucketing them by their anchor would show the whole series
+   * on its first date only. They live in `recurringTasks` and are expanded
+   * per day by `getTasksForDay`.
+   */
   tasksByDueDate: Map<string, CalendarEvent[]>
+  /** R2.7 — task masters carrying an RRULE, in stored order. */
+  recurringTasks: IndexedEvent[]
 }
 
 let eventIndex: EventIndex | null = null
@@ -140,6 +157,36 @@ function getOrCreateRRule(rruleStr: string, eventStart: Date): RRule {
   return rule
 }
 
+/**
+ * The `yyyy-MM-dd` a task belongs to.
+ *
+ * An all-day task's due date is stored as a floating midnight serialized with a
+ * `Z` (`2026-08-04T00:00:00.000Z`), so running it through the local-timezone
+ * `format(parseISO(...))` files it under the *previous* day anywhere west of
+ * UTC. All-day dates have no timezone by definition (RFC 5545 §3.3.4), so read
+ * the date part literally and only convert for timed tasks.
+ */
+function taskDayKey(task: CalendarEvent): string {
+  const due = task.dueDate as string
+  if (task.isAllDay) return due.split('T')[0]
+  return format(parseISO(due), 'yyyy-MM-dd')
+}
+
+/**
+ * R2.7 — Does this override carry edits beyond "completed", or is it purely a
+ * completion marker? Only the latter is safe to delete when un-completing.
+ */
+function overrideHasUserEdits(override: CalendarEvent, master: CalendarEvent): boolean {
+  return (
+    override.title !== master.title ||
+    override.description !== master.description ||
+    override.location !== master.location ||
+    override.priority !== master.priority ||
+    // The override was dragged to a different day/time than the rule produced.
+    override.start !== override.recurrenceId
+  )
+}
+
 function getEventIndex(events: CalendarEvent[]): EventIndex {
   if (eventIndex && eventIndex.events === events) {
     return eventIndex
@@ -151,6 +198,7 @@ function getEventIndex(events: CalendarEvent[]): EventIndex {
   const exceptions = new Map<string, CalendarEvent>()
   const legacyExceptions = new Map<string, CalendarEvent>()
   const tasksByDueDate = new Map<string, CalendarEvent[]>()
+  const recurringTasks: IndexedEvent[] = []
 
   for (let order = 0; order < events.length; order++) {
     const event = events[order]
@@ -192,8 +240,10 @@ function getEventIndex(events: CalendarEvent[]): EventIndex {
       }
     }
 
-    if (event.type === 'task' && event.dueDate) {
-      const dayKey = format(parseISO(event.dueDate), 'yyyy-MM-dd')
+    if (event.type === 'task' && (event.rruleString || event.recurrence) && !event.recurrenceId) {
+      recurringTasks.push(indexed)
+    } else if (event.type === 'task' && event.dueDate) {
+      const dayKey = taskDayKey(event)
       let bucket = tasksByDueDate.get(dayKey)
       if (!bucket) {
         bucket = []
@@ -220,6 +270,7 @@ function getEventIndex(events: CalendarEvent[]): EventIndex {
     exceptions,
     legacyExceptions,
     tasksByDueDate,
+    recurringTasks,
   }
   return eventIndex
 }
@@ -250,6 +301,75 @@ function lastStartingAtOrBefore(plain: IndexedEvent[], ms: number): number {
  */
 export function getTasksDueOn(events: CalendarEvent[], dayKey: string): CalendarEvent[] {
   return getEventIndex(events).tasksByDueDate.get(dayKey) ?? []
+}
+
+/**
+ * R2.7 — Every task shown on `dayKey`: the non-recurring bucket above, plus one
+ * expanded occurrence per recurring master that falls on that day.
+ *
+ * Per-day expansion rather than per-range keeps the three day-grid call sites
+ * on the same simple `(events, dayKey)` signature they already use. Each
+ * recurring master costs one `between()` over a single day, and the result is
+ * memoised on the day key.
+ */
+const tasksForDayCache = new Map<string, CalendarEvent[]>()
+let tasksForDayCacheEvents: CalendarEvent[] | null = null
+
+export function getTasksForDay(events: CalendarEvent[], dayKey: string): CalendarEvent[] {
+  const index = getEventIndex(events)
+  if (tasksForDayCacheEvents !== events) {
+    tasksForDayCache.clear()
+    tasksForDayCacheEvents = events
+  }
+  const cached = tasksForDayCache.get(dayKey)
+  if (cached) return cached
+
+  const plain = index.tasksByDueDate.get(dayKey) ?? []
+  if (index.recurringTasks.length === 0) {
+    tasksForDayCache.set(dayKey, plain)
+    return plain
+  }
+
+  const [y, m, d] = dayKey.split('-').map(Number)
+  const dayStart = new Date(y, m - 1, d, 0, 0, 0, 0)
+  const dayEnd = new Date(y, m - 1, d, 23, 59, 59, 999)
+
+  const expanded: CalendarEvent[] = []
+  for (const indexed of index.recurringTasks) {
+    const master = indexed.event
+    const rruleString = resolveRRuleString(master)
+    if (!rruleString) continue
+    let occurrences: Date[]
+    try {
+      occurrences = getOrCreateRRule(rruleString, rruleAnchor(master, indexed.start)).between(
+        ...rruleWindow(master.isAllDay, dayStart, dayEnd),
+        true
+      )
+    } catch {
+      continue
+    }
+    for (const occ of occurrences) {
+      const shape = shapeOccurrence(occ, indexed.start, indexed.end, master.isAllDay)
+      // A detached override supersedes the master's slot even when the date is
+      // also EXDATE'd (RFC 5545 §3.8.5.1) — it is already in the store in its
+      // own right, so here it only suppresses.
+      const recurrenceValue = occurrenceRecurrenceValue(occ, shape.occDateStr, master.isAllDay)
+      if (index.exceptions.has(`${master.calendarId}-${master.id}-${recurrenceValue}`)) continue
+      if (isOccurrenceExcluded(occ, shape.occDateStr, master.isAllDay, master.excludedDates)) {
+        continue
+      }
+      const occurrence = materializeOccurrence(master, shape)
+      // Guard against a rule whose occurrence lands on a neighbouring local day
+      // once the all-day floating rebuild is applied.
+      if (taskDayKey(occurrence) === dayKey) expanded.push(occurrence)
+    }
+  }
+
+  // Overrides live in `tasksByDueDate` (they carry a concrete dueDate and no
+  // RRULE), so a completed or moved occurrence already arrives via `plain`.
+  const result = expanded.length > 0 ? [...plain, ...expanded] : plain
+  tasksForDayCache.set(dayKey, result)
+  return result
 }
 
 export const selectOpenModal = (state: CalendarStore) => state.openModal
@@ -481,6 +601,90 @@ export const useCalendarStore = create<CalendarStore>()(
         bumpRangeExpansionVersion()
 
         return updatedTasks
+      },
+
+      // R2.7 — Completing ONE occurrence of a recurring task, per RFC 5545
+      // §3.6.2. The master is never mutated: its RRULE keeps generating the
+      // series, and the completion is recorded as a detached override VTODO
+      // sharing the master's UID with a RECURRENCE-ID naming the occurrence.
+      // This is what Thunderbird writes and what makes the series survive a
+      // round-trip through other clients.
+      //
+      // Returns the write plan rather than performing it — the caller feeds it
+      // straight to `saveRecurrenceOverride`, which owns both the CalDAV group
+      // PUT and the resulting store writes, so master and override can never
+      // land in the store without also reaching the server as one resource.
+      completeTaskOccurrence: (
+        masterId: string,
+        occurrenceStart: string,
+        completed: boolean
+      ): TaskOccurrencePlan | null => {
+        const events = get().events
+        const master = events.find((event) => event.id === masterId && event.type === 'task')
+        if (!master) return null
+
+        const uid = master.uid || master.id
+        const existing = events.find(
+          (event) =>
+            event.recurrenceId === occurrenceStart &&
+            (event.uid === uid || event.recurrenceMasterId === masterId)
+        )
+
+        if (!completed) {
+          if (!existing) return { master, override: null, removedOverrideIds: [] }
+          // Absence of an override means "this occurrence is exactly what the
+          // master says", so dropping it is the correct way to un-complete —
+          // unless the user also edited the occurrence, in which case those
+          // edits must survive and only the status flips back.
+          if (overrideHasUserEdits(existing, master)) {
+            return {
+              master,
+              override: {
+                ...existing,
+                completed: false,
+                taskStatus: 'NEEDS-ACTION',
+                percentComplete: 0,
+                completedAt: undefined,
+              },
+              removedOverrideIds: [],
+            }
+          }
+          return { master, override: null, removedOverrideIds: [existing.id] }
+        }
+
+        const shape = shapeOccurrence(
+          parseISO(occurrenceStart),
+          parseISO(master.start),
+          parseISO(master.end),
+          master.isAllDay
+        )
+        const base = existing ?? {
+          ...master,
+          id: `${uid}-${occurrenceStart}`,
+          start: shape.occStartStr,
+          end: shape.occEndStr,
+          dueDate: shape.occEndStr,
+          // An override describes a single instance and must not carry the
+          // series definition (RFC 5545 §3.8.5.3).
+          rruleString: undefined,
+          recurrence: undefined,
+          excludedDates: undefined,
+        }
+
+        return {
+          master,
+          override: {
+            ...base,
+            uid,
+            recurrenceId: occurrenceStart,
+            recurrenceMasterId: masterId,
+            completed: true,
+            taskStatus: 'COMPLETED',
+            percentComplete: 100,
+            completedAt: new Date().toISOString(),
+          },
+          removedOverrideIds: [],
+        }
       },
 
       deleteEvent: (id: string): void => {
@@ -991,6 +1195,13 @@ export const useCalendarStore = create<CalendarStore>()(
           if (event.eventStatus === 'CANCELLED') {
             continue
           }
+          // R2.7 — the VTODO equivalent: a CANCELLED override cancels its one
+          // occurrence, and it has already suppressed the master's slot for
+          // that date via the exception map, so simply not emitting it here is
+          // what makes the occurrence disappear.
+          if (event.type === 'task' && event.taskStatus === 'CANCELLED') {
+            continue
+          }
           const categorySource = event.recurrenceId
             ? recurringMasters.get(event.recurrenceMasterId || event.uid || '')
             : event
@@ -1005,11 +1216,7 @@ export const useCalendarStore = create<CalendarStore>()(
           const hasRecurrence = event.rruleString || event.recurrence
 
           if (hasRecurrence) {
-            let rruleString = event.rruleString
-
-            if (!rruleString && event.recurrence) {
-              rruleString = buildRRuleString(event.recurrence)
-            }
+            const rruleString = resolveRRuleString(event)
 
             try {
               if (!rruleString) {
@@ -1018,53 +1225,24 @@ export const useCalendarStore = create<CalendarStore>()(
               const eventStart = indexed.start
               const eventEnd = indexed.end
 
-              const rule = getOrCreateRRule(rruleString, eventStart)
+              const rule = getOrCreateRRule(rruleString, rruleAnchor(event, eventStart))
 
-              const occurrences = rule.between(startDate, endDate, true)
+              const occurrences = rule.between(
+                ...rruleWindow(event.isAllDay, startDate, endDate),
+                true
+              )
               const excludedDates = event.excludedDates || []
 
               for (const occ of occurrences) {
                 // For all-day events we work in whole-day, floating-time terms so
                 // that DST transitions can't shift an occurrence onto the wrong
                 // calendar day. Timed events keep exact millisecond duration.
-                let occStartStr: string
-                let occEndStr: string
-                let occDateStr: string
-                let occKey: string
-
-                if (event.isAllDay) {
-                  const MS_PER_DAY = 86400000
-                  const durationDays = Math.max(
-                    0,
-                    Math.round((eventEnd.getTime() - eventStart.getTime()) / MS_PER_DAY)
-                  )
-                  // rrule returns occurrences at the dtstart wall-clock time; read the
-                  // local Y/M/D and rebuild floating midnights, adding days via UTC
-                  // date arithmetic (immune to DST hour shifts).
-                  const y = occ.getFullYear()
-                  const m = occ.getMonth()
-                  const d = occ.getDate()
-                  const startDay = new Date(Date.UTC(y, m, d))
-                  const endDay = new Date(Date.UTC(y, m, d))
-                  endDay.setUTCDate(endDay.getUTCDate() + durationDays)
-                  const fmt = (dt: Date) =>
-                    `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, '0')}-${String(dt.getUTCDate()).padStart(2, '0')}`
-                  occDateStr = fmt(startDay)
-                  occStartStr = `${occDateStr}T00:00:00`
-                  occEndStr = `${fmt(endDay)}T00:00:00`
-                  occKey = occDateStr
-                } else {
-                  const duration = eventEnd.getTime() - eventStart.getTime()
-                  const occEnd = new Date(occ.getTime() + duration)
-                  occStartStr = occ.toISOString()
-                  occEndStr = occEnd.toISOString()
-                  occDateStr = occ.toISOString().split('T')[0]
-                  occKey = occ.toISOString()
-                }
+                const shape = shapeOccurrence(occ, eventStart, eventEnd, event.isAllDay)
+                const { occDateStr } = shape
 
                 // Check for exception first — if one exists for this date, use it
                 // regardless of whether the date is also in excludedDates.
-                const recurrenceValue = event.isAllDay ? occDateStr : occ.getTime()
+                const recurrenceValue = occurrenceRecurrenceValue(occ, occDateStr, event.isAllDay)
                 const exception =
                   exceptionMap.get(`${event.calendarId}-${event.id}-${recurrenceValue}`) ||
                   legacyExceptionMap.get(`${event.calendarId}-${occDateStr}`)
@@ -1075,24 +1253,13 @@ export const useCalendarStore = create<CalendarStore>()(
                 }
 
                 // No exception — honour EXDATE exclusions
-                const isExcluded = event.isAllDay
-                  ? excludedDates.some((date) => date.split('T')[0] === occDateStr)
-                  : excludedDates.some((date) => parseISO(date).getTime() === occ.getTime())
-                if (isExcluded) {
+                if (isOccurrenceExcluded(occ, occDateStr, event.isAllDay, excludedDates)) {
                   continue
                 }
 
-                const occId = `${event.id}-${occKey}`
-                seenIds.add(occId)
-                collected.push({
-                  order: indexed.order,
-                  event: {
-                    ...event,
-                    id: occId,
-                    start: occStartStr,
-                    end: occEndStr,
-                  },
-                })
+                const occurrence = materializeOccurrence(event, shape)
+                seenIds.add(occurrence.id)
+                collected.push({ order: indexed.order, event: occurrence })
               }
             } catch {
               const eventStart = indexed.start

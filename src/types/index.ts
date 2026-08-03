@@ -219,10 +219,29 @@ export interface CalendarState {
   rangeExpansionVersion: number
 }
 
+/**
+ * R2.7 — The write plan for completing/un-completing one occurrence of a
+ * recurring task. Shaped to be passed straight to
+ * `saveRecurrenceOverride(calendarId, master, override, removedOverrideIds)`.
+ */
+export interface TaskOccurrencePlan {
+  /** Unchanged — the master keeps its RRULE and is re-PUT only for SEQUENCE. */
+  master: CalendarEvent
+  /** The detached instance to write, or null to leave the series unexcepted. */
+  override: CalendarEvent | null
+  /** Overrides to drop from the resource (un-completing a pure marker). */
+  removedOverrideIds: string[]
+}
+
 export interface CalendarActions {
   addEvent: (event: CalendarEvent) => void
   updateEvent: (id: string, updates: Partial<CalendarEvent>) => void
   completeTask: (id: string, completed: boolean) => CalendarEvent[]
+  completeTaskOccurrence: (
+    masterId: string,
+    occurrenceStart: string,
+    completed: boolean
+  ) => TaskOccurrencePlan | null
   deleteEvent: (id: string) => void
   addBrokenEvent: (event: CalendarEvent, reason: string) => void
   removeBrokenEvent: (eventId: string) => void

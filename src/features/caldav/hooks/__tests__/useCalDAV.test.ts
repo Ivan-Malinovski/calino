@@ -876,6 +876,75 @@ describe('useCalDAV', () => {
         expect.objectContaining({ resourceHref: 'https://series.ics', etag: 'group-etag' })
       )
     })
+
+    // R2.7 — recurring VTODOs (issue #96). Per RFC 4791 §4.1 a master and its
+    // overrides must share ONE calendar object resource, so the two write
+    // paths that take a single event have to divert for task overrides.
+    describe('recurring VTODO writes', () => {
+      const taskMaster: CalendarEvent = {
+        ...mockEvent,
+        id: 'gym',
+        uid: 'gym',
+        type: 'task',
+        title: 'Exercise',
+        dueDate: mockEvent.start,
+        rruleString: 'FREQ=WEEKLY;BYDAY=TU',
+        resourceHref: `${mockCalendar.url}gym.ics`,
+      }
+      const taskOverride: CalendarEvent = {
+        ...taskMaster,
+        id: 'gym-2026-04-15T09:00:00Z',
+        recurrenceId: '2026-04-15T09:00:00Z',
+        recurrenceMasterId: 'gym',
+        rruleString: undefined,
+        completed: true,
+        taskStatus: 'COMPLETED',
+      }
+
+      it('writes master + override as one group instead of a standalone PUT', async () => {
+        act(() => {
+          useCalendarStore.getState().addEvent(taskMaster)
+        })
+
+        const { result } = renderHook(() => useCalDAV())
+        await waitFor(() => expect(result.current.accounts.length).toBe(1))
+        await act(async () => {
+          await result.current.updateEvent('cal-1', taskOverride)
+        })
+
+        // A standalone updateEvent would have orphaned the override on its own
+        // href, splitting the UID across two resources.
+        expect(mockSyncEngineInstance.updateEvent).not.toHaveBeenCalled()
+        const groupedEvents = mockSyncEngineInstance.updateEventGroup.mock.calls[0][0]
+        expect(groupedEvents).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({ id: 'gym', rruleString: 'FREQ=WEEKLY;BYDAY=TU' }),
+            expect.objectContaining({ id: taskOverride.id, taskStatus: 'COMPLETED' }),
+          ])
+        )
+      })
+
+      it('rewrites the group rather than DELETEing the resource an override shares', async () => {
+        act(() => {
+          useCalendarStore.getState().addEvent(taskMaster)
+          useCalendarStore.getState().addEvent(taskOverride)
+        })
+
+        const { result } = renderHook(() => useCalDAV())
+        await waitFor(() => expect(result.current.accounts.length).toBe(1))
+        await act(async () => {
+          await result.current.deleteEvent('cal-1', taskOverride.id)
+        })
+
+        // DELETE would take the master's whole series with it.
+        expect(mockSyncEngineInstance.deleteEvent).not.toHaveBeenCalled()
+        const groupedEvents = mockSyncEngineInstance.updateEventGroup.mock.calls[0][0]
+        expect(groupedEvents.map((event: CalendarEvent) => event.id)).not.toContain(taskOverride.id)
+        expect(
+          useCalendarStore.getState().events.some((event) => event.id === taskOverride.id)
+        ).toBe(false)
+      })
+    })
   })
 
   // -----------------------------------------------------------------------

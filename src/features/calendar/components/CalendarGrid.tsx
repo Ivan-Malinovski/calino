@@ -58,7 +58,7 @@ import { useContextMenuStore } from '@/store/contextMenuStore'
 import { AgendaView } from './AgendaView'
 import { DayView } from './DayView'
 import type { CalendarEvent, ViewType } from '@/types'
-import { getJournalDates, getTasksDueOn } from '@/store/calendarStore'
+import { getJournalDates, getTasksForDay } from '@/store/calendarStore'
 import styles from './CalendarGrid.module.css'
 
 // Shared by the button and span forms of the journal indicator (see the
@@ -586,7 +586,7 @@ export function CalendarGrid(): JSX.Element {
       .map((c) => c.id)
     for (const day of days) {
       const dayKey = format(day, 'yyyy-MM-dd')
-      const dayTasks = getTasksDueOn(events, dayKey).filter(
+      const dayTasks = getTasksForDay(events, dayKey).filter(
         (event) =>
           visibleCalendarIds.includes(event.calendarId) &&
           taskCalendarsWithTasks.includes(event.calendarId) &&
