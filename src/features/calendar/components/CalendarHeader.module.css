@@ -822,6 +822,7 @@
 @media (max-width: 500px) {
   .header {
     gap: var(--space-1);
+    padding-top: calc(11px + var(--safe-area-top));
     padding-bottom: 6px;
   }
 
@@ -842,14 +843,6 @@
     width: 0;
     overflow: hidden;
     transition: opacity 0.2s ease, width 0.2s ease;
-  }
-
-  /* With the year hidden the title has the row to itself, so it can grow back
-     to its full size and read as the peer of the 44px navigator beside it
-     rather than as a caption above it. */
-  .monthTitle,
-  .viewTitle {
-    font-size: 36px;
   }
 
   .viewDropdownMenu {
