@@ -4,6 +4,8 @@ All notable changes to Calino will be documented in this file.
 
 ## [Unreleased]
 
+## [0.27.0] - 2026-08-03
+
 ### Added
 
 - **Tasks can repeat.** "Exercise every Tuesday" is now a single task rather than a copy-paste job every week. Set a due date, tick **Recurring**, and pick a pattern with the same controls events use. The Tasks list shows the series as one row on its next due date; tick it and it advances to the next one, with the occurrences you've finished kept under the **Completed** filter. Hovering the repeat symbol tells you the pattern, when the next one is due, and how many you've done. Recurring tasks also appear on the right day in the month, week and day views, and can be ticked off from there. Raised in [#96](https://github.com/Ivan-Malinovski/calino/issues/96).
