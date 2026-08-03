@@ -14,6 +14,8 @@ All notable changes to Calino will be documented in this file.
 
 ### Fixed
 
+- **Auto rollup in the month view now measures what a day actually holds.** It costed every row at the height of a full event card, so a day of short rows — task pills, past-week events, multi-day bands, rolled-up recurrences — said "+N more" with half the cell still empty. Each row is now costed at the height it really renders at, measured off the page rather than assumed, so it also follows a change of theme, font size or browser zoom. Cells in a window too short to fit the month were being underestimated as well, and rolled up while the row they sit in had room to spare.
+- **A day that overflowed both its events and its tasks showed "+1 more" twice.** There is now one rollup line per day, counting both, and the popup it opens lists the day's tasks alongside its events.
 - **A repeating all-day event landed on the wrong day of the week east of UTC.** "Every Tuesday" generated Wednesdays for anyone ahead of UTC, including all of Europe. This affected events as well as the new recurring tasks.
 - **Tasks due on an all-day date could show up a day early** for anyone behind UTC.
 - **Recurring tasks written by other clients no longer lose their pattern.** Calino previously read such a task as a single one-off and dropped its repeat rule the next time it saved, along with the task's location and URL.
