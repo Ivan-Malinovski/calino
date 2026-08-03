@@ -1,6 +1,6 @@
 import type { JSX } from 'react'
 import React, { useMemo, useState, useRef, useCallback, useEffect, useLayoutEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import {
@@ -52,13 +52,19 @@ import { hapticIfEnabled } from '@/lib/haptics'
 import { useIsTallWindow, useIsWideWindow } from '@/hooks/useWindowHeight'
 import { useIsPortraitWindow } from '@/hooks/useWindow'
 import { useDragDuplicateModifier } from '@/hooks/useDragDuplicateModifier'
-import { useMonthEventCapacity, type MonthCellCapacity } from '@/hooks/useMonthEventCapacity'
+import {
+  useMonthEventCapacity,
+  fitMonthCell,
+  type MonthCellCapacity,
+  type MonthRowKind,
+} from '@/hooks/useMonthEventCapacity'
 import { useDragModifierStore } from '@/store/dragModifierStore'
 import { useContextMenuStore } from '@/store/contextMenuStore'
 import { AgendaView } from './AgendaView'
 import { DayView } from './DayView'
 import type { CalendarEvent, ViewType } from '@/types'
-import { getJournalDates, getTasksDueOn } from '@/store/calendarStore'
+import { getJournalDates, getTasksForDay } from '@/store/calendarStore'
+import { hasDueTime } from '@/lib/events'
 import styles from './CalendarGrid.module.css'
 
 // Shared by the button and span forms of the journal indicator (see the
@@ -586,7 +592,7 @@ export function CalendarGrid(): JSX.Element {
       .map((c) => c.id)
     for (const day of days) {
       const dayKey = format(day, 'yyyy-MM-dd')
-      const dayTasks = getTasksDueOn(events, dayKey).filter(
+      const dayTasks = getTasksForDay(events, dayKey).filter(
         (event) =>
           visibleCalendarIds.includes(event.calendarId) &&
           taskCalendarsWithTasks.includes(event.calendarId) &&
@@ -829,6 +835,11 @@ export function CalendarGrid(): JSX.Element {
     headerSelector: '[data-component="calendar-grid-header"]',
     weekCount: weekNumbers.length,
     compressedWeekCount,
+    // The week-number column carries `min-height: var(--day-cell-height)`, so
+    // with it on show a row can't be shorter than the row-height setting
+    // however short the window is — the grid scrolls instead. With it off
+    // nothing holds the row open and only the flex share is real.
+    rowHeightFloor: showWeekNumbers ? rowHeight : 0,
   })
   // Auto is on but nothing has been measured yet (first paint, or a hidden
   // grid): fall back to the old default rather than rendering every event.
@@ -1267,6 +1278,29 @@ export function CalendarGrid(): JSX.Element {
   )
 }
 
+/**
+ * Which of the month view's row shapes an item will render as — the same
+ * decision the render below makes, taken early so the cell can cost the item
+ * at the height that shape measures. A task with a due time carries a second
+ * line and is nearly twice the height of one without.
+ */
+function monthRowKind(
+  item: CalendarEvent,
+  isPastWeek: boolean,
+  compactRecurringEvents: boolean,
+  isCompactMobile: boolean
+): MonthRowKind {
+  if (isCompactMobile) return 'dot'
+  if (item.type === 'task') return hasDueTime(item) ? 'taskWithTime' : 'task'
+  const isMultiDay = !isSameDay(parseISO(item.start), parseISO(item.end))
+  const compact =
+    isPastWeek ||
+    !!item.isFragment ||
+    (compactRecurringEvents &&
+      (!!item.rruleString || !!item.recurrence || item.isAllDay || isMultiDay))
+  return compact ? 'compactEvent' : 'event'
+}
+
 interface DroppableDayProps {
   monthChangeMotion: DateChangeMotion
   dateKey: string
@@ -1321,19 +1355,37 @@ const DroppableDay = React.memo(function DroppableDay({
 }: DroppableDayProps): JSX.Element {
   const { setNodeRef, isOver } = useDroppable({ id: dateKey })
   // In "Auto" mode the cell's height, not a setting, decides how much shows.
-  // Events are drawn above tasks in the same cell, so events claim the rows
-  // first and tasks take what is left — with one row held back for tasks when
-  // the day has any, so they never vanish entirely behind the events' rollup.
+  // What fits depends on *which* items the day holds, not just how many: a
+  // compact pill or a task is about half the height of a full event card, so
+  // each item is costed at the height it will actually render at. The lane
+  // promotion below can only shrink a card further (a promoted single is
+  // forced compact), so costing it full-height errs towards a spare gap rather
+  // than an overflowing cell.
   const { eventLimit, taskLimit } = useMemo(() => {
     if (!monthCapacity) return { eventLimit: monthViewEventLimit, taskLimit: monthViewEventLimit }
-    const total = dayEvents.length + dayTasks.length
-    const rows = total > monthCapacity.rows ? monthCapacity.rowsWithMore : monthCapacity.rows
-    const eventLimit = dayTasks.length > 0 ? Math.max(1, rows - 1) : rows
-    return {
-      eventLimit,
-      taskLimit: Math.max(1, rows - Math.min(dayEvents.length, eventLimit)),
-    }
-  }, [monthCapacity, monthViewEventLimit, dayEvents.length, dayTasks.length])
+    const height = monthCapacity.itemHeights
+    const eventHeights = dayEvents.map(
+      (event) => height[monthRowKind(event, isPastWeek, compactRecurringEvents, isCompactMobile)]
+    )
+    const taskHeights = dayTasks.map(
+      (task) => height[monthRowKind(task, isPastWeek, compactRecurringEvents, isCompactMobile)]
+    )
+    return fitMonthCell(monthCapacity.contentHeight, eventHeights, taskHeights)
+  }, [
+    monthCapacity,
+    monthViewEventLimit,
+    dayEvents,
+    dayTasks,
+    isPastWeek,
+    isCompactMobile,
+    compactRecurringEvents,
+  ])
+  const hiddenCount =
+    Math.max(0, dayEvents.length - eventLimit) + Math.max(0, dayTasks.length - taskLimit)
+  const popupItems = useMemo(
+    () => (dayTasks.length > 0 ? [...dayEvents, ...dayTasks] : dayEvents),
+    [dayEvents, dayTasks]
+  )
   // Multi-day fragments carry a lane shared across every day they span, so a
   // fragment's vertical position must be identical in every cell for the pill
   // to read as one continuous band. Any lane a fragment doesn't occupy is
@@ -1404,7 +1456,7 @@ const DroppableDay = React.memo(function DroppableDay({
 
   const handlePopupEventClick = (event: CalendarEvent): void => {
     setShowPopup(false)
-    openModal(undefined, undefined, event.id)
+    openModal(undefined, undefined, event.id, event.type === 'task' ? 'task' : 'event')
   }
 
   const handleContextMenu = (e: React.MouseEvent): void => {
@@ -1581,15 +1633,13 @@ const DroppableDay = React.memo(function DroppableDay({
                   </motion.div>
                 ))}
               </AnimatePresence>
-              {(dayEvents.length > eventLimit || dayTasks.length > taskLimit) && (
+              {hiddenCount > 0 && (
                 <button
                   ref={moreEventsRef}
                   className={styles.moreEvents}
                   onClick={handleMoreEventsClick}
                 >
-                  +
-                  {Math.max(0, dayEvents.length - eventLimit) +
-                    Math.max(0, dayTasks.length - taskLimit)}
+                  +{hiddenCount}
                 </button>
               )}
             </div>
@@ -1629,6 +1679,11 @@ const DroppableDay = React.memo(function DroppableDay({
                   return (
                     <motion.div
                       key={event.id}
+                      // What the capacity hook measures a row of this shape
+                      // by. Tagged with what actually rendered, not with the
+                      // prediction, so a promoted single (forced compact to
+                      // hold a lane) is never sampled as a full card.
+                      data-row-kind={shouldCompact ? 'compactEvent' : 'event'}
                       variants={eventCardVariants}
                       initial={cardInitial}
                       animate="animate"
@@ -1646,21 +1701,13 @@ const DroppableDay = React.memo(function DroppableDay({
                   )
                 })}
               </AnimatePresence>
-              {dayEvents.length > eventLimit && (
-                <button
-                  ref={moreEventsRef}
-                  className={styles.moreEvents}
-                  onClick={handleMoreEventsClick}
-                >
-                  +{dayEvents.length - eventLimit} more
-                </button>
-              )}
             </div>
             <div className={styles.tasks} data-component="day-tasks">
               <AnimatePresence initial={false}>
                 {dayTasks.slice(0, taskLimit).map((task) => (
                   <motion.div
                     key={task.id}
+                    data-row-kind={hasDueTime(task) ? 'taskWithTime' : 'task'}
                     variants={eventCardVariants}
                     initial={monthChangeMotion.initial ? false : cardInitial}
                     animate="animate"
@@ -1677,8 +1724,19 @@ const DroppableDay = React.memo(function DroppableDay({
                   </motion.div>
                 ))}
               </AnimatePresence>
-              {dayTasks.length > taskLimit && (
-                <div className={styles.moreEvents}>+{dayTasks.length - taskLimit} more</div>
+              {/* One rollup line for the whole cell, not one per container:
+                  events and tasks are two stacks inside a single day, and a
+                  cell that overflowed both used to show "+1 more" twice. It
+                  lives at the bottom of the tasks stack — the last thing in
+                  the cell — and counts what both stacks hid. */}
+              {hiddenCount > 0 && (
+                <button
+                  ref={moreEventsRef}
+                  className={styles.moreEvents}
+                  onClick={handleMoreEventsClick}
+                >
+                  +{hiddenCount} more
+                </button>
               )}
             </div>
           </>
@@ -1687,7 +1745,9 @@ const DroppableDay = React.memo(function DroppableDay({
       {showPopup && (
         <DayEventsPopup
           date={day}
-          events={dayEvents}
+          // The rollup counts hidden tasks as well as hidden events, so the
+          // popup it opens has to be able to show them.
+          events={popupItems}
           position={popupPosition}
           onClose={() => setShowPopup(false)}
           onEventClick={handlePopupEventClick}

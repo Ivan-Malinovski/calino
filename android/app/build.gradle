@@ -7,7 +7,13 @@ import groovy.json.JsonSlurper
 // follow automatically.
 def appPackageJson = new JsonSlurper().parse(file('../../package.json'))
 def appVersionName = appPackageJson.version
-def (verMajor, verMinor, verPatch) = appVersionName.tokenize('.').collect { it.toInteger() }
+// versionName carries the full semver, prerelease suffix and all, so a beta
+// build says so on the About screen and in bug reports. versionCode has to be
+// a plain integer though, so the suffix is stripped before parsing: a
+// `0.27.0-beta.1` tester build and the eventual `0.27.0` share a code, which
+// is fine for sideloaded betas but means the final has to be installed over
+// the beta rather than upgrading it in place.
+def (verMajor, verMinor, verPatch) = appVersionName.split('-')[0].tokenize('.').collect { it.toInteger() }
 def appVersionCode = verMajor * 1000000 + verMinor * 1000 + verPatch
 
 def keystorePropertiesFile = rootProject.file('keystore.properties')
@@ -75,6 +81,9 @@ dependencies {
     implementation project(':capacitor-android')
     // DavHttpPlugin: HttpURLConnection can't send WebDAV verbs, OkHttp can.
     implementation "com.squareup.okhttp3:okhttp:$okhttpVersion"
+    // HeadlessSyncWorker: periodic background CalDAV refresh, so the calendar
+    // mirror holds events Calino never saw in the foreground.
+    implementation "androidx.work:work-runtime:$androidxWorkVersion"
     testImplementation "junit:junit:$junitVersion"
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"

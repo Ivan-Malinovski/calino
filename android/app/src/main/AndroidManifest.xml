@@ -59,4 +59,21 @@
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
+    <!-- Calendar mirror (CalendarMirrorPlugin): one-way export of CalDAV events
+         into CalendarContract, so the OS owns reminder alarms and widgets /
+         Wear OS / Android Auto can see them. Requested at runtime, only when
+         the user turns the mirror on. -->
+    <uses-permission android:name="android.permission.READ_CALENDAR" />
+    <uses-permission android:name="android.permission.WRITE_CALENDAR" />
+
+    <!-- Package visibility (Android 11+): the mirror asks whether any calendar
+         app is installed, because the provider stores reminders but a calendar
+         app is what actually posts the notification. Without this the query
+         always comes back empty. -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.INSERT" />
+            <data android:mimeType="vnd.android.cursor.dir/event" />
+        </intent>
+    </queries>
 </manifest>

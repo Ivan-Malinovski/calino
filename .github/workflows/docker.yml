@@ -229,10 +229,18 @@ jobs:
           # Only reached on a version-tag push (see the `if:` above), so this
           # is the release's one and only tag set — no `edge`/branch tags to
           # keep disjoint from anymore.
+          #
+          # `latest` and `main` are what a self-hoster's `docker pull` and
+          # every unpinned compose file resolve to, so they must only ever
+          # move to a stable release. A prerelease tag (`v0.27.0-beta.1` —
+          # anything with a SemVer hyphen) publishes under its own version
+          # tag only, and leaves the moving tags pointing at the last stable.
+          # This used to be unconditional, which meant tagging a beta shipped
+          # it to everyone running `:latest`.
           tags: |
             type=semver,pattern={{version}}
-            type=raw,value=latest
-            type=raw,value=main
+            type=raw,value=latest,enable=${{ !contains(github.ref_name, '-') }}
+            type=raw,value=main,enable=${{ !contains(github.ref_name, '-') }}
             type=sha,prefix=sha-,format=short
 
       - name: Create manifest list & push

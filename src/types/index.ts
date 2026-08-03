@@ -121,6 +121,14 @@ export interface CalendarEvent {
   recurrenceId?: string
   /** Local master identity for a detached recurrence occurrence. */
   recurrenceMasterId?: string
+  /**
+   * R2.7 — View-only. Set on an *expanded* occurrence (one the rule generated,
+   * as opposed to a stored detached override) and never persisted or
+   * serialized. It names the master this occurrence came from, so a card the
+   * user interacts with can act on the series without parsing its synthetic
+   * `${masterId}-${occurrenceKey}` id back apart.
+   */
+  occurrenceMasterId?: string
   /** Raw VEVENT STATUS value, including cancelled detached occurrences. */
   eventStatus?: string
   isFragment?: boolean
@@ -219,10 +227,29 @@ export interface CalendarState {
   rangeExpansionVersion: number
 }
 
+/**
+ * R2.7 — The write plan for completing/un-completing one occurrence of a
+ * recurring task. Shaped to be passed straight to
+ * `saveRecurrenceOverride(calendarId, master, override, removedOverrideIds)`.
+ */
+export interface TaskOccurrencePlan {
+  /** Unchanged — the master keeps its RRULE and is re-PUT only for SEQUENCE. */
+  master: CalendarEvent
+  /** The detached instance to write, or null to leave the series unexcepted. */
+  override: CalendarEvent | null
+  /** Overrides to drop from the resource (un-completing a pure marker). */
+  removedOverrideIds: string[]
+}
+
 export interface CalendarActions {
   addEvent: (event: CalendarEvent) => void
   updateEvent: (id: string, updates: Partial<CalendarEvent>) => void
   completeTask: (id: string, completed: boolean) => CalendarEvent[]
+  completeTaskOccurrence: (
+    masterId: string,
+    occurrenceStart: string,
+    completed: boolean
+  ) => TaskOccurrencePlan | null
   deleteEvent: (id: string) => void
   addBrokenEvent: (event: CalendarEvent, reason: string) => void
   removeBrokenEvent: (eventId: string) => void
@@ -301,6 +328,9 @@ export interface UserSettings {
   defaultReminderMinutes: number
   defaultEventColor: string
   enableDesktopNotifications: boolean
+  /** Android only: mirror events into the OS calendar provider so the system
+   *  fires reminders and other apps (widgets, Wear OS, Auto) can see them. */
+  enableCalendarMirror: boolean
   enableSoundAlerts: boolean
   enableHaptics: boolean
   conflictResolution: 'server-wins' | 'local-wins' | 'ask'

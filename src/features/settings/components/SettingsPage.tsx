@@ -1,6 +1,6 @@
 import type { JSX } from 'react'
 import { useState, useRef, useEffect } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router'
 import { Capacitor } from '@capacitor/core'
 import { GeneralSettings } from './GeneralSettings'
 import { ThemeSettings } from './ThemeSettings'

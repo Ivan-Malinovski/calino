@@ -12,7 +12,8 @@
   background: var(--canvas, #faf8f3);
 }
 
-@media (max-width: 768px) { /* sync with config.ts MOBILE_BREAKPOINT */
+@media (max-width: 768px) {
+  /* sync with config.ts MOBILE_BREAKPOINT */
   /* Replaces the desktop 72px with pill-safe clearance, as trailing scroll
      padding rather than App.css .main's visible gap (see .main[data-view]). */
   .container {
@@ -33,7 +34,9 @@
   flex: 1 1 auto;
   overflow-y: auto;
   min-height: 0;
-  transition: background 0.15s ease, box-shadow 0.15s ease;
+  transition:
+    background 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 /* Ambient cue shown while dragging a subtask over blank space (anywhere
@@ -230,7 +233,9 @@
   font-size: 10.5px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
-  transition: background 0.14s ease, color 0.14s ease;
+  transition:
+    background 0.14s ease,
+    color 0.14s ease;
 }
 
 .tabActive .tabCount {
@@ -255,9 +260,13 @@
   top: 4px;
   height: 30px;
   background: var(--panel, #ffffff);
-  box-shadow: 0 1px 2px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.08 * var(--shadow-opacity, 1))), 0 0 0 1px var(--line, rgba(var(--shadow-rgb, 0, 0, 0), calc(0.09 * var(--shadow-opacity, 1))));
+  box-shadow:
+    0 1px 2px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.08 * var(--shadow-opacity, 1))),
+    0 0 0 1px var(--line, rgba(var(--shadow-rgb, 0, 0, 0), calc(0.09 * var(--shadow-opacity, 1))));
   border-radius: var(--view-switcher-indicator-radius, 9px);
-  transition: left 0.25s cubic-bezier(0.4, 0, 0.2, 1), width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  transition:
+    left 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+    width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   z-index: 0;
 }
 
@@ -276,7 +285,9 @@
   border: none;
   cursor: pointer;
   box-shadow: 0 1px 2px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.14 * var(--shadow-opacity, 1)));
-  transition: background 0.14s, transform 0.04s;
+  transition:
+    background 0.14s,
+    transform 0.04s;
   font-family: inherit;
 }
 
@@ -353,7 +364,10 @@
   align-items: start;
   padding: 12px 14px;
   border-radius: var(--radius-md);
-  transition: background 0.12s, transform 0.12s, box-shadow 0.12s;
+  transition:
+    background 0.12s,
+    transform 0.12s,
+    box-shadow 0.12s;
 }
 
 .taskRow:hover {
@@ -370,7 +384,9 @@
 .fadingOut {
   opacity: 0;
   transform: translateY(-4px) scale(0.98);
-  transition: opacity 0.2s ease, transform 0.2s ease;
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
   pointer-events: none;
 }
 
@@ -388,13 +404,20 @@
   height: 20px;
   border-radius: 50%;
   cursor: pointer;
-  border: 1.7px solid color-mix(in srgb, var(--event-color, var(--accent)) var(--event-marker-mix, 55%), var(--ink-3, #a39d93));
+  border: 1.7px solid
+    color-mix(
+      in srgb,
+      var(--event-color, var(--accent)) var(--event-marker-mix, 55%),
+      var(--ink-3, #a39d93)
+    );
   background: transparent;
   display: grid;
   place-content: center;
   color: #fff;
   padding: 0;
-  transition: background 0.14s, border-color 0.14s;
+  transition:
+    background 0.14s,
+    border-color 0.14s;
 }
 
 .taskCheck:active {
@@ -405,12 +428,18 @@
   width: 11px;
   height: 11px;
   opacity: 0;
-  transition: opacity 0.12s, transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition:
+    opacity 0.12s,
+    transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .taskRow:hover .taskCheck {
   border-color: var(--event-color, var(--accent));
-  background: color-mix(in srgb, var(--event-color, var(--accent)) var(--event-bg-mix, 9%), transparent);
+  background: color-mix(
+    in srgb,
+    var(--event-color, var(--accent)) var(--event-bg-mix, 9%),
+    transparent
+  );
 }
 
 .taskRow:hover .taskCheck svg {
@@ -499,6 +528,49 @@
   gap: var(--space-3);
   padding-top: 2px;
   white-space: nowrap;
+}
+
+/* R2.7 — Marks a row that stands in for a recurring series. Deliberately quiet:
+   it sits beside the priority chip and due label, and those carry the urgency.
+   Sized to the same 12px optical weight as the due label so the meta column
+   still reads as one row rather than three competing badges. */
+.recurringBadge {
+  display: inline-flex;
+  align-items: center;
+  color: var(--ink-3, #a39d93);
+  flex: 0 0 auto;
+}
+
+/* Hover detail for the badge. Fixed-positioned in a body portal because the
+   task list is virtualized and clips its own overflow. `pointer-events: none`
+   keeps it from stealing the hover that spawned it. */
+.recurrenceTooltip {
+  position: fixed;
+  z-index: 10000;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--ink-2);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 7px 9px;
+  max-width: 260px;
+  box-shadow: 0 4px 12px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.1 * var(--shadow-opacity, 1)));
+  white-space: normal;
+  pointer-events: none;
+}
+
+.recurrenceTooltipTitle {
+  color: var(--ink, #2c2823);
+  font-weight: 600;
+}
+
+/* Touch has no hover, so the tooltip is unreachable there and the glyph is
+   left to speak for itself — the modal is where the rule can be read anyway. */
+@media (max-width: 768px) {
+  .recurrenceTooltip {
+    display: none;
+  }
 }
 
 /* ---- Priority Chips (Inverted: Low recedes, High is loud) ---- */
@@ -620,7 +692,9 @@
   border: none;
   cursor: pointer;
   box-shadow: 0 1px 2px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.14 * var(--shadow-opacity, 1)));
-  transition: background 0.14s, transform 0.04s;
+  transition:
+    background 0.14s,
+    transform 0.04s;
   font-family: inherit;
 }
 

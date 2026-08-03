@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
-import { useMonthEventCapacity } from '../useMonthEventCapacity'
+import { useMonthEventCapacity, fitMonthCell, ITEM_HEIGHT } from '../useMonthEventCapacity'
 
 /**
  * The hook reads real layout, so the grid is a stub element with a fixed
@@ -23,7 +23,12 @@ function makeGrid(clientHeight: number, headerHeight = 30): HTMLElement {
 
 function measured(
   grid: HTMLElement,
-  overrides: { weekCount?: number; compressedWeekCount?: number; enabled?: boolean } = {}
+  overrides: {
+    weekCount?: number
+    compressedWeekCount?: number
+    enabled?: boolean
+    rowHeightFloor?: number
+  } = {}
 ): ReturnType<typeof renderHook<ReturnType<typeof useMonthEventCapacity>, unknown>> {
   const rendered = renderHook(() =>
     useMonthEventCapacity({
@@ -32,6 +37,7 @@ function measured(
       headerSelector: '[data-component="calendar-grid-header"]',
       weekCount: overrides.weekCount ?? 5,
       compressedWeekCount: overrides.compressedWeekCount ?? 0,
+      rowHeightFloor: overrides.rowHeightFloor ?? 0,
     })
   )
   act(() => {
@@ -65,21 +71,19 @@ describe('useMonthEventCapacity', () => {
     vi.unstubAllGlobals()
   })
 
-  it('fits more events into a taller grid', () => {
-    // 5 weeks over 1000px of rows → 200px cells: 45px of chrome leaves 155px,
-    // and 45px rows (the last paying no 3px gap) fit three. At 750px the same
-    // cells are 150px and only two fit.
+  it('reports more content height for a taller grid', () => {
+    // 5 weeks over 1000px of rows → 200px cells, less 45px of chrome.
     const short = measured(makeGrid(780))
     const tall = measured(makeGrid(1030))
 
-    expect(short.result.current?.full.rows).toBe(2)
-    expect(tall.result.current?.full.rows).toBe(3)
+    expect(short.result.current?.full.contentHeight).toBe(105)
+    expect(tall.result.current?.full.contentHeight).toBe(155)
   })
 
   it('re-measures when the grid resizes', async () => {
     const grid = makeGrid(780)
     const { result } = measured(grid)
-    expect(result.current?.full.rows).toBe(2)
+    expect(result.current?.full.contentHeight).toBe(105)
 
     Object.defineProperty(grid, 'clientHeight', { value: 1380, configurable: true })
     await act(async () => {
@@ -87,30 +91,83 @@ describe('useMonthEventCapacity', () => {
       // Measurements after the first wait for the size to settle.
       await new Promise((resolve) => setTimeout(resolve, 200))
     })
-    expect(result.current?.full.rows).toBe(5)
+    expect(result.current?.full.contentHeight).toBe(225)
   })
 
-  it('holds a row back to make room for the "+N more" line', () => {
-    // 900px of rows fits three cards, but not three and a rollup line.
-    const { result } = measured(makeGrid(930))
-    expect(result.current?.full.rows).toBe(3)
-    expect(result.current?.full.rowsWithMore).toBe(2)
-  })
-
-  it('gives a compressed past week half the rows of a full one', () => {
+  it('gives a compressed past week half the height of a full one', () => {
     const { result } = measured(makeGrid(900, 30), { weekCount: 5, compressedWeekCount: 2 })
     const { full, compressed } = result.current!
-    expect(compressed.rows).toBeLessThan(full.rows)
-    expect(compressed.rows).toBeGreaterThanOrEqual(1)
+    expect(compressed.contentHeight).toBeLessThan(full.contentHeight)
+    expect(compressed.contentHeight).toBeGreaterThan(0)
   })
 
-  it('never reports fewer than one row, however short the grid', () => {
-    const { result } = measured(makeGrid(120))
-    expect(result.current?.full.rows).toBe(1)
+  it('never reads a row as shorter than the min-height holding it open', () => {
+    // 5 weeks over 250px of rows would be 50px cells, but the week-number
+    // column keeps every row at 100px and the grid scrolls instead.
+    const { result } = measured(makeGrid(280), { rowHeightFloor: 100 })
+    expect(result.current?.full.contentHeight).toBe(55)
+  })
+
+  it('costs a row at the height one of its kind actually measures', () => {
+    const grid = makeGrid(930)
+    const pill = document.createElement('div')
+    pill.setAttribute('data-row-kind', 'task')
+    Object.defineProperty(pill, 'offsetHeight', { value: 31, configurable: true })
+    grid.appendChild(pill)
+
+    const { result } = measured(grid)
+    expect(result.current?.full.itemHeights.task).toBe(31)
+    // A kind the month doesn't contain keeps its seed rather than jittering.
+    expect(result.current?.full.itemHeights.event).toBe(ITEM_HEIGHT.event)
   })
 
   it('reports nothing when disabled, so callers fall back to the setting', () => {
     const { result } = measured(makeGrid(930), { enabled: false })
     expect(result.current).toBeNull()
+  })
+})
+
+describe('fitMonthCell', () => {
+  const full = ITEM_HEIGHT.event
+  const pill = ITEM_HEIGHT.compactEvent
+  const task = ITEM_HEIGHT.task
+
+  it('shows everything when everything fits, with no room held back', () => {
+    // Two full cards and a task: 42 + 3 + 42 + 6 + 24 = 117.
+    expect(fitMonthCell(117, [full, full], [task])).toEqual({ eventLimit: 2, taskLimit: 1 })
+  })
+
+  it('fits far more pills than cards into the same cell', () => {
+    const cards = fitMonthCell(150, Array(8).fill(full), [])
+    const pills = fitMonthCell(150, Array(8).fill(pill), [])
+    expect(cards.eventLimit).toBe(2)
+    expect(pills.eventLimit).toBe(5)
+  })
+
+  it('does not roll up a short pill-and-task day that still has room', () => {
+    // The bug this replaced: one pill plus one task counted as two 45px rows,
+    // so a 105px cell rolled up with 50px to spare.
+    expect(fitMonthCell(105, [pill], [task])).toEqual({ eventLimit: 1, taskLimit: 1 })
+  })
+
+  it('holds room back for the "+N more" line once something overflows', () => {
+    // 130px fits three cards exactly (42*3 + 3*2 = 132 does not, 129 does at
+    // two) — the rollup line costs the third its place.
+    const tight = fitMonthCell(132, Array(4).fill(full), [])
+    expect(tight.eventLimit).toBe(2)
+  })
+
+  it('keeps one task visible however many events the day has', () => {
+    const fit = fitMonthCell(120, Array(6).fill(full), [task, task])
+    expect(fit.taskLimit).toBeGreaterThanOrEqual(1)
+    expect(fit.eventLimit).toBeGreaterThanOrEqual(1)
+  })
+
+  it('shows at least one of each, however short the cell', () => {
+    expect(fitMonthCell(10, [full, full], [task])).toEqual({ eventLimit: 1, taskLimit: 1 })
+  })
+
+  it('claims no task row on a day with no tasks', () => {
+    expect(fitMonthCell(150, Array(5).fill(full), []).taskLimit).toBe(0)
   })
 })

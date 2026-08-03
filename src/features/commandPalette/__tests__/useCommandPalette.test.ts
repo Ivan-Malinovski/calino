@@ -59,6 +59,7 @@ vi.mock('@/store/calendarStore', () => ({
       addEvent: vi.fn(),
       updateEvent: vi.fn(),
       completeTask: vi.fn(),
+      completeTaskOccurrence: vi.fn(),
       deleteEvent: vi.fn(),
       duplicateEvent: vi.fn(),
       addBrokenEvent: vi.fn(),
@@ -130,6 +131,7 @@ vi.mock('@/store/settingsStore', () => ({
       defaultReminderMinutes: 15,
       defaultEventColor: '#4285F4',
       enableDesktopNotifications: false,
+      enableCalendarMirror: false,
       enableSoundAlerts: false,
       enableHaptics: true,
       conflictResolution: 'local-wins',
@@ -169,7 +171,7 @@ vi.mock('@/store/settingsStore', () => ({
   selectUpdateSettings: (state: SettingsStore) => state.updateSettings,
 }))
 
-vi.mock('react-router-dom', () => ({
+vi.mock('react-router', () => ({
   useNavigate: () => vi.fn(),
 }))
 

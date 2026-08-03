@@ -6,6 +6,7 @@ import { useScrollInput } from '@/hooks/useScrollInput'
 import { useSettingsStore } from '@/store/settingsStore'
 import styles from './EventModal.module.css'
 import { TimeField } from './TimeField'
+import { RecurrenceFields, RecurrenceToggle, type RecurrenceFieldsProps } from './RecurrenceFields'
 
 interface TaskFormFieldsProps {
   completed: boolean
@@ -24,6 +25,28 @@ interface TaskFormFieldsProps {
   subtasks: CalendarEvent[]
   onOpenSubtask: (taskId: string) => void
   onAddSubtask?: () => void
+  /**
+   * R2.7 — Recurrence controls, identical to the event form's. Passed through
+   * rather than owned here so both forms drive the same `RecurrenceFields`.
+   */
+  recurrence?: TaskRecurrenceProps
+}
+
+/**
+ * R2.7 — Everything the shared recurrence UI needs, plus the one task-specific
+ * bit: why recurrence may be unavailable.
+ */
+export interface TaskRecurrenceProps extends Omit<
+  RecurrenceFieldsProps,
+  'recurring' | 'firstDayOfWeek' | 'startDate'
+> {
+  recurring: boolean
+  onRecurringChange: (recurring: boolean) => void
+  /**
+   * Non-empty when this task may not recur. Shown next to a disabled toggle —
+   * a control that silently vanishes reads as a missing feature.
+   */
+  disabledReason?: string
 }
 
 const PRIORITY_OPTIONS: { value: TaskPriority | undefined; label: string }[] = [
@@ -58,9 +81,11 @@ export function TaskFormFields({
   subtasks,
   onOpenSubtask,
   onAddSubtask,
+  recurrence: recurrenceProps,
 }: TaskFormFieldsProps): JSX.Element {
   const dueDateRef = useRef<HTMLInputElement>(null)
   const timeFormat = useSettingsStore((state) => state.timeFormat)
+  const firstDayOfWeek = useSettingsStore((state) => state.firstDayOfWeek)
   const parentTask = parentTasks.find((task) => task.id === parentTaskId)
   const hasDueDate = dueDate.trim().length > 0
   useScrollInput([dueDateRef])
@@ -250,6 +275,28 @@ export function TaskFormFields({
           </select>
         </div>
       </div>
+
+      {recurrenceProps && (
+        <div data-component="task-recurrence">
+          <div className={styles.row}>
+            <div className={styles.field}>
+              <RecurrenceToggle
+                recurring={recurrenceProps.recurring}
+                onRecurringChange={recurrenceProps.onRecurringChange}
+                disabled={Boolean(recurrenceProps.disabledReason)}
+                disabledReason={recurrenceProps.disabledReason}
+              />
+            </div>
+          </div>
+          {/* The due date is the task's DTSTART, so it is what the monthly /
+              yearly pattern pickers describe. */}
+          <RecurrenceFields
+            {...recurrenceProps}
+            startDate={dueDate.split('T')[0]}
+            firstDayOfWeek={firstDayOfWeek}
+          />
+        </div>
+      )}
     </>
   )
 }
