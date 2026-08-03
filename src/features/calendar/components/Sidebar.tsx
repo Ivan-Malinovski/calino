@@ -1,6 +1,6 @@
 import type { JSX } from 'react'
 import { useMemo, useState, useRef, useEffect, useCallback } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router'
 import { createPortal } from 'react-dom'
 import { AnimatePresence, motion, useMotionValue } from 'framer-motion'
 import { useReducedMotion } from '@/hooks/useReducedMotion'

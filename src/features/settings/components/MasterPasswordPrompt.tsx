@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { useLocation } from 'react-router-dom'
+import { useLocation } from 'react-router'
 import { useConfigStore } from '../../../store/configStore'
 import { useFocusTrap } from '@/hooks/useFocusTrap'
 import styles from './MasterPasswordPrompt.module.css'

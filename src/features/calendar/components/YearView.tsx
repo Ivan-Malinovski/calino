@@ -1,6 +1,6 @@
 import type { JSX } from 'react'
 import { Fragment, useMemo, type MouseEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router'
 import {
   format,
   parseISO,

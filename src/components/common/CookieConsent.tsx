@@ -1,6 +1,6 @@
 import type { JSX } from 'react'
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link } from 'react-router'
 import styles from './CookieConsent.module.css'
 
 const COOKIE_KEY = 'calino_cookie_notice'

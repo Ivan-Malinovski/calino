@@ -171,7 +171,7 @@ vi.mock('@/store/settingsStore', () => ({
   selectUpdateSettings: (state: SettingsStore) => state.updateSettings,
 }))
 
-vi.mock('react-router-dom', () => ({
+vi.mock('react-router', () => ({
   useNavigate: () => vi.fn(),
 }))
 

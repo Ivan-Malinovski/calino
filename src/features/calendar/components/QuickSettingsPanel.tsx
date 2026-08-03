@@ -1,5 +1,5 @@
 import type { JSX } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { useSettingsStore } from '@/store/settingsStore'
 import { useConfigStore } from '@/store/configStore'

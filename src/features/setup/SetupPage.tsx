@@ -1,6 +1,6 @@
 import type { JSX } from 'react'
 import { useState, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router'
 import { encryptWithMasterPassword } from '@/lib/crypto'
 import { discoverServerUrl } from '@/features/caldav/client/discovery'
 import type { CalinoConfig, PreconfiguredAccount, PreconfiguredWebcal } from '@/lib/configLoader'

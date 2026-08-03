@@ -1,6 +1,6 @@
 import type { JSX } from 'react'
 import React, { useMemo, useState, useRef, useCallback, useEffect, useLayoutEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import {

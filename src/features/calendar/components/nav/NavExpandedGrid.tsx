@@ -1,6 +1,6 @@
 import type { JSX } from 'react'
 
-import { useNavigate, useLocation } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router'
 import { motion, type PanInfo } from 'framer-motion'
 import { useCalendarStore } from '@/store/calendarStore'
 import { hapticIfEnabled } from '@/lib/haptics'
