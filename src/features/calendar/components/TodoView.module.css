@@ -541,6 +541,38 @@
   flex: 0 0 auto;
 }
 
+/* Hover detail for the badge. Fixed-positioned in a body portal because the
+   task list is virtualized and clips its own overflow. `pointer-events: none`
+   keeps it from stealing the hover that spawned it. */
+.recurrenceTooltip {
+  position: fixed;
+  z-index: 10000;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--ink-2);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 7px 9px;
+  max-width: 260px;
+  box-shadow: 0 4px 12px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.1 * var(--shadow-opacity, 1)));
+  white-space: normal;
+  pointer-events: none;
+}
+
+.recurrenceTooltipTitle {
+  color: var(--ink, #2c2823);
+  font-weight: 600;
+}
+
+/* Touch has no hover, so the tooltip is unreachable there and the glyph is
+   left to speak for itself — the modal is where the rule can be read anyway. */
+@media (max-width: 768px) {
+  .recurrenceTooltip {
+    display: none;
+  }
+}
+
 /* ---- Priority Chips (Inverted: Low recedes, High is loud) ---- */
 .priority {
   font-size: 10px;

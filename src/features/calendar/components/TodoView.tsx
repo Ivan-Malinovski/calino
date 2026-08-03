@@ -23,6 +23,7 @@ import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { DUR_FAST, EASE_POP } from '@/lib/motion'
 import { useCalendarStore, isCalendarReadOnly } from '@/store/calendarStore'
 import { nextOpenOccurrence, materializeOccurrence } from '@/lib/occurrenceExpansion'
+import { describeRecurrence } from '@/lib/recurrence'
 import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
 import type { CalendarEvent } from '@/types'
 import styles from './TodoView.module.css'
@@ -39,6 +40,12 @@ interface TaskWithColor extends CalendarEvent {
    * the master.
    */
   occurrenceStart?: string
+  /**
+   * R2.7 — Human-readable summary of the series, shown on the repeat glyph.
+   * Built in the `tasks` memo because that is the only place with both the
+   * master's rule and its overrides in hand.
+   */
+  recurrenceLabel?: string
 }
 
 interface TaskGroup {
@@ -85,6 +92,19 @@ function getDueLabel(task: TaskWithColor): { text: string; className: string } {
     return { text: format(parseISO(task.dueDate), 'EEE'), className: '' }
   }
   return { text: format(parseISO(task.dueDate), 'MMM d'), className: '' }
+}
+
+/**
+ * R2.7 — Render an occurrence's DTSTART for the repeat tooltip. All-day
+ * occurrences are floating dates (RFC 5545 §3.3.4) and must not show a time;
+ * timed ones do, since that is what distinguishes them.
+ */
+function formatOccurrenceDate(iso: string, isAllDay: boolean | undefined): string {
+  try {
+    return format(parseISO(iso), isAllDay ? 'EEE, d MMM yyyy' : 'EEE, d MMM yyyy, HH:mm')
+  } catch {
+    return iso
+  }
 }
 
 function getTaskGroup(task: TaskWithColor): string {
@@ -142,6 +162,15 @@ export function TodoView(): JSX.Element {
   // underneath) during a drag. Drives the ambient "drop here to promote to
   // root" hint on the list container, since there's no dedicated drop zone.
   const [isOverBlankSpace, setIsOverBlankSpace] = useState(false)
+  // R2.7 — Hover detail for the repeat glyph. Rendered into a portal at fixed
+  // coordinates rather than positioned next to the badge: task rows live in a
+  // virtualizer with its own scroll clipping, which would crop an absolutely
+  // positioned tooltip. Same approach the sidebar's task tooltip uses.
+  const [recurrenceTip, setRecurrenceTip] = useState<{
+    text: string
+    x: number
+    y: number
+  } | null>(null)
   const composerRef = useRef<HTMLInputElement>(null)
   const segmentedRef = useRef<HTMLDivElement>(null)
   const tabRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
@@ -239,19 +268,44 @@ export function TodoView(): JSX.Element {
       calendarColor: calendarMap.get(task.calendarId) || '#888',
     })
 
+    // An override carries no RRULE of its own (RFC 5545 §3.8.5.3), so the
+    // series it belongs to has to be read off its master.
+    const mastersById = new Map<string, CalendarEvent>()
+    for (const task of allTasks) {
+      if (task.recurrenceId) continue
+      mastersById.set(task.id, task)
+      if (task.uid) mastersById.set(task.uid, task)
+    }
+
     return allTasks.map((task) => {
       const isRecurringMaster = Boolean((task.rruleString || task.recurrence) && !task.recurrenceId)
-      if (!isRecurringMaster) return withColor(task)
+
+      if (!isRecurringMaster) {
+        if (!task.recurrenceId) return withColor(task)
+        // A detached occurrence — describe the series it came out of.
+        const master = mastersById.get(task.recurrenceMasterId || task.uid || '')
+        return {
+          ...withColor(task),
+          recurrenceLabel: [
+            master ? describeRecurrence(master) : 'Repeating task',
+            `This occurrence: ${formatOccurrenceDate(task.recurrenceId, task.isAllDay)}`,
+          ].join('\n'),
+        }
+      }
 
       const overrides =
         overridesByMaster.get(task.id) ??
         overridesByMaster.get(task.uid || '') ??
         new Map<string, CalendarEvent>()
+      const completedCount = [...overrides.values()].filter((o) => o.completed).length
       const next = nextOpenOccurrence(task, overrides)
       if (!next) {
         // Series exhausted — every occurrence has been dealt with. Show the row
         // as completed rather than stranding an undated master in the list.
-        return withColor({ ...task, completed: true, taskStatus: 'COMPLETED' })
+        return {
+          ...withColor({ ...task, completed: true, taskStatus: 'COMPLETED' }),
+          recurrenceLabel: [describeRecurrence(task), 'No occurrences left'].join('\n'),
+        }
       }
       // Keep the master's own id so the subtask tree and drag/re-parent logic,
       // which key off task ids, keep resolving. `materializeOccurrence` owns the
@@ -262,6 +316,13 @@ export function TodoView(): JSX.Element {
         completed: false,
         taskStatus: 'NEEDS-ACTION',
         occurrenceStart: next.occStartStr,
+        recurrenceLabel: [
+          describeRecurrence(task),
+          `Next: ${formatOccurrenceDate(next.occStartStr, task.isAllDay)}`,
+          completedCount > 0
+            ? `${completedCount} completed so far`
+            : 'None completed yet — tick to advance',
+        ].join('\n'),
       }
     })
   }, [events, calendars])
@@ -811,9 +872,18 @@ export function TodoView(): JSX.Element {
                     {(task.occurrenceStart || task.recurrenceId) && (
                       <span
                         className={styles.recurringBadge}
-                        title="Repeats"
-                        aria-label="Repeating task"
+                        aria-label={task.recurrenceLabel || 'Repeating task'}
                         data-component="task-recurring-badge"
+                        data-recurrence={task.recurrenceLabel}
+                        onMouseEnter={(e) =>
+                          task.recurrenceLabel &&
+                          setRecurrenceTip({
+                            text: task.recurrenceLabel,
+                            x: e.clientX,
+                            y: e.clientY,
+                          })
+                        }
+                        onMouseLeave={() => setRecurrenceTip(null)}
                       >
                         <svg
                           width="12"
@@ -1098,6 +1168,22 @@ export function TodoView(): JSX.Element {
           </DragOverlay>
         </DndContext>
       </div>
+      {createPortal(
+        recurrenceTip ? (
+          <div
+            className={styles.recurrenceTooltip}
+            role="tooltip"
+            style={{ left: recurrenceTip.x + 12, top: recurrenceTip.y + 12 }}
+          >
+            {recurrenceTip.text.split('\n').map((line, i) => (
+              <div key={line} className={i === 0 ? styles.recurrenceTooltipTitle : undefined}>
+                {line}
+              </div>
+            ))}
+          </div>
+        ) : null,
+        document.body
+      )}
     </div>
   )
 }
