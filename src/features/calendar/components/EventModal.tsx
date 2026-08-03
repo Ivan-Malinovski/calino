@@ -9,6 +9,7 @@ import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
 import { showToast } from '@/lib/toast'
 import { safeCalDAVUpdate } from '@/lib/caldavHelpers'
 import { buildRRuleString } from '@/lib/recurrence'
+import { hasRecurrenceChanged } from '@/lib/recurrenceComparison'
 import { buildMasterTruncation } from '@/lib/recurrenceSplit'
 import { deleteRecurringOccurrence } from '@/lib/recurrenceDelete'
 import type {
@@ -588,6 +589,26 @@ export function EventModal(): JSX.Element | null {
     const existingAttachments = existingEventForMode.attachments || []
     const attachmentsChanged = JSON.stringify(attachments) !== JSON.stringify(existingAttachments)
 
+    // R2.7 — Recurrence participates in BOTH branches now that tasks can
+    // recur. Leaving it out of the task branch made a recurrence-only edit
+    // look like "no changes", and saveEvent closes the modal without writing
+    // when nothing changed — so the old rule survived even a hard refresh.
+    const recurrenceChanged = hasRecurrenceChanged(
+      {
+        recurring,
+        frequency: recurrence,
+        interval,
+        byWeekday,
+        byMonthDay,
+        byMonth,
+        byDayOrdinals,
+        endCondition,
+        endOnDate,
+        endAfterCount,
+      },
+      existingEventForMode
+    )
+
     if (isTaskMode) {
       const taskTime = dueAllDay ? '00:00:00' : `${dueTime}:00`
       const taskDueDate = dueDate ? (dueAllDay ? dueDate : `${dueDate}T${taskTime}`) : undefined
@@ -602,6 +623,7 @@ export function EventModal(): JSX.Element | null {
           (existingEventForMode.isAllDay ?? true) ||
         completed !== (existingEventForMode.completed || false) ||
         priority !== existingEventForMode.priority ||
+        recurrenceChanged ||
         parentTaskId !== existingEventForMode.parentTaskId ||
         calendarId !== existingEventForMode.calendarId ||
         JSON.stringify(selectedCategories) !==
@@ -616,89 +638,6 @@ export function EventModal(): JSX.Element | null {
     const existingStart = format(parseISO(existingEventForMode.start), "yyyy-MM-dd'T'HH:mm:ss")
     const existingEnd = format(parseISO(existingEventForMode.end), "yyyy-MM-dd'T'HH:mm:ss")
 
-    const existingRecurrence = existingEventForMode.recurrence
-    const buildRecurrenceJSON = (
-      recur: boolean,
-      freq: string,
-      inter: number,
-      weekdays: number[],
-      monthDays: number[],
-      months: number[],
-      setPos: number[],
-      eCond: string,
-      eDate: string,
-      eCount: number
-    ) =>
-      recur
-        ? JSON.stringify({
-            frequency: freq,
-            interval: inter,
-            byWeekday: weekdays,
-            byMonthDay: monthDays,
-            byMonth: months,
-            byDayOrdinals: setPos,
-            // Only compare fields relevant to the active end condition
-            ...(eCond === 'on'
-              ? { endOnDate: eDate }
-              : eCond === 'after'
-                ? { endAfterCount: eCount }
-                : {}),
-          })
-        : null
-
-    // R2.4 — Existing recurrence's per-BYDAY ordinals: prefer byDayOrdinals
-    // (new), fall back to bySetPos for legacy data (events persisted
-    // before R2.4 stored per-BYDAY ordinals in bySetPos when byWeekday
-    // was present).
-    const existingDayOrdinals = (() => {
-      if (existingRecurrence?.byDayOrdinals && existingRecurrence.byDayOrdinals.length > 0) {
-        return existingRecurrence.byDayOrdinals
-      }
-      if (
-        existingRecurrence?.bySetPos &&
-        existingRecurrence.bySetPos.length > 0 &&
-        existingRecurrence.byWeekday &&
-        existingRecurrence.byWeekday.length > 0
-      ) {
-        return existingRecurrence.bySetPos
-      }
-      return []
-    })()
-
-    const existingEndCondition = existingRecurrence?.endDate
-      ? 'on'
-      : existingRecurrence?.count
-        ? 'after'
-        : 'never'
-    const currentRecurrenceJSON = buildRecurrenceJSON(
-      recurring,
-      recurrence,
-      interval,
-      byWeekday,
-      byMonthDay,
-      byMonth,
-      byDayOrdinals,
-      endCondition,
-      endOnDate,
-      endAfterCount
-    )
-    const existingRecurrenceJSON = existingRecurrence
-      ? buildRecurrenceJSON(
-          true,
-          existingRecurrence.frequency,
-          existingRecurrence.interval ?? 1,
-          existingRecurrence.byWeekday ?? [],
-          existingRecurrence.byMonthDay ?? [],
-          existingRecurrence.byMonth ?? [],
-          existingDayOrdinals,
-          existingEndCondition,
-          existingRecurrence.endDate
-            ? format(parseISO(existingRecurrence.endDate), 'yyyy-MM-dd')
-            : '',
-          existingRecurrence.count ?? 10
-        )
-      : null
-
     return (
       title !== existingEventForMode.title ||
       description !== (existingEventForMode.description || '') ||
@@ -706,8 +645,7 @@ export function EventModal(): JSX.Element | null {
       localStart !== existingStart ||
       localEnd !== existingEnd ||
       isAllDay !== existingEventForMode.isAllDay ||
-      recurring !== !!existingRecurrence ||
-      currentRecurrenceJSON !== existingRecurrenceJSON ||
+      recurrenceChanged ||
       travelDuration !== existingEventForMode.travelDuration ||
       calendarId !== existingEventForMode.calendarId ||
       JSON.stringify(selectedCategories) !==
