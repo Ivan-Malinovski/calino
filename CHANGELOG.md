@@ -6,8 +6,22 @@ All notable changes to Calino will be documented in this file.
 
 ### Added
 
+- **Tasks can repeat.** "Exercise every Tuesday" is now a single task rather than a copy-paste job every week. Set a due date, tick **Recurring**, and pick a pattern with the same controls events use. The Tasks list shows the series as one row on its next due date; tick it and it advances to the next one, with the occurrences you've finished kept under the **Completed** filter. Hovering the repeat symbol tells you the pattern, when the next one is due, and how many you've done. Recurring tasks also appear on the right day in the month, week and day views, and can be ticked off from there. Raised in [#96](https://github.com/Ivan-Malinovski/calino/issues/96).
+
+  It's built on plain RFC 5545 — an `RRULE` on the task plus one completed instance per occurrence, exactly as Thunderbird writes them, with no vendor-specific properties. A repeating task you create in Calino reads correctly in other CalDAV clients, and theirs read correctly here. (Tasks.org and OpenTasks represent repeats in a non-standard way and will only partly agree; that's a known limitation on their side.)
+
+  Recurrence isn't offered on a task with no due date — there'd be nothing for the pattern to count from — nor on subtasks or tasks that have subtasks, since a parent/child link has no per-occurrence meaning. The option explains itself rather than quietly disappearing.
+
 - **Android: your events can now live in the device calendar too.** A new **Sync to Android Calendar** switch in Notification settings copies your CalDAV events into Android's own calendar, which means the system delivers your reminders — they arrive on time whether or not Calino has been opened recently, instead of only for events the app already knew about last time it ran. It also puts your calendar in front of everything else on the phone that reads it: home-screen calendar widgets, Wear OS, Android Auto and Assistant. The copy is one-way and read-only: Calino stays the only thing that writes to your CalDAV server, and turning the switch off removes the mirrored calendars again. Off by default, and it asks for calendar permission when you turn it on.
 - **Android: the device calendar now stays up to date on its own.** With **Sync to Android Calendar** on, Calino checks your CalDAV server for new events roughly once an hour in the background, so an event someone adds on your laptop — or an invitation that lands while your phone is in your pocket — reaches the device calendar and reminds you at the right time, without you having opened Calino since. Previously the mirror only ever held what Calino had already seen, so the reminder you most needed was the one it couldn't give you.
+
+### Fixed
+
+- **Auto rollup in the month view now measures what a day actually holds.** It costed every row at the height of a full event card, so a day of short rows — task pills, past-week events, multi-day bands, rolled-up recurrences — said "+N more" with half the cell still empty. Each row is now costed at the height it really renders at, measured off the page rather than assumed, so it also follows a change of theme, font size or browser zoom. Cells in a window too short to fit the month were being underestimated as well, and rolled up while the row they sit in had room to spare.
+- **A day that overflowed both its events and its tasks showed "+1 more" twice.** There is now one rollup line per day, counting both, and the popup it opens lists the day's tasks alongside its events.
+- **A repeating all-day event landed on the wrong day of the week east of UTC.** "Every Tuesday" generated Wednesdays for anyone ahead of UTC, including all of Europe. This affected events as well as the new recurring tasks.
+- **Tasks due on an all-day date could show up a day early** for anyone behind UTC.
+- **Recurring tasks written by other clients no longer lose their pattern.** Calino previously read such a task as a single one-off and dropped its repeat rule the next time it saved, along with the task's location and URL.
 
 ## [0.26.0] - 2026-08-02
 

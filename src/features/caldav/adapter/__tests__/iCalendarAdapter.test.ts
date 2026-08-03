@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import ICAL from 'ical.js'
 import {
   eventToICAL,
+  eventsToICAL,
   foldICalLines,
   parseICALData,
   parseICALEvent,
@@ -1779,6 +1780,321 @@ END:VCALENDAR`
           expect(new TextEncoder().encode(l).length).toBeLessThanOrEqual(75)
         }
       })
+    })
+  })
+
+  // -----------------------------------------------------------------------
+  // R2.7 — Recurring VTODO (RFC 5545 §3.6.2)
+  //
+  // A VTODO may carry RRULE / EXDATE / RECURRENCE-ID exactly like a VEVENT.
+  // DTSTART anchors the recurrence set and defines the value type DUE must
+  // match. Per-occurrence completion is a detached override VTODO sharing the
+  // master's UID — the representation Thunderbird writes and Nextcloud Tasks
+  // reads. No X- properties are involved anywhere.
+  // -----------------------------------------------------------------------
+  describe('R2.7 recurring VTODO', () => {
+    it('parses an all-day recurring VTODO with DTSTART, DUE and RRULE', () => {
+      const ics = [
+        'BEGIN:VCALENDAR',
+        'VERSION:2.0',
+        'BEGIN:VTODO',
+        'UID:task-weekly',
+        'SUMMARY:Exercise',
+        'DTSTART;VALUE=DATE:20260804',
+        'DUE;VALUE=DATE:20260804',
+        'RRULE:FREQ=WEEKLY;BYDAY=TU',
+        'END:VTODO',
+        'END:VCALENDAR',
+      ].join('\r\n')
+
+      const task = parseICALTask(ics, 'cal-1')[0]
+      expect(task.isAllDay).toBe(true)
+      expect(task.start).toBe('2026-08-04')
+      expect(task.dueDate).toBe('2026-08-04')
+      expect(task.rruleString).toBe('FREQ=WEEKLY;BYDAY=TU')
+      expect(task.recurrence?.frequency).toBe('weekly')
+      expect(task.recurrence?.byWeekday).toEqual([2])
+      expect(task.recurrenceId).toBeUndefined()
+    })
+
+    it('preserves TZID on a timed recurring VTODO', () => {
+      const ics = [
+        'BEGIN:VCALENDAR',
+        'VERSION:2.0',
+        'BEGIN:VTODO',
+        'UID:task-tz',
+        'SUMMARY:Standup',
+        'DTSTART;TZID=Europe/Berlin:20260804T090000',
+        'DUE;TZID=Europe/Berlin:20260804T093000',
+        'RRULE:FREQ=DAILY',
+        'END:VTODO',
+        'END:VCALENDAR',
+      ].join('\r\n')
+
+      const task = parseICALTask(ics, 'cal-1')[0]
+      expect(task.isAllDay).toBe(false)
+      expect(task.timezone).toBe('Europe/Berlin')
+
+      const out = taskToICAL(task)
+      expect(out).toContain('DTSTART;TZID=Europe/Berlin:20260804T090000')
+      expect(out).toContain('DUE;TZID=Europe/Berlin:20260804T093000')
+      expect(out).toContain('RRULE:FREQ=DAILY')
+    })
+
+    it('trusts DTSTART over DUE when a peer disagrees on the value type', () => {
+      // Some clients emit a date-time DTSTART with a date-only DUE. DTSTART is
+      // the type-defining property (§3.8.2.3), so the task must stay timed.
+      const ics = [
+        'BEGIN:VCALENDAR',
+        'VERSION:2.0',
+        'BEGIN:VTODO',
+        'UID:task-mismatch',
+        'SUMMARY:Mismatched value types',
+        'DUE;VALUE=DATE:20260804',
+        'DTSTART:20260804T090000Z',
+        'END:VTODO',
+        'END:VCALENDAR',
+      ].join('\r\n')
+
+      const task = parseICALTask(ics, 'cal-1')[0]
+      expect(task.isAllDay).toBe(false)
+
+      // On re-serialize both properties must agree again.
+      const out = taskToICAL(task)
+      expect(out).not.toContain('DUE;VALUE=DATE')
+      expect(out).toContain('DTSTART:20260804T090000Z')
+    })
+
+    it('gives a master and its overrides distinct ids but a shared UID', () => {
+      // Regression: parseICALTask used to assign `id = uid` to every VTODO, so
+      // a master plus two overrides collapsed into three colliding store rows.
+      const ics = [
+        'BEGIN:VCALENDAR',
+        'VERSION:2.0',
+        'BEGIN:VTODO',
+        'UID:task-series',
+        'SUMMARY:Exercise',
+        'DTSTART:20260804T090000Z',
+        'DUE:20260804T100000Z',
+        'RRULE:FREQ=WEEKLY',
+        'END:VTODO',
+        'BEGIN:VTODO',
+        'UID:task-series',
+        'SUMMARY:Exercise',
+        'RECURRENCE-ID:20260804T090000Z',
+        'DTSTART:20260804T090000Z',
+        'DUE:20260804T100000Z',
+        'STATUS:COMPLETED',
+        'END:VTODO',
+        'BEGIN:VTODO',
+        'UID:task-series',
+        'SUMMARY:Exercise',
+        'RECURRENCE-ID:20260811T090000Z',
+        'DTSTART:20260811T090000Z',
+        'DUE:20260811T100000Z',
+        'STATUS:COMPLETED',
+        'END:VTODO',
+        'END:VCALENDAR',
+      ].join('\r\n')
+
+      const tasks = parseICALTask(ics, 'cal-1')
+      expect(tasks).toHaveLength(3)
+      expect(new Set(tasks.map((t) => t.id)).size).toBe(3)
+      expect(tasks.every((t) => t.uid === 'task-series')).toBe(true)
+
+      const master = tasks.find((t) => !t.recurrenceId)!
+      expect(master.id).toBe('task-series')
+      expect(master.rruleString).toBe('FREQ=WEEKLY')
+
+      const overrides = tasks.filter((t) => t.recurrenceId)
+      expect(overrides).toHaveLength(2)
+      for (const o of overrides) {
+        expect(o.recurrenceMasterId).toBe('task-series')
+        expect(o.id).toBe(`task-series-${o.recurrenceId}`)
+        expect(o.rruleString).toBeUndefined()
+        expect(o.completed).toBe(true)
+      }
+    })
+
+    it('round-trips a Thunderbird-authored series without inventing X- properties', () => {
+      // Thunderbird keeps the master's RRULE intact and appends a completed
+      // instance as a detached override in the same resource.
+      const ics = [
+        'BEGIN:VCALENDAR',
+        'VERSION:2.0',
+        'PRODID:-//Mozilla.org/NONSGML Mozilla Calendar V1.1//EN',
+        'BEGIN:VTODO',
+        'UID:tb-task-1',
+        'SUMMARY:Water the plants',
+        'DTSTART;VALUE=DATE:20260803',
+        'DUE;VALUE=DATE:20260803',
+        'RRULE:FREQ=WEEKLY;BYDAY=MO',
+        'STATUS:NEEDS-ACTION',
+        'END:VTODO',
+        'BEGIN:VTODO',
+        'UID:tb-task-1',
+        'SUMMARY:Water the plants',
+        'RECURRENCE-ID;VALUE=DATE:20260727',
+        'DTSTART;VALUE=DATE:20260727',
+        'DUE;VALUE=DATE:20260727',
+        'STATUS:COMPLETED',
+        'PERCENT-COMPLETE:100',
+        'COMPLETED:20260727T181500Z',
+        'END:VTODO',
+        'END:VCALENDAR',
+      ].join('\r\n')
+
+      const tasks = parseICALTask(ics, 'cal-1')
+      expect(tasks).toHaveLength(2)
+
+      const out = eventsToICAL(tasks)
+      expect(out.match(/BEGIN:VTODO/g)).toHaveLength(2)
+      expect(out).toContain('RRULE:FREQ=WEEKLY;BYDAY=MO')
+      expect(out).toContain('RECURRENCE-ID;VALUE=DATE:20260727')
+      expect(out).toContain('STATUS:COMPLETED')
+      expect(out).toContain('PERCENT-COMPLETE:100')
+      expect(out).toContain('COMPLETED:20260727T181500Z')
+      expect(out).toContain('UID:tb-task-1')
+      // The whole point of the standards-only model.
+      expect(out).not.toMatch(/^X-/m)
+    })
+
+    it('round-trips a COUNT-limited rule unchanged after a Nextcloud-style edit', () => {
+      // Nextcloud Tasks decrements COUNT as it advances the master. Whatever
+      // the current value is, we must hand it back byte-identically.
+      const ics = [
+        'BEGIN:VCALENDAR',
+        'VERSION:2.0',
+        'BEGIN:VTODO',
+        'UID:nc-task',
+        'SUMMARY:Take out the bins',
+        'DTSTART;VALUE=DATE:20260810',
+        'DUE;VALUE=DATE:20260810',
+        'RRULE:FREQ=WEEKLY;COUNT=7',
+        'END:VTODO',
+        'END:VCALENDAR',
+      ].join('\r\n')
+
+      const task = parseICALTask(ics, 'cal-1')[0]
+      expect(task.recurrence?.count).toBe(7)
+      expect(taskToICAL(task)).toContain('RRULE:FREQ=WEEKLY;COUNT=7')
+    })
+
+    it('keeps an override whose RECURRENCE-ID no longer matches the master anchor', () => {
+      // Nextcloud advances the master's DTSTART past occurrences it has
+      // already completed, orphaning their overrides. They still have to
+      // parse — they are the user's completion history.
+      const ics = [
+        'BEGIN:VCALENDAR',
+        'VERSION:2.0',
+        'BEGIN:VTODO',
+        'UID:nc-advanced',
+        'SUMMARY:Rolling anchor',
+        'DTSTART;VALUE=DATE:20260901',
+        'DUE;VALUE=DATE:20260901',
+        'RRULE:FREQ=MONTHLY',
+        'END:VTODO',
+        'BEGIN:VTODO',
+        'UID:nc-advanced',
+        'SUMMARY:Rolling anchor',
+        'RECURRENCE-ID;VALUE=DATE:20260801',
+        'DUE;VALUE=DATE:20260801',
+        'STATUS:COMPLETED',
+        'END:VTODO',
+        'END:VCALENDAR',
+      ].join('\r\n')
+
+      const tasks = parseICALTask(ics, 'cal-1')
+      expect(tasks).toHaveLength(2)
+      const orphan = tasks.find((t) => t.recurrenceId)!
+      expect(orphan.recurrenceId).toBe('2026-08-01')
+      expect(orphan.completed).toBe(true)
+    })
+
+    it('parses EXDATE on a VTODO and re-emits one property per date', () => {
+      const ics = [
+        'BEGIN:VCALENDAR',
+        'VERSION:2.0',
+        'BEGIN:VTODO',
+        'UID:task-exdate',
+        'SUMMARY:Skips a week',
+        'DTSTART;VALUE=DATE:20260804',
+        'DUE;VALUE=DATE:20260804',
+        'RRULE:FREQ=WEEKLY',
+        'EXDATE;VALUE=DATE:20260811,20260818',
+        'END:VTODO',
+        'END:VCALENDAR',
+      ].join('\r\n')
+
+      const task = parseICALTask(ics, 'cal-1')[0]
+      expect(task.excludedDates).toEqual(['2026-08-11', '2026-08-18'])
+
+      const out = taskToICAL(task)
+      expect(out).toContain('EXDATE;VALUE=DATE:20260811')
+      expect(out).toContain('EXDATE;VALUE=DATE:20260818')
+    })
+
+    it('never writes RRULE or EXDATE onto an override', () => {
+      const override: CalendarEvent = {
+        id: 'series-1-2026-08-04T09:00:00.000Z',
+        uid: 'series-1',
+        calendarId: 'cal-1',
+        title: 'Overridden instance',
+        start: '2026-08-04T09:00:00.000Z',
+        end: '2026-08-04T10:00:00.000Z',
+        isAllDay: false,
+        type: 'task',
+        dueDate: '2026-08-04T10:00:00.000Z',
+        recurrenceId: '2026-08-04T09:00:00.000Z',
+        recurrenceMasterId: 'series-1',
+        // Deliberately present: the serializer must refuse to emit them.
+        rruleString: 'FREQ=WEEKLY',
+        excludedDates: ['2026-08-11T09:00:00.000Z'],
+        completed: true,
+        taskStatus: 'COMPLETED',
+      }
+
+      const out = taskToICAL(override)
+      expect(out).toContain('UID:series-1')
+      expect(out).toContain('RECURRENCE-ID:20260804T090000Z')
+      expect(out).not.toContain('RRULE')
+      expect(out).not.toContain('EXDATE')
+    })
+
+    it('never writes DURATION, and keeps DUE matching DTSTART', () => {
+      const task: CalendarEvent = {
+        id: 'task-forms',
+        calendarId: 'cal-1',
+        title: 'Value forms',
+        start: '2026-08-04',
+        end: '2026-08-04',
+        isAllDay: true,
+        type: 'task',
+        dueDate: '2026-08-04',
+        rruleString: 'FREQ=WEEKLY',
+      }
+
+      const out = taskToICAL(task)
+      expect(out).not.toContain('DURATION')
+      expect(out).toContain('DTSTART;VALUE=DATE:20260804')
+      expect(out).toContain('DUE;VALUE=DATE:20260804')
+    })
+
+    it('drops an RRULE from an undated task rather than emitting an unanchored rule', () => {
+      const task: CalendarEvent = {
+        id: 'task-undated',
+        calendarId: 'cal-1',
+        title: 'No due date',
+        start: '2026-08-04T09:00:00.000Z',
+        end: '2026-08-04T09:00:00.000Z',
+        isAllDay: false,
+        type: 'task',
+        // no dueDate
+        rruleString: 'FREQ=WEEKLY',
+      }
+
+      const out = taskToICAL(task)
+      expect(out).not.toContain('RRULE')
     })
   })
 })

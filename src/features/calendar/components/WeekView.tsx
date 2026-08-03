@@ -31,7 +31,7 @@ import {
 import { pad2 } from '@/lib/datetime'
 import { hasDueTime } from '@/lib/events'
 import type { CalendarEvent } from '@/types'
-import { useCalendarStore, getTasksDueOn } from '@/store/calendarStore'
+import { useCalendarStore, getTasksForDay } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
 import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
 import { safeCalDAVUpdate } from '@/lib/caldavHelpers'
@@ -427,7 +427,7 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
     const visibleCalendarIds = calendars.filter((c) => c.isVisible).map((c) => c.id)
     for (const day of weekDays) {
       const dayKey = format(day, 'yyyy-MM-dd')
-      const dayTasks = getTasksDueOn(events, dayKey).filter((event) =>
+      const dayTasks = getTasksForDay(events, dayKey).filter((event) =>
         visibleCalendarIds.includes(event.calendarId)
       )
       if (dayTasks.length > 0) {

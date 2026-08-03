@@ -76,6 +76,7 @@ export const EventCard = React.memo(function EventCard({
   const isPreviewing = useCalendarStore((state) => state.previewEventId === event.id)
   const updateEvent = useCalendarStore((state) => state.updateEvent)
   const completeTask = useCalendarStore((state) => state.completeTask)
+  const completeTaskOccurrence = useCalendarStore((state) => state.completeTaskOccurrence)
   const deleteEvent = useCalendarStore((state) => state.deleteEvent)
   const addEvent = useCalendarStore((state) => state.addEvent)
   const duplicateEvent = useCalendarStore((state) => state.duplicateEvent)
@@ -419,6 +420,39 @@ export const EventCard = React.memo(function EventCard({
     e.stopPropagation()
     if (isReadOnlyCalendar) return
     const newCompleted = !event.completed
+
+    // R2.7 — One occurrence of a recurring task, not the series. An expanded
+    // occurrence's id is synthetic (`${masterId}-${occurrenceKey}`) and matches
+    // nothing in the store, so `completeTask` below would find no task and
+    // silently do nothing — the checkbox simply wouldn't respond. Route to the
+    // detached-override path instead, exactly as the Tasks list does.
+    const occurrenceTarget = event.occurrenceMasterId
+      ? { masterId: event.occurrenceMasterId, occurrenceStart: event.start }
+      : event.recurrenceId && event.recurrenceMasterId && event.type === 'task'
+        ? { masterId: event.recurrenceMasterId, occurrenceStart: event.recurrenceId }
+        : null
+
+    if (occurrenceTarget) {
+      const plan = completeTaskOccurrence(
+        occurrenceTarget.masterId,
+        occurrenceTarget.occurrenceStart,
+        newCompleted
+      )
+      if (plan) {
+        try {
+          await saveRecurrenceOverride(
+            plan.master.calendarId,
+            plan.master,
+            plan.override,
+            plan.removedOverrideIds
+          )
+        } catch {
+          // surfaced by useCalDAV, which queues a retry
+        }
+      }
+      return
+    }
+
     const updatedTasks = completeTask(event.id, newCompleted)
     if (!event.calendarId) return
     await Promise.all(

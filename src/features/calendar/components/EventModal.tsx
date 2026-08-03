@@ -9,6 +9,8 @@ import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
 import { showToast } from '@/lib/toast'
 import { safeCalDAVUpdate } from '@/lib/caldavHelpers'
 import { buildRRuleString } from '@/lib/recurrence'
+import { hasRecurrenceChanged } from '@/lib/recurrenceComparison'
+import { findEventById } from '@/lib/events'
 import { buildMasterTruncation } from '@/lib/recurrenceSplit'
 import { deleteRecurringOccurrence } from '@/lib/recurrenceDelete'
 import type {
@@ -35,7 +37,6 @@ import { useSmartDefaultsStore } from '@/store/smartDefaultsStore'
 import { useSettingsStore } from '@/store/settingsStore'
 
 import styles from './EventModal.module.css'
-
 
 export function EventModal(): JSX.Element | null {
   const isModalOpen = useCalendarStore((state) => state.isModalOpen)
@@ -482,11 +483,25 @@ export function EventModal(): JSX.Element | null {
         useCalendarStore.getState().setPendingEventPrefill(null)
       }
 
+      // R2.7 — `findEventById`, not an exact match: an expanded occurrence's id
+      // is the synthetic `${masterId}-${occurrenceKey}` and matches nothing in
+      // the store, so an exact lookup found no task at all and fell through to
+      // the "new task" branch below — which dated the form TODAY. That hit
+      // every recurring task opened from a calendar view.
       const existingEvent = selectedEventId
-        ? currentEvents.find((e) => e.id === selectedEventId)
+        ? findEventById(currentEvents, selectedEventId)
         : undefined
       if (existingEvent?.type === 'task') {
+        // For an expanded occurrence the id carries the date it stands for.
+        // The master's own dueDate is the series anchor, which is a different
+        // date and not the one the user clicked.
+        const masterId = formDefaults.originalEventId
+        const occurrenceKey =
+          masterId && selectedEventId?.startsWith(`${masterId}-`)
+            ? selectedEventId.slice(masterId.length + 1)
+            : undefined
         const taskDueDate =
+          occurrenceKey?.split('T')[0] ||
           existingEvent.dueDate?.split('T')[0] ||
           format(parseISO(existingEvent.start), 'yyyy-MM-dd')
         setDueDate(taskDueDate)
@@ -563,11 +578,51 @@ export function EventModal(): JSX.Element | null {
     [events, selectedEventId]
   )
 
+  // R2.7 — When a task may not recur, and why.
+  //
+  // A due date is required because it is what Calino writes as DTSTART, and
+  // RFC 5545 §3.6.2 has nothing to anchor a recurrence set to without one.
+  // The RELATED-TO cases are a product decision rather than a spec limit: the
+  // parent/child link has no per-occurrence form, so a recurring parent would
+  // have to either share one set of subtasks across every occurrence or
+  // silently fan them out — neither is representable in a way other clients
+  // would read back correctly.
+  const taskRecurrenceDisabledReason = !isTaskMode
+    ? undefined
+    : !dueDate
+      ? 'needs a due date'
+      : parentTaskId
+        ? 'subtasks cannot repeat'
+        : subtasks.length > 0
+          ? 'tasks with subtasks cannot repeat'
+          : undefined
+  const recurrenceAllowed = !isTaskMode || !taskRecurrenceDisabledReason
+
   const hasChanges = useMemo(() => {
     if (!existingEventForMode) return true
 
     const existingAttachments = existingEventForMode.attachments || []
     const attachmentsChanged = JSON.stringify(attachments) !== JSON.stringify(existingAttachments)
+
+    // R2.7 — Recurrence participates in BOTH branches now that tasks can
+    // recur. Leaving it out of the task branch made a recurrence-only edit
+    // look like "no changes", and saveEvent closes the modal without writing
+    // when nothing changed — so the old rule survived even a hard refresh.
+    const recurrenceChanged = hasRecurrenceChanged(
+      {
+        recurring,
+        frequency: recurrence,
+        interval,
+        byWeekday,
+        byMonthDay,
+        byMonth,
+        byDayOrdinals,
+        endCondition,
+        endOnDate,
+        endAfterCount,
+      },
+      existingEventForMode
+    )
 
     if (isTaskMode) {
       const taskTime = dueAllDay ? '00:00:00' : `${dueTime}:00`
@@ -583,6 +638,7 @@ export function EventModal(): JSX.Element | null {
           (existingEventForMode.isAllDay ?? true) ||
         completed !== (existingEventForMode.completed || false) ||
         priority !== existingEventForMode.priority ||
+        recurrenceChanged ||
         parentTaskId !== existingEventForMode.parentTaskId ||
         calendarId !== existingEventForMode.calendarId ||
         JSON.stringify(selectedCategories) !==
@@ -597,89 +653,6 @@ export function EventModal(): JSX.Element | null {
     const existingStart = format(parseISO(existingEventForMode.start), "yyyy-MM-dd'T'HH:mm:ss")
     const existingEnd = format(parseISO(existingEventForMode.end), "yyyy-MM-dd'T'HH:mm:ss")
 
-    const existingRecurrence = existingEventForMode.recurrence
-    const buildRecurrenceJSON = (
-      recur: boolean,
-      freq: string,
-      inter: number,
-      weekdays: number[],
-      monthDays: number[],
-      months: number[],
-      setPos: number[],
-      eCond: string,
-      eDate: string,
-      eCount: number
-    ) =>
-      recur
-        ? JSON.stringify({
-            frequency: freq,
-            interval: inter,
-            byWeekday: weekdays,
-            byMonthDay: monthDays,
-            byMonth: months,
-            byDayOrdinals: setPos,
-            // Only compare fields relevant to the active end condition
-            ...(eCond === 'on'
-              ? { endOnDate: eDate }
-              : eCond === 'after'
-                ? { endAfterCount: eCount }
-                : {}),
-          })
-        : null
-
-    // R2.4 — Existing recurrence's per-BYDAY ordinals: prefer byDayOrdinals
-    // (new), fall back to bySetPos for legacy data (events persisted
-    // before R2.4 stored per-BYDAY ordinals in bySetPos when byWeekday
-    // was present).
-    const existingDayOrdinals = (() => {
-      if (existingRecurrence?.byDayOrdinals && existingRecurrence.byDayOrdinals.length > 0) {
-        return existingRecurrence.byDayOrdinals
-      }
-      if (
-        existingRecurrence?.bySetPos &&
-        existingRecurrence.bySetPos.length > 0 &&
-        existingRecurrence.byWeekday &&
-        existingRecurrence.byWeekday.length > 0
-      ) {
-        return existingRecurrence.bySetPos
-      }
-      return []
-    })()
-
-    const existingEndCondition = existingRecurrence?.endDate
-      ? 'on'
-      : existingRecurrence?.count
-        ? 'after'
-        : 'never'
-    const currentRecurrenceJSON = buildRecurrenceJSON(
-      recurring,
-      recurrence,
-      interval,
-      byWeekday,
-      byMonthDay,
-      byMonth,
-      byDayOrdinals,
-      endCondition,
-      endOnDate,
-      endAfterCount
-    )
-    const existingRecurrenceJSON = existingRecurrence
-      ? buildRecurrenceJSON(
-          true,
-          existingRecurrence.frequency,
-          existingRecurrence.interval ?? 1,
-          existingRecurrence.byWeekday ?? [],
-          existingRecurrence.byMonthDay ?? [],
-          existingRecurrence.byMonth ?? [],
-          existingDayOrdinals,
-          existingEndCondition,
-          existingRecurrence.endDate
-            ? format(parseISO(existingRecurrence.endDate), 'yyyy-MM-dd')
-            : '',
-          existingRecurrence.count ?? 10
-        )
-      : null
-
     return (
       title !== existingEventForMode.title ||
       description !== (existingEventForMode.description || '') ||
@@ -687,8 +660,7 @@ export function EventModal(): JSX.Element | null {
       localStart !== existingStart ||
       localEnd !== existingEnd ||
       isAllDay !== existingEventForMode.isAllDay ||
-      recurring !== !!existingRecurrence ||
-      currentRecurrenceJSON !== existingRecurrenceJSON ||
+      recurrenceChanged ||
       travelDuration !== existingEventForMode.travelDuration ||
       calendarId !== existingEventForMode.calendarId ||
       JSON.stringify(selectedCategories) !==
@@ -848,6 +820,11 @@ export function EventModal(): JSX.Element | null {
             count: endCondition === 'after' ? endAfterCount : undefined,
           }
         : undefined
+
+      // R2.7 — Tasks now carry recurrence like events do. What stays forced off
+      // for a task is the rest of the "More" panel (reminders, travel time,
+      // transparency), which has no VTODO meaning in the current scope.
+      const effectiveRecurrence = recurrenceAllowed ? recurrenceRule : undefined
 
       if (isEditing && selectedEventId) {
         // For recurring-instance edits ("this occurrence" / "this and following"),
@@ -1039,7 +1016,11 @@ export function EventModal(): JSX.Element | null {
             end: eventEnd,
             isAllDay: isTaskMode ? dueAllDay : isAllDay,
             calendarId,
-            recurrence: isTaskMode ? undefined : recurrenceRule,
+            recurrence: effectiveRecurrence,
+            // Keep the raw RRULE in step with the structured rule. The
+            // serializer prefers `rruleString` when both are present, so a
+            // stale one would silently outvote the edit just made.
+            rruleString: effectiveRecurrence ? buildRRuleString(effectiveRecurrence) : undefined,
             travelDuration: isTaskMode ? undefined : travelDuration,
             type: isTaskMode ? 'task' : 'event',
             dueDate: taskDueDate,
@@ -1084,7 +1065,10 @@ export function EventModal(): JSX.Element | null {
                 end: eventEnd,
                 isAllDay: isTaskMode ? dueAllDay : isAllDay,
                 calendarId,
-                recurrence: isTaskMode ? undefined : recurrenceRule,
+                recurrence: effectiveRecurrence,
+                rruleString: effectiveRecurrence
+                  ? buildRRuleString(effectiveRecurrence)
+                  : undefined,
                 travelDuration: isTaskMode ? undefined : travelDuration,
                 type: isTaskMode ? 'task' : 'event',
                 dueDate: taskDueDate,
@@ -1104,7 +1088,10 @@ export function EventModal(): JSX.Element | null {
                 end: eventEnd,
                 isAllDay: isTaskMode ? dueAllDay : isAllDay,
                 calendarId,
-                recurrence: isTaskMode ? undefined : recurrenceRule,
+                recurrence: effectiveRecurrence,
+                rruleString: effectiveRecurrence
+                  ? buildRRuleString(effectiveRecurrence)
+                  : undefined,
                 travelDuration: isTaskMode ? undefined : travelDuration,
                 type: isTaskMode ? 'task' : 'event',
                 dueDate: taskDueDate,
@@ -1143,7 +1130,8 @@ export function EventModal(): JSX.Element | null {
           end: eventEnd,
           isAllDay: isTaskMode ? dueAllDay : isAllDay,
           calendarId,
-          recurrence: isTaskMode ? undefined : recurrenceRule,
+          recurrence: effectiveRecurrence,
+          rruleString: effectiveRecurrence ? buildRRuleString(effectiveRecurrence) : undefined,
           travelDuration: isTaskMode ? undefined : travelDuration,
           type: isTaskMode ? 'task' : 'event',
           dueDate: taskDueDate,
@@ -1376,6 +1364,39 @@ export function EventModal(): JSX.Element | null {
                     parentTasks={parentTaskOptions}
                     onParentTaskChange={setParentTaskId}
                     subtasks={subtasks}
+                    recurrence={{
+                      recurring: recurring && recurrenceAllowed,
+                      onRecurringChange: setRecurring,
+                      disabledReason: taskRecurrenceDisabledReason,
+                      recurrence,
+                      onRecurrenceChange: (freq) => {
+                        setRecurrence(freq)
+                        if (freq !== 'weekly' && freq !== 'monthly' && freq !== 'yearly') {
+                          setByWeekday([])
+                        }
+                        if (freq !== 'monthly' && freq !== 'yearly') {
+                          setByMonthDay([])
+                          setByMonth([])
+                          setByDayOrdinals([])
+                        }
+                      },
+                      interval,
+                      onIntervalChange: setInterval,
+                      byWeekday,
+                      onByWeekdayChange: setByWeekday,
+                      byMonthDay,
+                      onByMonthDayChange: setByMonthDay,
+                      byMonth,
+                      onByMonthChange: setByMonth,
+                      byDayOrdinals,
+                      onByDayOrdinalsChange: setByDayOrdinals,
+                      endCondition,
+                      onEndConditionChange: setEndCondition,
+                      endOnDate,
+                      onEndOnDateChange: setEndOnDate,
+                      endAfterCount,
+                      onEndAfterCountChange: setEndAfterCount,
+                    }}
                     onOpenSubtask={(taskId) => openModal(undefined, undefined, taskId, 'task')}
                     onAddSubtask={
                       selectedEventId

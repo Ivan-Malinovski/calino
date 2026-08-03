@@ -55,6 +55,7 @@ I have made it as close as possible, as to what I envision the perfect CalDAV no
 
 ### Tasks (VTODO) + Journals (VJOURNAL)
 - Full VTODO support with due dates, priorities, and completion status
+- **Recurring tasks** — standards-only (`RRULE` + per-occurrence completion, no vendor properties), so they interoperate with Thunderbird and other CalDAV clients. See [`docs/RECURRING_TASKS.md`](./docs/RECURRING_TASKS.md) for the wire format and a per-client interop table
 - Shows as checkboxes in month view, inline in week/day view
 - **VJOURNAL support**, a rarity among CalDAV clients. Use it for daily logs, or deeper notes related to your events.
 
