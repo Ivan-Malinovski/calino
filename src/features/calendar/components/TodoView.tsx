@@ -41,6 +41,14 @@ interface TaskWithColor extends CalendarEvent {
    */
   occurrenceStart?: string
   /**
+   * R2.7 — The synthetic `${masterId}-${occurrenceKey}` id for the occurrence
+   * this row shows. The row itself keeps the MASTER's id, because the subtask
+   * tree and drag/re-parent logic key off task ids — but opening the modal
+   * must use this one, or "this occurrence" edits and deletes resolve to the
+   * series' anchor date instead of the date the user is looking at.
+   */
+  occurrenceEventId?: string
+  /**
    * R2.7 — Human-readable summary of the series, shown on the repeat glyph.
    * Built in the `tasks` memo because that is the only place with both the
    * master's rule and its overrides in hand.
@@ -317,9 +325,11 @@ export function TodoView(): JSX.Element {
       // Keep the master's own id so the subtask tree and drag/re-parent logic,
       // which key off task ids, keep resolving. `materializeOccurrence` owns the
       // dueDate derivation so this row buckets the same way the grid does.
+      const occurrence = materializeOccurrence(task, next)
       return {
-        ...withColor(materializeOccurrence(task, next)),
+        ...withColor(occurrence),
         id: task.id,
+        occurrenceEventId: occurrence.id,
         completed: false,
         taskStatus: 'NEEDS-ACTION',
         occurrenceStart: next.occStartStr,
@@ -599,7 +609,11 @@ export function TodoView(): JSX.Element {
   }
 
   const handleTaskClick = (task: TaskWithColor): void => {
-    openModal(undefined, undefined, task.id, 'task')
+    // R2.7 — Open a recurring row on the occurrence it is showing, not on the
+    // master. The modal derives "which occurrence did the user act on" from the
+    // id it was given; handed the master's, "this occurrence" edits and deletes
+    // silently target the series' anchor date instead.
+    openModal(undefined, undefined, task.occurrenceEventId ?? task.id, 'task')
   }
 
   const handleCreateTask = (): void => {

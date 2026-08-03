@@ -10,6 +10,7 @@ import { showToast } from '@/lib/toast'
 import { safeCalDAVUpdate } from '@/lib/caldavHelpers'
 import { buildRRuleString } from '@/lib/recurrence'
 import { hasRecurrenceChanged } from '@/lib/recurrenceComparison'
+import { findEventById } from '@/lib/events'
 import { buildMasterTruncation } from '@/lib/recurrenceSplit'
 import { deleteRecurringOccurrence } from '@/lib/recurrenceDelete'
 import type {
@@ -482,11 +483,25 @@ export function EventModal(): JSX.Element | null {
         useCalendarStore.getState().setPendingEventPrefill(null)
       }
 
+      // R2.7 — `findEventById`, not an exact match: an expanded occurrence's id
+      // is the synthetic `${masterId}-${occurrenceKey}` and matches nothing in
+      // the store, so an exact lookup found no task at all and fell through to
+      // the "new task" branch below — which dated the form TODAY. That hit
+      // every recurring task opened from a calendar view.
       const existingEvent = selectedEventId
-        ? currentEvents.find((e) => e.id === selectedEventId)
+        ? findEventById(currentEvents, selectedEventId)
         : undefined
       if (existingEvent?.type === 'task') {
+        // For an expanded occurrence the id carries the date it stands for.
+        // The master's own dueDate is the series anchor, which is a different
+        // date and not the one the user clicked.
+        const masterId = formDefaults.originalEventId
+        const occurrenceKey =
+          masterId && selectedEventId?.startsWith(`${masterId}-`)
+            ? selectedEventId.slice(masterId.length + 1)
+            : undefined
         const taskDueDate =
+          occurrenceKey?.split('T')[0] ||
           existingEvent.dueDate?.split('T')[0] ||
           format(parseISO(existingEvent.start), 'yyyy-MM-dd')
         setDueDate(taskDueDate)
