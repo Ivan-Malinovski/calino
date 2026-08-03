@@ -872,8 +872,7 @@ function readRecurrenceId(comp: ICAL.Component): {
   const recIdProp = comp.getFirstProperty('recurrence-id')
   if (!recIdProp) return { recurrenceId: undefined, hasThisAndFuture: false }
   const range = recIdProp.getParameter('range')
-  const hasThisAndFuture =
-    typeof range === 'string' && range.toUpperCase() === 'THISANDFUTURE'
+  const hasThisAndFuture = typeof range === 'string' && range.toUpperCase() === 'THISANDFUTURE'
   const recIdValue = recIdProp.getFirstValue()
   return {
     recurrenceId: recIdValue instanceof ICAL.Time ? icalTimeToISO(recIdValue).iso : undefined,
@@ -933,10 +932,7 @@ function writeExdates(comp: ICAL.Component, event: CalendarEvent): void {
     } else if (event.timezone) {
       // R2.3 — EXDATE must use the same TZID form as DTSTART or the exception
       // will not match an occurrence.
-      const exProp = comp.addPropertyWithValue(
-        'exdate',
-        createIcalDateTime(exDate, event.timezone)
-      )
+      const exProp = comp.addPropertyWithValue('exdate', createIcalDateTime(exDate, event.timezone))
       exProp.setParameter('tzid', event.timezone)
     } else {
       comp.addPropertyWithValue('exdate', createIcalDateTime(exDate))
@@ -1171,7 +1167,18 @@ export function calendarEventToIcalVtodo(task: CalendarEvent): ICAL.Component {
       ? task.start
       : task.dueDate
     : undefined
-  if (dtstartIso) {
+  // Emit DTSTART only when it carries information: as a recurrence anchor (RFC
+  // 5545 §3.6.2 requires one), on an override so its RECURRENCE-ID has a
+  // matching start, or when the task genuinely starts before it is due.
+  //
+  // A plain dated task gets DUE alone, as before this feature. Writing
+  // DTSTART == DUE would say the task starts at the instant it is due, which
+  // is both meaningless and something a strict validator can object to, and it
+  // would have made every existing task emit a new property on its next save.
+  const writeDtstart = Boolean(
+    dtstartIso && (hasRecurrence || task.recurrenceId || dtstartIso !== task.dueDate)
+  )
+  if (dtstartIso && writeDtstart) {
     writeDateProp(vtodo, 'dtstart', dtstartIso, task.isAllDay, task.timezone)
   }
 

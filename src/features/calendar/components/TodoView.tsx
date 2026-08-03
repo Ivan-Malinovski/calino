@@ -245,7 +245,14 @@ export function TodoView(): JSX.Element {
   const tasks: TaskWithColor[] = useMemo(() => {
     const calendarMap = new Map(calendars.map((c) => [c.id, c.color]))
     const visibleCalendarIds = new Set(calendars.filter((c) => c.isVisible).map((c) => c.id))
-    const allTasks = events.filter((e) => e.type === 'task' && visibleCalendarIds.has(e.calendarId))
+    const allTasks = events.filter(
+      (e) =>
+        e.type === 'task' &&
+        visibleCalendarIds.has(e.calendarId) &&
+        // R2.7 — A cancelled override only exists to suppress one occurrence of
+        // a series; it is not a task the user still has to do.
+        e.taskStatus !== 'CANCELLED'
+    )
 
     // R2.7 — Group a recurring series' components by their shared UID so the
     // list can collapse them to one row. Overrides stay in the array in their

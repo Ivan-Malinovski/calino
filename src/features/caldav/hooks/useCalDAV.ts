@@ -129,14 +129,19 @@ function withResourceSiblings(
  * no href in common and only the UID to tie them together.
  */
 function findRecurrenceMaster(override: CalendarEvent): CalendarEvent | undefined {
-  return useCalendarStore
-    .getState()
-    .events.find(
-      (candidate) =>
-        !candidate.recurrenceId &&
-        (candidate.id === override.recurrenceMasterId ||
-          (Boolean(override.uid) && candidate.uid === override.uid))
-    )
+  return useCalendarStore.getState().events.find(
+    (candidate) =>
+      !candidate.recurrenceId &&
+      // Scoped to the same collection and component type. This feeds a group
+      // write that rewrites the matched master's whole resource, so a loose
+      // match here corrupts an unrelated calendar object — a bare id/uid
+      // comparison would happily pair a task override with a VEVENT of the
+      // same uid in another calendar.
+      candidate.calendarId === override.calendarId &&
+      candidate.type === override.type &&
+      (candidate.id === override.recurrenceMasterId ||
+        (Boolean(override.uid) && candidate.uid === override.uid))
+  )
 }
 
 /**
@@ -1697,7 +1702,33 @@ export function useCalDAV(): UseCalDAVReturn {
         master.resourceHref,
         removedExceptionIds
       )
-      const { url, etag } = await engine.updateEventGroup(groupedEvents, master.etag ?? '')
+      let url: string
+      let etag: string
+      try {
+        ;({ url, etag } = await engine.updateEventGroup(groupedEvents, master.etag ?? ''))
+      } catch (error) {
+        // R2.7 — Offline or a failed PUT must not silently swallow the edit.
+        // Everything here used to be written only after a successful round
+        // trip, so a dropped connection lost the change entirely with no toast
+        // and nothing queued — and completing a recurring task now routes
+        // through this function, which made that path much easier to hit.
+        // Apply the change locally, queue a replay of the master (whose update
+        // rebuilds the whole group), and let the caller see the throw.
+        storeUpdateEvent(master.id, { ...masterWithSequence, syncStatus: 'pending' })
+        for (const eventId of removedExceptionIds) storeDeleteEvent(eventId)
+        if (normalizedException) {
+          storeAddEvent({ ...normalizedException, syncStatus: 'pending' })
+        }
+        storage.addPendingChange({
+          type: 'update',
+          eventId: master.id,
+          calendarId,
+          data: JSON.stringify(masterWithSequence),
+        })
+        setSyncState((prev) => ({ ...prev, pendingChanges: prev.pendingChanges + 1 }))
+        showToast('Failed to sync with CalDAV server. It will be retried.')
+        throw error
+      }
 
       for (const groupedEvent of groupedEvents) {
         storeUpdateEvent(groupedEvent.id, { resourceHref: url, etag, syncStatus: 'synced' })
@@ -1741,7 +1772,13 @@ export function useCalDAV(): UseCalDAVReturn {
       // they already carry the master's resourceHref.)
       if (event.type === 'task' && event.recurrenceId) {
         const master = findRecurrenceMaster(event)
-        if (master) {
+        // Only when the two already share a resource, mirroring deleteEvent.
+        // Nextcloud Tasks PUTs its exceptions to a SEPARATE href; folding such
+        // an override into the master's resource here would write a second
+        // copy while leaving the original standalone resource on the server,
+        // and it would come back as a duplicate on the next sync. Rewriting
+        // its own resource in place is correct there.
+        if (master && (!event.resourceHref || master.resourceHref === event.resourceHref)) {
           await saveRecurrenceOverrideFn(calendarId, master, event, [])
           return
         }

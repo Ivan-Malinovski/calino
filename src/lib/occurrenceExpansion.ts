@@ -209,6 +209,38 @@ export function nextOpenOccurrence(
 }
 
 /**
+ * The instant a RECURRENCE-ID names, read in the frame the rule generates in.
+ *
+ * All-day recurrence ids are floating dates and must be resolved to the same
+ * UTC midnight {@link rruleAnchor} uses; parsing them with `parseISO` yields
+ * local midnight, which is the previous UTC day east of UTC.
+ */
+export function occurrenceInstant(master: CalendarEvent, occurrenceStart: string): Date {
+  return master.isAllDay ? utcMidnight(occurrenceStart) : parseISO(occurrenceStart)
+}
+
+/**
+ * Materialize one named occurrence without walking the rule to find it.
+ *
+ * Callers that already know which occurrence they mean (a RECURRENCE-ID in
+ * hand) must build it through here rather than shaping it themselves, or they
+ * reintroduce exactly the two bugs {@link occurrenceDueDate} and
+ * {@link occurrenceInstant} exist to prevent.
+ */
+export function materializeOccurrenceAt(
+  master: CalendarEvent,
+  occurrenceStart: string
+): CalendarEvent {
+  const shape = shapeOccurrence(
+    occurrenceInstant(master, occurrenceStart),
+    parseISO(master.start),
+    parseISO(master.end),
+    master.isAllDay
+  )
+  return materializeOccurrence(master, shape)
+}
+
+/**
  * Build the occurrence event itself. Tasks additionally get a per-occurrence
  * `dueDate`: it is the field every task view buckets by, and leaving the
  * master's value on a spread copy would file every occurrence under the

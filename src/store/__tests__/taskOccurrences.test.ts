@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { format, parseISO } from 'date-fns'
-import { useCalendarStore, getTasksForDay, getTasksDueOn } from '../calendarStore'
+import { useCalendarStore, getTasksForDay } from '../calendarStore'
 import { nextOpenOccurrence } from '@/lib/occurrenceExpansion'
 import { makeTask, makeRecurringTask } from '@/lib/__tests__/fixtures'
 import type { CalendarEvent } from '@/types'
@@ -91,9 +91,10 @@ describe('R2.7 recurring task occurrences', () => {
     it('keeps the recurring master out of the plain due-date index', () => {
       addRecurring()
 
-      // Otherwise the whole series would also render once on its anchor day
-      // via the non-recurring fast path, double-rendering that occurrence.
-      expect(getTasksDueOn(events(), '2026-03-03')).toEqual([])
+      // The master is indexed separately from the plain due-date bucket, so
+      // its anchor day yields exactly ONE row. Indexing it in both would
+      // double-render that occurrence.
+      expect(getTasksForDay(events(), '2026-03-03')).toHaveLength(1)
     })
 
     it('leaves non-recurring tasks on the plain index untouched', () => {
@@ -101,7 +102,6 @@ describe('R2.7 recurring task occurrences', () => {
         .getState()
         .addEvent(makeTask({ id: 'plain', uid: 'plain', calendarId: calId(), title: 'Buy milk' }))
 
-      expect(getTasksDueOn(events(), '2026-03-03').map((t) => t.title)).toEqual(['Buy milk'])
       expect(getTasksForDay(events(), '2026-03-03').map((t) => t.title)).toEqual(['Buy milk'])
     })
 
@@ -120,7 +120,7 @@ describe('R2.7 recurring task occurrences', () => {
         })
       )
 
-      expect(getTasksDueOn(events(), '2026-03-09').map((t) => t.title)).toEqual(['Renew passport'])
+      expect(getTasksForDay(events(), '2026-03-09').map((t) => t.title)).toEqual(['Renew passport'])
     })
 
     it('keeps a daily all-day task on its own day across a DST boundary', () => {
@@ -171,6 +171,13 @@ describe('R2.7 recurring task occurrences', () => {
         .getEventsForDateRange('2026-03-09', '2026-03-11')
         .filter((e) => e.type === 'task')
       expect(range).toEqual([])
+
+      // ...including on the task grid, which reads a different index. The
+      // cancelled override suppresses the master's slot for that date and must
+      // not then be emitted in its place.
+      expect(getTasksForDay(events(), '2026-03-10')).toEqual([])
+      // The rest of the series is untouched.
+      expect(getTasksForDay(events(), '2026-03-17')).toHaveLength(1)
     })
 
     it('honours EXDATE', () => {
@@ -216,6 +223,43 @@ describe('R2.7 recurring task occurrences', () => {
       // would make it a second master (RFC 5545 §3.8.5.3).
       expect(override.rruleString).toBeUndefined()
       expect(override.excludedDates).toBeUndefined()
+    })
+
+    it('places the override on the occurrence date, for a master shaped as EventModal writes one', () => {
+      // Regression: the override was built by hand instead of through
+      // materializeOccurrenceAt, which reintroduced two separate off-by-ones —
+      // dueDate taken from `end` (a day late for a 23:59:59 end) and the
+      // recurrence id parsed as local rather than UTC midnight (a day early
+      // east of UTC, putting DTSTART before its own RECURRENCE-ID).
+      addRecurring({ start: '2026-03-03T00:00:00', end: '2026-03-03T23:59:59' })
+
+      const plan = useCalendarStore
+        .getState()
+        .completeTaskOccurrence('gym', '2026-03-10T00:00:00', true)
+
+      const override = plan!.override!
+      expect(override.start).toBe('2026-03-10T00:00:00')
+      expect(override.dueDate).toBe('2026-03-10')
+      expect(override.start.split('T')[0]).toBe(override.recurrenceId!.split('T')[0])
+    })
+
+    it('round-trips complete then un-complete without stranding the occurrence', () => {
+      // The same off-by-one made overrideHasUserEdits always true, so
+      // un-completing kept the override and nextOpenOccurrence skipped past it
+      // — the occurrence could never be reopened.
+      addRecurring({ start: '2026-03-03T00:00:00', end: '2026-03-03T23:59:59' })
+
+      const done = useCalendarStore
+        .getState()
+        .completeTaskOccurrence('gym', '2026-03-03T00:00:00', true)
+      useCalendarStore.getState().addEvent(done!.override!)
+
+      const undone = useCalendarStore
+        .getState()
+        .completeTaskOccurrence('gym', '2026-03-03T00:00:00', false)
+
+      expect(undone!.override).toBeNull()
+      expect(undone!.removedOverrideIds).toEqual([done!.override!.id])
     })
 
     it('removes a pure completion marker when un-completing', () => {

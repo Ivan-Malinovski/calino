@@ -21,6 +21,7 @@ import {
   isOccurrenceExcluded,
   resolveRRuleString,
   materializeOccurrence,
+  materializeOccurrenceAt,
   rruleAnchor,
   rruleWindow,
 } from '@/lib/occurrenceExpansion'
@@ -183,8 +184,20 @@ function overrideHasUserEdits(override: CalendarEvent, master: CalendarEvent): b
     override.location !== master.location ||
     override.priority !== master.priority ||
     // The override was dragged to a different day/time than the rule produced.
-    override.start !== override.recurrenceId
+    // Compared on the resolved instant rather than the raw strings: an all-day
+    // RECURRENCE-ID can legitimately be written as a bare date or a floating
+    // midnight, and a string compare would call those two a user edit — which
+    // permanently pins the occurrence, because un-completing then keeps the
+    // override instead of removing it and the series skips past it forever.
+    !sameOccurrenceInstant(override, override.recurrenceId)
   )
+}
+
+/** Does this component start at the instant its own RECURRENCE-ID names? */
+function sameOccurrenceInstant(event: CalendarEvent, recurrenceId: string | undefined): boolean {
+  if (!recurrenceId) return true
+  if (event.isAllDay) return event.start.split('T')[0] === recurrenceId.split('T')[0]
+  return parseISO(event.start).getTime() === parseISO(recurrenceId).getTime()
 }
 
 function getEventIndex(events: CalendarEvent[]): EventIndex {
@@ -242,6 +255,13 @@ function getEventIndex(events: CalendarEvent[]): EventIndex {
 
     if (event.type === 'task' && (event.rruleString || event.recurrence) && !event.recurrenceId) {
       recurringTasks.push(indexed)
+    } else if (event.type === 'task' && event.taskStatus === 'CANCELLED') {
+      // R2.7 — A cancelled override is how RFC 5545 removes a single
+      // occurrence: it exists solely to suppress the master's slot for that
+      // date (which the exception map already does). Emitting it as a task in
+      // its own right would put the cancelled occurrence back on screen.
+      // Cancelled non-recurring tasks are dropped at sync, so this is the
+      // override case in practice.
     } else if (event.type === 'task' && event.dueDate) {
       const dayKey = taskDayKey(event)
       let bucket = tasksByDueDate.get(dayKey)
@@ -295,15 +315,6 @@ function lastStartingAtOrBefore(plain: IndexedEvent[], ms: number): number {
 }
 
 /**
- * Tasks due on a given `yyyy-MM-dd`, in stored order. Shared by the month,
- * week and day views, which each used to re-filter the entire event array.
- * Callers still apply their own visibility/category/completed filtering.
- */
-export function getTasksDueOn(events: CalendarEvent[], dayKey: string): CalendarEvent[] {
-  return getEventIndex(events).tasksByDueDate.get(dayKey) ?? []
-}
-
-/**
  * R2.7 — Every task shown on `dayKey`: the non-recurring bucket above, plus one
  * expanded occurrence per recurring master that falls on that day.
  *
@@ -314,6 +325,9 @@ export function getTasksDueOn(events: CalendarEvent[], dayKey: string): Calendar
  */
 const tasksForDayCache = new Map<string, CalendarEvent[]>()
 let tasksForDayCacheEvents: CalendarEvent[] | null = null
+// Panning across months adds an entry per visited day; bound it the way
+// `rangeExpansionCache` is bounded, since entries are cheap to recompute.
+const MAX_TASKS_FOR_DAY_CACHE = 400
 
 export function getTasksForDay(events: CalendarEvent[], dayKey: string): CalendarEvent[] {
   const index = getEventIndex(events)
@@ -323,6 +337,7 @@ export function getTasksForDay(events: CalendarEvent[], dayKey: string): Calenda
   }
   const cached = tasksForDayCache.get(dayKey)
   if (cached) return cached
+  if (tasksForDayCache.size > MAX_TASKS_FOR_DAY_CACHE) tasksForDayCache.clear()
 
   const plain = index.tasksByDueDate.get(dayKey) ?? []
   if (index.recurringTasks.length === 0) {
@@ -659,18 +674,13 @@ export const useCalendarStore = create<CalendarStore>()(
           return { master, override: null, removedOverrideIds: [existing.id] }
         }
 
-        const shape = shapeOccurrence(
-          parseISO(occurrenceStart),
-          parseISO(master.start),
-          parseISO(master.end),
-          master.isAllDay
-        )
+        // Build the occurrence through the shared helper, never by hand: it
+        // owns both the all-day UTC-frame resolution and the DTSTART→DUE offset
+        // that a naive `dueDate = end` gets wrong for Calino's 23:59:59 ends.
+        const occurrence = materializeOccurrenceAt(master, occurrenceStart)
         const base = existing ?? {
-          ...master,
+          ...occurrence,
           id: `${uid}-${occurrenceStart}`,
-          start: shape.occStartStr,
-          end: shape.occEndStr,
-          dueDate: shape.occEndStr,
           // An override describes a single instance and must not carry the
           // series definition (RFC 5545 §3.8.5.3).
           rruleString: undefined,
