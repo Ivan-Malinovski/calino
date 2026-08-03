@@ -245,9 +245,49 @@ function YearlyMonthPicker({ byMonth, onByMonthChange }: YearlyMonthPickerProps)
 
 // --- Main component ---
 
-interface RecurrenceFieldsProps {
+interface RecurrenceToggleProps {
   recurring: boolean
   onRecurringChange: (recurring: boolean) => void
+  disabled?: boolean
+  /** Shown next to a disabled toggle so the reason isn't invisible. */
+  disabledReason?: string
+}
+
+/**
+ * The "Recurring" checkbox on its own. Split from {@link RecurrenceFields}
+ * because the event form puts the toggle in the summary row and the controls
+ * inside the collapsible "More" panel.
+ */
+export function RecurrenceToggle({
+  recurring,
+  onRecurringChange,
+  disabled = false,
+  disabledReason,
+}: RecurrenceToggleProps): JSX.Element {
+  return (
+    <label
+      className={styles.checkbox}
+      title={disabled ? disabledReason : undefined}
+      style={disabled ? { opacity: 0.5, cursor: 'not-allowed' } : undefined}
+    >
+      <input
+        type="checkbox"
+        checked={recurring}
+        disabled={disabled}
+        onChange={(e) => onRecurringChange(e.target.checked)}
+      />
+      <span>Recurring</span>
+      {disabled && disabledReason && (
+        <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>
+          ({disabledReason})
+        </span>
+      )}
+    </label>
+  )
+}
+
+interface RecurrenceFieldsProps {
+  recurring: boolean
   recurrence: RecurrenceRule['frequency']
   onRecurrenceChange: (recurrence: RecurrenceRule['frequency']) => void
   interval: number
@@ -268,12 +308,15 @@ interface RecurrenceFieldsProps {
   endAfterCount: number
   onEndAfterCountChange: (count: number) => void
   firstDayOfWeek: number
-  showCheckbox?: boolean
 }
 
+/**
+ * The recurrence controls (frequency, interval, by-day/month pattern, end
+ * condition). Renders nothing unless `recurring` is true. The "Recurring"
+ * checkbox itself is {@link RecurrenceToggle}.
+ */
 export function RecurrenceFields({
   recurring,
-  onRecurringChange,
   recurrence,
   onRecurrenceChange,
   interval,
@@ -294,7 +337,6 @@ export function RecurrenceFields({
   endAfterCount,
   onEndAfterCountChange,
   firstDayOfWeek,
-  showCheckbox = true,
 }: RecurrenceFieldsProps): JSX.Element {
   const weekdayLabels = getWeekdayLabels(firstDayOfWeek)
 
@@ -309,17 +351,6 @@ export function RecurrenceFields({
 
   return (
     <>
-      {showCheckbox && (
-        <label className={styles.checkbox}>
-          <input
-            type="checkbox"
-            checked={recurring}
-            onChange={(e) => onRecurringChange(e.target.checked)}
-          />
-          <span>Recurring</span>
-        </label>
-      )}
-
       {recurring && (
         <div className={styles.row}>
           <div className={styles.field}>
