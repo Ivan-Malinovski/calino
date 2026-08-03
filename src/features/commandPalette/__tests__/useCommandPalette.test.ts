@@ -131,6 +131,7 @@ vi.mock('@/store/settingsStore', () => ({
       defaultReminderMinutes: 15,
       defaultEventColor: '#4285F4',
       enableDesktopNotifications: false,
+      enableCalendarMirror: false,
       enableSoundAlerts: false,
       enableHaptics: true,
       conflictResolution: 'local-wins',

@@ -328,6 +328,9 @@ export interface UserSettings {
   defaultReminderMinutes: number
   defaultEventColor: string
   enableDesktopNotifications: boolean
+  /** Android only: mirror events into the OS calendar provider so the system
+   *  fires reminders and other apps (widgets, Wear OS, Auto) can see them. */
+  enableCalendarMirror: boolean
   enableSoundAlerts: boolean
   enableHaptics: boolean
   conflictResolution: 'server-wins' | 'local-wins' | 'ask'
