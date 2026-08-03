@@ -22,7 +22,7 @@ import { useIsMobile } from '@/hooks/useIsMobile'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { DUR_FAST, EASE_POP } from '@/lib/motion'
 import { useCalendarStore, isCalendarReadOnly } from '@/store/calendarStore'
-import { nextOpenOccurrence } from '@/lib/occurrenceExpansion'
+import { nextOpenOccurrence, materializeOccurrence } from '@/lib/occurrenceExpansion'
 import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
 import type { CalendarEvent } from '@/types'
 import styles from './TodoView.module.css'
@@ -254,12 +254,11 @@ export function TodoView(): JSX.Element {
         return withColor({ ...task, completed: true, taskStatus: 'COMPLETED' })
       }
       // Keep the master's own id so the subtask tree and drag/re-parent logic,
-      // which key off task ids, keep resolving.
+      // which key off task ids, keep resolving. `materializeOccurrence` owns the
+      // dueDate derivation so this row buckets the same way the grid does.
       return {
-        ...withColor(task),
-        start: next.occStartStr,
-        end: next.occEndStr,
-        dueDate: next.occEndStr,
+        ...withColor(materializeOccurrence(task, next)),
+        id: task.id,
         completed: false,
         taskStatus: 'NEEDS-ACTION',
         occurrenceStart: next.occStartStr,
@@ -805,6 +804,35 @@ export function TodoView(): JSX.Element {
                     {task.description && <div className={styles.taskNote}>{task.description}</div>}
                   </div>
                   <div className={styles.taskMeta}>
+                    {/* R2.7 — A recurring row stands in for a whole series, and
+                        ticking it advances to the next date rather than
+                        removing it. Without a marker that reads as the row
+                        refusing to go away. */}
+                    {(task.occurrenceStart || task.recurrenceId) && (
+                      <span
+                        className={styles.recurringBadge}
+                        title="Repeats"
+                        aria-label="Repeating task"
+                        data-component="task-recurring-badge"
+                      >
+                        <svg
+                          width="12"
+                          height="12"
+                          viewBox="0 0 14 14"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="1.6"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          aria-hidden="true"
+                        >
+                          <path d="M2 6a5 5 0 0 1 8.5-3.2L12 4" />
+                          <path d="M12 8a5 5 0 0 1-8.5 3.2L2 10" />
+                          <path d="M12 1.5V4H9.5" />
+                          <path d="M2 12.5V10h2.5" />
+                        </svg>
+                      </span>
+                    )}
                     {task.priority && task.priority <= 3 && (
                       <span className={`${styles.priority} ${getPriorityClass(task.priority)}`}>
                         {PRIORITY_LABELS[task.priority]}

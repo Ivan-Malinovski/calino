@@ -330,9 +330,16 @@ export function getTasksForDay(events: CalendarEvent[], dayKey: string): Calenda
     return plain
   }
 
+  // The rule generates occurrence STARTS, but a task is filed under its DUE
+  // day — and those are not always the same local day. A task starting 09:00Z
+  // and due 17:00Z is due the next local day in UTC+13, so a window covering
+  // only the target day would never produce the occurrence that belongs to it.
+  // Over-scan by a day on each side and let the exact day-key check below
+  // decide; the alternative is threading each master's start→due offset
+  // through the window, which is the same thing with more arithmetic.
   const [y, m, d] = dayKey.split('-').map(Number)
-  const dayStart = new Date(y, m - 1, d, 0, 0, 0, 0)
-  const dayEnd = new Date(y, m - 1, d, 23, 59, 59, 999)
+  const dayStart = new Date(y, m - 1, d - 1, 0, 0, 0, 0)
+  const dayEnd = new Date(y, m - 1, d + 1, 23, 59, 59, 999)
 
   const expanded: CalendarEvent[] = []
   for (const indexed of index.recurringTasks) {
@@ -359,9 +366,9 @@ export function getTasksForDay(events: CalendarEvent[], dayKey: string): Calenda
         continue
       }
       const occurrence = materializeOccurrence(master, shape)
-      // Guard against a rule whose occurrence lands on a neighbouring local day
-      // once the all-day floating rebuild is applied.
-      if (taskDayKey(occurrence) === dayKey) expanded.push(occurrence)
+      // The authoritative check: does this occurrence's own due date land on
+      // the requested day? Also what discards the over-scanned neighbours.
+      if (occurrence.dueDate && taskDayKey(occurrence) === dayKey) expanded.push(occurrence)
     }
   }
 

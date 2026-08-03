@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
+import { format, parseISO } from 'date-fns'
 import { useCalendarStore, getTasksForDay, getTasksDueOn } from '../calendarStore'
 import { nextOpenOccurrence } from '@/lib/occurrenceExpansion'
 import { makeTask, makeRecurringTask } from '@/lib/__tests__/fixtures'
@@ -55,6 +56,36 @@ describe('R2.7 recurring task occurrences', () => {
       const [occurrence] = getTasksForDay(events(), '2026-03-17')
       expect(occurrence.dueDate?.split('T')[0]).toBe('2026-03-17')
       expect(occurrence.id).not.toBe('gym')
+    })
+
+    it('still lands on the grid when the master ends at 23:59:59 on its own day', () => {
+      // What EventModal actually writes for an all-day task: end is the SAME
+      // day at 23:59:59, not the next midnight. That rounds to a one-day
+      // duration, so deriving the occurrence's dueDate from its end pushed
+      // every occurrence onto the following day — where it then failed the
+      // day-key check and disappeared from the month grid entirely.
+      addRecurring({ start: '2026-03-03T00:00:00', end: '2026-03-03T23:59:59' })
+
+      const tasks = getTasksForDay(events(), '2026-03-10')
+      expect(tasks).toHaveLength(1)
+      expect(tasks[0].dueDate?.split('T')[0]).toBe('2026-03-10')
+    })
+
+    it('preserves a timed task’s DTSTART→DUE offset on every occurrence', () => {
+      // RFC 5545 §3.6.2: the offset is a duration that applies identically to
+      // each occurrence.
+      addRecurring({
+        isAllDay: false,
+        start: '2026-03-03T09:00:00.000Z',
+        end: '2026-03-03T17:00:00.000Z',
+        dueDate: '2026-03-03T17:00:00.000Z',
+      })
+
+      // A timed task buckets by its LOCAL day, which is not necessarily the
+      // UTC one — so derive the key rather than hardcoding a timezone's answer.
+      const dayKey = format(parseISO('2026-03-10T17:00:00.000Z'), 'yyyy-MM-dd')
+      const [occurrence] = getTasksForDay(events(), dayKey)
+      expect(occurrence.dueDate).toBe('2026-03-10T17:00:00.000Z')
     })
 
     it('keeps the recurring master out of the plain due-date index', () => {

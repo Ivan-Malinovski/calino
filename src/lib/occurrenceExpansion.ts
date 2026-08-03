@@ -222,7 +222,28 @@ export function materializeOccurrence(event: CalendarEvent, shape: OccurrenceSha
     end: shape.occEndStr,
   }
   if (event.type === 'task') {
-    occurrence.dueDate = shape.occEndStr
+    occurrence.dueDate = occurrenceDueDate(event, shape)
   }
   return occurrence
+}
+
+/**
+ * The DUE value for one occurrence, preserving the master's DTSTART→DUE offset
+ * (RFC 5545 §3.6.2: that offset is a duration applying identically to every
+ * occurrence) *and* the master's serialization shape.
+ *
+ * Both halves matter. Deriving it from the occurrence's `end` instead looks
+ * right but isn't: Calino stores an all-day task's `end` as the same day at
+ * 23:59:59, which rounds to a one-day duration and pushes every occurrence's
+ * due date onto the following day — which then fails the day-key check and
+ * makes the task vanish from the grid entirely. And an all-day `dueDate` is a
+ * bare `yyyy-MM-dd`, so returning a full timestamp would break the day
+ * bucketing that reads it literally.
+ */
+function occurrenceDueDate(master: CalendarEvent, shape: OccurrenceShape): string | undefined {
+  if (!master.dueDate) return undefined
+  if (master.isAllDay || !master.dueDate.includes('T')) return shape.occDateStr
+
+  const offsetMs = parseISO(master.dueDate).getTime() - parseISO(master.start).getTime()
+  return new Date(parseISO(shape.occStartStr).getTime() + offsetMs).toISOString()
 }
