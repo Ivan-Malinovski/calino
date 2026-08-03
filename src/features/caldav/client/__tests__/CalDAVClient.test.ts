@@ -1101,6 +1101,9 @@ END:VCALENDAR`,
 
       // Extract the custom fetch function and invoke it to test timeout
       const customFetch = mockCreateDAVClient.mock.calls[0][0].fetch
+      // tsdav types `fetch` as optional, so narrow rather than assert: the
+      // expectation above already proves it was passed.
+      if (!customFetch) throw new Error('createDAVClient was called without a fetch function')
       await customFetch('https://caldav.example.com/dav.php')
 
       // Verify fetch was called with a signal (from AbortController)
