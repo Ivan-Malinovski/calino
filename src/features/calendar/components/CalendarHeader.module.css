@@ -751,14 +751,20 @@
   .header {
     display: flex;
     align-items: center;
-    padding: calc(12px + var(--safe-area-top)) 0 12px;
+    padding: calc(17px + var(--safe-area-top)) 0 12px;
     gap: var(--space-2);
   }
 
   .monthTitle,
-  .yearTitle,
   .viewTitle {
-    font-size: 22px;
+    font-size: 28px;
+  }
+
+  /* Keep the desktop month:year ratio (~0.7). Matching the two sizes made the
+     year read as the larger of the pair — its digits are all cap-height, while
+     the month name is mostly x-height. */
+  .yearTitle {
+    font-size: 19px;
   }
 
   .rightCluster {
@@ -807,7 +813,7 @@
      navigator's boundary and made the icon appear to drift inside a
      stationary button. */
   .navigator {
-    transform: translate(10px, -3px);
+    transform: translate(10px, 0);
   }
 
 }
@@ -836,6 +842,14 @@
     width: 0;
     overflow: hidden;
     transition: opacity 0.2s ease, width 0.2s ease;
+  }
+
+  /* With the year hidden the title has the row to itself, so it can grow back
+     to its full size and read as the peer of the 44px navigator beside it
+     rather than as a caption above it. */
+  .monthTitle,
+  .viewTitle {
+    font-size: 36px;
   }
 
   .viewDropdownMenu {
