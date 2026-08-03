@@ -114,6 +114,9 @@ const DEFAULT_SETTINGS: UserSettings = {
   defaultReminderMinutes: 15,
   defaultEventColor: DEFAULT_CALENDAR_COLOR,
   enableDesktopNotifications: true,
+  // Off by default: it needs a runtime calendar permission, so it has to be a
+  // deliberate opt-in rather than something a user discovers via a prompt.
+  enableCalendarMirror: false,
   enableSoundAlerts: false,
   enableHaptics: false,
   conflictResolution: 'server-wins',

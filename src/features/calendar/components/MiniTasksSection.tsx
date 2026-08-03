@@ -7,6 +7,7 @@ import { Link } from 'react-router'
 import { format, parseISO, isToday, isBefore, startOfDay } from 'date-fns'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
+import { nextOpenOccurrence, materializeOccurrence } from '@/lib/occurrenceExpansion'
 import type { CalendarEvent } from '@/types'
 import styles from './Sidebar.module.css'
 
@@ -20,8 +21,9 @@ export function MiniTasksSection({ isExpanded, onToggle }: MiniTasksSectionProps
   const events = useCalendarStore((state) => state.events)
   const calendars = useCalendarStore((state) => state.calendars)
   const completeTask = useCalendarStore((state) => state.completeTask)
+  const completeTaskOccurrence = useCalendarStore((state) => state.completeTaskOccurrence)
   const openModal = useCalendarStore((state) => state.openModal)
-  const { updateEvent: updateCalDAVEvent } = useCalDAV()
+  const { updateEvent: updateCalDAVEvent, saveRecurrenceOverride } = useCalDAV()
   const [hoveredTask, setHoveredTask] = useState<string | null>(null)
   const [tooltipPosition, setTooltipPosition] = useState<{ x: number; y: number } | null>(null)
   const [completingTaskId, setCompletingTaskId] = useState<string | null>(null)
@@ -43,7 +45,33 @@ export function MiniTasksSection({ isExpanded, onToggle }: MiniTasksSectionProps
       calendars.filter((calendar) => calendar.isVisible).map((calendar) => calendar.id)
     )
 
-    const tasks = events
+    // R2.7 — This list reads raw store events, where a recurring task is a
+    // single master sitting on its anchor date. Shown as-is it would be stuck
+    // at the series' first date forever, and ticking it would run
+    // `completeTask` on the master — completing the WHOLE series rather than
+    // one occurrence. Substitute the next open occurrence, as the Tasks list
+    // does; `occurrenceMasterId` then routes the toggle to the override path.
+    const overridesByMaster = new Map<string, Map<string, CalendarEvent>>()
+    for (const e of events) {
+      if (e.type !== 'task' || !e.recurrenceId) continue
+      const key = e.recurrenceMasterId || e.uid || ''
+      const group = overridesByMaster.get(key) ?? new Map<string, CalendarEvent>()
+      group.set(e.recurrenceId, e)
+      overridesByMaster.set(key, group)
+    }
+    const resolved = events.flatMap((e): CalendarEvent[] => {
+      if (e.type !== 'task') return [e]
+      // A cancelled override exists only to suppress one occurrence.
+      if (e.taskStatus === 'CANCELLED') return []
+      if (e.recurrenceId || !(e.rruleString || e.recurrence)) return [e]
+      const next = nextOpenOccurrence(
+        e,
+        overridesByMaster.get(e.id) ?? overridesByMaster.get(e.uid || '') ?? new Map()
+      )
+      return next ? [materializeOccurrence(e, next)] : []
+    })
+
+    const tasks = resolved
       .filter(
         (e) =>
           e.type === 'task' &&
@@ -64,7 +92,7 @@ export function MiniTasksSection({ isExpanded, onToggle }: MiniTasksSectionProps
       })
       .slice(0, 8)
 
-    const overdue = events
+    const overdue = resolved
       .filter(
         (e) =>
           e.type === 'task' &&
@@ -133,6 +161,26 @@ export function MiniTasksSection({ isExpanded, onToggle }: MiniTasksSectionProps
 
     setTimeout(async () => {
       const newCompleted = !task.completed
+
+      // R2.7 — one occurrence of a series, not the series itself.
+      if (task.occurrenceMasterId) {
+        const plan = completeTaskOccurrence(task.occurrenceMasterId, task.start, newCompleted)
+        setCompletingTaskId(null)
+        if (plan) {
+          try {
+            await saveRecurrenceOverride(
+              plan.master.calendarId,
+              plan.master,
+              plan.override,
+              plan.removedOverrideIds
+            )
+          } catch {
+            // surfaced by useCalDAV, which queues a retry
+          }
+        }
+        return
+      }
+
       const updatedTasks = completeTask(task.id, newCompleted)
       setCompletingTaskId(null)
       try {

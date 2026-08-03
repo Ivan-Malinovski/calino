@@ -17,7 +17,7 @@ import {
   type DragStartEvent,
 } from '@dnd-kit/core'
 import { format, startOfDay, endOfDay, parseISO, isToday, addDays, addMinutes } from 'date-fns'
-import { useCalendarStore, getTasksDueOn } from '@/store/calendarStore'
+import { useCalendarStore, getTasksForDay } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
 import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
 import { getEventColor } from '@/lib/eventColor'
@@ -296,7 +296,7 @@ export function DayView({
   const dayTasks = useMemo(() => {
     const dateKey = format(date, 'yyyy-MM-dd')
     const visibleCalendarIds = calendars.filter((c) => c.isVisible).map((c) => c.id)
-    return getTasksDueOn(events, dateKey).filter((e) => visibleCalendarIds.includes(e.calendarId))
+    return getTasksForDay(events, dateKey).filter((e) => visibleCalendarIds.includes(e.calendarId))
   }, [date, events, calendars])
 
   // Tasks with a due time are anchored on the timeline as pills (matching week

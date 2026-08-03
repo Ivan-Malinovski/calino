@@ -450,29 +450,8 @@ export function icalEventToCalendarEvent(
     }
   }
 
-  let recurrence: RecurrenceRule | undefined
-  let rruleString: string | undefined
-
-  const rruleProp = vevent.getFirstProperty('rrule')
-  if (rruleProp) {
-    rruleString = rruleProp.toICALString().substring(6)
-    recurrence = parseRRule(rruleString)
-  }
-
-  const excludedDates: string[] = []
-  const exdateProps = vevent.getAllProperties('exdate')
-  for (const exdateProp of exdateProps) {
-    const values = exdateProp.getValues()
-    for (const val of values) {
-      if (val instanceof ICAL.Time) {
-        // R2.3 — For TZID preservation we'd need to store the TZID
-        // per-exdate. For now we keep the ISO string (which is wall-
-        // clock if the original had TZID). Re-emission uses the master
-        // event's `event.timezone` to reconstruct the TZID form.
-        excludedDates.push(icalTimeToISO(val).iso)
-      }
-    }
-  }
+  const { rruleString, recurrence } = readRRule(vevent)
+  const excludedDates = readExdates(vevent)
 
   const reminders: Reminder[] = []
   const valarms = vevent.getAllSubcomponents('valarm')
@@ -539,16 +518,7 @@ export function icalEventToCalendarEvent(
     transparency = transpValue === 'TRANSPARENT' ? 'transparent' : 'opaque'
   }
 
-  let recurrenceId: string | undefined
-  const recIdProp = vevent.getFirstProperty('recurrence-id')
-  if (recIdProp) {
-    const recIdValue = recIdProp.getFirstValue()
-    if (recIdValue instanceof ICAL.Time) {
-      // R2.3 — RECURRENCE-ID's wall-clock is preserved on the iso
-      // string; re-emission uses event.timezone + event.isAllDay.
-      recurrenceId = icalTimeToISO(recIdValue).iso
-    }
-  }
+  const { recurrenceId } = readRecurrenceId(vevent)
 
   const categories: string[] = []
   const catProp = vevent.getFirstProperty('categories')
@@ -778,62 +748,13 @@ export function calendarEventToIcalComponent(event: CalendarEvent): ICAL.Compone
     vevent.updatePropertyWithValue('categories', event.categories.join(','))
   }
 
-  if (event.rruleString) {
-    const rruleProp = ICAL.Property.fromString(`RRULE:${event.rruleString}`)
-    vevent.addProperty(rruleProp)
-  } else if (event.recurrence) {
-    // R2.1 — Propagate the event's isAllDay flag to the recurrence so
-    // buildRRuleString can emit VALUE=DATE for UNTIL on all-day events.
-    const rruleStr = buildRRuleString({ ...event.recurrence, isAllDay: event.isAllDay })
-    vevent.updatePropertyWithValue('rrule', ICAL.Recur.fromString(rruleStr))
-  }
+  writeRRule(vevent, event)
 
   if (event.recurrenceId) {
-    if (event.isAllDay) {
-      const recIdParts = event.recurrenceId.split('T')[0].split('-')
-      const recId = createAllDayDate(
-        parseInt(recIdParts[0], 10),
-        parseInt(recIdParts[1], 10),
-        parseInt(recIdParts[2], 10)
-      )
-      vevent.updatePropertyWithValue('recurrence-id', recId)
-      // R2.3 — All-day RECURRENCE-ID needs VALUE=DATE; ical.js omits
-      // the parameter when the time has isDate: true, but be explicit
-      // to match what icalTypeMapping.ts writes for DTSTART.
-    } else if (event.timezone) {
-      // R2.3 — RECURRENCE-ID with TZID: reconstruct wall-clock with
-      // the same zone as the master event's DTSTART.
-      const recIdTime = createIcalDateTime(event.recurrenceId, event.timezone)
-      vevent.updatePropertyWithValue('recurrence-id', recIdTime)
-      vevent.getFirstProperty('recurrence-id')?.setParameter('tzid', event.timezone)
-    } else {
-      const recId = createIcalDateTime(event.recurrenceId)
-      vevent.updatePropertyWithValue('recurrence-id', recId)
-    }
+    writeDateProp(vevent, 'recurrence-id', event.recurrenceId, event.isAllDay, event.timezone)
   }
 
-  if (event.excludedDates && event.excludedDates.length > 0) {
-    for (const exDate of event.excludedDates) {
-      if (event.isAllDay) {
-        const exParts = exDate.split('T')[0].split('-')
-        const exIcalDate = createAllDayDate(
-          parseInt(exParts[0], 10),
-          parseInt(exParts[1], 10),
-          parseInt(exParts[2], 10)
-        )
-        vevent.addPropertyWithValue('exdate', exIcalDate)
-      } else if (event.timezone) {
-        // R2.3 — EXDATE with TZID: emit the same TZID form as DTSTART
-        // so the exception is matched against the master event.
-        const exIcalTime = createIcalDateTime(exDate, event.timezone)
-        const exProp = vevent.addPropertyWithValue('exdate', exIcalTime)
-        exProp.setParameter('tzid', event.timezone)
-      } else {
-        const exIcalTime = createIcalDateTime(exDate)
-        vevent.addPropertyWithValue('exdate', exIcalTime)
-      }
-    }
-  }
+  writeExdates(vevent, event)
 
   vevent.updatePropertyWithValue(
     'transp',
@@ -897,6 +818,128 @@ export function calendarEventToIcalComponent(event: CalendarEvent): ICAL.Compone
   return vevent
 }
 
+// ---------------------------------------------------------------------------
+// R2.7 — Shared recurrence read/write helpers.
+//
+// RFC 5545 §3.6.2 lets a VTODO carry RRULE / EXDATE / RECURRENCE-ID exactly as
+// a VEVENT does, so the VEVENT implementation below is the reference and both
+// component types go through these helpers. Keeping two hand-written copies is
+// how the all-day / TZID / UTC value-form handling drifts apart.
+// ---------------------------------------------------------------------------
+
+/** Reads RRULE, returning both the raw string (authoritative) and the parsed rule. */
+function readRRule(comp: ICAL.Component): {
+  rruleString: string | undefined
+  recurrence: RecurrenceRule | undefined
+} {
+  const rruleProp = comp.getFirstProperty('rrule')
+  if (!rruleProp) return { rruleString: undefined, recurrence: undefined }
+  const rruleString = rruleProp.toICALString().substring(6)
+  return { rruleString, recurrence: parseRRule(rruleString) }
+}
+
+/**
+ * Reads every EXDATE value across every EXDATE property (a single line may
+ * carry a comma-separated list).
+ *
+ * R2.3 — The per-EXDATE TZID is not stored; the ISO string keeps the wall-clock
+ * and re-emission reconstructs the TZID form from the component's `timezone`.
+ */
+function readExdates(comp: ICAL.Component): string[] {
+  const excludedDates: string[] = []
+  for (const exdateProp of comp.getAllProperties('exdate')) {
+    for (const val of exdateProp.getValues()) {
+      if (val instanceof ICAL.Time) {
+        excludedDates.push(icalTimeToISO(val).iso)
+      }
+    }
+  }
+  return excludedDates
+}
+
+/**
+ * Reads RECURRENCE-ID. R2.3 — the wall-clock is preserved on the ISO string;
+ * re-emission uses `timezone` + `isAllDay` to pick the value form back.
+ *
+ * `RANGE=THISANDFUTURE` (RFC 5545 §3.2.13) would make the override apply to
+ * every later instance too. We do not implement that semantic, so we report it
+ * rather than silently treating the override as a single instance.
+ */
+function readRecurrenceId(comp: ICAL.Component): {
+  recurrenceId: string | undefined
+  hasThisAndFuture: boolean
+} {
+  const recIdProp = comp.getFirstProperty('recurrence-id')
+  if (!recIdProp) return { recurrenceId: undefined, hasThisAndFuture: false }
+  const range = recIdProp.getParameter('range')
+  const hasThisAndFuture = typeof range === 'string' && range.toUpperCase() === 'THISANDFUTURE'
+  const recIdValue = recIdProp.getFirstValue()
+  return {
+    recurrenceId: recIdValue instanceof ICAL.Time ? icalTimeToISO(recIdValue).iso : undefined,
+    hasThisAndFuture,
+  }
+}
+
+/**
+ * Writes a date-valued property in the correct value form.
+ *
+ * All three of DTSTART, DUE and RECURRENCE-ID must agree on their value type
+ * (RFC 5545 §3.6.2 / §3.8.2.3), so routing them all through one helper makes
+ * that structural rather than a rule three call sites have to remember.
+ */
+function writeDateProp(
+  comp: ICAL.Component,
+  name: string,
+  iso: string,
+  isAllDay: boolean,
+  tzid?: string
+): void {
+  if (isAllDay) {
+    const [y, m, d] = iso.split('T')[0].split('-')
+    comp.updatePropertyWithValue(
+      name,
+      createAllDayDate(parseInt(y, 10), parseInt(m, 10), parseInt(d, 10))
+    )
+    return
+  }
+  comp.updatePropertyWithValue(name, createIcalDateTime(iso, tzid))
+  if (tzid) {
+    comp.getFirstProperty(name)?.setParameter('tzid', tzid)
+  }
+}
+
+/** Writes RRULE, preferring the raw round-tripped string over the parsed rule. */
+function writeRRule(comp: ICAL.Component, event: CalendarEvent): void {
+  if (event.rruleString) {
+    comp.addProperty(ICAL.Property.fromString(`RRULE:${event.rruleString}`))
+  } else if (event.recurrence) {
+    // R2.1 — Propagate isAllDay so buildRRuleString emits VALUE=DATE for UNTIL.
+    const rruleStr = buildRRuleString({ ...event.recurrence, isAllDay: event.isAllDay })
+    comp.updatePropertyWithValue('rrule', ICAL.Recur.fromString(rruleStr))
+  }
+}
+
+/** Writes one EXDATE property per excluded date, matching DTSTART's value form. */
+function writeExdates(comp: ICAL.Component, event: CalendarEvent): void {
+  if (!event.excludedDates?.length) return
+  for (const exDate of event.excludedDates) {
+    if (event.isAllDay) {
+      const [y, m, d] = exDate.split('T')[0].split('-')
+      comp.addPropertyWithValue(
+        'exdate',
+        createAllDayDate(parseInt(y, 10), parseInt(m, 10), parseInt(d, 10))
+      )
+    } else if (event.timezone) {
+      // R2.3 — EXDATE must use the same TZID form as DTSTART or the exception
+      // will not match an occurrence.
+      const exProp = comp.addPropertyWithValue('exdate', createIcalDateTime(exDate, event.timezone))
+      exProp.setParameter('tzid', event.timezone)
+    } else {
+      comp.addPropertyWithValue('exdate', createIcalDateTime(exDate))
+    }
+  }
+}
+
 export function icalVtodoToCalendarEvent(vtodo: ICAL.Component, calendarId: string): CalendarEvent {
   const uidProp = vtodo.getFirstProperty('uid')
   const summaryProp = vtodo.getFirstProperty('summary')
@@ -932,6 +975,45 @@ export function icalVtodoToCalendarEvent(vtodo: ICAL.Component, calendarId: stri
       }
     }
   }
+
+  // R2.7 — DTSTART anchors the recurrence set (RFC 5545 §3.8.2.4) and is
+  // required whenever RRULE is present. It also defines the value type that
+  // DUE must match (§3.8.2.3), so when both are present DTSTART wins — some
+  // clients emit a date-time DTSTART alongside a date-only DUE, and trusting
+  // DUE there would flip a timed task to all-day.
+  let dtstartIso: string | undefined
+  let timezone: string | undefined
+  const dtstartProp = vtodo.getFirstProperty('dtstart')
+  if (dtstartProp) {
+    try {
+      const dtstartValue = dtstartProp.getFirstValue()
+      if (dtstartValue instanceof ICAL.Time) {
+        const startResult = icalTimeToISO(dtstartValue, dtstartProp)
+        if (startResult.iso && !startResult.iso.endsWith('T::')) {
+          dtstartIso = startResult.iso
+          // R2.2 — Capture the TZID so the wall-clock round-trips.
+          if (startResult.tzid) timezone = startResult.tzid
+          isAllDay = dtstartValue.isDate
+        }
+      }
+    } catch {
+      /* skip malformed DTSTART; DUE still carries the date */
+    }
+  }
+
+  const { rruleString, recurrence } = readRRule(vtodo)
+  const excludedDates = readExdates(vtodo)
+  const { recurrenceId, hasThisAndFuture } = readRecurrenceId(vtodo)
+  if (hasThisAndFuture) {
+    // We apply the override to its single instance only. Saying so beats
+    // silently mis-applying a range we don't implement.
+    console.warn(
+      'VTODO RECURRENCE-ID;RANGE=THISANDFUTURE is not supported; treating as a single instance'
+    )
+  }
+
+  const locationProp = vtodo.getFirstProperty('location')
+  const urlProp = vtodo.getFirstProperty('url')
 
   let priority: TaskPriority | undefined
   if (priorityProp) {
@@ -1015,14 +1097,31 @@ export function icalVtodoToCalendarEvent(vtodo: ICAL.Component, calendarId: stri
     })
     ?.getFirstValue()
 
+  const uid = uidProp ? (uidProp.getFirstValue() as string) : uuidv4()
+
+  // R2.7 — A master and its detached overrides legitimately share a UID
+  // (RFC 5545 §3.8.4.7), and CalDAV keeps them in one resource. Deriving the
+  // local id from the RECURRENCE-ID is what stops them colliding in the store
+  // — before this, every VTODO in such a resource parsed to the same id.
+  const id = recurrenceId ? `${uid}-${recurrenceId}` : uid
+
+  // DTSTART is the anchor when present; otherwise a task's start collapses
+  // onto its due date, which is how non-recurring tasks have always behaved.
+  const start = dtstartIso || dueDate || new Date().toISOString()
+  const end = dueDate || start
+
   return {
-    id: uidProp ? (uidProp.getFirstValue() as string) : uuidv4(),
+    id,
+    uid,
     calendarId,
     title: summaryProp ? (summaryProp.getFirstValue() as string) : 'Untitled',
     description: descProp ? (descProp.getFirstValue() as string) : undefined,
-    start: dueDate || new Date().toISOString(),
-    end: dueDate || new Date().toISOString(),
+    location: locationProp ? (locationProp.getFirstValue() as string) : undefined,
+    url: urlProp ? (urlProp.getFirstValue() as string) : undefined,
+    start,
+    end,
     isAllDay,
+    timezone,
     categories: categories.length > 0 ? categories : undefined,
     type: 'task',
     dueDate,
@@ -1034,34 +1133,82 @@ export function icalVtodoToCalendarEvent(vtodo: ICAL.Component, calendarId: stri
     priority,
     percentComplete,
     sequence,
+    // R2.7 — Recurrence, mirroring the VEVENT path.
+    recurrence,
+    rruleString,
+    excludedDates: excludedDates.length > 0 ? excludedDates : undefined,
+    recurrenceId,
+    recurrenceMasterId: recurrenceId ? uid : undefined,
   }
 }
 
 export function calendarEventToIcalVtodo(task: CalendarEvent): ICAL.Component {
   const vtodo = new ICAL.Component('vtodo')
 
-  vtodo.updatePropertyWithValue('uid', task.id)
+  // R2.7 — A detached override carries the master's UID, so prefer the stored
+  // UID over the local id (which for an override is `${uid}-${recurrenceId}`).
+  // Falling back to task.id keeps tasks written before this change stable.
+  vtodo.updatePropertyWithValue('uid', task.uid || task.recurrenceMasterId || task.id)
   vtodo.updatePropertyWithValue('dtstamp', ICAL.Time.fromJSDate(new Date(), true))
   vtodo.updatePropertyWithValue('sequence', task.sequence ?? 0)
   vtodo.updatePropertyWithValue('summary', task.title)
 
+  // R2.7 — DTSTART must be present to anchor an RRULE, and DUE's value type
+  // must match it (RFC 5545 §3.6.2 / §3.8.2.3). Both go through writeDateProp
+  // off the same `isAllDay` flag so the two forms cannot disagree. DURATION is
+  // never written — §3.6.2 forbids it alongside DUE.
+  //
+  // An undated task has no anchor at all: its `start` is synthesized (the
+  // parser falls back to import time), so writing that as DTSTART would invent
+  // a date the user never set — and would let an unanchored RRULE through.
+  const hasRecurrence = Boolean(task.rruleString || task.recurrence)
+  const dtstartIso = task.dueDate
+    ? task.start && task.start !== task.dueDate
+      ? task.start
+      : task.dueDate
+    : undefined
+  // Emit DTSTART only when it carries information: as a recurrence anchor (RFC
+  // 5545 §3.6.2 requires one), on an override so its RECURRENCE-ID has a
+  // matching start, or when the task genuinely starts before it is due.
+  //
+  // A plain dated task gets DUE alone, as before this feature. Writing
+  // DTSTART == DUE would say the task starts at the instant it is due, which
+  // is both meaningless and something a strict validator can object to, and it
+  // would have made every existing task emit a new property on its next save.
+  const writeDtstart = Boolean(
+    dtstartIso && (hasRecurrence || task.recurrenceId || dtstartIso !== task.dueDate)
+  )
+  if (dtstartIso && writeDtstart) {
+    writeDateProp(vtodo, 'dtstart', dtstartIso, task.isAllDay, task.timezone)
+  }
+
   if (task.dueDate) {
-    if (task.isAllDay) {
-      const dueParts = task.dueDate.split('T')[0].split('-')
-      const dueDate = createAllDayDate(
-        parseInt(dueParts[0], 10),
-        parseInt(dueParts[1], 10),
-        parseInt(dueParts[2], 10)
-      )
-      vtodo.updatePropertyWithValue('due', dueDate)
+    writeDateProp(vtodo, 'due', task.dueDate, task.isAllDay, task.timezone)
+  }
+
+  // An override describes one instance; the recurrence lives on the master.
+  if (!task.recurrenceId) {
+    // Without a DTSTART there is no anchor, so an RRULE would be meaningless.
+    if (hasRecurrence && !dtstartIso) {
+      console.warn('Dropping RRULE from a VTODO with no DTSTART/DUE to anchor it')
     } else {
-      const dueTime = ICAL.Time.fromJSDate(new Date(task.dueDate))
-      vtodo.updatePropertyWithValue('due', dueTime)
+      writeRRule(vtodo, task)
+      writeExdates(vtodo, task)
     }
+  } else {
+    writeDateProp(vtodo, 'recurrence-id', task.recurrenceId, task.isAllDay, task.timezone)
   }
 
   if (task.description) {
     vtodo.updatePropertyWithValue('description', task.description)
+  }
+
+  if (task.location) {
+    vtodo.updatePropertyWithValue('location', task.location)
+  }
+
+  if (task.url) {
+    vtodo.updatePropertyWithValue('url', task.url)
   }
 
   if (task.categories && task.categories.length > 0) {

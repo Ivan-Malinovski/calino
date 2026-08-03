@@ -40,6 +40,7 @@ import { initContactPhotos } from './lib/contactPhotoSync'
 import { useCalDAV } from './features/caldav/hooks/useCalDAV'
 import { useNativeKeyboard } from './hooks/useNativeKeyboard'
 import { useNotifications } from './hooks/useNotifications'
+import { useCalendarMirror } from './hooks/useCalendarMirror'
 import { openEventDeepLink } from './lib/deepLink'
 import { AIPhotoImportRoot } from './features/aiVision/components/AIPhotoImportRoot'
 import { useAIPhotoImport } from './features/aiVision/useAIPhotoImport'
@@ -322,6 +323,9 @@ function CalendarApp(): JSX.Element {
   // Fire event/task reminders (web: polling + Notification API; native:
   // real OS-scheduled notifications). Was defined but never mounted anywhere
   // in the app — reminders have never actually fired, on web or native.
+  // Must run before useNotifications reads the mirror status, so the two
+  // don't both schedule reminders on the first pass after launch.
+  useCalendarMirror()
   useNotifications()
 
   // Keep the focused field above the Android on-screen keyboard.
