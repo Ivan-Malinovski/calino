@@ -2,6 +2,22 @@
 
 All notable changes to Calino will be documented in this file.
 
+## [Unreleased]
+
+### Added
+
+- **Tasks can repeat.** "Exercise every Tuesday" is now a single task rather than a copy-paste job every week. Set a due date, tick **Recurring**, and pick a pattern with the same controls events use. The Tasks list shows the series as one row on its next due date; tick it and it advances to the next one, with the occurrences you've finished kept under the **Completed** filter. Hovering the repeat symbol tells you the pattern, when the next one is due, and how many you've done. Recurring tasks also appear on the right day in the month, week and day views, and can be ticked off from there. Raised in [#96](https://github.com/Ivan-Malinovski/calino/issues/96).
+
+  It's built on plain RFC 5545 — an `RRULE` on the task plus one completed instance per occurrence, exactly as Thunderbird writes them, with no vendor-specific properties. A repeating task you create in Calino reads correctly in other CalDAV clients, and theirs read correctly here. (Tasks.org and OpenTasks represent repeats in a non-standard way and will only partly agree; that's a known limitation on their side.)
+
+  Recurrence isn't offered on a task with no due date — there'd be nothing for the pattern to count from — nor on subtasks or tasks that have subtasks, since a parent/child link has no per-occurrence meaning. The option explains itself rather than quietly disappearing.
+
+### Fixed
+
+- **A repeating all-day event landed on the wrong day of the week east of UTC.** "Every Tuesday" generated Wednesdays for anyone ahead of UTC, including all of Europe. This affected events as well as the new recurring tasks.
+- **Tasks due on an all-day date could show up a day early** for anyone behind UTC.
+- **Recurring tasks written by other clients no longer lose their pattern.** Calino previously read such a task as a single one-off and dropped its repeat rule the next time it saved, along with the task's location and URL.
+
 ## [0.26.0] - 2026-08-02
 
 ### Added
