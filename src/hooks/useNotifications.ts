@@ -15,7 +15,9 @@ import {
   reconcileNativeReminders,
   listenForReminderActions,
   checkNativeReminderPermission,
+  cancelAllNativeReminders,
 } from '@/lib/nativeReminders'
+import { useCalendarMirrorStore, mirrorOwnsReminders } from '@/store/calendarMirrorStore'
 import { parseISO, isWithinInterval, addMinutes, addHours, addDays, isAfter } from 'date-fns'
 import { toast } from 'sonner'
 import type { CalendarEvent } from '@/types'
@@ -61,6 +63,11 @@ export function useNotifications(): void {
   const reminderEvents = useReminderOccurrences(events)
   const enableNotifications = useSettingsStore((state) => state.enableDesktopNotifications)
   const defaultReminderMinutes = useSettingsStore((state) => state.defaultReminderMinutes)
+  // When the Android calendar mirror is active the OS alarms our events off
+  // CalendarContract, which works with the app closed — strictly better than
+  // what we can schedule ourselves. Standing down avoids double notifications.
+  const mirrorStatus = useCalendarMirrorStore((state) => state.status)
+  const providerOwnsReminders = mirrorOwnsReminders(mirrorStatus)
   // Track reminder ID → scheduled trigger timestamp so we can re-fire
   // when the event is edited (trigger time changes).
   const shownReminders = useRef<Map<string, number>>(new Map())
@@ -81,6 +88,14 @@ export function useNotifications(): void {
     // independent of the app's own persisted settings, and schedule() throws
     // if it's not granted yet. Check for real before ever calling it.
     const reconcileIfPermitted = async (): Promise<void> => {
+      // With the mirror active the calendar provider alarms these events, so
+      // scheduling our own would double-notify. Drop what we already queued
+      // (this also covers the moment the mirror first becomes active) and
+      // leave the queue empty until it stops being active.
+      if (providerOwnsReminders) {
+        await cancelAllNativeReminders()
+        return
+      }
       const granted = await checkNativeReminderPermission()
       if (granted && !cancelled)
         await reconcileNativeReminders(reminderEvents, defaultReminderMinutes)
@@ -110,7 +125,7 @@ export function useNotifications(): void {
       removeListener()
       void appStateListenerPromise.then((handle) => handle.remove())
     }
-  }, [reminderEvents, enableNotifications, defaultReminderMinutes])
+  }, [reminderEvents, enableNotifications, defaultReminderMinutes, providerOwnsReminders])
 
   useEffect(() => {
     prevEnabledRef.current = enableNotifications

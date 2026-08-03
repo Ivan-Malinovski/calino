@@ -94,6 +94,22 @@ export async function reconcileNativeReminders(
   }
 }
 
+/**
+ * Drops every notification we have scheduled. Used when the Android calendar
+ * mirror takes over reminder duty, so the same event can't alert twice.
+ *
+ * Like `reconcileNativeReminders`, this clears pending snoozes too — they are
+ * scheduled through the same queue and there is no reason to keep a snooze
+ * alive for a reminder the OS is now going to raise itself.
+ */
+export async function cancelAllNativeReminders(): Promise<void> {
+  const pending = await LocalNotifications.getPending()
+  if (pending.notifications.length === 0) return
+  await LocalNotifications.cancel({
+    notifications: pending.notifications.map((n) => ({ id: n.id })),
+  })
+}
+
 export function listenForReminderActions(): () => void {
   const listenerPromise = LocalNotifications.addListener(
     'localNotificationActionPerformed',
