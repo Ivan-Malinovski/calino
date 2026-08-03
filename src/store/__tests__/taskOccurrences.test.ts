@@ -262,6 +262,30 @@ describe('R2.7 recurring task occurrences', () => {
       expect(undone!.removedOverrideIds).toEqual([done!.override!.id])
     })
 
+    it('can complete an occurrence straight off what the grid rendered', () => {
+      // Regression: the calendar grids tick a task via its rendered card,
+      // whose id is the synthetic `${masterId}-${occurrenceKey}`. That matches
+      // nothing in the store, so completing it silently did nothing — the
+      // checkbox in month/week/day view simply never responded. The rendered
+      // occurrence must carry enough identity to address its own master.
+      addRecurring({ start: '2026-03-03T00:00:00', end: '2026-03-03T23:59:59' })
+
+      const [rendered] = getTasksForDay(events(), '2026-03-17')
+      expect(rendered.occurrenceMasterId).toBe('gym')
+      expect(rendered.id).not.toBe('gym')
+
+      const plan = useCalendarStore
+        .getState()
+        .completeTaskOccurrence(rendered.occurrenceMasterId!, rendered.start, true)
+
+      expect(plan).not.toBeNull()
+      expect(plan!.override!.recurrenceId).toBe('2026-03-17T00:00:00')
+      expect(plan!.override!.taskStatus).toBe('COMPLETED')
+      // The series itself is untouched.
+      expect(plan!.master.rruleString).toBe('FREQ=WEEKLY;BYDAY=TU')
+      expect(plan!.master.completed).toBe(false)
+    })
+
     it('removes a pure completion marker when un-completing', () => {
       addRecurring()
       useCalendarStore.getState().addEvent(

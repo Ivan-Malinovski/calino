@@ -121,6 +121,14 @@ export interface CalendarEvent {
   recurrenceId?: string
   /** Local master identity for a detached recurrence occurrence. */
   recurrenceMasterId?: string
+  /**
+   * R2.7 — View-only. Set on an *expanded* occurrence (one the rule generated,
+   * as opposed to a stored detached override) and never persisted or
+   * serialized. It names the master this occurrence came from, so a card the
+   * user interacts with can act on the series without parsing its synthetic
+   * `${masterId}-${occurrenceKey}` id back apart.
+   */
+  occurrenceMasterId?: string
   /** Raw VEVENT STATUS value, including cancelled detached occurrences. */
   eventStatus?: string
   isFragment?: boolean

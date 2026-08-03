@@ -255,6 +255,9 @@ export function materializeOccurrence(event: CalendarEvent, shape: OccurrenceSha
   }
   if (event.type === 'task') {
     occurrence.dueDate = occurrenceDueDate(event, shape)
+    // Lets an interactive card complete THIS occurrence without reverse
+    // engineering the master's id out of the synthetic occurrence id.
+    occurrence.occurrenceMasterId = event.id
   }
   return occurrence
 }
