@@ -65,6 +65,7 @@ import { DayView } from './DayView'
 import type { CalendarEvent, ViewType } from '@/types'
 import { getJournalDates, getTasksForDay } from '@/store/calendarStore'
 import { hasDueTime } from '@/lib/events'
+import { consumesVerticalScroll } from '@/lib/scrollChaining'
 import styles from './CalendarGrid.module.css'
 
 // Shared by the button and span forms of the journal indicator (see the
@@ -94,6 +95,13 @@ const VIEW_ROUTES: Record<ViewType, string> = {
   journal: '/journal',
   contacts: '/contacts',
 }
+
+/**
+ * How long after a scroll that the content consumed to keep ignoring the wheel
+ * for navigation. Covers the momentum tail of a trackpad flick, which keeps
+ * firing events for a while after the scroller has hit its end.
+ */
+const SCROLL_CHAIN_QUIET_MS = 500
 
 export function CalendarGrid(): JSX.Element {
   const currentDate = useCalendarStore((state) => state.currentDate)
@@ -207,6 +215,7 @@ export function CalendarGrid(): JSX.Element {
   const splitRatioRef = useRef(splitRatio)
   const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const scrollCooldownRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const lastConsumedScrollRef = useRef(0)
   const currentDateRef = useRef(currentDate)
   const containerRef = useRef<HTMLDivElement>(null)
   // Track active resize listeners for cleanup on unmount
@@ -279,11 +288,25 @@ export function CalendarGrid(): JSX.Element {
       if (scrollCooldownRef.current) return
       if (Math.abs(e.deltaY) < 20) return
 
+      const direction = e.deltaY > 0 ? 'down' : 'up'
+
+      // A short window is the whole reason this check exists: the grid then
+      // overflows its scroller, and every scroll to reach the bottom row also
+      // flipped the month out from under the user. Reading the calendar takes
+      // precedence — navigate only once the content has nowhere left to go
+      // this way.
+      if (consumesVerticalScroll(e.target, direction)) {
+        lastConsumedScrollRef.current = Date.now()
+        return
+      }
+      // Momentum from that scroll keeps firing after the edge is reached, so a
+      // flick down to the last row would land on the next month regardless.
+      // Ignore the tail; a deliberate second gesture still navigates.
+      if (Date.now() - lastConsumedScrollRef.current < SCROLL_CHAIN_QUIET_MS) return
+
       if (scrollTimeoutRef.current) {
         clearTimeout(scrollTimeoutRef.current)
       }
-
-      const direction = e.deltaY > 0 ? 'down' : 'up'
 
       scrollCooldownRef.current = setTimeout(() => {
         scrollCooldownRef.current = null
