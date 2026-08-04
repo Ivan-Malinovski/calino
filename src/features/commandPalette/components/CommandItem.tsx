@@ -1,5 +1,5 @@
 import type { JSX } from 'react'
-import { format } from 'date-fns'
+import { format, parseISO } from 'date-fns'
 import { formatTime } from '@/lib/datetime'
 import type { Command, EventResult, CalendarResult, QuickAddResult } from '../types'
 import type { TimeFormat } from '@/types'
@@ -36,12 +36,20 @@ export function renderCommandItemContent({
   if (type === 'event') {
     const event = item as EventResult
     const calendarColor = '#4285F4'
+    // `new Date(...)` reads a bare 'yyyy-MM-dd' as UTC midnight, which shifts
+    // the day itself west of Greenwich — parseISO keeps it local. Journal
+    // entries are day-scoped, so they get no time either way.
+    const start = parseISO(event.start)
+    const dayOnly = event.type === 'journal' || !event.start.includes('T')
     return (
       <>
         <span className={styles.eventColor} style={{ backgroundColor: calendarColor }} />
         <div className={styles.body}>
           <div className={styles.title}>{event.title}</div>
-          <div className={styles.desc}>{new Date(event.start).toLocaleString()}</div>
+          <div className={styles.desc}>
+            {format(start, 'EEE, d MMM yyyy')}
+            {!dayOnly && ` ${formatTime(start, timeFormat)}`}
+          </div>
         </div>
       </>
     )
