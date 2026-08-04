@@ -263,6 +263,7 @@ export function useCommandPalette({ toggleSidebar, sidebarOpen }: UseCommandPale
             title: event.title,
             start: event.start,
             calendarId: event.calendarId,
+            type: event.type,
           })
           if (results.length === MAX_EVENT_RESULTS) break
         }
@@ -370,7 +371,9 @@ export function useCommandPalette({ toggleSidebar, sidebarOpen }: UseCommandPale
         return labelMatch || keywordMatch || descMatch
       })
       .map(commandToItem)
-    const eventItems = searchEvents(query).map((event) => eventToItem(event, openModal))
+    const eventItems = searchEvents(query).map((event) =>
+      eventToItem(event, openModal, openJournalModal)
+    )
     const calendarItems = searchCalendars(query).map((cal) => calendarToItem(cal, navigate))
 
     return [...commandItems, ...calendarItems, ...eventItems]
@@ -387,6 +390,7 @@ export function useCommandPalette({ toggleSidebar, sidebarOpen }: UseCommandPale
     addEvent,
     createCalDAVEvent,
     openModal,
+    openJournalModal,
     navigate,
   ])
 
@@ -432,7 +436,8 @@ function commandToItem(cmd: Command): CommandPaletteItem {
 
 function eventToItem(
   event: EventResult,
-  openModal: (date?: string, endDate?: string, eventId?: string) => void
+  openModal: (date?: string, endDate?: string, eventId?: string) => void,
+  openJournalModal: (date: string, startInCompose?: boolean) => void
 ): CommandPaletteItem {
   return {
     id: `event-${event.id}`,
@@ -440,7 +445,14 @@ function eventToItem(
     group: 'event',
     keywords: [],
     onSelect: async () => {
-      openModal(event.start, undefined, event.id)
+      if (event.type === 'journal') {
+        // Journal entries live in the journal day modal — the event modal
+        // can't render one (it filters journals out of its own lookup).
+        // That modal is keyed by day, not by entry id.
+        openJournalModal(event.start.split('T')[0])
+      } else {
+        openModal(event.start, undefined, event.id)
+      }
       return { success: true, message: `Opened: ${event.title}` }
     },
     data: event,

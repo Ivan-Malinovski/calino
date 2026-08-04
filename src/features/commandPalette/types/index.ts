@@ -1,4 +1,4 @@
-import type { ViewType } from '@/types'
+import type { CalendarEvent, ViewType } from '@/types'
 
 export type CommandCategory = 'navigation' | 'actions' | 'settings' | 'event'
 
@@ -37,6 +37,9 @@ export interface EventResult {
   title: string
   start: string
   calendarId: string
+  /** Which modal the result opens. Journal entries belong to the journal
+   *  day modal, not the event modal. Absent means a plain event. */
+  type?: CalendarEvent['type']
 }
 
 export interface ExecuteResult {
