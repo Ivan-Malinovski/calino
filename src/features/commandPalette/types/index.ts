@@ -55,6 +55,8 @@ export type CommandPaletteItemGroup =
   | 'settings'
   | 'calendars'
   | 'event'
+  | 'task'
+  | 'journal'
   | 'quick-add'
 
 export type CommandPaletteItemData = Command | CalendarResult | EventResult | QuickAddResult

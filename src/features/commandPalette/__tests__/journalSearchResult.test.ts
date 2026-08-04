@@ -29,6 +29,15 @@ const mockEvents: CalendarEvent[] = [
     isAllDay: true,
     type: 'journal',
   },
+  {
+    id: 'tk-1',
+    calendarId: 'cal1',
+    title: 'Book dentist follow-up',
+    start: '2024-03-16T09:00:00Z',
+    end: '2024-03-16T09:00:00Z',
+    isAllDay: false,
+    type: 'task',
+  },
 ]
 
 vi.mock('@/store/calendarStore', () => ({
@@ -113,6 +122,15 @@ describe('command palette — opening a search result', () => {
 
     expect(openJournalModal).toHaveBeenCalledWith('2024-03-15')
     expect(openModal).not.toHaveBeenCalled()
+  })
+
+  it('files journal entries and tasks under their own headings, not "Events"', async () => {
+    const result = await search('Dentist')
+
+    const groups = Object.fromEntries(result.current.items.map((i) => [i.id, i.group]))
+    expect(groups['event-jr-1']).toBe('journal')
+    expect(groups['event-tk-1']).toBe('task')
+    expect(groups['event-ev-1']).toBe('event')
   })
 
   it('still opens a plain event in the event modal', async () => {

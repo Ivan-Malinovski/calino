@@ -35,6 +35,8 @@ const GROUP_ORDER: CommandPaletteItemGroup[] = [
   'actions',
   'settings',
   'event',
+  'task',
+  'journal',
   'quick-add',
   'calendars',
 ]
@@ -46,6 +48,8 @@ function getCategoryLabel(category: CommandPaletteItemGroup): string {
     settings: 'Settings',
     calendars: 'Calendars',
     event: 'Events',
+    task: 'Tasks',
+    journal: 'Journal',
     'quick-add': 'Quick Add',
   }
   return labels[category] || category

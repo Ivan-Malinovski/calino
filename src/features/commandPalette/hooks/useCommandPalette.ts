@@ -442,7 +442,7 @@ function eventToItem(
   return {
     id: `event-${event.id}`,
     value: `${event.title} ${new Date(event.start).toLocaleString()}`,
-    group: 'event',
+    group: event.type === 'journal' ? 'journal' : event.type === 'task' ? 'task' : 'event',
     keywords: [],
     onSelect: async () => {
       if (event.type === 'journal') {
