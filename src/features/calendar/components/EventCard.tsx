@@ -21,7 +21,12 @@ import { deleteEventWithUndo } from '@/lib/deleteWithUndo'
 import { deleteRecurringOccurrence } from '@/lib/recurrenceDelete'
 import { showToast } from '@/lib/toast'
 
-import { extractOriginalEventId, hasDueTime, formatTravelDuration } from '@/lib/events'
+import {
+  extractOriginalEventId,
+  findEventById,
+  hasDueTime,
+  formatTravelDuration,
+} from '@/lib/events'
 import { hapticIfEnabled } from '@/lib/haptics'
 import { LocationLink } from './LocationLink'
 import { EventBackground } from '@/components/common/EventBackground'
@@ -81,6 +86,7 @@ export const EventCard = React.memo(function EventCard({
   const addEvent = useCalendarStore((state) => state.addEvent)
   const duplicateEvent = useCalendarStore((state) => state.duplicateEvent)
   const timeFormat = useSettingsStore((state) => state.timeFormat)
+  const defaultDuration = useSettingsStore((state) => state.defaultDuration)
   const {
     deleteEvent: deleteCalDAVEvent,
     updateEvent: updateCalDAVEvent,
@@ -719,15 +725,54 @@ export const EventCard = React.memo(function EventCard({
                         // start/end. Carry the event's start over as the due
                         // date; converting back to an event clears it since
                         // start/end already hold the real time.
+                        // A recurring occurrence's id is the synthetic
+                        // `${masterId}-${occurrenceKey}` and matches nothing in
+                        // the store, so updating it was a silent no-op — the
+                        // conversion just didn't happen. Convert the series.
+                        const target =
+                          findEventById(useCalendarStore.getState().events, event.id) ?? event
                         const updates: Partial<CalendarEvent> = {
                           type: newType,
-                          dueDate: newType === 'task' ? event.start : undefined,
+                          dueDate: newType === 'task' ? target.start : undefined,
                         }
-                        updateEvent(event.id, updates)
+                        if (newType === 'event') {
+                          // A task's `end` is its DUE (see parseVTodo, which sets
+                          // `end = dueDate || start`) — an anchor, not the end of a
+                          // range. A whole-day task's DUE is typically the following
+                          // midnight, so inheriting it as an event end made the
+                          // converted event span two days in the month grid, which
+                          // splits anything with start/end on different dates.
+                          // Tasks are filtered out of that grid, which is why the bad
+                          // end only ever showed up after converting. Build a real
+                          // single-day range off the date the task actually sat on.
+                          const anchor = target.dueDate || target.start
+                          const day = anchor.split('T')[0]
+                          if (target.isAllDay) {
+                            // All-day events store `end` as the inclusive last day at
+                            // midnight (see EventModal's endDateTime).
+                            updates.start = `${day}T00:00:00`
+                            updates.end = `${day}T00:00:00`
+                          } else {
+                            updates.start = anchor
+                            updates.end = new Date(
+                              parseISO(anchor).getTime() + defaultDuration * 60000
+                            ).toISOString()
+                          }
+                          // Task-only state has no meaning on an event, and a
+                          // leftover `completed` keeps rendering the struck-through
+                          // "done" styling.
+                          updates.completed = undefined
+                          updates.taskStatus = undefined
+                          updates.percentComplete = undefined
+                          updates.completedAt = undefined
+                          updates.priority = undefined
+                          updates.parentTaskId = undefined
+                        }
+                        updateEvent(target.id, updates)
                         await safeCalDAVUpdate(
                           updateCalDAVEvent,
-                          event.calendarId,
-                          { ...event, ...updates },
+                          target.calendarId,
+                          { ...target, ...updates },
                           updates
                         )
                       },
@@ -767,6 +812,7 @@ export const EventCard = React.memo(function EventCard({
         createPortal(
           <DeleteDialog
             isOpen={showDeleteDialog}
+            isTask={isTask}
             onClose={() => setShowDeleteDialog(false)}
             onConfirm={async (mode) => {
               const ok = await deleteRecurringOccurrence({

@@ -5,18 +5,22 @@ import { useModalDismiss } from '@/hooks/useModalDismiss'
 import type { RecurrenceEditMode } from '@/types'
 import styles from './DeleteDialog.module.css'
 
-
 interface DeleteDialogProps {
   isOpen: boolean
   onClose: () => void
   onConfirm: (mode: RecurrenceEditMode) => void
+  /** Word the choices as "tasks" rather than "events". */
+  isTask?: boolean
 }
 
 export function DeleteDialog({
   isOpen,
   onClose,
   onConfirm,
+  isTask = false,
 }: DeleteDialogProps): JSX.Element | null {
+  const noun = isTask ? 'task' : 'event'
+  const nounPlural = isTask ? 'tasks' : 'events'
   const { rendered, closing, requestClose } = useAnimatedClose(isOpen, onClose, 150)
   const modalRef = useRef<HTMLDivElement>(null)
   useModalDismiss(modalRef, rendered && !closing, requestClose)
@@ -33,7 +37,7 @@ export function DeleteDialog({
         onClick={(e) => e.stopPropagation()}
       >
         <div className={styles.header}>
-          <h2 className={styles.title}>Delete recurring event</h2>
+          <h2 className={styles.title}>Delete recurring {noun}</h2>
           <button className={styles.closeButton} onClick={requestClose} aria-label="Close">
             <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none">
               <path
@@ -46,20 +50,20 @@ export function DeleteDialog({
           </button>
         </div>
         <div className={styles.content}>
-          <p className={styles.message}>How would you like to delete this event?</p>
+          <p className={styles.message}>How would you like to delete this {noun}?</p>
           <div className={styles.buttons}>
             <button type="button" className={styles.deleteButton} onClick={() => onConfirm('all')}>
-              All events
+              All {nounPlural}
             </button>
             <button type="button" className={styles.deleteButton} onClick={() => onConfirm('this')}>
-              This event only
+              This {noun} only
             </button>
             <button
               type="button"
               className={styles.deleteButton}
               onClick={() => onConfirm('future')}
             >
-              This and following events
+              This and following {nounPlural}
             </button>
             <button type="button" className={styles.cancelButton} onClick={requestClose}>
               Cancel

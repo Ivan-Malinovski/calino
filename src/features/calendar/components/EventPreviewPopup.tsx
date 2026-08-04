@@ -308,7 +308,12 @@ export function EventPreviewPopup({
           return
         }
       } else {
+        // Spread the master rather than listing fields: a literal silently
+        // dropped `type`, so a recurring *task* occurrence came back as an
+        // event (issue #96 — same fix as EventModal's exceptionEvent).
+        const base = masterEvent ?? event
         const exceptionEvent: CalendarEvent = {
+          ...base,
           id: clickedEventId,
           uid: masterEvent?.uid || masterEvent?.id || event.uid || event.id,
           title: pendingUpdates.title ?? event.title,
@@ -318,10 +323,17 @@ export function EventPreviewPopup({
           end: pendingUpdates.end ?? effectiveEnd,
           isAllDay: event.isAllDay,
           calendarId: event.calendarId,
+          // A detached override carries no rule of its own, and none of the
+          // master's EXDATEs.
           recurrence: undefined,
           rruleString: undefined,
+          excludedDates: undefined,
           recurrenceId: occurrenceStartISO,
           recurrenceMasterId: originalEventId || eventIdToUse,
+          // The master's DUE is the series anchor, not this occurrence's date.
+          dueDate:
+            base.type === 'task' ? (pendingUpdates.dueDate ?? occurrenceStartISO) : undefined,
+          sequence: 0,
         }
         if (masterEvent) {
           const masterWithoutLegacyExdate = {
@@ -360,8 +372,14 @@ export function EventPreviewPopup({
         { excludedDates, recurrence, rruleString }
       )
 
+      // Same reason as the 'this' branch above: spread so the split series
+      // keeps the master's type (task vs event) and task fields.
       const newSeriesEvent: CalendarEvent = {
+        ...masterEvent,
         id: uuidv4(),
+        // A new series is a new VTODO/VEVENT — reusing the master's UID would
+        // collide with it on the server.
+        uid: undefined,
         calendarId: masterEvent.calendarId,
         title: pendingUpdates.title ?? masterEvent.title,
         description: pendingUpdates.description ?? masterEvent.description,
@@ -371,8 +389,15 @@ export function EventPreviewPopup({
         isAllDay: masterEvent.isAllDay,
         recurrence: newSeriesRecurrence,
         rruleString: newSeriesRrule,
+        // The truncation EXDATEs belong to the old master only.
+        excludedDates: undefined,
+        recurrenceId: undefined,
+        recurrenceMasterId: undefined,
+        dueDate:
+          masterEvent.type === 'task' ? (pendingUpdates.dueDate ?? occurrenceStartISO) : undefined,
         reminders: masterEvent.reminders,
         transparency: masterEvent.transparency,
+        sequence: 0,
       }
       store.addEvent(newSeriesEvent)
       try {
@@ -394,6 +419,16 @@ export function EventPreviewPopup({
         if (allUpdates.end) {
           const masterEndDate = format(parseISO(masterEvent.end), 'yyyy-MM-dd')
           allUpdates.end = `${masterEndDate}T${allUpdates.end.split('T')[1]}`
+        }
+        // A task's DUE is its anchor the same way `start` is, and `start` was
+        // just pinned to the master's date above — leaving the clicked
+        // occurrence's date here would make the two disagree and render the
+        // series on a day it doesn't start on.
+        if (allUpdates.dueDate) {
+          const masterDueDate =
+            masterEvent.dueDate?.split('T')[0] ?? format(parseISO(masterEvent.start), 'yyyy-MM-dd')
+          const dueTimePart = allUpdates.dueDate.split('T')[1]
+          allUpdates.dueDate = dueTimePart ? `${masterDueDate}T${dueTimePart}` : masterDueDate
         }
       }
       updateEvent(eventIdToUse, allUpdates)
@@ -1132,6 +1167,7 @@ export function EventPreviewPopup({
         <DeleteDialog
           key="delete-dialog"
           isOpen={showDeleteDialog}
+          isTask={isTask}
           onClose={() => setShowDeleteDialog(false)}
           onConfirm={(mode) => {
             performDelete(mode)
@@ -1143,6 +1179,7 @@ export function EventPreviewPopup({
         <RecurrenceDialog
           key="recurrence-dialog"
           isOpen={showRecurrenceDialog}
+          isTask={isTask}
           onClose={() => {
             setShowRecurrenceDialog(false)
             setPendingUpdates(null)

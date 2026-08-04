@@ -12,7 +12,7 @@ import { buildRRuleString } from '@/lib/recurrence'
 import { hasRecurrenceChanged } from '@/lib/recurrenceComparison'
 import { findEventById } from '@/lib/events'
 import { buildMasterTruncation } from '@/lib/recurrenceSplit'
-import { deleteRecurringOccurrence } from '@/lib/recurrenceDelete'
+import { deleteRecurringOccurrence, getOccurrenceStart } from '@/lib/recurrenceDelete'
 import type {
   CalendarEvent,
   CalendarAttachment,
@@ -99,9 +99,11 @@ export function EventModal(): JSX.Element | null {
     deleteEvent: deleteCalDAVEvent,
   } = useCalDAV()
 
-  const existingEvent = selectedEventId
-    ? events.find((event) => event.id === selectedEventId)
-    : undefined
+  // R2.7 — findEventById, not an exact match: an expanded occurrence's id is
+  // the synthetic `${masterId}-${occurrenceKey}`, which matches nothing in the
+  // store. An exact lookup made every recurring *task* occurrence look like an
+  // untyped event, so the calendar picker offered VEVENT-only calendars.
+  const existingEvent = findEventById(events, selectedEventId)
   const requiredCalendarComponent =
     selectedEventType === 'task' || existingEvent?.type === 'task' ? 'VTODO' : 'VEVENT'
   const compatibleCalendars = useMemo(
@@ -180,6 +182,12 @@ export function EventModal(): JSX.Element | null {
   // user hasn't touched yet.
   const calendarTouchedRef = useRef(false)
   const durationTouchedRef = useRef(false)
+  // R2.7 — The due date the form was *seeded* with. For a recurring task the
+  // modal is seeded with the clicked occurrence's date, not the series anchor,
+  // so an "apply to all" edit that never touched the due field must not write
+  // that occurrence date back over the master's DUE (which would drag the whole
+  // series forward to whichever occurrence happened to be edited).
+  const seededDueDateRef = useRef('')
 
   const handleEndTimeChange = useCallback((val: string): void => {
     durationTouchedRef.current = true
@@ -410,9 +418,7 @@ export function EventModal(): JSX.Element | null {
       const state = useCalendarStore.getState()
       const currentEvents = state.events
       const currentSelectedEventType = state.selectedEventType
-      const currentEvent = selectedEventId
-        ? currentEvents.find((event) => event.id === selectedEventId)
-        : undefined
+      const currentEvent = findEventById(currentEvents, selectedEventId)
       const requiredComponent =
         currentSelectedEventType === 'task' || currentEvent?.type === 'task' ? 'VTODO' : 'VEVENT'
       const currentCalendars = state.calendars.filter(
@@ -488,9 +494,7 @@ export function EventModal(): JSX.Element | null {
       // the store, so an exact lookup found no task at all and fell through to
       // the "new task" branch below — which dated the form TODAY. That hit
       // every recurring task opened from a calendar view.
-      const existingEvent = selectedEventId
-        ? findEventById(currentEvents, selectedEventId)
-        : undefined
+      const existingEvent = currentEvent
       if (existingEvent?.type === 'task') {
         // For an expanded occurrence the id carries the date it stands for.
         // The master's own dueDate is the series anchor, which is a different
@@ -505,23 +509,26 @@ export function EventModal(): JSX.Element | null {
           existingEvent.dueDate?.split('T')[0] ||
           format(parseISO(existingEvent.start), 'yyyy-MM-dd')
         setDueDate(taskDueDate)
+        seededDueDateRef.current = taskDueDate
         const taskTime = format(parseISO(existingEvent.start), 'HH:mm')
         setDueTime(taskTime !== '00:00' ? taskTime : '09:00')
         setDueAllDay(existingEvent.isAllDay ?? true)
         setCompleted(existingEvent.completed || false)
         setPriority(existingEvent.priority)
       } else if (currentSelectedEventType === 'task') {
-        setDueDate(
+        const newTaskDueDate =
           requestedParent?.dueDate?.split('T')[0] ||
-            selectedDate ||
-            format(new Date(), 'yyyy-MM-dd')
-        )
+          selectedDate ||
+          format(new Date(), 'yyyy-MM-dd')
+        setDueDate(newTaskDueDate)
+        seededDueDateRef.current = newTaskDueDate
         setDueTime('09:00')
         setDueAllDay(true)
         setCompleted(false)
         setPriority(undefined)
       } else {
         setDueDate('')
+        seededDueDateRef.current = ''
         setDueTime('09:00')
         setDueAllDay(true)
         setCompleted(false)
@@ -551,9 +558,12 @@ export function EventModal(): JSX.Element | null {
   const isRecurringEvent = initialState.recurring
   const showSuggestions = !isEditing && titleSuggestions.length > 0
   const originalEventId = initialState.originalEventId
-  const existingEventForMode = selectedEventId
-    ? events.find((e) => e.id === selectedEventId)
-    : undefined
+  // R2.7 — Must resolve occurrence ids back to their master. An exact match
+  // left `eventType` undefined for every expanded occurrence of a recurring
+  // task, so `isTaskMode` was false and saving wrote `type: 'event'` — editing
+  // any occurrence silently converted the whole series into events, and the
+  // due-date/all-day fields were dropped on the way out.
+  const existingEventForMode = findEventById(events, selectedEventId)
   const eventType = existingEventForMode?.type
   const isTaskMode = selectedEventType === 'task' || eventType === 'task'
   const parentTaskOptions = useMemo(() => {
@@ -826,6 +836,9 @@ export function EventModal(): JSX.Element | null {
       // transparency), which has no VTODO meaning in the current scope.
       const effectiveRecurrence = recurrenceAllowed ? recurrenceRule : undefined
 
+      const taskTime = dueAllDay ? '00:00:00' : `${dueTime}:00`
+      const taskEndTime = dueAllDay ? '23:59:59' : `${dueTime}:00`
+
       if (isEditing && selectedEventId) {
         // For recurring-instance edits ("this occurrence" / "this and following"),
         // the clicked occurrence's date is encoded in the instance id as
@@ -835,19 +848,25 @@ export function EventModal(): JSX.Element | null {
         // (including any edits the user made in the form). Falls back to the form
         // date for non-instance ids (plain master edits).
         const selectedStoredEvent = events.find((event) => event.id === selectedEventId)
-        const selectedRecurrenceId = selectedStoredEvent?.recurrenceId
-        const occInstanceMatch = selectedEventId.match(
-          /-(\d{4}-\d{2}-\d{2})T\d{2}:\d{2}:\d{2}\.\d{3}Z$/
-        )
-        const occDateStr =
-          selectedRecurrenceId?.split('T')[0] ||
-          (occInstanceMatch ? occInstanceMatch[1] : startDate)
+        // R2.7 — Same resolution the delete path uses: a detached override's
+        // RECURRENCE-ID when there is one, otherwise the id's occurrence
+        // suffix. That suffix is a bare `YYYY-MM-DD` for all-day items — which
+        // every all-day recurring task is — and the old ISO-timestamp-only
+        // regex here rejected it outright ("Invalid event data").
+        const occurrenceKey = originalEventId
+          ? getOccurrenceStart(selectedStoredEvent, selectedEventId, originalEventId)
+          : undefined
+        const occDateStr = occurrenceKey?.split('T')[0] || startDate
         const durationMs = new Date(endDateTime).getTime() - new Date(startDateTime).getTime()
-        const occStartDateTime = isAllDay
-          ? `${occDateStr}T00:00:00`
-          : new Date(`${occDateStr}T${startTime}:00`).toISOString()
+        const occStartDateTime = isTaskMode
+          ? `${occDateStr}T${taskTime}`
+          : isAllDay
+            ? `${occDateStr}T00:00:00`
+            : new Date(`${occDateStr}T${startTime}:00`).toISOString()
         let occEndDateTime: string
-        if (isAllDay) {
+        if (isTaskMode) {
+          occEndDateTime = `${occDateStr}T${taskEndTime}`
+        } else if (isAllDay) {
           const spanDays = Math.round(
             (new Date(`${endDate}T00:00:00Z`).getTime() -
               new Date(`${startDate}T00:00:00Z`).getTime()) /
@@ -867,11 +886,7 @@ export function EventModal(): JSX.Element | null {
             return
           }
 
-          const isoDateMatch = selectedEventId.match(
-            /(.+)-(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z)$/
-          )
-          const originalOccurrenceDate =
-            selectedRecurrenceId || (isoDateMatch ? isoDateMatch[2] : null)
+          const originalOccurrenceDate = occurrenceKey
           if (!originalOccurrenceDate) {
             showToast('Invalid event data. Cannot edit single occurrence.')
             return
@@ -887,15 +902,26 @@ export function EventModal(): JSX.Element | null {
             location: location || undefined,
             start: occStartDateTime,
             end: occEndDateTime,
-            isAllDay,
+            isAllDay: isTaskMode ? dueAllDay : isAllDay,
             recurrence: undefined,
             rruleString: undefined,
             recurrenceId: originalOccurrenceDate,
             recurrenceMasterId: originalEventId,
             categories: selectedCategories,
-            travelDuration,
-            reminders,
-            transparency,
+            // A VTODO override keeps its task identity and its own DUE; the
+            // event-only fields below have no VTODO meaning (see R2.7).
+            type: isTaskMode ? 'task' : 'event',
+            dueDate: isTaskMode
+              ? dueAllDay
+                ? occDateStr
+                : `${occDateStr}T${taskTime}`
+              : undefined,
+            completed: isTaskMode ? completed : undefined,
+            priority: isTaskMode ? priority : undefined,
+            parentTaskId: isTaskMode ? parentTaskId : undefined,
+            travelDuration: isTaskMode ? undefined : travelDuration,
+            reminders: isTaskMode ? undefined : reminders,
+            transparency: isTaskMode ? undefined : transparency,
             sequence: 0,
             relatedTo: relatedTo.length > 0 ? relatedTo : undefined,
             attachments: attachments.length > 0 ? attachments : undefined,
@@ -932,11 +958,7 @@ export function EventModal(): JSX.Element | null {
             return
           }
 
-          const isoDateMatch = selectedEventId.match(
-            /(.+)-(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z)$/
-          )
-          const originalOccurrenceDate =
-            selectedRecurrenceId || (isoDateMatch ? isoDateMatch[2] : null)
+          const originalOccurrenceDate = occurrenceKey
           if (!originalOccurrenceDate) {
             showToast('Invalid event data. Cannot split series.')
             return
@@ -979,12 +1001,21 @@ export function EventModal(): JSX.Element | null {
             location: location || undefined,
             start: occStartDateTime,
             end: occEndDateTime,
-            isAllDay,
-            recurrence: recurrenceRule,
-            rruleString: recurrenceRule ? buildRRuleString(recurrenceRule) : undefined,
-            travelDuration,
-            reminders,
-            transparency,
+            isAllDay: isTaskMode ? dueAllDay : isAllDay,
+            recurrence: effectiveRecurrence,
+            rruleString: effectiveRecurrence ? buildRRuleString(effectiveRecurrence) : undefined,
+            type: isTaskMode ? 'task' : 'event',
+            dueDate: isTaskMode
+              ? dueAllDay
+                ? occDateStr
+                : `${occDateStr}T${taskTime}`
+              : undefined,
+            completed: isTaskMode ? completed : undefined,
+            priority: isTaskMode ? priority : undefined,
+            parentTaskId: isTaskMode ? parentTaskId : undefined,
+            travelDuration: isTaskMode ? undefined : travelDuration,
+            reminders: isTaskMode ? undefined : reminders,
+            transparency: isTaskMode ? undefined : transparency,
             sequence: 0,
             relatedTo: relatedTo.length > 0 ? relatedTo : undefined,
             attachments: attachments.length > 0 ? attachments : undefined,
@@ -1001,13 +1032,28 @@ export function EventModal(): JSX.Element | null {
           }
         } else {
           const eventId = originalEventId || selectedEventId
-          const taskTime = dueAllDay ? '00:00:00' : `${dueTime}:00`
-          const taskEndTime = dueAllDay ? '23:59:59' : `${dueTime}:00`
-          const eventStart = isTaskMode && dueDate ? `${dueDate}T${taskTime}` : startDateTime
-          const eventEnd = isTaskMode && dueDate ? `${dueDate}T${taskEndTime}` : endDateTime
+          // Editing the whole series from one occurrence: the form's due date is
+          // that occurrence's, so unless the user actually changed it, keep the
+          // master's own DUE as the series anchor.
+          const masterForSeries = originalEventId
+            ? events.find((e) => e.id === originalEventId)
+            : undefined
+          const seriesDueDate =
+            isTaskMode && masterForSeries && dueDate === seededDueDateRef.current
+              ? masterForSeries.dueDate?.split('T')[0] ||
+                format(parseISO(masterForSeries.start), 'yyyy-MM-dd')
+              : dueDate
+          const eventStart =
+            isTaskMode && seriesDueDate ? `${seriesDueDate}T${taskTime}` : startDateTime
+          const eventEnd =
+            isTaskMode && seriesDueDate ? `${seriesDueDate}T${taskEndTime}` : endDateTime
           // Include time in dueDate for non-all-day tasks so we can display it
           const taskDueDate =
-            isTaskMode && dueDate ? (dueAllDay ? dueDate : `${dueDate}T${taskTime}`) : undefined
+            isTaskMode && seriesDueDate
+              ? dueAllDay
+                ? seriesDueDate
+                : `${seriesDueDate}T${taskTime}`
+              : undefined
           updateEvent(eventId!, {
             title,
             description: description || undefined,
@@ -1113,8 +1159,6 @@ export function EventModal(): JSX.Element | null {
           }
         }
       } else {
-        const taskTime = dueAllDay ? '00:00:00' : `${dueTime}:00`
-        const taskEndTime = dueAllDay ? '23:59:59' : `${dueTime}:00`
         const eventStart = isTaskMode && dueDate ? `${dueDate}T${taskTime}` : startDateTime
         const eventEnd = isTaskMode && dueDate ? `${dueDate}T${taskEndTime}` : endDateTime
         // Include time in dueDate for non-all-day tasks so we can display it
@@ -1628,12 +1672,14 @@ export function EventModal(): JSX.Element | null {
         isOpen={showRecurrenceDialog}
         onClose={() => setShowRecurrenceDialog(false)}
         onConfirm={handleRecurrenceDialogConfirm}
+        isTask={isTaskMode}
       />
 
       <DeleteDialog
         isOpen={showDeleteDialog}
         onClose={() => setShowDeleteDialog(false)}
         onConfirm={performDelete}
+        isTask={isTaskMode}
       />
     </div>
   )

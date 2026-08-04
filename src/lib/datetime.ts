@@ -74,3 +74,18 @@ export function addMinutesToTimeStr(time: string, minutes: number): string {
   const endM = ((total % 60) + 60) % 60
   return `${pad2(endH)}:${pad2(endM)}`
 }
+
+/**
+ * Step a "HH:mm" string by `minutes`, wrapping across midnight in *either*
+ * direction. Unlike `addMinutesToTimeStr` this is safe for negative deltas —
+ * that one floors a negative total into a negative hour ("00:00" minus 15
+ * gives "-1:45"), which is fine for its callers (all pass durations forward)
+ * but not for stepping a field down past midnight. Returns `time` unchanged
+ * if it isn't parseable.
+ */
+export function stepTimeStr(time: string, minutes: number): string {
+  const [h, m] = time.split(':').map(Number)
+  if (!Number.isInteger(h) || !Number.isInteger(m)) return time
+  const total = (((h * 60 + m + minutes) % 1440) + 1440) % 1440
+  return `${pad2(Math.floor(total / 60))}:${pad2(total % 60)}`
+}
