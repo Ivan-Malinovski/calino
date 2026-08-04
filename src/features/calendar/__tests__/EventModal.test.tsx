@@ -601,6 +601,92 @@ describe('EventModal', () => {
     })
   })
 
+  /**
+   * Issue #96 — recurring tasks. The modal resolved `selectedEventId` with an
+   * exact store lookup, but an expanded occurrence's id is the synthetic
+   * `${masterId}-${occurrenceKey}` and matches nothing. That left the modal
+   * unable to tell it was editing a task at all: saving wrote `type: 'event'`
+   * (the whole series turned into events), the due-date fields were dropped,
+   * and the single-occurrence path rejected the all-day occurrence id outright.
+   */
+  describe('editing a recurring task (issue #96)', () => {
+    const seedRecurringTask = (occurrenceId = 'task-master-2024-03-15') => {
+      const store = useCalendarStore.getState()
+      store.addEvent({
+        id: 'task-master',
+        uid: 'task-master',
+        calendarId: 'default',
+        title: 'Water the plants',
+        start: '2024-03-01T00:00:00',
+        end: '2024-03-01T23:59:59',
+        isAllDay: true,
+        type: 'task',
+        dueDate: '2024-03-01',
+        recurrence: { frequency: 'weekly', interval: 1 },
+      })
+      store.openModal(undefined, undefined, occurrenceId)
+    }
+
+    it('stays a task when an occurrence is renamed and applied to all events', async () => {
+      seedRecurringTask()
+      render(<EventModal />)
+
+      fireEvent.change(screen.getByPlaceholderText('Task title'), {
+        target: { value: 'Water the ferns' },
+      })
+      fireEvent.click(screen.getByRole('button', { name: /save/i }))
+      fireEvent.click(screen.getByRole('button', { name: /all tasks/i }))
+
+      await waitFor(() => {
+        const master = useCalendarStore.getState().events.find((e) => e.id === 'task-master')
+        expect(master?.title).toBe('Water the ferns')
+        expect(master?.type).toBe('task')
+        expect(master?.recurrence?.frequency).toBe('weekly')
+        // The series anchor must not be dragged to the edited occurrence.
+        expect(master?.dueDate).toBe('2024-03-01')
+        expect(master?.start).toContain('2024-03-01')
+      })
+    })
+
+    it('edits a single all-day occurrence instead of rejecting its date-only id', async () => {
+      seedRecurringTask()
+      render(<EventModal />)
+
+      fireEvent.change(screen.getByPlaceholderText('Task title'), {
+        target: { value: 'Just this once' },
+      })
+      fireEvent.click(screen.getByRole('button', { name: /save/i }))
+      fireEvent.click(screen.getByRole('button', { name: /this task only/i }))
+
+      await waitFor(() => {
+        const events = useCalendarStore.getState().events
+        expect(events.find((e) => e.id === 'task-master')?.title).toBe('Water the plants')
+        const exception = events.find((e) => e.title === 'Just this once')
+        expect(exception).toBeDefined()
+        expect(exception?.type).toBe('task')
+        expect(exception?.recurrenceId).toBe('2024-03-15')
+        expect(exception?.dueDate).toBe('2024-03-15')
+        expect(exception?.recurrence).toBeUndefined()
+      })
+    })
+
+    it('applies a switch from date-only to date-and-time across the series', async () => {
+      seedRecurringTask()
+      render(<EventModal />)
+
+      fireEvent.click(screen.getByText('Due date and time'))
+      fireEvent.click(screen.getByRole('button', { name: /save/i }))
+      fireEvent.click(screen.getByRole('button', { name: /all tasks/i }))
+
+      await waitFor(() => {
+        const master = useCalendarStore.getState().events.find((e) => e.id === 'task-master')
+        expect(master?.type).toBe('task')
+        expect(master?.isAllDay).toBe(false)
+        expect(master?.dueDate).toContain('T')
+      })
+    })
+  })
+
   describe('date field changes preserve start<=end (issue #44)', () => {
     it('shifts the end date along with the start date for an overnight event, keeping the range valid', () => {
       const store = useCalendarStore.getState()

@@ -5,18 +5,22 @@ import { useModalDismiss } from '@/hooks/useModalDismiss'
 import type { RecurrenceEditMode } from '@/types'
 import styles from './RecurrenceDialog.module.css'
 
-
 interface RecurrenceDialogProps {
   isOpen: boolean
   onClose: () => void
   onConfirm: (mode: RecurrenceEditMode) => void
+  /** Word the choices as "tasks" rather than "events". */
+  isTask?: boolean
 }
 
 export function RecurrenceDialog({
   isOpen,
   onClose,
   onConfirm,
+  isTask = false,
 }: RecurrenceDialogProps): JSX.Element | null {
+  const noun = isTask ? 'task' : 'event'
+  const nounPlural = isTask ? 'tasks' : 'events'
   const { rendered, closing, requestClose } = useAnimatedClose(isOpen, onClose, 150)
   const modalRef = useRef<HTMLDivElement>(null)
   useModalDismiss(modalRef, rendered && !closing, requestClose)
@@ -33,7 +37,7 @@ export function RecurrenceDialog({
         onClick={(e) => e.stopPropagation()}
       >
         <div className={styles.header}>
-          <h2 className={styles.title}>Edit recurring event</h2>
+          <h2 className={styles.title}>Edit recurring {noun}</h2>
           <button className={styles.closeButton} onClick={requestClose} aria-label="Close">
             <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none">
               <path
@@ -49,17 +53,17 @@ export function RecurrenceDialog({
           <p className={styles.message}>How would you like to apply these changes?</p>
           <div className={styles.buttons}>
             <button type="button" className={styles.actionButton} onClick={() => onConfirm('all')}>
-              All events
+              All {nounPlural}
             </button>
             <button
               type="button"
               className={styles.actionButton}
               onClick={() => onConfirm('future')}
             >
-              This and following events
+              This and following {nounPlural}
             </button>
             <button type="button" className={styles.actionButton} onClick={() => onConfirm('this')}>
-              This event only
+              This {noun} only
             </button>
             <button type="button" className={styles.cancelButton} onClick={requestClose}>
               Cancel
