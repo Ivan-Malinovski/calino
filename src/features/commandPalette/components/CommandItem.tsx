@@ -45,10 +45,22 @@ export function renderCommandItemContent({
       <>
         <span className={styles.eventColor} style={{ backgroundColor: calendarColor }} />
         <div className={styles.body}>
-          <div className={styles.title}>{event.title}</div>
+          <div className={styles.title}>
+            {event.title}
+            {event.recurrence && (
+              <span
+                className={styles.recurringBadge}
+                title={event.recurrence}
+                aria-label="Recurring"
+              >
+                ↻
+              </span>
+            )}
+          </div>
           <div className={styles.desc}>
             {format(start, 'EEE, d MMM yyyy')}
             {!dayOnly && ` ${formatTime(start, timeFormat)}`}
+            {event.recurrence && ` · ${event.recurrence}`}
           </div>
         </div>
       </>

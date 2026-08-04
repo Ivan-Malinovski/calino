@@ -321,6 +321,14 @@
   flex-shrink: 0;
 }
 
+/* Marks a result as one occurrence of a series. Sits inside .title, which
+   ellipsizes — the glyph is small enough to survive a long title. */
+.item .recurringBadge {
+  margin-left: 5px;
+  font-size: 11px;
+  color: var(--ink-3, #a39d93);
+}
+
 .item .confidence {
   color: var(--accent-strong, var(--accent, #b07d4f));
   font-weight: 500;

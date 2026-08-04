@@ -46,6 +46,18 @@ describe('command palette — event result row', () => {
     expect(screen.getByText('Fri, 15 Mar 2024 09:30')).toBeInTheDocument()
   })
 
+  it('marks a recurring result, and names the rule', () => {
+    row({ start: '2024-03-15T09:30:00', recurrence: 'Every week on Friday' })
+
+    expect(screen.getByLabelText('Recurring')).toBeInTheDocument()
+    expect(screen.getByText(/Every week on Friday/)).toBeInTheDocument()
+  })
+
+  it('leaves a one-off result unmarked', () => {
+    row({ start: '2024-03-15T09:30:00' })
+    expect(screen.queryByLabelText('Recurring')).not.toBeInTheDocument()
+  })
+
   it('honours the 12h preference', () => {
     row({ start: '2024-03-15T09:30:00' }, '12h')
     expect(screen.getByText('Fri, 15 Mar 2024 9:30 AM')).toBeInTheDocument()

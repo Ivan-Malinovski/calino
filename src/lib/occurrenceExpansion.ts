@@ -209,6 +209,68 @@ export function nextOpenOccurrence(
 }
 
 /**
+ * The occurrence of a series that best represents it *now*: the next one due,
+ * or — for a series that has finished — the most recent past one.
+ *
+ * Unlike {@link nextOpenOccurrence}, which walks from the master's own start
+ * looking for unfinished work, this is anchored on the current instant. Callers
+ * that show a series as a single row (search results, deep links) want the
+ * occurrence a user would recognise, not the one the series began with, which
+ * for a long-running weekly is years stale.
+ *
+ * EXDATE'd occurrences are skipped in both directions. Overrides are not: a
+ * detached instance is a real occurrence of the series and still the right
+ * thing to point at. Returns null for a non-recurring or unparseable master.
+ */
+export function displayOccurrence(master: CalendarEvent, now: Date): OccurrenceShape | null {
+  const rruleString = resolveRRuleString(master)
+  if (!rruleString) return null
+
+  const masterStart = parseISO(master.start)
+  const masterEnd = parseISO(master.end)
+  let rule: RRule
+  try {
+    rule = new RRule({
+      ...RRule.parseString(rruleString),
+      dtstart: rruleAnchor(master, masterStart),
+    })
+  } catch {
+    return null
+  }
+
+  // `now` has to be mapped into the frame the rule generates in for the same
+  // reason `rruleWindow` exists: an all-day series produces UTC midnights, so
+  // comparing them against a local instant is off by up to a day.
+  const [from] = rruleWindow(master.isAllDay, now, now)
+
+  const shapeOf = (occ: Date): OccurrenceShape =>
+    shapeOccurrence(occ, masterStart, masterEnd, master.isAllDay)
+  const excluded = (occ: Date, shape: OccurrenceShape): boolean =>
+    isOccurrenceExcluded(occ, shape.occDateStr, master.isAllDay, master.excludedDates)
+
+  // Forward from just before `from`, so an occurrence happening right now counts.
+  let cursor = new Date(from.getTime() - 1)
+  for (let i = 0; i < MAX_OCCURRENCE_SCAN; i++) {
+    const occ = rule.after(cursor, false)
+    if (!occ) break
+    const shape = shapeOf(occ)
+    if (!excluded(occ, shape)) return shape
+    cursor = occ
+  }
+
+  // Series exhausted — fall back to the last occurrence that did happen.
+  cursor = from
+  for (let i = 0; i < MAX_OCCURRENCE_SCAN; i++) {
+    const occ = rule.before(cursor, true)
+    if (!occ) return null
+    const shape = shapeOf(occ)
+    if (!excluded(occ, shape)) return shape
+    cursor = new Date(occ.getTime() - 1)
+  }
+  return null
+}
+
+/**
  * The instant a RECURRENCE-ID names, read in the frame the rule generates in.
  *
  * All-day recurrence ids are floating dates and must be resolved to the same

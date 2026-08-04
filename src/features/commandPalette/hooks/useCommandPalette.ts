@@ -15,6 +15,8 @@ import { useSettingsStore, selectThemeMode, selectUpdateSettings } from '@/store
 import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
 import { createCommandRegistry, type Command } from '../commands'
 import { parseNaturalLanguage } from '@/features/nlp'
+import { displayOccurrence, resolveRRuleString } from '@/lib/occurrenceExpansion'
+import { describeRecurrence } from '@/lib/recurrence'
 import type {
   CommandPaletteItem,
   CommandPaletteItemGroup,
@@ -41,8 +43,11 @@ const PURE_DATE_KEYWORDS = [
   'next weekend',
 ]
 
-/** How many matching events the palette shows. Also bounds the search scan. */
+/** How many matching events the palette shows. */
 const MAX_EVENT_RESULTS = 5
+
+/** Matches scanned per displayed row, leaving room for series de-duplication. */
+const CANDIDATE_OVERSCAN = 4
 
 const DAY_NAMES = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
 
@@ -251,22 +256,50 @@ export function useCommandPalette({ toggleSidebar, sidebarOpen }: UseCommandPale
       // Explicit loop with an early exit rather than .filter().slice(0, 5):
       // filter runs the whole corpus to completion before slicing, so on a
       // large calendar every keystroke scanned every event and allocated two
-      // lowercased strings per event. We only ever show 5.
-      const results: EventResult[] = []
+      // lowercased strings per event.
+      //
+      // The cap is a multiple of what we display because matches still have to
+      // survive series de-duplication below; overshooting a little is cheaper
+      // than scanning the whole calendar.
+      const matches: CalendarEvent[] = []
       for (const event of events) {
         if (
           event.title.toLowerCase().includes(lowerQuery) ||
           event.location?.toLowerCase().includes(lowerQuery)
         ) {
-          results.push({
-            id: event.id,
-            title: event.title,
-            start: event.start,
-            calendarId: event.calendarId,
-            type: event.type,
-          })
-          if (results.length === MAX_EVENT_RESULTS) break
+          matches.push(event)
+          if (matches.length === MAX_EVENT_RESULTS * CANDIDATE_OVERSCAN) break
         }
+      }
+
+      // A detached override is a separate event in the store, so an edited
+      // occurrence matched alongside its own series and showed up as a second,
+      // near-identical row. Drop it when its master matched too — the series
+      // row already stands for it. An override that no longer resembles the
+      // series (a renamed occurrence, matching on its own) keeps its row.
+      const matchedIds = new Set(matches.map((event) => event.id))
+
+      const now = new Date()
+      const results: EventResult[] = []
+      for (const event of matches) {
+        if (event.recurrenceMasterId && matchedIds.has(event.recurrenceMasterId)) continue
+
+        // A series is shown as one row, dated at the occurrence a user would
+        // recognise — the next one — rather than at the master's DTSTART,
+        // which for a long-running weekly is years in the past. The synthetic
+        // occurrence id is what `findEventById` resolves, so the modal opens
+        // on that occurrence and its recurrence-scope dialog offers the right
+        // choices.
+        const shape = resolveRRuleString(event) ? displayOccurrence(event, now) : null
+        results.push({
+          id: shape ? `${event.id}-${shape.occKey}` : event.id,
+          title: event.title,
+          start: shape ? shape.occStartStr : event.start,
+          calendarId: event.calendarId,
+          type: event.type,
+          recurrence: shape ? describeRecurrence(event) : undefined,
+        })
+        if (results.length === MAX_EVENT_RESULTS) break
       }
       return results
     },

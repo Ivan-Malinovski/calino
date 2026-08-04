@@ -40,6 +40,9 @@ export interface EventResult {
   /** Which modal the result opens. Journal entries belong to the journal
    *  day modal, not the event modal. Absent means a plain event. */
   type?: CalendarEvent['type']
+  /** Human-readable RRULE ("Every week on Monday") — set only for a series,
+   *  and the flag the row uses to mark itself recurring. */
+  recurrence?: string
 }
 
 export interface ExecuteResult {
@@ -50,14 +53,7 @@ export interface ExecuteResult {
 }
 
 export type CommandPaletteItemGroup =
-  | 'navigation'
-  | 'actions'
-  | 'settings'
-  | 'calendars'
-  | 'event'
-  | 'task'
-  | 'journal'
-  | 'quick-add'
+  'navigation' | 'actions' | 'settings' | 'calendars' | 'event' | 'task' | 'journal' | 'quick-add'
 
 export type CommandPaletteItemData = Command | CalendarResult | EventResult | QuickAddResult
 
