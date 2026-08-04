@@ -4,6 +4,8 @@ All notable changes to Calino will be documented in this file.
 
 ## [Unreleased]
 
+## [0.27.1] - 2026-08-04
+
 ### Added
 
 - **The time fields now respond to scrolling and to the arrow keys**, the way the date fields already did. Point at a start or end time and scroll, or focus it and press ↑/↓, to step it in 15-minute jumps — the same step the date fields use.
