@@ -4,6 +4,21 @@ All notable changes to Calino will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- **The time fields now respond to scrolling and to the arrow keys**, the way the date fields already did. Point at a start or end time and scroll, or focus it and press ↑/↓, to step it in 15-minute jumps — the same step the date fields use.
+- **Search results tell you what they are.** Tasks and journal entries have their own headings in the command palette rather than all being filed under "Events", and anything that repeats is marked with a ↻ and the pattern it follows ("Every week on Tuesday").
+
+### Fixed
+
+- **Editing a recurring task from the small preview popup no longer turns it into an event** ([#96](https://github.com/Ivan-Malinovski/calino/issues/96)). Editing through the full modal was fixed in 0.27.0, but the popup had the same fault untouched: choosing "this occurrence" or "this and following" rebuilt the task as an event and lost its due date, priority and completion state.
+- **A whole-day task converted to an event now stays on one day.** It stretched across two in the month view, because a task's due date was being carried over as the event's end.
+- **Editing or deleting a repeating task asks about "tasks".** Both dialogs offered "All events" / "This event only" whatever you had selected.
+- **Opening a journal entry from the command palette opens the journal**, rather than an event modal that couldn't display it.
+- **A repeating event or task found in the command palette is shown at its next occurrence**, not at the date the series began — which for a long-running weekly was years ago — and opening it lands on that occurrence, so an edit asks which occurrences you meant. An occurrence you've edited separately no longer appears as a second, near-identical result beside its own series.
+- **Dates in the command palette follow your 12/24-hour setting**, and an all-day or journal result no longer shows a spurious time — or, in a timezone behind UTC, the wrong day.
+- **Scrolling the month view no longer changes month while there's still calendar to see.** In a short window the grid doesn't fit, and every scroll towards the last week flipped the month instead of showing it. The month changes only once the grid has nothing left to scroll.
+
 ## [0.27.0] - 2026-08-03
 
 ### Added
