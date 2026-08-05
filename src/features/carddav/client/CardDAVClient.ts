@@ -48,13 +48,28 @@ interface ParsedDAVResponse {
  * as-is and then emitting `If-Match: "${etag}"` produces a doubled-up `""abc""`, which no
  * server matches — every conditional delete and update comes back 412. Normalize on the way
  * in and add exactly one pair of quotes on the way out.
+ *
+ * The callers here scrape etags out of raw multistatus XML, and sabre-based servers (Baikal,
+ * Nextcloud) escape the quotes they contain: `<D:getetag>&quot;abc&quot;</D:getetag>`. Decode
+ * first or the quote-stripping below matches nothing and the entity text is sent verbatim as
+ * an If-Match that can never match — the CardDAV twin of issue #110.
  */
 function normalizeEtag(raw: string | null | undefined): string {
   if (!raw) return ''
-  return raw
+  return decodeXmlEntities(raw)
     .trim()
     .replace(/^W\//i, '')
     .replace(/^"|"$/g, '')
+}
+
+/** The five predefined XML entities. Numeric character references are not used for etags. */
+function decodeXmlEntities(value: string): string {
+  return value
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&')
 }
 
 /**

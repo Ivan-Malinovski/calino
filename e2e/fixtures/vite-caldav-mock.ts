@@ -65,6 +65,16 @@ interface MockCollection {
   components: string[]
   /** Marks the collection as Calino's settings calendar. */
   isSettings?: boolean
+  /**
+   * Withhold the `ETag` response header on PUT, forcing Calino's PROPFIND
+   * fallback to recover it.
+   *
+   * This is the *normal* case on the web, not an exotic one: a CalDAV server
+   * that doesn't send `Access-Control-Expose-Headers: ETag` is, from the
+   * browser's side, indistinguishable from one that omits the header — so
+   * every write on a stock server takes the fallback path.
+   */
+  hideEtagOnPut?: boolean
 }
 
 interface MockAccount {
@@ -132,6 +142,25 @@ const ACCOUNTS: MockAccount[] = [
         components: ['VEVENT', 'VTODO', 'VJOURNAL'],
       },
       {
+        // Owned by `delete-sync.spec.ts` (issue #110), which asserts the
+        // collection is empty after a delete — it cannot share a collection
+        // with a spec running in parallel.
+        path: '/dav/calendars/user/del-sync/',
+        displayName: 'Del Sync',
+        color: '#A142F4',
+        components: ['VEVENT', 'VTODO', 'VJOURNAL'],
+      },
+      {
+        // Same as `del-sync/`, but the server withholds the ETag on PUT so the
+        // delete has to rely on the PROPFIND fallback — the path that broke on
+        // sabre servers in issue #110.
+        path: '/dav/calendars/user/del-sync-noetag/',
+        displayName: 'Del Sync No ETag',
+        color: '#F59E0B',
+        components: ['VEVENT', 'VTODO', 'VJOURNAL'],
+        hideEtagOnPut: true,
+      },
+      {
         path: '/dav/calendars/user/calino-settings/',
         displayName: 'Calino Settings',
         components: ['VEVENT'],
@@ -173,6 +202,12 @@ export function caldavMockPlugin(): Plugin {
   // Shared by every mount: account B uses a distinct principal, so stored
   // paths are globally unique and `__test__/dump` sees the whole world.
   const eventStore = new Map<string, string>()
+  // Real per-resource ETags, changing on every write. A constant `"mock-etag"`
+  // made every If-Match match, so the mock could never reproduce the
+  // stale-etag 412s that real servers (Baikal, Radicale) return — issue #110.
+  const etagStore = new Map<string, string>()
+  let etagCounter = 0
+  const nextEtag = () => `"mock-etag-${++etagCounter}"`
   const faults: FaultRule[] = []
 
   const esc = (s: string) =>
@@ -268,7 +303,10 @@ export function caldavMockPlugin(): Plugin {
         const prefix = new URL(req.url ?? '', 'http://localhost').searchParams.get('prefix')
         if (prefix) {
           for (const storedPath of [...eventStore.keys()]) {
-            if (storedPath.startsWith(prefix)) eventStore.delete(storedPath)
+            if (storedPath.startsWith(prefix)) {
+              eventStore.delete(storedPath)
+              etagStore.delete(storedPath)
+            }
           }
           for (let i = faults.length - 1; i >= 0; i--) {
             if (faults[i].prefix.startsWith(prefix) || prefix.startsWith(faults[i].prefix)) {
@@ -277,6 +315,7 @@ export function caldavMockPlugin(): Plugin {
           }
         } else {
           eventStore.clear()
+          etagStore.clear()
           faults.length = 0
         }
         res.writeHead(204)
@@ -387,6 +426,19 @@ export function caldavMockPlugin(): Plugin {
       // belong to" — used by REPORT, both PUT branches and DELETE.
       const owningCollection = COLLECTIONS.find((c) => path.startsWith(c.path))
 
+      // 5b) PROPFIND on an individual stored resource — how Calino recovers an
+      // ETag the server didn't expose on PUT. Quotes are XML-escaped by
+      // `esc()`, exactly as sabre serializes them
+      // (`<d:getetag>&quot;…&quot;</d:getetag>`); a client that scrapes the raw
+      // text instead of parsing it gets an unusable etag (issue #110).
+      if (method === 'PROPFIND' && eventStore.has(path)) {
+        return write207([
+          responseTag(absolute(path), [
+            { name: 'DAV:getetag', value: etagStore.get(path) ?? '"mock-etag"' },
+          ]),
+        ])
+      }
+
       // 6) REPORT → events, scoped per collection so collections never leak
       // events into each other.
       if (owningCollection && method === 'REPORT') {
@@ -398,7 +450,7 @@ export function caldavMockPlugin(): Plugin {
           const filename = storedPath.slice(prefix.length)
           events.push(
             responseTag(`${absolute(prefix)}${filename}`, [
-              { name: 'DAV:getetag', value: '"mock-etag"' },
+              { name: 'DAV:getetag', value: etagStore.get(storedPath) ?? '"mock-etag"' },
               { name: 'DAV:getcontenttype', value: 'text/calendar' },
               { name: 'CAL:calendar-data', value: ics, raw: true },
             ])
@@ -411,13 +463,33 @@ export function caldavMockPlugin(): Plugin {
       // settings sync, which PUTs to `…/calino-settings.ics`) and any
       // resource path underneath a collection.
       if (owningCollection && method === 'PUT') {
+        const ifMatch = req.headers['if-match']
+        const ifNoneMatch = req.headers['if-none-match']
+        const exists = eventStore.has(path)
+        // Sabre/Radicale semantics: a conditional write whose precondition
+        // doesn't hold is a 412, and an If-Match against a resource that
+        // isn't there fails too.
+        if (typeof ifMatch === 'string' && ifMatch !== '*') {
+          if (!exists || etagStore.get(path) !== ifMatch) {
+            res.writeHead(412, { 'Content-Type': 'text/plain' })
+            res.end('If-Match precondition failed')
+            return
+          }
+        }
+        if (ifNoneMatch === '*' && exists) {
+          res.writeHead(412, { 'Content-Type': 'text/plain' })
+          res.end('If-None-Match precondition failed')
+          return
+        }
         let body = ''
         req.on('data', (chunk) => {
           body += chunk
         })
         req.on('end', () => {
           eventStore.set(path, body)
-          res.writeHead(201, { ETag: '"mock-etag"' })
+          const etag = nextEtag()
+          etagStore.set(path, etag)
+          res.writeHead(201, owningCollection.hideEtagOnPut ? {} : { ETag: etag })
           res.end()
         })
         return
@@ -425,7 +497,16 @@ export function caldavMockPlugin(): Plugin {
 
       // 8) DELETE
       if (owningCollection && method === 'DELETE') {
+        const ifMatch = req.headers['if-match']
+        if (typeof ifMatch === 'string' && ifMatch !== '*') {
+          if (!eventStore.has(path) || etagStore.get(path) !== ifMatch) {
+            res.writeHead(412, { 'Content-Type': 'text/plain' })
+            res.end('If-Match precondition failed')
+            return
+          }
+        }
         eventStore.delete(path)
+        etagStore.delete(path)
         res.writeHead(204)
         res.end()
         return

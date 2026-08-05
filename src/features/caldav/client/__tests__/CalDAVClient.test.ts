@@ -484,6 +484,31 @@ END:VCALENDAR`,
       expect(fetchSpy).not.toHaveBeenCalled()
     })
 
+    // Issue #110. sabre-based servers (Baikal, Nextcloud) XML-escape the quotes
+    // an etag contains. Scraping the raw response text handed back the literal
+    // `&quot;abc&quot;`, which went out as an If-Match no server could match —
+    // so the next write or delete came back 412. Radicale writes the quotes
+    // literally, which is why it looked server-specific.
+    it('decodes XML entities in an etag recovered by PROPFIND', async () => {
+      await client.connect()
+
+      mockClientMethods.createCalendarObject.mockResolvedValue({
+        url: mockEventObject.url,
+      })
+      fetchSpy.mockResolvedValueOnce(
+        new Response(
+          `<d:multistatus xmlns:d="DAV:"><d:response><d:href>/event-1.ics</d:href>
+             <d:propstat><d:prop><d:getetag>&quot;sabre-etag&quot;</d:getetag></d:prop>
+             <d:status>HTTP/1.1 200 OK</d:status></d:propstat></d:response></d:multistatus>`,
+          { status: 207 }
+        )
+      )
+
+      const result = await client.createEvent(mockCalendar.url, mockEventObject.data, 'event-1.ics')
+
+      expect(result.etag).toBe('"sabre-etag"')
+    })
+
     it('returns an empty etag (not throwing) when the follow-up PROPFIND fails', async () => {
       await client.connect()
 

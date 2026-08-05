@@ -357,9 +357,16 @@ export class CalDAVClient {
       }
 
       const text = await response.text()
-      // Namespace-agnostic getetag match (d:, D:, or default namespace).
-      const etagMatch = text.match(/<[^>]*getetag[^>]*>([^<]+)<\/[^>]*getetag>/)
-      return etagMatch?.[1]?.trim() || ''
+      // Parsed, not regex-scraped: an etag is a quoted string, and sabre
+      // (Baikal, Nextcloud) XML-escapes those quotes —
+      // `<d:getetag>&quot;abc&quot;</d:getetag>`. Scraping the raw text handed
+      // back the literal `&quot;abc&quot;`, which then went out as an If-Match
+      // that could never match, so every write after a create 412'd (issue
+      // #110). Radicale writes the quotes literally, which is why it looked
+      // server-specific. `textContent` decodes entities for us.
+      const doc = new DOMParser().parseFromString(text, 'application/xml')
+      if (doc.getElementsByTagName('parsererror').length > 0) return ''
+      return this.getDavElementText(doc, 'getetag')?.trim() || ''
     } catch {
       return ''
     }
