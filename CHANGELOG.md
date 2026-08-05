@@ -4,6 +4,8 @@ All notable changes to Calino will be documented in this file.
 
 ## [Unreleased]
 
+## [0.27.2] - 2026-08-05
+
 ### Fixed
 
 - **Deleting a task, event or journal entry on a remote calendar works again** ([#110](https://github.com/Ivan-Malinovski/calino/issues/110)). It reported "Failed to sync deletion. It will be retried." and left the item on the server, which answered with a 412. Calino asks the server for the entry tag it needs to confirm a change, and Baikal and Nextcloud write the quotes in that tag escaped — Calino was reading them literally and quoting the escape codes back, so the server never recognised its own tag. Radicale writes them plainly, which is why it depended on which server you use. The same fault affected editing and deleting contacts.
