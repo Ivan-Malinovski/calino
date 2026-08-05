@@ -66,8 +66,17 @@ export function buildProxyUrl(proxyBase: string, targetUrl: string): string {
   return `${proxyBaseClean}/${encodedOrigin}${path}`
 }
 
-function prefixUrlWithProxy(url: string, proxyBase: string): string {
+export function prefixUrlWithProxy(url: string, proxyBase: string): string {
   if (!proxyBase) {
+    return url
+  }
+
+  // Already pointing at the proxy — prefixing again yields
+  // `proxy/https%3A%2F%2Fproxy/https%3A%2F%2Fdav…`, which resolves to nothing.
+  // Versions up to 0.27.1 persisted proxied URLs as `resourceHref` (see
+  // createEvent), so those rows are still in users' stores: this keeps them
+  // working until the next sync rewrites the href from the server listing.
+  if (url.replace(/\/$/, '').startsWith(proxyBase.replace(/\/$/, '') + '/')) {
     return url
   }
 
@@ -307,6 +316,15 @@ export class CalDAVClient {
     const client = this.getClient()
     const calendar = await this.findCalendarByUrl(calendarUrl)
 
+    // The resource URL as tsdav computes it — NOT `result.url`. Behind a CORS
+    // proxy the response's URL is the proxied one, and persisting that as the
+    // event's `resourceHref` means the next request proxies an already-proxied
+    // URL (`proxy/https%3A%2F%2Fproxy/https%3A%2F%2Fdav…`). DELETE has no
+    // collection guard to fall back on, so it hit that dead URL and servers
+    // that see an If-Match on a resource they don't have answer 412 — issue
+    // #110, "Failed to sync deletion. It will be retried."
+    const eventUrl = new URL(filename, calendar.url).href
+
     const result = await client.createCalendarObject({
       calendar,
       filename,
@@ -317,16 +335,19 @@ export class CalDAVClient {
     // Extract ETag from response headers
     let etag = result.headers?.get('etag') || ''
 
-    // Some servers (Google, iCloud) omit the ETag header on PUT. Persisting an
-    // empty etag with syncStatus 'synced' means the next update sends an empty
-    // If-Match — the stale-etag conflict we want to avoid. Recover it with a
-    // follow-up PROPFIND. Never throw: a missing etag must not fail creation.
-    if (!etag && result.url) {
-      etag = await this.fetchEtag(result.url)
+    // Some servers (Google, iCloud) omit the ETag header on PUT — and in the
+    // browser a server that doesn't send `Access-Control-Expose-Headers: ETag`
+    // is indistinguishable from one that omits it, so this is the common path
+    // on the web, not an edge case. Persisting an empty etag with syncStatus
+    // 'synced' means the next update sends an empty If-Match — the stale-etag
+    // conflict we want to avoid. Recover it with a follow-up PROPFIND. Never
+    // throw: a missing etag must not fail creation.
+    if (!etag) {
+      etag = await this.fetchEtag(eventUrl)
     }
 
     return {
-      url: result.url,
+      url: eventUrl,
       etag,
     }
   }
@@ -396,12 +417,14 @@ export class CalDAVClient {
     // update, and a fresh etag is preferred over the stale one but either is
     // accepted.
     let newEtag = result.headers?.get('etag') || ''
-    if (!newEtag && result.url) {
-      newEtag = await this.fetchEtag(result.url)
+    if (!newEtag) {
+      newEtag = await this.fetchEtag(eventUrl)
     }
 
+    // `eventUrl`, not `result.url` — see the note in createEvent: the response
+    // URL is proxy-prefixed behind a CORS proxy.
     return {
-      url: result.url,
+      url: eventUrl,
       etag: newEtag || etag,
     }
   }

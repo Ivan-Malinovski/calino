@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { CalDAVClient, createCalDAVClient, buildProxyUrl, normalizeColor } from '../CalDAVClient'
+import {
+  CalDAVClient,
+  createCalDAVClient,
+  buildProxyUrl,
+  prefixUrlWithProxy,
+  normalizeColor,
+} from '../CalDAVClient'
 import type { CalDAVCredentials } from '../../types'
 
 vi.mock('tsdav', () => ({
@@ -412,7 +418,11 @@ END:VCALENDAR`,
       ).rejects.toThrow(/HTTP 500/)
     })
 
-    // Bug 16: returned URL should be raw
+    // Bug 16 / issue #110: the returned URL must be raw even though the
+    // *response* carries the proxied one. It is persisted as `resourceHref`,
+    // and a proxied href gets proxied again on the next request, producing
+    // `proxy/https%3A%2F%2Fproxy/…` — a URL that resolves to nothing, which is
+    // how DELETE started failing with 412 on the hosted web app.
     it('returns raw URL without proxy prefix', async () => {
       const proxyClient = new CalDAVClient(
         mockCredentials.serverUrl,
@@ -422,7 +432,7 @@ END:VCALENDAR`,
       await proxyClient.connect()
 
       mockClientMethods.createCalendarObject.mockResolvedValue({
-        url: mockEventObject.url,
+        url: buildProxyUrl('https://proxy.example.com', mockEventObject.url),
       })
 
       const result = await proxyClient.createEvent(
@@ -919,6 +929,30 @@ END:VCALENDAR`,
       expect(result.url).toBe(mockEventObject.url)
     })
 
+    // Issue #110 — same reasoning as createEvent's proxy case.
+    it('returns raw URL without proxy prefix', async () => {
+      const proxyClient = new CalDAVClient(
+        mockCredentials.serverUrl,
+        mockCredentials,
+        'https://proxy.example.com'
+      )
+      await proxyClient.connect()
+
+      mockClientMethods.updateCalendarObject.mockResolvedValue({
+        url: buildProxyUrl('https://proxy.example.com', mockEventObject.url),
+      })
+
+      const result = await proxyClient.updateEvent(
+        mockCalendar.url,
+        mockEventObject.url,
+        mockEventObject.data,
+        mockEventObject.etag
+      )
+
+      expect(result.url).toBe(mockEventObject.url)
+      expect(result.url).not.toContain('proxy.example.com')
+    })
+
     // Same silent-swallow class as deleteEvent: tsdav's updateObject returns
     // the raw Response without checking res.ok, so a 5xx must be surfaced
     // here or a failed destination write looks like success (which would let
@@ -1154,6 +1188,23 @@ END:VCALENDAR`,
     it('strips trailing slash from proxy base', () => {
       const result = buildProxyUrl('https://proxy.example.com/', 'https://target.com')
       expect(result).toBe(`https://proxy.example.com/${encodeURIComponent('https://target.com')}/`)
+    })
+  })
+
+  describe('prefixUrlWithProxy', () => {
+    it('prefixes a raw server URL', () => {
+      expect(prefixUrlWithProxy('https://dav.example.com/x.ics', 'https://proxy.example.com')).toBe(
+        buildProxyUrl('https://proxy.example.com', 'https://dav.example.com/x.ics')
+      )
+    })
+
+    // Issue #110 — versions up to 0.27.1 persisted proxied URLs as
+    // `resourceHref`, so those hrefs are still sitting in users' stores.
+    // Re-prefixing one produces a URL that resolves to nothing.
+    it('leaves an already-proxied URL alone', () => {
+      const proxied = buildProxyUrl('https://proxy.example.com', 'https://dav.example.com/x.ics')
+      expect(prefixUrlWithProxy(proxied, 'https://proxy.example.com')).toBe(proxied)
+      expect(prefixUrlWithProxy(proxied, 'https://proxy.example.com/')).toBe(proxied)
     })
   })
 
