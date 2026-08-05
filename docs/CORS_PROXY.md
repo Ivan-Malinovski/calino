@@ -87,7 +87,9 @@ export default {
         'Access-Control-Allow-Headers',
         'Authorization, Content-Type, Depth, Prefer, If-None-Match, If-Match'
       )
-      corsHeaders.set('Access-Control-Expose-Headers', 'Location, X-Target-URL')
+      // ETag must be exposed or the browser hides it on PUT responses and
+      // Calino needs an extra PROPFIND per write to recover it.
+      corsHeaders.set('Access-Control-Expose-Headers', 'ETag, Location, X-Target-URL')
       corsHeaders.set('X-Target-URL', response.url)
 
       return new Response(response.body, {

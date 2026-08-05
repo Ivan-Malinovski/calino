@@ -329,7 +329,10 @@ const server = createServer(async (req, res) => {
     }
     outHeaders['access-control-allow-methods'] = ALLOW_METHODS
     outHeaders['access-control-allow-headers'] = ALLOW_HEADERS
-    outHeaders['access-control-expose-headers'] = 'Location, X-Target-URL'
+    // ETag: without it the browser hides the header on the PUT response, and
+    // Calino has to spend a follow-up PROPFIND per write to recover the etag
+    // it needs for the next If-Match.
+    outHeaders['access-control-expose-headers'] = 'ETag, Location, X-Target-URL'
 
     // Strip any credentials from the URL we echo back. Even though the proxy
     // never itself embeds credentials in the request line, a 30x Location

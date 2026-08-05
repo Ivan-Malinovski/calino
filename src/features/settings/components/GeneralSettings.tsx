@@ -41,7 +41,8 @@ function formatSyncError(error: string): JSX.Element {
           }}
         >{`Access-Control-Allow-Origin: *
 Access-Control-Allow-Methods: GET, POST, PUT, DELETE, PROPFIND, PROPPATCH, REPORT, OPTIONS, MKCOL, COPY, MOVE
-Access-Control-Allow-Headers: Authorization, Content-Type, Depth, Prefer, If-Match`}</code>
+Access-Control-Allow-Headers: Authorization, Content-Type, Depth, Prefer, If-Match, If-None-Match
+Access-Control-Expose-Headers: ETag`}</code>
         <span style={{ marginTop: 6, display: 'block' }}>
           See{' '}
           <a

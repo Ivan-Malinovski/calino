@@ -191,6 +191,7 @@ yourcaldav.server.com {
             Access-Control-Allow-Origin "*" # or your selfhosted Calino instance URL
             Access-Control-Allow-Methods "GET, POST, PUT, DELETE, PROPFIND, PROPPATCH, REPORT, OPTIONS, MKCOL, COPY, MOVE"
             Access-Control-Allow-Headers "Authorization, Content-Type, Depth, Prefer, If-None-Match, If-Match"
+            Access-Control-Expose-Headers "ETag"
         }
         respond "" 204
     }
@@ -199,6 +200,7 @@ yourcaldav.server.com {
         Access-Control-Allow-Origin "*"
         Access-Control-Allow-Methods "GET, POST, PUT, DELETE, PROPFIND, PROPPATCH, REPORT, OPTIONS, MKCOL, COPY, MOVE"
         Access-Control-Allow-Headers "Authorization, Content-Type, Depth, Prefer, If-None-Match, If-Match"
+        Access-Control-Expose-Headers "ETag"
         -Server
     }
 
@@ -224,9 +226,12 @@ If adding headers to your CalDAV server:
 Access-Control-Allow-Origin: <your-calino-origin>
 Access-Control-Allow-Headers: Authorization, Content-Type, Depth, If-Match, If-None-Match
 Access-Control-Allow-Methods: GET, PUT, POST, DELETE, PROPFIND, PROPPATCH, REPORT, OPTIONS, MKCOL, COPY, MOVE
+Access-Control-Expose-Headers: ETag
 ```
 
 > **Note:** `MKCOL`, `COPY`, and `MOVE` are required for settings sync (creating/moving the Calino settings collection). Omitting them still lets calendars load, but settings sync will fail.
+
+> **Note:** `Access-Control-Expose-Headers: ETag` is optional but worth setting. Without it the browser hides the `ETag` your server returns on every write, and Calino has to spend an extra PROPFIND per write to recover it.
 
 ### Self-Hosting a CORS Proxy
 
