@@ -4,6 +4,14 @@ All notable changes to Calino will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Deleting a task, event or journal entry on a remote calendar works again** ([#110](https://github.com/Ivan-Malinovski/calino/issues/110)). It reported "Failed to sync deletion. It will be retried." and left the item on the server, which answered with a 412. Calino asks the server for the entry tag it needs to confirm a change, and Baikal and Nextcloud write the quotes in that tag escaped — Calino was reading them literally and quoting the escape codes back, so the server never recognised its own tag. Radicale writes them plainly, which is why it depended on which server you use. The same fault affected editing and deleting contacts.
+
+  It only ever showed up in the browser, never in the Android app, and only when you deleted something before the next sync had run — which is why it looked like it came and went. Present since 0.20.0.
+
+- **Calendars reached through a CORS proxy no longer lose track of where an entry lives.** The address Calino stored for a newly created entry had the proxy's address folded into it a second time, so the next request went nowhere. Deleting was the operation that showed it, since it's the one with no fallback to fall back on. Addresses already stored this way keep working and correct themselves at the next sync.
+
 ## [0.27.1] - 2026-08-04
 
 ### Added
