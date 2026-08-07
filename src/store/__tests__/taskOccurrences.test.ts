@@ -180,6 +180,47 @@ describe('R2.7 recurring task occurrences', () => {
       expect(getTasksForDay(events(), '2026-03-17')).toHaveLength(1)
     })
 
+    it('suppresses the master slot when the override alone becomes timed', () => {
+      // Editing one occurrence of an all-day series from "date only" to "date
+      // and time" leaves the override timed while the master stays all-day.
+      // Its RECURRENCE-ID still names an all-day slot, so it has to be indexed
+      // in the MASTER's frame — keying it in the override's own frame filed it
+      // under a timestamp while every lookup asked for the date, and the day
+      // showed the occurrence twice: once timed, once from the master.
+      addRecurring()
+      addOverride('2026-03-10T00:00:00', {
+        isAllDay: false,
+        start: '2026-03-10T09:00:00.000Z',
+        end: '2026-03-10T10:00:00.000Z',
+        dueDate: '2026-03-10T10:00:00.000Z',
+      })
+
+      const dayKey = format(parseISO('2026-03-10T10:00:00.000Z'), 'yyyy-MM-dd')
+      const tasks = getTasksForDay(events(), dayKey)
+      expect(tasks).toHaveLength(1)
+      expect(tasks[0].dueDate).toBe('2026-03-10T10:00:00.000Z')
+    })
+
+    it('suppresses it too when the RECURRENCE-ID is a bare date', () => {
+      // What EventModal writes for this exact edit (#96): the occurrence key of
+      // an all-day recurring task is a bare `YYYY-MM-DD`, not an ISO instant,
+      // so the override reaching the index carries that form. Pinned
+      // separately because a fix that only normalises timestamps would leave
+      // the real user-facing path duplicating.
+      addRecurring()
+      addOverride('2026-03-10', {
+        isAllDay: false,
+        start: '2026-03-10T09:00:00.000Z',
+        end: '2026-03-10T10:00:00.000Z',
+        dueDate: '2026-03-10T10:00:00.000Z',
+      })
+
+      const dayKey = format(parseISO('2026-03-10T10:00:00.000Z'), 'yyyy-MM-dd')
+      const tasks = getTasksForDay(events(), dayKey)
+      expect(tasks).toHaveLength(1)
+      expect(tasks[0].dueDate).toBe('2026-03-10T10:00:00.000Z')
+    })
+
     it('honours EXDATE', () => {
       addRecurring({ excludedDates: ['2026-03-10T00:00:00'] })
 

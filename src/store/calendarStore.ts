@@ -212,6 +212,7 @@ function getEventIndex(events: CalendarEvent[]): EventIndex {
   const legacyExceptions = new Map<string, CalendarEvent>()
   const tasksByDueDate = new Map<string, CalendarEvent[]>()
   const recurringTasks: IndexedEvent[] = []
+  const pendingExceptions: { event: CalendarEvent; masterId: string }[] = []
 
   for (let order = 0; order < events.length; order++) {
     const event = events[order]
@@ -244,10 +245,9 @@ function getEventIndex(events: CalendarEvent[]): EventIndex {
         : undefined
       const masterId = event.recurrenceMasterId || inferredMasterId
       if (masterId) {
-        const recurrenceKey = event.isAllDay
-          ? event.recurrenceId.split('T')[0]
-          : parseISO(event.recurrenceId).getTime()
-        exceptions.set(`${event.calendarId}-${masterId}-${recurrenceKey}`, event)
+        // Keyed in a second pass — the key's shape depends on the *master's*
+        // all-day flag, and the master may not be indexed yet.
+        pendingExceptions.push({ event, masterId })
       } else {
         legacyExceptions.set(`${event.calendarId}-${event.recurrenceId.split('T')[0]}`, event)
       }
@@ -271,6 +271,20 @@ function getEventIndex(events: CalendarEvent[]): EventIndex {
       }
       bucket.push(event)
     }
+  }
+
+  // A RECURRENCE-ID names a slot in the master's recurrence set, so its key has
+  // to be read in the master's frame: whole dates for an all-day series, exact
+  // instants otherwise. Reading it in the *override's* frame breaks the moment
+  // an occurrence is edited into a shape the master doesn't share — flipping
+  // one occurrence of an all-day task to a timed due date filed it under a
+  // timestamp while every lookup asked for the date, so the master's own slot
+  // was never suppressed and the occurrence rendered twice (#96).
+  for (const { event, masterId } of pendingExceptions) {
+    const recurrenceId = event.recurrenceId as string
+    const isAllDay = masters.get(masterId)?.isAllDay ?? event.isAllDay
+    const recurrenceKey = isAllDay ? recurrenceId.split('T')[0] : parseISO(recurrenceId).getTime()
+    exceptions.set(`${event.calendarId}-${masterId}-${recurrenceKey}`, event)
   }
 
   plain.sort((a, b) => a.spanStartMs - b.spanStartMs)
@@ -606,15 +620,13 @@ export const useCalendarStore = create<CalendarStore>()(
         const completedAt = completed ? new Date().toISOString() : undefined
         const updatedTasks: CalendarEvent[] = events
           .filter((event) => affectedIds.has(event.id))
-          .map(
-            (event): CalendarEvent => ({
-              ...event,
-              completed,
-              taskStatus: completed ? 'COMPLETED' : 'NEEDS-ACTION',
-              percentComplete: completed ? 100 : 0,
-              completedAt,
-            })
-          )
+          .map((event): CalendarEvent => ({
+            ...event,
+            completed,
+            taskStatus: completed ? 'COMPLETED' : 'NEEDS-ACTION',
+            percentComplete: completed ? 100 : 0,
+            completedAt,
+          }))
 
         const updatedTasksById = new Map(updatedTasks.map((task) => [task.id, task]))
         set({

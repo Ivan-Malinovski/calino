@@ -24,6 +24,8 @@ All notable changes to Calino will be documented in this file.
 
 ### Fixed
 
+- **A recurring task edited to a specific time no longer appears twice** ([#96](https://github.com/Ivan-Malinovski/calino/issues/96), reported by [@MaliciousPoro](https://github.com/MaliciousPoro)). Taking one occurrence of an all-day recurring task, switching its due date from "date only" to "date and time" and saving it as "this task only" left two rows on that day — one with the new time, one without. They were the same task, so editing either changed the timed one and deleting either removed both. A single occurrence that's been detached from its series is filed under the slot it replaces, and that slot belongs to the series, not to the edited copy; the edited copy was being filed under its own new time instead, so the original slot was never hidden. Saving as "this and following" or "all tasks" was unaffected.
+
 - **Opening Calino always starts on the current month.** The month you were last browsing was saved and restored, so a new tab could open on June because that's where the previous session left off. The view you were in still comes from your default-view setting; only the date is reset.
 
 - **Contacts reached through a CORS proxy no longer lose track of where an entry lives.** The same double-prefixed address fixed for calendars in 0.27.2 was still present on the contacts side.
