@@ -4,6 +4,8 @@ All notable changes to Calino will be documented in this file.
 
 ## [Unreleased]
 
+## [0.27.3] - 2026-08-07
+
 ### Added
 
 - **Server diagnostics.** Settings → Sync now has a **Diagnose** button on each account, and a failed connection in the Add/Edit Calendar dialog offers to run it. Instead of one "this may be a CORS issue" catch-all, Calino probes the server check by check — is it reachable, does it allow cross-origin requests, are the credentials accepted, does it speak CalDAV, does it allow the methods and headers sync needs, can it list a collection, does it answer REPORT queries, is the ETag readable — and tells you exactly which header or method to add. There's a **Copy report** button for pasting into a bug report; it keeps your server's hostname and drops your username, password and proxy URL.
