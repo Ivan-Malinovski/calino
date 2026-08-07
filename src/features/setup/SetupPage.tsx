@@ -2,7 +2,10 @@ import type { JSX } from 'react'
 import { useState, useCallback } from 'react'
 import { useNavigate } from 'react-router'
 import { encryptWithMasterPassword } from '@/lib/crypto'
-import { discoverServerUrl } from '@/features/caldav/client/discovery'
+import { probeConnection } from '@/features/caldav/client/discovery'
+import { connectionErrorMessage } from '@/features/caldav/client/errorMessages'
+import type { DiagnosticsOptions } from '@/features/caldav/client/diagnostics'
+import { DiagnosticsPanel } from '@/features/settings/components/DiagnosticsPanel'
 import type { CalinoConfig, PreconfiguredAccount, PreconfiguredWebcal } from '@/lib/configLoader'
 import styles from './SetupPage.module.css'
 
@@ -25,56 +28,8 @@ interface WebcalEntry {
 
 type Step = 'accounts' | 'password' | 'done'
 
-// ─── Connection test ─────────────────────────────────────────────────────────
-
-async function testConnection(
-  serverUrl: string,
-  username: string,
-  password: string,
-  proxyUrl?: string
-): Promise<{ ok: boolean; error?: string }> {
-  try {
-    // Discover the actual CalDAV endpoint via .well-known/caldav
-    const baseUrl = await discoverServerUrl(serverUrl, proxyUrl)
-
-    let fetchUrl = baseUrl
-    if (proxyUrl) {
-      // The proxy expects the server origin encoded as the first path segment,
-      // with the rest of the path as unencoded segments.
-      const parsed = new URL(baseUrl)
-      const encodedOrigin = encodeURIComponent(parsed.origin)
-      const path = parsed.pathname + parsed.search + parsed.hash
-      const proxyBase = proxyUrl.replace(/\/$/, '')
-      fetchUrl = `${proxyBase}/${encodedOrigin}${path}`
-    }
-
-    const response = await fetch(fetchUrl, {
-      method: 'PROPFIND',
-      headers: {
-        Authorization: `Basic ${btoa(`${username}:${password}`)}`,
-        'Content-Type': 'application/xml',
-        Depth: '0',
-      },
-      body: `<?xml version="1.0" encoding="UTF-8"?>
-        <d:propfind xmlns:d="DAV:">
-          <d:prop>
-            <d:displayname/>
-          </d:prop>
-        </d:propfind>`,
-    })
-
-    if (response.ok || response.status === 207) {
-      return { ok: true }
-    }
-    return { ok: false, error: `Server returned status ${response.status}` }
-  } catch (error) {
-    const msg = error instanceof Error ? error.message : 'Unknown error'
-    return {
-      ok: false,
-      error: `Connection failed: ${msg}. This may be a CORS issue — the server must allow cross-origin requests.`,
-    }
-  }
-}
+/** What the diagnostics panel needs; it supplies the rest of its options. */
+type DiagnosticsTarget = Omit<DiagnosticsOptions, 'includeWriteTest' | 'onProgress'>
 
 // ─── Password strength ───────────────────────────────────────────────────────
 
@@ -109,6 +64,9 @@ export function SetupPage(): JSX.Element {
   const [showProxy, setShowProxy] = useState(false)
   const [testStatus, setTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle')
   const [testError, setTestError] = useState('')
+  const [testHint, setTestHint] = useState('')
+  const [diagnoseTarget, setDiagnoseTarget] = useState<DiagnosticsTarget | null>(null)
+  const [showDiagnostics, setShowDiagnostics] = useState(false)
 
   // Password state
   const [masterPassword, setMasterPassword] = useState('')
@@ -125,9 +83,26 @@ export function SetupPage(): JSX.Element {
     if (!formUrl || !formUsername || !formPassword) return
     setTestStatus('testing')
     setTestError('')
-    const result = await testConnection(formUrl, formUsername, formPassword, formProxy || undefined)
+    setTestHint('')
+    setShowDiagnostics(false)
+    const proxyUrl = formProxy || undefined
+    // Shared with the Add Calendar dialog rather than probed separately here:
+    // this page had its own copy that missed the redirect fallbacks and the
+    // provider-specific hints, so setup was the least helpful surface.
+    const result = await probeConnection(formUrl, formUsername, formPassword, proxyUrl)
     setTestStatus(result.ok ? 'success' : 'error')
-    if (!result.ok && result.error) setTestError(result.error)
+    if (result.ok) {
+      setDiagnoseTarget(null)
+    } else {
+      setTestError(connectionErrorMessage(result.error ?? 'Connection failed.'))
+      if (result.hint) setTestHint(result.hint)
+      setDiagnoseTarget({
+        serverUrl: formUrl,
+        username: formUsername,
+        password: formPassword,
+        proxyUrl,
+      })
+    }
   }, [formUrl, formUsername, formPassword, formProxy])
 
   const handleAddAccount = useCallback(() => {
@@ -430,7 +405,25 @@ export function SetupPage(): JSX.Element {
             {testStatus === 'success' && (
               <div className={styles.success}>✓ Connection successful</div>
             )}
-            {testStatus === 'error' && <div className={styles.error}>✕ {testError}</div>}
+            {testStatus === 'error' && (
+              <>
+                <div className={styles.error}>✕ {testError}</div>
+                {testHint && <div className={styles.hint}>{testHint}</div>}
+                {diagnoseTarget && !showDiagnostics && (
+                  <button
+                    type="button"
+                    className={styles.linkBtn}
+                    data-action="show-diagnostics"
+                    onClick={() => setShowDiagnostics(true)}
+                  >
+                    Run diagnostics to find out why
+                  </button>
+                )}
+              </>
+            )}
+            {showDiagnostics && diagnoseTarget && (
+              <DiagnosticsPanel options={diagnoseTarget} autoRun />
+            )}
 
             <div className={styles.actions}>
               <button

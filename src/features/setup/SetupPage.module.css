@@ -16,7 +16,9 @@
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
-  box-shadow: 0 24px 80px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.08 * var(--shadow-opacity, 1))), 0 6px 20px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.05 * var(--shadow-opacity, 1)));
+  box-shadow:
+    0 24px 80px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.08 * var(--shadow-opacity, 1))),
+    0 6px 20px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.05 * var(--shadow-opacity, 1)));
   width: 100%;
   max-width: 520px;
   padding: 32px;
@@ -251,7 +253,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: color 0.12s, background 0.12s;
+  transition:
+    color 0.12s,
+    background 0.12s;
   flex-shrink: 0;
 }
 
@@ -376,7 +380,9 @@
 .strengthFill {
   height: 100%;
   border-radius: 2px;
-  transition: width 0.2s, background 0.2s;
+  transition:
+    width 0.2s,
+    background 0.2s;
 }
 
 .strengthWeak {
@@ -402,4 +408,18 @@
   .input {
     font-size: 16px;
   }
+}
+
+/* Reveals the diagnostics panel after a failed connection test. */
+.linkBtn {
+  display: block;
+  margin: 6px 0 0;
+  padding: 0;
+  background: none;
+  border: none;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--accent);
+  text-decoration: underline;
+  cursor: pointer;
 }

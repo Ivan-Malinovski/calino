@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { classifySyncError, shortSyncErrorMessage } from '../errorMessages'
+import { classifySyncError, connectionErrorMessage, shortSyncErrorMessage } from '../errorMessages'
 
 describe('classifySyncError', () => {
   it.each([
@@ -47,5 +47,27 @@ describe('shortSyncErrorMessage', () => {
   it('falls back to the raw message only for unknown', () => {
     expect(shortSyncErrorMessage('unknown', 'kaboom')).toContain('kaboom')
     expect(shortSyncErrorMessage('auth', 'kaboom')).not.toContain('kaboom')
+  })
+})
+
+describe('connectionErrorMessage', () => {
+  it('never leaks the raw exception for a failed probe', () => {
+    // What probeConnection actually produces when a browser blocks the request.
+    const raw =
+      'Connection failed: TypeError: Failed to fetch. This may be a CORS issue - the server must allow cross-origin requests.'
+    const text = connectionErrorMessage(raw)
+
+    expect(text).not.toContain('TypeError')
+    expect(text).not.toContain('Failed to fetch')
+    // Both causes are indistinguishable to a browser, so name both.
+    expect(text).toMatch(/offline|reach/i)
+  })
+
+  it('names credentials rather than CORS on a 401', () => {
+    expect(connectionErrorMessage('Server returned status 401')).toMatch(/credential/i)
+  })
+
+  it('passes through a message it cannot improve on', () => {
+    expect(connectionErrorMessage('Master password required')).toBe('Master password required')
   })
 })

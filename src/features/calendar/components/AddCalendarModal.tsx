@@ -10,6 +10,7 @@ import {
 } from '@/features/caldav/client/discovery'
 import { getCredentialById } from '@/features/caldav/client/credentials'
 import type { DiagnosticsOptions } from '@/features/caldav/client/diagnostics'
+import { connectionErrorMessage } from '@/features/caldav/client/errorMessages'
 import { DiagnosticsPanel } from '@/features/settings/components/DiagnosticsPanel'
 import type { CalDAVAccount } from '@/features/caldav/types'
 import { useAnimatedClose } from '@/hooks/useAnimatedClose'
@@ -80,7 +81,9 @@ export function AddCalendarModal({
 
       setConnectionStatus(result.ok ? 'success' : 'error')
       if (!result.ok) {
-        setConnectionError(result.error ?? 'Connection failed')
+        setConnectionError(
+          result.error ? connectionErrorMessage(result.error) : 'Connection failed.'
+        )
         if (result.hint) {
           setConnectionHint(result.hint)
         }
@@ -148,7 +151,7 @@ export function AddCalendarModal({
   /** Surface a failed add/edit, preferring the probe's hint over a guess. */
   const showFailure = (error: unknown, serverUrl: string, fallback: string): void => {
     setConnectionStatus('error')
-    setConnectionError(error instanceof Error ? error.message : fallback)
+    setConnectionError(error instanceof Error ? connectionErrorMessage(error.message) : fallback)
     const hint =
       (error instanceof CalDAVConnectionError ? error.hint : undefined) ??
       suggestCalDAVUrl(serverUrl) ??

@@ -107,6 +107,37 @@ export function shortSyncErrorMessage(code: SyncErrorCode, raw: string, subject 
   }
 }
 
+/**
+ * Text for a failed *connection attempt*, as opposed to a failed sync.
+ *
+ * `probeConnection` returns a raw string built around the underlying exception
+ * — "Connection failed: Failed to fetch. This may be a CORS issue" — which
+ * leaks a `TypeError` into the first screen a new user sees, and asserts CORS
+ * even when the real cause is a typo in the hostname or a server that isn't
+ * running. Both are indistinguishable to a browser, so name both instead of
+ * guessing, and leave the specifics to the diagnostics panel.
+ */
+export function connectionErrorMessage(raw: string): string {
+  switch (classifySyncError(raw)) {
+    case 'cors':
+    case 'network':
+      return "Couldn't reach the server. Check the address, or it may be offline or blocking cross-origin requests."
+    case 'timeout':
+      return 'The server took too long to respond.'
+    // Deliberately short: `suggestAuthHint` renders directly below this and
+    // supplies the app-specific-password guidance for providers that need it.
+    case 'auth':
+      return 'The server rejected these credentials.'
+    case 'not-found':
+      return "The server answered, but there's nothing at that address. Check the URL path."
+    case 'server':
+      return 'The server returned an error. Check its logs.'
+    case 'conflict':
+    case 'unknown':
+      return raw
+  }
+}
+
 /** The header block a misconfigured DAV server needs, shown in the CORS copy. */
 export const CORS_HEADER_SNIPPET = `Access-Control-Allow-Origin: *
 Access-Control-Allow-Methods: GET, POST, PUT, DELETE, PROPFIND, PROPPATCH, REPORT, OPTIONS, MKCOL, MKCALENDAR, COPY, MOVE

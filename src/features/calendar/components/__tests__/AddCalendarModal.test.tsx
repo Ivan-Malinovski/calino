@@ -194,9 +194,12 @@ describe('AddCalendarModal', () => {
 
     await user.click(screen.getByRole('button', { name: /add calendar/i }))
 
+    // The status code is explained rather than shown: "Server returned status
+    // 401" tells a user nothing actionable.
     await waitFor(() => {
-      expect(screen.getByText(/401/i)).toBeInTheDocument()
+      expect(screen.getByText(/rejected these credentials/i)).toBeInTheDocument()
     })
+    expect(screen.queryByText(/401/)).not.toBeInTheDocument()
     expect(screen.getByText(/app-specific password/i)).toBeInTheDocument()
 
     // The modal stays open so the user can correct the credentials.
