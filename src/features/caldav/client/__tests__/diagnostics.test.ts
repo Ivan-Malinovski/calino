@@ -26,7 +26,7 @@ interface StubbedResponse {
  * exercise one check doesn't accidentally fail three others.
  */
 function stubFetch(routes: Record<string, StubbedResponse>): ReturnType<typeof vi.fn> {
-  const fetchMock = vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => {
+  const fetchMock = vi.fn(async (_url: RequestInfo | URL, init?: RequestInit) => {
     const method = (init?.method ?? 'GET').toUpperCase()
     const route = routes[method] ?? { status: 207, body: MULTISTATUS }
     if (route.throws) throw route.throws
