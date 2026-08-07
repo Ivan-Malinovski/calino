@@ -151,7 +151,14 @@ export function AddCalendarModal({
   /** Surface a failed add/edit, preferring the probe's hint over a guess. */
   const showFailure = (error: unknown, serverUrl: string, fallback: string): void => {
     setConnectionStatus('error')
-    setConnectionError(error instanceof Error ? connectionErrorMessage(error.message) : fallback)
+    setConnectionError(
+      error instanceof Error
+        ? connectionErrorMessage(
+            error.message,
+            error instanceof CalDAVConnectionError ? error.code : undefined
+          )
+        : fallback
+    )
     const hint =
       (error instanceof CalDAVConnectionError ? error.hint : undefined) ??
       suggestCalDAVUrl(serverUrl) ??

@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest'
-import { classifySyncError, connectionErrorMessage, shortSyncErrorMessage } from '../errorMessages'
+import {
+  classifySyncError,
+  connectionErrorMessage,
+  shortSyncErrorMessage,
+  syncErrorReason,
+} from '../errorMessages'
 
 describe('classifySyncError', () => {
   it.each([
@@ -69,5 +74,36 @@ describe('connectionErrorMessage', () => {
 
   it('passes through a message it cannot improve on', () => {
     expect(connectionErrorMessage('Master password required')).toBe('Master password required')
+  })
+})
+
+describe('syncErrorReason', () => {
+  it('omits the subject so callers can write their own sentence', () => {
+    const reason = syncErrorReason('network', 'Failed to fetch')
+
+    expect(reason).not.toMatch(/^sync failed/i)
+    expect(reason).toMatch(/^couldn't reach/i)
+    // The Sidebar composes exactly this.
+    expect(`Renamed locally, but the server didn't get it: ${reason}`).not.toContain('Sync failed')
+  })
+
+  it('stays in step with shortSyncErrorMessage', () => {
+    for (const code of ['cors', 'network', 'timeout', 'auth', 'server'] as const) {
+      expect(shortSyncErrorMessage(code, 'raw')).toBe(
+        `Sync failed: ${syncErrorReason(code, 'raw')}`
+      )
+    }
+  })
+
+  it('falls back to the raw message when it has nothing better', () => {
+    expect(syncErrorReason('unknown', 'Disk quota exceeded')).toBe('Disk quota exceeded')
+  })
+})
+
+describe('connectionErrorMessage with a known code', () => {
+  it('trusts an explicit code over the message text', () => {
+    // The message mentions "fetch", which would classify as network; the code
+    // says otherwise and must win.
+    expect(connectionErrorMessage('failed to fetch principal', 'auth')).toMatch(/credential/i)
   })
 })

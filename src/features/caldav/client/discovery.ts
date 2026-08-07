@@ -156,6 +156,25 @@ export async function discoverServerUrl(baseUrl: string, proxyUrl?: string): Pro
 }
 
 /**
+ * Does this status come from something that speaks DAV?
+ *
+ * 207 is the success case; 401 counts too, because an auth challenge means the
+ * endpoint understood the method and only wants credentials. A 403/404/500 is
+ * what a non-DAV URL answers — which matters because `discoverServerUrl`
+ * follows the whole redirect chain, and on some servers that runs past the DAV
+ * endpoint into a web interface (Radicale sends /.well-known/caldav → / →
+ * /.web). Callers use this to decide whether to fall back to the URL the user
+ * actually entered.
+ *
+ * `probeConnection` below deliberately keeps a laxer test of its own — it also
+ * accepts any 2xx — because it predates this and tightening it would change
+ * which servers pass setup.
+ */
+export function isDavStatus(status: number): boolean {
+  return status === 207 || status === 401
+}
+
+/**
  * Probe /.well-known/caldav and follow the redirect to the real CalDAV base.
  * Returns null if the server doesn't support well-known (e.g. returns 404).
  */

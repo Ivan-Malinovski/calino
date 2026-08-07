@@ -16,6 +16,8 @@ All notable changes to Calino will be documented in this file.
 
 - **Clearer errors when adding a server.** A failed connection used to show the underlying exception spliced into a sentence — "Connection failed: Failed to fetch. This may be a CORS issue" — which named CORS even when the real cause was a typo in the address or a server that wasn't running, and showed "Server returned status 401" rather than saying the password was refused. Both dialogs now explain the failure instead, and offer to run diagnostics. The first-run setup page had its own separate copy of the connection test, with no hints and no diagnostics; it now uses the same one as everything else.
 
+- **The rest of the calendar actions explain their failures too.** Syncing from the sidebar, renaming a calendar, changing its colour, deleting it, creating one on the server and subscribing to a webcal feed all used to put the underlying exception straight into the toast — most often a bare "Failed to fetch". They now say what went wrong, in the same words as everything else.
+
 - **Clearer sync error messages.** The inline error in Settings and the toast that accompanies it were written separately and had drifted apart, so the same failure could be described two different ways — and one branch could never fire at all. They now share one classifier. Timeouts, server-side 5xx errors, and "this changed on another device" conflicts previously fell through as raw technical text and now get their own explanation, and the CORS message points at the new diagnostics rather than only dumping a block of headers.
 
 ### Fixed

@@ -27,7 +27,13 @@
 import { Capacitor } from '@capacitor/core'
 import { webFetch } from '@/lib/webFetch'
 import { isHeadless } from '@/lib/headlessBridge'
-import { discoverServerUrl, proxyFetch, suggestAuthHint, suggestCalDAVUrl } from './discovery'
+import {
+  discoverServerUrl,
+  isDavStatus,
+  proxyFetch,
+  suggestAuthHint,
+  suggestCalDAVUrl,
+} from './discovery'
 import { CORS_HEADER_SNIPPET } from './errorMessages'
 
 const CHECK_TIMEOUT_MS = 15_000
@@ -119,15 +125,9 @@ function isAbort(error: unknown): boolean {
   return error instanceof Error && error.name === 'AbortError'
 }
 
-/**
- * Does this response come from something that actually speaks DAV?
- *
- * 207 is the success case; 401 counts too, because an auth challenge means the
- * endpoint understood the method and only wants credentials. A 403/404/500 is
- * what a non-DAV URL (a web UI, a static index) answers instead.
- */
+/** `isDavStatus`, lifted to the response we may or may not have got. */
 function isDavResponse(response: Response | null): boolean {
-  return response !== null && (response.status === 207 || response.status === 401)
+  return response !== null && isDavStatus(response.status)
 }
 
 // ─── The run ──────────────────────────────────────────────────────────────────

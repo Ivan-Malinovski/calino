@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom'
 import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
 import { useModalDismiss } from '@/hooks/useModalDismiss'
 import { EVENT_COLORS } from '@/store/settingsStore'
+import { classifySyncError, syncErrorReason } from '@/features/caldav/client/errorMessages'
 import styles from './AddCalendarModal.module.css'
 
 interface CreateCalendarModalProps {
@@ -59,8 +60,11 @@ export function CreateCalendarModal({
       })
       handleClose()
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : 'Failed to create calendar'
-      setError(errorMsg)
+      setError(
+        err instanceof Error
+          ? `Couldn't create the calendar: ${syncErrorReason(classifySyncError(err.message), err.message)}`
+          : 'Failed to create calendar.'
+      )
     } finally {
       setIsCreating(false)
     }

@@ -5,6 +5,7 @@ import { useWebcalSubscriptions } from '@/features/webcal/hooks/useWebcalSubscri
 import { useAnimatedClose } from '@/hooks/useAnimatedClose'
 import { useModalDismiss } from '@/hooks/useModalDismiss'
 import { EVENT_COLORS } from '@/store/settingsStore'
+import { classifySyncError, syncErrorReason } from '@/features/caldav/client/errorMessages'
 import styles from './AddCalendarModal.module.css'
 
 interface SubscribeCalendarModalProps {
@@ -77,7 +78,11 @@ export function SubscribeCalendarModal({
       })
       requestClose()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to subscribe to calendar.')
+      setError(
+        err instanceof Error
+          ? `Couldn't subscribe: ${syncErrorReason(classifySyncError(err.message), err.message)}`
+          : 'Failed to subscribe to calendar.'
+      )
     } finally {
       isSavingRef.current = false
       setIsSaving(false)

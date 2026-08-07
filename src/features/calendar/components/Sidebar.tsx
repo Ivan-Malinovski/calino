@@ -23,6 +23,11 @@ import {
   getISOWeek,
 } from 'date-fns'
 import { CALENDAR_COLORS, config, TOAST_DURATION_MS } from '@/config'
+import {
+  classifySyncError,
+  shortSyncErrorMessage,
+  syncErrorReason,
+} from '@/features/caldav/client/errorMessages'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
 import { useCalDAVSyncStore } from '@/store/caldavSyncStore'
@@ -39,6 +44,16 @@ import styles from './Sidebar.module.css'
 
 let hasAutoSyncedCalendars = false
 const CALENDAR_COLOR_PRESETS = [...CALENDAR_COLORS.slice(0, 4), '#7B1FA2']
+
+/**
+ * Tail of a "changed locally, but …" toast. The local edit already succeeded,
+ * so this only has to explain why the server didn't get it — without pasting a
+ * raw `TypeError` into the sentence.
+ */
+function serverFailureDetail(error: unknown): string {
+  if (!(error instanceof Error)) return "the server didn't get the change."
+  return `the server didn't get it: ${syncErrorReason(classifySyncError(error.message), error.message)}`
+}
 
 interface SidebarProps {
   isOpen?: boolean
@@ -160,7 +175,11 @@ export function Sidebar({
       await runSyncAll()
       showToast('All calendars synced.')
     } catch (error) {
-      showToast(error instanceof Error ? error.message : 'Failed to sync calendars')
+      showToast(
+        error instanceof Error
+          ? shortSyncErrorMessage(classifySyncError(error.message), error.message)
+          : 'Failed to sync calendars'
+      )
     } finally {
       setIsSyncingAll(false)
     }
@@ -319,8 +338,7 @@ export function Sidebar({
         try {
           await updateCalDAVCalendar(editingId, { name: newName })
         } catch (error) {
-          const detail = error instanceof Error ? error.message : 'unknown error'
-          showToast(`Renamed locally, but the server update failed: ${detail}`)
+          showToast(`Renamed locally, but ${serverFailureDetail(error)}`)
         }
       }
     }
@@ -346,8 +364,7 @@ export function Sidebar({
       try {
         await updateCalDAVCalendar(calendarId, { color })
       } catch (error) {
-        const detail = error instanceof Error ? error.message : 'unknown error'
-        showToast(`Color changed locally, but the server update failed: ${detail}`)
+        showToast(`Color changed locally, but ${serverFailureDetail(error)}`)
       }
     }
   }
@@ -1016,7 +1033,15 @@ export function Sidebar({
                 try {
                   await deleteCalendarFromServer(deleteCalendarId)
                 } catch (error) {
-                  showToast(error instanceof Error ? error.message : 'Failed to delete calendar')
+                  showToast(
+                    error instanceof Error
+                      ? shortSyncErrorMessage(
+                          classifySyncError(error.message),
+                          error.message,
+                          'Delete'
+                        )
+                      : 'Failed to delete calendar'
+                  )
                 }
               }
             }}

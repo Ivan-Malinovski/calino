@@ -87,23 +87,32 @@ export function classifySyncError(message: string): SyncErrorCode {
  * where we have nothing better to say than the original message.
  */
 export function shortSyncErrorMessage(code: SyncErrorCode, raw: string, subject = 'Sync'): string {
+  return `${subject} failed: ${syncErrorReason(code, raw)}`
+}
+
+/**
+ * The reason clause on its own, for callers that supply their own sentence —
+ * "Renamed locally, but …". Kept separate so nobody has to rewrite the output
+ * of `shortSyncErrorMessage` with a regex to drop its subject.
+ */
+export function syncErrorReason(code: SyncErrorCode, raw: string): string {
   switch (code) {
     case 'cors':
-      return `${subject} failed: your server is blocking the connection (CORS).`
+      return 'your server is blocking the connection (CORS).'
     case 'network':
-      return `${subject} failed: couldn't reach your server. It may be offline, or blocking CORS.`
+      return "couldn't reach your server. It may be offline, or blocking CORS."
     case 'timeout':
-      return `${subject} failed: the server took too long to respond.`
+      return 'the server took too long to respond.'
     case 'auth':
-      return `${subject} failed: authentication error. Check your username and password.`
+      return 'authentication error. Check your username and password.'
     case 'not-found':
-      return `${subject} failed: the resource wasn't found on the server.`
+      return "the resource wasn't found on the server."
     case 'conflict':
-      return `${subject} failed: this item changed on the server. Sync again to pick up the newer copy.`
+      return 'this item changed on the server. Sync again to pick up the newer copy.'
     case 'server':
-      return `${subject} failed: the server returned an error. Check its logs.`
+      return 'the server returned an error. Check its logs.'
     case 'unknown':
-      return `${subject} failed: ${raw}`
+      return raw
   }
 }
 
@@ -117,8 +126,8 @@ export function shortSyncErrorMessage(code: SyncErrorCode, raw: string, subject 
  * running. Both are indistinguishable to a browser, so name both instead of
  * guessing, and leave the specifics to the diagnostics panel.
  */
-export function connectionErrorMessage(raw: string): string {
-  switch (classifySyncError(raw)) {
+export function connectionErrorMessage(raw: string, code?: SyncErrorCode): string {
+  switch (code ?? classifySyncError(raw)) {
     case 'cors':
     case 'network':
       return "Couldn't reach the server. Check the address, or it may be offline or blocking cross-origin requests."
