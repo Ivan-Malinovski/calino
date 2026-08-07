@@ -9,10 +9,14 @@ import {
   expandProviderUrl,
 } from '@/features/caldav/client/discovery'
 import { getCredentialById } from '@/features/caldav/client/credentials'
+import type { DiagnosticsOptions } from '@/features/caldav/client/diagnostics'
+import { DiagnosticsPanel } from '@/features/settings/components/DiagnosticsPanel'
 import type { CalDAVAccount } from '@/features/caldav/types'
 import { useAnimatedClose } from '@/hooks/useAnimatedClose'
 import { useModalDismiss } from '@/hooks/useModalDismiss'
 import styles from './AddCalendarModal.module.css'
+
+type DiagnosticsTarget = Omit<DiagnosticsOptions, 'includeWriteTest' | 'onProgress'>
 
 interface AddCalendarModalProps {
   isOpen: boolean
@@ -35,6 +39,10 @@ export function AddCalendarModal({
   const [isTesting, setIsTesting] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [showProxyField, setShowProxyField] = useState(Boolean(account?.proxyUrl))
+  // Captured on failure so "Run diagnostics" probes exactly what was attempted,
+  // including the password we resolved out of the credential store in edit mode.
+  const [diagnoseTarget, setDiagnoseTarget] = useState<DiagnosticsTarget | null>(null)
+  const [showDiagnostics, setShowDiagnostics] = useState(false)
 
   const { addAccount, updateAccount } = useCalDAV()
   const isEdit = mode === 'edit' && account !== undefined
@@ -45,6 +53,8 @@ export function AddCalendarModal({
     setConnectionStatus('idle')
     setConnectionError('')
     setConnectionHint('')
+    setDiagnoseTarget(null)
+    setShowDiagnostics(false)
     onClose()
   }, [onClose])
   const { rendered, closing, requestClose } = useAnimatedClose(isOpen, doClose, 200)
@@ -63,6 +73,7 @@ export function AddCalendarModal({
     setConnectionStatus('idle')
     setConnectionError('')
     setConnectionHint('')
+    setShowDiagnostics(false)
 
     try {
       const result = await probeConnection(serverUrl, username, password, proxyUrl, originalUrl)
@@ -73,6 +84,9 @@ export function AddCalendarModal({
         if (result.hint) {
           setConnectionHint(result.hint)
         }
+        setDiagnoseTarget({ serverUrl, username, password, proxyUrl, originalUrl })
+      } else {
+        setDiagnoseTarget(null)
       }
       return result.ok
     } finally {
@@ -198,6 +212,19 @@ export function AddCalendarModal({
           ? 'Failed to update account. Please try again.'
           : 'Failed to add account. Please try again.'
       )
+      // A blank password in edit mode means "keep the current one", so
+      // diagnostics has to test the stored credential, not the empty field.
+      let effectivePassword = password
+      if (!effectivePassword && account) {
+        effectivePassword = (await getCredentialById(account.credentialId))?.password ?? ''
+      }
+      setDiagnoseTarget({
+        serverUrl: expandProviderUrl(serverUrl, username) || serverUrl,
+        username,
+        password: effectivePassword,
+        proxyUrl: proxyUrl ?? null,
+        originalUrl: serverUrl,
+      })
     } finally {
       isSavingRef.current = false
       setIsSaving(false)
@@ -339,6 +366,19 @@ export function AddCalendarModal({
           )}
           {connectionStatus === 'error' && <p className={styles.errorMessage}>{connectionError}</p>}
           {connectionHint && <div className={styles.hintMessage}>{connectionHint}</div>}
+          {connectionStatus === 'error' && diagnoseTarget && !showDiagnostics && (
+            <button
+              type="button"
+              className={styles.diagnoseLink}
+              onClick={() => setShowDiagnostics(true)}
+              data-action="show-diagnostics"
+            >
+              Run diagnostics to find out why
+            </button>
+          )}
+          {showDiagnostics && diagnoseTarget && (
+            <DiagnosticsPanel options={diagnoseTarget} autoRun />
+          )}
           <div className={styles.modalFooter}>
             <button
               type="button"

@@ -4,6 +4,22 @@ All notable changes to Calino will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- **Server diagnostics.** Settings → Sync now has a **Diagnose** button on each account, and a failed connection in the Add/Edit Calendar dialog offers to run it. Instead of one "this may be a CORS issue" catch-all, Calino probes the server check by check — is it reachable, does it allow cross-origin requests, are the credentials accepted, does it speak CalDAV, does it allow the methods and headers sync needs, can it list a collection, does it answer REPORT queries, is the ETag readable — and tells you exactly which header or method to add. There's a **Copy report** button for pasting into a bug report; it keeps your server's hostname and drops your username, password and proxy URL.
+
+  Two things worth knowing. Browsers deliberately hide a server's `Access-Control-Allow-*` headers from JavaScript, so some verdicts are marked **inferred**: deduced from which requests survived rather than read off the wire. Adding `DAV, Allow` to your server's `Access-Control-Expose-Headers` lets Calino read those directly, and the Android app has no CORS layer at all, so everything there is observed. Separately, there's an opt-in **write test** that creates one temporary event and deletes it again — it's the only way to be certain the ETag comes back on writes, so it sits behind its own button.
+
+  Diagnostics account for URLs that aren't a single calendar. Some servers redirect discovery past the CalDAV endpoint and on to their web interface — Radicale sends `/.well-known/caldav` to `/` and then to `/.web` — so if the discovered address turns out not to speak DAV, Calino falls back to the address you entered rather than reporting the web page's refusal as a rejected password. And pointing diagnostics at a principal or home set rather than one calendar skips the write test with an explanation, instead of failing on a request that URL could never have accepted.
+
+### Changed
+
+- **Clearer sync error messages.** The inline error in Settings and the toast that accompanies it were written separately and had drifted apart, so the same failure could be described two different ways — and one branch could never fire at all. They now share one classifier. Timeouts, server-side 5xx errors, and "this changed on another device" conflicts previously fell through as raw technical text and now get their own explanation, and the CORS message points at the new diagnostics rather than only dumping a block of headers.
+
+### Fixed
+
+- **Contacts reached through a CORS proxy no longer lose track of where an entry lives.** The same double-prefixed address fixed for calendars in 0.27.2 was still present on the contacts side.
+
 ## [0.27.2] - 2026-08-05
 
 ### Fixed

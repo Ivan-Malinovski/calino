@@ -322,3 +322,17 @@
     font-size: 16px;
   }
 }
+
+/* Offered under a failed connection attempt — see DiagnosticsPanel. */
+.diagnoseLink {
+  display: block;
+  margin: 0 0 12px;
+  padding: 0;
+  background: none;
+  border: none;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--accent);
+  text-decoration: underline;
+  cursor: pointer;
+}

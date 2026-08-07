@@ -2,6 +2,23 @@
 
 If your CalDAV server doesn't support CORS headers, you can use a proxy to add them.
 
+## First, check whether you need one
+
+Before reaching for a proxy, run **Settings → Sync → Diagnose** on the account. It probes your
+server check by check — reachability, preflight, credentials, DAV compliance classes, allowed
+methods, collection listing, REPORT queries and ETag exposure — and names the specific header or
+method that's missing. "Copy report" gives you a credential-free summary to paste into an issue.
+
+A caveat worth knowing: browsers deliberately hide a server's `Access-Control-Allow-*` headers
+from JavaScript, so on the web some verdicts are marked **inferred** — deduced from which requests
+survived rather than read off the response. Adding `DAV, Allow` to your server's
+`Access-Control-Expose-Headers` lets Calino read those two directly. On Android there's no CORS
+layer at all, so everything is observed.
+
+Diagnostics run **through** your proxy when one is configured, which means the CORS checks then
+describe the proxy rather than your server; those are reported as "not applicable" instead of
+passing on irrelevant evidence.
+
 ## Quick Options
 
 ### 1. Local Development Proxy

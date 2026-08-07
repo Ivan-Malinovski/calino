@@ -1,0 +1,201 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 20px 18px;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.primaryBtn,
+.secondaryBtn {
+  height: 30px;
+  padding: 0 12px;
+  border-radius: var(--radius-sm);
+  font-size: 12.5px;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  transition:
+    background 0.12s,
+    opacity 0.12s;
+}
+
+.primaryBtn {
+  color: white;
+  background: var(--accent);
+}
+
+.secondaryBtn {
+  color: var(--ink-2);
+  background: rgba(var(--ink-raw), 0.06);
+}
+
+.secondaryBtn:hover {
+  background: rgba(var(--ink-raw), 0.1);
+}
+
+.primaryBtn:disabled,
+.secondaryBtn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.note {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--ink-3);
+}
+
+.checks {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.check + .check {
+  border-top: 1px solid var(--line-2);
+}
+
+.checkHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13px;
+  text-align: left;
+  color: var(--ink);
+}
+
+.checkHeader:hover {
+  background: rgba(var(--ink-raw), 0.03);
+}
+
+.badge {
+  flex: none;
+  min-width: 56px;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.badge[data-status='pass'] {
+  color: var(--color-success, #4f8a63);
+  background: color-mix(in srgb, var(--color-success, #4f8a63) 14%, transparent);
+}
+
+.badge[data-status='fail'] {
+  color: var(--color-error, #c2697f);
+  background: color-mix(in srgb, var(--color-error, #c2697f) 14%, transparent);
+}
+
+.badge[data-status='warn'] {
+  color: var(--color-warning, #b98a3e);
+  background: color-mix(in srgb, var(--color-warning, #b98a3e) 16%, transparent);
+}
+
+.badge[data-status='skipped'],
+.badge[data-status='unknown'] {
+  color: var(--ink-3);
+  background: rgba(var(--ink-raw), 0.07);
+}
+
+.checkLabel {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Marks a verdict we deduced rather than read — see diagnostics.ts. */
+.inferred {
+  flex: none;
+  font-size: 10.5px;
+  color: var(--ink-3);
+  border: 1px dashed var(--line-2);
+  border-radius: var(--radius-sm);
+  padding: 1px 5px;
+  cursor: help;
+}
+
+.checkBody {
+  padding: 0 12px 12px 78px;
+}
+
+.detail {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--ink-2);
+}
+
+.fixLabel {
+  margin-top: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--ink-3);
+}
+
+.raw,
+.fix {
+  margin: 6px 0 0;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: rgba(var(--ink-raw), 0.05);
+  font-size: 11.5px;
+  font-family: var(--font-mono, monospace);
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-x: auto;
+  color: var(--ink-2);
+}
+
+.summary {
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 12.5px;
+  line-height: 1.5;
+  border: 1px solid var(--line-2);
+  color: var(--ink);
+}
+
+.summary[data-summary='broken'] {
+  border-color: var(--error-border);
+  background: color-mix(in srgb, var(--color-error, #c2697f) 8%, var(--panel));
+}
+
+.summary[data-summary='degraded'] {
+  background: color-mix(in srgb, var(--color-warning, #b98a3e) 8%, var(--panel));
+}
+
+.summary[data-summary='ok'] {
+  background: color-mix(in srgb, var(--color-success, #4f8a63) 8%, var(--panel));
+}
+
+.summaryNote {
+  color: var(--ink-3);
+}
+
+@media (max-width: 520px) {
+  .checkBody {
+    padding-left: 12px;
+  }
+}

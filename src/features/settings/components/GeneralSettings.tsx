@@ -9,6 +9,7 @@ import {
   MAP_PROVIDER_OPTIONS,
 } from '@/store/settingsStore'
 import { useSettingsSync } from '@/hooks/useSettingsSync'
+import { classifySyncError, CORS_HEADER_SNIPPET } from '@/features/caldav/client/errorMessages'
 import styles from './Settings.module.css'
 
 // Haptics are a native-only capability, and `enableHaptics` is deliberately
@@ -16,81 +17,99 @@ import styles from './Settings.module.css'
 // device that stutters isn't necessarily every device on the account.
 const isNative = Capacitor.isNativePlatform()
 
-/** Format a sync error into a friendly, helpful message. */
+const codeBlockStyle = {
+  display: 'block',
+  marginTop: 6,
+  padding: '6px 10px',
+  borderRadius: 'var(--radius-sm)',
+  background: 'rgba(44,40,33,0.04)',
+  fontSize: 12,
+  fontFamily: 'monospace',
+  lineHeight: 1.5,
+  whiteSpace: 'pre-wrap',
+} as const
+
+/**
+ * Render a sync error as help rather than a stack trace.
+ *
+ * Bucketing lives in `classifySyncError` so this and the toast in
+ * useSettingsSync can never disagree about what a given failure means — they
+ * used to keep separate substring ladders over the same categories.
+ */
 function formatSyncError(error: string): JSX.Element {
-  const lower = error.toLowerCase()
+  switch (classifySyncError(error)) {
+    case 'cors':
+      return (
+        <>
+          Your server is blocking the connection. This usually means CORS headers aren't configured.
+          Check that your CalDAV server sends these, and that it answers OPTIONS:
+          <code style={codeBlockStyle}>{CORS_HEADER_SNIPPET}</code>
+          <span style={{ marginTop: 6, display: 'block' }}>
+            Sync → your account → <strong>Diagnose</strong> will tell you which part is missing. See{' '}
+            <a
+              href="https://github.com/nickvdyck/baikal#cors"
+              target="_blank"
+              rel="noreferrer"
+              style={{ color: 'var(--accent)' }}
+            >
+              Baikal CORS docs
+            </a>{' '}
+            for help.
+          </span>
+        </>
+      )
 
-  // CORS errors
-  if (lower.includes('cors') || lower.includes('NetworkError') || lower.includes('cross-origin')) {
-    return (
-      <>
-        Your server is blocking the connection. This usually means CORS headers aren't configured.
-        Check that your CalDAV server has these headers set via PROPPATCH or your web server config:
-        <br />
-        <code
-          style={{
-            display: 'block',
-            marginTop: 6,
-            padding: '6px 10px',
-            borderRadius: 'var(--radius-sm)',
-            background: 'rgba(44,40,33,0.04)',
-            fontSize: 12,
-            fontFamily: 'monospace',
-            lineHeight: 1.5,
-            whiteSpace: 'pre-wrap',
-          }}
-        >{`Access-Control-Allow-Origin: *
-Access-Control-Allow-Methods: GET, POST, PUT, DELETE, PROPFIND, PROPPATCH, REPORT, OPTIONS, MKCOL, COPY, MOVE
-Access-Control-Allow-Headers: Authorization, Content-Type, Depth, Prefer, If-Match, If-None-Match
-Access-Control-Expose-Headers: ETag`}</code>
-        <span style={{ marginTop: 6, display: 'block' }}>
-          See{' '}
-          <a
-            href="https://github.com/nickvdyck/baikal#cors"
-            target="_blank"
-            rel="noreferrer"
-            style={{ color: 'var(--accent)' }}
-          >
-            Baikal CORS docs
-          </a>{' '}
-          for help.
-        </span>
-      </>
-    )
+    case 'network':
+      return (
+        <>
+          Couldn't reach your CalDAV server. Check your internet connection and make sure the server
+          is online — a missing CORS header looks identical from here, so try{' '}
+          <strong>Diagnose</strong> under Sync if the server is up.
+        </>
+      )
+
+    case 'timeout':
+      return (
+        <>
+          Your CalDAV server took too long to respond. It may be overloaded — try again in a moment.
+        </>
+      )
+
+    case 'auth':
+      return (
+        <>
+          Authentication failed. Check your CalDAV username and password. Many providers require an
+          app-specific password rather than your account password.
+        </>
+      )
+
+    case 'not-found':
+      return (
+        <>
+          The settings calendar wasn't found on your server. It may have been deleted. Try disabling
+          and re-enabling sync.
+        </>
+      )
+
+    case 'conflict':
+      return (
+        <>
+          Your settings were changed on another device since this one last synced. Sync again to
+          pick up the newer copy.
+        </>
+      )
+
+    case 'server':
+      return (
+        <>
+          Your CalDAV server returned an error. This is a problem on the server side — check its
+          logs.
+        </>
+      )
+
+    case 'unknown':
+      return <>{error}</>
   }
-
-  // Network errors
-  if (lower.includes('network') || lower.includes('fetch') || lower.includes('failed to fetch')) {
-    return (
-      <>
-        Couldn't reach your CalDAV server. Check your internet connection and make sure the server
-        is online.
-      </>
-    )
-  }
-
-  // Auth errors
-  if (
-    lower.includes('401') ||
-    lower.includes('403') ||
-    lower.includes('unauthorized') ||
-    lower.includes('forbidden')
-  ) {
-    return <>Authentication failed. Please check your CalDAV username and password.</>
-  }
-
-  // Not found
-  if (lower.includes('404') || lower.includes('not found')) {
-    return (
-      <>
-        The settings calendar wasn't found on your server. It may have been deleted. Try disabling
-        and re-enabling sync.
-      </>
-    )
-  }
-
-  // Default
-  return <>{error}</>
 }
 
 export function GeneralSettings(): JSX.Element {

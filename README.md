@@ -226,8 +226,10 @@ If adding headers to your CalDAV server:
 Access-Control-Allow-Origin: <your-calino-origin>
 Access-Control-Allow-Headers: Authorization, Content-Type, Depth, If-Match, If-None-Match
 Access-Control-Allow-Methods: GET, PUT, POST, DELETE, PROPFIND, PROPPATCH, REPORT, OPTIONS, MKCOL, COPY, MOVE
-Access-Control-Expose-Headers: ETag
+Access-Control-Expose-Headers: ETag, DAV, Allow
 ```
+
+> **Tip:** If something isn't working, don't guess at which header is missing — open **Settings → Sync**, pick your account and press **Diagnose**. Calino probes the server check by check and tells you what to change. Note that browsers hide a server's `Access-Control-Allow-*` headers from JavaScript, so some verdicts are marked "inferred": they're deduced from how the server behaved rather than read off the wire. Exposing `DAV` and `Allow` (above) lets Calino read those two directly.
 
 > **Note:** `MKCOL`, `COPY`, and `MOVE` are required for settings sync (creating/moving the Calino settings collection). Omitting them still lets calendars load, but settings sync will fail.
 

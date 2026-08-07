@@ -414,7 +414,7 @@ function createProxyFetch(proxyUrl: string): typeof fetch {
   }
 }
 
-async function proxyFetch(
+export async function proxyFetch(
   proxyUrl: string,
   targetUrl: string,
   init?: RequestInit

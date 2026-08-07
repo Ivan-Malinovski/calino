@@ -11,6 +11,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { toast as sonnerToast } from 'sonner'
 import { showToast } from '@/lib/toast'
+import { classifySyncError, shortSyncErrorMessage } from '@/features/caldav/client/errorMessages'
 import { useSettingsStore } from '@/store/settingsStore'
 import {
   serializeSettings,
@@ -36,39 +37,18 @@ import type { CalDAVAccount } from '@/features/caldav/types'
 
 // ─── Toast helper ─────────────────────────────────────────────────────────────
 
-
 /**
- * Turn a raw sync error message into a short, user-facing toast string.
- * Mirrors the categories `formatSyncError` in GeneralSettings.tsx already
- * shows inline, so a failure is never purely silent — push() previously
- * only toasted on success, leaving failures visible solely in the settings
- * panel's inline error text (invisible if the user isn't looking at it,
- * e.g. background autosave-style pushes or auto-discovery on account add).
+ * Toast a sync failure, so it's never purely silent — push() previously only
+ * toasted on success, leaving failures visible solely in the settings panel's
+ * inline error text (invisible if the user isn't looking at it, e.g. background
+ * autosave-style pushes or auto-discovery on account add).
+ *
+ * Both the wording and the bucketing come from the shared classifier, which
+ * `formatSyncError` in GeneralSettings.tsx also renders from; this used to be a
+ * hand-kept mirror of that function's substring ladder.
  */
-function formatSyncErrorForToast(message: string): string {
-  const lower = message.toLowerCase()
-  if (lower.includes('cors') || lower.includes('cross-origin')) {
-    return 'Settings sync failed: your server is blocking the connection (CORS).'
-  }
-  if (lower.includes('network') || lower.includes('fetch')) {
-    return "Settings sync failed: couldn't reach your CalDAV server."
-  }
-  if (
-    lower.includes('401') ||
-    lower.includes('403') ||
-    lower.includes('unauthorized') ||
-    lower.includes('forbidden')
-  ) {
-    return 'Settings sync failed: authentication error. Check your CalDAV credentials.'
-  }
-  if (lower.includes('404') || lower.includes('not found')) {
-    return 'Settings sync failed: settings calendar not found. Try disabling and re-enabling sync.'
-  }
-  return `Settings sync failed: ${message}`
-}
-
 function showErrorToast(message: string): void {
-  sonnerToast.error(formatSyncErrorForToast(message))
+  sonnerToast.error(shortSyncErrorMessage(classifySyncError(message), message, 'Settings sync'))
 }
 
 // ─── Return type ──────────────────────────────────────────────────────────────

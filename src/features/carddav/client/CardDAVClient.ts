@@ -56,10 +56,7 @@ interface ParsedDAVResponse {
  */
 function normalizeEtag(raw: string | null | undefined): string {
   if (!raw) return ''
-  return decodeXmlEntities(raw)
-    .trim()
-    .replace(/^W\//i, '')
-    .replace(/^"|"$/g, '')
+  return decodeXmlEntities(raw).trim().replace(/^W\//i, '').replace(/^"|"$/g, '')
 }
 
 /** The five predefined XML entities. Numeric character references are not used for etags. */
@@ -184,6 +181,14 @@ function createProxyFetch(proxyUrl: string): typeof fetch {
 
 function prefixUrlWithProxy(url: string, proxyBase: string): string {
   if (!proxyBase) {
+    return url
+  }
+
+  // Already pointing at the proxy — prefixing again yields
+  // `proxy/https%3A%2F%2Fproxy/https%3A%2F%2Fdav…`, which resolves to nothing.
+  // Same guard as CalDAVClient, for the same reason: stored hrefs from older
+  // versions can already carry the proxy prefix.
+  if (url.replace(/\/$/, '').startsWith(proxyBase.replace(/\/$/, '') + '/')) {
     return url
   }
 

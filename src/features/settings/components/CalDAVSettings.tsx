@@ -1,7 +1,10 @@
 import type { JSX } from 'react'
 import { useState } from 'react'
 import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
+import { getCredentialById } from '@/features/caldav/client/credentials'
+import type { DiagnosticsOptions } from '@/features/caldav/client/diagnostics'
 import type { CalDAVAccount } from '@/features/caldav/types'
+import { DiagnosticsPanel } from './DiagnosticsPanel'
 import { AddCalendarModal } from '@/features/calendar/components/AddCalendarModal'
 import { SubscribeCalendarModal } from '@/features/calendar/components/SubscribeCalendarModal'
 import { useWebcalSubscriptions } from '@/features/webcal/hooks/useWebcalSubscriptions'
@@ -20,6 +23,12 @@ export function CalDAVSettings(): JSX.Element {
   const [testStates, setTestStates] = useState<Record<string, TestState>>({})
   const [isSubscribing, setIsSubscribing] = useState(false)
   const [syncingSubscriptionId, setSyncingSubscriptionId] = useState<string | null>(null)
+  // The diagnostics panel needs the password, which lives in the credential
+  // store rather than on the account — resolved once, when the row is opened.
+  const [diagnosing, setDiagnosing] = useState<{
+    accountId: string
+    options: Omit<DiagnosticsOptions, 'includeWriteTest' | 'onProgress'>
+  } | null>(null)
 
   const { accounts, removeAccount, testAccount } = useCalDAV()
   const { subscriptions, removeSubscription, syncSubscription } = useWebcalSubscriptions()
@@ -60,8 +69,33 @@ export function CalDAVSettings(): JSX.Element {
     }))
   }
 
+  const handleDiagnose = async (account: CalDAVAccount): Promise<void> => {
+    if (diagnosing?.accountId === account.id) {
+      setDiagnosing(null)
+      return
+    }
+    const credential = await getCredentialById(account.credentialId)
+    if (!credential) {
+      setTestStates((prev) => ({
+        ...prev,
+        [account.id]: { status: 'error', message: 'Credentials not found' },
+      }))
+      return
+    }
+    setDiagnosing({
+      accountId: account.id,
+      options: {
+        serverUrl: account.serverUrl,
+        username: account.username,
+        password: credential.password,
+        proxyUrl: account.proxyUrl,
+      },
+    })
+  }
+
   const handleEditAccount = (account: CalDAVAccount): void => {
     clearTestState(account.id)
+    setDiagnosing(null)
     setEditingAccount(account)
   }
 
@@ -170,6 +204,17 @@ export function CalDAVSettings(): JSX.Element {
                   </button>
                   <button
                     className={styles.rowBtn}
+                    onClick={() => void handleDiagnose(account)}
+                    aria-label={`Run diagnostics for ${account.name}`}
+                    aria-expanded={diagnosing?.accountId === account.id}
+                    data-component="action-button"
+                    data-action="diagnose-account"
+                    type="button"
+                  >
+                    Diagnose
+                  </button>
+                  <button
+                    className={styles.rowBtn}
                     onClick={() => handleEditAccount(account)}
                     aria-label={`Edit ${account.name}`}
                     data-component="action-button"
@@ -190,6 +235,9 @@ export function CalDAVSettings(): JSX.Element {
               </div>
               {test?.status === 'error' && test.hint && (
                 <div className={styles.accountHint}>{test.hint}</div>
+              )}
+              {diagnosing?.accountId === account.id && (
+                <DiagnosticsPanel options={diagnosing.options} autoRun />
               )}
             </div>
           )
