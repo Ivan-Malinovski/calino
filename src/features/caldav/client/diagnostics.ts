@@ -125,6 +125,25 @@ function isAbort(error: unknown): boolean {
   return error instanceof Error && error.name === 'AbortError'
 }
 
+/**
+ * Why an `http://` server is unreachable from a page served over `https://`.
+ *
+ * Calino's CSP is `connect-src 'self' https:` (index.html), and browsers block
+ * mixed content besides — so the request never leaves the page and surfaces as
+ * a bare "Failed to fetch", identical to a server that is switched off. Worth
+ * naming explicitly: plenty of self-hosted DAV servers run plain http on a LAN,
+ * and no amount of server-side configuration will fix this one.
+ */
+function blockedByPagePolicy(target: string): string | null {
+  if (typeof location === 'undefined' || location.protocol !== 'https:') return null
+  if (!target.startsWith('http://')) return null
+  return (
+    'This page is served over https, so the browser refuses to contact an http server ' +
+    "(mixed content, and Calino's connect-src policy). Serve the DAV server over https, " +
+    'or point Calino at an https proxy in front of it. The Android app is not affected.'
+  )
+}
+
 /** `isDavStatus`, lifted to the response we may or may not have got. */
 function isDavResponse(response: Response | null): boolean {
   return response !== null && isDavStatus(response.status)
@@ -220,6 +239,7 @@ export async function runDiagnostics(options: DiagnosticsOptions): Promise<Diagn
         ? `${base} did not respond within ${CHECK_TIMEOUT_MS / 1000}s.`
         : `Could not connect to ${base}: ${errorMessage(error)}`,
       fix:
+        blockedByPagePolicy(base) ??
         suggestCalDAVUrl(hintUrl) ??
         'Check the server URL, that the server is running, and that its TLS certificate is valid.',
       raw: base,

@@ -14,6 +14,8 @@ All notable changes to Calino will be documented in this file.
 
 ### Changed
 
+- **A plain-http server now says why it can't be reached.** Calino is served over https, and browsers refuse to let an https page talk to an http one — so a DAV server on plain http inside a LAN failed with the same "couldn't reach the server" as one that was switched off. Diagnostics now names it, and says that the Android app isn't affected.
+
 - **Clearer errors when adding a server.** A failed connection used to show the underlying exception spliced into a sentence — "Connection failed: Failed to fetch. This may be a CORS issue" — which named CORS even when the real cause was a typo in the address or a server that wasn't running, and showed "Server returned status 401" rather than saying the password was refused. Both dialogs now explain the failure instead, and offer to run diagnostics. The first-run setup page had its own separate copy of the connection test, with no hints and no diagnostics; it now uses the same one as everything else.
 
 - **The rest of the calendar actions explain their failures too.** Syncing from the sidebar, renaming a calendar, changing its colour, deleting it, creating one on the server and subscribing to a webcal feed all used to put the underlying exception straight into the toast — most often a bare "Failed to fetch". They now say what went wrong, in the same words as everything else.

@@ -7,6 +7,7 @@ import { defineConfig, devices } from '@playwright/test'
 // Its own port keeps the suite self-contained and lets `pnpm dev` keep running.
 const PORT = Number(process.env.E2E_PORT ?? 5199)
 const BASE_URL = `http://localhost:${PORT}`
+const DAV_PORT = Number(process.env.DAV_PORT ?? 8099)
 const IS_CI = !!process.env.CI
 
 export default defineConfig({
@@ -33,12 +34,29 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'] },
     },
   ],
-  webServer: {
-    command: `CALINO_E2E_MOCK=1 pnpm dev --port ${PORT} --strictPort`,
-    url: BASE_URL,
-    reuseExistingServer: !IS_CI,
-    timeout: 120_000,
-    stdout: 'ignore',
-    stderr: 'pipe',
-  },
+  webServer: [
+    {
+      command: `CALINO_E2E_MOCK=1 pnpm dev --port ${PORT} --strictPort`,
+      url: BASE_URL,
+      reuseExistingServer: !IS_CI,
+      timeout: 120_000,
+      stdout: 'ignore',
+      stderr: 'pipe',
+    },
+    {
+      // A DAV server on its own origin, for e2e/diagnostics.spec.ts. The vite
+      // mock can't serve those specs: it's middleware on the app's origin, so
+      // its responses are same-origin and never exercise CORS — which is the
+      // only thing diagnostics has to reason about. HTTPS because the app's
+      // CSP is `connect-src 'self' https:`; the cert is self-signed, hence
+      // `ignoreHTTPSErrors` in the spec.
+      command: `node e2e/fixtures/dav-server.mjs`,
+      url: `https://localhost:${DAV_PORT}/good/`,
+      ignoreHTTPSErrors: true,
+      reuseExistingServer: !IS_CI,
+      timeout: 30_000,
+      stdout: 'ignore',
+      stderr: 'pipe',
+    },
+  ],
 })

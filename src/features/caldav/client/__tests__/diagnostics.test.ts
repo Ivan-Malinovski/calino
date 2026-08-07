@@ -280,3 +280,28 @@ describe('formatReportForClipboard', () => {
     expect(text).not.toContain('proxy.calino.io')
   })
 })
+
+describe('mixed content', () => {
+  it('names the page policy when an http server is unreachable from https', async () => {
+    // The browser blocks this before a request is made, so it is indistinguishable
+    // from a dead server unless we say so.
+    vi.stubGlobal('location', { protocol: 'https:', href: 'https://app.example.com/' })
+    stubFetch({ GET: { throws: new TypeError('Failed to fetch') } })
+
+    const report = await runDiagnostics({ ...OPTS, serverUrl: 'http://dav.local:5232' })
+
+    const reachable = report.checks.find((c) => c.id === 'reachable')!
+    expect(reachable.status).toBe('fail')
+    expect(reachable.fix).toMatch(/https/i)
+    expect(reachable.fix).toMatch(/mixed content|connect-src/i)
+  })
+
+  it('says nothing about mixed content when the page is itself http', async () => {
+    vi.stubGlobal('location', { protocol: 'http:', href: 'http://localhost:5173/' })
+    stubFetch({ GET: { throws: new TypeError('Failed to fetch') } })
+
+    const report = await runDiagnostics({ ...OPTS, serverUrl: 'http://dav.local:5232' })
+
+    expect(report.checks.find((c) => c.id === 'reachable')!.fix).not.toMatch(/mixed content/i)
+  })
+})
