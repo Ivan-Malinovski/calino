@@ -478,8 +478,10 @@
   width: 36px;
   height: 36px;
   padding: 0;
-  color: var(--accent-contrast, #fff);
-  background: var(--accent-strong, var(--color-accent));
+  /* Green rather than accent: this is the confirm action, and it sits next to
+     the destructive red delete button — the pair should read as yes/no. */
+  color: #fff;
+  background: var(--color-success);
   border: none;
   border-radius: 6px;
   cursor: pointer;
@@ -488,7 +490,7 @@
 }
 
 .saveBtn:hover {
-  background: var(--color-accent-hover);
+  background: color-mix(in srgb, var(--color-success) 85%, #000);
 }
 
 .openBtn {
