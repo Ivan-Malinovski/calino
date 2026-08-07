@@ -1008,7 +1008,9 @@ END:VCALENDAR`,
     // DELETE being observable to queue its delete-href retry (#86).
     it('throws when the server responds with a non-2xx status', async () => {
       await client.connect()
-      mockClientMethods.deleteCalendarObject.mockResolvedValue(new Response('oops', { status: 500 }))
+      mockClientMethods.deleteCalendarObject.mockResolvedValue(
+        new Response('oops', { status: 500 })
+      )
 
       await expect(client.deleteEvent(mockEventObject.url, mockEventObject.etag)).rejects.toThrow(
         /HTTP 500/
@@ -1017,7 +1019,9 @@ END:VCALENDAR`,
 
     it('attaches the HTTP status to the thrown error so callers can classify it', async () => {
       await client.connect()
-      mockClientMethods.deleteCalendarObject.mockResolvedValue(new Response('oops', { status: 502 }))
+      mockClientMethods.deleteCalendarObject.mockResolvedValue(
+        new Response('oops', { status: 502 })
+      )
 
       const error = await client
         .deleteEvent(mockEventObject.url, mockEventObject.etag)
@@ -1029,16 +1033,24 @@ END:VCALENDAR`,
     // 404/410 mean the resource is already gone — the outcome a delete wants.
     it('treats 404 as success (resource already gone)', async () => {
       await client.connect()
-      mockClientMethods.deleteCalendarObject.mockResolvedValue(new Response('gone', { status: 404 }))
+      mockClientMethods.deleteCalendarObject.mockResolvedValue(
+        new Response('gone', { status: 404 })
+      )
 
-      await expect(client.deleteEvent(mockEventObject.url, mockEventObject.etag)).resolves.toBeUndefined()
+      await expect(
+        client.deleteEvent(mockEventObject.url, mockEventObject.etag)
+      ).resolves.toBeUndefined()
     })
 
     it('treats 410 as success (resource already gone)', async () => {
       await client.connect()
-      mockClientMethods.deleteCalendarObject.mockResolvedValue(new Response('gone', { status: 410 }))
+      mockClientMethods.deleteCalendarObject.mockResolvedValue(
+        new Response('gone', { status: 410 })
+      )
 
-      await expect(client.deleteEvent(mockEventObject.url, mockEventObject.etag)).resolves.toBeUndefined()
+      await expect(
+        client.deleteEvent(mockEventObject.url, mockEventObject.etag)
+      ).resolves.toBeUndefined()
     })
 
     // Bug 20: offline detection

@@ -17,14 +17,7 @@ import { FloatingNavPill } from '@/features/calendar/components/nav/FloatingNavP
 import styles from './Settings.module.css'
 
 type SettingsTab =
-  | 'general'
-  | 'theme'
-  | 'calendar'
-  | 'categories'
-  | 'notifications'
-  | 'caldav'
-  | 'data'
-  | 'aiVision'
+  'general' | 'theme' | 'calendar' | 'categories' | 'notifications' | 'caldav' | 'data' | 'aiVision'
 
 interface NavItem {
   id: SettingsTab

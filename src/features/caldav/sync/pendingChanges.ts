@@ -1,8 +1,4 @@
-import type {
-  PendingChange,
-  MovePendingData,
-  DeleteHrefPendingData,
-} from '../types'
+import type { PendingChange, MovePendingData, DeleteHrefPendingData } from '../types'
 import type { CalendarEvent } from '@/types'
 
 /**

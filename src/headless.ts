@@ -121,7 +121,11 @@ export async function runHeadlessSync(): Promise<HeadlessResult> {
   const result = JSON.parse(bridge.mirrorSync(JSON.stringify(payload))) as { error?: string }
   if (result.error) throw new Error(result.error)
 
-  return { accounts: accountsSynced, calendars: payload.calendars.length, events: payload.events.length }
+  return {
+    accounts: accountsSynced,
+    calendars: payload.calendars.length,
+    events: payload.events.length,
+  }
 }
 
 const bridge = getHeadlessBridge()

@@ -210,9 +210,7 @@ describe('resourceIsInCollection', () => {
   const collection = 'https://caldav.example.com/calendars/test/personal/'
 
   it('accepts a resource inside the collection', () => {
-    expect(
-      resourceIsInCollection(`${collection}event.ics`, collection)
-    ).toBe(true)
+    expect(resourceIsInCollection(`${collection}event.ics`, collection)).toBe(true)
   })
 
   it('accepts an origin-relative href', () => {
@@ -227,14 +225,15 @@ describe('resourceIsInCollection', () => {
 
   it('rejects a resource on another origin', () => {
     expect(
-      resourceIsInCollection('https://other.example.com/calendars/test/personal/event.ics', collection)
+      resourceIsInCollection(
+        'https://other.example.com/calendars/test/personal/event.ics',
+        collection
+      )
     ).toBe(false)
   })
 
   it('tolerates a collection url without a trailing slash', () => {
-    expect(
-      resourceIsInCollection(`${collection}event.ics`, collection.slice(0, -1))
-    ).toBe(true)
+    expect(resourceIsInCollection(`${collection}event.ics`, collection.slice(0, -1))).toBe(true)
   })
 
   it('does not treat a prefix-sharing sibling as inside the collection', () => {

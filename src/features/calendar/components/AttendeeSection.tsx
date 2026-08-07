@@ -157,7 +157,9 @@ export function AttendeeSection({
         </button>
       </div>
       {inputError && (
-        <div style={{ color: 'var(--color-error)', fontSize: '12px', marginTop: '4px' }}>{inputError}</div>
+        <div style={{ color: 'var(--color-error)', fontSize: '12px', marginTop: '4px' }}>
+          {inputError}
+        </div>
       )}
     </div>
   )

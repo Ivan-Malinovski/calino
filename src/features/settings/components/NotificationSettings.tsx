@@ -209,7 +209,11 @@ export function NotificationSettings(): JSX.Element {
               </div>
             </div>
             <div className={styles.rowControl}>
-              <label className={styles.toggle} data-component="toggle" data-setting="calendar-mirror">
+              <label
+                className={styles.toggle}
+                data-component="toggle"
+                data-setting="calendar-mirror"
+              >
                 <input
                   type="checkbox"
                   checked={enableCalendarMirror}

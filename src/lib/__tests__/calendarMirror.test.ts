@@ -128,9 +128,7 @@ describe('buildMirrorPayload', () => {
   })
 
   it('derives an RRULE from the structured recurrence when there is no raw one', () => {
-    const [mirrored] = build([
-      event({ recurrence: { frequency: 'daily', interval: 2 } }),
-    ]).events
+    const [mirrored] = build([event({ recurrence: { frequency: 'daily', interval: 2 } })]).events
     expect(mirrored.rrule).toContain('FREQ=DAILY')
     expect(mirrored.rrule).toContain('INTERVAL=2')
   })
@@ -179,7 +177,11 @@ describe('buildMirrorPayload', () => {
 
   it('drops cancelled occurrences, which EXDATE already covers', () => {
     const result = build([
-      event({ id: 'cancelled', recurrenceId: '2026-06-23T09:00:00.000Z', eventStatus: 'CANCELLED' }),
+      event({
+        id: 'cancelled',
+        recurrenceId: '2026-06-23T09:00:00.000Z',
+        eventStatus: 'CANCELLED',
+      }),
     ])
     expect(result.events).toHaveLength(0)
   })

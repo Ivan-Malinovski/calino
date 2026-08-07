@@ -253,7 +253,11 @@ describe('useNotifications - Bug #81+90: shownReminders behavior', () => {
     // What the store's expansion actually hands back: an occurrence due in 15m.
     const occurrenceStart = new Date(now.getTime() + 15 * 60_000)
     currentExpandedEvents = [
-      { ...master, id: `daily1-${occurrenceStart.toISOString()}`, start: occurrenceStart.toISOString() },
+      {
+        ...master,
+        id: `daily1-${occurrenceStart.toISOString()}`,
+        start: occurrenceStart.toISOString(),
+      },
     ]
 
     renderHook(() => useNotifications())

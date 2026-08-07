@@ -97,10 +97,10 @@ export function usePullToRefresh(
 
     const handleTouchMove = (e: TouchEvent): void => {
       if (!tracking || e.touches.length !== 1) return
-      
+
       const dx = e.touches[0].clientX - startX
       const dy = e.touches[0].clientY - startY
-      
+
       if (!axisLocked && (Math.abs(dx) > 10 || Math.abs(dy) > 10)) {
         if (Math.abs(dx) > Math.abs(dy)) {
           tracking = false
@@ -109,7 +109,7 @@ export function usePullToRefresh(
         }
         axisLocked = true
       }
-      
+
       if (dy <= 0) {
         setPull(0)
         return

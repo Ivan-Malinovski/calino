@@ -82,9 +82,17 @@ describe('runHeadlessSync', () => {
     bridge = bridgeStub()
     ;(globalThis as { CalinoHeadless?: HeadlessBridge }).CalinoHeadless = bridge
 
-    mockGetAllAccounts.mockReset().mockReturnValue([
-      { id: 'acct-1', name: 'Radicale', serverUrl: 'https://dav.test', proxyUrl: null, credentialId: 'cred-1' },
-    ])
+    mockGetAllAccounts
+      .mockReset()
+      .mockReturnValue([
+        {
+          id: 'acct-1',
+          name: 'Radicale',
+          serverUrl: 'https://dav.test',
+          proxyUrl: null,
+          credentialId: 'cred-1',
+        },
+      ])
     mockGetCalendarsByAccountId
       .mockReset()
       .mockReturnValue([{ id: 'cal-1', url: 'https://dav.test/cal-1/', name: 'Personal' }])

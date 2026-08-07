@@ -86,8 +86,7 @@ function currentArrangement(): { ordered: ViewType[]; visible: ViewType[] } {
   const state = useSettingsStore.getState()
   const ordered = reconcileViewOrder(state.viewOrder).map((v) => v.value)
   const visible = ordered.filter(
-    (v) =>
-      (state.journalEnabled || v !== 'journal') && (state.contactsEnabled || v !== 'contacts')
+    (v) => (state.journalEnabled || v !== 'journal') && (state.contactsEnabled || v !== 'contacts')
   )
   return { ordered, visible }
 }

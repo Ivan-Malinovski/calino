@@ -1,9 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { Contact, PendingContactChange } from '@/features/carddav/types'
-import {
-  deleteContactWithUndo,
-  type PendingDeleteSnapshot,
-} from '../deleteContactWithUndo'
+import { deleteContactWithUndo, type PendingDeleteSnapshot } from '../deleteContactWithUndo'
 
 const undoHandlers: (() => void)[] = []
 

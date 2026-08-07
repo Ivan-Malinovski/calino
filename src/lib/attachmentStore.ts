@@ -48,4 +48,3 @@ export async function getAttachments(eventId: string): Promise<CalendarAttachmen
 export async function deleteAttachments(eventId: string): Promise<void> {
   await db.attachments.delete(eventId)
 }
-

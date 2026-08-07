@@ -544,7 +544,11 @@ export function ContactDetail({
                       <span className={styles.infoFieldSub}>
                         {RELATED_TYPE_LABELS[rel.type] ?? rel.type}
                       </span>
-                      <RelationValue value={rel.value} siblingOf={contact} contactLookup={contactLookup} />
+                      <RelationValue
+                        value={rel.value}
+                        siblingOf={contact}
+                        contactLookup={contactLookup}
+                      />
                     </div>
                   ))}
                 </div>
@@ -556,7 +560,11 @@ export function ContactDetail({
                   <span className={styles.infoFieldLabel}>MEMBERS</span>
                   {contact.memberUids.map((uid, i) => (
                     <div key={`member-${i}`} className={styles.infoFieldGrid}>
-                      <RelationValue value={uid} siblingOf={contact} contactLookup={contactLookup} />
+                      <RelationValue
+                        value={uid}
+                        siblingOf={contact}
+                        contactLookup={contactLookup}
+                      />
                     </div>
                   ))}
                 </div>

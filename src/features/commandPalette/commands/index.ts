@@ -589,4 +589,3 @@ export const createCommandRegistry = (deps: CommandFactoryDeps): Command[] => [
   ...createNavigationCommands(deps),
   ...createSettingsCommands(deps),
 ]
-

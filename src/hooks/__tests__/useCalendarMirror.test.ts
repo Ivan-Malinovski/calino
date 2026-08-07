@@ -30,8 +30,9 @@ const currentCalendars: Calendar[] = []
 let currentEnabled = true
 
 vi.mock('@/store/calendarStore', () => ({
-  useCalendarStore: (selector: (s: { events: CalendarEvent[]; calendars: Calendar[] }) => unknown) =>
-    selector({ events: currentEvents, calendars: currentCalendars }),
+  useCalendarStore: (
+    selector: (s: { events: CalendarEvent[]; calendars: Calendar[] }) => unknown
+  ) => selector({ events: currentEvents, calendars: currentCalendars }),
 }))
 
 vi.mock('@/store/settingsStore', () => ({

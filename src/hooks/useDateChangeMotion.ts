@@ -98,4 +98,3 @@ export function useDateChangeMotion(marker: string): DateChangeMotion {
     }
   }, [direction, isMobile, prefersReducedMotion, isFastDesktop, hasChanged])
 }
-

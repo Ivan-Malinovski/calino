@@ -1,11 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import type { Contact } from '../../types'
-import {
-  normalizeContactRef,
-  isContactRef,
-  resolveContactRef,
-  toContactRef,
-} from '../contactRefs'
+import { normalizeContactRef, isContactRef, resolveContactRef, toContactRef } from '../contactRefs'
 
 const ALICE_UID = '3f2504e0-4f89-11d3-9a0c-0305e82c3301'
 const BOB_UID = '9c858901-8a57-4791-81fe-4c455b099bc9'
@@ -132,7 +127,9 @@ describe('resolveContactRef', () => {
   })
 
   it('returns undefined when no contact has that uid', () => {
-    expect(resolveContactRef('urn:uuid:00000000-0000-4000-8000-000000000000', contacts)).toBeUndefined()
+    expect(
+      resolveContactRef('urn:uuid:00000000-0000-4000-8000-000000000000', contacts)
+    ).toBeUndefined()
   })
 
   it('returns undefined against an empty contact list', () => {

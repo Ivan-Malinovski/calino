@@ -266,10 +266,10 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
       const group = dayGroups[index]
       if (group.type === 'skip') return 32
       if (!group.hasEvents) return 46
-      
+
       const dateKey = format(group.days[0], 'yyyy-MM-dd')
       const sortedEvents = eventsByDate.get(dateKey) || []
-      
+
       let h = 46
       for (let i = 0; i < sortedEvents.length; i++) {
         const hasLocation = !!sortedEvents[i].event.location
@@ -279,8 +279,6 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
     },
     overscan: 4,
   })
-
-
 
   useEffect(() => {
     const onJumpToToday = () => {
@@ -375,7 +373,9 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
                       data-date={dateKey}
                       onContextMenu={(e) => handleContextMenu(e, day)}
                     >
-                      <div className={`${styles.agendaDayHeader} ${isEmpty ? styles.isEmpty : ''} ${isToday ? styles.isToday : ''}`}>
+                      <div
+                        className={`${styles.agendaDayHeader} ${isEmpty ? styles.isEmpty : ''} ${isToday ? styles.isToday : ''}`}
+                      >
                         <div className={styles.agendaDayLabel}>
                           <span className={styles.agendaDow}>{format(day, 'EEEE')}</span>
                           <span className={styles.agendaDate}>{format(day, 'MMM d, yyyy')}</span>

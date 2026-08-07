@@ -153,8 +153,7 @@ describe('useGestures', () => {
 
       act(() => {
         const handler = result.current.bind.onPointerMove as
-          | ((...args: unknown[]) => void)
-          | undefined
+          ((...args: unknown[]) => void) | undefined
         handler?.(moveEvent)
       })
 

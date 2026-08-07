@@ -128,24 +128,29 @@ describe('default theme contrast', () => {
       ['dark', DARK],
     ])('%s --accent-contrast is readable on an --accent-strong fill', (_mode, sel) => {
       // The "today" pill and every primary button rely on this pairing.
-      expect(contrast(token(sel, '--accent-contrast'), token(sel, '--accent-strong'))).toBeGreaterThanOrEqual(AA)
+      expect(
+        contrast(token(sel, '--accent-contrast'), token(sel, '--accent-strong'))
+      ).toBeGreaterThanOrEqual(AA)
     })
 
     it('hover is a step further from the page, not toward it', () => {
       const canvas = token(LIGHT, '--canvas')
       expect(contrast(token(LIGHT, '--accent-hover'), canvas)).toBeGreaterThan(
-        contrast(token(LIGHT, '--accent-strong'), canvas),
+        contrast(token(LIGHT, '--accent-strong'), canvas)
       )
     })
   })
 
   describe('status colours', () => {
-    it.each(['--color-success', '--color-error', '--color-warning-text', '--color-error-muted', '--color-success-muted'])(
-      'light %s is readable as text',
-      (name) => {
-        expect(contrast(token(LIGHT, name), token(LIGHT, '--canvas'))).toBeGreaterThanOrEqual(AA)
-      },
-    )
+    it.each([
+      '--color-success',
+      '--color-error',
+      '--color-warning-text',
+      '--color-error-muted',
+      '--color-success-muted',
+    ])('light %s is readable as text', (name) => {
+      expect(contrast(token(LIGHT, name), token(LIGHT, '--canvas'))).toBeGreaterThanOrEqual(AA)
+    })
   })
 
   describe('event tint levels', () => {

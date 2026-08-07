@@ -92,7 +92,6 @@ export function useGridReorder(
     return tiles.map((tile) => tile.getBoundingClientRect())
   }, [tileCount])
 
-
   const onTilePointerDown = useCallback(
     (event: PointerEvent) => {
       const element = (event.target as Element | null)?.closest<HTMLElement>('[data-tile-index]')

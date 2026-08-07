@@ -68,14 +68,8 @@ export function NavExpandedGrid({
 
   const visibleViews = useVisibleViews()
   const reorderViews = useReorderViews()
-  const {
-    reorderMode,
-    draggingIndex,
-    dragDelta,
-    registerGrid,
-    exitReorderMode,
-    consumeDragClick,
-  } = useGridReorder(visibleViews.length, reorderViews)
+  const { reorderMode, draggingIndex, dragDelta, registerGrid, exitReorderMode, consumeDragClick } =
+    useGridReorder(visibleViews.length, reorderViews)
 
   const activeTileIndex = visibleViews.findIndex(
     (v) => activeView === v.value || (v.value === 'week' && activeView === '3day')

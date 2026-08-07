@@ -11,7 +11,16 @@ describe('reconcileViewOrder', () => {
   })
 
   it('preserves a stored arrangement', () => {
-    const stored: ViewType[] = ['agenda', 'todo', 'month', 'week', 'year', 'day', 'journal', 'contacts']
+    const stored: ViewType[] = [
+      'agenda',
+      'todo',
+      'month',
+      'week',
+      'year',
+      'day',
+      'journal',
+      'contacts',
+    ]
     expect(reconcileViewOrder(stored).map((v) => v.value)).toEqual(stored)
   })
 

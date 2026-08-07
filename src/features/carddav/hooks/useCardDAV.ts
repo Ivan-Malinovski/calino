@@ -1,10 +1,5 @@
 import { useState, useCallback, useEffect } from 'react'
-import type {
-  AddressBook,
-  Contact,
-  CardDAVSyncState,
-  PendingContactChange,
-} from '../types'
+import type { AddressBook, Contact, CardDAVSyncState, PendingContactChange } from '../types'
 import type { PendingDeleteSnapshot } from '@/lib/deleteContactWithUndo'
 import { createCardDAVClient, CardDAVClient } from '../client/CardDAVClient'
 import { useContactStore } from '@/store/contactStore'
@@ -124,9 +119,7 @@ export function useCardDAV(): UseCardDAVReturn {
         return getLiveState().addressBooks.find((a) => a.id === c.addressBookId)?.accountId
       }
 
-      const changes = getLiveState().pendingChanges.filter(
-        (c) => accountForChange(c) === accountId
-      )
+      const changes = getLiveState().pendingChanges.filter((c) => accountForChange(c) === accountId)
 
       if (changes.length === 0) return []
 

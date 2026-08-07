@@ -76,8 +76,7 @@ type DavTransport = (options: {
 const headlessTransport: DavTransport = async (options) => {
   const bridge = getHeadlessBridge()!
   const result = JSON.parse(bridge.davRequest(JSON.stringify(options))) as
-    | { ok: true; response: DavHttpResponse }
-    | { ok: false; error: string }
+    { ok: true; response: DavHttpResponse } | { ok: false; error: string }
   if (!result.ok) throw new Error(result.error)
   return result.response
 }

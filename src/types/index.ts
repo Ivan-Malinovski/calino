@@ -1,11 +1,5 @@
 export type RecurrenceFrequency =
-  | 'secondly'
-  | 'minutely'
-  | 'hourly'
-  | 'daily'
-  | 'weekly'
-  | 'monthly'
-  | 'yearly'
+  'secondly' | 'minutely' | 'hourly' | 'daily' | 'weekly' | 'monthly' | 'yearly'
 
 import type { Category, AutoCategoryRule } from './categories'
 import type { ExtractedEventFields } from '@/features/aiVision/types'
@@ -173,15 +167,7 @@ export interface Calendar {
 }
 
 export type ViewType =
-  | 'month'
-  | 'week'
-  | '3day'
-  | 'day'
-  | 'agenda'
-  | 'todo'
-  | 'journal'
-  | 'contacts'
-  | 'year'
+  'month' | 'week' | '3day' | 'day' | 'agenda' | 'todo' | 'journal' | 'contacts' | 'year'
 
 export interface CalendarState {
   events: CalendarEvent[]
