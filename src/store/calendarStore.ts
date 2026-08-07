@@ -1368,7 +1368,10 @@ export const useCalendarStore = create<CalendarStore>()(
           autoCategoryRules: state.autoCategoryRules ?? [],
           brokenEvents: state.brokenEvents ?? [],
           duplicateUidIssues: state.duplicateUidIssues ?? [],
-          currentDate: state.currentDate ?? format(new Date(), 'yyyy-MM-dd'),
+          // Deliberately today's date, not the persisted one: opening the app
+          // should show the current month, not wherever the last session was
+          // browsing. Same reasoning as currentView below.
+          currentDate: format(new Date(), 'yyyy-MM-dd'),
           currentView: useSettingsStore.getState().defaultView,
           selectedCategoryIds: state.selectedCategoryIds ?? [],
         }
@@ -1391,7 +1394,7 @@ export const useCalendarStore = create<CalendarStore>()(
         calendars: state.calendars,
         categories: state.categories,
         autoCategoryRules: state.autoCategoryRules,
-        currentDate: state.currentDate,
+        // currentDate is NOT persisted: every fresh load starts on today.
       }),
     }
   )

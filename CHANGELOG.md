@@ -24,6 +24,8 @@ All notable changes to Calino will be documented in this file.
 
 ### Fixed
 
+- **Opening Calino always starts on the current month.** The month you were last browsing was saved and restored, so a new tab could open on June because that's where the previous session left off. The view you were in still comes from your default-view setting; only the date is reset.
+
 - **Contacts reached through a CORS proxy no longer lose track of where an entry lives.** The same double-prefixed address fixed for calendars in 0.27.2 was still present on the contacts side.
 
 ## [0.27.2] - 2026-08-05

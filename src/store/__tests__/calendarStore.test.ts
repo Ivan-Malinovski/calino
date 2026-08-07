@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { format } from 'date-fns'
 import { useCalendarStore } from '../calendarStore'
 
 describe('calendarStore', () => {
@@ -887,7 +888,9 @@ describe('calendarStore', () => {
       expect(result.categories).toHaveLength(1)
       expect(result.autoCategoryRules).toHaveLength(1)
       expect(result.brokenEvents).toHaveLength(1)
-      expect(result.currentDate).toBe('2024-06-15')
+      // currentDate is intentionally not carried over — a new session opens on
+      // today, not on whatever month the last one was browsing.
+      expect(result.currentDate).toBe(format(new Date(), 'yyyy-MM-dd'))
       expect(result.currentView).toBe('month')
       expect(result.selectedCategoryIds).toEqual(['cat1'])
     })
