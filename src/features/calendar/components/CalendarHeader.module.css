@@ -49,6 +49,7 @@
 }
 
 .brandDiamond {
+  flex: none;
   width: 11px;
   height: 11px;
   border-radius: 3px;
@@ -63,6 +64,13 @@
   font-size: 27px;
   letter-spacing: -0.01em;
   color: var(--ink);
+  /* "Calino" has no descenders, so the descender room the line box reserves is
+     dead space that pushes the glyphs above the diamond. Collapse to the em box
+     (Newsreader is ascent .735 / descent .265, so line-height 1 adds no leading)
+     and shift down by the residual: the letters span cap-top .065em to baseline
+     .735em, centring at .40em — .10em shy of the box centre. */
+  line-height: 1;
+  transform: translateY(0.1em);
 }
 
 /* ---- Navigator (Grouped Segmented Control) ---- */
