@@ -46,6 +46,12 @@
      a short viewport (a long task list, many calendars) were simply
      unreachable. */
   overflow-y: auto;
+  /* `overflow-y: auto` alone computes the x axis to `auto` as well, so any
+     child a fraction of a pixel too wide — the mini calendar's grid once the
+     vertical scrollbar eats into the width, a card's shadow — put a horizontal
+     scrollbar under the whole sidebar. Nothing here is meant to scroll
+     sideways. */
+  overflow-x: hidden;
   overscroll-behavior: contain;
 }
 
