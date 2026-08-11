@@ -20,6 +20,8 @@ All notable changes to Calino will be documented in this file.
 
 ### Fixed
 
+- **An "At time of event" reminder survives syncing.** A reminder set to fire at the moment the event starts was written to the server correctly but discarded when Calino read it back, so it worked until the next sync and then quietly disappeared. Zero minutes was being treated as "no reminder" rather than as a real choice. This is easier to run into now that the default reminder can be set to "At time of event".
+
 - **Duplicated events are saved to the server.** Duplicating an event — from the context menu, ctrl+clicking it, or ctrl+dragging it to a new slot — only ever created the copy locally. It looked right until the next sync, which removed it again: the server had never been told about it. The copy is now pushed like any other new event, and a failed push is queued for retry rather than lost.
 
 - **No stray horizontal scrollbar in the sidebar.** On the desktop layout the sidebar sometimes showed a scrollbar along its bottom edge even though nothing extended sideways.
