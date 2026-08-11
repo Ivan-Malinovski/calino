@@ -4,6 +4,8 @@ All notable changes to Calino will be documented in this file.
 
 ## [Unreleased]
 
+## [0.27.4] - 2026-08-11
+
 ### Added
 
 - **Tasks and events now carry a creation date** ([#112](https://github.com/Ivan-Malinovski/calino/issues/112), reported by [@riblet](https://github.com/riblet)). Everything Calino writes to a server now includes `CREATED` and `LAST-MODIFIED` alongside the `DTSTAMP` it already had. RFC 5545 doesn't require `CREATED`, but plenty of software assumes it is there — the reported case is MMM-CalDAV-Tasks, which appends `COMPLETED` *after* `END:VTODO` when it can't find one, corrupting the task.
