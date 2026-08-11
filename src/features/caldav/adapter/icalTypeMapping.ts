@@ -407,6 +407,48 @@ function icalTimeToISO(icalTime: ICAL.Time, prop?: ICAL.Property): IcalTimeToISO
   return { iso: jsDate.toISOString() }
 }
 
+/**
+ * Read one UTC audit stamp (CREATED / LAST-MODIFIED) off a component.
+ * Returns undefined when the property is absent or unparseable — callers
+ * must not invent a value, because a fabricated CREATED would overwrite the
+ * real one the store already holds.
+ */
+function readAuditStamp(
+  comp: ICAL.Component,
+  name: 'created' | 'last-modified'
+): string | undefined {
+  const prop = comp.getFirstProperty(name)
+  if (!prop) return undefined
+  try {
+    const value = prop.getFirstValue()
+    if (value instanceof ICAL.Time) return icalTimeToISO(value).iso
+  } catch {
+    /* malformed stamp — treat as absent */
+  }
+  return undefined
+}
+
+/**
+ * Write CREATED and LAST-MODIFIED (RFC 5545 §3.8.7.1 / §3.8.7.3). Both must be
+ * UTC, hence the `true` on fromJSDate.
+ *
+ * We rebuild every component from scratch on save, so CREATED only survives
+ * because the parsers read it back into `event.created`. When it is missing —
+ * a record written before this existed, or one whose stored value is junk — we
+ * stamp `now` rather than omitting the property: the whole point of issue #112
+ * is that clients in the wild break when CREATED is absent. That stamp is then
+ * parsed back on the next sync, so it moves once and then holds.
+ *
+ * `now` is passed in so LAST-MODIFIED cannot disagree with the caller's
+ * DTSTAMP by a millisecond.
+ */
+function writeAuditStamps(comp: ICAL.Component, event: CalendarEvent, now: Date): void {
+  const stored = event.created ? new Date(event.created) : undefined
+  const created = stored && !isNaN(stored.getTime()) ? stored : now
+  comp.updatePropertyWithValue('created', ICAL.Time.fromJSDate(created, true))
+  comp.updatePropertyWithValue('last-modified', ICAL.Time.fromJSDate(now, true))
+}
+
 export function icalEventToCalendarEvent(
   vevent: ICAL.Component,
   calendarId: string
@@ -615,6 +657,8 @@ export function icalEventToCalendarEvent(
     recurrenceMasterId: recurrenceId ? uid : undefined,
     eventStatus,
     attachments: attachments.length > 0 ? attachments : undefined,
+    created: readAuditStamp(vevent, 'created'),
+    lastModified: readAuditStamp(vevent, 'last-modified'),
   }
 }
 
@@ -684,9 +728,12 @@ function createAllDayDate(year: number, month: number, day: number): ICAL.Time {
 export function calendarEventToIcalComponent(event: CalendarEvent): ICAL.Component {
   const vevent = new ICAL.Component('vevent')
 
+  const now = new Date()
+
   vevent.updatePropertyWithValue('uid', event.uid || event.recurrenceMasterId || event.id)
-  vevent.updatePropertyWithValue('dtstamp', ICAL.Time.fromJSDate(new Date(), true))
+  vevent.updatePropertyWithValue('dtstamp', ICAL.Time.fromJSDate(now, true))
   vevent.updatePropertyWithValue('sequence', event.sequence ?? 0)
+  writeAuditStamps(vevent, event, now)
   if (event.eventStatus) {
     vevent.updatePropertyWithValue('status', event.eventStatus)
   }
@@ -1139,6 +1186,8 @@ export function icalVtodoToCalendarEvent(vtodo: ICAL.Component, calendarId: stri
     excludedDates: excludedDates.length > 0 ? excludedDates : undefined,
     recurrenceId,
     recurrenceMasterId: recurrenceId ? uid : undefined,
+    created: readAuditStamp(vtodo, 'created'),
+    lastModified: readAuditStamp(vtodo, 'last-modified'),
   }
 }
 
@@ -1148,9 +1197,12 @@ export function calendarEventToIcalVtodo(task: CalendarEvent): ICAL.Component {
   // R2.7 — A detached override carries the master's UID, so prefer the stored
   // UID over the local id (which for an override is `${uid}-${recurrenceId}`).
   // Falling back to task.id keeps tasks written before this change stable.
+  const now = new Date()
+
   vtodo.updatePropertyWithValue('uid', task.uid || task.recurrenceMasterId || task.id)
-  vtodo.updatePropertyWithValue('dtstamp', ICAL.Time.fromJSDate(new Date(), true))
+  vtodo.updatePropertyWithValue('dtstamp', ICAL.Time.fromJSDate(now, true))
   vtodo.updatePropertyWithValue('sequence', task.sequence ?? 0)
+  writeAuditStamps(vtodo, task, now)
   vtodo.updatePropertyWithValue('summary', task.title)
 
   // R2.7 — DTSTART must be present to anchor an RRULE, and DUE's value type
@@ -1407,9 +1459,12 @@ export function icalVjournalToCalendarEvent(
 export function calendarEventToIcalVjournal(entry: CalendarEvent): ICAL.Component {
   const vjournal = new ICAL.Component('vjournal')
 
+  const now = new Date()
+
   vjournal.updatePropertyWithValue('uid', entry.id)
-  vjournal.updatePropertyWithValue('dtstamp', ICAL.Time.fromJSDate(new Date(), true))
+  vjournal.updatePropertyWithValue('dtstamp', ICAL.Time.fromJSDate(now, true))
   vjournal.updatePropertyWithValue('sequence', entry.sequence ?? 0)
+  writeAuditStamps(vjournal, entry, now)
 
   // DTSTART — date only for journal entries
   const dateParts = entry.start.split('-')
@@ -1430,25 +1485,6 @@ export function calendarEventToIcalVjournal(entry: CalendarEvent): ICAL.Componen
 
   if (entry.categories && entry.categories.length > 0) {
     vjournal.updatePropertyWithValue('categories', entry.categories.join(','))
-  }
-
-  if (entry.created) {
-    try {
-      vjournal.updatePropertyWithValue('created', ICAL.Time.fromJSDate(new Date(entry.created)))
-    } catch {
-      /* skip */
-    }
-  }
-
-  if (entry.lastModified) {
-    try {
-      vjournal.updatePropertyWithValue(
-        'last-modified',
-        ICAL.Time.fromJSDate(new Date(entry.lastModified))
-      )
-    } catch {
-      /* skip */
-    }
   }
 
   if (entry.url) {

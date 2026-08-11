@@ -1925,4 +1925,67 @@ describe('calendarStore', () => {
       expect(apr3[0].title).toBe('Special Standup')
     })
   })
+
+  // #112 — `created` becomes the CREATED property on the wire, so it has to
+  // be stamped once and then left alone.
+  describe('creation timestamps', () => {
+    const base = {
+      calendarId: 'default',
+      title: 'Stamped',
+      start: '2024-03-15T10:00:00.000Z',
+      end: '2024-03-15T11:00:00.000Z',
+      isAllDay: false,
+    }
+
+    it('stamps created on an event that has none', () => {
+      const before = Date.now()
+      useCalendarStore.getState().addEvent({ ...base, id: 'stamp-1' })
+
+      const stored = useCalendarStore.getState().events.find((e) => e.id === 'stamp-1')!
+      expect(stored.created).toBeDefined()
+      const stamped = new Date(stored.created as string).getTime()
+      expect(stamped).toBeGreaterThanOrEqual(before)
+      expect(stamped).toBeLessThanOrEqual(Date.now())
+    })
+
+    it('keeps a created value supplied by the caller', () => {
+      useCalendarStore
+        .getState()
+        .addEvent({ ...base, id: 'stamp-2', created: '2020-01-02T03:04:05.000Z' })
+
+      expect(useCalendarStore.getState().events.find((e) => e.id === 'stamp-2')!.created).toBe(
+        '2020-01-02T03:04:05.000Z'
+      )
+    })
+
+    it('does not let an update clear created', () => {
+      const store = useCalendarStore.getState()
+      store.addEvent({ ...base, id: 'stamp-3', created: '2020-01-02T03:04:05.000Z' })
+
+      // This is the shape sync uses: a whole parsed event, whose `created` is
+      // an explicit undefined when the server copy carried no CREATED.
+      store.updateEvent('stamp-3', {
+        ...base,
+        id: 'stamp-3',
+        title: 'Stamped (from server)',
+        created: undefined,
+      })
+
+      const stored = useCalendarStore.getState().events.find((e) => e.id === 'stamp-3')!
+      expect(stored.created).toBe('2020-01-02T03:04:05.000Z')
+      expect(stored.title).toBe('Stamped (from server)')
+    })
+
+    it('gives a duplicate its own created rather than the original’s', () => {
+      const store = useCalendarStore.getState()
+      store.addEvent({ ...base, id: 'stamp-4', created: '2020-01-02T03:04:05.000Z' })
+
+      const newId = store.duplicateEvent('stamp-4')
+      const duplicate = useCalendarStore.getState().events.find((e) => e.id === newId!)!
+
+      expect(duplicate.created).toBeDefined()
+      expect(duplicate.created).not.toBe('2020-01-02T03:04:05.000Z')
+      expect(duplicate.lastModified).toBeUndefined()
+    })
+  })
 })

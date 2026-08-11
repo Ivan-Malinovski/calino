@@ -512,6 +512,11 @@ export const useCalendarStore = create<CalendarStore>()(
         const finalEvent = {
           ...event,
           categories: [...new Set([...existingCategories, ...autoCategoryNames])],
+          // #112 — CREATED is written from this. Locally created records get
+          // their real creation time here rather than waiting for a sync
+          // round-trip; synced ones arrive with `created` already parsed off
+          // the server's CREATED, so `??` leaves them alone.
+          created: event.created ?? new Date().toISOString(),
         }
         set((state) => {
           // Same id can arrive twice in one sync pass (e.g. the same UID
@@ -530,6 +535,12 @@ export const useCalendarStore = create<CalendarStore>()(
 
       updateEvent: (id: string, updates: Partial<CalendarEvent>): void => {
         const safeUpdates = { ...updates }
+        // #112 — `created` is write-once. Sync hands whole parsed events to
+        // this action, and a server copy carrying no CREATED parses to
+        // `created: undefined` — an explicit key, so the spread below would
+        // wipe the stamp `addEvent` made. Dropping the key keeps the first
+        // creation time we ever knew about.
+        if (safeUpdates.created === undefined) delete safeUpdates.created
         if (safeUpdates.start !== undefined && safeUpdates.end !== undefined) {
           if (safeUpdates.start > safeUpdates.end && !safeUpdates.isAllDay) {
             const reason = `start (${safeUpdates.start}) > end (${safeUpdates.end})`
@@ -828,6 +839,12 @@ export const useCalendarStore = create<CalendarStore>()(
           etag: undefined,
           resourceHref: undefined,
           sequence: undefined,
+          // #112 — a copy is a new record. Inheriting the original's CREATED
+          // would tell the server this task was created years ago. This path
+          // writes straight to `events` rather than going through `addEvent`,
+          // so it stamps its own creation time.
+          created: new Date().toISOString(),
+          lastModified: undefined,
         }
 
         set((state) => ({

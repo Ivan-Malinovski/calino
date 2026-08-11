@@ -398,6 +398,10 @@ export function EventPreviewPopup({
         reminders: masterEvent.reminders,
         transparency: masterEvent.transparency,
         sequence: 0,
+        // #112 — a split series is a new VTODO/VEVENT, so it must not inherit
+        // the master's CREATED. `addEvent` stamps the real time below.
+        created: undefined,
+        lastModified: undefined,
       }
       store.addEvent(newSeriesEvent)
       try {
