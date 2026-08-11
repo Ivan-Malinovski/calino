@@ -55,6 +55,7 @@ import {
 } from '../lib/dragSnap'
 import type { CalendarEvent } from '@/types'
 import styles from './DayView.module.css'
+import { duplicateEventWithSync } from '@/lib/duplicateWithSync'
 
 const DRAG_ACTIVATION_CONSTRAINT = 8
 const TOUCH_DRAG_ACTIVATION_DELAY = 200
@@ -105,7 +106,6 @@ export function DayView({
   const getEventsForDateRange = useCalendarStore((state) => state.getEventsForDateRange)
   const openModal = useCalendarStore((state) => state.openModal)
   const storeUpdateEvent = useCalendarStore((state) => state.updateEvent)
-  const duplicateEvent = useCalendarStore((state) => state.duplicateEvent)
   const setCurrentDate = useCalendarStore((state) => state.setCurrentDate)
   const timeFormat = useSettingsStore((state) => state.timeFormat)
 
@@ -128,7 +128,7 @@ export function DayView({
   const openMenu = useContextMenuStore((state) => state.openMenu)
   const closeMenu = useContextMenuStore((state) => state.closeMenu)
 
-  const { updateEvent: caldavUpdateEvent } = useCalDAV()
+  const { updateEvent: caldavUpdateEvent, createEvent: createCalDAVEvent } = useCalDAV()
 
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; hour?: number } | null>(
     null
@@ -484,9 +484,12 @@ export function DayView({
         isAllDay: true,
       }
       if (shouldDuplicate) {
-        const newId = duplicateEvent(originalEvent.id, false)
-        if (!newId) return
-        storeUpdateEvent(newId, allDayUpdates)
+        duplicateEventWithSync({
+          eventId: originalEvent.id,
+          addCopySuffix: false,
+          updates: allDayUpdates,
+          createCalDAVEvent,
+        })
         return
       }
       storeUpdateEvent(String(active.id), allDayUpdates)
@@ -543,9 +546,12 @@ export function DayView({
     }
 
     if (shouldDuplicate) {
-      const newId = duplicateEvent(originalEvent.id, false)
-      if (!newId) return
-      storeUpdateEvent(newId, updates)
+      duplicateEventWithSync({
+        eventId: originalEvent.id,
+        addCopySuffix: false,
+        updates: updates,
+        createCalDAVEvent,
+      })
       return
     }
 

@@ -46,6 +46,12 @@
      a short viewport (a long task list, many calendars) were simply
      unreachable. */
   overflow-y: auto;
+  /* `overflow-y: auto` alone computes the x axis to `auto` as well, so any
+     child a fraction of a pixel too wide — the mini calendar's grid once the
+     vertical scrollbar eats into the width, a card's shadow — put a horizontal
+     scrollbar under the whole sidebar. Nothing here is meant to scroll
+     sideways. */
+  overflow-x: hidden;
   overscroll-behavior: contain;
 }
 
@@ -150,11 +156,18 @@
      scroll container, so flush against the left edge the ring was clipped and
      the mark looked shaved. Inset by the spread; the glow's outer edge then
      lines up with the cards below, which is the correct optical alignment
-     anyway. */
-  padding: 12px 0 4px 4px;
+     anyway. The diamond is rotated, so the inset has to clear its *diagonal*
+     half-width (≈13.4px from centre) minus the 5.5px the layout box already
+     reserves — 4px was measured off the unrotated square and still clipped.
+
+     The top inset matches the desktop wordmark's: the header pads 18px and
+     centres the 27px mark in its 38px navigator row, putting its box 23.5px
+     down. .sidebar contributes 1px, so this covers the remaining 22.5px. */
+  padding: 22.5px 0 4px 8px;
 }
 
 .sidebarBrandDiamond {
+  flex: none;
   width: 11px;
   height: 11px;
   border-radius: 3px;
@@ -169,6 +182,13 @@
   font-size: 27px;
   letter-spacing: -0.01em;
   color: var(--ink);
+  /* "Calino" has no descenders, so the descender room the line box reserves is
+     dead space that pushes the glyphs above the diamond. Collapse to the em box
+     (Newsreader is ascent .735 / descent .265, so line-height 1 adds no leading)
+     and shift down by the residual: the letters span cap-top .065em to baseline
+     .735em, centring at .40em — .10em shy of the box centre. */
+  line-height: 1;
+  transform: translateY(0.1em);
 }
 
 .expandButton,

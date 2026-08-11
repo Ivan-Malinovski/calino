@@ -129,7 +129,19 @@ export function useWebcalSubscriptions(): UseWebcalSubscriptionsReturn {
           const existing = existingById.get(id)
           if (!existing) {
             storeAddEvent(event)
-          } else if (JSON.stringify(existing) !== JSON.stringify(event)) {
+          } else if (
+            // #112 — a feed without CREATED parses to `created: undefined`,
+            // while the stored copy carries the stamp we gave it on first
+            // sight. Comparing those directly reports every event as changed
+            // on every refresh, so hold the local stamps steady here; the
+            // store keeps them anyway.
+            JSON.stringify(existing) !==
+            JSON.stringify({
+              ...event,
+              created: event.created ?? existing.created,
+              lastModified: event.lastModified ?? existing.lastModified,
+            })
+          ) {
             storeUpdateEvent(id, event)
           }
         }

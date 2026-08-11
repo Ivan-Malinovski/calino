@@ -4,6 +4,20 @@ All notable changes to Calino will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- **Tasks and events now carry a creation date** ([#112](https://github.com/Ivan-Malinovski/calino/issues/112), reported by [@riblet](https://github.com/riblet)). Everything Calino writes to a server now includes `CREATED` and `LAST-MODIFIED` alongside the `DTSTAMP` it already had. RFC 5545 doesn't require `CREATED`, but plenty of software assumes it is there — the reported case is MMM-CalDAV-Tasks, which appends `COMPLETED` *after* `END:VTODO` when it can't find one, corrupting the task.
+
+  `CREATED` is now also read back when Calino pulls a task or event in. That matters more than it sounds: Calino rebuilds each component from scratch on every save, so before this change a creation date written by any other client was silently dropped the first time you edited that task here. Records that predate this — and ones whose server copy never had a `CREATED` — get stamped with the current time on their next save, and hold that value from then on. `LAST-MODIFIED` tracks each write and matches the `DTSTAMP` on it exactly.
+
+### Fixed
+
+- **Duplicated events are saved to the server.** Duplicating an event — from the context menu, ctrl+clicking it, or ctrl+dragging it to a new slot — only ever created the copy locally. It looked right until the next sync, which removed it again: the server had never been told about it. The copy is now pushed like any other new event, and a failed push is queued for retry rather than lost.
+
+- **No stray horizontal scrollbar in the sidebar.** On the desktop layout the sidebar sometimes showed a scrollbar along its bottom edge even though nothing extended sideways.
+
+- **Journal entries write their timestamps in UTC.** `CREATED` and `LAST-MODIFIED` on a journal entry were emitted as floating local times, which RFC 5545 §3.8.7 doesn't allow — a server or client in another zone read them hours off.
+
 ## [0.27.3] - 2026-08-07
 
 ### Added

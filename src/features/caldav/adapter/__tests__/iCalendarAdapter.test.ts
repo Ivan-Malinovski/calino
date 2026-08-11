@@ -864,6 +864,161 @@ END:VCALENDAR`
     })
   })
 
+  // #112 — CREATED/LAST-MODIFIED. Components are rebuilt from scratch on every
+  // save, so CREATED only survives because the parsers read it back.
+  describe('CREATED and LAST-MODIFIED', () => {
+    const baseTask: CalendarEvent = {
+      id: 'task-audit',
+      title: 'Audited task',
+      start: '2024-03-20T00:00:00',
+      end: '2024-03-20T23:59:59',
+      isAllDay: true,
+      calendarId: 'cal-1',
+      type: 'task',
+      dueDate: '2024-03-20T00:00:00',
+    }
+
+    const baseEvent: CalendarEvent = {
+      id: 'event-audit',
+      title: 'Audited event',
+      start: '2024-03-20T10:00:00.000Z',
+      end: '2024-03-20T11:00:00.000Z',
+      isAllDay: false,
+      calendarId: 'cal-1',
+    }
+
+    it('emits both stamps in UTC form on a VTODO', () => {
+      const iCal = taskToICAL(baseTask)
+
+      expect(iCal).toMatch(/CREATED:\d{8}T\d{6}Z/)
+      expect(iCal).toMatch(/LAST-MODIFIED:\d{8}T\d{6}Z/)
+    })
+
+    it('emits both stamps in UTC form on a VEVENT', () => {
+      const iCal = eventToICAL(baseEvent)
+
+      expect(iCal).toMatch(/CREATED:\d{8}T\d{6}Z/)
+      expect(iCal).toMatch(/LAST-MODIFIED:\d{8}T\d{6}Z/)
+    })
+
+    it('serializes a stored creation time verbatim', () => {
+      const iCal = taskToICAL({ ...baseTask, created: '2020-01-02T03:04:05.000Z' })
+
+      expect(iCal).toContain('CREATED:20200102T030405Z')
+    })
+
+    it('stamps a task with no stored creation time with the current time', () => {
+      const before = Date.now()
+      const iCal = taskToICAL(baseTask)
+      const stamped = iCal.match(
+        /CREATED:(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z/
+      ) as RegExpMatchArray
+
+      expect(stamped).not.toBeNull()
+      const [, y, mo, d, h, mi, s] = stamped.map(Number)
+      const parsed = Date.UTC(y, mo - 1, d, h, mi, s)
+      // Truncated to whole seconds on the wire, so allow the second boundary.
+      expect(parsed).toBeGreaterThanOrEqual(before - 1000)
+      expect(parsed).toBeLessThanOrEqual(Date.now() + 1000)
+    })
+
+    it('falls back to now when the stored creation time is unparseable', () => {
+      const iCal = taskToICAL({ ...baseTask, created: 'not-a-date' })
+
+      expect(iCal).toMatch(/CREATED:\d{8}T\d{6}Z/)
+    })
+
+    it('reads both stamps off a VTODO', () => {
+      const [parsed] = parseICALTask(
+        `BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VTODO
+UID:task-with-stamps
+SUMMARY:Stamped
+CREATED:20200102T030405Z
+LAST-MODIFIED:20210203T040506Z
+END:VTODO
+END:VCALENDAR`,
+        'cal-1'
+      )
+
+      expect(parsed?.created).toBe('2020-01-02T03:04:05.000Z')
+      expect(parsed?.lastModified).toBe('2021-02-03T04:05:06.000Z')
+    })
+
+    it('leaves both stamps undefined when the VTODO omits them', () => {
+      const [parsed] = parseICALTask(
+        `BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VTODO
+UID:task-no-stamps
+SUMMARY:Unstamped
+END:VTODO
+END:VCALENDAR`,
+        'cal-1'
+      )
+
+      expect(parsed?.created).toBeUndefined()
+      expect(parsed?.lastModified).toBeUndefined()
+    })
+
+    it('reads both stamps off a VEVENT', () => {
+      const [parsed] = parseICALEvent(
+        `BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+UID:event-with-stamps
+SUMMARY:Stamped
+DTSTART:20240320T100000Z
+DTEND:20240320T110000Z
+CREATED:20200102T030405Z
+LAST-MODIFIED:20210203T040506Z
+END:VEVENT
+END:VCALENDAR`,
+        'cal-1'
+      )
+
+      expect(parsed?.created).toBe('2020-01-02T03:04:05.000Z')
+      expect(parsed?.lastModified).toBe('2021-02-03T04:05:06.000Z')
+    })
+
+    it('preserves a task CREATED across a parse/serialize round-trip', () => {
+      const original = `BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VTODO
+UID:task-round-trip
+SUMMARY:Round trip
+CREATED:20200102T030405Z
+LAST-MODIFIED:20210203T040506Z
+END:VTODO
+END:VCALENDAR`
+
+      const reserialized = taskToICAL(parseICALTask(original, 'cal-1')[0])
+
+      expect(reserialized).toContain('CREATED:20200102T030405Z')
+      // LAST-MODIFIED tracks the write, so it must have moved on.
+      expect(reserialized).not.toContain('LAST-MODIFIED:20210203T040506Z')
+      expect(parseICALTask(reserialized, 'cal-1')[0].created).toBe('2020-01-02T03:04:05.000Z')
+    })
+
+    it('preserves an event CREATED across a parse/serialize round-trip', () => {
+      const original = `BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+UID:event-round-trip
+SUMMARY:Round trip
+DTSTART:20240320T100000Z
+DTEND:20240320T110000Z
+CREATED:20200102T030405Z
+END:VEVENT
+END:VCALENDAR`
+
+      const reserialized = eventToICAL(parseICALEvent(original, 'cal-1')[0])
+
+      expect(reserialized).toContain('CREATED:20200102T030405Z')
+    })
+  })
+
   describe('parseICALData', () => {
     it('parses both events and tasks from combined iCal data', () => {
       const iCalData = `BEGIN:VCALENDAR

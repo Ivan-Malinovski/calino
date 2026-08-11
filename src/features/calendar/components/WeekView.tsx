@@ -58,6 +58,7 @@ import {
 } from '../lib/dragSnap'
 import { SWIPE_SCROLLER_ATTR } from '../swipePaging'
 import styles from './WeekView.module.css'
+import { duplicateEventWithSync } from '@/lib/duplicateWithSync'
 
 const BASE_HOUR_HEIGHT = 60
 /** Narrowest the mobile day columns compress to, as a fraction of their normal
@@ -152,7 +153,6 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
   const rangeExpansionVersion = useCalendarStore((state) => state.rangeExpansionVersion)
   const openModal = useCalendarStore((state) => state.openModal)
   const storeUpdateEvent = useCalendarStore((state) => state.updateEvent)
-  const duplicateEvent = useCalendarStore((state) => state.duplicateEvent)
   const setCurrentDate = useCalendarStore((state) => state.setCurrentDate)
   const firstDayOfWeek = useSettingsStore((state) => state.firstDayOfWeek)
   const timeFormat = useSettingsStore((state) => state.timeFormat)
@@ -160,7 +160,7 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
   const openMenu = useContextMenuStore((state) => state.openMenu)
   const closeMenu = useContextMenuStore((state) => state.closeMenu)
 
-  const { updateEvent: caldavUpdateEvent } = useCalDAV()
+  const { updateEvent: caldavUpdateEvent, createEvent: createCalDAVEvent } = useCalDAV()
 
   const [activeEvent, setActiveEvent] = useState<CalendarEvent | null>(null)
   const [dropPreview, setDropPreview] = useState<DropPreview | null>(null)
@@ -665,9 +665,12 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
         isAllDay: true,
       }
       if (shouldDuplicate) {
-        const newId = duplicateEvent(originalEvent.id, false)
-        if (!newId) return
-        storeUpdateEvent(newId, allDayUpdates)
+        duplicateEventWithSync({
+          eventId: originalEvent.id,
+          addCopySuffix: false,
+          updates: allDayUpdates,
+          createCalDAVEvent,
+        })
         return
       }
       storeUpdateEvent(String(active.id), allDayUpdates)
@@ -723,9 +726,12 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
     }
 
     if (shouldDuplicate) {
-      const newId = duplicateEvent(originalEvent.id, false)
-      if (!newId) return
-      storeUpdateEvent(newId, updates)
+      duplicateEventWithSync({
+        eventId: originalEvent.id,
+        addCopySuffix: false,
+        updates: updates,
+        createCalDAVEvent,
+      })
       return
     }
 

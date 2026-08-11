@@ -67,6 +67,7 @@ import { getJournalDates, getTasksForDay } from '@/store/calendarStore'
 import { hasDueTime } from '@/lib/events'
 import { consumesVerticalScroll } from '@/lib/scrollChaining'
 import styles from './CalendarGrid.module.css'
+import { duplicateEventWithSync } from '@/lib/duplicateWithSync'
 
 // Shared by the button and span forms of the journal indicator (see the
 // compact-mobile branch in DroppableDay).
@@ -123,7 +124,6 @@ export function CalendarGrid(): JSX.Element {
   const rangeExpansionVersion = useCalendarStore((state) => state.rangeExpansionVersion)
   const openModal = useCalendarStore((state) => state.openModal)
   const storeUpdateEvent = useCalendarStore((state) => state.updateEvent)
-  const duplicateEvent = useCalendarStore((state) => state.duplicateEvent)
   const setCurrentDate = useCalendarStore((state) => state.setCurrentDate)
   const setCurrentView = useCalendarStore((state) => state.setCurrentView)
   const isOverlayOpen = useCalendarStore((state) => state.isOverlayOpen)
@@ -142,7 +142,7 @@ export function CalendarGrid(): JSX.Element {
   const monthAgendaSplitRatioSetting = useSettingsStore((state) => state.monthAgendaSplitRatio)
   const updateSettings = useSettingsStore((state) => state.updateSettings)
 
-  const { updateEvent: caldavUpdateEvent } = useCalDAV()
+  const { updateEvent: caldavUpdateEvent, createEvent: createCalDAVEvent } = useCalDAV()
 
   const { bind } = useGestures({
     onSwipe: (direction) => {
@@ -456,9 +456,12 @@ export function CalendarGrid(): JSX.Element {
     }
 
     if (shouldDuplicate) {
-      const newId = duplicateEvent(originalEvent.id, false)
-      if (!newId) return
-      storeUpdateEvent(newId, updates)
+      duplicateEventWithSync({
+        eventId: originalEvent.id,
+        addCopySuffix: false,
+        updates: updates,
+        createCalDAVEvent,
+      })
       return
     }
 
