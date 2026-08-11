@@ -16,6 +16,7 @@ import {
   createAnniversaryEvent,
   hasAnniversaryEvent,
 } from '@/lib/birthdayReminders'
+import { useSettingsStore } from '@/store/settingsStore'
 import { showToast } from '@/lib/toast'
 import type { Contact } from '../types'
 import { ContactList } from './ContactList'
@@ -345,6 +346,7 @@ export function ContactsView(): JSX.Element {
           contactName: contact.displayName,
           birthday: contact.birthday,
           calendarId,
+          defaultReminderMinutes: useSettingsStore.getState().defaultReminderMinutes,
         })
       }
       if (!contact.anniversary) return null
@@ -353,6 +355,7 @@ export function ContactsView(): JSX.Element {
         contactName: contact.displayName,
         anniversary: contact.anniversary,
         calendarId,
+        defaultReminderMinutes: useSettingsStore.getState().defaultReminderMinutes,
       })
     },
     []

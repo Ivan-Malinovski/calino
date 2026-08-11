@@ -3,6 +3,7 @@ import { pad2, addMinutesToTimeStr } from '@/lib/datetime'
 export { addMinutesToTimeStr }
 import { extractOriginalEventId } from '@/lib/events'
 import { isUUID } from '@/lib/uuid'
+import { makeDefaultReminders } from '@/lib/notifications'
 import type { CalendarEvent, CalendarAttachment, RecurrenceRule, Reminder } from '@/types'
 
 export interface InitialFormState {
@@ -39,21 +40,6 @@ export interface InitialFormState {
 export type InitialFormStateWithMeta = InitialFormState & {
   isRecurringInstance: boolean
   originalEventId: string | null
-}
-
-/**
- * The reminder a brand-new event starts with, from the "Default Reminder"
- * setting. Seeding the form is the whole of what that setting does — nothing
- * synthesizes a reminder later on, so the chips in the modal are exactly what
- * will fire. `null` (the setting's "None") starts the event with no reminder.
- *
- * The id is fixed rather than a fresh uuid: this runs inside a useMemo that
- * re-computes on unrelated changes, and a new id each time would churn the
- * form state for a chip the user hasn't touched.
- */
-export function makeDefaultReminders(defaultReminderMinutes: number | null): Reminder[] {
-  if (defaultReminderMinutes === null) return []
-  return [{ id: 'default', minutesBefore: defaultReminderMinutes, method: 'popup' }]
 }
 
 export function makeDefaultState(

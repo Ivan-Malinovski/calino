@@ -1,12 +1,15 @@
 import { v4 as uuidv4 } from 'uuid'
 import type { CalendarEvent } from '@/types'
 import { toLocalDateString } from './datetime'
+import { makeDefaultReminders } from './notifications'
 
 interface CreateBirthdayEventOptions {
   contactId: string
   contactName: string
   birthday: string // YYYY-MM-DD
   calendarId: string
+  /** Seeds the same default reminder a new event gets in the modal. */
+  defaultReminderMinutes: number | null
 }
 
 interface CreateAnniversaryEventOptions {
@@ -14,6 +17,8 @@ interface CreateAnniversaryEventOptions {
   contactName: string
   anniversary: string // YYYY-MM-DD
   calendarId: string
+  /** Seeds the same default reminder a new event gets in the modal. */
+  defaultReminderMinutes: number | null
 }
 
 /**
@@ -32,7 +37,7 @@ function annualStartDateStr(date: string): string {
  * Create an annual recurring all-day event for a contact's birthday.
  */
 export function createBirthdayEvent(options: CreateBirthdayEventOptions): CalendarEvent {
-  const { contactId, contactName, birthday, calendarId } = options
+  const { contactId, contactName, birthday, calendarId, defaultReminderMinutes } = options
 
   const dateStr = annualStartDateStr(birthday)
 
@@ -49,6 +54,7 @@ export function createBirthdayEvent(options: CreateBirthdayEventOptions): Calend
       interval: 1,
     },
     categories: ['birthday'],
+    reminders: makeDefaultReminders(defaultReminderMinutes),
     // Link back to the contact
     url: `calino:contact:${contactId}`,
   }
@@ -65,7 +71,7 @@ export function hasBirthdayEvent(contactId: string, events: CalendarEvent[]): bo
  * Create an annual recurring all-day event for a contact's anniversary.
  */
 export function createAnniversaryEvent(options: CreateAnniversaryEventOptions): CalendarEvent {
-  const { contactId, contactName, anniversary, calendarId } = options
+  const { contactId, contactName, anniversary, calendarId, defaultReminderMinutes } = options
 
   const dateStr = annualStartDateStr(anniversary)
 
@@ -82,6 +88,7 @@ export function createAnniversaryEvent(options: CreateAnniversaryEventOptions): 
       interval: 1,
     },
     categories: ['anniversary'],
+    reminders: makeDefaultReminders(defaultReminderMinutes),
     // Link back to the contact — distinct marker so it doesn't collide with birthday
     url: `calino:contact:${contactId}:anniversary`,
   }

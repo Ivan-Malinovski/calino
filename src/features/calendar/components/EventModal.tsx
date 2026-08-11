@@ -263,6 +263,12 @@ export function EventModal(): JSX.Element | null {
 
   const lastSelectedEventId = useRef<string | null>(null)
   const lastSelectedDate = useRef<string | null>(null)
+  // Opening the modal is itself a reset trigger, not just a change of target.
+  // `openModal()` with no arguments (the `n` shortcut, the command palette, the
+  // create drawer) leaves selectedEventId and selectedDate null, and closeModal
+  // nulls them again — so on a second no-argument open neither ref changes and
+  // the form below would keep the last event's values, including its reminders.
+  const wasModalOpen = useRef(false)
   const titleInputRef = useRef<HTMLInputElement>(null)
 
   useFocusTrap(dialogRef, isModalOpen && !isClosing)
@@ -411,7 +417,11 @@ export function EventModal(): JSX.Element | null {
   }
 
   useEffect(() => {
+    const justOpened = isModalOpen && !wasModalOpen.current
+    wasModalOpen.current = isModalOpen
+
     if (
+      justOpened ||
       selectedEventId !== lastSelectedEventId.current ||
       selectedDate !== lastSelectedDate.current
     ) {
@@ -543,7 +553,14 @@ export function EventModal(): JSX.Element | null {
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally only reset on user-initiated event/date/endDate changes
-  }, [selectedEventId, selectedDate, selectedEndDate, subtaskParentId, initialCalendarId])
+  }, [
+    isModalOpen,
+    selectedEventId,
+    selectedDate,
+    selectedEndDate,
+    subtaskParentId,
+    initialCalendarId,
+  ])
 
   // Auto-focus title input when creating a new event. On mobile this waits
   // for the entrance to finish: focusing mid-flight opens the soft keyboard,

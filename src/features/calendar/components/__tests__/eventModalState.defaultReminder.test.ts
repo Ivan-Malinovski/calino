@@ -39,8 +39,15 @@ describe('default reminder seeding', () => {
     expect(newEvent(null).reminders).toEqual([])
   })
 
-  it('keeps the seeded id stable so the chip survives a re-computation', () => {
-    expect(newEvent(15).reminders[0].id).toBe(newEvent(15).reminders[0].id)
+  it('seeds a fixed id rather than a fresh uuid on every re-computation', () => {
+    // getInitialFormState runs inside a useMemo that re-computes on unrelated
+    // changes (a background sync writing events, say). A uuid per call would
+    // hand the form a new chip identity each time and churn its state, so the
+    // id is deliberately constant — assert that, not merely that it equals
+    // itself.
+    const id = newEvent(15).reminders[0].id
+    expect(id).toBe('default')
+    expect(id).not.toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-/i)
   })
 
   it('leaves an existing event alone — its own reminders are the truth', () => {
