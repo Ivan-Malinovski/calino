@@ -41,6 +41,21 @@ export type InitialFormStateWithMeta = InitialFormState & {
   originalEventId: string | null
 }
 
+/**
+ * The reminder a brand-new event starts with, from the "Default Reminder"
+ * setting. Seeding the form is the whole of what that setting does — nothing
+ * synthesizes a reminder later on, so the chips in the modal are exactly what
+ * will fire. `null` (the setting's "None") starts the event with no reminder.
+ *
+ * The id is fixed rather than a fresh uuid: this runs inside a useMemo that
+ * re-computes on unrelated changes, and a new id each time would churn the
+ * form state for a chip the user hasn't touched.
+ */
+export function makeDefaultReminders(defaultReminderMinutes: number | null): Reminder[] {
+  if (defaultReminderMinutes === null) return []
+  return [{ id: 'default', minutesBefore: defaultReminderMinutes, method: 'popup' }]
+}
+
 export function makeDefaultState(
   overrides: Partial<InitialFormStateWithMeta> = {}
 ): InitialFormStateWithMeta {
@@ -85,14 +100,20 @@ export function getInitialFormState(
   events: CalendarEvent[],
   calendars: { id: string; isDefault: boolean }[],
   allCategories: { id: string; name: string }[],
-  defaultDuration: number = 60
+  defaultDuration: number = 60,
+  defaultReminderMinutes: number | null = null
 ): InitialFormStateWithMeta {
   const defaultEndTime = addMinutesToTimeStr('09:00', defaultDuration)
+  const defaultReminders = makeDefaultReminders(defaultReminderMinutes)
 
   // Early return when modal is closed — skip all computation
   if (!isModalOpen) {
     const defaultCalendar = calendars.find((c) => c.isDefault) || calendars[0]
-    return makeDefaultState({ calendarId: defaultCalendar?.id || '', endTime: defaultEndTime })
+    return makeDefaultState({
+      calendarId: defaultCalendar?.id || '',
+      endTime: defaultEndTime,
+      reminders: defaultReminders,
+    })
   }
 
   const defaultCalendar = calendars.find((c) => c.isDefault) || calendars[0]
@@ -230,6 +251,7 @@ export function getInitialFormState(
             endDate: endDatePart,
             endTime: endTimeVal,
             endOnDate: dateStr,
+            reminders: defaultReminders,
           })
         }
       }
@@ -241,9 +263,14 @@ export function getInitialFormState(
         endDate: dateStr,
         endTime: endTimeVal,
         endOnDate: dateStr,
+        reminders: defaultReminders,
       })
     }
   }
 
-  return makeDefaultState({ calendarId: defaultCalendar?.id || '', endTime: defaultEndTime })
+  return makeDefaultState({
+    calendarId: defaultCalendar?.id || '',
+    endTime: defaultEndTime,
+    reminders: defaultReminders,
+  })
 }

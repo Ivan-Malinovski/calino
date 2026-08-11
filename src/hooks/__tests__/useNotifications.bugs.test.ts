@@ -15,13 +15,7 @@ vi.mock('@/lib/notifications', () => ({
   createNotificationId: (eventId: string, reminderId: string) => `calino-${eventId}-${reminderId}`,
   getDueSnoozedReminders: () => [],
   snoozeReminder: vi.fn(),
-  getEffectiveReminders: (event: CalendarEvent, defaultReminderMinutes: number) => {
-    if (event.reminders?.length) return event.reminders
-    if (event.type === 'event' || !event.type) {
-      return [{ id: 'default', minutesBefore: defaultReminderMinutes, method: 'popup' as const }]
-    }
-    return []
-  },
+  getEffectiveReminders: (event: CalendarEvent) => event.reminders ?? [],
 }))
 
 let currentEvents: CalendarEvent[] = []

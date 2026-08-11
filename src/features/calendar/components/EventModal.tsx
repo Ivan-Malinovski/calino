@@ -52,6 +52,7 @@ export function EventModal(): JSX.Element | null {
   const calendars = useCalendarStore((state) => state.calendars)
   const categories = useCalendarStore((state) => state.categories)
   const defaultDuration = useSettingsStore((state) => state.defaultDuration)
+  const defaultReminderMinutes = useSettingsStore((state) => state.defaultReminderMinutes)
   const addEvent = useCalendarStore((state) => state.addEvent)
   const deleteEvent = useCalendarStore((state) => state.deleteEvent)
   const updateEvent = useCalendarStore((state) => state.updateEvent)
@@ -127,7 +128,8 @@ export function EventModal(): JSX.Element | null {
         events,
         compatibleCalendars,
         categories,
-        defaultDuration
+        defaultDuration,
+        defaultReminderMinutes
       ),
     [
       isModalOpen,
@@ -138,6 +140,7 @@ export function EventModal(): JSX.Element | null {
       compatibleCalendars,
       categories,
       defaultDuration,
+      defaultReminderMinutes,
     ]
   )
 
@@ -438,7 +441,8 @@ export function EventModal(): JSX.Element | null {
         currentEvents,
         currentCalendars,
         currentCategories,
-        useSettingsStore.getState().defaultDuration
+        useSettingsStore.getState().defaultDuration,
+        useSettingsStore.getState().defaultReminderMinutes
       )
 
       calendarTouchedRef.current = false

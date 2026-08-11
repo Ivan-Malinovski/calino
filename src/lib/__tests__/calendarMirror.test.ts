@@ -42,7 +42,7 @@ function event(overrides: Partial<CalendarEvent> = {}): CalendarEvent {
 }
 
 function build(events: CalendarEvent[]): ReturnType<typeof buildMirrorPayload> {
-  return buildMirrorPayload(events, calendars, 15, NOW)
+  return buildMirrorPayload(events, calendars, NOW)
 }
 
 describe('toDuration', () => {
@@ -200,9 +200,11 @@ describe('buildMirrorPayload', () => {
     expect(result.events.map((e) => e.id)).toEqual(['old-series'])
   })
 
-  it('falls back to the default reminder and drops email alarms', () => {
-    const [withDefault] = build([event()]).events
-    expect(withDefault.reminders).toEqual([15])
+  it('mirrors only the reminders an event carries, and drops email alarms', () => {
+    // No substituted default: an event with no reminders mirrors none, so the
+    // provider doesn't alarm an event the app itself shows as reminder-less.
+    const [withNone] = build([event()]).events
+    expect(withNone.reminders).toEqual([])
 
     const [withExplicit] = build([
       event({

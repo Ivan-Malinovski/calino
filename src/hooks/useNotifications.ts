@@ -62,7 +62,6 @@ export function useNotifications(): void {
   const events = useCalendarStore((state) => state.events)
   const reminderEvents = useReminderOccurrences(events)
   const enableNotifications = useSettingsStore((state) => state.enableDesktopNotifications)
-  const defaultReminderMinutes = useSettingsStore((state) => state.defaultReminderMinutes)
   // When the Android calendar mirror is active the OS alarms our events off
   // CalendarContract, which works with the app closed — strictly better than
   // what we can schedule ourselves. Standing down avoids double notifications.
@@ -97,8 +96,7 @@ export function useNotifications(): void {
         return
       }
       const granted = await checkNativeReminderPermission()
-      if (granted && !cancelled)
-        await reconcileNativeReminders(reminderEvents, defaultReminderMinutes)
+      if (granted && !cancelled) await reconcileNativeReminders(reminderEvents)
     }
     // Debounced because this effect re-runs on every event mutation, and a sync
     // writes events one at a time.
@@ -125,7 +123,7 @@ export function useNotifications(): void {
       removeListener()
       void appStateListenerPromise.then((handle) => handle.remove())
     }
-  }, [reminderEvents, enableNotifications, defaultReminderMinutes, providerOwnsReminders])
+  }, [reminderEvents, enableNotifications, providerOwnsReminders])
 
   useEffect(() => {
     prevEnabledRef.current = enableNotifications
@@ -163,7 +161,7 @@ export function useNotifications(): void {
       const catchUpCutoff = addHours(now, -CATCH_UP_WINDOW_HOURS)
 
       reminderEvents.forEach((event) => {
-        const reminders = getEffectiveReminders(event, defaultReminderMinutes)
+        const reminders = getEffectiveReminders(event)
 
         if (reminders.length === 0) return
 
@@ -267,5 +265,5 @@ export function useNotifications(): void {
       clearInterval(intervalId)
       document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
-  }, [reminderEvents, enableNotifications, defaultReminderMinutes])
+  }, [reminderEvents, enableNotifications])
 }

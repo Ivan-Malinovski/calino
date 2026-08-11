@@ -225,6 +225,10 @@ export const VIEW_OPTIONS: { value: ViewType; label: string }[] = [
   { value: 'todo', label: 'Tasks' },
 ]
 
+/**
+ * Options for the per-event reminder chips. No "None" here — removing the last
+ * chip is how an event ends up with no reminder.
+ */
 export const REMINDER_OPTIONS: { value: number; label: string }[] = [
   { value: 0, label: 'At time of event' },
   { value: 5, label: '5 minutes before' },
@@ -232,6 +236,15 @@ export const REMINDER_OPTIONS: { value: number; label: string }[] = [
   { value: 30, label: '30 minutes before' },
   { value: 60, label: '1 hour before' },
   { value: 1440, label: '1 day before' },
+]
+
+/**
+ * Options for the "Default Reminder" setting, which seeds the new-event form.
+ * "None" means a new event starts with no reminder at all.
+ */
+export const DEFAULT_REMINDER_OPTIONS: { value: number | null; label: string }[] = [
+  { value: null, label: 'None' },
+  ...REMINDER_OPTIONS,
 ]
 
 export const CONFLICT_OPTIONS: { value: 'server-wins' | 'local-wins' | 'ask'; label: string }[] = [

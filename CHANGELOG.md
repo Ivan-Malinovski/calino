@@ -10,6 +10,14 @@ All notable changes to Calino will be documented in this file.
 
   `CREATED` is now also read back when Calino pulls a task or event in. That matters more than it sounds: Calino rebuilds each component from scratch on every save, so before this change a creation date written by any other client was silently dropped the first time you edited that task here. Records that predate this — and ones whose server copy never had a `CREATED` — get stamped with the current time on their next save, and hold that value from then on. `LAST-MODIFIED` tracks each write and matches the `DTSTAMP` on it exactly.
 
+### Changed
+
+- **The default reminder now seeds new events instead of silently applying to all of them.** Setting a 15-minute default used to mean every event without its own reminder notified you 15 minutes ahead — but the event's form showed no reminder at all, so there was nothing to look at and nothing to remove. Worse, deleting an event's last reminder did nothing: an empty reminder list was indistinguishable from one that had never been set, so the default came straight back and the event notified anyway.
+
+  "Default Reminder" now does what its name suggests: a new event opens with that reminder already in place, as a chip you can change or delete like any other. What the form shows is exactly what will fire — on the web, in the Android app's own notifications, and in the calendar Calino mirrors to Android. The setting has gained a **None** option for starting new events with no reminder at all.
+
+  Worth knowing before you upgrade: events already saved without any reminder will stop notifying, because they genuinely have none. If you relied on the old blanket behaviour, open those events and add a reminder. Tasks are unaffected — they never took the default.
+
 ### Fixed
 
 - **Duplicated events are saved to the server.** Duplicating an event — from the context menu, ctrl+clicking it, or ctrl+dragging it to a new slot — only ever created the copy locally. It looked right until the next sync, which removed it again: the server had never been told about it. The copy is now pushed like any other new event, and a failed push is queued for retry rather than lost.

@@ -206,7 +206,6 @@ function rruleFor(event: CalendarEvent): string | undefined {
 export function buildMirrorPayload(
   events: CalendarEvent[],
   calendars: Calendar[],
-  defaultReminderMinutes: number,
   now: Date = new Date()
 ): { calendars: MirrorCalendarPayload[]; events: MirrorEventPayload[] } {
   const mirroredCalendars = calendars
@@ -272,7 +271,7 @@ export function buildMirrorPayload(
         rrule && exdates.length > 0
           ? exdates.map((iso) => toBasicFormat(iso, event.isAllDay)).join(',')
           : undefined,
-      reminders: getEffectiveReminders(event, defaultReminderMinutes)
+      reminders: getEffectiveReminders(event)
         // METHOD_ALERT is the only method we register on the calendar; an
         // email VALARM is the server's job, not the phone's.
         .filter((reminder) => reminder.method !== 'email')
@@ -287,10 +286,9 @@ export function buildMirrorPayload(
 
 export async function syncCalendarMirror(
   events: CalendarEvent[],
-  calendars: Calendar[],
-  defaultReminderMinutes: number
+  calendars: Calendar[]
 ): Promise<void> {
   if (!isCalendarMirrorSupported()) return
-  const payload = buildMirrorPayload(events, calendars, defaultReminderMinutes)
+  const payload = buildMirrorPayload(events, calendars)
   await CalendarMirror.sync(payload)
 }
