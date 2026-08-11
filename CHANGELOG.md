@@ -18,6 +18,8 @@ All notable changes to Calino will be documented in this file.
 
 - **Journal entries write their timestamps in UTC.** `CREATED` and `LAST-MODIFIED` on a journal entry were emitted as floating local times, which RFC 5545 §3.8.7 doesn't allow — a server or client in another zone read them hours off.
 
+- **The Calino wordmark sits centred against its diamond.** The serif line box reserves room for descenders that "Calino" hasn't got, so the word rode high next to the diamond. The rotated diamond was also clipped along its left edge — the inset was measured off the unrotated square, ignoring its wider diagonal — and the mobile brand row sat closer to the top of the screen than the desktop header's does.
+
 ## [0.27.3] - 2026-08-07
 
 ### Added
