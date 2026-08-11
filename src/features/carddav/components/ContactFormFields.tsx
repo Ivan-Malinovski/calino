@@ -17,7 +17,9 @@ export function ContactFormFields({ value, onChange }: ContactFormFieldsProps): 
   const valueRef = useRef(value)
   // Mirrors `local` so `update` can compute the next state without a state updater
   const localRef = useRef(local)
-  localRef.current = local
+  useEffect(() => {
+    localRef.current = local
+  }, [local])
 
   // Reset local state when value prop changes (e.g. when modal opens with a different contact)
   // Use ref to avoid re-triggering on every parent render

@@ -47,7 +47,9 @@ export function DiagnosticsPanel({ options, autoRun = false }: DiagnosticsPanelP
   // A run outlives a re-render, and options is a fresh object every time —
   // keep the latest in a ref so `run` stays stable and autoRun fires once.
   const optionsRef = useRef(options)
-  optionsRef.current = options
+  useEffect(() => {
+    optionsRef.current = options
+  }, [options])
 
   const run = useCallback(async (includeWriteTest: boolean): Promise<void> => {
     setRunning(true)
