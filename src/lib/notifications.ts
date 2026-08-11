@@ -3,17 +3,35 @@ import type { CalendarEvent, Reminder } from '@/types'
 
 export type NotificationPermissionStatus = 'granted' | 'denied' | 'default'
 
-/** Which reminders apply to an event: its own explicit reminders, or (for
- * plain events only, not tasks/journal entries) the default reminder. */
-export function getEffectiveReminders(
-  event: CalendarEvent,
-  defaultReminderMinutes: number
-): Reminder[] {
-  if (event.reminders?.length) return event.reminders
-  if (event.type === 'event' || !event.type) {
-    return [{ id: 'default', minutesBefore: defaultReminderMinutes, method: 'popup' }]
-  }
-  return []
+/**
+ * The reminder a newly-created event starts with, from the "Default Reminder"
+ * setting. Seeding at creation is the whole of what that setting does — nothing
+ * substitutes a reminder later on, so what an event shows is what fires. `null`
+ * (the setting's "None") creates the event with no reminder.
+ *
+ * The id is fixed rather than a fresh uuid: in the event modal this runs inside
+ * a useMemo that re-computes on unrelated changes, and a new id each time would
+ * churn form state for a chip the user hasn't touched. Reminder ids only have
+ * to be unique within one event, and the add-chip menu hides options already
+ * present, so the seeded chip can never collide with a user-added one.
+ */
+export function makeDefaultReminders(defaultReminderMinutes: number | null): Reminder[] {
+  if (defaultReminderMinutes === null) return []
+  return [{ id: 'default', minutesBefore: defaultReminderMinutes, method: 'popup' }]
+}
+
+/**
+ * Which reminders apply to an event: exactly the ones it carries.
+ *
+ * This used to substitute the "Default Reminder" setting whenever an event had
+ * none, which meant every event notified whether or not it showed a reminder in
+ * the form — and clearing the last reminder chip did nothing, since an empty
+ * list is indistinguishable from one that was never set. The default reminder is
+ * now applied where it can be seen and edited: it seeds the new-event form (see
+ * `makeDefaultReminders`), and what the form shows is what fires.
+ */
+export function getEffectiveReminders(event: CalendarEvent): Reminder[] {
+  return event.reminders ?? []
 }
 
 export async function requestNotificationPermission(): Promise<NotificationPermissionStatus> {

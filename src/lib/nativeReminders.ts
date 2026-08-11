@@ -59,15 +59,12 @@ function reminderBody(event: CalendarEvent): string {
   return `Starting at ${timeStr}`
 }
 
-export async function reconcileNativeReminders(
-  events: CalendarEvent[],
-  defaultReminderMinutes: number
-): Promise<void> {
+export async function reconcileNativeReminders(events: CalendarEvent[]): Promise<void> {
   const now = Date.now()
   const toSchedule: Parameters<typeof LocalNotifications.schedule>[0]['notifications'] = []
 
   for (const event of events) {
-    for (const reminder of getEffectiveReminders(event, defaultReminderMinutes)) {
+    for (const reminder of getEffectiveReminders(event)) {
       const at = new Date(event.start)
       at.setMinutes(at.getMinutes() - reminder.minutesBefore)
       if (at.getTime() <= now) continue

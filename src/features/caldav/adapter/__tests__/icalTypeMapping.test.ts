@@ -580,3 +580,69 @@ describe('Issue 84: VEVENT URL round-trip', () => {
     expect(calendarEventToIcalComponent(event).getFirstProperty('url')).toBeNull()
   })
 })
+
+// ---------------------------------------------------------------------------
+// "At time of event" reminders (minutesBefore: 0)
+// ---------------------------------------------------------------------------
+describe('zero-minute reminder round-trip', () => {
+  // Zero is a real reminder option ("At time of event"), not an absence. The
+  // read path used to treat it as one and drop the alarm, so such a reminder
+  // was written to the server, then silently disappeared on the next sync.
+  const eventWithReminder = (minutesBefore: number): CalendarEvent => ({
+    id: 'evt-0',
+    calendarId: 'cal-1',
+    title: 'Standup',
+    start: '2025-06-15T14:00:00.000Z',
+    end: '2025-06-15T15:00:00.000Z',
+    isAllDay: false,
+    reminders: [{ id: 'r1', minutesBefore, method: 'popup' }],
+  })
+
+  const parseTrigger = (trigger: string): CalendarEvent['reminders'] => {
+    const iCalStr = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'BEGIN:VEVENT',
+      'UID:zero-trigger',
+      'SUMMARY:Standup',
+      'DTSTART:20250615T140000Z',
+      'DTEND:20250615T150000Z',
+      'BEGIN:VALARM',
+      'ACTION:DISPLAY',
+      trigger.startsWith('-P') || trigger.startsWith('P')
+        ? `TRIGGER:${trigger}`
+        : `TRIGGER;VALUE=DATE-TIME:${trigger}`,
+      'DESCRIPTION:Reminder',
+      'END:VALARM',
+      'END:VEVENT',
+      'END:VCALENDAR',
+    ].join('\r\n')
+    return icalEventToCalendarEvent(createVevent(iCalStr), 'cal-1').reminders
+  }
+
+  it('parses -PT0M as a reminder at the time of the event', () => {
+    const reminders = parseTrigger('-PT0M')
+    expect(reminders).toHaveLength(1)
+    expect(reminders![0].minutesBefore).toBe(0)
+  })
+
+  it('parses an absolute trigger equal to DTSTART as zero', () => {
+    const reminders = parseTrigger('20250615T140000Z')
+    expect(reminders).toHaveLength(1)
+    expect(reminders![0].minutesBefore).toBe(0)
+  })
+
+  it('survives a full serialize → parse round-trip', () => {
+    const comp = calendarEventToIcalComponent(eventWithReminder(0))
+    const reparsed = icalEventToCalendarEvent(
+      createVevent(`BEGIN:VCALENDAR\r\nVERSION:2.0\r\n${comp.toString()}\r\nEND:VCALENDAR`),
+      'cal-1'
+    )
+    expect(reparsed.reminders).toHaveLength(1)
+    expect(reparsed.reminders![0].minutesBefore).toBe(0)
+  })
+
+  it('leaves non-zero reminders alone', () => {
+    expect(parseTrigger('-PT15M')![0].minutesBefore).toBe(15)
+  })
+})

@@ -3,6 +3,7 @@ import { pad2, addMinutesToTimeStr } from '@/lib/datetime'
 export { addMinutesToTimeStr }
 import { extractOriginalEventId } from '@/lib/events'
 import { isUUID } from '@/lib/uuid'
+import { makeDefaultReminders } from '@/lib/notifications'
 import type { CalendarEvent, CalendarAttachment, RecurrenceRule, Reminder } from '@/types'
 
 export interface InitialFormState {
@@ -85,14 +86,20 @@ export function getInitialFormState(
   events: CalendarEvent[],
   calendars: { id: string; isDefault: boolean }[],
   allCategories: { id: string; name: string }[],
-  defaultDuration: number = 60
+  defaultDuration: number = 60,
+  defaultReminderMinutes: number | null = null
 ): InitialFormStateWithMeta {
   const defaultEndTime = addMinutesToTimeStr('09:00', defaultDuration)
+  const defaultReminders = makeDefaultReminders(defaultReminderMinutes)
 
   // Early return when modal is closed — skip all computation
   if (!isModalOpen) {
     const defaultCalendar = calendars.find((c) => c.isDefault) || calendars[0]
-    return makeDefaultState({ calendarId: defaultCalendar?.id || '', endTime: defaultEndTime })
+    return makeDefaultState({
+      calendarId: defaultCalendar?.id || '',
+      endTime: defaultEndTime,
+      reminders: defaultReminders,
+    })
   }
 
   const defaultCalendar = calendars.find((c) => c.isDefault) || calendars[0]
@@ -230,6 +237,7 @@ export function getInitialFormState(
             endDate: endDatePart,
             endTime: endTimeVal,
             endOnDate: dateStr,
+            reminders: defaultReminders,
           })
         }
       }
@@ -241,9 +249,14 @@ export function getInitialFormState(
         endDate: dateStr,
         endTime: endTimeVal,
         endOnDate: dateStr,
+        reminders: defaultReminders,
       })
     }
   }
 
-  return makeDefaultState({ calendarId: defaultCalendar?.id || '', endTime: defaultEndTime })
+  return makeDefaultState({
+    calendarId: defaultCalendar?.id || '',
+    endTime: defaultEndTime,
+    reminders: defaultReminders,
+  })
 }

@@ -1,5 +1,5 @@
 import type { JSX } from 'react'
-import { useSettingsStore, DURATION_OPTIONS, REMINDER_OPTIONS } from '@/store/settingsStore'
+import { useSettingsStore, DURATION_OPTIONS, DEFAULT_REMINDER_OPTIONS } from '@/store/settingsStore'
 import { useCalendarStore } from '@/store/calendarStore'
 import styles from './Settings.module.css'
 
@@ -436,21 +436,25 @@ export function CalendarSettings(): JSX.Element {
           className={styles.row}
           data-component="setting-row"
           data-setting="default-reminder"
-          data-value={String(defaultReminderMinutes)}
+          data-value={defaultReminderMinutes === null ? 'none' : String(defaultReminderMinutes)}
         >
           <div className={styles.rowInfo}>
             <div className={styles.rowLabel}>Default Reminder</div>
-            <div className={styles.rowDesc}>How far ahead to send the reminder</div>
+            <div className={styles.rowDesc}>The reminder new events start with</div>
           </div>
           <div className={styles.rowControl}>
             <select
               className={styles.select}
-              value={defaultReminderMinutes}
+              value={defaultReminderMinutes === null ? '' : defaultReminderMinutes}
               aria-label="Default reminder"
-              onChange={(e) => updateSettings({ defaultReminderMinutes: Number(e.target.value) })}
+              onChange={(e) =>
+                updateSettings({
+                  defaultReminderMinutes: e.target.value === '' ? null : Number(e.target.value),
+                })
+              }
             >
-              {REMINDER_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
+              {DEFAULT_REMINDER_OPTIONS.map((opt) => (
+                <option key={opt.label} value={opt.value ?? ''}>
                   {opt.label}
                 </option>
               ))}

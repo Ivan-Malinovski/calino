@@ -17,13 +17,7 @@ vi.mock('@/lib/notifications', () => ({
   createNotificationId: (eventId: string, reminderId: string) => `calino-${eventId}-${reminderId}`,
   getDueSnoozedReminders: () => [],
   snoozeReminder: vi.fn(),
-  getEffectiveReminders: (event: CalendarEvent, defaultReminderMinutes: number) => {
-    if (event.reminders?.length) return event.reminders
-    if (event.type === 'event' || !event.type) {
-      return [{ id: 'default', minutesBefore: defaultReminderMinutes, method: 'popup' as const }]
-    }
-    return []
-  },
+  getEffectiveReminders: (event: CalendarEvent) => event.reminders ?? [],
 }))
 
 // Minimal zustand store mock: we directly mutate the returned state references
@@ -218,27 +212,30 @@ describe('useNotifications - Bug #81+90: shownReminders behavior', () => {
     expect(mockShowNotification).not.toHaveBeenCalled()
   })
 
-  it('applies default reminder for event with empty reminders array', () => {
+  // The "Default Reminder" setting seeds the new-event form; nothing is
+  // substituted at notify time. An event with no reminders is silent, and
+  // clearing the last reminder chip is what makes it so — an empty list used
+  // to be indistinguishable from one that was never set, so both got a
+  // default and the event notified anyway.
+  it('does not notify for an event whose reminders were cleared', () => {
     const now = new Date()
     const eventStart = new Date(now.getTime() + 15 * 60_000)
     currentEvents = [makeEvent('evt1', eventStart, { reminders: [] })]
 
     renderHook(() => useNotifications())
 
-    // Regular events with empty reminders still get the default reminder
-    expect(mockShowNotification).toHaveBeenCalledTimes(1)
+    expect(mockShowNotification).not.toHaveBeenCalled()
   })
 
-  it('uses defaultReminderMinutes when event has no explicit reminders', () => {
+  it('does not notify for an event that never had reminders', () => {
     currentDefaultReminderMinutes = 30
     const now = new Date()
-    // Event starts in 30 min → should fire with default reminder
     const eventStart = new Date(now.getTime() + 30 * 60_000)
     currentEvents = [makeEvent('evt1', eventStart, { reminders: undefined })]
 
     renderHook(() => useNotifications())
 
-    expect(mockShowNotification).toHaveBeenCalledTimes(1)
+    expect(mockShowNotification).not.toHaveBeenCalled()
   })
 
   it('reminds on a recurring occurrence, not just the series DTSTART', () => {

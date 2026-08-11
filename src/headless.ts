@@ -66,10 +66,6 @@ export async function runHeadlessSync(): Promise<HeadlessResult> {
   // on what gets mirrored — the same source the foreground pass uses.
   const storeCalendars = readPersisted<{ calendars: Calendar[] }>('calino-storage').calendars ?? []
   const visibleById = new Map(storeCalendars.filter((c) => c.isVisible).map((c) => [c.id, c]))
-  const { defaultReminderMinutes = 15 } = readPersisted<{ defaultReminderMinutes: number }>(
-    'calino-settings'
-  )
-
   const now = Date.now()
   const rangeStart = new Date(now - MIRROR_PAST_DAYS * DAY_MS).toISOString()
   const rangeEnd = new Date(now + MIRROR_FUTURE_DAYS * DAY_MS).toISOString()
@@ -117,7 +113,7 @@ export async function runHeadlessSync(): Promise<HeadlessResult> {
     return { accounts: accountsSynced, calendars: 0, events: 0 }
   }
 
-  const payload = buildMirrorPayload(events, fetched, defaultReminderMinutes)
+  const payload = buildMirrorPayload(events, fetched)
   const result = JSON.parse(bridge.mirrorSync(JSON.stringify(payload))) as { error?: string }
   if (result.error) throw new Error(result.error)
 

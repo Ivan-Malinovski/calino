@@ -12,6 +12,7 @@ import {
   selectSetCurrentDate,
 } from '@/store/calendarStore'
 import { useSettingsStore, selectThemeMode, selectUpdateSettings } from '@/store/settingsStore'
+import { makeDefaultReminders } from '@/lib/notifications'
 import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
 import { createCommandRegistry, type Command } from '../commands'
 import { parseNaturalLanguage } from '@/features/nlp'
@@ -559,6 +560,9 @@ function quickAddToItem(
         start: qa.startDate.toISOString(),
         end: qa.endDate ? qa.endDate.toISOString() : qa.startDate.toISOString(),
         isAllDay: qa.isAllDay,
+        // Quick-add skips the modal, so seed the default reminder here — the
+        // setting means "what a new event starts with", however it was made.
+        reminders: makeDefaultReminders(useSettingsStore.getState().defaultReminderMinutes),
       }
       addEvent(newEvent)
       try {

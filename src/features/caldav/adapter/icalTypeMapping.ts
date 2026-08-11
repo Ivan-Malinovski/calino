@@ -528,7 +528,8 @@ export function icalEventToCalendarEvent(
         }
       }
 
-      if (minutes !== null && minutes > 0) {
+      // `>= 0`: zero is "at the time of the event", a real reminder option.
+      if (minutes !== null && minutes >= 0) {
         // R2.6 — Read the VALARM ACTION property (DISPLAY/EMAIL/AUDIO)
         // and map to the Reminder.method union. Default to 'popup' for
         // compatibility with existing reminders and for any non-recognised
@@ -662,50 +663,33 @@ export function icalEventToCalendarEvent(
   }
 }
 
+/**
+ * Minutes before the event for a duration TRIGGER, or null when the string
+ * carries no duration at all.
+ *
+ * Zero is a real value, not an absence: "-PT0M" is "at the time of the event",
+ * which is one of the reminder options the UI offers. Returning null for it
+ * meant such an alarm was dropped on read, so a reminder set to "At time of
+ * event" survived until the next sync and then vanished. The `matched` flag
+ * keeps that case apart from a malformed trigger like "-PTxyz", which really
+ * does have nothing to read.
+ */
 function parseTriggerDuration(trigger: string): number | null {
-  if (trigger.startsWith('-PT')) {
-    const duration = trigger.substring(3)
-    let minutes = 0
+  const prefix = trigger.startsWith('-PT') ? 3 : trigger.startsWith('PT') ? 2 : null
+  if (prefix === null) return null
 
-    const hourMatch = duration.match(/(\d+)H/)
-    const minMatch = duration.match(/(\d+)M/)
-    const secMatch = duration.match(/(\d+)S/)
+  const duration = trigger.substring(prefix)
+  const hourMatch = duration.match(/(\d+)H/)
+  const minMatch = duration.match(/(\d+)M/)
+  const secMatch = duration.match(/(\d+)S/)
+  if (!hourMatch && !minMatch && !secMatch) return null
 
-    if (hourMatch) {
-      minutes += parseInt(hourMatch[1], 10) * 60
-    }
-    if (minMatch) {
-      minutes += parseInt(minMatch[1], 10)
-    }
-    if (secMatch) {
-      minutes += Math.ceil(parseInt(secMatch[1], 10) / 60)
-    }
+  let minutes = 0
+  if (hourMatch) minutes += parseInt(hourMatch[1], 10) * 60
+  if (minMatch) minutes += parseInt(minMatch[1], 10)
+  if (secMatch) minutes += Math.ceil(parseInt(secMatch[1], 10) / 60)
 
-    return minutes > 0 ? minutes : null
-  }
-
-  if (trigger.startsWith('PT')) {
-    const duration = trigger.substring(2)
-    let minutes = 0
-
-    const hourMatch = duration.match(/(\d+)H/)
-    const minMatch = duration.match(/(\d+)M/)
-    const secMatch = duration.match(/(\d+)S/)
-
-    if (hourMatch) {
-      minutes += parseInt(hourMatch[1], 10) * 60
-    }
-    if (minMatch) {
-      minutes += parseInt(minMatch[1], 10)
-    }
-    if (secMatch) {
-      minutes += Math.ceil(parseInt(secMatch[1], 10) / 60)
-    }
-
-    return minutes > 0 ? minutes : null
-  }
-
-  return null
+  return minutes
 }
 
 function createAllDayDate(year: number, month: number, day: number): ICAL.Time {

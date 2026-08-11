@@ -29,7 +29,6 @@ export function useCalendarMirror(): void {
   const events = useCalendarStore((state) => state.events)
   const calendars = useCalendarStore((state) => state.calendars)
   const enableCalendarMirror = useSettingsStore((state) => state.enableCalendarMirror)
-  const defaultReminderMinutes = useSettingsStore((state) => state.defaultReminderMinutes)
   const setStatus = useCalendarMirrorStore((state) => state.setStatus)
   const setLastError = useCalendarMirrorStore((state) => state.setLastError)
   // Survives effect re-runs, unlike a per-effect flag — see runSync.
@@ -87,7 +86,7 @@ export function useCalendarMirror(): void {
       }
 
       try {
-        await syncCalendarMirror(events, calendars, defaultReminderMinutes)
+        await syncCalendarMirror(events, calendars)
         if (isStale()) return
         setLastError(null)
         // Checked after a successful sync rather than once at startup: the
@@ -123,5 +122,5 @@ export function useCalendarMirror(): void {
       clearTimeout(debounceId)
       void appStateListenerPromise.then((handle) => handle.remove())
     }
-  }, [events, calendars, enableCalendarMirror, defaultReminderMinutes, setStatus, setLastError])
+  }, [events, calendars, enableCalendarMirror, setStatus, setLastError])
 }

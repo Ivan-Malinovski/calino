@@ -311,7 +311,8 @@ export interface UserSettings {
   showWeekNumbersInSidebar: boolean
   eventDensity: EventDensity
   mapProvider: MapProvider
-  defaultReminderMinutes: number
+  /** Reminder seeded into a new event's form. `null` is "None" — start with no reminder. */
+  defaultReminderMinutes: number | null
   defaultEventColor: string
   enableDesktopNotifications: boolean
   /** Android only: mirror events into the OS calendar provider so the system
