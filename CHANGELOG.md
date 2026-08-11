@@ -12,6 +12,8 @@ All notable changes to Calino will be documented in this file.
 
 ### Fixed
 
+- **Duplicated events are saved to the server.** Duplicating an event — from the context menu, ctrl+clicking it, or ctrl+dragging it to a new slot — only ever created the copy locally. It looked right until the next sync, which removed it again: the server had never been told about it. The copy is now pushed like any other new event, and a failed push is queued for retry rather than lost.
+
 - **Journal entries write their timestamps in UTC.** `CREATED` and `LAST-MODIFIED` on a journal entry were emitted as floating local times, which RFC 5545 §3.8.7 doesn't allow — a server or client in another zone read them hours off.
 
 ## [0.27.3] - 2026-08-07

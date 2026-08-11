@@ -33,6 +33,7 @@ import { EventBackground } from '@/components/common/EventBackground'
 import { matchEventBackground } from '@/lib/eventBackground'
 import { MINUTE_SNAP_INTERVAL } from '../lib/dragSnap'
 import styles from './EventCard.module.css'
+import { duplicateEventWithSync } from '@/lib/duplicateWithSync'
 
 interface EventCardProps {
   event: CalendarEvent
@@ -84,7 +85,6 @@ export const EventCard = React.memo(function EventCard({
   const completeTaskOccurrence = useCalendarStore((state) => state.completeTaskOccurrence)
   const deleteEvent = useCalendarStore((state) => state.deleteEvent)
   const addEvent = useCalendarStore((state) => state.addEvent)
-  const duplicateEvent = useCalendarStore((state) => state.duplicateEvent)
   const timeFormat = useSettingsStore((state) => state.timeFormat)
   const defaultDuration = useSettingsStore((state) => state.defaultDuration)
   const {
@@ -283,7 +283,7 @@ export const EventCard = React.memo(function EventCard({
 
     // Ctrl/Cmd+click is a shortcut for the context menu's "Duplicate" action.
     if ((e.ctrlKey || e.metaKey) && !isReadOnlyCalendar) {
-      duplicateEvent(event.id)
+      duplicateEventWithSync({ eventId: event.id, createCalDAVEvent })
       return
     }
 
@@ -780,7 +780,8 @@ export const EventCard = React.memo(function EventCard({
                     },
                     {
                       label: 'Duplicate',
-                      onClick: () => duplicateEvent(event.id),
+                      onClick: () =>
+                        duplicateEventWithSync({ eventId: event.id, createCalDAVEvent }),
                       icon: <DuplicateIcon />,
                     },
                     {
