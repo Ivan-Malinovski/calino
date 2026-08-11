@@ -233,6 +233,13 @@ export function EventModal(): JSX.Element | null {
     }
   }, [isModalOpen, selectedEventId, initialState.attachments])
 
+  // Declared before the Escape handler below so the compiler sees the ref
+  // created and synced ahead of the effect that reads it.
+  const closeModalRef = useRef(closeModal)
+  useEffect(() => {
+    closeModalRef.current = closeModal
+  })
+
   // Close on Escape
   useEffect(() => {
     if (!isModalOpen) return
@@ -254,10 +261,6 @@ export function EventModal(): JSX.Element | null {
   const lastSelectedEventId = useRef<string | null>(null)
   const lastSelectedDate = useRef<string | null>(null)
   const titleInputRef = useRef<HTMLInputElement>(null)
-  const closeModalRef = useRef(closeModal)
-  useEffect(() => {
-    closeModalRef.current = closeModal
-  })
 
   useFocusTrap(dialogRef, isModalOpen && !isClosing)
 
@@ -721,6 +724,26 @@ export function EventModal(): JSX.Element | null {
     })
   }, [events, selectedEventId, startDate])
 
+  // R3.4 — single source of truth for end-before-start. Used by:
+  //   - the form's Save button (disabled prop)
+  //   - the submit handler (toast + early return)
+  //   - saveEvent (called from the recurrence-dialog confirm path)
+  //   Each of those three sites used to inline-compute this; consolidating
+  // here keeps them in lockstep. Declared ahead of all three consumers so the
+  // compiler can keep the memoization.
+  const isTimeRangeInvalid = useMemo(() => {
+    // Tasks don't have a real start/end range — start and end are saved as
+    // the same timestamp (mirroring the due date/time), which would always
+    // trip the endMs <= startMs check below and permanently disable Save.
+    if (isTaskMode) return false
+    if (!isAllDay) {
+      const startMs = new Date(`${startDate}T${startTime}:00`).getTime()
+      const endMs = new Date(`${endDate}T${endTime}:00`).getTime()
+      return endMs <= startMs
+    }
+    return endDate < startDate
+  }, [isTaskMode, isAllDay, startDate, startTime, endDate, endTime])
+
   const handleSubmit = (e: React.FormEvent): void => {
     e.preventDefault()
 
@@ -761,25 +784,6 @@ export function EventModal(): JSX.Element | null {
 
     saveEvent('all')
   }
-
-  // R3.4 — single source of truth for end-before-start. Used by:
-  //   - the form's Save button (disabled prop)
-  //   - the submit handler (toast + early return)
-  //   - saveEvent (called from the recurrence-dialog confirm path)
-  //   Each of those three sites used to inline-compute this; consolidating
-  // here keeps them in lockstep.
-  const isTimeRangeInvalid = useMemo(() => {
-    // Tasks don't have a real start/end range — start and end are saved as
-    // the same timestamp (mirroring the due date/time), which would always
-    // trip the endMs <= startMs check below and permanently disable Save.
-    if (isTaskMode) return false
-    if (!isAllDay) {
-      const startMs = new Date(`${startDate}T${startTime}:00`).getTime()
-      const endMs = new Date(`${endDate}T${endTime}:00`).getTime()
-      return endMs <= startMs
-    }
-    return endDate < startDate
-  }, [isTaskMode, isAllDay, startDate, startTime, endDate, endTime])
 
   const saveEvent = async (mode: RecurrenceEditMode): Promise<void> => {
     // Defensive guard: also called from `handleRecurrenceDialogConfirm`, which

@@ -106,7 +106,9 @@ export function CommandPalette({
   // After the close animation finishes, unmount and call the parent's onClose
   // so it can clean up its own state.
   const onCloseRef = useRef(onClose)
-  onCloseRef.current = onClose
+  useEffect(() => {
+    onCloseRef.current = onClose
+  }, [onClose])
   const closeTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
 
   // Cancel any pending close when re-opening (fixes rapid open/close race)
