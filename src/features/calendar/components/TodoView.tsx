@@ -625,6 +625,10 @@ export function TodoView(): JSX.Element {
     (e: React.PointerEvent, task: TaskWithColor): void => {
       if (e.pointerType === 'mouse') return
       cancelLongPress()
+      // Strictly per-gesture: only the long-press below arms it, and a press
+      // that never reaches the body's onClick (started on the checkbox, or
+      // dismissed via the backdrop) must not leave it armed for the next tap.
+      suppressClickRef.current = false
       const { clientX: x, clientY: y } = e
       const timer = setTimeout(() => {
         longPressRef.current = null

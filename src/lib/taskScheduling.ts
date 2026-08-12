@@ -69,8 +69,10 @@ function resolveTargetDate(task: TaskLike, target: TaskMoveTarget, now: Date): s
   if (target === 'tomorrow') return format(addDays(today, 1), 'yyyy-MM-dd')
   // "Next week" means the same weekday one week on, so it counts from the
   // task's own due date — not from today, which would land on an arbitrary day
-  // for anything already scheduled.
-  const base = task.dueDate ? startOfDay(parseISO(task.dueDate)) : today
+  // for anything already scheduled. An overdue task counts from today instead:
+  // a week on from a date already past would leave it still overdue.
+  const due = task.dueDate ? startOfDay(parseISO(task.dueDate)) : today
+  const base = due > today ? due : today
   return format(addDays(base, 7), 'yyyy-MM-dd')
 }
 

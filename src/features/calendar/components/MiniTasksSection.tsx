@@ -40,6 +40,9 @@ export function MiniTasksSection({ isExpanded, onToggle }: MiniTasksSectionProps
     x: number
     y: number
   } | null>(null)
+  // A long-press that opened the menu is followed by a click on the row's
+  // content button; without this the task modal would open over the menu.
+  const suppressClickRef = useRef(false)
   // Tick once a minute so the "today" boundary advances even when the user
   // is idle (e.g. leaves the app open across midnight). Without this, the
   // "upcoming" filter would go stale until events change.
@@ -244,9 +247,12 @@ export function MiniTasksSection({ isExpanded, onToggle }: MiniTasksSectionProps
   const handlePointerDown = (e: React.PointerEvent, task: CalendarEvent): void => {
     if (e.pointerType === 'mouse') return
     cancelLongPress()
+    // Strictly per-gesture — see the click guard on the row's content button.
+    suppressClickRef.current = false
     const { clientX: x, clientY: y } = e
     const timer = setTimeout(() => {
       longPressRef.current = null
+      suppressClickRef.current = true
       hapticIfEnabled('medium')
       openTaskMenu(task, x, y)
     }, 400)
@@ -352,7 +358,13 @@ export function MiniTasksSection({ isExpanded, onToggle }: MiniTasksSectionProps
                     <button
                       type="button"
                       className={styles.taskContent}
-                      onClick={() => handleTaskClick(task)}
+                      onClick={() => {
+                        if (suppressClickRef.current) {
+                          suppressClickRef.current = false
+                          return
+                        }
+                        handleTaskClick(task)
+                      }}
                     >
                       <span className={styles.taskTitle}>{task.title}</span>
                       {(() => {

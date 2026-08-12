@@ -58,6 +58,12 @@ describe('buildTaskMovePatch', () => {
     expect(patch.dueDate).toBe('2026-08-27')
   })
 
+  it('counts next week from today for an overdue task, never landing in the past', () => {
+    // Counting from the stale due date would give 2026-07-08 — still overdue.
+    const patch = buildTaskMovePatch(task({ dueDate: '2026-07-01' }), 'nextWeek', NOW)
+    expect(patch.dueDate).toBe('2026-08-19')
+  })
+
   it('counts next week from today when there is no due date', () => {
     const patch = buildTaskMovePatch(task({ dueDate: undefined }), 'nextWeek', NOW)
     expect(patch.dueDate).toBe('2026-08-19')
