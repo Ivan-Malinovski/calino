@@ -17,6 +17,7 @@ import { useContextMenuStore } from '@/store/contextMenuStore'
 import { useHoveredEventStore } from '@/store/hoveredEventStore'
 import { useDragModifierStore } from '@/store/dragModifierStore'
 import { safeCalDAVUpdate } from '@/lib/caldavHelpers'
+import { useTaskContextMenuItems } from '../hooks/useTaskContextMenuItems'
 import { deleteEventWithUndo } from '@/lib/deleteWithUndo'
 import { deleteRecurringOccurrence } from '@/lib/recurrenceDelete'
 import { showToast } from '@/lib/toast'
@@ -249,6 +250,12 @@ export const EventCard = React.memo(function EventCard({
     useCategoryColors,
   })
   const isTask = event.type === 'task'
+  // Reschedule + done/not-done for task pills, shared with the tasks list and
+  // the sidebar. Delete stays this card's own — it also drives the recurring
+  // this/all dialog below.
+  const { items: taskMenuItems } = useTaskContextMenuItems(isTask ? event : null, {
+    includeDelete: false,
+  })
   // Decorative keyword icon — only on full-size cards, never on the dense
   // "pill" variants (compact / dot / mobile-month) where there's no room, and
   // only when the user hasn't turned event icons off.
@@ -684,6 +691,7 @@ export const EventCard = React.memo(function EventCard({
                 },
                 icon: <EditIcon />,
               },
+              ...taskMenuItems,
               // Convert/Duplicate/Delete all write into event.calendarId — for a
               // read-only webcal subscription that would either be silently
               // wiped on the next refresh (diff-by-id sees an id the feed

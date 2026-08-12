@@ -25,6 +25,10 @@ import { useCalendarStore, isCalendarReadOnly } from '@/store/calendarStore'
 import { nextOpenOccurrence, materializeOccurrence } from '@/lib/occurrenceExpansion'
 import { describeRecurrence } from '@/lib/recurrence'
 import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
+import { useContextMenuStore } from '@/store/contextMenuStore'
+import { hapticIfEnabled } from '@/lib/haptics'
+import { useTaskContextMenuItems } from '../hooks/useTaskContextMenuItems'
+import { TaskContextMenu } from './TaskContextMenu'
 import type { CalendarEvent } from '@/types'
 import styles from './TodoView.module.css'
 
@@ -146,11 +150,9 @@ type VirtualItem =
 export function TodoView(): JSX.Element {
   const events = useCalendarStore((state) => state.events)
   const calendars = useCalendarStore((state) => state.calendars)
-  const completeTask = useCalendarStore((state) => state.completeTask)
-  const completeTaskOccurrence = useCalendarStore((state) => state.completeTaskOccurrence)
   const openModal = useCalendarStore((state) => state.openModal)
   const updateEvent = useCalendarStore((state) => state.updateEvent)
-  const { updateEvent: updateCalDAVEvent, saveRecurrenceOverride } = useCalDAV()
+  const { updateEvent: updateCalDAVEvent } = useCalDAV()
   const isMobile = useIsMobile()
   const prefersReducedMotion = useReducedMotion()
 
@@ -179,6 +181,23 @@ export function TodoView(): JSX.Element {
     x: number
     y: number
   } | null>(null)
+  // The row the context menu is open for, with the coordinates it was summoned
+  // at. One at a time — rows are virtualized, so the menu is rendered once at
+  // this level rather than per row.
+  const [taskMenu, setTaskMenu] = useState<{ task: TaskWithColor; x: number; y: number } | null>(
+    null
+  )
+  const openMenu = useContextMenuStore((state) => state.openMenu)
+  const closeMenu = useContextMenuStore((state) => state.closeMenu)
+  const { toggleComplete } = useTaskContextMenuItems(null)
+  const longPressRef = useRef<{
+    timer: ReturnType<typeof setTimeout>
+    x: number
+    y: number
+  } | null>(null)
+  // A long-press that opened the menu is followed by a click on the row; without
+  // this the task modal would open behind the menu.
+  const suppressClickRef = useRef(false)
   const composerRef = useRef<HTMLInputElement>(null)
   const segmentedRef = useRef<HTMLDivElement>(null)
   const tabRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
@@ -567,45 +586,71 @@ export function TodoView(): JSX.Element {
         })
       }, 520)
     }
-    // R2.7 — A recurring row completes ONE occurrence: write a detached
-    // override and leave the master's RRULE alone, so the series carries on and
-    // the row advances to the next date. Un-ticking a completed override
-    // removes it, restoring the occurrence to what the master says.
-    const recurringTarget = task.occurrenceStart
-      ? { masterId: task.id, occurrenceStart: task.occurrenceStart }
-      : task.recurrenceId && task.recurrenceMasterId
-        ? { masterId: task.recurrenceMasterId, occurrenceStart: task.recurrenceId }
-        : null
+    // Everything above is this view's completion animation; the store and
+    // CalDAV writes (including the recurring-occurrence override path) live in
+    // useTaskContextMenuItems so the checkbox and the menu item can't drift.
+    await toggleComplete(task)
+  }
 
-    if (recurringTarget) {
-      const plan = completeTaskOccurrence(
-        recurringTarget.masterId,
-        recurringTarget.occurrenceStart,
-        newCompleted
-      )
-      if (plan) {
-        try {
-          await saveRecurrenceOverride(
-            plan.master.calendarId,
-            plan.master,
-            plan.override,
-            plan.removedOverrideIds
-          )
-        } catch {
-          // error handled by useCalDAV
-        }
+  const handleTaskContextMenu = useCallback(
+    (e: React.MouseEvent, task: TaskWithColor): void => {
+      // Suppress the native menu unconditionally — including the one Android's
+      // WebView synthesizes from a long-press on its own — but only open ours for
+      // a real right-click; touch long-presses come through the timer below.
+      e.preventDefault()
+      e.stopPropagation()
+      if (e.button !== 2) return
+      const menuId = `task-${task.id}`
+      openMenu(menuId)
+      setTaskMenu({ task, x: e.clientX, y: e.clientY })
+    },
+    [openMenu]
+  )
+
+  const cancelLongPress = useCallback((): void => {
+    if (longPressRef.current) clearTimeout(longPressRef.current.timer)
+    longPressRef.current = null
+  }, [])
+
+  /**
+   * Touch long-press, hand-rolled rather than via useGestures: the row already
+   * carries dnd-kit's pointer listeners, and a second library claiming
+   * `onPointerDown` on the same element breaks drag-to-nest. dnd-kit's sensor
+   * needs 8px of movement to activate, so a stationary press is ours alone.
+   */
+  const handleRowPointerDown = useCallback(
+    (e: React.PointerEvent, task: TaskWithColor): void => {
+      if (e.pointerType === 'mouse') return
+      cancelLongPress()
+      const { clientX: x, clientY: y } = e
+      const timer = setTimeout(() => {
+        longPressRef.current = null
+        suppressClickRef.current = true
+        hapticIfEnabled('medium')
+        openMenu(`task-${task.id}`)
+        setTaskMenu({ task, x, y })
+      }, 400)
+      longPressRef.current = { timer, x, y }
+    },
+    [cancelLongPress, openMenu]
+  )
+
+  const handleRowPointerMove = useCallback(
+    (e: React.PointerEvent): void => {
+      const pending = longPressRef.current
+      if (!pending) return
+      if (Math.abs(e.clientX - pending.x) > 10 || Math.abs(e.clientY - pending.y) > 10) {
+        cancelLongPress()
       }
-      return
-    }
+    },
+    [cancelLongPress]
+  )
 
-    const updatedTasks = completeTask(task.id, newCompleted)
-    try {
-      await Promise.all(
-        updatedTasks.map((updatedTask) => updateCalDAVEvent(updatedTask.calendarId, updatedTask))
-      )
-    } catch {
-      // error handled by useCalDAV
-    }
+  useEffect(() => cancelLongPress, [cancelLongPress])
+
+  const closeTaskMenu = (): void => {
+    closeMenu()
+    setTaskMenu(null)
   }
 
   const handleTaskClick = (task: TaskWithColor): void => {
@@ -855,8 +900,20 @@ export function TodoView(): JSX.Element {
                   data-component="task-row"
                   data-task-depth={item.depth}
                   data-task-id={task.id}
+                  onContextMenu={(e) => handleTaskContextMenu(e, task)}
                   {...dragAttributes}
                   {...(dragListeners ?? {})}
+                  onPointerDown={(e) => {
+                    // Compose rather than override: dnd-kit's own
+                    // onPointerDown, spread just above, starts the drag.
+                    ;(
+                      dragListeners?.onPointerDown as ((ev: React.PointerEvent) => void) | undefined
+                    )?.(e)
+                    handleRowPointerDown(e, task)
+                  }}
+                  onPointerMove={handleRowPointerMove}
+                  onPointerUp={cancelLongPress}
+                  onPointerCancel={cancelLongPress}
                 >
                   <button
                     className={styles.taskCheck}
@@ -881,7 +938,16 @@ export function TodoView(): JSX.Element {
                       <path d="M3 7.5l2.5 2.5L11 4" />
                     </svg>
                   </button>
-                  <div className={styles.taskBody} onClick={() => handleTaskClick(task)}>
+                  <div
+                    className={styles.taskBody}
+                    onClick={() => {
+                      if (suppressClickRef.current) {
+                        suppressClickRef.current = false
+                        return
+                      }
+                      handleTaskClick(task)
+                    }}
+                  >
                     <div className={styles.taskTitle}>{task.title}</div>
                     {task.description && <div className={styles.taskNote}>{task.description}</div>}
                   </div>
@@ -940,7 +1006,17 @@ export function TodoView(): JSX.Element {
         </div>
       )
     },
-    [activeTaskId, unstriking, fadingOut, handleToggleComplete, handleTaskClick]
+    [
+      activeTaskId,
+      unstriking,
+      fadingOut,
+      handleToggleComplete,
+      handleTaskClick,
+      handleTaskContextMenu,
+      handleRowPointerDown,
+      handleRowPointerMove,
+      cancelLongPress,
+    ]
   )
 
   return (
@@ -1204,6 +1280,16 @@ export function TodoView(): JSX.Element {
           </div>
         ) : null,
         document.body
+      )}
+      {taskMenu && (
+        <TaskContextMenu
+          task={taskMenu.task}
+          x={taskMenu.x}
+          y={taskMenu.y}
+          menuId={`task-${taskMenu.task.id}`}
+          onEdit={() => handleTaskClick(taskMenu.task)}
+          onClose={closeTaskMenu}
+        />
       )}
     </div>
   )
