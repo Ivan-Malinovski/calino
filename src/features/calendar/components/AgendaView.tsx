@@ -16,6 +16,7 @@ import { getEventColor } from '@/lib/eventColor'
 import { formatTime } from '@/lib/datetime'
 import { LocationLink } from './LocationLink'
 import { useDateChangeMotion } from '@/hooks/useDateChangeMotion'
+import { useTaskContextMenuItems } from '../hooks/useTaskContextMenuItems'
 import styles from './AgendaView.module.css'
 
 interface EventWithDate {
@@ -86,6 +87,9 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
   const events = useCalendarStore((state) => state.events)
   const timeFormat = useSettingsStore((state) => state.timeFormat)
   const deleteEvent = useCalendarStore((state) => state.deleteEvent)
+  // Shared with the tasks list and the sidebar so ticking a task off behaves
+  // the same wherever it is done — including the recurring-occurrence path.
+  const { toggleComplete } = useTaskContextMenuItems(null)
   const addEvent = useCalendarStore((state) => state.addEvent)
   const { deleteEvent: deleteCalDAVEvent, createEvent: createCalDAVEvent } = useCalDAV()
   const closeMenu = useContextMenuStore((state) => state.closeMenu)
@@ -419,9 +423,25 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
                                           ? 'Due'
                                           : formatTime(event.start, timeFormat)}
                                       </span>
-                                      <span className={styles.agendaTaskIcon}>
+                                      <button
+                                        type="button"
+                                        className={styles.agendaTaskIcon}
+                                        role="checkbox"
+                                        aria-checked={!!event.completed}
+                                        aria-label={
+                                          event.completed
+                                            ? `Mark "${event.title}" as incomplete`
+                                            : `Mark "${event.title}" as complete`
+                                        }
+                                        onClick={(e) => {
+                                          // The whole card opens the task; the
+                                          // check has to claim its own click.
+                                          e.stopPropagation()
+                                          void toggleComplete(event)
+                                        }}
+                                      >
                                         {event.completed ? '✓' : '○'}
-                                      </span>
+                                      </button>
                                       <span className={styles.agendaTaskTitle}>{event.title}</span>
                                     </div>
                                     {event.location && (

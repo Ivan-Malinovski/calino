@@ -244,4 +244,91 @@ describe('TodoView', () => {
     const positions = checkbox.compareDocumentPosition(title)
     expect(positions & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
+
+  describe('row context menu', () => {
+    const addTask = (overrides: Record<string, unknown> = {}): void => {
+      useCalendarStore.getState().addEvent({
+        id: 'menu-task',
+        calendarId: 'default',
+        title: 'Menu task',
+        start: '2024-03-15T10:00',
+        end: '2024-03-15T11:00',
+        isAllDay: false,
+        type: 'task',
+        dueDate: '2024-03-15',
+        ...overrides,
+      } as never)
+    }
+
+    const openMenu = async (): Promise<void> => {
+      const row = document.querySelector('[data-component="task-row"]')!
+      await userEvent.pointer({ keys: '[MouseRight]', target: row })
+    }
+
+    it('opens on right-click with the task actions', async () => {
+      addTask()
+      renderWithRouter(<TodoView />)
+      await openMenu()
+
+      expect(screen.getByRole('button', { name: 'Edit' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Move to next week' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Mark as done' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Delete' })).toBeInTheDocument()
+    })
+
+    it('offers "move to today" for a task that is not due today', async () => {
+      addTask({ dueDate: '2020-01-02', start: '2020-01-02T10:00', end: '2020-01-02T11:00' })
+      renderWithRouter(<TodoView />)
+      await openMenu()
+
+      expect(screen.getByRole('button', { name: 'Move to today' })).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: 'Move to tomorrow' })).not.toBeInTheDocument()
+    })
+
+    it('writes the new due date and start when rescheduling', async () => {
+      addTask({ dueDate: '2020-01-02', start: '2020-01-02T10:00', end: '2020-01-02T11:00' })
+      renderWithRouter(<TodoView />)
+      await openMenu()
+
+      await userEvent.click(screen.getByRole('button', { name: 'Move to today' }))
+
+      const today = new Date()
+      const iso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+      const updated = useCalendarStore.getState().events.find((e) => e.id === 'menu-task')!
+      expect(updated.dueDate).toBe(iso)
+      expect(updated.start).toBe(`${iso}T10:00`)
+      expect(updated.end).toBe(`${iso}T11:00`)
+    })
+
+    it('marks the task done', async () => {
+      addTask()
+      renderWithRouter(<TodoView />)
+      await openMenu()
+
+      await userEvent.click(screen.getByRole('button', { name: 'Mark as done' }))
+
+      expect(useCalendarStore.getState().events.find((e) => e.id === 'menu-task')!.completed).toBe(
+        true
+      )
+    })
+
+    it('deletes the task', async () => {
+      addTask()
+      renderWithRouter(<TodoView />)
+      await openMenu()
+
+      await userEvent.click(screen.getByRole('button', { name: 'Delete' }))
+
+      expect(useCalendarStore.getState().events.find((e) => e.id === 'menu-task')).toBeUndefined()
+    })
+
+    it('hides the reschedule items for a repeating task', async () => {
+      addTask({ rruleString: 'FREQ=WEEKLY' })
+      renderWithRouter(<TodoView />)
+      await openMenu()
+
+      expect(screen.getByRole('button', { name: 'Mark as done' })).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: /^Move to/ })).not.toBeInTheDocument()
+    })
+  })
 })

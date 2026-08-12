@@ -1,5 +1,5 @@
 import type { JSX } from 'react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { createPortal } from 'react-dom'
@@ -8,6 +8,9 @@ import { format, parseISO, isToday, isBefore, startOfDay } from 'date-fns'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
 import { nextOpenOccurrence, materializeOccurrence } from '@/lib/occurrenceExpansion'
+import { useContextMenuStore } from '@/store/contextMenuStore'
+import { hapticIfEnabled } from '@/lib/haptics'
+import { TaskContextMenu } from './TaskContextMenu'
 import type { CalendarEvent } from '@/types'
 import styles from './Sidebar.module.css'
 
@@ -27,6 +30,16 @@ export function MiniTasksSection({ isExpanded, onToggle }: MiniTasksSectionProps
   const [hoveredTask, setHoveredTask] = useState<string | null>(null)
   const [tooltipPosition, setTooltipPosition] = useState<{ x: number; y: number } | null>(null)
   const [completingTaskId, setCompletingTaskId] = useState<string | null>(null)
+  const [taskMenu, setTaskMenu] = useState<{ task: CalendarEvent; x: number; y: number } | null>(
+    null
+  )
+  const openMenu = useContextMenuStore((state) => state.openMenu)
+  const closeMenu = useContextMenuStore((state) => state.closeMenu)
+  const longPressRef = useRef<{
+    timer: ReturnType<typeof setTimeout>
+    x: number
+    y: number
+  } | null>(null)
   // Tick once a minute so the "today" boundary advances even when the user
   // is idle (e.g. leaves the app open across midnight). Without this, the
   // "upcoming" filter would go stale until events change.
@@ -197,6 +210,51 @@ export function MiniTasksSection({ isExpanded, onToggle }: MiniTasksSectionProps
     openModal(undefined, undefined, task.id, 'task')
   }
 
+  const openTaskMenu = (task: CalendarEvent, x: number, y: number): void => {
+    setHoveredTask(null)
+    setTooltipPosition(null)
+    openMenu(`mini-task-${task.id}`)
+    setTaskMenu({ task, x, y })
+  }
+
+  const handleContextMenu = (e: React.MouseEvent, task: CalendarEvent): void => {
+    // Always suppress the native menu — Android's WebView synthesizes one from
+    // a long-press on its own — but only open ours for a real right-click.
+    e.preventDefault()
+    e.stopPropagation()
+    if (e.button !== 2) return
+    openTaskMenu(task, e.clientX, e.clientY)
+  }
+
+  const cancelLongPress = (): void => {
+    if (longPressRef.current) clearTimeout(longPressRef.current.timer)
+    longPressRef.current = null
+  }
+
+  // Cancel on a real move only: a touch never holds perfectly still, and
+  // cancelling on raw jitter would make the long-press feel unreliable.
+  const handlePointerMove = (e: React.PointerEvent): void => {
+    const pending = longPressRef.current
+    if (!pending) return
+    if (Math.abs(e.clientX - pending.x) > 10 || Math.abs(e.clientY - pending.y) > 10) {
+      cancelLongPress()
+    }
+  }
+
+  const handlePointerDown = (e: React.PointerEvent, task: CalendarEvent): void => {
+    if (e.pointerType === 'mouse') return
+    cancelLongPress()
+    const { clientX: x, clientY: y } = e
+    const timer = setTimeout(() => {
+      longPressRef.current = null
+      hapticIfEnabled('medium')
+      openTaskMenu(task, x, y)
+    }, 400)
+    longPressRef.current = { timer, x, y }
+  }
+
+  useEffect(() => cancelLongPress, [])
+
   const hoveredTaskData = hoveredTask ? upcomingTasks.find((t) => t.id === hoveredTask) : null
 
   return (
@@ -251,6 +309,11 @@ export function MiniTasksSection({ isExpanded, onToggle }: MiniTasksSectionProps
                           }
                     }
                     className={`${styles.taskRow} ${task.id === completingTaskId ? styles.taskCompleting : ''}`}
+                    onContextMenu={(e) => handleContextMenu(e, task)}
+                    onPointerDown={(e) => handlePointerDown(e, task)}
+                    onPointerUp={cancelLongPress}
+                    onPointerCancel={cancelLongPress}
+                    onPointerMove={handlePointerMove}
                     onMouseEnter={(e) => {
                       setHoveredTask(task.id)
                       setTooltipPosition({ x: e.clientX, y: e.clientY })
@@ -342,6 +405,19 @@ export function MiniTasksSection({ isExpanded, onToggle }: MiniTasksSectionProps
                   </div>
                 ) : null,
                 document.body
+              )}
+              {taskMenu && (
+                <TaskContextMenu
+                  task={taskMenu.task}
+                  x={taskMenu.x}
+                  y={taskMenu.y}
+                  menuId={`mini-task-${taskMenu.task.id}`}
+                  onEdit={() => handleTaskClick(taskMenu.task)}
+                  onClose={() => {
+                    closeMenu()
+                    setTaskMenu(null)
+                  }}
+                />
               )}
               <Link to="/tasks" className={styles.tasksViewAll}>
                 View all →

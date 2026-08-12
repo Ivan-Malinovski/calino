@@ -272,7 +272,11 @@
 .agendaTaskMain {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
+  /* Tighter than the event row's --space-3 because a task row has an extra
+     column: the check sits between the time and the title, and 12px on both
+     sides of it left the title floating well clear of its own checkbox. The
+     time keeps the full 12px via its own margin below. */
+  gap: 8px;
 }
 
 .agendaTaskTime {
@@ -280,6 +284,7 @@
   color: var(--ink-3, #a39d93);
   font-weight: 500;
   min-width: 40px;
+  margin-right: 4px;
   flex-shrink: 0;
   font-variant-numeric: tabular-nums;
 }
@@ -298,14 +303,27 @@
 .agendaTaskIcon {
   font-size: 14px;
   order: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  border-radius: 50%;
   color: var(--ink-2, #6f6a62);
-  margin-right: 8px;
   width: 16px;
   height: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+}
+
+.agendaTaskIcon:hover {
+  color: var(--ink, #2c2823);
+}
+
+.agendaTaskIcon:focus-visible {
+  outline: 2px solid var(--accent, #b07d4f);
+  outline-offset: 2px;
 }
 
 /* On a phone the row is wide and mostly empty to the right of the title, so
@@ -316,7 +334,6 @@
   .agendaTaskIcon {
     order: 1;
     margin-left: auto;
-    margin-right: 0;
   }
 }
 
