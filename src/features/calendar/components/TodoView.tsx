@@ -551,46 +551,49 @@ export function TodoView(): JSX.Element {
     return result
   }, [filteredTasks, filter, recentlyCompleted])
 
-  const handleToggleComplete = async (task: TaskWithColor): Promise<void> => {
-    if (isCalendarReadOnly(task.calendarId)) return
-    const newCompleted = !task.completed
-    // If uncompleting, trigger unstrike animation
-    if (task.completed && !newCompleted) {
-      setUnstriking((prev) => new Set(prev).add(task.id))
-      setTimeout(() => {
-        setUnstriking((prev) => {
-          const next = new Set(prev)
-          next.delete(task.id)
-          return next
-        })
-      }, 300)
-    }
-    // If completing in active view, keep visible briefly for strike animation
-    if (!task.completed && newCompleted && filter === 'active') {
-      setRecentlyCompleted((prev) => new Set(prev).add(task.id))
-      // Start fade-out after strike animation completes
-      setTimeout(() => {
-        setFadingOut((prev) => new Set(prev).add(task.id))
-      }, 320)
-      // Remove from list after fade-out
-      setTimeout(() => {
-        setRecentlyCompleted((prev) => {
-          const next = new Set(prev)
-          next.delete(task.id)
-          return next
-        })
-        setFadingOut((prev) => {
-          const next = new Set(prev)
-          next.delete(task.id)
-          return next
-        })
-      }, 520)
-    }
-    // Everything above is this view's completion animation; the store and
-    // CalDAV writes (including the recurring-occurrence override path) live in
-    // useTaskContextMenuItems so the checkbox and the menu item can't drift.
-    await toggleComplete(task)
-  }
+  const handleToggleComplete = useCallback(
+    async (task: TaskWithColor): Promise<void> => {
+      if (isCalendarReadOnly(task.calendarId)) return
+      const newCompleted = !task.completed
+      // If uncompleting, trigger unstrike animation
+      if (task.completed && !newCompleted) {
+        setUnstriking((prev) => new Set(prev).add(task.id))
+        setTimeout(() => {
+          setUnstriking((prev) => {
+            const next = new Set(prev)
+            next.delete(task.id)
+            return next
+          })
+        }, 300)
+      }
+      // If completing in active view, keep visible briefly for strike animation
+      if (!task.completed && newCompleted && filter === 'active') {
+        setRecentlyCompleted((prev) => new Set(prev).add(task.id))
+        // Start fade-out after strike animation completes
+        setTimeout(() => {
+          setFadingOut((prev) => new Set(prev).add(task.id))
+        }, 320)
+        // Remove from list after fade-out
+        setTimeout(() => {
+          setRecentlyCompleted((prev) => {
+            const next = new Set(prev)
+            next.delete(task.id)
+            return next
+          })
+          setFadingOut((prev) => {
+            const next = new Set(prev)
+            next.delete(task.id)
+            return next
+          })
+        }, 520)
+      }
+      // Everything above is this view's completion animation; the store and
+      // CalDAV writes (including the recurring-occurrence override path) live in
+      // useTaskContextMenuItems so the checkbox and the menu item can't drift.
+      await toggleComplete(task)
+    },
+    [filter, toggleComplete]
+  )
 
   const handleTaskContextMenu = useCallback(
     (e: React.MouseEvent, task: TaskWithColor): void => {
@@ -653,13 +656,16 @@ export function TodoView(): JSX.Element {
     setTaskMenu(null)
   }
 
-  const handleTaskClick = (task: TaskWithColor): void => {
-    // R2.7 — Open a recurring row on the occurrence it is showing, not on the
-    // master. The modal derives "which occurrence did the user act on" from the
-    // id it was given; handed the master's, "this occurrence" edits and deletes
-    // silently target the series' anchor date instead.
-    openModal(undefined, undefined, task.occurrenceEventId ?? task.id, 'task')
-  }
+  const handleTaskClick = useCallback(
+    (task: TaskWithColor): void => {
+      // R2.7 — Open a recurring row on the occurrence it is showing, not on the
+      // master. The modal derives "which occurrence did the user act on" from the
+      // id it was given; handed the master's, "this occurrence" edits and deletes
+      // silently target the series' anchor date instead.
+      openModal(undefined, undefined, task.occurrenceEventId ?? task.id, 'task')
+    },
+    [openModal]
+  )
 
   const handleCreateTask = (): void => {
     setComposing(true)
@@ -833,10 +839,14 @@ export function TodoView(): JSX.Element {
   })
 
   const renderHeader = useCallback(
-    (item: Extract<VirtualItem, { type: 'header' }>, transform?: string) => (
+    (item: Extract<VirtualItem, { type: 'header' }>, transform?: string, index?: number) => (
       <div
         key={item.key}
-        data-index={0}
+        // data-index and the measure ref are what let the virtualizer replace
+        // its size estimate with the row's real height. Only meaningful on the
+        // virtualized path; the non-virtualized fallback lays out normally.
+        data-index={index ?? 0}
+        ref={index === undefined ? undefined : virtualizer.measureElement}
         style={{
           position: transform ? 'absolute' : undefined,
           top: 0,
@@ -854,18 +864,22 @@ export function TodoView(): JSX.Element {
         </div>
       </div>
     ),
-    []
+    [virtualizer]
   )
 
   const renderTask = useCallback(
-    (item: Extract<VirtualItem, { type: 'task' }>, transform?: string) => {
+    (item: Extract<VirtualItem, { type: 'task' }>, transform?: string, index?: number) => {
       const task = item.task
       const dueInfo = getDueLabel(task)
       const isActive = activeTaskId === task.id
       return (
         <div
           key={item.key}
-          data-index={0}
+          // See renderHeader: a task row is not a fixed height — a description
+          // adds a second line, and estimateSize alone would let taller rows
+          // overlap the one below.
+          data-index={index ?? 0}
+          ref={index === undefined ? undefined : virtualizer.measureElement}
           style={{
             position: transform ? 'absolute' : undefined,
             top: 0,
@@ -1016,6 +1030,7 @@ export function TodoView(): JSX.Element {
       handleRowPointerDown,
       handleRowPointerMove,
       cancelLongPress,
+      virtualizer,
     ]
   )
 
@@ -1196,9 +1211,9 @@ export function TodoView(): JSX.Element {
                 {virtualizer.getVirtualItems().map((virtualRow) => {
                   const item = flatItems[virtualRow.index]
                   if (item.type === 'header') {
-                    return renderHeader(item, `translateY(${virtualRow.start}px)`)
+                    return renderHeader(item, `translateY(${virtualRow.start}px)`, virtualRow.index)
                   }
-                  return renderTask(item, `translateY(${virtualRow.start}px)`)
+                  return renderTask(item, `translateY(${virtualRow.start}px)`, virtualRow.index)
                 })}
               </div>
             )}
