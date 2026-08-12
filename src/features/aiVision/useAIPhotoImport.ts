@@ -174,7 +174,7 @@ export function useAIPhotoImport(): {
   const confirmCandidate = (fields: ExtractedEventFields, onDone?: () => void): void => {
     setReviewCandidates(null)
     useCalendarStore.getState().setPendingEventPrefill(fields)
-    useCalendarStore.getState().openModal(fields.start, fields.end)
+    useCalendarStore.getState().openModal(fields.start, fields.end, undefined, fields.kind ?? 'event')
     hapticIfEnabled('light')
     onDone?.()
   }
@@ -184,7 +184,10 @@ export function useAIPhotoImport(): {
     useCalendarStore.getState().startImportQueue(fields)
     hapticIfEnabled('light')
     if (fields.length > 1) {
-      showToast(`Review and save each event — ${fields.length} found in this photo.`)
+      const allTasks = fields.every((f) => f.kind === 'task')
+      const allEvents = fields.every((f) => (f.kind ?? 'event') === 'event')
+      const noun = allTasks ? 'task' : allEvents ? 'event' : 'item'
+      showToast(`Review and save each ${noun} — ${fields.length} found in this photo.`)
     }
     onDone?.()
   }

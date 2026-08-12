@@ -55,6 +55,34 @@ describe('parseExtractedCandidates', () => {
     expect(parseExtractedCandidates(raw)).toEqual([{ title: 'Ok' }])
   })
 
+  it('keeps a "task" kind', () => {
+    const raw = '[{"title":"Renew passport","kind":"task","start":"2026-08-01T00:00"}]'
+    expect(parseExtractedCandidates(raw)).toEqual([
+      { title: 'Renew passport', kind: 'task', start: '2026-08-01T00:00' },
+    ])
+  })
+
+  it('keeps an explicit "event" kind', () => {
+    expect(parseExtractedCandidates('[{"title":"Gig","kind":"event"}]')).toEqual([
+      { title: 'Gig', kind: 'event' },
+    ])
+  })
+
+  it('drops an unrecognised kind (treated as an event downstream)', () => {
+    expect(parseExtractedCandidates('[{"title":"Gig","kind":"reminder"}]')).toEqual([
+      { title: 'Gig' },
+    ])
+  })
+
+  it('leaves kind undefined when the model omits it', () => {
+    expect(parseExtractedCandidates('[{"title":"Gig"}]')[0].kind).toBeUndefined()
+  })
+
+  it('parses a mixed batch of events and tasks', () => {
+    const raw = '[{"title":"Gig","kind":"event"},{"title":"Buy milk","kind":"task"}]'
+    expect(parseExtractedCandidates(raw).map((c) => c.kind)).toEqual(['event', 'task'])
+  })
+
   it('throws AIVisionExtractionError on garbage text', () => {
     const raw = 'I cannot help with that.'
     expect(() => parseExtractedCandidates(raw)).toThrow(AIVisionExtractionError)

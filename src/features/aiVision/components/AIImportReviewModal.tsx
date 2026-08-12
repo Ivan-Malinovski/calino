@@ -10,6 +10,8 @@ import type { TimeFormat } from '@/types'
 import type { ExtractedEventFields } from '../types'
 import styles from './AIImportReviewModal.module.css'
 
+type CandidateKind = NonNullable<ExtractedEventFields['kind']>
+
 interface AIImportReviewModalProps {
   isOpen: boolean
   candidates: ExtractedEventFields[]
@@ -49,6 +51,20 @@ function formatDateRange(fields: ExtractedEventFields, timeFormat: TimeFormat): 
   return `${startLabel} – ${endLabel}`
 }
 
+/**
+ * Same range, read differently depending on the toggle: for a task the
+ * extracted start is the due date, so it gets labelled as one.
+ */
+function describeDate(
+  fields: ExtractedEventFields,
+  timeFormat: TimeFormat,
+  kind: CandidateKind
+): string | null {
+  if (kind !== 'task') return formatDateRange(fields, timeFormat)
+  const start = formatDateRange({ ...fields, end: undefined }, timeFormat)
+  return start ? `Due ${start}` : null
+}
+
 function CheckIcon(): JSX.Element {
   return (
     <svg
@@ -64,6 +80,42 @@ function CheckIcon(): JSX.Element {
     >
       <path d="M3 8.5l3.2 3.2L13 4.5" />
     </svg>
+  )
+}
+
+/**
+ * Per-candidate Event/Task switch. Starts on whatever the model suggested,
+ * but the user's choice is what actually decides which form opens next.
+ * `stopPropagation` matters in the multi-candidate case, where the whole card
+ * is itself a click target that toggles selection.
+ */
+function KindToggle({
+  kind,
+  onChange,
+}: {
+  kind: CandidateKind
+  onChange: (kind: CandidateKind) => void
+}): JSX.Element {
+  const options: CandidateKind[] = ['event', 'task']
+
+  return (
+    <div className={styles.segmentedControl} data-component="ai-import-kind-toggle" role="group">
+      {options.map((option) => (
+        <button
+          key={option}
+          type="button"
+          className={`${styles.segmentTab} ${kind === option ? styles.segmentTabActive : ''}`}
+          aria-pressed={kind === option}
+          onClick={(e) => {
+            e.stopPropagation()
+            onChange(option)
+          }}
+          data-action={`set-kind-${option}`}
+        >
+          {option === 'event' ? 'Event' : 'Task'}
+        </button>
+      ))}
+    </div>
   )
 }
 
@@ -135,18 +187,27 @@ function CandidateDetails({
 function CandidateCard({
   fields,
   timeFormat,
+  kind,
+  onKindChange,
   onUse,
 }: {
   fields: ExtractedEventFields
   timeFormat: TimeFormat
+  kind: CandidateKind
+  onKindChange: (kind: CandidateKind) => void
   onUse: () => void
 }): JSX.Element {
-  const dateLabel = formatDateRange(fields, timeFormat)
+  const dateLabel = describeDate(fields, timeFormat, kind)
 
   return (
-    <div className={styles.candidateCard} data-component="ai-import-candidate">
-      <div className={styles.candidateTitle}>{fields.title || 'Untitled event'}</div>
+    <div className={styles.candidateCard} data-component="ai-import-candidate" data-kind={kind}>
+      <div className={styles.candidateTitle}>
+        {fields.title || (kind === 'task' ? 'Untitled task' : 'Untitled event')}
+      </div>
       <CandidateDetails fields={fields} dateLabel={dateLabel} />
+      <div className={styles.kindRow}>
+        <KindToggle kind={kind} onChange={onKindChange} />
+      </div>
       <div className={styles.candidateActions}>
         <button
           type="button"
@@ -166,23 +227,38 @@ function SelectableCandidateCard({
   fields,
   timeFormat,
   selected,
+  kind,
+  onKindChange,
   onToggle,
 }: {
   fields: ExtractedEventFields
   timeFormat: TimeFormat
   selected: boolean
+  kind: CandidateKind
+  onKindChange: (kind: CandidateKind) => void
   onToggle: () => void
 }): JSX.Element {
-  const dateLabel = formatDateRange(fields, timeFormat)
+  const dateLabel = describeDate(fields, timeFormat, kind)
 
+  // A div rather than a <button>: the card now nests the Event/Task toggle's
+  // own buttons, and a button inside a button is invalid markup that browsers
+  // reparent — which broke the toggle's click target outright.
   return (
-    <button
-      type="button"
+    <div
+      role="button"
+      tabIndex={0}
       className={`${styles.candidateCard} ${styles.candidateCardSelectable} ${selected ? styles.candidateCardSelected : ''}`}
       onClick={onToggle}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onToggle()
+        }
+      }}
       aria-pressed={selected}
       data-component="ai-import-candidate"
       data-selected={selected}
+      data-kind={kind}
     >
       <div className={styles.candidateCheckRow}>
         <span
@@ -191,10 +267,15 @@ function SelectableCandidateCard({
         >
           {selected && <CheckIcon />}
         </span>
-        <div className={styles.candidateTitle}>{fields.title || 'Untitled event'}</div>
+        <div className={styles.candidateTitle}>
+          {fields.title || (kind === 'task' ? 'Untitled task' : 'Untitled event')}
+        </div>
       </div>
       <CandidateDetails fields={fields} dateLabel={dateLabel} />
-    </button>
+      <div className={styles.kindRow}>
+        <KindToggle kind={kind} onChange={onKindChange} />
+      </div>
+    </div>
   )
 }
 
@@ -224,10 +305,13 @@ export function AIImportReviewModal({
   // Adjusting state during render (rather than in an effect) per
   // https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
   const [selected, setSelected] = useState<Set<number>>(() => new Set(candidates.map((_, i) => i)))
+  // Each candidate's Event/Task position, seeded from the model's suggestion.
+  const [kinds, setKinds] = useState<CandidateKind[]>(() => candidates.map((c) => c.kind ?? 'event'))
   const [lastCandidates, setLastCandidates] = useState(candidates)
   if (isOpen && lastCandidates !== candidates) {
     setLastCandidates(candidates)
     setSelected(new Set(candidates.map((_, i) => i)))
+    setKinds(candidates.map((c) => c.kind ?? 'event'))
   }
 
   if (!rendered) return null
@@ -245,20 +329,31 @@ export function AIImportReviewModal({
     })
   }
 
+  const setKindAt = (index: number, kind: CandidateKind): void => {
+    setKinds((prev) => prev.map((value, i) => (i === index ? kind : value)))
+  }
+
+  // The toggle, not the model, is the source of truth for what gets created.
+  const kindAt = (index: number): CandidateKind => kinds[index] ?? candidates[index].kind ?? 'event'
+  const withKind = (index: number): ExtractedEventFields => ({
+    ...candidates[index],
+    kind: kindAt(index),
+  })
+
   const selectedCount = selected.size
   const confirmSelected = (): void => {
-    const chosen = candidates.filter((_, i) => selected.has(i))
+    const chosen = candidates.map((_, i) => i).filter((i) => selected.has(i))
     if (chosen.length === 0) return
     if (chosen.length === 1) {
-      onConfirm(chosen[0])
+      onConfirm(withKind(chosen[0]))
     } else {
-      onConfirmAll(chosen)
+      onConfirmAll(chosen.map(withKind))
     }
   }
 
   const confirmLabel =
     selectedCount === 0
-      ? 'Select events to add'
+      ? 'Select items to add'
       : selectedCount === candidates.length
         ? `Add all ${selectedCount}`
         : `Add ${selectedCount} selected`
@@ -278,7 +373,7 @@ export function AIImportReviewModal({
       >
         <div className={styles.header}>
           <h3 className={styles.title} id="ai-import-review-title">
-            {isMultiple ? 'Which events?' : 'Confirm details'}
+            {isMultiple ? 'What did we find?' : 'Confirm details'}
           </h3>
           <button className={styles.close} onClick={requestClose} aria-label="Cancel">
             ✕
@@ -286,7 +381,7 @@ export function AIImportReviewModal({
         </div>
         <p className={styles.subtitle}>
           {isMultiple
-            ? 'The photo matched a few different dates or events — all are selected below. Tap any to leave it out.'
+            ? 'Everything read from the photo is selected below. Tap any to leave it out, and switch anything that should be a task instead.'
             : "Here's what was read from the photo. You can still edit everything in the next step."}
         </p>
         <div className={styles.candidateList}>
@@ -297,6 +392,8 @@ export function AIImportReviewModal({
                 fields={candidate}
                 timeFormat={timeFormat}
                 selected={selected.has(index)}
+                kind={kindAt(index)}
+                onKindChange={(kind) => setKindAt(index, kind)}
                 onToggle={() => toggleSelected(index)}
               />
             ) : (
@@ -304,7 +401,9 @@ export function AIImportReviewModal({
                 key={index}
                 fields={candidate}
                 timeFormat={timeFormat}
-                onUse={() => onConfirm(candidate)}
+                kind={kindAt(index)}
+                onKindChange={(kind) => setKindAt(index, kind)}
+                onUse={() => onConfirm(withKind(index))}
               />
             )
           )}
