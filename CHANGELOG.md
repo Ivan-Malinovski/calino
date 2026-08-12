@@ -4,6 +4,8 @@ All notable changes to Calino will be documented in this file.
 
 ## [Unreleased]
 
+## [0.28.0] - 2026-08-12
+
 ### Added
 
 - **A right-click menu on tasks** ([#107](https://github.com/Ivan-Malinovski/calino/issues/107), requested by [@skvsree](https://github.com/skvsree)). Right-click a task — in the tasks list, in the sidebar, or on a task pill in the calendar — and you get the things you'd otherwise have to open the whole form for: push it to tomorrow, pull it back to today, bump it a week, tick it off, or delete it. "Next week" counts from the task's own due date, so a scheduled task keeps its weekday; an overdue one counts from today instead, rather than being moved to a date that has also already passed. Whether you're offered "tomorrow" or "today" depends on where the task sits: anything already due today can only move forward. On a phone, long-press does the same thing. Deleting from here still gives you the usual few seconds to undo. Repeating tasks get the menu too, minus the reschedule shortcuts — moving one occurrence of a series is a different question, and it stays in the form for now.
