@@ -40,6 +40,12 @@ export interface ExtractedEventFields {
   end?: string
   allDay?: boolean
   confidence?: 'low' | 'medium' | 'high'
+  /**
+   * What the model thinks this is. Absent (or unrecognised) means "event" —
+   * the review modal's toggle is what ultimately decides, this is only its
+   * starting position.
+   */
+  kind?: 'event' | 'task'
 }
 
 export interface VisionMessageInput {

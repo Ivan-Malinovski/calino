@@ -9,14 +9,14 @@ export function buildExtractionSystemPrompt(): string {
   const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone
   const nowIso = now.toISOString()
 
-  return `You are an expert at reading event flyers, posters, invitations, and screenshots (from a photo) and extracting structured event details.
+  return `You are an expert at reading event flyers, posters, invitations, to-do lists, and screenshots (from a photo) and extracting structured calendar details.
 
 Current date/time (UTC, ISO-8601): ${nowIso}
 User's IANA timezone: ${timeZone}
 
-You will be shown an image. It might be a physical flyer, a poster, a screenshot of a social media post, an invite, a ticket, or similar. Carefully read all visible text, including small print, dates, times, addresses, and any other identifying details.
+You will be shown an image. It might be a physical flyer, a poster, a screenshot of a social media post, an invite, a ticket, a handwritten to-do list, or similar. Carefully read all visible text, including small print, dates, times, addresses, and any other identifying details.
 
-Extract the event details and respond with STRICT JSON ONLY — no markdown code fences, no explanation, no prose before or after. Respond with a JSON ARRAY of one or more candidate objects, each matching this shape (all fields optional; omit any field you cannot determine with reasonable confidence):
+Extract the details and respond with STRICT JSON ONLY — no markdown code fences, no explanation, no prose before or after. Respond with a JSON ARRAY of one or more candidate objects, each matching this shape (all fields optional; omit any field you cannot determine with reasonable confidence):
 
 [
   {
@@ -26,13 +26,16 @@ Extract the event details and respond with STRICT JSON ONLY — no markdown code
     "start": string,
     "end": string,
     "allDay": boolean,
-    "confidence": "low" | "medium" | "high"
+    "confidence": "low" | "medium" | "high",
+    "kind": "event" | "task"
   }
 ]
 
-Return MORE THAN ONE candidate only when the image is genuinely ambiguous in a way that changes the event details — for example: several distinct dates/times are printed for what looks like the same event (e.g. "Fri or Sat", a multi-date tour listing where the user likely wants one specific date) and you cannot tell which one applies, or the flyer advertises multiple separate events and it's unclear which one the user is trying to add. In that case, return one candidate per plausible option so the user can pick. Otherwise — the normal case — return a single-item array with your best single interpretation. Do not pad the array with near-duplicates just to hedge; only split when the details genuinely differ.
+Return MORE THAN ONE candidate only when the image is genuinely ambiguous in a way that changes the details — for example: several distinct dates/times are printed for what looks like the same event (e.g. "Fri or Sat", a multi-date tour listing where the user likely wants one specific date) and you cannot tell which one applies, or the flyer advertises multiple separate events and it's unclear which one the user is trying to add. In that case, return one candidate per plausible option so the user can pick. A to-do list is the other multi-candidate case: return one candidate per distinct item on the list. Otherwise — the normal case — return a single-item array with your best single interpretation. Do not pad the array with near-duplicates just to hedge; only split when the details genuinely differ.
 
 Rules:
+- "kind" tells the app whether to create a calendar event or a to-do. Default to "event". Use "task" only when the item reads as something the user has to *do* rather than somewhere they have to *be* — a to-do list, a checklist, a chore list, a shopping list, a "remember to…" note, an assignment or a deadline. A flyer, poster, invite, ticket, meeting or appointment is an "event".
+- For a "task", "start" (if determinable) is the due date and "end" and "location" are usually absent — omit them rather than inventing them.
 - "start" and "end" must be ISO-8601 LOCAL datetimes with NO timezone offset and NO trailing "Z", in the form "YYYY-MM-DDTHH:mm" (e.g. "2026-07-25T18:00"). Treat the time as local time in the user's timezone (${timeZone}) — do not convert it.
 - Resolve relative or partial dates ("this Saturday", "next Fri", "Aug 3rd", "tomorrow") into absolute dates using the current date given above. Assume the *next* upcoming occurrence of a weekday if no date is given.
 - If only a date is visible with no time, omit "start"/"end" times are still required as datetimes — pick a sensible time if one is implied (e.g. "doors 7pm"), otherwise set "allDay": true and use midnight ("T00:00") for start.
@@ -41,17 +44,18 @@ Rules:
 - "title" should be a concise, human-readable event name — not the entire flyer text.
 - "description" may include extra useful details (organizer, ticket info, notes) but should stay concise.
 - Set "confidence" to "high" if the date/time is explicit and unambiguous, "medium" if you had to infer or resolve relative dates, "low" if the image is unclear, partially unreadable, or you are guessing significantly.
-- If the image does not appear to contain any event information at all, return a single-item array containing {} (empty object) or whatever little you can determine, with "confidence": "low".
+- If the image does not appear to contain any event or task information at all, return a single-item array containing {} (empty object) or whatever little you can determine, with "confidence": "low".
 
 Respond with the JSON array and nothing else.`
 }
 
 /** Short user-turn instruction accompanying the image. */
 export function buildExtractionUserPrompt(): string {
-  return 'Extract the event details from this image as a JSON array of candidates, per the system instructions.'
+  return 'Extract the event or task details from this image as a JSON array of candidates, per the system instructions.'
 }
 
 const VALID_CONFIDENCE = new Set(['low', 'medium', 'high'])
+const VALID_KIND = new Set(['event', 'task'])
 
 function coerceExtractedFields(candidate: unknown): ExtractedEventFields {
   if (!candidate || typeof candidate !== 'object') {
@@ -68,6 +72,11 @@ function coerceExtractedFields(candidate: unknown): ExtractedEventFields {
   if (typeof source.allDay === 'boolean') result.allDay = source.allDay
   if (typeof source.confidence === 'string' && VALID_CONFIDENCE.has(source.confidence)) {
     result.confidence = source.confidence as ExtractedEventFields['confidence']
+  }
+  // Anything unrecognised is dropped rather than defaulted here — an absent
+  // kind and an "event" kind mean the same thing downstream.
+  if (typeof source.kind === 'string' && VALID_KIND.has(source.kind)) {
+    result.kind = source.kind as ExtractedEventFields['kind']
   }
 
   return result

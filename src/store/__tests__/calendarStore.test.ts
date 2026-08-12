@@ -513,6 +513,44 @@ describe('calendarStore', () => {
     })
   })
 
+  // Issue #106: one photo can yield both events and tasks, so the import
+  // queue has to switch the form's mode per candidate as it drains.
+  describe('AI import queue', () => {
+    it('opens the first candidate in its own mode', () => {
+      useCalendarStore.getState().startImportQueue([{ title: 'Buy milk', kind: 'task' }])
+
+      expect(useCalendarStore.getState().isModalOpen).toBe(true)
+      expect(useCalendarStore.getState().selectedEventType).toBe('task')
+    })
+
+    it('defaults a candidate with no kind to an event', () => {
+      useCalendarStore.getState().startImportQueue([{ title: 'Block Party' }])
+
+      expect(useCalendarStore.getState().selectedEventType).toBe('event')
+    })
+
+    it('switches mode per candidate as the queue drains', () => {
+      useCalendarStore.getState().startImportQueue([
+        { title: 'Block Party', kind: 'event', start: '2026-07-25T18:00' },
+        { title: 'Renew passport', kind: 'task' },
+        { title: 'Gig', kind: 'event' },
+      ])
+      expect(useCalendarStore.getState().selectedEventType).toBe('event')
+
+      useCalendarStore.getState().closeModal()
+      expect(useCalendarStore.getState().isModalOpen).toBe(true)
+      expect(useCalendarStore.getState().selectedEventType).toBe('task')
+      expect(useCalendarStore.getState().pendingEventPrefill?.title).toBe('Renew passport')
+
+      useCalendarStore.getState().closeModal()
+      expect(useCalendarStore.getState().selectedEventType).toBe('event')
+
+      useCalendarStore.getState().closeModal()
+      expect(useCalendarStore.getState().isModalOpen).toBe(false)
+      expect(useCalendarStore.getState().selectedEventType).toBe('event')
+    })
+  })
+
   describe('recurring event expansion with timezone', () => {
     it('expands recurring event with correct UTC conversion', () => {
       const store = useCalendarStore.getState()

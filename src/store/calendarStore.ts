@@ -1057,7 +1057,9 @@ export const useCalendarStore = create<CalendarStore>()(
             selectedEventId: null,
             selectedDate: next.start ?? null,
             selectedEndDate: next.end ?? null,
-            selectedEventType: 'event',
+            // Per candidate, not per batch — one photo can yield a mix of
+            // events and tasks, and each opens its own form in its own mode.
+            selectedEventType: next.kind ?? 'event',
             initialTitle: null,
             initialCalendarId: null,
             subtaskParentId: null,
@@ -1097,7 +1099,7 @@ export const useCalendarStore = create<CalendarStore>()(
           selectedEventId: null,
           selectedDate: first.start ?? null,
           selectedEndDate: first.end ?? null,
-          selectedEventType: 'event',
+          selectedEventType: first.kind ?? 'event',
           initialTitle: null,
           initialCalendarId: null,
           subtaskParentId: null,

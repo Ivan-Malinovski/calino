@@ -4,6 +4,10 @@ All notable changes to Calino will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- **Photo import can create tasks, not just events** ([#106](https://github.com/Ivan-Malinovski/calino/issues/106), requested by [@skvsree](https://github.com/skvsree)). Scanning a photo in the Android app now recognises to-do lists as well as flyers and invites: each item found in the picture appears in the review sheet with an Event/Task switch, and a photo of a hand-written list arrives with everything already switched to Task. The switch is yours either way — flip anything the model read as an event into a task before you confirm it, and vice versa. A photo can produce a mix of both; each opens its own form as you work through them.
+
 ## [0.27.4] - 2026-08-11
 
 ### Added

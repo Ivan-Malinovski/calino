@@ -533,14 +533,23 @@ export function EventModal(): JSX.Element | null {
         setCompleted(existingEvent.completed || false)
         setPriority(existingEvent.priority)
       } else if (currentSelectedEventType === 'task') {
+        // `.split('T')` — selectedDate is a bare `yyyy-MM-dd` from the todo
+        // composer but a full local datetime from the AI photo import, and
+        // the due-date field only ever wants the date half.
         const newTaskDueDate =
           requestedParent?.dueDate?.split('T')[0] ||
-          selectedDate ||
+          selectedDate?.split('T')[0] ||
           format(new Date(), 'yyyy-MM-dd')
         setDueDate(newTaskDueDate)
         seededDueDateRef.current = newTaskDueDate
-        setDueTime('09:00')
-        setDueAllDay(true)
+        // A time extracted from the photo is a real due time worth keeping;
+        // everything else keeps the all-day default.
+        const prefillTime =
+          pendingEventPrefill && pendingEventPrefill.allDay === false
+            ? selectedDate?.split('T')[1]?.slice(0, 5)
+            : undefined
+        setDueTime(prefillTime || '09:00')
+        setDueAllDay(!prefillTime)
         setCompleted(false)
         setPriority(undefined)
       } else {
