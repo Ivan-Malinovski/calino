@@ -261,7 +261,13 @@ export function MiniTasksSection({ isExpanded, onToggle }: MiniTasksSectionProps
 
   useEffect(() => cancelLongPress, [])
 
-  const hoveredTaskData = hoveredTask ? upcomingTasks.find((t) => t.id === hoveredTask) : null
+  // No description tooltip while the context menu is open. Both portal into
+  // <body> at the same z-index, so the winner is whichever mounted last — and
+  // the tooltip's portal only attaches once it first has content, which is
+  // after the menu. Suppressing it is also just the right behaviour: the menu
+  // supersedes the hover it was summoned from.
+  const hoveredTaskData =
+    hoveredTask && !taskMenu ? upcomingTasks.find((t) => t.id === hoveredTask) : null
 
   return (
     <div className={styles.tasksSection} data-component="tasks-section">
@@ -321,6 +327,10 @@ export function MiniTasksSection({ isExpanded, onToggle }: MiniTasksSectionProps
                     onPointerCancel={cancelLongPress}
                     onPointerMove={handlePointerMove}
                     onMouseEnter={(e) => {
+                      // Touch long-press synthesizes a mouseenter too; without
+                      // this the tooltip would re-arm behind the open menu and
+                      // appear the moment it closes.
+                      if (taskMenu) return
                       setHoveredTask(task.id)
                       setTooltipPosition({ x: e.clientX, y: e.clientY })
                     }}
