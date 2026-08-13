@@ -216,10 +216,17 @@ describe('EventPreviewPopup', () => {
       <EventPreviewPopup event={mockEvent} position={mockPosition} clickedEventId="test-event-1" />
     )
 
-    const time = screen.getByText(/11:00/)
+    // Derived from the fixture rather than hardcoded: mockEvent's start is a
+    // UTC instant, so its rendered wall-clock time depends on the runner's
+    // zone. The assertion is about the time becoming editable, not about a
+    // particular clock reading.
+    const start = new Date(mockEvent.start)
+    const hhmm = `${String(start.getHours()).padStart(2, '0')}:${String(start.getMinutes()).padStart(2, '0')}`
+
+    const time = screen.getByText(new RegExp(hhmm))
     fireEvent.click(time)
 
-    expect(screen.getByDisplayValue('11:00')).toBeInTheDocument()
+    expect(screen.getByDisplayValue(hhmm)).toBeInTheDocument()
   })
 
   it('makes location editable when clicked', () => {
