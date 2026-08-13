@@ -19,6 +19,13 @@ import { ALL_VIEWS, DEFAULT_DIVIDER_AFTER } from '@/features/calendar/viewRoutes
 export const selectThemeMode = (state: SettingsStore) => state.themeMode
 export const selectUpdateSettings = (state: SettingsStore) => state.updateSettings
 
+/**
+ * Seeds `timezone`, which nothing reads: Calino renders every date and time in
+ * the device's own zone. The Settings picker that used to expose this was
+ * removed — it claimed to control display and controlled nothing — but the
+ * field stays in state and in SYNCABLE_SETTINGS so a value written by another
+ * client round-trips through sync instead of being dropped on the floor.
+ */
 function getBrowserTimezone(): string {
   try {
     const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
@@ -61,43 +68,6 @@ function getEuropeDefaultFirstDay(): FirstDayOfWeek {
     // Fallback to Monday
   }
   return 1
-}
-
-function generateTimezoneOptions(): { value: string; label: string }[] {
-  try {
-    const timezones = Intl.supportedValuesOf('timeZone')
-    const options: { value: string; label: string }[] = []
-
-    for (const tz of timezones) {
-      try {
-        const formatter = new Intl.DateTimeFormat('en-US', {
-          timeZone: tz,
-          timeZoneName: 'shortOffset',
-        })
-        const parts = formatter.formatToParts(new Date())
-        const offsetPart = parts.find((p) => p.type === 'timeZoneName')
-        const offset = offsetPart?.value || ''
-
-        const city = tz.split('/').pop()?.replace(/_/g, ' ') || tz
-        const label = offset ? `${city} (${offset})` : city
-        options.push({ value: tz, label })
-      } catch {
-        options.push({ value: tz, label: tz })
-      }
-    }
-
-    return options.sort((a, b) => a.label.localeCompare(b.label))
-  } catch {
-    return [
-      { value: 'UTC', label: 'UTC' },
-      { value: 'Europe/London', label: 'London (GMT+0/GMT+1)' },
-      { value: 'Europe/Paris', label: 'Paris (GMT+1/GMT+2)' },
-      { value: 'Europe/Berlin', label: 'Berlin (GMT+1/GMT+2)' },
-      { value: 'Europe/Copenhagen', label: 'Copenhagen (GMT+1/GMT+2)' },
-      { value: 'America/New_York', label: 'New York (GMT-5/GMT-4)' },
-      { value: 'America/Los_Angeles', label: 'Los Angeles (GMT-8/GMT-7)' },
-    ]
-  }
 }
 
 const DEFAULT_SETTINGS: UserSettings = {
@@ -252,16 +222,6 @@ export const CONFLICT_OPTIONS: { value: 'server-wins' | 'local-wins' | 'ask'; la
   { value: 'local-wins', label: 'Local wins' },
   { value: 'ask', label: 'Ask me' },
 ]
-
-let _timezoneOptions: { value: string; label: string }[] | null = null
-function getTimezoneOptions(): { value: string; label: string }[] {
-  if (!_timezoneOptions) {
-    _timezoneOptions = generateTimezoneOptions()
-  }
-  return _timezoneOptions
-}
-
-export const TIMEZONE_OPTIONS = getTimezoneOptions()
 
 // Re-export from config for backward compatibility.
 export const EVENT_COLORS = _EVENT_COLORS_FROM_CONFIG

@@ -3,7 +3,6 @@ import type { JSX } from 'react'
 import { Capacitor } from '@capacitor/core'
 import {
   useSettingsStore,
-  TIMEZONE_OPTIONS,
   DATE_FORMAT_OPTIONS,
   TIME_FORMAT_OPTIONS,
   MAP_PROVIDER_OPTIONS,
@@ -113,7 +112,6 @@ function formatSyncError(error: string): JSX.Element {
 }
 
 export function GeneralSettings(): JSX.Element {
-  const timezone = useSettingsStore((s) => s.timezone)
   const dateFormat = useSettingsStore((s) => s.dateFormat)
   const timeFormat = useSettingsStore((s) => s.timeFormat)
   const firstDayOfWeek = useSettingsStore((s) => s.firstDayOfWeek)
@@ -158,31 +156,13 @@ export function GeneralSettings(): JSX.Element {
     >
       <h1 className={styles.pageTitle}>General</h1>
       <div className={styles.group}>
-        <div
-          className={styles.row}
-          data-component="setting-row"
-          data-setting="timezone"
-          data-value={timezone}
-        >
-          <div className={styles.rowInfo}>
-            <div className={styles.rowLabel}>Timezone</div>
-            <div className={styles.rowDesc}>All events will be displayed in this timezone</div>
-          </div>
-          <div className={styles.rowControl}>
-            <select
-              className={styles.select}
-              value={timezone}
-              aria-label="Timezone"
-              onChange={(e) => updateSettings({ timezone: e.target.value })}
-            >
-              {TIMEZONE_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
+        {/* No timezone picker: Calino renders every date and time in the
+            device's own zone, and always has. The control that used to sit
+            here promised "All events will be displayed in this timezone" but
+            was never read by anything — picking a zone changed nothing, which
+            made it worse than absent. The `timezone` setting itself survives
+            in the store and the sync payload so other clients' values still
+            round-trip untouched; see settingsStore.ts. */}
         <div
           className={styles.row}
           data-component="setting-row"
