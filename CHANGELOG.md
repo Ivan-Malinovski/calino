@@ -4,6 +4,22 @@ All notable changes to Calino will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- **A journal entry is filed under the day you're actually on** ([#116](https://github.com/Ivan-Malinovski/calino/issues/116), reported by [@riblet](https://github.com/riblet)). West of UTC, an entry written in the evening was dated tomorrow: the new-entry form took "today" from UTC rather than from your own clock, so anything after about 7pm in New York — or 4pm on the US west coast — was stored a day ahead. A journal entry's date has no time zone attached to it, so that wrong day was written to the server as-is and read back the same way. The `T` shortcut and the palette's "New journal entry" took their date from the same place and are fixed with it. East of UTC this never happened, which is why it went unnoticed for so long.
+
+  Entries already filed under the wrong day are not moved — Calino can't tell which ones were misdated and which ones you dated deliberately. Their date is editable in the entry itself.
+
+- **A repeating event that ends on a date now ends on that date.** Two faults, both only visible west of UTC. The description under a repeating event read one day late — set a series to repeat until 31 December and it told you "until January 1, 2026", because the end date was being shown in UTC rather than in your zone. And an all-day series was *sent to the server* a day late, as a moment in time rather than a plain date, which is both a day too long and not what the calendar standard permits for an all-day event. Other apps reading the same calendar saw the extra day too.
+
+  Series saved before this fix are repaired as they're read, so the extra day stops being drawn straight away, and the correction is written back the next time that series is saved.
+
+- **Editing a task's due date from its preview no longer wipes its time.** Clicking the date on a task's preview popup, changing it and saving turned the task into an all-day task: the time was only read from the time field, which stays empty unless you open it. The task's own time is now kept unless you actually change it — clearing the time field is still how a task becomes all-day. The same edit also left the task's end behind its new start, which was enough for it to be filed as broken and disappear from the calendar altogether.
+
+### Removed
+
+- **The time zone setting.** Settings → General offered a time zone picker that said "All events will be displayed in this timezone" and did nothing at all — Calino has always shown every date and time in the zone your device is set to, whatever this was set to. Rather than leave a control that made a promise it didn't keep, it's gone. Nothing about how your calendar is displayed changes. If another client syncs a time zone preference through Calino's settings sync, that value is still carried across untouched.
+
 ## [0.28.0] - 2026-08-12
 
 ### Added

@@ -868,7 +868,18 @@ export function EventModal(): JSX.Element | null {
       // R2.7 — Tasks now carry recurrence like events do. What stays forced off
       // for a task is the rest of the "More" panel (reminders, travel time,
       // transparency), which has no VTODO meaning in the current scope.
-      const effectiveRecurrence = recurrenceAllowed ? recurrenceRule : undefined
+      //
+      // isAllDay rides along because every buildRRuleString call below writes
+      // the event's stored rruleString, and writeRRule (icalTypeMapping)
+      // prefers that string over rebuilding from the rule. Without the flag
+      // here, an all-day series went to the server as a timed
+      // `UNTIL=…T045959Z` — RFC 5545 §3.3.10 requires UNTIL match DTSTART's
+      // value type, and west of UTC that instant is the *next* day, so the
+      // series ran a day long.
+      const effectiveRecurrence =
+        recurrenceAllowed && recurrenceRule
+          ? { ...recurrenceRule, isAllDay: isTaskMode ? dueAllDay : isAllDay }
+          : undefined
 
       const taskTime = dueAllDay ? '00:00:00' : `${dueTime}:00`
       const taskEndTime = dueAllDay ? '23:59:59' : `${dueTime}:00`

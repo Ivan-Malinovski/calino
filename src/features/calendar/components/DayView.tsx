@@ -40,7 +40,7 @@ import {
   TASK_PILL_LAYOUT_MINUTES,
 } from '../lib/eventLayout'
 import { eventCardVariants } from '../lib/eventAnimations'
-import { pad2 } from '@/lib/datetime'
+import { pad2, toLocalDateString } from '@/lib/datetime'
 import { HOURS } from '@/lib/hours'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
@@ -163,7 +163,8 @@ export function DayView({
         newDate = addDays(date, -7)
       }
 
-      setCurrentDate(newDate.toISOString().split('T')[0])
+      // Local, not UTC — see the matching note in WeekView.
+      setCurrentDate(toLocalDateString(newDate))
     },
     [currentDate, setCurrentDate]
   )

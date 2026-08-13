@@ -81,6 +81,35 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: './src/test/setup.ts',
+    // Pin the zone so date handling is asserted against a fixed offset rather
+    // than whatever the machine happens to be. Several suites (NLParser,
+    // DayEventsPopup, recurrence) were written against a UTC+ zone and only
+    // passed by accident of the author's machine; pinning makes that
+    // assumption explicit and true on a UTC CI box.
+    //
+    // The suite runs twice, once either side of UTC, because a single pin can
+    // only face one way and both directions have produced real bugs: west is
+    // where the `toISOString()` habit breaks (#116, the recurrence UNTIL
+    // description), east is where reading a floating date with UTC getters
+    // breaks (the all-day UNTIL serializer). A test file cannot pick its own
+    // zone — reassigning `process.env.TZ` inside a worker is a no-op, since the
+    // zone is resolved before the test runs — so this has to be two projects
+    // rather than a helper. Anything genuinely zone-dependent must derive its
+    // expectation from the ambient zone, not hardcode one offset.
+    projects: [
+      { extends: true, test: { name: 'west', env: { TZ: 'America/New_York' } } },
+      {
+        extends: true,
+        test: {
+          name: 'east',
+          env: { TZ: 'Europe/Copenhagen' },
+          // The perf spec asserts wall-clock budgets, so it measures whatever
+          // else the machine is doing — and the two projects run concurrently.
+          // It has no zone dependence, so one run is the whole of its value.
+          exclude: [...configDefaults.exclude, 'e2e/**', '.claude/**', '**/*.perf.test.ts'],
+        },
+      },
+    ],
     // e2e/ is for Playwright tests, not vitest — keep them out of `pnpm test`.
     // .claude/ may contain nested git worktrees with their own copy of this
     // repo; without excluding it, vitest resolves duplicate React/component

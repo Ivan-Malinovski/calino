@@ -1,6 +1,6 @@
 import { parseISO } from 'date-fns'
 import { RRule } from 'rrule'
-import { buildRRuleString } from './recurrence'
+import { buildRRuleString, normaliseAllDayUntil } from './recurrence'
 import type { CalendarEvent } from '@/types'
 
 /**
@@ -138,8 +138,16 @@ export function isOccurrenceExcluded(
 
 /** The event's RRULE as a string, whether stored raw or structured. */
 export function resolveRRuleString(event: CalendarEvent): string | undefined {
-  if (event.rruleString) return event.rruleString
-  if (event.recurrence) return buildRRuleString(event.recurrence)
+  // Legacy all-day series carry a timed UNTIL that expands one day long west
+  // of UTC — see normaliseAllDayUntil. A timed series is left untouched: there
+  // UNTIL genuinely is an instant.
+  if (event.rruleString) return normaliseAllDayUntil(event.rruleString, event.isAllDay)
+  // isAllDay decides whether UNTIL is emitted as a floating date or a UTC
+  // instant, and an instant one day past the intended end adds a spurious final
+  // occurrence west of UTC. Every other caller injects the flag the same way
+  // (icalTypeMapping's writeRRule, calendarMirror) — do it here too rather than
+  // rely on whoever built `recurrence` having set it.
+  if (event.recurrence) return buildRRuleString({ ...event.recurrence, isAllDay: event.isAllDay })
   return undefined
 }
 

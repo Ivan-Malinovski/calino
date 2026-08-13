@@ -3,11 +3,18 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { DayEventsPopup } from '../components/DayEventsPopup'
 import type { CalendarEvent } from '@/types'
 
+// Local wall-clock fixtures. These used to be UTC instants ('...T10:00:00.000Z')
+// with assertions written for the author's UTC+1 machine, so the file only
+// passed in that one zone. The component renders in local time, so the fixture
+// is built in local time and the expectations are plain wall-clock strings.
+const localISO = (h: number, m = 0): string =>
+  `2024-03-15T${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:00.000`
+
 const mockEvent: CalendarEvent = {
   id: '1',
   title: 'Test Event',
-  start: '2024-03-15T10:00:00.000Z',
-  end: '2024-03-15T11:00:00.000Z',
+  start: localISO(11),
+  end: localISO(12),
   calendarId: 'cal-1',
   isAllDay: false,
   color: '#4285F4',
@@ -16,8 +23,8 @@ const mockEvent: CalendarEvent = {
 const mockAllDayEvent: CalendarEvent = {
   id: '2',
   title: 'All Day Event',
-  start: '2024-03-15T00:00:00.000Z',
-  end: '2024-03-15T23:59:59.000Z',
+  start: localISO(0),
+  end: localISO(23, 59),
   calendarId: 'cal-1',
   isAllDay: true,
 }
@@ -32,7 +39,9 @@ const mockEventWithLocation: CalendarEvent = {
 describe('DayEventsPopup', () => {
   const mockOnClose = vi.fn()
   const mockOnEventClick = vi.fn()
-  const mockDate = new Date('2024-03-15')
+  // Local midnight — `new Date('2024-03-15')` is UTC midnight, which is the
+  // previous day west of UTC.
+  const mockDate = new Date(2024, 2, 15)
   const mockPosition = { x: 100, y: 200 }
 
   beforeEach(() => {

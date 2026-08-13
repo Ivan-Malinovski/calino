@@ -8,7 +8,8 @@ import type {
   TaskPriority,
 } from '@/types'
 import { addDays } from 'date-fns'
-import { buildRRuleString } from '@/lib/recurrence'
+import { buildRRuleString, normaliseAllDayUntil } from '@/lib/recurrence'
+import { toLocalDateString } from '@/lib/datetime'
 
 export function parseAppleTravelDuration(vevent: ICAL.Component): number | undefined {
   const prop = vevent.getFirstProperty('x-apple-travel-duration')
@@ -942,7 +943,14 @@ function writeDateProp(
 /** Writes RRULE, preferring the raw round-tripped string over the parsed rule. */
 function writeRRule(comp: ICAL.Component, event: CalendarEvent): void {
   if (event.rruleString) {
-    comp.addProperty(ICAL.Property.fromString(`RRULE:${event.rruleString}`))
+    // A legacy all-day series may carry a timed UNTIL, which §3.3.10 forbids
+    // alongside a DATE-valued DTSTART — repair it on the way out rather than
+    // writing back what we were given (see normaliseAllDayUntil).
+    comp.addProperty(
+      ICAL.Property.fromString(
+        `RRULE:${normaliseAllDayUntil(event.rruleString, event.isAllDay)}`
+      )
+    )
   } else if (event.recurrence) {
     // R2.1 — Propagate isAllDay so buildRRuleString emits VALUE=DATE for UNTIL.
     const rruleStr = buildRRuleString({ ...event.recurrence, isAllDay: event.isAllDay })
@@ -1310,7 +1318,7 @@ export function icalVjournalToCalendarEvent(
   const catProp = vjournal.getFirstProperty('categories')
 
   // DTSTART — date only for journal entries
-  let startDate = new Date().toISOString().split('T')[0]
+  let startDate = toLocalDateString(new Date())
   if (!dtstartProp) {
     console.warn('VJOURNAL missing DTSTART, defaulting to today:', uidProp?.getFirstValue())
   }

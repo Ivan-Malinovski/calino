@@ -28,7 +28,7 @@ import {
   addWeeks,
   addDays,
 } from 'date-fns'
-import { pad2 } from '@/lib/datetime'
+import { pad2, toLocalDateString } from '@/lib/datetime'
 import { hasDueTime } from '@/lib/events'
 import type { CalendarEvent } from '@/types'
 import { useCalendarStore, getTasksForDay } from '@/store/calendarStore'
@@ -212,7 +212,19 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
         newDate = direction === 'up' ? addDays(date, dayCount) : addDays(date, -dayCount)
       }
 
-      setCurrentDate(newDate.toISOString().split('T')[0])
+      // Local, not UTC: `currentDate` is a local yyyy-MM-dd and `parseISO` gave
+      // us local midnight, so a UTC slice reads back the previous day east of
+      // UTC — paging a week forward from the 12th landed on the 18th, and in
+      // DayView the ±1 day cancelled out entirely. Same trap as #116.
+      //
+      // Untested, and deliberately so rather than by oversight: this callback
+      // could not be made to fire under any harness we tried (mouse drag,
+      // synthetic touch, and real CDP touch, at both mobile and desktop
+      // widths), so how a user reaches it is unclear — the App-level pager in
+      // App.tsx handles the swipes we could actually drive. Fixed on
+      // correctness grounds; `setCurrentDate` takes a local date everywhere
+      // else it is called.
+      setCurrentDate(toLocalDateString(newDate))
     },
     [currentDate, setCurrentDate, dayCount]
   )

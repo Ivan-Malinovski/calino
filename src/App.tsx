@@ -16,6 +16,7 @@ import { useCalendarStore } from './store/calendarStore'
 import { useHistoryStore } from './store/historyStore'
 import { showToast } from './lib/toast'
 import { hapticIfEnabled } from './lib/haptics'
+import { toLocalDateString } from './lib/datetime'
 import { useSettingsStore } from './store/settingsStore'
 // Imported from their modules rather than through a features/calendar barrel:
 // the barrel also re-exported YearView, so pulling these four in eagerly
@@ -472,7 +473,7 @@ function CalendarApp(): JSX.Element {
       // T → go to today
       if (e.key === 't' || e.key === 'T') {
         e.preventDefault()
-        const today = new Date().toISOString().split('T')[0]
+        const today = toLocalDateString(new Date())
         useCalendarStore.getState().setCurrentDate(today)
         return
       }
