@@ -12,7 +12,9 @@ All notable changes to Calino will be documented in this file.
 
 - **A repeating event that ends on a date now ends on that date.** Two faults, both only visible west of UTC. The description under a repeating event read one day late — set a series to repeat until 31 December and it told you "until January 1, 2026", because the end date was being shown in UTC rather than in your zone. And an all-day series was *sent to the server* a day late, as a moment in time rather than a plain date, which is both a day too long and not what the calendar standard permits for an all-day event. Other apps reading the same calendar saw the extra day too.
 
-  Series saved before this fix keep the end date they were stored with; re-saving one corrects it. Until then its description and the days drawn on the grid can disagree by one.
+  Series saved before this fix are repaired as they're read, so the extra day stops being drawn straight away, and the correction is written back the next time that series is saved.
+
+- **Editing a task's due date from its preview no longer wipes its time.** Clicking the date on a task's preview popup, changing it and saving turned the task into an all-day task: the time was only read from the time field, which stays empty unless you open it. The task's own time is now kept unless you actually change it — clearing the time field is still how a task becomes all-day. The same edit also left the task's end behind its new start, which was enough for it to be filed as broken and disappear from the calendar altogether.
 
 ### Removed
 
