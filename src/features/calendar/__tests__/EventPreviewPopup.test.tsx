@@ -526,4 +526,85 @@ describe('EventPreviewPopup', () => {
       })
     })
   })
+
+  describe('editing a task’s due date', () => {
+    // A task carrying a time of day, expressed the way the app stores one:
+    // dueDate holds the time and isAllDay is false.
+    const mockTimedTask: CalendarEvent = {
+      id: 'test-task-timed',
+      title: 'Timed Task',
+      start: '2024-03-15T14:30:00',
+      end: '2024-03-15T14:30:00',
+      dueDate: '2024-03-15T14:30:00',
+      calendarId: 'default',
+      isAllDay: false,
+      type: 'task',
+    }
+
+    it('keeps the time when only the date is edited', async () => {
+      // Editing the date alone used to force the task to all-day and drop the
+      // time: the save path read the time from the edit field, which is empty
+      // unless the user opened it. The time is only removable by clearing it.
+      const store = useCalendarStore.getState()
+      store.addEvent(mockTimedTask)
+
+      render(
+        <EventPreviewPopup
+          event={mockTimedTask}
+          position={mockPosition}
+          clickedEventId="test-task-timed"
+        />
+      )
+
+      fireEvent.click(screen.getByText(/15 Mar 2024/))
+      fireEvent.change(screen.getByDisplayValue('2024-03-15'), {
+        target: { value: '2024-03-20' },
+      })
+      fireEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+
+      await waitFor(() => {
+        const updated = useCalendarStore.getState().events.find((e) => e.id === 'test-task-timed')
+        expect(updated?.dueDate).toBe('2024-03-20T14:30:00')
+        expect(updated?.start).toBe('2024-03-20T14:30:00')
+        expect(updated?.isAllDay).toBe(false)
+      })
+    })
+
+    it('leaves an all-day task all-day', async () => {
+      const allDayTask: CalendarEvent = {
+        id: 'test-task-allday',
+        title: 'All-day Task',
+        start: '2024-03-15T00:00:00',
+        end: '2024-03-15T00:00:00',
+        dueDate: '2024-03-15',
+        calendarId: 'default',
+        isAllDay: true,
+        type: 'task',
+      }
+      const store = useCalendarStore.getState()
+      store.addEvent(allDayTask)
+
+      render(
+        <EventPreviewPopup
+          event={allDayTask}
+          position={mockPosition}
+          clickedEventId="test-task-allday"
+        />
+      )
+
+      // An all-day task renders its date in both the date and the time row,
+      // so target the first (the date field).
+      fireEvent.click(screen.getAllByText(/15 Mar 2024/)[0])
+      fireEvent.change(screen.getByDisplayValue('2024-03-15'), {
+        target: { value: '2024-03-20' },
+      })
+      fireEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+
+      await waitFor(() => {
+        const updated = useCalendarStore.getState().events.find((e) => e.id === 'test-task-allday')
+        expect(updated?.dueDate).toBe('2024-03-20')
+        expect(updated?.isAllDay).toBe(true)
+      })
+    })
+  })
 })

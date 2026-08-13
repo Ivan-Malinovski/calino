@@ -172,7 +172,9 @@ export function EventPreviewPopup({
     // title/location/description are pre-seeded from useState and kept across field switches.
     if (field === 'date' && !editDate) {
       if (isTask && event.dueDate) {
-        setEditDate(event.dueDate)
+        // Date part only — a task's dueDate carries its time, and an
+        // `<input type="date">` given a full timestamp renders blank.
+        setEditDate(event.dueDate.split('T')[0])
       } else {
         setEditDate(format(parseISO(effectiveStart), 'yyyy-MM-dd'))
       }
@@ -200,11 +202,30 @@ export function EventPreviewPopup({
     }
 
     if (isTask && editDate) {
-      updates.dueDate = editDate
-      if (editTime) {
-        updates.start = `${editDate}T${editTime}:00`
+      // Keep the task's own time unless the user actually edited it. The time
+      // used to be read from the edit field alone, which is empty until that
+      // field is opened — so editing just the date dropped the time and forced
+      // the task to all-day. On a repeating task that also left a timed UNTIL
+      // on an otherwise all-day rule, which RFC 5545 §3.3.10 doesn't allow.
+      // Clearing the time field is still how a task becomes all-day.
+      const existingTime =
+        hasDueTime(event) && event.dueDate ? format(parseISO(event.dueDate), 'HH:mm') : ''
+      const dueTime = editTime || existingTime
+      //
+      // `end` moves with `start`. It was left behind before, which put the
+      // task's end before its start — the store diverts that into
+      // `brokenEvents` and the task vanishes from the calendar. The old code
+      // escaped that check only because forcing isAllDay exempted it. The
+      // shapes match what EventModal writes for a task.
+      if (dueTime) {
+        updates.dueDate = `${editDate}T${dueTime}:00`
+        updates.start = `${editDate}T${dueTime}:00`
+        updates.end = `${editDate}T${dueTime}:00`
+        updates.isAllDay = false
       } else {
+        updates.dueDate = editDate
         updates.start = `${editDate}T00:00:00`
+        updates.end = `${editDate}T23:59:59`
         updates.isAllDay = true
       }
     } else if (!isTask && (editDate || editTime || editEndDate || editEndTime)) {
