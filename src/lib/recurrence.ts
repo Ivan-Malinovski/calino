@@ -59,25 +59,57 @@ function parseUntilValue(value: string): Date | null {
 }
 
 /**
- * Rewrite a timed UNTIL to its local calendar day, in VALUE=DATE form, purely
- * for description purposes — RRule.toText() renders UNTIL with UTC getters
- * (see rrule's nlp/totext.js), so west of UTC a series the user ended on
- * Dec 31 23:59 local is described as running "until January 1, 2026". toText()
- * only ever prints the date portion, so nothing else in the sentence moves.
- *
- * A date-only UNTIL is already floating and already prints as written — leave
- * it alone, or it would shift a day backwards west of UTC.
- *
- * Display only. The RRULE that gets stored and synced comes from
- * buildRRuleString and never passes through here.
+ * Rewrite a timed UNTIL to its local calendar day, in VALUE=DATE form. A
+ * date-only UNTIL is already floating and is left alone — converting it would
+ * shift it a day backwards west of UTC.
  */
-function localiseUntilForDisplay(rruleString: string): string {
+function rewriteUntilToLocalDate(rruleString: string): string {
   return rruleString.replace(/UNTIL=([^;]+)/i, (whole, value: string) => {
     if (/^\d{8}$/.test(value)) return whole
     const d = parseUntilValue(value)
     if (!d || isNaN(d.getTime())) return whole
     return `UNTIL=${toLocalDateString(d).replaceAll('-', '')}`
   })
+}
+
+/**
+ * The same rewrite, for descriptions only — RRule.toText() renders UNTIL with
+ * UTC getters (see rrule's nlp/totext.js), so west of UTC a series the user
+ * ended on Dec 31 23:59 local is described as running "until January 1, 2026".
+ * toText() only prints the date portion, so nothing else in the sentence moves.
+ *
+ * The RRULE that gets stored and synced comes from buildRRuleString and never
+ * passes through here.
+ */
+function localiseUntilForDisplay(rruleString: string): string {
+  return rewriteUntilToLocalDate(rruleString)
+}
+
+/**
+ * Repair an all-day series whose stored RRULE carries a timed UNTIL.
+ *
+ * RFC 5545 §3.3.10 requires UNTIL to match DTSTART's value type, so an all-day
+ * series must end on a date, not an instant. Calino wrote instants here until
+ * the fix that added `isAllDay` to EventModal's rule, and those series are
+ * still out there — on servers, and in local storage. Left alone they run one
+ * day long west of UTC, because that instant falls on the following UTC day.
+ *
+ * Applied where such a string is *used* rather than migrated in place: the
+ * server copy can't be assumed corrected, so a sync would keep reintroducing
+ * it. Correcting it at the two choke points — expansion and serialization —
+ * means the grid stops drawing the extra day immediately, and the next save
+ * writes a conformant rule.
+ *
+ * The day is resolved in the viewer's zone, which is the best available guess:
+ * the original picker date is not recoverable from the instant alone if the
+ * series was created in a different zone.
+ */
+export function normaliseAllDayUntil(
+  rruleString: string,
+  isAllDay: boolean | undefined
+): string {
+  if (!isAllDay) return rruleString
+  return rewriteUntilToLocalDate(rruleString)
 }
 
 function capitaliseFirst(s: string): string {

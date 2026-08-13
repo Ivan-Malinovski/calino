@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { buildRRuleString, describeRecurrence } from '../recurrence'
+import { buildRRuleString, describeRecurrence, normaliseAllDayUntil } from '../recurrence'
+import { resolveRRuleString } from '../occurrenceExpansion'
 import { makeEvent, makeRule } from './fixtures'
 
 /**
@@ -10,13 +11,29 @@ import { makeEvent, makeRule } from './fixtures'
  * floating local wall clock, and true UTC instant — and both the description
  * and the all-day serializer used to treat them as one.
  *
- * The serializer cases below hold in any zone. The two description cases that
- * start from a UTC instant do not, and cannot: rendering an instant in the
- * user's own day is the whole fix, so their expectation moves with the zone.
- * They are written against the suite's America/New_York pin (vite.config.ts),
- * where 2026-01-01T04:59:59Z is the evening of Dec 31 — exactly the instant a
- * New York user creates by ending a series on Dec 31 at 23:59.
+ * The suite runs in two zones (see vite.config.ts). Cases that start from a
+ * fixed *instant* have no single right answer — resolving an instant into the
+ * viewer's own day is the whole fix — so they derive their expectation from
+ * the ambient zone using Intl, which is an oracle independent of the code
+ * under test. West of UTC that expectation differs from what the unfixed code
+ * produced, which is where these bite; east it is an identity check.
+ *
+ * Everything else here is a fixed calendar day and holds in any zone.
  */
+
+/** The instant's local calendar day as `yyyy-mm-dd`, computed via Intl. */
+function localDay(d: Date): string {
+  return new Intl.DateTimeFormat('en-CA').format(d)
+}
+
+/** The instant's local calendar day as rrule's `toText()` spells it. */
+function localDayLongForm(d: Date): string {
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  }).format(d)
+}
 
 describe('describeRecurrence renders UNTIL in the local day', () => {
   it('describes a picker-set end date as the day the user picked', () => {
@@ -32,9 +49,10 @@ describe('describeRecurrence renders UNTIL in the local day', () => {
   it('describes a synced UTC UNTIL in the local day', () => {
     // What a server stores for a series a New York user ended on Dec 31 23:59
     // local. This is the common path — synced events carry rruleString — and
-    // nothing covered it before.
+    // nothing covered it before. The unfixed code always said January 1.
+    const instant = new Date('2026-01-01T04:59:59Z')
     const event = makeEvent({ rruleString: 'FREQ=DAILY;UNTIL=20260101T045959Z' })
-    expect(describeRecurrence(event)).toBe('Every day until December 31, 2025')
+    expect(describeRecurrence(event)).toBe(`Every day until ${localDayLongForm(instant)}`)
   })
 
   it('leaves a date-only UNTIL alone', () => {
@@ -47,8 +65,11 @@ describe('describeRecurrence renders UNTIL in the local day', () => {
   })
 
   it('keeps describing rules with other parts after the UNTIL rewrite', () => {
+    const instant = new Date('2026-01-01T04:59:59Z')
     const event = makeEvent({ rruleString: 'FREQ=WEEKLY;UNTIL=20260101T045959Z;BYDAY=MO,WE' })
-    expect(describeRecurrence(event)).toBe('Every week on Monday, Wednesday until December 31, 2025')
+    expect(describeRecurrence(event)).toBe(
+      `Every week on Monday, Wednesday until ${localDayLongForm(instant)}`
+    )
   })
 
   it('falls back to the raw string when UNTIL is unparseable', () => {
@@ -89,5 +110,41 @@ describe('buildRRuleString emits the all-day UNTIL the user picked', () => {
     expect(
       buildRRuleString(makeRule({ frequency: 'daily', endDate: '2025-12-31T00:00:00.000Z' }))
     ).toBe('FREQ=DAILY;UNTIL=20251231T000000Z')
+  })
+})
+
+describe('legacy all-day series with a timed UNTIL', () => {
+  // What Calino itself wrote before EventModal started setting isAllDay on the
+  // rule: an instant, on an all-day series, one day past the picked date west
+  // of UTC. Those are still on servers and in local storage, so the string is
+  // repaired where it is used rather than migrated in place — a sync would
+  // otherwise keep bringing it back.
+  const LEGACY = 'FREQ=DAILY;UNTIL=20270101T045959Z'
+  // The instant that string encodes, resolved into the viewer's own day —
+  // Dec 31 west of UTC, Jan 1 east of it. Both are correct answers for their
+  // zone; what matters is that the result is a floating date either way.
+  const REPAIRED = `FREQ=DAILY;UNTIL=${localDay(new Date('2027-01-01T04:59:59Z')).replaceAll('-', '')}`
+
+  it('repairs it for an all-day series', () => {
+    expect(normaliseAllDayUntil(LEGACY, true)).toBe(REPAIRED)
+    // Whichever day it lands on, it must be a floating date, not an instant.
+    expect(REPAIRED).toMatch(/UNTIL=\d{8}$/)
+  })
+
+  it('leaves a timed series alone', () => {
+    // Here UNTIL genuinely is an instant and must stay one.
+    expect(normaliseAllDayUntil(LEGACY, false)).toBe(LEGACY)
+    expect(normaliseAllDayUntil(LEGACY, undefined)).toBe(LEGACY)
+  })
+
+  it('leaves an already-conformant all-day rule alone', () => {
+    expect(normaliseAllDayUntil('FREQ=DAILY;UNTIL=20261231', true)).toBe('FREQ=DAILY;UNTIL=20261231')
+  })
+
+  it('stops expansion drawing the extra day', () => {
+    // resolveRRuleString feeds the grid. Before the repair this returned the
+    // instant, which rrule expands through 2027-01-01.
+    const event = makeEvent({ isAllDay: true, rruleString: LEGACY })
+    expect(resolveRRuleString(event)).toBe(REPAIRED)
   })
 })
