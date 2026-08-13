@@ -98,7 +98,17 @@ export default defineConfig({
     // expectation from the ambient zone, not hardcode one offset.
     projects: [
       { extends: true, test: { name: 'west', env: { TZ: 'America/New_York' } } },
-      { extends: true, test: { name: 'east', env: { TZ: 'Europe/Copenhagen' } } },
+      {
+        extends: true,
+        test: {
+          name: 'east',
+          env: { TZ: 'Europe/Copenhagen' },
+          // The perf spec asserts wall-clock budgets, so it measures whatever
+          // else the machine is doing — and the two projects run concurrently.
+          // It has no zone dependence, so one run is the whole of its value.
+          exclude: [...configDefaults.exclude, 'e2e/**', '.claude/**', '**/*.perf.test.ts'],
+        },
+      },
     ],
     // e2e/ is for Playwright tests, not vitest — keep them out of `pnpm test`.
     // .claude/ may contain nested git worktrees with their own copy of this
