@@ -87,17 +87,10 @@ export default defineConfig({
     // runs. Several suites (NLParser, DayEventsPopup, recurrence) were already
     // written against a UTC+ zone and only passed by accident of the author's
     // machine; this makes that assumption explicit and true on a UTC CI box.
-    // East of UTC, matching what the suite already implicitly assumed. Flipping
-    // this to a west-of-UTC zone (America/New_York) is the more useful pin —
-    // that's the direction #116's `toISOString()` habit breaks on — and the
-    // suite is otherwise ready for it. One test stands in the way, and it is
-    // failing for a real reason, not a fixture reason:
-    // `recurrence.bugs.test.ts > includes "until" when rule has endDate`
-    // describes a rule ending 2025-12-31T23:59:59 local as "Every day until
-    // January 1, 2026", because rrule.toText() renders UNTIL in UTC. That's a
-    // user-facing display bug west of UTC and wants its own fix; flip this pin
-    // once it lands.
-    env: { TZ: 'Europe/Copenhagen' },
+    // West of UTC deliberately: that is the direction the `toISOString()` habit
+    // breaks on (#116 and the recurrence UNTIL bug both surfaced here), so it is
+    // the pin that catches this class of defect rather than hiding it.
+    env: { TZ: 'America/New_York' },
     // e2e/ is for Playwright tests, not vitest — keep them out of `pnpm test`.
     // .claude/ may contain nested git worktrees with their own copy of this
     // repo; without excluding it, vitest resolves duplicate React/component
