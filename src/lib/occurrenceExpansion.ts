@@ -139,7 +139,12 @@ export function isOccurrenceExcluded(
 /** The event's RRULE as a string, whether stored raw or structured. */
 export function resolveRRuleString(event: CalendarEvent): string | undefined {
   if (event.rruleString) return event.rruleString
-  if (event.recurrence) return buildRRuleString(event.recurrence)
+  // isAllDay decides whether UNTIL is emitted as a floating date or a UTC
+  // instant, and an instant one day past the intended end adds a spurious final
+  // occurrence west of UTC. Every other caller injects the flag the same way
+  // (icalTypeMapping's writeRRule, calendarMirror) — do it here too rather than
+  // rely on whoever built `recurrence` having set it.
+  if (event.recurrence) return buildRRuleString({ ...event.recurrence, isAllDay: event.isAllDay })
   return undefined
 }
 

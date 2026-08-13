@@ -151,6 +151,14 @@ const ACCOUNTS: MockAccount[] = [
         components: ['VEVENT', 'VTODO', 'VJOURNAL'],
       },
       {
+        // Owned by `recurrence-until-timezone.spec.ts`, which asserts the exact
+        // RRULE of the single series it creates — same reason as `j-tz/`.
+        path: '/dav/calendars/user/r-until/',
+        displayName: 'Recurrence Until',
+        color: '#7C3AED',
+        components: ['VEVENT', 'VTODO', 'VJOURNAL'],
+      },
+      {
         // Owned by `delete-sync.spec.ts` (issue #110), which asserts the
         // collection is empty after a delete — it cannot share a collection
         // with a spec running in parallel.

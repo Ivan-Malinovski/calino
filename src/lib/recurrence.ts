@@ -1,6 +1,6 @@
 import { RRule } from 'rrule'
 import type { CalendarEvent, RecurrenceRule } from '@/types'
-import { toICalUTC } from './datetime'
+import { toICalUTC, toLocalDateString } from './datetime'
 
 // byWeekday numbers stored in RecurrenceRule → BYDAY codes
 export const DAY_NUM_TO_CODE: Record<number, string> = {
@@ -21,6 +21,63 @@ export const FREQ_MAP: Record<string, string> = {
   weekly: 'WEEKLY',
   monthly: 'MONTHLY',
   yearly: 'YEARLY',
+}
+
+/**
+ * `rule.endDate` arrives in three shapes, and only the string itself says which:
+ *
+ *  - `'2025-12-30'`            floating date  — CalDAV all-day UNTIL, and
+ *                              buildMasterTruncation's all-day branch
+ *  - `'2025-12-31T23:59:59'`   floating local — the "repeat until" picker
+ *                              (EventModal), and floating CalDAV UNTIL
+ *  - `'2025-12-31T04:59:59Z'`  true instant   — timed CalDAV UNTIL, and
+ *                              buildMasterTruncation's timed branch
+ *
+ * Returns the calendar day to write as a VALUE=DATE UNTIL. A trailing Z means a
+ * genuine instant, so its UTC day is the answer; anything else is floating and
+ * the day is simply the one written in the string — passing it through a Date
+ * would invent a zone and shift it (that is exactly how an all-day series
+ * created west of UTC ended up running a day long).
+ */
+function untilDateOnly(endDate: string): string {
+  if (/^\d{4}-\d{2}-\d{2}/.test(endDate) && !/Z$/i.test(endDate)) {
+    return endDate.slice(0, 10).replaceAll('-', '')
+  }
+  const d = new Date(endDate)
+  return `${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, '0')}${String(d.getUTCDate()).padStart(2, '0')}`
+}
+
+/** Parse an iCal UNTIL value (`YYYYMMDD`, `YYYYMMDDTHHMMSS`, or `…Z`). */
+function parseUntilValue(value: string): Date | null {
+  const m = value.match(/^(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2})(Z)?)?$/i)
+  if (!m) return null
+  const [, y, mo, d, h = '0', mi = '0', s = '0', z] = m
+  const n = (v: string): number => parseInt(v, 10)
+  return z
+    ? new Date(Date.UTC(n(y), n(mo) - 1, n(d), n(h), n(mi), n(s)))
+    : new Date(n(y), n(mo) - 1, n(d), n(h), n(mi), n(s))
+}
+
+/**
+ * Rewrite a timed UNTIL to its local calendar day, in VALUE=DATE form, purely
+ * for description purposes — RRule.toText() renders UNTIL with UTC getters
+ * (see rrule's nlp/totext.js), so west of UTC a series the user ended on
+ * Dec 31 23:59 local is described as running "until January 1, 2026". toText()
+ * only ever prints the date portion, so nothing else in the sentence moves.
+ *
+ * A date-only UNTIL is already floating and already prints as written — leave
+ * it alone, or it would shift a day backwards west of UTC.
+ *
+ * Display only. The RRULE that gets stored and synced comes from
+ * buildRRuleString and never passes through here.
+ */
+function localiseUntilForDisplay(rruleString: string): string {
+  return rruleString.replace(/UNTIL=([^;]+)/i, (whole, value: string) => {
+    if (/^\d{8}$/.test(value)) return whole
+    const d = parseUntilValue(value)
+    if (!d || isNaN(d.getTime())) return whole
+    return `UNTIL=${toLocalDateString(d).replaceAll('-', '')}`
+  })
 }
 
 function capitaliseFirst(s: string): string {
@@ -132,15 +189,10 @@ export function buildRRuleString(rule: RecurrenceRule): string {
 
   if (rule.endDate) {
     if (rule.isAllDay) {
-      // R2.1 — VALUE=DATE form for all-day events per RFC 5545 §3.3.10.
-      // endDate is stored as a date-only string ('YYYY-MM-DD') on the event;
-      // emit it as YYYYMMDD without a time component or Z suffix.
-      // Use UTC getters — the endDate string may be a UTC ISO timestamp
-      // produced by buildMasterTruncation; local-time getters would shift
-      // the date by up to 24 hours in extreme timezones.
-      const d = new Date(rule.endDate)
-      const yyyymmdd = `${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, '0')}${String(d.getUTCDate()).padStart(2, '0')}`
-      parts.push(`UNTIL=${yyyymmdd}`)
+      // R2.1 — VALUE=DATE form for all-day events per RFC 5545 §3.3.10: emit
+      // YYYYMMDD with no time component and no Z suffix. Which day that is
+      // depends on the shape endDate arrived in — see untilDateOnly.
+      parts.push(`UNTIL=${untilDateOnly(rule.endDate)}`)
     } else {
       parts.push(`UNTIL=${toICalUTC(new Date(rule.endDate))}`)
     }
@@ -158,7 +210,9 @@ function describeFromRruleString(rruleString: string): string {
     return describeSecondly(interval)
   }
   try {
-    const rrule = RRule.fromString(`RRULE:${rruleString.replace(/^RRULE:/i, '')}`)
+    const rrule = RRule.fromString(
+      `RRULE:${localiseUntilForDisplay(rruleString.replace(/^RRULE:/i, ''))}`
+    )
     return capitaliseFirst(rrule.toText())
   } catch {
     return 'Recurring'
@@ -170,7 +224,7 @@ function describeFromRecurrenceRule(rule: RecurrenceRule): string {
     return describeSecondly(rule.interval ?? 1)
   }
   try {
-    const rruleString = buildRRuleString(rule)
+    const rruleString = localiseUntilForDisplay(buildRRuleString(rule))
     const rrule = RRule.fromString(`RRULE:${rruleString}`)
     return capitaliseFirst(rrule.toText())
   } catch {
