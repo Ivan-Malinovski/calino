@@ -12,20 +12,27 @@ vi.mock('@/hooks/useIsMobile')
  * default has to be the user's local calendar day. Deriving it from
  * `toISOString()` (UTC) filed evening entries west of UTC under tomorrow.
  *
- * The zone is pinned to America/New_York by `test.env` in vite.config.ts (a
- * test file can't set it for itself), so this is the reporter's own instant:
- * 2026-08-12 20:18 local is already 2026-08-13 in UTC.
+ * The suite runs either side of UTC (see vite.config.ts), so the instant is
+ * built from the ambient zone rather than hardcoded: late evening west of UTC
+ * (the reporter's own case — 2026-08-12 20:18 New York is already the 13th in
+ * UTC) and just after midnight east of it, which is the same defect mirrored.
+ * The guard below asserts the only property that matters — that the local day
+ * and the UTC day genuinely differ, so a UTC-defaulting regression cannot pass.
+ *
  * `e2e/journal-timezone.spec.ts` covers the same case end to end, against a
  * real stored DTSTART.
  */
-const LOCAL_EVENING = new Date('2026-08-13T00:18:00Z')
+// getTimezoneOffset is positive west of UTC, negative east.
+const IS_WEST_OF_UTC = new Date('2026-08-12T12:00:00').getTimezoneOffset() > 0
+const LOCAL_EVENING = IS_WEST_OF_UTC
+  ? new Date(2026, 7, 12, 20, 18)
+  : new Date(2026, 7, 12, 0, 30)
 const LOCAL_DAY = '2026-08-12'
 
 describe('JournalView compose date (#116)', () => {
   beforeEach(() => {
     // Guards the config-level TZ pin: without it the expectation below would
     // be zone-dependent and a UTC-defaulting regression could pass silently.
-    expect(LOCAL_EVENING.getTimezoneOffset()).toBe(240)
     expect(LOCAL_EVENING.toISOString().split('T')[0]).not.toBe(LOCAL_DAY)
 
     vi.useFakeTimers({ shouldAdvanceTime: true })

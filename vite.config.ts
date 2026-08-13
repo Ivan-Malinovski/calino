@@ -82,15 +82,24 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: './src/test/setup.ts',
     // Pin the zone so date handling is asserted against a fixed offset rather
-    // than whatever the machine happens to be — a test file can't do this for
-    // itself, since the worker has already resolved its zone by the time it
-    // runs. Several suites (NLParser, DayEventsPopup, recurrence) were already
-    // written against a UTC+ zone and only passed by accident of the author's
-    // machine; this makes that assumption explicit and true on a UTC CI box.
-    // West of UTC deliberately: that is the direction the `toISOString()` habit
-    // breaks on (#116 and the recurrence UNTIL bug both surfaced here), so it is
-    // the pin that catches this class of defect rather than hiding it.
-    env: { TZ: 'America/New_York' },
+    // than whatever the machine happens to be. Several suites (NLParser,
+    // DayEventsPopup, recurrence) were written against a UTC+ zone and only
+    // passed by accident of the author's machine; pinning makes that
+    // assumption explicit and true on a UTC CI box.
+    //
+    // The suite runs twice, once either side of UTC, because a single pin can
+    // only face one way and both directions have produced real bugs: west is
+    // where the `toISOString()` habit breaks (#116, the recurrence UNTIL
+    // description), east is where reading a floating date with UTC getters
+    // breaks (the all-day UNTIL serializer). A test file cannot pick its own
+    // zone — reassigning `process.env.TZ` inside a worker is a no-op, since the
+    // zone is resolved before the test runs — so this has to be two projects
+    // rather than a helper. Anything genuinely zone-dependent must derive its
+    // expectation from the ambient zone, not hardcode one offset.
+    projects: [
+      { extends: true, test: { name: 'west', env: { TZ: 'America/New_York' } } },
+      { extends: true, test: { name: 'east', env: { TZ: 'Europe/Copenhagen' } } },
+    ],
     // e2e/ is for Playwright tests, not vitest — keep them out of `pnpm test`.
     // .claude/ may contain nested git worktrees with their own copy of this
     // repo; without excluding it, vitest resolves duplicate React/component
