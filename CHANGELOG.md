@@ -4,6 +4,8 @@ All notable changes to Calino will be documented in this file.
 
 ## [Unreleased]
 
+## [0.28.1] - 2026-08-13
+
 ### Fixed
 
 - **A journal entry is filed under the day you're actually on** ([#116](https://github.com/Ivan-Malinovski/calino/issues/116), reported by [@riblet](https://github.com/riblet)). West of UTC, an entry written in the evening was dated tomorrow: the new-entry form took "today" from UTC rather than from your own clock, so anything after about 7pm in New York — or 4pm on the US west coast — was stored a day ahead. A journal entry's date has no time zone attached to it, so that wrong day was written to the server as-is and read back the same way. The `T` shortcut and the palette's "New journal entry" took their date from the same place and are fixed with it. East of UTC this never happened, which is why it went unnoticed for so long.
