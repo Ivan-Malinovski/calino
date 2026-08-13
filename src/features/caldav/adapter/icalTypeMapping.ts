@@ -9,6 +9,7 @@ import type {
 } from '@/types'
 import { addDays } from 'date-fns'
 import { buildRRuleString } from '@/lib/recurrence'
+import { toLocalDateString } from '@/lib/datetime'
 
 export function parseAppleTravelDuration(vevent: ICAL.Component): number | undefined {
   const prop = vevent.getFirstProperty('x-apple-travel-duration')
@@ -1310,7 +1311,7 @@ export function icalVjournalToCalendarEvent(
   const catProp = vjournal.getFirstProperty('categories')
 
   // DTSTART — date only for journal entries
-  let startDate = new Date().toISOString().split('T')[0]
+  let startDate = toLocalDateString(new Date())
   if (!dtstartProp) {
     console.warn('VJOURNAL missing DTSTART, defaulting to today:', uidProp?.getFirstValue())
   }

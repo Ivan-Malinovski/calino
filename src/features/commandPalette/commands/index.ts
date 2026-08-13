@@ -5,6 +5,7 @@ import { addDays, addWeeks, addMonths, subWeeks, subMonths, format } from 'date-
 import type { ThemeMode } from '@/types'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useHistoryStore } from '@/store/historyStore'
+import { toLocalDateString } from '@/lib/datetime'
 
 interface CommandFactoryDeps {
   navigate: (path: string) => void
@@ -463,7 +464,7 @@ const createSettingsCommands = (deps: CommandFactoryDeps): Command[] => [
     keywords: ['journal', 'notes', 'diary', 'new', 'create', 'add'],
     icon: ICONS.plus,
     action: () => {
-      const today = new Date().toISOString().split('T')[0]
+      const today = toLocalDateString(new Date())
       deps.openJournalModal(today, true)
     },
   },

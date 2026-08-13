@@ -1,6 +1,11 @@
 import { describe, it, expect } from 'vitest'
 import ICAL from 'ical.js'
-import { icalEventToCalendarEvent, calendarEventToIcalComponent } from '../icalTypeMapping'
+import {
+  icalEventToCalendarEvent,
+  calendarEventToIcalComponent,
+  calendarEventToIcalVjournal,
+  icalVjournalToCalendarEvent,
+} from '../icalTypeMapping'
 import type { CalendarEvent } from '@/types'
 
 // ---------------------------------------------------------------------------
@@ -644,5 +649,37 @@ describe('zero-minute reminder round-trip', () => {
 
   it('leaves non-zero reminders alone', () => {
     expect(parseTrigger('-PT15M')![0].minutesBefore).toBe(15)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Issue 116: journal DTSTART is a floating date
+// ---------------------------------------------------------------------------
+describe('Issue 116: VJOURNAL DTSTART is a floating date', () => {
+  const entry: CalendarEvent = {
+    id: 'journal-116',
+    calendarId: 'cal-1',
+    title: 'Debug Journal',
+    start: '2026-08-12',
+    end: '2026-08-12',
+    isAllDay: true,
+    type: 'journal',
+  }
+
+  it('writes entry.start verbatim, without a timezone shift', () => {
+    // The serializer must not reinterpret the day. This pins the layer: #116 was
+    // the *caller* passing a UTC-derived "today", so a future fix applied here
+    // instead would be wrong and this test would catch it.
+    const ics = new ICAL.Component(['vcalendar', [], []])
+    ics.addSubcomponent(calendarEventToIcalVjournal(entry))
+
+    expect(ics.toString()).toContain('DTSTART;VALUE=DATE:20260812')
+  })
+
+  it('round-trips the date back unchanged', () => {
+    const vjournal = calendarEventToIcalVjournal(entry)
+    const parsed = icalVjournalToCalendarEvent(vjournal, 'cal-1')
+
+    expect(parsed.start).toBe('2026-08-12')
   })
 })

@@ -18,6 +18,7 @@ import { MarkdownView } from '@/lib/markdown'
 import { showToast } from '@/lib/toast'
 import { deleteEventWithUndo } from '@/lib/deleteWithUndo'
 import { buildEventIndex } from '@/lib/events'
+import { toLocalDateString } from '@/lib/datetime'
 import { putAttachments, getAttachments, deleteAttachments } from '@/lib/attachmentStore'
 import type { Calendar, CalendarEvent, CalendarAttachment } from '@/types'
 import { AttachmentSection } from './AttachmentSection'
@@ -493,7 +494,10 @@ export function JournalView(): JSX.Element {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [title, setTitle] = useState('')
   const [body, setBody] = useState('')
-  const [editingDate, setEditingDate] = useState(new Date().toISOString().split('T')[0])
+  // Never observed: both paths that open the compose form (handleStartEdit and
+  // handleStartCompose) set editingDate first. Kept local anyway so the two
+  // spellings can't drift — see the note on handleStartCompose.
+  const [editingDate, setEditingDate] = useState(toLocalDateString(new Date()))
   const [selectedCategories, setSelectedCategories] = useState<string[]>([])
   const [attachments, setAttachments] = useState<CalendarAttachment[]>([])
   const [url, setUrl] = useState('')
@@ -808,7 +812,10 @@ export function JournalView(): JSX.Element {
     setEditingId(null)
     setTitle('')
     setBody('')
-    setEditingDate(new Date().toISOString().split('T')[0])
+    // Local, not UTC: DTSTART for a journal entry is a floating date, so a UTC
+    // "today" files evening entries west of UTC under tomorrow (issue #116).
+    // This is the line the fix turns on — it sets the date every new entry gets.
+    setEditingDate(toLocalDateString(new Date()))
     setSelectedCategories([])
     setAttachments([])
     setUrl('')
