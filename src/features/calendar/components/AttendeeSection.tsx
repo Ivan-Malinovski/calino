@@ -3,7 +3,7 @@ import type { CalendarAttendee, CalendarOrganizer, AttendeePartstat, CalendarEve
 import { useCalendarStore } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
 import { checkAttendeeAvailability, type Availability } from '@/lib/freeBusyCalculator'
-import { buildMailtoUri, formatInviteForClipboard } from '@/lib/mailtoInvite'
+import { buildMailtoUri } from '@/lib/mailtoInvite'
 import { showToast } from '@/lib/toast'
 import styles from './AttendeeSection.module.css'
 
@@ -124,18 +124,6 @@ export function AttendeeSection({
     window.location.href = mailto.uri
   }
 
-  // Fallback for desktops with no working mailto: handler — nothing to launch,
-  // just the composed message on the clipboard.
-  const handleCopyInvite = async (): Promise<void> => {
-    if (!mailto) return
-    try {
-      await navigator.clipboard.writeText(formatInviteForClipboard(mailto))
-      showToast('Invitation copied to clipboard')
-    } catch {
-      showToast('Could not access the clipboard')
-    }
-  }
-
   const handleAdd = (): void => {
     const email = inputValue.trim().toLowerCase()
     if (!email) return
@@ -183,43 +171,15 @@ export function AttendeeSection({
       <div className={styles.sectionHeader}>
         <div className={styles.sectionLabel}>Attendees</div>
         {mailto && (
-          <div className={styles.headerActions}>
-            <button
-              type="button"
-              className={styles.emailButton}
-              onClick={handleEmailAttendees}
-              data-component="email-attendees-btn"
-              data-mailto={mailto.uri}
-            >
-              Email attendees
-            </button>
-            <button
-              type="button"
-              className={styles.copyInviteButton}
-              onClick={() => void handleCopyInvite()}
-              aria-label="Copy invitation text"
-              title="Copy invitation text"
-              data-component="copy-invite-btn"
-            >
-              <svg aria-hidden="true" width="13" height="13" viewBox="0 0 14 14" fill="none">
-                <rect
-                  x="4.5"
-                  y="1.5"
-                  width="8"
-                  height="8"
-                  rx="1.5"
-                  stroke="currentColor"
-                  strokeWidth="1.2"
-                />
-                <path
-                  d="M9.5 11.5V12a.5.5 0 0 1-.5.5H2a.5.5 0 0 1-.5-.5V5a.5.5 0 0 1 .5-.5h.5"
-                  stroke="currentColor"
-                  strokeWidth="1.2"
-                  strokeLinecap="round"
-                />
-              </svg>
-            </button>
-          </div>
+          <button
+            type="button"
+            className={styles.emailButton}
+            onClick={handleEmailAttendees}
+            data-component="email-attendees-btn"
+            data-mailto={mailto.uri}
+          >
+            Email attendees
+          </button>
         )}
       </div>
 

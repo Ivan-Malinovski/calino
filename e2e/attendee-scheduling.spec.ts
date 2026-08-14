@@ -60,9 +60,10 @@ test.describe('attendees and scheduling', () => {
     await page.goto('/week')
     await page.locator('[data-component="event-card"]', { hasText: 'Design Review' }).first().click()
 
-    const button = page
-      .locator('[data-component="event-preview"] [data-component="email-attendees-btn"]')
-      .first()
+    const popup = page.locator('[data-component="event-preview"]')
+    await popup.locator('[data-component="event-share-menu-btn"]').click()
+
+    const button = popup.locator('[data-component="email-attendees-btn"]').first()
     await expect(button).toBeVisible()
 
     // Assert the attribute — never click it. Navigating a mailto: hands

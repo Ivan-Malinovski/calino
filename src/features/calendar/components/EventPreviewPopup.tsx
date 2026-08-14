@@ -23,7 +23,8 @@ import { describeRecurrence } from '@/lib/recurrence'
 import { hasDueTime, extractOriginalEventId } from '@/lib/events'
 import type { CalendarEvent, RecurrenceEditMode } from '@/types'
 import { deleteRecurringOccurrence } from '@/lib/recurrenceDelete'
-import { buildMailtoUri, formatInviteForClipboard } from '@/lib/mailtoInvite'
+import { buildMailtoUri } from '@/lib/mailtoInvite'
+import { exportSingleEventIcs } from '@/lib/icsExport'
 import { deleteEventWithUndo } from '@/lib/deleteWithUndo'
 import { TimeField } from './TimeField'
 import styles from './EventPreviewPopup.module.css'
@@ -133,6 +134,7 @@ export function EventPreviewPopup({
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [showRecurrenceDialog, setShowRecurrenceDialog] = useState(false)
   const [pendingUpdates, setPendingUpdates] = useState<Partial<CalendarEvent> | null>(null)
+  const [shareMenuOpen, setShareMenuOpen] = useState(false)
 
   const getEventDate = (): string => {
     if (editDate) return format(parseISO(editDate), dateFormatPattern)
@@ -573,16 +575,58 @@ export function EventPreviewPopup({
     if (mailto) window.location.href = mailto.uri
   }
 
-  // Fallback for desktops with no working mailto: handler.
-  const handleCopyInvite = async (): Promise<void> => {
+  // Fallback for desktops with no working mailto: handler — the addresses
+  // alone, ready to paste into whatever the user actually writes mail in.
+  const handleCopyAttendeeEmails = async (): Promise<void> => {
     if (!mailto) return
     try {
-      await navigator.clipboard.writeText(formatInviteForClipboard(mailto))
-      showToast('Invitation copied to clipboard')
+      await navigator.clipboard.writeText(mailto.recipients.join(', '))
+      showToast(
+        mailto.recipients.length === 1
+          ? 'Address copied'
+          : `${mailto.recipients.length} addresses copied`
+      )
     } catch {
       showToast('Could not access the clipboard')
     }
   }
+
+  const handleExportIcs = (): void => {
+    // Export the stored event, not the expanded occurrence the user clicked —
+    // that way the file carries the real RRULE instead of a single synthetic
+    // instance with a made-up id.
+    const storedId = originalEventId || event.id
+    const stored = useCalendarStore.getState().events.find((e) => e.id === storedId) ?? event
+    exportSingleEventIcs(stored)
+  }
+
+  const shareMenuItems: {
+    label: string
+    dataComponent: string
+    dataMailto?: string
+    onClick: () => void
+  }[] = [
+    {
+      label: 'Download .ics',
+      dataComponent: 'export-event-ics',
+      onClick: handleExportIcs,
+    },
+    ...(mailto
+      ? [
+          {
+            label: 'Email attendees',
+            dataComponent: 'email-attendees-btn',
+            dataMailto: mailto.uri,
+            onClick: handleEmailAttendees,
+          },
+          {
+            label: mailto.recipients.length === 1 ? 'Copy attendee email' : 'Copy attendee emails',
+            dataComponent: 'copy-attendee-emails',
+            onClick: () => void handleCopyAttendeeEmails(),
+          },
+        ]
+      : []),
+  ]
 
   const handleDelete = async (): Promise<void> => {
     if (event.recurrenceId) {
@@ -1197,62 +1241,59 @@ export function EventPreviewPopup({
                   <button className={styles.openBtn} onClick={handleOpen}>
                     {isTask ? 'Open task' : 'Open event'}
                   </button>
-                  {mailto && (
+                  <div className={styles.shareMenuWrap}>
                     <button
                       className={styles.exportBtn}
-                      onClick={handleEmailAttendees}
-                      aria-label={`Email ${mailto.recipients.length} attendee${mailto.recipients.length === 1 ? '' : 's'}`}
-                      title="Email attendees"
-                      data-component="email-attendees-btn"
-                      data-mailto={mailto.uri}
+                      onClick={() => setShareMenuOpen((open) => !open)}
+                      onBlur={(e) => {
+                        // Keep the menu up when focus lands on one of its own
+                        // items; anything else means the user moved on.
+                        if (!e.currentTarget.parentElement?.contains(e.relatedTarget as Node)) {
+                          setShareMenuOpen(false)
+                        }
+                      }}
+                      aria-label="More actions"
+                      aria-haspopup="menu"
+                      aria-expanded={shareMenuOpen}
+                      title="More actions"
+                      data-component="event-share-menu-btn"
                     >
-                      <svg aria-hidden="true" width="14" height="14" viewBox="0 0 14 14" fill="none">
-                        <rect
-                          x="1.5"
-                          y="3"
-                          width="11"
-                          height="8"
-                          rx="1"
-                          stroke="currentColor"
-                          strokeWidth="1.2"
-                        />
-                        <path
-                          d="M1.5 4L7 8L12.5 4"
-                          stroke="currentColor"
-                          strokeWidth="1.2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
+                      <svg
+                        aria-hidden="true"
+                        width="14"
+                        height="14"
+                        viewBox="0 0 14 14"
+                        fill="none"
+                      >
+                        <circle cx="3" cy="7" r="1.2" fill="currentColor" />
+                        <circle cx="7" cy="7" r="1.2" fill="currentColor" />
+                        <circle cx="11" cy="7" r="1.2" fill="currentColor" />
                       </svg>
                     </button>
-                  )}
-                  {mailto && (
-                    <button
-                      className={styles.exportBtn}
-                      onClick={() => void handleCopyInvite()}
-                      aria-label="Copy invitation text"
-                      title="Copy invitation text"
-                      data-component="copy-invite-btn"
-                    >
-                      <svg aria-hidden="true" width="14" height="14" viewBox="0 0 14 14" fill="none">
-                        <rect
-                          x="4.5"
-                          y="1.5"
-                          width="8"
-                          height="8"
-                          rx="1.5"
-                          stroke="currentColor"
-                          strokeWidth="1.2"
-                        />
-                        <path
-                          d="M9.5 11.5V12a.5.5 0 0 1-.5.5H2a.5.5 0 0 1-.5-.5V5a.5.5 0 0 1 .5-.5h.5"
-                          stroke="currentColor"
-                          strokeWidth="1.2"
-                          strokeLinecap="round"
-                        />
-                      </svg>
-                    </button>
-                  )}
+                    {shareMenuOpen && (
+                      <div
+                        className={styles.shareMenu}
+                        role="menu"
+                        data-component="event-share-menu"
+                      >
+                        {shareMenuItems.map((item) => (
+                          <button
+                            key={item.dataComponent}
+                            role="menuitem"
+                            className={styles.shareMenuItem}
+                            data-component={item.dataComponent}
+                            data-mailto={item.dataMailto}
+                            onClick={() => {
+                              item.onClick()
+                              setShareMenuOpen(false)
+                            }}
+                          >
+                            {item.label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                   <button className={styles.deleteBtn} onClick={handleDelete} aria-label="Delete">
                     <svg aria-hidden="true" width="14" height="14" viewBox="0 0 14 14" fill="none">
                       <path
