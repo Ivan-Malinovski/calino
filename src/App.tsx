@@ -25,6 +25,7 @@ import { CalendarHeader } from './features/calendar/components/CalendarHeader'
 import { Sidebar } from './features/calendar/components/Sidebar'
 import { EventModal } from './features/calendar/components/EventModal'
 import { EventPreviewPopup } from './features/calendar/components/EventPreviewPopup'
+import { IcsDropZone } from './features/calendar/components/IcsDropZone'
 import { JournalDayModal } from './features/calendar/components/JournalDayModal'
 import { CookieConsent, ErrorBoundary } from './components/common'
 import { useTheme } from './components/ThemeContext'
@@ -795,6 +796,7 @@ function CalendarApp(): JSX.Element {
         />
       )}
       <PreviewPopupWrapper />
+      <IcsDropZone />
       {paletteMounted && (
         <Suspense fallback={null}>
           <CommandPalette

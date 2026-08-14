@@ -1,0 +1,71 @@
+.summary {
+  margin: 0 0 12px;
+  font-size: 13px;
+  color: var(--color-text-secondary, #5f6368);
+}
+
+.fileName {
+  font-weight: 500;
+  color: var(--color-text-primary, #202124);
+}
+
+.previewList {
+  max-height: 180px;
+  overflow-y: auto;
+  margin-bottom: 12px;
+  padding: 4px 0;
+  border: 1px solid var(--color-border-subtle, #e8eaed);
+  border-radius: 6px;
+}
+
+.previewRow {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 4px 10px;
+  font-size: 13px;
+}
+
+.previewTitle {
+  flex: 1;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--color-text-primary, #202124);
+}
+
+.previewWhen {
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--color-text-secondary, #5f6368);
+}
+
+.previewKind {
+  flex-shrink: 0;
+  padding: 0 6px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--color-text-secondary, #5f6368);
+  background: var(--color-surface-hover, #f1f3f4);
+  border-radius: 4px;
+}
+
+.previewMore {
+  padding: 4px 10px;
+  font-size: 12px;
+  font-style: italic;
+  color: var(--color-text-secondary, #5f6368);
+}
+
+.duplicateNote {
+  margin: 0 0 12px;
+  font-size: 12px;
+  color: var(--color-text-secondary, #5f6368);
+}
+
+.emptyState {
+  margin: 0 0 12px;
+  font-size: 13px;
+  color: var(--color-text-secondary, #5f6368);
+}

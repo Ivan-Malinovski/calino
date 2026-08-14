@@ -34,6 +34,7 @@ import { useCalDAVSyncStore } from '@/store/caldavSyncStore'
 import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
 import { useUpdateCheck } from '@/hooks/useUpdateCheck'
 import { showToast } from '@/lib/toast'
+import { exportCalendarIcs } from '@/lib/icsExport'
 import { AddCalendarModal } from './AddCalendarModal'
 import { SubscribeCalendarModal } from './SubscribeCalendarModal'
 import { CreateCalendarModal } from './CreateCalendarModal'
@@ -1074,6 +1075,28 @@ export function Sidebar({
                       updateSettings({
                         hideCompletedTasksInMonthView: !hideCompletedTasksInMonthView,
                       })
+                      closeContextMenu()
+                    },
+                  },
+                  {
+                    label: 'Export Calendar (.ics)',
+                    dataComponent: 'export-calendar-ics',
+                    onClick: () => {
+                      const calendar = calendars.find((c) => c.id === contextMenu.calendarId)
+                      if (calendar) {
+                        // Read events off the store rather than a render-time
+                        // slice: this exports the whole calendar, not just what
+                        // the current view happens to have expanded.
+                        const count = exportCalendarIcs(
+                          calendar,
+                          useCalendarStore.getState().events
+                        )
+                        showToast(
+                          count === 1
+                            ? `Exported 1 event from ${calendar.name}`
+                            : `Exported ${count} events from ${calendar.name}`
+                        )
+                      }
                       closeContextMenu()
                     },
                   },

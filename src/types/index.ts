@@ -146,6 +146,10 @@ export interface CalendarEvent {
   taskStatus?: 'NEEDS-ACTION' | 'IN-PROCESS' | 'COMPLETED' | 'CANCELLED'
   // R2.5 — VTODO COMPLETED timestamp per RFC 5545 §3.8.2.1 (must be UTC).
   completedAt?: string
+  /** RFC 5545 §3.8.4.1 ATTENDEE properties. */
+  attendees?: CalendarAttendee[]
+  /** RFC 5545 §3.8.4.3 ORGANIZER property. */
+  organizer?: CalendarOrganizer
 }
 
 export type CalendarSource = 'local' | 'caldav' | 'webcal'

@@ -13,6 +13,13 @@ import { DEFAULT_CALENDAR_COLOR } from '@/config'
 import { useSettingsStore } from '@/store/settingsStore'
 import { eventToICAL, foldICalLines } from '@/features/caldav/adapter/iCalendarAdapter'
 import type { CalendarEvent } from '@/types'
+import type { FreeBusyPeriod } from '@/lib/freeBusyCalculator'
+import {
+  buildFreeBusyQueryXml,
+  buildFreeBusyRequestIcs,
+  parseScheduleResponse,
+  parseVFreeBusy,
+} from './freeBusy'
 
 const NETWORK_TIMEOUT_MS = 15_000
 
@@ -1191,6 +1198,99 @@ export class CalDAVClient {
     if (!resp.ok && resp.status !== 404) {
       const err = await resp.text()
       throw new Error(`Failed to delete settings calendar: ${resp.status} ${err}`)
+    }
+  }
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // Free/busy (RFC 4791 §7.10 and RFC 6638 §4.1)
+  //
+  // These live on the client rather than in a standalone module because every
+  // request has to go through `proxyFetch` and `authHeader` — a raw fetch from
+  // the page to an arbitrary CalDAV host is blocked by CORS. They return null
+  // (never throw) when the server can't or won't answer: "unknown" is the
+  // expected outcome for most servers, not an error worth surfacing.
+  // ──────────────────────────────────────────────────────────────────────────
+
+  /**
+   * Does this server do scheduling? RFC 6638 requires `calendar-auto-schedule`
+   * in the `DAV:` header. Without it there is no Outbox and no point asking
+   * about anyone but ourselves.
+   */
+  async supportsScheduling(url?: string): Promise<boolean> {
+    try {
+      const response = await this.proxyFetch(url ?? this.serverUrl, {
+        method: 'OPTIONS',
+        headers: { Authorization: this.authHeader },
+      })
+      const dav = response.headers?.get?.('dav') ?? ''
+      return /calendar-auto-schedule/i.test(dav)
+    } catch {
+      return false
+    }
+  }
+
+  /**
+   * RFC 4791 §7.10 — when is the *owner of this collection* busy. The response
+   * body is `text/calendar` (a VFREEBUSY), not a multistatus.
+   */
+  async queryFreeBusy(
+    calendarUrl: string,
+    start: Date,
+    end: Date
+  ): Promise<FreeBusyPeriod[] | null> {
+    try {
+      const response = await this.proxyFetch(calendarUrl, {
+        method: 'REPORT',
+        headers: {
+          'Content-Type': 'application/xml; charset=utf-8',
+          Authorization: this.authHeader,
+          Depth: '1',
+        },
+        body: buildFreeBusyQueryXml(start, end),
+      })
+
+      if (!response.ok) return null
+      return parseVFreeBusy(await response.text())
+    } catch {
+      return null
+    }
+  }
+
+  /**
+   * RFC 6638 §4.1 — ask the scheduling Outbox about other people. Returns a map
+   * keyed by lowercased email; a recipient the server declined to answer for
+   * maps to null rather than to an empty (i.e. "free") list.
+   */
+  async queryAttendeeFreeBusy(
+    outboxUrl: string,
+    organizerEmail: string,
+    attendeeEmails: string[],
+    start: Date,
+    end: Date
+  ): Promise<Map<string, FreeBusyPeriod[] | null> | null> {
+    if (attendeeEmails.length === 0) return new Map()
+
+    try {
+      const response = await this.proxyFetch(outboxUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'text/calendar; charset=utf-8',
+          Authorization: this.authHeader,
+          Originator: `mailto:${organizerEmail}`,
+          Recipient: attendeeEmails.map((e) => `mailto:${e}`).join(', '),
+        },
+        body: buildFreeBusyRequestIcs(organizerEmail, attendeeEmails, start, end),
+      })
+
+      if (!response.ok) return null
+
+      const result = new Map<string, FreeBusyPeriod[] | null>()
+      for (const entry of parseScheduleResponse(await response.text())) {
+        result.set(entry.recipient.toLowerCase(), entry.periods)
+      }
+      return result
+    } catch {
+      return null
     }
   }
 

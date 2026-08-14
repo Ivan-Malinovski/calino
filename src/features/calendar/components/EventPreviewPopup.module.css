@@ -143,6 +143,7 @@
   }
 
   .popup[data-sheet] .deleteBtn,
+  .popup[data-sheet] .exportBtn,
   .popup[data-sheet] .saveBtn {
     width: 48px;
     height: 48px;
@@ -469,6 +470,26 @@
 .deleteBtn:hover {
   background: var(--color-error, #dc3545);
   color: #fff;
+}
+
+/* Same footprint as delete, but neutral — exporting is not destructive. */
+.exportBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  color: var(--color-text-secondary, #5f6368);
+  background: none;
+  border: 1px solid var(--color-border-subtle, #e8eaed);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color var(--dur-fast);
+}
+
+.exportBtn:hover {
+  background: var(--color-surface-hover, #f1f3f4);
 }
 
 .saveBtn {

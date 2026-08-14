@@ -16,6 +16,8 @@ import { deleteRecurringOccurrence, getOccurrenceStart } from '@/lib/recurrenceD
 import type {
   CalendarEvent,
   CalendarAttachment,
+  CalendarAttendee,
+  CalendarOrganizer,
   RecurrenceRule,
   TaskPriority,
   Reminder,
@@ -35,6 +37,8 @@ import { parseNaturalLanguage } from '@/features/nlp'
 import type { NLPParseResult } from '@/features/nlp'
 import { useSmartDefaultsStore } from '@/store/smartDefaultsStore'
 import { useSettingsStore } from '@/store/settingsStore'
+import { exportSingleEventIcs } from '@/lib/icsExport'
+import { buildMailtoUri } from '@/lib/mailtoInvite'
 
 import styles from './EventModal.module.css'
 
@@ -51,6 +55,7 @@ export function EventModal(): JSX.Element | null {
   const events = useCalendarStore((state) => state.events)
   const calendars = useCalendarStore((state) => state.calendars)
   const categories = useCalendarStore((state) => state.categories)
+  const timeFormat = useSettingsStore((state) => state.timeFormat)
   const defaultDuration = useSettingsStore((state) => state.defaultDuration)
   const defaultReminderMinutes = useSettingsStore((state) => state.defaultReminderMinutes)
   const addEvent = useCalendarStore((state) => state.addEvent)
@@ -178,6 +183,9 @@ export function EventModal(): JSX.Element | null {
   const [showDescription, setShowDescription] = useState(!!initialState.description)
   const [attachments, setAttachments] = useState<CalendarAttachment[]>([])
   const [relatedTo, setRelatedTo] = useState<string[]>([])
+  const [attendees, setAttendees] = useState<CalendarAttendee[]>([])
+  const [organizer, setOrganizer] = useState<CalendarOrganizer | undefined>(undefined)
+  const [actionsMenuOpen, setActionsMenuOpen] = useState(false)
   const [parentTaskId, setParentTaskId] = useState<string | undefined>(undefined)
 
   // Smart defaults: track whether the user has manually overridden the
@@ -500,6 +508,8 @@ export function EventModal(): JSX.Element | null {
       setShowDescription(!!(prefillDescription ?? formDefaults.description))
       setSelectedCategories(formDefaults.categories)
       setRelatedTo(formDefaults.relatedTo)
+      setAttendees(formDefaults.attendees)
+      setOrganizer(formDefaults.organizer)
       setParentTaskId(currentEvent?.parentTaskId ?? requestedParent?.id)
 
       if (pendingEventPrefill) {
@@ -598,6 +608,69 @@ export function EventModal(): JSX.Element | null {
   // due-date/all-day fields were dropped on the way out.
   const existingEventForMode = findEventById(events, selectedEventId)
   const eventType = existingEventForMode?.type
+
+  // Actions that operate on the event as a whole rather than on a form field.
+  // They read the saved event, not the draft: exporting or mailing unsaved
+  // edits would describe something that does not exist yet.
+  const eventActionsMailto = useMemo(
+    () =>
+      existingEventForMode
+        ? buildMailtoUri(
+            existingEventForMode,
+            existingEventForMode.attendees ?? [],
+            existingEventForMode.organizer,
+            {
+              use24Hour: timeFormat !== '12h',
+              selfEmail: existingEventForMode.organizer?.email,
+            }
+          )
+        : null,
+    [existingEventForMode, timeFormat]
+  )
+
+  const copyAttendeeEmails = async (): Promise<void> => {
+    if (!eventActionsMailto) return
+    try {
+      await navigator.clipboard.writeText(eventActionsMailto.recipients.join(', '))
+      showToast(
+        eventActionsMailto.recipients.length === 1
+          ? 'Address copied'
+          : `${eventActionsMailto.recipients.length} addresses copied`
+      )
+    } catch {
+      showToast('Could not access the clipboard')
+    }
+  }
+
+  const eventActions: { label: string; dataComponent: string; onClick: () => void }[] =
+    existingEventForMode
+      ? [
+          {
+            label: 'Download .ics',
+            dataComponent: 'export-event-ics',
+            onClick: () => exportSingleEventIcs(existingEventForMode),
+          },
+          ...(eventActionsMailto
+            ? [
+                {
+                  label: 'Email attendees',
+                  dataComponent: 'email-attendees-btn',
+                  onClick: () => {
+                    window.location.href = eventActionsMailto.uri
+                  },
+                },
+                {
+                  label:
+                    eventActionsMailto.recipients.length === 1
+                      ? 'Copy attendee email'
+                      : 'Copy attendee emails',
+                  dataComponent: 'copy-attendee-emails',
+                  onClick: () => void copyAttendeeEmails(),
+                },
+              ]
+            : []),
+        ]
+      : []
   const isTaskMode = selectedEventType === 'task' || eventType === 'task'
   const parentTaskOptions = useMemo(() => {
     if (!isTaskMode) return []
@@ -646,6 +719,8 @@ export function EventModal(): JSX.Element | null {
 
     const existingAttachments = existingEventForMode.attachments || []
     const attachmentsChanged = JSON.stringify(attachments) !== JSON.stringify(existingAttachments)
+    const attendeesChanged =
+      JSON.stringify(attendees) !== JSON.stringify(existingEventForMode.attendees || [])
 
     // R2.7 — Recurrence participates in BOTH branches now that tasks can
     // recur. Leaving it out of the task branch made a recurrence-only edit
@@ -687,6 +762,7 @@ export function EventModal(): JSX.Element | null {
         JSON.stringify(selectedCategories) !==
           JSON.stringify(existingEventForMode.categories || []) ||
         JSON.stringify(relatedTo) !== JSON.stringify(existingEventForMode.relatedTo || []) ||
+        attendeesChanged ||
         attachmentsChanged
       )
     }
@@ -709,6 +785,7 @@ export function EventModal(): JSX.Element | null {
       JSON.stringify(selectedCategories) !==
         JSON.stringify(existingEventForMode.categories || []) ||
       JSON.stringify(relatedTo) !== JSON.stringify(existingEventForMode.relatedTo || []) ||
+      attendeesChanged ||
       attachmentsChanged
     )
   }, [
@@ -742,6 +819,7 @@ export function EventModal(): JSX.Element | null {
     calendarId,
     selectedCategories,
     relatedTo,
+    attendees,
     attachments,
   ])
 
@@ -969,6 +1047,8 @@ export function EventModal(): JSX.Element | null {
             transparency: isTaskMode ? undefined : transparency,
             sequence: 0,
             relatedTo: relatedTo.length > 0 ? relatedTo : undefined,
+            attendees: attendees.length > 0 ? attendees : undefined,
+            organizer,
             attachments: attachments.length > 0 ? attachments : undefined,
           }
 
@@ -1063,6 +1143,8 @@ export function EventModal(): JSX.Element | null {
             transparency: isTaskMode ? undefined : transparency,
             sequence: 0,
             relatedTo: relatedTo.length > 0 ? relatedTo : undefined,
+            attendees: attendees.length > 0 ? attendees : undefined,
+            organizer,
             attachments: attachments.length > 0 ? attachments : undefined,
           }
 
@@ -1122,6 +1204,8 @@ export function EventModal(): JSX.Element | null {
             transparency: isTaskMode ? undefined : transparency,
             categories: selectedCategories,
             relatedTo: relatedTo.length > 0 ? relatedTo : undefined,
+            attendees: attendees.length > 0 ? attendees : undefined,
+            organizer,
             attachments: attachments.length > 0 ? attachments : undefined,
           })
           const cascadedTasks =
@@ -1170,6 +1254,8 @@ export function EventModal(): JSX.Element | null {
                 transparency: isTaskMode ? undefined : transparency,
                 categories: selectedCategories,
                 relatedTo: relatedTo.length > 0 ? relatedTo : undefined,
+                attendees: attendees.length > 0 ? attendees : undefined,
+                organizer,
               },
               {
                 title,
@@ -1193,6 +1279,8 @@ export function EventModal(): JSX.Element | null {
                 transparency: isTaskMode ? undefined : transparency,
                 categories: selectedCategories,
                 relatedTo: relatedTo.length > 0 ? relatedTo : undefined,
+                attendees: attendees.length > 0 ? attendees : undefined,
+                organizer,
                 attachments: attachments.length > 0 ? attachments : undefined,
               }
             )
@@ -1231,6 +1319,8 @@ export function EventModal(): JSX.Element | null {
           transparency: isTaskMode ? undefined : transparency,
           categories: selectedCategories,
           relatedTo: relatedTo.length > 0 ? relatedTo : undefined,
+          attendees: attendees.length > 0 ? attendees : undefined,
+          organizer,
           attachments: attachments.length > 0 ? attachments : undefined,
         }
         addEvent(newEvent)
@@ -1558,6 +1648,13 @@ export function EventModal(): JSX.Element | null {
                     attachments={attachments}
                     onAttachmentsChange={setAttachments}
                     attachmentEventId={selectedEventId}
+                    attendees={attendees}
+                    onAttendeesChange={setAttendees}
+                    organizer={organizer}
+                    startIso={isAllDay ? `${startDate}T00:00:00` : `${startDate}T${startTime}:00`}
+                    endIso={isAllDay ? `${endDate}T23:59:59` : `${endDate}T${endTime}:00`}
+                    excludeEventId={originalEventId ?? selectedEventId ?? undefined}
+                    editingEvent={existingEventForMode ?? undefined}
                   />
                 )}
               </div>
@@ -1688,9 +1785,66 @@ export function EventModal(): JSX.Element | null {
                 </button>
               )}
               <div className={styles.modalActions}>
-                <button type="button" className={styles.modalCancel} onClick={animateClose}>
-                  Cancel
-                </button>
+                <div className={styles.modalActionsLeft}>
+                  <button type="button" className={styles.modalCancel} onClick={animateClose}>
+                    Cancel
+                  </button>
+                  {eventActions.length > 0 && (
+                    <div className={styles.actionsMenuWrap}>
+                      <button
+                        type="button"
+                        className={styles.actionsMenuBtn}
+                        onClick={() => setActionsMenuOpen((open) => !open)}
+                        onBlur={(e) => {
+                          // Stay open while focus moves onto one of its own items.
+                          if (!e.currentTarget.parentElement?.contains(e.relatedTarget as Node)) {
+                            setActionsMenuOpen(false)
+                          }
+                        }}
+                        aria-label="More actions"
+                        aria-haspopup="menu"
+                        aria-expanded={actionsMenuOpen}
+                        title="More actions"
+                        data-component="event-actions-menu-btn"
+                      >
+                        <svg
+                          aria-hidden="true"
+                          width="16"
+                          height="16"
+                          viewBox="0 0 16 16"
+                          fill="none"
+                        >
+                          <circle cx="3.5" cy="8" r="1.4" fill="currentColor" />
+                          <circle cx="8" cy="8" r="1.4" fill="currentColor" />
+                          <circle cx="12.5" cy="8" r="1.4" fill="currentColor" />
+                        </svg>
+                      </button>
+                      {actionsMenuOpen && (
+                        <div
+                          className={styles.actionsMenu}
+                          role="menu"
+                          data-component="event-actions-menu"
+                        >
+                          {eventActions.map((action) => (
+                            <button
+                              key={action.dataComponent}
+                              type="button"
+                              role="menuitem"
+                              className={styles.actionsMenuItem}
+                              data-component={action.dataComponent}
+                              onClick={() => {
+                                action.onClick()
+                                setActionsMenuOpen(false)
+                              }}
+                            >
+                              {action.label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
                 <button
                   type="submit"
                   className={styles.modalSave}

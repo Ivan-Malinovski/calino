@@ -1,20 +1,29 @@
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { AttendeeSection } from '../AttendeeSection'
-import type { CalendarAttendee, CalendarOrganizer } from '@/types'
+import type { CalendarAttendee, CalendarEvent, CalendarOrganizer } from '@/types'
+import { useCalendarStore } from '@/store/calendarStore'
 
 function renderAttendeeSection(
   overrides: {
     attendees?: CalendarAttendee[]
     organizer?: CalendarOrganizer
     onAttendeesChange?: (a: CalendarAttendee[]) => void
+    startIso?: string
+    endIso?: string
+    excludeEventId?: string
+    event?: CalendarEvent
   } = {}
 ) {
   const defaultProps = {
     attendees: overrides.attendees ?? [],
     onAttendeesChange: overrides.onAttendeesChange ?? vi.fn(),
     organizer: overrides.organizer,
+    startIso: overrides.startIso,
+    endIso: overrides.endIso,
+    excludeEventId: overrides.excludeEventId,
+    event: overrides.event,
   }
   return { ...render(<AttendeeSection {...defaultProps} />), ...defaultProps }
 }
@@ -215,5 +224,141 @@ describe('AttendeeSection', () => {
 
     const rows = screen.getAllByText(/@test\.com/)
     expect(rows).toHaveLength(3)
+  })
+})
+
+describe('AttendeeSection - availability', () => {
+  const START = '2026-03-10T10:30:00.000Z'
+  const END = '2026-03-10T11:30:00.000Z'
+
+  function seedEvents(events: CalendarEvent[]): void {
+    useCalendarStore.setState({ events })
+  }
+
+  beforeEach(() => {
+    seedEvents([])
+  })
+
+  it('shows no availability badges without a time window', () => {
+    renderAttendeeSection({ attendees: [{ email: 'a@test.com' }] })
+    expect(screen.queryByTestId).toBeDefined()
+    expect(document.querySelectorAll('[data-component="attendee-availability"]')).toHaveLength(0)
+  })
+
+  it('reports unknown when nothing is known about the attendee', () => {
+    renderAttendeeSection({
+      attendees: [{ email: 'a@test.com' }],
+      startIso: START,
+      endIso: END,
+    })
+
+    const badge = document.querySelector('[data-component="attendee-availability"]')
+    expect(badge).toHaveAttribute('data-availability', 'unknown')
+    expect(badge).toHaveTextContent('Unknown')
+  })
+
+  it('reports busy and warns when a local event naming the attendee overlaps', () => {
+    seedEvents([
+      {
+        id: 'clash',
+        calendarId: 'c',
+        title: 'Other meeting',
+        start: '2026-03-10T10:00:00.000Z',
+        end: '2026-03-10T11:00:00.000Z',
+        isAllDay: false,
+        attendees: [{ email: 'a@test.com' }],
+      },
+    ])
+
+    renderAttendeeSection({
+      attendees: [{ email: 'a@test.com' }],
+      startIso: START,
+      endIso: END,
+    })
+
+    expect(document.querySelector('[data-component="attendee-availability"]')).toHaveAttribute(
+      'data-availability',
+      'busy'
+    )
+    expect(screen.getByText(/1 attendee has a scheduling conflict/i)).toBeInTheDocument()
+    expect(screen.getByText(/You can still save/i)).toBeInTheDocument()
+  })
+
+  it('labels the badge for screen readers rather than relying on colour', () => {
+    renderAttendeeSection({
+      attendees: [{ email: 'a@test.com', name: 'Alice' }],
+      startIso: START,
+      endIso: END,
+    })
+
+    expect(
+      screen.getByLabelText('Alice: Unknown at this time')
+    ).toBeInTheDocument()
+  })
+
+  it('does not warn when the only overlapping event is the one being edited', () => {
+    seedEvents([
+      {
+        id: 'self',
+        calendarId: 'c',
+        title: 'This meeting',
+        start: START,
+        end: END,
+        isAllDay: false,
+        attendees: [{ email: 'a@test.com' }],
+      },
+    ])
+
+    renderAttendeeSection({
+      attendees: [{ email: 'a@test.com' }],
+      startIso: START,
+      endIso: END,
+      excludeEventId: 'self',
+    })
+
+    expect(screen.queryByText(/scheduling conflict/i)).not.toBeInTheDocument()
+  })
+})
+
+describe('AttendeeSection - email attendees', () => {
+  it('is hidden when there are no attendees', () => {
+    renderAttendeeSection()
+    expect(screen.queryByText('Email attendees')).not.toBeInTheDocument()
+  })
+
+  it('exposes a mailto: URI addressing the attendees', () => {
+    renderAttendeeSection({
+      attendees: [{ email: 'a@test.com' }, { email: 'b@test.com' }],
+      startIso: '2026-03-10T10:30:00.000Z',
+      endIso: '2026-03-10T11:30:00.000Z',
+      event: {
+        id: 'e',
+        calendarId: 'c',
+        title: 'Design review',
+        start: '2026-03-10T10:30:00.000Z',
+        end: '2026-03-10T11:30:00.000Z',
+        isAllDay: false,
+      },
+    })
+
+    const button = document.querySelector('[data-component="email-attendees-btn"]')
+    expect(button).toBeInTheDocument()
+
+    const uri = button!.getAttribute('data-mailto')!
+    expect(uri.startsWith('mailto:a%40test.com,b%40test.com?')).toBe(true)
+    expect(decodeURIComponent(uri)).toContain('Invitation: Design review')
+  })
+
+  it('excludes the organizer from the recipients', () => {
+    renderAttendeeSection({
+      attendees: [{ email: 'me@test.com' }, { email: 'other@test.com' }],
+      organizer: { email: 'me@test.com' },
+    })
+
+    const uri = document
+      .querySelector('[data-component="email-attendees-btn"]')!
+      .getAttribute('data-mailto')!
+    expect(uri).toContain('other%40test.com')
+    expect(uri.split('?')[0]).not.toContain('me%40test.com')
   })
 })
