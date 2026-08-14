@@ -458,8 +458,8 @@
     position: sticky;
     left: 0;
     z-index: 11;
-    min-width: 45px;
-    max-width: 45px;
+    min-width: var(--time-gutter-width, 45px);
+    max-width: var(--time-gutter-width, 45px);
     flex-shrink: 0;
     display: flex;
     align-items: center;
@@ -504,8 +504,8 @@
     left: 0;
     z-index: 5;
     background: var(--panel, #ffffff);
-    min-width: 45px;
-    max-width: 45px;
+    min-width: var(--time-gutter-width, 45px);
+    max-width: var(--time-gutter-width, 45px);
     flex-shrink: 0;
     border-right: 1px solid var(--line, rgba(var(--ink-raw), 0.09));
   }

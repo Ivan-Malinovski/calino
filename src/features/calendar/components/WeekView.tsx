@@ -789,7 +789,16 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
       {...{ [SWIPE_SCROLLER_ATTR]: true }}
     >
       <div className={styles.mobileHeader} data-component="week-mobile-header">
-        <div className={styles.weekNumberHeader}>W{weekNumber}</div>
+        <div className={styles.weekNumberHeader}>
+          {isDualTz ? (
+            <div className={styles.timeZoneHeaders}>
+              <span>{localTzAbbr}</span>
+              <span>{secondaryTzAbbr}</span>
+            </div>
+          ) : (
+            `W${weekNumber}`
+          )}
+        </div>
         <div className={styles.headerDays}>
           {weekDays.map((day) => (
             <div
@@ -805,11 +814,35 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
       </div>
       <div className={styles.mobileBody} data-component="week-mobile-body">
         <div className={styles.timeColumn} data-component="week-mobile-time-column">
-          {HOURS.map((hour) => (
-            <div key={hour.toISOString()} className={styles.timeCell}>
-              {format(hour, timeFormat === '24h' ? 'HH:mm' : 'h a')}
-            </div>
-          ))}
+          {HOURS.map((hour) => {
+            const primaryTime = format(hour, timeFormat === '24h' ? 'HH:mm' : 'h a')
+            if (isDualTz && secondaryTimezone) {
+              const secLabel = getSecondaryHourLabel(
+                hour.getHours(),
+                date,
+                secondaryTimezone,
+                timeFormat
+              )
+              return (
+                <div key={hour.toISOString()} className={styles.timeCell}>
+                  <div className={styles.timeRow}>
+                    <span className={styles.primaryTime}>{primaryTime}</span>
+                    <span className={styles.secondaryTime}>
+                      {secLabel.time}
+                      {secLabel.dayDelta && (
+                        <span className={styles.dayDelta}>{secLabel.dayDelta}</span>
+                      )}
+                    </span>
+                  </div>
+                </div>
+              )
+            }
+            return (
+              <div key={hour.toISOString()} className={styles.timeCell}>
+                {primaryTime}
+              </div>
+            )
+          })}
         </div>
         <div ref={daysContainerRef} className={styles.daysContainer}>
           {selectionOverlay}
@@ -1017,7 +1050,10 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
             '--hour-height': `${60 * effectiveScale}px`,
             '--day-count': weekDays.length,
             '--day-scale': dayScale,
-            '--time-gutter-width': isDualTz ? '90px' : '45px',
+            // The dual gutter needs room for two labels. On phones the day
+            // columns are already only 28vw, so it gets a tighter budget than
+            // on desktop rather than eating a quarter of the screen.
+            '--time-gutter-width': isDualTz ? (isMobile ? '72px' : '90px') : '45px',
           } as React.CSSProperties
         }
         {...bind}
