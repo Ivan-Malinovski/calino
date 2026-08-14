@@ -56,17 +56,17 @@ test.describe('ICS export', () => {
     await seedEvent(page)
   })
 
-  test('downloads a single event as .ics from the preview popup menu', async ({ page }) => {
+  test('downloads a single event as .ics from the event modal menu', async ({ page }) => {
     await page.goto('/week')
-    await card(page).click()
+    await card(page).dblclick()
 
-    const popup = page.locator('[data-component="event-preview"]')
-    await expect(popup).toBeVisible()
-    await popup.locator('[data-component="event-share-menu-btn"]').click()
+    const footer = page.locator('[data-component="modal-footer"]')
+    await expect(footer).toBeVisible()
+    await footer.locator('[data-component="event-actions-menu-btn"]').click()
 
     const [download] = await Promise.all([
       page.waitForEvent('download'),
-      popup.locator('[data-component="export-event-ics"]').click(),
+      footer.locator('[data-component="export-event-ics"]').click(),
     ])
 
     expect(download.suggestedFilename()).toBe(`${EVENT_TITLE}.ics`)
@@ -79,7 +79,6 @@ test.describe('ICS export', () => {
     expect(ics).toContain('BEGIN:VCALENDAR')
     expect(ics).toContain(`UID:${EVENT_UID}`)
     expect(ics).toContain(`SUMMARY:${EVENT_TITLE}`)
-    // Exactly one envelope, whatever the payload.
     expect(ics.match(/BEGIN:VCALENDAR/g)).toHaveLength(1)
   })
 

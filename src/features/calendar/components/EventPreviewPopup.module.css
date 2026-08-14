@@ -492,47 +492,6 @@
   background: var(--color-surface-hover, #f1f3f4);
 }
 
-/* Anchored to the trigger rather than to the viewport: the popup is animated
-   with a transform, which would make a fixed-position menu resolve against it
-   anyway. Staying in the popup's DOM also keeps its dismissal logic honest. */
-.shareMenuWrap {
-  position: relative;
-  display: flex;
-}
-
-.shareMenu {
-  position: absolute;
-  right: 0;
-  bottom: calc(100% + 4px);
-  z-index: 20;
-  min-width: 180px;
-  padding: 4px;
-  background: var(--color-bg-primary, #fff);
-  border-radius: var(--radius-sm, 6px);
-  box-shadow:
-    0 2px 10px rgb(0 0 0 / 15%),
-    0 0 0 1px var(--color-border-subtle, rgb(0 0 0 / 5%));
-}
-
-.shareMenuItem {
-  display: block;
-  width: 100%;
-  padding: 7px 10px;
-  font-size: 13px;
-  text-align: left;
-  white-space: nowrap;
-  color: var(--color-text-primary, #222);
-  background: none;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.shareMenuItem:hover,
-.shareMenuItem:focus-visible {
-  background: var(--color-surface-hover, #f1f3f4);
-}
-
 .saveBtn {
   display: flex;
   align-items: center;
