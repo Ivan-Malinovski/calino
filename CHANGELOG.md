@@ -4,6 +4,20 @@ All notable changes to Calino will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- **Drop an .ics file onto Calino to import it.** Drag a calendar file from your file manager anywhere onto the window and Calino shows you what's in it before anything is saved: how many items, what they are, and which calendar they'd go into. Events, tasks and journal entries all come through — the old importer in Settings quietly dropped everything that wasn't a plain event. You can send them to an existing calendar or have a new one made for them on the spot.
+
+  Anything already in the chosen calendar is left alone rather than duplicated, and the review step tells you how many it's going to skip, so re-importing a file you've imported before is safe. Imports into a synced calendar are now pushed to the server as well; previously they only ever existed on the device you imported them on. Settings → Data → Import opens the same review step, so both routes behave identically. Dropping anything that isn't a calendar file does nothing except say so.
+
+- **Export a single event, a whole calendar, or everything.** A **⋯** button next to Cancel at the bottom of the event form offers "Download .ics" for the event you're looking at — a repeating event exports as the series it is, not as the one occurrence you happened to open. Right-click a calendar in the sidebar for "Export Calendar (.ics)" to get everything in it. Settings → Data still exports the lot in one file. Filenames are taken from the event's title, with the characters your file system won't accept swapped out.
+
+- **Attendees on events.** Events now carry attendees and an organizer, and the event form has a section for them: type an email, press Enter. They're written to the server in the standard way, so other calendar apps see them and the people your colleagues invite you alongside show up here — until now Calino discarded that information entirely on both sides.
+
+  Each attendee shows whether they're free at that time. This is worked out from your own calendar alone: an attendee reads **Busy** when another event you can see names that same person at an overlapping time, and **Unknown** — the usual answer — when there's simply nothing to go on. It is a hint, never a block: a clash is pointed out above the list and you can save regardless. Calino does not ask anyone's server about anyone's availability, so nothing about who you're meeting leaves your device.
+
+  The same **⋯** menu will open a message to everyone on the list in your mail program, with the event's details already written out, or copy their addresses to the clipboard if you'd rather paste them somewhere yourself — useful if your system has no mail program set up to be opened.
+
 ## [0.28.1] - 2026-08-13
 
 ### Fixed
