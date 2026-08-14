@@ -1801,10 +1801,10 @@ export function EventModal(): JSX.Element | null {
                             setActionsMenuOpen(false)
                           }
                         }}
-                        aria-label="More actions"
+                        aria-label="Event actions"
                         aria-haspopup="menu"
                         aria-expanded={actionsMenuOpen}
-                        title="More actions"
+                        title="Event actions"
                         data-component="event-actions-menu-btn"
                       >
                         <svg
