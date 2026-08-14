@@ -558,7 +558,15 @@
 .modalActions {
   display: flex;
   flex: 1;
+  align-items: center;
   justify-content: space-between;
+}
+
+/* Cancel and the actions menu travel together, so Save keeps the far edge. */
+.modalActionsLeft {
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 /* Event-wide actions (export, mail). Anchored to its trigger and opening
@@ -572,15 +580,21 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
+  width: 28px;
+  height: 28px;
   padding: 0;
-  color: var(--color-text-secondary, #5f6368);
+  color: var(--color-text-tertiary, #888);
   background: none;
-  border: 1px solid var(--color-border-subtle, #e8eaed);
+  border: none;
   border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: background-color var(--dur-fast);
+  transition:
+    background-color var(--dur-fast),
+    color var(--dur-fast);
+}
+
+.actionsMenuBtn:hover {
+  color: var(--color-text-primary, #222);
 }
 
 .actionsMenuBtn:hover {

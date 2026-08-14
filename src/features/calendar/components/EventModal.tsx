@@ -1784,59 +1784,67 @@ export function EventModal(): JSX.Element | null {
                   {confirmDelete ? 'Click again to confirm' : 'Delete'}
                 </button>
               )}
-              {eventActions.length > 0 && (
-                <div className={styles.actionsMenuWrap}>
-                  <button
-                    type="button"
-                    className={styles.actionsMenuBtn}
-                    onClick={() => setActionsMenuOpen((open) => !open)}
-                    onBlur={(e) => {
-                      // Stay open while focus moves onto one of its own items.
-                      if (!e.currentTarget.parentElement?.contains(e.relatedTarget as Node)) {
-                        setActionsMenuOpen(false)
-                      }
-                    }}
-                    aria-label="More actions"
-                    aria-haspopup="menu"
-                    aria-expanded={actionsMenuOpen}
-                    title="More actions"
-                    data-component="event-actions-menu-btn"
-                  >
-                    <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none">
-                      <circle cx="3.5" cy="8" r="1.4" fill="currentColor" />
-                      <circle cx="8" cy="8" r="1.4" fill="currentColor" />
-                      <circle cx="12.5" cy="8" r="1.4" fill="currentColor" />
-                    </svg>
+              <div className={styles.modalActions}>
+                <div className={styles.modalActionsLeft}>
+                  <button type="button" className={styles.modalCancel} onClick={animateClose}>
+                    Cancel
                   </button>
-                  {actionsMenuOpen && (
-                    <div
-                      className={styles.actionsMenu}
-                      role="menu"
-                      data-component="event-actions-menu"
-                    >
-                      {eventActions.map((action) => (
-                        <button
-                          key={action.dataComponent}
-                          type="button"
-                          role="menuitem"
-                          className={styles.actionsMenuItem}
-                          data-component={action.dataComponent}
-                          onClick={() => {
-                            action.onClick()
+                  {eventActions.length > 0 && (
+                    <div className={styles.actionsMenuWrap}>
+                      <button
+                        type="button"
+                        className={styles.actionsMenuBtn}
+                        onClick={() => setActionsMenuOpen((open) => !open)}
+                        onBlur={(e) => {
+                          // Stay open while focus moves onto one of its own items.
+                          if (!e.currentTarget.parentElement?.contains(e.relatedTarget as Node)) {
                             setActionsMenuOpen(false)
-                          }}
+                          }
+                        }}
+                        aria-label="More actions"
+                        aria-haspopup="menu"
+                        aria-expanded={actionsMenuOpen}
+                        title="More actions"
+                        data-component="event-actions-menu-btn"
+                      >
+                        <svg
+                          aria-hidden="true"
+                          width="16"
+                          height="16"
+                          viewBox="0 0 16 16"
+                          fill="none"
                         >
-                          {action.label}
-                        </button>
-                      ))}
+                          <circle cx="3.5" cy="8" r="1.4" fill="currentColor" />
+                          <circle cx="8" cy="8" r="1.4" fill="currentColor" />
+                          <circle cx="12.5" cy="8" r="1.4" fill="currentColor" />
+                        </svg>
+                      </button>
+                      {actionsMenuOpen && (
+                        <div
+                          className={styles.actionsMenu}
+                          role="menu"
+                          data-component="event-actions-menu"
+                        >
+                          {eventActions.map((action) => (
+                            <button
+                              key={action.dataComponent}
+                              type="button"
+                              role="menuitem"
+                              className={styles.actionsMenuItem}
+                              data-component={action.dataComponent}
+                              onClick={() => {
+                                action.onClick()
+                                setActionsMenuOpen(false)
+                              }}
+                            >
+                              {action.label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
-              )}
-              <div className={styles.modalActions}>
-                <button type="button" className={styles.modalCancel} onClick={animateClose}>
-                  Cancel
-                </button>
                 <button
                   type="submit"
                   className={styles.modalSave}
