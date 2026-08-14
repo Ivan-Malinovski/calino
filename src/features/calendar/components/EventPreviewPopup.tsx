@@ -23,6 +23,7 @@ import { describeRecurrence } from '@/lib/recurrence'
 import { hasDueTime, extractOriginalEventId } from '@/lib/events'
 import type { CalendarEvent, RecurrenceEditMode } from '@/types'
 import { deleteRecurringOccurrence } from '@/lib/recurrenceDelete'
+import { exportSingleEventIcs } from '@/lib/icsExport'
 import { deleteEventWithUndo } from '@/lib/deleteWithUndo'
 import { TimeField } from './TimeField'
 import styles from './EventPreviewPopup.module.css'
@@ -556,6 +557,15 @@ export function EventPreviewPopup({
 
   const isRecurring =
     !event.recurrenceId && (!!event.recurrence || !!event.rruleString || !!originalEventId)
+
+  const handleExportIcs = (): void => {
+    // Export the stored event, not the expanded occurrence the user clicked —
+    // that way the file carries the real RRULE instead of a single synthetic
+    // instance with a made-up id.
+    const storedId = originalEventId || event.id
+    const stored = useCalendarStore.getState().events.find((e) => e.id === storedId) ?? event
+    exportSingleEventIcs(stored)
+  }
 
   const handleDelete = async (): Promise<void> => {
     if (event.recurrenceId) {
@@ -1169,6 +1179,23 @@ export function EventPreviewPopup({
                   )}
                   <button className={styles.openBtn} onClick={handleOpen}>
                     {isTask ? 'Open task' : 'Open event'}
+                  </button>
+                  <button
+                    className={styles.exportBtn}
+                    onClick={handleExportIcs}
+                    aria-label="Export as .ics"
+                    title="Export as .ics"
+                    data-component="export-event-ics"
+                  >
+                    <svg aria-hidden="true" width="14" height="14" viewBox="0 0 14 14" fill="none">
+                      <path
+                        d="M7 1.5V9M7 9L4.5 6.5M7 9L9.5 6.5M2 10.5V12H12V10.5"
+                        stroke="currentColor"
+                        strokeWidth="1.2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
                   </button>
                   <button className={styles.deleteBtn} onClick={handleDelete} aria-label="Delete">
                     <svg aria-hidden="true" width="14" height="14" viewBox="0 0 14 14" fill="none">

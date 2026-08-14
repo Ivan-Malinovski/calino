@@ -9,6 +9,8 @@ export interface ContextMenuItem {
   onClick: () => void
   icon?: JSX.Element
   danger?: boolean
+  /** Emitted as `data-component` so tests can target a specific item. */
+  dataComponent?: string
 }
 
 interface ContextMenuProps {
@@ -90,6 +92,7 @@ export function ContextMenu({ x, y, items, onClose, menuId }: ContextMenuProps):
         <button
           key={index}
           className={`${styles.item} ${item.danger ? styles.danger : ''}`}
+          data-component={item.dataComponent}
           onClick={(e) => {
             e.stopPropagation()
             item.onClick()

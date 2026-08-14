@@ -1,0 +1,52 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-drop-overlay, 9000);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--color-bg, #fff) 82%, transparent);
+  backdrop-filter: blur(2px);
+  pointer-events: none;
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 28px 40px;
+  color: var(--color-text-primary, #202124);
+  background: var(--color-surface, #fff);
+  border: 2px dashed var(--color-accent, #4285f4);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgb(0 0 0 / 12%);
+}
+
+.title {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.hint {
+  font-size: 13px;
+  color: var(--color-text-secondary, #5f6368);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .panel {
+    animation: pop var(--dur-fast, 120ms) ease-out;
+  }
+}
+
+@keyframes pop {
+  from {
+    transform: scale(0.96);
+    opacity: 0;
+  }
+
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
