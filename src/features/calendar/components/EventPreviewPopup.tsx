@@ -23,7 +23,7 @@ import { describeRecurrence } from '@/lib/recurrence'
 import { hasDueTime, extractOriginalEventId } from '@/lib/events'
 import type { CalendarEvent, RecurrenceEditMode } from '@/types'
 import { deleteRecurringOccurrence } from '@/lib/recurrenceDelete'
-import { buildMailtoUri } from '@/lib/mailtoInvite'
+import { buildMailtoUri, formatInviteForClipboard } from '@/lib/mailtoInvite'
 import { deleteEventWithUndo } from '@/lib/deleteWithUndo'
 import { TimeField } from './TimeField'
 import styles from './EventPreviewPopup.module.css'
@@ -571,6 +571,17 @@ export function EventPreviewPopup({
 
   const handleEmailAttendees = (): void => {
     if (mailto) window.location.href = mailto.uri
+  }
+
+  // Fallback for desktops with no working mailto: handler.
+  const handleCopyInvite = async (): Promise<void> => {
+    if (!mailto) return
+    try {
+      await navigator.clipboard.writeText(formatInviteForClipboard(mailto))
+      showToast('Invitation copied to clipboard')
+    } catch {
+      showToast('Could not access the clipboard')
+    }
   }
 
   const handleDelete = async (): Promise<void> => {
@@ -1211,6 +1222,33 @@ export function EventPreviewPopup({
                           strokeWidth="1.2"
                           strokeLinecap="round"
                           strokeLinejoin="round"
+                        />
+                      </svg>
+                    </button>
+                  )}
+                  {mailto && (
+                    <button
+                      className={styles.exportBtn}
+                      onClick={() => void handleCopyInvite()}
+                      aria-label="Copy invitation text"
+                      title="Copy invitation text"
+                      data-component="copy-invite-btn"
+                    >
+                      <svg aria-hidden="true" width="14" height="14" viewBox="0 0 14 14" fill="none">
+                        <rect
+                          x="4.5"
+                          y="1.5"
+                          width="8"
+                          height="8"
+                          rx="1.5"
+                          stroke="currentColor"
+                          strokeWidth="1.2"
+                        />
+                        <path
+                          d="M9.5 11.5V12a.5.5 0 0 1-.5.5H2a.5.5 0 0 1-.5-.5V5a.5.5 0 0 1 .5-.5h.5"
+                          stroke="currentColor"
+                          strokeWidth="1.2"
+                          strokeLinecap="round"
                         />
                       </svg>
                     </button>

@@ -264,6 +264,31 @@
   gap: var(--space-2);
 }
 
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.copyInviteButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 22px;
+  padding: 0;
+  color: var(--color-text-secondary, #5f6368);
+  background: none;
+  border: 1px solid var(--color-border-subtle, #e8eaed);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.copyInviteButton:hover {
+  color: var(--color-accent, #4285f4);
+  background: var(--color-surface-hover, #f1f3f4);
+}
+
 .emailButton {
   padding: 3px 10px;
   font-size: 11px;

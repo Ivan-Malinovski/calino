@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest'
-import { buildMailtoUri, formatInviteBody, MAILTO_MAX_LENGTH } from '../mailtoInvite'
+import {
+  buildMailtoUri,
+  formatInviteBody,
+  formatInviteForClipboard,
+  MAILTO_MAX_LENGTH,
+} from '../mailtoInvite'
 import type { CalendarEvent } from '@/types'
 
 function makeEvent(overrides: Partial<CalendarEvent> = {}): CalendarEvent {
@@ -172,5 +177,25 @@ describe('buildMailtoUri', () => {
 
     expect(result.recipients).toEqual(['fresh@example.com'])
     expect(bodyOf(result.uri)).toContain('Organizer: Chair <chair@example.com>')
+  })
+})
+
+describe('formatInviteForClipboard', () => {
+  it('renders recipients, subject and body as plain text', () => {
+    const text = formatInviteForClipboard(buildMailtoUri(makeEvent())!)
+
+    expect(text).toContain('To: colleague@example.com')
+    expect(text).toContain('Subject: Invitation: Sprint planning')
+    expect(text).toContain('When: ')
+    // Nothing percent-encoded — this goes to a human, not to a URI parser.
+    expect(text).not.toContain('%20')
+  })
+
+  it('keeps the full description even when the mailto: had to truncate it', () => {
+    const description = 'x'.repeat(4000)
+    const result = buildMailtoUri(makeEvent({ description }))!
+
+    expect(result.truncated).toBe(true)
+    expect(formatInviteForClipboard(result)).toContain(description)
   })
 })

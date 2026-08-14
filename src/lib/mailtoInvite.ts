@@ -85,6 +85,15 @@ export interface MailtoResult {
   recipients: string[]
   /** True when the description had to be cut to stay under the length cap. */
   truncated: boolean
+  /** Subject line, unencoded — for the clipboard fallback. */
+  subject: string
+  /** Full body, never truncated: the clipboard has no length ceiling. */
+  body: string
+}
+
+/** Plain-text rendering for users whose `mailto:` handler is broken or absent. */
+export function formatInviteForClipboard(mailto: MailtoResult): string {
+  return `To: ${mailto.recipients.join(', ')}\nSubject: ${mailto.subject}\n\n${mailto.body}`
 }
 
 /**
@@ -139,5 +148,5 @@ export function buildMailtoUri(
     }
   }
 
-  return { uri, recipients, truncated }
+  return { uri, recipients, truncated, subject, body: fullBody }
 }
