@@ -24,6 +24,7 @@ import { hasDueTime, extractOriginalEventId } from '@/lib/events'
 import type { CalendarEvent, RecurrenceEditMode } from '@/types'
 import { deleteRecurringOccurrence } from '@/lib/recurrenceDelete'
 import { exportSingleEventIcs } from '@/lib/icsExport'
+import { buildMailtoUri } from '@/lib/mailtoInvite'
 import { deleteEventWithUndo } from '@/lib/deleteWithUndo'
 import { TimeField } from './TimeField'
 import styles from './EventPreviewPopup.module.css'
@@ -557,6 +558,21 @@ export function EventPreviewPopup({
 
   const isRecurring =
     !event.recurrenceId && (!!event.recurrence || !!event.rruleString || !!originalEventId)
+
+  // Purely a compose shortcut — sending mail records no state on the event.
+  // Anything else would imply a scheduling lifecycle Calino doesn't have.
+  const mailto = useMemo(
+    () =>
+      buildMailtoUri(event, event.attendees ?? [], event.organizer, {
+        use24Hour: timeFormat !== '12h',
+        selfEmail: event.organizer?.email,
+      }),
+    [event, timeFormat]
+  )
+
+  const handleEmailAttendees = (): void => {
+    if (mailto) window.location.href = mailto.uri
+  }
 
   const handleExportIcs = (): void => {
     // Export the stored event, not the expanded occurrence the user clicked —
@@ -1180,6 +1196,35 @@ export function EventPreviewPopup({
                   <button className={styles.openBtn} onClick={handleOpen}>
                     {isTask ? 'Open task' : 'Open event'}
                   </button>
+                  {mailto && (
+                    <button
+                      className={styles.exportBtn}
+                      onClick={handleEmailAttendees}
+                      aria-label={`Email ${mailto.recipients.length} attendee${mailto.recipients.length === 1 ? '' : 's'}`}
+                      title="Email attendees"
+                      data-component="email-attendees-btn"
+                      data-mailto={mailto.uri}
+                    >
+                      <svg aria-hidden="true" width="14" height="14" viewBox="0 0 14 14" fill="none">
+                        <rect
+                          x="1.5"
+                          y="3"
+                          width="11"
+                          height="8"
+                          rx="1"
+                          stroke="currentColor"
+                          strokeWidth="1.2"
+                        />
+                        <path
+                          d="M1.5 4L7 8L12.5 4"
+                          stroke="currentColor"
+                          strokeWidth="1.2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    </button>
+                  )}
                   <button
                     className={styles.exportBtn}
                     onClick={handleExportIcs}

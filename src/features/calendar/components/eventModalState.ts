@@ -4,7 +4,14 @@ export { addMinutesToTimeStr }
 import { extractOriginalEventId } from '@/lib/events'
 import { isUUID } from '@/lib/uuid'
 import { makeDefaultReminders } from '@/lib/notifications'
-import type { CalendarEvent, CalendarAttachment, RecurrenceRule, Reminder } from '@/types'
+import type {
+  CalendarEvent,
+  CalendarAttachment,
+  CalendarAttendee,
+  CalendarOrganizer,
+  RecurrenceRule,
+  Reminder,
+} from '@/types'
 
 export interface InitialFormState {
   title: string
@@ -35,6 +42,8 @@ export interface InitialFormState {
   categories: string[]
   attachments: CalendarAttachment[]
   relatedTo: string[]
+  attendees: CalendarAttendee[]
+  organizer: CalendarOrganizer | undefined
 }
 
 export type InitialFormStateWithMeta = InitialFormState & {
@@ -72,6 +81,8 @@ export function makeDefaultState(
     categories: [],
     attachments: [],
     relatedTo: [],
+    attendees: [],
+    organizer: undefined,
     isRecurringInstance: false,
     originalEventId: null,
     ...overrides,
@@ -192,6 +203,8 @@ export function getInitialFormState(
         categories: categoryNames,
         attachments: existingEvent.attachments || [],
         relatedTo: existingEvent.relatedTo || [],
+        attendees: existingEvent.attendees || [],
+        organizer: existingEvent.organizer,
         isRecurringInstance,
         originalEventId,
       }

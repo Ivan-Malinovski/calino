@@ -3,9 +3,14 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { EventFormFields } from '../EventFormFields'
 import { useSettingsStore } from '@/store/settingsStore'
 
-vi.mock('@/store/settingsStore', () => ({
-  useSettingsStore: vi.fn(),
-}))
+vi.mock('@/store/settingsStore', () => {
+  // AttendeeSection pulls in calendarStore, which reads settings at module
+  // init — a bare vi.fn() has no getState and blows up on import.
+  const useSettingsStore = Object.assign(vi.fn(), {
+    getState: () => ({ defaultView: 'week', timeFormat: '24h' }),
+  })
+  return { useSettingsStore, EVENT_COLORS: ['#4285F4'] }
+})
 vi.mock('@/hooks/useIsMobile', () => ({
   useIsMobile: vi.fn().mockReturnValue(false),
 }))
@@ -57,6 +62,11 @@ describe('EventFormFields', () => {
     attachments: [] as never[],
     onAttachmentsChange: vi.fn(),
     attachmentEventId: null as string | null,
+    attendees: [] as never[],
+    onAttendeesChange: vi.fn(),
+    organizer: undefined,
+    startIso: '2026-03-10T09:00:00',
+    endIso: '2026-03-10T10:00:00',
   }
 
   const renderWithMoreOptions = (props = {}) => {

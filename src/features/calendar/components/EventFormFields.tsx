@@ -2,11 +2,19 @@ import type { JSX } from 'react'
 import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { v4 as uuidv4 } from 'uuid'
-import type { RecurrenceRule, Reminder, CalendarEvent, CalendarAttachment } from '@/types'
+import type {
+  RecurrenceRule,
+  Reminder,
+  CalendarEvent,
+  CalendarAttachment,
+  CalendarAttendee,
+  CalendarOrganizer,
+} from '@/types'
 import { useSettingsStore } from '@/store/settingsStore'
 import { useScrollInput } from '@/hooks/useScrollInput'
 import { daysBetween, addDays, addMinutesToTimeStr } from '@/lib/datetime'
 import { AttachmentSection } from './AttachmentSection'
+import { AttendeeSection } from './AttendeeSection'
 import { TimeField } from './TimeField'
 import { RecurrenceFields, RecurrenceToggle } from './RecurrenceFields'
 import styles from './EventModal.module.css'
@@ -54,6 +62,16 @@ interface EventFormFieldsProps {
   attachments: CalendarAttachment[]
   onAttachmentsChange: (attachments: CalendarAttachment[]) => void
   attachmentEventId: string | null
+  attendees: CalendarAttendee[]
+  onAttendeesChange: (attendees: CalendarAttendee[]) => void
+  organizer: CalendarOrganizer | undefined
+  /** Event window the availability check is run against. */
+  startIso: string
+  endIso: string
+  /** Excluded from the availability scan so an event never clashes with itself. */
+  excludeEventId?: string
+  /** Seeds the mailto: invitation. Absent while composing a new event. */
+  editingEvent?: CalendarEvent
 }
 
 const TRAVEL_DURATION_OPTIONS: { value: number | undefined; label: string }[] = [
@@ -123,6 +141,13 @@ export function EventFormFields({
   attachments,
   onAttachmentsChange,
   attachmentEventId,
+  attendees,
+  onAttendeesChange,
+  organizer,
+  startIso,
+  endIso,
+  excludeEventId,
+  editingEvent,
 }: EventFormFieldsProps): JSX.Element {
   const [moreOpen, setMoreOpen] = useState(false)
   const [reminderDropdownOpen, setReminderDropdownOpen] = useState(false)
@@ -457,6 +482,16 @@ export function EventFormFields({
             eventId={attachmentEventId}
             compact
             showLabel={false}
+          />
+
+          <AttendeeSection
+            attendees={attendees}
+            onAttendeesChange={onAttendeesChange}
+            organizer={organizer}
+            startIso={startIso}
+            endIso={endIso}
+            excludeEventId={excludeEventId}
+            event={editingEvent}
           />
         </div>
       </div>

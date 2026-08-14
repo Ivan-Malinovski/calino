@@ -16,6 +16,8 @@ import { deleteRecurringOccurrence, getOccurrenceStart } from '@/lib/recurrenceD
 import type {
   CalendarEvent,
   CalendarAttachment,
+  CalendarAttendee,
+  CalendarOrganizer,
   RecurrenceRule,
   TaskPriority,
   Reminder,
@@ -178,6 +180,8 @@ export function EventModal(): JSX.Element | null {
   const [showDescription, setShowDescription] = useState(!!initialState.description)
   const [attachments, setAttachments] = useState<CalendarAttachment[]>([])
   const [relatedTo, setRelatedTo] = useState<string[]>([])
+  const [attendees, setAttendees] = useState<CalendarAttendee[]>([])
+  const [organizer, setOrganizer] = useState<CalendarOrganizer | undefined>(undefined)
   const [parentTaskId, setParentTaskId] = useState<string | undefined>(undefined)
 
   // Smart defaults: track whether the user has manually overridden the
@@ -500,6 +504,8 @@ export function EventModal(): JSX.Element | null {
       setShowDescription(!!(prefillDescription ?? formDefaults.description))
       setSelectedCategories(formDefaults.categories)
       setRelatedTo(formDefaults.relatedTo)
+      setAttendees(formDefaults.attendees)
+      setOrganizer(formDefaults.organizer)
       setParentTaskId(currentEvent?.parentTaskId ?? requestedParent?.id)
 
       if (pendingEventPrefill) {
@@ -646,6 +652,8 @@ export function EventModal(): JSX.Element | null {
 
     const existingAttachments = existingEventForMode.attachments || []
     const attachmentsChanged = JSON.stringify(attachments) !== JSON.stringify(existingAttachments)
+    const attendeesChanged =
+      JSON.stringify(attendees) !== JSON.stringify(existingEventForMode.attendees || [])
 
     // R2.7 — Recurrence participates in BOTH branches now that tasks can
     // recur. Leaving it out of the task branch made a recurrence-only edit
@@ -687,6 +695,7 @@ export function EventModal(): JSX.Element | null {
         JSON.stringify(selectedCategories) !==
           JSON.stringify(existingEventForMode.categories || []) ||
         JSON.stringify(relatedTo) !== JSON.stringify(existingEventForMode.relatedTo || []) ||
+        attendeesChanged ||
         attachmentsChanged
       )
     }
@@ -709,6 +718,7 @@ export function EventModal(): JSX.Element | null {
       JSON.stringify(selectedCategories) !==
         JSON.stringify(existingEventForMode.categories || []) ||
       JSON.stringify(relatedTo) !== JSON.stringify(existingEventForMode.relatedTo || []) ||
+      attendeesChanged ||
       attachmentsChanged
     )
   }, [
@@ -742,6 +752,7 @@ export function EventModal(): JSX.Element | null {
     calendarId,
     selectedCategories,
     relatedTo,
+    attendees,
     attachments,
   ])
 
@@ -969,6 +980,8 @@ export function EventModal(): JSX.Element | null {
             transparency: isTaskMode ? undefined : transparency,
             sequence: 0,
             relatedTo: relatedTo.length > 0 ? relatedTo : undefined,
+            attendees: attendees.length > 0 ? attendees : undefined,
+            organizer,
             attachments: attachments.length > 0 ? attachments : undefined,
           }
 
@@ -1063,6 +1076,8 @@ export function EventModal(): JSX.Element | null {
             transparency: isTaskMode ? undefined : transparency,
             sequence: 0,
             relatedTo: relatedTo.length > 0 ? relatedTo : undefined,
+            attendees: attendees.length > 0 ? attendees : undefined,
+            organizer,
             attachments: attachments.length > 0 ? attachments : undefined,
           }
 
@@ -1122,6 +1137,8 @@ export function EventModal(): JSX.Element | null {
             transparency: isTaskMode ? undefined : transparency,
             categories: selectedCategories,
             relatedTo: relatedTo.length > 0 ? relatedTo : undefined,
+            attendees: attendees.length > 0 ? attendees : undefined,
+            organizer,
             attachments: attachments.length > 0 ? attachments : undefined,
           })
           const cascadedTasks =
@@ -1170,6 +1187,8 @@ export function EventModal(): JSX.Element | null {
                 transparency: isTaskMode ? undefined : transparency,
                 categories: selectedCategories,
                 relatedTo: relatedTo.length > 0 ? relatedTo : undefined,
+                attendees: attendees.length > 0 ? attendees : undefined,
+                organizer,
               },
               {
                 title,
@@ -1193,6 +1212,8 @@ export function EventModal(): JSX.Element | null {
                 transparency: isTaskMode ? undefined : transparency,
                 categories: selectedCategories,
                 relatedTo: relatedTo.length > 0 ? relatedTo : undefined,
+                attendees: attendees.length > 0 ? attendees : undefined,
+                organizer,
                 attachments: attachments.length > 0 ? attachments : undefined,
               }
             )
@@ -1231,6 +1252,8 @@ export function EventModal(): JSX.Element | null {
           transparency: isTaskMode ? undefined : transparency,
           categories: selectedCategories,
           relatedTo: relatedTo.length > 0 ? relatedTo : undefined,
+          attendees: attendees.length > 0 ? attendees : undefined,
+          organizer,
           attachments: attachments.length > 0 ? attachments : undefined,
         }
         addEvent(newEvent)
@@ -1558,6 +1581,13 @@ export function EventModal(): JSX.Element | null {
                     attachments={attachments}
                     onAttachmentsChange={setAttachments}
                     attachmentEventId={selectedEventId}
+                    attendees={attendees}
+                    onAttendeesChange={setAttendees}
+                    organizer={organizer}
+                    startIso={isAllDay ? `${startDate}T00:00:00` : `${startDate}T${startTime}:00`}
+                    endIso={isAllDay ? `${endDate}T23:59:59` : `${endDate}T${endTime}:00`}
+                    excludeEventId={originalEventId ?? selectedEventId ?? undefined}
+                    editingEvent={existingEventForMode ?? undefined}
                   />
                 )}
               </div>

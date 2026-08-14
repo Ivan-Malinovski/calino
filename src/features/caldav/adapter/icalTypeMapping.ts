@@ -3,6 +3,9 @@ import { v4 as uuidv4 } from 'uuid'
 import type {
   CalendarEvent,
   CalendarAttachment,
+  CalendarAttendee,
+  CalendarOrganizer,
+  AttendeePartstat,
   RecurrenceRule,
   Reminder,
   TaskPriority,
@@ -10,6 +13,91 @@ import type {
 import { addDays } from 'date-fns'
 import { buildRRuleString, normaliseAllDayUntil } from '@/lib/recurrence'
 import { toLocalDateString } from '@/lib/datetime'
+
+const VALID_PARTSTATS: AttendeePartstat[] = [
+  'ACCEPTED',
+  'DECLINED',
+  'TENTATIVE',
+  'NEEDS-ACTION',
+  'DELEGATED',
+]
+
+/** Strip the `mailto:` scheme RFC 5545 requires on CAL-ADDRESS values. */
+function calAddressToEmail(value: unknown): string {
+  if (typeof value !== 'string') return ''
+  return value.replace(/^mailto:/i, '').trim()
+}
+
+function paramString(prop: ICAL.Property, name: string): string | undefined {
+  const raw = prop.getParameter(name)
+  if (typeof raw !== 'string') return undefined
+  const trimmed = raw.trim()
+  return trimmed.length > 0 ? trimmed : undefined
+}
+
+/** RFC 5545 §3.8.4.1 — read every ATTENDEE off a component. */
+export function parseAttendees(component: ICAL.Component): CalendarAttendee[] {
+  const attendees: CalendarAttendee[] = []
+
+  for (const prop of component.getAllProperties('attendee')) {
+    const email = calAddressToEmail(prop.getFirstValue())
+    if (!email) continue
+
+    const partstatRaw = paramString(prop, 'partstat')?.toUpperCase()
+    const partstat = VALID_PARTSTATS.find((p) => p === partstatRaw)
+    const rsvp = paramString(prop, 'rsvp')?.toUpperCase()
+
+    attendees.push({
+      email,
+      name: paramString(prop, 'cn'),
+      role: paramString(prop, 'role'),
+      partstat,
+      // RFC 5545 defaults RSVP to FALSE when the parameter is absent.
+      rsvp: rsvp === undefined ? undefined : rsvp === 'TRUE',
+    })
+  }
+
+  return attendees
+}
+
+/** RFC 5545 §3.8.4.3 — read the ORGANIZER off a component. */
+export function parseOrganizer(component: ICAL.Component): CalendarOrganizer | undefined {
+  const prop = component.getFirstProperty('organizer')
+  if (!prop) return undefined
+
+  const email = calAddressToEmail(prop.getFirstValue())
+  if (!email) return undefined
+
+  return { email, name: paramString(prop, 'cn') }
+}
+
+/**
+ * Write ORGANIZER and ATTENDEE back out. Existing properties are cleared
+ * first: these are multi-valued, so updatePropertyWithValue can't be used and
+ * appending would double them on every save.
+ */
+export function writeAttendees(component: ICAL.Component, event: CalendarEvent): void {
+  component.removeAllProperties('organizer')
+  component.removeAllProperties('attendee')
+
+  if (event.organizer?.email) {
+    const prop = new ICAL.Property('organizer', component)
+    prop.setValue(`mailto:${event.organizer.email}`)
+    if (event.organizer.name) prop.setParameter('cn', event.organizer.name)
+    component.addProperty(prop)
+  }
+
+  for (const attendee of event.attendees ?? []) {
+    if (!attendee.email) continue
+    const prop = new ICAL.Property('attendee', component)
+    prop.setValue(`mailto:${attendee.email}`)
+    if (attendee.name) prop.setParameter('cn', attendee.name)
+    if (attendee.role) prop.setParameter('role', attendee.role)
+    if (attendee.partstat) prop.setParameter('partstat', attendee.partstat)
+    if (attendee.rsvp !== undefined) prop.setParameter('rsvp', attendee.rsvp ? 'TRUE' : 'FALSE')
+    component.addProperty(prop)
+  }
+}
 
 export function parseAppleTravelDuration(vevent: ICAL.Component): number | undefined {
   const prop = vevent.getFirstProperty('x-apple-travel-duration')
@@ -629,6 +717,7 @@ export function icalEventToCalendarEvent(
     }
   }
 
+  const attendees = parseAttendees(vevent)
   const uid = event.uid || uuidv4()
   const statusValue = vevent.getFirstPropertyValue('status')
   const eventStatus = typeof statusValue === 'string' ? statusValue.toUpperCase() : undefined
@@ -661,6 +750,8 @@ export function icalEventToCalendarEvent(
     attachments: attachments.length > 0 ? attachments : undefined,
     created: readAuditStamp(vevent, 'created'),
     lastModified: readAuditStamp(vevent, 'last-modified'),
+    attendees: attendees.length > 0 ? attendees : undefined,
+    organizer: parseOrganizer(vevent),
   }
 }
 
@@ -779,6 +870,8 @@ export function calendarEventToIcalComponent(event: CalendarEvent): ICAL.Compone
   if (event.categories && event.categories.length > 0) {
     vevent.updatePropertyWithValue('categories', event.categories.join(','))
   }
+
+  writeAttendees(vevent, event)
 
   writeRRule(vevent, event)
 
