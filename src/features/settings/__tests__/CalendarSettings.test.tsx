@@ -49,4 +49,40 @@ describe('CalendarSettings', () => {
 
     expect(useSettingsStore.getState().compressPastWeeks).toBe(false)
   })
+
+  it('toggles secondary timezone and selects timezone and label', async () => {
+    const user = userEvent.setup()
+    useSettingsStore.setState({
+      secondaryTimezoneEnabled: false,
+      secondaryTimezone: null,
+      secondaryTimezoneLabel: null,
+    })
+
+    render(<CalendarSettings />)
+
+    const toggle = screen.getByLabelText('Show secondary timezone')
+    expect(toggle).not.toBeChecked()
+
+    // Enable secondary timezone
+    await user.click(toggle)
+    expect(useSettingsStore.getState().secondaryTimezoneEnabled).toBe(true)
+    expect(useSettingsStore.getState().secondaryTimezone).toBe('UTC')
+
+    // Dropdown should now be visible
+    const select = screen.getByLabelText('Secondary timezone')
+    expect(select).toBeInTheDocument()
+
+    // Select America/New_York
+    await user.selectOptions(select, 'America/New_York')
+    expect(useSettingsStore.getState().secondaryTimezone).toBe('America/New_York')
+
+    // Set custom label
+    const labelInput = screen.getByLabelText('Secondary timezone label')
+    await user.type(labelInput, 'NYC')
+    expect(useSettingsStore.getState().secondaryTimezoneLabel).toBe('NYC')
+
+    // Clear label -> persists as null
+    await user.clear(labelInput)
+    expect(useSettingsStore.getState().secondaryTimezoneLabel).toBeNull()
+  })
 })

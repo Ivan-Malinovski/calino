@@ -119,6 +119,9 @@ vi.mock('@/store/settingsStore', () => ({
   useSettingsStore: vi.fn((selector: (state: SettingsStore) => unknown) => {
     const state: SettingsStore = {
       timezone: 'UTC',
+      secondaryTimezoneEnabled: false,
+      secondaryTimezone: null,
+      secondaryTimezoneLabel: null,
       dateFormat: 'yyyy-MM-dd',
       timeFormat: '12h',
       firstDayOfWeek: 0,

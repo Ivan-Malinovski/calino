@@ -573,6 +573,32 @@
   color: var(--ink-muted, rgba(var(--ink-raw), 0.55));
 }
 
+/* ── Text input (e.g. secondary timezone custom label) ───────────────────── */
+.textInput {
+  background: var(--canvas);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  height: 32px;
+  padding: 0 12px;
+  font-size: 14px;
+  color: var(--ink);
+  font-family: inherit;
+  min-width: 140px;
+  max-width: 200px;
+  transition: border-color 0.14s;
+  box-shadow: 0 1px 2px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.04 * var(--shadow-opacity, 1)));
+}
+
+.textInput:hover {
+  border-color: rgba(var(--ink-raw), 0.18);
+}
+
+.textInput:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
 /* ── Toggle ─────────────────────────────────────────────────────────────── */
 .toggle {
   position: relative;

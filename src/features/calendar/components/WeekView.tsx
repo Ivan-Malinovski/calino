@@ -47,6 +47,7 @@ import { useDragDuplicateModifier } from '@/hooks/useDragDuplicateModifier'
 import { useDragModifierStore } from '@/store/dragModifierStore'
 import { hapticIfEnabled } from '@/lib/haptics'
 import { HOURS } from '@/lib/hours'
+import { getTimezoneAbbr, getSecondaryHourLabel } from '@/lib/timezoneHelper'
 import { CurrentTimeIndicator } from './CurrentTimeIndicator'
 import { DropPreviewBand } from './DropPreviewBand'
 import {
@@ -156,9 +157,15 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
   const setCurrentDate = useCalendarStore((state) => state.setCurrentDate)
   const firstDayOfWeek = useSettingsStore((state) => state.firstDayOfWeek)
   const timeFormat = useSettingsStore((state) => state.timeFormat)
+  const secondaryTimezoneEnabled = useSettingsStore((state) => state.secondaryTimezoneEnabled)
+  const secondaryTimezone = useSettingsStore((state) => state.secondaryTimezone)
+  const secondaryTimezoneLabel = useSettingsStore((state) => state.secondaryTimezoneLabel)
+  const timezone = useSettingsStore((state) => state.timezone)
   const openMenuId = useContextMenuStore((state) => state.openMenuId)
   const openMenu = useContextMenuStore((state) => state.openMenu)
   const closeMenu = useContextMenuStore((state) => state.closeMenu)
+
+  const isDualTz = secondaryTimezoneEnabled && !!secondaryTimezone
 
   const { updateEvent: caldavUpdateEvent, createEvent: createCalDAVEvent } = useCalDAV()
 
@@ -347,6 +354,17 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
   }, [isMobile])
 
   const date = useMemo(() => parseISO(currentDate), [currentDate])
+
+  const localTzAbbr = useMemo(
+    () => getTimezoneAbbr(date, timezone || Intl.DateTimeFormat().resolvedOptions().timeZone),
+    [date, timezone]
+  )
+  const secondaryTzAbbr = useMemo(
+    () =>
+      secondaryTimezoneLabel ||
+      (secondaryTimezone ? getTimezoneAbbr(date, secondaryTimezone) : ''),
+    [date, secondaryTimezone, secondaryTimezoneLabel]
+  )
 
   // Range start/end: a full calendar week (aligned to firstDayOfWeek) when
   // dayCount === 7, otherwise a rolling window of `dayCount` days anchored on
@@ -859,7 +877,18 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
     return (
       <>
         <div className={`${styles.header} ${isScrolled ? styles.headerShadow : ''}`}>
-          <div className={styles.weekNumberHeader}>{dayCount === 7 ? `W${weekNumber}` : ''}</div>
+          <div className={styles.weekNumberHeader}>
+            {isDualTz ? (
+              <div className={styles.timeZoneHeaders}>
+                <span>{localTzAbbr}</span>
+                <span>{secondaryTzAbbr}</span>
+              </div>
+            ) : dayCount === 7 ? (
+              `W${weekNumber}`
+            ) : (
+              ''
+            )}
+          </div>
           <div className={styles.headerDays}>
             {weekDays.map((day, idx) => (
               <DayHeader
@@ -881,11 +910,35 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
           onScroll={handleScroll}
         >
           <div className={styles.timeColumn}>
-            {HOURS.map((hour) => (
-              <div key={hour.toISOString()} className={styles.timeCell}>
-                {format(hour, timeFormat === '24h' ? 'HH:mm' : 'h a')}
-              </div>
-            ))}
+            {HOURS.map((hour) => {
+              const primaryTime = format(hour, timeFormat === '24h' ? 'HH:mm' : 'h a')
+              if (isDualTz && secondaryTimezone) {
+                const secLabel = getSecondaryHourLabel(
+                  hour.getHours(),
+                  date,
+                  secondaryTimezone,
+                  timeFormat
+                )
+                return (
+                  <div key={hour.toISOString()} className={styles.timeCell}>
+                    <div className={styles.timeRow}>
+                      <span className={styles.primaryTime}>{primaryTime}</span>
+                      <span className={styles.secondaryTime}>
+                        {secLabel.time}
+                        {secLabel.dayDelta && (
+                          <span className={styles.dayDelta}>{secLabel.dayDelta}</span>
+                        )}
+                      </span>
+                    </div>
+                  </div>
+                )
+              }
+              return (
+                <div key={hour.toISOString()} className={styles.timeCell}>
+                  {primaryTime}
+                </div>
+              )
+            })}
           </div>
           <div ref={daysContainerRef} className={styles.daysContainer}>
             {selectionOverlay}
@@ -964,6 +1017,7 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
             '--hour-height': `${60 * effectiveScale}px`,
             '--day-count': weekDays.length,
             '--day-scale': dayScale,
+            '--time-gutter-width': isDualTz ? '90px' : '45px',
           } as React.CSSProperties
         }
         {...bind}

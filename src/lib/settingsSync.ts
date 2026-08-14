@@ -28,6 +28,9 @@ export interface SettingsSyncPayload {
 /** Explicit allowlist of settings fields that are synced. */
 export const SYNCABLE_SETTINGS: (keyof UserSettings)[] = [
   'timezone',
+  'secondaryTimezoneEnabled',
+  'secondaryTimezone',
+  'secondaryTimezoneLabel',
   'dateFormat',
   'timeFormat',
   'firstDayOfWeek',
