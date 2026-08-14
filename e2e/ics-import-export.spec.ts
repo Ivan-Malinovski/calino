@@ -58,7 +58,11 @@ test.describe('ICS export', () => {
 
   test('downloads a single event as .ics from the event modal menu', async ({ page }) => {
     await page.goto('/week')
-    await card(page).dblclick()
+    await card(page).click()
+    await page
+      .locator('[data-component="event-preview"]')
+      .getByRole('button', { name: /Open event/i })
+      .click()
 
     const footer = page.locator('[data-component="modal-footer"]')
     await expect(footer).toBeVisible()
@@ -85,9 +89,14 @@ test.describe('ICS export', () => {
   test('downloads a whole calendar from the sidebar context menu', async ({ page }) => {
     await page.goto('/week')
 
+    // The Calendars section starts collapsed on a fresh profile.
+    const section = page.getByRole('button', { name: /^Calendars/ }).first()
+    if ((await section.getAttribute('aria-expanded')) === 'false') await section.click()
+
+    // The row is a <label> wrapping the visibility checkbox — it carries no
+    // data-component of its own.
     const calendarRow = page
-      .locator('[data-component="calendar-item"], [data-component="sidebar-calendar"]')
-      .filter({ hasText: /calendar/i })
+      .locator('label:has([data-component="calendar-visibility-toggle"])')
       .first()
     await calendarRow.click({ button: 'right' })
 

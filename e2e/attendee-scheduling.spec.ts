@@ -92,7 +92,11 @@ test.describe('attendees and scheduling', () => {
     ])
 
     await page.goto('/week')
-    await page.locator('[data-component="event-card"]', { hasText: 'New Sync' }).first().dblclick()
+    await page.locator('[data-component="event-card"]', { hasText: 'New Sync' }).first().click()
+    await page
+      .locator('[data-component="event-preview"]')
+      .getByRole('button', { name: /Open event/i })
+      .click()
 
     const attendeeInput = page.getByLabel('Add attendee email')
     await expect(attendeeInput).toBeVisible()
@@ -120,7 +124,11 @@ test.describe('attendees and scheduling', () => {
     ])
 
     await page.goto('/week')
-    await page.locator('[data-component="event-card"]', { hasText: 'Solo Block' }).first().dblclick()
+    await page.locator('[data-component="event-card"]', { hasText: 'Solo Block' }).first().click()
+    await page
+      .locator('[data-component="event-preview"]')
+      .getByRole('button', { name: /Open event/i })
+      .click()
 
     const attendeeInput = page.getByLabel('Add attendee email')
     await attendeeInput.fill('stranger@elsewhere.test')
