@@ -5,6 +5,7 @@ import {
   calendarEventToIcalComponent,
   calendarEventToIcalVjournal,
   icalVjournalToCalendarEvent,
+  icalVtodoToCalendarEvent,
 } from '../icalTypeMapping'
 import type { CalendarEvent } from '@/types'
 
@@ -681,5 +682,368 @@ describe('Issue 116: VJOURNAL DTSTART is a floating date', () => {
     const parsed = icalVjournalToCalendarEvent(vjournal, 'cal-1')
 
     expect(parsed.start).toBe('2026-08-12')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// CATEGORIES is a multi-value property (RFC 5545 §3.8.1.2)
+//
+// `getFirstProperty('categories').getFirstValue()` returned only the first
+// value of the first line, so `CATEGORIES:Work,Personal,Urgent` parsed as
+// ['Work'] and the other two were destroyed on the next save.
+// ---------------------------------------------------------------------------
+describe('CATEGORIES multi-value parsing', () => {
+  const CATS = 'CATEGORIES:Work,Personal,Urgent'
+
+  function vtodoFrom(body: string): ICAL.Component {
+    const comp = new ICAL.Component(ICAL.parse(body))
+    return comp.getAllSubcomponents('vtodo')[0]
+  }
+
+  function vjournalFrom(body: string): ICAL.Component {
+    const comp = new ICAL.Component(ICAL.parse(body))
+    return comp.getAllSubcomponents('vjournal')[0]
+  }
+
+  it('reads every category from a VEVENT', () => {
+    const vevent = createVevent(
+      [
+        'BEGIN:VCALENDAR',
+        'VERSION:2.0',
+        'BEGIN:VEVENT',
+        'UID:cat-event',
+        'DTSTART:20260615T100000Z',
+        'DTEND:20260615T110000Z',
+        'SUMMARY:Categorised',
+        CATS,
+        'END:VEVENT',
+        'END:VCALENDAR',
+      ].join('\r\n')
+    )
+
+    expect(icalEventToCalendarEvent(vevent, 'cal-1').categories).toEqual([
+      'Work',
+      'Personal',
+      'Urgent',
+    ])
+  })
+
+  it('reads every category from a VTODO', () => {
+    const vtodo = vtodoFrom(
+      [
+        'BEGIN:VCALENDAR',
+        'VERSION:2.0',
+        'BEGIN:VTODO',
+        'UID:cat-task',
+        'SUMMARY:Categorised task',
+        CATS,
+        'END:VTODO',
+        'END:VCALENDAR',
+      ].join('\r\n')
+    )
+
+    expect(icalVtodoToCalendarEvent(vtodo, 'cal-1').categories).toEqual([
+      'Work',
+      'Personal',
+      'Urgent',
+    ])
+  })
+
+  it('reads every category from a VJOURNAL', () => {
+    const vjournal = vjournalFrom(
+      [
+        'BEGIN:VCALENDAR',
+        'VERSION:2.0',
+        'BEGIN:VJOURNAL',
+        'UID:cat-journal',
+        'DTSTART;VALUE=DATE:20260615',
+        'SUMMARY:Categorised entry',
+        CATS,
+        'END:VJOURNAL',
+        'END:VCALENDAR',
+      ].join('\r\n')
+    )
+
+    expect(icalVjournalToCalendarEvent(vjournal, 'cal-1').categories).toEqual([
+      'Work',
+      'Personal',
+      'Urgent',
+    ])
+  })
+
+  it('merges multiple CATEGORIES lines, dedupes, and trims', () => {
+    const vevent = createVevent(
+      [
+        'BEGIN:VCALENDAR',
+        'VERSION:2.0',
+        'BEGIN:VEVENT',
+        'UID:cat-multi',
+        'DTSTART:20260615T100000Z',
+        'DTEND:20260615T110000Z',
+        'CATEGORIES:Work, Personal',
+        'CATEGORIES:Urgent,Work',
+        'END:VEVENT',
+        'END:VCALENDAR',
+      ].join('\r\n')
+    )
+
+    // First-seen order preserved; the repeated 'Work' collapses to one tag.
+    expect(icalEventToCalendarEvent(vevent, 'cal-1').categories).toEqual([
+      'Work',
+      'Personal',
+      'Urgent',
+    ])
+  })
+
+  it('yields no categories when the property is absent', () => {
+    const vevent = createVevent(
+      [
+        'BEGIN:VCALENDAR',
+        'VERSION:2.0',
+        'BEGIN:VEVENT',
+        'UID:cat-none',
+        'DTSTART:20260615T100000Z',
+        'DTEND:20260615T110000Z',
+        'END:VEVENT',
+        'END:VCALENDAR',
+      ].join('\r\n')
+    )
+
+    expect(icalEventToCalendarEvent(vevent, 'cal-1').categories).toBeUndefined()
+  })
+
+  it('round-trips every category back out on save', () => {
+    const vevent = createVevent(
+      [
+        'BEGIN:VCALENDAR',
+        'VERSION:2.0',
+        'BEGIN:VEVENT',
+        'UID:cat-roundtrip',
+        'DTSTART:20260615T100000Z',
+        'DTEND:20260615T110000Z',
+        CATS,
+        'END:VEVENT',
+        'END:VCALENDAR',
+      ].join('\r\n')
+    )
+
+    const parsed = icalEventToCalendarEvent(vevent, 'cal-1')
+    const out = calendarEventToIcalComponent(parsed).toString()
+
+    expect(out).toContain('CATEGORIES:Work,Personal,Urgent')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Patch mode: calendarEventToIcalComponent(event, existing)
+//
+// Calino models a subset of RFC 5545. Rebuilding a VEVENT from scratch on every
+// save destroyed everything outside that subset. Patching an existing component
+// writes only what Calino owns and leaves the rest byte-identical.
+// ---------------------------------------------------------------------------
+describe('calendarEventToIcalComponent patch mode', () => {
+  const RICH = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//Other Client//EN',
+    'BEGIN:VEVENT',
+    'UID:rich-1',
+    'DTSTAMP:20260101T120000Z',
+    'DTSTART:20260310T100000Z',
+    'DTEND:20260310T120000Z',
+    'SUMMARY:Original title',
+    'DESCRIPTION:Original body',
+    'GEO:52.52;13.405',
+    'CLASS:CONFIDENTIAL',
+    'PRIORITY:2',
+    'RESOURCES:Projector,Whiteboard',
+    'COMMENT:A comment nobody should lose',
+    'CONTACT:Jane Doe',
+    'RELATED-TO;RELTYPE=PARENT:parent-uid-99',
+    'X-ALT-DESC;FMTTYPE=text/html:<html>rich body</html>',
+    'X-MOZ-LASTACK:20260101T120000Z',
+    'X-CUSTOM-FLAG:keepme',
+    'END:VEVENT',
+    'END:VCALENDAR',
+  ].join('\r\n')
+
+  /** Every property Calino has no field for; none may change on a save. */
+  const UNMODELLED = [
+    'geo',
+    'class',
+    'priority',
+    'resources',
+    'comment',
+    'contact',
+    'related-to',
+    'x-alt-desc',
+    'x-moz-lastack',
+    'x-custom-flag',
+  ]
+
+  function patch(ics: string, mutate: (e: CalendarEvent) => CalendarEvent = (e) => e) {
+    const vevent = createVevent(ics)
+    const before = new Map(
+      vevent.getAllProperties().map((p) => [p.name, p.toICALString()] as const)
+    )
+    const parsed = icalEventToCalendarEvent(vevent, 'cal-1')
+    const patched = calendarEventToIcalComponent(mutate(parsed), vevent)
+    return { patched, before }
+  }
+
+  it('preserves every unmodelled property byte-for-byte', () => {
+    const { patched, before } = patch(RICH, (e) => ({ ...e, title: 'Renamed' }))
+
+    for (const name of UNMODELLED) {
+      const prop = patched.getFirstProperty(name)
+      expect(prop, `${name} was dropped`).toBeTruthy()
+      expect(prop!.toICALString(), `${name} was rewritten`).toBe(before.get(name))
+    }
+    expect(patched.getFirstPropertyValue('summary')).toBe('Renamed')
+  })
+
+  it('does not duplicate properties that are written by appending', () => {
+    const { patched } = patch(
+      [
+        'BEGIN:VCALENDAR',
+        'VERSION:2.0',
+        'BEGIN:VEVENT',
+        'UID:series-1',
+        'DTSTART:20260310T100000Z',
+        'DTEND:20260310T110000Z',
+        'RRULE:FREQ=DAILY;COUNT=5',
+        'EXDATE:20260312T100000Z',
+        'ATTACH;FMTTYPE=text/plain:https://example.com/a.txt',
+        'X-APPLE-TRAVEL-DURATION:PT15M',
+        'END:VEVENT',
+        'END:VCALENDAR',
+      ].join('\r\n')
+    )
+
+    expect(patched.getAllProperties('rrule')).toHaveLength(1)
+    expect(patched.getAllProperties('exdate')).toHaveLength(1)
+    expect(patched.getAllProperties('attach')).toHaveLength(1)
+    expect(patched.getAllProperties('x-apple-travel-duration')).toHaveLength(1)
+  })
+
+  it('removes a property the user cleared', () => {
+    const { patched } = patch(RICH, (e) => ({ ...e, description: undefined }))
+
+    expect(patched.getFirstProperty('description')).toBeFalsy()
+    // ...without taking the unmodelled neighbours with it.
+    expect(patched.getFirstProperty('x-custom-flag')).toBeTruthy()
+  })
+
+  it('drops a stale TZID when the event no longer has a zone', () => {
+    const { patched } = patch(
+      [
+        'BEGIN:VCALENDAR',
+        'VERSION:2.0',
+        'BEGIN:VEVENT',
+        'UID:zoned-1',
+        'DTSTART;TZID=Europe/Berlin:20260310T100000',
+        'DTEND;TZID=Europe/Berlin:20260310T110000',
+        'END:VEVENT',
+        'END:VCALENDAR',
+      ].join('\r\n'),
+      (e) => ({ ...e, timezone: undefined })
+    )
+
+    expect(patched.getFirstProperty('dtstart')?.getParameter('tzid')).toBeFalsy()
+    expect(patched.getFirstProperty('dtend')?.getParameter('tzid')).toBeFalsy()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// VALARM reconciliation — the alarm details Calino cannot model must survive a
+// save, or an EMAIL alarm loses the ATTENDEE it is invalid without and a
+// RELATED=END trigger silently moves.
+// ---------------------------------------------------------------------------
+describe('VALARM reconciliation in patch mode', () => {
+  const WITH_ALARMS = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'BEGIN:VEVENT',
+    'UID:alarmed-1',
+    'DTSTART:20260310T100000Z',
+    'DTEND:20260310T120000Z',
+    'BEGIN:VALARM',
+    'ACTION:DISPLAY',
+    'DESCRIPTION:Alarm text',
+    'TRIGGER;RELATED=END:-PT15M',
+    'REPEAT:3',
+    'DURATION:PT5M',
+    'END:VALARM',
+    'END:VEVENT',
+    'END:VCALENDAR',
+  ].join('\r\n')
+
+  function patchAlarms(ics: string, mutate: (e: CalendarEvent) => CalendarEvent) {
+    const vevent = createVevent(ics)
+    const parsed = icalEventToCalendarEvent(vevent, 'cal-1')
+    return calendarEventToIcalComponent(mutate(parsed), vevent)
+  }
+
+  it('leaves an untouched alarm completely alone', () => {
+    const before = createVevent(WITH_ALARMS).getAllSubcomponents('valarm')[0].toString()
+    // Edit something else entirely.
+    const patched = patchAlarms(WITH_ALARMS, (e) => ({ ...e, title: 'Renamed' }))
+    const alarms = patched.getAllSubcomponents('valarm')
+
+    expect(alarms).toHaveLength(1)
+    expect(alarms[0].toString()).toBe(before)
+    // The pieces that a rebuild destroyed:
+    expect(alarms[0].getFirstProperty('trigger')?.getParameter('related')).toBe('END')
+    expect(alarms[0].getFirstPropertyValue('repeat')).toBe(3)
+    expect(alarms[0].getFirstPropertyValue('description')).toBe('Alarm text')
+  })
+
+  it('rewrites only ACTION and TRIGGER when the reminder changed', () => {
+    const patched = patchAlarms(WITH_ALARMS, (e) => ({
+      ...e,
+      reminders: [{ id: 'r1', minutesBefore: 30, method: 'popup' }],
+    }))
+    const alarm = patched.getAllSubcomponents('valarm')[0]
+
+    expect(alarm.getFirstPropertyValue('trigger')?.toString()).toBe('-PT30M')
+    // A start-relative trigger must not keep an END relation, or it moves.
+    expect(alarm.getFirstProperty('trigger')?.getParameter('related')).toBeFalsy()
+    // Unmodelled alarm detail is still preserved through the edit.
+    expect(alarm.getFirstPropertyValue('description')).toBe('Alarm text')
+    expect(alarm.getFirstPropertyValue('repeat')).toBe(3)
+  })
+
+  it('removes an alarm the user deleted', () => {
+    const patched = patchAlarms(WITH_ALARMS, (e) => ({ ...e, reminders: [] }))
+    expect(patched.getAllSubcomponents('valarm')).toHaveLength(0)
+  })
+
+  it('never touches an alarm whose trigger Calino cannot parse', () => {
+    const ics = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'BEGIN:VEVENT',
+      'UID:exotic-1',
+      'DTSTART:20260310T100000Z',
+      'DTEND:20260310T110000Z',
+      'BEGIN:VALARM',
+      'ACTION:NONE',
+      'X-WR-ALARMUID:exotic',
+      'END:VALARM',
+      'END:VEVENT',
+      'END:VCALENDAR',
+    ].join('\r\n')
+    const before = createVevent(ics).getAllSubcomponents('valarm')[0].toString()
+
+    // An unparseable alarm is invisible to `reminders`, so adding one must not
+    // be mistaken for "the existing alarm changed".
+    const patched = patchAlarms(ics, (e) => ({
+      ...e,
+      reminders: [{ id: 'r1', minutesBefore: 10, method: 'popup' }],
+    }))
+    const alarms = patched.getAllSubcomponents('valarm')
+
+    expect(alarms).toHaveLength(2)
+    expect(alarms.some((a) => a.toString() === before)).toBe(true)
   })
 })
