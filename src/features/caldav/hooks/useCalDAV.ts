@@ -24,6 +24,7 @@ import {
 import { parseICALData } from '../adapter/iCalendarAdapter'
 import { detectUidCollisions, type ParsedWithHref } from '../sync/detectUidCollisions'
 import { putAttachments } from '@/lib/attachmentStore'
+import { putRawIcs } from '@/lib/rawIcsStore'
 import * as storage from '../sync/accountStorage'
 import { SyncEngine, eventResourceFilename, resourceIsInCollection } from '../sync/syncEngine'
 import { moveEventGroup, MoveLostSourceError } from '../sync/moveEvent'
@@ -172,6 +173,19 @@ async function collectParsedWithHref(
   let hadParseFailures = false
   for (const eventData of fetchedEvents) {
     if (!eventData.data) continue
+
+    // Keep the server's own bytes so a later save can patch them instead of
+    // rebuilding the resource from the modelled subset (which drops GEO, X-
+    // properties, alarm detail, attendee parameters — see rawIcsStore).
+    //
+    // This is the only place both live fetch paths meet: `addAccount`'s
+    // initial import and `syncAccount`'s recurring sync. `SyncEngine.fullSync`
+    // looks like the natural home for it but has no callers.
+    //
+    // Non-fatal: failing to cache an original must never break a sync, it just
+    // costs a fall back to the previous from-scratch behaviour.
+    await putRawIcs(eventData.url, calendarId, eventData.data, eventData.etag).catch(() => {})
+
     const parsedEvents = parseICALData(eventData.data, calendarId)
     if (parsedEvents.length === 0 && eventData.data.trim()) {
       hadParseFailures = true

@@ -159,6 +159,15 @@ const ACCOUNTS: MockAccount[] = [
         components: ['VEVENT', 'VTODO', 'VJOURNAL'],
       },
       {
+        // Owned by `ics-fidelity.spec.ts`, which asserts the exact bytes of the
+        // single resource it seeds — a spec writing to the same collection in
+        // parallel would change the dump it reads back.
+        path: '/dav/calendars/user/ics-fid/',
+        displayName: 'ICS Fidelity',
+        color: '#0F9D58',
+        components: ['VEVENT', 'VTODO', 'VJOURNAL'],
+      },
+      {
         // Owned by `delete-sync.spec.ts` (issue #110), which asserts the
         // collection is empty after a delete — it cannot share a collection
         // with a spec running in parallel.
@@ -469,7 +478,12 @@ export function caldavMockPlugin(): Plugin {
             responseTag(`${absolute(prefix)}${filename}`, [
               { name: 'DAV:getetag', value: etagStore.get(storedPath) ?? '"mock-etag"' },
               { name: 'DAV:getcontenttype', value: 'text/calendar' },
-              { name: 'CAL:calendar-data', value: ics, raw: true },
+              // Escaped, not raw: iCalendar is text and may legitimately
+              // contain `<`, `>` or `&` (an X-ALT-DESC carrying HTML, an
+              // ampersand in a SUMMARY). Injecting it raw produced a malformed
+              // XML document that clients silently failed to parse — real
+              // servers escape it, and Calino's XML parsing unescapes on read.
+              { name: 'CAL:calendar-data', value: ics },
             ])
           )
         }
