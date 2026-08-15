@@ -39,6 +39,7 @@ import { useConfigStore } from './store/configStore'
 import { ThemeProvider } from './components/ThemeProvider'
 import { useCardDAV } from './features/carddav/hooks/useCardDAV'
 import { initContactPhotos } from './lib/contactPhotoSync'
+import { pruneRawIcs } from './lib/rawIcsStore'
 import { useCalDAV } from './features/caldav/hooks/useCalDAV'
 import { useNativeKeyboard } from './hooks/useNativeKeyboard'
 import { useNotifications } from './hooks/useNotifications'
@@ -292,6 +293,12 @@ function CalendarApp(): JSX.Element {
   // them back on the live contacts and mirror later edits out.
   useEffect(() => {
     void initContactPhotos()
+  }, [])
+
+  // Sweep raw ICS blobs no sync or save has touched in months: their resources
+  // are gone from the server and nothing else will ever remove them.
+  useEffect(() => {
+    pruneRawIcs().catch(() => {})
   }, [])
 
   // Mount the palette (closed) as soon as its chunk lands, one frame after the

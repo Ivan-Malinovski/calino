@@ -26,6 +26,7 @@ import {
   rruleWindow,
 } from '@/lib/occurrenceExpansion'
 import { deleteAttachments } from '@/lib/attachmentStore'
+import { deleteRawIcs, deleteRawIcsForCalendar } from '@/lib/rawIcsStore'
 import { useSettingsStore } from '@/store/settingsStore'
 
 // Memo cache for getEventsForDateRange. Keyed by the range; a cached result is
@@ -730,6 +731,10 @@ export const useCalendarStore = create<CalendarStore>()(
       deleteEvent: (id: string): void => {
         // Clean up attachments from IndexedDB (fire and forget)
         deleteAttachments(id).catch(() => {})
+        // The raw ICS is keyed by resource href, not event id — a local-only
+        // event has none, and there is nothing stored for it either.
+        const href = get().events.find((e) => e.id === id)?.resourceHref
+        if (href) deleteRawIcs(href).catch(() => {})
         set((state) => ({
           events: state.events.filter((e) => e.id !== id),
         }))
@@ -879,6 +884,9 @@ export const useCalendarStore = create<CalendarStore>()(
       },
 
       deleteCalendar: (id: string): void => {
+        // Raw ICS blobs carry the calendar id, so they go in one query rather
+        // than per event — which also catches resources no local event maps to.
+        deleteRawIcsForCalendar(id).catch(() => {})
         set((state) => {
           // Clean up attachments for all events in this calendar
           for (const event of state.events) {
