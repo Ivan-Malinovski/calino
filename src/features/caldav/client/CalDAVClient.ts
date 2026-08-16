@@ -362,8 +362,12 @@ export class CalDAVClient {
   /**
    * Fetch the current ETag for a single calendar object via PROPFIND (Depth 0).
    * Returns '' on any failure — callers treat a missing etag as non-fatal.
+   *
+   * Public so the pending-change replay can recover from a stale-etag 412:
+   * it re-fetches the current etag and re-applies the write against it
+   * instead of replaying the dead If-Match forever.
    */
-  private async fetchEtag(eventUrl: string): Promise<string> {
+  async fetchEtag(eventUrl: string): Promise<string> {
     try {
       const response = await this.proxyFetch(eventUrl, {
         method: 'PROPFIND',

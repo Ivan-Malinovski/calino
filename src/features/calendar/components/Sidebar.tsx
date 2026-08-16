@@ -148,8 +148,20 @@ export function Sidebar({
   )
 
   const syncAllAccounts = useCallback(async (): Promise<void> => {
+    // One account failing must not prevent the rest from syncing: runSyncAccount
+    // reports the failure through syncState and rethrows, so catch here, keep
+    // going, and surface a combined error only after every account had its turn.
+    const errors: string[] = []
     for (const accountId of accountIds) {
-      await syncAccount(accountId)
+      try {
+        await syncAccount(accountId)
+      } catch (err) {
+        console.warn(`[CalDAV] Sync failed for account ${accountId}:`, err)
+        errors.push(err instanceof Error ? err.message : String(err))
+      }
+    }
+    if (errors.length > 0) {
+      throw new Error(errors.join('; '))
     }
   }, [accountIds, syncAccount])
 

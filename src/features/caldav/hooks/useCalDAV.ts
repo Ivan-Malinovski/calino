@@ -11,6 +11,7 @@ import type {
   UpdateCalendarOptions,
   MovePendingData,
   DeleteHrefPendingData,
+  PendingChange,
 } from '../types'
 import { createCalDAVClient } from '../client/CalDAVClient'
 import { probeConnection, expandProviderUrl, type ProbeResult } from '../client/discovery'
@@ -26,6 +27,11 @@ import { detectUidCollisions, type ParsedWithHref } from '../sync/detectUidColli
 import { putAttachments } from '@/lib/attachmentStore'
 import { putRawIcs } from '@/lib/rawIcsStore'
 import * as storage from '../sync/accountStorage'
+import {
+  classifyPendingChangeError,
+  backoffDelayMs,
+  pendingChangeDropMessage,
+} from '../sync/pendingChangePolicy'
 import { SyncEngine, eventResourceFilename, resourceIsInCollection } from '../sync/syncEngine'
 import { moveEventGroup, MoveLostSourceError } from '../sync/moveEvent'
 import type { MoveResult } from '../sync/moveEvent'
@@ -68,6 +74,66 @@ const inFlightDeletes = new Set<string>()
 const inFlightSyncs = new Map<string, Promise<void>>()
 
 const MAX_RETRIES = 10
+
+// Last-attempt timestamps for the pending-change backoff gate, keyed by change
+// id. Kept here (not on the change record) so accountStorage's record shape
+// stays untouched. A reload resets it, which is acceptable — a freshly opened
+// app may retry immediately.
+const lastAttemptAtByChangeId = new Map<string, number>()
+
+/**
+ * Best-effort title for a pending change's payload, for toasts. The payload is
+ * either a bare event (create/update/delete) or a { events: [...] } group
+ * (move / MoveLostSourceError recovery / grouped create).
+ */
+function pendingChangeTitle(change: PendingChange): string {
+  if (!change.data) return ''
+  try {
+    const parsed = JSON.parse(change.data) as { events?: unknown[] } & Record<string, unknown>
+    const first =
+      Array.isArray(parsed.events) && parsed.events.length > 0 ? parsed.events[0] : parsed
+    return (first as CalendarEvent | undefined)?.title ?? ''
+  } catch {
+    return ''
+  }
+}
+
+/** The resource href a write for `event` targets — mirrors SyncEngine. */
+function eventWriteHref(event: CalendarEvent, calendar: { url: string }): string {
+  return event.resourceHref && resourceIsInCollection(event.resourceHref, calendar.url)
+    ? event.resourceHref
+    : `${calendar.url}${eventResourceFilename(event.id)}`
+}
+
+/**
+ * Apply a queued update, recovering from a stale-etag 412 exactly once:
+ * re-fetch the resource's current etag and re-apply against it. Never replay
+ * the dead etag — that is what 412s forever. A second 412 (or any other error
+ * from the re-apply) propagates to the caller's classifier.
+ */
+async function applyUpdateWithStaleEtagRecovery(
+  engine: SyncEngine,
+  client: Awaited<ReturnType<typeof createCalDAVClient>>,
+  event: CalendarEvent,
+  groupedEvents: CalendarEvent[],
+  useGroup: boolean,
+  etag: string,
+  href: string | undefined
+): Promise<{ url: string; etag: string }> {
+  const attempt = (withEtag: string) =>
+    useGroup
+      ? engine.updateEventGroup(groupedEvents, withEtag)
+      : engine.updateEvent({ ...event, etag: withEtag }, withEtag)
+
+  try {
+    return await attempt(etag)
+  } catch (err) {
+    if ((err as { status?: number } | undefined)?.status !== 412) throw err
+    const freshEtag = href ? await client.fetchEtag(href) : ''
+    if (!freshEtag) throw err
+    return await attempt(freshEtag)
+  }
+}
 
 /**
  * Build a SyncEngine bound to `calendar`, reusing `sameAccountClient` when the
@@ -289,6 +355,12 @@ export function useCalDAV(): UseCalDAVReturn {
     isProcessingRef.current = true
 
     try {
+      // Never attempt network writes while the browser reports offline. The
+      // client would throw "No network connection" for every change anyway;
+      // skipping the whole cycle keeps the queue untouched (no retryCount
+      // churn) and the writes land when the network returns.
+      if (!navigator.onLine) return
+
       const changes = storage.getPendingChanges()
       if (changes.length === 0) return
 
@@ -321,22 +393,37 @@ export function useCalDAV(): UseCalDAVReturn {
           } else if (change.type === 'move') {
             // A move that never lands leaves the event stranded in its old
             // calendar with a 'failed' sync status and no explanation. Say so.
-            let title = ''
-            try {
-              const parsed = JSON.parse(change.data || '{}') as MovePendingData
-              title = (parsed.events?.[0] as CalendarEvent | undefined)?.title ?? ''
-            } catch {
-              /* malformed payload — still toast, just without a title */
-            }
+            const title = pendingChangeTitle(change)
             const targetCalendar = allCalendars.find((c) => c.id === change.calendarId)
             showToast(
               `Couldn't move "${title || 'event'}"${
                 targetCalendar ? ` to ${targetCalendar.name}` : ''
               }. It may still be in its old calendar.`
             )
+          } else {
+            // create / update / delete carry user content — dropping them
+            // silently would orphan the edit with no explanation. The change
+            // itself is lost from the queue, but the local event stays in the
+            // store with syncStatus 'failed', so the user can see it and edit
+            // again.
+            showToast(pendingChangeDropMessage(change.type, pendingChangeTitle(change)))
           }
+          lastAttemptAtByChangeId.delete(change.id)
           storage.removePendingChange(change.id)
           failed++
+          continue
+        }
+
+        // Exponential backoff: a change that failed with a countable error
+        // waits out its window before the next attempt. Skipped changes are
+        // neither counted nor dropped. A retryCount of 0 (fresh edit, or a
+        // coalesced replacement) always attempts immediately.
+        const lastAttempt = lastAttemptAtByChangeId.get(change.id)
+        if (
+          change.retryCount > 0 &&
+          lastAttempt !== undefined &&
+          Date.now() - lastAttempt < backoffDelayMs(change.retryCount)
+        ) {
           continue
         }
 
@@ -400,16 +487,50 @@ export function useCalDAV(): UseCalDAVReturn {
                 state.events,
                 event.resourceHref
               )
-              const { url, etag } =
+              const useGroup =
                 groupedEvents.length > 1 &&
                 groupedEvents.some((candidate) => !candidate.recurrenceId)
-                  ? await engine.updateEventGroup(groupedEvents, event.etag || '')
-                  : await engine.updateEvent(event, event.etag || '')
-              for (const groupedEvent of groupedEvents) {
-                storeUpdateEvent(groupedEvent.id, { resourceHref: url, etag, syncStatus: 'synced' })
+              const masterForHref =
+                groupedEvents.find((candidate) => !candidate.recurrenceId) ?? event
+              try {
+                const { url, etag } = await applyUpdateWithStaleEtagRecovery(
+                  engine,
+                  client,
+                  event,
+                  groupedEvents,
+                  useGroup,
+                  event.etag || '',
+                  eventWriteHref(masterForHref, calendar)
+                )
+                for (const groupedEvent of groupedEvents) {
+                  storeUpdateEvent(groupedEvent.id, {
+                    resourceHref: url,
+                    etag,
+                    syncStatus: 'synced',
+                  })
+                }
+                // Mark as synced in the store
+                storeUpdateEvent(change.eventId, {
+                  resourceHref: url,
+                  etag,
+                  syncStatus: 'synced',
+                })
+              } catch (err) {
+                if ((err as { status?: number } | undefined)?.status === 412) {
+                  // Even re-applied against a fresh etag the server still
+                  // refuses: the resource changed again mid-recovery. Do not
+                  // loop — surface the conflict and keep the local edit (it
+                  // stays in the store with syncStatus 'failed').
+                  showToast(
+                    `Couldn't save "${pendingChangeTitle(change) || 'this event'}" — it changed on the server while this edit was queued. Your version is saved locally.`
+                  )
+                  lastAttemptAtByChangeId.delete(change.id)
+                  storage.removePendingChange(change.id)
+                  failed++
+                  break
+                }
+                throw err
               }
-              // Mark as synced in the store
-              storeUpdateEvent(change.eventId, { resourceHref: url, etag, syncStatus: 'synced' })
               break
             }
             case 'move': {
@@ -530,7 +651,19 @@ export function useCalDAV(): UseCalDAVReturn {
               if (caldavDebugMode) {
                 console.log('[CalDAV] Deleting event from server:', eventUrl, 'etag:', etag)
               }
-              await engine.deleteEvent(eventUrl, etag)
+              try {
+                await engine.deleteEvent(eventUrl, etag)
+              } catch (err) {
+                if ((err as { status?: number } | undefined)?.status !== 412) throw err
+                // Stale If-Match: re-fetch the current etag and retry once.
+                // If that also 412s (or the etag fetch fails), the outer
+                // classifier counts it and a later cycle tries again — a
+                // delete that stays queued is harmless, the event just stays
+                // on the server.
+                const freshEtag = await client.fetchEtag(eventUrl)
+                if (!freshEtag) throw err
+                await engine.deleteEvent(eventUrl, freshEtag)
+              }
               // Remove from the store: a failed delete re-adds the event with
               // syncStatus='failed' (see deleteEventFn catch), so on a successful
               // retry we must clear it or it lingers as a ghost (gone on server,
@@ -542,9 +675,36 @@ export function useCalDAV(): UseCalDAVReturn {
 
           storage.removePendingChange(change.id)
           succeeded++
-        } catch {
-          storage.updatePendingChangeRetry(change.id)
-          failed++
+        } catch (err) {
+          const disposition = classifyPendingChangeError(err, change.type)
+          switch (disposition.kind) {
+            case 'retry':
+              // Transient network/offline: never count toward MAX_RETRIES and
+              // never drop — the change carries user content.
+              failed++
+              break
+            case 'retry-counted':
+            case 'stale-etag':
+              // 'stale-etag' reaches here only when the in-case recovery could
+              // not fetch a fresh etag — count it and retry later.
+              storage.updatePendingChangeRetry(change.id)
+              lastAttemptAtByChangeId.set(change.id, Date.now())
+              failed++
+              break
+            case 'drop': {
+              showToast(
+                pendingChangeDropMessage(
+                  change.type,
+                  pendingChangeTitle(change),
+                  disposition.message
+                )
+              )
+              lastAttemptAtByChangeId.delete(change.id)
+              storage.removePendingChange(change.id)
+              failed++
+              break
+            }
+          }
         }
       }
 
@@ -1039,6 +1199,10 @@ export function useCalDAV(): UseCalDAVReturn {
       setSyncState((prev) => ({ ...prev, status: 'syncing', error: null }))
       useCalDAVSyncStore.getState().setStatus('syncing')
 
+      // Errors from individual calendars, accumulated so one collection
+      // failing never silences the others.
+      const syncErrors: string[] = []
+
       try {
         const credential = await getCredentialById(account.credentialId)
         if (!credential) {
@@ -1136,171 +1300,183 @@ export function useCalDAV(): UseCalDAVReturn {
         useCalendarStore.getState().clearDuplicateUidIssues()
 
         for (const cal of calendarsToSync) {
-          const fetchedEvents = await client.fetchEvents(cal.url, start, end, true)
+          try {
+            const fetchedEvents = await client.fetchEvents(cal.url, start, end, true)
 
-          // Snapshot pending local changes after the network fetch, as late as
-          // possible before reconciliation. They must win over remote state.
-          const pendingLocalChangeIds = pendingGuardedEventIds(storage.getPendingChanges())
-          // Also skip events whose server DELETE is in flight right now: on the
-          // happy path no pending-change tombstone is written, so without this a
-          // sync racing the delete would re-add the event.
-          for (const id of inFlightDeletes) pendingLocalChangeIds.add(id)
+            // Snapshot pending local changes after the network fetch, as late as
+            // possible before reconciliation. They must win over remote state.
+            const pendingLocalChangeIds = pendingGuardedEventIds(storage.getPendingChanges())
+            // Also skip events whose server DELETE is in flight right now: on the
+            // happy path no pending-change tombstone is written, so without this a
+            // sync racing the delete would re-add the event.
+            for (const id of inFlightDeletes) pendingLocalChangeIds.add(id)
 
-          // Get events that belong to this calendar, indexed by id for O(1) lookup
-          const calendarEvents = currentEvents.filter((e) => e.calendarId === cal.id)
-          const calendarEventsById = new Map(calendarEvents.map((e) => [e.id, e]))
-          const serverEventIds = new Set<string>()
-          const newCategoryNames: string[] = []
+            // Get events that belong to this calendar, indexed by id for O(1) lookup
+            const calendarEvents = currentEvents.filter((e) => e.calendarId === cal.id)
+            const calendarEventsById = new Map(calendarEvents.map((e) => [e.id, e]))
+            const serverEventIds = new Set<string>()
+            const newCategoryNames: string[] = []
 
-          const { items: parsedWithHref, hadParseFailures } = await collectParsedWithHref(
-            fetchedEvents,
-            cal.id
-          )
+            const { items: parsedWithHref, hadParseFailures } = await collectParsedWithHref(
+              fetchedEvents,
+              cal.id
+            )
 
-          // Detect independent events illegally sharing a UID across resources.
-          // Keep one deterministically; record the rest as data issues (#22).
-          const { issues, skip } = detectUidCollisions(parsedWithHref)
-          for (const issue of issues) {
-            useCalendarStore.getState().addDuplicateUidIssue(issue)
-          }
-
-          // R2.7 — UIDs whose *master* VTODO is cancelled. A cancelled master
-          // takes its whole series with it, overrides included, per RFC 5545
-          // §3.8.1.11: STATUS applies to the component it appears on, and the
-          // master defines the recurrence set the overrides belong to.
-          const cancelledTaskUids = new Set<string>()
-          for (const item of parsedWithHref) {
-            const e = item.event
-            if (e.type === 'task' && !e.recurrenceId && e.taskStatus === 'CANCELLED') {
-              cancelledTaskUids.add(e.uid || e.id)
-            }
-          }
-
-          for (const item of parsedWithHref) {
-            const parsedEvent = item.event
-
-            // Skip collision "losers" so they don't overwrite the kept event.
-            if (skip.has(item)) {
-              continue
+            // Detect independent events illegally sharing a UID across resources.
+            // Keep one deterministically; record the rest as data issues (#22).
+            const { issues, skip } = detectUidCollisions(parsedWithHref)
+            for (const issue of issues) {
+              useCalendarStore.getState().addDuplicateUidIssue(issue)
             }
 
-            // Do not overwrite a local change waiting to be pushed.
-            if (pendingLocalChangeIds.has(parsedEvent.id)) {
-              serverEventIds.add(parsedEvent.id)
-              continue
-            }
-
-            // Some CalDAV task clients retain deleted VTODO resources with
-            // STATUS:CANCELLED instead of issuing DELETE. Treat that as a
-            // remote deletion so the task does not remain in Calino.
-            //
-            // R2.7 — but only for a *master*. A cancelled detached override is
-            // the RFC-blessed way to cancel a single occurrence of a recurring
-            // task; dropping it here would let the master regenerate that
-            // occurrence, so the cancellation would silently undo itself on
-            // every sync. Overrides only go when their master goes.
-            if (parsedEvent.type === 'task' && parsedEvent.taskStatus === 'CANCELLED') {
-              if (!parsedEvent.recurrenceId) continue
-            }
-            if (
-              parsedEvent.type === 'task' &&
-              parsedEvent.recurrenceId &&
-              cancelledTaskUids.has(parsedEvent.uid || parsedEvent.recurrenceMasterId || '')
-            ) {
-              continue
-            }
-
-            serverEventIds.add(parsedEvent.id)
-
-            // Collect category names for auto-creation
-            // Bug 31 fix: do not filter categories by UUID pattern.
-            // Let users see all categories from their CalDAV server.
-            if (parsedEvent.categories) {
-              for (const catName of parsedEvent.categories) {
-                const existingCat = currentCategories.find((c) => c.name === catName)
-                if (!existingCat && !newCategoryNames.includes(catName)) {
-                  newCategoryNames.push(catName)
-                }
+            // R2.7 — UIDs whose *master* VTODO is cancelled. A cancelled master
+            // takes its whole series with it, overrides included, per RFC 5545
+            // §3.8.1.11: STATUS applies to the component it appears on, and the
+            // master defines the recurrence set the overrides belong to.
+            const cancelledTaskUids = new Set<string>()
+            for (const item of parsedWithHref) {
+              const e = item.event
+              if (e.type === 'task' && !e.recurrenceId && e.taskStatus === 'CANCELLED') {
+                cancelledTaskUids.add(e.uid || e.id)
               }
             }
 
-            const existingEvent = calendarEventsById.get(parsedEvent.id) ?? null
+            for (const item of parsedWithHref) {
+              const parsedEvent = item.event
 
-            if (existingEvent) {
-              const serverSeq = parsedEvent.sequence ?? 0
-              const localSeq = existingEvent.sequence ?? 0
-
-              let shouldUpdate = false
-              const isConflict = serverSeq !== localSeq
-
-              if (serverSeq > localSeq) {
-                shouldUpdate = conflictResolution === 'server-wins'
-              } else if (localSeq > serverSeq) {
-                shouldUpdate = conflictResolution === 'local-wins'
-              } else {
-                // Same sequence - no real conflict, safe to sync from server
-                shouldUpdate = true
-              }
-
-              // Bug 22 fix: for 'ask' mode, never auto-update on conflicts.
-              // Store conflict info for UI display.
-              if (isConflict && conflictResolution === 'ask') {
-                const conflict: ConflictInfo = {
-                  eventId: parsedEvent.id,
-                  localVersion: existingEvent,
-                  serverVersion: parsedEvent,
-                  resolution: 'ask',
-                }
-                setSyncState((prev) => ({
-                  ...prev,
-                  conflicts: [...prev.conflicts, conflict],
-                }))
-                console.log(
-                  `[CalDAV] Conflict detected for event ${parsedEvent.id} (local seq ${localSeq} vs server seq ${serverSeq}). Awaiting user resolution.`
-                )
+              // Skip collision "losers" so they don't overwrite the kept event.
+              if (skip.has(item)) {
                 continue
               }
 
-              if (shouldUpdate) {
-                storeUpdateEvent(parsedEvent.id, parsedEvent)
+              // Do not overwrite a local change waiting to be pushed.
+              if (pendingLocalChangeIds.has(parsedEvent.id)) {
+                serverEventIds.add(parsedEvent.id)
+                continue
+              }
+
+              // Some CalDAV task clients retain deleted VTODO resources with
+              // STATUS:CANCELLED instead of issuing DELETE. Treat that as a
+              // remote deletion so the task does not remain in Calino.
+              //
+              // R2.7 — but only for a *master*. A cancelled detached override is
+              // the RFC-blessed way to cancel a single occurrence of a recurring
+              // task; dropping it here would let the master regenerate that
+              // occurrence, so the cancellation would silently undo itself on
+              // every sync. Overrides only go when their master goes.
+              if (parsedEvent.type === 'task' && parsedEvent.taskStatus === 'CANCELLED') {
+                if (!parsedEvent.recurrenceId) continue
+              }
+              if (
+                parsedEvent.type === 'task' &&
+                parsedEvent.recurrenceId &&
+                cancelledTaskUids.has(parsedEvent.uid || parsedEvent.recurrenceMasterId || '')
+              ) {
+                continue
+              }
+
+              serverEventIds.add(parsedEvent.id)
+
+              // Collect category names for auto-creation
+              // Bug 31 fix: do not filter categories by UUID pattern.
+              // Let users see all categories from their CalDAV server.
+              if (parsedEvent.categories) {
+                for (const catName of parsedEvent.categories) {
+                  const existingCat = currentCategories.find((c) => c.name === catName)
+                  if (!existingCat && !newCategoryNames.includes(catName)) {
+                    newCategoryNames.push(catName)
+                  }
+                }
+              }
+
+              const existingEvent = calendarEventsById.get(parsedEvent.id) ?? null
+
+              if (existingEvent) {
+                const serverSeq = parsedEvent.sequence ?? 0
+                const localSeq = existingEvent.sequence ?? 0
+
+                let shouldUpdate = false
+                const isConflict = serverSeq !== localSeq
+
+                if (serverSeq > localSeq) {
+                  shouldUpdate = conflictResolution === 'server-wins'
+                } else if (localSeq > serverSeq) {
+                  shouldUpdate = conflictResolution === 'local-wins'
+                } else {
+                  // Same sequence - no real conflict, safe to sync from server
+                  shouldUpdate = true
+                }
+
+                // Bug 22 fix: for 'ask' mode, never auto-update on conflicts.
+                // Store conflict info for UI display.
+                if (isConflict && conflictResolution === 'ask') {
+                  const conflict: ConflictInfo = {
+                    eventId: parsedEvent.id,
+                    localVersion: existingEvent,
+                    serverVersion: parsedEvent,
+                    resolution: 'ask',
+                  }
+                  setSyncState((prev) => ({
+                    ...prev,
+                    conflicts: [...prev.conflicts, conflict],
+                  }))
+                  console.log(
+                    `[CalDAV] Conflict detected for event ${parsedEvent.id} (local seq ${localSeq} vs server seq ${serverSeq}). Awaiting user resolution.`
+                  )
+                  continue
+                }
+
+                if (shouldUpdate) {
+                  storeUpdateEvent(parsedEvent.id, parsedEvent)
+                }
+              } else {
+                storeAddEvent(parsedEvent)
+              }
+            }
+
+            // Auto-create categories from server
+            for (const catName of newCategoryNames) {
+              storeAddCategory({
+                id: crypto.randomUUID(),
+                name: catName,
+                color: EVENT_COLORS[Math.floor(Math.random() * EVENT_COLORS.length)],
+              })
+            }
+
+            // The complete collection listing makes absence an authoritative
+            // remote deletion. Never remove a local change waiting to be pushed.
+            // Skip deletion entirely if any resource in this fetch failed to
+            // parse: that resource's UID is unknown to us, so we cannot tell
+            // whether the local event it corresponds to is genuinely gone or
+            // just temporarily unreadable. Treating the listing as authoritative
+            // in that case could delete an event that still exists on the
+            // server. Adds/updates from resources that DID parse are unaffected.
+            if (!hadParseFailures) {
+              for (const localEvent of calendarEvents) {
+                if (
+                  !serverEventIds.has(localEvent.id) &&
+                  !pendingLocalChangeIds.has(localEvent.id)
+                ) {
+                  storeDeleteEvent(localEvent.id)
+                }
               }
             } else {
-              storeAddEvent(parsedEvent)
+              console.warn(
+                `[CalDAV] Skipping remote-deletion reconciliation for calendar ${cal.id}: one or more resources failed to parse this cycle.`
+              )
             }
-          }
-
-          // Auto-create categories from server
-          for (const catName of newCategoryNames) {
-            storeAddCategory({
-              id: crypto.randomUUID(),
-              name: catName,
-              color: EVENT_COLORS[Math.floor(Math.random() * EVENT_COLORS.length)],
-            })
-          }
-
-          // The complete collection listing makes absence an authoritative
-          // remote deletion. Never remove a local change waiting to be pushed.
-          // Skip deletion entirely if any resource in this fetch failed to
-          // parse: that resource's UID is unknown to us, so we cannot tell
-          // whether the local event it corresponds to is genuinely gone or
-          // just temporarily unreadable. Treating the listing as authoritative
-          // in that case could delete an event that still exists on the
-          // server. Adds/updates from resources that DID parse are unaffected.
-          if (!hadParseFailures) {
-            for (const localEvent of calendarEvents) {
-              if (!serverEventIds.has(localEvent.id) && !pendingLocalChangeIds.has(localEvent.id)) {
-                storeDeleteEvent(localEvent.id)
-              }
-            }
-          } else {
-            console.warn(
-              `[CalDAV] Skipping remote-deletion reconciliation for calendar ${cal.id}: one or more resources failed to parse this cycle.`
+          } catch (err) {
+            // One calendar failing must not stop the rest from syncing: log,
+            // accumulate, and let the account sync finish — the pending queue
+            // still drains (see the finally below).
+            console.warn(`[CalDAV] Sync failed for calendar ${cal.id}:`, err)
+            syncErrors.push(
+              `calendar ${cal.name || cal.id}: ${err instanceof Error ? err.message : String(err)}`
             )
           }
         }
 
         storage.updateAccountLastSync(accountId)
-        await processPendingChanges()
 
         // Check for broken events after sync and notify
         const brokenEventsAfterSync = useCalendarStore.getState().brokenEvents
@@ -1399,6 +1575,14 @@ export function useCalDAV(): UseCalDAVReturn {
         }))
         useCalDAVSyncStore.getState().setStatus('idle')
         throw error
+      } finally {
+        // Drain the queue even when the sync itself failed: a queued edit
+        // must not wait for a fully successful sync.
+        await processPendingChanges()
+      }
+
+      if (syncErrors.length > 0) {
+        throw new Error(`Sync finished with errors: ${syncErrors.join('; ')}`)
       }
     },
     [conflictResolution]
@@ -1555,8 +1739,20 @@ export function useCalDAV(): UseCalDAVReturn {
   )
 
   const syncAll = useCallback(async (): Promise<void> => {
+    // One account failing must not prevent the rest from syncing: runSyncAccount
+    // reports failures through syncState and rethrows, so catch here, keep
+    // going, and surface a combined error only after every account had a turn.
+    const errors: string[] = []
     for (const account of accounts) {
-      await syncAccount(account.id)
+      try {
+        await syncAccount(account.id)
+      } catch (err) {
+        console.warn(`[CalDAV] Sync failed for account ${account.id}:`, err)
+        errors.push(err instanceof Error ? err.message : String(err))
+      }
+    }
+    if (errors.length > 0) {
+      throw new Error(`Sync finished with errors: ${errors.join('; ')}`)
     }
   }, [accounts, syncAccount])
 

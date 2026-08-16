@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { renderHook, waitFor, act } from '@testing-library/react'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
+import { showToast } from '@/lib/toast'
 import type { CalendarEvent } from '@/types'
 
 // ---------------------------------------------------------------------------
@@ -21,6 +22,10 @@ vi.mock('../../sync/syncEngine', async (importOriginal) => {
   }
 })
 vi.mock('@/lib/uuid')
+vi.mock('@/lib/toast', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/toast')>()
+  return { ...actual, showToast: vi.fn() }
+})
 
 // ---------------------------------------------------------------------------
 // Helper: typed access to mocked modules
@@ -2686,6 +2691,381 @@ describe('useCalDAV', () => {
       const store = useCalendarStore.getState()
       expect(store.categories.find((c) => c.name === 'work')).toBeDefined()
       expect(store.categories.find((c) => c.name === 'important')).toBeDefined()
+    })
+  })
+
+  // -----------------------------------------------------------------------
+  // Phase 3 — queued edits are never lost (offline guard, status-aware
+  // classification, backoff, stale-etag 412 recovery, resilient sync loops)
+  // -----------------------------------------------------------------------
+  describe('Phase 3: pending-change resilience', () => {
+    const queuedCreate = {
+      id: 'pc-p3',
+      type: 'create' as const,
+      eventId: 'evt-p3',
+      calendarId: 'cal-1',
+      data: JSON.stringify(mockEvent),
+      timestamp: '2025-01-01T00:00:00Z',
+      retryCount: 0,
+    }
+
+    function queueWith(change: unknown): void {
+      mockAccountStorage.getPendingChanges.mockReturnValue([change] as any)
+    }
+
+    it('does not attempt queued writes while the browser is offline', async () => {
+      const original = navigator.onLine
+      Object.defineProperty(navigator, 'onLine', { configurable: true, value: false })
+      try {
+        queueWith(queuedCreate)
+        mockAccountStorage.getAllAccounts.mockReturnValue([mockAccount])
+        mockAccountStorage.getAllCalendars.mockReturnValue([mockCalendar])
+
+        renderHook(() => useCalDAV())
+
+        // Give the mount cycle time to run — the guard must return before
+        // any engine call.
+        await new Promise((resolve) => setTimeout(resolve, 50))
+
+        expect(mockSyncEngineInstance.pushEvent).not.toHaveBeenCalled()
+        expect(mockAccountStorage.updatePendingChangeRetry).not.toHaveBeenCalled()
+        expect(mockAccountStorage.removePendingChange).not.toHaveBeenCalled()
+      } finally {
+        Object.defineProperty(navigator, 'onLine', { configurable: true, value: original })
+      }
+    })
+
+    it('does not count a network failure toward MAX_RETRIES', async () => {
+      mockSyncEngineInstance.pushEvent.mockRejectedValue(
+        new Error('No network connection. Please check your internet connection.')
+      )
+      queueWith(queuedCreate)
+      mockAccountStorage.getAllAccounts.mockReturnValue([mockAccount])
+      mockAccountStorage.getAllCalendars.mockReturnValue([mockCalendar])
+
+      renderHook(() => useCalDAV())
+
+      await waitFor(() => {
+        expect(mockSyncEngineInstance.pushEvent).toHaveBeenCalled()
+      })
+      // The change stays queued, uncounted and undropped.
+      expect(mockAccountStorage.updatePendingChangeRetry).not.toHaveBeenCalled()
+      expect(mockAccountStorage.removePendingChange).not.toHaveBeenCalled()
+    })
+
+    it('recovers from a stale-etag 412 by re-fetching the etag and re-applying once', async () => {
+      const updateEvent = {
+        ...mockEvent,
+        id: 'evt-412',
+        etag: '"stale"',
+        resourceHref: 'https://caldav.example.com/cal/main/evt-412.ics',
+      }
+      queueWith({
+        id: 'pc-412',
+        type: 'update',
+        eventId: 'evt-412',
+        calendarId: 'cal-1',
+        data: JSON.stringify(updateEvent),
+        timestamp: '2025-01-01T00:00:00Z',
+        retryCount: 0,
+      })
+      mockAccountStorage.getAllAccounts.mockReturnValue([mockAccount])
+      mockAccountStorage.getAllCalendars.mockReturnValue([mockCalendar])
+      mockSyncEngineInstance.updateEvent
+        .mockRejectedValueOnce(
+          Object.assign(
+            new Error(
+              'PUT https://caldav.example.com/cal/main/evt-412.ics failed: HTTP 412: If-Match precondition failed'
+            ),
+            { status: 412 }
+          )
+        )
+        .mockResolvedValueOnce({
+          url: 'https://caldav.example.com/cal/main/evt-412.ics',
+          etag: '"fresh"',
+        })
+      const fetchEtag = vi.fn().mockResolvedValue('"fresh"')
+      mockCalDAVClient.createCalDAVClient.mockResolvedValue({
+        fetchEvents: vi.fn().mockResolvedValue([]),
+        fetchCalendars: vi.fn().mockResolvedValue([]),
+        fetchEtag,
+      } as any)
+
+      renderHook(() => useCalDAV())
+
+      await waitFor(() => {
+        expect(mockAccountStorage.removePendingChange).toHaveBeenCalledWith('pc-412')
+      })
+
+      // The stale etag went out first, the re-fetched one second — never a
+      // replay of the dead etag.
+      expect(mockSyncEngineInstance.updateEvent).toHaveBeenCalledTimes(2)
+      expect(mockSyncEngineInstance.updateEvent.mock.calls[0][1]).toBe('"stale"')
+      expect(mockSyncEngineInstance.updateEvent.mock.calls[1][1]).toBe('"fresh"')
+      expect(fetchEtag).toHaveBeenCalledWith(
+        'https://caldav.example.com/cal/main/evt-412.ics'
+      )
+      expect(mockAccountStorage.updatePendingChangeRetry).not.toHaveBeenCalled()
+    })
+
+    it('drops an update that still 412s after a fresh etag, keeping the local edit', async () => {
+      const updateEvent = {
+        ...mockEvent,
+        id: 'evt-412b',
+        etag: '"stale"',
+        resourceHref: 'https://caldav.example.com/cal/main/evt-412b.ics',
+      }
+      queueWith({
+        id: 'pc-412b',
+        type: 'update',
+        eventId: 'evt-412b',
+        calendarId: 'cal-1',
+        data: JSON.stringify(updateEvent),
+        timestamp: '2025-01-01T00:00:00Z',
+        retryCount: 0,
+      })
+      mockAccountStorage.getAllAccounts.mockReturnValue([mockAccount])
+      mockAccountStorage.getAllCalendars.mockReturnValue([mockCalendar])
+      mockSyncEngineInstance.updateEvent.mockRejectedValue(
+        Object.assign(
+          new Error(
+            'PUT https://caldav.example.com/cal/main/evt-412b.ics failed: HTTP 412: If-Match precondition failed'
+          ),
+          { status: 412 }
+        )
+      )
+      mockCalDAVClient.createCalDAVClient.mockResolvedValue({
+        fetchEvents: vi.fn().mockResolvedValue([]),
+        fetchCalendars: vi.fn().mockResolvedValue([]),
+        fetchEtag: vi.fn().mockResolvedValue('"fresh"'),
+      } as any)
+
+      renderHook(() => useCalDAV())
+
+      await waitFor(() => {
+        expect(mockAccountStorage.removePendingChange).toHaveBeenCalledWith('pc-412b')
+      })
+      // One stale attempt + one fresh attempt, then it is dropped — no loop.
+      expect(mockSyncEngineInstance.updateEvent).toHaveBeenCalledTimes(2)
+      expect(showToast).toHaveBeenCalledWith(expect.stringContaining('changed on the server'))
+    })
+
+    it('drops a create that fails with 507 (quota) and explains why', async () => {
+      mockSyncEngineInstance.pushEvent.mockRejectedValue(
+        Object.assign(
+          new Error('PUT https://... failed: HTTP 507: Insufficient Storage'),
+          { status: 507 }
+        )
+      )
+      queueWith(queuedCreate)
+      mockAccountStorage.getAllAccounts.mockReturnValue([mockAccount])
+      mockAccountStorage.getAllCalendars.mockReturnValue([mockCalendar])
+
+      renderHook(() => useCalDAV())
+
+      await waitFor(() => {
+        expect(mockAccountStorage.removePendingChange).toHaveBeenCalledWith('pc-p3')
+      })
+      expect(mockAccountStorage.updatePendingChangeRetry).not.toHaveBeenCalled()
+      expect(showToast).toHaveBeenCalledWith(expect.stringContaining('storage is full'))
+    })
+
+    it('waits out the exponential backoff window before retrying a counted failure', async () => {
+      vi.useFakeTimers()
+      const queue = [queuedCreate]
+      mockAccountStorage.getPendingChanges.mockReturnValue(queue as any)
+      mockAccountStorage.updatePendingChangeRetry.mockImplementation((id: string) => {
+        const entry = queue.find((c) => c.id === id)
+        if (entry) entry.retryCount += 1
+      })
+      mockAccountStorage.removePendingChange.mockImplementation((id: string) => {
+        const idx = queue.findIndex((c) => c.id === id)
+        if (idx !== -1) queue.splice(idx, 1)
+      })
+      mockAccountStorage.getAllAccounts.mockReturnValue([mockAccount])
+      mockAccountStorage.getAllCalendars.mockReturnValue([mockCalendar])
+      mockSyncEngineInstance.pushEvent.mockRejectedValue(
+        Object.assign(new Error('PUT https://... failed: HTTP 500'), { status: 500 })
+      )
+
+      renderHook(() => useCalDAV())
+
+      // Mount attempt fails (counted) → retryCount 1.
+      await vi.advanceTimersByTimeAsync(100)
+      expect(queue[0].retryCount).toBe(1)
+      const callsAfterFirst = mockSyncEngineInstance.pushEvent.mock.calls.length
+
+      // 30s later: backoff(1) = 60s not elapsed → skipped, nothing attempted.
+      await vi.advanceTimersByTimeAsync(30_000)
+      expect(mockSyncEngineInstance.pushEvent.mock.calls.length).toBe(callsAfterFirst)
+      expect(queue[0].retryCount).toBe(1)
+
+      // 60s total: the window has elapsed → attempted again (and counted again).
+      await vi.advanceTimersByTimeAsync(30_000)
+      expect(mockSyncEngineInstance.pushEvent.mock.calls.length).toBeGreaterThan(callsAfterFirst)
+      expect(queue[0].retryCount).toBe(2)
+
+      vi.useRealTimers()
+    })
+
+    it('drops an exhausted update with a toast naming the event', async () => {
+      queueWith({
+        ...queuedCreate,
+        id: 'pc-exh-toast',
+        type: 'update',
+        eventId: 'evt-exh-toast',
+        retryCount: 10,
+      })
+      mockAccountStorage.getAllAccounts.mockReturnValue([mockAccount])
+      mockAccountStorage.getAllCalendars.mockReturnValue([mockCalendar])
+
+      renderHook(() => useCalDAV())
+
+      await waitFor(() => {
+        expect(mockAccountStorage.removePendingChange).toHaveBeenCalledWith('pc-exh-toast')
+      })
+      expect(mockSyncEngineInstance.updateEvent).not.toHaveBeenCalled()
+      expect(showToast).toHaveBeenCalledWith(expect.stringContaining('Test Event'))
+    })
+
+    it('syncs the remaining calendars when one collection throws', async () => {
+      const calA = { ...mockCalendar, id: 'cal-a', url: 'https://caldav.example.com/cal/a/' }
+      const calB = { ...mockCalendar, id: 'cal-b', url: 'https://caldav.example.com/cal/b/' }
+      mockAccountStorage.getAllAccounts.mockReturnValue([mockAccount])
+      mockAccountStorage.getAllCalendars.mockReturnValue([calA, calB])
+      mockAccountStorage.getAccountById.mockReturnValue(mockAccount)
+      mockAccountStorage.getCalendarsByAccountId.mockReturnValue([calA, calB])
+
+      const eventB = { ...mockEvent, id: 'evt-b', calendarId: 'cal-b' }
+      const iCalendarAdapter = await import('../../adapter/iCalendarAdapter')
+      vi.mocked(iCalendarAdapter.parseICALData).mockReturnValue([eventB])
+      const fetchEvents = vi
+        .fn()
+        .mockRejectedValueOnce(
+          Object.assign(
+            new Error('REPORT https://caldav.example.com/cal/a/ failed: HTTP 500'),
+            { status: 500 }
+          )
+        )
+        .mockResolvedValue([
+          { url: 'https://caldav.example.com/cal/b/evt-b.ics', data: 'ical-data', etag: 'etag1' },
+        ])
+      mockCalDAVClient.createCalDAVClient.mockResolvedValue({
+        fetchEvents,
+        fetchCalendars: vi.fn().mockResolvedValue([calA, calB]),
+      } as any)
+
+      const { result } = renderHook(() => useCalDAV())
+      await waitFor(() => expect(result.current.accounts.length).toBe(1))
+
+      await act(async () => {
+        await expect(result.current.syncAccount('acc-1')).rejects.toThrow(
+          /Sync finished with errors/
+        )
+      })
+
+      // Calendar B's events still landed despite A failing.
+      expect(useCalendarStore.getState().events.find((e) => e.id === 'evt-b')).toBeDefined()
+    })
+
+    it('drains the pending queue from the finally even when a calendar sync fails', async () => {
+      const queue = [
+        {
+          id: 'pc-fin',
+          type: 'create' as const,
+          eventId: 'evt-fin',
+          calendarId: 'cal-a',
+          data: JSON.stringify(mockEvent),
+          timestamp: '2025-01-01T00:00:00Z',
+          retryCount: 0,
+        },
+      ]
+      mockAccountStorage.getPendingChanges.mockReturnValue(queue as any)
+      mockAccountStorage.removePendingChange.mockImplementation((id: string) => {
+        const idx = queue.findIndex((c) => c.id === id)
+        if (idx !== -1) queue.splice(idx, 1)
+      })
+      mockAccountStorage.updatePendingChangeRetry.mockImplementation((id: string) => {
+        const entry = queue.find((c) => c.id === id)
+        if (entry) entry.retryCount += 1
+      })
+
+      const calA = { ...mockCalendar, id: 'cal-a', url: 'https://caldav.example.com/cal/a/' }
+      const calB = { ...mockCalendar, id: 'cal-b', url: 'https://caldav.example.com/cal/b/' }
+      mockAccountStorage.getAllAccounts.mockReturnValue([mockAccount])
+      mockAccountStorage.getAllCalendars.mockReturnValue([calA, calB])
+      mockAccountStorage.getAccountById.mockReturnValue(mockAccount)
+      mockAccountStorage.getCalendarsByAccountId.mockReturnValue([calA, calB])
+
+      // The mount attempt fails with a TRANSIENT error (uncounted, no
+      // backoff entry), so the sync's finally is free to attempt again
+      // immediately.
+      mockSyncEngineInstance.pushEvent
+        .mockRejectedValueOnce(
+          new Error('No network connection. Please check your internet connection.')
+        )
+        .mockResolvedValue({ url: 'https://...', etag: 'abc' })
+
+      const eventB = { ...mockEvent, id: 'evt-b', calendarId: 'cal-b' }
+      const iCalendarAdapter = await import('../../adapter/iCalendarAdapter')
+      vi.mocked(iCalendarAdapter.parseICALData).mockReturnValue([eventB])
+      const fetchEvents = vi
+        .fn()
+        .mockRejectedValueOnce(
+          Object.assign(
+            new Error('REPORT https://caldav.example.com/cal/a/ failed: HTTP 500'),
+            { status: 500 }
+          )
+        )
+        .mockResolvedValue([
+          { url: 'https://caldav.example.com/cal/b/evt-b.ics', data: 'ical-data', etag: 'etag1' },
+        ])
+      mockCalDAVClient.createCalDAVClient.mockResolvedValue({
+        fetchEvents,
+        fetchCalendars: vi.fn().mockResolvedValue([calA, calB]),
+      } as any)
+
+      const { result } = renderHook(() => useCalDAV())
+      await waitFor(() => expect(mockSyncEngineInstance.pushEvent).toHaveBeenCalledTimes(1))
+
+      await act(async () => {
+        await expect(result.current.syncAccount('acc-1')).rejects.toThrow(
+          /Sync finished with errors/
+        )
+      })
+
+      // The finally drained the queue: the queued create landed and was removed.
+      expect(queue).toHaveLength(0)
+      expect(mockAccountStorage.removePendingChange).toHaveBeenCalledWith('pc-fin')
+    })
+
+    it('syncAll keeps going after one account fails', async () => {
+      const acc2 = { ...mockAccount, id: 'acc-2', credentialId: 'cred-2' }
+      mockAccountStorage.getAllAccounts.mockReturnValue([mockAccount, acc2])
+      mockAccountStorage.getAccountById.mockImplementation((id: string) =>
+        id === 'acc-2' ? acc2 : mockAccount
+      )
+      mockCredentials.getCredentialById.mockImplementation((id: string) =>
+        id === 'cred-2' ? undefined : { id: 'cred-1', serverUrl: '', username: '', password: '' }
+      )
+      mockAccountStorage.getCalendarsByAccountId.mockImplementation((id: string) =>
+        id === 'acc-1' ? [mockCalendar] : []
+      )
+      const fetchEvents = vi.fn().mockResolvedValue([])
+      mockCalDAVClient.createCalDAVClient.mockResolvedValue({
+        fetchEvents,
+        fetchCalendars: vi.fn().mockResolvedValue([]),
+      } as any)
+
+      const { result } = renderHook(() => useCalDAV())
+      await waitFor(() => expect(result.current.accounts.length).toBe(2))
+
+      await act(async () => {
+        await expect(result.current.syncAll()).rejects.toThrow(/Sync finished with errors/)
+      })
+
+      // Account 1 was still synced even though account 2 failed.
+      expect(fetchEvents).toHaveBeenCalled()
     })
   })
 })
