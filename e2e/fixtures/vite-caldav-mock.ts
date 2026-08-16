@@ -197,6 +197,16 @@ const ACCOUNTS: MockAccount[] = [
         hideEtagOnPut: true,
       },
       {
+        // Owned by `sync-queue.spec.ts` (Phase 3 — queued-edit
+        // resilience), which asserts the exact bytes of the resources it
+        // seeds and replays — same reason as `r-until/`: a parallel
+        // spec writing to this collection would change the dump it reads.
+        path: '/dav/calendars/user/sync-queue/',
+        displayName: 'Sync Queue',
+        color: '#4285F4',
+        components: ['VEVENT', 'VTODO', 'VJOURNAL'],
+      },
+      {
         path: '/dav/calendars/user/calino-settings/',
         displayName: 'Calino Settings',
         components: ['VEVENT'],
@@ -556,7 +566,8 @@ export function caldavMockPlugin(): Plugin {
       // 9) OPTIONS
       if (method === 'OPTIONS') {
         res.writeHead(200, {
-          Allow: 'OPTIONS, GET, HEAD, POST, PUT, DELETE, PROPFIND, PROPPATCH, REPORT, MKCALENDAR, MKCOL, COPY, MOVE',
+          Allow:
+            'OPTIONS, GET, HEAD, POST, PUT, DELETE, PROPFIND, PROPPATCH, REPORT, MKCALENDAR, MKCOL, COPY, MOVE',
           DAV: '1, 2, 3, calendar-access',
         })
         res.end()
