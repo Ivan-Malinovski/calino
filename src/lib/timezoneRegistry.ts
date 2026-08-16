@@ -1,22 +1,36 @@
 import ICAL from 'ical.js'
-import { getVtimezoneComponent } from '@touch4it/ical-timezones'
+// The package's own getVtimezoneComponent reads zone files with fs.readFileSync
+// (Node-only) and cannot run in the browser. Vite statically collects the raw
+// zone texts below instead; the eager glob makes every zone synchronously
+// available after module load, so the expansion/serialization paths never
+// fall back to a zone-less frame. Zones are parsed into TimezoneService lazily
+// on first use (registration cost is per-used-zone).
+//
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+import zoneIndex from '@touch4it/ical-timezones/zones.js'
 
-/**
- * Phase 2 (C0) - timezone data for ical.js.
- *
- * ical.js ships no IANA tzdata and its ICAL.TimezoneService starts
- * completely empty (not even UTC until the first get/reset). Without a
- * real zone, a TZID resolves to "floating": recurrence expansion keeps a
- * fixed UTC instant instead of the series wall clock (the Phase 2 DST-
- * drift bug) and serialization cannot emit a VTIMEZONE.
- *
- * This module lazily registers real zones (tzurl data bundled with
- * @touch4it/ical-timezones) into the global TimezoneService on first
- * use, and resolves Windows/legacy TZIDs that ical.js and date-fns-tz
- * cannot understand to their IANA equivalents. Registration is lazy and
- * cached so startup cost is zero for calendars carrying no TZIDs, and
- * unit tests exercise it through the expansion/serialization paths.
- */
+// Raw zone texts keyed by Vite's glob path (absolute); matched by suffix.
+const zoneTextLoaders = import.meta.glob('../../node_modules/@touch4it/ical-timezones/zones/**/*.ics', {
+  query: '?raw',
+  import: 'default',
+  eager: true,
+}) as Record<string, string>
+
+const zoneFileCache = new Map<string, string>()
+function zoneText(filename: string): string | undefined {
+  const cached = zoneFileCache.get(filename)
+  if (cached !== undefined) return cached || undefined
+  const suffix = 'zones/' + filename
+  for (const key of Object.keys(zoneTextLoaders)) {
+    if (key.endsWith(suffix)) {
+      zoneFileCache.set(filename, zoneTextLoaders[key])
+      return zoneTextLoaders[key]
+    }
+  }
+  zoneFileCache.set(filename, '')
+  return undefined
+}
 
 /** Windows zone IDs to IANA. Covers the IDs a Windows/Outlook-produced
  * ICS is likely to carry; the tzurl data also knows legacy Olson names. */
@@ -178,18 +192,20 @@ export function normalizeTzid(tzid: string): string {
  * ICAL.TimezoneService, so ICAL.RecurExpansion can expand a series in its
  * own zone and ICAL.helpers.updateTimezones can emit a VTIMEZONE.
  *
- * Synchronous: the tzurl data ships inside the package (one file per zone).
- * Returns true when the zone is available (registered just now or before).
+ * Synchronous and browser-safe: the raw zone texts are bundled by Vite and
+ * parsed on first use. Returns true when the zone is available.
  */
 export function ensureZoneRegistered(tzid: string): boolean {
   primeService()
   const resolved = normalizeTzid(tzid)
   if (ICAL.TimezoneService.has(resolved)) return true
+  if (resolved === 'UTC') return true
   try {
-    const text = getVtimezoneComponent(resolved)
+    const filename = (zoneIndex as Record<string, string>)[resolved]
+    const text = filename ? zoneText(filename) : undefined
     if (!text) return false
     const comp = new ICAL.Component(ICAL.parse(text) as unknown as string[])
-    // The generator returns a bare VTIMEZONE; tolerate a VCALENDAR wrapper.
+    // The zone file is a VCALENDAR wrapper; take the VTIMEZONE inside.
     const vtimezone = comp.name === 'vcalendar' ? comp.getFirstSubcomponent('vtimezone') : comp
     if (!vtimezone) return false
     ICAL.TimezoneService.register(new ICAL.Timezone(vtimezone), resolved)

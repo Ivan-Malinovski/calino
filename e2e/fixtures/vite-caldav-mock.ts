@@ -168,6 +168,16 @@ const ACCOUNTS: MockAccount[] = [
         components: ['VEVENT', 'VTODO', 'VJOURNAL'],
       },
       {
+        // Owned by `timezone-correctness.spec.ts`, which asserts the exact
+        // DTSTART bytes of the TZID resources it seeds and drags — same
+        // reason as `r-until/`: a parallel spec writing to this collection
+        // would change the dump it reads back.
+        path: '/dav/calendars/user/tz-correct/',
+        displayName: 'Timezone Correct',
+        color: '#EA4335',
+        components: ['VEVENT', 'VTODO', 'VJOURNAL'],
+      },
+      {
         // Owned by `delete-sync.spec.ts` (issue #110), which asserts the
         // collection is empty after a delete — it cannot share a collection
         // with a spec running in parallel.
