@@ -24,6 +24,8 @@ import {
   materializeOccurrenceAt,
   rruleAnchor,
   rruleWindow,
+  expandZonedOccurrences,
+  parseOccurrenceInstant,
 } from '@/lib/occurrenceExpansion'
 import { deleteAttachments } from '@/lib/attachmentStore'
 import { deleteRawIcs, deleteRawIcsForCalendar } from '@/lib/rawIcsStore'
@@ -198,7 +200,11 @@ function overrideHasUserEdits(override: CalendarEvent, master: CalendarEvent): b
 function sameOccurrenceInstant(event: CalendarEvent, recurrenceId: string | undefined): boolean {
   if (!recurrenceId) return true
   if (event.isAllDay) return event.start.split('T')[0] === recurrenceId.split('T')[0]
-  return parseISO(event.start).getTime() === parseISO(recurrenceId).getTime()
+  // TZID events store both as naive wall clocks in the series' zone.
+  return (
+    parseOccurrenceInstant(event.start, event.timezone).getTime() ===
+    parseOccurrenceInstant(recurrenceId, event.timezone).getTime()
+  )
 }
 
 function getEventIndex(events: CalendarEvent[]): EventIndex {
@@ -283,8 +289,13 @@ function getEventIndex(events: CalendarEvent[]): EventIndex {
   // was never suppressed and the occurrence rendered twice (#96).
   for (const { event, masterId } of pendingExceptions) {
     const recurrenceId = event.recurrenceId as string
-    const isAllDay = masters.get(masterId)?.isAllDay ?? event.isAllDay
-    const recurrenceKey = isAllDay ? recurrenceId.split('T')[0] : parseISO(recurrenceId).getTime()
+    const master = masters.get(masterId)
+    const isAllDay = master?.isAllDay ?? event.isAllDay
+    // A RECURRENCE-ID names a slot in the master's recurrence set, so it must
+    // be read in the master's zone frame — TZID series store naive wall clocks.
+    const recurrenceKey = isAllDay
+      ? recurrenceId.split('T')[0]
+      : parseOccurrenceInstant(recurrenceId, master?.timezone).getTime()
     exceptions.set(`${event.calendarId}-${masterId}-${recurrenceKey}`, event)
   }
 
@@ -378,10 +389,13 @@ export function getTasksForDay(events: CalendarEvent[], dayKey: string): Calenda
     if (!rruleString) continue
     let occurrences: Date[]
     try {
-      occurrences = getOrCreateRRule(rruleString, rruleAnchor(master, indexed.start)).between(
-        ...rruleWindow(master.isAllDay, dayStart, dayEnd),
-        true
-      )
+      // TZID timed series expand in their own zone (wall clock held across DST).
+      occurrences =
+        expandZonedOccurrences(master, dayStart, dayEnd) ??
+        getOrCreateRRule(rruleString, rruleAnchor(master, indexed.start)).between(
+          ...rruleWindow(master.isAllDay, dayStart, dayEnd),
+          true
+        )
     } catch {
       continue
     }
@@ -392,7 +406,7 @@ export function getTasksForDay(events: CalendarEvent[], dayKey: string): Calenda
       // own right, so here it only suppresses.
       const recurrenceValue = occurrenceRecurrenceValue(occ, shape.occDateStr, master.isAllDay)
       if (index.exceptions.has(`${master.calendarId}-${master.id}-${recurrenceValue}`)) continue
-      if (isOccurrenceExcluded(occ, shape.occDateStr, master.isAllDay, master.excludedDates)) {
+      if (isOccurrenceExcluded(occ, shape.occDateStr, master.isAllDay, master.excludedDates, master.timezone)) {
         continue
       }
       const occurrence = materializeOccurrence(master, shape)
@@ -1283,10 +1297,14 @@ export const useCalendarStore = create<CalendarStore>()(
 
               const rule = getOrCreateRRule(rruleString, rruleAnchor(event, eventStart))
 
-              const occurrences = rule.between(
-                ...rruleWindow(event.isAllDay, startDate, endDate),
-                true
-              )
+              // TZID timed series expand in their own zone (wall clock held
+              // across DST); the rrule path stays for all-day/UTC/floating.
+              const occurrences =
+                expandZonedOccurrences(event, startDate, endDate) ??
+                rule.between(
+                  ...rruleWindow(event.isAllDay, startDate, endDate),
+                  true
+                )
               const excludedDates = event.excludedDates || []
 
               for (const occ of occurrences) {
@@ -1309,7 +1327,7 @@ export const useCalendarStore = create<CalendarStore>()(
                 }
 
                 // No exception — honour EXDATE exclusions
-                if (isOccurrenceExcluded(occ, occDateStr, event.isAllDay, excludedDates)) {
+                if (isOccurrenceExcluded(occ, occDateStr, event.isAllDay, excludedDates, event.timezone)) {
                   continue
                 }
 
