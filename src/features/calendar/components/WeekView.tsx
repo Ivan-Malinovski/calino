@@ -28,7 +28,7 @@ import {
   addWeeks,
   addDays,
 } from 'date-fns'
-import { pad2, toLocalDateString } from '@/lib/datetime'
+import { pad2, toLocalDateString, toEventInstant } from '@/lib/datetime'
 import { hasDueTime } from '@/lib/events'
 import type { CalendarEvent } from '@/types'
 import { useCalendarStore, getTasksForDay } from '@/store/calendarStore'
@@ -378,8 +378,8 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
     const timedFragments = new Map<string, CalendarEvent[]>()
 
     for (const event of weekEvents) {
-      const eventStart = parseISO(event.start)
-      const eventEnd = parseISO(event.end)
+      const eventStart = toEventInstant(event.start, event.timezone)
+      const eventEnd = toEventInstant(event.end, event.timezone)
       const startKey = format(eventStart, 'yyyy-MM-dd')
       const endKey = format(eventEnd, 'yyyy-MM-dd')
 
@@ -487,9 +487,13 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
 
         if (sortedAllEvents.length === 0) return
 
-        sortedAllEvents.sort((a, b) => parseISO(a.start).getTime() - parseISO(b.start).getTime())
+        sortedAllEvents.sort(
+          (a, b) =>
+            toEventInstant(a.start, a.timezone).getTime() -
+            toEventInstant(b.start, b.timezone).getTime()
+        )
         const firstEvent = sortedAllEvents[0]
-        const eventStart = parseISO(firstEvent.start)
+        const eventStart = toEventInstant(firstEvent.start, firstEvent.timezone)
         const hours = eventStart.getHours()
         const minutes = eventStart.getMinutes()
         const fraction = (hours * 60 + minutes) / (24 * 60)
@@ -721,8 +725,10 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
         isAllDay: false,
       }
     } else {
-      const originalStart = parseISO(originalEvent.start)
-      const originalEnd = parseISO(originalEvent.end)
+      // Phase 2 (C3) — baseline in the device frame so the drop target is
+      // the instant the user sees; updateEvent re-frames it for TZID events.
+      const originalStart = toEventInstant(originalEvent.start, originalEvent.timezone)
+      const originalEnd = toEventInstant(originalEvent.end, originalEvent.timezone)
       const durationMs = originalEnd.getTime() - originalStart.getTime()
       // The droppable cell only tells us which day was dropped on; the time of
       // day comes from how far the card was dragged vertically, snapped to a

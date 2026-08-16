@@ -1,4 +1,6 @@
 import { format, parseISO } from 'date-fns'
+import { fromZonedTime, formatInTimeZone } from 'date-fns-tz'
+import { normalizeTzid } from '@/lib/timezoneRegistry'
 import type { TimeFormat } from '@/types'
 
 /** Zero-pad a number to 2 digits (e.g. 9 → '09'). */
@@ -46,6 +48,60 @@ export function formatDateLong(date: Date | string, timeFormat: TimeFormat = '24
   const d = typeof date === 'string' ? parseISO(date) : date
   const timePattern = timeFormat === '24h' ? 'HH:mm' : 'h:mm a'
   return format(d, `MMM d, yyyy ${timePattern}`)
+}
+
+/**
+ * Phase 2 (C2) - resolve an event time string to the instant it denotes.
+ *
+ * TZID events store naive wall clocks in the event zone (event.timezone), so
+ * they must be read through date-fns-tz in that zone; a trailing Z is a
+ * genuine instant; floating strings are device-local. Falls back to a
+ * device-local parse when the zone cannot be resolved, which keeps locally-
+ * created events (which never carry a timezone) and unknown TZIDs behaving
+ * as before.
+ */
+export function toEventInstant(iso: string, timezone?: string): Date {
+  if (timezone && !iso.endsWith('Z')) {
+    try {
+      const zoned = fromZonedTime(iso, timezone)
+      // date-fns-tz v3 does not throw for an unknown zone - it returns NaN.
+      if (!Number.isNaN(zoned.getTime())) return zoned
+    } catch {
+      // Unknown zone name - fall through to the device-local interpretation.
+    }
+  }
+  return parseISO(iso)
+}
+
+/**
+ * Phase 2 (C2) - format an event time in the user's preferred format,
+ * resolving TZID wall clocks through toEventInstant first.
+ */
+export function formatEventTime(
+  date: string,
+  timezone: string | undefined,
+  timeFormat: TimeFormat,
+  variant: 'full' | 'hour' = 'full'
+): string {
+  return formatTime(toEventInstant(date, timezone), timeFormat, variant)
+}
+
+/**
+ * Phase 2 (C3) — convert a Z/offset instant to a zone's naive wall clock,
+ * keeping the "TZID events store naive wall clocks" storage invariant when a
+ * drag/save writes a genuine instant onto a TZID-carrying event. Naive input
+ * passes through unchanged; unresolvable zones fall back to stripping the
+ * zone marker.
+ */
+export function toZoneWallClock(iso: string, timezone: string): string {
+  if (!/Z$/i.test(iso) && !/[+-]\d{2}:?\d{2}$/.test(iso)) return iso
+  try {
+    const wall = formatInTimeZone(new Date(iso), normalizeTzid(timezone), "yyyy-MM-dd'T'HH:mm:ss")
+    if (!wall.includes('Invalid')) return wall
+  } catch {
+    // Unknown zone - fall through to stripping the zone marker.
+  }
+  return iso.replace(/Z$/i, '').replace(/[+-]\d{2}:?\d{2}$/, '').replace(/\.\d+$/, '')
 }
 
 /** Number of whole days between two `yyyy-MM-dd` date strings (UTC-based, DST-safe). */

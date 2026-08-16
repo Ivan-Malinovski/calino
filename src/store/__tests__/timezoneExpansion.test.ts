@@ -83,4 +83,27 @@ describe('timed TZID series expansion (Phase 2 C1)', () => {
     // And the override itself is present.
     expect(march.some((e) => e.id === 'cph-override-mar30')).toBe(true)
   })
+  describe('updateEvent TZID normalization (Phase 2 C3)', () => {
+    it('converts a Z instant update to the event zone wall clock', () => {
+      addCopenhagenDaily()
+      useCalendarStore.getState().updateEvent('cph', {
+        start: '2026-06-01T06:00:00.000Z',
+        end: '2026-06-01T07:00:00.000Z',
+      })
+      const ev = useCalendarStore.getState().events.find((e) => e.id === 'cph')!
+      expect(ev.start).toBe('2026-06-01T08:00:00')
+      expect(ev.end).toBe('2026-06-01T09:00:00')
+      expect(ev.timezone).toBe('Europe/Copenhagen')
+    })
+    it('leaves naive (already zone-frame) updates untouched', () => {
+      addCopenhagenDaily()
+      useCalendarStore.getState().updateEvent('cph', {
+        start: '2026-06-01T08:00:00',
+        end: '2026-06-01T09:00:00',
+      })
+      const ev = useCalendarStore.getState().events.find((e) => e.id === 'cph')!
+      expect(ev.start).toBe('2026-06-01T08:00:00')
+      expect(ev.end).toBe('2026-06-01T09:00:00')
+    })
+  })
 })

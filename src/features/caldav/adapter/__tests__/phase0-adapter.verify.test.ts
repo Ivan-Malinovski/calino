@@ -31,16 +31,6 @@ const FLOATING_ICS = [
   'END:VCALENDAR',
 ].join('\r\n')
 
-/**
- * The UTC instant the ambient zone assigns to a local wall clock, in
- * iCalendar basic format (`YYYYMMDDTHHMMSSZ`). This mirrors what
- * `ICAL.Time.fromJSDate(new Date(iso), true)` produces — deliberately,
- * because that is the bug being pinned. Derived, not hardcoded, so the
- * expectation is correct in both `west` and `east`.
- */
-function localWallClockAsUtcStamp(localIso: string): string {
-  return new Date(localIso).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '')
-}
 
 function dtstartLine(ics: string): string {
   return ics.split('\r\n').find((l) => l.startsWith('DTSTART')) ?? ''
@@ -60,40 +50,30 @@ describe('Phase 0 verification: floating time round-trip (Bug A)', () => {
     expect(event.isAllDay).toBe(false)
   })
 
-  it('BUG: re-serializing a floating time emits a UTC instant shifted by the ambient offset', () => {
+  it('FIXED (Phase 2 C3): a floating time round-trips unchanged', () => {
     const [event] = parseICALData(FLOATING_ICS, 'cal-1')
     const out = eventToICAL(event)
 
-    // CORRECT per RFC 5545 §3.3.5 form 1: a floating time round-trips
-    // unchanged as `DTSTART:20260102T100000` — no Z, no TZID. Instead
-    // `createIcalDateTime` (icalTypeMapping.ts ~L427) falls through to
-    // `ICAL.Time.fromJSDate(new Date(isoString), true)`, which reads the
-    // string as LOCAL and then forces UTC output — so the emitted stamp
-    // is the wall clock rebased through the browser's offset.
-    //
-    // west (America/New_York, -05:00 in January) -> DTSTART:20260102T150000Z
-    // east (Europe/Copenhagen, +01:00 in January) -> DTSTART:20260102T090000Z
-    expect(dtstartLine(out)).toBe(`DTSTART:${localWallClockAsUtcStamp('2026-01-02T10:00:00')}`)
-    expect(dtendLine(out)).toBe(`DTEND:${localWallClockAsUtcStamp('2026-01-02T11:00:00')}`)
-
-    // Stated negatively, so the intent survives the fix: the floating
-    // form is gone and a Z-suffixed instant took its place.
-    expect(out).not.toContain('DTSTART:20260102T100000\r\n')
-    expect(dtstartLine(out)).toMatch(/Z$/)
+    // RFC 5545 §3.3.5 form 1: a floating time round-trips unchanged as
+    // `DTSTART:20260102T100000` — no Z, no TZID. Phase 2 C3 replaced
+    // the `ICAL.Time.fromJSDate(new Date(isoString), true)` fallthrough (which
+    // rebased the wall clock through the browser's offset into UTC) with a
+    // true floating ICAL.Time.
+    expect(dtstartLine(out)).toBe('DTSTART:20260102T100000')
+    expect(dtendLine(out)).toBe('DTEND:20260102T110000')
+    expect(dtstartLine(out)).not.toMatch(/Z$/)
+    expect(out).toContain('DTSTART:20260102T100000\r\n')
   })
 
-  it('BUG: a second round-trip shifts the wall clock away from the original', () => {
+  it('FIXED (Phase 2 C3): parse -> serialize -> parse is the identity for a floating time', () => {
     const [first] = parseICALData(FLOATING_ICS, 'cal-1')
     const [second] = parseICALData(eventToICAL(first), 'cal-1')
 
     // CORRECT: parse -> serialize -> parse is the identity for a
-    // floating time. Today the second pass comes back as a UTC instant
-    // ('...Z'), i.e. the floating-ness is lost after one save.
-    expect(second.start).not.toBe(first.start)
-    expect(second.start).toMatch(/Z$/)
-    // Note the re-parsed value also carries milliseconds ('...00.000Z'),
-    // where the original floating value had none.
-    expect(second.start).toBe(new Date('2026-01-02T10:00:00').toISOString())
+    // floating time. Phase 2 C3 keeps it floating, so the second pass
+    // comes back with the same naive wall clock.
+    expect(second.start).toBe(first.start)
+    expect(second.start).toBe('2026-01-02T10:00:00')
   })
 })
 

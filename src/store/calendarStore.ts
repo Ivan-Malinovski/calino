@@ -30,6 +30,7 @@ import {
 import { deleteAttachments } from '@/lib/attachmentStore'
 import { deleteRawIcs, deleteRawIcsForCalendar } from '@/lib/rawIcsStore'
 import { useSettingsStore } from '@/store/settingsStore'
+import { toZoneWallClock } from '@/lib/datetime'
 
 // Memo cache for getEventsForDateRange. Keyed by the range; a cached result is
 // reused only when its stored `version` matches the current
@@ -556,6 +557,21 @@ export const useCalendarStore = create<CalendarStore>()(
         // wipe the stamp `addEvent` made. Dropping the key keeps the first
         // creation time we ever knew about.
         if (safeUpdates.created === undefined) delete safeUpdates.created
+        // Phase 2 (C3) — keep the TZID storage invariant: TZID events store
+        // naive wall clocks in the event zone, but a drag/save/resize can
+        // write a Z instant. Normalize it back to the zone's wall clock so
+        // expansion and serialization never see a mixed frame. Skipped when
+        // the update explicitly clears the timezone.
+        const existingForNormalization = get().events.find((e) => e.id === id)
+        const effectiveTimezone = 'timezone' in safeUpdates ? safeUpdates.timezone : existingForNormalization?.timezone
+        if (effectiveTimezone) {
+          if (safeUpdates.start !== undefined && safeUpdates.start !== existingForNormalization?.start) {
+            safeUpdates.start = toZoneWallClock(safeUpdates.start, effectiveTimezone)
+          }
+          if (safeUpdates.end !== undefined && safeUpdates.end !== existingForNormalization?.end) {
+            safeUpdates.end = toZoneWallClock(safeUpdates.end, effectiveTimezone)
+          }
+        }
         if (safeUpdates.start !== undefined && safeUpdates.end !== undefined) {
           if (safeUpdates.start > safeUpdates.end && !safeUpdates.isAllDay) {
             const reason = `start (${safeUpdates.start}) > end (${safeUpdates.end})`

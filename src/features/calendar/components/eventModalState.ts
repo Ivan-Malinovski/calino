@@ -1,5 +1,5 @@
 import { format, parseISO } from 'date-fns'
-import { pad2, addMinutesToTimeStr } from '@/lib/datetime'
+import { pad2, addMinutesToTimeStr, toEventInstant } from '@/lib/datetime'
 export { addMinutesToTimeStr }
 import { extractOriginalEventId } from '@/lib/events'
 import { isUUID } from '@/lib/uuid'
@@ -171,7 +171,7 @@ export function getInitialFormState(
             : undefined
       const endOnDate = rule?.endDate
         ? format(parseISO(rule.endDate), 'yyyy-MM-dd')
-        : format(parseISO(existingEvent.start), 'yyyy-MM-dd')
+        : format(toEventInstant(existingEvent.start, existingEvent.timezone), 'yyyy-MM-dd')
       const endCondition: 'never' | 'on' | 'after' = rule?.endDate
         ? 'on'
         : rule?.count
@@ -181,10 +181,12 @@ export function getInitialFormState(
         title: existingEvent.title,
         description: existingEvent.description || '',
         location: existingEvent.location || '',
-        startDate: format(parseISO(existingEvent.start), 'yyyy-MM-dd'),
-        startTime: format(parseISO(existingEvent.start), 'HH:mm'),
-        endDate: format(parseISO(existingEvent.end), 'yyyy-MM-dd'),
-        endTime: format(parseISO(existingEvent.end), 'HH:mm'),
+        // TZID events store naive wall clocks in the event zone — the modal
+        // must show them as the device would see the instant (Phase 2 C2).
+        startDate: format(toEventInstant(existingEvent.start, existingEvent.timezone), 'yyyy-MM-dd'),
+        startTime: format(toEventInstant(existingEvent.start, existingEvent.timezone), 'HH:mm'),
+        endDate: format(toEventInstant(existingEvent.end, existingEvent.timezone), 'yyyy-MM-dd'),
+        endTime: format(toEventInstant(existingEvent.end, existingEvent.timezone), 'HH:mm'),
         isAllDay: existingEvent.isAllDay,
         calendarId: existingEvent.calendarId,
         recurring: !!rule,

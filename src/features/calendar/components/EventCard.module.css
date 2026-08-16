@@ -169,6 +169,20 @@
   text-overflow: ellipsis;
 }
 
+/* Phase 2 (C2) — shown when the event's zone differs from the device zone. */
+.tzBadge {
+  display: inline-block;
+  margin-top: 2px;
+  padding: 0 4px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--event-ink-2, var(--ink-2));
+  background: var(--event-ink-3, rgba(128, 128, 128, 0.18));
+  white-space: nowrap;
+}
+
 /* ---- Meta (time + location on one line) ---- */
 .meta {
   display: flex;

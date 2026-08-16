@@ -1,4 +1,4 @@
-import { parseISO } from 'date-fns'
+import { toEventInstant } from '@/lib/datetime'
 import type { CalendarEvent } from '@/types'
 
 export interface PositionedEvent {
@@ -61,8 +61,8 @@ export function positionEvents(events: CalendarEvent[]): PositionedEvent[] {
     .filter((e) => e.transparency !== 'transparent')
     .map((event) => ({
       event,
-      startMs: parseISO(event.start).getTime(),
-      endMs: parseISO(event.end).getTime(),
+      startMs: toEventInstant(event.start, event.timezone).getTime(),
+      endMs: toEventInstant(event.end, event.timezone).getTime(),
     }))
     .sort((a, b) => {
       const startDiff = a.startMs - b.startMs

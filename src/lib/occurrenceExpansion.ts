@@ -136,7 +136,9 @@ export function occurrenceRecurrenceValue(
 export function parseOccurrenceInstant(iso: string, timezone?: string): Date {
   if (timezone && !iso.endsWith('Z')) {
     try {
-      return fromZonedTime(iso, timezone)
+      const zoned = fromZonedTime(iso, timezone)
+      // date-fns-tz v3 does not throw for an unknown zone - it returns NaN.
+      if (!Number.isNaN(zoned.getTime())) return zoned
     } catch {
       // Unknown zone name — fall through to the device-local interpretation.
     }

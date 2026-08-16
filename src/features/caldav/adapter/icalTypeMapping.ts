@@ -11,8 +11,10 @@ import type {
   TaskPriority,
 } from '@/types'
 import { addDays } from 'date-fns'
+import { formatInTimeZone } from 'date-fns-tz'
 import { buildRRuleString, normaliseAllDayUntil } from '@/lib/recurrence'
 import { toLocalDateString } from '@/lib/datetime'
+import { normalizeTzid } from '@/lib/timezoneRegistry'
 
 const VALID_PARTSTATS: AttendeePartstat[] = [
   'ACCEPTED',
@@ -544,7 +546,26 @@ function createIcalDateTime(isoString: string, tzid?: string): ICAL.Time {
   // TZID is carried via the property's TZID parameter (set by the
   // caller), not via the resolved zone.
   if (tzid) {
-    const wall = isoString.replace(/Z$/, '').replace(/[+-]\d{2}:?\d{2}$/, '')
+    let wall = isoString
+    // Phase 2 (C3): a trailing Z/offset is a genuine instant (a drag or save
+    // can leave one on a TZID event) - convert it to the event zone's wall
+    // clock instead of stamping TZID on a UTC value. Fractional seconds on a
+    // naive string are stripped so .000 cannot fall through to the UTC branch.
+    if (/Z$/i.test(isoString) || /[+-]\d{2}:?\d{2}$/.test(isoString)) {
+      try {
+        const converted = formatInTimeZone(new Date(isoString), normalizeTzid(tzid), "yyyy-MM-dd'T'HH:mm:ss")
+        // date-fns-tz v3 returns 'Invalid Date' for an unknown zone rather
+        // than throwing - keep the wall clock only when it is a real time.
+        if (!converted.includes('Invalid')) wall = converted
+      } catch {
+        // Unknown zone - fall back to stripping the zone marker.
+      }
+      if (wall === isoString) {
+        wall = isoString.replace(/Z$/i, '').replace(/[+-]\d{2}:?\d{2}$/, '')
+      }
+    } else {
+      wall = wall.replace(/\.\d+$/, '')
+    }
     // Parse the wall-clock ISO into components.
     const m = wall.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/)
     if (m) {
@@ -561,6 +582,21 @@ function createIcalDateTime(isoString: string, tzid?: string): ICAL.Time {
         ICAL.Timezone.utcTimezone
       )
     }
+  }
+  // Phase 2 (C3): no TZID and a plain naive string - floating wall clock.
+  const floating = isoString.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?(?:\.\d+)?$/)
+  if (floating) {
+    return new ICAL.Time(
+      {
+        year: parseInt(floating[1], 10),
+        month: parseInt(floating[2], 10),
+        day: parseInt(floating[3], 10),
+        hour: parseInt(floating[4], 10),
+        minute: parseInt(floating[5], 10),
+        second: floating[6] ? parseInt(floating[6], 10) : 0,
+      },
+      null as never
+    )
   }
   return ICAL.Time.fromJSDate(new Date(isoString), true)
 }

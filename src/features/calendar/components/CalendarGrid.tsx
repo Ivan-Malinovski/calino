@@ -36,7 +36,7 @@ import {
   addDays,
   differenceInCalendarDays,
 } from 'date-fns'
-import { pad2 } from '@/lib/datetime'
+import { pad2, toEventInstant, toZoneWallClock } from '@/lib/datetime'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
 import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
@@ -416,8 +416,10 @@ export function CalendarGrid(): JSX.Element {
     // by that fragment's offset from the start so the whole span moves as one.
     const [activeId, grabbedDay] = String(active.id).split('::')
 
-    const originalStart = parseISO(originalEvent.start)
-    const originalEnd = parseISO(originalEvent.end)
+    // Phase 2 (C3) — baseline in the device frame so the drop target is the
+    // instant the user sees; updateEvent re-frames it for TZID events.
+    const originalStart = toEventInstant(originalEvent.start, originalEvent.timezone)
+    const originalEnd = toEventInstant(originalEvent.end, originalEvent.timezone)
     const durationMs = originalEnd.getTime() - originalStart.getTime()
 
     let targetDayStr = dayStr
@@ -436,7 +438,7 @@ export function CalendarGrid(): JSX.Element {
     // For tasks, preserve the time in dueDate if it exists
     let newDueDate = dayStr
     if (isTask && originalEvent.dueDate) {
-      const originalDueDate = parseISO(originalEvent.dueDate)
+      const originalDueDate = toEventInstant(originalEvent.dueDate, originalEvent.timezone)
       const hasTime =
         originalEvent.dueDate.includes('T') &&
         !originalEvent.dueDate.endsWith('T00:00:00') &&
@@ -445,7 +447,13 @@ export function CalendarGrid(): JSX.Element {
       if (hasTime) {
         const timeHours = pad2(originalDueDate.getHours())
         const timeMinutes = pad2(originalDueDate.getMinutes())
-        newDueDate = `${dayStr}T${timeHours}:${timeMinutes}:00`
+        // TZID tasks store their due time as the zone's wall clock.
+        newDueDate = originalEvent.timezone
+          ? toZoneWallClock(
+              new Date(`${dayStr}T${timeHours}:${timeMinutes}:00`).toISOString(),
+              originalEvent.timezone
+            )
+          : `${dayStr}T${timeHours}:${timeMinutes}:00`
       }
     }
 
@@ -523,16 +531,16 @@ export function CalendarGrid(): JSX.Element {
     // lane up front: longest spans on top, earlier start wins a tie.
     const spans = gridEvents
       .map((event) => {
-        const startKey = format(parseISO(event.start), 'yyyy-MM-dd')
-        const endKey = format(parseISO(event.end), 'yyyy-MM-dd')
+        const startKey = format(toEventInstant(event.start, event.timezone), 'yyyy-MM-dd')
+        const endKey = format(toEventInstant(event.end, event.timezone), 'yyyy-MM-dd')
         return { event, startKey, endKey }
       })
       .filter(({ startKey, endKey }) => startKey !== endKey)
       .map((span) => ({
         ...span,
         days: eachDayOfInterval({
-          start: startOfDay(parseISO(span.event.start)),
-          end: startOfDay(parseISO(span.event.end)),
+          start: startOfDay(toEventInstant(span.event.start, span.event.timezone)),
+          end: startOfDay(toEventInstant(span.event.end, span.event.timezone)),
         }).map((d) => format(d, 'yyyy-MM-dd')),
       }))
       .sort((a, b) => {
@@ -552,8 +560,8 @@ export function CalendarGrid(): JSX.Element {
     })
 
     gridEvents.forEach((event) => {
-      const eventStart = parseISO(event.start)
-      const eventEnd = parseISO(event.end)
+      const eventStart = toEventInstant(event.start, event.timezone)
+      const eventEnd = toEventInstant(event.end, event.timezone)
       const startKey = format(eventStart, 'yyyy-MM-dd')
       const endKey = format(eventEnd, 'yyyy-MM-dd')
 
@@ -590,7 +598,10 @@ export function CalendarGrid(): JSX.Element {
         if (a.isFragment && !b.isFragment) return -1
         if (!a.isFragment && b.isFragment) return 1
         if (a.isFragment && b.isFragment) return (a.laneIndex ?? 0) - (b.laneIndex ?? 0)
-        return new Date(a.start).getTime() - new Date(b.start).getTime()
+        return (
+          toEventInstant(a.start, a.timezone).getTime() -
+          toEventInstant(b.start, b.timezone).getTime()
+        )
       })
       map.set(dateKey, sorted)
     })
@@ -1318,7 +1329,10 @@ function monthRowKind(
 ): MonthRowKind {
   if (isCompactMobile) return 'dot'
   if (item.type === 'task') return hasDueTime(item) ? 'taskWithTime' : 'task'
-  const isMultiDay = !isSameDay(parseISO(item.start), parseISO(item.end))
+  const isMultiDay = !isSameDay(
+    toEventInstant(item.start, item.timezone),
+    toEventInstant(item.end, item.timezone)
+  )
   const compact =
     isPastWeek ||
     !!item.isFragment ||
@@ -1612,7 +1626,10 @@ const DroppableDay = React.memo(function DroppableDay({
                 {visibleDayEvents
                   .filter((event) => !event.isFragment)
                   .map((event) => {
-                    const isMultiDay = !isSameDay(parseISO(event.start), parseISO(event.end))
+                    const isMultiDay = !isSameDay(
+                      toEventInstant(event.start, event.timezone),
+                      toEventInstant(event.end, event.timezone)
+                    )
                     const shouldCompact =
                       isPastWeek ||
                       (compactRecurringEvents &&
@@ -1692,7 +1709,10 @@ const DroppableDay = React.memo(function DroppableDay({
                     return <div key={slot.spacerKey} className={styles.eventSpacer} aria-hidden />
                   }
                   const { event } = slot
-                  const isMultiDay = !isSameDay(parseISO(event.start), parseISO(event.end))
+                  const isMultiDay = !isSameDay(
+                    toEventInstant(event.start, event.timezone),
+                    toEventInstant(event.end, event.timezone)
+                  )
                   const shouldCompact =
                     slot.forceCompact ||
                     isPastWeek ||

@@ -2,7 +2,7 @@ import type { JSX } from 'react'
 import React, { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { format, parseISO, isSameDay } from 'date-fns'
-import { formatTime } from '@/lib/datetime'
+import { formatEventTime, toEventInstant } from '@/lib/datetime'
 import { useDraggable } from '@dnd-kit/core'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
@@ -34,6 +34,10 @@ import { EventBackground } from '@/components/common/EventBackground'
 import { matchEventBackground } from '@/lib/eventBackground'
 import { MINUTE_SNAP_INTERVAL } from '../lib/dragSnap'
 import styles from './EventCard.module.css'
+
+/** Device zone — the zone every non-TZID time is shown in. A TZID badge is
+ * shown when the event's own zone differs from it (Phase 2 C2). */
+const DEVICE_TIMEZONE = Intl.DateTimeFormat().resolvedOptions().timeZone
 import { duplicateEventWithSync } from '@/lib/duplicateWithSync'
 
 interface EventCardProps {
@@ -322,7 +326,7 @@ export const EventCard = React.memo(function EventCard({
     // click fire if the user just taps. Both flags are flipped inside
     // handleResizeMove once the pointer has moved more than a few px.
     resizeStartY.current = e.clientY
-    resizeStartEnd.current = parseISO(event.end)
+    resizeStartEnd.current = toEventInstant(event.end, event.timezone)
 
     // Remove any previously attached listeners to prevent accumulation
     if (handleResizeMoveRef.current) {
@@ -347,7 +351,7 @@ export const EventCard = React.memo(function EventCard({
       const deltaMinutes = Math.round(rawDeltaMinutes / MINUTE_SNAP_INTERVAL) * MINUTE_SNAP_INTERVAL
       const newEnd = new Date(resizeStartEnd.current.getTime() + deltaMinutes * 60 * 1000)
 
-      if (newEnd > parseISO(event.start)) {
+      if (newEnd > toEventInstant(event.start, event.timezone)) {
         updateEvent(event.id, { end: newEnd.toISOString() })
       }
     }
@@ -491,10 +495,10 @@ export const EventCard = React.memo(function EventCard({
         tabIndex={0}
         aria-label={
           isTask
-            ? `${event.title}${event.completed ? ' (completed)' : ''}${event.dueDate ? ` due ${formatTime(event.dueDate, timeFormat)}` : ''}`
+            ? `${event.title}${event.completed ? ' (completed)' : ''}${event.dueDate ? ` due ${formatEventTime(event.dueDate, event.timezone, timeFormat)}` : ''}`
             : event.isAllDay
               ? `${event.title}, all day`
-              : `${event.title}, ${formatTime(event.start, timeFormat)} to ${formatTime(event.end, timeFormat)}`
+              : `${event.title}, ${formatEventTime(event.start, event.timezone, timeFormat)} to ${formatEventTime(event.end, event.timezone, timeFormat)}`
         }
         {...(isMultiDay ? { 'data-multi-day': '' } : {})}
         {...(isFragmentFirst ? { 'data-fragment-first': '' } : {})}
@@ -599,7 +603,7 @@ export const EventCard = React.memo(function EventCard({
               {event.title}
             </div>
             {!hideDueTime && hasDueTime(event) && event.dueDate && (
-              <div className={styles.dueDate}>{formatTime(event.dueDate, timeFormat)}</div>
+              <div className={styles.dueDate}>{formatEventTime(event.dueDate, event.timezone, timeFormat)}</div>
             )}
           </div>
         ) : (
@@ -627,12 +631,12 @@ export const EventCard = React.memo(function EventCard({
                 const timeText =
                   !compact && !event.isAllDay
                     ? isFragmentFirst
-                      ? `${formatTime(event.start, timeFormat)} - ${format(parseISO(event.originalEnd || event.end), 'MMM d')}`
+                      ? `${formatEventTime(event.start, event.timezone, timeFormat)} - ${format(toEventInstant(event.originalEnd || event.end, event.timezone), 'MMM d')}`
                       : isFragmentMiddle
-                        ? `${format(parseISO(event.originalStart || event.start), 'MMM d')} - ${format(parseISO(event.originalEnd || event.end), 'MMM d')}`
+                        ? `${format(toEventInstant(event.originalStart || event.start, event.timezone), 'MMM d')} - ${format(toEventInstant(event.originalEnd || event.end, event.timezone), 'MMM d')}`
                         : isFragmentLast
-                          ? `${format(parseISO(event.originalStart || event.start), 'MMM d')} - ${formatTime(event.end, timeFormat)}`
-                          : `${formatTime(event.start, timeFormat)} - ${formatTime(event.end, timeFormat)}`
+                          ? `${format(toEventInstant(event.originalStart || event.start, event.timezone), 'MMM d')} - ${formatEventTime(event.end, event.timezone, timeFormat)}`
+                          : `${formatEventTime(event.start, event.timezone, timeFormat)} - ${formatEventTime(event.end, event.timezone, timeFormat)}`
                     : event.isAllDay
                       ? 'All day'
                       : null
@@ -653,6 +657,9 @@ export const EventCard = React.memo(function EventCard({
                   </>
                 )
               })()}
+              {!compact && event.timezone && event.timezone !== DEVICE_TIMEZONE && (
+                <span className={styles.tzBadge}>{event.timezone}</span>
+              )}
               {event.travelDuration && (
                 <div className={styles.travelTime}>
                   <TravelIcon />
@@ -893,6 +900,7 @@ function arePropsEqual(prev: EventCardProps, next: EventCardProps): boolean {
     a.isLastFragment === b.isLastFragment &&
     a.originalStart === b.originalStart &&
     a.originalEnd === b.originalEnd &&
+    a.timezone === b.timezone &&
     (a.attachments?.length ?? 0) === (b.attachments?.length ?? 0) &&
     (a.categories?.join(',') ?? '') === (b.categories?.join(',') ?? '')
   )
