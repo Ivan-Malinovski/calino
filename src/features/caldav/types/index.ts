@@ -19,7 +19,13 @@ export interface CalDAVCalendar {
   syncToken: string | null
   isVisible: boolean
   isDefault: boolean
-  supportedComponents?: ('VEVENT' | 'VTODO')[]
+  supportedComponents?: ('VEVENT' | 'VTODO' | 'VJOURNAL')[]
+  /** True when the server's current-user-privilege-set grants no write privilege. */
+  readOnly?: boolean
+  /** cs:subscribed — a CalendarServer subscription; always treated as read-only. */
+  isSubscribed?: boolean
+  /** cs:calendar-order — server-side ordering hint. */
+  calendarOrder?: number
 }
 
 export interface SyncState {

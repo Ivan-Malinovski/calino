@@ -51,6 +51,26 @@ function parseRetryAfterSeconds(raw: string | null | undefined): number | undefi
   return Math.min(seconds, MAX_HONORED_RETRY_AFTER_SECONDS)
 }
 
+/**
+ * Interpret a DAV:current-user-privilege-set as parsed by tsdav/xml-js
+ * (roughly `{ privilege: { read: {}, write: {}, ... } }`). Returns null when
+ * the server did not answer the property — distinct from "answered with no
+ * write grant", which is a genuine read-only calendar (RFC 3744 §5.1: a
+ * writable collection grants `write`; `all` or `unlocked` imply it).
+ */
+function parsePrivileges(raw: unknown): { canWrite: boolean } | null {
+  if (raw == null || typeof raw !== 'object') return null
+  const privilege = (raw as { privilege?: unknown }).privilege
+  if (privilege == null || typeof privilege !== 'object') return null
+  const granted = new Set(
+    Object.keys(privilege as Record<string, unknown>).map((key) => key.toLowerCase())
+  )
+  if (granted.size === 0) return null
+  const canWrite =
+    granted.has('write') || granted.has('all') || granted.has('unlocked') || granted.has('write-content')
+  return { canWrite }
+}
+
 function escapeXml(str: string): string {
   return (
     str
@@ -202,30 +222,83 @@ export class CalDAVClient {
       throw new Error('No network connection. Please check your internet connection.')
     }
     const client = this.getClient()
-    const davCalendars = await client.fetchCalendars()
+    // tsdav's defaults are replaced wholesale when `props` is passed, so spell
+    // them out and add the Phase 4 extras: current-user-privilege-set (readOnly),
+    // cs:subscribed and cs:calendar-order. `projectedProps` carries the raw
+    // parsed extras onto the returned calendar objects.
+    const davCalendars = await client.fetchCalendars({
+      props: {
+        'c:calendar-description': {},
+        'c:calendar-timezone': {},
+        'd:displayname': {},
+        'ca:calendar-color': {},
+        'cs:getctag': {},
+        'd:resourcetype': {},
+        'c:supported-calendar-component-set': {},
+        'd:sync-token': {},
+        'd:current-user-privilege-set': {},
+        'cs:subscribed': {},
+        'cs:calendar-order': {},
+      },
+      projectedProps: {
+        currentUserPrivilegeSet: true,
+        subscribed: true,
+        calendarOrder: true,
+      },
+    })
 
     this.cachedCalendars = davCalendars
 
-    return davCalendars.map((cal, index) => {
-      const supportedComponents = cal.components?.filter(
-        (component): component is 'VEVENT' | 'VTODO' =>
-          component === 'VEVENT' || component === 'VTODO'
-      )
+    return davCalendars
+      .filter((cal) => {
+        // A schedule inbox/outbox is a CalDAV collection but never a calendar
+        // the user reads or writes events from.
+        const resourceTypes: string[] = cal.resourcetype ?? []
+        return !resourceTypes.some(
+          (rt) =>
+            rt === 'inbox' ||
+            rt === 'schedule-inbox' ||
+            rt === 'outbox' ||
+            rt === 'schedule-outbox'
+        )
+      })
+      .map((cal, index) => {
+        const supportedComponents = cal.components?.filter(
+          (component): component is 'VEVENT' | 'VTODO' | 'VJOURNAL' =>
+            component === 'VEVENT' || component === 'VTODO' || component === 'VJOURNAL'
+        )
 
-      return {
-        id: cal.url || `cal-${index}-${uuidv4()}`,
-        // Note: accountId is NOT set here - the caller must set it
-        // this.credentials.id is the credential ID, not the account ID
-        url: cal.url || '',
-        name: typeof cal.displayName === 'string' ? cal.displayName : 'Unnamed Calendar',
-        color: normalizeColor(cal.calendarColor as string | null | undefined),
-        ctag: null,
-        syncToken: null,
-        isVisible: true,
-        isDefault: index === 0,
-        supportedComponents: cal.components ? supportedComponents : undefined,
-      }
-    })
+        const privileges = parsePrivileges(
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (cal as any).projectedProps?.currentUserPrivilegeSet
+        )
+        const isSubscribed = Boolean((cal as any).projectedProps?.subscribed)
+        // No privilege info at all (server didn't answer the prop) → assume
+        // writable; undefined must not read as read-only. A subscription is
+        // read-only regardless of what the privileges claim.
+        const readOnly = isSubscribed || (privileges !== null && !privileges.canWrite)
+        const calendarOrderRaw = (cal as any).projectedProps?.calendarOrder
+        const calendarOrder = Number(calendarOrderRaw)
+
+        return {
+          id: cal.url || `cal-${index}-${uuidv4()}`,
+          // Note: accountId is NOT set here - the caller must set it
+          // this.credentials.id is the credential ID, not the account ID
+          url: cal.url || '',
+          name: typeof cal.displayName === 'string' ? cal.displayName : 'Unnamed Calendar',
+          color: normalizeColor(cal.calendarColor as string | null | undefined),
+          // tsdav already parsed cs:getctag / d:sync-token from the same
+          // PROPFIND — capture them instead of discarding.
+          ctag: (cal.ctag as string | null | undefined) ?? null,
+          syncToken: (cal.syncToken as string | null | undefined) ?? null,
+          isVisible: true,
+          isDefault: index === 0,
+          supportedComponents: cal.components ? supportedComponents : undefined,
+          readOnly,
+          isSubscribed: isSubscribed || undefined,
+          calendarOrder: Number.isFinite(calendarOrder) ? calendarOrder : undefined,
+        }
+      })
   }
 
   /**

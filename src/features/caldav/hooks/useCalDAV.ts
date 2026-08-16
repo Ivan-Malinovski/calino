@@ -804,6 +804,7 @@ export function useCalDAV(): UseCalDAVReturn {
           accountId: cal.accountId,
           showTasksInViews: true,
           supportedComponents: cal.supportedComponents,
+          readOnly: cal.readOnly,
         })
       }
     }
@@ -917,6 +918,7 @@ export function useCalDAV(): UseCalDAVReturn {
               accountId: newAccount.id,
               showTasksInViews: true,
               supportedComponents: cal.supportedComponents,
+              readOnly: cal.readOnly,
             })
           }
         }
@@ -1307,9 +1309,21 @@ export function useCalDAV(): UseCalDAVReturn {
                 name: serverCalendar.name,
                 color: serverCalendar.color,
                 supportedComponents: serverCalendar.supportedComponents,
+                readOnly: serverCalendar.readOnly,
+                isSubscribed: serverCalendar.isSubscribed,
+                calendarOrder: serverCalendar.calendarOrder,
               }
               storage.updateCalendar(storedCalendar.id, updates)
               storeUpdateCalendar(storedCalendar.id, updates)
+              // Capture change cursors when the server actually returned one —
+              // a null answer must not wipe a previously stored token (the
+              // collection may simply not have changed / not expose it).
+              if (serverCalendar.syncToken) {
+                storage.updateCalendar(storedCalendar.id, { syncToken: serverCalendar.syncToken })
+              }
+              if (serverCalendar.ctag) {
+                storage.updateCalendar(storedCalendar.id, { ctag: serverCalendar.ctag })
+              }
               continue
             }
 
@@ -1330,6 +1344,7 @@ export function useCalDAV(): UseCalDAVReturn {
                 accountId,
                 showTasksInViews: true,
                 supportedComponents: serverCalendar.supportedComponents,
+                readOnly: serverCalendar.readOnly,
               })
             }
           }
@@ -1777,6 +1792,7 @@ export function useCalDAV(): UseCalDAVReturn {
               accountId,
               showTasksInViews: true,
               supportedComponents: cal.supportedComponents,
+              readOnly: cal.readOnly,
             })
           }
         }

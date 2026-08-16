@@ -133,15 +133,122 @@ END:VCALENDAR`,
       expect(calendars[0].supportedComponents).toEqual(['VEVENT', 'VTODO'])
     })
 
-    it('keeps only supported event and task component metadata', async () => {
+    it('keeps only known calendar component metadata (VJOURNAL now included)', async () => {
       mockClientMethods.fetchCalendars.mockResolvedValue([
-        { ...mockCalendar, components: ['VTODO', 'VJOURNAL'] },
+        { ...mockCalendar, components: ['VTODO', 'VJOURNAL', 'VFREEBUSY'] },
       ])
       await client.connect()
 
       const calendars = await client.fetchCalendars()
 
-      expect(calendars[0].supportedComponents).toEqual(['VTODO'])
+      expect(calendars[0].supportedComponents).toEqual(['VTODO', 'VJOURNAL'])
+    })
+
+    // Phase 4 — capability metadata
+    it('captures ctag and syncToken returned by the server', async () => {
+      mockClientMethods.fetchCalendars.mockResolvedValue([
+        { ...mockCalendar, ctag: 'ctag-42', syncToken: 'https://example.com/ns/sync/1234' },
+      ])
+      await client.connect()
+
+      const calendars = await client.fetchCalendars()
+
+      expect(calendars[0].ctag).toBe('ctag-42')
+      expect(calendars[0].syncToken).toBe('https://example.com/ns/sync/1234')
+    })
+
+    it('requests privilege-set, subscribed and calendar-order via props', async () => {
+      await client.connect()
+      await client.fetchCalendars()
+
+      const arg = mockClientMethods.fetchCalendars.mock.calls[0][0]
+      expect(arg.props).toMatchObject({
+        'cs:getctag': {},
+        'd:sync-token': {},
+        'd:current-user-privilege-set': {},
+        'cs:subscribed': {},
+        'cs:calendar-order': {},
+      })
+      expect(arg.projectedProps).toMatchObject({
+        currentUserPrivilegeSet: true,
+        subscribed: true,
+        calendarOrder: true,
+      })
+    })
+
+    it('marks a calendar read-only when the privilege set grants no write', async () => {
+      mockClientMethods.fetchCalendars.mockResolvedValue([
+        {
+          ...mockCalendar,
+          projectedProps: {
+            currentUserPrivilegeSet: { privilege: { read: {}, 'read-current-user': {} } },
+          },
+        },
+      ])
+      await client.connect()
+
+      const calendars = await client.fetchCalendars()
+      expect(calendars[0].readOnly).toBe(true)
+    })
+
+    it('stays writable when the privilege set grants write, and when absent', async () => {
+      mockClientMethods.fetchCalendars.mockResolvedValue([
+        {
+          ...mockCalendar,
+          url: 'https://caldav.example.com/calendars/test/writable/',
+          projectedProps: {
+            currentUserPrivilegeSet: { privilege: { read: {}, write: {}, bind: {} } },
+          },
+        },
+        {
+          ...mockCalendar,
+          url: 'https://caldav.example.com/calendars/test/no-privs/',
+          // Server did not answer the property at all
+        },
+      ])
+      await client.connect()
+
+      const calendars = await client.fetchCalendars()
+      expect(calendars.find((c) => c.url.endsWith('writable/'))?.readOnly).toBe(false)
+      expect(calendars.find((c) => c.url.endsWith('no-privs/'))?.readOnly).toBe(false)
+    })
+
+    it('forces subscriptions read-only regardless of privileges', async () => {
+      mockClientMethods.fetchCalendars.mockResolvedValue([
+        {
+          ...mockCalendar,
+          projectedProps: {
+            subscribed: {},
+            currentUserPrivilegeSet: { privilege: { read: {}, write: {} } },
+          },
+        },
+      ])
+      await client.connect()
+
+      const calendars = await client.fetchCalendars()
+      expect(calendars[0].isSubscribed).toBe(true)
+      expect(calendars[0].readOnly).toBe(true)
+    })
+
+    it('skips schedule inbox/outbox collections', async () => {
+      mockClientMethods.fetchCalendars.mockResolvedValue([
+        { ...mockCalendar },
+        {
+          ...mockCalendar,
+          url: 'https://caldav.example.com/calendars/test/inbox/',
+          resourcetype: ['collection', 'schedule-inbox'],
+        },
+        {
+          ...mockCalendar,
+          url: 'https://caldav.example.com/calendars/test/outbox/',
+          resourcetype: ['collection', 'schedule-outbox'],
+        },
+      ])
+      await client.connect()
+
+      const calendars = await client.fetchCalendars()
+      expect(calendars).toHaveLength(1)
+      expect(calendars[0].url).toBe(mockCalendar.url)
     })
 
     // Bug 14: calendar ID should use UUID, not Date.now()
