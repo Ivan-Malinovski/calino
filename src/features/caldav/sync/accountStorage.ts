@@ -117,16 +117,47 @@ export function deleteCalendarsByAccountId(accountId: string): void {
   localStorage.setItem(CALENDARS_KEY, JSON.stringify(filtered))
 }
 
+// 'create' | 'update' | 'delete' are store-write ops on the same resource;
+// consecutive queued writes to one event coalesce into the newest intent.
+// 'move' and 'delete-href' are lifecycle ops with different replay semantics
+// and different calendarId meanings (move's is the TARGET, delete-href's is
+// the SOURCE) and are never coalesced.
+const COALESCIBLE_TYPES = new Set(['create', 'update', 'delete'])
+
 export function addPendingChange(
   change: Omit<PendingChange, 'id' | 'timestamp' | 'retryCount'>
 ): void {
   const changes = getPendingChanges()
-  changes.push({
-    ...change,
-    id: uuidv4(),
-    timestamp: new Date().toISOString(),
-    retryCount: 0,
-  })
+  const now = new Date().toISOString()
+
+  const existingIndex = COALESCIBLE_TYPES.has(change.type)
+    ? changes.findIndex(
+        (c) =>
+          COALESCIBLE_TYPES.has(c.type) &&
+          c.eventId === change.eventId &&
+          c.calendarId === change.calendarId
+      )
+    : -1
+
+  if (existingIndex !== -1) {
+    // Supersede the older queued write in place: same array index (queue
+    // order preserved), same id (any in-flight reference still resolves),
+    // timestamp refreshed, retryCount reset.
+    changes[existingIndex] = {
+      ...change,
+      id: changes[existingIndex].id,
+      timestamp: now,
+      retryCount: 0,
+    }
+  } else {
+    changes.push({
+      ...change,
+      id: uuidv4(),
+      timestamp: now,
+      retryCount: 0,
+    })
+  }
+
   localStorage.setItem(PENDING_CHANGES_KEY, JSON.stringify(changes))
 }
 
