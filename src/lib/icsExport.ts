@@ -1,4 +1,6 @@
 import ICAL from 'ical.js'
+import { ensureZoneRegistered } from '@/lib/timezoneRegistry'
+import { foldICalLines } from '@/features/caldav/adapter/iCalendarAdapter'
 import {
   calendarEventToIcalComponent,
   calendarEventToIcalVjournal,
@@ -36,7 +38,14 @@ export function buildVCalendar(events: CalendarEvent[]): string {
     }
   }
 
-  return comp.toString()
+  // Phase 2 (C4) — emit VTIMEZONEs for referenced TZIDs and fold lines,
+  // matching the sync serializers.
+  for (const event of events) {
+    if (event.timezone) ensureZoneRegistered(event.timezone)
+  }
+  ICAL.helpers.updateTimezones(comp)
+
+  return foldICalLines(comp.toString())
 }
 
 /**

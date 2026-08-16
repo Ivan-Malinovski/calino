@@ -2329,4 +2329,32 @@ END:VCALENDAR`
     })
   })
   })
+  describe('Phase 2 C4 VTIMEZONE emission', () => {
+    it('emits a VTIMEZONE for a referenced TZID', () => {
+      const event: CalendarEvent = {
+        id: 'tzid-vtz',
+        calendarId: 'cal-1',
+        title: 'Zoned',
+        start: '2026-03-10T09:00:00',
+        end: '2026-03-10T09:30:00',
+        isAllDay: false,
+        timezone: 'Europe/Copenhagen',
+      }
+      const out = eventToICAL(event)
+      expect(out).toContain('BEGIN:VTIMEZONE')
+      expect(out).toContain('TZID:Europe/Copenhagen')
+      expect(out).toContain('DTSTART;TZID=Europe/Copenhagen:20260310T090000')
+    })
+    it('emits no VTIMEZONE when no event carries a TZID', () => {
+      const out = eventToICAL({
+        id: 'plain',
+        calendarId: 'cal-1',
+        title: 'Plain',
+        start: '2026-03-10T09:00:00.000Z',
+        end: '2026-03-10T09:30:00.000Z',
+        isAllDay: false,
+      })
+      expect(out).not.toContain('BEGIN:VTIMEZONE')
+    })
+  })
 })

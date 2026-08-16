@@ -1,4 +1,5 @@
 import ICAL from 'ical.js'
+import { ensureZoneRegistered } from '@/lib/timezoneRegistry'
 import type { CalendarEvent } from '@/types'
 import { SETTINGS_EVENT_UID_PREFIX } from '@/lib/settingsSync'
 import {
@@ -160,6 +161,15 @@ export function eventsToICAL(events: CalendarEvent[]): string {
     )
   }
 
+  // Phase 2 (C4) — emit a VTIMEZONE for every referenced TZID. updateTimezones
+  // only copies zones already registered in TimezoneService, so register them
+  // first (lazy, cached). The patch path (icalPatch) deliberately never calls
+  // this: origin VTIMEZONEs must survive untouched there.
+  for (const event of events) {
+    if (event.timezone) ensureZoneRegistered(event.timezone)
+  }
+  ICAL.helpers.updateTimezones(comp)
+
   return foldICalLines(comp.toString())
 }
 
@@ -171,6 +181,10 @@ export function taskToICAL(task: CalendarEvent): string {
 
   const vtodo = calendarEventToIcalVtodo(task)
   comp.addSubcomponent(vtodo)
+
+  // Phase 2 (C4) — see eventsToICAL.
+  if (task.timezone) ensureZoneRegistered(task.timezone)
+  ICAL.helpers.updateTimezones(comp)
 
   return foldICalLines(comp.toString())
 }
@@ -211,6 +225,10 @@ export function journalToICAL(entry: CalendarEvent): string {
 
   const vjournal = calendarEventToIcalVjournal(entry)
   comp.addSubcomponent(vjournal)
+
+  // Phase 2 (C4) — see eventsToICAL.
+  if (entry.timezone) ensureZoneRegistered(entry.timezone)
+  ICAL.helpers.updateTimezones(comp)
 
   return foldICalLines(comp.toString())
 }

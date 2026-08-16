@@ -180,4 +180,21 @@ describe('download helpers', () => {
     exportAllEventsIcs([makeEvent()])
     expect(clicked[0]!.download).toMatch(/^calino-export-\d{4}-\d{2}-\d{2}\.ics$/)
   })
+  describe('Phase 2 C4 buildVCalendar VTIMEZONE', () => {
+    it('emits a VTIMEZONE and folds lines', () => {
+      const ics = buildVCalendar([
+        makeEvent({
+          start: '2026-03-10T09:00:00',
+          end: '2026-03-10T09:30:00',
+          timezone: 'Europe/Copenhagen',
+        }),
+      ])
+      expect(ics).toContain('BEGIN:VTIMEZONE')
+      expect(ics).toContain('TZID:Europe/Copenhagen')
+      // RFC 5545 §3.1: no physical line may exceed 75 octets.
+      for (const line of ics.split('\r\n')) {
+        expect(new TextEncoder().encode(line).length).toBeLessThanOrEqual(75)
+      }
+    })
+  })
 })
