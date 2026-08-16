@@ -111,13 +111,112 @@ END:VCALENDAR`,
           username: mockCredentials.username,
           password: mockCredentials.password,
         },
-        authMethod: 'Basic',
+        // Phase 4 — tsdav's own Basic auth mangles non-Latin-1 credentials,
+        // so we hand it a UTF-8 header via the Custom authFunction.
+        authMethod: 'Custom',
+        authFunction: expect.any(Function),
         defaultAccountType: 'caldav',
         // Always an explicit fetch: on native we must bypass Capacitor's
         // patched window.fetch, which cannot send WebDAV verbs.
         fetch: expect.any(Function),
       })
       expect(result).toBeInstanceOf(CalDAVClient)
+    })
+
+    it('authenticates tsdav requests with a UTF-8-safe Basic header', async () => {
+      const unicodeCreds = {
+        ...mockCredentials,
+        username: 'ivan',
+        password: '密码123',
+      }
+      const unicodeClient = new CalDAVClient(unicodeCreds.serverUrl, unicodeCreds)
+      await unicodeClient.connect()
+
+      const params = mockCreateDAVClient.mock.calls[0][0] as {
+        authMethod: string
+        authFunction: (c: unknown) => Promise<Record<string, string>>
+      }
+      expect(params.authMethod).toBe('Custom')
+      // btoa would throw on the CJK password; the custom function must not.
+      const headers = await params.authFunction(unicodeCreds)
+      expect(headers).toEqual({ Authorization: 'Basic aXZhbjrlr4bnoIExMjM=' })
+    })
+  })
+
+  describe('principal discovery (RFC 5397 + RFC 4791)', () => {
+    const radicalePrincipalResponse = `<?xml version="1.0" encoding="UTF-8" ?>
+<D:multistatus xmlns:D="DAV:">
+  <D:response>
+    <D:href>/</D:href>
+    <D:propstat>
+      <D:prop>
+        <D:current-user-principal>
+          <href>/ivan/</href>
+        </D:current-user-principal>
+      </D:prop>
+      <D:status>HTTP/1.1 200 OK</D:status>
+    </D:propstat>
+  </D:response>
+</D:multistatus>`
+
+    const radicaleHomeSetResponse = `<?xml version="1.0" encoding="UTF-8" ?>
+<D:multistatus xmlns:D="DAV:" xmlns:C="urn:ietf:params:xml:ns:caldav">
+  <D:response>
+    <D:href>/ivan/</D:href>
+    <D:propstat>
+      <D:prop>
+        <C:calendar-home-set>
+          <href>/ivan/calendars/</href>
+        </C:calendar-home-set>
+      </D:prop>
+      <D:status>HTTP/1.1 200 OK</D:status>
+    </D:propstat>
+  </D:response>
+</D:multistatus>`
+
+    it('resolves current-user-principal → calendar-home-set with unprefixed child hrefs', async () => {
+      await client.connect()
+      // No calendars cached yet → findCalendarHome falls through to the
+      // principal path, which issues its own PROPFINDs via global fetch.
+      mockClientMethods.fetchCalendars.mockResolvedValue([])
+
+      const requests: Array<{ url: string; method: string }> = []
+      fetchSpy.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = typeof input === 'string' ? input : input.toString()
+        requests.push({ url, method: init?.method ?? 'GET' })
+        if (url === 'https://caldav.example.com') {
+          return new Response(radicalePrincipalResponse, { status: 207 })
+        }
+        if (url === 'https://caldav.example.com/ivan/') {
+          return new Response(radicaleHomeSetResponse, { status: 207 })
+        }
+        // The MKCALENDAR for the new calendar collection under the home.
+        return new Response(null, { status: 201 })
+      })
+
+      const created = await client.createCalendar({ name: 'Trip Plans' })
+
+      expect(created.url).toMatch(
+        /^https:\/\/caldav\.example\.com\/ivan\/calendars\/trip-plans-[0-9a-f-]+\/$/
+      )
+      const propfinds = requests.filter((r) => r.method === 'PROPFIND')
+      expect(propfinds.map((r) => r.url)).toEqual([
+        'https://caldav.example.com',
+        'https://caldav.example.com/ivan/',
+      ])
+    })
+
+    it('survives a principal that answers no properties (falls back)', async () => {
+      await client.connect()
+      mockClientMethods.fetchCalendars.mockResolvedValue([])
+      fetchSpy.mockResolvedValue(
+        new Response('<D:multistatus xmlns:D="DAV:"></D:multistatus>', { status: 207 })
+      )
+
+      // With no principal info and no cached calendars, home discovery fails.
+      await expect(client.createCalendar({ name: 'Nope' })).rejects.toThrow(
+        /Could not determine calendar home/
+      )
     })
   })
 

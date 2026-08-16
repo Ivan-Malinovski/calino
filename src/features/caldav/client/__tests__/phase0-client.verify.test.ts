@@ -39,56 +39,45 @@ function correctBasic(username: string, password: string): string {
   return btoa(String.fromCharCode(...bytes))
 }
 
-describe('Phase 0 verification: Bug A — btoa() on non-Latin-1 credentials', () => {
-  it('CURRENT (BUG): the constructor throws for a password outside Latin-1', () => {
-    // CORRECT behaviour: construction succeeds and the header carries
-    // base64 of the UTF-8 bytes. Flip this to `.not.toThrow()` when fixed.
+describe('Phase 0 verification: Bug A — btoa() on non-Latin-1 credentials (FIXED in Phase 4)', () => {
+  it('FIXED: the constructor accepts a password outside Latin-1', () => {
+    // Was CURRENT (BUG): construction threw InvalidCharacterError. Fixed by
+    // basicAuthHeader (UTF-8 encode before base64).
     expect(
       () =>
         new CalDAVClient('https://caldav.example.com', {
           ...baseCredentials,
           password: 'парол123',
         })
-    ).toThrow()
+    ).not.toThrow()
   })
 
   it.each([
     ['Cyrillic', 'парол123'],
     ['CJK', '密码1234'],
     ['emoji', 'pw🔒123'],
-  ])('CURRENT (BUG): %s password throws InvalidCharacterError', (_label, password) => {
-    let caught: unknown
-    try {
-      new CalDAVClient('https://caldav.example.com', { ...baseCredentials, password })
-    } catch (e) {
-      caught = e
-    }
-    expect(caught).toBeInstanceOf(Error)
-    const err = caught as Error
-    // jsdom throws a DOMException named InvalidCharacterError — an opaque
-    // low-level failure with no mention of the password or of CalDAV.
-    expect(err.name).toBe('InvalidCharacterError')
-    expect(err.message).toMatch(/not a valid latin1|character/i)
-    expect(err.message).not.toMatch(/password/i)
+  ])('FIXED: %s password no longer throws InvalidCharacterError', (_label, password) => {
+    const client = new CalDAVClient('https://caldav.example.com', { ...baseCredentials, password })
+    // The header must carry base64 of the UTF-8 bytes, not an exception.
+    const expected = correctBasic('testuser', password)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect((client as any).authHeader).toBe(`Basic ${expected}`)
   })
 
-  it('CURRENT: a Latin-1 password (café / ü) does NOT throw, but encodes Latin-1 bytes, not UTF-8', () => {
-    const password = 'café'
+  it('FIXED: Latin-1 characters encode as UTF-8 bytes, not codepoints', () => {
     const client = new CalDAVClient('https://caldav.example.com', {
       ...baseCredentials,
-      password,
+      password: 'café',
     })
-    expect(client).toBeInstanceOf(CalDAVClient)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const produced = (client as any).authHeader.slice('Basic '.length)
+    const correct = correctBasic('testuser', 'café')
+    // Was silent mojibake (server saw 0xE9 instead of 0xC3 0xA9).
+    expect(produced).toBe(correct)
+    expect(produced).toBe('dGVzdHVzZXI6Y2Fmw6k=')
+  })
 
-    const produced = btoa(`testuser:${password}`)
-    const correct = correctBasic('testuser', password)
-    // CURRENT (BUG): silent mojibake — server sees 0xE9 instead of 0xC3 0xA9.
-    // CORRECT: produced should equal `correct`. Flip to toBe when fixed.
-    expect(produced).not.toBe(correct)
-    expect(produced).toBe('dGVzdHVzZXI6Y2Fm6Q==')
-    expect(correct).toBe('dGVzdHVzZXI6Y2Fmw6k=')
-
-    // 'ü' likewise passes btoa without throwing
+  it("FIXED: 'ü' likewise passes without throwing", () => {
     expect(
       () => new CalDAVClient('https://caldav.example.com', { ...baseCredentials, password: 'über' })
     ).not.toThrow()
@@ -105,7 +94,7 @@ describe('Phase 0 verification: Bug B — fetchCalendars() drops VJOURNAL', () =
     client = new CalDAVClient('https://caldav.example.com', baseCredentials)
   })
 
-  it('CURRENT (BUG): a Radicale calendar advertising VEVENT,VJOURNAL,VTODO loses VJOURNAL', async () => {
+  it('FIXED: a Radicale calendar advertising VEVENT,VJOURNAL,VTODO keeps VJOURNAL', async () => {
     mockClientMethods.fetchCalendars.mockResolvedValue([
       {
         url: 'https://caldav.example.com/calendars/test/personal/',
@@ -117,12 +106,10 @@ describe('Phase 0 verification: Bug B — fetchCalendars() drops VJOURNAL', () =
     await client.connect()
     const calendars = await client.fetchCalendars()
 
-    // CORRECT: ['VEVENT', 'VJOURNAL', 'VTODO']
-    expect(calendars[0].supportedComponents).toEqual(['VEVENT', 'VTODO'])
-    expect(calendars[0].supportedComponents).not.toContain('VJOURNAL')
+    expect(calendars[0].supportedComponents).toEqual(['VEVENT', 'VJOURNAL', 'VTODO'])
   })
 
-  it('CURRENT (BUG): a VJOURNAL-only collection yields a truthy empty array', async () => {
+  it('FIXED: a VJOURNAL-only collection yields ["VJOURNAL"]', async () => {
     mockClientMethods.fetchCalendars.mockResolvedValue([
       {
         url: 'https://caldav.example.com/calendars/test/journal/',
@@ -134,16 +121,10 @@ describe('Phase 0 verification: Bug B — fetchCalendars() drops VJOURNAL', () =
     await client.connect()
     const calendars = await client.fetchCalendars()
 
-    // CORRECT: ['VJOURNAL']
-    expect(calendars[0].supportedComponents).toEqual([])
-    // Truthy, so the `!calendar.supportedComponents` escape hatch used by
-    // EventModal/TodoView/EventCard does NOT fire; every includes() check fails.
-    expect(Boolean(calendars[0].supportedComponents)).toBe(true)
-    expect(calendars[0].supportedComponents?.includes('VEVENT')).toBe(false)
-    expect(calendars[0].supportedComponents?.includes('VTODO')).toBe(false)
+    expect(calendars[0].supportedComponents).toEqual(['VJOURNAL'])
   })
 
-  it('CURRENT: a calendar with no components property still yields undefined (unfiltered escape hatch)', async () => {
+  it('FIXED: a calendar with no components property still yields undefined (unfiltered escape hatch)', async () => {
     mockClientMethods.fetchCalendars.mockResolvedValue([
       { url: 'https://caldav.example.com/calendars/test/plain/', displayName: 'Plain' },
     ])

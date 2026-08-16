@@ -5,6 +5,7 @@ import type {
   CreateCalendarOptions,
   UpdateCalendarOptions,
 } from '../types'
+import { basicAuthHeader } from './basicAuth'
 import { v4 as uuidv4 } from 'uuid'
 import { decodeBase64 } from '@/lib/settingsSync'
 import { webFetch } from '@/lib/webFetch'
@@ -58,6 +59,19 @@ function parseRetryAfterSeconds(raw: string | null | undefined): number | undefi
  * write grant", which is a genuine read-only calendar (RFC 3744 §5.1: a
  * writable collection grants `write`; `all` or `unlocked` imply it).
  */
+/**
+ * Resolve a server-returned DAV href against a base URL. Hrefs are usually
+ * paths (`/ivan/calendars/`); some servers return absolute URLs. Unresolvable
+ * input is returned unchanged rather than throwing.
+ */
+export function resolveDavHref(baseUrl: string, href: string): string {
+  try {
+    return new URL(href, baseUrl).href
+  } catch {
+    return href
+  }
+}
+
 function parsePrivileges(raw: unknown): { canWrite: boolean } | null {
   if (raw == null || typeof raw !== 'object') return null
   const privilege = (raw as { privilege?: unknown }).privilege
@@ -193,7 +207,8 @@ export class CalDAVClient {
     this.serverUrl = serverUrl
     this.proxyUrl = proxyUrl
     this.credentials = credentials
-    this.authHeader = `Basic ${btoa(`${credentials.username}:${credentials.password}`)}`
+    // UTF-8-safe Basic auth (btoa alone mangles non-ASCII credentials).
+    this.authHeader = basicAuthHeader(credentials.username, credentials.password)
     this.proxyFetch = proxyUrl ? createProxyFetch(proxyUrl) : fetchWithTimeout
   }
 
@@ -204,7 +219,11 @@ export class CalDAVClient {
         username: this.credentials.username,
         password: this.credentials.password,
       },
-      authMethod: 'Basic',
+      // tsdav's own Basic auth encodes Latin-1 codepoints and throws on
+      // anything above U+00FF — hand it the same UTF-8 header we use for
+      // direct requests so every tsdav call authenticates identically.
+      authMethod: 'Custom',
+      authFunction: async () => ({ Authorization: this.authHeader }),
       defaultAccountType: 'caldav',
       fetch: this.proxyUrl ? createProxyFetch(this.proxyUrl) : fetchWithTimeout,
     })
@@ -709,53 +728,95 @@ export class CalDAVClient {
     )
   }
 
+  /**
+   * Real principal discovery (RFC 5397 + RFC 4791 §6.2.1):
+   *   1. PROPFIND the server root for DAV:current-user-principal
+   *   2. PROPFIND that principal for CALDAV:calendar-home-set
+   * Both answers are parsed namespace-aware (getElementsByTagNameNS), so a
+   * Radicale-shaped response whose inner <href> is unprefixed parses exactly
+   * like a prefixed one — the regex this replaces matched only
+   * `<C:calendar-home-set><d:href>` and failed on precisely that server.
+   * Hrefs are resolved against the base URL (they are usually relative), and
+   * the principal URL needs no username interpolation, so odd usernames never
+   * break discovery.
+   */
   private async findCalendarHomeFromPrincipal(): Promise<string | null> {
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/xml; charset=utf-8',
-      Authorization: this.authHeader,
-      Depth: '0',
-    }
+    const baseUrl = this.serverUrl.replace(/\/$/, '')
+    try {
+      const principalHref = await this.propfindFirstHref(
+        baseUrl,
+        'DAV:',
+        'current-user-principal'
+      )
+      if (!principalHref) return null
+      const principalUrl = resolveDavHref(baseUrl, principalHref)
 
-    // Try to find the current user's principal
-    const principalXml = `<?xml version="1.0" encoding="UTF-8" ?>
-<d:propfind xmlns:d="DAV:" xmlns:C="urn:ietf:params:xml:ns:caldav">
+      const homeHref = await this.propfindFirstHref(
+        principalUrl,
+        'urn:ietf:params:xml:ns:caldav',
+        'calendar-home-set'
+      )
+      if (!homeHref) return null
+      return resolveDavHref(baseUrl, homeHref)
+    } catch {
+      return null
+    }
+  }
+
+  /**
+   * First descendant element in `ns` with `localName`, falling back to a
+   * local-name-only match. The fallback is deliberate: real servers (notably
+   * Radicale) emit child `<href>` elements with no namespace at all when no
+   * default namespace is declared — strictly invalid, but common enough that
+   * a namespace-only lookup misses the very servers this discovery targets.
+   */
+  private firstElementByLocalName(
+    scope: Element | Document,
+    ns: string,
+    localName: string
+  ): Element | undefined {
+    const strict = scope.getElementsByTagNameNS(ns, localName)[0]
+    if (strict) return strict
+    return Array.from(scope.getElementsByTagName('*')).find((el) => el.localName === localName)
+  }
+
+  /**
+   * PROPFIND Depth:0 asking for one property; returns the text of its first
+   * descendant href (the shape both current-user-principal and
+   * calendar-home-set use), or null when the server did not answer it.
+   */
+  private async propfindFirstHref(
+    url: string,
+    namespace: string,
+    localName: 'current-user-principal' | 'calendar-home-set'
+  ): Promise<string | null> {
+    const prop =
+      localName === 'calendar-home-set'
+        ? '<C:calendar-home-set xmlns:C="urn:ietf:params:xml:ns:caldav"/>'
+        : '<d:current-user-principal xmlns:d="DAV:"/>'
+    const body = `<?xml version="1.0" encoding="UTF-8" ?>
+<d:propfind xmlns:d="DAV:">
   <d:prop>
-    <C:calendar-home-set/>
+    ${prop}
   </d:prop>
 </d:propfind>`
 
-    // Try common principal URLs
-    const principalPaths = [
-      '/dav.php/principals/',
-      '/principals/',
-      '/remote.php/dav/principals/',
-      '/dav/',
-    ]
+    const response = await this.proxyFetch(url, {
+      method: 'PROPFIND',
+      headers: {
+        'Content-Type': 'application/xml; charset=utf-8',
+        Authorization: this.authHeader,
+        Depth: '0',
+      },
+      body,
+    })
 
-    for (const path of principalPaths) {
-      const baseUrl = this.serverUrl.replace(/\/$/, '')
-      const testUrl = `${baseUrl}${path}${this.credentials.username}/`
-
-      try {
-        const response = await this.proxyFetch(testUrl, {
-          method: 'PROPFIND',
-          headers,
-          body: principalXml,
-        })
-
-        if (response.ok || response.status === 207) {
-          const text = await response.text()
-          const match = text.match(/<C:calendar-home-set>\s*<d:href>([^<]+)<\/d:href>/)
-          if (match?.[1]) {
-            return match[1].startsWith('http') ? match[1] : `${baseUrl}${match[1]}`
-          }
-        }
-      } catch {
-        // Try next path
-      }
-    }
-
-    return null
+    if (!response.ok && response.status !== 207) return null
+    const doc = this.parseXmlDocument(await response.text())
+    const propEl = this.firstElementByLocalName(doc, namespace, localName)
+    if (!propEl) return null
+    const hrefEl = this.firstElementByLocalName(propEl, 'DAV:', 'href')
+    return hrefEl?.textContent?.trim() || null
   }
 
   private async findCalendarHomeFromCalendars(): Promise<string | null> {
