@@ -6,8 +6,6 @@ import ICAL from 'ical.js'
 // fall back to a zone-less frame. Zones are parsed into TimezoneService lazily
 // on first use (registration cost is per-used-zone).
 //
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-// eslint-disable-next-line @typescript-eslint/no-require-imports
 import zoneIndex from '@touch4it/ical-timezones/zones.js'
 
 // Raw zone texts keyed by Vite's glob path (absolute); matched by suffix.
