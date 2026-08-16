@@ -1,5 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { useCalendarStore } from '../calendarStore'
+import { nextOpenOccurrence } from '@/lib/occurrenceExpansion'
+import { makeRecurringTask, makeTask } from '@/lib/__tests__/fixtures'
+import type { CalendarEvent } from '@/types'
 
 /**
  * Phase 2 (C1) - timed TZID series expansion must keep the wall clock in
@@ -57,7 +60,9 @@ describe('timed TZID series expansion (Phase 2 C1)', () => {
     const march = store.getEventsForDateRange('2026-03-25', '2026-03-28')
     const mar26 = march.find((e) => e.id.startsWith('cph-') && e.start.startsWith('2026-03-26'))
     expect(mar26).toBeUndefined()
-    expect(march.some((e) => e.id.startsWith('cph-') && e.start.startsWith('2026-03-25'))).toBe(true)
+    expect(march.some((e) => e.id.startsWith('cph-') && e.start.startsWith('2026-03-25'))).toBe(
+      true
+    )
   })
 
   it('matches a detached override by the series zone frame', () => {
@@ -76,9 +81,7 @@ describe('timed TZID series expansion (Phase 2 C1)', () => {
     })
     const march = store.getEventsForDateRange('2026-03-30', '2026-04-05')
     // The master slot for Mar 30 must be suppressed (override supersedes it).
-    const masterSlot = march.find(
-      (e) => e.id.startsWith('cph-2026-03-30')
-    )
+    const masterSlot = march.find((e) => e.id.startsWith('cph-2026-03-30'))
     expect(masterSlot).toBeUndefined()
     // And the override itself is present.
     expect(march.some((e) => e.id === 'cph-override-mar30')).toBe(true)
@@ -105,5 +108,65 @@ describe('timed TZID series expansion (Phase 2 C1)', () => {
       expect(ev.start).toBe('2026-06-01T08:00:00')
       expect(ev.end).toBe('2026-06-01T09:00:00')
     })
+  })
+})
+
+/**
+ * nextOpenOccurrence must judge "is this occurrence already past?" in the
+ * same frame the zoned walk generates in. The cursor is initialized from the
+ * master's own start via occurrenceInstant (the series' zone for a timed
+ * TZID master, UTC midnight for all-day), so the first real occurrence is a
+ * candidate instead of being sorted a day late by a device-zone parse.
+ * Assertions are instants (toISOString), so they hold in both vitest
+ * projects regardless of the ambient zone.
+ */
+describe('nextOpenOccurrence with timed TZID tasks', () => {
+  const overrideMap = (...entries: CalendarEvent[]): Map<string, CalendarEvent> =>
+    new Map(entries.map((e) => [e.recurrenceId as string, e]))
+
+  const makeCopenhagenDaily = (start: string, end: string): CalendarEvent =>
+    makeRecurringTask('FREQ=DAILY', {
+      isAllDay: false,
+      timezone: 'Europe/Copenhagen',
+      start,
+      end,
+      rruleString: 'FREQ=DAILY',
+    })
+
+  it('returns the first occurrence at its true instant, not a day late', () => {
+    // Wall 10:00 Copenhagen = 09:00Z (CET). The buggy cursor (device-parse of
+    // the naive wall clock) sorted this occurrence before the walk and the
+    // function returned Feb 11 instead.
+    const master = makeCopenhagenDaily('2026-02-10T10:00:00', '2026-02-10T11:00:00')
+    expect(nextOpenOccurrence(master, new Map())!.occStartStr).toBe('2026-02-10T09:00:00.000Z')
+  })
+
+  it('advances past a completed first occurrence', () => {
+    const master = makeCopenhagenDaily('2026-02-10T10:00:00', '2026-02-10T11:00:00')
+    const done = makeTask({
+      recurrenceId: '2026-02-10T10:00:00',
+      completed: true,
+      taskStatus: 'COMPLETED',
+    })
+
+    expect(nextOpenOccurrence(master, overrideMap(done))!.occStartStr).toBe(
+      '2026-02-11T09:00:00.000Z'
+    )
+  })
+
+  it('keeps occurrence instants correct across the 2026-03-29 spring-forward', () => {
+    const master = makeCopenhagenDaily('2026-03-25T10:00:00', '2026-03-25T11:00:00')
+
+    // Before spring-forward: wall 10:00 CET = 09:00Z.
+    expect(nextOpenOccurrence(master, new Map())!.occStartStr).toBe('2026-03-25T09:00:00.000Z')
+
+    // Complete every occurrence up to and including Mar 28 (still CET).
+    const done = ['2026-03-25', '2026-03-26', '2026-03-27', '2026-03-28'].map((d) =>
+      makeTask({ recurrenceId: d + 'T10:00:00', completed: true, taskStatus: 'COMPLETED' })
+    )
+    // After spring-forward: wall 10:00 CEST = 08:00Z.
+    expect(nextOpenOccurrence(master, overrideMap(...done))!.occStartStr).toBe(
+      '2026-03-29T08:00:00.000Z'
+    )
   })
 })

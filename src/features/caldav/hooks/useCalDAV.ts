@@ -81,6 +81,15 @@ const MAX_RETRIES = 10
 // app may retry immediately.
 const lastAttemptAtByChangeId = new Map<string, number>()
 
+// Server-issued Retry-After (seconds) per change id, remembered from the last
+// counted failure's error (see the outer classifier). The backoff gate waits
+// out max(exponential, retryAfter) so a rate-limited (429) change is not
+// hammered before the server's own deadline. Cleared whenever the change is
+// removed, dropped, or succeeds, mirroring lastAttemptAtByChangeId. On the
+// web the header may be invisible (no Access-Control-Expose-Headers), in
+// which case nothing is ever stored and the gate is pure exponential.
+const retryAfterByChangeId = new Map<string, number>()
+
 /**
  * Best-effort title for a pending change's payload, for toasts. The payload is
  * either a bare event (create/update/delete) or a { events: [...] } group
@@ -409,6 +418,7 @@ export function useCalDAV(): UseCalDAVReturn {
             showToast(pendingChangeDropMessage(change.type, pendingChangeTitle(change)))
           }
           lastAttemptAtByChangeId.delete(change.id)
+          retryAfterByChangeId.delete(change.id)
           storage.removePendingChange(change.id)
           failed++
           continue
@@ -419,10 +429,14 @@ export function useCalDAV(): UseCalDAVReturn {
         // neither counted nor dropped. A retryCount of 0 (fresh edit, or a
         // coalesced replacement) always attempts immediately.
         const lastAttempt = lastAttemptAtByChangeId.get(change.id)
+        // A server Retry-After (remembered from the last counted failure)
+        // acts as a lower bound on the wait — honor it even when the
+        // exponential schedule would already have elapsed.
+        const retryAfterMs = (retryAfterByChangeId.get(change.id) ?? 0) * 1000
         if (
           change.retryCount > 0 &&
           lastAttempt !== undefined &&
-          Date.now() - lastAttempt < backoffDelayMs(change.retryCount)
+          Date.now() - lastAttempt < Math.max(backoffDelayMs(change.retryCount), retryAfterMs)
         ) {
           continue
         }
@@ -525,6 +539,7 @@ export function useCalDAV(): UseCalDAVReturn {
                     `Couldn't save "${pendingChangeTitle(change) || 'this event'}" — it changed on the server while this edit was queued. Your version is saved locally.`
                   )
                   lastAttemptAtByChangeId.delete(change.id)
+                  retryAfterByChangeId.delete(change.id)
                   storage.removePendingChange(change.id)
                   failed++
                   break
@@ -656,13 +671,29 @@ export function useCalDAV(): UseCalDAVReturn {
               } catch (err) {
                 if ((err as { status?: number } | undefined)?.status !== 412) throw err
                 // Stale If-Match: re-fetch the current etag and retry once.
-                // If that also 412s (or the etag fetch fails), the outer
-                // classifier counts it and a later cycle tries again — a
-                // delete that stays queued is harmless, the event just stays
-                // on the server.
                 const freshEtag = await client.fetchEtag(eventUrl)
                 if (!freshEtag) throw err
-                await engine.deleteEvent(eventUrl, freshEtag)
+                try {
+                  await engine.deleteEvent(eventUrl, freshEtag)
+                } catch (retryErr) {
+                  if ((retryErr as { status?: number } | undefined)?.status !== 412) {
+                    throw retryErr
+                  }
+                  // Even against a fresh etag the server still refuses: the
+                  // resource changed again mid-recovery. Do not loop — surface
+                  // the conflict and keep the local event (it stays in the
+                  // store with syncStatus 'failed' so the user can see it and
+                  // delete again). Mirrors the update path's second-412
+                  // handling.
+                  showToast(
+                    `Couldn't delete "${pendingChangeTitle(change) || 'this event'}" — it changed on the server while this delete was queued. The event stays on the server.`
+                  )
+                  lastAttemptAtByChangeId.delete(change.id)
+                  retryAfterByChangeId.delete(change.id)
+                  storage.removePendingChange(change.id)
+                  failed++
+                  break
+                }
               }
               // Remove from the store: a failed delete re-adds the event with
               // syncStatus='failed' (see deleteEventFn catch), so on a successful
@@ -674,6 +705,7 @@ export function useCalDAV(): UseCalDAVReturn {
           }
 
           storage.removePendingChange(change.id)
+          retryAfterByChangeId.delete(change.id)
           succeeded++
         } catch (err) {
           const disposition = classifyPendingChangeError(err, change.type)
@@ -684,13 +716,21 @@ export function useCalDAV(): UseCalDAVReturn {
               failed++
               break
             case 'retry-counted':
-            case 'stale-etag':
+            case 'stale-etag': {
               // 'stale-etag' reaches here only when the in-case recovery could
               // not fetch a fresh etag — count it and retry later.
               storage.updatePendingChangeRetry(change.id)
               lastAttemptAtByChangeId.set(change.id, Date.now())
+              // A 429 (or any rate-limited response) may carry Retry-After —
+              // the server's own minimum wait. Remember it per change so the
+              // backoff gate honors it on the next cycle.
+              const retryAfter = (err as { retryAfter?: number } | undefined)?.retryAfter
+              if (typeof retryAfter === 'number' && Number.isFinite(retryAfter) && retryAfter > 0) {
+                retryAfterByChangeId.set(change.id, retryAfter)
+              }
               failed++
               break
+            }
             case 'drop': {
               showToast(
                 pendingChangeDropMessage(
@@ -700,6 +740,7 @@ export function useCalDAV(): UseCalDAVReturn {
                 )
               )
               lastAttemptAtByChangeId.delete(change.id)
+              retryAfterByChangeId.delete(change.id)
               storage.removePendingChange(change.id)
               failed++
               break

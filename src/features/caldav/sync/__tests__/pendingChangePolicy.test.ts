@@ -39,9 +39,9 @@ describe('classifyPendingChangeError — network failures (no status)', () => {
   })
 
   it('NetworkError and offline wording (case-insensitive) → retry (uncounted)', () => {
-    expect(classifyPendingChangeError(new Error('NetworkError: request aborted'), 'delete')).toEqual(
-      { kind: 'retry' }
-    )
+    expect(
+      classifyPendingChangeError(new Error('NetworkError: request aborted'), 'delete')
+    ).toEqual({ kind: 'retry' })
     expect(classifyPendingChangeError(new Error('you are OFFLINE'), 'move')).toEqual({
       kind: 'retry',
     })
@@ -75,7 +75,10 @@ describe('classifyPendingChangeError — 412 stale etag', () => {
   })
 
   it('412 create → drop with a duplicate message', () => {
-    const d = classifyPendingChangeError(statusError(412, 'HTTP 412', 'If-Match mismatch'), 'create')
+    const d = classifyPendingChangeError(
+      statusError(412, 'HTTP 412', 'If-Match mismatch'),
+      'create'
+    )
     expect(d.kind).toBe('drop')
     expect(d.message).toBe(
       `Couldn't create "this event" — already exists on the server — check for a duplicate.`
@@ -95,11 +98,7 @@ describe('classifyPendingChangeError — 412 stale etag', () => {
 describe('classifyPendingChangeError — 403 / 401', () => {
   it('403 with a no-uid-conflict body → drop (duplicate UID)', () => {
     const d = classifyPendingChangeError(
-      statusError(
-        403,
-        'HTTP 403',
-        '<C:no-uid-conflict xmlns:C="urn:ietf:params:xml:ns:caldav"/>'
-      ),
+      statusError(403, 'HTTP 403', '<C:no-uid-conflict xmlns:C="urn:ietf:params:xml:ns:caldav"/>'),
       'create'
     )
     expect(d.kind).toBe('drop')
@@ -203,6 +202,24 @@ describe('backoffDelayMs', () => {
     expect(backoffDelayMs(-1)).toBe(30_000)
     expect(backoffDelayMs(Number.NaN)).toBe(30_000)
     expect(backoffDelayMs(Number.POSITIVE_INFINITY)).toBe(30_000)
+  })
+
+  it('uses a server Retry-After as a lower bound on the exponential schedule', () => {
+    // retryCount 0 → exponential 30s, but the server asked for 120s.
+    expect(backoffDelayMs(0, 120)).toBe(120_000)
+    // Larger than the exponential for this retry count too.
+    expect(backoffDelayMs(1, 120)).toBe(120_000)
+    // When the exponential is already longer, it wins.
+    expect(backoffDelayMs(3, 30)).toBe(240_000)
+  })
+
+  it('falls back to the exponential schedule when Retry-After is absent or invalid', () => {
+    expect(backoffDelayMs(1)).toBe(60_000)
+    expect(backoffDelayMs(1, undefined)).toBe(60_000)
+    expect(backoffDelayMs(1, Number.NaN)).toBe(60_000)
+    expect(backoffDelayMs(1, Number.POSITIVE_INFINITY)).toBe(60_000)
+    expect(backoffDelayMs(1, -5)).toBe(60_000)
+    expect(backoffDelayMs(1, 0)).toBe(60_000)
   })
 })
 

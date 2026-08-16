@@ -13,11 +13,7 @@ import type { PendingChange } from '../types'
  * - 'stale-etag': 412 on an update/delete — the If-Match etag is stale;
  *   the caller re-GETs the etag and re-applies the change once.
  */
-export type PendingChangeDispositionKind =
-  | 'retry'
-  | 'retry-counted'
-  | 'drop'
-  | 'stale-etag'
+export type PendingChangeDispositionKind = 'retry' | 'retry-counted' | 'drop' | 'stale-etag'
 
 export interface PendingChangeDisposition {
   kind: PendingChangeDispositionKind
@@ -58,9 +54,7 @@ export function classifyPendingChangeError(
   // transient and UNCOUNTED; anything else (programming/parse errors) keeps
   // today's behaviour of a counted retry.
   if (status === undefined) {
-    return NETWORK_ERROR_RE.test(message)
-      ? { kind: 'retry' }
-      : { kind: 'retry-counted' }
+    return NETWORK_ERROR_RE.test(message) ? { kind: 'retry' } : { kind: 'retry-counted' }
   }
 
   // 412 Precondition Failed: the If-Match etag we sent is stale.
@@ -122,21 +116,14 @@ export function classifyPendingChangeError(
   if (status === 507) {
     return {
       kind: 'drop',
-      message: pendingChangeDropMessage(
-        changeType,
-        undefined,
-        'the server storage is full (507).'
-      ),
+      message: pendingChangeDropMessage(changeType, undefined, 'the server storage is full (507).'),
     }
   }
 
   // 404/410 on create/update: the target resource is gone. DELETE 404/410 is
   // tolerated by the client and never reaches this classifier; a delete that
   // did arrive falls through to the counted-retry default below.
-  if (
-    (status === 404 || status === 410) &&
-    (changeType === 'create' || changeType === 'update')
-  ) {
+  if ((status === 404 || status === 410) && (changeType === 'create' || changeType === 'update')) {
     return {
       kind: 'drop',
       message: pendingChangeDropMessage(
@@ -171,16 +158,26 @@ export function classifyPendingChangeError(
  * retryCount: 30s doubled per attempt, capped at 30 minutes. retryCount 0 →
  * 30s, 1 → 60s, 2 → 120s, ..., 6+ → 30min. Negative or non-finite input
  * falls back to the base delay.
+ *
+ * When retryAfterSeconds is a positive finite number (a server-issued
+ * Retry-After, e.g. from a 429), it acts as a LOWER BOUND: the caller never
+ * retries sooner than the server asked, even when the exponential schedule
+ * would. Invalid values (absent, 0, negative, non-finite) are ignored and
+ * the pure exponential schedule applies.
  */
-export function backoffDelayMs(retryCount: number): number {
-  if (
-    typeof retryCount !== 'number' ||
-    !Number.isFinite(retryCount) ||
-    retryCount < 0
-  ) {
+export function backoffDelayMs(retryCount: number, retryAfterSeconds?: number): number {
+  if (typeof retryCount !== 'number' || !Number.isFinite(retryCount) || retryCount < 0) {
     return BACKOFF_BASE_MS
   }
-  return Math.min(BACKOFF_BASE_MS * 2 ** retryCount, BACKOFF_CAP_MS)
+  const exponential = Math.min(BACKOFF_BASE_MS * 2 ** retryCount, BACKOFF_CAP_MS)
+  if (
+    typeof retryAfterSeconds === 'number' &&
+    Number.isFinite(retryAfterSeconds) &&
+    retryAfterSeconds > 0
+  ) {
+    return Math.max(exponential, retryAfterSeconds * 1000)
+  }
+  return exponential
 }
 
 /** Default trailing reason per change type when no specific reason is given. */

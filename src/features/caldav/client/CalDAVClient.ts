@@ -23,6 +23,34 @@ import {
 
 const NETWORK_TIMEOUT_MS = 15_000
 
+// Upper bound for an honored Retry-After (seconds). Anything larger — or
+// unparseable — is treated as absent, so a misbehaving server can't stall the
+// pending-change queue for hours on a single 429.
+const MAX_HONORED_RETRY_AFTER_SECONDS = 3600
+
+/**
+ * Parse an HTTP `Retry-After` header value into whole seconds, clamped to
+ * [0, MAX_HONORED_RETRY_AFTER_SECONDS]. Supports both RFC 9110 forms:
+ * integer delay-seconds and an HTTP-date. Returns undefined for missing,
+ * empty, or unparseable values (the caller then falls back to the pure
+ * exponential backoff).
+ */
+function parseRetryAfterSeconds(raw: string | null | undefined): number | undefined {
+  if (!raw) return undefined
+  const trimmed = raw.trim()
+  if (!trimmed) return undefined
+  let seconds: number
+  if (/^\d+$/.test(trimmed)) {
+    seconds = Number(trimmed)
+  } else {
+    const when = Date.parse(trimmed)
+    if (Number.isNaN(when)) return undefined
+    seconds = Math.max(0, Math.ceil((when - Date.now()) / 1000))
+  }
+  if (!Number.isFinite(seconds) || seconds < 0) return undefined
+  return Math.min(seconds, MAX_HONORED_RETRY_AFTER_SECONDS)
+}
+
 function escapeXml(str: string): string {
   return (
     str
@@ -481,9 +509,16 @@ export class CalDAVClient {
     const body = await response.text().catch(() => '')
     const error = new Error(
       `${method} ${url} failed: HTTP ${response.status}${body ? `: ${body.slice(0, 200)}` : ''}`
-    ) as Error & { status: number; body?: string }
+    ) as Error & { status: number; body?: string; retryAfter?: number }
     error.status = response.status
     if (body) error.body = body
+    // A rate-limited response (429) may carry Retry-After — the server's own
+    // minimum wait before the next attempt, in seconds (integer or HTTP-date).
+    // Attach it (clamped) so the pending-change backoff can honor it. Missing
+    // or invalid values degrade to the exponential schedule. The optional
+    // chaining keeps mock Responses without headers from throwing here.
+    const retryAfter = parseRetryAfterSeconds(response.headers?.get?.('retry-after'))
+    if (retryAfter !== undefined) error.retryAfter = retryAfter
     throw error
   }
 

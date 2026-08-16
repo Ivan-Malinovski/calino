@@ -157,20 +157,36 @@ export function isOccurrenceExcluded(
   if (!excludedDates || excludedDates.length === 0) return false
   return isAllDay
     ? excludedDates.some((date) => date.split('T')[0] === occDateStr)
-    : excludedDates.some((date) => parseOccurrenceInstant(date, timezone).getTime() === occ.getTime())
+    : excludedDates.some(
+        (date) => parseOccurrenceInstant(date, timezone).getTime() === occ.getTime()
+      )
 }
 
 /** Parse the wall-clock components of a timed start string (strips Z/offset/fraction). */
 function wallClockParts(
   iso: string
-): { year: number; month: number; day: number; hour: number; minute: number; second: number } | null {
+): {
+  year: number
+  month: number
+  day: number
+  hour: number
+  minute: number
+  second: number
+} | null {
   const wall = iso
     .replace(/Z$/i, '')
     .replace(/[+-]\d{2}:?\d{2}$/, '')
     .replace(/\.\d+$/, '')
   const m = wall.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/)
   if (!m) return null
-  return { year: +m[1], month: +m[2], day: +m[3], hour: +m[4], minute: +m[5], second: m[6] ? +m[6] : 0 }
+  return {
+    year: +m[1],
+    month: +m[2],
+    day: +m[3],
+    hour: +m[4],
+    minute: +m[5],
+    second: m[6] ? +m[6] : 0,
+  }
 }
 
 /** Safety cap for the zoned expansion walk (a window can be far from DTSTART). */
@@ -301,10 +317,13 @@ export function nextOpenOccurrence(
   if (!rruleString) return null
 
   const masterStart = parseISO(master.start)
-  const anchor = rruleAnchor(master, masterStart)
 
-  // Start the walk just before the anchor so the anchor itself is a candidate.
-  let cursor = new Date(anchor.getTime() - 1)
+  // Start the walk just before the master's own start, in the frame the walk
+  // generates in: for a timed TZID series that is the series' zone (a
+  // device-parse of the naive wall clock can sort the first occurrence a day
+  // late), for all-day it is the same UTC midnight rruleAnchor uses —
+  // occurrenceInstant covers both.
+  let cursor = new Date(occurrenceInstant(master, master.start).getTime() - 1)
   for (const override of overridesByRecurrenceId.values()) {
     if (!override.completed) continue
     // Compare in the same frame the rule generates in, or an all-day
@@ -313,16 +332,38 @@ export function nextOpenOccurrence(
     if (at.getTime() > cursor.getTime()) cursor = at
   }
 
+  // Duration endpoints in the frame the walk generates in. For a timed TZID
+  // series the device-parse of the naive wall clock differs from the true
+  // instant by the zone offset; that cancels out of the duration except when a
+  // DST transition falls between the two instants, where the wall-clock
+  // difference is wrong by the transition. Resolving through the series zone
+  // keeps the occurrence end the true elapsed interval (other callers of
+  // shapeOccurrence are untouched).
+  const shapeStart =
+    !master.isAllDay && master.timezone
+      ? parseOccurrenceInstant(master.start, master.timezone)
+      : masterStart
+  const shapeEnd =
+    !master.isAllDay && master.timezone
+      ? parseOccurrenceInstant(master.end, master.timezone)
+      : parseISO(master.end)
+
   let examined = 0
   for (const occ of occurrencesFrom(master, cursor, rruleString)) {
     if (examined++ >= MAX_OCCURRENCE_SCAN) return null
-    const shape = shapeOccurrence(occ, masterStart, parseISO(master.end), master.isAllDay)
+    const shape = shapeOccurrence(occ, shapeStart, shapeEnd, master.isAllDay)
     const hasOverride =
       overridesByRecurrenceId.has(shape.occStartStr) ||
       overridesByRecurrenceId.has(shape.occDateStr)
     if (
       !hasOverride &&
-      !isOccurrenceExcluded(occ, shape.occDateStr, master.isAllDay, master.excludedDates, master.timezone)
+      !isOccurrenceExcluded(
+        occ,
+        shape.occDateStr,
+        master.isAllDay,
+        master.excludedDates,
+        master.timezone
+      )
     ) {
       return shape
     }
@@ -359,7 +400,13 @@ export function displayOccurrence(master: CalendarEvent, now: Date): OccurrenceS
   const shapeOf = (occ: Date): OccurrenceShape =>
     shapeOccurrence(occ, masterStart, masterEnd, master.isAllDay)
   const excluded = (occ: Date, shape: OccurrenceShape): boolean =>
-    isOccurrenceExcluded(occ, shape.occDateStr, master.isAllDay, master.excludedDates, master.timezone)
+    isOccurrenceExcluded(
+      occ,
+      shape.occDateStr,
+      master.isAllDay,
+      master.excludedDates,
+      master.timezone
+    )
 
   // TZID series cannot jump with rrule.before/after; walk the zoned expansion
   // forward, remembering the last non-excluded occurrence at or before now.

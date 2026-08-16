@@ -4,7 +4,7 @@ import { format, parseISO } from 'date-fns'
 import { EventPreviewPopup } from '../components/EventPreviewPopup'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
-import { formatTime } from '@/lib/datetime'
+import { formatTime, formatEventTime, toEventInstant, toZoneWallClock } from '@/lib/datetime'
 import type { CalendarEvent } from '@/types'
 
 const mockEvent: CalendarEvent = {
@@ -490,8 +490,14 @@ describe('EventPreviewPopup', () => {
         const updated = useCalendarStore
           .getState()
           .events.find((e) => e.id === 'test-event-overnight')
-        expect(updated?.start).toBe(`${shiftedStartDate}T${startLocalTime}:00`)
-        expect(updated?.end).toBe(`${shiftedEndDate}T${endLocalTime}:00`)
+        // The popup writes device-frame Z instants (Phase 2 C3) for timed
+        // events, which the store keeps as UTC for timezone-less events.
+        // Derive the expectation from the same device-frame math so it holds
+        // in any test zone (previously the popup stored a bare naive string).
+        expect(updated?.start).toBe(
+          new Date(`${shiftedStartDate}T${startLocalTime}:00`).toISOString()
+        )
+        expect(updated?.end).toBe(new Date(`${shiftedEndDate}T${endLocalTime}:00`).toISOString())
       })
     })
 
@@ -605,6 +611,195 @@ describe('EventPreviewPopup', () => {
         expect(updated?.dueDate).toBe('2024-03-20')
         expect(updated?.isAllDay).toBe(true)
       })
+    })
+  })
+
+  describe('TZID events render and edit in the device frame (Phase 2)', () => {
+    // A TZID event stores a naive wall clock in the event zone. The popup must
+    // resolve it through toEventInstant for display and edit-field seeding:
+    // this Copenhagen 10:00 must read 04:00 in an America/New_York runner and
+    // 10:00 in a Europe/Copenhagen one. Expectations derive from the same
+    // helpers so the identical assertions hold in both vitest projects — the
+    // old parseISO-based code renders 10:00 in both and fails the west run.
+    const mockTzidEvent: CalendarEvent = {
+      id: 'test-event-tzid',
+      title: 'Copenhagen Sync',
+      start: '2026-02-10T10:00:00',
+      end: '2026-02-10T11:00:00',
+      calendarId: 'default',
+      isAllDay: false,
+      timezone: 'Europe/Copenhagen',
+    }
+
+    it('renders the time in the device frame, not the event zone', () => {
+      const store = useCalendarStore.getState()
+      store.addEvent(mockTzidEvent)
+      render(
+        <EventPreviewPopup
+          event={mockTzidEvent}
+          position={mockPosition}
+          clickedEventId="test-event-tzid"
+        />
+      )
+      const tf = useSettingsStore.getState().timeFormat
+      const expected = `${formatEventTime(
+        mockTzidEvent.start,
+        mockTzidEvent.timezone,
+        tf
+      )} - ${formatEventTime(mockTzidEvent.end, mockTzidEvent.timezone, tf)}`
+      expect(screen.getByText(expected)).toBeInTheDocument()
+    })
+
+    it('renders the date in the device frame when the zone crosses midnight', () => {
+      const crossMidnight: CalendarEvent = {
+        ...mockTzidEvent,
+        id: 'test-event-tzid-cross',
+        start: '2026-02-10T00:30:00',
+        end: '2026-02-10T01:30:00',
+      }
+      const store = useCalendarStore.getState()
+      store.addEvent(crossMidnight)
+      render(
+        <EventPreviewPopup
+          event={crossMidnight}
+          position={mockPosition}
+          clickedEventId="test-event-tzid-cross"
+        />
+      )
+      // 'd MMM yyyy' — the popup's pattern for the default 'dd/MM/yyyy' setting
+      // (west: 9 Feb 2026, east: 10 Feb 2026).
+      const expected = format(
+        toEventInstant(crossMidnight.start, crossMidnight.timezone),
+        'd MMM yyyy'
+      )
+      expect(screen.getByText(expected)).toBeInTheDocument()
+    })
+
+    it('initializes the edit fields from the device-frame instant', () => {
+      const store = useCalendarStore.getState()
+      store.addEvent(mockTzidEvent)
+      render(
+        <EventPreviewPopup
+          event={mockTzidEvent}
+          position={mockPosition}
+          clickedEventId="test-event-tzid"
+        />
+      )
+      const expectedTime = format(
+        toEventInstant(mockTzidEvent.start, mockTzidEvent.timezone),
+        'HH:mm'
+      )
+      const time = screen.getByText(new RegExp(expectedTime))
+      fireEvent.click(time)
+      expect(screen.getByDisplayValue(expectedTime)).toBeInTheDocument()
+    })
+
+    it('writes edits back as device-frame Z instants the store re-frames into the event zone', async () => {
+      const store = useCalendarStore.getState()
+      store.addEvent(mockTzidEvent)
+      render(
+        <EventPreviewPopup
+          event={mockTzidEvent}
+          position={mockPosition}
+          clickedEventId="test-event-tzid"
+        />
+      )
+
+      // Open the time editor and type a new device-frame start time. The
+      // preserved 1h duration shifts the end to 13:00.
+      const expectedTime = format(
+        toEventInstant(mockTzidEvent.start, mockTzidEvent.timezone),
+        'HH:mm'
+      )
+      fireEvent.click(screen.getByText(new RegExp(expectedTime)))
+      fireEvent.change(screen.getByDisplayValue(expectedTime), {
+        target: { value: '12:00' },
+      })
+      fireEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+
+      // The store normalizes the device-frame Z instant back to the event
+      // zone's naive wall clock (calendarStore.updateEvent / toZoneWallClock).
+      const tz = mockTzidEvent.timezone!
+      const expectedStart = toZoneWallClock(new Date('2026-02-10T12:00:00').toISOString(), tz)
+      const expectedEnd = toZoneWallClock(new Date('2026-02-10T13:00:00').toISOString(), tz)
+      await waitFor(() => {
+        const updated = useCalendarStore.getState().events.find((e) => e.id === 'test-event-tzid')
+        expect(updated?.start).toBe(expectedStart)
+        expect(updated?.end).toBe(expectedEnd)
+      })
+    })
+
+    it('renders a timed TZID task due time in the device frame', () => {
+      const tzidTask: CalendarEvent = {
+        id: 'test-task-tzid',
+        title: 'Copenhagen Task',
+        start: '2026-02-10T14:30:00',
+        end: '2026-02-10T14:30:00',
+        dueDate: '2026-02-10T14:30:00',
+        calendarId: 'default',
+        isAllDay: false,
+        type: 'task',
+        timezone: 'Europe/Copenhagen',
+      }
+      const store = useCalendarStore.getState()
+      store.addEvent(tzidTask)
+      render(
+        <EventPreviewPopup
+          event={tzidTask}
+          position={mockPosition}
+          clickedEventId="test-task-tzid"
+        />
+      )
+      const tf = useSettingsStore.getState().timeFormat
+      const expected = formatEventTime(tzidTask.dueDate!, tzidTask.timezone, tf)
+      expect(screen.getByText(expected)).toBeInTheDocument()
+    })
+
+    it('keeps all-day TZID events floating ("All day")', () => {
+      const allDayTzid: CalendarEvent = {
+        id: 'test-event-allday-tzid',
+        title: 'All-day Holiday',
+        start: '2026-02-10T00:00:00',
+        end: '2026-02-10T23:59:59',
+        calendarId: 'default',
+        isAllDay: true,
+        timezone: 'Europe/Copenhagen',
+      }
+      const store = useCalendarStore.getState()
+      store.addEvent(allDayTzid)
+      render(
+        <EventPreviewPopup
+          event={allDayTzid}
+          position={mockPosition}
+          clickedEventId="test-event-allday-tzid"
+        />
+      )
+      expect(screen.getByText('All day')).toBeInTheDocument()
+    })
+
+    it('keeps all-day TZID edit dates floating (no day shift)', () => {
+      const allDayTzid: CalendarEvent = {
+        id: 'test-event-allday-tzid-edit',
+        title: 'All-day Holiday',
+        start: '2026-02-10T00:00:00',
+        end: '2026-02-10T23:59:59',
+        calendarId: 'default',
+        isAllDay: true,
+        timezone: 'Europe/Copenhagen',
+      }
+      const store = useCalendarStore.getState()
+      store.addEvent(allDayTzid)
+      render(
+        <EventPreviewPopup
+          event={allDayTzid}
+          position={mockPosition}
+          clickedEventId="test-event-allday-tzid-edit"
+        />
+      )
+      fireEvent.click(screen.getByText(/10 Feb 2026/))
+      // The floating date is kept as-is — resolving it through toEventInstant
+      // would shift it a day west of UTC (to Feb 9 in America/New_York).
+      expect(screen.getByDisplayValue('2026-02-10')).toBeInTheDocument()
     })
   })
 })

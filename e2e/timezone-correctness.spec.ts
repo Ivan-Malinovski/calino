@@ -84,7 +84,12 @@ const singleEvent = {
 const card = (page: Page, title: string) =>
   page.locator('[data-component="event-card"]', { hasText: title }).first()
 
-async function dragDownBy(page: Page, title: string, deltaY: number): Promise<void> {
+async function dragDownBy(
+  page: Page,
+  title: string,
+  deltaY: number,
+  midDrag?: () => Promise<void>
+): Promise<void> {
   await card(page, title).scrollIntoViewIfNeeded()
   await page.waitForTimeout(200)
   const box = await card(page, title).boundingBox()
@@ -100,6 +105,7 @@ async function dragDownBy(page: Page, title: string, deltaY: number): Promise<vo
   }
   await page.mouse.move(x, y + deltaY, { steps: 20 })
   await page.waitForTimeout(50)
+  if (midDrag) await midDrag()
   await page.mouse.up()
   await page.waitForTimeout(300)
 }
@@ -139,8 +145,63 @@ test.describe('timezone correctness through the UI', () => {
     // moves by exactly the drag - proving the drag did not shift the event
     // by the device/event offset. Server-byte assertions for the same
     // serialization path live in the icalTypeMapping unit tests.
-    await dragDownBy(page, 'Copenhagen Standup', 120)
+    await dragDownBy(page, 'Copenhagen Standup', 120, async () => {
+      // The drop-preview band must start from the DEVICE-frame minute (04:00 =
+      // 240), not the event-zone wall clock (10:00 = 600) — otherwise the band
+      // floats above the card. 120px at 60px/h = +120min -> 360 (06:00).
+      const band = page.locator('[data-component="drop-preview"]')
+      await expect(band).toHaveCount(1)
+      await expect(band).toHaveAttribute('data-minute-of-day', '360')
+    })
     await expect(cph).toContainText('06:00')
     await expect(cph).toContainText('Europe/Copenhagen')
+  })
+
+  test('the preview popup shows the NY wall clock and edit fields initialise in the device frame', async ({
+    page,
+  }) => {
+    await seedStore(page, [singleEvent])
+    await page.goto('/week')
+    const cph = card(page, 'Copenhagen Standup')
+    await expect(cph).toBeVisible({ timeout: 10_000 })
+
+    await cph.click()
+    const preview = page.locator('[data-component="event-preview"]')
+    await expect(preview).toBeVisible({ timeout: 10_000 })
+
+    // 10:00 CET = 09:00Z = 04:00 EST. The preview must render the device
+    // frame (like the card), not the event-zone wall clock (10:00).
+    await expect(preview).toContainText('04:00')
+    await expect(preview).toContainText('05:00')
+
+    // Opening the time editor must initialise the fields in the device frame.
+    await preview.getByText('04:00 - 05:00').click()
+    await expect(page.getByLabel('Start time')).toHaveValue('04:00')
+    await expect(page.getByLabel('End time')).toHaveValue('05:00')
+  })
+
+  test('a cross-midnight TZID event stays on a single device day', async ({ page }) => {
+    await seedStore(page, [
+      {
+        id: 'tz-late',
+        uid: 'tz-late',
+        type: 'event',
+        calendarId: 'tzc',
+        title: 'Late Night Copenhagen',
+        start: '2026-02-10T23:30:00',
+        end: '2026-02-11T01:00:00',
+        isAllDay: false,
+        timezone: 'Europe/Copenhagen',
+      },
+    ])
+    await page.goto('/week')
+    const late = card(page, 'Late Night Copenhagen')
+    await expect(late).toBeVisible({ timeout: 10_000 })
+
+    // 23:30 CPH = 17:30 EST on Feb 10; 01:00 CPH Feb 11 = 19:00 EST Feb 10:
+    // one device day, so the card must NOT be flagged multi-day (the naive
+    // parse saw two calendar dates and added the multi-day styling).
+    await expect(late).not.toHaveAttribute('data-multi-day', '')
+    await expect(late).toContainText('17:30')
   })
 })

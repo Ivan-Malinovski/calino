@@ -3067,5 +3067,112 @@ describe('useCalDAV', () => {
       // Account 1 was still synced even though account 2 failed.
       expect(fetchEvents).toHaveBeenCalled()
     })
+
+    it('drops a delete that still 412s after a fresh etag, keeping the local event', async () => {
+      const deleteEvent = {
+        ...mockEvent,
+        id: 'evt-del-412',
+        etag: '"stale"',
+        resourceHref: 'https://caldav.example.com/cal/main/evt-del-412.ics',
+      }
+      queueWith({
+        id: 'pc-del-412',
+        type: 'delete',
+        eventId: 'evt-del-412',
+        calendarId: 'cal-1',
+        data: JSON.stringify(deleteEvent),
+        timestamp: '2025-01-01T00:00:00Z',
+        retryCount: 0,
+      })
+      mockAccountStorage.getAllAccounts.mockReturnValue([mockAccount])
+      mockAccountStorage.getAllCalendars.mockReturnValue([mockCalendar])
+      // The event exists locally — a conflicted delete must NOT erase it.
+      act(() => {
+        useCalendarStore.getState().addEvent(deleteEvent)
+      })
+      // Every attempt 412s: stale first, then still stale against the fresh etag.
+      mockSyncEngineInstance.deleteEvent.mockRejectedValue(
+        Object.assign(
+          new Error(
+            'DELETE https://caldav.example.com/cal/main/evt-del-412.ics failed: HTTP 412: If-Match precondition failed'
+          ),
+          { status: 412 }
+        )
+      )
+      mockCalDAVClient.createCalDAVClient.mockResolvedValue({
+        fetchEvents: vi.fn().mockResolvedValue([]),
+        fetchCalendars: vi.fn().mockResolvedValue([]),
+        fetchEtag: vi.fn().mockResolvedValue('"fresh"'),
+      } as any)
+
+      renderHook(() => useCalDAV())
+
+      await waitFor(() => {
+        expect(mockAccountStorage.removePendingChange).toHaveBeenCalledWith('pc-del-412')
+      })
+
+      // Stale attempt + fresh attempt, then dropped — no loop, no retry count.
+      expect(mockSyncEngineInstance.deleteEvent).toHaveBeenCalledTimes(2)
+      expect(mockSyncEngineInstance.deleteEvent.mock.calls[0][1]).toBe('"stale"')
+      expect(mockSyncEngineInstance.deleteEvent.mock.calls[1][1]).toBe('"fresh"')
+      expect(mockAccountStorage.updatePendingChangeRetry).not.toHaveBeenCalled()
+      // A delete-flavored conflict toast, mirroring the update path's wording.
+      expect(showToast).toHaveBeenCalledWith(expect.stringContaining("Couldn't delete"))
+      expect(showToast).toHaveBeenCalledWith(expect.stringContaining('changed on the server'))
+      // The local event survives: storeDeleteEvent only runs on a successful delete.
+      expect(useCalendarStore.getState().events.find((e) => e.id === 'evt-del-412')).toBeDefined()
+    })
+
+    it('honors a server Retry-After when gating a 429-counted retry', async () => {
+      vi.useFakeTimers()
+      // Do NOT spread the describe-level queuedCreate: the earlier
+      // exponential-backoff test mutates that shared fixture's retryCount to 2,
+      // so a fresh change with an explicit retryCount is required here.
+      const queue = [
+        {
+          ...queuedCreate,
+          id: 'pc-429',
+          retryCount: 0,
+        },
+      ]
+      mockAccountStorage.getPendingChanges.mockReturnValue(queue as any)
+      mockAccountStorage.updatePendingChangeRetry.mockImplementation((id: string) => {
+        const entry = queue.find((c) => c.id === id)
+        if (entry) entry.retryCount += 1
+      })
+      mockAccountStorage.removePendingChange.mockImplementation((id: string) => {
+        const idx = queue.findIndex((c) => c.id === id)
+        if (idx !== -1) queue.splice(idx, 1)
+      })
+      mockAccountStorage.getAllAccounts.mockReturnValue([mockAccount])
+      mockAccountStorage.getAllCalendars.mockReturnValue([mockCalendar])
+      // 429 with the server's own Retry-After of 120s.
+      mockSyncEngineInstance.pushEvent.mockRejectedValue(
+        Object.assign(new Error('PUT https://... failed: HTTP 429: Too Many Requests'), {
+          status: 429,
+          retryAfter: 120,
+        })
+      )
+
+      renderHook(() => useCalDAV())
+
+      // Mount attempt fails (counted) → retryCount 1, Retry-After remembered.
+      await vi.advanceTimersByTimeAsync(100)
+      expect(queue[0].retryCount).toBe(1)
+      const callsAfterFirst = mockSyncEngineInstance.pushEvent.mock.calls.length
+
+      // 60s in: exponential backoff(1) = 60s has elapsed, but the server asked
+      // for 120s — the gate must still hold.
+      await vi.advanceTimersByTimeAsync(60_000)
+      expect(mockSyncEngineInstance.pushEvent.mock.calls.length).toBe(callsAfterFirst)
+      expect(queue[0].retryCount).toBe(1)
+
+      // 120s total: the Retry-After bound has elapsed → attempted again.
+      await vi.advanceTimersByTimeAsync(60_000)
+      expect(mockSyncEngineInstance.pushEvent.mock.calls.length).toBeGreaterThan(callsAfterFirst)
+      expect(queue[0].retryCount).toBe(2)
+
+      vi.useRealTimers()
+    })
   })
 })

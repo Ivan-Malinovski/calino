@@ -9,11 +9,14 @@ import ICAL from 'ical.js'
 import zoneIndex from '@touch4it/ical-timezones/zones.js'
 
 // Raw zone texts keyed by Vite's glob path (absolute); matched by suffix.
-const zoneTextLoaders = import.meta.glob('../../node_modules/@touch4it/ical-timezones/zones/**/*.ics', {
-  query: '?raw',
-  import: 'default',
-  eager: true,
-}) as Record<string, string>
+const zoneTextLoaders = import.meta.glob(
+  '../../node_modules/@touch4it/ical-timezones/zones/**/*.ics',
+  {
+    query: '?raw',
+    import: 'default',
+    eager: true,
+  }
+) as Record<string, string>
 
 const zoneFileCache = new Map<string, string>()
 function zoneText(filename: string): string | undefined {
@@ -71,7 +74,7 @@ const WINDOWS_TZID_ALIASES: Record<string, string> = {
   'UTC-02': 'Etc/GMT+2',
   'Azores Standard Time': 'Atlantic/Azores',
   'Cape Verde Standard Time': 'Atlantic/Cape_Verde',
-  'UTC': 'UTC',
+  UTC: 'UTC',
   'GMT Standard Time': 'Europe/London',
   'Greenwich Standard Time': 'Atlantic/Reykjavik',
   'W. Europe Standard Time': 'Europe/Berlin',
@@ -159,10 +162,22 @@ const WINDOWS_TZID_ALIASES: Record<string, string> = {
 
 let primed = false
 
-/** ical.js TimezoneService starts with no zones at all; prime Z/UTC/GMT once. */
+/**
+ * ical.js TimezoneService starts with no zones at all; seed Z/UTC/GMT once.
+ *
+ * Never call TimezoneService.reset() here: the CalDAV adapter registers the
+ * VTIMEZONEs carried by the parsed ICS into this same service before the
+ * first lazy prime, and reset() would wipe those source-registered zones.
+ * Custom/vendor TZIDs absent from the @touch4it package would then lose
+ * their definition and fall back to device-local behaviour. Seeding is
+ * idempotent per alias, so an already-populated service is left untouched.
+ */
 function primeService(): void {
   if (primed) return
-  ICAL.TimezoneService.reset()
+  const utc = ICAL.Timezone.utcTimezone
+  if (!ICAL.TimezoneService.has('UTC')) ICAL.TimezoneService.register(utc, 'UTC')
+  if (!ICAL.TimezoneService.has('Z')) ICAL.TimezoneService.register(utc, 'Z')
+  if (!ICAL.TimezoneService.has('GMT')) ICAL.TimezoneService.register(utc, 'GMT')
   primed = true
 }
 
@@ -192,6 +207,11 @@ export function normalizeTzid(tzid: string): string {
  *
  * Synchronous and browser-safe: the raw zone texts are bundled by Vite and
  * parsed on first use. Returns true when the zone is available.
+ *
+ * Lookup order is deliberate: the service is consulted (after a
+ * non-destructive prime) before the package, so zones the CalDAV adapter
+ * registered from a parsed ICS — including custom/vendor TZIDs absent from
+ * the @touch4it package — are found without a package round-trip.
  */
 export function ensureZoneRegistered(tzid: string): boolean {
   primeService()

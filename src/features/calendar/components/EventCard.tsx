@@ -32,7 +32,7 @@ import { hapticIfEnabled } from '@/lib/haptics'
 import { LocationLink } from './LocationLink'
 import { EventBackground } from '@/components/common/EventBackground'
 import { matchEventBackground } from '@/lib/eventBackground'
-import { MINUTE_SNAP_INTERVAL } from '../lib/dragSnap'
+import { MINUTE_SNAP_INTERVAL, timedDragStartMinutes } from '../lib/dragSnap'
 import styles from './EventCard.module.css'
 
 /** Device zone — the zone every non-TZID time is shown in. A TZID badge is
@@ -160,18 +160,22 @@ export const EventCard = React.memo(function EventCard({
   // save/delete on them (see isCalendarReadOnly() in calendarStore.ts).
   const disableDirectEdit = isRecurring || isRecurringInstance || isReadOnlyCalendar
 
+  // Drag metadata lives in the device frame (the frame the drop preview and
+  // drop handlers snap in): TZID events store naive wall clocks in the event
+  // zone, so resolve through toEventInstant — a Copenhagen 10:00 event viewed
+  // in New York drags from 04:00 (240), not 10:00 (600).
   const dragStartMinutes = event.isAllDay
     ? undefined
-    : (() => {
-        const start = parseISO(event.start)
-        return start.getHours() * 60 + start.getMinutes()
-      })()
+    : timedDragStartMinutes(event.start, event.timezone)
 
   // Each fragment of a multi-day event shares event.id, which would give
   // duplicate draggable ids. Encode the fragment's day so drag handling knows
   // which day was grabbed and can move the whole span by the right offset.
   const draggableId = event.isFragment
-    ? `${event.id}::${format(parseISO(event.start), 'yyyy-MM-dd')}`
+    ? `${event.id}::${format(
+        event.isAllDay ? parseISO(event.start) : toEventInstant(event.start, event.timezone),
+        'yyyy-MM-dd'
+      )}`
     : event.id
 
   const {
@@ -266,7 +270,14 @@ export const EventCard = React.memo(function EventCard({
   const showEventIcons = useSettingsStore((state) => state.showEventIcons)
   const showBackground = showEventIcons && !compact && !dotMode && !isMobileMonth && !isTask
   const backgroundId = showBackground ? matchEventBackground(event.title || event.location) : null
-  const isMultiDay = !isSameDay(parseISO(event.start), parseISO(event.end))
+  // Multi-day detection must also compare device-frame dates: the cross-midnight
+  // TZID case (23:30 → 01:00 in Copenhagen, viewed in New York) is a single
+  // device day, so it must not be styled/flagged multi-day. All-day events stay
+  // on parseISO — floating dates, whose device date is the day itself.
+  const isMultiDay = !isSameDay(
+    event.isAllDay ? parseISO(event.start) : toEventInstant(event.start, event.timezone),
+    event.isAllDay ? parseISO(event.end) : toEventInstant(event.end, event.timezone)
+  )
   const isFragmentMiddle = event.isFragment && !event.isFirstFragment && !event.isLastFragment
   const isFragmentFirst = event.isFragment && event.isFirstFragment
   const isFragmentLast = event.isFragment && event.isLastFragment
@@ -603,7 +614,9 @@ export const EventCard = React.memo(function EventCard({
               {event.title}
             </div>
             {!hideDueTime && hasDueTime(event) && event.dueDate && (
-              <div className={styles.dueDate}>{formatEventTime(event.dueDate, event.timezone, timeFormat)}</div>
+              <div className={styles.dueDate}>
+                {formatEventTime(event.dueDate, event.timezone, timeFormat)}
+              </div>
             )}
           </div>
         ) : (

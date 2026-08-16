@@ -1064,6 +1064,78 @@ END:VCALENDAR`,
     })
   })
 
+  // Finding 6: assertResponseOk must surface the server's Retry-After on
+  // rate-limit errors so the pending-change backoff can honor it. Exercised
+  // through the public deleteEvent path, which routes every non-2xx response
+  // through assertResponseOk.
+  describe('Retry-After handling', () => {
+    it('attaches a numeric Retry-After to a 429 error', async () => {
+      await client.connect()
+      mockClientMethods.deleteCalendarObject.mockResolvedValue(
+        new Response('slow down', { status: 429, headers: { 'retry-after': '120' } })
+      )
+
+      const error = await client
+        .deleteEvent(mockEventObject.url, mockEventObject.etag)
+        .catch((e: unknown) => e)
+      expect((error as { status?: number }).status).toBe(429)
+      expect((error as { retryAfter?: number }).retryAfter).toBe(120)
+    })
+
+    it('parses an HTTP-date Retry-After into seconds until that date', async () => {
+      await client.connect()
+      const inFiveMinutes = new Date(Date.now() + 5 * 60_000).toUTCString()
+      mockClientMethods.deleteCalendarObject.mockResolvedValue(
+        new Response('slow down', { status: 429, headers: { 'retry-after': inFiveMinutes } })
+      )
+
+      const error = await client
+        .deleteEvent(mockEventObject.url, mockEventObject.etag)
+        .catch((e: unknown) => e)
+      const retryAfter = (error as { retryAfter?: number }).retryAfter
+      expect(retryAfter).toBeGreaterThanOrEqual(290)
+      expect(retryAfter).toBeLessThanOrEqual(310)
+    })
+
+    it('omits retryAfter when the header is invalid', async () => {
+      await client.connect()
+      mockClientMethods.deleteCalendarObject.mockResolvedValue(
+        new Response('slow down', { status: 429, headers: { 'retry-after': 'not-a-date' } })
+      )
+
+      const error = await client
+        .deleteEvent(mockEventObject.url, mockEventObject.etag)
+        .catch((e: unknown) => e)
+      expect((error as { status?: number }).status).toBe(429)
+      expect((error as { retryAfter?: number }).retryAfter).toBeUndefined()
+    })
+
+    it('omits retryAfter when the header is missing', async () => {
+      await client.connect()
+      mockClientMethods.deleteCalendarObject.mockResolvedValue(
+        new Response('slow down', { status: 429 })
+      )
+
+      const error = await client
+        .deleteEvent(mockEventObject.url, mockEventObject.etag)
+        .catch((e: unknown) => e)
+      expect((error as { status?: number }).status).toBe(429)
+      expect((error as { retryAfter?: number }).retryAfter).toBeUndefined()
+    })
+
+    it('clamps an oversized Retry-After to the safe cap', async () => {
+      await client.connect()
+      mockClientMethods.deleteCalendarObject.mockResolvedValue(
+        new Response('slow down', { status: 429, headers: { 'retry-after': '99999999' } })
+      )
+
+      const error = await client
+        .deleteEvent(mockEventObject.url, mockEventObject.etag)
+        .catch((e: unknown) => e)
+      expect((error as { retryAfter?: number }).retryAfter).toBe(3600)
+    })
+  })
+
   describe('calendar caching (Bug 32)', () => {
     it('caches calendars after first fetchCalendars() call', async () => {
       await client.connect()
