@@ -565,6 +565,18 @@ export const useCalendarStore = create<CalendarStore>()(
         const existingForNormalization = get().events.find((e) => e.id === id)
         const effectiveTimezone = 'timezone' in safeUpdates ? safeUpdates.timezone : existingForNormalization?.timezone
         if (effectiveTimezone) {
+          // R1 — dueDate carries the same invariant for timed TZID tasks: the
+          // adapter stores a naive wall clock in the event zone, but the
+          // preview popup (and any save path) can write a device-frame Z
+          // instant. Normalize it back like start/end so display and
+          // serialization never see a mixed frame. A floating (all-day)
+          // dueDate is naive, so toZoneWallClock passes it through untouched.
+          if (
+            safeUpdates.dueDate !== undefined &&
+            safeUpdates.dueDate !== existingForNormalization?.dueDate
+          ) {
+            safeUpdates.dueDate = toZoneWallClock(safeUpdates.dueDate, effectiveTimezone)
+          }
           if (safeUpdates.start !== undefined && safeUpdates.start !== existingForNormalization?.start) {
             safeUpdates.start = toZoneWallClock(safeUpdates.start, effectiveTimezone)
           }

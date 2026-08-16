@@ -132,6 +132,11 @@ export function EventPreviewPopup({
   // bare date through toEventInstant would shift a day west of UTC.
   const instantFor = (iso: string): Date =>
     event.isAllDay ? parseISO(iso) : toEventInstant(iso, event.timezone)
+  // R1 — a timed TZID task's dueDate follows the same storage invariant as
+  // start/end: a naive wall clock in the event zone. All-day dueDates are
+  // floating dates and must not pass through the zone conversion.
+  const dueInstantFor = (iso: string): Date =>
+    isTask && !event.isAllDay && event.timezone ? toEventInstant(iso, event.timezone) : parseISO(iso)
   const dateFormatPattern =
     dateFormat === 'MM/dd/yyyy'
       ? 'MMM d, yyyy'
@@ -155,7 +160,7 @@ export function EventPreviewPopup({
   const getEventDate = (): string => {
     if (editDate) return format(parseISO(editDate), dateFormatPattern)
     if (isTask && event.dueDate) {
-      return format(parseISO(event.dueDate), dateFormatPattern)
+      return format(dueInstantFor(event.dueDate), dateFormatPattern)
     }
     return format(instantFor(effectiveStart), dateFormatPattern)
   }
@@ -193,9 +198,9 @@ export function EventPreviewPopup({
     // title/location/description are pre-seeded from useState and kept across field switches.
     if (field === 'date' && !editDate) {
       if (isTask && event.dueDate) {
-        // Date part only — a task's dueDate carries its time, and an
-        // `<input type="date">` given a full timestamp renders blank.
-        setEditDate(event.dueDate.split('T')[0])
+        // Date part of the DEVICE-frame instant — an event-zone dueDate near
+        // midnight falls on a different device-local date.
+        setEditDate(format(dueInstantFor(event.dueDate), 'yyyy-MM-dd'))
       } else {
         setEditDate(format(instantFor(effectiveStart), 'yyyy-MM-dd'))
       }
@@ -204,7 +209,7 @@ export function EventPreviewPopup({
     } else if (field === 'time') {
       if (!editTime) {
         if (isTask && event.dueDate) {
-          setEditTime(format(parseISO(event.dueDate), 'HH:mm'))
+          setEditTime(format(dueInstantFor(event.dueDate), 'HH:mm'))
         } else {
           setEditTime(format(instantFor(effectiveStart), 'HH:mm'))
         }
@@ -230,7 +235,7 @@ export function EventPreviewPopup({
       // on an otherwise all-day rule, which RFC 5545 §3.3.10 doesn't allow.
       // Clearing the time field is still how a task becomes all-day.
       const existingTime =
-        hasDueTime(event) && event.dueDate ? format(parseISO(event.dueDate), 'HH:mm') : ''
+        hasDueTime(event) && event.dueDate ? format(dueInstantFor(event.dueDate), 'HH:mm') : ''
       const dueTime = editTime || existingTime
       //
       // `end` moves with `start`. It was left behind before, which put the
@@ -239,9 +244,14 @@ export function EventPreviewPopup({
       // escaped that check only because forcing isAllDay exempted it. The
       // shapes match what EventModal writes for a task.
       if (dueTime) {
-        updates.dueDate = `${editDate}T${dueTime}:00`
-        updates.start = `${editDate}T${dueTime}:00`
-        updates.end = `${editDate}T${dueTime}:00`
+        // R1 — the edit fields are device-frame, but a timed TZID task's
+        // dueDate/start/end are naive wall clocks in the event zone. Write a
+        // device-frame Z instant and let the store re-frame all three via
+        // toZoneWallClock, exactly like the non-task branch below.
+        const dueInstant = new Date(`${editDate}T${dueTime}:00`).toISOString()
+        updates.dueDate = dueInstant
+        updates.start = dueInstant
+        updates.end = dueInstant
         updates.isAllDay = false
       } else {
         updates.dueDate = editDate

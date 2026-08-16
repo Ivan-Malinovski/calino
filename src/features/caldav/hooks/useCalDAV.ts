@@ -461,6 +461,13 @@ export function useCalDAV(): UseCalDAVReturn {
           const client = await createCalDAVClient(account.serverUrl, credential, account.proxyUrl)
           const engine = new SyncEngine(client, change.calendarId)
 
+          // N1 — the update/delete second-412 handlers finish the change
+          // themselves (toast + removePendingChange + failed++). A bare `break`
+          // would fall through to the post-switch success cleanup below
+          // (double-counting succeeded and re-calling removePendingChange), so
+          // they set this flag and the loop continues here instead.
+          let conflictHandled = false
+
           switch (change.type) {
             case 'create': {
               // Payload may be a bare event (legacy) or a { events: [...] }
@@ -542,6 +549,7 @@ export function useCalDAV(): UseCalDAVReturn {
                   retryAfterByChangeId.delete(change.id)
                   storage.removePendingChange(change.id)
                   failed++
+                  conflictHandled = true
                   break
                 }
                 throw err
@@ -692,6 +700,7 @@ export function useCalDAV(): UseCalDAVReturn {
                   retryAfterByChangeId.delete(change.id)
                   storage.removePendingChange(change.id)
                   failed++
+                  conflictHandled = true
                   break
                 }
               }
@@ -703,6 +712,8 @@ export function useCalDAV(): UseCalDAVReturn {
               break
             }
           }
+
+          if (conflictHandled) continue
 
           storage.removePendingChange(change.id)
           retryAfterByChangeId.delete(change.id)

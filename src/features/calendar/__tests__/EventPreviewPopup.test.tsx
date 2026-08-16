@@ -568,10 +568,14 @@ describe('EventPreviewPopup', () => {
       })
       fireEvent.click(screen.getByRole('button', { name: 'Save changes' }))
 
+      // R1 — timed task saves now write a device-frame Z instant (matching
+      // the non-task branch from the review fixes: timezone-less edits persist
+      // as Z instants). The kept time-of-day is the device-frame '14:30'.
+      const expectedKept = new Date('2024-03-20T14:30:00').toISOString()
       await waitFor(() => {
         const updated = useCalendarStore.getState().events.find((e) => e.id === 'test-task-timed')
-        expect(updated?.dueDate).toBe('2024-03-20T14:30:00')
-        expect(updated?.start).toBe('2024-03-20T14:30:00')
+        expect(updated?.dueDate).toBe(expectedKept)
+        expect(updated?.start).toBe(expectedKept)
         expect(updated?.isAllDay).toBe(false)
       })
     })
@@ -753,6 +757,105 @@ describe('EventPreviewPopup', () => {
       const tf = useSettingsStore.getState().timeFormat
       const expected = formatEventTime(tzidTask.dueDate!, tzidTask.timezone, tf)
       expect(screen.getByText(expected)).toBeInTheDocument()
+    })
+
+    it('renders a timed TZID task due DATE in the device frame across midnight (R1)', () => {
+      // 00:30 Copenhagen is still Feb 9 in America/New_York — the due date
+      // must come from toEventInstant, not a naive parseISO of the wall clock.
+      const tzidTask: CalendarEvent = {
+        id: 'test-task-tzid-date',
+        title: 'Copenhagen Midnight Task',
+        start: '2026-02-10T00:30:00',
+        end: '2026-02-10T00:30:00',
+        dueDate: '2026-02-10T00:30:00',
+        calendarId: 'default',
+        isAllDay: false,
+        type: 'task',
+        timezone: 'Europe/Copenhagen',
+      }
+      const store = useCalendarStore.getState()
+      store.addEvent(tzidTask)
+      render(
+        <EventPreviewPopup
+          event={tzidTask}
+          position={mockPosition}
+          clickedEventId="test-task-tzid-date"
+        />
+      )
+      const expected = format(
+        toEventInstant(tzidTask.dueDate!, tzidTask.timezone),
+        'd MMM yyyy'
+      )
+      expect(screen.getByText(expected)).toBeInTheDocument()
+    })
+
+    it('seeds timed TZID task edit fields from the device-frame instant (R1)', () => {
+      const tzidTask: CalendarEvent = {
+        id: 'test-task-tzid-seed',
+        title: 'Copenhagen Task',
+        start: '2026-02-10T14:30:00',
+        end: '2026-02-10T14:30:00',
+        dueDate: '2026-02-10T14:30:00',
+        calendarId: 'default',
+        isAllDay: false,
+        type: 'task',
+        timezone: 'Europe/Copenhagen',
+      }
+      const store = useCalendarStore.getState()
+      store.addEvent(tzidTask)
+      render(
+        <EventPreviewPopup
+          event={tzidTask}
+          position={mockPosition}
+          clickedEventId="test-task-tzid-seed"
+        />
+      )
+      const instant = toEventInstant(tzidTask.dueDate!, tzidTask.timezone)
+      // Time editor seeds the device-frame 'HH:mm' (08:30 west / 14:30 east).
+      fireEvent.click(screen.getByText(new RegExp(format(instant, 'HH:mm'))))
+      expect(screen.getByDisplayValue(format(instant, 'HH:mm'))).toBeInTheDocument()
+    })
+
+    it('writes timed TZID task edits as device-frame Z instants the store re-frames (R1)', async () => {
+      const tzidTask: CalendarEvent = {
+        id: 'test-task-tzid-save',
+        title: 'Copenhagen Task',
+        start: '2026-02-10T14:30:00',
+        end: '2026-02-10T14:30:00',
+        dueDate: '2026-02-10T14:30:00',
+        calendarId: 'default',
+        isAllDay: false,
+        type: 'task',
+        timezone: 'Europe/Copenhagen',
+      }
+      const store = useCalendarStore.getState()
+      store.addEvent(tzidTask)
+      render(
+        <EventPreviewPopup
+          event={tzidTask}
+          position={mockPosition}
+          clickedEventId="test-task-tzid-save"
+        />
+      )
+      // Move the task to Feb 12 keeping its device-frame time-of-day. The
+      // popup writes a device-frame Z instant; the store must re-frame all of
+      // dueDate/start/end into the event zone's naive wall clock.
+      const instant = toEventInstant(tzidTask.dueDate!, tzidTask.timezone)
+      fireEvent.click(screen.getByText(new RegExp(format(instant, 'd MMM yyyy'))))
+      fireEvent.change(screen.getByDisplayValue(format(instant, 'yyyy-MM-dd')), {
+        target: { value: '2026-02-12' },
+      })
+      fireEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+
+      const tz = tzidTask.timezone!
+      const devTime = format(instant, 'HH:mm')
+      const expectedDue = toZoneWallClock(new Date(`2026-02-12T${devTime}:00`).toISOString(), tz)
+      await waitFor(() => {
+        const updated = useCalendarStore.getState().events.find((e) => e.id === 'test-task-tzid-save')
+        expect(updated?.dueDate).toBe(expectedDue)
+        expect(updated?.start).toBe(expectedDue)
+        expect(updated?.end).toBe(expectedDue)
+      })
     })
 
     it('keeps all-day TZID events floating ("All day")', () => {
