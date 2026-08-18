@@ -107,16 +107,54 @@ function projectedProps(cal: object): Record<string, unknown> | undefined {
   return projected as Record<string, unknown>
 }
 
+/**
+ * Collect every element name appearing anywhere under a parsed privilege tree.
+ *
+ * Three shapes have to survive this, and only the first is obvious:
+ *
+ *  - RFC 3744 defines `current-user-privilege-set` as a *sequence* of
+ *    `<privilege>` elements, and xml-js (compact mode, `alwaysArray: false`)
+ *    turns repeated siblings into an ARRAY. Reading `Object.keys()` off that
+ *    array yields "0", "1", "2" — no privilege name in sight, which reads as
+ *    "granted something, but not write" and marks every calendar read-only.
+ *  - `<write>` is an aggregate of `<write-content>`/`<write-properties>`
+ *    (§3.2), and `<all>` aggregates everything, so the privilege that matters
+ *    may be nested rather than top-level.
+ *  - XML prefixes are arbitrary: sabre sends `<d:write/>`, Radicale sends
+ *    `<write/>`. Compare on the local name.
+ *
+ * Keys beginning with `_` are xml-js metadata (`_attributes`, `_text`), not
+ * elements.
+ */
+function collectPrivilegeNames(node: unknown, into: Set<string>): void {
+  if (Array.isArray(node)) {
+    for (const item of node) collectPrivilegeNames(item, into)
+    return
+  }
+  if (node == null || typeof node !== 'object') return
+  for (const [key, value] of Object.entries(node)) {
+    if (key.startsWith('_')) continue
+    into.add(key.slice(key.indexOf(':') + 1).toLowerCase())
+    collectPrivilegeNames(value, into)
+  }
+}
+
 function parsePrivileges(raw: unknown): { canWrite: boolean } | null {
   if (raw == null || typeof raw !== 'object') return null
   const privilege = (raw as { privilege?: unknown }).privilege
   if (privilege == null || typeof privilege !== 'object') return null
-  const granted = new Set(
-    Object.keys(privilege as Record<string, unknown>).map((key) => key.toLowerCase())
-  )
+  const granted = new Set<string>()
+  collectPrivilegeNames(privilege, granted)
   if (granted.size === 0) return null
   const canWrite =
-    granted.has('write') || granted.has('all') || granted.has('unlocked') || granted.has('write-content')
+    granted.has('write') ||
+    granted.has('all') ||
+    granted.has('unlocked') ||
+    granted.has('write-content') ||
+    granted.has('write-properties') ||
+    // A calendar you may add resources to is writable even if the server
+    // spells that as bind/unbind rather than as a write aggregate.
+    granted.has('bind')
   return { canWrite }
 }
 

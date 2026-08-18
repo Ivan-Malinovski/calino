@@ -76,12 +76,16 @@ interface MockCollection {
    */
   hideEtagOnPut?: boolean
   /**
-   * Advertise a `current-user-privilege-set` granting read but not write, so
-   * Calino marks the calendar `readOnly` from discovery alone. Collections
-   * without the flag omit the property entirely — which is how most servers
-   * behave, and must keep reading as writable.
+   * Privileges to advertise in `current-user-privilege-set`, one `<privilege>`
+   * element each — the sequence RFC 3744 §5.4 defines and every real server
+   * emits. Collections without the field omit the property entirely, which
+   * must keep reading as writable.
+   *
+   * Emitting these as separate elements is the point: a single merged
+   * `<privilege>` carrying every name is a shape no server produces, and a
+   * client that only handles that shape marks every calendar read-only.
    */
-  readOnly?: boolean
+  privileges?: string[]
   /**
    * Reject every `sync-collection` REPORT with `400 Bad Request` (RFC 6578
    * §3.2), the way a server does when its token has expired or its change log
@@ -256,6 +260,7 @@ const ACCOUNTS: MockAccount[] = [
         displayName: 'Inc Sync',
         color: '#2563EB',
         components: ['VEVENT', 'VTODO', 'VJOURNAL'],
+        privileges: ['read', 'write', 'write-content', 'write-properties', 'bind', 'unbind'],
       },
       {
         // Refuses every sync-collection REPORT, the way a server does once its
@@ -272,7 +277,7 @@ const ACCOUNTS: MockAccount[] = [
         displayName: 'Inc Read Only',
         color: '#059669',
         components: ['VEVENT', 'VTODO', 'VJOURNAL'],
-        readOnly: true,
+        privileges: ['read', 'read-current-user-privilege-set'],
       },
     ],
   },
@@ -418,10 +423,10 @@ export function caldavMockPlugin(): Plugin {
         // move together here because both derive from the same revision.
         props.push({ name: 'http://calendarserver.org/ns/getctag', value: ctagFor(c.path) })
         props.push({ name: 'DAV:sync-token', value: syncTokenFor(c.path) })
-        if (c.readOnly) {
+        if (c.privileges) {
           props.push({
             name: 'DAV:current-user-privilege-set',
-            value: '<d:privilege><d:read/></d:privilege>',
+            value: c.privileges.map((p) => `<d:privilege><d:${p}/></d:privilege>`).join(''),
             raw: true,
           })
         }

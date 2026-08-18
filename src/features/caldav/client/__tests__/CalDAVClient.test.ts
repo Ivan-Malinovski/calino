@@ -312,6 +312,76 @@ END:VCALENDAR`,
       expect(calendars.find((c) => c.url.endsWith('no-privs/'))?.readOnly).toBe(false)
     })
 
+    it('stays writable when the server sends one <privilege> element per privilege', async () => {
+      // The shape every real server actually produces. RFC 3744 defines
+      // current-user-privilege-set as a *sequence* of <privilege> elements,
+      // and xml-js (compact mode, alwaysArray: false) turns repeated siblings
+      // into an array — so `privilege` is an array here, not one merged
+      // object. Reading keys off it yields "0", "1", "2", which contain no
+      // privilege named `write`, and every calendar on the server goes
+      // read-only.
+      mockClientMethods.fetchCalendars.mockResolvedValue([
+        {
+          ...mockCalendar,
+          projectedProps: {
+            currentUserPrivilegeSet: {
+              privilege: [{ read: {} }, { write: {} }, { 'write-content': {} }],
+            },
+          },
+        },
+      ])
+      await client.connect()
+
+      const calendars = await client.fetchCalendars()
+      expect(calendars[0].readOnly).toBe(false)
+    })
+
+    it('reads a write privilege nested inside an aggregate, and through a namespace prefix', async () => {
+      // `<write>` aggregates `<write-content>`/`<write-properties>` (RFC 3744
+      // §3.2), so a server may grant write only as a child of an aggregate.
+      // And prefixes are arbitrary: sabre sends `<d:write/>` where Radicale
+      // sends `<write/>` — a matcher bound to the bare local name misses one
+      // of them.
+      mockClientMethods.fetchCalendars.mockResolvedValue([
+        {
+          ...mockCalendar,
+          url: 'https://caldav.example.com/calendars/test/nested/',
+          projectedProps: {
+            currentUserPrivilegeSet: { privilege: [{ all: { 'write-content': {} } }] },
+          },
+        },
+        {
+          ...mockCalendar,
+          url: 'https://caldav.example.com/calendars/test/prefixed/',
+          projectedProps: {
+            currentUserPrivilegeSet: { privilege: [{ 'd:read': {} }, { 'd:write': {} }] },
+          },
+        },
+      ])
+      await client.connect()
+
+      const calendars = await client.fetchCalendars()
+      expect(calendars.find((c) => c.url.endsWith('nested/'))?.readOnly).toBe(false)
+      expect(calendars.find((c) => c.url.endsWith('prefixed/'))?.readOnly).toBe(false)
+    })
+
+    it('still marks read-only when a per-element privilege list grants no write', async () => {
+      mockClientMethods.fetchCalendars.mockResolvedValue([
+        {
+          ...mockCalendar,
+          projectedProps: {
+            currentUserPrivilegeSet: {
+              privilege: [{ read: {} }, { 'read-current-user-privilege-set': {} }],
+            },
+          },
+        },
+      ])
+      await client.connect()
+
+      const calendars = await client.fetchCalendars()
+      expect(calendars[0].readOnly).toBe(true)
+    })
+
     it('forces subscriptions read-only regardless of privileges', async () => {
       mockClientMethods.fetchCalendars.mockResolvedValue([
         {
