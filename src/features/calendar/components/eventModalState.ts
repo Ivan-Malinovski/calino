@@ -89,13 +89,38 @@ export function makeDefaultState(
   }
 }
 
+/**
+ * The calendar a brand-new event lands on.
+ *
+ * Read-only calendars are skipped even when one is flagged default or happens
+ * to sit first. The modal's Create button validates the chosen calendar
+ * against a writable-only list, so defaulting to a read-only calendar leaves
+ * Create permanently disabled while the picker cheerfully displays the
+ * calendar it just chose — a dead form with nothing on screen explaining why.
+ *
+ * If every calendar is read-only there is no good answer; fall back to the
+ * old pick so `calendarId` still resolves and the read-only notice renders,
+ * rather than returning nothing and blaming an empty selection.
+ */
+function pickDefaultCalendar<T extends { id: string; isDefault: boolean; readOnly?: boolean }>(
+  calendars: T[]
+): T | undefined {
+  const writable = calendars.filter((calendar) => !calendar.readOnly)
+  return (
+    writable.find((calendar) => calendar.isDefault) ??
+    writable[0] ??
+    calendars.find((calendar) => calendar.isDefault) ??
+    calendars[0]
+  )
+}
+
 export function getInitialFormState(
   isModalOpen: boolean,
   selectedEventId: string | null,
   selectedDate: string | null,
   selectedEndDate: string | null,
   events: CalendarEvent[],
-  calendars: { id: string; isDefault: boolean }[],
+  calendars: { id: string; isDefault: boolean; readOnly?: boolean }[],
   allCategories: { id: string; name: string }[],
   defaultDuration: number = 60,
   defaultReminderMinutes: number | null = null
@@ -105,7 +130,7 @@ export function getInitialFormState(
 
   // Early return when modal is closed — skip all computation
   if (!isModalOpen) {
-    const defaultCalendar = calendars.find((c) => c.isDefault) || calendars[0]
+    const defaultCalendar = pickDefaultCalendar(calendars)
     return makeDefaultState({
       calendarId: defaultCalendar?.id || '',
       endTime: defaultEndTime,
@@ -113,7 +138,7 @@ export function getInitialFormState(
     })
   }
 
-  const defaultCalendar = calendars.find((c) => c.isDefault) || calendars[0]
+  const defaultCalendar = pickDefaultCalendar(calendars)
 
   const isEditing = selectedEventId !== null
 

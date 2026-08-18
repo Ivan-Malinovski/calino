@@ -305,6 +305,11 @@ async function collectParsedWithHref(
  * on the path only, and keep percent-encoding as-is — decoding would fold
  * `%2F` into a path separator.
  */
+/** Human-readable identifier for sync logging. */
+function calendarLabel(cal: { name?: string; id: string }): string {
+  return cal.name || cal.id
+}
+
 function hrefKey(href: string): string {
   let path = href
   try {
@@ -1455,6 +1460,10 @@ export function useCalDAV(): UseCalDAVReturn {
             // when some earlier pass reconciled cleanly and left a cursor. A
             // missing or invalidated token always re-syncs.
             if (storedToken && cal.ctag && fresh.ctag && cal.ctag === fresh.ctag) {
+              // Logged, because "skipped" and "silently did nothing" are
+              // otherwise indistinguishable from the console — the whole
+              // point of this branch is that it emits no network traffic.
+              console.log(`[CalDAV] ${calendarLabel(cal)}: skipped, ctag unchanged`)
               continue
             }
 
@@ -1502,6 +1511,11 @@ export function useCalDAV(): UseCalDAVReturn {
               // duplicate resolution, store writes — stays deterministic and
               // serial.
               const changed = changes.filter((change) => change.status === 'changed')
+              console.log(
+                `[CalDAV] ${calendarLabel(cal)}: incremental sync, ${changed.length} changed, ${
+                  changes.length - changed.length
+                } removed`
+              )
               const fetched = await mapWithConcurrency(
                 changed,
                 CALDAV_FETCH_CONCURRENCY,
@@ -1532,6 +1546,11 @@ export function useCalDAV(): UseCalDAVReturn {
                 continue
               }
             } else {
+              console.log(
+                `[CalDAV] ${calendarLabel(cal)}: full listing${
+                  storedToken ? ' (sync token unusable)' : ' (no stored sync token)'
+                }`
+              )
               fetchedEvents = await client.fetchEvents(cal.url, start, end, true)
               fullyListedCalendarIds.add(cal.id)
             }

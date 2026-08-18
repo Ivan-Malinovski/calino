@@ -445,9 +445,15 @@ export function EventModal(): JSX.Element | null {
       const currentEvent = findEventById(currentEvents, selectedEventId)
       const requiredComponent =
         currentSelectedEventType === 'task' || currentEvent?.type === 'task' ? 'VTODO' : 'VEVENT'
+      // Must match `compatibleCalendars` above, read-only exclusion included.
+      // When these two lists disagree, the form defaults `calendarId` to a
+      // calendar the Create button then rejects, and the button greys out with
+      // no visible cause.
       const currentCalendars = state.calendars.filter(
         (calendar) =>
-          !calendar.supportedComponents || calendar.supportedComponents.includes(requiredComponent)
+          (!calendar.supportedComponents ||
+            calendar.supportedComponents.includes(requiredComponent)) &&
+          !calendar.readOnly
       )
       const currentCategories = state.categories
 

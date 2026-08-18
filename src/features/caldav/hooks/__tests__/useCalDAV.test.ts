@@ -1757,6 +1757,50 @@ describe('useCalDAV', () => {
       expect(client.fetchEvents).not.toHaveBeenCalled()
     })
 
+    it('logs which path each calendar took, so a silent sync can be told from a skipped one', async () => {
+      // The skip branch is defined by the network traffic it does NOT make.
+      // Without a log line, "skipped correctly" and "failed to do anything"
+      // look identical from the console, which is the only place a user
+      // verifying a sync can see.
+      const log = vi.spyOn(console, 'log').mockImplementation(() => {})
+      try {
+        seedAccount()
+        mockClient({ fetchCalendars: vi.fn().mockResolvedValue([{ ...STORED, ctag: 'ctag-old' }]) })
+        await runSync()
+        expect(log.mock.calls.map((call) => String(call[0]))).toContainEqual(
+          expect.stringContaining('skipped, ctag unchanged')
+        )
+
+        log.mockClear()
+        seedAccount({ ...STORED, syncToken: null })
+        mockClient({ fetchCalendars: vi.fn().mockResolvedValue([SERVER_CHANGED]) })
+        await runSync()
+        expect(log.mock.calls.map((call) => String(call[0]))).toContainEqual(
+          expect.stringContaining('full listing (no stored sync token)')
+        )
+
+        log.mockClear()
+        seedAccount()
+        mockClient({
+          syncCollection: vi.fn().mockResolvedValue({
+            changes: [
+              { href: 'https://caldav.example.com/cal/main/a.ics', etag: '"a"', status: 'changed' },
+              { href: 'https://caldav.example.com/cal/main/b.ics', etag: null, status: 'removed' },
+            ],
+            newSyncToken: 'http://example.com/ns/sync/200',
+            tokenInvalidated: false,
+          }),
+          fetchResourceByHref: vi.fn().mockResolvedValue(null),
+        })
+        await runSync()
+        expect(log.mock.calls.map((call) => String(call[0]))).toContainEqual(
+          expect.stringContaining('incremental sync, 1 changed, 1 removed')
+        )
+      } finally {
+        log.mockRestore()
+      }
+    })
+
     it('does not skip on an unchanged ctag when no sync token is stored', async () => {
       // A ctag match is only trustworthy alongside a cursor proving some
       // earlier pass actually reconciled this collection.
