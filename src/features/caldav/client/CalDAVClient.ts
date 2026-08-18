@@ -72,6 +72,16 @@ export function resolveDavHref(baseUrl: string, href: string): string {
   }
 }
 
+/**
+ * tsdav's DAVCalendar type does not declare `projectedProps`, which is where it
+ * stashes the values of any extra props passed via `customProps`/`props`.
+ */
+function projectedProps(cal: object): Record<string, unknown> | undefined {
+  const projected = (cal as { projectedProps?: unknown }).projectedProps
+  if (projected == null || typeof projected !== 'object') return undefined
+  return projected as Record<string, unknown>
+}
+
 function parsePrivileges(raw: unknown): { canWrite: boolean } | null {
   if (raw == null || typeof raw !== 'object') return null
   const privilege = (raw as { privilege?: unknown }).privilege
@@ -287,16 +297,14 @@ export class CalDAVClient {
             component === 'VEVENT' || component === 'VTODO' || component === 'VJOURNAL'
         )
 
-        const privileges = parsePrivileges(
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          (cal as any).projectedProps?.currentUserPrivilegeSet
-        )
-        const isSubscribed = Boolean((cal as any).projectedProps?.subscribed)
+        const projected = projectedProps(cal)
+        const privileges = parsePrivileges(projected?.currentUserPrivilegeSet)
+        const isSubscribed = Boolean(projected?.subscribed)
         // No privilege info at all (server didn't answer the prop) → assume
         // writable; undefined must not read as read-only. A subscription is
         // read-only regardless of what the privileges claim.
         const readOnly = isSubscribed || (privileges !== null && !privileges.canWrite)
-        const calendarOrderRaw = (cal as any).projectedProps?.calendarOrder
+        const calendarOrderRaw = projected?.calendarOrder
         const calendarOrder = Number(calendarOrderRaw)
 
         return {
