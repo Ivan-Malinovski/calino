@@ -1732,8 +1732,29 @@ END:VCALENDAR`,
       ])
     })
 
-    it.each([400, 507])('sets tokenInvalidated on a %d response and drops the token', async (status) => {
-      fetchSpy.mockResolvedValueOnce(new Response('', { status }))
+    it.each([400, 403, 409, 507])(
+      'sets tokenInvalidated on a %d response and drops the token',
+      async (status) => {
+        fetchSpy.mockResolvedValueOnce(new Response('', { status }))
+
+        const result = await client.syncCollection(collectionUrl, 'stale-token')
+
+        expect(result).toEqual({ changes: [], newSyncToken: null, tokenInvalidated: true })
+      }
+    )
+
+    it('treats the DAV:valid-sync-token precondition as a rejected token', async () => {
+      // Verified against Radicale 3: a stale or unparsable token comes back as
+      // 403 carrying this precondition element, NOT the 400/507 this code
+      // originally enumerated. The fallback survived only because of the
+      // catch-all for non-2xx; this pins the real-world shape so a future
+      // narrowing of that branch cannot quietly strand the cursor.
+      fetchSpy.mockResolvedValueOnce(
+        new Response(
+          `<?xml version='1.0' encoding='utf-8'?>\n<error xmlns="DAV:"><valid-sync-token /></error>`,
+          { status: 403 }
+        )
+      )
 
       const result = await client.syncCollection(collectionUrl, 'stale-token')
 

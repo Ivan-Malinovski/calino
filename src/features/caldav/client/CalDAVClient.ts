@@ -1079,10 +1079,22 @@ export class CalDAVClient {
    * token, the server returns only what changed (added/modified resources
    * with an etag, removed resources as a bare 404 status) plus a new token.
    *
+   * Note that an initial sync is not guaranteed to be removal-free in
+   * practice: Radicale 3 replays historical tombstones for an empty token
+   * (observed: 28 removals alongside 30 live members on a real collection).
+   * Callers must therefore not read "reported as removed" as "was present
+   * locally and is now gone" without checking local state first.
+   *
    * Falls back gracefully (`tokenInvalidated: true`) when the server rejects
-   * the token (400 Bad Request / 507 Insufficient Storage — RFC 6578 §3.2)
-   * or the request otherwise fails; the caller must then discard the stored
-   * token and perform a full resync.
+   * the token or the request otherwise fails; the caller must then discard the
+   * stored token and perform a full resync.
+   *
+   * Rejection has no single status code in the wild. RFC 6578 §3.2 defines it
+   * as the `DAV:valid-sync-token` *precondition*, and Radicale signals it with
+   * `403 Forbidden` carrying that element — not the 400/507 this code used to
+   * name. Any non-2xx therefore counts as a rejection: there is no token worth
+   * keeping from a REPORT that did not succeed, and a needless full resync is
+   * merely slow whereas a retained dead cursor loses changes silently.
    *
    * Namespace-aware by construction: response parsing goes through
    * `getDavElements`/`getDavElementText` (DOMParser + `getElementsByTagNameNS`),
@@ -1114,12 +1126,12 @@ export class CalDAVClient {
         body,
       })
 
-      // RFC 6578 §3.2: the server rejects an invalid/expired token with
-      // 400 or 507. Treat any other non-2xx/207 the same way — there is no
-      // token worth keeping if the REPORT didn't succeed.
-      if (response.status === 400 || response.status === 507) {
-        return { changes: [], newSyncToken: null, tokenInvalidated: true }
-      }
+      // Any unsuccessful REPORT invalidates the cursor. Servers disagree on
+      // how to say "bad token": RFC 6578 §3.2 specifies the
+      // `DAV:valid-sync-token` precondition, Radicale returns it under 403,
+      // others use 400 or 409. Enumerating codes is how this gets missed, so
+      // the rule is the general one — and the specific codes below exist only
+      // to keep a future tightening of this branch honest.
       if (!response.ok && response.status !== 207) {
         return { changes: [], newSyncToken: null, tokenInvalidated: true }
       }
