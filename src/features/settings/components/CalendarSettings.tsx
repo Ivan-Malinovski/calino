@@ -1,6 +1,7 @@
-import type { JSX } from 'react'
+import { useMemo, type JSX } from 'react'
 import { useSettingsStore, DURATION_OPTIONS, DEFAULT_REMINDER_OPTIONS } from '@/store/settingsStore'
 import { useCalendarStore } from '@/store/calendarStore'
+import { getSupportedTimezones, TIMEZONE_PRESETS } from '@/lib/timezoneHelper'
 import styles from './Settings.module.css'
 
 export function CalendarSettings(): JSX.Element {
@@ -16,9 +17,14 @@ export function CalendarSettings(): JSX.Element {
   const fadePastDaysInAgenda = useSettingsStore((s) => s.fadePastDaysInAgenda)
   const defaultDuration = useSettingsStore((s) => s.defaultDuration)
   const defaultReminderMinutes = useSettingsStore((s) => s.defaultReminderMinutes)
+  const secondaryTimezoneEnabled = useSettingsStore((s) => s.secondaryTimezoneEnabled)
+  const secondaryTimezone = useSettingsStore((s) => s.secondaryTimezone)
+  const secondaryTimezoneLabel = useSettingsStore((s) => s.secondaryTimezoneLabel)
   const updateSettings = useSettingsStore((s) => s.updateSettings)
   const calendars = useCalendarStore((s) => s.calendars)
   const updateCalendar = useCalendarStore((s) => s.updateCalendar)
+
+  const allTimezones = useMemo(() => getSupportedTimezones(), [])
 
   const defaultCalendar = calendars.find((c) => c.isDefault) || calendars[0]
   const isCustomDuration = !DURATION_OPTIONS.some((o) => o.value === defaultDuration)
@@ -192,6 +198,114 @@ export function CalendarSettings(): JSX.Element {
             </label>
           </div>
         </div>
+      </div>
+
+      <div className={styles.group}>
+        <div className={styles.groupLabel}>Secondary Timezone</div>
+        <div
+          className={styles.row}
+          data-component="setting-row"
+          data-setting="secondary-timezone-enabled"
+          data-value={String(secondaryTimezoneEnabled)}
+        >
+          <div className={styles.rowInfo}>
+            <div className={styles.rowLabel}>Show Secondary Timezone</div>
+            <div className={styles.rowDesc}>
+              Display an additional timezone in Day and Week time grids
+            </div>
+          </div>
+          <div className={styles.rowControl}>
+            <label
+              className={styles.toggle}
+              data-component="toggle"
+              data-setting="secondary-timezone-enabled"
+            >
+              <input
+                type="checkbox"
+                checked={secondaryTimezoneEnabled}
+                aria-label="Show secondary timezone"
+                onChange={() =>
+                  updateSettings({
+                    secondaryTimezoneEnabled: !secondaryTimezoneEnabled,
+                    ...(!secondaryTimezoneEnabled && !secondaryTimezone
+                      ? { secondaryTimezone: 'UTC' }
+                      : {}),
+                  })
+                }
+              />
+              <span className={styles.pill} />
+              <span className={styles.knob} />
+            </label>
+          </div>
+        </div>
+        {secondaryTimezoneEnabled && (
+          <>
+            <div
+              className={styles.row}
+              data-component="setting-row"
+              data-setting="secondary-timezone"
+              data-value={secondaryTimezone || ''}
+            >
+              <div className={styles.rowInfo}>
+                <div className={styles.rowLabel}>Secondary Timezone</div>
+                <div className={styles.rowDesc}>
+                  Select the timezone to display alongside local time
+                </div>
+              </div>
+              <div className={styles.rowControl}>
+                <select
+                  className={styles.select}
+                  value={secondaryTimezone || 'UTC'}
+                  aria-label="Secondary timezone"
+                  onChange={(e) => updateSettings({ secondaryTimezone: e.target.value })}
+                >
+                  <optgroup label="Presets">
+                    {TIMEZONE_PRESETS.map((tz) => (
+                      <option key={`preset-${tz.value}`} value={tz.value}>
+                        {tz.label}
+                      </option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="All Timezones">
+                    {allTimezones.map((tz) => (
+                      <option key={`all-${tz}`} value={tz}>
+                        {tz}
+                      </option>
+                    ))}
+                  </optgroup>
+                </select>
+              </div>
+            </div>
+            <div
+              className={styles.row}
+              data-component="setting-row"
+              data-setting="secondary-timezone-label"
+              data-value={secondaryTimezoneLabel || ''}
+            >
+              <div className={styles.rowInfo}>
+                <div className={styles.rowLabel}>Custom Label</div>
+                <div className={styles.rowDesc}>
+                  Optional short label (e.g. NYC, HQ, max 8 characters)
+                </div>
+              </div>
+              <div className={styles.rowControl}>
+                <input
+                  type="text"
+                  className={styles.textInput}
+                  maxLength={8}
+                  placeholder="e.g. NYC"
+                  value={secondaryTimezoneLabel ?? ''}
+                  aria-label="Secondary timezone label"
+                  onChange={(e) => {
+                    const val = e.target.value.slice(0, 8)
+                    const trimmed = val.trim()
+                    updateSettings({ secondaryTimezoneLabel: trimmed === '' ? null : val })
+                  }}
+                />
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       <div className={styles.group}>

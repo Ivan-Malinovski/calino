@@ -147,9 +147,43 @@
   }
 }
 
+.headerGutter {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: var(--time-gutter-width, 60px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-right: 1px solid var(--line, rgba(var(--ink-raw, 44, 40, 33), 0.09));
+}
+
+.timeZoneHeaders {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  width: 100%;
+  padding: 0 4px;
+  align-items: center;
+  justify-items: center;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-3, #a39d93);
+}
+
+.timeZoneHeaders span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 0 2px;
+  text-align: center;
+}
+
 .hourRow {
   display: grid;
-  grid-template-columns: 60px 1fr;
+  grid-template-columns: var(--time-gutter-width, 60px) 1fr;
   height: var(--hour-height, 60px);
   flex: none;
   border-bottom: 1px solid var(--line-2, rgba(var(--ink-raw, 44, 40, 33), 0.05));
@@ -163,14 +197,56 @@
 }
 
 .timeLabel {
-  padding: var(--space-1, 4px) var(--space-2, 8px);
+  padding: var(--space-1, 4px) 2px;
   font-size: 11px;
   font-weight: 500;
   color: var(--ink-3, #a39d93);
   font-variant-numeric: tabular-nums;
-  text-align: right;
+  text-align: center;
   border-right: 1px solid var(--line, rgba(var(--ink-raw, 44, 40, 33), 0.09));
   background: var(--panel, #ffffff);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.timeRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  width: 100%;
+  height: 100%;
+  align-items: center;
+}
+
+.primaryTime {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--ink-3, #a39d93);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  padding: 0 2px;
+}
+
+.secondaryTime {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--ink-muted, rgba(var(--ink-raw, 44, 40, 33), 0.55));
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  padding: 0 2px;
+  border-left: 1px solid var(--line-2, rgba(var(--ink-raw, 44, 40, 33), 0.05));
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+}
+
+.dayDelta {
+  font-size: 8.5px;
+  font-weight: 600;
+  color: var(--accent, #b07d4f);
+  margin-left: 2px;
 }
 
 .cell {
@@ -190,7 +266,7 @@
 .eventsOverlay {
   position: absolute;
   top: 0;
-  left: 60px;
+  left: var(--time-gutter-width, 60px);
   right: 0;
   height: calc(24 * var(--hour-height, 60px));
   pointer-events: none;
@@ -288,7 +364,7 @@
   border-top: 1px solid var(--line, rgba(var(--ink-raw, 44, 40, 33), 0.09));
   padding: 8px 0;
   display: grid;
-  grid-template-columns: 60px 1fr;
+  grid-template-columns: var(--time-gutter-width, 60px) 1fr;
   gap: 0;
   z-index: 100;
   max-height: 100px;

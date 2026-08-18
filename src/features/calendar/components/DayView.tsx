@@ -42,6 +42,7 @@ import {
 import { eventCardVariants } from '../lib/eventAnimations'
 import { pad2, toLocalDateString, toEventInstant } from '@/lib/datetime'
 import { HOURS } from '@/lib/hours'
+import { getTimezoneAbbr, getSecondaryHourLabel } from '@/lib/timezoneHelper'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { CurrentTimeIndicator } from './CurrentTimeIndicator'
@@ -53,7 +54,7 @@ import {
   isSameDropPreview,
   type DropPreview,
 } from '../lib/dragSnap'
-import type { CalendarEvent } from '@/types'
+import type { CalendarEvent, TimeFormat } from '@/types'
 import styles from './DayView.module.css'
 import { duplicateEventWithSync } from '@/lib/duplicateWithSync'
 
@@ -65,7 +66,10 @@ const BASE_HOUR_HEIGHT = 60
 interface HourCellProps {
   hour: Date
   dateStr: string
-  timeFormat: string
+  timeFormat: TimeFormat
+  baseDate: Date
+  isDualTz: boolean
+  secondaryTimezone: string | null
   onCellClick: (hour: Date) => void
   onDragStart: (hour: Date, e: React.MouseEvent) => void
 }
@@ -76,15 +80,39 @@ function HourCell({
   hour,
   dateStr,
   timeFormat,
+  baseDate,
+  isDualTz,
+  secondaryTimezone,
   onCellClick,
   onDragStart,
 }: HourCellProps): JSX.Element {
   const droppableId = `${dateStr}-${format(hour, 'HH:mm')}`
   const { setNodeRef } = useDroppable({ id: droppableId })
+  const primaryTime = format(hour, timeFormat === '24h' ? 'HH:mm' : 'h a')
+
+  let timeContent: React.ReactNode = primaryTime
+
+  if (isDualTz && secondaryTimezone) {
+    const secLabel = getSecondaryHourLabel(
+      hour.getHours(),
+      baseDate,
+      secondaryTimezone,
+      timeFormat
+    )
+    timeContent = (
+      <div className={styles.timeRow}>
+        <span className={styles.primaryTime}>{primaryTime}</span>
+        <span className={styles.secondaryTime}>
+          {secLabel.time}
+          {secLabel.dayDelta && <span className={styles.dayDelta}>{secLabel.dayDelta}</span>}
+        </span>
+      </div>
+    )
+  }
 
   return (
     <div className={styles.hourRow}>
-      <div className={styles.timeLabel}>{format(hour, timeFormat === '24h' ? 'HH:mm' : 'h a')}</div>
+      <div className={styles.timeLabel}>{timeContent}</div>
       <div
         ref={setNodeRef}
         className={styles.cell}
@@ -108,6 +136,12 @@ export function DayView({
   const storeUpdateEvent = useCalendarStore((state) => state.updateEvent)
   const setCurrentDate = useCalendarStore((state) => state.setCurrentDate)
   const timeFormat = useSettingsStore((state) => state.timeFormat)
+  const secondaryTimezoneEnabled = useSettingsStore((state) => state.secondaryTimezoneEnabled)
+  const secondaryTimezone = useSettingsStore((state) => state.secondaryTimezone)
+  const secondaryTimezoneLabel = useSettingsStore((state) => state.secondaryTimezoneLabel)
+  const timezone = useSettingsStore((state) => state.timezone)
+
+  const isDualTz = secondaryTimezoneEnabled && !!secondaryTimezone
 
   const [activeEvent, setActiveEvent] = useState<CalendarEvent | null>(null)
   const [dropPreview, setDropPreview] = useState<DropPreview | null>(null)
@@ -242,6 +276,16 @@ export function DayView({
   }, [])
 
   const date = useMemo(() => parseISO(currentDate), [currentDate])
+  const localTzAbbr = useMemo(
+    () => getTimezoneAbbr(date, timezone || Intl.DateTimeFormat().resolvedOptions().timeZone),
+    [date, timezone]
+  )
+  const secondaryTzAbbr = useMemo(
+    () =>
+      secondaryTimezoneLabel ||
+      (secondaryTimezone ? getTimezoneAbbr(date, secondaryTimezone) : ''),
+    [date, secondaryTimezone, secondaryTimezoneLabel]
+  )
   const dateKey = format(date, 'yyyy-MM-dd')
 
   // The header doubles as a drop target: dragging a timed event onto it turns
@@ -733,7 +777,12 @@ export function DayView({
         className={styles.container}
         data-embedded={onBack ? '' : undefined}
         ref={containerRef}
-        style={{ '--hour-height': `${hourHeight}px` } as React.CSSProperties}
+        style={
+          {
+            '--hour-height': `${hourHeight}px`,
+            '--time-gutter-width': isDualTz ? '100px' : '60px',
+          } as React.CSSProperties
+        }
         onContextMenu={(e) => {
           e.preventDefault()
           openMenu('dayview')
@@ -750,6 +799,14 @@ export function DayView({
           ref={setAllDayDropRef}
           className={`${styles.header} ${isScrolled ? styles.headerShadow : ''} ${allDayEvents.length > 0 ? styles.hasAllDayEvents : ''} ${isAllDayDropOver && activeEvent && !activeEvent.isAllDay ? styles.headerDropActive : ''}`}
         >
+          {isDualTz && (
+            <div className={styles.headerGutter}>
+              <div className={styles.timeZoneHeaders}>
+                <span className={styles.primaryTzHeader}>{localTzAbbr}</span>
+                <span className={styles.secondaryTzHeader}>{secondaryTzAbbr}</span>
+              </div>
+            </div>
+          )}
           {onBack && (
             <button className={styles.backButton} onClick={onBack} aria-label="Back to agenda">
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -798,6 +855,9 @@ export function DayView({
               hour={hour}
               dateStr={dateStr}
               timeFormat={timeFormat}
+              baseDate={date}
+              isDualTz={isDualTz}
+              secondaryTimezone={secondaryTimezone}
               onCellClick={handleCellClick}
               onDragStart={handleDragStartFromCell}
             />

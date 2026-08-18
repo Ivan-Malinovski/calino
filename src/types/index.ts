@@ -306,6 +306,9 @@ export type MapProvider = 'google' | 'apple' | 'osm' | 'mapy' | 'geo'
 
 export interface UserSettings {
   timezone: string
+  secondaryTimezoneEnabled: boolean
+  secondaryTimezone: string | null
+  secondaryTimezoneLabel: string | null
   dateFormat: DateFormat
   timeFormat: TimeFormat
   firstDayOfWeek: FirstDayOfWeek

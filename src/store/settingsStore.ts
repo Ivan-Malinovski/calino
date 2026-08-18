@@ -72,6 +72,9 @@ function getEuropeDefaultFirstDay(): FirstDayOfWeek {
 
 const DEFAULT_SETTINGS: UserSettings = {
   timezone: getBrowserTimezone(),
+  secondaryTimezoneEnabled: false,
+  secondaryTimezone: null,
+  secondaryTimezoneLabel: null,
   dateFormat: 'dd/MM/yyyy',
   timeFormat: '24h',
   firstDayOfWeek: getEuropeDefaultFirstDay(),
