@@ -27,6 +27,7 @@ import { parseICALData } from '../adapter/iCalendarAdapter'
 import { detectUidCollisions, type ParsedWithHref } from '../sync/detectUidCollisions'
 import { putAttachments } from '@/lib/attachmentStore'
 import { putRawIcs, deleteRawIcs } from '@/lib/rawIcsStore'
+import { mapWithConcurrency, CALDAV_FETCH_CONCURRENCY } from '@/lib/mapWithConcurrency'
 import * as storage from '../sync/accountStorage'
 import {
   classifyPendingChangeError,
@@ -995,13 +996,21 @@ export function useCalDAV(): UseCalDAVReturn {
         // Fresh connect — re-derive duplicate-UID issues from scratch (#22).
         useCalendarStore.getState().clearDuplicateUidIssues()
 
-        // Fetch every calendar in parallel before processing any of them. This
+        // Fetch the calendars concurrently before processing any of them. This
         // is a fresh connect, so unlike syncAccount there are no pending local
         // changes to snapshot between fetch and reconcile — nothing depends on
         // the fetches being interleaved with the store writes below. Serially
         // this was one full round-trip per calendar.
-        const fetchedPerCalendar = await Promise.all(
-          serverCalendars.map(async (cal) => {
+        //
+        // Bounded rather than all-at-once: each fetchEvents is itself three
+        // REPORTs (VEVENT/VTODO/VJOURNAL), so an account with a dozen
+        // collections would open dozens of simultaneous requests against a
+        // server that is often a single-process Radicale. Results stay in
+        // calendar order, which the dedup below depends on.
+        const fetchedPerCalendar = await mapWithConcurrency(
+          serverCalendars,
+          CALDAV_FETCH_CONCURRENCY,
+          async (cal) => {
             console.log('[CalDAV] addAccount: fetching events for', cal.name, cal.url)
             const fetchedEvents = await client.fetchEvents(cal.url, start, end)
             console.log(
@@ -1011,7 +1020,7 @@ export function useCalDAV(): UseCalDAVReturn {
               cal.name
             )
             return { cal, fetchedEvents }
-          })
+          }
         )
 
         // Store writes stay serial and in calendar order, so the
@@ -1486,19 +1495,36 @@ export function useCalDAV(): UseCalDAVReturn {
               // resource can sit far outside the sync window, or have changed
               // in a way that never moves DTSTART. A failure here throws and
               // is caught below, which leaves the old token in place.
-              const fetched: { url: string; data: string; etag?: string }[] = []
-              for (const change of changes) {
-                if (change.status !== 'changed') continue
-                const resource = await client.fetchResourceByHref(change.href)
+              //
+              // Bounded fan-out: a first delta can name hundreds of
+              // resources. Results come back in REPORT order regardless of
+              // which GET finished first, so everything downstream — parsing,
+              // duplicate resolution, store writes — stays deterministic and
+              // serial.
+              const changed = changes.filter((change) => change.status === 'changed')
+              const fetched = await mapWithConcurrency(
+                changed,
+                CALDAV_FETCH_CONCURRENCY,
+                async (change) => {
+                  const resource = await client.fetchResourceByHref(change.href)
+                  if (!resource) return { change, resource: null }
+                  return {
+                    change,
+                    resource: { ...resource, etag: resource.etag ?? change.etag ?? undefined },
+                  }
+                }
+              )
+
+              fetchedEvents = []
+              for (const { change, resource } of fetched) {
                 if (!resource) {
                   // Deleted between the REPORT and the GET — a tombstone, not
                   // a failure.
                   removedHrefs.add(hrefKey(change.href))
                   continue
                 }
-                fetched.push({ ...resource, etag: resource.etag ?? change.etag ?? undefined })
+                fetchedEvents.push(resource)
               }
-              fetchedEvents = fetched
 
               if (changes.length === 0) {
                 // Nothing changed server-side; the cursor still advances.

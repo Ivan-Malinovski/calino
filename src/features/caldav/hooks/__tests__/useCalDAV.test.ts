@@ -1822,6 +1822,50 @@ describe('useCalDAV', () => {
       })
     })
 
+    it('bounds changed-resource GETs at 3 and still reconciles in REPORT order', async () => {
+      seedAccount()
+      const hrefs = Array.from(
+        { length: 9 },
+        (_, i) => `https://caldav.example.com/cal/main/evt-${i}.ics`
+      )
+      const iCalendarAdapter = await import('../../adapter/iCalendarAdapter')
+      vi.mocked(iCalendarAdapter.parseICALData).mockImplementation((data: string) => [
+        {
+          id: data,
+          uid: data,
+          calendarId: 'cal-1',
+          title: data,
+          start: '2025-06-01T10:00:00.000Z',
+          end: '2025-06-01T11:00:00.000Z',
+          isAllDay: false,
+        },
+      ])
+
+      let active = 0
+      let peak = 0
+      mockClient({
+        syncCollection: vi.fn().mockResolvedValue({
+          changes: hrefs.map((href) => ({ href, etag: '"e"', status: 'changed' })),
+          newSyncToken: 'http://example.com/ns/sync/200',
+          tokenInvalidated: false,
+        }),
+        fetchResourceByHref: vi.fn().mockImplementation(async (href: string) => {
+          active++
+          peak = Math.max(peak, active)
+          // Later hrefs finish first, so a fan-out that preserved completion
+          // order rather than input order would reconcile backwards.
+          await new Promise((r) => setTimeout(r, 20 - hrefs.indexOf(href)))
+          active--
+          return { url: href, data: href, etag: '"e"' }
+        }),
+      })
+
+      await runSync()
+
+      expect(peak).toBe(3)
+      expect(vi.mocked(iCalendarAdapter.parseICALData).mock.calls.map((c) => c[0])).toEqual(hrefs)
+    })
+
     it('removes the local components of a tombstoned resource and leaves the rest alone', async () => {
       seedAccount()
       seedEvent('evt-gone', 'https://caldav.example.com/cal/main/gone.ics')
