@@ -90,11 +90,24 @@ export function IcsImportModal({
   useModalDismiss(dialogRef, isOpen, requestClose)
 
   // Parsed once per file, not per render — parseICALData walks the whole
-  // document three times (events, tasks, journals).
-  const parsed = useMemo(
-    () => (icsText ? parseICALData(icsText, 'preview') : []),
-    [icsText]
-  )
+  // document three times (events, tasks, journals). parseICALData already
+  // catches ICAL.parse failures per-component internally, but a malformed
+  // file can still hit an unexpected exception path (e.g. inside a type
+  // mapper) — this MUST NOT throw during render, or the whole modal tree
+  // (and anything above it) unmounts. Any parse failure degrades to "0
+  // items found" rather than a crash.
+  const { parsed, parseFailed } = useMemo((): {
+    parsed: CalendarEvent[]
+    parseFailed: boolean
+  } => {
+    if (!icsText) return { parsed: [], parseFailed: false }
+    try {
+      return { parsed: parseICALData(icsText, 'preview'), parseFailed: false }
+    } catch (e) {
+      console.error('Failed to parse .ics file for import preview:', e)
+      return { parsed: [], parseFailed: true }
+    }
+  }, [icsText])
 
   // Recomputed as the target changes: an incoming UID only counts as a
   // duplicate if it already exists in the calendar we're about to write to.
@@ -161,11 +174,22 @@ export function IcsImportModal({
         useCalendarStore.getState().addEvent(event)
       }
 
-      // Push to CalDAV where the target is server-backed. This is a no-op for
-      // local calendars and falls back to pendingChanges when offline, so an
-      // import into a synced calendar doesn't silently stay device-local.
+      // Group by UID before pushing: a recurring series' master and its
+      // overrides share one UID and MUST live in a single calendar object
+      // resource (RFC 4791 §4.1), not one PUT per component. All group
+      // members go out in one `createEventGroup` PUT per UID. This is a
+      // no-op for local (non-CalDAV) calendars and falls back to
+      // pendingChanges when offline, same as the previous per-event push.
+      const groups = new Map<string, CalendarEvent[]>()
       for (const event of incoming) {
-        await caldav.createEvent(calendarId, event)
+        const key = event.uid ?? event.id
+        const group = groups.get(key)
+        if (group) group.push(event)
+        else groups.set(key, [event])
+      }
+
+      for (const group of groups.values()) {
+        await caldav.createEventGroup(calendarId, group)
       }
 
       const skipped = parsed.length - incoming.length
@@ -218,7 +242,11 @@ export function IcsImportModal({
           Choose which calendar these should be added to.
         </p>
 
-        {parsed.length === 0 ? (
+        {parseFailed ? (
+          <p className={shell.errorMessage} data-component="ics-import-parse-error">
+            This file could not be read as a calendar file. Please check it and try again.
+          </p>
+        ) : parsed.length === 0 ? (
           <p className={styles.emptyState} data-component="ics-import-empty">
             No events, tasks, or journal entries were found in this file.
           </p>
@@ -318,7 +346,7 @@ export function IcsImportModal({
             type="button"
             className={`${shell.button} ${shell.buttonPrimary}`}
             onClick={handleConfirm}
-            disabled={isImporting}
+            disabled={isImporting || parseFailed}
             aria-busy={isImporting}
             data-testid="ics-import-confirm"
           >

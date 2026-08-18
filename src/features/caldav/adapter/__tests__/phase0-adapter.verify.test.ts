@@ -78,34 +78,27 @@ describe('Phase 0 verification: floating time round-trip (Bug A)', () => {
 })
 
 describe('Phase 0 verification: ICS import robustness (Bug B)', () => {
-  it('BUG: two concatenated VCALENDAR blocks throw a TypeError instead of parsing', () => {
+  it('FIXED (Phase 4): two concatenated VCALENDAR blocks parse as 2 events', () => {
     const twoDocuments = [
       FLOATING_ICS,
       FLOATING_ICS.replace('UID:floating-1', 'UID:floating-2'),
     ].join('\r\n')
 
-    // CORRECT: multi-document ICS (common in mail attachments and
-    // exports) should yield 2 events. `ICAL.parse` returns an ARRAY of
-    // jCal documents here, and `new ICAL.Component(jCal)`
-    // (iCalendarAdapter.ts L26) mis-binds it, so `getAllSubcomponents`
-    // dereferences undefined.
-    //
-    // Observed: TypeError "Cannot read properties of undefined (reading
-    // 'length')" at Component.getAllSubcomponents (ical.js:8079).
-    // It escapes parseICALEvent's try/catch, which only wraps ICAL.parse.
-    expect(() => parseICALData(twoDocuments, 'cal-1')).toThrow(TypeError)
-    expect(() => parseICALData(twoDocuments, 'cal-1')).toThrow(
-      /Cannot read properties of undefined \(reading 'length'\)/
-    )
+    // `ICAL.parse` returns an ARRAY of jCal documents for concatenated
+    // VCALENDAR blocks. iCalendarAdapter now detects that shape and builds
+    // one `ICAL.Component` per document instead of mis-binding the array
+    // straight into a single `ICAL.Component`.
+    const events = parseICALData(twoDocuments, 'cal-1')
+    expect(events).toHaveLength(2)
+    expect(events.map((e) => e.uid).sort()).toEqual(['floating-1', 'floating-2'])
   })
 
-  it('BUG: a leading UTF-8 BOM silently yields 0 events', () => {
+  it('FIXED (Phase 4): a leading UTF-8 BOM no longer swallows the file', () => {
     const withBom = '﻿' + FLOATING_ICS
 
-    // CORRECT: a BOM is a legal artefact of a UTF-8 export and should be
-    // stripped before parsing, yielding 1 event. Today ICAL.parse throws,
-    // parseICALEvent swallows it with console.error and returns [].
-    expect(parseICALData(withBom, 'cal-1')).toHaveLength(0)
+    // A BOM is a legal artefact of a UTF-8 export. normalizeICalText strips
+    // it before ICAL.parse runs, so this now yields 1 event instead of 0.
+    expect(parseICALData(withBom, 'cal-1')).toHaveLength(1)
   })
 
   it('BUG: a truncated file (missing END:VEVENT) silently yields 0 events', () => {

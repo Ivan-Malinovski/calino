@@ -321,6 +321,7 @@ interface UseCalDAVReturn {
   syncAll: () => Promise<void>
   createEvent: (calendarId: string, event: CalendarEvent) => Promise<void>
   updateEvent: (calendarId: string, event: CalendarEvent) => Promise<void>
+  createEventGroup: (calendarId: string, events: CalendarEvent[]) => Promise<void>
   saveRecurrenceOverride: (
     calendarId: string,
     master: CalendarEvent,
@@ -1923,6 +1924,74 @@ export function useCalDAV(): UseCalDAVReturn {
     [caldavDebugMode, storeUpdateEvent]
   )
 
+  /**
+   * Create every component of ONE calendar object resource in a single PUT.
+   *
+   * A recurrence master and its RECURRENCE-ID overrides share a UID and MUST
+   * live in one resource (RFC 4791 §4.1); `createEvent` writes one resource
+   * per component, which splits them. Used by .ics import, where a file
+   * routinely carries a master plus overrides under the same UID.
+   *
+   * `putEventGroup` sends an empty `If-Match` on purpose (tsdav drops a falsy
+   * one), so a retried import overwrites its own partial result rather than
+   * 412-ing the way tsdav's `If-None-Match: *` create would.
+   */
+  const createEventGroup = useCallback(
+    async (calendarId: string, events: CalendarEvent[]): Promise<void> => {
+      if (events.length === 0) return
+
+      const allCalendars = storage.getAllCalendars()
+      const allAccounts = storage.getAllAccounts()
+      const calendar = allCalendars.find((c) => c.id === calendarId)
+      const account = allAccounts.find((a) => a.id === calendar?.accountId)
+
+      // Local-only calendar, or sample-data mode with no accounts: the events
+      // are already in the store and there is nothing to sync.
+      if (!calendar || !account) {
+        if (allAccounts.length === 0) return
+        showToast('Failed to sync event with CalDAV server. It will be retried.')
+        return
+      }
+
+      // Same convention as createEvent: a freshly created resource starts at
+      // SEQUENCE 0 regardless of what the source file claimed.
+      const group = events.map((event) => ({ ...event, sequence: 0 }))
+      const master = group.find((event) => !event.recurrenceId) ?? group[0]
+
+      try {
+        const credential = await getCredentialById(account.credentialId)
+        if (!credential) throw new Error('Credentials not found')
+
+        const client = await createCalDAVClient(account.serverUrl, credential, account.proxyUrl)
+        const engine = new SyncEngine(client, calendarId)
+        const { url, etag } =
+          group.length > 1 ? await engine.putEventGroup(group) : await engine.pushEvent(master)
+
+        for (const event of group) {
+          storeUpdateEvent(event.id, { resourceHref: url, etag, syncStatus: 'synced' })
+        }
+        storage.updateAccountLastSync(account.id)
+        processPendingChanges()
+      } catch (error) {
+        // Queue the whole group as one 'create' — that handler already accepts
+        // a { events: [...] } payload and replays it through putEventGroup, so
+        // an offline import lands as a single resource when the network returns.
+        storage.addPendingChange({
+          type: 'create',
+          eventId: master.id,
+          calendarId,
+          data: JSON.stringify({ events: group }),
+        })
+        for (const event of group) {
+          storeUpdateEvent(event.id, { syncStatus: 'failed' })
+        }
+        setSyncState((prev) => ({ ...prev, pendingChanges: prev.pendingChanges + 1 }))
+        throw error
+      }
+    },
+    [storeUpdateEvent, processPendingChanges]
+  )
+
   const saveRecurrenceOverrideFn = useCallback(
     async (
       calendarId: string,
@@ -2628,6 +2697,7 @@ export function useCalDAV(): UseCalDAVReturn {
     syncAccount,
     syncAll,
     createEvent,
+    createEventGroup,
     updateEvent: updateEventFn,
     saveRecurrenceOverride: saveRecurrenceOverrideFn,
     deleteEvent: deleteEventFn,

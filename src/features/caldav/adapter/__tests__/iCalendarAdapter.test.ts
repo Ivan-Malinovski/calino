@@ -2357,4 +2357,83 @@ END:VCALENDAR`
       expect(out).not.toContain('BEGIN:VTIMEZONE')
     })
   })
+
+  describe('Phase 4: import robustness', () => {
+    const bareIcs = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'PRODID:-//Test//EN',
+      'BEGIN:VEVENT',
+      'UID:mixed-1',
+      'DTSTAMP:20260101T000000Z',
+      'DTSTART:20260102T100000',
+      'DTEND:20260102T110000',
+      'SUMMARY:Bare LF meeting',
+      'END:VEVENT',
+      'END:VCALENDAR',
+    ]
+
+    it('parses a file using bare LF line endings', () => {
+      const events = parseICALData(bareIcs.join('\n'), 'cal-1')
+      expect(events).toHaveLength(1)
+      expect(events[0].title).toBe('Bare LF meeting')
+    })
+
+    it('parses a file with mixed CRLF/LF line endings', () => {
+      const mixed = bareIcs
+        .map((line, i) => line + (i % 2 === 0 ? '\r\n' : '\n'))
+        .join('')
+      const events = parseICALData(mixed, 'cal-1')
+      expect(events).toHaveLength(1)
+      expect(events[0].title).toBe('Bare LF meeting')
+    })
+
+    it('strips a leading UTF-8 BOM before parsing', () => {
+      const withBom = '﻿' + bareIcs.join('\r\n')
+      const events = parseICALData(withBom, 'cal-1')
+      expect(events).toHaveLength(1)
+      expect(events[0].uid).toBe('mixed-1')
+    })
+
+    it('parses concatenated VCALENDAR documents as separate events', () => {
+      const doc2 = bareIcs.join('\r\n').replace('UID:mixed-1', 'UID:mixed-2')
+      const events = parseICALData([bareIcs.join('\r\n'), doc2].join('\r\n'), 'cal-1')
+      expect(events.map((e) => e.uid).sort()).toEqual(['mixed-1', 'mixed-2'])
+    })
+
+    it('handles a concatenated document where one block also has a BOM-normalized prefix', () => {
+      const doc1 = '﻿' + bareIcs.join('\r\n')
+      const doc2 = bareIcs.join('\r\n').replace('UID:mixed-1', 'UID:mixed-3')
+      const events = parseICALData([doc1, doc2].join('\r\n'), 'cal-1')
+      expect(events.map((e) => e.uid).sort()).toEqual(['mixed-1', 'mixed-3'])
+    })
+
+    it('does not throw on a truncated (malformed) file — degrades to no events', () => {
+      const truncated = bareIcs.join('\r\n').replace('END:VEVENT\r\n', '')
+      expect(() => parseICALData(truncated, 'cal-1')).not.toThrow()
+      expect(parseICALData(truncated, 'cal-1')).toHaveLength(0)
+    })
+
+    it('does not throw on garbage input', () => {
+      expect(() => parseICALData('this is not an ics file at all', 'cal-1')).not.toThrow()
+      expect(parseICALData('this is not an ics file at all', 'cal-1')).toHaveLength(0)
+    })
+
+    it('parseICALEvent and parseICALTask both handle concatenated documents', () => {
+      const vtodoDoc = [
+        'BEGIN:VCALENDAR',
+        'VERSION:2.0',
+        'PRODID:-//Test//EN',
+        'BEGIN:VTODO',
+        'UID:task-2',
+        'DTSTAMP:20260101T000000Z',
+        'SUMMARY:Second task',
+        'END:VTODO',
+        'END:VCALENDAR',
+      ].join('\r\n')
+      const combined = [bareIcs.join('\r\n'), vtodoDoc].join('\r\n')
+      expect(parseICALEvent(combined, 'cal-1')).toHaveLength(1)
+      expect(parseICALTask(combined, 'cal-1')).toHaveLength(1)
+    })
+  })
 })
