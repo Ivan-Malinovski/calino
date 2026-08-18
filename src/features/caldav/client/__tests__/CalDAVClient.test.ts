@@ -1544,6 +1544,50 @@ END:VCALENDAR`,
     })
   })
 
+  describe('fetchResourceByHref', () => {
+    const href = 'https://caldav.example.com/calendars/test/default/event-1.ics'
+    const ICS = 'BEGIN:VCALENDAR\r\nVERSION:2.0\r\nEND:VCALENDAR'
+
+    it('GETs the resource and returns its body', async () => {
+      fetchSpy.mockResolvedValueOnce(
+        new Response(ICS, { status: 200, headers: { ETag: '"etag-1"' } })
+      )
+
+      const result = await client.fetchResourceByHref(href)
+
+      expect(result).toEqual({ url: href, data: ICS, etag: '"etag-1"' })
+      const [calledUrl, init] = fetchSpy.mock.calls[0]
+      expect(String(calledUrl)).toBe(href)
+      expect(init?.method).toBe('GET')
+    })
+
+    it('returns null when the resource vanished between REPORT and GET', async () => {
+      fetchSpy.mockResolvedValueOnce(new Response('', { status: 404 }))
+
+      // A tombstone the next REPORT will describe properly — not a reason to
+      // fail the whole calendar's sync.
+      await expect(client.fetchResourceByHref(href)).resolves.toBeNull()
+    })
+
+    it('throws on a server error so the caller leaves its sync token alone', async () => {
+      fetchSpy.mockResolvedValueOnce(new Response('', { status: 503 }))
+
+      await expect(client.fetchResourceByHref(href)).rejects.toThrow('503')
+    })
+
+    it('omits the etag when the browser cannot read the header', async () => {
+      // Radicale sends no access-control-expose-headers, so ETag is invisible
+      // to a cross-origin browser read. The caller falls back to the etag the
+      // REPORT already gave it.
+      fetchSpy.mockResolvedValueOnce(new Response(ICS, { status: 200 }))
+
+      const result = await client.fetchResourceByHref(href)
+
+      expect(result?.etag).toBeUndefined()
+      expect(result?.data).toBe(ICS)
+    })
+  })
+
   describe('syncCollection (RFC 6578)', () => {
     const collectionUrl = 'https://caldav.example.com/calendars/test/default/'
 

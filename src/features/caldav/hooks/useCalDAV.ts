@@ -14,6 +14,7 @@ import type {
   PendingChange,
 } from '../types'
 import { createCalDAVClient } from '../client/CalDAVClient'
+import type { SyncCollectionChange } from '../client/CalDAVClient'
 import { probeConnection, expandProviderUrl, type ProbeResult } from '../client/discovery'
 import { CalDAVConnectionError } from '../client/errors'
 import {
@@ -25,7 +26,7 @@ import {
 import { parseICALData } from '../adapter/iCalendarAdapter'
 import { detectUidCollisions, type ParsedWithHref } from '../sync/detectUidCollisions'
 import { putAttachments } from '@/lib/attachmentStore'
-import { putRawIcs } from '@/lib/rawIcsStore'
+import { putRawIcs, deleteRawIcs } from '@/lib/rawIcsStore'
 import * as storage from '../sync/accountStorage'
 import {
   classifyPendingChangeError,
@@ -291,6 +292,26 @@ async function collectParsedWithHref(
     }
   }
   return { items: result, hadParseFailures }
+}
+
+/**
+ * Compare two resource hrefs for identity.
+ *
+ * Stored `resourceHref` values come from tsdav's `obj.url`; sync-collection
+ * hrefs are resolved against the collection URL. The same resource can
+ * therefore arrive as an absolute URL from one path and a server-relative one
+ * from the other, and servers are inconsistent about a trailing slash. Compare
+ * on the path only, and keep percent-encoding as-is — decoding would fold
+ * `%2F` into a path separator.
+ */
+function hrefKey(href: string): string {
+  let path = href
+  try {
+    path = new URL(href, 'http://x.invalid').pathname
+  } catch {
+    // Not URL-shaped; fall through and compare the raw string.
+  }
+  return path.replace(/\/+$/, '')
 }
 
 interface UseCalDAVReturn {
@@ -901,8 +922,15 @@ export function useCalDAV(): UseCalDAVReturn {
         })
 
         for (const cal of serverCalendars) {
+          // Store the collection without its change cursors. The tokens the
+          // server just handed us describe state we have not imported yet — if
+          // the import below fails halfway, a stored token would let the next
+          // sync skip straight to "nothing changed" and the missing events
+          // would never arrive. They are persisted after the import instead.
           storage.saveCalendar({
             ...cal,
+            ctag: null,
+            syncToken: null,
             accountId: newAccount.id,
           })
           // Hide the Calino Settings calendar from the sidebar (unless debug mode)
@@ -1029,6 +1057,17 @@ export function useCalDAV(): UseCalDAVReturn {
         }
 
         console.log(`[CalDAV] addAccount: done — ${eventsAdded} events added`)
+
+        // The import succeeded, so the cursors captured *before* it are now a
+        // truthful description of what we hold, and the next sync can go
+        // incremental. Captured-before is deliberate: anything written to the
+        // server during the import is simply reported again next cycle.
+        for (const cal of serverCalendars) {
+          const stored = storage.getAllCalendars().find((c) => c.url === cal.url)
+          if (!stored) continue
+          if (cal.syncToken) storage.updateCalendar(stored.id, { syncToken: cal.syncToken })
+          if (cal.ctag) storage.updateCalendar(stored.id, { ctag: cal.ctag })
+        }
 
         // After adding account, check if any journal entries exist and enable journaling if so
         const allEvents = useCalendarStore.getState().events
@@ -1268,6 +1307,13 @@ export function useCalDAV(): UseCalDAVReturn {
         const accountCalendars = storage.getCalendarsByAccountId(accountId)
         let calendarsToSync = accountCalendars
 
+        // Change cursors as the server reports them *right now*, keyed by
+        // local calendar id. Deliberately not written to storage here: a token
+        // is only truthful once the changes it excludes have actually been
+        // reconciled, so each calendar persists its own after a successful
+        // pass (see `commitCursors` below).
+        const freshCursors = new Map<string, { ctag: string | null; syncToken: string | null }>()
+
         // Re-discover collections on every sync. This migrates capabilities
         // saved by older versions and picks up calendars created elsewhere.
         try {
@@ -1316,21 +1362,24 @@ export function useCalDAV(): UseCalDAVReturn {
               }
               storage.updateCalendar(storedCalendar.id, updates)
               storeUpdateCalendar(storedCalendar.id, updates)
-              // Capture change cursors when the server actually returned one —
-              // a null answer must not wipe a previously stored token (the
-              // collection may simply not have changed / not expose it).
-              if (serverCalendar.syncToken) {
-                storage.updateCalendar(storedCalendar.id, { syncToken: serverCalendar.syncToken })
-              }
-              if (serverCalendar.ctag) {
-                storage.updateCalendar(storedCalendar.id, { ctag: serverCalendar.ctag })
-              }
+              freshCursors.set(storedCalendar.id, {
+                ctag: serverCalendar.ctag,
+                syncToken: serverCalendar.syncToken,
+              })
               continue
             }
 
-            const newCalendar = { ...serverCalendar, accountId }
+            // A collection we have never listed: store it cursor-less so the
+            // first pass below is a full fetch. Persisting the server's token
+            // here would make this sync's own skip check believe we are
+            // already up to date with a calendar we hold nothing from.
+            const newCalendar = { ...serverCalendar, accountId, ctag: null, syncToken: null }
             storage.saveCalendar(newCalendar)
             discoveredCalendars.push(newCalendar)
+            freshCursors.set(serverCalendar.id, {
+              ctag: serverCalendar.ctag,
+              syncToken: serverCalendar.syncToken,
+            })
 
             const isSettingsCalendar =
               serverCalendar.name === 'Calino Settings' ||
@@ -1364,12 +1413,102 @@ export function useCalDAV(): UseCalDAVReturn {
         const currentEvents = state.events
         const currentCategories = state.categories
 
-        // Re-derive duplicate-UID issues from scratch each sync (#22).
+        // Re-derive duplicate-UID issues from scratch each sync (#22). A
+        // collision is only visible in a complete listing, so issues belonging
+        // to calendars this pass does not fully re-list are restored
+        // afterwards rather than silently dropped.
+        const issuesBeforeSync = useCalendarStore.getState().duplicateUidIssues
         useCalendarStore.getState().clearDuplicateUidIssues()
+        const fullyListedCalendarIds = new Set<string>()
+
+        /**
+         * Persist a calendar's change cursors. Called only after that
+         * calendar's changes have been fully applied — a token committed any
+         * earlier moves the cursor past changes we never stored, and the
+         * server will never mention them again.
+         */
+        const commitCursors = (
+          calendarId: string,
+          syncToken: string | null,
+          ctag: string | null
+        ): void => {
+          if (syncToken) storage.updateCalendar(calendarId, { syncToken })
+          if (ctag) storage.updateCalendar(calendarId, { ctag })
+        }
 
         for (const cal of calendarsToSync) {
           try {
-            const fetchedEvents = await client.fetchEvents(cal.url, start, end, true)
+            const fresh = freshCursors.get(cal.id) ?? { ctag: null, syncToken: null }
+            const storedToken = cal.syncToken ?? null
+
+            // ctag is a change hint, not a tombstone authority — and it is
+            // only trusted to mean "skip" when we also hold a sync token, i.e.
+            // when some earlier pass reconciled cleanly and left a cursor. A
+            // missing or invalidated token always re-syncs.
+            if (storedToken && cal.ctag && fresh.ctag && cal.ctag === fresh.ctag) {
+              continue
+            }
+
+            // `null` = no usable cursor, run the full-listing path below.
+            let changes: SyncCollectionChange[] | null = null
+            let nextToken: string | null = fresh.syncToken
+
+            if (storedToken) {
+              const report = await client.syncCollection(cal.url, storedToken)
+              if (report.tokenInvalidated) {
+                // RFC 6578 §3.2 — the cursor is dead. Fall back to a full
+                // listing and re-establish a token from this cycle's PROPFIND.
+                console.warn(
+                  `[CalDAV] Sync token rejected for calendar ${cal.name || cal.id}; falling back to a full sync.`
+                )
+              } else {
+                changes = report.changes
+                // A server that returns no new token leaves us on the old one:
+                // the same changes get replayed next cycle, which is harmless.
+                nextToken = report.newSyncToken ?? storedToken
+              }
+            }
+
+            // Hrefs whose local components this pass is allowed to delete.
+            // In incremental mode that is exactly the resources the server
+            // named; in full mode the whole collection is authoritative.
+            const touchedHrefs: Set<string> | null = changes ? new Set<string>() : null
+            const removedHrefs = new Set<string>()
+            let fetchedEvents: { url: string; data: string; etag?: string }[]
+
+            if (changes) {
+              for (const change of changes) {
+                touchedHrefs?.add(hrefKey(change.href))
+                if (change.status === 'removed') removedHrefs.add(hrefKey(change.href))
+              }
+
+              // Resource-level GETs, not the time-windowed query: a changed
+              // resource can sit far outside the sync window, or have changed
+              // in a way that never moves DTSTART. A failure here throws and
+              // is caught below, which leaves the old token in place.
+              const fetched: { url: string; data: string; etag?: string }[] = []
+              for (const change of changes) {
+                if (change.status !== 'changed') continue
+                const resource = await client.fetchResourceByHref(change.href)
+                if (!resource) {
+                  // Deleted between the REPORT and the GET — a tombstone, not
+                  // a failure.
+                  removedHrefs.add(hrefKey(change.href))
+                  continue
+                }
+                fetched.push({ ...resource, etag: resource.etag ?? change.etag ?? undefined })
+              }
+              fetchedEvents = fetched
+
+              if (changes.length === 0) {
+                // Nothing changed server-side; the cursor still advances.
+                commitCursors(cal.id, nextToken, fresh.ctag)
+                continue
+              }
+            } else {
+              fetchedEvents = await client.fetchEvents(cal.url, start, end, true)
+              fullyListedCalendarIds.add(cal.id)
+            }
 
             // Snapshot pending local changes after the network fetch, as late as
             // possible before reconciliation. They must win over remote state.
@@ -1519,16 +1658,42 @@ export function useCalDAV(): UseCalDAVReturn {
             // just temporarily unreadable. Treating the listing as authoritative
             // in that case could delete an event that still exists on the
             // server. Adds/updates from resources that DID parse are unaffected.
+            //
+            // In incremental mode the listing is deliberately partial, so
+            // absence is only authoritative for the resources the server
+            // actually named this cycle: a tombstoned resource (nothing came
+            // back for it) and a changed resource that no longer contains a
+            // component it used to — a deleted recurrence override, say.
+            // Every other local event is simply not covered by this REPORT.
             if (!hadParseFailures) {
-              for (const localEvent of calendarEvents) {
+              const deletionCandidates = touchedHrefs
+                ? calendarEvents.filter(
+                    (e) => e.resourceHref && touchedHrefs.has(hrefKey(e.resourceHref))
+                  )
+                : calendarEvents
+              for (const localEvent of deletionCandidates) {
                 if (
                   !serverEventIds.has(localEvent.id) &&
                   !pendingLocalChangeIds.has(localEvent.id)
                 ) {
                   storeDeleteEvent(localEvent.id)
+                  // Drop the cached original too, but only when the resource
+                  // itself is gone: a resource that merely lost one component
+                  // still has authoritative bytes worth keeping.
+                  if (
+                    localEvent.resourceHref &&
+                    removedHrefs.has(hrefKey(localEvent.resourceHref))
+                  ) {
+                    await deleteRawIcs(localEvent.resourceHref).catch(() => {})
+                  }
                 }
               }
+              commitCursors(cal.id, nextToken, fresh.ctag)
             } else {
+              // Reconciliation is incomplete, so the cursors stay where they
+              // are: advancing them would retire the server's only mention of
+              // a resource we could not read. A body that failed to parse is
+              // never a deletion — it is retried next cycle.
               console.warn(
                 `[CalDAV] Skipping remote-deletion reconciliation for calendar ${cal.id}: one or more resources failed to parse this cycle.`
               )
@@ -1541,6 +1706,15 @@ export function useCalDAV(): UseCalDAVReturn {
             syncErrors.push(
               `calendar ${cal.name || cal.id}: ${err instanceof Error ? err.message : String(err)}`
             )
+          }
+        }
+
+        // Collisions can only be seen in a complete listing. Calendars that
+        // ran incrementally (or were skipped on an unchanged ctag) keep the
+        // issues the last full listing found, instead of appearing clean.
+        for (const issue of issuesBeforeSync) {
+          if (!fullyListedCalendarIds.has(issue.calendarId)) {
+            useCalendarStore.getState().addDuplicateUidIssue(issue)
           }
         }
 

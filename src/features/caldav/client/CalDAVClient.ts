@@ -465,6 +465,48 @@ export class CalDAVClient {
     return Array.from(uniqueByUrl.values())
   }
 
+  /**
+   * GET a single calendar object resource by its href.
+   *
+   * `fetchEvents` is time-windowed and comp-filtered; a `sync-collection`
+   * REPORT can name a resource that no such query would return — an event far
+   * outside the window, or one whose metadata changed without DTSTART moving.
+   * Incremental reconciliation therefore fetches changed resources directly.
+   *
+   * Returns `null` for 404/410: the resource vanished between the REPORT and
+   * this GET, which is a tombstone the next sync will report properly, not an
+   * error worth failing the whole calendar over. Any other non-OK status
+   * throws, so the caller leaves the sync token where it is and retries.
+   *
+   * The returned `etag` is best-effort: Radicale sends no
+   * `access-control-expose-headers`, so a browser cannot read `ETag` off this
+   * response. Callers that already hold the etag from the REPORT should prefer
+   * theirs.
+   */
+  async fetchResourceByHref(
+    href: string
+  ): Promise<{ url: string; data: string; etag?: string } | null> {
+    if (!navigator.onLine) {
+      throw new Error('No network connection. Please check your internet connection.')
+    }
+
+    const response = await this.proxyFetch(href, {
+      method: 'GET',
+      headers: {
+        Authorization: this.authHeader,
+        Accept: 'text/calendar',
+      },
+    })
+
+    if (response.status === 404 || response.status === 410) return null
+    if (!response.ok) {
+      throw new Error(`Failed to fetch resource ${href}: ${response.status}`)
+    }
+
+    const data = await response.text()
+    return { url: href, data, etag: response.headers.get('etag') ?? undefined }
+  }
+
   async createEvent(
     calendarUrl: string,
     iCalString: string,

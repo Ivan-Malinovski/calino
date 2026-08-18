@@ -4,6 +4,7 @@ import { useCalendarStore } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
 import { showToast } from '@/lib/toast'
 import type { CalendarEvent } from '@/types'
+import type { CalDAVCalendar } from '../../types'
 
 // ---------------------------------------------------------------------------
 // Mock every module that useCalDAV imports from
@@ -1673,6 +1674,340 @@ describe('useCalDAV', () => {
       expect(useCalendarStore.getState().calendars).toContainEqual(
         expect.objectContaining({ ...updates, id: 'cal-1', isVisible: false, isDefault: true })
       )
+    })
+  })
+
+  // -----------------------------------------------------------------------
+  // Phase 4 step 5: resource-level incremental reconciliation
+  // -----------------------------------------------------------------------
+  describe('incremental sync (RFC 6578)', () => {
+    const STORED: CalDAVCalendar = {
+      ...mockCalendar,
+      ctag: 'ctag-old',
+      syncToken: 'http://example.com/ns/sync/100',
+    }
+
+    /** A calendar the server reports as changed since our stored cursors. */
+    const SERVER_CHANGED = { ...STORED, ctag: 'ctag-new', syncToken: 'ignored-by-caller' }
+
+    function seedEvent(id: string, resourceHref: string): void {
+      useCalendarStore.getState().addEvent({
+        id,
+        uid: id,
+        calendarId: 'cal-1',
+        title: id,
+        start: '2025-06-01T10:00:00.000Z',
+        end: '2025-06-01T11:00:00.000Z',
+        isAllDay: false,
+        resourceHref,
+      })
+    }
+
+    function mockClient(overrides: Record<string, unknown>): {
+      fetchEvents: ReturnType<typeof vi.fn>
+      syncCollection: ReturnType<typeof vi.fn>
+      fetchResourceByHref: ReturnType<typeof vi.fn>
+    } {
+      const client = {
+        fetchCalendars: vi.fn().mockResolvedValue([SERVER_CHANGED]),
+        fetchEvents: vi.fn().mockResolvedValue([]),
+        syncCollection: vi
+          .fn()
+          .mockResolvedValue({ changes: [], newSyncToken: null, tokenInvalidated: false }),
+        fetchResourceByHref: vi.fn().mockResolvedValue(null),
+        createEvent: vi.fn(),
+        updateEvent: vi.fn(),
+        deleteEvent: vi.fn(),
+        ...overrides,
+      }
+      mockCalDAVClient.createCalDAVClient.mockResolvedValue(
+        client as unknown as Awaited<ReturnType<typeof CalDAVClientModule.createCalDAVClient>>
+      )
+      return client as unknown as {
+        fetchEvents: ReturnType<typeof vi.fn>
+        syncCollection: ReturnType<typeof vi.fn>
+        fetchResourceByHref: ReturnType<typeof vi.fn>
+      }
+    }
+
+    function seedAccount(stored = STORED): void {
+      mockAccountStorage.getAllAccounts.mockReturnValue([mockAccount])
+      mockAccountStorage.getAllCalendars.mockReturnValue([stored])
+      mockAccountStorage.getAccountById.mockReturnValue(mockAccount)
+      mockAccountStorage.getCalendarsByAccountId.mockReturnValue([stored])
+    }
+
+    async function runSync(): Promise<void> {
+      const { result } = renderHook(() => useCalDAV())
+      await waitFor(() => expect(result.current.accounts).toHaveLength(1))
+      await act(async () => {
+        await result.current.syncAccount('acc-1')
+      })
+    }
+
+    it('makes no per-calendar fetch when the ctag is unchanged', async () => {
+      seedAccount()
+      const client = mockClient({
+        fetchCalendars: vi.fn().mockResolvedValue([{ ...STORED, ctag: 'ctag-old' }]),
+      })
+
+      await runSync()
+
+      expect(client.syncCollection).not.toHaveBeenCalled()
+      expect(client.fetchEvents).not.toHaveBeenCalled()
+    })
+
+    it('does not skip on an unchanged ctag when no sync token is stored', async () => {
+      // A ctag match is only trustworthy alongside a cursor proving some
+      // earlier pass actually reconciled this collection.
+      seedAccount({ ...STORED, syncToken: null })
+      const client = mockClient({
+        fetchCalendars: vi.fn().mockResolvedValue([{ ...STORED, ctag: 'ctag-old' }]),
+      })
+
+      await runSync()
+
+      expect(client.fetchEvents).toHaveBeenCalled()
+    })
+
+    it('fetches only the changed resource, by href, and never the time window', async () => {
+      seedAccount()
+      const iCalendarAdapter = await import('../../adapter/iCalendarAdapter')
+      vi.mocked(iCalendarAdapter.parseICALData).mockReturnValue([
+        {
+          id: 'evt-remote',
+          uid: 'evt-remote',
+          calendarId: 'cal-1',
+          // Deliberately outside the sync window a fetchEvents query would use.
+          title: 'Far future',
+          start: '2099-01-01T10:00:00.000Z',
+          end: '2099-01-01T11:00:00.000Z',
+          isAllDay: false,
+        },
+      ])
+      const client = mockClient({
+        syncCollection: vi.fn().mockResolvedValue({
+          changes: [
+            {
+              href: 'https://caldav.example.com/cal/main/far.ics',
+              etag: '"e1"',
+              status: 'changed',
+            },
+          ],
+          newSyncToken: 'http://example.com/ns/sync/200',
+          tokenInvalidated: false,
+        }),
+        fetchResourceByHref: vi.fn().mockResolvedValue({
+          url: 'https://caldav.example.com/cal/main/far.ics',
+          data: 'BEGIN:VCALENDAR\r\nEND:VCALENDAR',
+          etag: '"e1"',
+        }),
+      })
+
+      await runSync()
+
+      expect(client.syncCollection).toHaveBeenCalledWith(
+        'https://caldav.example.com/cal/main/',
+        'http://example.com/ns/sync/100'
+      )
+      expect(client.fetchResourceByHref).toHaveBeenCalledWith(
+        'https://caldav.example.com/cal/main/far.ics'
+      )
+      expect(client.fetchEvents).not.toHaveBeenCalled()
+      expect(useCalendarStore.getState().events).toContainEqual(
+        expect.objectContaining({ id: 'evt-remote', title: 'Far future' })
+      )
+      expect(mockAccountStorage.updateCalendar).toHaveBeenCalledWith('cal-1', {
+        syncToken: 'http://example.com/ns/sync/200',
+      })
+    })
+
+    it('removes the local components of a tombstoned resource and leaves the rest alone', async () => {
+      seedAccount()
+      seedEvent('evt-gone', 'https://caldav.example.com/cal/main/gone.ics')
+      seedEvent('evt-kept', 'https://caldav.example.com/cal/main/kept.ics')
+      const iCalendarAdapter = await import('../../adapter/iCalendarAdapter')
+      vi.mocked(iCalendarAdapter.parseICALData).mockReturnValue([])
+      mockClient({
+        syncCollection: vi.fn().mockResolvedValue({
+          changes: [
+            { href: 'https://caldav.example.com/cal/main/gone.ics', etag: null, status: 'removed' },
+          ],
+          newSyncToken: 'http://example.com/ns/sync/200',
+          tokenInvalidated: false,
+        }),
+      })
+
+      await runSync()
+
+      const ids = useCalendarStore.getState().events.map((e) => e.id)
+      expect(ids).not.toContain('evt-gone')
+      // Not named by the REPORT, so this sync says nothing about it.
+      expect(ids).toContain('evt-kept')
+    })
+
+    it('matches a tombstone whose href arrives server-relative', async () => {
+      seedAccount()
+      seedEvent('evt-gone', 'https://caldav.example.com/cal/main/gone.ics')
+      const iCalendarAdapter = await import('../../adapter/iCalendarAdapter')
+      vi.mocked(iCalendarAdapter.parseICALData).mockReturnValue([])
+      mockClient({
+        syncCollection: vi.fn().mockResolvedValue({
+          changes: [{ href: '/cal/main/gone.ics', etag: null, status: 'removed' }],
+          newSyncToken: 'http://example.com/ns/sync/200',
+          tokenInvalidated: false,
+        }),
+      })
+
+      await runSync()
+
+      expect(useCalendarStore.getState().events.map((e) => e.id)).not.toContain('evt-gone')
+    })
+
+    it('does not advance the sync token when a changed resource cannot be fetched', async () => {
+      seedAccount()
+      seedEvent('evt-kept', 'https://caldav.example.com/cal/main/boom.ics')
+      mockClient({
+        syncCollection: vi.fn().mockResolvedValue({
+          changes: [
+            { href: 'https://caldav.example.com/cal/main/boom.ics', etag: '"e"', status: 'changed' },
+          ],
+          newSyncToken: 'http://example.com/ns/sync/200',
+          tokenInvalidated: false,
+        }),
+        fetchResourceByHref: vi.fn().mockRejectedValue(new Error('502')),
+      })
+
+      const { result } = renderHook(() => useCalDAV())
+      await waitFor(() => expect(result.current.accounts).toHaveLength(1))
+      await act(async () => {
+        await expect(result.current.syncAccount('acc-1')).rejects.toThrow(/finished with errors/)
+      })
+
+      expect(mockAccountStorage.updateCalendar).not.toHaveBeenCalledWith(
+        'cal-1',
+        expect.objectContaining({ syncToken: 'http://example.com/ns/sync/200' })
+      )
+      // A fetch failure is not a deletion.
+      expect(useCalendarStore.getState().events.map((e) => e.id)).toContain('evt-kept')
+    })
+
+    it('does not advance the cursors when a changed resource fails to parse', async () => {
+      seedAccount()
+      seedEvent('evt-kept', 'https://caldav.example.com/cal/main/bad.ics')
+      const iCalendarAdapter = await import('../../adapter/iCalendarAdapter')
+      // A body that yields no components: unreadable, not deleted.
+      vi.mocked(iCalendarAdapter.parseICALData).mockReturnValue([])
+      mockClient({
+        syncCollection: vi.fn().mockResolvedValue({
+          changes: [
+            { href: 'https://caldav.example.com/cal/main/bad.ics', etag: '"e"', status: 'changed' },
+          ],
+          newSyncToken: 'http://example.com/ns/sync/200',
+          tokenInvalidated: false,
+        }),
+        fetchResourceByHref: vi.fn().mockResolvedValue({
+          url: 'https://caldav.example.com/cal/main/bad.ics',
+          data: 'BEGIN:VCALENDAR\r\ngarbage\r\nEND:VCALENDAR',
+        }),
+      })
+
+      await runSync()
+
+      expect(mockAccountStorage.updateCalendar).not.toHaveBeenCalledWith(
+        'cal-1',
+        expect.objectContaining({ syncToken: 'http://example.com/ns/sync/200' })
+      )
+      expect(useCalendarStore.getState().events.map((e) => e.id)).toContain('evt-kept')
+    })
+
+    it('falls back to a full listing when the server rejects the stored token', async () => {
+      seedAccount()
+      const client = mockClient({
+        fetchCalendars: vi
+          .fn()
+          .mockResolvedValue([{ ...SERVER_CHANGED, syncToken: 'http://example.com/ns/sync/300' }]),
+        syncCollection: vi
+          .fn()
+          .mockResolvedValue({ changes: [], newSyncToken: null, tokenInvalidated: true }),
+      })
+
+      await runSync()
+
+      expect(client.fetchEvents).toHaveBeenCalledWith(
+        'https://caldav.example.com/cal/main/',
+        expect.any(String),
+        expect.any(String),
+        true
+      )
+      // The replacement cursor comes from this cycle's PROPFIND, and only
+      // after the full listing was reconciled.
+      expect(mockAccountStorage.updateCalendar).toHaveBeenCalledWith('cal-1', {
+        syncToken: 'http://example.com/ns/sync/300',
+      })
+    })
+
+    it('uses the full-listing path when the server exposes no sync token', async () => {
+      seedAccount({ ...STORED, ctag: null, syncToken: null })
+      const client = mockClient({
+        fetchCalendars: vi
+          .fn()
+          .mockResolvedValue([{ ...STORED, ctag: null, syncToken: null }]),
+      })
+
+      await runSync()
+
+      expect(client.syncCollection).not.toHaveBeenCalled()
+      expect(client.fetchEvents).toHaveBeenCalled()
+    })
+
+    it('does not let an incremental change overwrite a pending local edit', async () => {
+      seedAccount()
+      seedEvent('evt-1', 'https://caldav.example.com/cal/main/evt-1.ics')
+      mockAccountStorage.getPendingChanges.mockReturnValue([
+        {
+          id: 'pc-1',
+          type: 'update',
+          eventId: 'evt-1',
+          calendarId: 'cal-1',
+          data: JSON.stringify(mockEvent),
+          createdAt: new Date().toISOString(),
+          retryCount: 0,
+        },
+      ])
+      const iCalendarAdapter = await import('../../adapter/iCalendarAdapter')
+      vi.mocked(iCalendarAdapter.parseICALData).mockReturnValue([
+        {
+          id: 'evt-1',
+          uid: 'evt-1',
+          calendarId: 'cal-1',
+          title: 'Remote wins?',
+          start: '2025-06-01T10:00:00.000Z',
+          end: '2025-06-01T11:00:00.000Z',
+          isAllDay: false,
+        },
+      ])
+      mockClient({
+        syncCollection: vi.fn().mockResolvedValue({
+          changes: [
+            {
+              href: 'https://caldav.example.com/cal/main/evt-1.ics',
+              etag: '"e"',
+              status: 'changed',
+            },
+          ],
+          newSyncToken: 'http://example.com/ns/sync/200',
+          tokenInvalidated: false,
+        }),
+        fetchResourceByHref: vi.fn().mockResolvedValue({
+          url: 'https://caldav.example.com/cal/main/evt-1.ics',
+          data: 'BEGIN:VCALENDAR\r\nEND:VCALENDAR',
+        }),
+      })
+
+      await runSync()
+
+      expect(useCalendarStore.getState().events.find((e) => e.id === 'evt-1')?.title).toBe('evt-1')
     })
   })
 
