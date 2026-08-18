@@ -24,9 +24,13 @@ import {
   materializeOccurrenceAt,
   rruleAnchor,
   rruleWindow,
+  expandZonedOccurrences,
+  parseOccurrenceInstant,
 } from '@/lib/occurrenceExpansion'
 import { deleteAttachments } from '@/lib/attachmentStore'
+import { deleteRawIcs, deleteRawIcsForCalendar } from '@/lib/rawIcsStore'
 import { useSettingsStore } from '@/store/settingsStore'
+import { toZoneWallClock } from '@/lib/datetime'
 
 // Memo cache for getEventsForDateRange. Keyed by the range; a cached result is
 // reused only when its stored `version` matches the current
@@ -197,7 +201,11 @@ function overrideHasUserEdits(override: CalendarEvent, master: CalendarEvent): b
 function sameOccurrenceInstant(event: CalendarEvent, recurrenceId: string | undefined): boolean {
   if (!recurrenceId) return true
   if (event.isAllDay) return event.start.split('T')[0] === recurrenceId.split('T')[0]
-  return parseISO(event.start).getTime() === parseISO(recurrenceId).getTime()
+  // TZID events store both as naive wall clocks in the series' zone.
+  return (
+    parseOccurrenceInstant(event.start, event.timezone).getTime() ===
+    parseOccurrenceInstant(recurrenceId, event.timezone).getTime()
+  )
 }
 
 function getEventIndex(events: CalendarEvent[]): EventIndex {
@@ -282,8 +290,13 @@ function getEventIndex(events: CalendarEvent[]): EventIndex {
   // was never suppressed and the occurrence rendered twice (#96).
   for (const { event, masterId } of pendingExceptions) {
     const recurrenceId = event.recurrenceId as string
-    const isAllDay = masters.get(masterId)?.isAllDay ?? event.isAllDay
-    const recurrenceKey = isAllDay ? recurrenceId.split('T')[0] : parseISO(recurrenceId).getTime()
+    const master = masters.get(masterId)
+    const isAllDay = master?.isAllDay ?? event.isAllDay
+    // A RECURRENCE-ID names a slot in the master's recurrence set, so it must
+    // be read in the master's zone frame — TZID series store naive wall clocks.
+    const recurrenceKey = isAllDay
+      ? recurrenceId.split('T')[0]
+      : parseOccurrenceInstant(recurrenceId, master?.timezone).getTime()
     exceptions.set(`${event.calendarId}-${masterId}-${recurrenceKey}`, event)
   }
 
@@ -377,10 +390,13 @@ export function getTasksForDay(events: CalendarEvent[], dayKey: string): Calenda
     if (!rruleString) continue
     let occurrences: Date[]
     try {
-      occurrences = getOrCreateRRule(rruleString, rruleAnchor(master, indexed.start)).between(
-        ...rruleWindow(master.isAllDay, dayStart, dayEnd),
-        true
-      )
+      // TZID timed series expand in their own zone (wall clock held across DST).
+      occurrences =
+        expandZonedOccurrences(master, dayStart, dayEnd) ??
+        getOrCreateRRule(rruleString, rruleAnchor(master, indexed.start)).between(
+          ...rruleWindow(master.isAllDay, dayStart, dayEnd),
+          true
+        )
     } catch {
       continue
     }
@@ -391,7 +407,7 @@ export function getTasksForDay(events: CalendarEvent[], dayKey: string): Calenda
       // own right, so here it only suppresses.
       const recurrenceValue = occurrenceRecurrenceValue(occ, shape.occDateStr, master.isAllDay)
       if (index.exceptions.has(`${master.calendarId}-${master.id}-${recurrenceValue}`)) continue
-      if (isOccurrenceExcluded(occ, shape.occDateStr, master.isAllDay, master.excludedDates)) {
+      if (isOccurrenceExcluded(occ, shape.occDateStr, master.isAllDay, master.excludedDates, master.timezone)) {
         continue
       }
       const occurrence = materializeOccurrence(master, shape)
@@ -541,6 +557,33 @@ export const useCalendarStore = create<CalendarStore>()(
         // wipe the stamp `addEvent` made. Dropping the key keeps the first
         // creation time we ever knew about.
         if (safeUpdates.created === undefined) delete safeUpdates.created
+        // Phase 2 (C3) — keep the TZID storage invariant: TZID events store
+        // naive wall clocks in the event zone, but a drag/save/resize can
+        // write a Z instant. Normalize it back to the zone's wall clock so
+        // expansion and serialization never see a mixed frame. Skipped when
+        // the update explicitly clears the timezone.
+        const existingForNormalization = get().events.find((e) => e.id === id)
+        const effectiveTimezone = 'timezone' in safeUpdates ? safeUpdates.timezone : existingForNormalization?.timezone
+        if (effectiveTimezone) {
+          // R1 — dueDate carries the same invariant for timed TZID tasks: the
+          // adapter stores a naive wall clock in the event zone, but the
+          // preview popup (and any save path) can write a device-frame Z
+          // instant. Normalize it back like start/end so display and
+          // serialization never see a mixed frame. A floating (all-day)
+          // dueDate is naive, so toZoneWallClock passes it through untouched.
+          if (
+            safeUpdates.dueDate !== undefined &&
+            safeUpdates.dueDate !== existingForNormalization?.dueDate
+          ) {
+            safeUpdates.dueDate = toZoneWallClock(safeUpdates.dueDate, effectiveTimezone)
+          }
+          if (safeUpdates.start !== undefined && safeUpdates.start !== existingForNormalization?.start) {
+            safeUpdates.start = toZoneWallClock(safeUpdates.start, effectiveTimezone)
+          }
+          if (safeUpdates.end !== undefined && safeUpdates.end !== existingForNormalization?.end) {
+            safeUpdates.end = toZoneWallClock(safeUpdates.end, effectiveTimezone)
+          }
+        }
         if (safeUpdates.start !== undefined && safeUpdates.end !== undefined) {
           if (safeUpdates.start > safeUpdates.end && !safeUpdates.isAllDay) {
             const reason = `start (${safeUpdates.start}) > end (${safeUpdates.end})`
@@ -730,6 +773,10 @@ export const useCalendarStore = create<CalendarStore>()(
       deleteEvent: (id: string): void => {
         // Clean up attachments from IndexedDB (fire and forget)
         deleteAttachments(id).catch(() => {})
+        // The raw ICS is keyed by resource href, not event id — a local-only
+        // event has none, and there is nothing stored for it either.
+        const href = get().events.find((e) => e.id === id)?.resourceHref
+        if (href) deleteRawIcs(href).catch(() => {})
         set((state) => ({
           events: state.events.filter((e) => e.id !== id),
         }))
@@ -879,6 +926,9 @@ export const useCalendarStore = create<CalendarStore>()(
       },
 
       deleteCalendar: (id: string): void => {
+        // Raw ICS blobs carry the calendar id, so they go in one query rather
+        // than per event — which also catches resources no local event maps to.
+        deleteRawIcsForCalendar(id).catch(() => {})
         set((state) => {
           // Clean up attachments for all events in this calendar
           for (const event of state.events) {
@@ -1275,10 +1325,14 @@ export const useCalendarStore = create<CalendarStore>()(
 
               const rule = getOrCreateRRule(rruleString, rruleAnchor(event, eventStart))
 
-              const occurrences = rule.between(
-                ...rruleWindow(event.isAllDay, startDate, endDate),
-                true
-              )
+              // TZID timed series expand in their own zone (wall clock held
+              // across DST); the rrule path stays for all-day/UTC/floating.
+              const occurrences =
+                expandZonedOccurrences(event, startDate, endDate) ??
+                rule.between(
+                  ...rruleWindow(event.isAllDay, startDate, endDate),
+                  true
+                )
               const excludedDates = event.excludedDates || []
 
               for (const occ of occurrences) {
@@ -1301,7 +1355,7 @@ export const useCalendarStore = create<CalendarStore>()(
                 }
 
                 // No exception — honour EXDATE exclusions
-                if (isOccurrenceExcluded(occ, occDateStr, event.isAllDay, excludedDates)) {
+                if (isOccurrenceExcluded(occ, occDateStr, event.isAllDay, excludedDates, event.timezone)) {
                   continue
                 }
 

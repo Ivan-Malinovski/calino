@@ -40,7 +40,7 @@ import {
   TASK_PILL_LAYOUT_MINUTES,
 } from '../lib/eventLayout'
 import { eventCardVariants } from '../lib/eventAnimations'
-import { pad2, toLocalDateString } from '@/lib/datetime'
+import { pad2, toLocalDateString, toEventInstant } from '@/lib/datetime'
 import { HOURS } from '@/lib/hours'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
@@ -264,8 +264,8 @@ export function DayView({
     const fragmentedEvents: CalendarEvent[] = []
 
     for (const event of eventsForDay) {
-      const eventStart = parseISO(event.start)
-      const eventEnd = parseISO(event.end)
+      const eventStart = toEventInstant(event.start, event.timezone)
+      const eventEnd = toEventInstant(event.end, event.timezone)
       const eventStartKey = format(eventStart, 'yyyy-MM-dd')
       const eventEndKey = format(eventEnd, 'yyyy-MM-dd')
 
@@ -337,10 +337,12 @@ export function DayView({
       } else if (dayEvents.length > 0) {
         // Scroll to first event
         const sortedEvents = [...dayEvents].sort(
-          (a, b) => parseISO(a.start).getTime() - parseISO(b.start).getTime()
+          (a, b) =>
+            toEventInstant(a.start, a.timezone).getTime() -
+            toEventInstant(b.start, b.timezone).getTime()
         )
         const firstEvent = sortedEvents[0]
-        const eventStart = parseISO(firstEvent.start)
+        const eventStart = toEventInstant(firstEvent.start, firstEvent.timezone)
         const hours = eventStart.getHours()
         const minutes = eventStart.getMinutes()
         const fraction = (hours * 60 + minutes) / (24 * 60)
@@ -530,8 +532,10 @@ export function DayView({
         isAllDay: false,
       }
     } else {
-      const originalStart = parseISO(originalEvent.start)
-      const originalEnd = parseISO(originalEvent.end)
+      // Phase 2 (C3) — baseline in the device frame so the drop target is
+      // the instant the user sees; updateEvent re-frames it for TZID events.
+      const originalStart = toEventInstant(originalEvent.start, originalEvent.timezone)
+      const originalEnd = toEventInstant(originalEvent.end, originalEvent.timezone)
       const durationMs = originalEnd.getTime() - originalStart.getTime()
       // The droppable cell only tells us which day was dropped on; the time of
       // day comes from how far the card was dragged vertically, snapped to a
@@ -569,7 +573,9 @@ export function DayView({
 
   const renderEvents = (): JSX.Element => {
     const sortedEvents = [...dayEvents].sort(
-      (a, b) => parseISO(a.start).getTime() - parseISO(b.start).getTime()
+      (a, b) =>
+        toEventInstant(a.start, a.timezone).getTime() -
+        toEventInstant(b.start, b.timezone).getTime()
     )
 
     const transparentEvents = sortedEvents.filter((e) => e.transparency === 'transparent')
@@ -627,7 +633,7 @@ export function DayView({
     const taskLayoutItems = timedTasks.map((task) => ({
       ...task,
       end: format(
-        addMinutes(parseISO(task.start), TASK_PILL_LAYOUT_MINUTES),
+        addMinutes(toEventInstant(task.start, task.timezone), TASK_PILL_LAYOUT_MINUTES),
         "yyyy-MM-dd'T'HH:mm:ss"
       ),
     }))

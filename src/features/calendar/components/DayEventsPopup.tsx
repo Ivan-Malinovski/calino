@@ -1,7 +1,7 @@
 import { type JSX, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { format } from 'date-fns'
-import { formatTime } from '@/lib/datetime'
+import { formatEventTime } from '@/lib/datetime'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { useModalDismiss } from '@/hooks/useModalDismiss'
@@ -159,7 +159,7 @@ export function DayEventsPopup({
                 <div className={styles.eventTime}>
                   {event.isAllDay
                     ? 'All day'
-                    : `${formatTime(event.start, timeFormat)} - ${formatTime(event.end, timeFormat)}`}
+                    : `${formatEventTime(event.start, event.timezone, timeFormat)} - ${formatEventTime(event.end, event.timezone, timeFormat)}`}
                 </div>
                 {event.location && (
                   <div className={styles.eventLocation}>

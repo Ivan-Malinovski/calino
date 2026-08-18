@@ -1,0 +1,147 @@
+import { describe, it, expect } from 'vitest'
+import { parseICALData, eventToICAL } from '../iCalendarAdapter'
+
+/**
+ * Phase 0 verification suite.
+ *
+ * These tests pin down CURRENT, KNOWN-WRONG behaviour of the iCalendar
+ * adapter so that a later fix has to flip each assertion deliberately.
+ * Every case carries a comment naming the RFC 5545 behaviour that ought
+ * to replace it.
+ *
+ * The suite runs in two projects, `west` (America/New_York) and `east`
+ * (Europe/Copenhagen) — see vite.config.ts. A test file cannot pick its
+ * own zone, so anything zone-dependent derives its expectation from the
+ * ambient zone via an oracle independent of the code under test
+ * (`new Date(...)` + `toISOString()`), never a hardcoded offset.
+ */
+
+const FLOATING_ICS = [
+  'BEGIN:VCALENDAR',
+  'VERSION:2.0',
+  'PRODID:-//Calino Phase 0//EN',
+  'CALSCALE:GREGORIAN',
+  'BEGIN:VEVENT',
+  'UID:floating-1',
+  'DTSTAMP:20260101T000000Z',
+  'DTSTART:20260102T100000',
+  'DTEND:20260102T110000',
+  'SUMMARY:Floating meeting',
+  'END:VEVENT',
+  'END:VCALENDAR',
+].join('\r\n')
+
+
+function dtstartLine(ics: string): string {
+  return ics.split('\r\n').find((l) => l.startsWith('DTSTART')) ?? ''
+}
+
+function dtendLine(ics: string): string {
+  return ics.split('\r\n').find((l) => l.startsWith('DTEND')) ?? ''
+}
+
+describe('Phase 0 verification: floating time round-trip (Bug A)', () => {
+  it('parses a floating DTSTART without promoting it to an instant', () => {
+    const [event] = parseICALData(FLOATING_ICS, 'cal-1')
+
+    // This half is already correct: no Z, no offset, no zone shift.
+    expect(event.start).toBe('2026-01-02T10:00:00')
+    expect(event.end).toBe('2026-01-02T11:00:00')
+    expect(event.isAllDay).toBe(false)
+  })
+
+  it('FIXED (Phase 2 C3): a floating time round-trips unchanged', () => {
+    const [event] = parseICALData(FLOATING_ICS, 'cal-1')
+    const out = eventToICAL(event)
+
+    // RFC 5545 §3.3.5 form 1: a floating time round-trips unchanged as
+    // `DTSTART:20260102T100000` — no Z, no TZID. Phase 2 C3 replaced
+    // the `ICAL.Time.fromJSDate(new Date(isoString), true)` fallthrough (which
+    // rebased the wall clock through the browser's offset into UTC) with a
+    // true floating ICAL.Time.
+    expect(dtstartLine(out)).toBe('DTSTART:20260102T100000')
+    expect(dtendLine(out)).toBe('DTEND:20260102T110000')
+    expect(dtstartLine(out)).not.toMatch(/Z$/)
+    expect(out).toContain('DTSTART:20260102T100000\r\n')
+  })
+
+  it('FIXED (Phase 2 C3): parse -> serialize -> parse is the identity for a floating time', () => {
+    const [first] = parseICALData(FLOATING_ICS, 'cal-1')
+    const [second] = parseICALData(eventToICAL(first), 'cal-1')
+
+    // CORRECT: parse -> serialize -> parse is the identity for a
+    // floating time. Phase 2 C3 keeps it floating, so the second pass
+    // comes back with the same naive wall clock.
+    expect(second.start).toBe(first.start)
+    expect(second.start).toBe('2026-01-02T10:00:00')
+  })
+})
+
+describe('Phase 0 verification: ICS import robustness (Bug B)', () => {
+  it('FIXED (Phase 4): two concatenated VCALENDAR blocks parse as 2 events', () => {
+    const twoDocuments = [
+      FLOATING_ICS,
+      FLOATING_ICS.replace('UID:floating-1', 'UID:floating-2'),
+    ].join('\r\n')
+
+    // `ICAL.parse` returns an ARRAY of jCal documents for concatenated
+    // VCALENDAR blocks. iCalendarAdapter now detects that shape and builds
+    // one `ICAL.Component` per document instead of mis-binding the array
+    // straight into a single `ICAL.Component`.
+    const events = parseICALData(twoDocuments, 'cal-1')
+    expect(events).toHaveLength(2)
+    expect(events.map((e) => e.uid).sort()).toEqual(['floating-1', 'floating-2'])
+  })
+
+  it('FIXED (Phase 4): a leading UTF-8 BOM no longer swallows the file', () => {
+    const withBom = '﻿' + FLOATING_ICS
+
+    // A BOM is a legal artefact of a UTF-8 export. normalizeICalText strips
+    // it before ICAL.parse runs, so this now yields 1 event instead of 0.
+    expect(parseICALData(withBom, 'cal-1')).toHaveLength(1)
+  })
+
+  it('BUG: a truncated file (missing END:VEVENT) silently yields 0 events', () => {
+    const truncated = FLOATING_ICS.replace('END:VEVENT\r\n', '')
+
+    // CORRECT: either recover the complete VEVENTs that precede the
+    // truncation, or surface a real error to the user. Today ICAL.parse
+    // throws ParserError "invalid ical body. component began but did not
+    // end", which is swallowed into an empty, indistinguishable result.
+    expect(parseICALData(truncated, 'cal-1')).toHaveLength(0)
+  })
+
+  it('BUG: one unparseable DTSTART drops that VEVENT with only a console.error', () => {
+    const mixed = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'PRODID:-//Calino Phase 0//EN',
+      'BEGIN:VEVENT',
+      'UID:good-1',
+      'DTSTAMP:20260101T000000Z',
+      'DTSTART:20260102T100000Z',
+      'DTEND:20260102T110000Z',
+      'SUMMARY:Good',
+      'END:VEVENT',
+      'BEGIN:VEVENT',
+      'UID:bad-1',
+      'DTSTAMP:20260101T000000Z',
+      'DTSTART:notadate',
+      'SUMMARY:Bad',
+      'END:VEVENT',
+      'END:VCALENDAR',
+    ].join('\r\n')
+
+    const events = parseICALData(mixed, 'cal-1')
+
+    // CORRECT: the caller should learn that 1 of 2 events was rejected
+    // (a skipped/failed count surfaced to the import UI). Today the good
+    // event survives and the bad one vanishes silently — the only trace
+    // is `console.error('Failed to parse vevent:', ...)` with
+    // Error: invalid date-time value: "nota-da-teT::"
+    // (icalTypeMapping.ts L547, via Event.startDate).
+    expect(events).toHaveLength(1)
+    expect(events[0].uid).toBe('good-1')
+    expect(events.some((e) => e.uid === 'bad-1')).toBe(false)
+  })
+})

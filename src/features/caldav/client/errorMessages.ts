@@ -10,7 +10,17 @@
  */
 
 export type SyncErrorCode =
-  'cors' | 'network' | 'timeout' | 'auth' | 'not-found' | 'conflict' | 'server' | 'unknown'
+  | 'cors'
+  | 'network'
+  | 'timeout'
+  | 'auth'
+  | 'forbidden'
+  | 'quota'
+  | 'rate-limited'
+  | 'not-found'
+  | 'conflict'
+  | 'server'
+  | 'unknown'
 
 /**
  * Bucket a raw error message into a code.
@@ -39,13 +49,30 @@ export function classifySyncError(message: string): SyncErrorCode {
     return 'timeout'
   }
 
-  if (
-    lower.includes('401') ||
-    lower.includes('403') ||
-    lower.includes('unauthorized') ||
-    lower.includes('forbidden')
-  ) {
+  // 403 is distinct from 401: the credentials were accepted but the server
+  // refused the operation (typically no write access). Must be checked before
+  // the auth bucket so "403 Forbidden" no longer lands on 'auth'.
+  if (lower.includes('403') || lower.includes('forbidden')) {
+    return 'forbidden'
+  }
+
+  if (lower.includes('401') || lower.includes('unauthorized')) {
     return 'auth'
+  }
+
+  // 507 Insufficient Storage is a 5xx, but means something specific, so it
+  // must be checked before the generic 5xx regex below or it falls into
+  // 'server'.
+  if (lower.includes('507') || lower.includes('insufficient storage') || lower.includes('quota')) {
+    return 'quota'
+  }
+
+  if (
+    lower.includes('429') ||
+    lower.includes('too many requests') ||
+    lower.includes('rate limit')
+  ) {
+    return 'rate-limited'
   }
 
   if (lower.includes('404') || lower.includes('not found')) {
@@ -105,6 +132,12 @@ export function syncErrorReason(code: SyncErrorCode, raw: string): string {
       return 'the server took too long to respond.'
     case 'auth':
       return 'authentication error. Check your username and password.'
+    case 'forbidden':
+      return 'the server refused the change. You may not have write access to this calendar, or the server rejected the data.'
+    case 'quota':
+      return 'the server storage is full. Free up space on the server and try again.'
+    case 'rate-limited':
+      return 'the server is rate-limiting requests. Try again in a moment.'
     case 'not-found':
       return "the resource wasn't found on the server."
     case 'conflict':
@@ -137,6 +170,12 @@ export function connectionErrorMessage(raw: string, code?: SyncErrorCode): strin
     // supplies the app-specific-password guidance for providers that need it.
     case 'auth':
       return 'The server rejected these credentials.'
+    case 'forbidden':
+      return 'The server refused the request. Check that you have write access to this calendar.'
+    case 'quota':
+      return 'The server storage is full. Free up space on the server and try again.'
+    case 'rate-limited':
+      return 'The server is rate-limiting requests. Try again in a moment.'
     case 'not-found':
       return "The server answered, but there's nothing at that address. Check the URL path."
     case 'server':

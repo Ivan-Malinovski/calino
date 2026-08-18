@@ -5,6 +5,7 @@ import type {
   CreateCalendarOptions,
   UpdateCalendarOptions,
 } from '../types'
+import { basicAuthHeader } from './basicAuth'
 import { v4 as uuidv4 } from 'uuid'
 import { decodeBase64 } from '@/lib/settingsSync'
 import { webFetch } from '@/lib/webFetch'
@@ -22,6 +23,140 @@ import {
 } from './freeBusy'
 
 const NETWORK_TIMEOUT_MS = 15_000
+
+// ---------------------------------------------------------------------------
+// sync-collection REPORT (RFC 6578) types
+// ---------------------------------------------------------------------------
+
+/**
+ * One entry from a sync-collection REPORT response. `href` is always
+ * resolved to an absolute URL (relative/percent-encoded server hrefs are
+ * normalized via `resolveDavHref`). `changed` covers both newly-added and
+ * modified resources — sync-collection alone cannot distinguish the two;
+ * the caller determines that by checking whether the href is already known.
+ */
+export interface SyncCollectionChange {
+  href: string
+  etag: string | null
+  status: 'changed' | 'removed'
+}
+
+export interface SyncCollectionResult {
+  changes: SyncCollectionChange[]
+  newSyncToken: string | null
+  /** True when the server rejected the token (400/507) or the request otherwise
+   * failed — the caller must fall back to a full sync and discard the old token. */
+  tokenInvalidated: boolean
+}
+
+// Upper bound for an honored Retry-After (seconds). Anything larger — or
+// unparseable — is treated as absent, so a misbehaving server can't stall the
+// pending-change queue for hours on a single 429.
+const MAX_HONORED_RETRY_AFTER_SECONDS = 3600
+
+/**
+ * Parse an HTTP `Retry-After` header value into whole seconds, clamped to
+ * [0, MAX_HONORED_RETRY_AFTER_SECONDS]. Supports both RFC 9110 forms:
+ * integer delay-seconds and an HTTP-date. Returns undefined for missing,
+ * empty, or unparseable values (the caller then falls back to the pure
+ * exponential backoff).
+ */
+function parseRetryAfterSeconds(raw: string | null | undefined): number | undefined {
+  if (!raw) return undefined
+  const trimmed = raw.trim()
+  if (!trimmed) return undefined
+  let seconds: number
+  if (/^\d+$/.test(trimmed)) {
+    seconds = Number(trimmed)
+  } else {
+    const when = Date.parse(trimmed)
+    if (Number.isNaN(when)) return undefined
+    seconds = Math.max(0, Math.ceil((when - Date.now()) / 1000))
+  }
+  if (!Number.isFinite(seconds) || seconds < 0) return undefined
+  return Math.min(seconds, MAX_HONORED_RETRY_AFTER_SECONDS)
+}
+
+/**
+ * Interpret a DAV:current-user-privilege-set as parsed by tsdav/xml-js
+ * (roughly `{ privilege: { read: {}, write: {}, ... } }`). Returns null when
+ * the server did not answer the property — distinct from "answered with no
+ * write grant", which is a genuine read-only calendar (RFC 3744 §5.1: a
+ * writable collection grants `write`; `all` or `unlocked` imply it).
+ */
+/**
+ * Resolve a server-returned DAV href against a base URL. Hrefs are usually
+ * paths (`/ivan/calendars/`); some servers return absolute URLs. Unresolvable
+ * input is returned unchanged rather than throwing.
+ */
+export function resolveDavHref(baseUrl: string, href: string): string {
+  try {
+    return new URL(href, baseUrl).href
+  } catch {
+    return href
+  }
+}
+
+/**
+ * tsdav's DAVCalendar type does not declare `projectedProps`, which is where it
+ * stashes the values of any extra props passed via `customProps`/`props`.
+ */
+function projectedProps(cal: object): Record<string, unknown> | undefined {
+  const projected = (cal as { projectedProps?: unknown }).projectedProps
+  if (projected == null || typeof projected !== 'object') return undefined
+  return projected as Record<string, unknown>
+}
+
+/**
+ * Collect every element name appearing anywhere under a parsed privilege tree.
+ *
+ * Three shapes have to survive this, and only the first is obvious:
+ *
+ *  - RFC 3744 defines `current-user-privilege-set` as a *sequence* of
+ *    `<privilege>` elements, and xml-js (compact mode, `alwaysArray: false`)
+ *    turns repeated siblings into an ARRAY. Reading `Object.keys()` off that
+ *    array yields "0", "1", "2" — no privilege name in sight, which reads as
+ *    "granted something, but not write" and marks every calendar read-only.
+ *  - `<write>` is an aggregate of `<write-content>`/`<write-properties>`
+ *    (§3.2), and `<all>` aggregates everything, so the privilege that matters
+ *    may be nested rather than top-level.
+ *  - XML prefixes are arbitrary: sabre sends `<d:write/>`, Radicale sends
+ *    `<write/>`. Compare on the local name.
+ *
+ * Keys beginning with `_` are xml-js metadata (`_attributes`, `_text`), not
+ * elements.
+ */
+function collectPrivilegeNames(node: unknown, into: Set<string>): void {
+  if (Array.isArray(node)) {
+    for (const item of node) collectPrivilegeNames(item, into)
+    return
+  }
+  if (node == null || typeof node !== 'object') return
+  for (const [key, value] of Object.entries(node)) {
+    if (key.startsWith('_')) continue
+    into.add(key.slice(key.indexOf(':') + 1).toLowerCase())
+    collectPrivilegeNames(value, into)
+  }
+}
+
+function parsePrivileges(raw: unknown): { canWrite: boolean } | null {
+  if (raw == null || typeof raw !== 'object') return null
+  const privilege = (raw as { privilege?: unknown }).privilege
+  if (privilege == null || typeof privilege !== 'object') return null
+  const granted = new Set<string>()
+  collectPrivilegeNames(privilege, granted)
+  if (granted.size === 0) return null
+  const canWrite =
+    granted.has('write') ||
+    granted.has('all') ||
+    granted.has('unlocked') ||
+    granted.has('write-content') ||
+    granted.has('write-properties') ||
+    // A calendar you may add resources to is writable even if the server
+    // spells that as bind/unbind rather than as a write aggregate.
+    granted.has('bind')
+  return { canWrite }
+}
 
 function escapeXml(str: string): string {
   return (
@@ -145,7 +280,8 @@ export class CalDAVClient {
     this.serverUrl = serverUrl
     this.proxyUrl = proxyUrl
     this.credentials = credentials
-    this.authHeader = `Basic ${btoa(`${credentials.username}:${credentials.password}`)}`
+    // UTF-8-safe Basic auth (btoa alone mangles non-ASCII credentials).
+    this.authHeader = basicAuthHeader(credentials.username, credentials.password)
     this.proxyFetch = proxyUrl ? createProxyFetch(proxyUrl) : fetchWithTimeout
   }
 
@@ -156,7 +292,11 @@ export class CalDAVClient {
         username: this.credentials.username,
         password: this.credentials.password,
       },
-      authMethod: 'Basic',
+      // tsdav's own Basic auth encodes Latin-1 codepoints and throws on
+      // anything above U+00FF — hand it the same UTF-8 header we use for
+      // direct requests so every tsdav call authenticates identically.
+      authMethod: 'Custom',
+      authFunction: async () => ({ Authorization: this.authHeader }),
       defaultAccountType: 'caldav',
       fetch: this.proxyUrl ? createProxyFetch(this.proxyUrl) : fetchWithTimeout,
     })
@@ -174,30 +314,81 @@ export class CalDAVClient {
       throw new Error('No network connection. Please check your internet connection.')
     }
     const client = this.getClient()
-    const davCalendars = await client.fetchCalendars()
+    // tsdav's defaults are replaced wholesale when `props` is passed, so spell
+    // them out and add the Phase 4 extras: current-user-privilege-set (readOnly),
+    // cs:subscribed and cs:calendar-order. `projectedProps` carries the raw
+    // parsed extras onto the returned calendar objects.
+    const davCalendars = await client.fetchCalendars({
+      props: {
+        'c:calendar-description': {},
+        'c:calendar-timezone': {},
+        'd:displayname': {},
+        'ca:calendar-color': {},
+        'cs:getctag': {},
+        'd:resourcetype': {},
+        'c:supported-calendar-component-set': {},
+        'd:sync-token': {},
+        'd:current-user-privilege-set': {},
+        'cs:subscribed': {},
+        'cs:calendar-order': {},
+      },
+      projectedProps: {
+        currentUserPrivilegeSet: true,
+        subscribed: true,
+        calendarOrder: true,
+      },
+    })
 
     this.cachedCalendars = davCalendars
 
-    return davCalendars.map((cal, index) => {
-      const supportedComponents = cal.components?.filter(
-        (component): component is 'VEVENT' | 'VTODO' =>
-          component === 'VEVENT' || component === 'VTODO'
-      )
+    return davCalendars
+      .filter((cal) => {
+        // A schedule inbox/outbox is a CalDAV collection but never a calendar
+        // the user reads or writes events from.
+        const resourceTypes: string[] = cal.resourcetype ?? []
+        return !resourceTypes.some(
+          (rt) =>
+            rt === 'inbox' ||
+            rt === 'schedule-inbox' ||
+            rt === 'outbox' ||
+            rt === 'schedule-outbox'
+        )
+      })
+      .map((cal, index) => {
+        const supportedComponents = cal.components?.filter(
+          (component): component is 'VEVENT' | 'VTODO' | 'VJOURNAL' =>
+            component === 'VEVENT' || component === 'VTODO' || component === 'VJOURNAL'
+        )
 
-      return {
-        id: cal.url || `cal-${index}-${uuidv4()}`,
-        // Note: accountId is NOT set here - the caller must set it
-        // this.credentials.id is the credential ID, not the account ID
-        url: cal.url || '',
-        name: typeof cal.displayName === 'string' ? cal.displayName : 'Unnamed Calendar',
-        color: normalizeColor(cal.calendarColor as string | null | undefined),
-        ctag: null,
-        syncToken: null,
-        isVisible: true,
-        isDefault: index === 0,
-        supportedComponents: cal.components ? supportedComponents : undefined,
-      }
-    })
+        const projected = projectedProps(cal)
+        const privileges = parsePrivileges(projected?.currentUserPrivilegeSet)
+        const isSubscribed = Boolean(projected?.subscribed)
+        // No privilege info at all (server didn't answer the prop) → assume
+        // writable; undefined must not read as read-only. A subscription is
+        // read-only regardless of what the privileges claim.
+        const readOnly = isSubscribed || (privileges !== null && !privileges.canWrite)
+        const calendarOrderRaw = projected?.calendarOrder
+        const calendarOrder = Number(calendarOrderRaw)
+
+        return {
+          id: cal.url || `cal-${index}-${uuidv4()}`,
+          // Note: accountId is NOT set here - the caller must set it
+          // this.credentials.id is the credential ID, not the account ID
+          url: cal.url || '',
+          name: typeof cal.displayName === 'string' ? cal.displayName : 'Unnamed Calendar',
+          color: normalizeColor(cal.calendarColor as string | null | undefined),
+          // tsdav already parsed cs:getctag / d:sync-token from the same
+          // PROPFIND — capture them instead of discarding.
+          ctag: (cal.ctag as string | null | undefined) ?? null,
+          syncToken: (cal.syncToken as string | null | undefined) ?? null,
+          isVisible: true,
+          isDefault: index === 0,
+          supportedComponents: cal.components ? supportedComponents : undefined,
+          readOnly,
+          isSubscribed: isSubscribed || undefined,
+          calendarOrder: Number.isFinite(calendarOrder) ? calendarOrder : undefined,
+        }
+      })
   }
 
   /**
@@ -312,6 +503,48 @@ export class CalDAVClient {
     return Array.from(uniqueByUrl.values())
   }
 
+  /**
+   * GET a single calendar object resource by its href.
+   *
+   * `fetchEvents` is time-windowed and comp-filtered; a `sync-collection`
+   * REPORT can name a resource that no such query would return — an event far
+   * outside the window, or one whose metadata changed without DTSTART moving.
+   * Incremental reconciliation therefore fetches changed resources directly.
+   *
+   * Returns `null` for 404/410: the resource vanished between the REPORT and
+   * this GET, which is a tombstone the next sync will report properly, not an
+   * error worth failing the whole calendar over. Any other non-OK status
+   * throws, so the caller leaves the sync token where it is and retries.
+   *
+   * The returned `etag` is best-effort: Radicale sends no
+   * `access-control-expose-headers`, so a browser cannot read `ETag` off this
+   * response. Callers that already hold the etag from the REPORT should prefer
+   * theirs.
+   */
+  async fetchResourceByHref(
+    href: string
+  ): Promise<{ url: string; data: string; etag?: string } | null> {
+    if (!navigator.onLine) {
+      throw new Error('No network connection. Please check your internet connection.')
+    }
+
+    const response = await this.proxyFetch(href, {
+      method: 'GET',
+      headers: {
+        Authorization: this.authHeader,
+        Accept: 'text/calendar',
+      },
+    })
+
+    if (response.status === 404 || response.status === 410) return null
+    if (!response.ok) {
+      throw new Error(`Failed to fetch resource ${href}: ${response.status}`)
+    }
+
+    const data = await response.text()
+    return { url: href, data, etag: response.headers.get('etag') ?? undefined }
+  }
+
   async createEvent(
     calendarUrl: string,
     iCalString: string,
@@ -362,8 +595,12 @@ export class CalDAVClient {
   /**
    * Fetch the current ETag for a single calendar object via PROPFIND (Depth 0).
    * Returns '' on any failure — callers treat a missing etag as non-fatal.
+   *
+   * Public so the pending-change replay can recover from a stale-etag 412:
+   * it re-fetches the current etag and re-applies the write against it
+   * instead of replaying the dead If-Match forever.
    */
-  private async fetchEtag(eventUrl: string): Promise<string> {
+  async fetchEtag(eventUrl: string): Promise<string> {
     try {
       const response = await this.proxyFetch(eventUrl, {
         method: 'PROPFIND',
@@ -477,9 +714,16 @@ export class CalDAVClient {
     const body = await response.text().catch(() => '')
     const error = new Error(
       `${method} ${url} failed: HTTP ${response.status}${body ? `: ${body.slice(0, 200)}` : ''}`
-    ) as Error & { status: number; body?: string }
+    ) as Error & { status: number; body?: string; retryAfter?: number }
     error.status = response.status
     if (body) error.body = body
+    // A rate-limited response (429) may carry Retry-After — the server's own
+    // minimum wait before the next attempt, in seconds (integer or HTTP-date).
+    // Attach it (clamped) so the pending-change backoff can honor it. Missing
+    // or invalid values degrade to the exponential schedule. The optional
+    // chaining keeps mock Responses without headers from throwing here.
+    const retryAfter = parseRetryAfterSeconds(response.headers?.get?.('retry-after'))
+    if (retryAfter !== undefined) error.retryAfter = retryAfter
     throw error
   }
 
@@ -597,53 +841,95 @@ export class CalDAVClient {
     )
   }
 
+  /**
+   * Real principal discovery (RFC 5397 + RFC 4791 §6.2.1):
+   *   1. PROPFIND the server root for DAV:current-user-principal
+   *   2. PROPFIND that principal for CALDAV:calendar-home-set
+   * Both answers are parsed namespace-aware (getElementsByTagNameNS), so a
+   * Radicale-shaped response whose inner <href> is unprefixed parses exactly
+   * like a prefixed one — the regex this replaces matched only
+   * `<C:calendar-home-set><d:href>` and failed on precisely that server.
+   * Hrefs are resolved against the base URL (they are usually relative), and
+   * the principal URL needs no username interpolation, so odd usernames never
+   * break discovery.
+   */
   private async findCalendarHomeFromPrincipal(): Promise<string | null> {
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/xml; charset=utf-8',
-      Authorization: this.authHeader,
-      Depth: '0',
-    }
+    const baseUrl = this.serverUrl.replace(/\/$/, '')
+    try {
+      const principalHref = await this.propfindFirstHref(
+        baseUrl,
+        'DAV:',
+        'current-user-principal'
+      )
+      if (!principalHref) return null
+      const principalUrl = resolveDavHref(baseUrl, principalHref)
 
-    // Try to find the current user's principal
-    const principalXml = `<?xml version="1.0" encoding="UTF-8" ?>
-<d:propfind xmlns:d="DAV:" xmlns:C="urn:ietf:params:xml:ns:caldav">
+      const homeHref = await this.propfindFirstHref(
+        principalUrl,
+        'urn:ietf:params:xml:ns:caldav',
+        'calendar-home-set'
+      )
+      if (!homeHref) return null
+      return resolveDavHref(baseUrl, homeHref)
+    } catch {
+      return null
+    }
+  }
+
+  /**
+   * First descendant element in `ns` with `localName`, falling back to a
+   * local-name-only match. The fallback is deliberate: real servers (notably
+   * Radicale) emit child `<href>` elements with no namespace at all when no
+   * default namespace is declared — strictly invalid, but common enough that
+   * a namespace-only lookup misses the very servers this discovery targets.
+   */
+  private firstElementByLocalName(
+    scope: Element | Document,
+    ns: string,
+    localName: string
+  ): Element | undefined {
+    const strict = scope.getElementsByTagNameNS(ns, localName)[0]
+    if (strict) return strict
+    return Array.from(scope.getElementsByTagName('*')).find((el) => el.localName === localName)
+  }
+
+  /**
+   * PROPFIND Depth:0 asking for one property; returns the text of its first
+   * descendant href (the shape both current-user-principal and
+   * calendar-home-set use), or null when the server did not answer it.
+   */
+  private async propfindFirstHref(
+    url: string,
+    namespace: string,
+    localName: 'current-user-principal' | 'calendar-home-set'
+  ): Promise<string | null> {
+    const prop =
+      localName === 'calendar-home-set'
+        ? '<C:calendar-home-set xmlns:C="urn:ietf:params:xml:ns:caldav"/>'
+        : '<d:current-user-principal xmlns:d="DAV:"/>'
+    const body = `<?xml version="1.0" encoding="UTF-8" ?>
+<d:propfind xmlns:d="DAV:">
   <d:prop>
-    <C:calendar-home-set/>
+    ${prop}
   </d:prop>
 </d:propfind>`
 
-    // Try common principal URLs
-    const principalPaths = [
-      '/dav.php/principals/',
-      '/principals/',
-      '/remote.php/dav/principals/',
-      '/dav/',
-    ]
+    const response = await this.proxyFetch(url, {
+      method: 'PROPFIND',
+      headers: {
+        'Content-Type': 'application/xml; charset=utf-8',
+        Authorization: this.authHeader,
+        Depth: '0',
+      },
+      body,
+    })
 
-    for (const path of principalPaths) {
-      const baseUrl = this.serverUrl.replace(/\/$/, '')
-      const testUrl = `${baseUrl}${path}${this.credentials.username}/`
-
-      try {
-        const response = await this.proxyFetch(testUrl, {
-          method: 'PROPFIND',
-          headers,
-          body: principalXml,
-        })
-
-        if (response.ok || response.status === 207) {
-          const text = await response.text()
-          const match = text.match(/<C:calendar-home-set>\s*<d:href>([^<]+)<\/d:href>/)
-          if (match?.[1]) {
-            return match[1].startsWith('http') ? match[1] : `${baseUrl}${match[1]}`
-          }
-        }
-      } catch {
-        // Try next path
-      }
-    }
-
-    return null
+    if (!response.ok && response.status !== 207) return null
+    const doc = this.parseXmlDocument(await response.text())
+    const propEl = this.firstElementByLocalName(doc, namespace, localName)
+    if (!propEl) return null
+    const hrefEl = this.firstElementByLocalName(propEl, 'DAV:', 'href')
+    return hrefEl?.textContent?.trim() || null
   }
 
   private async findCalendarHomeFromCalendars(): Promise<string | null> {
@@ -778,6 +1064,140 @@ export class CalDAVClient {
   /** Text content of the first descendant element matching a local name in the DAV: namespace. */
   private getDavElementText(scope: Document | Element, localName: string): string | null {
     return this.getDavElements(scope, localName)[0]?.textContent ?? null
+  }
+
+  // ---------------------------------------------------------------------------
+  // sync-collection REPORT (RFC 6578)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Perform an incremental sync of a single collection (calendar or address
+   * book) using sync-collection REPORT (RFC 6578).
+   *
+   * With `syncToken: null` this is a full initial sync — the server returns
+   * every member and a fresh token to store. On a subsequent call with that
+   * token, the server returns only what changed (added/modified resources
+   * with an etag, removed resources as a bare 404 status) plus a new token.
+   *
+   * Note that an initial sync is not guaranteed to be removal-free in
+   * practice: Radicale 3 replays historical tombstones for an empty token
+   * (observed: 28 removals alongside 30 live members on a real collection).
+   * Callers must therefore not read "reported as removed" as "was present
+   * locally and is now gone" without checking local state first.
+   *
+   * Falls back gracefully (`tokenInvalidated: true`) when the server rejects
+   * the token or the request otherwise fails; the caller must then discard the
+   * stored token and perform a full resync.
+   *
+   * Rejection has no single status code in the wild. RFC 6578 §3.2 defines it
+   * as the `DAV:valid-sync-token` *precondition*, and Radicale signals it with
+   * `403 Forbidden` carrying that element — not the 400/507 this code used to
+   * name. Any non-2xx therefore counts as a rejection: there is no token worth
+   * keeping from a REPORT that did not succeed, and a needless full resync is
+   * merely slow whereas a retained dead cursor loses changes silently.
+   *
+   * Namespace-aware by construction: response parsing goes through
+   * `getDavElements`/`getDavElementText` (DOMParser + `getElementsByTagNameNS`),
+   * not prefix-bound regexes — Radicale emits DAV elements unprefixed
+   * (`<href>` rather than `<D:href>`), which defeats a prefix-bound matcher.
+   */
+  async syncCollection(
+    collectionUrl: string,
+    syncToken: string | null
+  ): Promise<SyncCollectionResult> {
+    const body = `<?xml version="1.0" encoding="UTF-8" ?>
+<D:sync-collection xmlns:D="DAV:">
+  ${syncToken ? `<D:sync-token>${escapeXml(syncToken)}</D:sync-token>` : '<D:sync-token/>'}
+  <D:sync-level>1</D:sync-level>
+  <D:prop>
+    <D:getetag/>
+  </D:prop>
+</D:sync-collection>`
+
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/xml; charset=utf-8',
+      Authorization: this.authHeader,
+    }
+
+    try {
+      const response = await this.proxyFetch(collectionUrl, {
+        method: 'REPORT',
+        headers,
+        body,
+      })
+
+      // Any unsuccessful REPORT invalidates the cursor. Servers disagree on
+      // how to say "bad token": RFC 6578 §3.2 specifies the
+      // `DAV:valid-sync-token` precondition, Radicale returns it under 403,
+      // others use 400 or 409. Enumerating codes is how this gets missed, so
+      // the rule is the general one — and the specific codes below exist only
+      // to keep a future tightening of this branch honest.
+      if (!response.ok && response.status !== 207) {
+        return { changes: [], newSyncToken: null, tokenInvalidated: true }
+      }
+
+      const text = await response.text()
+      const doc = this.parseXmlDocument(text)
+
+      const newSyncToken = this.getDavElementText(doc, 'sync-token')
+      const changes = this.parseSyncCollectionResponse(doc, collectionUrl)
+
+      return { changes, newSyncToken, tokenInvalidated: false }
+    } catch {
+      return { changes: [], newSyncToken: null, tokenInvalidated: true }
+    }
+  }
+
+  /**
+   * Parse a sync-collection multistatus into individual changes.
+   * Each `<response>` is either:
+   * - a tombstone: a `<status>` directly under `<response>` reporting 404
+   *   (the member was removed since the last sync);
+   * - added/changed: a `<propstat>` carrying `<getetag>` (200).
+   *
+   * Hrefs are resolved to absolute URLs via `resolveDavHref` (handles
+   * relative, absolute and percent-encoded forms) before being returned.
+   */
+  private parseSyncCollectionResponse(doc: Document, baseUrl: string): SyncCollectionChange[] {
+    const changes: SyncCollectionChange[] = []
+    const responseElements = this.getDavElements(doc, 'response')
+
+    for (const responseEl of responseElements) {
+      const rawHref = this.getDavElementText(responseEl, 'href')
+      if (!rawHref) continue
+
+      // Resolve the href EXACTLY as the server sent it. Do not percent-decode
+      // first: `new URL()` re-encodes %C3%A9 and %20 losslessly, but a decoded
+      // %23 or %3F becomes a literal '#'/'?' and is reparsed as a fragment or
+      // query — `ev%231.ics` would resolve to `.../ev#1.ics`, so a later GET
+      // fetches `/ev` and the href no longer matches the stored one. Principal
+      // discovery (see resolveDavHref call sites above) resolves raw for the
+      // same reason.
+      const href = resolveDavHref(baseUrl, rawHref)
+
+      // A tombstone reports its status directly on <response>, not nested
+      // inside a <propstat>. Only consider a <status> that is a direct
+      // child of this <response> — a <propstat><status> further down
+      // covers a per-property failure, not a resource-level removal.
+      const topStatusEl = this.getDavElements(responseEl, 'status').find(
+        (el) => el.parentElement === responseEl
+      )
+      const topStatusMatch = topStatusEl?.textContent
+        ? /HTTP\/\d\.\d\s+(\d+)/.exec(topStatusEl.textContent)
+        : null
+
+      if (topStatusMatch && parseInt(topStatusMatch[1], 10) === 404) {
+        changes.push({ href, etag: null, status: 'removed' })
+        continue
+      }
+
+      const etag = this.getDavElementText(responseEl, 'getetag')
+      if (etag) {
+        changes.push({ href, etag, status: 'changed' })
+      }
+    }
+
+    return changes
   }
 
   /**

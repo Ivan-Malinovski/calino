@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
+import { parseISO } from 'date-fns'
 import { useNotifications } from '../useNotifications'
+import { toEventInstant } from '@/lib/datetime'
 import type { CalendarEvent } from '@/types'
 
 // ── Mocks ──────────────────────────────────────────────────────────────────
@@ -415,5 +417,88 @@ describe('useNotifications - R5.1: 12h catch-up pass for never-shown reminders',
     renderHook(() => useNotifications())
 
     expect(mockShowNotification).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('useNotifications - TZID events resolve wall clocks through the event zone', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+    vi.clearAllMocks()
+    currentEvents = []
+    currentExpandedEvents = null
+    currentEnableNotifications = true
+    currentDefaultReminderMinutes = 15
+    mockToast.mockClear()
+
+    Object.defineProperty(globalThis, 'Notification', {
+      value: { permission: 'granted' },
+      writable: true,
+      configurable: true,
+    })
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('fires a TZID reminder at toEventInstant(start, tz) minus minutesBefore, with a device-local body', () => {
+    // Naive wall clock in Europe/Copenhagen on a device that may be anywhere
+    // (west project: America/New_York). The old code parsed the wall clock as
+    // device-local, so on a New York device a 10:00 Copenhagen event fired at
+    // 10:00 New York time — 6h late. Expected values are derived from
+    // toEventInstant inside the test so it passes in both the west and east
+    // projects regardless of the ambient zone.
+    const start = '2026-02-10T10:00:00'
+    const timezone = 'Europe/Copenhagen'
+    const minutesBefore = 15
+    const instant = toEventInstant(start, timezone)
+    const trigger = new Date(instant.getTime() - minutesBefore * 60_000)
+    vi.setSystemTime(trigger)
+
+    currentEvents = [
+      makeEvent('tzid1', new Date(), {
+        start,
+        timezone,
+      }),
+    ]
+
+    renderHook(() => useNotifications())
+
+    // Fires exactly at the resolved instant (the device-local parse would be
+    // hours away in a west-zone device and never fire now).
+    expect(mockShowNotification).toHaveBeenCalledTimes(1)
+    // The body shows the device-local rendering of the true instant.
+    const body = mockShowNotification.mock.calls[0][1] as string
+    expect(body).toBe(
+      `Starting at ${instant.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`
+    )
+  })
+
+  it('keeps calendar-date behavior for all-day events (no conversion)', () => {
+    // An all-day event with a TZID must NOT be shifted through toEventInstant
+    // (a date-only value would move a day west of UTC) — the trigger stays
+    // midnight local on the event date minus the lead time.
+    const start = '2026-02-10'
+    const minutesBefore = 15
+    const trigger = new Date(parseISO(start).getTime() - minutesBefore * 60_000)
+    vi.setSystemTime(trigger)
+
+    currentEvents = [
+      makeEvent('allday1', new Date(), {
+        start,
+        isAllDay: true,
+        timezone: 'Europe/Copenhagen',
+      }),
+    ]
+
+    renderHook(() => useNotifications())
+
+    expect(mockShowNotification).toHaveBeenCalledTimes(1)
+    expect(mockShowNotification).toHaveBeenCalledWith(
+      'Event allday1',
+      'Starting today',
+      'allday1',
+      start
+    )
   })
 })

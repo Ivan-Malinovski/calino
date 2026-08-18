@@ -82,6 +82,28 @@ function formatSyncError(error: string): JSX.Element {
         </>
       )
 
+    case 'forbidden':
+      return (
+        <>
+          The server refused the change. You may not have write access to this calendar, or the
+          server rejected the data.
+        </>
+      )
+
+    case 'quota':
+      return (
+        <>
+          Your server storage is full. Free up space on the server and try again.
+        </>
+      )
+
+    case 'rate-limited':
+      return (
+        <>
+          The server is rate-limiting requests. Try again in a moment.
+        </>
+      )
+
     case 'not-found':
       return (
         <>

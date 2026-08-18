@@ -2,7 +2,7 @@ import type { JSX } from 'react'
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import { format, parseISO } from 'date-fns'
-import { pad2 } from '@/lib/datetime'
+import { pad2, toEventInstant } from '@/lib/datetime'
 import { v4 as uuidv4 } from 'uuid'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
@@ -445,9 +445,15 @@ export function EventModal(): JSX.Element | null {
       const currentEvent = findEventById(currentEvents, selectedEventId)
       const requiredComponent =
         currentSelectedEventType === 'task' || currentEvent?.type === 'task' ? 'VTODO' : 'VEVENT'
+      // Must match `compatibleCalendars` above, read-only exclusion included.
+      // When these two lists disagree, the form defaults `calendarId` to a
+      // calendar the Create button then rejects, and the button greys out with
+      // no visible cause.
       const currentCalendars = state.calendars.filter(
         (calendar) =>
-          !calendar.supportedComponents || calendar.supportedComponents.includes(requiredComponent)
+          (!calendar.supportedComponents ||
+            calendar.supportedComponents.includes(requiredComponent)) &&
+          !calendar.readOnly
       )
       const currentCategories = state.categories
 
@@ -534,10 +540,10 @@ export function EventModal(): JSX.Element | null {
         const taskDueDate =
           occurrenceKey?.split('T')[0] ||
           existingEvent.dueDate?.split('T')[0] ||
-          format(parseISO(existingEvent.start), 'yyyy-MM-dd')
+          format(toEventInstant(existingEvent.start, existingEvent.timezone), 'yyyy-MM-dd')
         setDueDate(taskDueDate)
         seededDueDateRef.current = taskDueDate
-        const taskTime = format(parseISO(existingEvent.start), 'HH:mm')
+        const taskTime = format(toEventInstant(existingEvent.start, existingEvent.timezone), 'HH:mm')
         setDueTime(taskTime !== '00:00' ? taskTime : '09:00')
         setDueAllDay(existingEvent.isAllDay ?? true)
         setCompleted(existingEvent.completed || false)
@@ -769,8 +775,14 @@ export function EventModal(): JSX.Element | null {
 
     const localStart = isAllDay ? `${startDate}T00:00:00` : `${startDate}T${startTime}:00`
     const localEnd = isAllDay ? `${endDate}T23:59:59` : `${endDate}T${endTime}:00`
-    const existingStart = format(parseISO(existingEventForMode.start), "yyyy-MM-dd'T'HH:mm:ss")
-    const existingEnd = format(parseISO(existingEventForMode.end), "yyyy-MM-dd'T'HH:mm:ss")
+    const existingStart = format(
+      toEventInstant(existingEventForMode.start, existingEventForMode.timezone),
+      "yyyy-MM-dd'T'HH:mm:ss"
+    )
+    const existingEnd = format(
+      toEventInstant(existingEventForMode.end, existingEventForMode.timezone),
+      "yyyy-MM-dd'T'HH:mm:ss"
+    )
 
     return (
       title !== existingEventForMode.title ||

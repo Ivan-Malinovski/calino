@@ -1,4 +1,5 @@
 import type { CalendarEvent } from '@/types'
+import { toEventInstant } from '@/lib/datetime'
 
 /** Shared gap between adjacent event columns. */
 const GAP = 4
@@ -20,8 +21,8 @@ export function positionedEventStyle(
   left: string
   width: string
 } {
-  const start = new Date(event.start)
-  const end = new Date(event.end)
+  const start = toEventInstant(event.start, event.timezone)
+  const end = toEventInstant(event.end, event.timezone)
   const startHour = start.getHours()
   const startMinutes = start.getMinutes()
   const durationMinutes = (end.getTime() - start.getTime()) / (1000 * 60)
@@ -53,8 +54,8 @@ export function transparentEventStyle(
   left: string
   width: string
 } {
-  const start = new Date(event.start)
-  const end = new Date(event.end)
+  const start = toEventInstant(event.start, event.timezone)
+  const end = toEventInstant(event.end, event.timezone)
   const startHour = start.getHours()
   const startMinutes = start.getMinutes()
   const durationMinutes = (end.getTime() - start.getTime()) / (1000 * 60)
@@ -97,7 +98,7 @@ export function taskPillStyle(
   left: string
   width: string
 } {
-  const due = new Date(task.start)
+  const due = toEventInstant(task.start, task.timezone)
   const hour = due.getHours()
   const minutes = due.getMinutes()
 
@@ -126,7 +127,7 @@ export function travelBarStyle(
   left: string
   width: string
 } {
-  const start = new Date(event.start)
+  const start = toEventInstant(event.start, event.timezone)
   const travelDurationMinutes = event.travelDuration ?? 0
   const travelStart = new Date(start.getTime() - travelDurationMinutes * 60 * 1000)
   const travelStartHour = travelStart.getHours()

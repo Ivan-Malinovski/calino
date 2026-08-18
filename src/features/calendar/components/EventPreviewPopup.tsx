@@ -2,7 +2,14 @@ import { type JSX, useRef, useEffect, useState, useCallback, useMemo } from 'rea
 import { createPortal } from 'react-dom'
 import { format, parseISO, isSameDay } from 'date-fns'
 import { v4 as uuidv4 } from 'uuid'
-import { formatTime, daysBetween, addDays, addMinutesToTimeStr } from '@/lib/datetime'
+import {
+  formatTime,
+  formatEventTime,
+  toEventInstant,
+  daysBetween,
+  addDays,
+  addMinutesToTimeStr,
+} from '@/lib/datetime'
 import { buildMasterTruncation } from '@/lib/recurrenceSplit'
 import { showToast } from '@/lib/toast'
 import { motion, AnimatePresence, animate } from 'framer-motion'
@@ -105,15 +112,31 @@ export function EventPreviewPopup({
   const effectiveEnd = occurrenceStartISO
     ? new Date(
         parseISO(occurrenceStartISO).getTime() +
-          (parseISO(event.end).getTime() - parseISO(event.start).getTime())
+          (toEventInstant(event.end, event.timezone).getTime() -
+            toEventInstant(event.start, event.timezone).getTime())
       ).toISOString()
     : event.end
 
   const isMultiDay = !isSameDay(
-    parseISO(event.originalStart || event.start),
-    parseISO(event.originalEnd || event.end)
+    event.isAllDay
+      ? parseISO(event.originalStart || event.start)
+      : toEventInstant(event.originalStart || event.start, event.timezone),
+    event.isAllDay
+      ? parseISO(event.originalEnd || event.end)
+      : toEventInstant(event.originalEnd || event.end, event.timezone)
   )
   const isTask = event.type === 'task'
+  // Phase 2 (C2) — TZID events store naive wall clocks in the event zone, so
+  // the popup must read them as instants before displaying or seeding edit
+  // fields (mirrors EventCard/EventModal). All-day dates stay floating — a
+  // bare date through toEventInstant would shift a day west of UTC.
+  const instantFor = (iso: string): Date =>
+    event.isAllDay ? parseISO(iso) : toEventInstant(iso, event.timezone)
+  // R1 — a timed TZID task's dueDate follows the same storage invariant as
+  // start/end: a naive wall clock in the event zone. All-day dueDates are
+  // floating dates and must not pass through the zone conversion.
+  const dueInstantFor = (iso: string): Date =>
+    isTask && !event.isAllDay && event.timezone ? toEventInstant(iso, event.timezone) : parseISO(iso)
   const dateFormatPattern =
     dateFormat === 'MM/dd/yyyy'
       ? 'MMM d, yyyy'
@@ -137,9 +160,9 @@ export function EventPreviewPopup({
   const getEventDate = (): string => {
     if (editDate) return format(parseISO(editDate), dateFormatPattern)
     if (isTask && event.dueDate) {
-      return format(parseISO(event.dueDate), dateFormatPattern)
+      return format(dueInstantFor(event.dueDate), dateFormatPattern)
     }
-    return format(parseISO(effectiveStart), dateFormatPattern)
+    return format(instantFor(effectiveStart), dateFormatPattern)
   }
 
   const getEventTime = (): string => {
@@ -149,7 +172,7 @@ export function EventPreviewPopup({
       }
       // For tasks with an actual time (not midnight), show the time
       if (hasDueTime(event)) {
-        return formatTime(event.dueDate, timeFormat)
+        return formatEventTime(event.dueDate, event.timezone, timeFormat)
       }
       // For all-day tasks or tasks with no specific time
       return format(parseISO(event.dueDate), dateFormatPattern)
@@ -158,13 +181,15 @@ export function EventPreviewPopup({
       return 'All day'
     }
     if (editTime) {
+      // The draft is device-frame 'HH:mm' already — never run it through the
+      // event's timezone.
       const fmt = (t: string) => formatTime(`2000-01-01T${t}:00`, timeFormat)
       return `${fmt(editTime)} - ${fmt(editEndTime || editTime)}`
     }
     if (isMultiDay) {
-      return `${formatTime(event.originalStart || event.start, timeFormat)} - ${formatTime(event.originalEnd || event.end, timeFormat)}`
+      return `${formatEventTime(event.originalStart || event.start, event.timezone, timeFormat)} - ${formatEventTime(event.originalEnd || event.end, event.timezone, timeFormat)}`
     }
-    return `${formatTime(effectiveStart, timeFormat)} - ${formatTime(effectiveEnd, timeFormat)}`
+    return `${formatEventTime(effectiveStart, event.timezone, timeFormat)} - ${formatEventTime(effectiveEnd, event.timezone, timeFormat)}`
   }
 
   const startEditing = (field: string): void => {
@@ -173,24 +198,24 @@ export function EventPreviewPopup({
     // title/location/description are pre-seeded from useState and kept across field switches.
     if (field === 'date' && !editDate) {
       if (isTask && event.dueDate) {
-        // Date part only — a task's dueDate carries its time, and an
-        // `<input type="date">` given a full timestamp renders blank.
-        setEditDate(event.dueDate.split('T')[0])
+        // Date part of the DEVICE-frame instant — an event-zone dueDate near
+        // midnight falls on a different device-local date.
+        setEditDate(format(dueInstantFor(event.dueDate), 'yyyy-MM-dd'))
       } else {
-        setEditDate(format(parseISO(effectiveStart), 'yyyy-MM-dd'))
+        setEditDate(format(instantFor(effectiveStart), 'yyyy-MM-dd'))
       }
     } else if (field === 'endDate' && !editEndDate) {
-      setEditEndDate(format(parseISO(effectiveEnd), 'yyyy-MM-dd'))
+      setEditEndDate(format(instantFor(effectiveEnd), 'yyyy-MM-dd'))
     } else if (field === 'time') {
       if (!editTime) {
         if (isTask && event.dueDate) {
-          setEditTime(format(parseISO(event.dueDate), 'HH:mm'))
+          setEditTime(format(dueInstantFor(event.dueDate), 'HH:mm'))
         } else {
-          setEditTime(format(parseISO(effectiveStart), 'HH:mm'))
+          setEditTime(format(instantFor(effectiveStart), 'HH:mm'))
         }
       }
       if (!editEndTime && !isTask) {
-        setEditEndTime(format(parseISO(effectiveEnd), 'HH:mm'))
+        setEditEndTime(format(instantFor(effectiveEnd), 'HH:mm'))
       }
     }
   }
@@ -210,7 +235,7 @@ export function EventPreviewPopup({
       // on an otherwise all-day rule, which RFC 5545 §3.3.10 doesn't allow.
       // Clearing the time field is still how a task becomes all-day.
       const existingTime =
-        hasDueTime(event) && event.dueDate ? format(parseISO(event.dueDate), 'HH:mm') : ''
+        hasDueTime(event) && event.dueDate ? format(dueInstantFor(event.dueDate), 'HH:mm') : ''
       const dueTime = editTime || existingTime
       //
       // `end` moves with `start`. It was left behind before, which put the
@@ -219,9 +244,14 @@ export function EventPreviewPopup({
       // escaped that check only because forcing isAllDay exempted it. The
       // shapes match what EventModal writes for a task.
       if (dueTime) {
-        updates.dueDate = `${editDate}T${dueTime}:00`
-        updates.start = `${editDate}T${dueTime}:00`
-        updates.end = `${editDate}T${dueTime}:00`
+        // R1 — the edit fields are device-frame, but a timed TZID task's
+        // dueDate/start/end are naive wall clocks in the event zone. Write a
+        // device-frame Z instant and let the store re-frame all three via
+        // toZoneWallClock, exactly like the non-task branch below.
+        const dueInstant = new Date(`${editDate}T${dueTime}:00`).toISOString()
+        updates.dueDate = dueInstant
+        updates.start = dueInstant
+        updates.end = dueInstant
         updates.isAllDay = false
       } else {
         updates.dueDate = editDate
@@ -234,15 +264,25 @@ export function EventPreviewPopup({
       // Otherwise a title/location-only edit would carry the clicked occurrence's
       // date into `updates.start` and, for an "All events" edit, move the whole
       // series anchor onto that date — silently dropping every earlier occurrence.
-      const originalDate = format(parseISO(effectiveStart), 'yyyy-MM-dd')
+      // Phase 2 (C3) — the edit fields above are device-frame, but TZID
+      // events store naive wall clocks in the event zone. Write a device-frame
+      // Z instant and let the store re-frame it into the event zone via
+      // toZoneWallClock (calendarStore.updateEvent), exactly like EventModal.
+      // Timezone-less events store UTC instants, so toISOString is correct
+      // there too. All-day writes stay floating date strings (no conversion).
+      const originalDate = format(instantFor(effectiveStart), 'yyyy-MM-dd')
       const dateToUse = editDate || originalDate
-      const startTime = editTime || format(parseISO(effectiveStart), 'HH:mm')
-      const endTime = editEndTime || format(parseISO(effectiveEnd), 'HH:mm')
-      updates.start = `${dateToUse}T${startTime}:00`
+      const startTime = editTime || format(instantFor(effectiveStart), 'HH:mm')
+      const endTime = editEndTime || format(instantFor(effectiveEnd), 'HH:mm')
+      updates.start = event.isAllDay
+        ? `${dateToUse}T${startTime}:00`
+        : new Date(`${dateToUse}T${startTime}:00`).toISOString()
 
-      const originalEndDate = format(parseISO(effectiveEnd), 'yyyy-MM-dd')
+      const originalEndDate = format(instantFor(effectiveEnd), 'yyyy-MM-dd')
       const endDateToUse = editEndDate || originalEndDate
-      updates.end = `${endDateToUse}T${endTime}:00`
+      updates.end = event.isAllDay
+        ? `${endDateToUse}T${endTime}:00`
+        : new Date(`${endDateToUse}T${endTime}:00`).toISOString()
 
       // Safety net: the end-date field (editingField === 'endDate') has no
       // shifting logic of its own, so it can still be set to a date before
@@ -513,8 +553,8 @@ export function EventPreviewPopup({
         // Shift the end date by the same number of days the start date moved,
         // preserving the event's span so a multi-day/overnight event doesn't
         // end up with start > end (issue #44).
-        const oldStartDate = editDate || format(parseISO(effectiveStart), 'yyyy-MM-dd')
-        const oldEndDate = editEndDate || format(parseISO(effectiveEnd), 'yyyy-MM-dd')
+        const oldStartDate = editDate || format(instantFor(effectiveStart), 'yyyy-MM-dd')
+        const oldEndDate = editEndDate || format(instantFor(effectiveEnd), 'yyyy-MM-dd')
         const dayDelta = daysBetween(oldStartDate, value)
         setEditEndDate(addDays(oldEndDate, dayDelta))
       }
@@ -693,7 +733,7 @@ export function EventPreviewPopup({
               startEditing('date')
             }}
           >
-            {format(parseISO(event.originalStart || event.start), dateFormatPattern)}
+            {format(instantFor(event.originalStart || event.start), dateFormatPattern)}
           </span>
           <span> - </span>
           <input
@@ -708,8 +748,8 @@ export function EventPreviewPopup({
       )
     }
     if (isMultiDay) {
-      const startDisplay = format(parseISO(event.originalStart || event.start), dateFormatPattern)
-      const endDisplay = format(parseISO(event.originalEnd || event.end), dateFormatPattern)
+      const startDisplay = format(instantFor(event.originalStart || event.start), dateFormatPattern)
+      const endDisplay = format(instantFor(event.originalEnd || event.end), dateFormatPattern)
       return (
         <>
           <span
@@ -1195,7 +1235,13 @@ export function EventPreviewPopup({
                       data-component="email-attendees-btn"
                       data-mailto={mailto.uri}
                     >
-                      <svg aria-hidden="true" width="14" height="14" viewBox="0 0 14 14" fill="none">
+                      <svg
+                        aria-hidden="true"
+                        width="14"
+                        height="14"
+                        viewBox="0 0 14 14"
+                        fill="none"
+                      >
                         <rect
                           x="1.5"
                           y="3"

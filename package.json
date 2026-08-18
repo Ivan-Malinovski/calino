@@ -33,6 +33,7 @@
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "@tanstack/react-virtual": "^3.14.9",
+    "@touch4it/ical-timezones": "^1.9.0",
     "@use-gesture/react": "^10.3.1",
     "browser-image-compression": "^2.0.2",
     "chrono-node": "^2.10.1",

@@ -18,6 +18,7 @@ import {
   cancelAllNativeReminders,
 } from '@/lib/nativeReminders'
 import { useCalendarMirrorStore, mirrorOwnsReminders } from '@/store/calendarMirrorStore'
+import { toEventInstant } from '@/lib/datetime'
 import { parseISO, isWithinInterval, addMinutes, addHours, addDays, isAfter } from 'date-fns'
 import { toast } from 'sonner'
 import type { CalendarEvent } from '@/types'
@@ -166,8 +167,17 @@ export function useNotifications(): void {
         if (reminders.length === 0) return
 
         reminders.forEach((reminder) => {
-          const reminderTime = parseISO(event.start)
-          reminderTime.setMinutes(reminderTime.getMinutes() - reminder.minutesBefore)
+          // TZID events store naive wall clocks in the event zone — resolve
+          // them to the true instant via toEventInstant instead of parsing the
+          // wall clock as device-local (on a New York device a Copenhagen
+          // 10:00 event used to fire at 10:00 New York time, 6h late).
+          // All-day events keep their calendar-date behavior — no conversion,
+          // because toEventInstant would shift a date-only value a day west of
+          // UTC.
+          const startInstant = event.isAllDay
+            ? parseISO(event.start)
+            : toEventInstant(event.start, event.timezone)
+          const reminderTime = new Date(startInstant.getTime() - reminder.minutesBefore * 60_000)
 
           const reminderId = createNotificationId(event.id, reminder.id)
           const triggerTimestamp = reminderTime.getTime()
@@ -198,7 +208,7 @@ export function useNotifications(): void {
 
             const timeStr = event.isAllDay
               ? 'All day'
-              : parseISO(event.start).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+              : startInstant.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
 
             const body = event.isAllDay ? `Starting today` : `Starting at ${timeStr}`
 

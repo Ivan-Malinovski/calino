@@ -13,6 +13,7 @@ import {
   calendarEventToIcalComponent,
   calendarEventToIcalVjournal,
   calendarEventToIcalVtodo,
+  recurrenceIdICALString,
 } from '../icalTypeMapping'
 import type { CalendarEvent, Reminder } from '@/types'
 
@@ -2250,6 +2251,189 @@ END:VCALENDAR`
 
       const out = taskToICAL(task)
       expect(out).not.toContain('RRULE')
+    })
+
+  // ---------------------------------------------------------------------
+  // Phase 2 (C3) — serialization: never TZID-on-UTC, floating stays floating
+  // ---------------------------------------------------------------------
+  describe('Phase 2 C3 serialization', () => {
+    it('a .000Z instant on a TZID event becomes the zone wall clock, never TZID=...Z', () => {
+      const event: CalendarEvent = {
+        id: 'tzid-z',
+        calendarId: 'cal-1',
+        title: 'Z Instant',
+        // 2024-03-10T02:30:00Z = 2024-03-09 21:30 America/New_York (EST, before
+        // US spring-forward on Mar 10).
+        start: '2024-03-10T02:30:00.000Z',
+        end: '2024-03-10T03:30:00.000Z',
+        isAllDay: false,
+        timezone: 'America/New_York',
+      }
+      const out = eventToICAL(event)
+      expect(out).toContain('DTSTART;TZID=America/New_York:20240309T213000')
+      expect(out).not.toMatch(/TZID=America\/New_York:[0-9]{8}T[0-9]{6}Z/)
+      expect(out).not.toContain('DTSTART:20240310T023000Z')
+    })
+
+    it('a naive string without a TZID stays floating (no Z, no TZID)', () => {
+      const event: CalendarEvent = {
+        id: 'floating',
+        calendarId: 'cal-1',
+        title: 'Floating',
+        start: '2024-03-10T02:30:00',
+        end: '2024-03-10T03:30:00',
+        isAllDay: false,
+      }
+      const out = eventToICAL(event)
+      expect(out).toContain('DTSTART:20240310T023000')
+      expect(out).not.toContain('DTSTART:20240310T013000Z')
+      expect(out).not.toMatch(/DTSTART;TZID=/)
+      expect(out).not.toMatch(/DTSTART:[0-9]{8}T[0-9]{6}Z/)
+    })
+
+    it('a UTC-valued EXDATE on a zoned series converts to the zone wall clock', () => {
+      const event: CalendarEvent = {
+        id: 'exdate-utc',
+        calendarId: 'cal-1',
+        title: 'Zoned with UTC EXDATE',
+        start: '2024-06-01T10:00:00',
+        end: '2024-06-01T11:00:00',
+        isAllDay: false,
+        timezone: 'Europe/Copenhagen',
+        rruleString: 'FREQ=DAILY',
+        // 2024-06-01T00:00:00Z = 02:00 CEST.
+        excludedDates: ['2024-06-01T00:00:00.000Z'],
+      }
+      const out = eventToICAL(event)
+      expect(out).toContain('EXDATE;TZID=Europe/Copenhagen:20240601T020000')
+      expect(out).not.toMatch(/EXDATE;TZID=Europe\/Copenhagen:[0-9]{8}T[0-9]{6}Z/)
+    })
+
+    it('a UTC-valued RECURRENCE-ID on a zoned event converts to the zone wall clock', () => {
+      const event: CalendarEvent = {
+        id: 'recid-utc',
+        calendarId: 'cal-1',
+        title: 'Override',
+        start: '2024-03-10T02:30:00',
+        end: '2024-03-10T03:30:00',
+        isAllDay: false,
+        timezone: 'America/New_York',
+        // 2024-03-10T02:30:00Z = 2024-03-09 21:30 EST.
+        recurrenceId: '2024-03-10T02:30:00.000Z',
+      }
+      const out = eventToICAL(event)
+      expect(out).toContain('RECURRENCE-ID;TZID=America/New_York:20240309T213000')
+      expect(out).not.toMatch(/RECURRENCE-ID;TZID=America\/New_York:[0-9]{8}T[0-9]{6}Z/)
+      // The patch match key must agree with the emitted form.
+      expect(recurrenceIdICALString(event)).toContain('RECURRENCE-ID;TZID=America/New_York:20240309T213000')
+    })
+  })
+  })
+  describe('Phase 2 C4 VTIMEZONE emission', () => {
+    it('emits a VTIMEZONE for a referenced TZID', () => {
+      const event: CalendarEvent = {
+        id: 'tzid-vtz',
+        calendarId: 'cal-1',
+        title: 'Zoned',
+        start: '2026-03-10T09:00:00',
+        end: '2026-03-10T09:30:00',
+        isAllDay: false,
+        timezone: 'Europe/Copenhagen',
+      }
+      const out = eventToICAL(event)
+      expect(out).toContain('BEGIN:VTIMEZONE')
+      expect(out).toContain('TZID:Europe/Copenhagen')
+      expect(out).toContain('DTSTART;TZID=Europe/Copenhagen:20260310T090000')
+    })
+    it('emits no VTIMEZONE when no event carries a TZID', () => {
+      const out = eventToICAL({
+        id: 'plain',
+        calendarId: 'cal-1',
+        title: 'Plain',
+        start: '2026-03-10T09:00:00.000Z',
+        end: '2026-03-10T09:30:00.000Z',
+        isAllDay: false,
+      })
+      expect(out).not.toContain('BEGIN:VTIMEZONE')
+    })
+  })
+
+  describe('Phase 4: import robustness', () => {
+    const bareIcs = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'PRODID:-//Test//EN',
+      'BEGIN:VEVENT',
+      'UID:mixed-1',
+      'DTSTAMP:20260101T000000Z',
+      'DTSTART:20260102T100000',
+      'DTEND:20260102T110000',
+      'SUMMARY:Bare LF meeting',
+      'END:VEVENT',
+      'END:VCALENDAR',
+    ]
+
+    it('parses a file using bare LF line endings', () => {
+      const events = parseICALData(bareIcs.join('\n'), 'cal-1')
+      expect(events).toHaveLength(1)
+      expect(events[0].title).toBe('Bare LF meeting')
+    })
+
+    it('parses a file with mixed CRLF/LF line endings', () => {
+      const mixed = bareIcs
+        .map((line, i) => line + (i % 2 === 0 ? '\r\n' : '\n'))
+        .join('')
+      const events = parseICALData(mixed, 'cal-1')
+      expect(events).toHaveLength(1)
+      expect(events[0].title).toBe('Bare LF meeting')
+    })
+
+    it('strips a leading UTF-8 BOM before parsing', () => {
+      const withBom = '﻿' + bareIcs.join('\r\n')
+      const events = parseICALData(withBom, 'cal-1')
+      expect(events).toHaveLength(1)
+      expect(events[0].uid).toBe('mixed-1')
+    })
+
+    it('parses concatenated VCALENDAR documents as separate events', () => {
+      const doc2 = bareIcs.join('\r\n').replace('UID:mixed-1', 'UID:mixed-2')
+      const events = parseICALData([bareIcs.join('\r\n'), doc2].join('\r\n'), 'cal-1')
+      expect(events.map((e) => e.uid).sort()).toEqual(['mixed-1', 'mixed-2'])
+    })
+
+    it('handles a concatenated document where one block also has a BOM-normalized prefix', () => {
+      const doc1 = '﻿' + bareIcs.join('\r\n')
+      const doc2 = bareIcs.join('\r\n').replace('UID:mixed-1', 'UID:mixed-3')
+      const events = parseICALData([doc1, doc2].join('\r\n'), 'cal-1')
+      expect(events.map((e) => e.uid).sort()).toEqual(['mixed-1', 'mixed-3'])
+    })
+
+    it('does not throw on a truncated (malformed) file — degrades to no events', () => {
+      const truncated = bareIcs.join('\r\n').replace('END:VEVENT\r\n', '')
+      expect(() => parseICALData(truncated, 'cal-1')).not.toThrow()
+      expect(parseICALData(truncated, 'cal-1')).toHaveLength(0)
+    })
+
+    it('does not throw on garbage input', () => {
+      expect(() => parseICALData('this is not an ics file at all', 'cal-1')).not.toThrow()
+      expect(parseICALData('this is not an ics file at all', 'cal-1')).toHaveLength(0)
+    })
+
+    it('parseICALEvent and parseICALTask both handle concatenated documents', () => {
+      const vtodoDoc = [
+        'BEGIN:VCALENDAR',
+        'VERSION:2.0',
+        'PRODID:-//Test//EN',
+        'BEGIN:VTODO',
+        'UID:task-2',
+        'DTSTAMP:20260101T000000Z',
+        'SUMMARY:Second task',
+        'END:VTODO',
+        'END:VCALENDAR',
+      ].join('\r\n')
+      const combined = [bareIcs.join('\r\n'), vtodoDoc].join('\r\n')
+      expect(parseICALEvent(combined, 'cal-1')).toHaveLength(1)
+      expect(parseICALTask(combined, 'cal-1')).toHaveLength(1)
     })
   })
 })

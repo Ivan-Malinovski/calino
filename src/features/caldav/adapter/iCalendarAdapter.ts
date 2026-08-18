@@ -1,4 +1,5 @@
 import ICAL from 'ical.js'
+import { ensureZoneRegistered } from '@/lib/timezoneRegistry'
 import type { CalendarEvent } from '@/types'
 import { SETTINGS_EVENT_UID_PREFIX } from '@/lib/settingsSync'
 import {
@@ -10,21 +11,46 @@ import {
   calendarEventToIcalVjournal,
 } from './icalTypeMapping'
 
-export function parseICALEvent(iCalData: string, calendarId: string): CalendarEvent[] {
-  if (!iCalData || !iCalData.trim()) {
-    return []
-  }
+/**
+ * Normalizes raw .ics text before handing it to `ICAL.parse`.
+ *
+ * - Strips a leading UTF-8 BOM (U+FEFF). Some exporters (notably some
+ *   Windows/Outlook flows) prepend one; ical.js's line parser treats it as
+ *   part of the first content line, which corrupts the `BEGIN:VCALENDAR`
+ *   match and silently yields zero parsed items rather than an error.
+ * - Normalizes all line endings to CRLF, since RFC 5545 §3.1 mandates CRLF
+ *   and some files arrive with bare LF or a mix of both.
+ */
+export function normalizeICalText(iCalData: string): string {
+  return iCalData.replace(/^\uFEFF/, '').replace(/\r\n|\r|\n/g, '\r\n')
+}
 
-  let jCal: string | unknown[]
-  try {
-    jCal = ICAL.parse(iCalData) as string | unknown[]
-  } catch (e) {
-    console.error('ICAL.parse failed:', e)
-    return []
-  }
+/**
+ * Parses raw .ics text into one or more top-level `ICAL.Component` documents.
+ *
+ * `ICAL.parse` returns a single jCal document (`[name, props, comps]`) for
+ * ordinary input, but when the text contains multiple concatenated
+ * `BEGIN:VCALENDAR…END:VCALENDAR` blocks (some exporters and mail clients
+ * produce these), it returns an ARRAY of jCal documents instead — the
+ * top-level `root.length == 1 ? root[0] : root` branch in ical.js. Passing
+ * that array straight to `new ICAL.Component()` misinterprets it as a single
+ * malformed document. Detect the shape and build one `Component` per
+ * document instead.
+ */
+function parseICalComponents(iCalData: string): ICAL.Component[] {
+  const jCal = ICAL.parse(normalizeICalText(iCalData)) as unknown
 
-  const comp = new ICAL.Component(jCal)
+  // A single jCal document is `[name: string, props: [], comps: []]` — its
+  // first element is a string. An array-of-documents has jCal documents (each
+  // themselves arrays) as its elements, so the first element is not a string.
+  const isMultiDocument =
+    Array.isArray(jCal) && jCal.length > 0 && !(typeof jCal[0] === 'string')
 
+  const documents = isMultiDocument ? (jCal as unknown[]) : [jCal]
+  return documents.map((doc) => new ICAL.Component(doc as string | unknown[]))
+}
+
+function registerTimezones(comp: ICAL.Component): void {
   const vtimezones = comp.getAllSubcomponents('vtimezone')
   for (const vtz of vtimezones) {
     try {
@@ -34,17 +60,35 @@ export function parseICALEvent(iCalData: string, calendarId: string): CalendarEv
       // Fall back to UTC for unknown timezones
     }
   }
+}
 
-  const vevents = comp.getAllSubcomponents('vevent')
+export function parseICALEvent(iCalData: string, calendarId: string): CalendarEvent[] {
+  if (!iCalData || !iCalData.trim()) {
+    return []
+  }
+
+  let comps: ICAL.Component[]
+  try {
+    comps = parseICalComponents(iCalData)
+  } catch (e) {
+    console.error('ICAL.parse failed:', e)
+    return []
+  }
+
   const events: CalendarEvent[] = []
 
-  for (const vevent of vevents) {
-    try {
-      const event = icalEventToCalendarEvent(vevent, calendarId)
-      events.push(event)
-    } catch (e) {
-      console.error('Failed to parse vevent:', e)
-      continue
+  for (const comp of comps) {
+    registerTimezones(comp)
+
+    const vevents = comp.getAllSubcomponents('vevent')
+    for (const vevent of vevents) {
+      try {
+        const event = icalEventToCalendarEvent(vevent, calendarId)
+        events.push(event)
+      } catch (e) {
+        console.error('Failed to parse vevent:', e)
+        continue
+      }
     }
   }
 
@@ -56,24 +100,26 @@ export function parseICALTask(iCalData: string, calendarId: string): CalendarEve
     return []
   }
 
-  let jCal: string | unknown[]
+  let comps: ICAL.Component[]
   try {
-    jCal = ICAL.parse(iCalData) as string | unknown[]
+    comps = parseICalComponents(iCalData)
   } catch (e) {
     console.error('ICAL.parse failed for tasks:', e)
     return []
   }
 
-  const comp = new ICAL.Component(jCal)
-
-  const vtodos = comp.getAllSubcomponents('vtodo')
   const tasks: CalendarEvent[] = []
-  for (const vtodo of vtodos) {
-    try {
-      tasks.push(icalVtodoToCalendarEvent(vtodo, calendarId))
-    } catch (e) {
-      console.error('Failed to parse vtodo:', e)
-      continue
+  for (const comp of comps) {
+    registerTimezones(comp)
+
+    const vtodos = comp.getAllSubcomponents('vtodo')
+    for (const vtodo of vtodos) {
+      try {
+        tasks.push(icalVtodoToCalendarEvent(vtodo, calendarId))
+      } catch (e) {
+        console.error('Failed to parse vtodo:', e)
+        continue
+      }
     }
   }
   return tasks
@@ -160,6 +206,15 @@ export function eventsToICAL(events: CalendarEvent[]): string {
     )
   }
 
+  // Phase 2 (C4) — emit a VTIMEZONE for every referenced TZID. updateTimezones
+  // only copies zones already registered in TimezoneService, so register them
+  // first (lazy, cached). The patch path (icalPatch) deliberately never calls
+  // this: origin VTIMEZONEs must survive untouched there.
+  for (const event of events) {
+    if (event.timezone) ensureZoneRegistered(event.timezone)
+  }
+  ICAL.helpers.updateTimezones(comp)
+
   return foldICalLines(comp.toString())
 }
 
@@ -172,6 +227,10 @@ export function taskToICAL(task: CalendarEvent): string {
   const vtodo = calendarEventToIcalVtodo(task)
   comp.addSubcomponent(vtodo)
 
+  // Phase 2 (C4) — see eventsToICAL.
+  if (task.timezone) ensureZoneRegistered(task.timezone)
+  ICAL.helpers.updateTimezones(comp)
+
   return foldICalLines(comp.toString())
 }
 
@@ -180,24 +239,26 @@ export function parseICALJournal(iCalData: string, calendarId: string): Calendar
     return []
   }
 
-  let jCal: string | unknown[]
+  let comps: ICAL.Component[]
   try {
-    jCal = ICAL.parse(iCalData) as string | unknown[]
+    comps = parseICalComponents(iCalData)
   } catch (e) {
     console.error('ICAL.parse failed for journals:', e)
     return []
   }
 
-  const comp = new ICAL.Component(jCal)
-
-  const vjournals = comp.getAllSubcomponents('vjournal')
   const entries: CalendarEvent[] = []
-  for (const vjournal of vjournals) {
-    try {
-      entries.push(icalVjournalToCalendarEvent(vjournal, calendarId))
-    } catch (e) {
-      console.error('Failed to parse vjournal:', e)
-      continue
+  for (const comp of comps) {
+    registerTimezones(comp)
+
+    const vjournals = comp.getAllSubcomponents('vjournal')
+    for (const vjournal of vjournals) {
+      try {
+        entries.push(icalVjournalToCalendarEvent(vjournal, calendarId))
+      } catch (e) {
+        console.error('Failed to parse vjournal:', e)
+        continue
+      }
     }
   }
   return entries
@@ -211,6 +272,10 @@ export function journalToICAL(entry: CalendarEvent): string {
 
   const vjournal = calendarEventToIcalVjournal(entry)
   comp.addSubcomponent(vjournal)
+
+  // Phase 2 (C4) — see eventsToICAL.
+  if (entry.timezone) ensureZoneRegistered(entry.timezone)
+  ICAL.helpers.updateTimezones(comp)
 
   return foldICalLines(comp.toString())
 }

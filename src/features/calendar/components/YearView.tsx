@@ -21,6 +21,7 @@ import {
 import { useCalendarStore } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
 import type { ViewType } from '@/types'
+import { toEventInstant } from '@/lib/datetime'
 import styles from './YearView.module.css'
 
 const VIEW_ROUTES: Record<ViewType, string> = {
@@ -68,7 +69,7 @@ export function YearView(): JSX.Element {
     const keys = new Set<string>()
     yearEvents.forEach((event) => {
       try {
-        keys.add(format(parseISO(event.start), 'yyyy-MM-dd'))
+        keys.add(format(toEventInstant(event.start, event.timezone), 'yyyy-MM-dd'))
       } catch {
         // ignore malformed dates
       }

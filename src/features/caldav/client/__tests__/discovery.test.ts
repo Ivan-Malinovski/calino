@@ -143,6 +143,25 @@ describe('discovery', () => {
   // -----------------------------------------------------------------------
   // Proxy support
   // -----------------------------------------------------------------------
+  describe('isDavStatus', () => {
+    it('accepts 207 (multistatus) and 401 (auth challenge)', async () => {
+      const { isDavStatus } = await import('../discovery')
+      expect(isDavStatus(207)).toBe(true)
+      expect(isDavStatus(401)).toBe(true)
+    })
+
+    it('rejects statuses a web UI answers with', async () => {
+      const { isDavStatus } = await import('../discovery')
+      // A followed redirect into a login page or admin UI answers 200;
+      // a non-DAV endpoint answers 404/405/500 to PROPFIND.
+      expect(isDavStatus(200)).toBe(false)
+      expect(isDavStatus(302)).toBe(false)
+      expect(isDavStatus(404)).toBe(false)
+      expect(isDavStatus(405)).toBe(false)
+      expect(isDavStatus(500)).toBe(false)
+    })
+  })
+
   describe('proxy support', () => {
     it('probes well-known through proxy', async () => {
       const fetchSpy = vi.fn().mockResolvedValue({
@@ -167,13 +186,63 @@ describe('discovery', () => {
       expect(callUrl).toContain('/.well-known/caldav')
     })
 
-    it('follows redirect manually through proxy', async () => {
+    it('adopts the proxy-followed final URL when the endpoint spoke DAV', async () => {
       const mockResponse = {
-        ok: true,
-        status: 200,
+        ok: false,
+        status: 207,
         url: 'https://proxy.example.com/https%3A%2F%2Fcaldav.example.com%2Fdav.php',
         headers: new Headers({
           'X-Target-URL': 'https://caldav.example.com/dav.php',
+        }),
+      } as unknown as Response
+      const fetchSpy = vi.fn().mockResolvedValue(mockResponse)
+      vi.stubGlobal('fetch', fetchSpy)
+
+      const result = await discoverServerUrl(
+        'https://caldav.example.com',
+        'https://proxy.example.com'
+      )
+
+      expect(result).toBe('https://caldav.example.com/dav.php')
+      // The probe asks the proxy to follow the chain itself.
+      const init = fetchSpy.mock.calls[0][1] as RequestInit
+      expect(init.method).toBe('PROPFIND')
+      expect(new Headers(init.headers as HeadersInit).get('X-Follow-Redirects')).toBe('1')
+    })
+
+    it('rejects a followed chain that ends in a web UI (non-DAV status)', async () => {
+      // Radicale-style overshoot: /.well-known/caldav → / → /.web. The final
+      // answer to PROPFIND is 404/405, not 207 — the discovered URL must be
+      // rejected and discovery fall back to the base URL.
+      vi.spyOn(console, 'log').mockImplementation(() => {})
+      const mockResponse = {
+        ok: false,
+        status: 404,
+        url: 'https://proxy.example.com/https%3A%2F%2Fradicale.example.com%2F.web%2F',
+        headers: new Headers({
+          'X-Target-URL': 'https://radicale.example.com/.web/',
+        }),
+      } as unknown as Response
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue(mockResponse))
+
+      const result = await discoverServerUrl(
+        'https://radicale.example.com',
+        'https://proxy.example.com'
+      )
+
+      expect(result).toBe('https://radicale.example.com')
+    })
+
+    it('resolves a relayed 3xx Location from an older proxy', async () => {
+      // Old proxy: ignores X-Follow-Redirects, relays the upstream 3xx with
+      // Location exposed. The redirect is the server's own declaration of
+      // its CalDAV endpoint — resolve and adopt it.
+      const mockResponse = {
+        ok: false,
+        status: 301,
+        url: 'https://proxy.example.com/https%3A%2F%2Fcaldav.example.com%2F.well-known%2Fcaldav',
+        headers: new Headers({
+          Location: '/remote.php/dav',
         }),
       } as unknown as Response
       vi.stubGlobal('fetch', vi.fn().mockResolvedValue(mockResponse))
@@ -183,13 +252,13 @@ describe('discovery', () => {
         'https://proxy.example.com'
       )
 
-      expect(result).toBe('https://caldav.example.com/dav.php')
+      expect(result).toBe('https://caldav.example.com/remote.php/dav')
     })
 
     it('preserves trailing slash from proxy redirect (Davis)', async () => {
       const mockResponse = {
-        ok: true,
-        status: 200,
+        ok: false,
+        status: 207,
         url: 'https://proxy.example.com/https%3A%2F%2Fdavis.example.com%2Fdav%2F',
         headers: new Headers({
           'X-Target-URL': 'https://davis.example.com/dav/',

@@ -18,8 +18,16 @@ describe('classifySyncError', () => {
     ['AbortError: The operation was aborted.', 'timeout'],
     ['Request timed out after 15000ms', 'timeout'],
     ['Server returned status 401', 'auth'],
-    ['403 Forbidden', 'auth'],
+    // Deliberate flip: 403 is no longer lumped into 'auth' — the credentials
+    // were accepted, the server refused the operation (usually no write access).
+    ['403 Forbidden', 'forbidden'],
+    ['Server returned status 403', 'forbidden'],
     ['Unauthorized', 'auth'],
+    ['Server returned status 507', 'quota'],
+    ['Insufficient storage', 'quota'],
+    ['Server returned status 429', 'rate-limited'],
+    ['Too Many Requests', 'rate-limited'],
+    ['Rate limit exceeded', 'rate-limited'],
     ['Calendar not found: abc', 'not-found'],
     ['Server returned status 404', 'not-found'],
     ['412 Precondition Failed', 'conflict'],
@@ -33,6 +41,10 @@ describe('classifySyncError', () => {
 
   it('prefers auth over network when a 401 arrives via fetch', () => {
     expect(classifySyncError('Failed to fetch: 401 Unauthorized')).toBe('auth')
+  })
+
+  it('keeps 403 distinct from 401 when a 403 arrives via fetch', () => {
+    expect(classifySyncError('Failed to fetch: 403 Forbidden')).toBe('forbidden')
   })
 
   it('does not read a version number as a 5xx status', () => {
@@ -75,6 +87,14 @@ describe('connectionErrorMessage', () => {
   it('passes through a message it cannot improve on', () => {
     expect(connectionErrorMessage('Master password required')).toBe('Master password required')
   })
+
+  it('names full storage on a 507', () => {
+    expect(connectionErrorMessage('Server returned status 507')).toMatch(/full|free up space/i)
+  })
+
+  it('names rate limiting on a 429', () => {
+    expect(connectionErrorMessage('Server returned status 429')).toMatch(/rate-limiting/i)
+  })
 })
 
 describe('syncErrorReason', () => {
@@ -88,7 +108,16 @@ describe('syncErrorReason', () => {
   })
 
   it('stays in step with shortSyncErrorMessage', () => {
-    for (const code of ['cors', 'network', 'timeout', 'auth', 'server'] as const) {
+    for (const code of [
+      'cors',
+      'network',
+      'timeout',
+      'auth',
+      'forbidden',
+      'quota',
+      'rate-limited',
+      'server',
+    ] as const) {
       expect(shortSyncErrorMessage(code, 'raw')).toBe(
         `Sync failed: ${syncErrorReason(code, 'raw')}`
       )
@@ -97,6 +126,10 @@ describe('syncErrorReason', () => {
 
   it('falls back to the raw message when it has nothing better', () => {
     expect(syncErrorReason('unknown', 'Disk quota exceeded')).toBe('Disk quota exceeded')
+  })
+
+  it('explains a 403 as a write-access refusal', () => {
+    expect(syncErrorReason('forbidden', 'raw')).toMatch(/write access/i)
   })
 })
 

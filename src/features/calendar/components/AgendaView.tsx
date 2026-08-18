@@ -13,7 +13,7 @@ import type { CalendarEvent } from '@/types'
 import { ContextMenu } from '@/components/common/ContextMenu'
 import { EmptyState } from '@/components/common/EmptyState'
 import { getEventColor } from '@/lib/eventColor'
-import { formatTime } from '@/lib/datetime'
+import { formatEventTime, toEventInstant } from '@/lib/datetime'
 import { LocationLink } from './LocationLink'
 import { useDateChangeMotion } from '@/hooks/useDateChangeMotion'
 import { useTaskContextMenuItems } from '../hooks/useTaskContextMenuItems'
@@ -156,7 +156,7 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
       // Undated tasks have a technical start value from their VTODO import;
       // only tasks with an explicit due date belong on the agenda.
       if (event.type === 'task' && !event.dueDate) return
-      const eventDate = format(parseISO(event.start), 'yyyy-MM-dd')
+      const eventDate = format(toEventInstant(event.start, event.timezone), 'yyyy-MM-dd')
       // R4.6: push onto a stable array instead of spreading into a new
       // one. The previous `eventMap.set(k, [...existing, item])` was
       // O(k.length) per event, so for a day with N events it was O(N²)
@@ -166,17 +166,17 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
         arr = []
         eventMap.set(eventDate, arr)
       }
-      arr.push({ event, date: parseISO(event.start) })
+      arr.push({ event, date: toEventInstant(event.start, event.timezone) })
 
       if (!event.isAllDay) {
-        const eventEndDate = format(parseISO(event.end), 'yyyy-MM-dd')
+        const eventEndDate = format(toEventInstant(event.end, event.timezone), 'yyyy-MM-dd')
         if (eventEndDate !== eventDate) {
           let endArr = eventMap.get(eventEndDate)
           if (!endArr) {
             endArr = []
             eventMap.set(eventEndDate, endArr)
           }
-          endArr.push({ event, date: parseISO(event.end) })
+          endArr.push({ event, date: toEventInstant(event.end, event.timezone) })
         }
       }
     })
@@ -189,7 +189,10 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
       arr.sort((a, b) => {
         if (a.event.isAllDay && !b.event.isAllDay) return -1
         if (!a.event.isAllDay && b.event.isAllDay) return 1
-        return parseISO(a.event.start).getTime() - parseISO(b.event.start).getTime()
+        return (
+          toEventInstant(a.event.start, a.event.timezone).getTime() -
+          toEventInstant(b.event.start, b.event.timezone).getTime()
+        )
       })
     })
 
@@ -421,7 +424,7 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
                                       <span className={styles.agendaTaskTime}>
                                         {event.start.includes('T00:00')
                                           ? 'Due'
-                                          : formatTime(event.start, timeFormat)}
+                                          : formatEventTime(event.start, event.timezone, timeFormat)}
                                       </span>
                                       <button
                                         type="button"
@@ -476,7 +479,7 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
                                     <span className={styles.agendaEventTime}>
                                       {event.isAllDay
                                         ? 'All day'
-                                        : formatTime(event.start, timeFormat)}
+                                        : formatEventTime(event.start, event.timezone, timeFormat)}
                                     </span>
                                     <span className={styles.agendaEventTitle}>{event.title}</span>
                                   </div>

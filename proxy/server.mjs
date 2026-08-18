@@ -78,7 +78,8 @@ const FORWARDED_HEADERS = new Set([
 
 const ALLOW_METHODS =
   'GET, POST, PUT, DELETE, PROPFIND, PROPPATCH, REPORT, OPTIONS, MKCOL, MKCALENDAR, COPY, MOVE'
-const ALLOW_HEADERS = 'Authorization, Content-Type, Depth, Prefer, If-None-Match, If-Match'
+const ALLOW_HEADERS =
+  'Authorization, Content-Type, Depth, Prefer, If-None-Match, If-Match, X-Follow-Redirects'
 
 const ALLOWED_ORIGINS_NORMALIZED = ALLOWED_ORIGINS
 const ALLOWED_TARGETS_ASCII = ALLOWED_TARGETS.map((s) => {
@@ -298,11 +299,17 @@ const server = createServer(async (req, res) => {
     const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
     let upstream
     try {
+      // X-Follow-Redirects: 1 asks the proxy to follow the upstream redirect
+      // chain itself (redirect: 'manual' by default). Discovery probes need
+      // this: the browser cannot follow a cross-origin redirect the proxy
+      // relays (CORS), and cannot read a manual one (opaque-redirect). With
+      // the chain followed here, X-Target-URL reports the final URL.
+      const followRedirects = req.headers['x-follow-redirects'] === '1'
       upstream = await fetch(targetUrl, {
         method: req.method,
         headers,
         body,
-        redirect: 'manual',
+        redirect: followRedirects ? 'follow' : 'manual',
         signal: controller.signal,
       })
     } finally {

@@ -1,5 +1,6 @@
 import { LocalNotifications } from '@capacitor/local-notifications'
-import { addMinutes } from 'date-fns'
+import { addMinutes, parseISO } from 'date-fns'
+import { toEventInstant } from '@/lib/datetime'
 import type { CalendarEvent } from '@/types'
 import { getEffectiveReminders } from './notifications'
 import { openEventDeepLink } from './deepLink'
@@ -50,13 +51,34 @@ export async function registerReminderActions(): Promise<void> {
   })
 }
 
-function reminderBody(event: CalendarEvent): string {
-  if (event.isAllDay) return 'Starting today'
-  const timeStr = new Date(event.start).toLocaleTimeString([], {
+/**
+ * The true instant a reminder should fire for an event. TZID events store
+ * naive wall clocks in the event zone, so they must be resolved through
+ * toEventInstant (a trailing-Z start is already a genuine instant and passes
+ * through unchanged). All-day events keep their calendar-date behavior — no
+ * conversion, because toEventInstant would shift a date-only value a day
+ * west of UTC.
+ */
+export function reminderInstant(event: CalendarEvent, minutesBefore: number): Date {
+  const start = event.isAllDay ? parseISO(event.start) : toEventInstant(event.start, event.timezone)
+  return new Date(start.getTime() - minutesBefore * 60_000)
+}
+
+/**
+ * Device-local display of the event's start time, resolved through
+ * toEventInstant for TZID events. Returns 'All day' for all-day events.
+ */
+export function reminderBodyTime(event: CalendarEvent): string {
+  if (event.isAllDay) return 'All day'
+  return toEventInstant(event.start, event.timezone).toLocaleTimeString([], {
     hour: 'numeric',
     minute: '2-digit',
   })
-  return `Starting at ${timeStr}`
+}
+
+export function reminderBody(event: CalendarEvent): string {
+  if (event.isAllDay) return 'Starting today'
+  return `Starting at ${reminderBodyTime(event)}`
 }
 
 export async function reconcileNativeReminders(events: CalendarEvent[]): Promise<void> {
@@ -65,8 +87,7 @@ export async function reconcileNativeReminders(events: CalendarEvent[]): Promise
 
   for (const event of events) {
     for (const reminder of getEffectiveReminders(event)) {
-      const at = new Date(event.start)
-      at.setMinutes(at.getMinutes() - reminder.minutesBefore)
+      const at = reminderInstant(event, reminder.minutesBefore)
       if (at.getTime() <= now) continue
 
       toSchedule.push({

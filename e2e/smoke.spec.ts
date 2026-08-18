@@ -98,12 +98,14 @@ test.describe('smoke', () => {
     await dialog.getByLabel('Password').fill(TEST_CALDAV_ENV.password!)
     await dialog.getByLabel(/account name/i).fill(TEST_CALDAV_NAME)
 
-    // Submit. Calino first does a connection test (PROPFIND), then the
-    // success message appears.
+    // Submit. The add flow runs the probe (PROPFIND) inside `addAccount` and
+    // closes the dialog on success — the in-dialog "Connection successful!"
+    // text only renders after the separate "Test connection" button
+    // (handleTestConnection), so waiting for it here would time out even on
+    // a healthy server. Asserting the dialog closes is the success signal.
     await dialog.getByRole('button', { name: 'Add Calendar' }).click()
 
-    await expect(dialog.getByText('Connection successful')).toBeVisible({ timeout: 30_000 })
-    await expect(dialog).toBeHidden({ timeout: 15_000 })
+    await expect(dialog).toBeHidden({ timeout: 30_000 })
 
     // The account was written to localStorage. The Settings page's
     // `useCalDAV()` keeps accounts in local React state — a refresh

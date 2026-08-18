@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { format } from 'date-fns'
+import { toZoneWallClock } from '@/lib/datetime'
 import { useCalendarStore } from '../calendarStore'
 
 describe('calendarStore', () => {
@@ -168,6 +169,66 @@ describe('calendarStore', () => {
           percentComplete: 100,
         })
       )
+    })
+  })
+
+  describe('R1: TZID task dueDate frame normalization', () => {
+    const tzidTask = {
+      id: 'tz-task-norm',
+      title: 'Copenhagen Task',
+      start: '2026-02-10T14:30:00',
+      end: '2026-02-10T14:30:00',
+      dueDate: '2026-02-10T14:30:00',
+      calendarId: 'default',
+      isAllDay: false,
+      type: 'task' as const,
+      timezone: 'Europe/Copenhagen',
+    }
+
+    it('re-frames a device-frame Z instant dueDate into the event zone', () => {
+      useCalendarStore.getState().addEvent(tzidTask)
+      // A device-frame save (EventPreviewPopup) writes a Z instant; the store
+      // must re-frame it like start/end so the naive-wall-clock invariant holds.
+      const devFrame = new Date('2026-02-12T12:00:00').toISOString()
+      useCalendarStore.getState().updateEvent('tz-task-norm', {
+        dueDate: devFrame,
+        start: devFrame,
+        end: devFrame,
+      })
+      const expected = toZoneWallClock(devFrame, 'Europe/Copenhagen')
+      const updated = useCalendarStore.getState().events.find((e) => e.id === 'tz-task-norm')
+      expect(updated?.dueDate).toBe(expected)
+      expect(updated?.start).toBe(expected)
+      expect(updated?.end).toBe(expected)
+    })
+
+    it('passes a naive dueDate through unchanged (floating / already framed)', () => {
+      useCalendarStore.getState().addEvent(tzidTask)
+      useCalendarStore.getState().updateEvent('tz-task-norm', {
+        dueDate: '2026-02-13T14:30:00',
+      })
+      const updated = useCalendarStore.getState().events.find((e) => e.id === 'tz-task-norm')
+      expect(updated?.dueDate).toBe('2026-02-13T14:30:00')
+    })
+
+    it('leaves an all-day TZID task dueDate floating (no day shift)', () => {
+      useCalendarStore.getState().addEvent({
+        ...tzidTask,
+        id: 'tz-task-allday-norm',
+        isAllDay: true,
+        dueDate: '2026-02-10',
+        start: '2026-02-10T00:00:00',
+        end: '2026-02-10T23:59:59',
+      })
+      useCalendarStore.getState().updateEvent('tz-task-allday-norm', {
+        dueDate: '2026-02-14',
+      })
+      const updated = useCalendarStore.getState().events.find(
+        (e) => e.id === 'tz-task-allday-norm'
+      )
+      // A bare date must never be resolved through the zone — Feb 14 stays
+      // Feb 14 in every runner timezone.
+      expect(updated?.dueDate).toBe('2026-02-14')
     })
   })
 

@@ -1,5 +1,6 @@
-import { format, parseISO } from 'date-fns'
+import { format } from 'date-fns'
 import type { CalendarAttendee, CalendarEvent, CalendarOrganizer } from '@/types'
+import { toEventInstant } from '@/lib/datetime'
 
 /**
  * Windows' shell and several mail clients silently truncate long `mailto:`
@@ -13,8 +14,8 @@ const MIN_DESCRIPTION_CHARS = 40
 
 function formatWhen(event: CalendarEvent, use24Hour: boolean): string {
   try {
-    const start = parseISO(event.start)
-    const end = parseISO(event.end)
+    const start = toEventInstant(event.start, event.timezone)
+    const end = toEventInstant(event.end, event.timezone)
     if (Number.isNaN(start.getTime())) return ''
 
     if (event.isAllDay) {

@@ -111,13 +111,112 @@ END:VCALENDAR`,
           username: mockCredentials.username,
           password: mockCredentials.password,
         },
-        authMethod: 'Basic',
+        // Phase 4 — tsdav's own Basic auth mangles non-Latin-1 credentials,
+        // so we hand it a UTF-8 header via the Custom authFunction.
+        authMethod: 'Custom',
+        authFunction: expect.any(Function),
         defaultAccountType: 'caldav',
         // Always an explicit fetch: on native we must bypass Capacitor's
         // patched window.fetch, which cannot send WebDAV verbs.
         fetch: expect.any(Function),
       })
       expect(result).toBeInstanceOf(CalDAVClient)
+    })
+
+    it('authenticates tsdav requests with a UTF-8-safe Basic header', async () => {
+      const unicodeCreds = {
+        ...mockCredentials,
+        username: 'ivan',
+        password: '密码123',
+      }
+      const unicodeClient = new CalDAVClient(unicodeCreds.serverUrl, unicodeCreds)
+      await unicodeClient.connect()
+
+      const params = mockCreateDAVClient.mock.calls[0][0] as {
+        authMethod: string
+        authFunction: (c: unknown) => Promise<Record<string, string>>
+      }
+      expect(params.authMethod).toBe('Custom')
+      // btoa would throw on the CJK password; the custom function must not.
+      const headers = await params.authFunction(unicodeCreds)
+      expect(headers).toEqual({ Authorization: 'Basic aXZhbjrlr4bnoIExMjM=' })
+    })
+  })
+
+  describe('principal discovery (RFC 5397 + RFC 4791)', () => {
+    const radicalePrincipalResponse = `<?xml version="1.0" encoding="UTF-8" ?>
+<D:multistatus xmlns:D="DAV:">
+  <D:response>
+    <D:href>/</D:href>
+    <D:propstat>
+      <D:prop>
+        <D:current-user-principal>
+          <href>/ivan/</href>
+        </D:current-user-principal>
+      </D:prop>
+      <D:status>HTTP/1.1 200 OK</D:status>
+    </D:propstat>
+  </D:response>
+</D:multistatus>`
+
+    const radicaleHomeSetResponse = `<?xml version="1.0" encoding="UTF-8" ?>
+<D:multistatus xmlns:D="DAV:" xmlns:C="urn:ietf:params:xml:ns:caldav">
+  <D:response>
+    <D:href>/ivan/</D:href>
+    <D:propstat>
+      <D:prop>
+        <C:calendar-home-set>
+          <href>/ivan/calendars/</href>
+        </C:calendar-home-set>
+      </D:prop>
+      <D:status>HTTP/1.1 200 OK</D:status>
+    </D:propstat>
+  </D:response>
+</D:multistatus>`
+
+    it('resolves current-user-principal → calendar-home-set with unprefixed child hrefs', async () => {
+      await client.connect()
+      // No calendars cached yet → findCalendarHome falls through to the
+      // principal path, which issues its own PROPFINDs via global fetch.
+      mockClientMethods.fetchCalendars.mockResolvedValue([])
+
+      const requests: Array<{ url: string; method: string }> = []
+      fetchSpy.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = typeof input === 'string' ? input : input.toString()
+        requests.push({ url, method: init?.method ?? 'GET' })
+        if (url === 'https://caldav.example.com') {
+          return new Response(radicalePrincipalResponse, { status: 207 })
+        }
+        if (url === 'https://caldav.example.com/ivan/') {
+          return new Response(radicaleHomeSetResponse, { status: 207 })
+        }
+        // The MKCALENDAR for the new calendar collection under the home.
+        return new Response(null, { status: 201 })
+      })
+
+      const created = await client.createCalendar({ name: 'Trip Plans' })
+
+      expect(created.url).toMatch(
+        /^https:\/\/caldav\.example\.com\/ivan\/calendars\/trip-plans-[0-9a-f-]+\/$/
+      )
+      const propfinds = requests.filter((r) => r.method === 'PROPFIND')
+      expect(propfinds.map((r) => r.url)).toEqual([
+        'https://caldav.example.com',
+        'https://caldav.example.com/ivan/',
+      ])
+    })
+
+    it('survives a principal that answers no properties (falls back)', async () => {
+      await client.connect()
+      mockClientMethods.fetchCalendars.mockResolvedValue([])
+      fetchSpy.mockResolvedValue(
+        new Response('<D:multistatus xmlns:D="DAV:"></D:multistatus>', { status: 207 })
+      )
+
+      // With no principal info and no cached calendars, home discovery fails.
+      await expect(client.createCalendar({ name: 'Nope' })).rejects.toThrow(
+        /Could not determine calendar home/
+      )
     })
   })
 
@@ -133,15 +232,192 @@ END:VCALENDAR`,
       expect(calendars[0].supportedComponents).toEqual(['VEVENT', 'VTODO'])
     })
 
-    it('keeps only supported event and task component metadata', async () => {
+    it('keeps only known calendar component metadata (VJOURNAL now included)', async () => {
       mockClientMethods.fetchCalendars.mockResolvedValue([
-        { ...mockCalendar, components: ['VTODO', 'VJOURNAL'] },
+        { ...mockCalendar, components: ['VTODO', 'VJOURNAL', 'VFREEBUSY'] },
       ])
       await client.connect()
 
       const calendars = await client.fetchCalendars()
 
-      expect(calendars[0].supportedComponents).toEqual(['VTODO'])
+      expect(calendars[0].supportedComponents).toEqual(['VTODO', 'VJOURNAL'])
+    })
+
+    // Phase 4 — capability metadata
+    it('captures ctag and syncToken returned by the server', async () => {
+      mockClientMethods.fetchCalendars.mockResolvedValue([
+        { ...mockCalendar, ctag: 'ctag-42', syncToken: 'https://example.com/ns/sync/1234' },
+      ])
+      await client.connect()
+
+      const calendars = await client.fetchCalendars()
+
+      expect(calendars[0].ctag).toBe('ctag-42')
+      expect(calendars[0].syncToken).toBe('https://example.com/ns/sync/1234')
+    })
+
+    it('requests privilege-set, subscribed and calendar-order via props', async () => {
+      await client.connect()
+      await client.fetchCalendars()
+
+      const arg = mockClientMethods.fetchCalendars.mock.calls[0][0]
+      expect(arg.props).toMatchObject({
+        'cs:getctag': {},
+        'd:sync-token': {},
+        'd:current-user-privilege-set': {},
+        'cs:subscribed': {},
+        'cs:calendar-order': {},
+      })
+      expect(arg.projectedProps).toMatchObject({
+        currentUserPrivilegeSet: true,
+        subscribed: true,
+        calendarOrder: true,
+      })
+    })
+
+    it('marks a calendar read-only when the privilege set grants no write', async () => {
+      mockClientMethods.fetchCalendars.mockResolvedValue([
+        {
+          ...mockCalendar,
+          projectedProps: {
+            currentUserPrivilegeSet: { privilege: { read: {}, 'read-current-user': {} } },
+          },
+        },
+      ])
+      await client.connect()
+
+      const calendars = await client.fetchCalendars()
+      expect(calendars[0].readOnly).toBe(true)
+    })
+
+    it('stays writable when the privilege set grants write, and when absent', async () => {
+      mockClientMethods.fetchCalendars.mockResolvedValue([
+        {
+          ...mockCalendar,
+          url: 'https://caldav.example.com/calendars/test/writable/',
+          projectedProps: {
+            currentUserPrivilegeSet: { privilege: { read: {}, write: {}, bind: {} } },
+          },
+        },
+        {
+          ...mockCalendar,
+          url: 'https://caldav.example.com/calendars/test/no-privs/',
+          // Server did not answer the property at all
+        },
+      ])
+      await client.connect()
+
+      const calendars = await client.fetchCalendars()
+      expect(calendars.find((c) => c.url.endsWith('writable/'))?.readOnly).toBe(false)
+      expect(calendars.find((c) => c.url.endsWith('no-privs/'))?.readOnly).toBe(false)
+    })
+
+    it('stays writable when the server sends one <privilege> element per privilege', async () => {
+      // The shape every real server actually produces. RFC 3744 defines
+      // current-user-privilege-set as a *sequence* of <privilege> elements,
+      // and xml-js (compact mode, alwaysArray: false) turns repeated siblings
+      // into an array — so `privilege` is an array here, not one merged
+      // object. Reading keys off it yields "0", "1", "2", which contain no
+      // privilege named `write`, and every calendar on the server goes
+      // read-only.
+      mockClientMethods.fetchCalendars.mockResolvedValue([
+        {
+          ...mockCalendar,
+          projectedProps: {
+            currentUserPrivilegeSet: {
+              privilege: [{ read: {} }, { write: {} }, { 'write-content': {} }],
+            },
+          },
+        },
+      ])
+      await client.connect()
+
+      const calendars = await client.fetchCalendars()
+      expect(calendars[0].readOnly).toBe(false)
+    })
+
+    it('reads a write privilege nested inside an aggregate, and through a namespace prefix', async () => {
+      // `<write>` aggregates `<write-content>`/`<write-properties>` (RFC 3744
+      // §3.2), so a server may grant write only as a child of an aggregate.
+      // And prefixes are arbitrary: sabre sends `<d:write/>` where Radicale
+      // sends `<write/>` — a matcher bound to the bare local name misses one
+      // of them.
+      mockClientMethods.fetchCalendars.mockResolvedValue([
+        {
+          ...mockCalendar,
+          url: 'https://caldav.example.com/calendars/test/nested/',
+          projectedProps: {
+            currentUserPrivilegeSet: { privilege: [{ all: { 'write-content': {} } }] },
+          },
+        },
+        {
+          ...mockCalendar,
+          url: 'https://caldav.example.com/calendars/test/prefixed/',
+          projectedProps: {
+            currentUserPrivilegeSet: { privilege: [{ 'd:read': {} }, { 'd:write': {} }] },
+          },
+        },
+      ])
+      await client.connect()
+
+      const calendars = await client.fetchCalendars()
+      expect(calendars.find((c) => c.url.endsWith('nested/'))?.readOnly).toBe(false)
+      expect(calendars.find((c) => c.url.endsWith('prefixed/'))?.readOnly).toBe(false)
+    })
+
+    it('still marks read-only when a per-element privilege list grants no write', async () => {
+      mockClientMethods.fetchCalendars.mockResolvedValue([
+        {
+          ...mockCalendar,
+          projectedProps: {
+            currentUserPrivilegeSet: {
+              privilege: [{ read: {} }, { 'read-current-user-privilege-set': {} }],
+            },
+          },
+        },
+      ])
+      await client.connect()
+
+      const calendars = await client.fetchCalendars()
+      expect(calendars[0].readOnly).toBe(true)
+    })
+
+    it('forces subscriptions read-only regardless of privileges', async () => {
+      mockClientMethods.fetchCalendars.mockResolvedValue([
+        {
+          ...mockCalendar,
+          projectedProps: {
+            subscribed: {},
+            currentUserPrivilegeSet: { privilege: { read: {}, write: {} } },
+          },
+        },
+      ])
+      await client.connect()
+
+      const calendars = await client.fetchCalendars()
+      expect(calendars[0].isSubscribed).toBe(true)
+      expect(calendars[0].readOnly).toBe(true)
+    })
+
+    it('skips schedule inbox/outbox collections', async () => {
+      mockClientMethods.fetchCalendars.mockResolvedValue([
+        { ...mockCalendar },
+        {
+          ...mockCalendar,
+          url: 'https://caldav.example.com/calendars/test/inbox/',
+          resourcetype: ['collection', 'schedule-inbox'],
+        },
+        {
+          ...mockCalendar,
+          url: 'https://caldav.example.com/calendars/test/outbox/',
+          resourcetype: ['collection', 'schedule-outbox'],
+        },
+      ])
+      await client.connect()
+
+      const calendars = await client.fetchCalendars()
+      expect(calendars).toHaveLength(1)
+      expect(calendars[0].url).toBe(mockCalendar.url)
     })
 
     // Bug 14: calendar ID should use UUID, not Date.now()
@@ -1064,6 +1340,78 @@ END:VCALENDAR`,
     })
   })
 
+  // Finding 6: assertResponseOk must surface the server's Retry-After on
+  // rate-limit errors so the pending-change backoff can honor it. Exercised
+  // through the public deleteEvent path, which routes every non-2xx response
+  // through assertResponseOk.
+  describe('Retry-After handling', () => {
+    it('attaches a numeric Retry-After to a 429 error', async () => {
+      await client.connect()
+      mockClientMethods.deleteCalendarObject.mockResolvedValue(
+        new Response('slow down', { status: 429, headers: { 'retry-after': '120' } })
+      )
+
+      const error = await client
+        .deleteEvent(mockEventObject.url, mockEventObject.etag)
+        .catch((e: unknown) => e)
+      expect((error as { status?: number }).status).toBe(429)
+      expect((error as { retryAfter?: number }).retryAfter).toBe(120)
+    })
+
+    it('parses an HTTP-date Retry-After into seconds until that date', async () => {
+      await client.connect()
+      const inFiveMinutes = new Date(Date.now() + 5 * 60_000).toUTCString()
+      mockClientMethods.deleteCalendarObject.mockResolvedValue(
+        new Response('slow down', { status: 429, headers: { 'retry-after': inFiveMinutes } })
+      )
+
+      const error = await client
+        .deleteEvent(mockEventObject.url, mockEventObject.etag)
+        .catch((e: unknown) => e)
+      const retryAfter = (error as { retryAfter?: number }).retryAfter
+      expect(retryAfter).toBeGreaterThanOrEqual(290)
+      expect(retryAfter).toBeLessThanOrEqual(310)
+    })
+
+    it('omits retryAfter when the header is invalid', async () => {
+      await client.connect()
+      mockClientMethods.deleteCalendarObject.mockResolvedValue(
+        new Response('slow down', { status: 429, headers: { 'retry-after': 'not-a-date' } })
+      )
+
+      const error = await client
+        .deleteEvent(mockEventObject.url, mockEventObject.etag)
+        .catch((e: unknown) => e)
+      expect((error as { status?: number }).status).toBe(429)
+      expect((error as { retryAfter?: number }).retryAfter).toBeUndefined()
+    })
+
+    it('omits retryAfter when the header is missing', async () => {
+      await client.connect()
+      mockClientMethods.deleteCalendarObject.mockResolvedValue(
+        new Response('slow down', { status: 429 })
+      )
+
+      const error = await client
+        .deleteEvent(mockEventObject.url, mockEventObject.etag)
+        .catch((e: unknown) => e)
+      expect((error as { status?: number }).status).toBe(429)
+      expect((error as { retryAfter?: number }).retryAfter).toBeUndefined()
+    })
+
+    it('clamps an oversized Retry-After to the safe cap', async () => {
+      await client.connect()
+      mockClientMethods.deleteCalendarObject.mockResolvedValue(
+        new Response('slow down', { status: 429, headers: { 'retry-after': '99999999' } })
+      )
+
+      const error = await client
+        .deleteEvent(mockEventObject.url, mockEventObject.etag)
+        .catch((e: unknown) => e)
+      expect((error as { retryAfter?: number }).retryAfter).toBe(3600)
+    })
+  })
+
   describe('calendar caching (Bug 32)', () => {
     it('caches calendars after first fetchCalendars() call', async () => {
       await client.connect()
@@ -1263,6 +1611,316 @@ END:VCALENDAR`,
 
     it('returns default for numeric values', () => {
       expect(normalizeColor(42 as unknown as string)).toBe('#4285F4')
+    })
+  })
+
+  describe('fetchResourceByHref', () => {
+    const href = 'https://caldav.example.com/calendars/test/default/event-1.ics'
+    const ICS = 'BEGIN:VCALENDAR\r\nVERSION:2.0\r\nEND:VCALENDAR'
+
+    it('GETs the resource and returns its body', async () => {
+      fetchSpy.mockResolvedValueOnce(
+        new Response(ICS, { status: 200, headers: { ETag: '"etag-1"' } })
+      )
+
+      const result = await client.fetchResourceByHref(href)
+
+      expect(result).toEqual({ url: href, data: ICS, etag: '"etag-1"' })
+      const [calledUrl, init] = fetchSpy.mock.calls[0]
+      expect(String(calledUrl)).toBe(href)
+      expect(init?.method).toBe('GET')
+    })
+
+    it('returns null when the resource vanished between REPORT and GET', async () => {
+      fetchSpy.mockResolvedValueOnce(new Response('', { status: 404 }))
+
+      // A tombstone the next REPORT will describe properly — not a reason to
+      // fail the whole calendar's sync.
+      await expect(client.fetchResourceByHref(href)).resolves.toBeNull()
+    })
+
+    it('throws on a server error so the caller leaves its sync token alone', async () => {
+      fetchSpy.mockResolvedValueOnce(new Response('', { status: 503 }))
+
+      await expect(client.fetchResourceByHref(href)).rejects.toThrow('503')
+    })
+
+    it('omits the etag when the browser cannot read the header', async () => {
+      // Radicale sends no access-control-expose-headers, so ETag is invisible
+      // to a cross-origin browser read. The caller falls back to the etag the
+      // REPORT already gave it.
+      fetchSpy.mockResolvedValueOnce(new Response(ICS, { status: 200 }))
+
+      const result = await client.fetchResourceByHref(href)
+
+      expect(result?.etag).toBeUndefined()
+      expect(result?.data).toBe(ICS)
+    })
+  })
+
+  describe('syncCollection (RFC 6578)', () => {
+    const collectionUrl = 'https://caldav.example.com/calendars/test/default/'
+
+    function multistatusResponse(body: string, status = 207): Response {
+      return new Response(body, { status })
+    }
+
+    it('parses added/changed resources and captures the returned sync token', async () => {
+      const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<D:multistatus xmlns:D="DAV:">
+  <D:response>
+    <D:href>/calendars/test/default/event-1.ics</D:href>
+    <D:propstat>
+      <D:prop><D:getetag>"etag-1"</D:getetag></D:prop>
+      <D:status>HTTP/1.1 200 OK</D:status>
+    </D:propstat>
+  </D:response>
+  <D:response>
+    <D:href>/calendars/test/default/event-2.ics</D:href>
+    <D:propstat>
+      <D:prop><D:getetag>"etag-2"</D:getetag></D:prop>
+      <D:status>HTTP/1.1 200 OK</D:status>
+    </D:propstat>
+  </D:response>
+  <D:sync-token>https://caldav.example.com/sync/2</D:sync-token>
+</D:multistatus>`
+      fetchSpy.mockResolvedValueOnce(multistatusResponse(xml))
+
+      const result = await client.syncCollection(collectionUrl, 'https://caldav.example.com/sync/1')
+
+      expect(result.tokenInvalidated).toBe(false)
+      expect(result.newSyncToken).toBe('https://caldav.example.com/sync/2')
+      expect(result.changes).toEqual([
+        {
+          href: 'https://caldav.example.com/calendars/test/default/event-1.ics',
+          etag: '"etag-1"',
+          status: 'changed',
+        },
+        {
+          href: 'https://caldav.example.com/calendars/test/default/event-2.ics',
+          etag: '"etag-2"',
+          status: 'changed',
+        },
+      ])
+
+      // Sent a REPORT carrying the supplied sync token.
+      const [, init] = fetchSpy.mock.calls[fetchSpy.mock.calls.length - 1]
+      expect(init?.method).toBe('REPORT')
+      expect(String(init?.body)).toContain('<D:sync-token>https://caldav.example.com/sync/1</D:sync-token>')
+    })
+
+    it('parses tombstoned (removed) resources reported as a top-level 404', async () => {
+      const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<D:multistatus xmlns:D="DAV:">
+  <D:response>
+    <D:href>/calendars/test/default/event-deleted.ics</D:href>
+    <D:status>HTTP/1.1 404 Not Found</D:status>
+  </D:response>
+  <D:sync-token>https://caldav.example.com/sync/3</D:sync-token>
+</D:multistatus>`
+      fetchSpy.mockResolvedValueOnce(multistatusResponse(xml))
+
+      const result = await client.syncCollection(collectionUrl, 'https://caldav.example.com/sync/2')
+
+      expect(result.tokenInvalidated).toBe(false)
+      expect(result.changes).toEqual([
+        {
+          href: 'https://caldav.example.com/calendars/test/default/event-deleted.ics',
+          etag: null,
+          status: 'removed',
+        },
+      ])
+    })
+
+    it.each([400, 403, 409, 507])(
+      'sets tokenInvalidated on a %d response and drops the token',
+      async (status) => {
+        fetchSpy.mockResolvedValueOnce(new Response('', { status }))
+
+        const result = await client.syncCollection(collectionUrl, 'stale-token')
+
+        expect(result).toEqual({ changes: [], newSyncToken: null, tokenInvalidated: true })
+      }
+    )
+
+    it('treats the DAV:valid-sync-token precondition as a rejected token', async () => {
+      // Verified against Radicale 3: a stale or unparsable token comes back as
+      // 403 carrying this precondition element, NOT the 400/507 this code
+      // originally enumerated. The fallback survived only because of the
+      // catch-all for non-2xx; this pins the real-world shape so a future
+      // narrowing of that branch cannot quietly strand the cursor.
+      fetchSpy.mockResolvedValueOnce(
+        new Response(
+          `<?xml version='1.0' encoding='utf-8'?>\n<error xmlns="DAV:"><valid-sync-token /></error>`,
+          { status: 403 }
+        )
+      )
+
+      const result = await client.syncCollection(collectionUrl, 'stale-token')
+
+      expect(result).toEqual({ changes: [], newSyncToken: null, tokenInvalidated: true })
+    })
+
+    it('sets tokenInvalidated when the request throws (network failure)', async () => {
+      fetchSpy.mockRejectedValueOnce(new Error('network down'))
+
+      const result = await client.syncCollection(collectionUrl, 'token-1')
+
+      expect(result).toEqual({ changes: [], newSyncToken: null, tokenInvalidated: true })
+    })
+
+    it('parses an UNPREFIXED (Radicale-shaped) multistatus — this is exactly what a prefix-bound regex misses', async () => {
+      const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<multistatus xmlns="DAV:">
+  <response>
+    <href>/ivan/calendars/default/event-radicale.ics</href>
+    <propstat>
+      <prop><getetag>"radicale-etag"</getetag></prop>
+      <status>HTTP/1.1 200 OK</status>
+    </propstat>
+  </response>
+  <response>
+    <href>/ivan/calendars/default/event-gone.ics</href>
+    <status>HTTP/1.1 404 Not Found</status>
+  </response>
+  <sync-token>http://radicale.malinov.ski/sync/7</sync-token>
+</multistatus>`
+      fetchSpy.mockResolvedValueOnce(multistatusResponse(xml))
+
+      const result = await client.syncCollection(collectionUrl, null)
+
+      expect(result.tokenInvalidated).toBe(false)
+      expect(result.newSyncToken).toBe('http://radicale.malinov.ski/sync/7')
+      expect(result.changes).toEqual([
+        {
+          href: 'https://caldav.example.com/ivan/calendars/default/event-radicale.ics',
+          etag: '"radicale-etag"',
+          status: 'changed',
+        },
+        {
+          href: 'https://caldav.example.com/ivan/calendars/default/event-gone.ics',
+          etag: null,
+          status: 'removed',
+        },
+      ])
+    })
+
+    it('resolves an absolute href unchanged', async () => {
+      const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<D:multistatus xmlns:D="DAV:">
+  <D:response>
+    <D:href>https://other-host.example.com/cal/event-abs.ics</D:href>
+    <D:propstat>
+      <D:prop><D:getetag>"abs-etag"</D:getetag></D:prop>
+      <D:status>HTTP/1.1 200 OK</D:status>
+    </D:propstat>
+  </D:response>
+  <D:sync-token>tok-abs</D:sync-token>
+</D:multistatus>`
+      fetchSpy.mockResolvedValueOnce(multistatusResponse(xml))
+
+      const result = await client.syncCollection(collectionUrl, null)
+
+      expect(result.changes).toEqual([
+        {
+          href: 'https://other-host.example.com/cal/event-abs.ics',
+          etag: '"abs-etag"',
+          status: 'changed',
+        },
+      ])
+    })
+
+    it('resolves a relative href against the collection URL', async () => {
+      const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<D:multistatus xmlns:D="DAV:">
+  <D:response>
+    <D:href>event-rel.ics</D:href>
+    <D:propstat>
+      <D:prop><D:getetag>"rel-etag"</D:getetag></D:prop>
+      <D:status>HTTP/1.1 200 OK</D:status>
+    </D:propstat>
+  </D:response>
+  <D:sync-token>tok-rel</D:sync-token>
+</D:multistatus>`
+      fetchSpy.mockResolvedValueOnce(multistatusResponse(xml))
+
+      const result = await client.syncCollection(collectionUrl, null)
+
+      expect(result.changes).toEqual([
+        {
+          href: 'https://caldav.example.com/calendars/test/default/event-rel.ics',
+          etag: '"rel-etag"',
+          status: 'changed',
+        },
+      ])
+    })
+
+    it('preserves a percent-encoded href exactly as the server sent it', async () => {
+      // %20 round-trips through a decode, but %23/%3F do not: decoding them
+      // first yields a literal '#'/'?' which `new URL()` reparses as a
+      // fragment/query, truncating the path. A later GET would then fetch the
+      // wrong resource and the href would not match the stored one.
+      const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<D:multistatus xmlns:D="DAV:">
+  <D:response>
+    <D:href>/calendars/test/my%20calendar/event%20four.ics</D:href>
+    <D:propstat>
+      <D:prop><D:getetag>"enc-etag"</D:getetag></D:prop>
+      <D:status>HTTP/1.1 200 OK</D:status>
+    </D:propstat>
+  </D:response>
+  <D:response>
+    <D:href>/calendars/test/hash%231.ics</D:href>
+    <D:propstat>
+      <D:prop><D:getetag>"hash-etag"</D:getetag></D:prop>
+      <D:status>HTTP/1.1 200 OK</D:status>
+    </D:propstat>
+  </D:response>
+  <D:response>
+    <D:href>/calendars/test/query%3Fx.ics</D:href>
+    <D:propstat>
+      <D:prop><D:getetag>"query-etag"</D:getetag></D:prop>
+      <D:status>HTTP/1.1 200 OK</D:status>
+    </D:propstat>
+  </D:response>
+  <D:sync-token>tok-enc</D:sync-token>
+</D:multistatus>`
+      fetchSpy.mockResolvedValueOnce(multistatusResponse(xml))
+
+      const result = await client.syncCollection(collectionUrl, null)
+
+      expect(result.changes).toEqual([
+        {
+          href: 'https://caldav.example.com/calendars/test/my%20calendar/event%20four.ics',
+          etag: '"enc-etag"',
+          status: 'changed',
+        },
+        {
+          href: 'https://caldav.example.com/calendars/test/hash%231.ics',
+          etag: '"hash-etag"',
+          status: 'changed',
+        },
+        {
+          href: 'https://caldav.example.com/calendars/test/query%3Fx.ics',
+          etag: '"query-etag"',
+          status: 'changed',
+        },
+      ])
+    })
+
+    it('sends an empty sync-token element for a full (initial) sync', async () => {
+      const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<D:multistatus xmlns:D="DAV:">
+  <D:sync-token>tok-initial</D:sync-token>
+</D:multistatus>`
+      fetchSpy.mockResolvedValueOnce(multistatusResponse(xml))
+
+      const result = await client.syncCollection(collectionUrl, null)
+
+      expect(result.newSyncToken).toBe('tok-initial')
+      expect(result.changes).toEqual([])
+      const [, init] = fetchSpy.mock.calls[fetchSpy.mock.calls.length - 1]
+      expect(String(init?.body)).toContain('<D:sync-token/>')
     })
   })
 })

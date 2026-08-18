@@ -1,5 +1,6 @@
 import { createDAVClient } from 'tsdav'
 import { webFetch } from '@/lib/webFetch'
+import { basicAuthHeader } from './basicAuth'
 
 const DISCOVERY_TIMEOUT_MS = 8_000
 
@@ -231,7 +232,19 @@ async function probeWellKnownDirect(wellKnownUrl: string, baseUrl: string): Prom
   }
 }
 
-/** Proxy fetch: same logic as direct — the proxy handles redirects. */
+/**
+ * Proxy fetch: ask the proxy to follow the upstream redirect chain itself
+ * (X-Follow-Redirects — see proxy/server.mjs). The browser cannot do it: a
+ * cross-origin Location the proxy relays fails CORS when followed, and
+ * `redirect: 'manual'` comes back opaque, headers unreadable. With the chain
+ * followed proxy-side, X-Target-URL reports the final URL.
+ *
+ * The probe is a PROPFIND (not GET): a DAV server redirects it exactly like
+ * the GET the RFC suggests, but the *final* answer is then a 207/401 that
+ * `isDavStatus` can validate — a followed chain that overshoots into a web
+ * interface (Radicale → / → /.web) ends in 404/405 and is rejected instead
+ * of being adopted as the CalDAV endpoint.
+ */
 async function probeWellKnownViaProxy(
   wellKnownUrl: string,
   baseUrl: string,
@@ -241,21 +254,47 @@ async function probeWellKnownViaProxy(
   const timer = setTimeout(() => controller.abort(), DISCOVERY_TIMEOUT_MS)
   try {
     const response = await proxyFetch(proxyUrl, wellKnownUrl, {
-      method: 'GET',
+      method: 'PROPFIND',
+      headers: {
+        'X-Follow-Redirects': '1',
+        Depth: '0',
+      },
       redirect: 'follow',
       signal: controller.signal,
     })
 
-    // Same logic as probeWellKnownDirect: check if we ended up somewhere else.
-    // If the proxy followed a redirect, the X-Target-URL header reveals the
-    // real endpoint. Preserve trailing slash — some servers (Davis) require it.
+    // Final URL of a followed chain (new proxies), or the originally
+    // requested URL (old proxies / no redirect happened).
     const targetUrl = response.headers.get('X-Target-URL')
     if (targetUrl) {
       const finalUrl = new URL(targetUrl)
       const finalPath = finalUrl.pathname
-      if (!isWellKnownPath(finalPath)) {
+      if (isWellKnownPath(finalPath)) {
+        // Still on .well-known: no redirect happened → unsupported.
+        return null
+      }
+      // The chain moved somewhere — only trust it when the final endpoint
+      // actually spoke DAV to the PROPFIND.
+      if (isDavStatus(response.status)) {
         return buildBaseUrl(baseUrl, finalPath, finalUrl.origin)
       }
+      return null
+    }
+
+    // Old proxy relaying the 3xx with an exposed Location: the redirect is
+    // the server's own declaration of its CalDAV endpoint (RFC 6764 §5), so
+    // resolve it and hand it back — probeConnection verifies it afterwards.
+    const location = response.headers.get('Location')
+    if (response.status >= 300 && response.status < 400 && location) {
+      try {
+        const resolved = new URL(location, wellKnownUrl)
+        if (!isWellKnownPath(resolved.pathname)) {
+          return buildBaseUrl(baseUrl, resolved.pathname, resolved.origin)
+        }
+      } catch {
+        // Malformed Location — fall through.
+      }
+      return null
     }
 
     // No X-Target-URL: infer from status.
@@ -265,12 +304,7 @@ async function probeWellKnownViaProxy(
       return null
     }
 
-    // 200 at .well-known itself — server doesn't redirect (unsupported)
-    if (response.ok) {
-      return null
-    }
-
-    // 404/405 — not supported
+    // Anything else (200/404/405 at .well-known itself) — unsupported.
     return null
   } finally {
     clearTimeout(timer)
@@ -356,7 +390,7 @@ export async function probeConnection(
       const init: RequestInit = {
         method: 'PROPFIND',
         headers: {
-          Authorization: `Basic ${btoa(`${username}:${password}`)}`,
+          Authorization: basicAuthHeader(username, password),
           'Content-Type': 'application/xml',
           Depth: '0',
         },

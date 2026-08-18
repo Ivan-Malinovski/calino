@@ -1,12 +1,13 @@
 import { memo, useMemo } from 'react'
 import type { JSX } from 'react'
-import { addMinutes, format, parseISO } from 'date-fns'
+import { addMinutes, format } from 'date-fns'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useDndContext } from '@dnd-kit/core'
 import type { CalendarEvent, Calendar } from '@/types'
 import { EventCard } from './EventCard'
 import { getEventColor } from '@/lib/eventColor'
 import { formatTravelDuration } from '@/lib/events'
+import { toEventInstant } from '@/lib/datetime'
 import { positionEvents } from '@/lib/eventPositioning'
 import {
   positionedEventStyle,
@@ -58,7 +59,9 @@ const WeekDayColumn = memo(function WeekDayColumn({
   // active drag and reduced-motion. See #73.
   const { transparentEvents, taskById, positionedEvents } = useMemo(() => {
     const sorted = [...events, ...fragments].sort(
-      (a, b) => parseISO(a.start).getTime() - parseISO(b.start).getTime()
+      (a, b) =>
+        toEventInstant(a.start, a.timezone).getTime() -
+        toEventInstant(b.start, b.timezone).getTime()
     )
 
     // Timed tasks share the event column algorithm so overlapping items sit
@@ -70,7 +73,7 @@ const WeekDayColumn = memo(function WeekDayColumn({
     const taskLayoutItems = timedTasks.map((task) => ({
       ...task,
       end: format(
-        addMinutes(parseISO(task.start), TASK_PILL_LAYOUT_MINUTES),
+        addMinutes(toEventInstant(task.start, task.timezone), TASK_PILL_LAYOUT_MINUTES),
         "yyyy-MM-dd'T'HH:mm:ss"
       ),
     }))
