@@ -24,6 +24,31 @@ import {
 
 const NETWORK_TIMEOUT_MS = 15_000
 
+// ---------------------------------------------------------------------------
+// sync-collection REPORT (RFC 6578) types
+// ---------------------------------------------------------------------------
+
+/**
+ * One entry from a sync-collection REPORT response. `href` is always
+ * resolved to an absolute URL (relative/percent-encoded server hrefs are
+ * normalized via `resolveDavHref`). `changed` covers both newly-added and
+ * modified resources — sync-collection alone cannot distinguish the two;
+ * the caller determines that by checking whether the href is already known.
+ */
+export interface SyncCollectionChange {
+  href: string
+  etag: string | null
+  status: 'changed' | 'removed'
+}
+
+export interface SyncCollectionResult {
+  changes: SyncCollectionChange[]
+  newSyncToken: string | null
+  /** True when the server rejected the token (400/507) or the request otherwise
+   * failed — the caller must fall back to a full sync and discard the old token. */
+  tokenInvalidated: boolean
+}
+
 // Upper bound for an honored Retry-After (seconds). Anything larger — or
 // unparseable — is treated as absent, so a misbehaving server can't stall the
 // pending-change queue for hours on a single 429.
@@ -959,6 +984,128 @@ export class CalDAVClient {
   /** Text content of the first descendant element matching a local name in the DAV: namespace. */
   private getDavElementText(scope: Document | Element, localName: string): string | null {
     return this.getDavElements(scope, localName)[0]?.textContent ?? null
+  }
+
+  // ---------------------------------------------------------------------------
+  // sync-collection REPORT (RFC 6578)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Perform an incremental sync of a single collection (calendar or address
+   * book) using sync-collection REPORT (RFC 6578).
+   *
+   * With `syncToken: null` this is a full initial sync — the server returns
+   * every member and a fresh token to store. On a subsequent call with that
+   * token, the server returns only what changed (added/modified resources
+   * with an etag, removed resources as a bare 404 status) plus a new token.
+   *
+   * Falls back gracefully (`tokenInvalidated: true`) when the server rejects
+   * the token (400 Bad Request / 507 Insufficient Storage — RFC 6578 §3.2)
+   * or the request otherwise fails; the caller must then discard the stored
+   * token and perform a full resync.
+   *
+   * Namespace-aware by construction: response parsing goes through
+   * `getDavElements`/`getDavElementText` (DOMParser + `getElementsByTagNameNS`),
+   * not prefix-bound regexes — Radicale emits DAV elements unprefixed
+   * (`<href>` rather than `<D:href>`), which defeats a prefix-bound matcher.
+   */
+  async syncCollection(
+    collectionUrl: string,
+    syncToken: string | null
+  ): Promise<SyncCollectionResult> {
+    const body = `<?xml version="1.0" encoding="UTF-8" ?>
+<D:sync-collection xmlns:D="DAV:">
+  ${syncToken ? `<D:sync-token>${escapeXml(syncToken)}</D:sync-token>` : '<D:sync-token/>'}
+  <D:sync-level>1</D:sync-level>
+  <D:prop>
+    <D:getetag/>
+  </D:prop>
+</D:sync-collection>`
+
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/xml; charset=utf-8',
+      Authorization: this.authHeader,
+    }
+
+    try {
+      const response = await this.proxyFetch(collectionUrl, {
+        method: 'REPORT',
+        headers,
+        body,
+      })
+
+      // RFC 6578 §3.2: the server rejects an invalid/expired token with
+      // 400 or 507. Treat any other non-2xx/207 the same way — there is no
+      // token worth keeping if the REPORT didn't succeed.
+      if (response.status === 400 || response.status === 507) {
+        return { changes: [], newSyncToken: null, tokenInvalidated: true }
+      }
+      if (!response.ok && response.status !== 207) {
+        return { changes: [], newSyncToken: null, tokenInvalidated: true }
+      }
+
+      const text = await response.text()
+      const doc = this.parseXmlDocument(text)
+
+      const newSyncToken = this.getDavElementText(doc, 'sync-token')
+      const changes = this.parseSyncCollectionResponse(doc, collectionUrl)
+
+      return { changes, newSyncToken, tokenInvalidated: false }
+    } catch {
+      return { changes: [], newSyncToken: null, tokenInvalidated: true }
+    }
+  }
+
+  /**
+   * Parse a sync-collection multistatus into individual changes.
+   * Each `<response>` is either:
+   * - a tombstone: a `<status>` directly under `<response>` reporting 404
+   *   (the member was removed since the last sync);
+   * - added/changed: a `<propstat>` carrying `<getetag>` (200).
+   *
+   * Hrefs are resolved to absolute URLs via `resolveDavHref` (handles
+   * relative, absolute and percent-encoded forms) before being returned.
+   */
+  private parseSyncCollectionResponse(doc: Document, baseUrl: string): SyncCollectionChange[] {
+    const changes: SyncCollectionChange[] = []
+    const responseElements = this.getDavElements(doc, 'response')
+
+    for (const responseEl of responseElements) {
+      const rawHref = this.getDavElementText(responseEl, 'href')
+      if (!rawHref) continue
+
+      // Resolve the href EXACTLY as the server sent it. Do not percent-decode
+      // first: `new URL()` re-encodes %C3%A9 and %20 losslessly, but a decoded
+      // %23 or %3F becomes a literal '#'/'?' and is reparsed as a fragment or
+      // query — `ev%231.ics` would resolve to `.../ev#1.ics`, so a later GET
+      // fetches `/ev` and the href no longer matches the stored one. Principal
+      // discovery (see resolveDavHref call sites above) resolves raw for the
+      // same reason.
+      const href = resolveDavHref(baseUrl, rawHref)
+
+      // A tombstone reports its status directly on <response>, not nested
+      // inside a <propstat>. Only consider a <status> that is a direct
+      // child of this <response> — a <propstat><status> further down
+      // covers a per-property failure, not a resource-level removal.
+      const topStatusEl = this.getDavElements(responseEl, 'status').find(
+        (el) => el.parentElement === responseEl
+      )
+      const topStatusMatch = topStatusEl?.textContent
+        ? /HTTP\/\d\.\d\s+(\d+)/.exec(topStatusEl.textContent)
+        : null
+
+      if (topStatusMatch && parseInt(topStatusMatch[1], 10) === 404) {
+        changes.push({ href, etag: null, status: 'removed' })
+        continue
+      }
+
+      const etag = this.getDavElementText(responseEl, 'getetag')
+      if (etag) {
+        changes.push({ href, etag, status: 'changed' })
+      }
+    }
+
+    return changes
   }
 
   /**

@@ -1543,4 +1543,249 @@ END:VCALENDAR`,
       expect(normalizeColor(42 as unknown as string)).toBe('#4285F4')
     })
   })
+
+  describe('syncCollection (RFC 6578)', () => {
+    const collectionUrl = 'https://caldav.example.com/calendars/test/default/'
+
+    function multistatusResponse(body: string, status = 207): Response {
+      return new Response(body, { status })
+    }
+
+    it('parses added/changed resources and captures the returned sync token', async () => {
+      const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<D:multistatus xmlns:D="DAV:">
+  <D:response>
+    <D:href>/calendars/test/default/event-1.ics</D:href>
+    <D:propstat>
+      <D:prop><D:getetag>"etag-1"</D:getetag></D:prop>
+      <D:status>HTTP/1.1 200 OK</D:status>
+    </D:propstat>
+  </D:response>
+  <D:response>
+    <D:href>/calendars/test/default/event-2.ics</D:href>
+    <D:propstat>
+      <D:prop><D:getetag>"etag-2"</D:getetag></D:prop>
+      <D:status>HTTP/1.1 200 OK</D:status>
+    </D:propstat>
+  </D:response>
+  <D:sync-token>https://caldav.example.com/sync/2</D:sync-token>
+</D:multistatus>`
+      fetchSpy.mockResolvedValueOnce(multistatusResponse(xml))
+
+      const result = await client.syncCollection(collectionUrl, 'https://caldav.example.com/sync/1')
+
+      expect(result.tokenInvalidated).toBe(false)
+      expect(result.newSyncToken).toBe('https://caldav.example.com/sync/2')
+      expect(result.changes).toEqual([
+        {
+          href: 'https://caldav.example.com/calendars/test/default/event-1.ics',
+          etag: '"etag-1"',
+          status: 'changed',
+        },
+        {
+          href: 'https://caldav.example.com/calendars/test/default/event-2.ics',
+          etag: '"etag-2"',
+          status: 'changed',
+        },
+      ])
+
+      // Sent a REPORT carrying the supplied sync token.
+      const [, init] = fetchSpy.mock.calls[fetchSpy.mock.calls.length - 1]
+      expect(init?.method).toBe('REPORT')
+      expect(String(init?.body)).toContain('<D:sync-token>https://caldav.example.com/sync/1</D:sync-token>')
+    })
+
+    it('parses tombstoned (removed) resources reported as a top-level 404', async () => {
+      const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<D:multistatus xmlns:D="DAV:">
+  <D:response>
+    <D:href>/calendars/test/default/event-deleted.ics</D:href>
+    <D:status>HTTP/1.1 404 Not Found</D:status>
+  </D:response>
+  <D:sync-token>https://caldav.example.com/sync/3</D:sync-token>
+</D:multistatus>`
+      fetchSpy.mockResolvedValueOnce(multistatusResponse(xml))
+
+      const result = await client.syncCollection(collectionUrl, 'https://caldav.example.com/sync/2')
+
+      expect(result.tokenInvalidated).toBe(false)
+      expect(result.changes).toEqual([
+        {
+          href: 'https://caldav.example.com/calendars/test/default/event-deleted.ics',
+          etag: null,
+          status: 'removed',
+        },
+      ])
+    })
+
+    it.each([400, 507])('sets tokenInvalidated on a %d response and drops the token', async (status) => {
+      fetchSpy.mockResolvedValueOnce(new Response('', { status }))
+
+      const result = await client.syncCollection(collectionUrl, 'stale-token')
+
+      expect(result).toEqual({ changes: [], newSyncToken: null, tokenInvalidated: true })
+    })
+
+    it('sets tokenInvalidated when the request throws (network failure)', async () => {
+      fetchSpy.mockRejectedValueOnce(new Error('network down'))
+
+      const result = await client.syncCollection(collectionUrl, 'token-1')
+
+      expect(result).toEqual({ changes: [], newSyncToken: null, tokenInvalidated: true })
+    })
+
+    it('parses an UNPREFIXED (Radicale-shaped) multistatus — this is exactly what a prefix-bound regex misses', async () => {
+      const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<multistatus xmlns="DAV:">
+  <response>
+    <href>/ivan/calendars/default/event-radicale.ics</href>
+    <propstat>
+      <prop><getetag>"radicale-etag"</getetag></prop>
+      <status>HTTP/1.1 200 OK</status>
+    </propstat>
+  </response>
+  <response>
+    <href>/ivan/calendars/default/event-gone.ics</href>
+    <status>HTTP/1.1 404 Not Found</status>
+  </response>
+  <sync-token>http://radicale.malinov.ski/sync/7</sync-token>
+</multistatus>`
+      fetchSpy.mockResolvedValueOnce(multistatusResponse(xml))
+
+      const result = await client.syncCollection(collectionUrl, null)
+
+      expect(result.tokenInvalidated).toBe(false)
+      expect(result.newSyncToken).toBe('http://radicale.malinov.ski/sync/7')
+      expect(result.changes).toEqual([
+        {
+          href: 'https://caldav.example.com/ivan/calendars/default/event-radicale.ics',
+          etag: '"radicale-etag"',
+          status: 'changed',
+        },
+        {
+          href: 'https://caldav.example.com/ivan/calendars/default/event-gone.ics',
+          etag: null,
+          status: 'removed',
+        },
+      ])
+    })
+
+    it('resolves an absolute href unchanged', async () => {
+      const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<D:multistatus xmlns:D="DAV:">
+  <D:response>
+    <D:href>https://other-host.example.com/cal/event-abs.ics</D:href>
+    <D:propstat>
+      <D:prop><D:getetag>"abs-etag"</D:getetag></D:prop>
+      <D:status>HTTP/1.1 200 OK</D:status>
+    </D:propstat>
+  </D:response>
+  <D:sync-token>tok-abs</D:sync-token>
+</D:multistatus>`
+      fetchSpy.mockResolvedValueOnce(multistatusResponse(xml))
+
+      const result = await client.syncCollection(collectionUrl, null)
+
+      expect(result.changes).toEqual([
+        {
+          href: 'https://other-host.example.com/cal/event-abs.ics',
+          etag: '"abs-etag"',
+          status: 'changed',
+        },
+      ])
+    })
+
+    it('resolves a relative href against the collection URL', async () => {
+      const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<D:multistatus xmlns:D="DAV:">
+  <D:response>
+    <D:href>event-rel.ics</D:href>
+    <D:propstat>
+      <D:prop><D:getetag>"rel-etag"</D:getetag></D:prop>
+      <D:status>HTTP/1.1 200 OK</D:status>
+    </D:propstat>
+  </D:response>
+  <D:sync-token>tok-rel</D:sync-token>
+</D:multistatus>`
+      fetchSpy.mockResolvedValueOnce(multistatusResponse(xml))
+
+      const result = await client.syncCollection(collectionUrl, null)
+
+      expect(result.changes).toEqual([
+        {
+          href: 'https://caldav.example.com/calendars/test/default/event-rel.ics',
+          etag: '"rel-etag"',
+          status: 'changed',
+        },
+      ])
+    })
+
+    it('preserves a percent-encoded href exactly as the server sent it', async () => {
+      // %20 round-trips through a decode, but %23/%3F do not: decoding them
+      // first yields a literal '#'/'?' which `new URL()` reparses as a
+      // fragment/query, truncating the path. A later GET would then fetch the
+      // wrong resource and the href would not match the stored one.
+      const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<D:multistatus xmlns:D="DAV:">
+  <D:response>
+    <D:href>/calendars/test/my%20calendar/event%20four.ics</D:href>
+    <D:propstat>
+      <D:prop><D:getetag>"enc-etag"</D:getetag></D:prop>
+      <D:status>HTTP/1.1 200 OK</D:status>
+    </D:propstat>
+  </D:response>
+  <D:response>
+    <D:href>/calendars/test/hash%231.ics</D:href>
+    <D:propstat>
+      <D:prop><D:getetag>"hash-etag"</D:getetag></D:prop>
+      <D:status>HTTP/1.1 200 OK</D:status>
+    </D:propstat>
+  </D:response>
+  <D:response>
+    <D:href>/calendars/test/query%3Fx.ics</D:href>
+    <D:propstat>
+      <D:prop><D:getetag>"query-etag"</D:getetag></D:prop>
+      <D:status>HTTP/1.1 200 OK</D:status>
+    </D:propstat>
+  </D:response>
+  <D:sync-token>tok-enc</D:sync-token>
+</D:multistatus>`
+      fetchSpy.mockResolvedValueOnce(multistatusResponse(xml))
+
+      const result = await client.syncCollection(collectionUrl, null)
+
+      expect(result.changes).toEqual([
+        {
+          href: 'https://caldav.example.com/calendars/test/my%20calendar/event%20four.ics',
+          etag: '"enc-etag"',
+          status: 'changed',
+        },
+        {
+          href: 'https://caldav.example.com/calendars/test/hash%231.ics',
+          etag: '"hash-etag"',
+          status: 'changed',
+        },
+        {
+          href: 'https://caldav.example.com/calendars/test/query%3Fx.ics',
+          etag: '"query-etag"',
+          status: 'changed',
+        },
+      ])
+    })
+
+    it('sends an empty sync-token element for a full (initial) sync', async () => {
+      const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<D:multistatus xmlns:D="DAV:">
+  <D:sync-token>tok-initial</D:sync-token>
+</D:multistatus>`
+      fetchSpy.mockResolvedValueOnce(multistatusResponse(xml))
+
+      const result = await client.syncCollection(collectionUrl, null)
+
+      expect(result.newSyncToken).toBe('tok-initial')
+      expect(result.changes).toEqual([])
+      const [, init] = fetchSpy.mock.calls[fetchSpy.mock.calls.length - 1]
+      expect(String(init?.body)).toContain('<D:sync-token/>')
+    })
+  })
 })
