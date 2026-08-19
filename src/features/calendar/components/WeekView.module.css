@@ -494,6 +494,58 @@
     border-right: none;
   }
 
+  /* All-day items are full-bleed in the column even though the day name and
+     number above them are centred. */
+  .dayHeader .allDayEventsInHeader {
+    align-self: stretch;
+  }
+
+  /* Keeps a long list from pushing the timeline off the bottom of the screen
+     once a day is expanded. */
+  .dayHeader.hasAllDayEvents .allDayEventsInHeader {
+    max-height: 30vh;
+    overflow-y: auto;
+    scrollbar-width: none;
+  }
+
+  .dayHeader.hasAllDayEvents .allDayEventsInHeader::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Reads as one more row in the stack, because that is what it stands in for.
+     24px clears the WCAG 2.2 AA target minimum across the full column width;
+     the 44px AAA figure is for controls where a mis-tap is costly, and this one
+     just toggles a disclosure. */
+  .headerMoreItems {
+    width: 100%;
+    min-height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: var(--ink-3, #a39d93);
+    padding: 0 4px;
+    border: none;
+    border-radius: var(--radius-sm, 4px);
+    background: none;
+    font-family: inherit;
+    cursor: pointer;
+    flex-shrink: 0;
+    white-space: nowrap;
+    /* No 300ms double-tap-zoom delay on the toggle. */
+    touch-action: manipulation;
+  }
+
+  .headerMoreItems:active {
+    background: var(--line-2, rgba(var(--ink-raw), 0.05));
+  }
+
+  .headerMoreItems:focus-visible {
+    outline: 2px solid var(--accent);
+  }
+
   .header,
   .body {
     display: none;

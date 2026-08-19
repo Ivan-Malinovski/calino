@@ -72,6 +72,11 @@ const HOUR_KEYS = HOURS.map((hour) => format(hour, 'HH:mm'))
 /** Shared empty array so days with no events keep a stable prop reference. */
 const EMPTY_EVENTS: CalendarEvent[] = []
 
+/** How many all-day items a mobile day header shows before collapsing the rest
+ *  behind a `+N` chip. Two keeps the timeline the dominant thing on screen —
+ *  a busy day used to be able to push the grid off the bottom entirely. */
+const MOBILE_HEADER_ITEM_LIMIT = 2
+
 interface DroppableCellProps {
   dateKey: string
   hourKey: string
@@ -200,6 +205,19 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
   }, [openMenuId])
 
   const isMobile = useIsMobile()
+
+  // Day keys whose header is showing every all-day item rather than the first
+  // MOBILE_HEADER_ITEM_LIMIT. Expanding in place beats navigating away: the
+  // user is mid-scan of the week and a view switch loses that context.
+  const [expandedHeaderDays, setExpandedHeaderDays] = useState<ReadonlySet<string>>(() => new Set())
+
+  const toggleHeaderDay = useCallback((dayKey: string) => {
+    setExpandedHeaderDays((prev) => {
+      const next = new Set(prev)
+      if (!next.delete(dayKey)) next.add(dayKey)
+      return next
+    })
+  }, [])
 
   const handleSwipe = useCallback(
     (direction: 'left' | 'right' | 'up' | 'down') => {
@@ -361,8 +379,7 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
   )
   const secondaryTzAbbr = useMemo(
     () =>
-      secondaryTimezoneLabel ||
-      (secondaryTimezone ? getTimezoneAbbr(date, secondaryTimezone) : ''),
+      secondaryTimezoneLabel || (secondaryTimezone ? getTimezoneAbbr(date, secondaryTimezone) : ''),
     [date, secondaryTimezone, secondaryTimezoneLabel]
   )
 
@@ -468,6 +485,24 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
     }
     return { tasksMap: map, timedTasksMap: timedMap }
   }, [weekDays, events, calendars, rangeExpansionVersion])
+
+  // Everything that belongs above the timeline rather than in it: all-day
+  // events plus untimed tasks (see hasDueTime — a task with no due time, or
+  // one due at exactly midnight, has no row to sit on). Mobile renders these
+  // in the day header; desktop keeps all-day events in the header and untimed
+  // tasks in the aligned footer below (#120).
+  const mobileHeaderItemsMap = useMemo(() => {
+    const map = new Map<string, CalendarEvent[]>()
+    for (const day of weekDays) {
+      const dayKey = format(day, 'yyyy-MM-dd')
+      const items = [
+        ...(allDayEventsMap.get(dayKey) ?? EMPTY_EVENTS),
+        ...(tasksMap.get(dayKey) ?? EMPTY_EVENTS).filter((t) => !hasDueTime(t)),
+      ]
+      if (items.length > 0) map.set(dayKey, items)
+    }
+    return map
+  }, [weekDays, allDayEventsMap, tasksMap])
 
   const bodyRef = useRef<HTMLDivElement>(null)
   const lastDateRef = useRef(date.toISOString())
@@ -806,16 +841,71 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
           )}
         </div>
         <div className={styles.headerDays}>
-          {weekDays.map((day) => (
-            <div
-              key={day.toISOString()}
-              className={`${styles.dayHeader} ${isToday(day) ? styles.today : ''}`}
-              data-component="week-mobile-day-header"
-            >
-              <div className={styles.dayName}>{format(day, 'EEE')}</div>
-              <div className={styles.dayNumber}>{format(day, 'd')}</div>
-            </div>
-          ))}
+          {weekDays.map((day) => {
+            const dayKey = format(day, 'yyyy-MM-dd')
+            const headerItems = mobileHeaderItemsMap.get(dayKey) ?? EMPTY_EVENTS
+            const isExpanded = expandedHeaderDays.has(dayKey)
+            // Collapsing only pays for itself when the chip hides more than it
+            const canToggle = headerItems.length > MOBILE_HEADER_ITEM_LIMIT
+            const visibleItems =
+              isExpanded || !canToggle
+                ? headerItems
+                : headerItems.slice(0, MOBILE_HEADER_ITEM_LIMIT)
+            const hiddenCount = headerItems.length - visibleItems.length
+            const dayLabel = format(day, 'EEEE d MMMM')
+            return (
+              <div
+                key={day.toISOString()}
+                className={`${styles.dayHeader} ${isToday(day) ? styles.today : ''} ${
+                  headerItems.length > 0 ? styles.hasAllDayEvents : ''
+                }`}
+                data-component="week-mobile-day-header"
+              >
+                <div className={styles.dayName}>{format(day, 'EEE')}</div>
+                <div className={styles.dayNumber}>{format(day, 'd')}</div>
+                {/* All-day events and untimed tasks live here rather than in a
+                    separate footer, so they sit in the same DOM column as the
+                    day and inherit its width — the footer was laid out against
+                    the viewport while these columns scroll horizontally, which
+                    put items under the wrong day and squeezed titles to
+                    nothing (#120). */}
+                {headerItems.length > 0 && (
+                  <div className={styles.allDayEventsInHeader}>
+                    {visibleItems.map((item) => (
+                      <EventCard
+                        key={item.id}
+                        event={item}
+                        compact
+                        monthView
+                        enableResize={false}
+                      />
+                    ))}
+                    {/* Sits at the bottom of the stack, where the items it
+                        stands for would be — under the date it read as a badge
+                        on the day number instead. Sized like one item row: the
+                        24px WCAG AA target is the bar that applies to a tap
+                        this cheap to undo, and 44px cost more space than the
+                        rows it was hiding. */}
+                    {canToggle && (
+                      <button
+                        type="button"
+                        className={styles.headerMoreItems}
+                        aria-expanded={isExpanded}
+                        aria-label={
+                          isExpanded
+                            ? `Show fewer all-day items on ${dayLabel}`
+                            : `Show ${hiddenCount} more all-day items on ${dayLabel}`
+                        }
+                        onClick={() => toggleHeaderDay(dayKey)}
+                      >
+                        {isExpanded ? 'Less' : `+${hiddenCount} more`}
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            )
+          })}
         </div>
       </div>
       <div className={styles.mobileBody} data-component="week-mobile-body">
@@ -1065,32 +1155,43 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
         {...bind}
       >
         {isMobile ? renderMobileContent() : renderDesktopContent()}
-        {(() => {
-          const tasksByDay: CalendarEvent[][] = Array(weekDays.length)
-            .fill(null)
-            .map(() => [])
-          weekDays.forEach((day, idx) => {
-            const dayKey = format(day, 'yyyy-MM-dd')
-            const dayTasks = tasksMap.get(dayKey) || []
-            // Timed tasks live on the timeline (rendered as pills in the day
-            // column); only all-day / untimed tasks belong in the footer.
-            dayTasks.filter((t) => !hasDueTime(t)).forEach((t) => tasksByDay[idx].push(t))
-          })
-          const hasTasks = tasksByDay.some((arr) => arr.length > 0)
-          if (!hasTasks) return null
-          return (
-            <div className={styles.tasksFixedFooter}>
-              <div></div>
-              {tasksByDay.map((tasks, idx) => (
-                <div key={idx} className={styles.tasksFixedFooterCol}>
-                  {tasks.map((task) => (
-                    <EventCard key={task.id} event={task} compact monthView enableResize={false} />
-                  ))}
-                </div>
-              ))}
-            </div>
-          )
-        })()}
+        {/* Desktop only. Its grid template assumes the day columns are `1fr`
+            of the container, which holds for the desktop body but not for the
+            mobile strip's fixed-width, horizontally scrolled columns — on
+            mobile these items render in the day header instead (#120). */}
+        {!isMobile &&
+          (() => {
+            const tasksByDay: CalendarEvent[][] = Array(weekDays.length)
+              .fill(null)
+              .map(() => [])
+            weekDays.forEach((day, idx) => {
+              const dayKey = format(day, 'yyyy-MM-dd')
+              const dayTasks = tasksMap.get(dayKey) || []
+              // Timed tasks live on the timeline (rendered as pills in the day
+              // column); only all-day / untimed tasks belong in the footer.
+              dayTasks.filter((t) => !hasDueTime(t)).forEach((t) => tasksByDay[idx].push(t))
+            })
+            const hasTasks = tasksByDay.some((arr) => arr.length > 0)
+            if (!hasTasks) return null
+            return (
+              <div className={styles.tasksFixedFooter}>
+                <div></div>
+                {tasksByDay.map((tasks, idx) => (
+                  <div key={idx} className={styles.tasksFixedFooterCol}>
+                    {tasks.map((task) => (
+                      <EventCard
+                        key={task.id}
+                        event={task}
+                        compact
+                        monthView
+                        enableResize={false}
+                      />
+                    ))}
+                  </div>
+                ))}
+              </div>
+            )
+          })()}
       </div>
       <DragOverlay dropAnimation={null}>
         {activeEvent ? <EventCard event={activeEvent} isDragging /> : null}

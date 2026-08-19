@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { BrowserRouter } from 'react-router'
 import { WeekView } from '../WeekView'
 import { useCalendarStore } from '@/store/calendarStore'
@@ -143,5 +144,173 @@ describe('Bug #88: Timed tasks invisible in WeekView', () => {
 
     renderWithRouter(<WeekView />)
     expect(screen.getByText('Regular Event')).toBeInTheDocument()
+  })
+})
+
+describe('Bug #120: all-day items in the mobile week view', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+
+    mockUseCalDAV.mockReturnValue({
+      accounts: [],
+      calendars: [],
+      syncState: { status: 'idle', lastSyncAt: null, error: null, pendingChanges: 0 },
+      addAccount: vi.fn(),
+      removeAccount: vi.fn(),
+      syncAccount: vi.fn(),
+      syncAll: vi.fn(),
+      createEvent: vi.fn(),
+      updateEvent: vi.fn(),
+      deleteEvent: vi.fn(),
+      retryAllFailedSyncs: vi.fn().mockResolvedValue({ succeeded: 0, failed: 0 }),
+      createCalendar: vi.fn(),
+      updateCalendar: vi.fn(),
+      deleteCalendarFromServer: vi.fn(),
+    } as unknown as ReturnType<typeof useCalDAV>)
+
+    mockUseGestures.mockReturnValue({
+      bind: {},
+      gestureState: 'idle',
+    })
+
+    // The bug was mobile-only: the old footer's grid was laid out against the
+    // viewport while the mobile day columns are fixed-width and scroll
+    // horizontally.
+    mockUseIsMobile.mockReturnValue(true)
+
+    const store = useCalendarStore.getState()
+    store.events.forEach((e) => store.deleteEvent(e.id))
+    store.calendars.forEach((c) => store.deleteCalendar(c.id))
+    store.addCalendar({
+      id: 'default',
+      name: 'Default Calendar',
+      color: '#4285F4',
+      isVisible: true,
+      isDefault: true,
+      showTasksInViews: true,
+    })
+    store.setCurrentDate('2024-03-15')
+  })
+
+  const addAllDayTask = (id: string, title: string, dueDate = '2024-03-15') => {
+    useCalendarStore.getState().addEvent({
+      id,
+      calendarId: 'default',
+      title,
+      start: `${dueDate}T00:00:00`,
+      end: `${dueDate}T23:59:59`,
+      isAllDay: true,
+      type: 'task',
+      dueDate,
+    })
+  }
+
+  const headerFor = (title: string) =>
+    screen.getByText(title).closest('[data-component="week-mobile-day-header"]')
+
+  it('renders an all-day task inside its own day header column', () => {
+    addAllDayTask('task-allday-mobile', 'All Day Task')
+
+    renderWithRouter(<WeekView />)
+
+    // Being inside the day header is the fix: the header is a child of the
+    // horizontally scrolled strip, so it shares the day column's width and
+    // position instead of being laid out against the viewport.
+    expect(headerFor('All Day Task')).not.toBeNull()
+  })
+
+  it('places each all-day task under the day it is due, not an arbitrary column', () => {
+    addAllDayTask('task-fri', 'Friday Task', '2024-03-15')
+    addAllDayTask('task-sat', 'Saturday Task', '2024-03-16')
+
+    renderWithRouter(<WeekView />)
+
+    expect(headerFor('Friday Task')).toHaveTextContent('15')
+    expect(headerFor('Saturday Task')).toHaveTextContent('16')
+    expect(headerFor('Friday Task')).not.toBe(headerFor('Saturday Task'))
+  })
+
+  it('shows all-day events, which the mobile header previously dropped entirely', () => {
+    useCalendarStore.getState().addEvent({
+      id: 'event-allday-mobile',
+      calendarId: 'default',
+      title: 'All Day Event',
+      start: '2024-03-15T00:00:00',
+      end: '2024-03-15T23:59:59',
+      isAllDay: true,
+      type: 'event',
+    })
+
+    renderWithRouter(<WeekView />)
+
+    expect(headerFor('All Day Event')).not.toBeNull()
+  })
+
+  it('keeps timed tasks on the timeline rather than moving them into the header', () => {
+    useCalendarStore.getState().addEvent({
+      id: 'task-timed-mobile',
+      calendarId: 'default',
+      title: 'Timed Task',
+      start: '2024-03-15T14:00:00',
+      end: '2024-03-15T15:00:00',
+      isAllDay: false,
+      type: 'task',
+      dueDate: '2024-03-15T14:00:00',
+    })
+
+    renderWithRouter(<WeekView />)
+
+    expect(screen.getByText('Timed Task')).toBeInTheDocument()
+    expect(headerFor('Timed Task')).toBeNull()
+  })
+
+  it('collapses past two items and expands again from the date block', async () => {
+    addAllDayTask('t1', 'Task One')
+    addAllDayTask('t2', 'Task Two')
+    addAllDayTask('t3', 'Task Three')
+    addAllDayTask('t4', 'Task Four')
+
+    renderWithRouter(<WeekView />)
+
+    expect(screen.getByText('Task One')).toBeInTheDocument()
+    expect(screen.getByText('Task Two')).toBeInTheDocument()
+    expect(screen.queryByText('Task Three')).not.toBeInTheDocument()
+    expect(screen.queryByText('Task Four')).not.toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: /Show 2 more all-day items/ }))
+
+    expect(screen.getByText('Task Three')).toBeInTheDocument()
+    expect(screen.getByText('Task Four')).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: /Show fewer all-day items/ }))
+
+    expect(screen.queryByText('Task Three')).not.toBeInTheDocument()
+  })
+
+  it('puts the overflow control at the bottom of the stack, not under the date', () => {
+    addAllDayTask('t1', 'Task One')
+    addAllDayTask('t2', 'Task Two')
+    addAllDayTask('t3', 'Task Three')
+
+    renderWithRouter(<WeekView />)
+
+    // Under the date it read as a badge on the day number; among the items it
+    // reads as the rows it stands in for.
+    const toggle = screen.getByRole('button', { name: /Show 1 more all-day items/ })
+    expect(toggle).toHaveTextContent('+1 more')
+    expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    expect(toggle.previousElementSibling).not.toBeNull()
+    expect(toggle.parentElement).toHaveTextContent('Task Two')
+  })
+
+  it('leaves days within the limit with no overflow control at all', () => {
+    addAllDayTask('t1', 'Task One')
+    addAllDayTask('t2', 'Task Two')
+
+    renderWithRouter(<WeekView />)
+
+    expect(screen.getByText('Task One')).toBeInTheDocument()
+    expect(screen.getByText('Task Two')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /all-day items/ })).not.toBeInTheDocument()
   })
 })
