@@ -4,7 +4,7 @@ import React from 'react'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
 import { parseICALEvent } from '@/features/caldav/adapter/iCalendarAdapter'
-import { toEventInstant } from '@/lib/datetime'
+import { toEventInstant, deviceTimezone } from '@/lib/datetime'
 
 /**
  * Issue #126 — editing an item that arrived from another client.
@@ -231,5 +231,37 @@ describe('issue 126 — editing a foreign-TZID event does not move it', () => {
     // the split day showing the series twice, once at each time.
     const splitDay = useCalendarStore.getState().getEventsForDateRange('2026-08-05', '2026-08-05')
     expect(splitDay.filter((e) => e.title.startsWith('LA standup'))).toHaveLength(1)
+  })
+
+  // The form's fields are device-local, so without this the zone an event is
+  // anchored in is invisible while editing it — which is how a 09:00 Los
+  // Angeles meeting comes to be edited as "18:00" with no hint that those are
+  // different clocks.
+  it('shows the event own wall clock while editing it', async () => {
+    const { EventModal } = await import('@/features/calendar/components/EventModal')
+    render(<EventModal />)
+
+    const note = document.querySelector('[data-component="event-foreign-zone"]')
+    expect(note).toBeTruthy()
+    // The event's own clock — identical in both vitest zones, which is the
+    // whole point: the fields above read 12:00 in the west project and 18:00
+    // in the east, and neither is the event's time.
+    expect(note!.textContent).toBe('09:00\u201309:30 in Los Angeles')
+  })
+
+  it('says nothing when the event is anchored in the device zone', async () => {
+    const local = {
+      ...useCalendarStore.getState().events[0],
+      id: 'local-event',
+      timezone: deviceTimezone(),
+      start: '2026-08-03T09:00:00',
+      end: '2026-08-03T09:45:00',
+    }
+    useCalendarStore.setState({ events: [local], selectedEventId: 'local-event' })
+
+    const { EventModal } = await import('@/features/calendar/components/EventModal')
+    render(<EventModal />)
+
+    expect(document.querySelector('[data-component="event-foreign-zone"]')).toBeNull()
   })
 })

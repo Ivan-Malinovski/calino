@@ -9,6 +9,7 @@ import {
   daysBetween,
   addDays,
   addMinutesToTimeStr,
+  deviceTimezone,
 } from '@/lib/datetime'
 import { buildMasterTruncation } from '@/lib/recurrenceSplit'
 import { showToast } from '@/lib/toast'
@@ -136,7 +137,9 @@ export function EventPreviewPopup({
   // start/end: a naive wall clock in the event zone. All-day dueDates are
   // floating dates and must not pass through the zone conversion.
   const dueInstantFor = (iso: string): Date =>
-    isTask && !event.isAllDay && event.timezone ? toEventInstant(iso, event.timezone) : parseISO(iso)
+    isTask && !event.isAllDay && event.timezone
+      ? toEventInstant(iso, event.timezone)
+      : parseISO(iso)
   const dateFormatPattern =
     dateFormat === 'MM/dd/yyyy'
       ? 'MMM d, yyyy'
@@ -1035,6 +1038,12 @@ export function EventPreviewPopup({
                       />
                     </svg>
                     {renderTime()}
+                    {/* Times above are shown in the device zone. An event
+                        anchored elsewhere says so, matching the badge
+                        EventCard already renders in the grid. */}
+                    {event.timezone && event.timezone !== deviceTimezone() && (
+                      <span className={styles.tzBadge}>{event.timezone}</span>
+                    )}
                   </div>
 
                   {(editLocation || event.location) && (

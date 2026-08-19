@@ -1652,6 +1652,10 @@ export function EventModal(): JSX.Element | null {
 
                 {!isTaskMode && (
                   <EventFormFields
+                    eventTimezone={
+                      events.find((event) => event.id === (originalEventId ?? selectedEventId))
+                        ?.timezone
+                    }
                     isAllDay={isAllDay}
                     onIsAllDayChange={setIsAllDay}
                     startDate={startDate}

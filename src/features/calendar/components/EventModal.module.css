@@ -7,7 +7,9 @@
   justify-content: center;
   background: var(--modal-scrim, rgba(26, 26, 26, 0.25));
   backdrop-filter: var(--modal-blur, blur(3px));
-  transition: background var(--dur-base), backdrop-filter var(--dur-base);
+  transition:
+    background var(--dur-base),
+    backdrop-filter var(--dur-base);
 }
 
 .modalBackdrop.closing {
@@ -149,7 +151,10 @@
   flex-shrink: 0;
   margin-top: 4px;
   box-shadow: var(--shadow-event);
-  transition: background var(--dur-fast), color var(--dur-fast), transform 0.1s;
+  transition:
+    background var(--dur-fast),
+    color var(--dur-fast),
+    transform 0.1s;
 }
 
 .modalClose:hover {
@@ -369,7 +374,9 @@
   color: var(--color-text-primary, #1a1a1a);
   outline: none;
   box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.04);
-  transition: border-color var(--dur-fast), box-shadow var(--dur-fast);
+  transition:
+    border-color var(--dur-fast),
+    box-shadow var(--dur-fast);
 }
 
 .modalInput:focus,
@@ -475,7 +482,9 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  transition: border-color var(--dur-fast), background var(--dur-fast);
+  transition:
+    border-color var(--dur-fast),
+    background var(--dur-fast);
 }
 
 .checkBox.checked {
@@ -508,7 +517,10 @@
   align-items: center;
   justify-content: space-between;
   cursor: pointer;
-  transition: border-color var(--dur-fast), box-shadow var(--dur-fast), background var(--dur-fast);
+  transition:
+    border-color var(--dur-fast),
+    box-shadow var(--dur-fast),
+    background var(--dur-fast);
 }
 
 .modalSelect:hover {
@@ -649,7 +661,11 @@
   font-family: var(--font-sans, 'Inter', sans-serif);
   cursor: pointer;
   box-shadow: var(--shadow-event);
-  transition: background-color var(--dur-fast), color var(--dur-fast), border-color var(--dur-fast), transform 0.1s;
+  transition:
+    background-color var(--dur-fast),
+    color var(--dur-fast),
+    border-color var(--dur-fast),
+    transform 0.1s;
 }
 
 .modalDelete:hover {
@@ -681,7 +697,10 @@
   font-family: var(--font-sans, 'Inter', sans-serif);
   cursor: pointer;
   box-shadow: var(--shadow-event);
-  transition: background var(--dur-fast), color var(--dur-fast), transform 0.1s;
+  transition:
+    background var(--dur-fast),
+    color var(--dur-fast),
+    transform 0.1s;
 }
 
 .modalCancel:hover {
@@ -706,7 +725,10 @@
   cursor: pointer;
   letter-spacing: -0.01em;
   box-shadow: var(--modal-save-shadow, 0 2px 8px rgba(196, 168, 154, 0.4));
-  transition: background var(--dur-fast), box-shadow var(--dur-fast), transform 0.1s;
+  transition:
+    background var(--dur-fast),
+    box-shadow var(--dur-fast),
+    transform 0.1s;
 }
 
 .modalSave:hover {
@@ -782,7 +804,7 @@
 .row.divider {
   padding-top: 14px;
   margin-top: 6px;
-  border-top: 1px solid var(--color-border, rgba(0, 0, 0, 0.10));
+  border-top: 1px solid var(--color-border, rgba(0, 0, 0, 0.1));
 }
 
 .row .field {
@@ -857,7 +879,9 @@
   color: var(--color-text-primary, #1a1a1a);
   outline: none;
   box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.04);
-  transition: border-color var(--dur-fast), box-shadow var(--dur-fast);
+  transition:
+    border-color var(--dur-fast),
+    box-shadow var(--dur-fast);
 }
 
 .input:focus,
@@ -1030,9 +1054,13 @@
   top: 4px;
   height: calc(100% - 8px);
   background: var(--panel, #ffffff);
-  box-shadow: 0 1px 2px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.08 * var(--shadow-opacity, 1))), 0 0 0 1px var(--line, rgba(var(--shadow-rgb, 0, 0, 0), calc(0.09 * var(--shadow-opacity, 1))));
+  box-shadow:
+    0 1px 2px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.08 * var(--shadow-opacity, 1))),
+    0 0 0 1px var(--line, rgba(var(--shadow-rgb, 0, 0, 0), calc(0.09 * var(--shadow-opacity, 1))));
   border-radius: var(--view-switcher-indicator-radius, 9px);
-  transition: left 0.25s cubic-bezier(0.4, 0, 0.2, 1), width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  transition:
+    left 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+    width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   z-index: 0;
 }
 
@@ -1059,7 +1087,9 @@
   overflow: hidden;
   max-height: 0;
   opacity: 0;
-  transition: max-height 0.2s ease, opacity 0.2s ease;
+  transition:
+    max-height 0.2s ease,
+    opacity 0.2s ease;
 }
 
 .moreOptionsOpen {
@@ -1608,4 +1638,13 @@
   .textarea {
     font-size: 16px;
   }
+}
+
+/* The event's own wall clock, for a series anchored outside the device zone.
+   The date/time fields above are device-local, so without this a foreign TZID
+   is invisible while editing (see EventFormFields.foreignZoneTimes). */
+.foreignZoneNote {
+  margin: -2px 0 2px;
+  font-size: 12px;
+  color: var(--ink-2);
 }

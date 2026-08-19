@@ -351,7 +351,10 @@
   text-decoration: none;
   flex-shrink: 0;
   opacity: 0.6;
-  transition: opacity var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+  transition:
+    opacity var(--dur-fast) var(--ease-out),
+    background-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
 }
 
 .locationMapLink:hover {
@@ -543,4 +546,18 @@
   .popup[data-sheet] .field {
     font-size: 16px;
   }
+}
+
+/* Zone of an event anchored outside the device zone — same treatment as the
+   grid card's badge (EventCard.module.css .tzBadge). */
+.tzBadge {
+  margin-left: 6px;
+  padding: 0 4px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--ink-2);
+  background: rgba(128, 128, 128, 0.18);
+  white-space: nowrap;
 }

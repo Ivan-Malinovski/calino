@@ -12,14 +12,69 @@ import type {
 } from '@/types'
 import { useSettingsStore } from '@/store/settingsStore'
 import { useScrollInput } from '@/hooks/useScrollInput'
-import { daysBetween, addDays, addMinutesToTimeStr } from '@/lib/datetime'
+import { daysBetween, addDays, addMinutesToTimeStr, deviceTimezone } from '@/lib/datetime'
+import { formatInTimeZone } from 'date-fns-tz'
 import { AttachmentSection } from './AttachmentSection'
 import { AttendeeSection } from './AttendeeSection'
 import { TimeField } from './TimeField'
 import { RecurrenceFields, RecurrenceToggle } from './RecurrenceFields'
 import styles from './EventModal.module.css'
 
+/**
+ * The event's own times, for a series anchored in a zone other than the
+ * device's. The form's fields are device-local, so this is the same moment
+ * read on the event's clock — what actually moves when the fields change.
+ * Returns null when there is nothing to disambiguate.
+ */
+function foreignZoneTimes(
+  eventTimezone: string | undefined,
+  isAllDay: boolean,
+  startDate: string,
+  startTime: string,
+  endDate: string,
+  endTime: string,
+  timeFormat: '12h' | '24h'
+): { zoneLabel: string; times: string } | null {
+  if (!eventTimezone || isAllDay) return null
+  if (eventTimezone === deviceTimezone()) return null
+
+  const startInstant = new Date(`${startDate}T${startTime}:00`)
+  const endInstant = new Date(`${endDate}T${endTime}:00`)
+  if (Number.isNaN(startInstant.getTime()) || Number.isNaN(endInstant.getTime())) return null
+
+  const pattern = timeFormat === '24h' ? 'HH:mm' : 'h:mm a'
+  let start: string
+  let end: string
+  try {
+    start = formatInTimeZone(startInstant, eventTimezone, pattern)
+    end = formatInTimeZone(endInstant, eventTimezone, pattern)
+    // A late or early event can sit on a different calendar day over there, so
+    // name the day when it differs — otherwise the times alone would mislead.
+    const startDay = formatInTimeZone(startInstant, eventTimezone, 'yyyy-MM-dd')
+    if (startDay !== startDate) {
+      start = `${formatInTimeZone(startInstant, eventTimezone, 'MMM d')}, ${start}`
+    }
+  } catch {
+    // Unknown zone: better to show nothing than a wrong time.
+    return null
+  }
+
+  return {
+    // 'America/Los_Angeles' reads as 'Los Angeles'; the region prefix is noise
+    // once the city is there.
+    zoneLabel: (eventTimezone.split('/').pop() ?? eventTimezone).replace(/_/g, ' '),
+    times: `${start}\u2013${end}`,
+  }
+}
+
 interface EventFormFieldsProps {
+  /**
+   * The event's own TZID, when it has one. The date/time fields always work in
+   * the device zone, so a foreign TZID is otherwise invisible: editing a 09:00
+   * Los Angeles meeting from Copenhagen shows 18:00 with nothing saying what
+   * is actually being moved. Shown as a read-only line under the fields.
+   */
+  eventTimezone?: string
   isAllDay: boolean
   onIsAllDayChange: (checked: boolean) => void
   startDate: string
@@ -103,6 +158,7 @@ export function EventFormFields({
   onIsAllDayChange,
   startDate,
   onStartDateChange,
+  eventTimezone,
   startTime,
   onStartTimeChange,
   endDate,
@@ -274,6 +330,24 @@ export function EventFormFields({
           </div>
         </div>
       </div>
+
+      {(() => {
+        const foreign = foreignZoneTimes(
+          eventTimezone,
+          isAllDay,
+          startDate,
+          startTime,
+          endDate,
+          endTime,
+          timeFormat
+        )
+        if (!foreign) return null
+        return (
+          <div className={styles.foreignZoneNote} data-component="event-foreign-zone">
+            {foreign.times} in {foreign.zoneLabel}
+          </div>
+        )
+      })()}
 
       <div className={styles.row}>
         <label className={styles.checkbox}>
