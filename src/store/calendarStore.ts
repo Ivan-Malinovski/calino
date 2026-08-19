@@ -519,7 +519,27 @@ export const useCalendarStore = create<CalendarStore>()(
       journalModalDate: null,
       journalStartInCompose: false,
 
-      addEvent: (event: CalendarEvent): void => {
+      addEvent: (rawEvent: CalendarEvent): void => {
+        // Phase 2 (C3) — the same TZID storage invariant `updateEvent`
+        // enforces: a TZID item stores naive wall clocks in its own zone. An
+        // insert can carry a Z instant just as an update can (the "this and
+        // following" split writes the new master's start in the device frame
+        // when the series has a foreign TZID), and a mixed frame reaching the
+        // expansion reads those UTC fields as the event zone's wall clock —
+        // drifting the whole series by the offset. Naive input is untouched,
+        // so sync-parsed events pass straight through.
+        const event: CalendarEvent =
+          !rawEvent.isAllDay && rawEvent.timezone
+            ? {
+                ...rawEvent,
+                start: toZoneWallClock(rawEvent.start, rawEvent.timezone),
+                end: toZoneWallClock(rawEvent.end, rawEvent.timezone),
+                ...(rawEvent.dueDate
+                  ? { dueDate: toZoneWallClock(rawEvent.dueDate, rawEvent.timezone) }
+                  : {}),
+              }
+            : rawEvent
+
         // Capture events with invalid date ranges as broken instead of dropping them
         if (event.start > event.end && !event.isAllDay) {
           const reason = `start (${event.start}) > end (${event.end})`
