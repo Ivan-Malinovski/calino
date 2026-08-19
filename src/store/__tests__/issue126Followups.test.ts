@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { useCalendarStore, getTasksForDay } from '../calendarStore'
 import { expandZonedOccurrences } from '@/lib/occurrenceExpansion'
 import { format } from 'date-fns'
+import { formatInTimeZone } from 'date-fns-tz'
 import { deviceTimezone, toEventInstant } from '@/lib/datetime'
 import { makeTask } from '@/lib/__tests__/fixtures'
 import type { CalendarEvent } from '@/types'
@@ -160,5 +161,43 @@ describe('issue 126 — a TZID task with a naive due date files on its wall day'
     const events = useCalendarStore.getState().events
     expect(getTasksForDay(events, '2026-08-03').some((e) => e.id === 'cph-task')).toBe(true)
     expect(getTasksForDay(events, '2026-08-04').some((e) => e.id === 'cph-task')).toBe(false)
+  })
+})
+
+describe('a TZID series whose start was written back as an instant', () => {
+  // A local edit or drag leaves `…Z` on an item that still carries its TZID.
+  // Stripping the marker and reading the UTC fields as that zone's wall clock
+  // drifts the whole series by the zone offset — and, for an evening start,
+  // onto the wrong weekday, which is exactly the #126 symptom.
+  it('expands at its own zone wall clock, not the stripped UTC fields', () => {
+    const master: CalendarEvent = {
+      id: 'nyc-evening',
+      calendarId: 'default',
+      title: 'NYC evening',
+      // 23:00 Monday Aug 3 in New York.
+      start: '2026-08-04T03:00:00.000Z',
+      end: '2026-08-04T03:30:00.000Z',
+      isAllDay: false,
+      timezone: 'America/New_York',
+      rruleString: 'FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR',
+    }
+
+    const occurrences = expandZonedOccurrences(
+      master,
+      new Date('2026-08-03T00:00:00Z'),
+      new Date('2026-08-10T00:00:00Z')
+    )
+
+    expect(occurrences).not.toBeNull()
+    const nyc = occurrences!.map((occ) =>
+      formatInTimeZone(occ, 'America/New_York', "yyyy-MM-dd'T'HH:mm")
+    )
+    expect(nyc).toEqual([
+      '2026-08-03T23:00',
+      '2026-08-04T23:00',
+      '2026-08-05T23:00',
+      '2026-08-06T23:00',
+      '2026-08-07T23:00',
+    ])
   })
 })

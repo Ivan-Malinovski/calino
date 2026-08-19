@@ -192,13 +192,9 @@ interface WallClockParts {
   second: number
 }
 
-/** Parse the wall-clock components of a timed start string (strips Z/offset/fraction). */
-function wallClockParts(iso: string): WallClockParts | null {
-  const wall = iso
-    .replace(/Z$/i, '')
-    .replace(/[+-]\d{2}:?\d{2}$/, '')
-    .replace(/\.\d+$/, '')
-  const m = wall.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/)
+/** Split a naive `yyyy-MM-ddTHH:mm[:ss]` into components. Null if unparseable. */
+function parseWallClock(wall: string): WallClockParts | null {
+  const m = wall.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?/)
   if (!m) return null
   return {
     year: +m[1],
@@ -210,22 +206,37 @@ function wallClockParts(iso: string): WallClockParts | null {
   }
 }
 
+/** True when the string names a genuine instant rather than a naive wall clock. */
+function isInstantString(iso: string): boolean {
+  return /Z$/i.test(iso) || /[+-]\d{2}:?\d{2}$/.test(iso)
+}
+
+/** Parse the wall-clock components of a naive timed string (strips any fraction). */
+function wallClockParts(iso: string): WallClockParts | null {
+  return parseWallClock(iso.replace(/\.\d+$/, ''))
+}
+
 /**
- * The device-local wall-clock components of a stored timed start. A no-TZID
- * timed event is a UTC instant; the wall clock the user picked is the
- * *device-local* reading of that instant (issue #126), not the UTC fields
- * that `wallClockParts` would strip from the string.
+ * The wall-clock components a stored instant reads as in `timezone`.
+ *
+ * Used for two cases the expansion must not confuse with a naive wall clock:
+ * a no-TZID timed event, which is a UTC instant whose intended wall clock is
+ * the *device-local* reading (issue #126); and a TZID event whose start was
+ * written back as an instant — a local edit or drag leaves `…Z` on an item
+ * that still carries its TZID, and stripping the marker would read the UTC
+ * fields as the event zone's wall clock, drifting the whole series by the
+ * zone offset. (`createIcalDateTime` already converts rather than strips on
+ * the write side; this is the read side of the same rule.)
  */
-function deviceWallClockParts(iso: string): WallClockParts | null {
+function instantWallClockParts(iso: string, timezone: string): WallClockParts | null {
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return null
-  return {
-    year: d.getFullYear(),
-    month: d.getMonth() + 1,
-    day: d.getDate(),
-    hour: d.getHours(),
-    minute: d.getMinutes(),
-    second: d.getSeconds(),
+  try {
+    // date-fns-tz v3 returns 'Invalid Date' for an unknown zone rather than
+    // throwing; parseWallClock rejects it, and the caller falls back to rrule.
+    return parseWallClock(formatInTimeZone(d, timezone, "yyyy-MM-dd'T'HH:mm:ss"))
+  } catch {
+    return null
   }
 }
 
@@ -298,7 +309,14 @@ function zonedExpansion(master: CalendarEvent): ZonedExpansion | null {
     if (!master.timezone) warnUnknownDeviceZone(deviceTz)
     return null
   }
-  const parts = master.timezone ? wallClockParts(master.start) : deviceWallClockParts(master.start)
+  // A TZID series' start is normally a naive wall clock already in its zone;
+  // when it is an instant instead, resolve it *through* that zone rather than
+  // stripping the marker. A no-TZID start is always read as an instant in the
+  // device zone — a naive one parses device-locally, so both agree.
+  const parts =
+    master.timezone && !isInstantString(master.start)
+      ? wallClockParts(master.start)
+      : instantWallClockParts(master.start, master.timezone ?? deviceTz)
   if (!parts) return null
   const dtstart = ICAL.Time.fromData(parts, zone)
   const vevent = new ICAL.Component('vevent')
