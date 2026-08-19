@@ -4,6 +4,8 @@ All notable changes to Calino will be documented in this file.
 
 ## [Unreleased]
 
+## [0.29.0] - 2026-08-19
+
 ### Added
 
 - **Drop an .ics file onto Calino to import it.** Drag a calendar file from your file manager anywhere onto the window and Calino shows you what's in it before anything is saved: how many items, what they are, and which calendar they'd go into. Events, tasks and journal entries all come through — the old importer in Settings quietly dropped everything that wasn't a plain event. You can send them to an existing calendar or have a new one made for them on the spot.
