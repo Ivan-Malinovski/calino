@@ -18,6 +18,7 @@ import React from 'react'
 // ---------------------------------------------------------------------------
 import { useCalendarStore } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
+import { toEventInstant } from '@/lib/datetime'
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -452,7 +453,11 @@ describe('Bug 59: EventModal timezone for all-day events', () => {
     }
   })
 
-  it('non-all-day events should still use ISO UTC format with .000Z', async () => {
+  // Rewritten for issue #126: a timed event is no longer stored as a bare UTC
+  // instant. It keeps the wall clock the user typed and carries the device
+  // TZID, so an attached RRULE repeats on the weekdays they picked instead of
+  // on UTC weekdays. What must stay true is the instant it resolves to.
+  it('non-all-day events store a wall clock stamped with the device zone', async () => {
     const { EventModal } = await import('@/features/calendar/components/EventModal')
 
     render(<EventModal />)
@@ -482,9 +487,15 @@ describe('Bug 59: EventModal timezone for all-day events', () => {
     const timedEvent = events.find((e) => e.title === 'Timed Event')
 
     if (timedEvent) {
-      // Non-all-day events should use toISOString() -> .000Z
-      expect(timedEvent.start).toContain('.000Z')
-      expect(timedEvent.end).toContain('.000Z')
+      expect(timedEvent.start).not.toContain('Z')
+      expect(timedEvent.end).not.toContain('Z')
+      expect(timedEvent.start).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/)
+      expect(timedEvent.timezone).toBe(Intl.DateTimeFormat().resolvedOptions().timeZone)
+      // The stored wall clock, read through its own zone, is the same instant
+      // the previous `new Date(local).toISOString()` produced.
+      expect(toEventInstant(timedEvent.start, timedEvent.timezone).toISOString()).toBe(
+        new Date(timedEvent.start).toISOString()
+      )
     }
   })
 

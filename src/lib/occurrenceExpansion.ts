@@ -3,6 +3,7 @@ import { fromZonedTime, formatInTimeZone } from 'date-fns-tz'
 import { RRule } from 'rrule'
 import ICAL from 'ical.js'
 import { buildRRuleString, normaliseAllDayUntil } from './recurrence'
+import { deviceTimezone } from './datetime'
 import { resolveZone } from './timezoneRegistry'
 import type { CalendarEvent } from '@/types'
 
@@ -79,9 +80,7 @@ export function shapeOccurrence(
   }
 
   const occEnd = new Date(occ.getTime() + (eventEnd.getTime() - eventStart.getTime()))
-  const occDateStr = timezone
-    ? formatInTimeZone(occ, timezone, 'yyyy-MM-dd')
-    : localDateString(occ)
+  const occDateStr = timezone ? formatInTimeZone(occ, timezone, 'yyyy-MM-dd') : localDateString(occ)
   return {
     occStartStr: occ.toISOString(),
     occEndStr: occEnd.toISOString(),
@@ -184,17 +183,17 @@ export function isOccurrenceExcluded(
       )
 }
 
-/** Parse the wall-clock components of a timed start string (strips Z/offset/fraction). */
-function wallClockParts(
-  iso: string
-): {
+interface WallClockParts {
   year: number
   month: number
   day: number
   hour: number
   minute: number
   second: number
-} | null {
+}
+
+/** Parse the wall-clock components of a timed start string (strips Z/offset/fraction). */
+function wallClockParts(iso: string): WallClockParts | null {
   const wall = iso
     .replace(/Z$/i, '')
     .replace(/[+-]\d{2}:?\d{2}$/, '')
@@ -217,16 +216,7 @@ function wallClockParts(
  * *device-local* reading of that instant (issue #126), not the UTC fields
  * that `wallClockParts` would strip from the string.
  */
-function deviceWallClockParts(
-  iso: string
-): {
-  year: number
-  month: number
-  day: number
-  hour: number
-  minute: number
-  second: number
-} | null {
+function deviceWallClockParts(iso: string): WallClockParts | null {
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return null
   return {
@@ -235,22 +225,28 @@ function deviceWallClockParts(
     day: d.getDate(),
     hour: d.getHours(),
     minute: d.getMinutes(),
-    // Include millis so EXDATE exact-instant matching survives a round-trip.
-    second: d.getSeconds() + d.getMilliseconds() / 1000,
+    second: d.getSeconds(),
   }
+}
+
+/**
+ * The sub-second remainder of a stored timed start, which `ICAL.Time` cannot
+ * carry: it stores a fractional `second` verbatim but truncates it in
+ * `toString`/`toJSDate`, so occurrences would come back rounded down to the
+ * whole second and no longer match the master's own start on the exact-instant
+ * comparisons EXDATE and RECURRENCE-ID matching rely on. The remainder is the
+ * same for every occurrence of a series, so the walk adds it back (see
+ * {@link ZonedExpansion}). Normally 0 — a locally-created event's
+ * `toISOString()` ends in `.000` — but a synced or imported start need not.
+ */
+function subSecondMs(iso: string): number {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return 0
+  return d.getMilliseconds()
 }
 
 /** Safety cap for the zoned expansion walk (a window can be far from DTSTART). */
 const MAX_ZONED_EXPANSION_SCAN = 100000
-
-/** The device's IANA zone, with a UTC fallback when Intl cannot resolve one. */
-function deviceTimezone(): string {
-  try {
-    return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
-  } catch {
-    return 'UTC'
-  }
-}
 
 /** Warn once when a no-TZID series cannot be expanded in the device zone. */
 let warnedUnknownDeviceZone = false
@@ -283,7 +279,13 @@ function warnUnknownDeviceZone(deviceTz: string): void {
  * A no-TZID event whose stored start is genuinely meant as UTC wall time can
  * carry `timezone: 'UTC'` to opt into UTC-weekday recurrence instead.
  */
-function zonedExpansion(master: CalendarEvent): ICAL.RecurExpansion | null {
+interface ZonedExpansion {
+  expansion: ICAL.RecurExpansion
+  /** Sub-second remainder ICAL.Time drops; added back to every instant. */
+  msOffset: number
+}
+
+function zonedExpansion(master: CalendarEvent): ZonedExpansion | null {
   if (master.isAllDay) return null
   const rruleString = resolveRRuleString(master)
   if (!rruleString) return null
@@ -296,19 +298,28 @@ function zonedExpansion(master: CalendarEvent): ICAL.RecurExpansion | null {
     if (!master.timezone) warnUnknownDeviceZone(deviceTz)
     return null
   }
-  const parts = master.timezone
-    ? wallClockParts(master.start)
-    : deviceWallClockParts(master.start)
+  const parts = master.timezone ? wallClockParts(master.start) : deviceWallClockParts(master.start)
   if (!parts) return null
   const dtstart = ICAL.Time.fromData(parts, zone)
   const vevent = new ICAL.Component('vevent')
   vevent.addPropertyWithValue('dtstart', dtstart)
   try {
     vevent.addPropertyWithValue('rrule', ICAL.Recur.fromString(rruleString))
-    return new ICAL.RecurExpansion({ dtstart, component: vevent })
+    return {
+      expansion: new ICAL.RecurExpansion({ dtstart, component: vevent }),
+      msOffset: subSecondMs(master.start),
+    }
   } catch {
     return null
   }
+}
+
+/** The next occurrence instant of a zoned walk, or null when it is exhausted. */
+function nextZonedInstant(walk: ZonedExpansion): Date | null {
+  const next = walk.expansion.next()
+  if (!next) return null
+  const instant = next.toJSDate()
+  return walk.msOffset ? new Date(instant.getTime() + walk.msOffset) : instant
 }
 
 /**
@@ -318,15 +329,14 @@ function zonedExpansion(master: CalendarEvent): ICAL.RecurExpansion | null {
  * callers fall back to the rrule path.
  */
 export function expandZonedOccurrences(master: CalendarEvent, from: Date, to: Date): Date[] | null {
-  const expansion = zonedExpansion(master)
-  if (!expansion) return null
+  const walk = zonedExpansion(master)
+  if (!walk) return null
   const out: Date[] = []
   let n = 0
   try {
-    while (!expansion.complete && n++ < MAX_ZONED_EXPANSION_SCAN) {
-      const next = expansion.next()
-      if (!next) break
-      const instant = next.toJSDate()
+    while (!walk.expansion.complete && n++ < MAX_ZONED_EXPANSION_SCAN) {
+      const instant = nextZonedInstant(walk)
+      if (!instant) break
       if (instant > to) break
       if (instant >= from) out.push(instant)
     }
@@ -385,13 +395,12 @@ function* occurrencesFrom(
   cursor: Date,
   rruleString: string
 ): Generator<Date> {
-  const expansion = zonedExpansion(master)
-  if (expansion) {
+  const walk = zonedExpansion(master)
+  if (walk) {
     let n = 0
-    while (!expansion.complete && n++ < MAX_ZONED_EXPANSION_SCAN) {
-      const next = expansion.next()
-      if (!next) return
-      const instant = next.toJSDate()
+    while (!walk.expansion.complete && n++ < MAX_ZONED_EXPANSION_SCAN) {
+      const instant = nextZonedInstant(walk)
+      if (!instant) return
       if (instant.getTime() > cursor.getTime()) yield instant
     }
     return
@@ -486,8 +495,37 @@ export function nextOpenOccurrence(
  * EXDATE'd occurrences are skipped in both directions. Overrides are not: a
  * detached instance is a real occurrence of the series and still the right
  * thing to point at. Returns null for a non-recurring or unparseable master.
+ *
+ * Memoized: the timed path is a linear walk from DTSTART, and the one caller
+ * (the command palette) re-runs it for every match on every keystroke with a
+ * fresh `now` that only matters at minute resolution.
  */
 export function displayOccurrence(master: CalendarEvent, now: Date): OccurrenceShape | null {
+  const key = `${master.id}|${master.start}|${master.end}|${master.timezone ?? ''}|${
+    master.isAllDay ? 1 : 0
+  }|${resolveRRuleString(master) ?? ''}|${(master.excludedDates ?? []).join(',')}|${Math.floor(
+    now.getTime() / DISPLAY_OCCURRENCE_BUCKET_MS
+  )}`
+  const hit = displayOccurrenceCache.get(key)
+  if (hit !== undefined) return hit
+  const shape = computeDisplayOccurrence(master, now)
+  // Plain size cap rather than an LRU: entries are keyed by a time bucket, so
+  // the whole map is stale within a minute anyway.
+  if (displayOccurrenceCache.size >= MAX_DISPLAY_OCCURRENCE_CACHE) displayOccurrenceCache.clear()
+  displayOccurrenceCache.set(key, shape)
+  return shape
+}
+
+/**
+ * Coarseness of the `now` component of the memo key. A displayed occurrence
+ * only changes when the series crosses `now`, so a minute is invisible to a
+ * user and collapses a burst of keystrokes into one walk.
+ */
+const DISPLAY_OCCURRENCE_BUCKET_MS = 60_000
+const MAX_DISPLAY_OCCURRENCE_CACHE = 500
+const displayOccurrenceCache = new Map<string, OccurrenceShape | null>()
+
+function computeDisplayOccurrence(master: CalendarEvent, now: Date): OccurrenceShape | null {
   const rruleString = resolveRRuleString(master)
   if (!rruleString) return null
 
@@ -515,21 +553,25 @@ export function displayOccurrence(master: CalendarEvent, now: Date): OccurrenceS
   // remembering the last non-excluded occurrence at or before now. TZID
   // series expand in their own zone, no-TZID timed in the device zone.
   // This is a linear walk from DTSTART (RecurExpansion has no seek), bounded
-  // by MAX_ZONED_EXPANSION_SCAN — the same cost the TZID path already paid.
+  // by MAX_ZONED_EXPANSION_SCAN. Since #126 it covers every timed series, not
+  // just the rarer TZID ones, so the historical stretch before `from` — which
+  // for a years-old daily is thousands of iterations — must stay cheap: shape
+  // only what a decision depends on. `shapeOf` costs an Intl format per call
+  // (see shapeOccurrence), and with no EXDATEs nothing before `from` needs one.
   if (!master.isAllDay) {
-    const expansion = zonedExpansion(master)
-    if (expansion) {
+    const walk = zonedExpansion(master)
+    if (walk) {
+      const hasExclusions = (master.excludedDates?.length ?? 0) > 0
       let lastBefore: Date | null = null
       let n = 0
-      while (!expansion.complete && n++ < MAX_ZONED_EXPANSION_SCAN) {
-        const next = expansion.next()
-        if (!next) break
-        const occ = next.toJSDate()
-        const shape = shapeOf(occ)
+      while (!walk.expansion.complete && n++ < MAX_ZONED_EXPANSION_SCAN) {
+        const occ = nextZonedInstant(walk)
+        if (!occ) break
         if (occ.getTime() < from.getTime()) {
-          if (!excluded(occ, shape)) lastBefore = occ
+          if (!hasExclusions || !excluded(occ, shapeOf(occ))) lastBefore = occ
           continue
         }
+        const shape = shapeOf(occ)
         if (!excluded(occ, shape)) return shape
       }
       return lastBefore ? shapeOf(lastBefore) : null

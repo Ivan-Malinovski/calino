@@ -175,10 +175,15 @@ function getOrCreateRRule(rruleStr: string, eventStart: Date): RRule {
 function taskDayKey(task: CalendarEvent): string {
   const due = task.dueDate as string
   if (task.isAllDay) return due.split('T')[0]
-  // A timed TZID task's due date is a true instant (Z); file it under the day
-  // it is due in the event's zone (issue #126), not the viewing device's zone.
+  // File a timed TZID task under the day it is due in the event's zone (issue
+  // #126), not the viewing device's zone. The due date may be stored either as
+  // a true instant (Z, e.g. the one occurrenceDueDate synthesises) or as a
+  // naive wall clock in the TZID (how a synced VTODO arrives), so resolve it
+  // the same way occurrenceDueDate does rather than assuming an instant --
+  // `new Date(naive)` reads device-locally and files a 23:30 New York task on
+  // the next day for any device west of the event's zone.
   if (task.timezone) {
-    return formatInTimeZone(new Date(due), task.timezone, 'yyyy-MM-dd')
+    return formatInTimeZone(parseOccurrenceInstant(due, task.timezone), task.timezone, 'yyyy-MM-dd')
   }
   return format(parseISO(due), 'yyyy-MM-dd')
 }
@@ -407,13 +412,27 @@ export function getTasksForDay(events: CalendarEvent[], dayKey: string): Calenda
       continue
     }
     for (const occ of occurrences) {
-      const shape = shapeOccurrence(occ, indexed.start, indexed.end, master.isAllDay, master.timezone)
+      const shape = shapeOccurrence(
+        occ,
+        indexed.start,
+        indexed.end,
+        master.isAllDay,
+        master.timezone
+      )
       // A detached override supersedes the master's slot even when the date is
       // also EXDATE'd (RFC 5545 §3.8.5.1) — it is already in the store in its
       // own right, so here it only suppresses.
       const recurrenceValue = occurrenceRecurrenceValue(occ, shape.occDateStr, master.isAllDay)
       if (index.exceptions.has(`${master.calendarId}-${master.id}-${recurrenceValue}`)) continue
-      if (isOccurrenceExcluded(occ, shape.occDateStr, master.isAllDay, master.excludedDates, master.timezone)) {
+      if (
+        isOccurrenceExcluded(
+          occ,
+          shape.occDateStr,
+          master.isAllDay,
+          master.excludedDates,
+          master.timezone
+        )
+      ) {
         continue
       }
       const occurrence = materializeOccurrence(master, shape)
@@ -569,7 +588,8 @@ export const useCalendarStore = create<CalendarStore>()(
         // expansion and serialization never see a mixed frame. Skipped when
         // the update explicitly clears the timezone.
         const existingForNormalization = get().events.find((e) => e.id === id)
-        const effectiveTimezone = 'timezone' in safeUpdates ? safeUpdates.timezone : existingForNormalization?.timezone
+        const effectiveTimezone =
+          'timezone' in safeUpdates ? safeUpdates.timezone : existingForNormalization?.timezone
         if (effectiveTimezone) {
           // R1 — dueDate carries the same invariant for timed TZID tasks: the
           // adapter stores a naive wall clock in the event zone, but the
@@ -583,7 +603,10 @@ export const useCalendarStore = create<CalendarStore>()(
           ) {
             safeUpdates.dueDate = toZoneWallClock(safeUpdates.dueDate, effectiveTimezone)
           }
-          if (safeUpdates.start !== undefined && safeUpdates.start !== existingForNormalization?.start) {
+          if (
+            safeUpdates.start !== undefined &&
+            safeUpdates.start !== existingForNormalization?.start
+          ) {
             safeUpdates.start = toZoneWallClock(safeUpdates.start, effectiveTimezone)
           }
           if (safeUpdates.end !== undefined && safeUpdates.end !== existingForNormalization?.end) {
@@ -1335,17 +1358,35 @@ export const useCalendarStore = create<CalendarStore>()(
               // across DST); the rrule path stays for all-day/UTC/floating.
               const occurrences =
                 expandZonedOccurrences(event, startDate, endDate) ??
-                rule.between(
-                  ...rruleWindow(event.isAllDay, startDate, endDate),
-                  true
-                )
+                rule.between(...rruleWindow(event.isAllDay, startDate, endDate), true)
               const excludedDates = event.excludedDates || []
+
+              // A legacy override carries only a bare date. Before issue #126 a
+              // timed occurrence's day-key was its UTC day, so such a key may
+              // name either frame and the lookup below tries both. West of UTC
+              // an evening series has an occurrence whose UTC day is the *next*
+              // occurrence's wall day, and matching both would let one legacy
+              // override suppress two slots — so the UTC fallback is only used
+              // for a date no occurrence in this window claims as its wall day.
+              const wallDayKeys = new Set(
+                occurrences.map(
+                  (occ) =>
+                    shapeOccurrence(occ, eventStart, eventEnd, event.isAllDay, event.timezone)
+                      .occDateStr
+                )
+              )
 
               for (const occ of occurrences) {
                 // For all-day events we work in whole-day, floating-time terms so
                 // that DST transitions can't shift an occurrence onto the wrong
                 // calendar day. Timed events keep exact millisecond duration.
-                const shape = shapeOccurrence(occ, eventStart, eventEnd, event.isAllDay, event.timezone)
+                const shape = shapeOccurrence(
+                  occ,
+                  eventStart,
+                  eventEnd,
+                  event.isAllDay,
+                  event.timezone
+                )
                 const { occDateStr } = shape
 
                 // Check for exception first — if one exists for this date, use it
@@ -1354,10 +1395,10 @@ export const useCalendarStore = create<CalendarStore>()(
                 const utcDay = occ.toISOString().split('T')[0]
                 const exception =
                   exceptionMap.get(`${event.calendarId}-${event.id}-${recurrenceValue}`) ||
-                  // Legacy overrides carry only a bare date; before issue #126
-                  // timed day-keys were the UTC day, so try both frames.
                   legacyExceptionMap.get(`${event.calendarId}-${occDateStr}`) ||
-                  legacyExceptionMap.get(`${event.calendarId}-${utcDay}`)
+                  (wallDayKeys.has(utcDay)
+                    ? undefined
+                    : legacyExceptionMap.get(`${event.calendarId}-${utcDay}`))
                 if (exception) {
                   // The detached instance is rendered independently at its
                   // actual start below. Here it only suppresses the master slot.
@@ -1365,7 +1406,15 @@ export const useCalendarStore = create<CalendarStore>()(
                 }
 
                 // No exception — honour EXDATE exclusions
-                if (isOccurrenceExcluded(occ, occDateStr, event.isAllDay, excludedDates, event.timezone)) {
+                if (
+                  isOccurrenceExcluded(
+                    occ,
+                    occDateStr,
+                    event.isAllDay,
+                    excludedDates,
+                    event.timezone
+                  )
+                ) {
                   continue
                 }
 

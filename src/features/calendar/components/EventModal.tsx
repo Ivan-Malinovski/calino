@@ -2,7 +2,7 @@ import type { JSX } from 'react'
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import { format, parseISO } from 'date-fns'
-import { pad2, toEventInstant } from '@/lib/datetime'
+import { pad2, toEventInstant, deviceTimezone } from '@/lib/datetime'
 import { v4 as uuidv4 } from 'uuid'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
@@ -543,7 +543,10 @@ export function EventModal(): JSX.Element | null {
           format(toEventInstant(existingEvent.start, existingEvent.timezone), 'yyyy-MM-dd')
         setDueDate(taskDueDate)
         seededDueDateRef.current = taskDueDate
-        const taskTime = format(toEventInstant(existingEvent.start, existingEvent.timezone), 'HH:mm')
+        const taskTime = format(
+          toEventInstant(existingEvent.start, existingEvent.timezone),
+          'HH:mm'
+        )
         setDueTime(taskTime !== '00:00' ? taskTime : '09:00')
         setDueAllDay(existingEvent.isAllDay ?? true)
         setCompleted(existingEvent.completed || false)
@@ -939,8 +942,36 @@ export function EventModal(): JSX.Element | null {
 
       const localStart = isAllDay ? `${startDate}T00:00:00` : `${startDate}T${startTime}:00`
       const localEnd = isAllDay ? `${endDate}T23:59:59` : `${endDate}T${endTime}:00`
-      const startDateTime = isAllDay ? `${startDate}T00:00:00` : new Date(localStart).toISOString()
-      const endDateTime = isAllDay ? `${endDate}T00:00:00` : new Date(localEnd).toISOString()
+
+      // Issue #126: a timed item used to be stored as a bare UTC instant, which
+      // throws away the zone the user picked. The instant is right, but an
+      // RRULE attached to it is evaluated on *UTC* weekdays — for a 23:00 start
+      // west of UTC that is the next day, so "every Mon–Fri" ran Sun–Thu. Stamp
+      // the device zone and store the wall clock instead, the same shape a
+      // synced TZID item has: the recurrence then repeats on the weekdays the
+      // user chose, at the wall time they chose, and it exports as
+      // `DTSTART;TZID=…` so other CalDAV clients agree with us.
+      //
+      // Only stamped when the item does not already carry a zone. An item
+      // synced with a foreign TZID keeps today's behaviour: the form shows its
+      // times in the *device* zone, so writing them back as a wall clock would
+      // silently re-read them in the foreign zone. Those stay UTC instants,
+      // which createIcalDateTime converts to the event zone on write.
+      const editedStoredEvent = isEditing
+        ? events.find((event) => event.id === selectedEventId) ||
+          (originalEventId ? events.find((event) => event.id === originalEventId) : undefined)
+        : undefined
+      // Tasks carry their all-day-ness in `dueAllDay`, which is also what the
+      // written `isAllDay` resolves to below.
+      const effectiveAllDay = isTaskMode ? dueAllDay : isAllDay
+      const stampDeviceZone = !effectiveAllDay && !editedStoredEvent?.timezone
+      const eventTimezone = stampDeviceZone ? deviceTimezone() : editedStoredEvent?.timezone
+      /** A timed wall clock in the form's zone, stored in the item's own frame. */
+      const storeTimed = (localWall: string): string =>
+        stampDeviceZone ? localWall : new Date(localWall).toISOString()
+
+      const startDateTime = isAllDay ? `${startDate}T00:00:00` : storeTimed(localStart)
+      const endDateTime = isAllDay ? `${endDate}T00:00:00` : storeTimed(localEnd)
 
       const recurrenceRule: RecurrenceRule | undefined = recurring
         ? {
@@ -997,7 +1028,7 @@ export function EventModal(): JSX.Element | null {
           ? `${occDateStr}T${taskTime}`
           : isAllDay
             ? `${occDateStr}T00:00:00`
-            : new Date(`${occDateStr}T${startTime}:00`).toISOString()
+            : storeTimed(`${occDateStr}T${startTime}:00`)
         let occEndDateTime: string
         if (isTaskMode) {
           occEndDateTime = `${occDateStr}T${taskEndTime}`
@@ -1010,6 +1041,14 @@ export function EventModal(): JSX.Element | null {
           const endD = new Date(`${occDateStr}T00:00:00Z`)
           endD.setUTCDate(endD.getUTCDate() + spanDays)
           occEndDateTime = `${endD.toISOString().split('T')[0]}T00:00:00`
+        } else if (stampDeviceZone) {
+          // Wall-clock frame: add the duration to the instant, then read it
+          // back as a device-zone wall clock so a DST transition inside the
+          // occurrence does not shift the stored end by an hour.
+          const occEnd = new Date(
+            toEventInstant(occStartDateTime, eventTimezone).getTime() + durationMs
+          )
+          occEndDateTime = format(occEnd, "yyyy-MM-dd'T'HH:mm:ss")
         } else {
           occEndDateTime = new Date(new Date(occStartDateTime).getTime() + durationMs).toISOString()
         }
@@ -1038,6 +1077,7 @@ export function EventModal(): JSX.Element | null {
             start: occStartDateTime,
             end: occEndDateTime,
             isAllDay: isTaskMode ? dueAllDay : isAllDay,
+            timezone: eventTimezone,
             recurrence: undefined,
             rruleString: undefined,
             recurrenceId: originalOccurrenceDate,
@@ -1139,6 +1179,7 @@ export function EventModal(): JSX.Element | null {
             start: occStartDateTime,
             end: occEndDateTime,
             isAllDay: isTaskMode ? dueAllDay : isAllDay,
+            timezone: eventTimezone,
             recurrence: effectiveRecurrence,
             rruleString: effectiveRecurrence ? buildRRuleString(effectiveRecurrence) : undefined,
             type: isTaskMode ? 'task' : 'event',
@@ -1200,6 +1241,7 @@ export function EventModal(): JSX.Element | null {
             start: eventStart,
             end: eventEnd,
             isAllDay: isTaskMode ? dueAllDay : isAllDay,
+            timezone: eventTimezone,
             calendarId,
             recurrence: effectiveRecurrence,
             // Keep the raw RRULE in step with the structured rule. The
@@ -1251,6 +1293,7 @@ export function EventModal(): JSX.Element | null {
                 start: eventStart,
                 end: eventEnd,
                 isAllDay: isTaskMode ? dueAllDay : isAllDay,
+                timezone: eventTimezone,
                 calendarId,
                 recurrence: effectiveRecurrence,
                 rruleString: effectiveRecurrence
@@ -1276,6 +1319,7 @@ export function EventModal(): JSX.Element | null {
                 start: eventStart,
                 end: eventEnd,
                 isAllDay: isTaskMode ? dueAllDay : isAllDay,
+                timezone: eventTimezone,
                 calendarId,
                 recurrence: effectiveRecurrence,
                 rruleString: effectiveRecurrence
@@ -1318,6 +1362,7 @@ export function EventModal(): JSX.Element | null {
           start: eventStart,
           end: eventEnd,
           isAllDay: isTaskMode ? dueAllDay : isAllDay,
+          timezone: eventTimezone,
           calendarId,
           recurrence: effectiveRecurrence,
           rruleString: effectiveRecurrence ? buildRRuleString(effectiveRecurrence) : undefined,

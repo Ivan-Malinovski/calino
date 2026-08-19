@@ -60,6 +60,20 @@ export function formatDateLong(date: Date | string, timeFormat: TimeFormat = '24
  * created events (which never carry a timezone) and unknown TZIDs behaving
  * as before.
  */
+/**
+ * The device's IANA zone, with a UTC fallback when Intl cannot resolve one.
+ * This is the zone a locally-created timed event is stamped with (issue #126):
+ * the wall clock the user typed is meaningless without one, and a bare UTC
+ * instant makes an RRULE repeat on UTC weekdays rather than the user's.
+ */
+export function deviceTimezone(): string {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
+  } catch {
+    return 'UTC'
+  }
+}
+
 export function toEventInstant(iso: string, timezone?: string): Date {
   if (timezone && !iso.endsWith('Z')) {
     try {
@@ -101,7 +115,10 @@ export function toZoneWallClock(iso: string, timezone: string): string {
   } catch {
     // Unknown zone - fall through to stripping the zone marker.
   }
-  return iso.replace(/Z$/i, '').replace(/[+-]\d{2}:?\d{2}$/, '').replace(/\.\d+$/, '')
+  return iso
+    .replace(/Z$/i, '')
+    .replace(/[+-]\d{2}:?\d{2}$/, '')
+    .replace(/\.\d+$/, '')
 }
 
 /** Number of whole days between two `yyyy-MM-dd` date strings (UTC-based, DST-safe). */
