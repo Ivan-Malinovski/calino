@@ -78,6 +78,9 @@ const master: CalendarEvent = {
   start: '2024-01-02T09:00:00.000Z',
   end: '2024-01-02T09:15:00.000Z',
   isAllDay: false,
+  // UTC so the assertions hold in both vitest projects: since issue #126, a
+  // no-TZID timed series expands in the device zone and 09:00Z would shift.
+  timezone: 'UTC',
   rruleString: 'FREQ=WEEKLY;BYDAY=TU',
 }
 

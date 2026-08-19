@@ -6,6 +6,13 @@ import type { CalendarEvent } from '@/types'
  * The occurrence that represents a series in a single-row context. Anchored on
  * "now" rather than on the master's DTSTART, which for a long-running weekly is
  * years stale.
+ *
+ * The fixture is a UTC event (`timezone: 'UTC'`), not a bare no-TZID Z string:
+ * since issue #126, a no-TZID timed series expands in the *device* zone, so a
+ * bare `09:00Z` would shift by the ambient offset. These tests exercise the
+ * occurrence-walk logic (next/current/EXDATE/finished-series), which is
+ * zone-independent; tagging the zone UTC keeps every assertion valid in both
+ * vitest projects (west/east).
  */
 const NOW = new Date('2026-08-04T12:00:00Z') // a Tuesday
 
@@ -16,6 +23,7 @@ const series = (over: Partial<CalendarEvent> = {}): CalendarEvent => ({
   start: '2024-01-02T09:00:00.000Z',
   end: '2024-01-02T09:15:00.000Z',
   isAllDay: false,
+  timezone: 'UTC',
   rruleString: 'FREQ=WEEKLY;BYDAY=TU',
   ...over,
 })

@@ -612,7 +612,7 @@ describe('calendarStore', () => {
     })
   })
 
-  describe('recurring event expansion with timezone', () => {
+  describe('recurring event expansion in UTC', () => {
     it('expands recurring event with correct UTC conversion', () => {
       const store = useCalendarStore.getState()
 
@@ -623,6 +623,9 @@ describe('calendarStore', () => {
         start: '2024-03-18T09:00:00.000Z',
         end: '2024-03-18T10:00:00.000Z',
         isAllDay: false,
+        // UTC so the occurrence instants stay fixed in both vitest projects:
+        // since issue #126, a no-TZID timed series expands in the device zone.
+        timezone: 'UTC',
         recurrence: { frequency: 'weekly', interval: 1 },
         rruleString: 'FREQ=WEEKLY;INTERVAL=1',
       })
@@ -648,6 +651,7 @@ describe('calendarStore', () => {
         start: '2024-03-25T08:00:00.000Z',
         end: '2024-03-25T09:00:00.000Z',
         isAllDay: false,
+        timezone: 'UTC',
         recurrence: { frequency: 'weekly', interval: 1 },
         rruleString: 'FREQ=WEEKLY;INTERVAL=1',
       })

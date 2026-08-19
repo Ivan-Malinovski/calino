@@ -62,6 +62,9 @@ graphify-out/
 feedback.txt
 scripts/rrule_test.mjs
 
+# Command Code agent state (taste, plans, session data)
+.commandcode/
+
 # impeccable design tooling — local runtime state only (session logs, caches,
 # locks, server handles) plus the files it injects into the source tree while
 # live editing. Previously in .git/info/exclude, which is per-clone and so left

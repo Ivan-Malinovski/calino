@@ -76,6 +76,9 @@ describe('R2.7 recurring task occurrences', () => {
       // each occurrence.
       addRecurring({
         isAllDay: false,
+        // UTC so the assertion holds in both vitest projects: since issue
+        // #126, a no-TZID timed series expands in the device zone.
+        timezone: 'UTC',
         start: '2026-03-03T09:00:00.000Z',
         end: '2026-03-03T17:00:00.000Z',
         dueDate: '2026-03-03T17:00:00.000Z',

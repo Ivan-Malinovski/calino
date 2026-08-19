@@ -1,5 +1,5 @@
 import { parseISO } from 'date-fns'
-import { fromZonedTime } from 'date-fns-tz'
+import { fromZonedTime, formatInTimeZone } from 'date-fns-tz'
 import { RRule } from 'rrule'
 import ICAL from 'ical.js'
 import { buildRRuleString, normaliseAllDayUntil } from './recurrence'
@@ -35,14 +35,28 @@ const formatUTCDate = (dt: Date): string =>
     dt.getUTCDate()
   ).padStart(2, '0')}`
 
+/** `yyyy-MM-dd` of an instant in the device's local calendar. */
+function localDateString(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
+    d.getDate()
+  ).padStart(2, '0')}`
+}
+
 /**
  * Place one rrule-produced occurrence, given the master's own start/end.
+ *
+ * `timezone` is the master's TZID (when present). The timed branch uses it —
+ * or the device zone when absent — to derive the occurrence's calendar-day
+ * key in the same frame the views bucket by (issue #126): a no-TZID timed
+ * event stored as a UTC instant renders on its device-local day, which for a
+ * late-evening start differs from the UTC day.
  */
 export function shapeOccurrence(
   occ: Date,
   eventStart: Date,
   eventEnd: Date,
-  isAllDay: boolean | undefined
+  isAllDay: boolean | undefined,
+  timezone?: string
 ): OccurrenceShape {
   if (isAllDay) {
     const durationDays = Math.max(
@@ -65,10 +79,13 @@ export function shapeOccurrence(
   }
 
   const occEnd = new Date(occ.getTime() + (eventEnd.getTime() - eventStart.getTime()))
+  const occDateStr = timezone
+    ? formatInTimeZone(occ, timezone, 'yyyy-MM-dd')
+    : localDateString(occ)
   return {
     occStartStr: occ.toISOString(),
     occEndStr: occEnd.toISOString(),
-    occDateStr: occ.toISOString().split('T')[0],
+    occDateStr,
     occKey: occ.toISOString(),
   }
 }
@@ -83,7 +100,9 @@ export function shapeOccurrence(
  * generates Wednesdays. Anchoring at UTC midnight of the literal date keeps
  * rrule's weekday arithmetic on the day the user actually picked.
  *
- * Timed events are genuine instants and are passed through unchanged.
+ * Timed events are genuine instants and are passed through unchanged; the
+ * no-TZID ones are re-anchored via the device-zone expansion (see
+ * {@link zonedExpansion}), so this stays the all-day and fallback anchor.
  */
 export function rruleAnchor(event: CalendarEvent, parsedStart: Date): Date {
   if (!event.isAllDay) return parsedStart
@@ -98,6 +117,9 @@ export function rruleAnchor(event: CalendarEvent, parsedStart: Date): Date {
  * first all-day occurrence anywhere west of UTC (00:00Z is the previous
  * evening locally) and pick up a spurious trailing one east of it. Mapping the
  * window's local calendar dates onto the same UTC dates keeps both ends exact.
+ *
+ * A no-TZID timed series expands in the device zone (see {@link zonedExpansion}),
+ * so its occurrences come back as true instants and the window is used as-is.
  */
 export function rruleWindow(
   isAllDay: boolean | undefined,
@@ -189,29 +211,100 @@ function wallClockParts(
   }
 }
 
+/**
+ * The device-local wall-clock components of a stored timed start. A no-TZID
+ * timed event is a UTC instant; the wall clock the user picked is the
+ * *device-local* reading of that instant (issue #126), not the UTC fields
+ * that `wallClockParts` would strip from the string.
+ */
+function deviceWallClockParts(
+  iso: string
+): {
+  year: number
+  month: number
+  day: number
+  hour: number
+  minute: number
+  second: number
+} | null {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return null
+  return {
+    year: d.getFullYear(),
+    month: d.getMonth() + 1,
+    day: d.getDate(),
+    hour: d.getHours(),
+    minute: d.getMinutes(),
+    // Include millis so EXDATE exact-instant matching survives a round-trip.
+    second: d.getSeconds() + d.getMilliseconds() / 1000,
+  }
+}
+
 /** Safety cap for the zoned expansion walk (a window can be far from DTSTART). */
 const MAX_ZONED_EXPANSION_SCAN = 100000
 
+/** The device's IANA zone, with a UTC fallback when Intl cannot resolve one. */
+function deviceTimezone(): string {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
+  } catch {
+    return 'UTC'
+  }
+}
+
+/** Warn once when a no-TZID series cannot be expanded in the device zone. */
+let warnedUnknownDeviceZone = false
+function warnUnknownDeviceZone(deviceTz: string): void {
+  if (warnedUnknownDeviceZone) return
+  warnedUnknownDeviceZone = true
+  console.warn(
+    `[Calendar] Device timezone "${deviceTz}" cannot be resolved for recurrence ` +
+      'expansion; falling back to UTC-weekday expansion. Timed events created ' +
+      'locally may repeat on the wrong weekdays (issue #126).'
+  )
+}
+
 /**
- * Phase 2 (C1) — a RecurExpansion seeded from a TZID series' own zone, or null
- * when the series cannot be expanded zonally (all-day, no TZID, unknown zone,
+ * A RecurExpansion seeded in the frame that keeps the wall clock stable — a
+ * TZID series in its own zone, a no-TZID timed series in the device zone —
+ * or null when the series cannot be expanded zonally (all-day, unknown zone,
  * malformed start). The zone must be registered in ICAL.TimezoneService first
  * (see timezoneRegistry), otherwise ical.js resolves it to floating and the
  * wall clock would drift exactly like today's rrule path.
+ *
+ * Issue #126: a no-TZID timed event is stored as a UTC instant (EventModal:
+ * `new Date(localStart).toISOString()`). rrule's UTC-based BYDAY then repeats
+ * on *UTC* weekdays, but the user picked *local* weekdays — for a late-evening
+ * start the two differ by a day (23:00 in UTC−4 is 03:00Z the next day), so a
+ * "every Mon–Fri at 23:00" series renders Sun–Thu. Rebuilding the wall clock
+ * in the device zone and expanding there repeats on the local weekdays at the
+ * local wall time (stable across DST), which is what the views display.
+ *
+ * A no-TZID event whose stored start is genuinely meant as UTC wall time can
+ * carry `timezone: 'UTC'` to opt into UTC-weekday recurrence instead.
  */
 function zonedExpansion(master: CalendarEvent): ICAL.RecurExpansion | null {
-  if (master.isAllDay || !master.timezone) return null
+  if (master.isAllDay) return null
   const rruleString = resolveRRuleString(master)
   if (!rruleString) return null
-  const parts = wallClockParts(master.start)
+  // TZID series use their own zone (start is a naive wall clock in it);
+  // no-TZID timed series use the device zone, converting a stored UTC
+  // instant back to the device wall clock (issue #126).
+  const deviceTz = deviceTimezone()
+  const zone = master.timezone ? resolveZone(master.timezone) : resolveZone(deviceTz)
+  if (!zone) {
+    if (!master.timezone) warnUnknownDeviceZone(deviceTz)
+    return null
+  }
+  const parts = master.timezone
+    ? wallClockParts(master.start)
+    : deviceWallClockParts(master.start)
   if (!parts) return null
-  const zone = resolveZone(master.timezone)
-  if (!zone) return null
   const dtstart = ICAL.Time.fromData(parts, zone)
   const vevent = new ICAL.Component('vevent')
   vevent.addPropertyWithValue('dtstart', dtstart)
-  vevent.addPropertyWithValue('rrule', ICAL.Recur.fromString(rruleString))
   try {
+    vevent.addPropertyWithValue('rrule', ICAL.Recur.fromString(rruleString))
     return new ICAL.RecurExpansion({ dtstart, component: vevent })
   } catch {
     return null
@@ -219,21 +312,29 @@ function zonedExpansion(master: CalendarEvent): ICAL.RecurExpansion | null {
 }
 
 /**
- * Phase 2 (C1) — expand a TZID timed series within [from, to] keeping the
- * wall clock in the series' zone across DST. Returns null when the series
- * cannot be expanded zonally, so callers fall back to the rrule path.
+ * Expand a timed series within [from, to] keeping the wall clock in its
+ * frame — the series' own zone for TZID, the device zone for no-TZID
+ * (issue #126). Returns null when the series cannot be expanded zonally, so
+ * callers fall back to the rrule path.
  */
 export function expandZonedOccurrences(master: CalendarEvent, from: Date, to: Date): Date[] | null {
   const expansion = zonedExpansion(master)
   if (!expansion) return null
   const out: Date[] = []
   let n = 0
-  while (!expansion.complete && n++ < MAX_ZONED_EXPANSION_SCAN) {
-    const next = expansion.next()
-    if (!next) break
-    const instant = next.toJSDate()
-    if (instant > to) break
-    if (instant >= from) out.push(instant)
+  try {
+    while (!expansion.complete && n++ < MAX_ZONED_EXPANSION_SCAN) {
+      const next = expansion.next()
+      if (!next) break
+      const instant = next.toJSDate()
+      if (instant > to) break
+      if (instant >= from) out.push(instant)
+    }
+  } catch {
+    // A malformed rule that only blows up mid-walk must not masquerade as a
+    // healthy series (the store's outer catch would render the master once).
+    // The null contract already means "fall back to the rrule path".
+    return null
   }
   return out
 }
@@ -275,8 +376,9 @@ const MAX_OCCURRENCE_SCAN = 500
 /**
  * Yield occurrence instants in series order, starting strictly after
  * the given cursor. TZID series walk the zoned RecurExpansion (wall
- * clock held in the series' zone); everything else walks rrule.after in
- * today's frame (UTC midnight for all-day, device-parsed instant).
+ * clock held in the series' zone), no-TZID timed series walk it in the
+ * device zone (issue #126); everything else walks rrule.after in today's
+ * frame (UTC midnight for all-day, device-parsed instant).
  */
 function* occurrencesFrom(
   master: CalendarEvent,
@@ -351,7 +453,7 @@ export function nextOpenOccurrence(
   let examined = 0
   for (const occ of occurrencesFrom(master, cursor, rruleString)) {
     if (examined++ >= MAX_OCCURRENCE_SCAN) return null
-    const shape = shapeOccurrence(occ, shapeStart, shapeEnd, master.isAllDay)
+    const shape = shapeOccurrence(occ, shapeStart, shapeEnd, master.isAllDay, master.timezone)
     const hasOverride =
       overridesByRecurrenceId.has(shape.occStartStr) ||
       overridesByRecurrenceId.has(shape.occDateStr)
@@ -398,7 +500,7 @@ export function displayOccurrence(master: CalendarEvent, now: Date): OccurrenceS
   const [from] = rruleWindow(master.isAllDay, now, now)
 
   const shapeOf = (occ: Date): OccurrenceShape =>
-    shapeOccurrence(occ, masterStart, masterEnd, master.isAllDay)
+    shapeOccurrence(occ, masterStart, masterEnd, master.isAllDay, master.timezone)
   const excluded = (occ: Date, shape: OccurrenceShape): boolean =>
     isOccurrenceExcluded(
       occ,
@@ -408,9 +510,13 @@ export function displayOccurrence(master: CalendarEvent, now: Date): OccurrenceS
       master.timezone
     )
 
-  // TZID series cannot jump with rrule.before/after; walk the zoned expansion
-  // forward, remembering the last non-excluded occurrence at or before now.
-  if (!master.isAllDay && master.timezone) {
+  // Timed series cannot jump with rrule.before/after without drifting across
+  // the zone boundary (issue #126); walk the zoned expansion forward,
+  // remembering the last non-excluded occurrence at or before now. TZID
+  // series expand in their own zone, no-TZID timed in the device zone.
+  // This is a linear walk from DTSTART (RecurExpansion has no seek), bounded
+  // by MAX_ZONED_EXPANSION_SCAN — the same cost the TZID path already paid.
+  if (!master.isAllDay) {
     const expansion = zonedExpansion(master)
     if (expansion) {
       let lastBefore: Date | null = null
@@ -430,7 +536,7 @@ export function displayOccurrence(master: CalendarEvent, now: Date): OccurrenceS
     }
   }
 
-  // Non-TZID frame: forward walk, then the rrule.before fallback.
+  // Non-zoned frame: forward walk, then the rrule.before fallback.
   let rule: RRule
   try {
     rule = new RRule({
@@ -491,7 +597,8 @@ export function materializeOccurrenceAt(
     occurrenceInstant(master, occurrenceStart),
     parseISO(master.start),
     parseISO(master.end),
-    master.isAllDay
+    master.isAllDay,
+    master.timezone
   )
   return materializeOccurrence(master, shape)
 }
@@ -535,6 +642,12 @@ function occurrenceDueDate(master: CalendarEvent, shape: OccurrenceShape): strin
   if (!master.dueDate) return undefined
   if (master.isAllDay || !master.dueDate.includes('T')) return shape.occDateStr
 
-  const offsetMs = parseISO(master.dueDate).getTime() - parseISO(master.start).getTime()
+  // Resolve the offset in the series' frame: a TZID task's start/due are naive
+  // wall clocks in its zone, so parsing them device-locally gives a wrong
+  // offset for a late-evening task (23:00 NY vs 03:30Z the next day), which
+  // would push every occurrence's due date onto the wrong calendar day.
+  const startInstant = parseOccurrenceInstant(master.start, master.timezone)
+  const dueInstant = parseOccurrenceInstant(master.dueDate, master.timezone)
+  const offsetMs = dueInstant.getTime() - startInstant.getTime()
   return new Date(parseISO(shape.occStartStr).getTime() + offsetMs).toISOString()
 }
