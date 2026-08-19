@@ -3,6 +3,7 @@ import { describe, it, expect } from 'vitest'
 import { buildMasterTruncation, getFutureOverrideIds, isFirstOccurrence } from '../recurrenceSplit'
 import { makeEvent, makeRule } from './fixtures'
 import type { CalendarEvent } from '@/types'
+import { fromZonedTime } from 'date-fns-tz'
 
 describe('buildMasterTruncation (R5.2: do not pollute excludedDates)', () => {
   it('returns excludedDates: [] when the master has no excludedDates', () => {
@@ -46,7 +47,7 @@ describe('buildMasterTruncation (R5.2: do not pollute excludedDates)', () => {
     expect(result.recurrence?.endDate).toBe('2026-04-16T06:29:59.000Z')
   })
 
-  it('reinterprets generated UTC-shaped occurrence IDs in the series timezone', () => {
+  it('reads a generated occurrence id as the instant it is', () => {
     const master = makeEvent({
       start: '2026-04-01T23:30:00',
       end: '2026-04-02T00:30:00',
@@ -54,9 +55,21 @@ describe('buildMasterTruncation (R5.2: do not pollute excludedDates)', () => {
       recurrence: makeRule({ frequency: 'hourly' }),
     })
 
-    const generatedOccurrenceId = new Date('2026-04-15T23:30:00').toISOString()
+    // What the zoned expansion produces for 23:30 Los Angeles: a true instant.
+    // (This fixture used to build the id with `new Date(naive).toISOString()`,
+    // reading the wall clock in the *device* zone, because that is what the
+    // pre-#126 expansion did — and parseOccurrenceValue undid it by the same
+    // offset. Both halves are gone; the id is now simply an instant.)
+    const generatedOccurrenceId = fromZonedTime(
+      '2026-04-15T23:30:00',
+      'America/Los_Angeles'
+    ).toISOString()
+    expect(generatedOccurrenceId).toBe('2026-04-16T06:30:00.000Z')
+
     const result = buildMasterTruncation(master, generatedOccurrenceId)
 
+    // One second before the occurrence, so the truncated master can no longer
+    // emit it — the split date must not render the old and new times at once.
     expect(result.recurrence?.endDate).toBe('2026-04-16T06:29:59.000Z')
   })
 

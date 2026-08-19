@@ -224,5 +224,12 @@ describe('issue 126 — editing a foreign-TZID event does not move it', () => {
       'Thu 09:00',
       'Fri 09:00',
     ])
+
+    // And the old master must stop at the split: the truncating UNTIL is
+    // computed from the occurrence id, and reading that id in the wrong frame
+    // put the boundary *after* the occurrence it was meant to drop — leaving
+    // the split day showing the series twice, once at each time.
+    const splitDay = useCalendarStore.getState().getEventsForDateRange('2026-08-05', '2026-08-05')
+    expect(splitDay.filter((e) => e.title.startsWith('LA standup'))).toHaveLength(1)
   })
 })

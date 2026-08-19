@@ -1,6 +1,5 @@
-import { fromZonedTime } from 'date-fns-tz'
-import { format } from 'date-fns'
 import { buildRRuleString } from '@/lib/recurrence'
+import { parseOccurrenceInstant } from '@/lib/occurrenceExpansion'
 import type { CalendarEvent, RecurrenceRule } from '@/types'
 
 export interface MasterTruncation {
@@ -101,14 +100,17 @@ function parseOccurrenceValue(master: CalendarEvent, value: string): Date {
     const masterTime = master.start.split('T')[1] || '00:00:00'
     normalized = `${normalized}T${masterTime}`
   }
-  if (master.timezone && master.timezone !== 'UTC') {
-    // Generated occurrence IDs use Date#toISOString even when DTSTART has a
-    // TZID. Convert them back to the browser wall clock used by expansion, then
-    // reinterpret that clock in the series timezone before writing UNTIL.
-    const wallClock = normalized.endsWith('Z')
-      ? format(new Date(normalized), "yyyy-MM-dd'T'HH:mm:ss")
-      : normalized
-    return fromZonedTime(wallClock, master.timezone)
-  }
-  return new Date(normalized)
+  // A generated occurrence id is `Date#toISOString`, i.e. a true instant — so
+  // read it as one. A stored RECURRENCE-ID from a TZID series is instead a
+  // naive wall clock in that zone, which parseOccurrenceInstant resolves.
+  //
+  // This used to round-trip a Z value through the *device* wall clock before
+  // reinterpreting it in the series zone, compensating for an expansion that
+  // generated occurrences in the device frame. Since issue #126 the expansion
+  // is zoned and the ids are genuine instants, so that compensation became a
+  // shift by the offset between the two zones — which pushed the split UNTIL
+  // past the very occurrence it was meant to exclude, leaving the old master
+  // still rendering it beside the new series (a duplicate on the split date,
+  // one at the old time and one at the new).
+  return parseOccurrenceInstant(normalized, master.timezone)
 }
