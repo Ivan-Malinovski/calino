@@ -18,6 +18,34 @@ All notable changes to Calino will be documented in this file.
 
   The same **⋯** menu will open a message to everyone on the list in your mail program, with the event's details already written out, or copy their addresses to the clipboard if you'd rather paste them somewhere yourself — useful if your system has no mail program set up to be opened.
 
+- **A second time zone down the side of the week and day views.** Settings → Calendar → Secondary Timezone adds a second column of hours next to the usual one, so you can see at a glance what 15:00 here is over there. Pick any zone and give it a short label of your own — "SF", "HQ" — or leave it to name itself. It follows daylight saving in both zones independently, so the offset between the two columns changes on the right dates rather than being frozen at whatever it was when you set it up. Off by default, and synced along with the rest of your settings.
+
+- **An event now says which zone it's anchored in.** An event created in another zone — by a colleague, or by you before you travelled — used to look like any other: a 09:00 Los Angeles meeting simply read 18:00 here, with nothing on screen saying those were different clocks. Cards in the calendar now carry a small zone badge, and opening the event shows its own local times under the date fields ("09:00–09:30 in Los Angeles"), including the day, when it falls on a different date over there.
+
+  The fields themselves still work in your zone — a personal calendar answers "when do I turn up", and a form whose meaning depended on which event you opened would trade one confusion for a worse one. The badge only appears when the zones actually differ. One consequence worth knowing: events you make now carry your own zone, so travelling will make the badge appear on them. That is the badge doing its job — they are anchored where you made them.
+
+### Changed
+
+- **Syncing only fetches what actually changed.** Calino used to re-download every calendar in full on every sync. It now asks each server what has changed since the last time it looked, and fetches just those items; a calendar the server reports as untouched is skipped without a single request. On a large account this is the difference between seconds and a moment. Servers that don't support the standard for this — it's an optional one — fall back to the old full listing automatically, and Calino falls back on its own if a server ever rejects its bookmark, so there is nothing to configure and nothing that can get stuck. Which route each calendar took is written to the browser console, since a sync that correctly did nothing and a sync that silently failed otherwise look identical.
+
+- **Editing an event no longer discards what Calino doesn't understand.** Calino used to rebuild a calendar entry from scratch every time you saved it, which meant anything it has no feature for was destroyed the moment you touched an event another app had written — location coordinates, privacy class, priority, categories another client set, relationships between items, extra attendee details, and every custom field. It now edits the original entry in place: the parts Calino owns are updated, everything else is left exactly as it was, including alarms it didn't change and the identifier of the app that created the entry. If that ever fails it falls back to the old behaviour rather than not saving at all.
+
+### Fixed
+
+- **A repeating event keeps the weekdays you picked** ([#126](https://github.com/Ivan-Malinovski/calino/issues/126), reported by [@donderbolt](https://github.com/donderbolt)). A late-evening series repeating Monday–Friday showed up Sunday–Thursday for anyone west of UTC: the repeat rule was being worked out against UTC days rather than yours, and 23:00 on Monday in New York is already Tuesday in UTC. Series are now expanded in your own zone, at the wall-clock time you chose, and stay there across daylight saving.
+
+  New timed events are also written with your zone attached, the way every other calendar app writes them. Before, they were stored as a bare instant with no zone at all, so even once Calino displayed them correctly, every *other* client reading the same calendar kept getting the old shifted weekdays. Existing zone-less events are still read the right way round, so nothing needs re-saving.
+
+- **All-day tasks are readable in the week view on a phone** ([#120](https://github.com/Ivan-Malinovski/calino/issues/120), reported by [@YW5uaWth](https://github.com/YW5uaWth)). They appeared as bare checkboxes with no title, filed under the wrong day. The row they lived in was laid out across the width of the screen while the days themselves scroll sideways, so each one got about 45 pixels and sat wherever that offset happened to land. All-day tasks and events now sit in the day's own heading, as they already did in the day view; a busy day shows two and collapses the rest behind a tap. All-day *events* were not drawn at all in the mobile week view before this — they are now.
+
+- **A new event is never filed into a calendar you can't write to.** If a read-only calendar — a subscription, or one the server grants you no write access on — happened to sort first, the event form picked it by default and then refused to save: Create greyed out, the picker showing the calendar it had just chosen itself, and nothing on screen explaining why.
+
+- **Edits made offline survive.** A queue of pending changes could lose entries in several ways: two edits to the same event overwrote one another, an edit made while offline could be dropped rather than held, and a change the server rejected because someone else had edited the same item first was discarded instead of being retried against the newer version. Failures are now told apart from one another — a full mailbox, a permission problem, a server asking you to slow down — and retried on terms that suit each, rather than all being treated as one kind of "didn't work".
+
+- **Importing a .ics file copes with what real files look like.** Files saved by Windows tools, files with several calendars concatenated together, and files whose repeating events were split across separate blocks all now import correctly rather than partially or not at all.
+
+- **Server accounts with non-ASCII passwords connect.** Credentials were encoded in a way that mangled anything outside plain ASCII, so a password with an accented character failed to authenticate with no useful explanation. Account discovery also follows redirects properly and reads per-calendar permissions correctly where a server reports them as a list, which is what several do.
+
 ## [0.28.1] - 2026-08-13
 
 ### Fixed
