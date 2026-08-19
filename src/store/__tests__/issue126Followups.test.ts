@@ -201,3 +201,36 @@ describe('a TZID series whose start was written back as an instant', () => {
     ])
   })
 })
+
+describe('issue 126 — a stamped series holds its wall time across DST', () => {
+  beforeEach(clearStore)
+
+  // The point of storing a wall clock plus a TZID rather than an instant: the
+  // hour is fixed to the user's clock, so an autumn transition inside the
+  // series must not slide it to 22:00.
+  it('stays at 23:00 local after the October change', () => {
+    useCalendarStore.getState().addEvent({
+      id: 'friday-night',
+      calendarId: 'default',
+      title: 'Friday night',
+      start: '2026-10-23T23:00:00',
+      end: '2026-10-23T23:30:00',
+      isAllDay: false,
+      timezone: deviceTimezone(),
+      recurrence: { frequency: 'weekly', interval: 1, byWeekday: [5] },
+      rruleString: 'FREQ=WEEKLY;BYDAY=FR',
+    })
+
+    // Both vitest zones change on the last Sunday of October (Oct 25 2026),
+    // so this window straddles it.
+    const occurrences = useCalendarStore
+      .getState()
+      .getEventsForDateRange('2026-10-23', '2026-11-07')
+      .filter((e) => e.id.startsWith('friday-night'))
+
+    expect(occurrences.length).toBe(3)
+    for (const occ of occurrences) {
+      expect(format(toEventInstant(occ.start, occ.timezone), 'HH:mm')).toBe('23:00')
+    }
+  })
+})
