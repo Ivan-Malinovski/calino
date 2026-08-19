@@ -23,7 +23,10 @@ function foreignClientExpansion(ics: string, viewingZone: string, count: number)
   const vcal = new ICAL.Component(ICAL.parse(ics))
   for (const vtz of vcal.getAllSubcomponents('vtimezone')) {
     const zone = new ICAL.Timezone(vtz)
-    if (!ICAL.TimezoneService.has(zone.tzid)) ICAL.TimezoneService.register(zone.tzid, zone)
+    // register(timezone, name?) — ical.js v2 order. The v1 order (name first)
+    // still works via a compat shim the library plans to drop in v3, but it no
+    // longer typechecks. The name defaults to the zone's own tzid.
+    if (!ICAL.TimezoneService.has(zone.tzid)) ICAL.TimezoneService.register(zone)
   }
   const iterator = new ICAL.Event(vcal.getFirstSubcomponent('vevent')!).iterator()
   const fmt = new Intl.DateTimeFormat('en-GB', {

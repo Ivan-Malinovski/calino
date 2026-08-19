@@ -338,7 +338,11 @@ END:VCALENDAR`,
 
     const body = await reportCalendar(page, calendarUrl)
     expect(body.match(/UID:atomic-series/g)).toHaveLength(2)
-    expect(body).toContain('RECURRENCE-ID:')
+    // Since #126 an override carries its zone, so the property is written as
+    // `RECURRENCE-ID;TZID=<zone>:` rather than the bare `RECURRENCE-ID:` this
+    // used to match. Accept either form — what matters is that the override
+    // identifies the occurrence it replaces at all.
+    expect(body).toMatch(/RECURRENCE-ID(;TZID=[^:;]+)?:\d{8}T\d{6}Z?/)
     expect(body).toContain('SUMMARY:Atomic recurring override')
 
     await page.reload()

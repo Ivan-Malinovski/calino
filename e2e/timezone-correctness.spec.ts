@@ -127,8 +127,14 @@ test.describe('timezone correctness through the UI', () => {
     const cph = card(page, 'Copenhagen Daily')
     await expect(cph).toBeVisible({ timeout: 10_000 })
     await expect(cph).toContainText('04:00')
-    // The zone badge appears because the event zone differs from the device zone.
-    await expect(cph).toContainText('Europe/Copenhagen')
+    // The zone badge appears because the event zone differs from the device
+    // zone. It shows the city alone so it fits on the time line (4e7606a); the
+    // full TZID stays on the title attribute, which is what actually has to
+    // survive — a card reading "Copenhagen" with the wrong zone behind it would
+    // pass a text check.
+    const zone = cph.locator('[data-component="event-card-zone"]')
+    await expect(zone).toHaveText('Copenhagen')
+    await expect(zone).toHaveAttribute('title', 'Europe/Copenhagen')
   })
 
   test('dragging a TZID event keeps the series zone and the NY wall clock moves with the drag', async ({
@@ -154,7 +160,10 @@ test.describe('timezone correctness through the UI', () => {
       await expect(band).toHaveAttribute('data-minute-of-day', '360')
     })
     await expect(cph).toContainText('06:00')
-    await expect(cph).toContainText('Europe/Copenhagen')
+    // Still Copenhagen-zoned after the drag — the point of the test. Asserted
+    // on the title, since the visible badge is only the city (see above).
+    const zone = cph.locator('[data-component="event-card-zone"]')
+    await expect(zone).toHaveAttribute('title', 'Europe/Copenhagen')
   })
 
   test('the preview popup shows the NY wall clock and edit fields initialise in the device frame', async ({

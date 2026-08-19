@@ -16,7 +16,16 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: IS_CI,
   retries: IS_CI ? 2 : 0,
-  workers: IS_CI ? 2 : undefined,
+  // Capped rather than left to Playwright's default (half the CPU count). All
+  // workers share ONE vite process, which serves both the module graph and the
+  // mock CalDAV middleware — so past a handful of browsers the server, not the
+  // machine, is the bottleneck, and sync-driven assertions start timing out.
+  // On a 16-core box the default of 8 failed calendar-sync/event-move on every
+  // full run while passing them serially; those were never defects. 4 still
+  // dropped calendar-sync. 2 is the measured-stable figure, and matches CI —
+  // a release gate that cries wolf is a release gate people stop reading.
+  // Costs ~4.4m against ~2.3m; override with `--workers=N` for a quick loop.
+  workers: 2,
   reporter: IS_CI ? [['github'], ['list']] : [['list']],
   outputDir: './e2e/test-results',
   timeout: 30_000,

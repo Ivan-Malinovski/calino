@@ -31,7 +31,11 @@ import {
 // `calendar-sync.spec.ts` resets `personal/` in its beforeEach, which under
 // `fullyParallel` deleted the birthday this spec had just written.
 const BIRTHDAYS = '/dav/calendars/user/birthdays/'
-const WORK = '/dav/calendars/user/work/'
+// This spec's own second writable calendar. It used `work/`, but
+// `event-move.spec.ts` resets that collection in its beforeEach and the two
+// wiped each other under `fullyParallel`. Seeded below under the name 'Work'
+// so the calendar picker still reads naturally.
+const WORK = '/dav/calendars/user/b-work/'
 const BIRTHDAY_MARKER = (contactId: string) => `calino:contact:${contactId}`
 
 /**
@@ -73,7 +77,7 @@ function dumpHasMarker(dumpData: Record<string, string> | null, marker: string):
 async function seedAllCalendars(page: Page, baseURL: string): Promise<void> {
   const extras = [
     { name: 'Move Source', path: 'calendars/user/move-source/' },
-    { name: 'Work', path: 'calendars/user/work/' },
+    { name: 'Work', path: 'calendars/user/b-work/' },
     { name: 'Journal Work', path: 'calendars/user/j-work/' },
     { name: 'Journal Personal', path: 'calendars/user/j-personal/' },
   ] as const

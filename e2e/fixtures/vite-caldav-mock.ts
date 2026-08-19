@@ -159,6 +159,17 @@ const ACCOUNTS: MockAccount[] = [
         components: ['VEVENT', 'VTODO', 'VJOURNAL'],
       },
       {
+        // The second writable calendar `contacts-birthday.spec.ts` needs to
+        // prove a birthday lands in the *chosen* calendar. It used `work/`,
+        // which `event-move.spec.ts` resets in its beforeEach — under
+        // `fullyParallel` that wiped the birthday mid-assertion, and
+        // event-move lost its own fixtures to the same collision.
+        path: '/dav/calendars/user/b-work/',
+        displayName: 'Birthday Work',
+        color: '#EA4335',
+        components: ['VEVENT', 'VTODO', 'VJOURNAL'],
+      },
+      {
         // Owned by `journal-timezone.spec.ts` (issue #116), which asserts the
         // exact DTSTART of the single entry it creates — it cannot share a
         // collection with a spec running in parallel.
