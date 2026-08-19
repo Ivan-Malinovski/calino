@@ -169,18 +169,19 @@
   text-overflow: ellipsis;
 }
 
-/* Phase 2 (C2) — shown when the event's zone differs from the device zone. */
-.tzBadge {
-  display: inline-block;
-  margin-top: 2px;
-  padding: 0 4px;
-  border-radius: 3px;
-  font-size: 10px;
+/* Phase 2 (C2) — shown when the event's zone differs from the device zone.
+   Sits on the time line, not under it: a short card clips a second row. */
+.tzInline {
+  min-width: 0;
+  font-size: 10.5px;
   font-weight: 500;
-  line-height: 1.4;
+  line-height: 1.3;
   color: var(--event-ink-2, var(--ink-2));
-  background: var(--event-ink-3, rgba(128, 128, 128, 0.18));
+  opacity: 0.75;
+  letter-spacing: 0.01em;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* ---- Meta (time + location on one line) ---- */
@@ -698,4 +699,32 @@
 .dot .dragContent,
 .dot .dueDate {
   display: none;
+}
+
+/* ---- Tight cards ----
+   A card whose duration leaves room for one line only. Title and time share
+   that line rather than stacking, so nothing is clipped in half. */
+.card.tight {
+  padding-top: 2px;
+  padding-bottom: 2px;
+  align-items: center;
+}
+
+.card.tight .dragContent {
+  flex-direction: row;
+  align-items: baseline;
+  gap: 5px;
+}
+
+.card.tight .title {
+  flex: 0 1 auto;
+}
+
+.card.tight .meta {
+  flex: 0 1 auto;
+  gap: 4px;
+}
+
+.card.tight .time {
+  margin-top: 0;
 }

@@ -38,6 +38,14 @@ import styles from './EventCard.module.css'
 /** Device zone — the zone every non-TZID time is shown in. A TZID badge is
  * shown when the event's own zone differs from it (Phase 2 C2). */
 const DEVICE_TIMEZONE = Intl.DateTimeFormat().resolvedOptions().timeZone
+
+/** Below this rendered height a card only has room for a single line of text. */
+const TIGHT_CARD_HEIGHT = 42
+
+/** `America/Los_Angeles` -> `Los Angeles`. The region prefix is noise on a card. */
+function shortZoneLabel(timezone: string): string {
+  return (timezone.split('/').pop() ?? timezone).replace(/_/g, ' ')
+}
 import { duplicateEventWithSync } from '@/lib/duplicateWithSync'
 
 interface EventCardProps {
@@ -278,6 +286,19 @@ export const EventCard = React.memo(function EventCard({
     event.isAllDay ? parseISO(event.start) : toEventInstant(event.start, event.timezone),
     event.isAllDay ? parseISO(event.end) : toEventInstant(event.end, event.timezone)
   )
+  // Timed grid cards take their height from the event's duration, so the card
+  // can work out up front how much vertical room it has. A half-hour slot only
+  // fits one line of text — lay title and time out side by side there instead
+  // of stacking them and clipping the second line mid-glyph.
+  const gridHeightPx =
+    compact || monthView || isDragging || event.isAllDay || isTask
+      ? null
+      : ((toEventInstant(event.end, event.timezone).getTime() -
+          toEventInstant(event.start, event.timezone).getTime()) /
+          3600000) *
+        hourHeight
+  const isTight = gridHeightPx !== null && gridHeightPx > 0 && gridHeightPx < TIGHT_CARD_HEIGHT
+
   const isFragmentMiddle = event.isFragment && !event.isFirstFragment && !event.isLastFragment
   const isFragmentFirst = event.isFragment && event.isFirstFragment
   const isFragmentLast = event.isFragment && event.isLastFragment
@@ -512,6 +533,7 @@ export const EventCard = React.memo(function EventCard({
               : `${event.title}, ${formatEventTime(event.start, event.timezone, timeFormat)} to ${formatEventTime(event.end, event.timezone, timeFormat)}`
         }
         {...(isMultiDay ? { 'data-multi-day': '' } : {})}
+        {...(isTight ? { 'data-tight': '' } : {})}
         {...(isFragmentFirst ? { 'data-fragment-first': '' } : {})}
         {...(isFragmentMiddle ? { 'data-fragment-middle': '' } : {})}
         {...(isFragmentLast ? { 'data-fragment-last': '' } : {})}
@@ -523,7 +545,7 @@ export const EventCard = React.memo(function EventCard({
                 : 'Click to edit (recurring event)',
             }
           : {})}
-        className={`${styles.card} ${compact ? styles.compact : ''} ${isCurrentDragging || isDragging ? styles.dragging : ''} ${isResizing ? styles.resizing : ''} ${hideTopRadius ? styles.noTopRadius : ''} ${isTask ? styles.task : ''} ${event.completed ? styles.completed : ''} ${event.completed ? styles.isDone : ''} ${isMobileMonth ? styles.mobileMonth : ''} ${monthView ? styles.monthView : ''} ${transparent ? styles.transparent : ''} ${isMultiDay ? styles.multiDay : ''} ${isFragmentMiddle ? styles.fragmentMiddle : ''} ${isFragmentFirst ? styles.fragmentFirst : ''} ${isFragmentLast ? styles.fragmentLast : ''} ${dotMode ? styles.dot : ''} ${event.isFragment && isSharedHovered ? styles.hovered : ''} ${disableDirectEdit ? styles.noDrag : ''}`}
+        className={`${styles.card} ${compact ? styles.compact : ''} ${isCurrentDragging || isDragging ? styles.dragging : ''} ${isResizing ? styles.resizing : ''} ${hideTopRadius ? styles.noTopRadius : ''} ${isTask ? styles.task : ''} ${event.completed ? styles.completed : ''} ${event.completed ? styles.isDone : ''} ${isMobileMonth ? styles.mobileMonth : ''} ${monthView ? styles.monthView : ''} ${transparent ? styles.transparent : ''} ${isMultiDay ? styles.multiDay : ''} ${isFragmentMiddle ? styles.fragmentMiddle : ''} ${isFragmentFirst ? styles.fragmentFirst : ''} ${isFragmentLast ? styles.fragmentLast : ''} ${dotMode ? styles.dot : ''} ${isTight ? styles.tight : ''} ${event.isFragment && isSharedHovered ? styles.hovered : ''} ${disableDirectEdit ? styles.noDrag : ''}`}
         onContextMenu={handleContextMenu}
         onClick={handleClick}
         // role="button" requires Enter and Space activation for keyboard
@@ -654,25 +676,34 @@ export const EventCard = React.memo(function EventCard({
                       ? 'All day'
                       : null
                 const locText = event.location || null
-                if (timeText && locText) {
-                  return (
-                    <div className={styles.meta}>
-                      <span className={styles.time}>{timeText}</span>
-                      <span className={styles.metaDot}>·</span>
-                      <LocationLink location={locText} className={styles.location} />
-                    </div>
-                  )
-                }
+                // The zone rides on the time line rather than below it: a
+                // short card clips anything on a second row.
+                const tzText =
+                  !compact && event.timezone && event.timezone !== DEVICE_TIMEZONE
+                    ? shortZoneLabel(event.timezone)
+                    : null
+                if (!timeText && !tzText && !locText) return null
                 return (
-                  <>
-                    {timeText && <div className={styles.time}>{timeText}</div>}
-                    {locText && <LocationLink location={locText} className={styles.location} />}
-                  </>
+                  <div className={styles.meta}>
+                    {timeText && <span className={styles.time}>{timeText}</span>}
+                    {tzText && (
+                      <span
+                        className={styles.tzInline}
+                        title={event.timezone}
+                        data-component="event-card-zone"
+                      >
+                        {tzText}
+                      </span>
+                    )}
+                    {locText && (
+                      <>
+                        {(timeText || tzText) && <span className={styles.metaDot}>·</span>}
+                        <LocationLink location={locText} className={styles.location} />
+                      </>
+                    )}
+                  </div>
                 )
               })()}
-              {!compact && event.timezone && event.timezone !== DEVICE_TIMEZONE && (
-                <span className={styles.tzBadge}>{event.timezone}</span>
-              )}
               {event.travelDuration && (
                 <div className={styles.travelTime}>
                   <TravelIcon />

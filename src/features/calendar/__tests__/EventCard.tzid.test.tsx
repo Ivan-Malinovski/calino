@@ -201,3 +201,83 @@ describe('EventCard isMultiDay with TZID events', () => {
     expect(card(container)).toHaveAttribute('data-multi-day')
   })
 })
+
+describe('EventCard zone label and tight layout', () => {
+  const base: CalendarEvent = {
+    id: 'zone-card',
+    calendarId: 'default',
+    title: 'SF sync',
+    start: '2026-02-10T10:00:00',
+    end: '2026-02-10T11:00:00',
+    timezone: 'America/Los_Angeles',
+    isAllDay: false,
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockUseCalDAV.mockReturnValue({
+      accounts: [],
+      calendars: [],
+      syncState: { status: 'idle', lastSyncAt: null, error: null, pendingChanges: 0 },
+      addAccount: vi.fn(),
+      removeAccount: vi.fn(),
+      syncAccount: vi.fn(),
+      syncAll: vi.fn(),
+      createEvent: vi.fn(),
+      updateEvent: vi.fn(),
+      deleteEvent: vi.fn(),
+    } as unknown as ReturnType<typeof useCalDAV>)
+    seedStore()
+  })
+
+  const card = (container: HTMLElement): Element | null =>
+    container.querySelector('[data-component="event-card"]')
+  const zone = (container: HTMLElement): Element | null =>
+    container.querySelector('[data-component="event-card-zone"]')
+
+  it('renders the zone beside the time, shortened, on the same row', () => {
+    const { container } = render(<EventCard event={base} />)
+    const label = zone(container)
+    expect(label).not.toBeNull()
+    expect(label?.textContent).toBe('Los Angeles')
+    expect(label?.getAttribute('title')).toBe('America/Los_Angeles')
+    // Same parent as the time — a second row is what got clipped.
+    expect(label?.parentElement?.textContent).toContain('Los Angeles')
+    expect(label?.previousElementSibling?.textContent).toMatch(/\d{1,2}[:.]\d{2}/)
+  })
+
+  it('omits the zone when it matches the device zone', () => {
+    const { container } = render(<EventCard event={{ ...base, timezone: deviceZone() }} />)
+    expect(zone(container)).toBeNull()
+  })
+
+  it('omits the zone on a floating event', () => {
+    const { container } = render(<EventCard event={{ ...base, timezone: undefined }} />)
+    expect(zone(container)).toBeNull()
+  })
+
+  it('flags a card too short for two lines as tight', () => {
+    // 30 minutes at the default 60px hour height is 30px — one line of room.
+    const short: CalendarEvent = { ...base, end: '2026-02-10T10:30:00' }
+    const { container } = render(<EventCard event={short} />)
+    expect(card(container)).toHaveAttribute('data-tight')
+  })
+
+  it('leaves a card with room for two lines alone', () => {
+    const { container } = render(<EventCard event={base} />)
+    expect(card(container)).not.toHaveAttribute('data-tight')
+  })
+
+  it('scales the tight threshold with the hour height', () => {
+    // The same 30-minute event is 60px tall when zoomed in — not tight.
+    const short: CalendarEvent = { ...base, end: '2026-02-10T10:30:00' }
+    const { container } = render(<EventCard event={short} hourHeight={120} />)
+    expect(card(container)).not.toHaveAttribute('data-tight')
+  })
+
+  it('never marks a month-view card tight', () => {
+    const short: CalendarEvent = { ...base, end: '2026-02-10T10:15:00' }
+    const { container } = render(<EventCard event={short} compact monthView />)
+    expect(card(container)).not.toHaveAttribute('data-tight')
+  })
+})
