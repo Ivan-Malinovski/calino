@@ -8,6 +8,7 @@ import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
 import { useModalDismiss } from '@/hooks/useModalDismiss'
 import { parseICALData } from '@/features/caldav/adapter/iCalendarAdapter'
 import { showToast } from '@/lib/toast'
+import { withProgress } from '@/store/progressStore'
 import type { CalendarEvent } from '@/types'
 import shell from './AddCalendarModal.module.css'
 import styles from './IcsImportModal.module.css'
@@ -188,9 +189,21 @@ export function IcsImportModal({
         else groups.set(key, [event])
       }
 
-      for (const group of groups.values()) {
-        await caldav.createEventGroup(calendarId, group)
-      }
+      // One task for the whole import, not one per group: `createEventGroup`
+      // tracks itself, and a few hundred short-lived tasks would flicker the
+      // pill instead of showing steady progress. `owned` silences those.
+      await withProgress(
+        `Importing ${incoming.length} ${plural(incoming.length)}…`,
+        async (report) => {
+          let done = 0
+          report({ done, total: groups.size })
+          for (const group of groups.values()) {
+            await caldav.createEventGroup(calendarId, group)
+            report({ done: ++done, total: groups.size })
+          }
+        },
+        { owned: true }
+      )
 
       const skipped = parsed.length - incoming.length
       showToast(

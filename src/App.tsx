@@ -27,7 +27,7 @@ import { EventModal } from './features/calendar/components/EventModal'
 import { EventPreviewPopup } from './features/calendar/components/EventPreviewPopup'
 import { IcsDropZone } from './features/calendar/components/IcsDropZone'
 import { JournalDayModal } from './features/calendar/components/JournalDayModal'
-import { CookieConsent, ErrorBoundary } from './components/common'
+import { CookieConsent, ErrorBoundary, GlobalProgress } from './components/common'
 import { useTheme } from './components/ThemeContext'
 import { CalendarSkeleton } from './components/common/Skeleton'
 import { FloatingNavPill } from './features/calendar/components/nav/FloatingNavPill'
@@ -909,6 +909,7 @@ function App(): JSX.Element {
         <CalDAVProvider>
           <GitHubPagesRedirect />
           <ThemedToaster />
+          <GlobalProgress />
           {!Capacitor.isNativePlatform() && <CookieConsent />}
           <MasterPasswordPrompt />
           <Routes>

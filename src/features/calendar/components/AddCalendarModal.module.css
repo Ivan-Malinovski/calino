@@ -336,3 +336,47 @@
   text-decoration: underline;
   cursor: pointer;
 }
+
+/* Live stage read-out while an account connects — see progressStore. */
+.progress {
+  margin-top: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.progressTrack {
+  position: relative;
+  height: 4px;
+  border-radius: var(--radius-full, 999px);
+  background: var(--color-bg-tertiary);
+  overflow: hidden;
+}
+
+.progressBar {
+  height: 100%;
+  background: var(--color-primary, var(--color-accent));
+  transition: width 0.25s ease;
+}
+
+.progressIndeterminate {
+  position: absolute;
+  inset-block: 0;
+  width: 35%;
+  background: var(--color-primary, var(--color-accent));
+  animation: progressSweep 1.2s ease-in-out infinite;
+}
+
+.progressLabel {
+  font-size: var(--font-size-xs, 0.75rem);
+  color: var(--color-text-secondary);
+}
+
+@keyframes progressSweep {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(300%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .progressIndeterminate { animation-duration: 3s; }
+}

@@ -13,6 +13,7 @@ import type { DiagnosticsOptions } from '@/features/caldav/client/diagnostics'
 import { connectionErrorMessage } from '@/features/caldav/client/errorMessages'
 import { DiagnosticsPanel } from '@/features/settings/components/DiagnosticsPanel'
 import type { CalDAVAccount } from '@/features/caldav/types'
+import { useProgressStore, selectActiveTask } from '@/store/progressStore'
 import { useAnimatedClose } from '@/hooks/useAnimatedClose'
 import { useModalDismiss } from '@/hooks/useModalDismiss'
 import styles from './AddCalendarModal.module.css'
@@ -46,6 +47,9 @@ export function AddCalendarModal({
   const [showDiagnostics, setShowDiagnostics] = useState(false)
 
   const { addAccount, updateAccount } = useCalDAV()
+  // The connect narrates its own stages (probe → calendars → per-calendar
+  // import); show them here so a slow first sync doesn't look like a hang.
+  const progressTask = useProgressStore(selectActiveTask)
   const isEdit = mode === 'edit' && account !== undefined
   const formRef = useRef<HTMLFormElement>(null)
   const isSavingRef = useRef(false)
@@ -388,6 +392,37 @@ export function AddCalendarModal({
           )}
           {showDiagnostics && diagnoseTarget && (
             <DiagnosticsPanel options={diagnoseTarget} autoRun />
+          )}
+          {isSaving && progressTask && (
+            <div className={styles.progress} role="status" aria-live="polite">
+              <div
+                className={styles.progressTrack}
+                role="progressbar"
+                aria-label={progressTask.label}
+                aria-valuemin={progressTask.total ? 0 : undefined}
+                aria-valuemax={progressTask.total ? 100 : undefined}
+                aria-valuenow={
+                  progressTask.total
+                    ? Math.round(((progressTask.done ?? 0) / progressTask.total) * 100)
+                    : undefined
+                }
+              >
+                {progressTask.total ? (
+                  <div
+                    className={styles.progressBar}
+                    style={{
+                      width: `${Math.min(
+                        100,
+                        Math.round(((progressTask.done ?? 0) / progressTask.total) * 100)
+                      )}%`,
+                    }}
+                  />
+                ) : (
+                  <div className={styles.progressIndeterminate} />
+                )}
+              </div>
+              <span className={styles.progressLabel}>{progressTask.label}</span>
+            </div>
           )}
           <div className={styles.modalFooter}>
             <button
