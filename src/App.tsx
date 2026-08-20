@@ -37,6 +37,7 @@ import { SetupPage } from './features/setup/SetupPage'
 import { MasterPasswordPrompt } from './features/settings/components/MasterPasswordPrompt'
 import { useConfigStore } from './store/configStore'
 import { ThemeProvider } from './components/ThemeProvider'
+import { CalDAVProvider } from './features/caldav/hooks/CalDAVProvider'
 import { useCardDAV } from './features/carddav/hooks/useCardDAV'
 import { initContactPhotos } from './lib/contactPhotoSync'
 import { pruneRawIcs } from './lib/rawIcsStore'
@@ -905,41 +906,43 @@ function App(): JSX.Element {
   return (
     <BrowserRouter>
       <ThemeProvider>
-        <GitHubPagesRedirect />
-        <ThemedToaster />
-        {!Capacitor.isNativePlatform() && <CookieConsent />}
-        <MasterPasswordPrompt />
-        <Routes>
-          <Route path="/month" element={<CalendarApp />} />
-          <Route path="/year" element={<CalendarApp />} />
-          <Route path="/week" element={<CalendarApp />} />
-          <Route path="/3day" element={<CalendarApp />} />
-          <Route path="/day" element={<CalendarApp />} />
-          <Route path="/agenda" element={<CalendarApp />} />
-          <Route path="/tasks" element={<CalendarApp />} />
-          <Route path="/journal" element={<CalendarApp />} />
-          <Route path="/contacts" element={<CalendarApp />} />
-          <Route path="/" element={<CalendarApp />} />
-          {/* No fallback: these are whole-page routes, and a spinner that
+        <CalDAVProvider>
+          <GitHubPagesRedirect />
+          <ThemedToaster />
+          {!Capacitor.isNativePlatform() && <CookieConsent />}
+          <MasterPasswordPrompt />
+          <Routes>
+            <Route path="/month" element={<CalendarApp />} />
+            <Route path="/year" element={<CalendarApp />} />
+            <Route path="/week" element={<CalendarApp />} />
+            <Route path="/3day" element={<CalendarApp />} />
+            <Route path="/day" element={<CalendarApp />} />
+            <Route path="/agenda" element={<CalendarApp />} />
+            <Route path="/tasks" element={<CalendarApp />} />
+            <Route path="/journal" element={<CalendarApp />} />
+            <Route path="/contacts" element={<CalendarApp />} />
+            <Route path="/" element={<CalendarApp />} />
+            {/* No fallback: these are whole-page routes, and a spinner that
               flashes for one frame on a warm cache reads as a glitch. */}
-          <Route
-            path="/settings"
-            element={
-              <Suspense fallback={null}>
-                <SettingsPage />
-              </Suspense>
-            }
-          />
-          <Route
-            path="/privacy"
-            element={
-              <Suspense fallback={null}>
-                <PrivacyPolicy />
-              </Suspense>
-            }
-          />
-          <Route path="/setup" element={<SetupPage />} />
-        </Routes>
+            <Route
+              path="/settings"
+              element={
+                <Suspense fallback={null}>
+                  <SettingsPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/privacy"
+              element={
+                <Suspense fallback={null}>
+                  <PrivacyPolicy />
+                </Suspense>
+              }
+            />
+            <Route path="/setup" element={<SetupPage />} />
+          </Routes>
+        </CalDAVProvider>
       </ThemeProvider>
     </BrowserRouter>
   )

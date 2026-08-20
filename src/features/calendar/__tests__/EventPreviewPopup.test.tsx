@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { screen, fireEvent, waitFor } from '@testing-library/react'
+import { render } from '@/test/caldavRender'
 import { format, parseISO } from 'date-fns'
 import { EventPreviewPopup } from '../components/EventPreviewPopup'
 import { useCalendarStore } from '@/store/calendarStore'
@@ -782,10 +783,7 @@ describe('EventPreviewPopup', () => {
           clickedEventId="test-task-tzid-date"
         />
       )
-      const expected = format(
-        toEventInstant(tzidTask.dueDate!, tzidTask.timezone),
-        'd MMM yyyy'
-      )
+      const expected = format(toEventInstant(tzidTask.dueDate!, tzidTask.timezone), 'd MMM yyyy')
       expect(screen.getByText(expected)).toBeInTheDocument()
     })
 
@@ -851,7 +849,9 @@ describe('EventPreviewPopup', () => {
       const devTime = format(instant, 'HH:mm')
       const expectedDue = toZoneWallClock(new Date(`2026-02-12T${devTime}:00`).toISOString(), tz)
       await waitFor(() => {
-        const updated = useCalendarStore.getState().events.find((e) => e.id === 'test-task-tzid-save')
+        const updated = useCalendarStore
+          .getState()
+          .events.find((e) => e.id === 'test-task-tzid-save')
         expect(updated?.dueDate).toBe(expectedDue)
         expect(updated?.start).toBe(expectedDue)
         expect(updated?.end).toBe(expectedDue)

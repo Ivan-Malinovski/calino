@@ -36,7 +36,7 @@ import * as credentials from '../../client/credentials'
 import * as accountStorage from '../../sync/accountStorage'
 import * as CalDAVClientModule from '../../client/CalDAVClient'
 import * as SyncEngineModule from '../../sync/syncEngine'
-import { useCalDAV } from '../useCalDAV'
+import { useCalDAVInstance as useCalDAV } from '../useCalDAV'
 
 type MockDiscovery = typeof discovery & {
   discoverServerUrl: ReturnType<typeof vi.fn>
@@ -1958,7 +1958,11 @@ describe('useCalDAV', () => {
       mockClient({
         syncCollection: vi.fn().mockResolvedValue({
           changes: [
-            { href: 'https://caldav.example.com/cal/main/boom.ics', etag: '"e"', status: 'changed' },
+            {
+              href: 'https://caldav.example.com/cal/main/boom.ics',
+              etag: '"e"',
+              status: 'changed',
+            },
           ],
           newSyncToken: 'http://example.com/ns/sync/200',
           tokenInvalidated: false,
@@ -2038,9 +2042,7 @@ describe('useCalDAV', () => {
     it('uses the full-listing path when the server exposes no sync token', async () => {
       seedAccount({ ...STORED, ctag: null, syncToken: null })
       const client = mockClient({
-        fetchCalendars: vi
-          .fn()
-          .mockResolvedValue([{ ...STORED, ctag: null, syncToken: null }]),
+        fetchCalendars: vi.fn().mockResolvedValue([{ ...STORED, ctag: null, syncToken: null }]),
       })
 
       await runSync()
@@ -3225,9 +3227,7 @@ describe('useCalDAV', () => {
       expect(mockSyncEngineInstance.updateEvent).toHaveBeenCalledTimes(2)
       expect(mockSyncEngineInstance.updateEvent.mock.calls[0][1]).toBe('"stale"')
       expect(mockSyncEngineInstance.updateEvent.mock.calls[1][1]).toBe('"fresh"')
-      expect(fetchEtag).toHaveBeenCalledWith(
-        'https://caldav.example.com/cal/main/evt-412.ics'
-      )
+      expect(fetchEtag).toHaveBeenCalledWith('https://caldav.example.com/cal/main/evt-412.ics')
       expect(mockAccountStorage.updatePendingChangeRetry).not.toHaveBeenCalled()
     })
 
@@ -3275,10 +3275,9 @@ describe('useCalDAV', () => {
 
     it('drops a create that fails with 507 (quota) and explains why', async () => {
       mockSyncEngineInstance.pushEvent.mockRejectedValue(
-        Object.assign(
-          new Error('PUT https://... failed: HTTP 507: Insufficient Storage'),
-          { status: 507 }
-        )
+        Object.assign(new Error('PUT https://... failed: HTTP 507: Insufficient Storage'), {
+          status: 507,
+        })
       )
       queueWith(queuedCreate)
       mockAccountStorage.getAllAccounts.mockReturnValue([mockAccount])
@@ -3365,10 +3364,9 @@ describe('useCalDAV', () => {
       const fetchEvents = vi
         .fn()
         .mockRejectedValueOnce(
-          Object.assign(
-            new Error('REPORT https://caldav.example.com/cal/a/ failed: HTTP 500'),
-            { status: 500 }
-          )
+          Object.assign(new Error('REPORT https://caldav.example.com/cal/a/ failed: HTTP 500'), {
+            status: 500,
+          })
         )
         .mockResolvedValue([
           { url: 'https://caldav.example.com/cal/b/evt-b.ics', data: 'ical-data', etag: 'etag1' },
@@ -3435,10 +3433,9 @@ describe('useCalDAV', () => {
       const fetchEvents = vi
         .fn()
         .mockRejectedValueOnce(
-          Object.assign(
-            new Error('REPORT https://caldav.example.com/cal/a/ failed: HTTP 500'),
-            { status: 500 }
-          )
+          Object.assign(new Error('REPORT https://caldav.example.com/cal/a/ failed: HTTP 500'), {
+            status: 500,
+          })
         )
         .mockResolvedValue([
           { url: 'https://caldav.example.com/cal/b/evt-b.ics', data: 'ical-data', etag: 'etag1' },

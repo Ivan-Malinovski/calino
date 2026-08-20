@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { screen, fireEvent } from '@testing-library/react'
+import { render } from '@/test/caldavRender'
 import { MemoryRouter } from 'react-router'
 import { SettingsPage } from '../SettingsPage'
 import { ThemeProvider } from '@/components/ThemeProvider'

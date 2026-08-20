@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useContext, useEffect } from 'react'
 import { addDays } from 'date-fns'
 import type { CalendarEvent } from '@/types'
 import { showToast, showBrokenEventsNotification, showDuplicateUidNotification } from '@/lib/toast'
@@ -38,6 +38,7 @@ import { SyncEngine, eventResourceFilename, resourceIsInCollection } from '../sy
 import { moveEventGroup, MoveLostSourceError } from '../sync/moveEvent'
 import type { MoveResult } from '../sync/moveEvent'
 import { pendingGuardedEventIds } from '../sync/pendingChanges'
+import { CalDAVContext } from './calDAVContext'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
 import { useCalDAVSyncStore } from '@/store/caldavSyncStore'
@@ -62,6 +63,12 @@ const isProcessingRef = { current: false }
 
 // Module-level guard for auto-connect (shared across all hook instances)
 let autoConnectDone = false
+
+// Module-level guard: accounts already probed for CardDAV support. useCalDAV is
+// mounted by ~20 components, so without this every mount (including the churn
+// when a viewport resize crosses a breakpoint and swaps whole view subtrees)
+// re-ran discovery plus a full contact fetch for every address book.
+const cardDavCheckedAccounts = new Set<string>()
 // Module-level guard: only sync once per page session (set when timer fires, not when effect runs)
 // Module-level guard: event IDs whose server DELETE is currently in flight. A
 // concurrent sync must skip these — otherwise it can re-add an event the user
@@ -320,7 +327,7 @@ function hrefKey(href: string): string {
   return path.replace(/\/+$/, '')
 }
 
-interface UseCalDAVReturn {
+export interface UseCalDAVReturn {
   accounts: CalDAVAccount[]
   calendars: CalDAVCalendar[]
   syncState: SyncState
@@ -363,7 +370,26 @@ interface UseCalDAVReturn {
   deleteCalendarFromServer: (calendarId: string) => Promise<void>
 }
 
+/**
+ * Reads the app-wide CalDAV instance provided by `CalDAVProvider`.
+ *
+ * This is the hook components should use. Constructing a second instance with
+ * `useCalDAVInstance` duplicates its mount-time work (account load, CardDAV
+ * probe, pending-change timer) rather than sharing it.
+ */
 export function useCalDAV(): UseCalDAVReturn {
+  const ctx = useContext(CalDAVContext)
+  if (!ctx) {
+    throw new Error('useCalDAV must be used inside a <CalDAVProvider>')
+  }
+  return ctx
+}
+
+/**
+ * Builds a CalDAV instance. Call this exactly once, from `CalDAVProvider` —
+ * everything else goes through `useCalDAV`.
+ */
+export function useCalDAVInstance(): UseCalDAVReturn {
   const [accounts, setAccounts] = useState<CalDAVAccount[]>([])
   const [calendars, setCalendars] = useState<CalDAVCalendar[]>([])
   const [syncState, setSyncState] = useState<SyncState>({
@@ -843,6 +869,8 @@ export function useCalDAV(): UseCalDAVReturn {
     // Check for CardDAV support on existing accounts
     const checkCardDAV = async (): Promise<void> => {
       for (const account of loadedAccounts) {
+        if (cardDavCheckedAccounts.has(account.id)) continue
+        cardDavCheckedAccounts.add(account.id)
         try {
           const credential = await getCredentialById(account.credentialId)
           if (!credential) continue
