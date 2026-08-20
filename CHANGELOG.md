@@ -4,6 +4,28 @@ All notable changes to Calino will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- **A bar at the top of the window says what Calino is waiting on.** Connecting an account, importing a file or saving over a slow link no longer looks like a hang. Quick saves don't flash it up, and timer-driven syncs stay silent.
+
+- **The sidebar says when changes haven't reached the server,** how many are waiting, and offers to send them now. They also go out the moment you're back online.
+
+### Changed
+
+- **Saving an event closes the form straight away** instead of waiting for the server. Failures are still reported. Editing a single occurrence of a repeating event now updates immediately too.
+
+- **Views open without a placeholder on Android** — they're prepared shortly after launch.
+
+- Calino sets up its server connection once for the whole app rather than in around twenty places, most noticeably when turning a phone sideways.
+
+### Fixed
+
+- **Self-hosted servers work over plain HTTP on Android** ([#119](https://github.com/Ivan-Malinovski/calino/issues/119)), including with your own certificate authority. Since `http://` really does send your password unprotected, the account forms now say so.
+
+- **The agenda heading no longer shrinks on the current month,** where the "Today" button drops out and took the bar's height with it.
+
+- An event's title lines up with its edit button, and a long title fades at the edge rather than being cut mid-letter.
+
 ## [0.29.0] - 2026-08-19
 
 ### Added
