@@ -21,8 +21,10 @@
   animation: pendingPulse 2s ease-in-out infinite;
 }
 
+/* Muted toward the ink rather than raw --color-error: being offline is worth
+   flagging, but it isn't an alarm and the dot sits in quiet footer chrome. */
 .offline {
-  background: var(--ink-3);
+  background: color-mix(in srgb, var(--color-error) 60%, var(--ink-3));
 }
 
 .message {
