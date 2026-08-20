@@ -251,8 +251,9 @@ describe('EventModal', () => {
     // Regression: clicking Save while a CalDAV sync is in flight used to create
     // one event per click because `saveEvent` awaited the network round-trip
     // before calling `closeModal()` and the button stayed enabled the whole
-    // time.  Fix adds a synchronous re-entrancy guard so the second click is
-    // dropped while the first save is still in flight.
+    // time.  The save is now synchronous up to the close, but a click already
+    // queued in the same tick still has to be dropped — that is the latched
+    // `isSavingRef` guard's job.
     const store = useCalendarStore.getState()
     store.openModal()
 
@@ -284,39 +285,29 @@ describe('EventModal', () => {
     expect(matching).toHaveLength(1)
   })
 
-  it('shows a spinner and Saving label while save is in flight', async () => {
-    // The disabled :opacity 0.5 fade is fine for the "empty title" / "end
-    // before start" states, but while the save is actively in flight the
-    // user needs an explicit "this is working" signal — a spinner and a
-    // "Saving…" label, with aria-busy for screen readers.
+  it('closes on the click that saves, without an in-flight Saving state', () => {
+    // The modal used to hold itself open behind a disabled "Saving…" spinner
+    // for the whole CalDAV round trip. It now applies the change locally and
+    // closes on the same tick — the server write is carried by the global
+    // progress pill — so there is never a "Saving…" button to find.
     const store = useCalendarStore.getState()
     store.openModal()
 
     render(<EventModal />)
 
     fireEvent.change(screen.getByPlaceholderText('Event title'), {
-      target: { value: 'Spinner Test' },
+      target: { value: 'Instant Close Test' },
     })
 
-    const createButton = screen.getByRole('button', { name: /create/i })
-    fireEvent.click(createButton)
+    fireEvent.click(screen.getByRole('button', { name: /create/i }))
 
-    // While the in-flight CalDAV mock is pending, the button must:
-    //   - be re-labelled "Saving…"
-    //   - expose aria-busy="true" for assistive tech
-    //   - remain disabled (the click is in flight, not the next click)
-    //   - contain an aria-hidden spinner span
-    const savingButton = await screen.findByRole('button', { name: /saving/i })
-    expect(savingButton).toHaveAttribute('aria-busy', 'true')
-    expect(savingButton).toBeDisabled()
-    const spinner = savingButton.querySelector('span[aria-hidden="true"]')
-    expect(spinner).not.toBeNull()
-
-    // Let the save complete cleanly so the next test starts from a fresh
-    // modal state.
-    await waitFor(() => {
-      expect(useCalendarStore.getState().isModalOpen).toBe(false)
-    })
+    // No await anywhere above: both the store write and the close are done by
+    // the time the click handler returns.
+    expect(useCalendarStore.getState().isModalOpen).toBe(false)
+    expect(
+      useCalendarStore.getState().events.some((e) => e.title === 'Instant Close Test')
+    ).toBe(true)
+    expect(screen.queryByRole('button', { name: /saving/i })).not.toBeInTheDocument()
   })
 
   describe('hasChanges with recurrence', () => {
