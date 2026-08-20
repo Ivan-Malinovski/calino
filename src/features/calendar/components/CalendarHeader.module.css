@@ -777,6 +777,11 @@
 
   .rightCluster {
     gap: var(--space-2);
+    /* The today button is the tallest thing in the header on mobile, and it
+       unmounts once you're on today — which shrank the whole bar on the
+       current month while every other month kept the taller one. Reserve its
+       height so the bar stays put either way. */
+    min-height: 44px;
   }
 
   /* 44px minimum tap target on touch surfaces (see EventPreviewPopup). */
