@@ -449,6 +449,13 @@ export function EventModal(): JSX.Element | null {
     const justOpened = isModalOpen && !wasModalOpen.current
     wasModalOpen.current = isModalOpen
 
+    // The accepted save path latches `isSavingRef` and leaves it latched, on
+    // the reasoning that the unmount takes the ref with it. It doesn't: a
+    // closed modal renders `null` but stays mounted, so without this the latch
+    // outlives the save and every later submit is dropped on the floor with
+    // the modal left hanging open. A fresh open is a fresh save.
+    if (justOpened) isSavingRef.current = false
+
     if (
       justOpened ||
       selectedEventId !== lastSelectedEventId.current ||

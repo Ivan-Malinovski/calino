@@ -336,8 +336,20 @@ END:VCALENDAR`,
         .first()
     ).toBeVisible({ timeout: 10_000 })
 
+    // The override reaching the *server* is a separate step from it reaching
+    // the calendar: the modal applies the edit to the store and closes, and
+    // the CalDAV write runs detached from there. Sampling the collection once,
+    // the instant the card renders, races that write and usually loses. Poll
+    // until the master holds both components — a write that never lands still
+    // fails, it just no longer fails on timing alone.
+    await expect
+      .poll(
+        async () => (await reportCalendar(page, calendarUrl)).match(/UID:atomic-series/g)?.length ?? 0,
+        { timeout: 15_000 }
+      )
+      .toBe(2)
+
     const body = await reportCalendar(page, calendarUrl)
-    expect(body.match(/UID:atomic-series/g)).toHaveLength(2)
     // Since #126 an override carries its zone, so the property is written as
     // `RECURRENCE-ID;TZID=<zone>:` rather than the bare `RECURRENCE-ID:` this
     // used to match. Accept either form — what matters is that the override

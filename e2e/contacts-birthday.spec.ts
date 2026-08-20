@@ -33,9 +33,17 @@ import {
 const BIRTHDAYS = '/dav/calendars/user/birthdays/'
 // This spec's own second writable calendar. It used `work/`, but
 // `event-move.spec.ts` resets that collection in its beforeEach and the two
-// wiped each other under `fullyParallel`. Seeded below under the name 'Work'
-// so the calendar picker still reads naturally.
+// wiped each other under `fullyParallel`.
+//
+// Seeded under the name the *server* gives it. The mock serves every
+// collection to every account, so boot discovery also turns up the unrelated
+// `work/` collection, which is the one actually named 'Work' — and discovery
+// overwrites a seeded name with the server's displayname anyway. So once it
+// lands, this collection is 'Birthday Work' and the bare 'Work' button means
+// the other one, sending the birthday there. Clicking the name this calendar
+// really has settles it, instead of depending on the click beating discovery.
 const WORK = '/dav/calendars/user/b-work/'
+const WORK_NAME = 'Birthday Work'
 const BIRTHDAY_MARKER = (contactId: string) => `calino:contact:${contactId}`
 
 /**
@@ -77,7 +85,7 @@ function dumpHasMarker(dumpData: Record<string, string> | null, marker: string):
 async function seedAllCalendars(page: Page, baseURL: string): Promise<void> {
   const extras = [
     { name: 'Move Source', path: 'calendars/user/move-source/' },
-    { name: 'Work', path: 'calendars/user/b-work/' },
+    { name: WORK_NAME, path: 'calendars/user/b-work/' },
     { name: 'Journal Work', path: 'calendars/user/j-work/' },
     { name: 'Journal Personal', path: 'calendars/user/j-personal/' },
   ] as const
@@ -174,7 +182,7 @@ test.describe('contact birthday → calendar (#84)', () => {
 
     await page.goto('/contacts')
     await page.getByRole('button', { name: 'Grace Hopper' }).click()
-    await addBirthdayTo(page, 'Work')
+    await addBirthdayTo(page, WORK_NAME)
 
     // No silent "first calendar the server listed" — the user's choice is
     // where the VEVENT lands.
