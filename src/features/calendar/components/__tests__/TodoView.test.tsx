@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { screen } from '@testing-library/react'
+import { render } from '@/test/caldavRender'
 import userEvent from '@testing-library/user-event'
 import { BrowserRouter } from 'react-router'
 import { TodoView } from '../TodoView'

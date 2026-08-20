@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { screen, waitFor } from '@testing-library/react'
+import { render } from '@/test/caldavRender'
 import userEvent from '@testing-library/user-event'
 import { DataSettings } from '../components/DataSettings'
 import { useCalendarStore } from '@/store/calendarStore'

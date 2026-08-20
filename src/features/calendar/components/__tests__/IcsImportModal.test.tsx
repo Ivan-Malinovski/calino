@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { screen, waitFor } from '@testing-library/react'
+import { render } from '@/test/caldavRender'
 import userEvent from '@testing-library/user-event'
 import { IcsImportModal } from '../IcsImportModal'
 import { useCalendarStore } from '@/store/calendarStore'
@@ -215,9 +216,7 @@ describe('IcsImportModal', () => {
   })
 
   it('renders nothing when closed', () => {
-    const { container } = render(
-      <IcsImportModal isOpen={false} icsText={ICS} onClose={vi.fn()} />
-    )
+    const { container } = render(<IcsImportModal isOpen={false} icsText={ICS} onClose={vi.fn()} />)
     expect(container).toBeEmptyDOMElement()
     expect(screen.queryByTestId('ics-import-confirm')).not.toBeInTheDocument()
   })
@@ -257,14 +256,20 @@ SUMMARY:Unterminated`
     }))
     vi.resetModules()
     const { IcsImportModal: MockedModal } = await import('../IcsImportModal')
+    // resetModules gave the modal a fresh module registry, so it reads a fresh
+    // CalDAVContext too — the provider has to come from that same registry.
+    const { CalDAVProvider: FreshProvider } = await import('@/features/caldav/hooks/CalDAVProvider')
 
     expect(() =>
-      render(<MockedModal isOpen icsText={ICS} fileName="team.ics" onClose={vi.fn()} />)
+      render(
+        <FreshProvider>
+          <MockedModal isOpen icsText={ICS} fileName="team.ics" onClose={vi.fn()} />
+        </FreshProvider>,
+        { wrapper: undefined }
+      )
     ).not.toThrow()
 
-    expect(
-      screen.getByText(/could not be read as a calendar file/i)
-    ).toBeInTheDocument()
+    expect(screen.getByText(/could not be read as a calendar file/i)).toBeInTheDocument()
     expect(screen.getByTestId('ics-import-confirm')).toBeDisabled()
 
     vi.doUnmock('@/features/caldav/adapter/iCalendarAdapter')
@@ -278,6 +283,9 @@ SUMMARY:Unterminated`
         createEvent: vi.fn().mockResolvedValue(undefined),
         createEventGroup,
       }),
+      // The default render wrapper mounts CalDAVProvider, which builds its
+      // value from this module; the modal reads the mocked useCalDAV above.
+      useCalDAVInstance: () => ({}),
     }))
     vi.resetModules()
     const { IcsImportModal: MockedModal } = await import('../IcsImportModal')
@@ -308,9 +316,7 @@ SUMMARY:Unterminated`
       expect(createEventGroup).toHaveBeenCalledTimes(2)
     })
 
-    const pushedUids = createEventGroup.mock.calls
-      .map(([, group]) => group[0].uid)
-      .sort()
+    const pushedUids = createEventGroup.mock.calls.map(([, group]) => group[0].uid).sort()
     expect(pushedUids).toEqual(['evt-solo@example.com', 'series-1@example.com'])
 
     // The series goes out as ONE call carrying both components; the solo

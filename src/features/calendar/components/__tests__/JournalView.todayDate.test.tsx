@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { screen } from '@testing-library/react'
+import { render } from '@/test/caldavRender'
 import userEvent from '@testing-library/user-event'
 import { BrowserRouter } from 'react-router'
 import { JournalView } from '../JournalView'
@@ -24,9 +25,7 @@ vi.mock('@/hooks/useIsMobile')
  */
 // getTimezoneOffset is positive west of UTC, negative east.
 const IS_WEST_OF_UTC = new Date('2026-08-12T12:00:00').getTimezoneOffset() > 0
-const LOCAL_EVENING = IS_WEST_OF_UTC
-  ? new Date(2026, 7, 12, 20, 18)
-  : new Date(2026, 7, 12, 0, 30)
+const LOCAL_EVENING = IS_WEST_OF_UTC ? new Date(2026, 7, 12, 20, 18) : new Date(2026, 7, 12, 0, 30)
 const LOCAL_DAY = '2026-08-12'
 
 describe('JournalView compose date (#116)', () => {

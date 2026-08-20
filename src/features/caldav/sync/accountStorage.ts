@@ -4,6 +4,34 @@ import { v4 as uuidv4 } from 'uuid'
 const ACCOUNTS_KEY = 'calino_caldav_accounts'
 const PENDING_CHANGES_KEY = 'calino_pending_changes'
 
+/**
+ * The queue lives in localStorage, which nothing can subscribe to, so the
+ * mutators announce themselves here. Cached as a count rather than re-parsing
+ * on every read: subscribers only ever ask how many are waiting, and
+ * `useSyncExternalStore` asks on every render.
+ */
+const pendingListeners = new Set<() => void>()
+let cachedPendingCount: number | null = null
+
+function announcePendingChanged(count: number): void {
+  cachedPendingCount = count
+  for (const listener of pendingListeners) listener()
+}
+
+/** Subscribe to the size of the retry queue. Returns an unsubscribe. */
+export function subscribeToPendingChanges(listener: () => void): () => void {
+  pendingListeners.add(listener)
+  return () => {
+    pendingListeners.delete(listener)
+  }
+}
+
+/** How many writes are queued for retry, without re-parsing storage. */
+export function getPendingChangeCount(): number {
+  cachedPendingCount ??= getPendingChanges().length
+  return cachedPendingCount
+}
+
 export function saveAccount(
   account: Omit<CalDAVAccount, 'id' | 'createdAt' | 'lastSyncAt' | 'proxyUrl'> & {
     proxyUrl?: string | null
@@ -159,6 +187,7 @@ export function addPendingChange(
   }
 
   localStorage.setItem(PENDING_CHANGES_KEY, JSON.stringify(changes))
+  announcePendingChanged(changes.length)
 }
 
 export function getPendingChanges(): PendingChange[] {
@@ -180,6 +209,7 @@ export function removePendingChange(id: string): void {
   const changes = getPendingChanges()
   const filtered = changes.filter((c) => c.id !== id)
   localStorage.setItem(PENDING_CHANGES_KEY, JSON.stringify(filtered))
+  announcePendingChanged(filtered.length)
 }
 
 export function updatePendingChangeRetry(id: string): void {
@@ -193,4 +223,5 @@ export function updatePendingChangeRetry(id: string): void {
 
 export function clearPendingChanges(): void {
   localStorage.setItem(PENDING_CHANGES_KEY, JSON.stringify([]))
+  announcePendingChanged(0)
 }

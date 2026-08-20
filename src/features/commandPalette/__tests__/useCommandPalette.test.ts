@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
-import { renderHook, act } from '@testing-library/react'
+import { act } from '@testing-library/react'
+import { renderHook } from '@/test/caldavRender'
 import { useCommandPalette } from '../hooks/useCommandPalette'
 import type { CalendarEvent, CalendarStore, SettingsStore } from '@/types'
 

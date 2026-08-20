@@ -11,8 +11,10 @@ import {
 import { getCredentialById } from '@/features/caldav/client/credentials'
 import type { DiagnosticsOptions } from '@/features/caldav/client/diagnostics'
 import { connectionErrorMessage } from '@/features/caldav/client/errorMessages'
+import { isCleartextUrl, CLEARTEXT_WARNING } from '@/features/caldav/client/insecureUrl'
 import { DiagnosticsPanel } from '@/features/settings/components/DiagnosticsPanel'
 import type { CalDAVAccount } from '@/features/caldav/types'
+import { useProgressStore, selectActiveTask } from '@/store/progressStore'
 import { useAnimatedClose } from '@/hooks/useAnimatedClose'
 import { useModalDismiss } from '@/hooks/useModalDismiss'
 import styles from './AddCalendarModal.module.css'
@@ -40,12 +42,17 @@ export function AddCalendarModal({
   const [isTesting, setIsTesting] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [showProxyField, setShowProxyField] = useState(Boolean(account?.proxyUrl))
+  /** Mirrors the (uncontrolled) URL field, only so the cleartext warning can react to it. */
+  const [urlDraft, setUrlDraft] = useState(account?.serverUrl ?? '')
   // Captured on failure so "Run diagnostics" probes exactly what was attempted,
   // including the password we resolved out of the credential store in edit mode.
   const [diagnoseTarget, setDiagnoseTarget] = useState<DiagnosticsTarget | null>(null)
   const [showDiagnostics, setShowDiagnostics] = useState(false)
 
   const { addAccount, updateAccount } = useCalDAV()
+  // The connect narrates its own stages (probe → calendars → per-calendar
+  // import); show them here so a slow first sync doesn't look like a hang.
+  const progressTask = useProgressStore(selectActiveTask)
   const isEdit = mode === 'edit' && account !== undefined
   const formRef = useRef<HTMLFormElement>(null)
   const isSavingRef = useRef(false)
@@ -294,9 +301,11 @@ export function AddCalendarModal({
               className={styles.input}
               placeholder="https://caldav.example.com"
               defaultValue={account?.serverUrl}
+              onChange={(e) => setUrlDraft(e.target.value)}
               required
             />
             <span className={styles.formHint}>Enter the full URL of your CalDAV server</span>
+            {isCleartextUrl(urlDraft) && <div className={styles.formWarn}>{CLEARTEXT_WARNING}</div>}
           </div>
           <div className={styles.formGroup}>
             <button
@@ -388,6 +397,37 @@ export function AddCalendarModal({
           )}
           {showDiagnostics && diagnoseTarget && (
             <DiagnosticsPanel options={diagnoseTarget} autoRun />
+          )}
+          {isSaving && progressTask && (
+            <div className={styles.progress} role="status" aria-live="polite">
+              <div
+                className={styles.progressTrack}
+                role="progressbar"
+                aria-label={progressTask.label}
+                aria-valuemin={progressTask.total ? 0 : undefined}
+                aria-valuemax={progressTask.total ? 100 : undefined}
+                aria-valuenow={
+                  progressTask.total
+                    ? Math.round(((progressTask.done ?? 0) / progressTask.total) * 100)
+                    : undefined
+                }
+              >
+                {progressTask.total ? (
+                  <div
+                    className={styles.progressBar}
+                    style={{
+                      width: `${Math.min(
+                        100,
+                        Math.round(((progressTask.done ?? 0) / progressTask.total) * 100)
+                      )}%`,
+                    }}
+                  />
+                ) : (
+                  <div className={styles.progressIndeterminate} />
+                )}
+              </div>
+              <span className={styles.progressLabel}>{progressTask.label}</span>
+            </div>
           )}
           <div className={styles.modalFooter}>
             <button

@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { render, screen, fireEvent, act, waitFor } from '@testing-library/react'
+import { screen, fireEvent, act, waitFor } from '@testing-library/react'
+import { render } from '@/test/caldavRender'
 import { BrowserRouter } from 'react-router'
 import { Sidebar } from '../components/Sidebar'
 import { useCalendarStore } from '@/store/calendarStore'

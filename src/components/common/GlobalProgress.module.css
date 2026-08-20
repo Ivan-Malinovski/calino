@@ -1,0 +1,76 @@
+.host {
+  position: fixed;
+  top: var(--safe-area-top, 0px);
+  left: 0;
+  right: 0;
+  z-index: 2000;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  animation: progressIn 0.18s ease-out;
+}
+
+/* Snappy exit: the work is done, so it leaves faster than it arrived. */
+.host.closing {
+  animation: progressOut 0.14s cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+
+.track {
+  position: relative;
+  width: 100%;
+  height: 3px;
+  overflow: hidden;
+  background: var(--color-bg-tertiary);
+}
+
+.bar {
+  height: 100%;
+  background: var(--color-primary, var(--color-accent));
+  transition: width 0.25s ease;
+}
+
+/* No known total — sweep instead of lying about how far along we are. */
+.indeterminate {
+  position: absolute;
+  inset-block: 0;
+  width: 35%;
+  background: var(--color-primary, var(--color-accent));
+  animation: sweep 1.2s ease-in-out infinite;
+}
+
+.label {
+  margin-top: var(--space-2);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-full, 999px);
+  background: var(--color-bg-secondary);
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-sm);
+  font-size: var(--font-size-xs, 0.75rem);
+  white-space: nowrap;
+  max-width: 90vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@keyframes sweep {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(300%); }
+}
+
+@keyframes progressIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes progressOut {
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(-6px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .host,
+  .host.closing { animation: none; }
+  .indeterminate { animation-duration: 3s; }
+}

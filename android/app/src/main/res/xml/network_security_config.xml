@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Self-hosted CalDAV servers are often reachable only on a private network or
+  over a VPN, where a publicly trusted certificate is impossible to obtain. Two
+  platform defaults get in the way of those setups, and neither is changeable
+  from the phone once the APK is built:
+
+    - Since API 28, cleartext HTTP is refused before the request leaves the app.
+      That covers the OkHttp calls in DavHttpPlugin, not just the WebView.
+    - Since API 24, user-installed CAs are ignored unless an app opts in, so a
+      private CA can't be used for https either.
+
+  The server's hostname isn't known at build time, so a per-domain rule isn't
+  possible here — this is deliberately a broad base config. The setup screen
+  warns when a URL isn't https, which is the more useful place to raise it.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="user" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

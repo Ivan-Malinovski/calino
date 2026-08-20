@@ -42,6 +42,25 @@ import { buildMailtoUri } from '@/lib/mailtoInvite'
 
 import styles from './EventModal.module.css'
 
+/**
+ * Run the server writes a save left behind, after the modal has closed.
+ *
+ * Sequential because order matters within one save (a series split truncates
+ * the master before creating the new series), and swallowing here because each
+ * write already reports itself — a toast, a queued pending change, and
+ * `syncStatus: 'failed'` on the event. There is no component left to tell.
+ */
+async function runNetworkWrites(writes: Array<() => Promise<void>>): Promise<void> {
+  for (const write of writes) {
+    try {
+      await write()
+    } catch {
+      // Already surfaced by the CalDAV layer; keep going so one failed write
+      // doesn't strand the ones behind it.
+    }
+  }
+}
+
 export function EventModal(): JSX.Element | null {
   const isModalOpen = useCalendarStore((state) => state.isModalOpen)
   const selectedEventId = useCalendarStore((state) => state.selectedEventId)
@@ -65,11 +84,13 @@ export function EventModal(): JSX.Element | null {
   const closeModal = useCalendarStore((state) => state.closeModal)
   const openModal = useCalendarStore((state) => state.openModal)
   const [isClosing, setIsClosing] = useState(false)
-  // Re-entrancy guard for the async save path. The ref is the synchronous
-  // trip-wire (state updates don't commit until the next render); the state
-  // is just the visual disable on the Save button so the user gets feedback
-  // that the click was received while the CalDAV sync is still in flight.
-  const [isSaving, setIsSaving] = useState(false)
+  // Re-entrancy guard for the save path. Saving is now synchronous up to the
+  // close (the CalDAV write is detached — see `saveEvent`), so the unmount
+  // normally stops a second submit on its own. This is the trip-wire for the
+  // window before that unmount commits: a click already queued in the same
+  // tick would otherwise run the whole save again. Deliberately *not* released
+  // once a save went through — the ref dies with the component, and re-opening
+  // the modal remounts it with a fresh one.
   const isSavingRef = useRef(false)
   const prefersReducedMotion = useReducedMotion()
   const animateClose = useCallback(() => {
@@ -870,9 +891,9 @@ export function EventModal(): JSX.Element | null {
   const handleSubmit = (e: React.FormEvent): void => {
     e.preventDefault()
 
-    // Synchronous re-entrancy guard. While a save is in flight (the ref is
-    // flipped true by `saveEvent` itself), drop further submit attempts so
-    // duplicate events can't be queued while the CalDAV await is pending.
+    // Synchronous re-entrancy guard. The ref is flipped true by `saveEvent`
+    // itself, so a submit queued behind an accepted one is dropped rather than
+    // creating a duplicate event.
     if (isSavingRef.current) return
 
     if (!title.trim()) {
@@ -908,12 +929,32 @@ export function EventModal(): JSX.Element | null {
     saveEvent('all')
   }
 
-  const saveEvent = async (mode: RecurrenceEditMode): Promise<void> => {
+  /**
+   * Apply the form to the local store, then close — the CalDAV write is kicked
+   * off detached rather than awaited, so the modal never sits there spinning
+   * for a network round trip. The global progress pill speaks for the write
+   * from then on (every function `useCalDAV` returns is progress-tracked), and
+   * a failure surfaces as a toast plus `syncStatus: 'failed'` on the event
+   * itself, both of which outlive this component.
+   *
+   * Synchronous on purpose: nothing may touch this component's state after the
+   * close, and the only way to guarantee that is to have no `await` before it.
+   */
+  const saveEvent = (mode: RecurrenceEditMode): void => {
     // Defensive guard: also called from `handleRecurrenceDialogConfirm`, which
     // a user can rapid-click just like the form's Save button.
     if (isSavingRef.current) return
     isSavingRef.current = true
-    setIsSaving(true)
+    // Set when the save was accepted and the modal closed, so the guard above
+    // stays latched; a validation bail-out releases it instead (see `finally`).
+    let accepted = false
+    /**
+     * Server writes for changes the store already has. Run in order after the
+     * close: a series split must truncate the master before it creates the new
+     * series, and each entry reports its own failure, so one must not cancel
+     * the next.
+     */
+    const networkWrites: Array<() => Promise<void>> = []
     try {
       if (isEditing && !hasChanges) {
         closeModal()
@@ -1111,19 +1152,25 @@ export function EventModal(): JSX.Element | null {
               (date) => date.split('T')[0] !== occurrenceDate
             ),
           }
-          try {
-            await saveRecurrenceOverride(
+          // Apply the detached override locally first, so the occurrence
+          // updates in the grid the instant the modal closes.
+          // `saveRecurrenceOverride` writes these same two records on both its
+          // success and its offline paths, so doing it early is idempotent —
+          // it only moves the visible part of the work off the network.
+          updateEvent(masterEvent.id, {
+            excludedDates: masterWithoutLegacyExdate.excludedDates,
+          })
+          addEvent({ ...exceptionEvent, syncStatus: 'pending' })
+          if (attachments.length > 0) {
+            putAttachments(exceptionEvent.id, attachments).catch(() => {})
+          }
+          networkWrites.push(() =>
+            saveRecurrenceOverride(
               masterEvent.calendarId,
               masterWithoutLegacyExdate,
               exceptionEvent
             )
-          } catch {
-            showToast('Failed to update this occurrence. The original event was kept.')
-            return
-          }
-          if (attachments.length > 0) {
-            putAttachments(exceptionEvent.id, attachments).catch(() => {})
-          }
+          )
         } else if (mode === 'future' && originalEventId) {
           // "This and following events": split the series at the current
           // occurrence.  The master event keeps all past occurrences (ending
@@ -1153,21 +1200,23 @@ export function EventModal(): JSX.Element | null {
             recurrence: masterRecurrence,
             rruleString: masterRruleString,
           })
-          await safeCalDAVUpdate(
-            updateCalDAVEvent,
-            masterEvent.calendarId,
-            {
-              ...masterEvent,
-              excludedDates: updatedExcludedDates,
-              recurrence: masterRecurrence,
-              rruleString: masterRruleString,
-            },
-            {
-              excludedDates: updatedExcludedDates,
-              recurrence: masterRecurrence,
-              rruleString: masterRruleString,
-            }
-          ).catch(() => {})
+          networkWrites.push(() =>
+            safeCalDAVUpdate(
+              updateCalDAVEvent,
+              masterEvent.calendarId,
+              {
+                ...masterEvent,
+                excludedDates: updatedExcludedDates,
+                recurrence: masterRecurrence,
+                rruleString: masterRruleString,
+              },
+              {
+                excludedDates: updatedExcludedDates,
+                recurrence: masterRecurrence,
+                rruleString: masterRruleString,
+              }
+            ).then(() => {})
+          )
 
           // Create the new series starting from the current occurrence
           const newSeriesEvent: CalendarEvent = {
@@ -1205,11 +1254,15 @@ export function EventModal(): JSX.Element | null {
           if (attachments.length > 0) {
             putAttachments(newSeriesEvent.id, attachments).catch(() => {})
           }
-          try {
-            await createCalDAVEvent(masterEvent.calendarId, newSeriesEvent)
-          } catch {
-            showToast('Failed to sync new series with CalDAV server. It will be retried.')
-          }
+          networkWrites.push(async () => {
+            try {
+              await createCalDAVEvent(masterEvent.calendarId, newSeriesEvent)
+            } catch {
+              // `createEvent` queues a pending change and marks the event
+              // failed; the toast is what tells the user it did.
+              showToast('Failed to sync new series with CalDAV server. It will be retried.')
+            }
+          })
         } else {
           const eventId = originalEventId || selectedEventId
           // Editing the whole series from one occurrence: the form's due date is
@@ -1282,69 +1335,75 @@ export function EventModal(): JSX.Element | null {
               '[EventModal] existingEvent.attachments:',
               JSON.stringify(existingEvent.attachments)
             )
-            await safeCalDAVUpdate(
-              updateCalDAVEvent,
-              calendarId,
-              {
-                ...existingEvent,
-                title,
-                description: description || undefined,
-                location: location || undefined,
-                start: eventStart,
-                end: eventEnd,
-                isAllDay: isTaskMode ? dueAllDay : isAllDay,
-                timezone: eventTimezone,
+            const pushEdit = (): Promise<boolean> =>
+              safeCalDAVUpdate(
+                updateCalDAVEvent,
                 calendarId,
-                recurrence: effectiveRecurrence,
-                rruleString: effectiveRecurrence
-                  ? buildRRuleString(effectiveRecurrence)
-                  : undefined,
-                travelDuration: isTaskMode ? undefined : travelDuration,
-                type: isTaskMode ? 'task' : 'event',
-                dueDate: taskDueDate,
-                completed: isTaskMode ? completed : undefined,
-                priority: isTaskMode ? priority : undefined,
-                parentTaskId: isTaskMode ? parentTaskId : undefined,
-                reminders: isTaskMode ? undefined : reminders,
-                transparency: isTaskMode ? undefined : transparency,
-                categories: selectedCategories,
-                relatedTo: relatedTo.length > 0 ? relatedTo : undefined,
-                attendees: attendees.length > 0 ? attendees : undefined,
-                organizer,
-              },
-              {
-                title,
-                description: description || undefined,
-                location: location || undefined,
-                start: eventStart,
-                end: eventEnd,
-                isAllDay: isTaskMode ? dueAllDay : isAllDay,
-                timezone: eventTimezone,
-                calendarId,
-                recurrence: effectiveRecurrence,
-                rruleString: effectiveRecurrence
-                  ? buildRRuleString(effectiveRecurrence)
-                  : undefined,
-                travelDuration: isTaskMode ? undefined : travelDuration,
-                type: isTaskMode ? 'task' : 'event',
-                dueDate: taskDueDate,
-                completed: isTaskMode ? completed : undefined,
-                priority: isTaskMode ? priority : undefined,
-                parentTaskId: isTaskMode ? parentTaskId : undefined,
-                reminders: isTaskMode ? undefined : reminders,
-                transparency: isTaskMode ? undefined : transparency,
-                categories: selectedCategories,
-                relatedTo: relatedTo.length > 0 ? relatedTo : undefined,
-                attendees: attendees.length > 0 ? attendees : undefined,
-                organizer,
-                attachments: attachments.length > 0 ? attachments : undefined,
-              }
-            )
-            await Promise.all(
-              cascadedTasks
-                .filter((task) => task.id !== eventId)
-                .map((task) => safeCalDAVUpdate(updateCalDAVEvent, task.calendarId, task, {}))
-            )
+                {
+                  ...existingEvent,
+                  title,
+                  description: description || undefined,
+                  location: location || undefined,
+                  start: eventStart,
+                  end: eventEnd,
+                  isAllDay: isTaskMode ? dueAllDay : isAllDay,
+                  timezone: eventTimezone,
+                  calendarId,
+                  recurrence: effectiveRecurrence,
+                  rruleString: effectiveRecurrence
+                    ? buildRRuleString(effectiveRecurrence)
+                    : undefined,
+                  travelDuration: isTaskMode ? undefined : travelDuration,
+                  type: isTaskMode ? 'task' : 'event',
+                  dueDate: taskDueDate,
+                  completed: isTaskMode ? completed : undefined,
+                  priority: isTaskMode ? priority : undefined,
+                  parentTaskId: isTaskMode ? parentTaskId : undefined,
+                  reminders: isTaskMode ? undefined : reminders,
+                  transparency: isTaskMode ? undefined : transparency,
+                  categories: selectedCategories,
+                  relatedTo: relatedTo.length > 0 ? relatedTo : undefined,
+                  attendees: attendees.length > 0 ? attendees : undefined,
+                  organizer,
+                },
+                {
+                  title,
+                  description: description || undefined,
+                  location: location || undefined,
+                  start: eventStart,
+                  end: eventEnd,
+                  isAllDay: isTaskMode ? dueAllDay : isAllDay,
+                  timezone: eventTimezone,
+                  calendarId,
+                  recurrence: effectiveRecurrence,
+                  rruleString: effectiveRecurrence
+                    ? buildRRuleString(effectiveRecurrence)
+                    : undefined,
+                  travelDuration: isTaskMode ? undefined : travelDuration,
+                  type: isTaskMode ? 'task' : 'event',
+                  dueDate: taskDueDate,
+                  completed: isTaskMode ? completed : undefined,
+                  priority: isTaskMode ? priority : undefined,
+                  parentTaskId: isTaskMode ? parentTaskId : undefined,
+                  reminders: isTaskMode ? undefined : reminders,
+                  transparency: isTaskMode ? undefined : transparency,
+                  categories: selectedCategories,
+                  relatedTo: relatedTo.length > 0 ? relatedTo : undefined,
+                  attendees: attendees.length > 0 ? attendees : undefined,
+                  organizer,
+                  attachments: attachments.length > 0 ? attachments : undefined,
+                }
+              )
+            networkWrites.push(async () => {
+              await pushEdit()
+              // Completing a parent task cascades to its subtasks; those are
+              // already updated locally, so they only need pushing.
+              await Promise.all(
+                cascadedTasks
+                  .filter((task) => task.id !== eventId)
+                  .map((task) => safeCalDAVUpdate(updateCalDAVEvent, task.calendarId, task, {}))
+              )
+            })
           }
         }
       } else {
@@ -1399,27 +1458,35 @@ export function EventModal(): JSX.Element | null {
           deleteAttachments('new').catch(() => {})
           putAttachments(newEvent.id, attachments).catch(() => {})
         }
-        await safeCalDAVUpdate(createCalDAVEvent, calendarId, newEvent, {})
+        networkWrites.push(() =>
+          safeCalDAVUpdate(createCalDAVEvent, calendarId, newEvent, {}).then(() => {})
+        )
       }
 
       setShowRecurrenceDialog(false)
+      accepted = true
+      // The store already has the change, so the calendar shows it before the
+      // server has heard a word about it.
       closeModal()
+      // Deliberately not awaited: this component is unmounting, so nothing
+      // after this point may touch its state. Failures are reported by the
+      // CalDAV layer (toast + `syncStatus: 'failed'` on the event) and by the
+      // global progress pill, all of which outlive the modal.
+      void runNetworkWrites(networkWrites)
     } finally {
-      // Release the guard so a follow-up save (after an early-return toast,
-      // or after the user re-opens the modal) can proceed. `closeModal()`
-      // unmounts this component on the happy path, so resetting `isSaving`
-      // here is harmless.
-      isSavingRef.current = false
-      setIsSaving(false)
+      // Released only when the save bailed out (a validation toast), so the
+      // user can correct the form and submit again. On the accepted path the
+      // guard stays latched until the unmount takes the ref with it.
+      if (!accepted) isSavingRef.current = false
     }
   }
 
-  const handleRecurrenceDialogConfirm = async (mode: RecurrenceEditMode): Promise<void> => {
+  const handleRecurrenceDialogConfirm = (mode: RecurrenceEditMode): void => {
     if (!title.trim()) {
       showToast('Title is required')
       return
     }
-    await saveEvent(mode)
+    saveEvent(mode)
   }
 
   const handleDelete = (): void => {
@@ -1912,15 +1979,15 @@ export function EventModal(): JSX.Element | null {
                   disabled={
                     !title.trim() ||
                     isTimeRangeInvalid ||
-                    isSaving ||
                     isCurrentCalendarReadOnly ||
                     !compatibleCalendars.some((calendar) => calendar.id === calendarId)
                   }
-                  aria-busy={isSaving}
                   data-component="modal-save"
                 >
-                  {isSaving && <span className={styles.modalSaveSpinner} aria-hidden="true" />}
-                  <span>{isSaving ? 'Saving…' : isEditing ? 'Save' : 'Create'}</span>
+                  {/* No in-flight state: the save is applied locally and the
+                      modal closes on the same tick, with the global progress
+                      pill carrying the server write from there. */}
+                  <span>{isEditing ? 'Save' : 'Create'}</span>
                 </button>
               </div>
             </div>

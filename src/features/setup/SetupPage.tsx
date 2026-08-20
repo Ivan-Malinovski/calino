@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router'
 import { encryptWithMasterPassword } from '@/lib/crypto'
 import { probeConnection } from '@/features/caldav/client/discovery'
 import { connectionErrorMessage } from '@/features/caldav/client/errorMessages'
+import { isCleartextUrl, CLEARTEXT_WARNING } from '@/features/caldav/client/insecureUrl'
 import type { DiagnosticsOptions } from '@/features/caldav/client/diagnostics'
 import { DiagnosticsPanel } from '@/features/settings/components/DiagnosticsPanel'
 import type { CalinoConfig, PreconfiguredAccount, PreconfiguredWebcal } from '@/lib/configLoader'
@@ -329,6 +330,7 @@ export function SetupPage(): JSX.Element {
                 }}
                 placeholder="https://caldav.example.com/dav.php"
               />
+              {isCleartextUrl(formUrl) && <div className={styles.warn}>{CLEARTEXT_WARNING}</div>}
             </div>
 
             <div className={styles.field}>

@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useContext, useEffect, useMemo } from 'react'
 import { addDays } from 'date-fns'
 import type { CalendarEvent } from '@/types'
 import { showToast, showBrokenEventsNotification, showDuplicateUidNotification } from '@/lib/toast'
@@ -38,9 +38,11 @@ import { SyncEngine, eventResourceFilename, resourceIsInCollection } from '../sy
 import { moveEventGroup, MoveLostSourceError } from '../sync/moveEvent'
 import type { MoveResult } from '../sync/moveEvent'
 import { pendingGuardedEventIds } from '../sync/pendingChanges'
+import { CalDAVContext } from './calDAVContext'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
 import { useCalDAVSyncStore } from '@/store/caldavSyncStore'
+import { useProgressStore, withProgress, isProgressOwned } from '@/store/progressStore'
 import { useConfigStore } from '@/store/configStore'
 import { EVENT_COLORS } from '@/store/settingsStore'
 import {
@@ -62,6 +64,12 @@ const isProcessingRef = { current: false }
 
 // Module-level guard for auto-connect (shared across all hook instances)
 let autoConnectDone = false
+
+// Module-level guard: accounts already probed for CardDAV support. useCalDAV is
+// mounted by ~20 components, so without this every mount (including the churn
+// when a viewport resize crosses a breakpoint and swaps whole view subtrees)
+// re-ran discovery plus a full contact fetch for every address book.
+const cardDavCheckedAccounts = new Set<string>()
 // Module-level guard: only sync once per page session (set when timer fires, not when effect runs)
 // Module-level guard: event IDs whose server DELETE is currently in flight. A
 // concurrent sync must skip these — otherwise it can re-add an event the user
@@ -320,7 +328,22 @@ function hrefKey(href: string): string {
   return path.replace(/\/+$/, '')
 }
 
-interface UseCalDAVReturn {
+/**
+ * Wrap a write so it registers a progress task for as long as it is in flight.
+ *
+ * These calls go over the network to someone else's server, and a slow one
+ * otherwise looks like the app has locked up: the modal has already closed and
+ * nothing else says the write is still running.
+ */
+function tracked<A extends unknown[], R>(
+  label: string,
+  fn: (...args: A) => Promise<R>
+): (...args: A) => Promise<R> {
+  return (...args: A) =>
+    isProgressOwned() ? fn(...args) : withProgress(label, () => fn(...args))
+}
+
+export interface UseCalDAVReturn {
   accounts: CalDAVAccount[]
   calendars: CalDAVCalendar[]
   syncState: SyncState
@@ -363,7 +386,26 @@ interface UseCalDAVReturn {
   deleteCalendarFromServer: (calendarId: string) => Promise<void>
 }
 
+/**
+ * Reads the app-wide CalDAV instance provided by `CalDAVProvider`.
+ *
+ * This is the hook components should use. Constructing a second instance with
+ * `useCalDAVInstance` duplicates its mount-time work (account load, CardDAV
+ * probe, pending-change timer) rather than sharing it.
+ */
 export function useCalDAV(): UseCalDAVReturn {
+  const ctx = useContext(CalDAVContext)
+  if (!ctx) {
+    throw new Error('useCalDAV must be used inside a <CalDAVProvider>')
+  }
+  return ctx
+}
+
+/**
+ * Builds a CalDAV instance. Call this exactly once, from `CalDAVProvider` —
+ * everything else goes through `useCalDAV`.
+ */
+export function useCalDAVInstance(): UseCalDAVReturn {
   const [accounts, setAccounts] = useState<CalDAVAccount[]>([])
   const [calendars, setCalendars] = useState<CalDAVCalendar[]>([])
   const [syncState, setSyncState] = useState<SyncState>({
@@ -799,14 +841,23 @@ export function useCalDAV(): UseCalDAVReturn {
     }
   }, [storeUpdateEvent, storeDeleteEvent])
 
-  // Retry pending changes on mount and on a 30-second interval
+  // Retry pending changes on mount, on a 30-second interval, and the moment
+  // the browser says the network is back — waiting out the rest of the tick
+  // after reconnecting is the one time the delay is both avoidable and obvious.
   useEffect(() => {
     processPendingChanges()
 
     const interval = setInterval(() => {
       processPendingChanges()
     }, 30000)
-    return () => clearInterval(interval)
+    const onOnline = (): void => {
+      processPendingChanges()
+    }
+    window.addEventListener('online', onOnline)
+    return () => {
+      clearInterval(interval)
+      window.removeEventListener('online', onOnline)
+    }
   }, [processPendingChanges])
 
   useEffect(() => {
@@ -843,6 +894,8 @@ export function useCalDAV(): UseCalDAVReturn {
     // Check for CardDAV support on existing accounts
     const checkCardDAV = async (): Promise<void> => {
       for (const account of loadedAccounts) {
+        if (cardDavCheckedAccounts.has(account.id)) continue
+        cardDavCheckedAccounts.add(account.id)
         try {
           const credential = await getCredentialById(account.credentialId)
           if (!credential) continue
@@ -891,6 +944,16 @@ export function useCalDAV(): UseCalDAVReturn {
       setSyncState((prev) => ({ ...prev, status: 'syncing', error: null }))
       useCalDAVSyncStore.getState().setStatus('syncing')
 
+      // A first connect can run for minutes on a large account, so it narrates
+      // itself: which stage, and how far through the calendars it is.
+      const progress = useProgressStore.getState()
+      const progressId = progress.begin('Connecting to server…')
+      const reportProgress = (patch: {
+        label?: string
+        done?: number
+        total?: number
+      }): void => useProgressStore.getState().update(progressId, patch)
+
       try {
         console.log('[CalDAV] addAccount: probing server...', serverUrl)
         // probeConnection handles discovery, the PROPFIND, and the base-URL
@@ -915,6 +978,7 @@ export function useCalDAV(): UseCalDAVReturn {
 
         console.log('[CalDAV] addAccount: creating client...')
         const client = await createCalDAVClient(discoveredUrl, credential, proxyUrl)
+        reportProgress({ label: 'Looking for calendars…' })
         console.log('[CalDAV] addAccount: fetching calendars...')
         const serverCalendars = await client.fetchCalendars()
         console.log('[CalDAV] addAccount: found', serverCalendars.length, 'calendars')
@@ -1012,12 +1076,26 @@ export function useCalDAV(): UseCalDAVReturn {
         // collections would open dozens of simultaneous requests against a
         // server that is often a single-process Radicale. Results stay in
         // calendar order, which the dedup below depends on.
+        // Two stages of work per calendar — download, then parse and store —
+        // so the bar keeps moving instead of stalling at the halfway point.
+        const progressTotal = serverCalendars.length * 2
+        let progressDone = 0
+        reportProgress({
+          label: `Downloading events from ${serverCalendars.length} calendar${
+            serverCalendars.length === 1 ? '' : 's'
+          }…`,
+          done: 0,
+          total: progressTotal,
+        })
+
         const fetchedPerCalendar = await mapWithConcurrency(
           serverCalendars,
           CALDAV_FETCH_CONCURRENCY,
           async (cal) => {
             console.log('[CalDAV] addAccount: fetching events for', cal.name, cal.url)
             const fetchedEvents = await client.fetchEvents(cal.url, start, end)
+            progressDone++
+            reportProgress({ done: progressDone })
             console.log(
               '[CalDAV] addAccount: got',
               fetchedEvents.length,
@@ -1031,6 +1109,7 @@ export function useCalDAV(): UseCalDAVReturn {
         // Store writes stay serial and in calendar order, so the
         // already-seen-this-pass dedup below behaves exactly as before.
         for (const { cal, fetchedEvents } of fetchedPerCalendar) {
+          reportProgress({ label: `Importing ${calendarLabel(cal)}…` })
           const { items: parsedWithHref } = await collectParsedWithHref(fetchedEvents, cal.id)
 
           // Detect independent events illegally sharing a UID across resources.
@@ -1068,6 +1147,8 @@ export function useCalDAV(): UseCalDAVReturn {
             }
             eventsAdded++
           }
+          progressDone++
+          reportProgress({ done: progressDone })
         }
 
         console.log(`[CalDAV] addAccount: done — ${eventsAdded} events added`)
@@ -1103,6 +1184,7 @@ export function useCalDAV(): UseCalDAVReturn {
         }
 
         // After calendar sync, check for CardDAV support
+        reportProgress({ label: 'Checking for contacts…', done: undefined, total: undefined })
         try {
           const { createCardDAVClient } = await import('@/features/carddav/client/CardDAVClient')
           const carddavClient = await createCardDAVClient(serverUrl, credential, proxyUrl ?? null)
@@ -1223,6 +1305,8 @@ export function useCalDAV(): UseCalDAVReturn {
         }))
         useCalDAVSyncStore.getState().setStatus('idle')
         throw error
+      } finally {
+        useProgressStore.getState().end(progressId)
       }
     },
     [storeAddEvent, storeUpdateEvent]
@@ -1917,111 +2001,119 @@ export function useCalDAV(): UseCalDAVReturn {
         proxyUrl?: string | null
       }
     ): Promise<void> => {
-      const account = storage.getAccountById(accountId)
-      if (!account) {
-        return
-      }
-      const credential = await getCredentialById(account.credentialId)
-      if (!credential) {
-        throw new Error('Credentials not found')
-      }
+      // Editing an account can be the longest wait in the app: a server probe
+      // followed, when the principal changed, by a full calendar re-fetch and
+      // event sync. Narrate the stages so it doesn't read as a hang.
+      return withProgress('Checking connection…', async (reportProgress) => {
+        const account = storage.getAccountById(accountId)
+        if (!account) {
+          return
+        }
+        const credential = await getCredentialById(account.credentialId)
+        if (!credential) {
+          throw new Error('Credentials not found')
+        }
 
-      // A blank password means "keep the current one".
-      const effectivePassword = updates.password || credential.password
-      const proxyUrl = updates.proxyUrl ?? null
+        // A blank password means "keep the current one".
+        const effectivePassword = updates.password || credential.password
+        const proxyUrl = updates.proxyUrl ?? null
 
-      const expanded = expandProviderUrl(updates.serverUrl, updates.username)
-      const effectiveUrl = expanded || updates.serverUrl
+        const expanded = expandProviderUrl(updates.serverUrl, updates.username)
+        const effectiveUrl = expanded || updates.serverUrl
 
-      // Probe before touching storage: a failed edit must leave the account
-      // exactly as it was, not half-written with credentials that don't work.
-      const probe = await probeConnection(
-        effectiveUrl,
-        updates.username,
-        effectivePassword,
-        proxyUrl,
-        updates.serverUrl
-      )
-      if (!probe.ok) {
-        throw new Error(probe.error ?? 'Could not connect with these settings')
-      }
-      const resolvedUrl = probe.resolvedUrl ?? effectiveUrl
+        // Probe before touching storage: a failed edit must leave the account
+        // exactly as it was, not half-written with credentials that don't work.
+        const probe = await probeConnection(
+          effectiveUrl,
+          updates.username,
+          effectivePassword,
+          proxyUrl,
+          updates.serverUrl
+        )
+        if (!probe.ok) {
+          throw new Error(probe.error ?? 'Could not connect with these settings')
+        }
+        const resolvedUrl = probe.resolvedUrl ?? effectiveUrl
+        reportProgress({ label: 'Saving account…' })
 
-      // Only a different principal invalidates the calendars stored for this
-      // account — a rename or password rotation leaves their URLs valid.
-      const principalChanged =
-        resolvedUrl !== account.serverUrl || updates.username !== account.username
+        // Only a different principal invalidates the calendars stored for this
+        // account — a rename or password rotation leaves their URLs valid.
+        const principalChanged =
+          resolvedUrl !== account.serverUrl || updates.username !== account.username
 
-      await updateCredential(account.credentialId, {
-        serverUrl: resolvedUrl,
-        username: updates.username,
-        // updateCredential re-encrypts only when this is truthy, so a blank
-        // password leaves the stored one untouched.
-        password: updates.password || undefined,
-      })
-      storage.updateAccount(accountId, {
-        name: updates.name,
-        serverUrl: resolvedUrl,
-        username: updates.username,
-        proxyUrl,
-      })
-
-      if (principalChanged) {
-        // syncAccount only walks calendars already stored for the account, so
-        // it can never discover the new principal's calendars. Re-fetch and
-        // reconcile by url here, before handing off to it for the event pull.
-        const freshCredential = {
-          ...credential,
+        await updateCredential(account.credentialId, {
           serverUrl: resolvedUrl,
           username: updates.username,
-          password: effectivePassword,
-        }
-        const client = await createCalDAVClient(resolvedUrl, freshCredential, proxyUrl)
-        const serverCalendars = await client.fetchCalendars()
+          // updateCredential re-encrypts only when this is truthy, so a blank
+          // password leaves the stored one untouched.
+          password: updates.password || undefined,
+        })
+        storage.updateAccount(accountId, {
+          name: updates.name,
+          serverUrl: resolvedUrl,
+          username: updates.username,
+          proxyUrl,
+        })
 
-        const storedCalendars = storage.getCalendarsByAccountId(accountId)
-        const serverUrls = new Set(serverCalendars.map((c) => c.url))
-        const storedUrls = new Set(storedCalendars.map((c) => c.url))
+        if (principalChanged) {
+          // syncAccount only walks calendars already stored for the account, so
+          // it can never discover the new principal's calendars. Re-fetch and
+          // reconcile by url here, before handing off to it for the event pull.
+          const freshCredential = {
+            ...credential,
+            serverUrl: resolvedUrl,
+            username: updates.username,
+            password: effectivePassword,
+          }
+          reportProgress({ label: 'Looking for calendars…' })
+          const client = await createCalDAVClient(resolvedUrl, freshCredential, proxyUrl)
+          const serverCalendars = await client.fetchCalendars()
 
-        // Drop calendars the new principal doesn't have, so they don't linger
-        // in the sidebar pointing at the old account's URLs.
-        for (const cal of storedCalendars) {
-          if (!serverUrls.has(cal.url)) {
-            storage.deleteCalendar(cal.id)
-            storeDeleteCalendar(cal.id)
+          const storedCalendars = storage.getCalendarsByAccountId(accountId)
+          const serverUrls = new Set(serverCalendars.map((c) => c.url))
+          const storedUrls = new Set(storedCalendars.map((c) => c.url))
+
+          // Drop calendars the new principal doesn't have, so they don't linger
+          // in the sidebar pointing at the old account's URLs.
+          for (const cal of storedCalendars) {
+            if (!serverUrls.has(cal.url)) {
+              storage.deleteCalendar(cal.id)
+              storeDeleteCalendar(cal.id)
+            }
+          }
+
+          // Add only genuinely new calendars. Survivors are left alone so their
+          // local color, visibility, and default flag are preserved.
+          const caldavDebugMode = useSettingsStore.getState().caldavDebugMode
+          for (const cal of serverCalendars) {
+            if (storedUrls.has(cal.url)) {
+              continue
+            }
+            storage.saveCalendar({ ...cal, accountId })
+            const isSettingsCal =
+              cal.name === 'Calino Settings' || cal.url?.includes('calino-settings')
+            if (!isSettingsCal || caldavDebugMode) {
+              storeAddCalendar({
+                id: cal.id,
+                name: cal.name,
+                color: cal.color,
+                isVisible: cal.isVisible,
+                isDefault: cal.isDefault,
+                accountId,
+                showTasksInViews: true,
+                supportedComponents: cal.supportedComponents,
+                readOnly: cal.readOnly,
+              })
+            }
           }
         }
 
-        // Add only genuinely new calendars. Survivors are left alone so their
-        // local color, visibility, and default flag are preserved.
-        const caldavDebugMode = useSettingsStore.getState().caldavDebugMode
-        for (const cal of serverCalendars) {
-          if (storedUrls.has(cal.url)) {
-            continue
-          }
-          storage.saveCalendar({ ...cal, accountId })
-          const isSettingsCal =
-            cal.name === 'Calino Settings' || cal.url?.includes('calino-settings')
-          if (!isSettingsCal || caldavDebugMode) {
-            storeAddCalendar({
-              id: cal.id,
-              name: cal.name,
-              color: cal.color,
-              isVisible: cal.isVisible,
-              isDefault: cal.isDefault,
-              accountId,
-              showTasksInViews: true,
-              supportedComponents: cal.supportedComponents,
-              readOnly: cal.readOnly,
-            })
-          }
-        }
-      }
+        reportProgress({ label: 'Syncing events…' })
+        await syncAccount(accountId)
 
-      await syncAccount(accountId)
-
-      setAccounts(storage.getAllAccounts())
-      setCalendars(storage.getAllCalendars())
+        setAccounts(storage.getAllAccounts())
+        setCalendars(storage.getAllCalendars())
+      })
     },
     [syncAccount, storeAddCalendar, storeDeleteCalendar]
   )
@@ -2905,6 +2997,39 @@ export function useCalDAV(): UseCalDAVReturn {
     [storeDeleteCalendar]
   )
 
+  // Background syncs are deliberately absent: they run on a timer with no one
+  // waiting on them, and the sidebar already animates while they do.
+  const trackedCreateEvent = useMemo(() => tracked('Saving event…', createEvent), [createEvent])
+  const trackedCreateEventGroup = useMemo(
+    () => tracked('Saving events…', createEventGroup),
+    [createEventGroup]
+  )
+  const trackedUpdateEvent = useMemo(() => tracked('Saving event…', updateEventFn), [updateEventFn])
+  const trackedSaveRecurrenceOverride = useMemo(
+    () => tracked('Saving event…', saveRecurrenceOverrideFn),
+    [saveRecurrenceOverrideFn]
+  )
+  const trackedDeleteEvent = useMemo(
+    () => tracked('Deleting event…', deleteEventFn),
+    [deleteEventFn]
+  )
+  const trackedDeleteEventByHref = useMemo(
+    () => tracked('Deleting event…', deleteEventByHref),
+    [deleteEventByHref]
+  )
+  const trackedCreateCalendar = useMemo(
+    () => tracked('Creating calendar…', createCalDAVCalendar),
+    [createCalDAVCalendar]
+  )
+  const trackedUpdateCalendar = useMemo(
+    () => tracked('Saving calendar…', updateCalDAVCalendar),
+    [updateCalDAVCalendar]
+  )
+  const trackedDeleteCalendar = useMemo(
+    () => tracked('Deleting calendar…', deleteCalDAVCalendar),
+    [deleteCalDAVCalendar]
+  )
+
   return {
     accounts,
     calendars,
@@ -2915,15 +3040,15 @@ export function useCalDAV(): UseCalDAVReturn {
     testAccount,
     syncAccount,
     syncAll,
-    createEvent,
-    createEventGroup,
-    updateEvent: updateEventFn,
-    saveRecurrenceOverride: saveRecurrenceOverrideFn,
-    deleteEvent: deleteEventFn,
-    deleteEventByHref,
+    createEvent: trackedCreateEvent,
+    createEventGroup: trackedCreateEventGroup,
+    updateEvent: trackedUpdateEvent,
+    saveRecurrenceOverride: trackedSaveRecurrenceOverride,
+    deleteEvent: trackedDeleteEvent,
+    deleteEventByHref: trackedDeleteEventByHref,
     retryAllFailedSyncs,
-    createCalendar: createCalDAVCalendar,
-    updateCalendar: updateCalDAVCalendar,
-    deleteCalendarFromServer: deleteCalDAVCalendar,
+    createCalendar: trackedCreateCalendar,
+    updateCalendar: trackedUpdateCalendar,
+    deleteCalendarFromServer: trackedDeleteCalendar,
   }
 }
