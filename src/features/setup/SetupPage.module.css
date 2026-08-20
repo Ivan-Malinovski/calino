@@ -358,7 +358,7 @@
   color: var(--accent-strong, var(--accent));
 }
 
-.instructions .warn {
+.warn {
   margin-top: 12px;
   padding: 10px 12px;
   background: rgba(234, 67, 53, 0.06);

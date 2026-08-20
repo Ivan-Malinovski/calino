@@ -11,6 +11,7 @@ import {
 import { getCredentialById } from '@/features/caldav/client/credentials'
 import type { DiagnosticsOptions } from '@/features/caldav/client/diagnostics'
 import { connectionErrorMessage } from '@/features/caldav/client/errorMessages'
+import { isCleartextUrl, CLEARTEXT_WARNING } from '@/features/caldav/client/insecureUrl'
 import { DiagnosticsPanel } from '@/features/settings/components/DiagnosticsPanel'
 import type { CalDAVAccount } from '@/features/caldav/types'
 import { useProgressStore, selectActiveTask } from '@/store/progressStore'
@@ -41,6 +42,8 @@ export function AddCalendarModal({
   const [isTesting, setIsTesting] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [showProxyField, setShowProxyField] = useState(Boolean(account?.proxyUrl))
+  /** Mirrors the (uncontrolled) URL field, only so the cleartext warning can react to it. */
+  const [urlDraft, setUrlDraft] = useState(account?.serverUrl ?? '')
   // Captured on failure so "Run diagnostics" probes exactly what was attempted,
   // including the password we resolved out of the credential store in edit mode.
   const [diagnoseTarget, setDiagnoseTarget] = useState<DiagnosticsTarget | null>(null)
@@ -298,9 +301,11 @@ export function AddCalendarModal({
               className={styles.input}
               placeholder="https://caldav.example.com"
               defaultValue={account?.serverUrl}
+              onChange={(e) => setUrlDraft(e.target.value)}
               required
             />
             <span className={styles.formHint}>Enter the full URL of your CalDAV server</span>
+            {isCleartextUrl(urlDraft) && <div className={styles.formWarn}>{CLEARTEXT_WARNING}</div>}
           </div>
           <div className={styles.formGroup}>
             <button

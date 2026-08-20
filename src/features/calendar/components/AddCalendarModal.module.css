@@ -158,6 +158,16 @@
   color: var(--color-text-secondary, #5f6368);
 }
 
+.formWarn {
+  margin-top: 6px;
+  padding: 10px 12px;
+  background: rgba(234, 67, 53, 0.06);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  color: var(--color-text-primary, #202124);
+  line-height: 1.5;
+}
+
 .input {
   padding: 8px 12px;
   border: 1px solid var(--color-border-visible, #dadce0);
