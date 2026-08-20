@@ -62,30 +62,31 @@ import { format, parseISO } from 'date-fns'
 
 import './App.css'
 
-const CalendarGrid = lazy(() =>
-  import('./features/calendar/components/CalendarGrid').then((m) => ({ default: m.CalendarGrid }))
-)
-const WeekView = lazy(() =>
-  import('./features/calendar/components/WeekView').then((m) => ({ default: m.WeekView }))
-)
-const DayView = lazy(() =>
-  import('./features/calendar/components/DayView').then((m) => ({ default: m.DayView }))
-)
-const AgendaView = lazy(() =>
-  import('./features/calendar/components/AgendaView').then((m) => ({ default: m.AgendaView }))
-)
-const TodoView = lazy(() =>
-  import('./features/calendar/components/TodoView').then((m) => ({ default: m.TodoView }))
-)
-const JournalView = lazy(() =>
-  import('./features/calendar/components/JournalView').then((m) => ({ default: m.JournalView }))
-)
-const ContactsView = lazy(() =>
-  import('./features/carddav/components/ContactsView').then((m) => ({ default: m.ContactsView }))
-)
-const YearView = lazy(() =>
-  import('./features/calendar/components/YearView').then((m) => ({ default: m.YearView }))
-)
+// Every lazy view chunk, keyed by the view it backs. Vite keys chunks by
+// import specifier, so the specifier has to be written exactly once and
+// shared — the native preloader in CalendarApp pulls the same chunks these
+// lazy() calls will later ask for, and a second copy of the string that
+// drifted would preload a chunk nothing ever uses.
+const VIEW_LOADERS = {
+  month: () => import('./features/calendar/components/CalendarGrid'),
+  year: () => import('./features/calendar/components/YearView'),
+  week: () => import('./features/calendar/components/WeekView'),
+  '3day': () => import('./features/calendar/components/WeekView'),
+  day: () => import('./features/calendar/components/DayView'),
+  agenda: () => import('./features/calendar/components/AgendaView'),
+  todo: () => import('./features/calendar/components/TodoView'),
+  journal: () => import('./features/calendar/components/JournalView'),
+  contacts: () => import('./features/carddav/components/ContactsView'),
+} satisfies Record<ViewType, () => Promise<unknown>>
+
+const CalendarGrid = lazy(() => VIEW_LOADERS.month().then((m) => ({ default: m.CalendarGrid })))
+const WeekView = lazy(() => VIEW_LOADERS.week().then((m) => ({ default: m.WeekView })))
+const DayView = lazy(() => VIEW_LOADERS.day().then((m) => ({ default: m.DayView })))
+const AgendaView = lazy(() => VIEW_LOADERS.agenda().then((m) => ({ default: m.AgendaView })))
+const TodoView = lazy(() => VIEW_LOADERS.todo().then((m) => ({ default: m.TodoView })))
+const JournalView = lazy(() => VIEW_LOADERS.journal().then((m) => ({ default: m.JournalView })))
+const ContactsView = lazy(() => VIEW_LOADERS.contacts().then((m) => ({ default: m.ContactsView })))
+const YearView = lazy(() => VIEW_LOADERS.year().then((m) => ({ default: m.YearView })))
 
 // Whole routes of their own — nothing here is needed to paint a calendar, so
 // they stay out of the initial bundle.
@@ -100,6 +101,54 @@ const CommandPalette = lazy(() =>
     default: m.CommandPalette,
   }))
 )
+
+// Map each view to the lazy component that renders it, so the preloader can
+// warm the very object React will render. (`3day` renders WeekView too, with
+// a different prop.)
+const VIEW_COMPONENTS: Record<ViewType, unknown> = {
+  month: CalendarGrid,
+  year: YearView,
+  week: WeekView,
+  '3day': WeekView,
+  day: DayView,
+  agenda: AgendaView,
+  todo: TodoView,
+  journal: JournalView,
+  contacts: ContactsView,
+}
+
+interface LazyInternals {
+  _payload: unknown
+  _init: (payload: unknown) => unknown
+}
+
+/**
+ * Fully resolve a lazy view so its first render is synchronous.
+ *
+ * Importing the chunk is not enough. `lazy()` only calls its factory the
+ * first time React renders the component, and the resulting promise resolves
+ * a microtask later — so React suspends and commits the skeleton no matter
+ * how warm the module cache is. This drives the same `_init` React would,
+ * ahead of time: it throws the pending thenable on first call, and once that
+ * settles the payload is marked resolved and rendering never suspends.
+ */
+async function warmLazyView(component: unknown, load: () => Promise<unknown>): Promise<void> {
+  await load().catch(() => {})
+
+  const lazyComponent = component as Partial<LazyInternals>
+  if (typeof lazyComponent._init !== 'function') return
+  try {
+    lazyComponent._init(lazyComponent._payload)
+  } catch (thrown) {
+    // React signals "still loading" by throwing the thenable itself.
+    if (typeof (thrown as PromiseLike<unknown> | null)?.then === 'function') {
+      await (thrown as PromiseLike<unknown>).then(
+        () => undefined,
+        () => undefined
+      )
+    }
+  }
+}
 
 function ViewLoader({
   children,
@@ -314,14 +363,54 @@ function CalendarApp(): JSX.Element {
   // path, restores the old timing while keeping it out of the entry bundle.
   useEffect(() => {
     let cancelled = false
-    const frame = requestAnimationFrame(() => {
+    // A timer rather than requestAnimationFrame: rAF callbacks registered this
+    // early never fire in the Capacitor WebView, so on native this preload
+    // silently never ran at all. See the view-chunk preload below.
+    const timer = setTimeout(() => {
       void import('./features/commandPalette/components/CommandPalette').then(() => {
         if (!cancelled) setPaletteMounted(true)
       })
-    })
+    }, 0)
     return () => {
       cancelled = true
-      cancelAnimationFrame(frame)
+      clearTimeout(timer)
+    }
+  }, [])
+
+  // Pull every view's chunk in the background on native, so switching to a
+  // view for the first time doesn't flash a skeleton.
+  //
+  // The skeleton in ViewLoader is a code-loading skeleton, not a data one —
+  // views render straight out of the hydrated stores. On the web the split is
+  // still worth it, but in the Android WebView the chunks are local files in
+  // the APK, so fetching all of them costs nothing and the skeleton is pure
+  // overhead.
+  //
+  // setTimeout, not requestAnimationFrame: rAF callbacks registered this early
+  // never fire in the Capacitor WebView — verified on device, the callback
+  // simply never runs and the preload never happened. A timer fires reliably.
+  //
+  // Sequential: startup is already busy with CalDAV/CardDAV sync, photo
+  // rehydration and the palette preload, and eight module evaluations at once
+  // would fight them for the main thread.
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return
+
+    let cancelled = false
+    const timer = setTimeout(() => {
+      void (async () => {
+        const mounted = useCalendarStore.getState().currentView
+        for (const [view, load] of Object.entries(VIEW_LOADERS)) {
+          if (cancelled) return
+          if (view === mounted) continue // already in flight
+          // A failed preload is invisible: Suspense still covers the switch.
+          await warmLazyView(VIEW_COMPONENTS[view as ViewType], load)
+        }
+      })()
+    }, 500)
+    return () => {
+      cancelled = true
+      clearTimeout(timer)
     }
   }, [])
 
