@@ -4,6 +4,8 @@ All notable changes to Calino will be documented in this file.
 
 ## [Unreleased]
 
+## [0.29.1] - 2026-08-20
+
 ### Added
 
 - **A bar at the top of the window says what Calino is waiting on.** Connecting an account, importing a file or saving over a slow link no longer looks like a hang. Quick saves don't flash it up, and timer-driven syncs stay silent.
