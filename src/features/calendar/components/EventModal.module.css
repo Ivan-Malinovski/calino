@@ -105,12 +105,22 @@
   color: var(--color-text-primary, #1a1a1a);
   letter-spacing: -0.3px;
   line-height: 1.2;
-  padding: 0;
+  /* Nudged down so the text sits on the same line as .titleEditIcon, whose
+     own 8px top offset keeps it clear of the header's top padding. */
+  padding: 3px 0 0;
+  /* A long title fades out at the right edge instead of being sliced mid-glyph.
+     The mask paints nothing extra when the title is short, so it only shows up
+     once the text actually reaches the edge. */
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
 }
 
 .modalTitle:focus,
 .modalTitle:focus-visible {
   outline: none;
+  /* While editing, the caret and the tail of the text must stay fully legible. */
+  -webkit-mask-image: none;
+  mask-image: none;
 }
 
 .modalTitle::placeholder {
