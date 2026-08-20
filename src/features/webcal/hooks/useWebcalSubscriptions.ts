@@ -14,6 +14,7 @@ import {
   selectDeleteCalendar,
 } from '@/store/calendarStore'
 import { useConfigStore } from '@/store/configStore'
+import { withProgress } from '@/store/progressStore'
 
 // Module-level guard: useWebcalSubscriptions() may be instantiated in
 // multiple components (settings panel, sidebar), same reasoning as
@@ -38,7 +39,7 @@ interface UseWebcalSubscriptionsReturn {
   addSubscription: (options: AddWebcalSubscriptionOptions) => Promise<WebcalSubscription>
   removeSubscription: (id: string) => void
   syncSubscription: (id: string) => Promise<void>
-  syncAll: () => Promise<void>
+  syncAll: (options?: { silent?: boolean }) => Promise<void>
 }
 
 function isDue(subscription: WebcalSubscription): boolean {
@@ -64,37 +65,42 @@ export function useWebcalSubscriptions(): UseWebcalSubscriptionsReturn {
   const addSubscription = useCallback(
     async (options: AddWebcalSubscriptionOptions): Promise<WebcalSubscription> => {
       const normalizedUrl = normalizeWebcalUrl(options.url)
-      const icsText = await fetchWebcalIcs(normalizedUrl, options.proxyUrl)
-      const calendarId = uuidv4()
-      const events = parseICALData(icsText, calendarId)
+      // The feed lives on someone else's server and a big ICS takes a while to
+      // parse, so narrate both stages rather than leaving the dialog silent.
+      return withProgress('Adding subscription…', async (report) => {
+        const icsText = await fetchWebcalIcs(normalizedUrl, options.proxyUrl)
+        report({ label: 'Importing events…' })
+        const calendarId = uuidv4()
+        const events = parseICALData(icsText, calendarId)
 
-      const calendar: Calendar = {
-        id: calendarId,
-        name: options.name,
-        color: options.color,
-        isVisible: true,
-        isDefault: false,
-        showTasksInViews: true,
-        source: 'webcal',
-        readOnly: true,
-      }
-      storeAddCalendar(calendar)
-      for (const event of events) {
-        storeAddEvent(event)
-      }
+        const calendar: Calendar = {
+          id: calendarId,
+          name: options.name,
+          color: options.color,
+          isVisible: true,
+          isDefault: false,
+          showTasksInViews: true,
+          source: 'webcal',
+          readOnly: true,
+        }
+        storeAddCalendar(calendar)
+        for (const event of events) {
+          storeAddEvent(event)
+        }
 
-      const saved = storage.saveSubscription({
-        calendarId,
-        name: options.name,
-        url: normalizedUrl,
-        refreshIntervalMinutes: options.refreshIntervalMinutes,
-        proxyUrl: options.proxyUrl ?? null,
-        isPreconfigured: options.isPreconfigured,
+        const saved = storage.saveSubscription({
+          calendarId,
+          name: options.name,
+          url: normalizedUrl,
+          refreshIntervalMinutes: options.refreshIntervalMinutes,
+          proxyUrl: options.proxyUrl ?? null,
+          isPreconfigured: options.isPreconfigured,
+        })
+        storage.updateSubscription(saved.id, { lastFetchedAt: new Date().toISOString() })
+        const withFetchTime = { ...saved, lastFetchedAt: new Date().toISOString() }
+        setSubscriptions((prev) => [...prev, withFetchTime])
+        return withFetchTime
       })
-      storage.updateSubscription(saved.id, { lastFetchedAt: new Date().toISOString() })
-      const withFetchTime = { ...saved, lastFetchedAt: new Date().toISOString() }
-      setSubscriptions((prev) => [...prev, withFetchTime])
-      return withFetchTime
     },
     [storeAddCalendar, storeAddEvent]
   )
@@ -110,13 +116,16 @@ export function useWebcalSubscriptions(): UseWebcalSubscriptionsReturn {
     [storeDeleteCalendar]
   )
 
-  const syncSubscription = useCallback(
-    async (id: string): Promise<void> => {
+  // Progress-free core, so `syncAll` can report one task for the whole loop
+  // instead of one per subscription.
+  const runSync = useCallback(
+    async (id: string, report?: (patch: { label?: string }) => void): Promise<void> => {
       const subscription = storage.getSubscriptionById(id)
       if (!subscription) return
 
       try {
         const icsText = await fetchWebcalIcs(subscription.url, subscription.proxyUrl)
+        report?.({ label: 'Importing events…' })
         const freshEvents = parseICALData(icsText, subscription.calendarId)
         const freshById = new Map(freshEvents.map((e) => [e.id, e]))
 
@@ -167,17 +176,38 @@ export function useWebcalSubscriptions(): UseWebcalSubscriptionsReturn {
     [storeAddEvent, storeUpdateEvent, storeDeleteEvent]
   )
 
-  const syncAll = useCallback(async (): Promise<void> => {
-    const due = storage.getAllSubscriptions().filter(isDue)
-    for (const subscription of due) {
-      await syncSubscription(subscription.id)
-    }
-  }, [syncSubscription])
+  const syncSubscription = useCallback(
+    (id: string): Promise<void> =>
+      withProgress('Refreshing subscription…', (report) => runSync(id, report)),
+    [runSync]
+  )
+
+  // `silent` is for the timer below: nobody is waiting on a background refresh,
+  // so it must not pop the pill over whatever the user is actually doing.
+  const syncAll = useCallback(
+    async (options?: { silent?: boolean }): Promise<void> => {
+      const due = storage.getAllSubscriptions().filter(isDue)
+      if (due.length === 0) return
+      const run = async (report: (patch: { done?: number; total?: number }) => void) => {
+        report({ done: 0, total: due.length })
+        for (const [index, subscription] of due.entries()) {
+          await runSync(subscription.id)
+          report({ done: index + 1, total: due.length })
+        }
+      }
+      if (options?.silent) {
+        await run(() => {})
+        return
+      }
+      await withProgress('Refreshing subscriptions…', run)
+    },
+    [runSync]
+  )
 
   // Background refresh — checks periodically which subscriptions are due.
   useEffect(() => {
     const interval = setInterval(() => {
-      syncAll()
+      syncAll({ silent: true })
     }, DUE_CHECK_INTERVAL_MS)
     return () => clearInterval(interval)
   }, [syncAll])
