@@ -1,0 +1,75 @@
+.indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  font-size: 12px;
+  color: var(--ink-3);
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--accent, #9a6c42);
+}
+
+/* Offline is a state the app can't act its way out of, so it holds still —
+   the pulse is for work that is still being attempted. */
+.dot:not(.offline) {
+  animation: pendingPulse 2s ease-in-out infinite;
+}
+
+.offline {
+  background: var(--ink-3);
+}
+
+.message {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.retry {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  padding: 2px 4px;
+  margin: -2px -4px;
+  font: inherit;
+  color: var(--ink-2);
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-underline-offset: 2px;
+  transition: color var(--dur-fast), text-decoration-color var(--dur-fast);
+}
+
+.retry:hover:not(:disabled) {
+  color: var(--ink);
+  text-decoration-color: currentColor;
+}
+
+.retry:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+@keyframes pendingPulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dot:not(.offline) {
+    animation: none;
+  }
+}

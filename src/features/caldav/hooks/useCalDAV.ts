@@ -841,14 +841,23 @@ export function useCalDAVInstance(): UseCalDAVReturn {
     }
   }, [storeUpdateEvent, storeDeleteEvent])
 
-  // Retry pending changes on mount and on a 30-second interval
+  // Retry pending changes on mount, on a 30-second interval, and the moment
+  // the browser says the network is back — waiting out the rest of the tick
+  // after reconnecting is the one time the delay is both avoidable and obvious.
   useEffect(() => {
     processPendingChanges()
 
     const interval = setInterval(() => {
       processPendingChanges()
     }, 30000)
-    return () => clearInterval(interval)
+    const onOnline = (): void => {
+      processPendingChanges()
+    }
+    window.addEventListener('online', onOnline)
+    return () => {
+      clearInterval(interval)
+      window.removeEventListener('online', onOnline)
+    }
   }, [processPendingChanges])
 
   useEffect(() => {

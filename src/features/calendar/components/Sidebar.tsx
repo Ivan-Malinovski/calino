@@ -36,6 +36,7 @@ import { useUpdateCheck } from '@/hooks/useUpdateCheck'
 import { showToast } from '@/lib/toast'
 import { exportCalendarIcs } from '@/lib/icsExport'
 import { AddCalendarModal } from './AddCalendarModal'
+import { SyncStatusIndicator } from './SyncStatusIndicator'
 import { SubscribeCalendarModal } from './SubscribeCalendarModal'
 import { CreateCalendarModal } from './CreateCalendarModal'
 import { DeleteCalendarDialog } from './DeleteCalendarDialog'
@@ -990,6 +991,8 @@ export function Sidebar({
                 </AnimatePresence>
               </div>
             )}
+
+            <SyncStatusIndicator />
 
             <div className={styles.footer}>
               <Link to="/privacy" className={styles.footerLink}>
