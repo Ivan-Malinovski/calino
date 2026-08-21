@@ -97,4 +97,46 @@ describe('useRovingGrid', () => {
     expect(document.activeElement).toBe(cells[5])
     expect(cells[0].tabIndex).toBe(0)
   })
+
+  it('clears a stale edge marker when a keydown fires with focus outside the grid', () => {
+    const { getByTestId } = render(<Harness />)
+    const grid = getByTestId('grid')
+    const cells = Array.from(grid.querySelectorAll<HTMLElement>('[data-cell]'))
+    cells[5].focus()
+    fireEvent.keyDown(grid, { key: 'ArrowRight' })
+    expect(grid.dataset.rovingAtEdge).toBe('ArrowRight')
+
+    // Tab away, then any arrow keypress on the container must drop the stale
+    // marker instead of leaving it armed for a spurious page later.
+    getByTestId('outside').focus()
+    fireEvent.keyDown(grid, { key: 'ArrowLeft' })
+
+    expect(grid.dataset.rovingAtEdge).toBeUndefined()
+  })
+
+  it('keeps its handlers referentially stable across anchor moves', () => {
+    const identities: string[] = []
+    function StabilityHarness() {
+      const gridRef = useRef<HTMLDivElement>(null)
+      const roving = useRovingGrid(gridRef, '[data-cell]', (key) =>
+        key === 'ArrowRight' ? 1 : null
+      )
+      identities.push(`${roving.handleKeyDown.toString()}`)
+      return (
+        <div ref={gridRef} data-testid="grid" onKeyDown={roving.handleKeyDown}>
+          {Array.from({ length: 3 }, (_, i) => (
+            <div key={i} data-cell={i} tabIndex={i === 0 ? 0 : -1} />
+          ))}
+        </div>
+      )
+    }
+    const { getByTestId } = render(<StabilityHarness />)
+    const grid = getByTestId('grid')
+    const cells = Array.from(grid.querySelectorAll<HTMLElement>('[data-cell]'))
+    cells[0].focus()
+    fireEvent.keyDown(grid, { key: 'ArrowRight' })
+
+    // One identity per render, and moving the anchor must not have changed it.
+    expect(new Set(identities).size).toBe(1)
+  })
 })

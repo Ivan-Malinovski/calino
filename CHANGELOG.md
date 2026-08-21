@@ -8,7 +8,7 @@ All notable changes to Calino will be documented in this file.
 
 ### Added
 
-- **The calendar grids are fully keyboard-navigable.** In week and day views, arrow keys move between days and hours, and Enter opens quick-create at the focused slot — matching what month view already did. One Tab lands you in the grid, not one stop per cell.
+- **The calendar grids are fully keyboard-navigable.** In week and day views, arrow keys move between days and hours, and Enter opens quick-create at the focused slot — matching what month view already did. One Tab lands you in the grid, not one stop per cell. Focused slots announce their date and time to screen readers.
 
 - **A skip-to-content link** is the first thing Tab reaches on every page, jumping straight past the sidebar and header to the calendar.
 

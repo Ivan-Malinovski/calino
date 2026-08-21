@@ -70,6 +70,11 @@ import { consumesVerticalScroll } from '@/lib/scrollChaining'
 import styles from './CalendarGrid.module.css'
 import { duplicateEventWithSync } from '@/lib/duplicateWithSync'
 
+// Module-level so `useRovingGrid`'s `handleKeyDown` stays referentially stable.
+// ←/→ move one day, ↑/↓ move one week in the flattened cell list.
+const gridDelta = (key: string): number | null =>
+  key === 'ArrowLeft' ? -1 : key === 'ArrowRight' ? 1 : key === 'ArrowUp' ? -7 : key === 'ArrowDown' ? 7 : null
+
 // Shared by the button and span forms of the journal indicator (see the
 // compact-mobile branch in DroppableDay).
 const journalIndicatorIcon = (
@@ -208,16 +213,7 @@ export function CalendarGrid(): JSX.Element {
   const { handleKeyDown: handleGridKeyDown } = useRovingGrid(
     gridScrollRef,
     '[data-date]',
-    (key) =>
-      key === 'ArrowLeft'
-        ? -1
-        : key === 'ArrowRight'
-          ? 1
-          : key === 'ArrowUp'
-            ? -7
-            : key === 'ArrowDown'
-              ? 7
-              : null
+    gridDelta
   )
 
   // Track active resize listeners for cleanup on unmount

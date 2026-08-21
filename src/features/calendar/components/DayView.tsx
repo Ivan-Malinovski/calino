@@ -64,6 +64,12 @@ const TOUCH_DRAG_ACTIVATION_DELAY = 200
 const TOUCH_DRAG_ACTIVATION_TOLERANCE = 8
 const BASE_HOUR_HEIGHT = 60
 
+// Module-level so `useRovingGrid`'s `handleKeyDown` stays referentially stable.
+// A single column: ↑/↓ move one hour slot; ←/→ fall through to the global
+// handlers (there is nothing to move to sideways).
+const gridDelta = (key: string): number | null =>
+  key === 'ArrowUp' ? -1 : key === 'ArrowDown' ? 1 : null
+
 interface HourCellProps {
   hour: Date
   dateStr: string
@@ -120,6 +126,12 @@ function HourCell({
         ref={setNodeRef}
         className={styles.cell}
         data-hour={format(hour, 'HH:mm')}
+        role="button"
+        // Screen-reader name for the focused slot: without it the roving tab
+        // stop lands on an unnamed "blank". The date comes from `dateStr`, not
+        // from `hour` — HOURS is a module-load constant anchored to real
+        // today, so its calendar date goes stale as soon as the user navigates.
+        aria-label={`${format(parseISO(dateStr), 'EEEE, MMMM d, yyyy')} ${format(hour, 'HH:mm')}`}
         tabIndex={isFocusAnchor ? 0 : -1}
         onClick={() => onCellClick(hour)}
         onMouseDown={(e) => onDragStart(hour, e)}
@@ -195,10 +207,10 @@ export function DayView({
   // so they fall through to the global handlers). Enter/Space on a focused
   // slot opens the quick-create modal (same handler as a click).
   const gridBodyRef = useRef<HTMLDivElement>(null)
-  const { handleKeyDown: handleGridKeyDown } = useRovingGrid(
+  const { handleKeyDown: handleGridKeyDown, focusAnchor, setFocusAnchor } = useRovingGrid(
     gridBodyRef,
     '[data-hour]',
-    (key) => (key === 'ArrowUp' ? -1 : key === 'ArrowDown' ? 1 : null)
+    gridDelta
   )
   // Both refs point at the same element (the hour-grid body): `bodyRef` for
   // scroll-to-now / context-menu geometry, `gridBodyRef` for roving focus.
@@ -206,6 +218,19 @@ export function DayView({
     bodyRef.current = el
     gridBodyRef.current = el
   }, [])
+
+  // The roving tab stop has ONE owner: the hook's `focusAnchor` state once the
+  // user has moved, "first hour slot" before that. When the visible day
+  // changes, drop the anchor so the default re-engages.
+  const anchorHour = focusAnchor?.dataset.hour ?? null
+  const isCellFocusAnchor = useCallback(
+    (idx: number, hourKey: string): boolean =>
+      anchorHour === null ? idx === 0 : anchorHour === hourKey,
+    [anchorHour]
+  )
+  useEffect(() => {
+    setFocusAnchor(null)
+  }, [currentDate, setFocusAnchor])
 
   useEffect(() => {
     if (openMenuId !== null && openMenuId !== 'dayview' && contextMenu) {
@@ -891,7 +916,7 @@ export function DayView({
               baseDate={date}
               isDualTz={isDualTz}
               secondaryTimezone={secondaryTimezone}
-              isFocusAnchor={idx === 0}
+              isFocusAnchor={isCellFocusAnchor(idx, format(hour, 'HH:mm'))}
               onCellClick={handleCellClick}
               onDragStart={handleDragStartFromCell}
             />

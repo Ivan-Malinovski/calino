@@ -275,4 +275,30 @@ describe('WeekView keyboard navigation', () => {
     expect(useCalendarStore.getState().isModalOpen).toBe(true)
     expect(useCalendarStore.getState().selectedDate).toBe('2024-03-15T09:00')
   })
+
+  it('names each hour slot for screen readers (role=button + aria-label)', () => {
+    const { container } = renderWithRouter(<WeekView />)
+    const hour = cell(container, '2024-03-15', '09:00')
+    expect(hour.getAttribute('role')).toBe('button')
+    // Date and time both present, so the focused slot is never a "blank".
+    expect(hour.getAttribute('aria-label')).toContain('March 15')
+    expect(hour.getAttribute('aria-label')).toContain('09:00')
+  })
+
+  it('keeps exactly one tab stop after moving focus and re-rendering', () => {
+    const { container, rerender } = renderWithRouter(<WeekView />)
+    const current = cell(container, '2024-03-15', '09:00')
+    current.focus()
+    fireEvent.keyDown(grid(container), { key: 'ArrowRight' })
+
+    // An unrelated re-render (store update, drag tick) must not resurrect the
+    // default anchor behind the moved tab stop.
+    rerender(<BrowserRouter><WeekView /></BrowserRouter>)
+
+    const tabbable = container.querySelectorAll('[data-hour][tabindex="0"]')
+    expect(tabbable).toHaveLength(1)
+    const dates = weekDates(container)
+    const nextDate = dates[dates.indexOf('2024-03-15') + 1]
+    expect(tabbable[0]).toBe(cell(container, nextDate, '09:00'))
+  })
 })

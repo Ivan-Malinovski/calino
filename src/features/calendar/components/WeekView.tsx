@@ -78,6 +78,20 @@ const EMPTY_EVENTS: CalendarEvent[] = []
  *  a busy day used to be able to push the grid off the bottom entirely. */
 const MOBILE_HEADER_ITEM_LIMIT = 2
 
+// Module-level so `useRovingGrid`'s `handleKeyDown` stays referentially stable
+// (an inline arrow would rebuild it — and everything downstream of it — every
+// render). ←/→ move one day column (±24 slots), ↑/↓ one hour slot.
+const gridDelta = (key: string): number | null =>
+  key === 'ArrowLeft'
+    ? -24
+    : key === 'ArrowRight'
+      ? 24
+      : key === 'ArrowUp'
+        ? -1
+        : key === 'ArrowDown'
+          ? 1
+          : null
+
 interface DroppableCellProps {
   dateKey: string
   hourKey: string
@@ -108,6 +122,10 @@ const DroppableCell = React.memo(function DroppableCell({
   onKeyDown,
 }: DroppableCellProps): JSX.Element {
   const { setNodeRef } = useDroppable({ id: `${dateKey}-${hourKey}` })
+  // Screen-reader name for the focused slot: without it the roving tab stop
+  // lands on an unnamed "blank". Derived from the same data attributes the
+  // handlers read, so the memo still holds.
+  const ariaLabel = `${format(parseISO(dateKey), 'EEEE, MMMM d, yyyy')} ${hourKey}`
 
   return (
     <div
@@ -115,6 +133,8 @@ const DroppableCell = React.memo(function DroppableCell({
       className={styles.cell}
       data-date={dateKey}
       data-hour={hourKey}
+      role="button"
+      aria-label={ariaLabel}
       tabIndex={isFocusAnchor ? 0 : -1}
       onClick={onClick}
       onMouseDown={onMouseDown}
@@ -214,19 +234,10 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
   // modal (same handler as a click). Edge-of-grid arrows trigger the pager
   // below, so focus never silently sticks.
   const gridBodyRef = useRef<HTMLDivElement>(null)
-  const { handleKeyDown: handleGridKeyDown, setFocusAnchor } = useRovingGrid(
+  const { handleKeyDown: handleGridKeyDown, focusAnchor, setFocusAnchor } = useRovingGrid(
     gridBodyRef,
     '[data-hour]',
-    (key) =>
-      key === 'ArrowLeft'
-        ? -24
-        : key === 'ArrowRight'
-          ? 24
-          : key === 'ArrowUp'
-            ? -1
-            : key === 'ArrowDown'
-              ? 1
-              : null
+    gridDelta
   )
   // Both refs point at the same element (the days container): `daysContainerRef`
   // for drag-to-create geometry, `gridBodyRef` for roving focus.
@@ -264,6 +275,27 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
     [handleGridKeyDown, handleGridEdgeKeyDown]
   )
 
+  // The roving tab stop has ONE owner: the hook's `focusAnchor` state once the
+  // user has moved, the `currentDate`-anchored default before that. Cells read
+  // `isFocusAnchor` from this comparison (see the render sites), so a re-render
+  // can never resurrect a second `tabindex=0` behind React's back.
+  const anchorDate = focusAnchor?.getAttribute('data-date') ?? null
+  const anchorHour = focusAnchor?.dataset.hour ?? null
+  const isCellFocusAnchor = useCallback(
+    (dayKey: string, hourKey: string): boolean =>
+      anchorDate === null
+        ? dayKey === currentDate && hourKey === '00:00'
+        : anchorDate === dayKey && anchorHour === hourKey,
+    [anchorDate, anchorHour, currentDate]
+  )
+
+  // When the visible week changes (header pager or edge paging), drop the
+  // hook's anchor so the default re-engages on the new week. Declared before
+  // the edge-paging effect below so the restore wins when both fire.
+  useEffect(() => {
+    setFocusAnchor(null)
+  }, [currentDate, setFocusAnchor])
+
   useEffect(() => {
     if (!edgeArrowRef.current) return
     // The day columns have re-rendered for the new week. Land focus on the
@@ -282,10 +314,7 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
     const target = cells.find(
       (cell) => cell.getAttribute('data-date') === edgeDate && cell.dataset.hour === hour
     )
-    const anchorCell = body.querySelector<HTMLElement>('[data-hour][tabindex="0"]')
-    if (anchorCell) anchorCell.tabIndex = -1
     if (target) {
-      target.tabIndex = 0
       target.focus()
       setFocusAnchor(target)
     }
@@ -1075,7 +1104,7 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
                       key={`${dayKey}-${hourKey}`}
                       dateKey={dayKey}
                       hourKey={hourKey}
-                      isFocusAnchor={dayKey === currentDate && hourKey === '00:00'}
+                        isFocusAnchor={isCellFocusAnchor(dayKey, hourKey)}
                       onClick={handleCellClick}
                       onMouseDown={handleDragStartFromCell}
                       onKeyDown={handleCellKeyDown}
@@ -1213,7 +1242,7 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
                         key={`${dayKey}-${hourKey}`}
                         dateKey={dayKey}
                         hourKey={hourKey}
-                        isFocusAnchor={dayKey === currentDate && hourKey === '00:00'}
+                      isFocusAnchor={isCellFocusAnchor(dayKey, hourKey)}
                         onClick={handleCellClick}
                         onMouseDown={handleDragStartFromCell}
                         onKeyDown={handleCellKeyDown}

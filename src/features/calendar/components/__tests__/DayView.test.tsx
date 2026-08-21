@@ -338,4 +338,28 @@ describe('DayView keyboard navigation', () => {
     fireEvent.keyDown(grid(container), { key: 'ArrowDown' })
     expect(useCalendarStore.getState().currentDate).toBe('2024-03-15')
   })
+
+  it('names each hour slot for screen readers (role=button + aria-label)', () => {
+    const { container } = renderWithRouter(<DayView />)
+    const hour = cell(container, '09:00')
+    expect(hour.getAttribute('role')).toBe('button')
+    // Date and time both present, so the focused slot is never a "blank".
+    expect(hour.getAttribute('aria-label')).toContain('March 15')
+    expect(hour.getAttribute('aria-label')).toContain('09:00')
+  })
+
+  it('keeps exactly one tab stop after moving focus and re-rendering', () => {
+    const { container, rerender } = renderWithRouter(<DayView />)
+    const current = cell(container, '09:00')
+    current.focus()
+    fireEvent.keyDown(grid(container), { key: 'ArrowDown' })
+
+    // An unrelated re-render must not resurrect the default anchor behind the
+    // moved tab stop.
+    rerender(<BrowserRouter><DayView /></BrowserRouter>)
+
+    const tabbable = container.querySelectorAll('[data-hour][tabindex="0"]')
+    expect(tabbable).toHaveLength(1)
+    expect(tabbable[0]).toBe(cell(container, '10:00'))
+  })
 })

@@ -1,5 +1,5 @@
 import type { RefObject } from 'react'
-import { useCallback, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 
 /** The CSS selector a grid cell must match to take part in roving focus. */
 export type RovingGridCellSelector = string
@@ -18,15 +18,23 @@ export type RovingMoveResult =
  * than once per cell).
  *
  * All three functions are stable across renders (the selector and container
- * ref are read lazily), so a grid can hand them to memoized children without
- * breaking their memo.
+ * ref are read lazily; the anchor is mirrored into a ref so `moveFocus` does
+ * not depend on its state), so a grid can hand them to memoized children
+ * without breaking their memo.
+ *
+ * The hook owns the roving tab stop once the user first moves: callers should
+ * render `tabindex` from `focusAnchor` (falling back to their own default
+ * anchor while it is `null`) rather than from a parallel prop, and reset the
+ * anchor with `setFocusAnchor(null)` whenever the grid's cell set changes
+ * (e.g. the visible week) so the fallback re-engages.
  *
  * @param containerRef The element that owns the keydown listener (the same
  *   element passed to `moveFocus`).
  * @param cellSelector CSS selector matching the navigable cells.
  * @param getDelta Key → index delta applied to the flattened cell list.
  *   `null` means the key is not a grid-navigation key and should be left for
- *   other handlers.
+ *   other handlers. Pass a module-level function (or `useCallback` it) — a
+ *   fresh inline arrow would rebuild `handleKeyDown` every render.
  */
 export function useRovingGrid(
   containerRef: RefObject<HTMLElement | null>,
@@ -47,7 +55,15 @@ export function useRovingGrid(
    */
   moveFocus: (delta: number) => RovingMoveResult
 } {
-  const [focusAnchor, setFocusAnchor] = useState<HTMLElement | null>(null)
+  const [focusAnchor, setFocusAnchorState] = useState<HTMLElement | null>(null)
+  // Mirror of `focusAnchor` read inside `moveFocus`, so the callback does not
+  // need the state in its dependency array and stays referentially stable.
+  const focusAnchorRef = useRef<HTMLElement | null>(null)
+
+  const setFocusAnchor = useCallback((element: HTMLElement | null): void => {
+    focusAnchorRef.current = element
+    setFocusAnchorState(element)
+  }, [])
 
   const moveFocus = useCallback(
     (delta: number): RovingMoveResult => {
@@ -59,7 +75,8 @@ export function useRovingGrid(
       const idx = cell ? cells.indexOf(cell as HTMLElement) : -1
       // Start from the anchor when the focus is elsewhere (e.g. moved by a
       // click) so the first keypress still moves relative to the grid.
-      const base = idx !== -1 ? idx : focusAnchor ? cells.indexOf(focusAnchor) : -1
+      const anchor = focusAnchorRef.current
+      const base = idx !== -1 ? idx : anchor ? cells.indexOf(anchor) : -1
       if (base === -1) return { ok: false, reason: 'no-cell' }
       const target = cells[base + delta]
       if (!target) return { ok: false, reason: 'no-target' }
@@ -69,7 +86,7 @@ export function useRovingGrid(
       setFocusAnchor(target)
       return { ok: true, target }
     },
-    [containerRef, cellSelector, focusAnchor]
+    [containerRef, cellSelector, setFocusAnchor]
   )
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLElement>): void => {
@@ -78,7 +95,13 @@ export function useRovingGrid(
       const container = e.currentTarget
       const active = document.activeElement as HTMLElement | null
       const cell = active?.closest(cellSelector) as HTMLElement | null
-      if (!cell || !container.contains(cell)) return
+      if (!cell || !container.contains(cell)) {
+        // Focus is outside the grid: drop any stale edge marker left over
+        // from a previous interaction so it cannot trigger a spurious page
+        // when the grid is re-entered.
+        delete container.dataset.rovingAtEdge
+        return
+      }
       // Stop the window-level handlers (e.g. ↑/↓ paging the month) from also
       // firing while a grid cell owns keyboard focus.
       e.preventDefault()

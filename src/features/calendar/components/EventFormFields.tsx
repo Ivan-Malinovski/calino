@@ -1,5 +1,5 @@
 import type { JSX } from 'react'
-import { useState, useRef, useEffect } from 'react'
+import { useId, useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { v4 as uuidv4 } from 'uuid'
 import type {
@@ -205,6 +205,11 @@ export function EventFormFields({
   excludeEventId,
   editingEvent,
 }: EventFormFieldsProps): JSX.Element {
+  // Instance-scoped ids for the label↔input pairs: hard-coded ids would
+  // collide if two forms ever mounted side by side (same pattern as
+  // RecurrenceDialog/DeleteDialog).
+  const startDateId = useId()
+  const endDateId = useId()
   const [moreOpen, setMoreOpen] = useState(false)
   const [reminderDropdownOpen, setReminderDropdownOpen] = useState(false)
   const [reminderMenuPos, setReminderMenuPos] = useState({ top: 0, left: 0 })
@@ -250,14 +255,14 @@ export function EventFormFields({
     <>
       <div className={styles.dateTimeRow}>
         <div className={styles.dateTimeGroup}>
-          <label className={styles.label} htmlFor="event-start-date">
+          <label className={styles.label} htmlFor={startDateId}>
             Start
           </label>
           <div className={styles.dateTimeInputs}>
             <input
               type="date"
               ref={startDateRef}
-              id="event-start-date"
+              id={startDateId}
               value={startDate}
               onChange={(e) => {
                 const newDate = e.target.value
@@ -309,14 +314,14 @@ export function EventFormFields({
         </div>
 
         <div className={styles.dateTimeGroup}>
-          <label className={styles.label} htmlFor="event-end-date">
+          <label className={styles.label} htmlFor={endDateId}>
             End
           </label>
           <div className={styles.dateTimeInputs}>
             <input
               type="date"
               ref={endDateRef}
-              id="event-end-date"
+              id={endDateId}
               value={endDate}
               onChange={(e) => onEndDateChange(e.target.value)}
               className={styles.input}

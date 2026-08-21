@@ -510,17 +510,19 @@
 }
 
 /* ---- Weekend Dimming ---- */
-/* Other-month weekend days opt out: they already carry the full-opacity
-   --ink-3-dimmed colour (see .otherMonth .dayNumber above), and stacking the
-   0.9 opacity on top would knock it back under 4.5:1. Current-month weekend
-   day numbers (--ink-2 at 0.9) still clear AA at 4.98:1. */
+/* Other-month weekend days opt out entirely: their day numbers already carry
+   the full-opacity --ink-3-dimmed colour (see .otherMonth .dayNumber above),
+   and stacking the 0.9 opacity on top would knock it back under 4.5:1 — the
+   same arithmetic applies to event chips, so `.events` opts out with them.
+   Current-month weekend day numbers (--ink-2 at 0.9) still clear AA at
+   4.98:1. */
 .day:nth-child(7n):not(.today):not(.otherMonth) .dayNumber,
-.day:nth-child(7n):not(.today) .events {
+.day:nth-child(7n):not(.today):not(.otherMonth) .events {
   opacity: 0.9;
 }
 
 .day:nth-child(7n + 1):not(.today):not(.otherMonth) .dayNumber,
-.day:nth-child(7n + 1):not(.today) .events {
+.day:nth-child(7n + 1):not(.today):not(.otherMonth) .events {
   opacity: 0.9;
 }
 
