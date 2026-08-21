@@ -4,6 +4,8 @@ All notable changes to Calino will be documented in this file.
 
 ## [Unreleased]
 
+## [0.30.0] - 2026-08-21
+
 ### Added
 
 - **Drag across day cells in month view to create an all-day event** spanning the days you swept, instead of clicking one day and editing the end date by hand.
@@ -11,6 +13,12 @@ All notable changes to Calino will be documented in this file.
 - **The command palette treats plain phrases as events.** Typing "lunch" or "team offsite friday" offers to create it, while any matching existing events and calendars still appear below.
 
 - **"every other day/week/month/monday" sets up a fortnightly series** from the command palette, alongside the existing "every day" and "every weekday" phrasings.
+
+- **Multi-day all-day events now span the week.** An event that runs across several days appears as one continuous pill across every covered day in week view, on desktop and mobile, with overlapping events staying aligned.
+
+### Changed
+
+- **Long all-day event titles stay easy to follow.** A spanning event's name appears once per week and flows across the days it covers instead of being repeated or cut off at each cell boundary. Month view uses the same treatment.
 
 ### Fixed
 
