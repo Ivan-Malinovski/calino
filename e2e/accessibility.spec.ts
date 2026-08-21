@@ -28,14 +28,16 @@ test.describe('accessibility scans', () => {
   })
 
   async function scan(page: import('@playwright/test').Page) {
-    return new AxeBuilder({ page })
-      .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
-      // The app renders one <main> per route (calendar, settings, setup…)
-      // rather than a single persistent landmark — a deliberate routing
-      // choice, so the "region" best-practice rule would only ever fire on
-      // chrome that already has labelled landmarks around it.
-      .disableRules(['region'])
-      .analyze()
+    return (
+      new AxeBuilder({ page })
+        .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+        // The app renders one <main> per route (calendar, settings, setup…)
+        // rather than a single persistent landmark — a deliberate routing
+        // choice, so the "region" best-practice rule would only ever fire on
+        // chrome that already has labelled landmarks around it.
+        .disableRules(['region'])
+        .analyze()
+    )
   }
 
   function seriousOrCritical(results: Awaited<ReturnType<typeof scan>>) {

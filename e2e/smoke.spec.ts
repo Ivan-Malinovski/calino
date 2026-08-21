@@ -82,7 +82,10 @@ test.describe('smoke', () => {
   })
 
   test('add CalDAV account flow: form, discovery, success', async ({ page }) => {
-    test.skip(!HAS_LIVE_CALDAV, 'CALINO_TEST_CALDAV_{URL,USER,PASS} not set — skipping live-server test')
+    test.skip(
+      !HAS_LIVE_CALDAV,
+      'CALINO_TEST_CALDAV_{URL,USER,PASS} not set — skipping live-server test'
+    )
 
     await gotoSettingsSync(page)
 
@@ -117,7 +120,10 @@ test.describe('smoke', () => {
   })
 
   test('settings persist across reload (localStorage round-trip)', async ({ page }) => {
-    test.skip(!HAS_LIVE_CALDAV, 'CALINO_TEST_CALDAV_{URL,USER,PASS} not set — skipping live-server test')
+    test.skip(
+      !HAS_LIVE_CALDAV,
+      'CALINO_TEST_CALDAV_{URL,USER,PASS} not set — skipping live-server test'
+    )
     await seedAccount(page, {
       name: 'Persisted Server',
       serverUrl: TEST_CALDAV_ENV.url!,
@@ -166,13 +172,16 @@ test.describe('smoke', () => {
     await expect(page.locator('[data-component="header"]')).toBeVisible()
 
     // The seeded event should be visible somewhere in the current week.
-    await expect(
-      page.getByRole('button', { name: /Weekly Meeting/ }).first()
-    ).toBeVisible({ timeout: 10_000 })
+    await expect(page.getByRole('button', { name: /Weekly Meeting/ }).first()).toBeVisible({
+      timeout: 10_000,
+    })
 
     // Open the event (the EventCard is a role=button). This routes through
     // the preview popup, which has an "Open event" button.
-    await page.getByRole('button', { name: /Weekly Meeting/ }).first().click()
+    await page
+      .getByRole('button', { name: /Weekly Meeting/ })
+      .first()
+      .click()
     await expect(page.locator('[data-component="event-preview"]')).toBeVisible({
       timeout: 5_000,
     })
@@ -236,7 +245,10 @@ test.describe('smoke', () => {
     await currentOccurrence.click()
     const preview = page.locator('[data-component="event-preview"]')
     await preview.getByRole('button', { name: /Open event/i }).click()
-    await page.locator('[data-component="modal-card"]').getByRole('button', { name: 'Delete' }).click()
+    await page
+      .locator('[data-component="modal-card"]')
+      .getByRole('button', { name: 'Delete' })
+      .click()
 
     const dialog = page.getByRole('dialog').filter({ hasText: /Delete recurring event/i })
     const futureButton = dialog.getByRole('button', { name: /This and following events/i })
@@ -277,10 +289,7 @@ test.describe('smoke', () => {
     // the event. Either the event card or the "Created event:" toast
     // confirms creation — either is enough.
     await expect(
-      page
-        .locator('[data-component="event-card"]')
-        .filter({ hasText: /Lunch/i })
-        .first()
+      page.locator('[data-component="event-card"]').filter({ hasText: /Lunch/i }).first()
     ).toBeVisible({ timeout: 5_000 })
   })
 

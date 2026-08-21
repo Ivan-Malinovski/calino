@@ -34,6 +34,7 @@ If you're changing user-visible behavior in this refactor, your task is not
 done until a Playwright spec exercises the changed path and passes.
 
 This applies to:
+
 - Stores, hooks, or components that produce visible output (event creation,
   settings, navigation, view switching, sync flows, undo/redo)
 - Route changes, command palette commands, keyboard shortcuts, modal triggers
@@ -41,6 +42,7 @@ This applies to:
 - Error and loading states the user can observe
 
 It does **not** apply to:
+
 - Internal refactors with no observable change (rename, extract, dedupe)
 - Pure type-only changes
 - CSS-only changes that don't change semantics

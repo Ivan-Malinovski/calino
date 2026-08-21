@@ -13,7 +13,10 @@
   padding: 1px 20px 0 20px;
   gap: var(--space-4);
   overflow: hidden;
-  transition: width 0.3s cubic-bezier(0.32, 0.72, 0, 1), min-width 0.3s cubic-bezier(0.32, 0.72, 0, 1), padding 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+  transition:
+    width 0.3s cubic-bezier(0.32, 0.72, 0, 1),
+    min-width 0.3s cubic-bezier(0.32, 0.72, 0, 1),
+    padding 0.3s cubic-bezier(0.32, 0.72, 0, 1);
   position: relative;
 }
 
@@ -79,7 +82,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background var(--dur-fast), color var(--dur-fast);
+  transition:
+    background var(--dur-fast),
+    color var(--dur-fast);
   opacity: 0;
   position: absolute;
   top: 12px;
@@ -202,7 +207,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background var(--dur-fast), color var(--dur-fast);
+  transition:
+    background var(--dur-fast),
+    color var(--dur-fast);
 }
 
 .expandButton:hover,
@@ -218,7 +225,9 @@
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   padding: 16px 16px 18px;
-  box-shadow: 0 1px 2px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.04 * var(--shadow-opacity, 1))), 0 6px 16px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.03 * var(--shadow-opacity, 1)));
+  box-shadow:
+    0 1px 2px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.04 * var(--shadow-opacity, 1))),
+    0 6px 16px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.03 * var(--shadow-opacity, 1)));
 }
 
 /* Plain sections (no card) */
@@ -234,7 +243,9 @@
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   padding: 16px 16px 18px;
-  box-shadow: 0 1px 2px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.04 * var(--shadow-opacity, 1))), 0 6px 16px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.03 * var(--shadow-opacity, 1)));
+  box-shadow:
+    0 1px 2px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.04 * var(--shadow-opacity, 1))),
+    0 6px 16px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.03 * var(--shadow-opacity, 1)));
 }
 
 /* Tasks section card */
@@ -245,7 +256,9 @@
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   padding: 16px 16px 3px;
-  box-shadow: 0 1px 2px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.04 * var(--shadow-opacity, 1))), 0 6px 16px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.03 * var(--shadow-opacity, 1)));
+  box-shadow:
+    0 1px 2px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.04 * var(--shadow-opacity, 1))),
+    0 6px 16px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.03 * var(--shadow-opacity, 1)));
 }
 
 .miniHeader {
@@ -305,7 +318,9 @@
   background: transparent;
   border: none;
   cursor: pointer;
-  transition: background var(--dur-fast), color var(--dur-fast);
+  transition:
+    background var(--dur-fast),
+    color var(--dur-fast);
 }
 
 .miniNavBtn {
@@ -320,7 +335,9 @@
   background: transparent;
   border: none;
   cursor: pointer;
-  transition: background var(--dur-fast), color var(--dur-fast);
+  transition:
+    background var(--dur-fast),
+    color var(--dur-fast);
 }
 
 .miniNav:hover,
@@ -436,7 +453,9 @@
   font-weight: var(--today-btn-weight, 500);
   background: var(--hover-bg);
   cursor: pointer;
-  transition: border-color var(--dur-fast), background var(--dur-fast);
+  transition:
+    border-color var(--dur-fast),
+    background var(--dur-fast);
 }
 
 .todayBtn:hover {
@@ -453,7 +472,10 @@
   background: var(--popover-bg, var(--panel));
   border: 1px solid var(--popover-border, var(--line));
   border-radius: var(--radius-sm);
-  box-shadow: var(--modal-shadow, 0 4px 12px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.1 * var(--shadow-opacity, 1))));
+  box-shadow: var(
+    --modal-shadow,
+    0 4px 12px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.1 * var(--shadow-opacity, 1)))
+  );
   max-height: 200px;
   overflow-y: auto;
   z-index: 100;
@@ -523,7 +545,9 @@
   background: transparent;
   border: none;
   cursor: pointer;
-  transition: background var(--dur-fast), color var(--dur-fast);
+  transition:
+    background var(--dur-fast),
+    color var(--dur-fast);
 }
 
 .sideAdd:hover,
@@ -587,7 +611,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background var(--dur-fast), color var(--dur-fast);
+  transition:
+    background var(--dur-fast),
+    color var(--dur-fast);
 }
 
 .addCalendarButton:hover {
@@ -640,7 +666,9 @@
   display: grid;
   place-content: center;
   cursor: pointer;
-  transition: background var(--dur-fast), border-color var(--dur-fast);
+  transition:
+    background var(--dur-fast),
+    border-color var(--dur-fast);
 }
 
 .checkbox:checked {
@@ -649,7 +677,7 @@
 }
 
 .checkbox:checked::after {
-  content: "";
+  content: '';
   width: 9px;
   height: 9px;
   border-radius: 2px;
@@ -712,7 +740,9 @@
   border: 2px solid transparent;
   border-radius: 50%;
   cursor: pointer;
-  transition: transform var(--dur-fast), box-shadow var(--dur-fast);
+  transition:
+    transform var(--dur-fast),
+    box-shadow var(--dur-fast);
 }
 
 .colorPreset:hover {
@@ -798,7 +828,9 @@
   outline: none;
   background: var(--panel);
   color: var(--ink);
-  transition: border-color var(--dur-fast), box-shadow var(--dur-fast);
+  transition:
+    border-color var(--dur-fast),
+    box-shadow var(--dur-fast);
 }
 
 .renameInput:focus {
@@ -832,7 +864,9 @@
   display: grid;
   place-content: center;
   cursor: pointer;
-  transition: background var(--dur-fast), border-color var(--dur-fast);
+  transition:
+    background var(--dur-fast),
+    border-color var(--dur-fast);
 }
 
 .calCheckbox:checked {
@@ -841,7 +875,7 @@
 }
 
 .calCheckbox:checked::after {
-  content: "";
+  content: '';
   width: 9px;
   height: 9px;
   border-radius: 2px;
@@ -873,7 +907,9 @@
   outline: none;
   background: var(--panel);
   color: var(--ink);
-  transition: border-color var(--dur-fast), box-shadow var(--dur-fast);
+  transition:
+    border-color var(--dur-fast),
+    box-shadow var(--dur-fast);
 }
 
 .renameInput:focus {
@@ -893,7 +929,9 @@
   align-items: center;
   justify-content: center;
   margin-left: auto;
-  transition: opacity var(--dur-fast), color var(--dur-fast);
+  transition:
+    opacity var(--dur-fast),
+    color var(--dur-fast);
 }
 
 .calRow:hover .syncButton {
@@ -927,8 +965,12 @@
 }
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* ---- Tasks Section ---- */
@@ -1249,7 +1291,9 @@
   align-items: center;
   justify-content: center;
   margin-left: auto;
-  transition: opacity var(--dur-fast), color var(--dur-fast);
+  transition:
+    opacity var(--dur-fast),
+    color var(--dur-fast);
 }
 
 .calendarItem:hover .syncButton {
@@ -1282,7 +1326,9 @@
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   padding: 16px 16px 18px;
-  box-shadow: 0 1px 2px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.04 * var(--shadow-opacity, 1))), 0 6px 16px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.03 * var(--shadow-opacity, 1)));
+  box-shadow:
+    0 1px 2px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.04 * var(--shadow-opacity, 1))),
+    0 6px 16px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.03 * var(--shadow-opacity, 1)));
 }
 
 /* ---- Year/Month Dropdowns ---- */
@@ -1431,7 +1477,9 @@
   text-decoration-thickness: 1px;
   text-underline-offset: 2px;
   cursor: pointer;
-  transition: color var(--dur-fast), text-decoration-color var(--dur-fast);
+  transition:
+    color var(--dur-fast),
+    text-decoration-color var(--dur-fast);
   text-decoration-color: transparent;
 }
 
@@ -1457,17 +1505,19 @@
 }
 
 @keyframes updatePulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.6; transform: scale(1.4); }
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(1.4);
+  }
 }
 
 .updateShimmer {
-  background: linear-gradient(
-    90deg,
-    var(--ink) 0%,
-    var(--accent) 50%,
-    var(--ink) 100%
-  );
+  background: linear-gradient(90deg, var(--ink) 0%, var(--accent) 50%, var(--ink) 100%);
   background-size: 200% 100%;
   -webkit-background-clip: text;
   background-clip: text;
@@ -1476,8 +1526,12 @@
 }
 
 @keyframes shimmer {
-  0% { background-position: 200% center; }
-  100% { background-position: -200% center; }
+  0% {
+    background-position: 200% center;
+  }
+  100% {
+    background-position: -200% center;
+  }
 }
 
 .updatePopup {
@@ -1523,7 +1577,9 @@
   color: var(--ink-2);
   font-size: 12.5px;
   cursor: pointer;
-  transition: background var(--dur-fast), color var(--dur-fast);
+  transition:
+    background var(--dur-fast),
+    color var(--dur-fast);
 }
 
 .updateDismissBtn:hover {

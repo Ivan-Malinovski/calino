@@ -90,12 +90,18 @@ test.describe('Monthly recurrence — second Tuesday (R2.4 byDayOrdinals)', () =
     // 8. Open the same event. The event was saved to the Tuesday we
     //    clicked, which is in the displayed month. Find an event card
     //    with the title we set.
-    const eventCard = page.locator('[data-component="event-card"]').filter({ hasText: 'Second Tuesday standup' }).first()
+    const eventCard = page
+      .locator('[data-component="event-card"]')
+      .filter({ hasText: 'Second Tuesday standup' })
+      .first()
     await expect(eventCard).toBeVisible()
     await eventCard.click()
 
     // 9. Open the event from the preview popup.
-    await page.locator('[data-component="event-preview"]').getByRole('button', { name: /Open event/ }).click()
+    await page
+      .locator('[data-component="event-preview"]')
+      .getByRole('button', { name: /Open event/ })
+      .click()
     await expect(modal).toBeVisible()
 
     // 10. Assert the recurrence UI round-trips the pattern correctly.
