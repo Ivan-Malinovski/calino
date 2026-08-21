@@ -587,6 +587,10 @@ function quickAddToItem(
           isAllDay: qa.isAllDay,
           type: 'task' as const,
           dueDate: format(qa.startDate, 'yyyy-MM-dd'),
+          // Same as the event branch below: the row shows a ↻ badge for
+          // "water plants every monday", so the saved task has to actually
+          // repeat rather than quietly becoming a one-off.
+          ...(qa.recurrence ? { recurrence: { ...qa.recurrence, isAllDay: qa.isAllDay } } : {}),
         }
         addEvent(newEvent)
         try {

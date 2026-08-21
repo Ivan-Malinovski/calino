@@ -59,16 +59,21 @@ export function extractTitle(input: string, parsedText: string): string {
   // day" is a Gym event repeating every other day, and leaving the phrase in
   // made every occurrence read "Gym every other day". Kept in sync with
   // RECURRENCE_PATTERNS in extractDuration.ts — anything parsed into a rule
-  // there has to come out of the title here.
+  // there has to come out of the title here, and nothing else may be stripped.
+  // Removing a phrase the parser does NOT understand ("every 2 weeks",
+  // "biweekly", "every morning") is strictly worse than leaving it in: the
+  // event silently loses the repeat AND the evidence that one was asked for.
   text = text
     .replace(
-      /\bevery\s+(?:other\s+|\d+\s+)?(?:day|days|week|weeks|month|months|year|years|weekday|weekdays|weekend|weekends|morning|afternoon|evening|night|monday|tuesday|wednesday|thursday|friday|saturday|sunday)s?\b/gi,
+      /\bevery\s+(?:other\s+)?(?:day|week|month|year|weekday|weekend|monday|tuesday|wednesday|thursday|friday|saturday|sunday)s?\b/gi,
       ''
     )
-    .replace(/\b(?:daily|weekly|monthly|yearly|annually|biweekly|fortnightly)\b/gi, '')
+    .replace(/\b(?:daily|weekly|monthly|yearly|annually)\b/gi, '')
     // chrono may already have eaten the unit ("review every other monday"
-    // parses the weekday away), leaving the quantifier stranded.
-    .replace(/\bevery\s+(?:other|\d+)\s*$/i, '')
+    // parses the weekday away), leaving the quantifier stranded. It strands at
+    // whichever end the phrase sat: "every monday gym" leaves it leading.
+    .replace(/\bevery\s+(?:other\s*)?$/i, '')
+    .replace(/^every\s+(?:other\s+)?/i, '')
     .replace(/\s+/g, ' ')
     .replace(/^[,\-\s]+|[,\-\s]+$/g, '')
     .trim()

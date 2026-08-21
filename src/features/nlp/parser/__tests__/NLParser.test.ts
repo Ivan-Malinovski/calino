@@ -152,6 +152,26 @@ describe('NLParser - recurrence phrases stay out of the title', () => {
     expect(result.recurrence).toBeDefined()
   })
 
+  it.each([
+    ['every monday gym', 'Gym'],
+    ['every other monday review', 'Review'],
+  ])('strips a leading repeat phrase too: %s → %s', (input, title) => {
+    const result = parse(input)
+    expect(result.title).toBe(title)
+    expect(result.recurrence).toBeDefined()
+  })
+
+  // Stripping a phrase the parser cannot turn into a rule loses the repeat AND
+  // the evidence the user asked for one, which is worse than leaving it in.
+  it.each(['sync biweekly', 'standup fortnightly'])(
+    'keeps unsupported repeat wording in the title: %s',
+    (input) => {
+      const result = parse(input)
+      expect(result.recurrence).toBeUndefined()
+      expect(result.title.toLowerCase()).toContain(input.split(' ')[1])
+    }
+  )
+
   it('leaves non-recurring titles alone', () => {
     expect(parse('everyday carry review tomorrow').title).toBe('Everyday carry review')
   })
