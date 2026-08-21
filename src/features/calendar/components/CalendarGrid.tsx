@@ -32,7 +32,6 @@ import {
   isSameDay,
   isBefore,
   startOfDay,
-  endOfDay,
   addDays,
   differenceInCalendarDays,
 } from 'date-fns'
@@ -69,6 +68,7 @@ import { hasDueTime } from '@/lib/events'
 import { consumesVerticalScroll } from '@/lib/scrollChaining'
 import styles from './CalendarGrid.module.css'
 import { duplicateEventWithSync } from '@/lib/duplicateWithSync'
+import { assignSpanLanes, compareDayEvents, makeDayFragments } from '../lib/multiDayFragments'
 
 // Module-level so `useRovingGrid`'s `handleKeyDown` stays referentially stable.
 // ←/→ move one day, ↑/↓ move one week in the flattened cell list.
@@ -540,85 +540,20 @@ export function CalendarGrid(): JSX.Element {
     )
 
     // A multi-day event is split into one fragment per day, and each day cell
-    // stacks its own fragments top-to-bottom. Without a row reserved for the
-    // whole span, two overlapping multi-day events can swap order between
-    // adjacent days and the pill visually breaks apart. So assign every span a
-    // lane up front: longest spans on top, earlier start wins a tie.
-    const spans = gridEvents
-      .map((event) => {
-        const startKey = format(toEventInstant(event.start, event.timezone), 'yyyy-MM-dd')
-        const endKey = format(toEventInstant(event.end, event.timezone), 'yyyy-MM-dd')
-        return { event, startKey, endKey }
-      })
-      .filter(({ startKey, endKey }) => startKey !== endKey)
-      .map((span) => ({
-        ...span,
-        days: eachDayOfInterval({
-          start: startOfDay(toEventInstant(span.event.start, span.event.timezone)),
-          end: startOfDay(toEventInstant(span.event.end, span.event.timezone)),
-        }).map((d) => format(d, 'yyyy-MM-dd')),
-      }))
-      .sort((a, b) => {
-        if (a.days.length !== b.days.length) return b.days.length - a.days.length
-        if (a.startKey !== b.startKey) return a.startKey < b.startKey ? -1 : 1
-        return a.event.id < b.event.id ? -1 : 1
-      })
-
-    const laneOccupancy: Set<string>[] = []
-    const laneOf = new Map<string, number>()
-    spans.forEach(({ event, days }) => {
-      let lane = 0
-      while (lane < laneOccupancy.length && days.some((d) => laneOccupancy[lane].has(d))) lane++
-      if (lane === laneOccupancy.length) laneOccupancy.push(new Set())
-      days.forEach((d) => laneOccupancy[lane].add(d))
-      laneOf.set(event.id, lane)
-    })
+    // reserves the same lane for every fragment in a span.
+    const laneOf = assignSpanLanes(gridEvents)
 
     gridEvents.forEach((event) => {
-      const eventStart = toEventInstant(event.start, event.timezone)
-      const eventEnd = toEventInstant(event.end, event.timezone)
-      const startKey = format(eventStart, 'yyyy-MM-dd')
-      const endKey = format(eventEnd, 'yyyy-MM-dd')
-
-      if (startKey === endKey) {
-        const eventDate = format(eventStart, 'yyyy-MM-dd')
+      const fragments = makeDayFragments(event, laneOf.get(event.id))
+      fragments.forEach((fragment) => {
+        const eventDate = format(toEventInstant(fragment.start, fragment.timezone), 'yyyy-MM-dd')
         const existing = map.get(eventDate) || []
-        map.set(eventDate, [...existing, event])
-      } else {
-        let currentDay = eventStart
-        while (currentDay <= eventEnd) {
-          const dayKey = format(currentDay, 'yyyy-MM-dd')
-          const isFirst = dayKey === startKey
-          const isLast = dayKey === endKey
-          const fragment: CalendarEvent = {
-            ...event,
-            start: isFirst ? event.start : format(startOfDay(currentDay), "yyyy-MM-dd'T'HH:mm:ss"),
-            end: isLast ? event.end : format(endOfDay(currentDay), "yyyy-MM-dd'T'HH:mm:ss"),
-            isFragment: true,
-            isFirstFragment: isFirst,
-            isLastFragment: isLast,
-            laneIndex: laneOf.get(event.id),
-            originalStart: event.start,
-            originalEnd: event.end,
-          }
-          const dayEvents = map.get(dayKey) || []
-          map.set(dayKey, [...dayEvents, fragment])
-          currentDay = addDays(currentDay, 1)
-        }
-      }
+        map.set(eventDate, [...existing, fragment])
+      })
     })
 
     map.forEach((events, dateKey) => {
-      const sorted = [...events].sort((a, b) => {
-        if (a.isFragment && !b.isFragment) return -1
-        if (!a.isFragment && b.isFragment) return 1
-        if (a.isFragment && b.isFragment) return (a.laneIndex ?? 0) - (b.laneIndex ?? 0)
-        return (
-          toEventInstant(a.start, a.timezone).getTime() -
-          toEventInstant(b.start, b.timezone).getTime()
-        )
-      })
-      map.set(dateKey, sorted)
+      map.set(dateKey, [...events].sort(compareDayEvents))
     })
 
     return map
@@ -1196,6 +1131,7 @@ export function CalendarGrid(): JSX.Element {
                                 key={idx}
                                 dateKey={dateKey}
                                 day={day}
+                                isWeekStart={idx === 0}
                                 monthChangeMotion={monthChangeMotion}
                                 dayEvents={dayEvents}
                                 dayTasks={dayTasks}
@@ -1381,6 +1317,7 @@ export function CalendarGrid(): JSX.Element {
                           key={idx}
                           dateKey={dateKey}
                           day={day}
+                          isWeekStart={idx === 0}
                           monthChangeMotion={monthChangeMotion}
                           dayEvents={dayEvents}
                           dayTasks={dayTasks}
@@ -1471,6 +1408,7 @@ interface DroppableDayProps {
   monthChangeMotion: DateChangeMotion
   dateKey: string
   day: Date
+  isWeekStart: boolean
   dayEvents: CalendarEvent[]
   dayTasks: CalendarEvent[]
   hasJournal: boolean
@@ -1504,6 +1442,7 @@ interface DroppableDayProps {
 const DroppableDay = React.memo(function DroppableDay({
   dateKey,
   day,
+  isWeekStart,
   monthChangeMotion,
   dayEvents,
   dayTasks,
@@ -1750,6 +1689,9 @@ const DroppableDay = React.memo(function DroppableDay({
                         enableResize={false}
                         monthView
                         clickDisabled
+                        hideFragmentTitle={
+                          event.isFragment && !event.isFirstFragment && !isWeekStart
+                        }
                       />
                     </motion.div>
                   ))}
@@ -1876,6 +1818,9 @@ const DroppableDay = React.memo(function DroppableDay({
                         isMobileMonth={isMobile}
                         enableResize={false}
                         monthView
+                        hideFragmentTitle={
+                          event.isFragment && !event.isFirstFragment && !isWeekStart
+                        }
                       />
                     </motion.div>
                   )

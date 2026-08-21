@@ -246,6 +246,33 @@ describe('Bug #120: all-day items in the mobile week view', () => {
     expect(headerFor('All Day Event')).not.toBeNull()
   })
 
+  it('renders a spanning all-day event in every covered mobile column', () => {
+    useCalendarStore.getState().addEvent({
+      id: 'event-span-mobile',
+      calendarId: 'default',
+      title: 'Span Mobile',
+      start: '2024-03-12T00:00:00',
+      end: '2024-03-14T23:59:59',
+      isAllDay: true,
+      type: 'event',
+    })
+
+    renderWithRouter(<WeekView />)
+
+    const headers = Array.from(document.querySelectorAll('[data-component="event-card"]'))
+      .filter((card) => card.getAttribute('aria-label')?.includes('Span Mobile'))
+      .map((card) => card.closest('[data-component="week-mobile-day-header"]'))
+
+    expect(headers).toHaveLength(3)
+    expect(headers.map((header) => header?.textContent)).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('Tue'),
+        expect.stringContaining('Wed'),
+        expect.stringContaining('Thu'),
+      ])
+    )
+  })
+
   it('keeps timed tasks on the timeline rather than moving them into the header', () => {
     useCalendarStore.getState().addEvent({
       id: 'task-timed-mobile',

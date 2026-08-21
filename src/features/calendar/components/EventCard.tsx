@@ -68,6 +68,8 @@ interface EventCardProps {
    *  indicators rather than targets and the tap belongs to the day cell.
    *  Drag, resize and the long-press context menu are unaffected. */
   clickDisabled?: boolean
+  /** Keep a spanning pill's continuation visually label-free after its first day. */
+  hideFragmentTitle?: boolean
 }
 
 export const EventCard = React.memo(function EventCard({
@@ -84,6 +86,7 @@ export const EventCard = React.memo(function EventCard({
   dotMode = false,
   hideDueTime = false,
   clickDisabled = false,
+  hideFragmentTitle = false,
 }: EventCardProps): JSX.Element {
   const calendars = useCalendarStore((state) => state.calendars)
   const categories = useCalendarStore((state) => state.categories)
@@ -302,6 +305,7 @@ export const EventCard = React.memo(function EventCard({
   const isFragmentMiddle = event.isFragment && !event.isFirstFragment && !event.isLastFragment
   const isFragmentFirst = event.isFragment && event.isFirstFragment
   const isFragmentLast = event.isFragment && event.isLastFragment
+  const hasFragmentTitle = event.isFragment && !hideFragmentTitle
 
   const handleClick = (e: React.MouseEvent): void => {
     let moved = false
@@ -545,7 +549,7 @@ export const EventCard = React.memo(function EventCard({
                 : 'Click to edit (recurring event)',
             }
           : {})}
-        className={`${styles.card} ${compact ? styles.compact : ''} ${isCurrentDragging || isDragging ? styles.dragging : ''} ${isResizing ? styles.resizing : ''} ${hideTopRadius ? styles.noTopRadius : ''} ${isTask ? styles.task : ''} ${event.completed ? styles.completed : ''} ${event.completed ? styles.isDone : ''} ${isMobileMonth ? styles.mobileMonth : ''} ${monthView ? styles.monthView : ''} ${transparent ? styles.transparent : ''} ${isMultiDay ? styles.multiDay : ''} ${isFragmentMiddle ? styles.fragmentMiddle : ''} ${isFragmentFirst ? styles.fragmentFirst : ''} ${isFragmentLast ? styles.fragmentLast : ''} ${dotMode ? styles.dot : ''} ${isTight ? styles.tight : ''} ${event.isFragment && isSharedHovered ? styles.hovered : ''} ${disableDirectEdit ? styles.noDrag : ''}`}
+        className={`${styles.card} ${compact ? styles.compact : ''} ${isCurrentDragging || isDragging ? styles.dragging : ''} ${isResizing ? styles.resizing : ''} ${hideTopRadius ? styles.noTopRadius : ''} ${isTask ? styles.task : ''} ${event.completed ? styles.completed : ''} ${event.completed ? styles.isDone : ''} ${isMobileMonth ? styles.mobileMonth : ''} ${monthView ? styles.monthView : ''} ${transparent ? styles.transparent : ''} ${isMultiDay ? styles.multiDay : ''} ${isFragmentMiddle ? styles.fragmentMiddle : ''} ${isFragmentFirst ? styles.fragmentFirst : ''} ${isFragmentLast ? styles.fragmentLast : ''} ${hasFragmentTitle ? styles.fragmentTitle : ''} ${dotMode ? styles.dot : ''} ${isTight ? styles.tight : ''} ${event.isFragment && isSharedHovered ? styles.hovered : ''} ${disableDirectEdit ? styles.noDrag : ''}`}
         onContextMenu={handleContextMenu}
         onClick={handleClick}
         // role="button" requires Enter and Space activation for keyboard
@@ -632,7 +636,12 @@ export const EventCard = React.memo(function EventCard({
             {...listeners}
             {...attributes}
           >
-            <div className={styles.title} title={event.title}>
+            <div
+              className={styles.title}
+              title={event.title}
+              style={hideFragmentTitle ? { visibility: 'hidden' } : undefined}
+              aria-hidden={hideFragmentTitle || undefined}
+            >
               {event.title}
             </div>
             {!hideDueTime && hasDueTime(event) && event.dueDate && (
@@ -659,7 +668,12 @@ export const EventCard = React.memo(function EventCard({
               {...listeners}
               {...attributes}
             >
-              <div className={styles.title} title={event.title}>
+              <div
+                className={styles.title}
+                title={event.title}
+                style={hideFragmentTitle ? { visibility: 'hidden' } : undefined}
+                aria-hidden={hideFragmentTitle || undefined}
+              >
                 {event.title}
               </div>
               {(() => {
@@ -916,7 +930,8 @@ function arePropsEqual(prev: EventCardProps, next: EventCardProps): boolean {
     prev.hourHeight !== next.hourHeight ||
     prev.dotMode !== next.dotMode ||
     prev.hideDueTime !== next.hideDueTime ||
-    prev.clickDisabled !== next.clickDisabled
+    prev.clickDisabled !== next.clickDisabled ||
+    prev.hideFragmentTitle !== next.hideFragmentTitle
   ) {
     return false
   }

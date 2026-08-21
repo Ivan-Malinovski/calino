@@ -113,6 +113,108 @@ describe('WeekView', () => {
     expect(screen.getByText('Conference')).toBeInTheDocument()
   })
 
+  it('renders a multi-day all-day event in every covered desktop header', () => {
+    useCalendarStore.getState().addEvent({
+      id: 'event-span',
+      calendarId: 'default',
+      title: 'Conference Span',
+      start: '2024-03-12T00:00:00',
+      end: '2024-03-14T23:59:59',
+      isAllDay: true,
+    })
+
+    const { container } = renderWithRouter(<WeekView />)
+    const headers = Array.from(container.querySelectorAll('[class*="dayHeader"]'))
+    const eventHeaders = headers.filter((header) =>
+      header
+        .querySelector('[data-component="event-card"]')
+        ?.getAttribute('aria-label')
+        ?.includes('Conference Span')
+    )
+
+    expect(eventHeaders).toHaveLength(3)
+    expect(eventHeaders.map((header) => header.textContent)).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('Tue'),
+        expect.stringContaining('Wed'),
+        expect.stringContaining('Thu'),
+      ])
+    )
+
+    const cards = eventHeaders.map((header) =>
+      header.querySelector('[data-component="event-card"]')
+    )
+    expect(cards[0]).toHaveAttribute('data-fragment-first')
+    expect(cards[1]).toHaveAttribute('data-fragment-middle')
+    expect(cards[2]).toHaveAttribute('data-fragment-last')
+  })
+
+  it('shows a continuation title at the start of the displayed week', () => {
+    useCalendarStore.getState().addEvent({
+      id: 'event-long-span',
+      calendarId: 'default',
+      title: 'Long weekly event',
+      start: '2024-03-01T00:00:00',
+      end: '2024-03-20T23:59:59',
+      isAllDay: true,
+    })
+
+    const { container } = renderWithRouter(<WeekView />)
+    const cards = Array.from(container.querySelectorAll('[data-component="event-card"]')).filter(
+      (card) => card.getAttribute('aria-label')?.includes('Long weekly event')
+    )
+    const visibleTitles = cards.filter(
+      (card) =>
+        (card.querySelector('[class*="title"]') as HTMLElement | null)?.style.visibility !==
+        'hidden'
+    )
+
+    expect(cards).toHaveLength(7)
+    expect(visibleTitles).toHaveLength(1)
+    expect(visibleTitles[0]?.closest('[class*="dayHeader"]')).toHaveTextContent('Mon')
+  })
+
+  it('keeps staggered all-day spans in the same desktop lane', () => {
+    const store = useCalendarStore.getState()
+    store.addEvent({
+      id: 'span-a',
+      calendarId: 'default',
+      title: 'Span A',
+      start: '2024-03-12T00:00:00',
+      end: '2024-03-14T23:59:59',
+      isAllDay: true,
+    })
+    store.addEvent({
+      id: 'span-b',
+      calendarId: 'default',
+      title: 'Span B',
+      start: '2024-03-13T00:00:00',
+      end: '2024-03-15T23:59:59',
+      isAllDay: true,
+    })
+
+    const { container } = renderWithRouter(<WeekView />)
+    const headers = Array.from(container.querySelectorAll('[class*="dayHeader"]'))
+    const slotIndexes = (title: string) =>
+      headers
+        .filter((header) =>
+          Array.from(header.querySelectorAll('[data-component="event-card"]')).some((card) =>
+            card.getAttribute('aria-label')?.includes(title)
+          )
+        )
+        .map((header) => {
+          const wrapper = header.querySelector('[class*="allDayEventsInHeader"]')
+          return wrapper
+            ? Array.from(wrapper.children).findIndex((child) =>
+                child.getAttribute('aria-label')?.includes(title)
+              )
+            : -1
+        })
+
+    expect(slotIndexes('Span A')).toEqual([0, 0, 0])
+    expect(slotIndexes('Span B')).toEqual([1, 1, 1])
+  })
+
   it('applies correct CSS variable for hour height', () => {
     const { container } = renderWithRouter(<WeekView />)
     const dayColumn = container.querySelector('[class*="dayColumn"]')

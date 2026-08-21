@@ -35,6 +35,7 @@
   display: grid;
   grid-template-columns: repeat(var(--day-count, 7), 1fr);
   flex: 1;
+  overflow: hidden;
 }
 
 .allDayEventsInHeader {
@@ -43,7 +44,6 @@
   gap: 2px;
   width: 100%;
   margin-top: 2px;
-  overflow: hidden;
 }
 
 .headerShadow {
@@ -176,7 +176,7 @@
   padding: var(--space-1, 4px);
   border-right: 1px solid var(--line-2, rgba(var(--ink-raw), 0.05));
   min-height: 48px;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .dayHeader.hasAllDayEvents {
@@ -195,7 +195,25 @@
   gap: 2px;
   width: 100%;
   margin-top: 2px;
-  overflow: hidden;
+}
+
+/* Reserves an empty lane so a spanning pill keeps the same row in every day
+   cell it covers. */
+.eventSpacer {
+  box-sizing: border-box;
+  min-height: 18px;
+  padding: 2px 4px 2px 8px;
+  border: 1px solid transparent;
+  flex-shrink: 0;
+  pointer-events: none;
+}
+
+.eventSpacer::after {
+  content: '';
+  display: block;
+  font-size: 12px;
+  line-height: 1.3;
+  height: 1.3em;
 }
 
 .dayHeader:last-child {

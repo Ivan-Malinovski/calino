@@ -61,6 +61,7 @@ import {
 import { SWIPE_SCROLLER_ATTR } from '../swipePaging'
 import styles from './WeekView.module.css'
 import { duplicateEventWithSync } from '@/lib/duplicateWithSync'
+import { assignSpanLanes, compareDayEvents, makeDayFragments } from '../lib/multiDayFragments'
 
 const BASE_HOUR_HEIGHT = 60
 /** Narrowest the mobile day columns compress to, as a fraction of their normal
@@ -160,6 +161,7 @@ const DroppableCell = React.memo(function DroppableCell({
 interface DayHeaderProps {
   day: Date
   isTodayDay: boolean
+  isWeekStart: boolean
   allDayEvents: CalendarEvent[]
   activeIsTimed: boolean
 }
@@ -170,10 +172,27 @@ interface DayHeaderProps {
 const DayHeader = React.memo(function DayHeader({
   day,
   isTodayDay,
+  isWeekStart,
   allDayEvents,
   activeIsTimed,
 }: DayHeaderProps): JSX.Element {
   const { setNodeRef, isOver } = useDroppable({ id: `allday::${format(day, 'yyyy-MM-dd')}` })
+
+  const dayKey = format(day, 'yyyy-MM-dd')
+  const fragmentByLane = new Map<number, CalendarEvent>()
+  const singleDayEvents: CalendarEvent[] = []
+  allDayEvents.forEach((event) => {
+    if (event.isFragment) fragmentByLane.set(event.laneIndex ?? 0, event)
+    else singleDayEvents.push(event)
+  })
+
+  const slots: Array<{ event: CalendarEvent } | { spacerKey: string }> = []
+  const maxLane = fragmentByLane.size === 0 ? -1 : Math.max(...fragmentByLane.keys())
+  for (let lane = 0; lane <= maxLane; lane++) {
+    const fragment = fragmentByLane.get(lane)
+    slots.push(fragment ? { event: fragment } : { spacerKey: `${dayKey}-spacer-${lane}` })
+  }
+  singleDayEvents.forEach((event) => slots.push({ event }))
 
   return (
     <div
@@ -184,9 +203,22 @@ const DayHeader = React.memo(function DayHeader({
       <div className={styles.dayNumber}>{format(day, 'd')}</div>
       {allDayEvents.length > 0 && (
         <div className={styles.allDayEventsInHeader}>
-          {allDayEvents.map((event) => (
-            <EventCard key={event.id} event={event} compact monthView enableResize={false} />
-          ))}
+          {slots.map((slot) =>
+            'spacerKey' in slot ? (
+              <div key={slot.spacerKey} className={styles.eventSpacer} aria-hidden />
+            ) : (
+              <EventCard
+                key={slot.event.isFragment ? `${slot.event.id}-${dayKey}` : slot.event.id}
+                event={slot.event}
+                compact
+                monthView
+                enableResize={false}
+                hideFragmentTitle={
+                  slot.event.isFragment && !slot.event.isFirstFragment && !isWeekStart
+                }
+              />
+            )
+          )}
         </div>
       )}
     </div>
@@ -551,45 +583,37 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
     const allDay = new Map<string, CalendarEvent[]>()
     const timed = new Map<string, CalendarEvent[]>()
     const timedFragments = new Map<string, CalendarEvent[]>()
+    const allDayEvents = weekEvents.filter(
+      (event) => event.type !== 'task' && event.type !== 'journal' && event.isAllDay
+    )
+    const allDayLaneOf = assignSpanLanes(allDayEvents)
 
     for (const event of weekEvents) {
-      const eventStart = toEventInstant(event.start, event.timezone)
-      const eventEnd = toEventInstant(event.end, event.timezone)
-      const startKey = format(eventStart, 'yyyy-MM-dd')
-      const endKey = format(eventEnd, 'yyyy-MM-dd')
-
       if (event.type !== 'task' && event.type !== 'journal' && event.isAllDay) {
-        allDay.set(startKey, [...(allDay.get(startKey) || []), event])
+        makeDayFragments(event, allDayLaneOf.get(event.id)).forEach((fragment) => {
+          const dayKey = format(toEventInstant(fragment.start, fragment.timezone), 'yyyy-MM-dd')
+          allDay.set(dayKey, [...(allDay.get(dayKey) || []), fragment])
+        })
       } else if (event.type !== 'task' && !event.isAllDay) {
         // Tasks (all-day or timed) are never placed in the time grid — they
         // render as compact cards in the per-day task footer, matching month
         // view. Only real timed events reach this branch.
-        if (startKey === endKey) {
-          timed.set(startKey, [...(timed.get(startKey) || []), event])
+        const fragments = makeDayFragments(event)
+        if (fragments.length === 1) {
+          const dayKey = format(toEventInstant(event.start, event.timezone), 'yyyy-MM-dd')
+          timed.set(dayKey, [...(timed.get(dayKey) || []), event])
         } else {
-          let currentDay = eventStart
-          while (currentDay <= eventEnd) {
-            const dayKey = format(currentDay, 'yyyy-MM-dd')
-            const isFirst = dayKey === startKey
-            const isLast = dayKey === endKey
-            const fragment: CalendarEvent = {
-              ...event,
-              start: isFirst
-                ? event.start
-                : format(startOfDay(currentDay), "yyyy-MM-dd'T'HH:mm:ss"),
-              end: isLast ? event.end : format(endOfDay(currentDay), "yyyy-MM-dd'T'HH:mm:ss"),
-              isFragment: true,
-              isFirstFragment: isFirst,
-              isLastFragment: isLast,
-              originalStart: event.start,
-              originalEnd: event.end,
-            }
+          fragments.forEach((fragment) => {
+            const dayKey = format(toEventInstant(fragment.start, fragment.timezone), 'yyyy-MM-dd')
             timedFragments.set(dayKey, [...(timedFragments.get(dayKey) || []), fragment])
-            currentDay = addDays(currentDay, 1)
-          }
+          })
         }
       }
     }
+
+    allDay.forEach((dayEvents, dayKey) => {
+      allDay.set(dayKey, [...dayEvents].sort(compareDayEvents))
+    })
 
     return { allDayEventsMap: allDay, eventsMap: timed, timedFragmentsMap: timedFragments }
     // `events` and `calendars` are kept as deps alongside
@@ -638,7 +662,7 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
       const items = [
         ...(allDayEventsMap.get(dayKey) ?? EMPTY_EVENTS),
         ...(tasksMap.get(dayKey) ?? EMPTY_EVENTS).filter((t) => !hasDueTime(t)),
-      ]
+      ].sort(compareDayEvents)
       if (items.length > 0) map.set(dayKey, items)
     }
     return map
@@ -853,7 +877,7 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
     // didn't move far enough to count as a drag yet) when a new drag starts —
     // close it instead of leaving it floating over the grid mid-drag.
     useContextMenuStore.getState().closeMenu()
-    const eventId = String(event.active.id)
+    const [eventId] = String(event.active.id).split('::')
     const draggedEvent = events.find((e) => e.id === eventId)
     setActiveEvent(draggedEvent || null)
     markDragStart(event.activatorEvent)
@@ -861,6 +885,7 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
 
   const handleDragEnd = async (event: DragEndEvent): Promise<void> => {
     const { active, over, delta } = event
+    const [activeId] = String(active.id).split('::')
     const shouldDuplicate = useDragModifierStore.getState().isDuplicateModifierHeld
     markDragEnd()
     // Defer clearing active event to avoid scroll jump
@@ -874,7 +899,7 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
     // Dropped on a day header → convert a timed event into an all-day event.
     if (droppableId.startsWith('allday::')) {
       const dayStr = droppableId.slice('allday::'.length)
-      const originalEvent = events.find((e) => e.id === active.id)
+      const originalEvent = events.find((e) => e.id === activeId)
       if (!originalEvent || originalEvent.isAllDay) return
       // Defensive: dnd-kit's useDraggable is disabled on recurring events, but
       // if some other code path triggers a drop on a recurring event, refuse
@@ -895,7 +920,7 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
         })
         return
       }
-      storeUpdateEvent(String(active.id), allDayUpdates)
+      storeUpdateEvent(activeId, allDayUpdates)
       await safeCalDAVUpdate(
         caldavUpdateEvent,
         originalEvent.calendarId,
@@ -912,7 +937,7 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
 
     if (!dayStr || !hourStr) return
 
-    const originalEvent = events.find((e) => e.id === active.id)
+    const originalEvent = events.find((e) => e.id === activeId)
     if (!originalEvent) return
     // Defensive: dnd-kit's useDraggable is disabled on recurring events, but
     // if some other code path triggers a drop on a recurring event, refuse
@@ -959,7 +984,7 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
       return
     }
 
-    storeUpdateEvent(String(active.id), updates)
+    storeUpdateEvent(activeId, updates)
 
     await safeCalDAVUpdate(
       caldavUpdateEvent,
@@ -994,7 +1019,7 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
           )}
         </div>
         <div className={styles.headerDays}>
-          {weekDays.map((day) => {
+          {weekDays.map((day, idx) => {
             const dayKey = format(day, 'yyyy-MM-dd')
             const headerItems = mobileHeaderItemsMap.get(dayKey) ?? EMPTY_EVENTS
             const isExpanded = expandedHeaderDays.has(dayKey)
@@ -1026,11 +1051,12 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
                   <div className={styles.allDayEventsInHeader}>
                     {visibleItems.map((item) => (
                       <EventCard
-                        key={item.id}
+                        key={item.isFragment ? `${item.id}-${dayKey}` : item.id}
                         event={item}
                         compact
                         monthView
                         enableResize={false}
+                        hideFragmentTitle={item.isFragment && !item.isFirstFragment && idx !== 0}
                       />
                     ))}
                     {/* Sits at the bottom of the stack, where the items it
@@ -1184,6 +1210,7 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
                 key={day.toISOString()}
                 day={day}
                 isTodayDay={isToday(day)}
+                isWeekStart={idx === 0}
                 allDayEvents={allDayEventsByDay[idx]}
                 activeIsTimed={!!activeEvent && !activeEvent.isAllDay}
               />
