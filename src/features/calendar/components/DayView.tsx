@@ -18,6 +18,8 @@ import {
 } from '@dnd-kit/core'
 import { format, startOfDay, endOfDay, parseISO, isToday, addDays, addMinutes } from 'date-fns'
 import { useCalendarStore, getTasksForDay } from '@/store/calendarStore'
+import { filterTasksByCollapsedAncestors } from '@/lib/taskTree'
+import { useTaskCollapse } from '../hooks/useTaskCollapse'
 import { useSettingsStore } from '@/store/settingsStore'
 import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
 import { getEventColor } from '@/lib/eventColor'
@@ -152,6 +154,7 @@ export function DayView({
   const currentDate = propDate || storeDate
   const events = useCalendarStore((state) => state.events)
   const calendars = useCalendarStore((state) => state.calendars)
+  const taskCollapse = useTaskCollapse(events)
   const getEventsForDateRange = useCalendarStore((state) => state.getEventsForDateRange)
   const openModal = useCalendarStore((state) => state.openModal)
   const storeUpdateEvent = useCalendarStore((state) => state.updateEvent)
@@ -391,8 +394,9 @@ export function DayView({
   const dayTasks = useMemo(() => {
     const dateKey = format(date, 'yyyy-MM-dd')
     const visibleCalendarIds = calendars.filter((c) => c.isVisible).map((c) => c.id)
-    return getTasksForDay(events, dateKey).filter((e) => visibleCalendarIds.includes(e.calendarId))
-  }, [date, events, calendars])
+    const tasks = getTasksForDay(events, dateKey).filter((e) => visibleCalendarIds.includes(e.calendarId))
+    return filterTasksByCollapsedAncestors(tasks, events, taskCollapse.collapsedTaskIds)
+  }, [date, events, calendars, taskCollapse.collapsedTaskIds])
 
   // Tasks with a due time are anchored on the timeline as pills (matching week
   // view); the rest stay in the header list.
@@ -748,7 +752,17 @@ export function DayView({
             className={`${styles.eventPositioned} ${styles.taskPositioned}`}
             style={taskPillStyle(task, column, totalColumns)}
           >
-            <EventCard event={task} compact monthView enableResize={false} hideDueTime />
+            <EventCard
+              event={task}
+              compact
+              monthView
+              enableResize={false}
+              hideDueTime
+              taskHasSubtasks={taskCollapse.hasSubtasks(task.id)}
+              taskSubtasksCollapsed={taskCollapse.isCollapsed(task.id)}
+              taskSubtaskCount={taskCollapse.descendantCount(task.id)}
+              onToggleTaskSubtasks={() => taskCollapse.toggleTask(task.id)}
+            />
           </motion.div>
         )
         continue
@@ -885,7 +899,17 @@ export function DayView({
             {untimedTasks.length > 0 && (
               <div className={styles.allDayEventsInHeader}>
                 {untimedTasks.map((task) => (
-                  <EventCard key={task.id} event={task} compact monthView enableResize={false} />
+                  <EventCard
+                    key={task.id}
+                    event={task}
+                    compact
+                    monthView
+                    enableResize={false}
+                    taskHasSubtasks={taskCollapse.hasSubtasks(task.id)}
+                    taskSubtasksCollapsed={taskCollapse.isCollapsed(task.id)}
+                    taskSubtaskCount={taskCollapse.descendantCount(task.id)}
+                    onToggleTaskSubtasks={() => taskCollapse.toggleTask(task.id)}
+                  />
                 ))}
               </div>
             )}

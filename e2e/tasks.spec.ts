@@ -4,16 +4,58 @@ import { clearState } from './fixtures/localstorage'
 test('renders imported subtasks beneath their parent', async ({ page }) => {
   await clearState(page)
   await page.addInitScript(() => {
-    localStorage.setItem('calino-storage', JSON.stringify({
-      state: {
-        calendars: [{ id: 'default', name: 'Offline calendar', color: '#4285F4', isVisible: true, isDefault: true, showTasksInViews: true }],
-        events: [
-          { id: 'parent', calendarId: 'default', title: 'Plan trip', type: 'task', start: '2026-07-10T09:00:00.000Z', end: '2026-07-10T09:00:00.000Z', isAllDay: false, completed: false },
-          { id: 'child', calendarId: 'default', title: 'Book hotel', parentTaskId: 'parent', type: 'task', start: '2026-07-11T09:00:00.000Z', end: '2026-07-11T09:00:00.000Z', isAllDay: false, completed: false },
-          { id: 'grandchild', calendarId: 'default', title: 'Pack bags', parentTaskId: 'child', type: 'task', start: '2026-07-12T09:00:00.000Z', end: '2026-07-12T09:00:00.000Z', isAllDay: false, completed: false },
-        ],
-      }, version: 1,
-    }))
+    localStorage.setItem(
+      'calino-storage',
+      JSON.stringify({
+        state: {
+          calendars: [
+            {
+              id: 'default',
+              name: 'Offline calendar',
+              color: '#4285F4',
+              isVisible: true,
+              isDefault: true,
+              showTasksInViews: true,
+            },
+          ],
+          events: [
+            {
+              id: 'parent',
+              calendarId: 'default',
+              title: 'Plan trip',
+              type: 'task',
+              start: '2026-07-10T09:00:00.000Z',
+              end: '2026-07-10T09:00:00.000Z',
+              isAllDay: false,
+              completed: false,
+            },
+            {
+              id: 'child',
+              calendarId: 'default',
+              title: 'Book hotel',
+              parentTaskId: 'parent',
+              type: 'task',
+              start: '2026-07-11T09:00:00.000Z',
+              end: '2026-07-11T09:00:00.000Z',
+              isAllDay: false,
+              completed: false,
+            },
+            {
+              id: 'grandchild',
+              calendarId: 'default',
+              title: 'Pack bags',
+              parentTaskId: 'child',
+              type: 'task',
+              start: '2026-07-12T09:00:00.000Z',
+              end: '2026-07-12T09:00:00.000Z',
+              isAllDay: false,
+              completed: false,
+            },
+          ],
+        },
+        version: 1,
+      })
+    )
   })
 
   await page.goto('/tasks')
@@ -23,11 +65,19 @@ test('renders imported subtasks beneath their parent', async ({ page }) => {
   const grandchild = page.getByText('Pack bags')
   await expect(parent).toBeVisible()
   await expect(child).toBeVisible()
-  await expect(child.locator('xpath=ancestor::*[@data-component="task-row"]')).toHaveAttribute('data-task-depth', '1')
-  await expect(grandchild.locator('xpath=ancestor::*[@data-component="task-row"]')).toHaveAttribute('data-task-depth', '2')
+  await expect(child.locator('xpath=ancestor::*[@data-component="task-row"]')).toHaveAttribute(
+    'data-task-depth',
+    '1'
+  )
+  await expect(grandchild.locator('xpath=ancestor::*[@data-component="task-row"]')).toHaveAttribute(
+    'data-task-depth',
+    '2'
+  )
 
   await parent.click()
-  await expect(page.locator('[data-component="modal-card"]').getByRole('button', { name: 'Book hotel' })).toBeVisible()
+  await expect(
+    page.locator('[data-component="modal-card"]').getByRole('button', { name: 'Book hotel' })
+  ).toBeVisible()
 })
 
 test('month task cards and task surfaces expose subtask completion controls', async ({ page }) => {
@@ -37,23 +87,72 @@ test('month task cards and task surfaces expose subtask completion controls', as
     sessionStorage.setItem('surface-seeded', '1')
     const now = new Date()
     const date = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
-    localStorage.setItem('calino-storage', JSON.stringify({
-      state: {
-        calendars: [{ id: 'default', name: 'Offline calendar', color: '#4285F4', isVisible: true, isDefault: true, showTasksInViews: true }],
-        events: [
-          { id: 'surface-parent', calendarId: 'default', title: 'Surface parent', type: 'task', start: `${date}T00:00:00`, end: `${date}T23:59:59`, dueDate: date, isAllDay: true, completed: false },
-          { id: 'surface-child', calendarId: 'default', title: 'Surface child', type: 'task', parentTaskId: 'surface-parent', start: `${date}T00:00:00`, end: `${date}T23:59:59`, dueDate: date, isAllDay: true, completed: false },
-          { id: 'surface-grandchild', calendarId: 'default', title: 'Surface grandchild', type: 'task', parentTaskId: 'surface-child', start: `${date}T00:00:00`, end: `${date}T23:59:59`, dueDate: date, isAllDay: true, completed: false },
-        ],
-      }, version: 1,
-    }))
+    localStorage.setItem(
+      'calino-storage',
+      JSON.stringify({
+        state: {
+          calendars: [
+            {
+              id: 'default',
+              name: 'Offline calendar',
+              color: '#4285F4',
+              isVisible: true,
+              isDefault: true,
+              showTasksInViews: true,
+            },
+          ],
+          events: [
+            {
+              id: 'surface-parent',
+              calendarId: 'default',
+              title: 'Surface parent',
+              type: 'task',
+              start: `${date}T00:00:00`,
+              end: `${date}T23:59:59`,
+              dueDate: date,
+              isAllDay: true,
+              completed: false,
+            },
+            {
+              id: 'surface-child',
+              calendarId: 'default',
+              title: 'Surface child',
+              type: 'task',
+              parentTaskId: 'surface-parent',
+              start: `${date}T00:00:00`,
+              end: `${date}T23:59:59`,
+              dueDate: date,
+              isAllDay: true,
+              completed: false,
+            },
+            {
+              id: 'surface-grandchild',
+              calendarId: 'default',
+              title: 'Surface grandchild',
+              type: 'task',
+              parentTaskId: 'surface-child',
+              start: `${date}T00:00:00`,
+              end: `${date}T23:59:59`,
+              dueDate: date,
+              isAllDay: true,
+              completed: false,
+            },
+          ],
+        },
+        version: 1,
+      })
+    )
   })
 
   await page.goto('/month')
-  const childCard = page.locator('[data-component="event-card"]').filter({ hasText: 'Surface child' })
+  const childCard = page
+    .locator('[data-component="event-card"]')
+    .filter({ hasText: 'Surface child' })
   await expect(childCard).toHaveAttribute('aria-label', /subtask/i)
 
-  const parentCard = page.locator('[data-component="event-card"]').filter({ hasText: 'Surface parent' })
+  const parentCard = page
+    .locator('[data-component="event-card"]')
+    .filter({ hasText: 'Surface parent' })
   await parentCard.click()
 
   const preview = page.locator('[data-component="event-preview"]')
@@ -66,13 +165,110 @@ test('month task cards and task surfaces expose subtask completion controls', as
   const modal = page.locator('[data-component="modal-card"]')
   await expect(modal.getByRole('button', { name: 'Surface child' })).toBeVisible()
   await expect(modal.getByRole('button', { name: 'Surface grandchild' })).toBeVisible()
-  await expect(modal.getByRole('checkbox', { name: 'Mark "Surface grandchild" as incomplete' })).toBeChecked()
+  await expect(
+    modal.getByRole('checkbox', { name: 'Mark "Surface grandchild" as incomplete' })
+  ).toBeChecked()
 
   await page.reload()
   await page.goto('/tasks')
   await page.locator('main').getByRole('button', { name: 'Done' }).click()
-  await expect(page.locator('[data-component="task-row"]').filter({ hasText: 'Surface child' }).getByRole('button', { name: 'Mark as incomplete' })).toBeVisible()
-  await expect(page.locator('[data-component="task-row"]').filter({ hasText: 'Surface grandchild' }).getByRole('button', { name: 'Mark as incomplete' })).toBeVisible()
+  await expect(
+    page
+      .locator('[data-component="task-row"]')
+      .filter({ hasText: 'Surface child' })
+      .getByRole('button', { name: 'Mark as incomplete' })
+  ).toBeVisible()
+  await expect(
+    page
+      .locator('[data-component="task-row"]')
+      .filter({ hasText: 'Surface grandchild' })
+      .getByRole('button', { name: 'Mark as incomplete' })
+  ).toBeVisible()
+})
+
+test('large subtask trees collapse with a chevron across task views', async ({ page }) => {
+  await clearState(page)
+  await page.addInitScript(() => {
+    const now = new Date()
+    const date = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+    localStorage.setItem(
+      'calino-storage',
+      JSON.stringify({
+        state: {
+          calendars: [
+            {
+              id: 'default',
+              name: 'Offline calendar',
+              color: '#4285F4',
+              isVisible: true,
+              isDefault: true,
+              showTasksInViews: true,
+            },
+          ],
+          events: [
+            {
+              id: 'collapse-parent',
+              calendarId: 'default',
+              title: 'Collapse parent',
+              type: 'task',
+              start: `${date}T00:00:00`,
+              end: `${date}T23:59:59`,
+              dueDate: date,
+              isAllDay: true,
+              completed: false,
+            },
+            ...['one', 'two', 'three', 'four'].map((suffix) => ({
+              id: `collapse-${suffix}`,
+              calendarId: 'default',
+              title: `Collapse child ${suffix}`,
+              parentTaskId: 'collapse-parent',
+              type: 'task',
+              start: `${date}T00:00:00`,
+              end: `${date}T23:59:59`,
+              dueDate: date,
+              isAllDay: true,
+              completed: false,
+            })),
+          ],
+        },
+        version: 1,
+      })
+    )
+  })
+
+  const assertCollapsed = async (route: string): Promise<void> => {
+    const parent = page
+      .locator(
+        route === '/agenda' ? '[data-component="agenda-task"]' : '[data-component="event-card"]'
+      )
+      .filter({ hasText: 'Collapse parent' })
+      .first()
+    await expect(parent).toBeVisible()
+    const toggle = parent.locator('[data-component="task-collapse-toggle"]')
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    await expect(page.getByText('Collapse child one')).not.toBeVisible()
+  }
+
+  for (const route of ['/month', '/week', '/agenda', '/day']) {
+    await page.goto(route)
+    await assertCollapsed(route)
+  }
+
+  await page.goto('/tasks')
+  const taskRow = page.locator('[data-component="task-row"]').filter({ hasText: 'Collapse parent' })
+  const taskToggle = taskRow.getByRole('button', { name: /Expand subtasks for "Collapse parent"/ })
+  await expect(taskToggle).toHaveAttribute('aria-expanded', 'false')
+  await taskToggle.click()
+  await expect(
+    page.locator('[data-component="task-row"]').filter({ hasText: 'Collapse child one' })
+  ).toBeVisible()
+
+  await taskRow.getByText('Collapse parent').click()
+  const modal = page.locator('[data-component="modal-card"]')
+  const modalToggle = modal.getByRole('button', { name: /Expand subtasks for "Collapse parent"/ })
+  await expect(modalToggle).toHaveAttribute('aria-expanded', 'false')
+  await modalToggle.click()
+  await expect(modal.getByRole('button', { name: 'Collapse child one' })).toBeVisible()
 })
 
 test.describe('mobile task surfaces', () => {
@@ -87,16 +283,61 @@ test.describe('mobile task surfaces', () => {
     await page.addInitScript(() => {
       const now = new Date()
       const date = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
-      localStorage.setItem('calino-storage', JSON.stringify({
-        state: {
-          calendars: [{ id: 'default', name: 'Offline calendar', color: '#4285F4', isVisible: true, isDefault: true, showTasksInViews: true }],
-          events: [
-            { id: 'mobile-parent', calendarId: 'default', title: 'Mobile parent', type: 'task', start: `${date}T00:00:00`, end: `${date}T23:59:59`, dueDate: date, isAllDay: true, completed: false },
-            { id: 'mobile-child', calendarId: 'default', title: 'Mobile child', type: 'task', parentTaskId: 'mobile-parent', start: `${date}T00:00:00`, end: `${date}T23:59:59`, dueDate: date, isAllDay: true, completed: false },
-            { id: 'mobile-grandchild', calendarId: 'default', title: 'Mobile grandchild', type: 'task', parentTaskId: 'mobile-child', start: `${date}T00:00:00`, end: `${date}T23:59:59`, dueDate: date, isAllDay: true, completed: false },
-          ],
-        }, version: 1,
-      }))
+      localStorage.setItem(
+        'calino-storage',
+        JSON.stringify({
+          state: {
+            calendars: [
+              {
+                id: 'default',
+                name: 'Offline calendar',
+                color: '#4285F4',
+                isVisible: true,
+                isDefault: true,
+                showTasksInViews: true,
+              },
+            ],
+            events: [
+              {
+                id: 'mobile-parent',
+                calendarId: 'default',
+                title: 'Mobile parent',
+                type: 'task',
+                start: `${date}T00:00:00`,
+                end: `${date}T23:59:59`,
+                dueDate: date,
+                isAllDay: true,
+                completed: false,
+              },
+              {
+                id: 'mobile-child',
+                calendarId: 'default',
+                title: 'Mobile child',
+                type: 'task',
+                parentTaskId: 'mobile-parent',
+                start: `${date}T00:00:00`,
+                end: `${date}T23:59:59`,
+                dueDate: date,
+                isAllDay: true,
+                completed: false,
+              },
+              {
+                id: 'mobile-grandchild',
+                calendarId: 'default',
+                title: 'Mobile grandchild',
+                type: 'task',
+                parentTaskId: 'mobile-child',
+                start: `${date}T00:00:00`,
+                end: `${date}T23:59:59`,
+                dueDate: date,
+                isAllDay: true,
+                completed: false,
+              },
+            ],
+          },
+          version: 1,
+        })
+      )
     })
 
     await page.goto('/month')
@@ -109,159 +350,347 @@ test.describe('mobile task surfaces', () => {
     // taps through to the day cell. Use the week surface for the preview check,
     // where the task card remains an actionable target.
     await page.goto('/week')
-    const weekParentCard = page.locator('[data-component="event-card"][aria-label^="Mobile parent"]')
+    const weekParentCard = page.locator(
+      '[data-component="event-card"][aria-label^="Mobile parent"]'
+    )
     await expect(weekParentCard).toBeVisible()
-    await weekParentCard.click()
+    await weekParentCard.getByText('Mobile parent').click()
 
     const preview = page.locator('[data-component="event-preview"]')
     await expect(preview).toBeVisible()
-    await expect(preview.locator('[data-component="task-preview-subtask-checkbox"]')).toHaveCSS('width', '20px')
-    const previewRow = preview.locator('[data-component="task-preview-subtask-checkbox"]').locator('..')
+    await expect(preview.locator('[data-component="task-preview-subtask-checkbox"]')).toHaveCSS(
+      'width',
+      '20px'
+    )
+    const previewRow = preview
+      .locator('[data-component="task-preview-subtask-checkbox"]')
+      .locator('..')
     expect((await previewRow.boundingBox())?.height).toBeGreaterThanOrEqual(44)
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)
+    ).toBe(true)
 
     await preview.getByRole('button', { name: 'Open task' }).click()
     const modal = page.locator('[data-component="modal-card"]')
     await expect(modal).toBeVisible()
     const modalBox = await modal.boundingBox()
     expect(modalBox?.width).toBeLessThanOrEqual(390)
-    const grandchildRow = modal.locator('[data-component="subtask-row"]').filter({ hasText: 'Mobile grandchild' })
+    const grandchildRow = modal
+      .locator('[data-component="subtask-row"]')
+      .filter({ hasText: 'Mobile grandchild' })
     await expect(grandchildRow).toHaveAttribute('data-task-depth', '1')
     expect((await grandchildRow.boundingBox())?.height).toBeGreaterThanOrEqual(44)
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)
+    ).toBe(true)
   })
 })
 
 test('shows only parent tasks in the sidebar', async ({ page }) => {
   await clearState(page)
   await page.addInitScript(() => {
-    localStorage.setItem('calino-storage', JSON.stringify({
-      state: {
-        calendars: [{ id: 'default', name: 'Offline calendar', color: '#4285F4', isVisible: true, isDefault: true, showTasksInViews: true }],
-        events: [
-          { id: 'parent', calendarId: 'default', title: 'Plan trip', type: 'task', start: '2026-07-10T09:00:00.000Z', end: '2026-07-10T09:00:00.000Z', isAllDay: false, completed: false },
-          { id: 'child', calendarId: 'default', title: 'Book hotel', parentTaskId: 'parent', type: 'task', start: '2026-07-10T09:00:00.000Z', end: '2026-07-10T09:00:00.000Z', isAllDay: false, completed: false },
-        ],
-      }, version: 1,
-    }))
+    localStorage.setItem(
+      'calino-storage',
+      JSON.stringify({
+        state: {
+          calendars: [
+            {
+              id: 'default',
+              name: 'Offline calendar',
+              color: '#4285F4',
+              isVisible: true,
+              isDefault: true,
+              showTasksInViews: true,
+            },
+          ],
+          events: [
+            {
+              id: 'parent',
+              calendarId: 'default',
+              title: 'Plan trip',
+              type: 'task',
+              start: '2026-07-10T09:00:00.000Z',
+              end: '2026-07-10T09:00:00.000Z',
+              isAllDay: false,
+              completed: false,
+            },
+            {
+              id: 'child',
+              calendarId: 'default',
+              title: 'Book hotel',
+              parentTaskId: 'parent',
+              type: 'task',
+              start: '2026-07-10T09:00:00.000Z',
+              end: '2026-07-10T09:00:00.000Z',
+              isAllDay: false,
+              completed: false,
+            },
+          ],
+        },
+        version: 1,
+      })
+    )
   })
 
   await page.goto('/month')
   const tasksHeader = page.locator('[data-component="tasks-header"]')
-  if (await tasksHeader.getAttribute('aria-expanded') === 'false') await tasksHeader.click()
+  if ((await tasksHeader.getAttribute('aria-expanded')) === 'false') await tasksHeader.click()
 
   const sidebarTasks = page.locator('[data-component="tasks-section"]')
   await expect(sidebarTasks.getByText('Plan trip')).toBeVisible()
   await expect(sidebarTasks.getByText('Book hotel')).not.toBeVisible()
 })
 
-test('parents with hidden subtasks show a subtask-count badge in the sidebar', async ({
-  page,
-}) => {
+test('parents with hidden subtasks show a subtask-count badge in the sidebar', async ({ page }) => {
   // Subtasks are intentionally hidden from the sidebar (the parent represents
   // the whole subtree). But without a counter, users think their child task
   // has vanished. The badge "↳ 1" on the parent row makes the indirection
   // discoverable.
   await clearState(page)
   await page.addInitScript(() => {
-    localStorage.setItem('calino-storage', JSON.stringify({
-      state: {
-        calendars: [{ id: 'default', name: 'Offline calendar', color: '#4285F4', isVisible: true, isDefault: true, showTasksInViews: true }],
-        events: [
-          { id: 'parent', calendarId: 'default', title: 'Plan trip', type: 'task', start: '2026-07-10T09:00:00.000Z', end: '2026-07-10T09:00:00.000Z', isAllDay: false, completed: false },
-          { id: 'child', calendarId: 'default', title: 'Book hotel', parentTaskId: 'parent', type: 'task', start: '2026-07-10T09:00:00.000Z', end: '2026-07-10T09:00:00.000Z', isAllDay: false, completed: false },
-        ],
-      }, version: 1,
-    }))
+    localStorage.setItem(
+      'calino-storage',
+      JSON.stringify({
+        state: {
+          calendars: [
+            {
+              id: 'default',
+              name: 'Offline calendar',
+              color: '#4285F4',
+              isVisible: true,
+              isDefault: true,
+              showTasksInViews: true,
+            },
+          ],
+          events: [
+            {
+              id: 'parent',
+              calendarId: 'default',
+              title: 'Plan trip',
+              type: 'task',
+              start: '2026-07-10T09:00:00.000Z',
+              end: '2026-07-10T09:00:00.000Z',
+              isAllDay: false,
+              completed: false,
+            },
+            {
+              id: 'child',
+              calendarId: 'default',
+              title: 'Book hotel',
+              parentTaskId: 'parent',
+              type: 'task',
+              start: '2026-07-10T09:00:00.000Z',
+              end: '2026-07-10T09:00:00.000Z',
+              isAllDay: false,
+              completed: false,
+            },
+          ],
+        },
+        version: 1,
+      })
+    )
   })
 
   await page.goto('/month')
   const tasksHeader = page.locator('[data-component="tasks-header"]')
-  if (await tasksHeader.getAttribute('aria-expanded') === 'false') await tasksHeader.click()
+  if ((await tasksHeader.getAttribute('aria-expanded')) === 'false') await tasksHeader.click()
 
-  const parentRow = page.locator('[data-component="tasks-section"]').getByText('Plan trip').locator('..').locator('..')
+  const parentRow = page
+    .locator('[data-component="tasks-section"]')
+    .getByText('Plan trip')
+    .locator('..')
+    .locator('..')
   await expect(parentRow.locator('[data-component="task-subtask-count"]')).toBeVisible()
-  await expect(parentRow.locator('[data-component="task-subtask-count"]')).toHaveAttribute('data-subtask-count', '1')
+  await expect(parentRow.locator('[data-component="task-subtask-count"]')).toHaveAttribute(
+    'data-subtask-count',
+    '1'
+  )
 })
 
-test('subtask count badge includes grandchildren and drops completed work', async ({
-  page,
-}) => {
+test('subtask count badge includes grandchildren and drops completed work', async ({ page }) => {
   // The badge should count the whole open subtree, not just direct children.
   // A completed grandchild must NOT inflate the badge — the badge tells the
   // user about *open* work under the row.
   await clearState(page)
   await page.addInitScript(() => {
-    localStorage.setItem('calino-storage', JSON.stringify({
-      state: {
-        calendars: [{ id: 'default', name: 'Offline calendar', color: '#4285F4', isVisible: true, isDefault: true, showTasksInViews: true }],
-        events: [
-          { id: 'parent', calendarId: 'default', title: 'Plan trip', type: 'task', start: '2026-07-10T09:00:00.000Z', end: '2026-07-10T09:00:00.000Z', isAllDay: false, completed: false },
-          // Open child → counted.
-          { id: 'child-open', calendarId: 'default', title: 'Book hotel', parentTaskId: 'parent', type: 'task', start: '2026-07-10T09:00:00.000Z', end: '2026-07-10T09:00:00.000Z', isAllDay: false, completed: false },
-          // Completed child → not counted.
-          { id: 'child-done', calendarId: 'default', title: 'Renew passport', parentTaskId: 'parent', type: 'task', start: '2026-07-10T09:00:00.000Z', end: '2026-07-10T09:00:00.000Z', isAllDay: false, completed: true },
-          // Open grandchild → counted under the parent (total open = 2).
-          { id: 'grand-open', calendarId: 'default', title: 'Pack charger', parentTaskId: 'child-open', type: 'task', start: '2026-07-10T09:00:00.000Z', end: '2026-07-10T09:00:00.000Z', isAllDay: false, completed: false },
-        ],
-      }, version: 1,
-    }))
+    localStorage.setItem(
+      'calino-storage',
+      JSON.stringify({
+        state: {
+          calendars: [
+            {
+              id: 'default',
+              name: 'Offline calendar',
+              color: '#4285F4',
+              isVisible: true,
+              isDefault: true,
+              showTasksInViews: true,
+            },
+          ],
+          events: [
+            {
+              id: 'parent',
+              calendarId: 'default',
+              title: 'Plan trip',
+              type: 'task',
+              start: '2026-07-10T09:00:00.000Z',
+              end: '2026-07-10T09:00:00.000Z',
+              isAllDay: false,
+              completed: false,
+            },
+            // Open child → counted.
+            {
+              id: 'child-open',
+              calendarId: 'default',
+              title: 'Book hotel',
+              parentTaskId: 'parent',
+              type: 'task',
+              start: '2026-07-10T09:00:00.000Z',
+              end: '2026-07-10T09:00:00.000Z',
+              isAllDay: false,
+              completed: false,
+            },
+            // Completed child → not counted.
+            {
+              id: 'child-done',
+              calendarId: 'default',
+              title: 'Renew passport',
+              parentTaskId: 'parent',
+              type: 'task',
+              start: '2026-07-10T09:00:00.000Z',
+              end: '2026-07-10T09:00:00.000Z',
+              isAllDay: false,
+              completed: true,
+            },
+            // Open grandchild → counted under the parent (total open = 2).
+            {
+              id: 'grand-open',
+              calendarId: 'default',
+              title: 'Pack charger',
+              parentTaskId: 'child-open',
+              type: 'task',
+              start: '2026-07-10T09:00:00.000Z',
+              end: '2026-07-10T09:00:00.000Z',
+              isAllDay: false,
+              completed: false,
+            },
+          ],
+        },
+        version: 1,
+      })
+    )
   })
 
   await page.goto('/month')
   const tasksHeader = page.locator('[data-component="tasks-header"]')
-  if (await tasksHeader.getAttribute('aria-expanded') === 'false') await tasksHeader.click()
+  if ((await tasksHeader.getAttribute('aria-expanded')) === 'false') await tasksHeader.click()
 
-  const parentRow = page.locator('[data-component="tasks-section"]').getByText('Plan trip').locator('..').locator('..')
+  const parentRow = page
+    .locator('[data-component="tasks-section"]')
+    .getByText('Plan trip')
+    .locator('..')
+    .locator('..')
   await expect(parentRow.locator('[data-component="task-subtask-count"]')).toHaveAttribute(
     'data-subtask-count',
     '2'
   )
 })
 
-
 test('hides tasks from disabled calendars in the sidebar', async ({ page }) => {
   await clearState(page)
   await page.addInitScript(() => {
-    localStorage.setItem('calino-storage', JSON.stringify({
-      state: {
-        calendars: [
-          { id: 'default', name: 'Offline calendar', color: '#4285F4', isVisible: true, isDefault: true, showTasksInViews: true },
-          { id: 'hidden', name: 'Hidden calendar', color: '#EA4335', isVisible: false, isDefault: false, showTasksInViews: true },
-        ],
-        events: [
-          { id: 'hidden-task', calendarId: 'hidden', title: 'Hidden sidebar task', type: 'task', start: '2026-07-10T09:00:00.000Z', end: '2026-07-10T09:00:00.000Z', isAllDay: false, completed: false },
-        ],
-      }, version: 1,
-    }))
+    localStorage.setItem(
+      'calino-storage',
+      JSON.stringify({
+        state: {
+          calendars: [
+            {
+              id: 'default',
+              name: 'Offline calendar',
+              color: '#4285F4',
+              isVisible: true,
+              isDefault: true,
+              showTasksInViews: true,
+            },
+            {
+              id: 'hidden',
+              name: 'Hidden calendar',
+              color: '#EA4335',
+              isVisible: false,
+              isDefault: false,
+              showTasksInViews: true,
+            },
+          ],
+          events: [
+            {
+              id: 'hidden-task',
+              calendarId: 'hidden',
+              title: 'Hidden sidebar task',
+              type: 'task',
+              start: '2026-07-10T09:00:00.000Z',
+              end: '2026-07-10T09:00:00.000Z',
+              isAllDay: false,
+              completed: false,
+            },
+          ],
+        },
+        version: 1,
+      })
+    )
   })
 
   await page.goto('/month')
   const tasksHeader = page.locator('[data-component="tasks-header"]')
-  if (await tasksHeader.getAttribute('aria-expanded') === 'false') await tasksHeader.click()
+  if ((await tasksHeader.getAttribute('aria-expanded')) === 'false') await tasksHeader.click()
 
-  await expect(page.locator('[data-component="tasks-section"]').getByText('Hidden sidebar task')).not.toBeVisible()
+  await expect(
+    page.locator('[data-component="tasks-section"]').getByText('Hidden sidebar task')
+  ).not.toBeVisible()
 })
 
 test('keeps undated imported tasks out of calendar and agenda views', async ({ page }) => {
   await clearState(page)
   const today = new Date().toISOString()
   await page.addInitScript((today) => {
-    localStorage.setItem('calino-storage', JSON.stringify({
-      state: {
-        calendars: [{ id: 'default', name: 'Offline calendar', color: '#4285F4', isVisible: true, isDefault: true, showTasksInViews: true }],
-        events: [
-          { id: 'undated', calendarId: 'default', title: 'Imported without due date', type: 'task', start: today, end: today, isAllDay: false, completed: false },
-        ],
-      }, version: 1,
-    }))
+    localStorage.setItem(
+      'calino-storage',
+      JSON.stringify({
+        state: {
+          calendars: [
+            {
+              id: 'default',
+              name: 'Offline calendar',
+              color: '#4285F4',
+              isVisible: true,
+              isDefault: true,
+              showTasksInViews: true,
+            },
+          ],
+          events: [
+            {
+              id: 'undated',
+              calendarId: 'default',
+              title: 'Imported without due date',
+              type: 'task',
+              start: today,
+              end: today,
+              isAllDay: false,
+              completed: false,
+            },
+          ],
+        },
+        version: 1,
+      })
+    )
   }, today)
 
   await page.goto('/tasks')
   await expect(page.locator('main').getByText('Imported without due date')).toBeVisible()
 
   await page.goto('/month')
-  await expect(page.locator('[data-component="calendar-grid"]').getByText('Imported without due date')).not.toBeVisible()
+  await expect(
+    page.locator('[data-component="calendar-grid"]').getByText('Imported without due date')
+  ).not.toBeVisible()
 
   await page.goto('/agenda')
   await expect(page.locator('main').getByText('Imported without due date')).not.toBeVisible()
@@ -270,19 +699,63 @@ test('keeps undated imported tasks out of calendar and agenda views', async ({ p
 test('filters all tasks by project without changing calendar visibility', async ({ page }) => {
   await clearState(page)
   await page.addInitScript(() => {
-    localStorage.setItem('calino-storage', JSON.stringify({
-      state: {
-        calendars: [
-          { id: 'default', name: 'Personal', color: '#4285F4', isVisible: true, isDefault: true, showTasksInViews: true },
-          { id: 'work', name: 'Work', color: '#EA4335', isVisible: true, isDefault: false, showTasksInViews: true },
-          { id: 'events-only', name: 'Events only', color: '#34A853', isVisible: true, isDefault: false, showTasksInViews: true, supportedComponents: ['VEVENT'] },
-        ],
-        events: [
-          { id: 'personal-task', calendarId: 'default', title: 'Personal task', type: 'task', start: '2026-07-10T09:00:00.000Z', end: '2026-07-10T09:00:00.000Z', isAllDay: false, completed: false },
-          { id: 'work-task', calendarId: 'work', title: 'Work task', type: 'task', start: '2026-07-10T09:00:00.000Z', end: '2026-07-10T09:00:00.000Z', isAllDay: false, completed: false },
-        ],
-      }, version: 1,
-    }))
+    localStorage.setItem(
+      'calino-storage',
+      JSON.stringify({
+        state: {
+          calendars: [
+            {
+              id: 'default',
+              name: 'Personal',
+              color: '#4285F4',
+              isVisible: true,
+              isDefault: true,
+              showTasksInViews: true,
+            },
+            {
+              id: 'work',
+              name: 'Work',
+              color: '#EA4335',
+              isVisible: true,
+              isDefault: false,
+              showTasksInViews: true,
+            },
+            {
+              id: 'events-only',
+              name: 'Events only',
+              color: '#34A853',
+              isVisible: true,
+              isDefault: false,
+              showTasksInViews: true,
+              supportedComponents: ['VEVENT'],
+            },
+          ],
+          events: [
+            {
+              id: 'personal-task',
+              calendarId: 'default',
+              title: 'Personal task',
+              type: 'task',
+              start: '2026-07-10T09:00:00.000Z',
+              end: '2026-07-10T09:00:00.000Z',
+              isAllDay: false,
+              completed: false,
+            },
+            {
+              id: 'work-task',
+              calendarId: 'work',
+              title: 'Work task',
+              type: 'task',
+              start: '2026-07-10T09:00:00.000Z',
+              end: '2026-07-10T09:00:00.000Z',
+              isAllDay: false,
+              completed: false,
+            },
+          ],
+        },
+        version: 1,
+      })
+    )
   })
 
   await page.goto('/tasks')

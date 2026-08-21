@@ -1644,6 +1644,17 @@
   margin: 4px 0 12px;
 }
 
+.subtaskHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 28px;
+}
+
+.subtaskCollapseToggle {
+  color: var(--ink-2, #6f6a62);
+}
+
 .subtaskItem {
   display: flex;
   align-items: center;
@@ -1666,6 +1677,7 @@
 
 .subtaskTitle {
   min-width: 0;
+  flex: 1;
   overflow: hidden;
   border: 0;
   background: transparent;

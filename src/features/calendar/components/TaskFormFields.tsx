@@ -3,6 +3,7 @@ import { useLayoutEffect, useRef, useState } from 'react'
 import { format } from 'date-fns'
 import type { CalendarEvent, TaskPriority } from '@/types'
 import type { TaskTreeItem } from '@/lib/taskTree'
+import { TaskCollapseToggle } from './TaskCollapseToggle'
 import { useScrollInput } from '@/hooks/useScrollInput'
 import { useSettingsStore } from '@/store/settingsStore'
 import styles from './EventModal.module.css'
@@ -26,6 +27,12 @@ interface TaskFormFieldsProps {
   subtasks: TaskTreeItem[]
   onOpenSubtask: (taskId: string) => void
   onToggleSubtask: (task: CalendarEvent) => void
+  rootTaskId?: string
+  rootTaskTitle?: string
+  taskHasSubtasks: (taskId: string) => boolean
+  taskIsCollapsed: (taskId: string) => boolean
+  taskDescendantCount: (taskId: string) => number
+  onToggleTaskSubtasks: (taskId: string) => void
   readOnly?: boolean
   readOnlyTaskIds?: Set<string>
   onAddSubtask?: () => void
@@ -85,6 +92,12 @@ export function TaskFormFields({
   subtasks,
   onOpenSubtask,
   onToggleSubtask,
+  rootTaskId,
+  rootTaskTitle,
+  taskHasSubtasks,
+  taskIsCollapsed,
+  taskDescendantCount,
+  onToggleTaskSubtasks,
   readOnly = false,
   readOnlyTaskIds,
   onAddSubtask,
@@ -207,9 +220,20 @@ export function TaskFormFields({
         )}
       </div>
 
-      {subtasks.length > 0 && (
+      {(subtasks.length > 0 || (rootTaskId && taskHasSubtasks(rootTaskId))) && (
         <div className={styles.subtaskList}>
-          <span className={styles.label}>Subtasks</span>
+          <div className={styles.subtaskHeading}>
+            <span className={styles.label}>Subtasks</span>
+            {rootTaskId && rootTaskTitle && taskHasSubtasks(rootTaskId) && (
+              <TaskCollapseToggle
+                taskTitle={rootTaskTitle}
+                collapsed={taskIsCollapsed(rootTaskId)}
+                hiddenCount={taskDescendantCount(rootTaskId)}
+                onToggle={() => onToggleTaskSubtasks(rootTaskId)}
+                className={styles.subtaskCollapseToggle}
+              />
+            )}
+          </div>
           {subtasks.map(({ task, depth }) => (
             <div
               key={task.id}
@@ -236,6 +260,15 @@ export function TaskFormFields({
               >
                 {task.title}
               </button>
+              {taskHasSubtasks(task.id) && (
+                <TaskCollapseToggle
+                  taskTitle={task.title}
+                  collapsed={taskIsCollapsed(task.id)}
+                  hiddenCount={taskDescendantCount(task.id)}
+                  onToggle={() => onToggleTaskSubtasks(task.id)}
+                  className={styles.subtaskCollapseToggle}
+                />
+              )}
             </div>
           ))}
         </div>

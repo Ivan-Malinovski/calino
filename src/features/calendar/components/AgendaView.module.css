@@ -293,6 +293,11 @@
   font-size: 13px;
   font-weight: 500;
   color: var(--ink, #2c2823);
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .agendaTaskCompleted .agendaTaskTitle {
@@ -326,6 +331,11 @@
   outline-offset: 2px;
 }
 
+.agendaTaskCollapseToggle {
+  margin-left: auto;
+  color: var(--ink-2, #6f6a62);
+}
+
 /* On a phone the row is wide and mostly empty to the right of the title, so
    the check reads better parked on the card's trailing edge — thumb-side and
    in one column down the list — than wedged between the time and the title.
@@ -333,7 +343,12 @@
 @media (max-width: 768px) { /* sync with config.ts MOBILE_BREAKPOINT */
   .agendaTaskIcon {
     order: 1;
-    margin-left: auto;
+    margin-left: 4px;
+  }
+
+  .agendaTaskCollapseToggle {
+    order: 1;
+    margin-left: 0;
   }
 }
 

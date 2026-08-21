@@ -39,8 +39,9 @@ import { useSmartDefaultsStore } from '@/store/smartDefaultsStore'
 import { useSettingsStore } from '@/store/settingsStore'
 import { exportSingleEventIcs } from '@/lib/icsExport'
 import { buildMailtoUri } from '@/lib/mailtoInvite'
-import { getDirectSubtasks, getTaskDescendants } from '@/lib/taskTree'
+import { getDirectSubtasks, getVisibleTaskDescendants } from '@/lib/taskTree'
 import { completeTaskAndSync } from '@/lib/taskCompletion'
+import { useTaskCollapse } from '../hooks/useTaskCollapse'
 
 import styles from './EventModal.module.css'
 
@@ -75,6 +76,7 @@ export function EventModal(): JSX.Element | null {
   const selectedEventType = useCalendarStore((state) => state.selectedEventType)
   const events = useCalendarStore((state) => state.events)
   const calendars = useCalendarStore((state) => state.calendars)
+  const taskCollapse = useTaskCollapse(events)
   const categories = useCalendarStore((state) => state.categories)
   const timeFormat = useSettingsStore((state) => state.timeFormat)
   const defaultDuration = useSettingsStore((state) => state.defaultDuration)
@@ -734,8 +736,11 @@ export function EventModal(): JSX.Element | null {
     [events, selectedEventId]
   )
   const subtasks = useMemo(
-    () => (selectedEventId ? getTaskDescendants(events, selectedEventId) : []),
-    [events, selectedEventId]
+    () =>
+      selectedEventId
+        ? getVisibleTaskDescendants(events, selectedEventId, taskCollapse.collapsedTaskIds)
+        : [],
+    [events, selectedEventId, taskCollapse.collapsedTaskIds]
   )
   const readOnlyTaskIds = useMemo(
     () =>
@@ -1718,6 +1723,12 @@ export function EventModal(): JSX.Element | null {
                     onParentTaskChange={setParentTaskId}
                     subtasks={subtasks}
                     onToggleSubtask={handleSubtaskToggle}
+                    rootTaskId={selectedEventId ?? undefined}
+                    rootTaskTitle={title}
+                    taskHasSubtasks={taskCollapse.hasSubtasks}
+                    taskIsCollapsed={taskCollapse.isCollapsed}
+                    taskDescendantCount={taskCollapse.descendantCount}
+                    onToggleTaskSubtasks={taskCollapse.toggleTask}
                     readOnly={isCurrentCalendarReadOnly}
                     readOnlyTaskIds={readOnlyTaskIds}
                     recurrence={{

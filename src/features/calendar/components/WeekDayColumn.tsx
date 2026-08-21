@@ -27,6 +27,10 @@ interface WeekDayColumnProps {
   calendars: Calendar[]
   hourHeight: number
   openModal: (start?: string, endDate?: string, eventId?: string, mode?: 'event' | 'task') => void
+  taskHasSubtasks: (taskId: string) => boolean
+  taskIsCollapsed: (taskId: string) => boolean
+  taskDescendantCount: (taskId: string) => number
+  onToggleTaskSubtasks: (taskId: string) => void
 }
 
 const WeekDayColumn = memo(function WeekDayColumn({
@@ -36,6 +40,10 @@ const WeekDayColumn = memo(function WeekDayColumn({
   calendars,
   hourHeight,
   openModal,
+  taskHasSubtasks,
+  taskIsCollapsed,
+  taskDescendantCount,
+  onToggleTaskSubtasks,
 }: WeekDayColumnProps): JSX.Element {
   const reducedMotion = useReducedMotion()
   const enterTransition = { duration: reducedMotion ? 0 : 0.18, ease: 'easeOut' as const }
@@ -121,7 +129,17 @@ const WeekDayColumn = memo(function WeekDayColumn({
           className={`${styles.eventPositioned} ${styles.taskPositioned}`}
           style={taskPillStyle(task, column, totalColumns)}
         >
-          <EventCard event={task} compact monthView enableResize={false} hideDueTime />
+          <EventCard
+            event={task}
+            compact
+            monthView
+            enableResize={false}
+            hideDueTime
+            taskHasSubtasks={taskHasSubtasks(task.id)}
+            taskSubtasksCollapsed={taskIsCollapsed(task.id)}
+            taskSubtaskCount={taskDescendantCount(task.id)}
+            onToggleTaskSubtasks={() => onToggleTaskSubtasks(task.id)}
+          />
         </motion.div>
       )
       continue

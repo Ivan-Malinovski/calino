@@ -69,6 +69,8 @@ import { consumesVerticalScroll } from '@/lib/scrollChaining'
 import styles from './CalendarGrid.module.css'
 import { duplicateEventWithSync } from '@/lib/duplicateWithSync'
 import { assignSpanLanes, compareDayEvents, makeDayFragments } from '../lib/multiDayFragments'
+import { filterTasksByCollapsedAncestors } from '@/lib/taskTree'
+import { useTaskCollapse } from '../hooks/useTaskCollapse'
 
 // Module-level so `useRovingGrid`'s `handleKeyDown` stays referentially stable.
 // ←/→ move one day, ↑/↓ move one week in the flattened cell list.
@@ -192,6 +194,7 @@ export function CalendarGrid(): JSX.Element {
   const isTallWindow = useIsTallWindow()
   const isWideWindow = useIsWideWindow()
   const isPortraitWindow = useIsPortraitWindow()
+  const taskCollapse = useTaskCollapse(events)
   const showAgendaSplit =
     agendaBelowMonthEnabled && ((isTallWindow && isPortraitWindow) || isCompactMobile)
   // #79: `compressPastWeeks` shrinks a week row to make room by trading away
@@ -587,10 +590,22 @@ export function CalendarGrid(): JSX.Element {
           (selectedCategoryNames.length === 0 ||
             event.categories?.some((c) => selectedCategoryNames.includes(c)))
       )
-      if (dayTasks.length > 0) map.set(dayKey, dayTasks)
+      const visibleTasks = filterTasksByCollapsedAncestors(
+        dayTasks,
+        events,
+        taskCollapse.collapsedTaskIds
+      )
+      if (visibleTasks.length > 0) map.set(dayKey, visibleTasks)
     }
     return map
-  }, [days, events, calendars, hideCompletedTasksInMonthView, selectedCategoryNames])
+  }, [
+    days,
+    events,
+    calendars,
+    hideCompletedTasksInMonthView,
+    selectedCategoryNames,
+    taskCollapse.collapsedTaskIds,
+  ])
 
   // `events` and `rangeExpansionVersion` are both kept as deps for
   // defense-in-depth (see WeekView for the rationale). R4.1/R4.3 review fix.
@@ -1147,6 +1162,10 @@ export function CalendarGrid(): JSX.Element {
                                 monthCapacity={null}
                                 isMobile={isMobile}
                                 isCompactMobile={isCompactMobile}
+                                taskHasSubtasks={taskCollapse.hasSubtasks}
+                                taskIsCollapsed={taskCollapse.isCollapsed}
+                                taskDescendantCount={taskCollapse.descendantCount}
+                                onToggleTaskSubtasks={taskCollapse.toggleTask}
                                 onDayClick={handleDayClick}
                                 onDayDoubleClick={handleDayDoubleClick}
                                 onDayNumberClick={handleDayNumberClick}
@@ -1337,6 +1356,10 @@ export function CalendarGrid(): JSX.Element {
                           }
                           isMobile={isMobile}
                           isCompactMobile={isCompactMobile}
+                          taskHasSubtasks={taskCollapse.hasSubtasks}
+                          taskIsCollapsed={taskCollapse.isCollapsed}
+                          taskDescendantCount={taskCollapse.descendantCount}
+                          onToggleTaskSubtasks={taskCollapse.toggleTask}
                           onDayClick={handleDayClick}
                           onDayDoubleClick={handleDayDoubleClick}
                           onDayNumberClick={handleDayNumberClick}
@@ -1424,6 +1447,10 @@ interface DroppableDayProps {
   monthCapacity: MonthCellCapacity | null
   isMobile: boolean
   isCompactMobile: boolean
+  taskHasSubtasks: (taskId: string) => boolean
+  taskIsCollapsed: (taskId: string) => boolean
+  taskDescendantCount: (taskId: string) => number
+  onToggleTaskSubtasks: (taskId: string) => void
   onDayClick: (day: Date) => void
   onDayDoubleClick: (day: Date) => void
   onDayNumberClick: (day: Date) => void
@@ -1458,6 +1485,10 @@ const DroppableDay = React.memo(function DroppableDay({
   monthCapacity,
   isMobile,
   isCompactMobile,
+  taskHasSubtasks,
+  taskIsCollapsed,
+  taskDescendantCount,
+  onToggleTaskSubtasks,
   onDayClick,
   onDayDoubleClick,
   onDayNumberClick,
@@ -1748,6 +1779,10 @@ const DroppableDay = React.memo(function DroppableDay({
                       enableResize={false}
                       monthView
                       clickDisabled
+                      taskHasSubtasks={taskHasSubtasks(task.id)}
+                      taskSubtasksCollapsed={taskIsCollapsed(task.id)}
+                      taskSubtaskCount={taskDescendantCount(task.id)}
+                      onToggleTaskSubtasks={() => onToggleTaskSubtasks(task.id)}
                     />
                   </motion.div>
                 ))}
@@ -1845,6 +1880,10 @@ const DroppableDay = React.memo(function DroppableDay({
                       isMobileMonth={isMobile}
                       enableResize={false}
                       monthView
+                      taskHasSubtasks={taskHasSubtasks(task.id)}
+                      taskSubtasksCollapsed={taskIsCollapsed(task.id)}
+                      taskSubtaskCount={taskDescendantCount(task.id)}
+                      onToggleTaskSubtasks={() => onToggleTaskSubtasks(task.id)}
                     />
                   </motion.div>
                 ))}

@@ -570,6 +570,21 @@
   padding-right: 0;
 }
 
+.task .dragContentWithCollapse {
+  flex-direction: row;
+  align-items: center;
+  gap: 3px;
+}
+
+.cardTaskCollapseToggle {
+  color: var(--event-color, var(--accent));
+}
+
+.task .dragContentWithCollapse .title {
+  min-width: 0;
+  flex: 1;
+}
+
 /* Month-view child tasks carry a small branch marker so their relationship is
    visible even when the title and due date are otherwise identical to a root
    task. It lives inside the drag content so it truncates naturally with the

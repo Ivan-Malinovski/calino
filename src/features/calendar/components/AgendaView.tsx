@@ -17,6 +17,9 @@ import { formatEventTime, toEventInstant } from '@/lib/datetime'
 import { LocationLink } from './LocationLink'
 import { useDateChangeMotion } from '@/hooks/useDateChangeMotion'
 import { useTaskContextMenuItems } from '../hooks/useTaskContextMenuItems'
+import { filterTasksByCollapsedAncestors } from '@/lib/taskTree'
+import { useTaskCollapse } from '../hooks/useTaskCollapse'
+import { TaskCollapseToggle } from './TaskCollapseToggle'
 import styles from './AgendaView.module.css'
 
 interface EventWithDate {
@@ -85,6 +88,7 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
   const previewEventId = useCalendarStore((state) => state.previewEventId)
   const closePreview = useCalendarStore((state) => state.closePreview)
   const events = useCalendarStore((state) => state.events)
+  const taskCollapse = useTaskCollapse(events)
   const timeFormat = useSettingsStore((state) => state.timeFormat)
   const deleteEvent = useCalendarStore((state) => state.deleteEvent)
   // Shared with the tasks list and the sidebar so ticking a task off behaves
@@ -196,6 +200,20 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
       })
     })
 
+    eventMap.forEach((arr, dateKey) => {
+      const tasks = arr.filter(({ event }) => event.type === 'task').map(({ event }) => event)
+      if (tasks.length === 0) return
+      const visibleTaskIds = new Set(
+        filterTasksByCollapsedAncestors(tasks, events, taskCollapse.collapsedTaskIds).map(
+          (task) => task.id
+        )
+      )
+      eventMap.set(
+        dateKey,
+        arr.filter(({ event }) => event.type !== 'task' || visibleTaskIds.has(event.id))
+      )
+    })
+
     const todayKey = format(new Date(), 'yyyy-MM-dd')
 
     const groups: DayGroup[] = []
@@ -231,7 +249,7 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
     }
 
     return { eventsByDate: eventMap, dayGroups: groups }
-  }, [date, events, getEventsForDateRange, embedded])
+  }, [date, events, getEventsForDateRange, embedded, taskCollapse.collapsedTaskIds])
 
   const handleCreateEvent = (day: Date): void => {
     openModal(format(day, 'yyyy-MM-dd'))
@@ -407,6 +425,7 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
                                   className={`${styles.agendaTask} ${
                                     event.completed ? styles.agendaTaskCompleted : ''
                                   }`}
+                                  data-component="agenda-task"
                                   role="button"
                                   tabIndex={0}
                                   onClick={(e) => handleEventClick(e, event)}
@@ -424,7 +443,11 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
                                       <span className={styles.agendaTaskTime}>
                                         {event.start.includes('T00:00')
                                           ? 'Due'
-                                          : formatEventTime(event.start, event.timezone, timeFormat)}
+                                          : formatEventTime(
+                                              event.start,
+                                              event.timezone,
+                                              timeFormat
+                                            )}
                                       </span>
                                       <button
                                         type="button"
@@ -446,6 +469,15 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
                                         {event.completed ? '✓' : '○'}
                                       </button>
                                       <span className={styles.agendaTaskTitle}>{event.title}</span>
+                                      {taskCollapse.hasSubtasks(event.id) && (
+                                        <TaskCollapseToggle
+                                          taskTitle={event.title}
+                                          collapsed={taskCollapse.isCollapsed(event.id)}
+                                          hiddenCount={taskCollapse.descendantCount(event.id)}
+                                          onToggle={() => taskCollapse.toggleTask(event.id)}
+                                          className={styles.agendaTaskCollapseToggle}
+                                        />
+                                      )}
                                     </div>
                                     {event.location && (
                                       <div className={styles.agendaEventSub}>{event.location}</div>

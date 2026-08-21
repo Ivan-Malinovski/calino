@@ -467,6 +467,18 @@
   min-width: 0;
 }
 
+.taskTitleRow {
+  display: flex;
+  align-items: flex-start;
+  min-width: 0;
+  gap: 4px;
+}
+
+.taskCollapseToggle {
+  margin-left: auto;
+  color: var(--ink-2, #6f6a62);
+}
+
 .taskTitle {
   font-size: 14.5px;
   font-weight: 500;
@@ -475,6 +487,7 @@
   position: relative;
   top: -3px;
   display: inline;
+  min-width: 0;
 }
 
 .taskNote {

@@ -34,6 +34,7 @@ import { LocationLink } from './LocationLink'
 import { EventBackground } from '@/components/common/EventBackground'
 import { matchEventBackground } from '@/lib/eventBackground'
 import { MINUTE_SNAP_INTERVAL, timedDragStartMinutes } from '../lib/dragSnap'
+import { TaskCollapseToggle } from './TaskCollapseToggle'
 import styles from './EventCard.module.css'
 
 /** Device zone — the zone every non-TZID time is shown in. A TZID badge is
@@ -71,6 +72,11 @@ interface EventCardProps {
   clickDisabled?: boolean
   /** Keep a spanning pill's continuation visually label-free after its first day. */
   hideFragmentTitle?: boolean
+  /** Subtask disclosure state supplied by the containing task surface. */
+  taskHasSubtasks?: boolean
+  taskSubtasksCollapsed?: boolean
+  taskSubtaskCount?: number
+  onToggleTaskSubtasks?: () => void
 }
 
 export const EventCard = React.memo(function EventCard({
@@ -88,6 +94,10 @@ export const EventCard = React.memo(function EventCard({
   hideDueTime = false,
   clickDisabled = false,
   hideFragmentTitle = false,
+  taskHasSubtasks = false,
+  taskSubtasksCollapsed = false,
+  taskSubtaskCount,
+  onToggleTaskSubtasks,
 }: EventCardProps): JSX.Element {
   const calendars = useCalendarStore((state) => state.calendars)
   const categories = useCalendarStore((state) => state.categories)
@@ -271,6 +281,7 @@ export const EventCard = React.memo(function EventCard({
   })
   const isTask = event.type === 'task'
   const isSubtask = isTask && Boolean(event.parentTaskId)
+  const showTaskCollapse = isTask && taskHasSubtasks && Boolean(onToggleTaskSubtasks) && !dotMode
   // Reschedule + done/not-done for task pills, shared with the tasks list and
   // the sidebar. Delete stays this card's own — it also drives the recurring
   // this/all dialog below.
@@ -589,7 +600,7 @@ export const EventCard = React.memo(function EventCard({
         )}
         {isTask ? (
           <div
-            className={styles.dragContent}
+            className={`${styles.dragContent} ${showTaskCollapse ? styles.dragContentWithCollapse : ''}`}
             onPointerDown={(e) => {
               e.stopPropagation()
               pointerStartPos.current = { x: e.clientX, y: e.clientY }
@@ -621,6 +632,15 @@ export const EventCard = React.memo(function EventCard({
               <div className={styles.dueDate}>
                 {formatEventTime(event.dueDate, event.timezone, timeFormat)}
               </div>
+            )}
+            {showTaskCollapse && onToggleTaskSubtasks && (
+              <TaskCollapseToggle
+                taskTitle={event.title}
+                collapsed={taskSubtasksCollapsed}
+                hiddenCount={taskSubtaskCount}
+                onToggle={onToggleTaskSubtasks}
+                className={styles.cardTaskCollapseToggle}
+              />
             )}
           </div>
         ) : (

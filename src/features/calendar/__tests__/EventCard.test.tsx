@@ -70,6 +70,38 @@ describe('EventCard', () => {
     expect(screen.getByTitle('Subtask')).toBeInTheDocument()
   })
 
+  it('renders a chevron for a task with subtasks without opening the card', async () => {
+    const user = userEvent.setup()
+    const handleClick = vi.fn()
+    const toggle = vi.fn()
+    const task: CalendarEvent = {
+      ...mockEvent,
+      type: 'task',
+      title: 'Parent task',
+    }
+
+    render(
+      <EventCard
+        event={task}
+        onClick={handleClick}
+        taskHasSubtasks
+        taskSubtasksCollapsed
+        taskSubtaskCount={4}
+        onToggleTaskSubtasks={toggle}
+      />
+    )
+
+    const chevron = screen.getByRole('button', {
+      name: 'Expand subtasks for "Parent task" (4 hidden)',
+    })
+    expect(chevron).toHaveAttribute('aria-expanded', 'false')
+
+    await user.click(chevron)
+
+    expect(toggle).toHaveBeenCalledOnce()
+    expect(handleClick).not.toHaveBeenCalled()
+  })
+
   it('disables task completion on read-only calendars', () => {
     const store = useCalendarStore.getState()
     store.updateCalendar('default', { readOnly: true })

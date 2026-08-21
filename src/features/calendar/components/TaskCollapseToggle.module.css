@@ -1,0 +1,42 @@
+.toggle {
+  display: inline-flex;
+  flex: 0 0 auto;
+  margin-left: auto;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-text-secondary, var(--ink-2, #6f6a62));
+  cursor: pointer;
+  transition: color var(--dur-fast);
+}
+
+.toggle:hover,
+.toggle:focus-visible {
+  color: var(--color-text-primary, var(--ink, #2f2b27));
+}
+
+.toggle:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+.toggle svg {
+  width: 9px;
+  height: 9px;
+  transition: transform var(--dur-fast) var(--ease-out, ease-out);
+}
+
+.toggle[data-collapsed='false'] svg {
+  transform: rotate(90deg);
+}
+
+@media (pointer: coarse) {
+  .toggle {
+    width: 32px;
+    height: 32px;
+  }
+}

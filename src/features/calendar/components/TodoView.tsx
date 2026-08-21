@@ -28,7 +28,9 @@ import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
 import { useContextMenuStore } from '@/store/contextMenuStore'
 import { hapticIfEnabled } from '@/lib/haptics'
 import { useTaskContextMenuItems } from '../hooks/useTaskContextMenuItems'
+import { useTaskCollapse } from '../hooks/useTaskCollapse'
 import { TaskContextMenu } from './TaskContextMenu'
+import { TaskCollapseToggle } from './TaskCollapseToggle'
 import type { CalendarEvent } from '@/types'
 import styles from './TodoView.module.css'
 
@@ -362,6 +364,8 @@ export function TodoView(): JSX.Element {
       }
     })
   }, [events, calendars])
+
+  const taskCollapse = useTaskCollapse(events)
 
   const taskCalendars = useMemo(
     () =>
@@ -826,6 +830,7 @@ export function TodoView(): JSX.Element {
       }
       const appendTask = (task: TaskWithColor, depth: number): void => {
         items.push({ type: 'task', key: `task-${task.id}`, task, depth })
+        if (taskCollapse.isCollapsed(task.id)) return
         for (const child of children.get(task.id) ?? []) appendTask(child, depth + 1)
       }
       for (const task of group.tasks) {
@@ -833,7 +838,7 @@ export function TodoView(): JSX.Element {
       }
     }
     return items
-  }, [groupedTasks])
+  }, [groupedTasks, taskCollapse.collapsedTaskIds])
 
   const virtualizer = useVirtualizer({
     count: flatItems.length,
@@ -966,7 +971,18 @@ export function TodoView(): JSX.Element {
                       handleTaskClick(task)
                     }}
                   >
-                    <div className={styles.taskTitle}>{task.title}</div>
+                    <div className={styles.taskTitleRow}>
+                      <div className={styles.taskTitle}>{task.title}</div>
+                      {taskCollapse.hasSubtasks(task.id) && (
+                        <TaskCollapseToggle
+                          taskTitle={task.title}
+                          collapsed={taskCollapse.isCollapsed(task.id)}
+                          hiddenCount={taskCollapse.descendantCount(task.id)}
+                          onToggle={() => taskCollapse.toggleTask(task.id)}
+                          className={styles.taskCollapseToggle}
+                        />
+                      )}
+                    </div>
                     {task.description && <div className={styles.taskNote}>{task.description}</div>}
                   </div>
                   <div className={styles.taskMeta}>
@@ -1035,6 +1051,7 @@ export function TodoView(): JSX.Element {
       handleRowPointerMove,
       cancelLongPress,
       virtualizer,
+      taskCollapse,
     ]
   )
 

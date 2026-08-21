@@ -62,6 +62,8 @@ import { SWIPE_SCROLLER_ATTR } from '../swipePaging'
 import styles from './WeekView.module.css'
 import { duplicateEventWithSync } from '@/lib/duplicateWithSync'
 import { assignSpanLanes, compareDayEvents, makeDayFragments } from '../lib/multiDayFragments'
+import { filterTasksByCollapsedAncestors } from '@/lib/taskTree'
+import { useTaskCollapse } from '../hooks/useTaskCollapse'
 
 const BASE_HOUR_HEIGHT = 60
 /** Narrowest the mobile day columns compress to, as a fraction of their normal
@@ -229,6 +231,7 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
   const currentDate = useCalendarStore((state) => state.currentDate)
   const events = useCalendarStore((state) => state.events)
   const calendars = useCalendarStore((state) => state.calendars)
+  const taskCollapse = useTaskCollapse(events)
   const getEventsForDateRange = useCalendarStore((state) => state.getEventsForDateRange)
   // Subscribed to a primitive counter so the eventsMap memo only depends on
   // a number, not the events array reference (R4.3).
@@ -641,14 +644,19 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
       const dayTasks = getTasksForDay(events, dayKey).filter((event) =>
         visibleCalendarIds.includes(event.calendarId)
       )
-      if (dayTasks.length > 0) {
-        map.set(dayKey, dayTasks)
-        const timed = dayTasks.filter((t) => hasDueTime(t))
+      const visibleTasks = filterTasksByCollapsedAncestors(
+        dayTasks,
+        events,
+        taskCollapse.collapsedTaskIds
+      )
+      if (visibleTasks.length > 0) {
+        map.set(dayKey, visibleTasks)
+        const timed = visibleTasks.filter((t) => hasDueTime(t))
         if (timed.length > 0) timedMap.set(dayKey, timed)
       }
     }
     return { tasksMap: map, timedTasksMap: timedMap }
-  }, [weekDays, events, calendars, rangeExpansionVersion])
+  }, [weekDays, events, calendars, rangeExpansionVersion, taskCollapse.collapsedTaskIds])
 
   // Everything that belongs above the timeline rather than in it: all-day
   // events plus untimed tasks (see hasDueTime — a task with no due time, or
@@ -1057,6 +1065,18 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
                         monthView
                         enableResize={false}
                         hideFragmentTitle={item.isFragment && !item.isFirstFragment && idx !== 0}
+                        taskHasSubtasks={item.type === 'task' && taskCollapse.hasSubtasks(item.id)}
+                        taskSubtasksCollapsed={
+                          item.type === 'task' && taskCollapse.isCollapsed(item.id)
+                        }
+                        taskSubtaskCount={
+                          item.type === 'task' ? taskCollapse.descendantCount(item.id) : undefined
+                        }
+                        onToggleTaskSubtasks={
+                          item.type === 'task'
+                            ? () => taskCollapse.toggleTask(item.id)
+                            : undefined
+                        }
                       />
                     ))}
                     {/* Sits at the bottom of the stack, where the items it
@@ -1166,6 +1186,10 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
                     calendars={calendars}
                     hourHeight={hourHeight}
                     openModal={openModal}
+                    taskHasSubtasks={taskCollapse.hasSubtasks}
+                    taskIsCollapsed={taskCollapse.isCollapsed}
+                    taskDescendantCount={taskCollapse.descendantCount}
+                    onToggleTaskSubtasks={taskCollapse.toggleTask}
                   />
                   {isToday(day) && (
                     <CurrentTimeIndicator
@@ -1305,6 +1329,10 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
                       calendars={calendars}
                       hourHeight={hourHeight}
                       openModal={openModal}
+                      taskHasSubtasks={taskCollapse.hasSubtasks}
+                      taskIsCollapsed={taskCollapse.isCollapsed}
+                      taskDescendantCount={taskCollapse.descendantCount}
+                      onToggleTaskSubtasks={taskCollapse.toggleTask}
                     />
                     {isToday(day) && (
                       <CurrentTimeIndicator
@@ -1379,6 +1407,10 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
                         compact
                         monthView
                         enableResize={false}
+                        taskHasSubtasks={taskCollapse.hasSubtasks(task.id)}
+                        taskSubtasksCollapsed={taskCollapse.isCollapsed(task.id)}
+                        taskSubtaskCount={taskCollapse.descendantCount(task.id)}
+                        onToggleTaskSubtasks={() => taskCollapse.toggleTask(task.id)}
                       />
                     ))}
                   </div>
