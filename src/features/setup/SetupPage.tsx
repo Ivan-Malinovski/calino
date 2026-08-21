@@ -238,7 +238,7 @@ export function SetupPage(): JSX.Element {
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div className={styles.page}>
+    <main className={styles.page} id="main-content" tabIndex={-1}>
       <div className={styles.card}>
         <div className={styles.header}>
           <div className={styles.logo}>📅</div>
@@ -453,7 +453,16 @@ export function SetupPage(): JSX.Element {
                 borderTop: '1px solid var(--modal-border, #e0e0e0)',
               }}
             />
-            <h3 style={{ marginBottom: 12 }}>Calendar Subscriptions (.ics)</h3>
+            <h2
+              style={{
+                marginBottom: 12,
+                fontSize: 15,
+                fontWeight: 600,
+                marginTop: 0,
+              }}
+            >
+              Calendar Subscriptions (.ics)
+            </h2>
 
             {webcalSubscriptions.length > 0 && (
               <div className={styles.accountList}>
@@ -662,7 +671,7 @@ export function SetupPage(): JSX.Element {
         {step === 'done' && (
           <>
             <div className={styles.instructions}>
-              <h3>Next steps</h3>
+              <h2>Next steps</h2>
               <ol>
                 <li>
                   Place <code>calino.config.json</code> in the project root
@@ -707,6 +716,6 @@ export function SetupPage(): JSX.Element {
           </>
         )}
       </div>
-    </div>
+    </main>
   )
 }

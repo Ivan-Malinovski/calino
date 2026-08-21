@@ -1807,6 +1807,7 @@ export function EventModal(): JSX.Element | null {
 
                   <select
                     id="calendar-select"
+                    aria-label="Calendar"
                     value={calendarId}
                     onChange={(e) => handleCalendarChange(e.target.value)}
                     className={styles.modalSelect}

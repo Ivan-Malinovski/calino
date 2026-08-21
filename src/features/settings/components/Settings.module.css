@@ -154,7 +154,10 @@
 
 .navItemActive {
   background: var(--accent-soft);
-  color: var(--accent-strong, var(--accent));
+  /* --accent-strong (#8d643f) is 4.25:1 on --accent-soft — just under AA at
+     14px. Darken one step for this specific surface instead of touching the
+     shared token, which also sits behind white text elsewhere. 4.61:1 here. */
+  color: var(--accent-strong-on-soft, #865f3c);
   font-weight: 500;
 }
 
@@ -190,6 +193,11 @@
   padding: 32px 48px 80px;
   overflow-y: auto;
   background: var(--canvas);
+}
+
+/* Programmatic skip-link target — no focus ring around the whole panel. */
+.main:focus {
+  outline: none;
 }
 
 /* ── "Saved" indicator ──────────────────────────────────────────────────── */

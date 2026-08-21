@@ -35,6 +35,12 @@
      failed everywhere, and the two were too close to darken ink-3 alone. */
   --ink-2: #655f57;
   --ink-3: #756d62;
+  /* Dimmed ink for de-emphasised-but-readable text (other-month day numbers,
+     mini-calendar days). This is the full-opacity replacement for the old
+     `color: var(--ink-3); opacity: 0.85` trick, which dropped ink-3 to 3.74:1
+     on white. Full opacity keeps the "muted" look while clearing WCAG AA:
+     4.93:1 on --panel, 4.73:1 on the other-month cell tint. */
+  --ink-3-dimmed: #786f64;
   --line: rgba(44, 40, 33, 0.09);
   --line-2: rgba(44, 40, 33, 0.05);
   --accent: #b07d4f;
@@ -82,6 +88,10 @@
   --color-warning-text: #8d6902;
   --color-error: #c8351f;
   --color-info: #8d643f;
+  /* "Now" line in day/week views. Google's raw #e53935 was 4.23:1 on white —
+     just under AA for the 10px time label — so the default is one step darker.
+     catppuccin-mocha overrides this with its own pink. */
+  --color-current-time: #d93025;
 
   /* Overlay */
   --color-overlay: rgba(0, 0, 0, 0.5);
@@ -227,10 +237,17 @@
   --panel: #242220;
   --side: #2a2826;
   --ink: #f0ece6;
-  --ink-2: #a39d93;
+  /* 4.76:1 on --side (the lightest dark surface) and 4.76:1 on the sidebar
+     badge chip fill (rgba(ink-raw, 0.07) over --side) — #a39d93 was 4.49:1
+     on the chip and just missed AA. Still a clear step below --ink-3. */
+  --ink-2: #a8a29a;
   /* 4.66:1 on --side, the lightest dark surface; #6f6a62 was 2.74:1 and
-     failed WCAG AA everywhere. Still a clear step below --ink-2 (#a39d93). */
+     failed WCAG AA everywhere. Still a clear step below --ink-2 (#a8a29a). */
   --ink-3: #989086;
+  /* Dimmed ink for de-emphasised-but-readable text. 5.35:1 on --panel and
+     4.96:1 on --side — a hair lighter than --ink-3 so the "muted" step stays
+     visible, but comfortably clear of 4.5. */
+  --ink-3-dimmed: #9c958c;
   --line: rgba(240, 236, 230, 0.09);
   --line-2: rgba(240, 236, 230, 0.05);
   --accent: #c9956a;
@@ -243,7 +260,7 @@
 
   /* Text */
   --color-text-primary: #f0ece6;
-  --color-text-secondary: #a39d93;
+  --color-text-secondary: #a8a29a;
   --color-text-muted: #989086;
   --color-text: #f0ece6;
   --color-text-tertiary: #989086;

@@ -546,4 +546,13 @@ describe('EventFormFields', () => {
       expect(onEndTimeChange).not.toHaveBeenCalled()
     })
   })
+
+  describe('date field accessible names', () => {
+    it('exposes the start and end date inputs via their associated labels', () => {
+      render(<EventFormFields {...defaultProps} />)
+
+      expect(screen.getByLabelText('Start')).toHaveValue('2024-03-15')
+      expect(screen.getByLabelText('End')).toHaveValue('2024-03-15')
+    })
+  })
 })

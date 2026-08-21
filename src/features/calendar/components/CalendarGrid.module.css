@@ -217,11 +217,14 @@
   background: var(--day-cell-other-month-bg, rgba(var(--ink-raw, 44, 40, 33), 0.02));
 }
 
-/* Dimmed on purpose, but these are still real, clickable dates — 0.6 put them
-   at 1.96:1, below even the 3:1 floor for non-text UI. */
+/* Dimmed on purpose, but these are still real, clickable dates. The dimming
+   used to be `opacity: 0.85` on top of --ink-3, which dropped the effective
+   contrast to 3.74:1 on white / 3.63:1 on the other-month tint. The opacity
+   trick is gone: --ink-3-dimmed is the muted-but-readable colour at full
+   opacity (4.93:1 on --panel, 4.73:1 on the other-month cell tint). */
 .otherMonth .dayNumber {
-  color: var(--ink-3);
-  opacity: 0.85;
+  color: var(--ink-3-dimmed, var(--ink-3));
+  opacity: 1;
 }
 
 /* ---- Today ---- */
@@ -507,12 +510,16 @@
 }
 
 /* ---- Weekend Dimming ---- */
-.day:nth-child(7n):not(.today) .dayNumber,
+/* Other-month weekend days opt out: they already carry the full-opacity
+   --ink-3-dimmed colour (see .otherMonth .dayNumber above), and stacking the
+   0.9 opacity on top would knock it back under 4.5:1. Current-month weekend
+   day numbers (--ink-2 at 0.9) still clear AA at 4.98:1. */
+.day:nth-child(7n):not(.today):not(.otherMonth) .dayNumber,
 .day:nth-child(7n):not(.today) .events {
   opacity: 0.9;
 }
 
-.day:nth-child(7n + 1):not(.today) .dayNumber,
+.day:nth-child(7n + 1):not(.today):not(.otherMonth) .dayNumber,
 .day:nth-child(7n + 1):not(.today) .events {
   opacity: 0.9;
 }

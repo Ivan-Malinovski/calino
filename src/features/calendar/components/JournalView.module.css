@@ -1009,12 +1009,12 @@
   text-align: center;
 }
 
-.empty strong {
+.empty h2 {
   font-size: 16px;
   color: var(--ink-2);
   font-weight: 500;
   font-family: var(--font-serif, 'Newsreader', Georgia, serif);
-  display: block;
+  margin: 0;
 }
 
 /* Responsive: stack date column on mobile */

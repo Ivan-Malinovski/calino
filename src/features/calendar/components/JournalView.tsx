@@ -1018,7 +1018,7 @@ export function JournalView(): JSX.Element {
         {/* Entry list */}
         {groupedEntries.length === 0 && !isComposing ? (
           <div className={styles.empty}>
-            <strong>Nothing written yet</strong>
+            <h2 className={styles.emptyTitle}>Nothing written yet</h2>
             Start capturing your days — one entry at a time.
           </div>
         ) : viewMode === 'month' ? (

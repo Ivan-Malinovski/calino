@@ -255,7 +255,7 @@ export function SettingsPage(): JSX.Element {
     <div className={styles.container} data-component="settings-page">
       <div className={styles.body}>
         <aside className={styles.nav} data-component="settings-sidebar">
-          <h1 className={styles.navTitle}>Settings</h1>
+          <h2 className={styles.navTitle}>Settings</h2>
           <nav className={styles.navList} aria-label="Settings">
             {NAV_ITEMS.map((item) => (
               <button
@@ -275,7 +275,12 @@ export function SettingsPage(): JSX.Element {
             ))}
           </nav>
         </aside>
-        <main className={styles.main} data-component="settings-panel">
+        <main
+          className={styles.main}
+          data-component="settings-panel"
+          id="main-content"
+          tabIndex={-1}
+        >
           <div className={styles.savedBar} role="status" aria-live="polite">
             <span
               className={`${styles.savedPill} ${showSaved ? styles.savedPillVisible : ''}`}
@@ -314,7 +319,14 @@ export function SettingsPage(): JSX.Element {
           </div>
           {isMobile ? (
             <div data-component="settings-category-list">
-              <h1 className={styles.mobileTitle}>Settings</h1>
+              {/* Exactly one h1 per page: when a category is expanded its own
+                  pageTitle h1 is the page heading, so this list title steps
+                  down to h2 (a level decrease, not a skip). */}
+              {activeTab ? (
+                <h2 className={styles.mobileTitle}>Settings</h2>
+              ) : (
+                <h1 className={styles.mobileTitle}>Settings</h1>
+              )}
               <nav className={styles.categoryList} aria-label="Settings categories">
                 {NAV_ITEMS.map((item) => {
                   const isOpen = activeTab === item.id

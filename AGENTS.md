@@ -81,6 +81,8 @@ e2e/
   events.spec.ts                   # event CRUD, recurrence, NLP
   sync.spec.ts                     # CalDAV account + sync flow
   settings.spec.ts                 # settings persistence per section
+  accessibility.spec.ts            # axe-core scans (WCAG A+AA) per surface
+  keyboard-nav.spec.ts             # grid arrow navigation, skip link
   ...
   fixtures/
     localstorage.ts                # state-priming helpers
@@ -155,8 +157,8 @@ Set them in your shell, in a `.env.test` file (gitignored, see
   navigation, including `page.reload()`. The provided helpers use
   `sessionStorage` flags so they fire only once per test — copy that
   pattern if you write your own.
-- **RecurrenceDialog** has no `aria-label` on its dialog element. Scope
-  it with `.filter({ hasText: /Edit recurring event/ })`, not
-  `getByRole('dialog', { name: ... })`.
+- **RecurrenceDialog/DeleteDialog** are plain dialogs (not the shared Modal
+  shell). They're named via `aria-labelledby`, so
+  `getByRole('dialog', { name: /Edit recurring event/ })` works.
 
 ## Release Script

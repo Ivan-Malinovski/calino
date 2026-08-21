@@ -39,10 +39,11 @@ test.describe('Monthly recurrence — second Tuesday (R2.4 byDayOrdinals)', () =
   })
 
   test('second Tuesday pattern survives save → reload → reopen', async ({ page }) => {
-    // 1. Open the month view and click on any Tuesday. Day cells in the
-    //    month grid have an aria-label of the form "Tuesday, July 15, 2025".
+    // 1. Open the month view and click on any Tuesday. Day cells are
+    //    focusable containers without a button role (the day-number button is
+    //    the semantic control); their aria-label still names the day.
     await page.goto('/month')
-    const tuesdayCell = page.getByRole('button', { name: /^Tuesday, / }).first()
+    const tuesdayCell = page.locator('[data-date][aria-label^="Tuesday, "]').first()
     await expect(tuesdayCell).toBeVisible()
     await tuesdayCell.click()
 

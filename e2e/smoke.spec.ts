@@ -369,13 +369,47 @@ test.describe('smoke', () => {
     for (const route of routes) {
       await page.goto(route)
       // Every route should render either the calendar header (chrome) or
-      // the settings heading (settings page). A refactor that breaks the
-      // router will fail this assertion immediately.
+      // the settings page. A refactor that breaks the router will fail
+      // this assertion immediately.
       await expect(
         page
-          .locator('[data-component="header"], [data-component="caldav-settings"], h1:has-text("Settings")')
+          .locator(
+            '[data-component="header"], [data-component="caldav-settings"], [data-component="settings-page"]'
+          )
           .first()
       ).toBeVisible({ timeout: 10_000 })
     }
+  })
+
+  test('skip link is the first tabbable element and jumps to the main content', async ({
+    page,
+  }) => {
+    await page.goto('/month')
+    await expect(page.locator('[data-component="header"]')).toBeVisible()
+
+    const skipLink = page.getByRole('link', { name: 'Skip to calendar' })
+
+    // Hidden until focused — the link is the first element in the tab order,
+    // so a single Tab from a fresh page lands on it.
+    await expect(skipLink).not.toBeInViewport()
+    await page.keyboard.press('Tab')
+    await expect(skipLink).toBeInViewport()
+
+    // Activating it moves focus into the main landmark.
+    await page.keyboard.press('Enter')
+    await expect(page.locator('main#main-content')).toBeFocused()
+  })
+
+  test('settings page exposes a single h1 and the skip link target', async ({ page }) => {
+    await page.goto('/settings')
+    await expect(page.locator('[data-component="settings-page"]')).toBeVisible()
+
+    // Exactly one h1 on the settings page (the active tab's title), not
+    // counting the sidebar which now uses an h2.
+    const h1Count = await page.locator('h1').count()
+    expect(h1Count).toBe(1)
+
+    // The skip-link target landmark is present.
+    await expect(page.locator('main#main-content')).toHaveCount(1)
   })
 })

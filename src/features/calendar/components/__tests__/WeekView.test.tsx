@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { BrowserRouter } from 'react-router'
 import { WeekView } from '../WeekView'
 import { useCalendarStore } from '@/store/calendarStore'
@@ -148,5 +148,131 @@ describe('WeekView', () => {
     // (headerScrollRef and bodyScrollRef are never attached, so the effect
     // bails out early - but we verify no RAF was called for scroll sync)
     rafSpy.mockRestore()
+  })
+})
+
+describe('WeekView keyboard navigation', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+
+    mockUseCalDAV.mockReturnValue({
+      accounts: [],
+      calendars: [],
+      syncState: { status: 'idle', lastSyncAt: null, error: null, pendingChanges: 0 },
+      addAccount: vi.fn(),
+      removeAccount: vi.fn(),
+      syncAccount: vi.fn(),
+      syncAll: vi.fn(),
+      createEvent: vi.fn(),
+      updateEvent: vi.fn(),
+      deleteEvent: vi.fn(),
+    } as unknown as ReturnType<typeof useCalDAV>)
+
+    mockUseGestures.mockReturnValue({
+      bind: {},
+      gestureState: 'idle',
+    })
+
+    mockUseIsMobile.mockReturnValue(false)
+
+    const store = useCalendarStore.getState()
+    store.events.forEach((e) => store.deleteEvent(e.id))
+    store.calendars.forEach((c) => store.deleteCalendar(c.id))
+    store.addCalendar({
+      id: 'default',
+      name: 'Default Calendar',
+      color: '#4285F4',
+      isVisible: true,
+      isDefault: true,
+      showTasksInViews: true,
+    })
+    store.setCurrentDate('2024-03-15')
+  })
+
+  const grid = (container: HTMLElement): HTMLElement => {
+    const el = container.querySelector<HTMLElement>('[data-component="week-grid"]')
+    if (!el) throw new Error('week-grid not found')
+    return el
+  }
+
+  const cell = (container: HTMLElement, date: string, hour: string): HTMLElement => {
+    const el = container.querySelector<HTMLElement>(`[data-date="${date}"][data-hour="${hour}"]`)
+    if (!el) throw new Error(`cell ${date} ${hour} not found`)
+    return el
+  }
+
+  // The week's day columns in DOM order (the week start follows the locale's
+  // firstDayOfWeek setting).
+  const weekDates = (container: HTMLElement): string[] => {
+    const gridEl = grid(container)
+    const dates = Array.from(gridEl.querySelectorAll<HTMLElement>('[data-hour]')).map(
+      (c) => c.getAttribute('data-date')!
+    )
+    return [...new Set(dates)]
+  }
+
+  it('exposes only one hour slot as a tab stop (roving tabindex)', () => {
+    const { container } = renderWithRouter(<WeekView />)
+    const tabbable = container.querySelectorAll('[data-hour][tabindex="0"]')
+    expect(tabbable).toHaveLength(1)
+    expect(tabbable[0].getAttribute('data-date')).toBe('2024-03-15')
+    expect(tabbable[0].getAttribute('data-hour')).toBe('00:00')
+  })
+
+  it('ArrowRight moves focus to the same hour slot in the next day column', () => {
+    const { container } = renderWithRouter(<WeekView />)
+    const dates = weekDates(container)
+    const currentDate = dates.find((d) => d === '2024-03-15') ?? dates[0]
+    const nextDate = dates[dates.indexOf(currentDate) + 1]
+    const current = cell(container, currentDate, '09:00')
+    current.focus()
+    fireEvent.keyDown(grid(container), { key: 'ArrowRight' })
+    expect(document.activeElement).toBe(cell(container, nextDate, '09:00'))
+  })
+
+  it('ArrowDown moves focus one hour down within the same day column', () => {
+    const { container } = renderWithRouter(<WeekView />)
+    const current = cell(container, '2024-03-15', '09:00')
+    current.focus()
+    fireEvent.keyDown(grid(container), { key: 'ArrowDown' })
+    expect(document.activeElement).toBe(cell(container, '2024-03-15', '10:00'))
+  })
+
+  it('moves the roving tab stop to the focused cell', () => {
+    const { container } = renderWithRouter(<WeekView />)
+    const dates = weekDates(container)
+    const currentDate = dates.find((d) => d === '2024-03-15') ?? dates[0]
+    const nextDate = dates[dates.indexOf(currentDate) + 1]
+    const current = cell(container, currentDate, '09:00')
+    current.focus()
+    fireEvent.keyDown(grid(container), { key: 'ArrowRight' })
+    const next = cell(container, nextDate, '09:00')
+    expect(next.tabIndex).toBe(0)
+    expect(current.tabIndex).toBe(-1)
+  })
+
+  it('ArrowRight past the last day column pages to the next week and moves focus to its first day', () => {
+    const { container } = renderWithRouter(<WeekView />)
+    const dates = weekDates(container)
+    const lastDate = dates.at(-1)!
+    const last = cell(container, lastDate, '09:00')
+    last.focus()
+    fireEvent.keyDown(grid(container), { key: 'ArrowRight' })
+    const store = useCalendarStore.getState()
+    // The current date pages one week forward.
+    expect(store.currentDate).not.toBe('2024-03-15')
+    // Focus lands on the first column of the newly visible week at the same hour.
+    const newDates = weekDates(container)
+    const firstOfNewWeek = newDates[0]
+    expect(document.activeElement).toBe(cell(container, firstOfNewWeek, '09:00'))
+  })
+
+  it('Enter on a focused hour slot triggers the same quick-create as a click', () => {
+    const { container } = renderWithRouter(<WeekView />)
+    const hour = cell(container, '2024-03-15', '09:00')
+    hour.focus()
+    fireEvent.keyDown(hour, { key: 'Enter' })
+    expect(useCalendarStore.getState().isModalOpen).toBe(true)
+    expect(useCalendarStore.getState().selectedDate).toBe('2024-03-15T09:00')
   })
 })

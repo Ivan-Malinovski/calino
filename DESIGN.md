@@ -215,3 +215,48 @@ Buttons, inputs, and cards are calm and restrained by default: quiet neutral sur
 - **Don't** fill event or card backgrounds with a solid category color — use the accent-rail + tinted-background pattern instead.
 - **Don't** carry a light-mode shadow value into dark mode unchanged; it will look muddy against the dark surface steps.
 - **Don't** set Newsreader on body copy, form fields, or list-dense UI — it's reserved for hierarchy moments only.
+
+## Accessibility
+
+WCAG 2.1 AA is the working standard (see PRODUCT.md). The rules below are how
+that standard shows up in day-to-day design work; `e2e/accessibility.spec.ts`
+enforces the mechanical parts with axe-core on every surface scan.
+
+### Contrast
+
+- Text tokens clear 4.5:1 against every surface they appear on, in both light
+  and dark themes. Ratio notes live as comments next to token values in
+  `src/themes/built-in.css` — keep that convention when adjusting values.
+- De-emphasis is expressed through a dedicated dimmed token (`--ink-3-dimmed`)
+  at full opacity, never by stacking `opacity` on an already-muted ink —
+  opacity blending is what produced the pre-0.30 failures.
+- Intentional exceptions (none currently) would be documented here with their
+  justification and the surfaces they apply to.
+
+### Focus & keyboard
+
+- Every interactive element has a visible focus ring; the app-wide
+  `--focus-ring` token colors it. Programmatic focus targets (e.g. the
+  skip-link destination `<main>`) suppress the ring; real keyboard focus
+  never does.
+- Calendar grids use roving tabindex: one Tab stop per grid, arrows move
+  focus between days/hours, Enter/Space activates. New grid-like UI follows
+  the same pattern (see `useRovingGrid`).
+- Modals trap focus and restore it on close (`useFocusTrap`); dialogs are
+  named via `aria-labelledby` pointing at their visible heading.
+- A skip-to-content link is the first tabbable element on every page.
+
+### Motion
+
+- All animation respects `prefers-reduced-motion`: framer-motion durations
+  collapse to 0 via `useReducedMotion`, and CSS animations/transitions are
+  neutralized by the global rule in `index.css`. New motion must route
+  through one of those two mechanisms — never raw durations.
+
+### Semantics
+
+- Interactive elements are real buttons/links/inputs. Composite cells (a day
+  cell containing buttons) stay focusable containers without a button role —
+  nested interactive controls inside a `role="button"` fail axe.
+- Async state changes users need to know about (sync status, saves, progress)
+  announce via `role="status"` / `aria-live="polite"`.

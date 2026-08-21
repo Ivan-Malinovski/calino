@@ -103,6 +103,19 @@ describe('CalendarGrid', () => {
     expect(tabbable[0].getAttribute('data-date')).toBe('2024-03-15')
   })
 
+  it('keeps the roving tab stop and aria-label on day cells without a button role', () => {
+    // Regression: the day cell used to be role="button" while containing real
+    // buttons (day-number, journal indicator, event cards) — axe flagged that
+    // as nested-interactive. The cell stays focusable with its label and key
+    // handlers, but the inner buttons are the semantic controls.
+    const { container } = renderWithRouter(<CalendarGrid />)
+    const cell = container.querySelector<HTMLElement>('[data-date="2024-03-15"]')!
+    expect(cell).not.toBeNull()
+    expect(cell.getAttribute('role')).toBeNull()
+    expect(cell.getAttribute('tabindex')).toBe('0')
+    expect(cell.getAttribute('aria-label')).toBe('Friday, March 15, 2024')
+  })
+
   it('ArrowRight moves keyboard focus to the next day cell', () => {
     const { container } = renderWithRouter(<CalendarGrid />)
     const cell = container.querySelector<HTMLElement>('[data-date="2024-03-15"]')!

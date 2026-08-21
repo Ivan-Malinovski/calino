@@ -41,6 +41,7 @@ import { ContextMenu } from '@/components/common/ContextMenu'
 import { useGestures } from '@/hooks/useGestures'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { usePinchScale } from '@/hooks/usePinchScale'
+import { useRovingGrid } from '@/hooks/useRovingGrid'
 import { useContextMenuStore } from '@/store/contextMenuStore'
 import { useWindowHeight } from '@/hooks/useWindowHeight'
 import { useDragDuplicateModifier } from '@/hooks/useDragDuplicateModifier'
@@ -80,8 +81,10 @@ const MOBILE_HEADER_ITEM_LIMIT = 2
 interface DroppableCellProps {
   dateKey: string
   hourKey: string
+  isFocusAnchor: boolean
   onClick: (e: React.MouseEvent<HTMLDivElement>) => void
   onMouseDown: (e: React.MouseEvent<HTMLDivElement>) => void
+  onKeyDown: (e: React.KeyboardEvent<HTMLDivElement>) => void
 }
 
 // The cell is only a drop *target* — the highlight showing where the event will
@@ -93,11 +96,16 @@ interface DroppableCellProps {
 // per render, which meant this React.memo never once prevented a re-render
 // (and re-ran useDroppable's registration for all 168 cells) whenever WeekView
 // rendered — during drags, that was every frame. See #73.
+//
+// `isFocusAnchor` (roving tab stop) and `tabIndex` are per-cell values, so the
+// memo holds only for the empty cell.
 const DroppableCell = React.memo(function DroppableCell({
   dateKey,
   hourKey,
+  isFocusAnchor,
   onClick,
   onMouseDown,
+  onKeyDown,
 }: DroppableCellProps): JSX.Element {
   const { setNodeRef } = useDroppable({ id: `${dateKey}-${hourKey}` })
 
@@ -107,8 +115,10 @@ const DroppableCell = React.memo(function DroppableCell({
       className={styles.cell}
       data-date={dateKey}
       data-hour={hourKey}
+      tabIndex={isFocusAnchor ? 0 : -1}
       onClick={onClick}
       onMouseDown={onMouseDown}
+      onKeyDown={onKeyDown}
     />
   )
 })
@@ -197,6 +207,89 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
   const mobileScrollRef = useRef<HTMLDivElement>(null)
   const daysContainerRef = useRef<HTMLDivElement>(null)
   const hourHeight = BASE_HOUR_HEIGHT * effectiveScale
+
+  // Roving-tabindex arrow navigation across the 7×24 hour-slot grid: ←/→ move
+  // between day columns, ↑/↓ between hour slots (matching the month view's
+  // ←/→ + ↑/↓ model). Enter/Space on a focused cell opens the quick-create
+  // modal (same handler as a click). Edge-of-grid arrows trigger the pager
+  // below, so focus never silently sticks.
+  const gridBodyRef = useRef<HTMLDivElement>(null)
+  const { handleKeyDown: handleGridKeyDown, setFocusAnchor } = useRovingGrid(
+    gridBodyRef,
+    '[data-hour]',
+    (key) =>
+      key === 'ArrowLeft'
+        ? -24
+        : key === 'ArrowRight'
+          ? 24
+          : key === 'ArrowUp'
+            ? -1
+            : key === 'ArrowDown'
+              ? 1
+              : null
+  )
+  // Both refs point at the same element (the days container): `daysContainerRef`
+  // for drag-to-create geometry, `gridBodyRef` for roving focus.
+  const daysAndGridRef = useCallback((el: HTMLDivElement | null) => {
+    daysContainerRef.current = el
+    gridBodyRef.current = el
+  }, [])
+  const edgeArrowRef = useRef<{ key: 'ArrowLeft' | 'ArrowRight'; hour: string } | null>(null)
+
+  const handleGridEdgeKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLDivElement>): void => {
+      const key = e.key
+      if (key !== 'ArrowLeft' && key !== 'ArrowRight') return
+      const atEdge = e.currentTarget.dataset.rovingAtEdge
+      if (atEdge !== key) return
+      e.preventDefault()
+      e.stopPropagation()
+      const active = document.activeElement as HTMLElement | null
+      const hour = active?.closest('[data-hour]')?.getAttribute('data-hour') ?? '00:00'
+      edgeArrowRef.current = { key, hour }
+      const direction: 'prev' | 'next' = key === 'ArrowLeft' ? 'prev' : 'next'
+      const date = parseISO(currentDate)
+      setCurrentDate(
+        toLocalDateString(dayCount === 7 ? addWeeks(date, direction === 'next' ? 1 : -1) : addDays(date, direction === 'next' ? dayCount : -dayCount))
+      )
+    },
+    [currentDate, setCurrentDate, dayCount]
+  )
+
+  const handleGridKeyDownWithEdge = useCallback(
+    (e: React.KeyboardEvent<HTMLDivElement>): void => {
+      handleGridKeyDown(e)
+      handleGridEdgeKeyDown(e)
+    },
+    [handleGridKeyDown, handleGridEdgeKeyDown]
+  )
+
+  useEffect(() => {
+    if (!edgeArrowRef.current) return
+    // The day columns have re-rendered for the new week. Land focus on the
+    // edge day of the newly visible week (first column after paging right,
+    // last column after paging left) at the hour the user was on.
+    const { key, hour } = edgeArrowRef.current
+    edgeArrowRef.current = null
+    const body = gridBodyRef.current
+    if (!body) return
+    const cells = Array.from(body.querySelectorAll<HTMLElement>('[data-hour]'))
+    if (cells.length === 0) return
+    const edgeDate =
+      key === 'ArrowRight'
+        ? cells[0].getAttribute('data-date')
+        : cells[cells.length - 1].getAttribute('data-date')
+    const target = cells.find(
+      (cell) => cell.getAttribute('data-date') === edgeDate && cell.dataset.hour === hour
+    )
+    const anchorCell = body.querySelector<HTMLElement>('[data-hour][tabindex="0"]')
+    if (anchorCell) anchorCell.tabIndex = -1
+    if (target) {
+      target.tabIndex = 0
+      target.focus()
+      setFocusAnchor(target)
+    }
+  }, [currentDate, setFocusAnchor])
 
   useEffect(() => {
     if (openMenuId !== null && openMenuId !== 'weekview' && contextMenu) {
@@ -592,6 +685,19 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
     [openModal]
   )
 
+  // Enter/Space on a focused empty slot starts the same quick-create as a
+  // click. (A focused event card handles its own Enter via EventCard.) Stable
+  // like handleCellClick so DroppableCell's memo holds.
+  const handleCellKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLDivElement>): void => {
+      if (e.key !== 'Enter' && e.key !== ' ') return
+      e.preventDefault()
+      e.stopPropagation()
+      handleCellClick(e as unknown as React.MouseEvent<HTMLDivElement>)
+    },
+    [handleCellClick]
+  )
+
   const handleDragStartFromCell = useCallback((e: React.MouseEvent<HTMLDivElement>): void => {
     if (e.button !== 0) return
     const { date, hour } = e.currentTarget.dataset
@@ -940,7 +1046,12 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
             )
           })}
         </div>
-        <div ref={daysContainerRef} className={styles.daysContainer}>
+        <div
+          ref={daysAndGridRef}
+          className={styles.daysContainer}
+          data-component="week-grid"
+          onKeyDown={handleGridKeyDownWithEdge}
+        >
           {selectionOverlay}
           {weekDays.map((day) => {
             const dayKey = format(day, 'yyyy-MM-dd')
@@ -964,8 +1075,10 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
                       key={`${dayKey}-${hourKey}`}
                       dateKey={dayKey}
                       hourKey={hourKey}
+                      isFocusAnchor={dayKey === currentDate && hourKey === '00:00'}
                       onClick={handleCellClick}
                       onMouseDown={handleDragStartFromCell}
+                      onKeyDown={handleCellKeyDown}
                     />
                   ))}
                 </div>
@@ -1069,7 +1182,12 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
               )
             })}
           </div>
-          <div ref={daysContainerRef} className={styles.daysContainer}>
+          <div
+            ref={daysAndGridRef}
+            className={styles.daysContainer}
+            data-component="week-grid"
+            onKeyDown={handleGridKeyDownWithEdge}
+          >
             {selectionOverlay}
             {weekDays.map((day) => {
               const dayKey = format(day, 'yyyy-MM-dd')
@@ -1095,8 +1213,10 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
                         key={`${dayKey}-${hourKey}`}
                         dateKey={dayKey}
                         hourKey={hourKey}
+                        isFocusAnchor={dayKey === currentDate && hourKey === '00:00'}
                         onClick={handleCellClick}
                         onMouseDown={handleDragStartFromCell}
+                        onKeyDown={handleCellKeyDown}
                       />
                     ))}
                   </div>

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { BrowserRouter } from 'react-router'
 import { DayView } from '../DayView'
 import { useCalendarStore } from '@/store/calendarStore'
@@ -237,5 +237,105 @@ describe('DayView', () => {
       (el) => (el as HTMLElement).style.opacity === '1'
     )
     expect(motionControl.length).toBeGreaterThanOrEqual(0)
+  })
+})
+
+describe('DayView keyboard navigation', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+
+    mockUseCalDAV.mockReturnValue({
+      accounts: [],
+      calendars: [],
+      syncState: { status: 'idle', lastSyncAt: null, error: null, pendingChanges: 0 },
+      addAccount: vi.fn(),
+      removeAccount: vi.fn(),
+      syncAccount: vi.fn(),
+      syncAll: vi.fn(),
+      createEvent: vi.fn(),
+      updateEvent: vi.fn(),
+      deleteEvent: vi.fn(),
+    } as unknown as ReturnType<typeof useCalDAV>)
+
+    mockUseGestures.mockReturnValue({
+      bind: {},
+      gestureState: 'idle',
+    })
+
+    const store = useCalendarStore.getState()
+    store.events.forEach((e) => store.deleteEvent(e.id))
+    store.calendars.forEach((c) => store.deleteCalendar(c.id))
+    store.addCalendar({
+      id: 'default',
+      name: 'Default Calendar',
+      color: '#4285F4',
+      isVisible: true,
+      isDefault: true,
+      showTasksInViews: true,
+    })
+    store.setCurrentDate('2024-03-15')
+  })
+
+  const grid = (container: HTMLElement): HTMLElement => {
+    const el = container.querySelector<HTMLElement>('[data-component="day-grid"]')
+    if (!el) throw new Error('day-grid not found')
+    return el
+  }
+
+  const cell = (container: HTMLElement, hour: string): HTMLElement => {
+    const el = container.querySelector<HTMLElement>(`[data-hour="${hour}"]`)
+    if (!el) throw new Error(`cell ${hour} not found`)
+    return el
+  }
+
+  it('exposes only one hour slot as a tab stop (roving tabindex)', () => {
+    const { container } = renderWithRouter(<DayView />)
+    const tabbable = container.querySelectorAll('[data-hour][tabindex="0"]')
+    expect(tabbable).toHaveLength(1)
+    expect(tabbable[0].getAttribute('data-hour')).toBe('00:00')
+  })
+
+  it('ArrowDown moves focus to the next hour slot', () => {
+    const { container } = renderWithRouter(<DayView />)
+    const current = cell(container, '09:00')
+    current.focus()
+    fireEvent.keyDown(grid(container), { key: 'ArrowDown' })
+    expect(document.activeElement).toBe(cell(container, '10:00'))
+  })
+
+  it('ArrowUp moves focus to the previous hour slot', () => {
+    const { container } = renderWithRouter(<DayView />)
+    const current = cell(container, '09:00')
+    current.focus()
+    fireEvent.keyDown(grid(container), { key: 'ArrowUp' })
+    expect(document.activeElement).toBe(cell(container, '08:00'))
+  })
+
+  it('moves the roving tab stop to the focused cell', () => {
+    const { container } = renderWithRouter(<DayView />)
+    const current = cell(container, '09:00')
+    current.focus()
+    fireEvent.keyDown(grid(container), { key: 'ArrowDown' })
+    const next = cell(container, '10:00')
+    expect(next.tabIndex).toBe(0)
+    expect(current.tabIndex).toBe(-1)
+  })
+
+  it('Enter on a focused hour slot triggers the same quick-create as a click', () => {
+    const { container } = renderWithRouter(<DayView />)
+    const hour = cell(container, '09:00')
+    hour.focus()
+    fireEvent.keyDown(hour, { key: 'Enter' })
+    const store = useCalendarStore.getState()
+    expect(store.isModalOpen).toBe(true)
+    expect(store.selectedDate).toBe('2024-03-15T09:00')
+  })
+
+  it('ArrowDown does not trigger the global date pager while a cell has focus', () => {
+    const { container } = renderWithRouter(<DayView />)
+    const current = cell(container, '09:00')
+    current.focus()
+    fireEvent.keyDown(grid(container), { key: 'ArrowDown' })
+    expect(useCalendarStore.getState().currentDate).toBe('2024-03-15')
   })
 })

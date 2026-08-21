@@ -561,3 +561,10 @@
   background: rgba(128, 128, 128, 0.18);
   white-space: nowrap;
 }
+
+/* The light-gray chip sits *lighter* than the popover in dark mode, which eats
+   the contrast of --ink-2 on it (4.45:1 on the default dark theme). Flip the
+   chip to a dark scrim in dark mode so the light ink reads at AA+ (6.2:1). */
+[data-theme='dark'] .tzBadge {
+  background: rgba(0, 0, 0, 0.3);
+}

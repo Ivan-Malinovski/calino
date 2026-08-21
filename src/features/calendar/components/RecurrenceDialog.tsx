@@ -1,5 +1,5 @@
 import type { JSX } from 'react'
-import { useRef } from 'react'
+import { useId, useRef } from 'react'
 import { useAnimatedClose } from '@/hooks/useAnimatedClose'
 import { useModalDismiss } from '@/hooks/useModalDismiss'
 import type { RecurrenceEditMode } from '@/types'
@@ -23,6 +23,7 @@ export function RecurrenceDialog({
   const nounPlural = isTask ? 'tasks' : 'events'
   const { rendered, closing, requestClose } = useAnimatedClose(isOpen, onClose, 150)
   const modalRef = useRef<HTMLDivElement>(null)
+  const titleId = useId()
   useModalDismiss(modalRef, rendered && !closing, requestClose)
 
   if (!rendered) return null
@@ -34,10 +35,13 @@ export function RecurrenceDialog({
         className={styles.modal}
         role="dialog"
         aria-modal="true"
+        aria-labelledby={titleId}
         onClick={(e) => e.stopPropagation()}
       >
         <div className={styles.header}>
-          <h2 className={styles.title}>Edit recurring {noun}</h2>
+          <h2 id={titleId} className={styles.title}>
+            Edit recurring {noun}
+          </h2>
           <button className={styles.closeButton} onClick={requestClose} aria-label="Close">
             <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none">
               <path

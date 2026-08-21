@@ -75,7 +75,10 @@ test.describe('All-day recurrence UNTIL across the UTC boundary', () => {
   }) => {
     await page.goto('/month')
 
-    const cell = page.getByRole('button', { name: /^\w+day, / }).first()
+    // The day cell is a focusable container without a button role (the inner
+    // day-number button is the semantic control) — select it by data-date.
+    // Clicking it opens the same quick-create modal as before.
+    const cell = page.locator('[data-date]').first()
     await expect(cell).toBeVisible()
     await cell.click()
 

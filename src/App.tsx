@@ -811,6 +811,8 @@ function CalendarApp(): JSX.Element {
         <motion.main
           className="main"
           ref={mainRef}
+          id="main-content"
+          tabIndex={-1}
           data-view={currentView}
           onPanStart={isMobile ? handleContentPanStart : undefined}
           onPanEnd={isMobile ? handleContentPanEnd : undefined}
@@ -996,6 +998,12 @@ function App(): JSX.Element {
     <BrowserRouter>
       <ThemeProvider>
         <CalDAVProvider>
+          {/* Skip link — the first tabbable element in the document. Visually
+              hidden until focused, then appears top-left so keyboard users can
+              jump past the header/sidebar straight to the app content. */}
+          <a className="skipLink" href="#main-content">
+            Skip to calendar
+          </a>
           <GitHubPagesRedirect />
           <ThemedToaster />
           <GlobalProgress />

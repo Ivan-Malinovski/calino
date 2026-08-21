@@ -406,9 +406,12 @@
   }
 }
 
+/* Other-month mini-calendar days. The old `opacity: 0.85` over --ink-3 put
+   the text at 3.74:1 on white; --ink-3-dimmed is the muted-but-readable
+   colour at full opacity (4.93:1 on --panel, 4.73:1 on the cell tint). */
 .miniDay.otherMonth {
-  color: var(--ink-3);
-  opacity: 0.85;
+  color: var(--ink-3-dimmed, var(--ink-3));
+  opacity: 1;
 }
 
 .miniDay.selected {

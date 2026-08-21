@@ -282,7 +282,7 @@ export function ContactDetail({
                 autoFocus
               />
             ) : (
-              <h1 className={styles.heroName}>{contact.displayName}</h1>
+              <h2 className={styles.heroName}>{contact.displayName}</h2>
             )}
           </div>
           {roleOrg && <p className={styles.heroRole}>{roleOrg}</p>}

@@ -60,6 +60,7 @@ import {
 } from '@/hooks/useMonthEventCapacity'
 import { useDragModifierStore } from '@/store/dragModifierStore'
 import { useContextMenuStore } from '@/store/contextMenuStore'
+import { useRovingGrid } from '@/hooks/useRovingGrid'
 import { AgendaView } from './AgendaView'
 import { DayView } from './DayView'
 import type { CalendarEvent, ViewType } from '@/types'
@@ -162,30 +163,8 @@ export function CalendarGrid(): JSX.Element {
   })
 
   // Arrow-key roving focus across day cells: ←/→ move one day, ↑/↓ move one
-  // week. Enter/Space (handled on each cell) opens the focused day.
-  const handleGridKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
-    const { key } = e
-    if (key !== 'ArrowLeft' && key !== 'ArrowRight' && key !== 'ArrowUp' && key !== 'ArrowDown')
-      return
-    const active = document.activeElement as HTMLElement | null
-    const cell = active?.closest('[data-date]') as HTMLElement | null
-    if (!cell || !e.currentTarget.contains(cell)) return
-    // Stop the window-level handler (which maps ↑/↓ to month change) from also
-    // firing while a day cell owns keyboard focus.
-    e.preventDefault()
-    e.stopPropagation()
-    const cells = Array.from(e.currentTarget.querySelectorAll<HTMLElement>('[data-date]'))
-    const idx = cells.indexOf(cell)
-    if (idx === -1) return
-    const delta = key === 'ArrowLeft' ? -1 : key === 'ArrowRight' ? 1 : key === 'ArrowUp' ? -7 : 7
-    const target = cells[idx + delta]
-    if (!target) return
-    // Move the roving tab stop so Tab/Shift+Tab re-enter at the last cell.
-    cell.tabIndex = -1
-    target.tabIndex = 0
-    target.focus()
-  }, [])
-
+  // week (handled by useRovingGrid, which also owns the roving tab stop). The
+  // cell itself keeps its own Enter/Space handler that opens the focused day.
   const [activeEvent, setActiveEvent] = useState<CalendarEvent | null>(null)
   const [activeLayout, setActiveLayout] = useState<{
     compact: boolean
@@ -218,6 +197,29 @@ export function CalendarGrid(): JSX.Element {
   const lastConsumedScrollRef = useRef(0)
   const currentDateRef = useRef(currentDate)
   const containerRef = useRef<HTMLDivElement>(null)
+  // The scrolling month grid. Shared by the standalone view, the split view's
+  // top half, and the roving-focus/keyboard and auto-capacity hooks that read
+  // cells off it.
+  const gridScrollRef = useRef<HTMLDivElement>(null)
+
+  // Arrow-key roving focus across day cells: ←/→ move one day, ↑/↓ move one
+  // week (handled by useRovingGrid, which also owns the roving tab stop). The
+  // cell itself keeps its own Enter/Space handler that opens the focused day.
+  const { handleKeyDown: handleGridKeyDown } = useRovingGrid(
+    gridScrollRef,
+    '[data-date]',
+    (key) =>
+      key === 'ArrowLeft'
+        ? -1
+        : key === 'ArrowRight'
+          ? 1
+          : key === 'ArrowUp'
+            ? -7
+            : key === 'ArrowDown'
+              ? 7
+              : null
+  )
+
   // Track active resize listeners for cleanup on unmount
   const resizeCleanupRef = useRef<(() => void) | null>(null)
   // Journal day modal state (from global store)
@@ -857,7 +859,6 @@ export function CalendarGrid(): JSX.Element {
   // dots, not rows, so there is no row height to divide by.
   const monthLimitIsAuto = monthViewEventLimit === 0
   const autoLimitEnabled = monthLimitIsAuto && !showAgendaSplit && !isCompactMobile
-  const standaloneGridRef = useRef<HTMLDivElement>(null)
   const compressedWeekCount = useMemo(() => {
     if (!compressWeekRows) return 0
     const today = startOfDay(new Date())
@@ -868,7 +869,7 @@ export function CalendarGrid(): JSX.Element {
   }, [compressWeekRows, weekNumbers, days])
   const autoCapacity = useMonthEventCapacity({
     enabled: autoLimitEnabled,
-    gridRef: standaloneGridRef,
+    gridRef: gridScrollRef,
     headerSelector: '[data-component="calendar-grid-header"]',
     weekCount: weekNumbers.length,
     compressedWeekCount,
@@ -898,7 +899,6 @@ export function CalendarGrid(): JSX.Element {
   const AGENDA_MIN_SHARE = 0.25
   const splitContainerRef = useRef<HTMLDivElement>(null)
   const gridTopRef = useRef<HTMLDivElement>(null)
-  const gridScrollRef = useRef<HTMLDivElement>(null)
   const [gridMinHeight, setGridMinHeight] = useState(0)
   const hasMeasuredRef = useRef(false)
   const rafRef = useRef(0)
@@ -1188,7 +1188,7 @@ export function CalendarGrid(): JSX.Element {
           {...bind}
         >
           <div
-            ref={standaloneGridRef}
+            ref={gridScrollRef}
             className={styles.grid}
             data-component="calendar-grid"
             onKeyDown={handleGridKeyDown}
@@ -1513,7 +1513,6 @@ const DroppableDay = React.memo(function DroppableDay({
       {...(!isCurrentMonth ? { 'data-other-month': '' } : {})}
       {...(isWeekend ? { 'data-weekend': '' } : {})}
       {...(isOver ? { 'data-drop-target': '' } : {})}
-      role="button"
       tabIndex={isFocusAnchor ? 0 : -1}
       aria-label={format(day, 'EEEE, MMMM d, yyyy')}
       data-date={dateKey}

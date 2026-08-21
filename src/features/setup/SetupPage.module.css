@@ -12,6 +12,11 @@
   padding: var(--space-6);
 }
 
+/* Programmatic skip-link target — no focus ring around the whole page. */
+.page:focus {
+  outline: none;
+}
+
 .card {
   background: var(--panel);
   border: 1px solid var(--line);
@@ -334,7 +339,7 @@
   margin-bottom: 20px;
 }
 
-.instructions h3 {
+.instructions h2 {
   font-size: 15px;
   font-weight: 600;
   color: var(--ink);

@@ -250,11 +250,14 @@ export function EventFormFields({
     <>
       <div className={styles.dateTimeRow}>
         <div className={styles.dateTimeGroup}>
-          <label className={styles.label}>Start</label>
+          <label className={styles.label} htmlFor="event-start-date">
+            Start
+          </label>
           <div className={styles.dateTimeInputs}>
             <input
               type="date"
               ref={startDateRef}
+              id="event-start-date"
               value={startDate}
               onChange={(e) => {
                 const newDate = e.target.value
@@ -306,11 +309,14 @@ export function EventFormFields({
         </div>
 
         <div className={styles.dateTimeGroup}>
-          <label className={styles.label}>End</label>
+          <label className={styles.label} htmlFor="event-end-date">
+            End
+          </label>
           <div className={styles.dateTimeInputs}>
             <input
               type="date"
               ref={endDateRef}
+              id="event-end-date"
               value={endDate}
               onChange={(e) => onEndDateChange(e.target.value)}
               className={styles.input}

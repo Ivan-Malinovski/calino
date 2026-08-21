@@ -7,7 +7,7 @@ export function PrivacyPolicy(): JSX.Element {
   const navigate = useNavigate()
 
   return (
-    <div className={styles.container}>
+    <main className={styles.container} id="main-content" tabIndex={-1}>
       <div className={styles.header}>
         <button onClick={() => navigate(-1)} className={styles.backButton}>
           ← Back
@@ -109,6 +109,6 @@ export function PrivacyPolicy(): JSX.Element {
           </p>
         </section>
       </div>
-    </div>
+    </main>
   )
 }

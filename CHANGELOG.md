@@ -4,6 +4,28 @@ All notable changes to Calino will be documented in this file.
 
 ## [Unreleased]
 
+## [0.30.0] - 2026-08-21
+
+### Added
+
+- **The calendar grids are fully keyboard-navigable.** In week and day views, arrow keys move between days and hours, and Enter opens quick-create at the focused slot — matching what month view already did. One Tab lands you in the grid, not one stop per cell.
+
+- **A skip-to-content link** is the first thing Tab reaches on every page, jumping straight past the sidebar and header to the calendar.
+
+### Changed
+
+- **WCAG 2.1 AA is now Calino's working accessibility standard,** documented in PRODUCT.md and DESIGN.md. Automated axe-core scans over every main surface (views, settings, event modal, command palette) run in the E2E suite and fail on serious or critical violations.
+
+### Fixed
+
+- **Muted text meets contrast requirements in both themes** — dimmed dates in the mini-calendar and month grid, the current-time label, the settings active-nav item, and several secondary text colors were below the AA ratio and have been adjusted while keeping their visual character.
+
+- **Recurring-event dialogs are announced correctly by screen readers** — they now expose their visible heading as an accessible name.
+
+- **Form controls in the event modal are labelled** — the calendar picker and start/end date fields no longer read as anonymous inputs to assistive technology.
+
+- **Month view day cells no longer nest interactive controls inside a button role**, which screen readers reported as broken structure.
+
 ## [0.29.1] - 2026-08-20
 
 ### Added

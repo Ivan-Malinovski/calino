@@ -44,7 +44,7 @@ A CalDAV client built to the maintainer's own taste for what a non-enterprise ca
 - Optimized, gesture-driven mobile view (swipe between months/weeks/days).
 - Constraint: offline/service-worker support requires self-hosting with the right headers — GitHub Pages strips `Service-Worker-Allowed`, so the hosted calino.io experience is online-only by default.
 - Constraint: LLM-based image-to-event is opt-in, BYOK (bring your own key), and Android-only — not a dependency for the core product experience.
-- No accessibility standard formally established yet ([see below](#accessibility--inclusion)).
+- Accessibility: WCAG 2.1 AA is the working standard ([see below](#accessibility--inclusion)).
 
 ## Brand Commitments
 
@@ -68,4 +68,21 @@ A CalDAV client built to the maintainer's own taste for what a non-enterprise ca
 
 ## Accessibility & Inclusion
 
-No accessibility standard has been formally established. Do not invent a compliance target (e.g. WCAG level) on the product's behalf; treat this as an open decision rather than a confirmed requirement.
+WCAG 2.1 level AA is the working standard. This is a quality bar the product
+designs and tests against — not a formal certification claim; do not market
+Calino as "certified" or "compliant" anywhere user-facing.
+
+How the standard is enforced:
+
+- `e2e/accessibility.spec.ts` runs axe-core (WCAG 2.0/2.1 A+AA tags) over the
+  main surfaces — month/week/day/agenda views, settings, the event modal, and
+  the command palette — and fails on any serious or critical violation.
+- Contrast tokens in `src/themes/built-in.css` are chosen to clear AA ratios;
+  ratio notes are kept as comments next to the values they document.
+- Keyboard operation is a first-class requirement: roving-tabindex arrow
+  navigation across month, week, and day grids; skip-to-content link; focus
+  trapping with restore on all modals.
+
+Known deliberate exceptions are documented in DESIGN.md's Accessibility
+section. New UI should ship with an axe scan or keyboard spec covering it —
+see AGENTS.md's testing rules.

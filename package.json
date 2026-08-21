@@ -1,7 +1,7 @@
 {
   "name": "calino",
   "private": true,
-  "version": "0.29.1",
+  "version": "0.30.0",
   "type": "module",
   "packageManager": "pnpm@10.30.3",
   "scripts": {
@@ -60,6 +60,7 @@
     "zustand": "^5.0.15"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
     "@capacitor/android": "^8.5.0",
     "@capacitor/app": "^8.1.1",
     "@capacitor/cli": "^8.5.0",

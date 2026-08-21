@@ -861,7 +861,7 @@ export function TodoView(): JSX.Element {
       >
         <div className={`${styles.taskGroup} ${item.isOverdue ? styles.overdueGroup : ''}`}>
           <div className={styles.groupHeader}>
-            <span className={styles.groupTitle}>{item.label}</span>
+            <h2 className={styles.groupTitle}>{item.label}</h2>
             <span className={styles.groupCount}>{item.count}</span>
             <span className={styles.groupRule} />
           </div>

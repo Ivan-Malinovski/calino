@@ -17,7 +17,7 @@
   top: -8px;
   font-size: 10px;
   font-weight: 600;
-  color: var(--color-current-time, #e53935);
+  color: var(--color-current-time, #d93025);
   white-space: nowrap;
   background: var(--panel, #ffffff);
   padding: 1px 4px;
@@ -32,8 +32,8 @@
   right: 0;
   top: 0;
   height: 2px;
-  background: var(--color-current-time, #e53935);
-  box-shadow: 0 1px 3px color-mix(in srgb, var(--color-current-time, #e53935) 30%, transparent);
+  background: var(--color-current-time, #d93025);
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--color-current-time, #d93025) 30%, transparent);
 }
 
 /* Small circle on the left edge (gutter) */
@@ -45,5 +45,5 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: var(--color-current-time, #e53935);
+  background: var(--color-current-time, #d93025);
 }

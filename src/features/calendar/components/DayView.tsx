@@ -25,6 +25,7 @@ import { safeCalDAVUpdate } from '@/lib/caldavHelpers'
 import { EventCard } from './EventCard'
 import { ContextMenu } from '@/components/common/ContextMenu'
 import { useGestures } from '@/hooks/useGestures'
+import { useRovingGrid } from '@/hooks/useRovingGrid'
 import { useContextMenuStore } from '@/store/contextMenuStore'
 import { useWindowHeight } from '@/hooks/useWindowHeight'
 import { useDragDuplicateModifier } from '@/hooks/useDragDuplicateModifier'
@@ -70,6 +71,7 @@ interface HourCellProps {
   baseDate: Date
   isDualTz: boolean
   secondaryTimezone: string | null
+  isFocusAnchor: boolean
   onCellClick: (hour: Date) => void
   onDragStart: (hour: Date, e: React.MouseEvent) => void
 }
@@ -83,6 +85,7 @@ function HourCell({
   baseDate,
   isDualTz,
   secondaryTimezone,
+  isFocusAnchor,
   onCellClick,
   onDragStart,
 }: HourCellProps): JSX.Element {
@@ -116,8 +119,19 @@ function HourCell({
       <div
         ref={setNodeRef}
         className={styles.cell}
+        data-hour={format(hour, 'HH:mm')}
+        tabIndex={isFocusAnchor ? 0 : -1}
         onClick={() => onCellClick(hour)}
         onMouseDown={(e) => onDragStart(hour, e)}
+        onKeyDown={(e) => {
+          // Enter/Space on a focused hour slot starts the same quick-create as
+          // a click. (A focused event card handles its own Enter via EventCard.)
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            e.stopPropagation()
+            onCellClick(hour)
+          }
+        }}
       />
     </div>
   )
@@ -175,6 +189,23 @@ export function DayView({
   const stretchFactor = windowHeight > 1570 ? windowHeight / 1570 : 1
   const effectiveScale = scale * stretchFactor
   const hourHeight = BASE_HOUR_HEIGHT * effectiveScale
+
+  // Roving-tabindex arrow navigation across the 24 hour-slot column: ↑/↓ move
+  // between hour slots (←/→ have nothing to move to in a single-column grid,
+  // so they fall through to the global handlers). Enter/Space on a focused
+  // slot opens the quick-create modal (same handler as a click).
+  const gridBodyRef = useRef<HTMLDivElement>(null)
+  const { handleKeyDown: handleGridKeyDown } = useRovingGrid(
+    gridBodyRef,
+    '[data-hour]',
+    (key) => (key === 'ArrowUp' ? -1 : key === 'ArrowDown' ? 1 : null)
+  )
+  // Both refs point at the same element (the hour-grid body): `bodyRef` for
+  // scroll-to-now / context-menu geometry, `gridBodyRef` for roving focus.
+  const bodyAndGridRef = useCallback((el: HTMLDivElement | null) => {
+    bodyRef.current = el
+    gridBodyRef.current = el
+  }, [])
 
   useEffect(() => {
     if (openMenuId !== null && openMenuId !== 'dayview' && contextMenu) {
@@ -842,14 +873,16 @@ export function DayView({
           </div>
         </div>
         <div
-          ref={bodyRef}
+          ref={bodyAndGridRef}
           className={styles.body}
+          data-component="day-grid"
+          onKeyDown={handleGridKeyDown}
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
           onMouseLeave={handleMouseUp}
           onScroll={handleScroll}
         >
-          {HOURS.map((hour) => (
+          {HOURS.map((hour, idx) => (
             <HourCell
               key={hour.toISOString()}
               hour={hour}
@@ -858,6 +891,7 @@ export function DayView({
               baseDate={date}
               isDualTz={isDualTz}
               secondaryTimezone={secondaryTimezone}
+              isFocusAnchor={idx === 0}
               onCellClick={handleCellClick}
               onDragStart={handleDragStartFromCell}
             />

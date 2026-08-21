@@ -14,6 +14,11 @@
   background: var(--color-bg);
 }
 
+/* Programmatic skip-link target — no focus ring around the whole page. */
+.container:focus {
+  outline: none;
+}
+
 @media (max-width: 768px) {
   .container {
     padding-top: calc(var(--space-6) + var(--safe-area-top));

@@ -5,6 +5,42 @@
   background: var(--color-bg, var(--color-bg-primary));
 }
 
+/* Skip link — first tabbable element in the document. Positioned off-screen
+   (out of the visual layout) until it receives focus, then pinned to the
+   top-left with an elevated surface so it never shifts the layout around it. */
+.skipLink {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.skipLink:focus {
+  position: fixed;
+  top: var(--space-2, 8px);
+  left: var(--space-2, 8px);
+  z-index: 200;
+  width: auto;
+  height: auto;
+  padding: 10px 16px;
+  clip: auto;
+  border-radius: var(--radius-md, 8px);
+  background: var(--color-accent, #b07d4f);
+  color: var(--color-accent-contrast, #fff);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.25);
+  outline: 2px solid var(--color-focus, #4a90d9);
+  outline-offset: 2px;
+}
+
 @media (max-width: 768px) { /* sync with config.ts MOBILE_BREAKPOINT */
   /* Fade the bottom safe-area inset (gesture nav bar) to transparent
      instead of a hard-edged solid strip in the app's background color. */
@@ -93,6 +129,13 @@
   flex-direction: column;
   min-height: 0;
   overflow: hidden;
+}
+
+/* The skip link's target. tabindex="-1" lets the browser move focus there
+   programmatically, but the whole-viewport outline a real :focus would draw
+   reads as a broken ring — screen readers still announce the landmark. */
+.main:focus {
+  outline: none;
 }
 
 @media (max-width: 768px) { /* sync with config.ts MOBILE_BREAKPOINT */

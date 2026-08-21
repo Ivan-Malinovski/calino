@@ -328,6 +328,7 @@
   text-transform: uppercase;
   color: var(--ink-3, #a39d93);
   white-space: nowrap;
+  margin: 0;
 }
 
 .groupCount {

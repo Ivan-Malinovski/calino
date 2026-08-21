@@ -45,8 +45,10 @@ test.describe('deleting synced resources', () => {
     await page.goto('/month')
     await page.locator('[data-component="sync-all-calendars"]').click()
 
-    // Create through the modal, targeting the remote calendar.
-    const dayCell = page.getByRole('button', { name: /^Tuesday, / }).first()
+    // Create through the modal, targeting the remote calendar. Day cells are
+    // focusable containers without a button role (the day-number button is the
+    // semantic control), so select by data-date.
+    const dayCell = page.locator('[data-date]').first()
     await expect(dayCell).toBeVisible({ timeout: 10_000 })
     await dayCell.click()
     const modal = page.locator('[data-component="modal-card"]')
