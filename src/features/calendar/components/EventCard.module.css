@@ -570,6 +570,24 @@
   padding-right: 0;
 }
 
+/* Month-view child tasks carry a small branch marker so their relationship is
+   visible even when the title and due date are otherwise identical to a root
+   task. It lives inside the drag content so it truncates naturally with the
+   title instead of consuming a second row. */
+.monthView.subtask .dragContent {
+  flex-direction: row;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.subtaskMarker {
+  flex: 0 0 auto;
+  color: var(--event-color, var(--accent));
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+}
+
 .task::before {
   display: none;
 }
@@ -605,6 +623,11 @@
   content: '';
   position: absolute;
   inset: -6px;
+}
+
+.task .taskCheckbox:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
 .task .taskCheckbox:hover {
@@ -744,6 +767,14 @@
 .dot .dragContent,
 .dot .dueDate {
   display: none;
+}
+
+/* Mobile month tasks are dots rather than titled pills. A ring distinguishes
+   a child task without relying on color, while the card's aria-label carries
+   the full relationship for assistive technology. */
+.dot.task.subtask {
+  border: 2px solid color-mix(in srgb, var(--event-color, var(--accent)) 70%, white);
+  box-shadow: inset 0 0 0 1px var(--canvas, #fff);
 }
 
 /* ---- Tight cards ----

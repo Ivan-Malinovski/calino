@@ -165,6 +165,71 @@ describe('EventPreviewPopup', () => {
     expect(screen.getByText('Open task')).toBeInTheDocument()
   })
 
+  it('shows and completes direct subtasks in the task preview', async () => {
+    const store = useCalendarStore.getState()
+    const parent = { ...mockTask, id: 'preview-parent', title: 'Preview parent' }
+    const child: CalendarEvent = {
+      ...mockTask,
+      id: 'preview-child',
+      title: 'Preview child',
+      parentTaskId: parent.id,
+      completed: false,
+    }
+    store.addEvent(parent)
+    store.addEvent(child)
+
+    render(<EventPreviewPopup event={parent} position={mockPosition} clickedEventId={parent.id} />)
+
+    expect(screen.getByText('Subtasks')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Preview child' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Mark "Preview child" as complete' }))
+
+    await waitFor(() => {
+      expect(
+        useCalendarStore.getState().events.find((event) => event.id === child.id)?.completed
+      ).toBe(true)
+    })
+    expect(useCalendarStore.getState().isModalOpen).toBe(false)
+  })
+
+  it('completes a recurring occurrence without completing its master series', () => {
+    const store = useCalendarStore.getState()
+    const master: CalendarEvent = {
+      ...mockTask,
+      id: 'preview-recurring-task',
+      title: 'Recurring task',
+      recurrence: { frequency: 'daily', interval: 1 },
+      completed: false,
+    }
+    const occurrenceId = 'preview-recurring-task-2024-03-16T10:00:00.000Z'
+    store.addEvent(master)
+
+    render(
+      <EventPreviewPopup event={master} position={mockPosition} clickedEventId={occurrenceId} />
+    )
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Mark "Recurring task" as complete' }))
+
+    expect(
+      useCalendarStore.getState().events.find((event) => event.id === master.id)?.completed
+    ).not.toBe(true)
+  })
+
+  it('identifies a previewed subtask by its parent', () => {
+    const parent: CalendarEvent = { ...mockTask, id: 'preview-parent', title: 'Preview parent' }
+    const child: CalendarEvent = {
+      ...mockTask,
+      id: 'preview-child',
+      title: 'Preview child',
+      parentTaskId: parent.id,
+    }
+    useCalendarStore.getState().addEvent(parent)
+    useCalendarStore.getState().addEvent(child)
+
+    render(<EventPreviewPopup event={child} position={mockPosition} clickedEventId={child.id} />)
+
+    expect(screen.getByText('Subtask of Preview parent')).toBeInTheDocument()
+  })
+
   it('has delete button', () => {
     render(
       <EventPreviewPopup event={mockEvent} position={mockPosition} clickedEventId="test-event-1" />

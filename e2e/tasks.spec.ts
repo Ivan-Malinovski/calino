@@ -30,6 +30,108 @@ test('renders imported subtasks beneath their parent', async ({ page }) => {
   await expect(page.locator('[data-component="modal-card"]').getByRole('button', { name: 'Book hotel' })).toBeVisible()
 })
 
+test('month task cards and task surfaces expose subtask completion controls', async ({ page }) => {
+  await clearState(page)
+  await page.addInitScript(() => {
+    if (sessionStorage.getItem('surface-seeded')) return
+    sessionStorage.setItem('surface-seeded', '1')
+    const now = new Date()
+    const date = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+    localStorage.setItem('calino-storage', JSON.stringify({
+      state: {
+        calendars: [{ id: 'default', name: 'Offline calendar', color: '#4285F4', isVisible: true, isDefault: true, showTasksInViews: true }],
+        events: [
+          { id: 'surface-parent', calendarId: 'default', title: 'Surface parent', type: 'task', start: `${date}T00:00:00`, end: `${date}T23:59:59`, dueDate: date, isAllDay: true, completed: false },
+          { id: 'surface-child', calendarId: 'default', title: 'Surface child', type: 'task', parentTaskId: 'surface-parent', start: `${date}T00:00:00`, end: `${date}T23:59:59`, dueDate: date, isAllDay: true, completed: false },
+          { id: 'surface-grandchild', calendarId: 'default', title: 'Surface grandchild', type: 'task', parentTaskId: 'surface-child', start: `${date}T00:00:00`, end: `${date}T23:59:59`, dueDate: date, isAllDay: true, completed: false },
+        ],
+      }, version: 1,
+    }))
+  })
+
+  await page.goto('/month')
+  const childCard = page.locator('[data-component="event-card"]').filter({ hasText: 'Surface child' })
+  await expect(childCard).toHaveAttribute('aria-label', /subtask/i)
+
+  const parentCard = page.locator('[data-component="event-card"]').filter({ hasText: 'Surface parent' })
+  await parentCard.click()
+
+  const preview = page.locator('[data-component="event-preview"]')
+  await expect(preview).toBeVisible()
+  const previewChildCheckbox = preview.locator('[data-component="task-preview-subtask-checkbox"]')
+  await previewChildCheckbox.check()
+  await expect(previewChildCheckbox).toBeChecked()
+
+  await preview.getByRole('button', { name: 'Open task' }).click()
+  const modal = page.locator('[data-component="modal-card"]')
+  await expect(modal.getByRole('button', { name: 'Surface child' })).toBeVisible()
+  await expect(modal.getByRole('button', { name: 'Surface grandchild' })).toBeVisible()
+  await expect(modal.getByRole('checkbox', { name: 'Mark "Surface grandchild" as incomplete' })).toBeChecked()
+
+  await page.reload()
+  await page.goto('/tasks')
+  await page.locator('main').getByRole('button', { name: 'Done' }).click()
+  await expect(page.locator('[data-component="task-row"]').filter({ hasText: 'Surface child' }).getByRole('button', { name: 'Mark as incomplete' })).toBeVisible()
+  await expect(page.locator('[data-component="task-row"]').filter({ hasText: 'Surface grandchild' }).getByRole('button', { name: 'Mark as incomplete' })).toBeVisible()
+})
+
+test.describe('mobile task surfaces', () => {
+  test.use({
+    viewport: { width: 390, height: 844 },
+    isMobile: true,
+    hasTouch: true,
+  })
+
+  test('keeps inline task controls within usable mobile sheets', async ({ page }) => {
+    await clearState(page)
+    await page.addInitScript(() => {
+      const now = new Date()
+      const date = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+      localStorage.setItem('calino-storage', JSON.stringify({
+        state: {
+          calendars: [{ id: 'default', name: 'Offline calendar', color: '#4285F4', isVisible: true, isDefault: true, showTasksInViews: true }],
+          events: [
+            { id: 'mobile-parent', calendarId: 'default', title: 'Mobile parent', type: 'task', start: `${date}T00:00:00`, end: `${date}T23:59:59`, dueDate: date, isAllDay: true, completed: false },
+            { id: 'mobile-child', calendarId: 'default', title: 'Mobile child', type: 'task', parentTaskId: 'mobile-parent', start: `${date}T00:00:00`, end: `${date}T23:59:59`, dueDate: date, isAllDay: true, completed: false },
+            { id: 'mobile-grandchild', calendarId: 'default', title: 'Mobile grandchild', type: 'task', parentTaskId: 'mobile-child', start: `${date}T00:00:00`, end: `${date}T23:59:59`, dueDate: date, isAllDay: true, completed: false },
+          ],
+        }, version: 1,
+      }))
+    })
+
+    await page.goto('/month')
+    const parentCard = page.locator('[data-component="event-card"][aria-label^="Mobile parent"]')
+    const childCard = page.locator('[data-component="event-card"][aria-label^="Mobile child"]')
+    await expect(parentCard).toBeVisible()
+    await expect(childCard).toHaveAttribute('aria-label', /subtask/i)
+
+    // Compact mobile month cards are intentionally density indicators and pass
+    // taps through to the day cell. Use the week surface for the preview check,
+    // where the task card remains an actionable target.
+    await page.goto('/week')
+    const weekParentCard = page.locator('[data-component="event-card"][aria-label^="Mobile parent"]')
+    await expect(weekParentCard).toBeVisible()
+    await weekParentCard.click()
+
+    const preview = page.locator('[data-component="event-preview"]')
+    await expect(preview).toBeVisible()
+    await expect(preview.locator('[data-component="task-preview-subtask-checkbox"]')).toHaveCSS('width', '20px')
+    const previewRow = preview.locator('[data-component="task-preview-subtask-checkbox"]').locator('..')
+    expect((await previewRow.boundingBox())?.height).toBeGreaterThanOrEqual(44)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+
+    await preview.getByRole('button', { name: 'Open task' }).click()
+    const modal = page.locator('[data-component="modal-card"]')
+    await expect(modal).toBeVisible()
+    const modalBox = await modal.boundingBox()
+    expect(modalBox?.width).toBeLessThanOrEqual(390)
+    const grandchildRow = modal.locator('[data-component="subtask-row"]').filter({ hasText: 'Mobile grandchild' })
+    await expect(grandchildRow).toHaveAttribute('data-task-depth', '1')
+    expect((await grandchildRow.boundingBox())?.height).toBeGreaterThanOrEqual(44)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+  })
+})
+
 test('shows only parent tasks in the sidebar', async ({ page }) => {
   await clearState(page)
   await page.addInitScript(() => {

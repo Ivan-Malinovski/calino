@@ -55,6 +55,36 @@ describe('EventCard', () => {
     expect(screen.getByText('Test Meeting')).toBeInTheDocument()
   })
 
+  it('marks a child task in month view', () => {
+    const subtask: CalendarEvent = {
+      ...mockEvent,
+      id: 'subtask',
+      title: 'Child task',
+      type: 'task',
+      parentTaskId: 'parent',
+    }
+
+    render(<EventCard event={subtask} compact monthView />)
+
+    expect(screen.getByRole('button', { name: /Child task.*subtask/i })).toBeInTheDocument()
+    expect(screen.getByTitle('Subtask')).toBeInTheDocument()
+  })
+
+  it('disables task completion on read-only calendars', () => {
+    const store = useCalendarStore.getState()
+    store.updateCalendar('default', { readOnly: true })
+    const task: CalendarEvent = {
+      ...mockEvent,
+      calendarId: 'default',
+      type: 'task',
+      title: 'Read-only task',
+    }
+
+    render(<EventCard event={task} />)
+
+    expect(screen.getByRole('button', { name: 'Toggle completion' })).toBeDisabled()
+  })
+
   it('renders event time when not all-day', () => {
     render(<EventCard event={mockEvent} />)
     expect(screen.getByText(/10:00.*11:00/)).toBeInTheDocument()

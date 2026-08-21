@@ -1000,6 +1000,27 @@
   .row.checksRow .chevronButton {
     margin-left: 0;
   }
+
+  /* Inline subtask actions are part of the mobile form, so give both the
+     checkbox and its title a comfortable row to hit without shrinking the
+     nested indentation. */
+  .subtaskItem {
+    min-height: 44px;
+    padding-top: 6px;
+    padding-bottom: 6px;
+  }
+
+  .subtaskItem input {
+    width: 20px;
+    height: 20px;
+  }
+
+  .subtaskTitle {
+    display: flex;
+    align-items: center;
+    flex: 1;
+    min-height: 32px;
+  }
 }
 
 .textarea {
@@ -1624,19 +1645,42 @@
 }
 
 .subtaskItem {
-  border: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   border-radius: var(--radius-sm);
   background: transparent;
   color: var(--ink-2);
-  cursor: pointer;
-  font: inherit;
   padding: 5px 8px;
-  text-align: left;
 }
 
 .subtaskItem:hover {
   background: var(--surface-bg);
   color: var(--ink);
+}
+
+.subtaskItem input {
+  flex: 0 0 auto;
+  accent-color: var(--accent);
+}
+
+.subtaskTitle {
+  min-width: 0;
+  overflow: hidden;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  padding: 0;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.subtaskTitle:hover {
+  color: var(--ink);
+  text-decoration: underline;
 }
 
 /* iOS Safari zooms the page when a focused field's text is under 16px, and

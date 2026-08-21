@@ -87,12 +87,63 @@ describe('EventModal', () => {
       isAllDay: false,
       type: 'task',
     })
+    store.addEvent({
+      id: 'grandchild',
+      calendarId: 'default',
+      title: 'Grandchild task',
+      parentTaskId: 'child',
+      start: '2024-03-15T10:00:00',
+      end: '2024-03-15T10:00:00',
+      isAllDay: false,
+      type: 'task',
+    })
     store.openModal(undefined, undefined, 'parent', 'task')
 
     render(<EventModal />)
 
     expect(screen.getByText('Subtasks')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Child task' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Grandchild task' })).toBeInTheDocument()
+    expect(
+      screen
+        .getByRole('button', { name: 'Grandchild task' })
+        .closest('[data-component="subtask-row"]')
+    ).toHaveAttribute('data-task-depth', '1')
+  })
+
+  it('completes a subtask inline without opening its editor', async () => {
+    const store = useCalendarStore.getState()
+    store.addEvent({
+      id: 'parent',
+      calendarId: 'default',
+      title: 'Parent task',
+      start: '2024-03-15T10:00:00',
+      end: '2024-03-15T10:00:00',
+      isAllDay: false,
+      type: 'task',
+    })
+    store.addEvent({
+      id: 'child',
+      calendarId: 'default',
+      title: 'Child task',
+      parentTaskId: 'parent',
+      start: '2024-03-15T10:00:00',
+      end: '2024-03-15T10:00:00',
+      isAllDay: false,
+      type: 'task',
+      completed: false,
+    })
+    store.openModal(undefined, undefined, 'parent', 'task')
+
+    render(<EventModal />)
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Mark "Child task" as complete' }))
+
+    await waitFor(() => {
+      expect(
+        useCalendarStore.getState().events.find((event) => event.id === 'child')?.completed
+      ).toBe(true)
+    })
+    expect(useCalendarStore.getState().isModalOpen).toBe(true)
   })
 
   it('does not show delete button when creating', () => {

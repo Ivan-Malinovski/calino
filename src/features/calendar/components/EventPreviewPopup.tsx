@@ -12,6 +12,7 @@ import {
   deviceTimezone,
 } from '@/lib/datetime'
 import { buildMasterTruncation } from '@/lib/recurrenceSplit'
+import { materializeOccurrenceAt } from '@/lib/occurrenceExpansion'
 import { showToast } from '@/lib/toast'
 import { motion, AnimatePresence, animate } from 'framer-motion'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
@@ -33,6 +34,8 @@ import type { CalendarEvent, RecurrenceEditMode } from '@/types'
 import { deleteRecurringOccurrence } from '@/lib/recurrenceDelete'
 import { buildMailtoUri } from '@/lib/mailtoInvite'
 import { deleteEventWithUndo } from '@/lib/deleteWithUndo'
+import { completeTaskAndSync } from '@/lib/taskCompletion'
+import { getDirectSubtasks } from '@/lib/taskTree'
 import { TimeField } from './TimeField'
 import styles from './EventPreviewPopup.module.css'
 
@@ -65,6 +68,10 @@ export function EventPreviewPopup({
   const defaultDuration = useSettingsStore((state) => state.defaultDuration)
   const openModal = useCalendarStore((state) => state.openModal)
   const closePreview = useCalendarStore((state) => state.closePreview)
+  const events = useCalendarStore((state) => state.events)
+  const calendars = useCalendarStore((state) => state.calendars)
+  const completeTask = useCalendarStore((state) => state.completeTask)
+  const completeTaskOccurrence = useCalendarStore((state) => state.completeTaskOccurrence)
   const [isClosing, setIsClosing] = useState(false)
   const prefersReducedMotion = useReducedMotion()
   const isMobile = useIsMobile()
@@ -127,6 +134,62 @@ export function EventPreviewPopup({
       : toEventInstant(event.originalEnd || event.end, event.timezone)
   )
   const isTask = event.type === 'task'
+  const currentTask = useMemo(() => {
+    const storedTask = events.find((candidate) => candidate.id === event.id) ?? event
+    if (!isTask || !occurrenceStartISO) return storedTask
+
+    const occurrence = materializeOccurrenceAt(storedTask, occurrenceStartISO)
+    const occurrenceOverride = events.find(
+      (candidate) =>
+        candidate.type === 'task' &&
+        candidate.recurrenceId === occurrenceStartISO &&
+        (candidate.uid === (storedTask.uid || storedTask.id) ||
+          candidate.recurrenceMasterId === storedTask.id)
+    )
+
+    return occurrenceOverride
+      ? {
+          ...occurrence,
+          completed: occurrenceOverride.completed,
+          taskStatus: occurrenceOverride.taskStatus,
+          percentComplete: occurrenceOverride.percentComplete,
+          completedAt: occurrenceOverride.completedAt,
+        }
+      : occurrence
+  }, [event, events, isTask, occurrenceStartISO])
+  const directSubtasks = useMemo(
+    () => (isTask ? getDirectSubtasks(events, event.id) : []),
+    [event.id, events, isTask]
+  )
+  const parentTask = useMemo(
+    () =>
+      isTask && event.parentTaskId
+        ? events.find((candidate) => candidate.id === event.parentTaskId)
+        : undefined,
+    [event.parentTaskId, events, isTask]
+  )
+  const isReadOnlyCalendar =
+    calendars.find((calendar) => calendar.id === currentTask.calendarId)?.readOnly === true
+  const [taskCompleted, setTaskCompleted] = useState(Boolean(currentTask.completed))
+
+  useEffect(() => {
+    setTaskCompleted(Boolean(currentTask.completed))
+  }, [currentTask.completed, currentTask.id])
+
+  const handleTaskCompletion = async (task: CalendarEvent): Promise<void> => {
+    if (calendars.find((calendar) => calendar.id === task.calendarId)?.readOnly === true) return
+    if (task.id === currentTask.id) setTaskCompleted(!task.completed)
+    try {
+      await completeTaskAndSync(task, !task.completed, {
+        completeTask,
+        completeTaskOccurrence,
+        updateCalDAVEvent,
+        saveRecurrenceOverride,
+      })
+    } catch {
+      // The CalDAV hook queues failed writes and surfaces their status.
+    }
+  }
   // Phase 2 (C2) — TZID events store naive wall clocks in the event zone, so
   // the popup must read them as instants before displaying or seeding edit
   // fields (mirrors EventCard/EventModal). All-day dates stay floating — a
@@ -598,6 +661,11 @@ export function EventPreviewPopup({
     openModal(undefined, undefined, clickedEventId)
   }
 
+  const handleOpenSubtask = (taskId: string): void => {
+    closePreview()
+    openModal(undefined, undefined, taskId, 'task')
+  }
+
   const isRecurring =
     !event.recurrenceId && (!!event.recurrence || !!event.rruleString || !!originalEventId)
 
@@ -974,6 +1042,62 @@ export function EventPreviewPopup({
                 </div>
 
                 <div className={styles.content} ref={scrollRef}>
+                  {isTask && (
+                    <label
+                      className={styles.taskCompletion}
+                      data-component="task-preview-completion"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={taskCompleted}
+                        disabled={isReadOnlyCalendar}
+                        onChange={() => void handleTaskCompletion(currentTask)}
+                        aria-label={
+                          taskCompleted
+                            ? `Mark "${currentTask.title}" as incomplete`
+                            : `Mark "${currentTask.title}" as complete`
+                        }
+                      />
+                      <span>{taskCompleted ? 'Completed' : 'Mark complete'}</span>
+                    </label>
+                  )}
+                  {isTask && parentTask && (
+                    <div className={styles.taskRelationship} data-component="task-preview-parent">
+                      <span aria-hidden="true">↳</span>
+                      <span>Subtask of {parentTask.title}</span>
+                    </div>
+                  )}
+                  {isTask && directSubtasks.length > 0 && (
+                    <div className={styles.previewSubtasks} data-component="task-preview-subtasks">
+                      <div className={styles.previewSubtasksLabel}>Subtasks</div>
+                      {directSubtasks.map((subtask) => (
+                        <div className={styles.previewSubtaskRow} key={subtask.id}>
+                          <input
+                            type="checkbox"
+                            data-component="task-preview-subtask-checkbox"
+                            checked={Boolean(subtask.completed)}
+                            disabled={
+                              calendars.find((calendar) => calendar.id === subtask.calendarId)
+                                ?.readOnly === true
+                            }
+                            onChange={() => void handleTaskCompletion(subtask)}
+                            aria-label={
+                              subtask.completed
+                                ? `Mark "${subtask.title}" as incomplete`
+                                : `Mark "${subtask.title}" as complete`
+                            }
+                          />
+                          <button
+                            type="button"
+                            className={styles.previewSubtaskTitle}
+                            onClick={() => handleOpenSubtask(subtask.id)}
+                          >
+                            {subtask.title}
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                   <div className={styles.field}>
                     <svg
                       aria-hidden="true"

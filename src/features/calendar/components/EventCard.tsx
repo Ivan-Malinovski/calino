@@ -17,6 +17,7 @@ import { useContextMenuStore } from '@/store/contextMenuStore'
 import { useHoveredEventStore } from '@/store/hoveredEventStore'
 import { useDragModifierStore } from '@/store/dragModifierStore'
 import { safeCalDAVUpdate } from '@/lib/caldavHelpers'
+import { completeTaskAndSync } from '@/lib/taskCompletion'
 import { useTaskContextMenuItems } from '../hooks/useTaskContextMenuItems'
 import { deleteEventWithUndo } from '@/lib/deleteWithUndo'
 import { deleteRecurringOccurrence } from '@/lib/recurrenceDelete'
@@ -269,6 +270,7 @@ export const EventCard = React.memo(function EventCard({
     useCategoryColors,
   })
   const isTask = event.type === 'task'
+  const isSubtask = isTask && Boolean(event.parentTaskId)
   // Reschedule + done/not-done for task pills, shared with the tasks list and
   // the sidebar. Delete stays this card's own — it also drives the recurring
   // this/all dialog below.
@@ -473,51 +475,16 @@ export const EventCard = React.memo(function EventCard({
     e.stopPropagation()
     if (isReadOnlyCalendar) return
     const newCompleted = !event.completed
-
-    // R2.7 — One occurrence of a recurring task, not the series. An expanded
-    // occurrence's id is synthetic (`${masterId}-${occurrenceKey}`) and matches
-    // nothing in the store, so `completeTask` below would find no task and
-    // silently do nothing — the checkbox simply wouldn't respond. Route to the
-    // detached-override path instead, exactly as the Tasks list does.
-    const occurrenceTarget = event.occurrenceMasterId
-      ? { masterId: event.occurrenceMasterId, occurrenceStart: event.start }
-      : event.recurrenceId && event.recurrenceMasterId && event.type === 'task'
-        ? { masterId: event.recurrenceMasterId, occurrenceStart: event.recurrenceId }
-        : null
-
-    if (occurrenceTarget) {
-      const plan = completeTaskOccurrence(
-        occurrenceTarget.masterId,
-        occurrenceTarget.occurrenceStart,
-        newCompleted
-      )
-      if (plan) {
-        try {
-          await saveRecurrenceOverride(
-            plan.master.calendarId,
-            plan.master,
-            plan.override,
-            plan.removedOverrideIds
-          )
-        } catch {
-          // surfaced by useCalDAV, which queues a retry
-        }
-      }
-      return
+    try {
+      await completeTaskAndSync(event, newCompleted, {
+        completeTask,
+        completeTaskOccurrence,
+        updateCalDAVEvent,
+        saveRecurrenceOverride,
+      })
+    } catch {
+      // The CalDAV hook queues failed writes and surfaces their status.
     }
-
-    const updatedTasks = completeTask(event.id, newCompleted)
-    if (!event.calendarId) return
-    await Promise.all(
-      updatedTasks.map((updatedTask) =>
-        safeCalDAVUpdate(updateCalDAVEvent, updatedTask.calendarId, updatedTask, {
-          completed: updatedTask.completed,
-          taskStatus: updatedTask.taskStatus,
-          percentComplete: updatedTask.percentComplete,
-          completedAt: updatedTask.completedAt,
-        })
-      )
-    )
   }
 
   return (
@@ -531,7 +498,7 @@ export const EventCard = React.memo(function EventCard({
         tabIndex={0}
         aria-label={
           isTask
-            ? `${event.title}${event.completed ? ' (completed)' : ''}${event.dueDate ? ` due ${formatEventTime(event.dueDate, event.timezone, timeFormat)}` : ''}`
+            ? `${event.title}${isSubtask ? ' (subtask)' : ''}${event.completed ? ' (completed)' : ''}${event.dueDate ? ` due ${formatEventTime(event.dueDate, event.timezone, timeFormat)}` : ''}`
             : event.isAllDay
               ? `${event.title}, all day`
               : `${event.title}, ${formatEventTime(event.start, event.timezone, timeFormat)} to ${formatEventTime(event.end, event.timezone, timeFormat)}`
@@ -549,7 +516,7 @@ export const EventCard = React.memo(function EventCard({
                 : 'Click to edit (recurring event)',
             }
           : {})}
-        className={`${styles.card} ${compact ? styles.compact : ''} ${isCurrentDragging || isDragging ? styles.dragging : ''} ${isResizing ? styles.resizing : ''} ${hideTopRadius ? styles.noTopRadius : ''} ${isTask ? styles.task : ''} ${event.completed ? styles.completed : ''} ${event.completed ? styles.isDone : ''} ${isMobileMonth ? styles.mobileMonth : ''} ${monthView ? styles.monthView : ''} ${transparent ? styles.transparent : ''} ${isMultiDay ? styles.multiDay : ''} ${isFragmentMiddle ? styles.fragmentMiddle : ''} ${isFragmentFirst ? styles.fragmentFirst : ''} ${isFragmentLast ? styles.fragmentLast : ''} ${hasFragmentTitle ? styles.fragmentTitle : ''} ${dotMode ? styles.dot : ''} ${isTight ? styles.tight : ''} ${event.isFragment && isSharedHovered ? styles.hovered : ''} ${disableDirectEdit ? styles.noDrag : ''}`}
+        className={`${styles.card} ${compact ? styles.compact : ''} ${isCurrentDragging || isDragging ? styles.dragging : ''} ${isResizing ? styles.resizing : ''} ${hideTopRadius ? styles.noTopRadius : ''} ${isTask ? styles.task : ''} ${isSubtask && monthView ? styles.subtask : ''} ${event.completed ? styles.completed : ''} ${event.completed ? styles.isDone : ''} ${isMobileMonth ? styles.mobileMonth : ''} ${monthView ? styles.monthView : ''} ${transparent ? styles.transparent : ''} ${isMultiDay ? styles.multiDay : ''} ${isFragmentMiddle ? styles.fragmentMiddle : ''} ${isFragmentFirst ? styles.fragmentFirst : ''} ${isFragmentLast ? styles.fragmentLast : ''} ${hasFragmentTitle ? styles.fragmentTitle : ''} ${dotMode ? styles.dot : ''} ${isTight ? styles.tight : ''} ${event.isFragment && isSharedHovered ? styles.hovered : ''} ${disableDirectEdit ? styles.noDrag : ''}`}
         onContextMenu={handleContextMenu}
         onClick={handleClick}
         // role="button" requires Enter and Space activation for keyboard
@@ -610,6 +577,7 @@ export const EventCard = React.memo(function EventCard({
           <button
             className={`${styles.checkbox} ${styles.taskCheckbox}`}
             onClick={handleCheckboxClick}
+            disabled={isReadOnlyCalendar}
             aria-label="Toggle completion"
           >
             {event.completed ? (
@@ -636,6 +604,11 @@ export const EventCard = React.memo(function EventCard({
             {...listeners}
             {...attributes}
           >
+            {isSubtask && monthView && !dotMode && (
+              <span className={styles.subtaskMarker} aria-hidden="true" title="Subtask">
+                ↳
+              </span>
+            )}
             <div
               className={styles.title}
               title={event.title}

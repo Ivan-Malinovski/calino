@@ -2,6 +2,7 @@ import type { JSX } from 'react'
 import { useLayoutEffect, useRef, useState } from 'react'
 import { format } from 'date-fns'
 import type { CalendarEvent, TaskPriority } from '@/types'
+import type { TaskTreeItem } from '@/lib/taskTree'
 import { useScrollInput } from '@/hooks/useScrollInput'
 import { useSettingsStore } from '@/store/settingsStore'
 import styles from './EventModal.module.css'
@@ -22,8 +23,11 @@ interface TaskFormFieldsProps {
   parentTaskId?: string
   parentTasks: CalendarEvent[]
   onParentTaskChange: (parentTaskId: string | undefined) => void
-  subtasks: CalendarEvent[]
+  subtasks: TaskTreeItem[]
   onOpenSubtask: (taskId: string) => void
+  onToggleSubtask: (task: CalendarEvent) => void
+  readOnly?: boolean
+  readOnlyTaskIds?: Set<string>
   onAddSubtask?: () => void
   /**
    * R2.7 — Recurrence controls, identical to the event form's. Passed through
@@ -80,6 +84,9 @@ export function TaskFormFields({
   onParentTaskChange,
   subtasks,
   onOpenSubtask,
+  onToggleSubtask,
+  readOnly = false,
+  readOnlyTaskIds,
   onAddSubtask,
   recurrence: recurrenceProps,
 }: TaskFormFieldsProps): JSX.Element {
@@ -203,16 +210,33 @@ export function TaskFormFields({
       {subtasks.length > 0 && (
         <div className={styles.subtaskList}>
           <span className={styles.label}>Subtasks</span>
-          {subtasks.map((task) => (
-            <button
+          {subtasks.map(({ task, depth }) => (
+            <div
               key={task.id}
-              type="button"
               className={styles.subtaskItem}
-              onClick={() => onOpenSubtask(task.id)}
+              style={{ marginLeft: depth * 18 }}
+              data-component="subtask-row"
+              data-task-depth={depth}
             >
-              {task.completed ? '✓ ' : ''}
-              {task.title}
-            </button>
+              <input
+                type="checkbox"
+                checked={Boolean(task.completed)}
+                disabled={readOnly || readOnlyTaskIds?.has(task.id)}
+                onChange={() => onToggleSubtask(task)}
+                aria-label={
+                  task.completed
+                    ? `Mark "${task.title}" as incomplete`
+                    : `Mark "${task.title}" as complete`
+                }
+              />
+              <button
+                type="button"
+                className={styles.subtaskTitle}
+                onClick={() => onOpenSubtask(task.id)}
+              >
+                {task.title}
+              </button>
+            </div>
           ))}
         </div>
       )}

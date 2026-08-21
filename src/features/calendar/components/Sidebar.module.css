@@ -1081,6 +1081,11 @@
   border-color: var(--accent);
 }
 
+.taskCheckbox:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
 .taskContent {
   flex: 1;
   display: flex;

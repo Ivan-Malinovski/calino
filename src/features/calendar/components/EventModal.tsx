@@ -39,6 +39,8 @@ import { useSmartDefaultsStore } from '@/store/smartDefaultsStore'
 import { useSettingsStore } from '@/store/settingsStore'
 import { exportSingleEventIcs } from '@/lib/icsExport'
 import { buildMailtoUri } from '@/lib/mailtoInvite'
+import { getDirectSubtasks, getTaskDescendants } from '@/lib/taskTree'
+import { completeTaskAndSync } from '@/lib/taskCompletion'
 
 import styles from './EventModal.module.css'
 
@@ -81,6 +83,7 @@ export function EventModal(): JSX.Element | null {
   const deleteEvent = useCalendarStore((state) => state.deleteEvent)
   const updateEvent = useCalendarStore((state) => state.updateEvent)
   const completeTask = useCalendarStore((state) => state.completeTask)
+  const completeTaskOccurrence = useCalendarStore((state) => state.completeTaskOccurrence)
   const closeModal = useCalendarStore((state) => state.closeModal)
   const openModal = useCalendarStore((state) => state.openModal)
   const [isClosing, setIsClosing] = useState(false)
@@ -726,9 +729,49 @@ export function EventModal(): JSX.Element | null {
       (task) => task.type === 'task' && task.calendarId === calendarId && !excludedIds.has(task.id)
     )
   }, [calendarId, events, isTaskMode, selectedEventId])
-  const subtasks = useMemo(
-    () => events.filter((task) => task.type === 'task' && task.parentTaskId === selectedEventId),
+  const directSubtasks = useMemo(
+    () => (selectedEventId ? getDirectSubtasks(events, selectedEventId) : []),
     [events, selectedEventId]
+  )
+  const subtasks = useMemo(
+    () => (selectedEventId ? getTaskDescendants(events, selectedEventId) : []),
+    [events, selectedEventId]
+  )
+  const readOnlyTaskIds = useMemo(
+    () =>
+      new Set(
+        events
+          .filter(
+            (task) =>
+              task.type === 'task' &&
+              calendars.find((calendar) => calendar.id === task.calendarId)?.readOnly === true
+          )
+          .map((task) => task.id)
+      ),
+    [calendars, events]
+  )
+
+  const handleSubtaskToggle = useCallback(
+    async (task: CalendarEvent): Promise<void> => {
+      if (readOnlyTaskIds.has(task.id)) return
+      try {
+        await completeTaskAndSync(task, !task.completed, {
+          completeTask,
+          completeTaskOccurrence,
+          updateCalDAVEvent,
+          saveRecurrenceOverride,
+        })
+      } catch {
+        // The CalDAV hook queues failed writes and surfaces their status.
+      }
+    },
+    [
+      completeTask,
+      completeTaskOccurrence,
+      readOnlyTaskIds,
+      saveRecurrenceOverride,
+      updateCalDAVEvent,
+    ]
   )
 
   // R2.7 — When a task may not recur, and why.
@@ -746,7 +789,7 @@ export function EventModal(): JSX.Element | null {
       ? 'needs a due date'
       : parentTaskId
         ? 'subtasks cannot repeat'
-        : subtasks.length > 0
+        : directSubtasks.length > 0
           ? 'tasks with subtasks cannot repeat'
           : undefined
   const recurrenceAllowed = !isTaskMode || !taskRecurrenceDisabledReason
@@ -1674,6 +1717,9 @@ export function EventModal(): JSX.Element | null {
                     parentTasks={parentTaskOptions}
                     onParentTaskChange={setParentTaskId}
                     subtasks={subtasks}
+                    onToggleSubtask={handleSubtaskToggle}
+                    readOnly={isCurrentCalendarReadOnly}
+                    readOnlyTaskIds={readOnlyTaskIds}
                     recurrence={{
                       recurring: recurring && recurrenceAllowed,
                       onRecurringChange: setRecurring,

@@ -10,6 +10,7 @@ import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
 import { nextOpenOccurrence, materializeOccurrence } from '@/lib/occurrenceExpansion'
 import { useContextMenuStore } from '@/store/contextMenuStore'
 import { hapticIfEnabled } from '@/lib/haptics'
+import { completeTaskAndSync } from '@/lib/taskCompletion'
 import { TaskContextMenu } from './TaskContextMenu'
 import type { CalendarEvent } from '@/types'
 import styles from './Sidebar.module.css'
@@ -173,36 +174,20 @@ export function MiniTasksSection({ isExpanded, onToggle }: MiniTasksSectionProps
   }, [events])
 
   const handleToggleComplete = async (task: CalendarEvent): Promise<void> => {
+    if (calendars.find((calendar) => calendar.id === task.calendarId)?.readOnly === true) return
     setCompletingTaskId(task.id)
 
     setTimeout(async () => {
       const newCompleted = !task.completed
 
-      // R2.7 — one occurrence of a series, not the series itself.
-      if (task.occurrenceMasterId) {
-        const plan = completeTaskOccurrence(task.occurrenceMasterId, task.start, newCompleted)
-        setCompletingTaskId(null)
-        if (plan) {
-          try {
-            await saveRecurrenceOverride(
-              plan.master.calendarId,
-              plan.master,
-              plan.override,
-              plan.removedOverrideIds
-            )
-          } catch {
-            // surfaced by useCalDAV, which queues a retry
-          }
-        }
-        return
-      }
-
-      const updatedTasks = completeTask(task.id, newCompleted)
       setCompletingTaskId(null)
       try {
-        await Promise.all(
-          updatedTasks.map((updatedTask) => updateCalDAVEvent(updatedTask.calendarId, updatedTask))
-        )
+        await completeTaskAndSync(task, newCompleted, {
+          completeTask,
+          completeTaskOccurrence,
+          updateCalDAVEvent,
+          saveRecurrenceOverride,
+        })
       } catch {
         // error handled by useCalDAV
       }
@@ -341,6 +326,10 @@ export function MiniTasksSection({ isExpanded, onToggle }: MiniTasksSectionProps
                   >
                     <button
                       className={styles.taskCheckbox}
+                      disabled={
+                        calendars.find((calendar) => calendar.id === task.calendarId)?.readOnly ===
+                        true
+                      }
                       onClick={(e) => {
                         e.stopPropagation()
                         setHoveredTask(null)
