@@ -144,6 +144,57 @@ describe('NLParser', () => {
     expect(result.isAllDay).toBe(true)
   })
 
+  it('keeps "tonight" out of the title', () => {
+    const result = parseNaturalLanguage('dinner tonight')
+    expect(result.title).toBe('Dinner')
+    expect(result.startDate.getHours()).toBe(22)
+  })
+
+  it('treats a casual time-of-day as a timed event, not an all-day one', () => {
+    // chrono gives "tonight"/"this evening" an *implied* hour, which
+    // isCertain('hour') reports the same way as the implied noon of a bare
+    // date — so these used to come back all-day while also carrying a real
+    // start time.
+    for (const [input, hour] of [
+      ['dinner tonight', 22],
+      ['lunch this evening', 20],
+      ['party friday night', 20],
+    ] as const) {
+      const result = parseNaturalLanguage(input)
+      expect(result.isAllDay, input).toBe(false)
+      expect(result.startDate.getHours(), input).toBe(hour)
+      expect(result.endDate, input).toBeDefined()
+    }
+  })
+
+  it('still treats a bare date reference as all-day', () => {
+    // The guard above keys off time-of-day words in the text chrono consumed,
+    // so a date with no time part must be unaffected.
+    for (const input of ['meeting tomorrow', 'standup monday', 'all hands next week']) {
+      expect(parseNaturalLanguage(input).isAllDay, input).toBe(true)
+    }
+  })
+
+  it('keeps "this evening" out of the title', () => {
+    const result = parseNaturalLanguage('lunch this evening')
+    expect(result.title).toBe('Lunch')
+  })
+
+  it('keeps "this morning" out of the title', () => {
+    const result = parseNaturalLanguage('run this morning')
+    expect(result.title).toBe('Run')
+  })
+
+  it('keeps "this afternoon" out of the title', () => {
+    const result = parseNaturalLanguage('call this afternoon')
+    expect(result.title).toBe('Call')
+  })
+
+  it('cleans a trailing "from" left by the time parser', () => {
+    const result = parseNaturalLanguage('workshop from 3pm')
+    expect(result.title).toBe('Workshop')
+  })
+
   it('parses time keywords', () => {
     const result = parseNaturalLanguage('lunch at noon')
     expect(result.title).toBe('Lunch')

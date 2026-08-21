@@ -1,4 +1,20 @@
 const RECURRENCE_PATTERNS = [
+  // "every other X" skips one period, so these carry interval 2 directly.
+  // They are listed first because the plain "every X" patterns below would
+  // otherwise never be reached for them — and the interval belongs to the
+  // matched pattern, not to the input as a whole ("standup every day, review
+  // every other week" must not make the daily standup fortnightly).
+  { pattern: /\bevery\s+other\s+day\b/i, frequency: 'daily' as const, interval: 2 },
+  { pattern: /\bevery\s+other\s+week\b/i, frequency: 'weekly' as const, interval: 2 },
+  { pattern: /\bevery\s+other\s+month\b/i, frequency: 'monthly' as const, interval: 2 },
+  { pattern: /\bevery\s+other\s+year\b/i, frequency: 'yearly' as const, interval: 2 },
+  {
+    pattern: /\bevery\s+other\s+(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/i,
+    frequency: 'weekly' as const,
+    interval: 2,
+  },
+  { pattern: /\bevery\s+other\s+weekday\b/i, frequency: 'weekly' as const, interval: 2 },
+  { pattern: /\bevery\s+other\s+weekend\b/i, frequency: 'weekly' as const, interval: 2 },
   { pattern: /\bevery\s+day\b/i, frequency: 'daily' as const, interval: 1 },
   { pattern: /(?<![-])\bdaily\b/i, frequency: 'daily' as const, interval: 1 },
   { pattern: /\bevery\s+week\b/i, frequency: 'weekly' as const, interval: 1 },
@@ -9,9 +25,23 @@ const RECURRENCE_PATTERNS = [
   { pattern: /(?<![-])\b(?:yearly|annually)\b/i, frequency: 'yearly' as const, interval: 1 },
   { pattern: /\bevery\s+weekday\b/i, frequency: 'weekly' as const, interval: 1 },
   { pattern: /\bevery\s+weekend\b/i, frequency: 'weekly' as const, interval: 1 },
+  // Plain "every <weekday>". This list previously had no entry for it, so
+  // "gym every monday" produced no recurrence at all — the BYDAY extraction
+  // below only runs once some pattern has matched, and none did. The gap only
+  // became obvious when "every other monday" started working above it.
+  {
+    pattern: /\bevery\s+(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)s?\b/i,
+    frequency: 'weekly' as const,
+    interval: 1,
+  },
   { pattern: /(?<![-])\bweekdays?\b/i, frequency: 'weekly' as const, interval: 1 },
   { pattern: /(?<![-])\bweekends?\b/i, frequency: 'weekly' as const, interval: 1 },
 ]
+
+/** Weekday extraction, tolerating the optional "other" from "every other X". */
+const WEEKDAY_WITH_OTHER_RE =
+  /every\s+(?:other\s+)?(monday|tuesday|wednesday|thursday|friday|saturday|sunday)s?/i
+const WEEKDAY_LIST_WITH_OTHER_RE = /every\s+(?:other\s+)?(weekday|weekend)/i
 
 const WEEKDAY_MAP: Record<string, number> = {
   sunday: 0,
@@ -94,9 +124,7 @@ export function extractRecurrence(input: string): RecurrenceResult | null {
     if (pattern.test(lowerInput)) {
       const result: RecurrenceResult = { frequency, interval }
 
-      const weekdayMatch = lowerInput.match(
-        /every\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday)/i
-      )
+      const weekdayMatch = lowerInput.match(WEEKDAY_WITH_OTHER_RE)
       if (weekdayMatch) {
         const dayNum = WEEKDAY_MAP[weekdayMatch[1].toLowerCase()]
         if (dayNum !== undefined) {
@@ -104,7 +132,7 @@ export function extractRecurrence(input: string): RecurrenceResult | null {
         }
       }
 
-      const weekdayListMatch = lowerInput.match(/every\s+(weekday|weekend)/i)
+      const weekdayListMatch = lowerInput.match(WEEKDAY_LIST_WITH_OTHER_RE)
       if (weekdayListMatch) {
         if (weekdayListMatch[1].toLowerCase() === 'weekday') {
           result.byWeekday = [1, 2, 3, 4, 5]

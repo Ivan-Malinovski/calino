@@ -1,4 +1,5 @@
-import type { CalendarEvent, ViewType } from '@/types'
+import type { CalendarEvent, RecurrenceRule, ViewType } from '@/types'
+import type { NLPParseResult } from '@/features/nlp'
 
 export type CommandCategory = 'navigation' | 'actions' | 'settings' | 'event'
 
@@ -24,6 +25,10 @@ export interface QuickAddResult {
   isAllDay: boolean
   isTask: boolean
   confidence: number
+  /** Parsed recurrence ("every monday", "every other day"). Quick-add skips
+   *  the modal, so this has to reach the created event from here or the
+   *  series silently collapses to a single occurrence. */
+  recurrence?: RecurrenceRule
 }
 
 export interface CalendarResult {
@@ -86,4 +91,7 @@ export interface ParsedInput {
   raw: string
   command?: string
   dateRef?: string
+  /** Parsed NLP result, attached when the input was analysed. Lets callers
+   *  reuse a single parse instead of re-running the parser. */
+  nlp?: NLPParseResult
 }

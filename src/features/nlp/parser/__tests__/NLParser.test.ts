@@ -78,4 +78,81 @@ describe('NLParser - Bug #89: recurrence should not destroy endDate/duration', (
     expect(result.recurrence?.byWeekday).toEqual([1, 2, 3, 4, 5])
     expect(result.endDate).toBeDefined()
   })
+
+  it('treats plain "every <weekday>" as a weekly series on that day', () => {
+    // The pattern list had no entry for this, so it produced no recurrence at
+    // all and quick-add created a single event on that weekday.
+    const result = parser.parse('gym every monday')
+    expect(result.recurrence).toBeDefined()
+    expect(result.recurrence?.frequency).toBe('weekly')
+    expect(result.recurrence?.interval).toBe(1)
+    expect(result.recurrence?.byWeekday).toEqual([1])
+  })
+
+  it('accepts the plural "every sundays" form', () => {
+    expect(parser.parse('brunch every sundays').recurrence?.byWeekday).toEqual([0])
+  })
+
+  it('leaves a one-off weekday reference alone', () => {
+    // "lunch monday" is a date, not a series — no recurrence may be invented.
+    expect(parser.parse('lunch monday').recurrence).toBeUndefined()
+  })
+
+  it('treats "every other day" as a daily series with interval 2', () => {
+    const result = parser.parse('gym every other day')
+    expect(result.recurrence).toBeDefined()
+    expect(result.recurrence?.frequency).toBe('daily')
+    expect(result.recurrence?.interval).toBe(2)
+  })
+
+  it('treats "every other week" as a weekly series with interval 2', () => {
+    const result = parser.parse('standup every other week')
+    expect(result.recurrence?.frequency).toBe('weekly')
+    expect(result.recurrence?.interval).toBe(2)
+  })
+
+  it('treats "every other month" as a monthly series with interval 2', () => {
+    const result = parser.parse('bill every other month')
+    expect(result.recurrence?.frequency).toBe('monthly')
+    expect(result.recurrence?.interval).toBe(2)
+  })
+
+  it('treats "every other monday" as a weekly interval-2 series on Monday', () => {
+    const result = parser.parse('review every other monday')
+    expect(result.recurrence?.frequency).toBe('weekly')
+    expect(result.recurrence?.interval).toBe(2)
+    expect(result.recurrence?.byWeekday).toEqual([1])
+  })
+
+  it('cleans a "starting at" phrase from the title', () => {
+    const result = parser.parse('meeting starting at 3pm')
+    expect(result.title).toBe('Meeting')
+    expect(result.startDate.getHours()).toBe(15)
+  })
+
+  it('cleans a "beginning at" phrase from the title', () => {
+    const result = parser.parse('gym beginning at 5pm')
+    expect(result.title).toBe('Gym')
+  })
+})
+
+describe('NLParser - recurrence phrases stay out of the title', () => {
+  const parse = (input: string) => new NLParser().parse(input)
+
+  it.each([
+    ['gym every other day', 'Gym'],
+    ['fitness every other day', 'Fitness'],
+    ['gym every monday', 'Gym'],
+    ['review every other monday', 'Review'],
+    ['standup every weekday', 'Standup'],
+    ['payday monthly', 'Payday'],
+  ])('%s → %s', (input, title) => {
+    const result = parse(input)
+    expect(result.title).toBe(title)
+    expect(result.recurrence).toBeDefined()
+  })
+
+  it('leaves non-recurring titles alone', () => {
+    expect(parse('everyday carry review tomorrow').title).toBe('Everyday carry review')
+  })
 })

@@ -205,8 +205,8 @@ describe('WeekView keyboard navigation', () => {
   // firstDayOfWeek setting).
   const weekDates = (container: HTMLElement): string[] => {
     const gridEl = grid(container)
-    const dates = Array.from(gridEl.querySelectorAll<HTMLElement>('[data-hour]')).map(
-      (c) => c.getAttribute('data-date')!
+    const dates = Array.from(gridEl.querySelectorAll<HTMLElement>('[data-hour]')).map((c) =>
+      c.getAttribute('data-date')!
     )
     return [...new Set(dates)]
   }
@@ -236,6 +236,22 @@ describe('WeekView keyboard navigation', () => {
     current.focus()
     fireEvent.keyDown(grid(container), { key: 'ArrowDown' })
     expect(document.activeElement).toBe(cell(container, '2024-03-15', '10:00'))
+  })
+
+  it('ArrowDown at 23:00 stays put instead of crossing into the next day', () => {
+    const { container } = renderWithRouter(<WeekView />)
+    const last = cell(container, '2024-03-15', '23:00')
+    last.focus()
+    fireEvent.keyDown(grid(container), { key: 'ArrowDown' })
+    expect(document.activeElement).toBe(last)
+  })
+
+  it('ArrowUp at 00:00 stays put instead of crossing into the previous day', () => {
+    const { container } = renderWithRouter(<WeekView />)
+    const first = cell(container, '2024-03-15', '00:00')
+    first.focus()
+    fireEvent.keyDown(grid(container), { key: 'ArrowUp' })
+    expect(document.activeElement).toBe(first)
   })
 
   it('moves the roving tab stop to the focused cell', () => {
@@ -293,7 +309,11 @@ describe('WeekView keyboard navigation', () => {
 
     // An unrelated re-render (store update, drag tick) must not resurrect the
     // default anchor behind the moved tab stop.
-    rerender(<BrowserRouter><WeekView /></BrowserRouter>)
+    rerender(
+      <BrowserRouter>
+        <WeekView />
+      </BrowserRouter>
+    )
 
     const tabbable = container.querySelectorAll('[data-hour][tabindex="0"]')
     expect(tabbable).toHaveLength(1)

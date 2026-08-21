@@ -104,10 +104,7 @@ function localiseUntilForDisplay(rruleString: string): string {
  * the original picker date is not recoverable from the instant alone if the
  * series was created in a different zone.
  */
-export function normaliseAllDayUntil(
-  rruleString: string,
-  isAllDay: boolean | undefined
-): string {
+export function normaliseAllDayUntil(rruleString: string, isAllDay: boolean | undefined): string {
   if (!isAllDay) return rruleString
   return rewriteUntilToLocalDate(rruleString)
 }
@@ -251,7 +248,12 @@ function describeFromRruleString(rruleString: string): string {
   }
 }
 
-function describeFromRecurrenceRule(rule: RecurrenceRule): string {
+/**
+ * Human-readable text for a bare rule ("Every 2 days"), for callers that have
+ * a `RecurrenceRule` but no event yet — the command palette's quick-add row
+ * describes what it is about to create before the event exists.
+ */
+export function describeRecurrenceRule(rule: RecurrenceRule): string {
   if (rule.frequency === 'secondly') {
     return describeSecondly(rule.interval ?? 1)
   }
@@ -266,6 +268,6 @@ function describeFromRecurrenceRule(rule: RecurrenceRule): string {
 
 export function describeRecurrence(event: CalendarEvent): string {
   if (event.rruleString) return describeFromRruleString(event.rruleString)
-  if (event.recurrence) return describeFromRecurrenceRule(event.recurrence)
+  if (event.recurrence) return describeRecurrenceRule(event.recurrence)
   return 'Recurring'
 }

@@ -1,6 +1,7 @@
 import type { JSX } from 'react'
 import { format, parseISO } from 'date-fns'
 import { formatTime } from '@/lib/datetime'
+import { describeRecurrenceRule } from '@/lib/recurrence'
 import type { Command, EventResult, CalendarResult, QuickAddResult } from '../types'
 import type { TimeFormat } from '@/types'
 import styles from './CommandPalette.module.css'
@@ -83,6 +84,10 @@ export function renderCommandItemContent({
     const qa = item as QuickAddResult
     const confidencePercent = Math.round(qa.confidence * 100)
     const isTaskItem = qa.isTask
+    // Quick-add creates the series without opening the modal, so the row has
+    // to say so up front — same badge + description suffix an existing
+    // recurring event gets above.
+    const recurrence = qa.recurrence ? describeRecurrenceRule(qa.recurrence) : undefined
     return (
       <>
         <span className={styles.icon}>{isTaskItem ? '○' : '+'}</span>
@@ -90,6 +95,11 @@ export function renderCommandItemContent({
           <div className={styles.title}>
             {isTaskItem ? 'Task: ' : 'Create: '}
             {qa.title}
+            {recurrence && (
+              <span className={styles.recurringBadge} title={recurrence} aria-label="Recurring">
+                ↻
+              </span>
+            )}
           </div>
           <div className={styles.desc}>
             {format(qa.startDate, 'EEEE, MMMM d')}
@@ -98,6 +108,7 @@ export function renderCommandItemContent({
             {!qa.endDate && !qa.isAllDay && ` ${formatTime(qa.startDate, timeFormat)}`}
             {qa.isAllDay && ' (all day)'}
             {qa.location && ` at ${qa.location}`}
+            {recurrence && ` · ${recurrence}`}
             <span className={styles.confidence}> · {confidencePercent}%</span>
           </div>
         </div>

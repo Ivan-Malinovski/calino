@@ -18,6 +18,13 @@ const DATE_TIME_PATTERNS = [
   /\b(?:at\s+)?evening\b/i,
   /\b(?:at\s+)?afternoon\b/i,
   /\b(?:at\s+)?night\b/i,
+  // Casual time-of-day references used as event anchors. chrono-node usually
+  // consumes these as parsedText, but when it captures only part of the
+  // phrase (e.g. "dinner tonight") we still need to strip the token so it
+  // doesn't leak into the title.
+  /\btonight\b/i,
+  /\bthis\s+(?:morning|afternoon|evening|night)\b/i,
+  /\btoday\s+(?:morning|afternoon|evening|night)\b/i,
   /\b\d+\s*(?:minute|minutes|hour|hours|day|days|week|weeks)\b/i,
   /\b(?:for|duration|lasting)\s+\d+\s*(?:minute|minutes|hour|hours|day|days)\b/i,
 ]
@@ -48,6 +55,24 @@ export function extractTitle(input: string, parsedText: string): string {
     .replace(/\b(?:for|duration|lasting)\s+\d+\s*(?:minute|minutes|hour|hours|day|days)\b/gi, '')
     .trim()
 
+  // Recurrence phrases belong to the rule, not the title: "gym every other
+  // day" is a Gym event repeating every other day, and leaving the phrase in
+  // made every occurrence read "Gym every other day". Kept in sync with
+  // RECURRENCE_PATTERNS in extractDuration.ts — anything parsed into a rule
+  // there has to come out of the title here.
+  text = text
+    .replace(
+      /\bevery\s+(?:other\s+|\d+\s+)?(?:day|days|week|weeks|month|months|year|years|weekday|weekdays|weekend|weekends|morning|afternoon|evening|night|monday|tuesday|wednesday|thursday|friday|saturday|sunday)s?\b/gi,
+      ''
+    )
+    .replace(/\b(?:daily|weekly|monthly|yearly|annually|biweekly|fortnightly)\b/gi, '')
+    // chrono may already have eaten the unit ("review every other monday"
+    // parses the weekday away), leaving the quantifier stranded.
+    .replace(/\bevery\s+(?:other|\d+)\s*$/i, '')
+    .replace(/\s+/g, ' ')
+    .replace(/^[,\-\s]+|[,\-\s]+$/g, '')
+    .trim()
+
   const prepositionsToRemove = [
     /\bwith\b\s*$/i,
     /\bfor\b\s*$/i,
@@ -69,6 +94,16 @@ export function extractTitle(input: string, parsedText: string): string {
   for (const pattern of prepositionsToRemove) {
     text = text.replace(pattern, '').trim()
   }
+
+  // Drop verb-led time introducers ("meeting starting at 3pm" → "Meeting",
+  // "gym beginning at 5" → "Gym") and a dangling trailing "from" left behind
+  // when chrono only captured the time that followed it.
+  text = text
+    .replace(/\b(?:starting|beginning)\b\s*(?:at|from)?\s*/gi, '')
+    .replace(/\bfrom\b\s*$/i, '')
+    .replace(/\s+/g, ' ')
+    .replace(/^[,\-\s]+|[,\-\s]+$/g, '')
+    .trim()
 
   if (!text || text.length < 2) {
     return 'New Event'

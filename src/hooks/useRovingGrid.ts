@@ -6,8 +6,7 @@ export type RovingGridCellSelector = string
 
 /** Result of moving focus from the active cell towards a target cell. */
 export type RovingMoveResult =
-  | { ok: true; target: HTMLElement }
-  | { ok: false; reason: 'no-cell' | 'no-target' }
+  { ok: true; target: HTMLElement } | { ok: false; reason: 'no-cell' | 'no-target' }
 
 /**
  * Roving-tabindex arrow navigation for a grid of focusable cells.
@@ -35,11 +34,21 @@ export type RovingMoveResult =
  *   `null` means the key is not a grid-navigation key and should be left for
  *   other handlers. Pass a module-level function (or `useCallback` it) — a
  *   fresh inline arrow would rebuild `handleKeyDown` every render.
+ * @param isMoveAllowed Optional guard rejecting a move that is in range but
+ *   crosses a boundary the flat index cannot express. A flattened grid only
+ *   models one axis faithfully: the other wraps into the neighbouring
+ *   row/column at its ends. Views where that wrap is wrong (the week view's
+ *   ↑/↓, which must stay inside one day column) reject it here; views where it
+ *   is right (the month view's ←/→ crossing into the next week) omit the
+ *   guard. A rejected move is reported as `no-target`, exactly like the grid
+ *   edge, so edge paging keeps working. Pass a module-level function for the
+ *   same stability reason as `getDelta`.
  */
 export function useRovingGrid(
   containerRef: RefObject<HTMLElement | null>,
   cellSelector: RovingGridCellSelector,
-  getDelta: (key: string) => number | null
+  getDelta: (key: string) => number | null,
+  isMoveAllowed?: (fromIndex: number, toIndex: number) => boolean
 ): {
   /** Call as the `onKeyDown` handler of the grid container. */
   handleKeyDown: (e: React.KeyboardEvent<HTMLElement>) => void
@@ -78,15 +87,19 @@ export function useRovingGrid(
       const anchor = focusAnchorRef.current
       const base = idx !== -1 ? idx : anchor ? cells.indexOf(anchor) : -1
       if (base === -1) return { ok: false, reason: 'no-cell' }
-      const target = cells[base + delta]
+      const targetIndex = base + delta
+      const target = cells[targetIndex]
       if (!target) return { ok: false, reason: 'no-target' }
+      if (isMoveAllowed && !isMoveAllowed(base, targetIndex)) {
+        return { ok: false, reason: 'no-target' }
+      }
       cells[base].tabIndex = -1
       target.tabIndex = 0
       target.focus()
       setFocusAnchor(target)
       return { ok: true, target }
     },
-    [containerRef, cellSelector, setFocusAnchor]
+    [containerRef, cellSelector, setFocusAnchor, isMoveAllowed]
   )
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLElement>): void => {

@@ -4,6 +4,24 @@ All notable changes to Calino will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- **Drag across day cells in month view to create an all-day event** spanning the days you swept, instead of clicking one day and editing the end date by hand.
+
+- **The command palette treats plain phrases as events.** Typing "lunch" or "team offsite friday" offers to create it, while any matching existing events and calendars still appear below.
+
+- **"every other day/week/month/monday" sets up a fortnightly series** from the command palette, alongside the existing "every day" and "every weekday" phrasings.
+
+### Fixed
+
+- **Repeat phrases stay out of the event title.** "gym every other day" is titled "Gym", not "Gym every other day", and the command palette row shows the repeat ("Every 2 days") with a ↻ badge, the same way existing recurring events do.
+
+- **Quick-add now keeps the recurrence you typed.** "gym every monday" created a single event because the parsed rule never reached the saved event, and plain "every &lt;weekday&gt;" was not recognised as a repeat at all.
+
+- **"dinner tonight" creates a timed evening event** instead of an all-day one that secretly carried a 22:00 start. Same for "this morning", "this afternoon", "this evening" and "friday night".
+
+- **Casual time-of-day words stay out of the title** — "dinner tonight" is titled "Dinner", and "meeting starting at 3pm" is titled "Meeting".
+
 ## [0.30.0] - 2026-08-21
 
 ### Added
@@ -82,9 +100,9 @@ All notable changes to Calino will be documented in this file.
 
 - **A repeating event keeps the weekdays you picked** ([#126](https://github.com/Ivan-Malinovski/calino/issues/126), reported by [@donderbolt](https://github.com/donderbolt)). A late-evening series repeating Monday–Friday showed up Sunday–Thursday for anyone west of UTC: the repeat rule was being worked out against UTC days rather than yours, and 23:00 on Monday in New York is already Tuesday in UTC. Series are now expanded in your own zone, at the wall-clock time you chose, and stay there across daylight saving.
 
-  New timed events are also written with your zone attached, the way every other calendar app writes them. Before, they were stored as a bare instant with no zone at all, so even once Calino displayed them correctly, every *other* client reading the same calendar kept getting the old shifted weekdays. Existing zone-less events are still read the right way round, so nothing needs re-saving.
+  New timed events are also written with your zone attached, the way every other calendar app writes them. Before, they were stored as a bare instant with no zone at all, so even once Calino displayed them correctly, every _other_ client reading the same calendar kept getting the old shifted weekdays. Existing zone-less events are still read the right way round, so nothing needs re-saving.
 
-- **All-day tasks are readable in the week view on a phone** ([#120](https://github.com/Ivan-Malinovski/calino/issues/120), reported by [@YW5uaWth](https://github.com/YW5uaWth)). They appeared as bare checkboxes with no title, filed under the wrong day. The row they lived in was laid out across the width of the screen while the days themselves scroll sideways, so each one got about 45 pixels and sat wherever that offset happened to land. All-day tasks and events now sit in the day's own heading, as they already did in the day view; a busy day shows two and collapses the rest behind a tap. All-day *events* were not drawn at all in the mobile week view before this — they are now.
+- **All-day tasks are readable in the week view on a phone** ([#120](https://github.com/Ivan-Malinovski/calino/issues/120), reported by [@YW5uaWth](https://github.com/YW5uaWth)). They appeared as bare checkboxes with no title, filed under the wrong day. The row they lived in was laid out across the width of the screen while the days themselves scroll sideways, so each one got about 45 pixels and sat wherever that offset happened to land. All-day tasks and events now sit in the day's own heading, as they already did in the day view; a busy day shows two and collapses the rest behind a tap. All-day _events_ were not drawn at all in the mobile week view before this — they are now.
 
 - **A new event is never filed into a calendar you can't write to.** If a read-only calendar — a subscription, or one the server grants you no write access on — happened to sort first, the event form picked it by default and then refused to save: Create greyed out, the picker showing the calendar it had just chosen itself, and nothing on screen explaining why.
 
@@ -102,7 +120,7 @@ All notable changes to Calino will be documented in this file.
 
   Entries already filed under the wrong day are not moved — Calino can't tell which ones were misdated and which ones you dated deliberately. Their date is editable in the entry itself.
 
-- **A repeating event that ends on a date now ends on that date.** Two faults, both only visible west of UTC. The description under a repeating event read one day late — set a series to repeat until 31 December and it told you "until January 1, 2026", because the end date was being shown in UTC rather than in your zone. And an all-day series was *sent to the server* a day late, as a moment in time rather than a plain date, which is both a day too long and not what the calendar standard permits for an all-day event. Other apps reading the same calendar saw the extra day too.
+- **A repeating event that ends on a date now ends on that date.** Two faults, both only visible west of UTC. The description under a repeating event read one day late — set a series to repeat until 31 December and it told you "until January 1, 2026", because the end date was being shown in UTC rather than in your zone. And an all-day series was _sent to the server_ a day late, as a moment in time rather than a plain date, which is both a day too long and not what the calendar standard permits for an all-day event. Other apps reading the same calendar saw the extra day too.
 
   Series saved before this fix are repaired as they're read, so the extra day stops being drawn straight away, and the correction is written back the next time that series is saved.
 
@@ -128,7 +146,7 @@ All notable changes to Calino will be documented in this file.
 
 ### Added
 
-- **Tasks and events now carry a creation date** ([#112](https://github.com/Ivan-Malinovski/calino/issues/112), reported by [@riblet](https://github.com/riblet)). Everything Calino writes to a server now includes `CREATED` and `LAST-MODIFIED` alongside the `DTSTAMP` it already had. RFC 5545 doesn't require `CREATED`, but plenty of software assumes it is there — the reported case is MMM-CalDAV-Tasks, which appends `COMPLETED` *after* `END:VTODO` when it can't find one, corrupting the task.
+- **Tasks and events now carry a creation date** ([#112](https://github.com/Ivan-Malinovski/calino/issues/112), reported by [@riblet](https://github.com/riblet)). Everything Calino writes to a server now includes `CREATED` and `LAST-MODIFIED` alongside the `DTSTAMP` it already had. RFC 5545 doesn't require `CREATED`, but plenty of software assumes it is there — the reported case is MMM-CalDAV-Tasks, which appends `COMPLETED` _after_ `END:VTODO` when it can't find one, corrupting the task.
 
   `CREATED` is now also read back when Calino pulls a task or event in. That matters more than it sounds: Calino rebuilds each component from scratch on every save, so before this change a creation date written by any other client was silently dropped the first time you edited that task here. Records that predate this — and ones whose server copy never had a `CREATED` — get stamped with the current time on their next save, and hold that value from then on. `LAST-MODIFIED` tracks each write and matches the `DTSTAMP` on it exactly.
 

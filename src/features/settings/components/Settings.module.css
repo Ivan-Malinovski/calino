@@ -154,10 +154,13 @@
 
 .navItemActive {
   background: var(--accent-soft);
-  /* --accent-strong (#8d643f) is 4.25:1 on --accent-soft — just under AA at
-     14px. Darken one step for this specific surface instead of touching the
-     shared token, which also sits behind white text elsewhere. 4.61:1 here. */
-  color: var(--accent-strong-on-soft, #865f3c);
+  /* --accent-strong is 4.25:1 on --accent-soft — just under AA at 14px — so
+     both built-in themes define a one-step variant for this surface instead of
+     moving the shared token, which also sits behind white text elsewhere
+     (light darkens to 4.61:1, dark lightens to 5.42:1). User-supplied themes
+     don't define it, so they fall back to their own --accent-strong rather
+     than a hard-coded hex from the wrong palette. */
+  color: var(--accent-strong-on-soft, var(--accent-strong, var(--accent)));
   font-weight: 500;
 }
 
@@ -227,7 +230,9 @@
   box-shadow: 0 2px 10px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.18 * var(--shadow-opacity, 1)));
   opacity: 0;
   transform: translateY(-6px);
-  transition: opacity 0.2s ease, transform 0.2s ease;
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
 }
 
 .savedPillVisible {

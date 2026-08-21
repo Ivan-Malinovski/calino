@@ -31,8 +31,12 @@
   padding: 10px 16px;
   clip: auto;
   border-radius: var(--radius-md, 8px);
-  background: var(--color-accent, #b07d4f);
-  color: var(--color-accent-contrast, #fff);
+  /* --accent-strong/--accent-contrast are defined per theme (built-in.css);
+     the pair is 5.21:1 in light and 6.74:1 in dark. The earlier
+     --color-accent-contrast token did not exist anywhere, so this always fell
+     back to white on the raw accent — 3.58:1 light, 2.5:1 dark. */
+  background: var(--accent-strong, var(--color-accent, #b07d4f));
+  color: var(--accent-contrast, #fff);
   font-size: 14px;
   font-weight: 600;
   text-decoration: none;
@@ -41,7 +45,8 @@
   outline-offset: 2px;
 }
 
-@media (max-width: 768px) { /* sync with config.ts MOBILE_BREAKPOINT */
+@media (max-width: 768px) {
+  /* sync with config.ts MOBILE_BREAKPOINT */
   /* Fade the bottom safe-area inset (gesture nav bar) to transparent
      instead of a hard-edged solid strip in the app's background color. */
   .app::after {
@@ -111,7 +116,8 @@
   --grid-margin: 18px;
 }
 
-@media (max-width: 768px) { /* sync with config.ts MOBILE_BREAKPOINT */
+@media (max-width: 768px) {
+  /* sync with config.ts MOBILE_BREAKPOINT */
   .appContent {
     flex-direction: column;
   }
@@ -138,7 +144,8 @@
   outline: none;
 }
 
-@media (max-width: 768px) { /* sync with config.ts MOBILE_BREAKPOINT */
+@media (max-width: 768px) {
+  /* sync with config.ts MOBILE_BREAKPOINT */
   .main {
     /* Reserve space so the last row of content isn't obscured by the
        floating nav pill (collapsed height ~57px + its 20px bottom offset).
@@ -211,7 +218,9 @@
   cursor: pointer;
   padding: 0 4px;
   border-radius: var(--radius-sm, 6px);
-  transition: background 0.12s, color 0.12s;
+  transition:
+    background 0.12s,
+    color 0.12s;
 }
 
 .agendaSidebarClose:hover {
@@ -282,4 +291,3 @@
     transform: translateX(-50%) translateY(0);
   }
 }
-

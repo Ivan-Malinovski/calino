@@ -92,6 +92,20 @@ const gridDelta = (key: string): number | null =>
           ? 1
           : null
 
+/** Hours per day column — the stride of the day-major flattening that
+ *  `gridDelta` walks. */
+const HOURS_PER_DAY = HOUR_KEYS.length
+
+// ↑/↓ step the flat cell list by ±1, which at a column's ends would slide into
+// the neighbouring day (23:00 + ↓ lands on the next day's 00:00, and the
+// mirror image for 00:00 + ↑). Days are contiguous blocks of `HOURS_PER_DAY`
+// cells, so a vertical move is only legal while both ends sit in the same
+// block. ←/→ (±24) always land on the same hour of another day, so they are
+// left alone.
+const isGridMoveAllowed = (fromIndex: number, toIndex: number): boolean =>
+  Math.abs(toIndex - fromIndex) !== 1 ||
+  Math.floor(fromIndex / HOURS_PER_DAY) === Math.floor(toIndex / HOURS_PER_DAY)
+
 interface DroppableCellProps {
   dateKey: string
   hourKey: string
@@ -234,11 +248,11 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
   // modal (same handler as a click). Edge-of-grid arrows trigger the pager
   // below, so focus never silently sticks.
   const gridBodyRef = useRef<HTMLDivElement>(null)
-  const { handleKeyDown: handleGridKeyDown, focusAnchor, setFocusAnchor } = useRovingGrid(
-    gridBodyRef,
-    '[data-hour]',
-    gridDelta
-  )
+  const {
+    handleKeyDown: handleGridKeyDown,
+    focusAnchor,
+    setFocusAnchor,
+  } = useRovingGrid(gridBodyRef, '[data-hour]', gridDelta, isGridMoveAllowed)
   // Both refs point at the same element (the days container): `daysContainerRef`
   // for drag-to-create geometry, `gridBodyRef` for roving focus.
   const daysAndGridRef = useCallback((el: HTMLDivElement | null) => {
@@ -261,7 +275,11 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
       const direction: 'prev' | 'next' = key === 'ArrowLeft' ? 'prev' : 'next'
       const date = parseISO(currentDate)
       setCurrentDate(
-        toLocalDateString(dayCount === 7 ? addWeeks(date, direction === 'next' ? 1 : -1) : addDays(date, direction === 'next' ? dayCount : -dayCount))
+        toLocalDateString(
+          dayCount === 7
+            ? addWeeks(date, direction === 'next' ? 1 : -1)
+            : addDays(date, direction === 'next' ? dayCount : -dayCount)
+        )
       )
     },
     [currentDate, setCurrentDate, dayCount]
@@ -1104,7 +1122,7 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
                       key={`${dayKey}-${hourKey}`}
                       dateKey={dayKey}
                       hourKey={hourKey}
-                        isFocusAnchor={isCellFocusAnchor(dayKey, hourKey)}
+                      isFocusAnchor={isCellFocusAnchor(dayKey, hourKey)}
                       onClick={handleCellClick}
                       onMouseDown={handleDragStartFromCell}
                       onKeyDown={handleCellKeyDown}
@@ -1242,7 +1260,7 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
                         key={`${dayKey}-${hourKey}`}
                         dateKey={dayKey}
                         hourKey={hourKey}
-                      isFocusAnchor={isCellFocusAnchor(dayKey, hourKey)}
+                        isFocusAnchor={isCellFocusAnchor(dayKey, hourKey)}
                         onClick={handleCellClick}
                         onMouseDown={handleDragStartFromCell}
                         onKeyDown={handleCellKeyDown}

@@ -73,7 +73,15 @@ import { duplicateEventWithSync } from '@/lib/duplicateWithSync'
 // Module-level so `useRovingGrid`'s `handleKeyDown` stays referentially stable.
 // ←/→ move one day, ↑/↓ move one week in the flattened cell list.
 const gridDelta = (key: string): number | null =>
-  key === 'ArrowLeft' ? -1 : key === 'ArrowRight' ? 1 : key === 'ArrowUp' ? -7 : key === 'ArrowDown' ? 7 : null
+  key === 'ArrowLeft'
+    ? -1
+    : key === 'ArrowRight'
+      ? 1
+      : key === 'ArrowUp'
+        ? -7
+        : key === 'ArrowDown'
+          ? 7
+          : null
 
 // Shared by the button and span forms of the journal indicator (see the
 // compact-mobile branch in DroppableDay).
@@ -195,6 +203,15 @@ export function CalendarGrid(): JSX.Element {
   const [bottomPanelDay, setBottomPanelDay] = useState<string | null>(null)
   const [splitRatio, setSplitRatio] = useState(monthAgendaSplitRatioSetting)
   const [gridRatio, setGridRatio] = useState(monthAgendaGridRatioSetting)
+  // Month-view drag-to-create (desktop, all-day range across empty day
+  // cells). Mirrors DayView/WeekView's mouse-driven create gesture but
+  // produces a date-only range instead of a timed span. `dragEnd` is
+  // mirrored in a ref so the window-level cleanup listeners (added while a
+  // drag is in flight) read the latest value without being re-subscribed.
+  const [createDragStart, setCreateDragStart] = useState<string | null>(null)
+  const [createDragEnd, setCreateDragEnd] = useState<string | null>(null)
+  const createDragStartRef = useRef<string | null>(null)
+  const createDragEndRef = useRef<string | null>(null)
   const gridRatioRef = useRef(gridRatio)
   const splitRatioRef = useRef(splitRatio)
   const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -820,6 +837,91 @@ export function CalendarGrid(): JSX.Element {
     navigate(VIEW_ROUTES.day, { replace: true })
   }
 
+  // Inclusive [min, max] bounds of the in-progress drag-to-create, used to
+  // highlight the spanned day cells. Empty unless a drag is active.
+  const createRange = useMemo(() => {
+    if (!createDragStart || !createDragEnd) return null
+    return createDragStart <= createDragEnd
+      ? { min: createDragStart, max: createDragEnd }
+      : { min: createDragEnd, max: createDragStart }
+  }, [createDragStart, createDragEnd])
+
+  // Begin a create-drag when the left mouse button goes down on empty day-cell
+  // area. We deliberately ignore presses that start on an event card (so the
+  // dnd-kit move keeps working), a button (day number / +more / journal), or
+  // compact mobile (where tap-to-create lives on the long-press menu and touch
+  // drives swipe navigation). These are plain functions, not `useCallback`:
+  // they're only ever handed to the `daysContainer` div's own props (never to
+  // the memoized `DroppableDay`), so memoizing them would buy nothing and
+  // would trip the React Compiler's manual-memoization lint.
+  const handleCreateDragStart = (e: React.MouseEvent<HTMLElement>): void => {
+    if (isCompactMobile) return
+    if (e.button !== 0) return
+    const target = e.target as HTMLElement
+    if (target.closest('[data-component="event-card"]')) return
+    if (target.closest('button')) return
+    const dateKey = (target.closest('[data-date]') as HTMLElement | null)?.dataset.date
+    if (!dateKey) return
+    createDragStartRef.current = dateKey
+    createDragEndRef.current = dateKey
+    setCreateDragStart(dateKey)
+    setCreateDragEnd(dateKey)
+  }
+
+  // Track the day under the pointer. `elementFromPoint` resolves the cell even
+  // when hovering an event card or the day-number button, because both are
+  // descendants of the `[data-date]` cell.
+  const handleCreateDragMove = (e: React.MouseEvent<HTMLElement>): void => {
+    if (!createDragStartRef.current) return
+    const el = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null
+    const cell = el?.closest('[data-date]') as HTMLElement | null
+    const dateKey = cell?.dataset.date
+    if (dateKey && dateKey !== createDragEndRef.current) {
+      createDragEndRef.current = dateKey
+      setCreateDragEnd(dateKey)
+    }
+  }
+
+  // The window listener is the ONLY commit path. Container-level mouseup /
+  // mouseleave handlers were wrong here: a held-button drag that leaves
+  // `daysContainer` (up past the weekday header, down past the last row,
+  // sideways past the week-number gutter) fires `mouseleave` and would commit
+  // the range at that boundary, even though the user is still dragging. Going
+  // through the window instead means the release is caught wherever it lands —
+  // over the header, another app, or not at all when the OS cancels the
+  // gesture. Window blur is treated as a cancel (no accidental create when
+  // focus is lost mid-press). The commit/cancel logic is inlined here so the
+  // effect only depends on `createDragStart` and `openModal` — both stable for
+  // its lifetime — and doesn't re-subscribe on every pointer move.
+  useEffect(() => {
+    if (!createDragStart) return
+    const onUp = (): void => {
+      const start = createDragStartRef.current
+      const end = createDragEndRef.current
+      createDragStartRef.current = null
+      createDragEndRef.current = null
+      setCreateDragStart(null)
+      setCreateDragEnd(null)
+      if (start && end && start !== end) {
+        openModal(start < end ? start : end, start < end ? end : start)
+      }
+    }
+    const onCancel = (): void => {
+      createDragStartRef.current = null
+      createDragEndRef.current = null
+      setCreateDragStart(null)
+      setCreateDragEnd(null)
+    }
+    window.addEventListener('mouseup', onUp)
+    window.addEventListener('pointercancel', onCancel)
+    window.addEventListener('blur', onCancel)
+    return () => {
+      window.removeEventListener('mouseup', onUp)
+      window.removeEventListener('pointercancel', onCancel)
+      window.removeEventListener('blur', onCancel)
+    }
+  }, [createDragStart, openModal])
+
   // Hoisted out of the day-cell JSX: these were rebuilt per render and handed
   // to all 42 memoized DroppableDays, so their memo never held. See #73.
   const handleJournalIndicatorClick = useCallback(
@@ -1034,7 +1136,11 @@ export function CalendarGrid(): JSX.Element {
                       </div>
                     ))}
                   </div>
-                  <div className={styles.daysContainer}>
+                  <div
+                    className={styles.daysContainer}
+                    onMouseDown={handleCreateDragStart}
+                    onMouseMove={handleCreateDragMove}
+                  >
                     {weekNumbers.map((weekNum, weekIdx) => {
                       const weekEnd = days[weekIdx * 7 + 6]
                       const today = startOfDay(new Date())
@@ -1111,6 +1217,17 @@ export function CalendarGrid(): JSX.Element {
                                 onJournalIndicatorClick={handleJournalIndicatorClick}
                                 onOpenJournalModal={handleOpenJournalModal}
                                 openModal={openModal}
+                                selectionState={
+                                  createRange &&
+                                  dateKey >= createRange.min &&
+                                  dateKey <= createRange.max
+                                    ? dateKey === createRange.min
+                                      ? 'start'
+                                      : dateKey === createRange.max
+                                        ? 'end'
+                                        : 'between'
+                                    : null
+                                }
                               />
                             )
                           })}
@@ -1213,7 +1330,11 @@ export function CalendarGrid(): JSX.Element {
                 </div>
               ))}
             </div>
-            <div className={styles.daysContainer}>
+            <div
+              className={styles.daysContainer}
+              onMouseDown={handleCreateDragStart}
+              onMouseMove={handleCreateDragMove}
+            >
               {weekNumbers.map((weekNum, weekIdx) => {
                 const weekEnd = days[weekIdx * 7 + 6]
                 const today = startOfDay(new Date())
@@ -1285,6 +1406,15 @@ export function CalendarGrid(): JSX.Element {
                           onJournalIndicatorClick={handleJournalIndicatorClick}
                           onOpenJournalModal={handleOpenJournalModal}
                           openModal={openModal}
+                          selectionState={
+                            createRange && dateKey >= createRange.min && dateKey <= createRange.max
+                              ? dateKey === createRange.min
+                                ? 'start'
+                                : dateKey === createRange.max
+                                  ? 'end'
+                                  : 'between'
+                              : null
+                          }
                         />
                       )
                     })}
@@ -1362,6 +1492,13 @@ interface DroppableDayProps {
   onJournalIndicatorClick: (day: Date) => void
   onOpenJournalModal: (date: string) => void
   openModal: (date?: string, endDate?: string, eventId?: string, mode?: 'event' | 'task') => void
+  /**
+   * Month-view drag-to-create feedback. `'start'` / `'end'` / `'between'`
+   * mark the cell as part of the in-progress all-day range; `null` means no
+   * selection. A primitive so `React.memo` only re-renders cells whose
+   * membership actually changed during the drag.
+   */
+  selectionState: 'start' | 'end' | 'between' | null
 }
 
 const DroppableDay = React.memo(function DroppableDay({
@@ -1388,6 +1525,7 @@ const DroppableDay = React.memo(function DroppableDay({
   onJournalIndicatorClick,
   onOpenJournalModal,
   openModal,
+  selectionState,
 }: DroppableDayProps): JSX.Element {
   const { setNodeRef, isOver } = useDroppable({ id: dateKey })
   // In "Auto" mode the cell's height, not a setting, decides how much shows.
@@ -1504,11 +1642,12 @@ const DroppableDay = React.memo(function DroppableDay({
   return (
     <motion.div
       ref={setNodeRef}
-      className={`${styles.day} ${!isCurrentMonth ? styles.otherMonth : ''} ${isTodayDate ? styles.today : ''} ${isWeekend ? styles.weekend : ''} ${isOver ? styles.dropTarget : ''}`}
+      className={`${styles.day} ${!isCurrentMonth ? styles.otherMonth : ''} ${isTodayDate ? styles.today : ''} ${isWeekend ? styles.weekend : ''} ${isOver ? styles.dropTarget : ''} ${selectionState ? styles.createSelecting : ''}`}
       {...(isTodayDate ? { 'data-today': '' } : {})}
       {...(!isCurrentMonth ? { 'data-other-month': '' } : {})}
       {...(isWeekend ? { 'data-weekend': '' } : {})}
       {...(isOver ? { 'data-drop-target': '' } : {})}
+      {...(selectionState ? { 'data-create-selection': selectionState } : {})}
       tabIndex={isFocusAnchor ? 0 : -1}
       aria-label={format(day, 'EEEE, MMMM d, yyyy')}
       data-date={dateKey}

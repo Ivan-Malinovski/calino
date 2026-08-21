@@ -3,6 +3,7 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { BrowserRouter } from 'react-router'
 import { DayView } from '../DayView'
 import { useCalendarStore } from '@/store/calendarStore'
+import { useSettingsStore } from '@/store/settingsStore'
 import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
 import { useGestures } from '@/hooks/useGestures'
 
@@ -19,6 +20,7 @@ const renderWithRouter = (component: React.ReactElement) => {
 describe('DayView', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    useSettingsStore.setState({ timeFormat: '24h' })
 
     mockUseCalDAV.mockReturnValue({
       accounts: [],
@@ -243,6 +245,7 @@ describe('DayView', () => {
 describe('DayView keyboard navigation', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    useSettingsStore.setState({ timeFormat: '24h' })
 
     mockUseCalDAV.mockReturnValue({
       accounts: [],
@@ -339,13 +342,17 @@ describe('DayView keyboard navigation', () => {
     expect(useCalendarStore.getState().currentDate).toBe('2024-03-15')
   })
 
-  it('names each hour slot for screen readers (role=button + aria-label)', () => {
+  it('names each hour slot for screen readers using the preferred time format', () => {
+    useSettingsStore.setState({ timeFormat: '12h' })
     const { container } = renderWithRouter(<DayView />)
-    const hour = cell(container, '09:00')
+    const hour = cell(container, '14:00')
     expect(hour.getAttribute('role')).toBe('button')
     // Date and time both present, so the focused slot is never a "blank".
     expect(hour.getAttribute('aria-label')).toContain('March 15')
-    expect(hour.getAttribute('aria-label')).toContain('09:00')
+    expect(hour.getAttribute('aria-label')).toContain('2 PM')
+    // The user preference only affects the accessible label, not selectors
+    // used by calendar automation and drag/drop.
+    expect(hour.getAttribute('data-hour')).toBe('14:00')
   })
 
   it('keeps exactly one tab stop after moving focus and re-rendering', () => {
@@ -356,7 +363,11 @@ describe('DayView keyboard navigation', () => {
 
     // An unrelated re-render must not resurrect the default anchor behind the
     // moved tab stop.
-    rerender(<BrowserRouter><DayView /></BrowserRouter>)
+    rerender(
+      <BrowserRouter>
+        <DayView />
+      </BrowserRouter>
+    )
 
     const tabbable = container.querySelectorAll('[data-hour][tabindex="0"]')
     expect(tabbable).toHaveLength(1)

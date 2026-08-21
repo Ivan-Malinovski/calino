@@ -51,7 +51,9 @@ describe('NLP parser improvements', () => {
 
   it('standup daily at 9am to 9:30am → correct time range with recurrence', () => {
     const r = parseNaturalLanguage('standup daily at 9am to 9:30am')
-    expect(r.title).toBe('Standup daily')
+    // "daily" is carried by r.recurrence below, so it must not also sit in
+    // the title — every occurrence would otherwise read "Standup daily".
+    expect(r.title).toBe('Standup')
     expect(r.location).toBeUndefined()
     expect(r.startDate?.getHours()).toBe(9)
     expect(r.endDate?.getHours()).toBe(9)

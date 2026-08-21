@@ -3,10 +3,20 @@ import { render, fireEvent } from '@testing-library/react'
 import { useRef } from 'react'
 import { useRovingGrid } from '../useRovingGrid'
 
+const rightArrowDelta = (key: string): number | null => (key === 'ArrowRight' ? 1 : null)
+
 function Harness() {
   const gridRef = useRef<HTMLDivElement>(null)
   const { handleKeyDown } = useRovingGrid(gridRef, '[data-cell]', (key) =>
-    key === 'ArrowLeft' ? -1 : key === 'ArrowRight' ? 1 : key === 'ArrowUp' ? -3 : key === 'ArrowDown' ? 3 : null
+    key === 'ArrowLeft'
+      ? -1
+      : key === 'ArrowRight'
+        ? 1
+        : key === 'ArrowUp'
+          ? -3
+          : key === 'ArrowDown'
+            ? 3
+            : null
   )
   return (
     <div>
@@ -115,13 +125,11 @@ describe('useRovingGrid', () => {
   })
 
   it('keeps its handlers referentially stable across anchor moves', () => {
-    const identities: string[] = []
+    const identities: Array<(e: React.KeyboardEvent<HTMLElement>) => void> = []
     function StabilityHarness() {
       const gridRef = useRef<HTMLDivElement>(null)
-      const roving = useRovingGrid(gridRef, '[data-cell]', (key) =>
-        key === 'ArrowRight' ? 1 : null
-      )
-      identities.push(`${roving.handleKeyDown.toString()}`)
+      const roving = useRovingGrid(gridRef, '[data-cell]', rightArrowDelta)
+      identities.push(roving.handleKeyDown)
       return (
         <div ref={gridRef} data-testid="grid" onKeyDown={roving.handleKeyDown}>
           {Array.from({ length: 3 }, (_, i) => (
@@ -136,7 +144,10 @@ describe('useRovingGrid', () => {
     cells[0].focus()
     fireEvent.keyDown(grid, { key: 'ArrowRight' })
 
-    // One identity per render, and moving the anchor must not have changed it.
-    expect(new Set(identities).size).toBe(1)
+    // Moving the anchor re-renders the harness, but must not replace its
+    // event handler. A source-text comparison cannot establish this: distinct
+    // functions created from the same source stringify identically.
+    expect(identities).toHaveLength(2)
+    expect(identities[1]).toBe(identities[0])
   })
 })

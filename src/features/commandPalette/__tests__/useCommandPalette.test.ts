@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { act } from '@testing-library/react'
 import { renderHook } from '@/test/caldavRender'
 import { useCommandPalette } from '../hooks/useCommandPalette'
@@ -273,5 +273,68 @@ describe('useCommandPalette', () => {
     const quickAddItems = result.current.items.filter((i) => i.group === 'quick-add')
     expect(quickAddItems.length).toBeGreaterThanOrEqual(1)
     expect(quickAddItems[0].itemType).toBe('quick-add')
+  })
+
+  describe('natural-event routing improvements', () => {
+    const quickAdd = (q: string) => result0.current.parseInput(q).type
+
+    let result0: { current: ReturnType<typeof useCommandPalette> }
+
+    beforeEach(() => {
+      const { result } = renderHook(() => useCommandPalette({ isOpen: true }))
+      result0 = result
+    })
+
+    it('routes bare-noun events to quick-add (lunch/gym/meeting)', () => {
+      expect(quickAdd('lunch')).toBe('quick-add')
+      expect(quickAdd('gym')).toBe('quick-add')
+      expect(quickAdd('meeting')).toBe('quick-add')
+    })
+
+    it('routes task-prefixed phrases to quick-add', () => {
+      expect(quickAdd('todo buy milk')).toBe('quick-add')
+      expect(quickAdd('task call mom')).toBe('quick-add')
+      expect(quickAdd('remind me to send email')).toBe('quick-add')
+    })
+
+    it('does not false-reject a navigation-verb phrase that clearly has event time', () => {
+      expect(quickAdd('go to gym at 5pm')).toBe('quick-add')
+      expect(quickAdd('show the demo on friday at 2pm')).toBe('quick-add')
+    })
+
+    it('does not misroute a month-name substring inside an event phrase to navigation', () => {
+      // "may" as a verb, not the month of May.
+      expect(quickAdd('may I have a meeting')).toBe('quick-add')
+      // "december" embedded in another word must not trigger December navigation.
+      expect(quickAdd('the decemberists concert')).toBe('quick-add')
+    })
+
+    it('still navigates for a bare month/day name', () => {
+      expect(quickAdd('march')).toBe('navigation')
+      expect(quickAdd('monday')).toBe('navigation')
+      expect(quickAdd('2027')).toBe('navigation')
+    })
+
+    it('navigates on a half-typed month or day name', () => {
+      // Prefix matching keeps mid-typing navigation working: the value is
+      // always shorter than the name it matches, so an event phrase that
+      // merely starts with a date word cannot reach this branch.
+      expect(quickAdd('dece')).toBe('navigation')
+      expect(quickAdd('marc')).toBe('navigation')
+      expect(quickAdd('thur')).toBe('navigation')
+      expect(quickAdd('septemb')).toBe('navigation')
+    })
+
+    it('does not let a prefix match hijack a longer event phrase', () => {
+      expect(quickAdd('may i have a meeting')).toBe('quick-add')
+      expect(quickAdd('march to the gym at 6pm')).toBe('quick-add')
+    })
+
+    it('attaches the parsed NLP result to avoid re-parsing', () => {
+      const parsed = result0.current.parseInput('lunch tomorrow at 1pm')
+      expect(parsed.type).toBe('quick-add')
+      expect(parsed.nlp).toBeDefined()
+      expect(parsed.nlp?.title).toBe('Lunch')
+    })
   })
 })

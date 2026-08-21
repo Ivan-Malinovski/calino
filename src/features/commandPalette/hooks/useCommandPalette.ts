@@ -173,78 +173,103 @@ export function useCommandPalette({ toggleSidebar, sidebarOpen }: UseCommandPale
       return { type: 'navigation', raw: input, dateRef: ref }
     }
 
-    // Check for event creation intent (has time or duration indicators)
+    // Parse once and reuse it for both the event-intent check below and the
+    // quick-add result (see the nlpResult memo), so the relatively expensive
+    // chrono parse runs a single time per keystroke instead of twice.
+    const nlp = parseNaturalLanguage(input)
+
+    // Signals that the phrase carries explicit event structure.
     const hasTimeIndicator =
       /\bat\s+\d|\bat\s+noon|\bat\s+midnight|\bat\s+lunch|\bat\s+dinner|\d{1,2}\s*(am|pm)|\d{1,2}:\d{2}/.test(
         trimmed
       )
     const hasDurationIndicator = /for\s+\d+\s*(min|hour|hr)/.test(trimmed)
     const hasLocationIndicator = /\bat\s+(?!\d|noon|midnight|lunch|dinner)/.test(trimmed)
+    const hasEventStructure =
+      hasTimeIndicator || hasDurationIndicator || hasLocationIndicator || nlp.isTask
 
-    // If has time/duration/location, try quick-add (check BEFORE month/day navigation)
-    if (hasTimeIndicator || hasDurationIndicator || hasLocationIndicator) {
-      const result = parseNaturalLanguage(input)
-      if (result.confidence > 0.6 && result.title) {
-        return { type: 'quick-add', raw: input }
-      }
-    }
-
-    // If NLP produces a meaningful title with high confidence, prefer
-    // quick-add even without explicit time/duration/location indicators.
-    // This lets inputs like "hang out with batman tomorrow" become a
-    // quick-add result instead of falling through to navigation. The
-    // "New Event" placeholder from extractTitle is excluded so plain
-    // date keywords like "tomorrow" still navigate. Navigation verbs
-    // ("go to", "show", "open") are also excluded — they indicate the
-    // user wants to navigate, not create an event.
+    // A non-empty title that chrono produced from the phrase (and that doesn't
+    // start with a navigation verb) is a "bare event" — e.g. a single noun like
+    // "lunch", "gym", or "meeting", or a phrase like "team offsite".
     const NAVIGATION_VERBS = /^(go|show|open|navigate|view|switch|take me)\b/i
-    const nlpPreview = parseNaturalLanguage(input)
-    if (
-      nlpPreview.title &&
-      nlpPreview.title !== 'New Event' &&
-      nlpPreview.confidence >= 0.7 &&
-      !NAVIGATION_VERBS.test(nlpPreview.title)
-    ) {
-      return { type: 'quick-add', raw: input }
-    }
+    const isEventTitle =
+      !!nlp.title && nlp.title !== 'New Event' && !NAVIGATION_VERBS.test(nlp.title)
 
-    // Check for pure date navigation (exact or starts with date keyword)
-    for (const keyword of PURE_DATE_KEYWORDS) {
-      if (trimmed === keyword || trimmed.startsWith(keyword)) {
-        return { type: 'navigation', raw: input, dateRef: trimmed }
+    // True only when the whole input is a date/navigation reference (a bare
+    // month/day/year name, "next monday", "march 2024", "june 15", …). A
+    // month/day name *embedded* in an event phrase ("pay rent may 1st",
+    // "team meeting next monday", "may I have a meeting") must NOT count —
+    // those are events, not navigation.
+    const isPureDateNavigation = (value: string): boolean => {
+      for (const keyword of PURE_DATE_KEYWORDS) {
+        if (value === keyword || value.startsWith(keyword + ' ')) return true
       }
-    }
-
-    // Check for day names ("monday", "next monday", "this friday", "thu" for thursday)
-    for (const day of DAY_NAMES) {
-      if (trimmed === day || trimmed.endsWith(day) || day.startsWith(trimmed)) {
-        return { type: 'navigation', raw: input, dateRef: trimmed }
+      if (/^\d{4}$/.test(value)) return true
+      if (
+        /^(?:next|last|this|on|the)?\s*(monday|tuesday|wednesday|thursday|friday|saturday|sunday)$/i.test(
+          value
+        )
+      )
+        return true
+      // Prefix matching so a half-typed name still navigates while the user
+      // types ("thur" → thursday, "dece" → december). Only ever fires for a
+      // value SHORTER than the name, so an event phrase that merely starts
+      // with a month/day word ("may I have a meeting") can't match here.
+      for (const day of DAY_NAMES) {
+        if (value === day || value === day.slice(0, 3) || day.startsWith(value)) return true
       }
-    }
-
-    // Check for month names ("march", "march 2024", "show march", "dece" for december)
-    for (const month of MONTH_NAMES) {
-      if (trimmed.includes(month) || month.startsWith(trimmed)) {
-        return { type: 'navigation', raw: input, dateRef: trimmed }
+      if (
+        /^(?:next|last|this|on|the)?\s*(january|february|march|april|may|june|july|august|september|october|november|december)(?:\s+\d{1,2}(?:st|nd|rd|th)?|\s+\d{4})?$/i.test(
+          value
+        )
+      )
+        return true
+      if (
+        /^\d{1,2}(?:st|nd|rd|th)?\s+of\s+(january|february|march|april|may|june|july|august|september|october|november|december)$/i.test(
+          value
+        )
+      )
+        return true
+      for (const month of MONTH_NAMES) {
+        if (value === month || value === month.slice(0, 3) || month.startsWith(value)) return true
       }
+      return false
     }
 
-    // Check for year patterns ("2024", "2025")
-    if (/^\d{4}$/.test(trimmed)) {
+    // 1) Explicit event structure always wins — even if a navigation verb leads
+    //    the phrase ("go to gym at 5pm"). The confidence gate keeps false
+    //    positives like "call at 555-1234" (a phone number) from matching.
+    if (hasEventStructure && (nlp.confidence > 0.6 || nlp.isTask)) {
+      return { type: 'quick-add', raw: input, nlp }
+    }
+
+    // 2) A pure date reference navigates. This runs before the bare-event check
+    //    so "march", "monday", "2027" still navigate and aren't turned into
+    //    all-day events.
+    if (isPureDateNavigation(trimmed)) {
       return { type: 'navigation', raw: input, dateRef: trimmed }
+    }
+
+    // 3) Otherwise a non-empty event title is a quick-add: bare nouns
+    //    ("lunch"/"gym"/"meeting"), task prefixes, or any event phrase. This
+    //    runs AFTER the pure-date guard so a month/day name inside an event
+    //    phrase never misroutes to navigation.
+    if (isEventTitle) {
+      return { type: 'quick-add', raw: input, nlp }
     }
 
     // Default: search
     return { type: 'search', raw: input }
   }, [])
 
-  // Memoize NLP result once per query
+  // Memoize NLP result once per query — reuse the parse from parseInput rather
+  // than re-running the parser a second time.
   const nlpResult = useMemo(() => {
     if (!query.trim()) return null
     const parsed = parseInput(query)
-    if (parsed.type === 'quick-add') {
-      const result = parseNaturalLanguage(query)
-      return result.confidence > 0.5 ? result : null
+    if (parsed.type === 'quick-add' && parsed.nlp) {
+      const nlp = parsed.nlp
+      return nlp.title && nlp.title !== 'New Event' ? nlp : null
     }
     return null
   }, [query, parseInput])
@@ -333,9 +358,35 @@ export function useCommandPalette({ toggleSidebar, sidebarOpen }: UseCommandPale
 
     const parsed = parseInput(query)
 
+    // Union of commands + matched events + matched calendars. Shared by the
+    // quick-add and search branches so typing a bare event noun still finds
+    // existing items by name.
+    const buildSearchUnion = (): CommandPaletteItem[] => {
+      const lowerQuery = query.toLowerCase()
+      const commandItems = commands
+        .filter((cmd) => {
+          const labelMatch = cmd.label.toLowerCase().includes(lowerQuery)
+          const keywordMatch = cmd.keywords.some((kw) => kw.toLowerCase().includes(lowerQuery))
+          const descText =
+            typeof cmd.description === 'function' ? cmd.description() : cmd.description
+          const descMatch = descText?.toLowerCase().includes(lowerQuery)
+          return labelMatch || keywordMatch || descMatch
+        })
+        .map(commandToItem)
+      const eventItems = searchEvents(query).map((event) =>
+        eventToItem(event, openModal, openJournalModal)
+      )
+      const calendarItems = searchCalendars(query).map((cal) => calendarToItem(cal, navigate))
+
+      return [...commandItems, ...calendarItems, ...eventItems]
+    }
+
     // Direct navigation: synthesize a "Go to ..." item
     if (parsed.type === 'navigation') {
       const dateRef = parsed.dateRef || query
+      // `parsed.nlp` is only attached on the quick-add branches, and `dateRef`
+      // is frequently a substring of the query rather than the whole of it, so
+      // the navigation branch always parses the reference itself.
       const parsedDate = parseNaturalLanguage(dateRef)
       const navCmd: Command = {
         id: 'nav-quick',
@@ -358,21 +409,35 @@ export function useCommandPalette({ toggleSidebar, sidebarOpen }: UseCommandPale
       return [commandToItem(navCmd)]
     }
 
-    // Quick-add
+    // Quick-add: offer the parsed event/task, but ALSO surface any existing
+    // events/calendars/commands that match the text. A bare noun like "lunch"
+    // is now an event, yet "Standup" should still find an existing "Standup"
+    // series — showing both keeps creation and search from being mutually
+    // exclusive.
     if (parsed.type === 'quick-add') {
-      if (nlpResult && nlpResult.title) {
-        const qa: QuickAddResult = {
-          title: nlpResult.title,
-          startDate: nlpResult.startDate,
-          endDate: nlpResult.endDate ?? undefined,
-          location: nlpResult.location,
-          isAllDay: nlpResult.isAllDay,
-          isTask: nlpResult.isTask,
-          confidence: nlpResult.confidence,
-        }
-        return [quickAddToItem(qa, query, calendars, addEvent, createCalDAVEvent, openModal)]
-      }
-      return []
+      const quickAddItem: CommandPaletteItem[] =
+        nlpResult && nlpResult.title
+          ? [
+              quickAddToItem(
+                {
+                  title: nlpResult.title,
+                  startDate: nlpResult.startDate,
+                  endDate: nlpResult.endDate ?? undefined,
+                  location: nlpResult.location,
+                  isAllDay: nlpResult.isAllDay,
+                  isTask: nlpResult.isTask,
+                  confidence: nlpResult.confidence,
+                  recurrence: nlpResult.recurrence,
+                },
+                query,
+                calendars,
+                addEvent,
+                createCalDAVEvent,
+                openModal
+              ),
+            ]
+          : []
+      return [...quickAddItem, ...buildSearchUnion()]
     }
 
     // Explicit `>` command prefix: show only commands, let cmdk filter
@@ -395,22 +460,7 @@ export function useCommandPalette({ toggleSidebar, sidebarOpen }: UseCommandPale
 
     // Search/command: union of all commands + matched events + matched calendars.
     // We do our own filtering since cmdk's fuzzy filter is too aggressive.
-    const lowerQuery = query.toLowerCase()
-    const commandItems = commands
-      .filter((cmd) => {
-        const labelMatch = cmd.label.toLowerCase().includes(lowerQuery)
-        const keywordMatch = cmd.keywords.some((kw) => kw.toLowerCase().includes(lowerQuery))
-        const descText = typeof cmd.description === 'function' ? cmd.description() : cmd.description
-        const descMatch = descText?.toLowerCase().includes(lowerQuery)
-        return labelMatch || keywordMatch || descMatch
-      })
-      .map(commandToItem)
-    const eventItems = searchEvents(query).map((event) =>
-      eventToItem(event, openModal, openJournalModal)
-    )
-    const calendarItems = searchCalendars(query).map((cal) => calendarToItem(cal, navigate))
-
-    return [...commandItems, ...calendarItems, ...eventItems]
+    return buildSearchUnion()
   }, [
     query,
     commands,
@@ -563,6 +613,11 @@ function quickAddToItem(
         // Quick-add skips the modal, so seed the default reminder here — the
         // setting means "what a new event starts with", however it was made.
         reminders: makeDefaultReminders(useSettingsStore.getState().defaultReminderMinutes),
+        // Same reasoning for recurrence: "gym every other day" parses a rule,
+        // and with no modal in the way this is the only place it can be
+        // attached. `isAllDay` is mirrored onto the rule because the RRULE
+        // serializer picks the UNTIL form from it (see RecurrenceRule).
+        ...(qa.recurrence ? { recurrence: { ...qa.recurrence, isAllDay: qa.isAllDay } } : {}),
       }
       addEvent(newEvent)
       try {

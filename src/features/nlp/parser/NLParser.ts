@@ -7,6 +7,14 @@ import type { NLPParseResult, NLPParseOptions } from '../types'
 
 const chrono = new Chrono()
 
+/**
+ * Time-of-day words that give chrono an implied hour. Matched against the text
+ * chrono actually consumed, so a title word ("Night Shift Planning") that
+ * chrono did not treat as a date cannot trip it.
+ */
+const CASUAL_TIME_OF_DAY =
+  /\b(?:tonight|morning|afternoon|evening|night|noon|midnight|midday|lunchtime)\b/i
+
 const DEFAULT_DURATION = 60
 
 const TASK_PREFIXES = [
@@ -136,11 +144,20 @@ export class NLParser {
       const hasHour = firstMatch.start.isCertain('hour')
       const hasMinute = firstMatch.start.isCertain('minute')
 
-      if (!hasHour && !hasMinute) {
+      // chrono reports a casual time-of-day ("tonight", "this evening",
+      // "monday morning") as an *implied* hour — 22, 20, 9 — which
+      // `isCertain('hour')` cannot tell apart from the implied noon it gives a
+      // bare date like "tomorrow". The difference lives in the matched text:
+      // the user did say when, so the event is timed, not all-day. Without
+      // this, "dinner tonight" became an all-day event that also carried a
+      // 22:00 start.
+      const hasCasualTimeOfDay = CASUAL_TIME_OF_DAY.test(parsedText)
+
+      if (!hasHour && !hasMinute && !hasCasualTimeOfDay) {
         isAllDay = true
         confidence = 0.8
       } else {
-        confidence = 0.9
+        confidence = hasHour || hasMinute ? 0.9 : 0.8
       }
 
       if (firstMatch.end) {

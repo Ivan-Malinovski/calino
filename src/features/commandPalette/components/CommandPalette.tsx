@@ -29,15 +29,17 @@ const TYPING_SPEED = 45
 const PAUSE_AFTER_TYPING = 2000
 const ERASING_SPEED = 25
 
-// Group order for display
+// Group order for display. "quick-add" leads so that when a phrase is parsed
+// as an event the create-action is the default selection (Enter creates it),
+// while any matching existing events/calendars/commands still appear below.
 const GROUP_ORDER: CommandPaletteItemGroup[] = [
+  'quick-add',
   'navigation',
   'actions',
   'settings',
   'event',
   'task',
   'journal',
-  'quick-add',
   'calendars',
 ]
 

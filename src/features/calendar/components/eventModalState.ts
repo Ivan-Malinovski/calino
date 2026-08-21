@@ -208,7 +208,10 @@ export function getInitialFormState(
         location: existingEvent.location || '',
         // TZID events store naive wall clocks in the event zone — the modal
         // must show them as the device would see the instant (Phase 2 C2).
-        startDate: format(toEventInstant(existingEvent.start, existingEvent.timezone), 'yyyy-MM-dd'),
+        startDate: format(
+          toEventInstant(existingEvent.start, existingEvent.timezone),
+          'yyyy-MM-dd'
+        ),
         startTime: format(toEventInstant(existingEvent.start, existingEvent.timezone), 'HH:mm'),
         endDate: format(toEventInstant(existingEvent.end, existingEvent.timezone), 'yyyy-MM-dd'),
         endTime: format(toEventInstant(existingEvent.end, existingEvent.timezone), 'HH:mm'),
@@ -280,6 +283,24 @@ export function getInitialFormState(
             reminders: defaultReminders,
           })
         }
+      }
+
+      // Month-view drag-to-create seeds an *all-day range*: a date-only (no
+      // time) end date. A single-day click passes no endDate at all, so it
+      // keeps the default timed event below. Here we mark the seeded event
+      // all-day and span the inclusive end date — see the store's all-day
+      // convention (end stored as `endDateT00:00:00`, rendered inclusive).
+      if (selectedEndDate && !selectedEndDate.includes('T')) {
+        return makeDefaultState({
+          calendarId: defaultCalendar?.id || '',
+          startDate: dateStr,
+          startTime: '00:00',
+          endDate: selectedEndDate,
+          endTime: '23:59',
+          isAllDay: true,
+          endOnDate: dateStr,
+          reminders: defaultReminders,
+        })
       }
 
       return makeDefaultState({

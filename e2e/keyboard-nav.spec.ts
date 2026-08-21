@@ -75,6 +75,55 @@ test.describe('keyboard navigation', () => {
     expect(hour).toBe('01:00')
   })
 
+  test('week view: ArrowDown at 23:00 stays in the same day column', async ({ page }) => {
+    await openWeekView(page)
+
+    // Walk to the bottom of the first column, then try to step past it.
+    const start = tabbableSlot(page).first()
+    await start.focus()
+    const day = await start.getAttribute('data-date')
+    for (let i = 0; i < 23; i++) await page.keyboard.press('ArrowDown')
+
+    const atBottom = await page.evaluate(() => {
+      const el = document.activeElement as HTMLElement | null
+      return {
+        date: el?.getAttribute('data-date') ?? null,
+        hour: el?.getAttribute('data-hour') ?? null,
+      }
+    })
+    expect(atBottom).toEqual({ date: day, hour: '23:00' })
+
+    await page.keyboard.press('ArrowDown')
+    const afterEdge = await page.evaluate(() => {
+      const el = document.activeElement as HTMLElement | null
+      return {
+        date: el?.getAttribute('data-date') ?? null,
+        hour: el?.getAttribute('data-hour') ?? null,
+      }
+    })
+    // Must not slide into the next day's 00:00.
+    expect(afterEdge).toEqual({ date: day, hour: '23:00' })
+  })
+
+  test('week view: ArrowUp at 00:00 stays in the same day column', async ({ page }) => {
+    await openWeekView(page)
+
+    const start = tabbableSlot(page).first()
+    await start.focus()
+    const day = await start.getAttribute('data-date')
+
+    await page.keyboard.press('ArrowUp')
+    const after = await page.evaluate(() => {
+      const el = document.activeElement as HTMLElement | null
+      return {
+        date: el?.getAttribute('data-date') ?? null,
+        hour: el?.getAttribute('data-hour') ?? null,
+      }
+    })
+    // Must not slide into the previous day's 23:00.
+    expect(after).toEqual({ date: day, hour: '00:00' })
+  })
+
   test('week view: Enter on an empty slot opens quick-create', async ({ page }) => {
     await openWeekView(page)
 
@@ -108,6 +157,24 @@ test.describe('keyboard navigation', () => {
     await page.keyboard.press('Enter')
     const titleInput = page.locator('[data-component="event-title-input"]')
     await expect(titleInput).toBeVisible({ timeout: 5_000 })
+  })
+
+  test('day view: hour slots announce time in the preferred format', async ({ page }) => {
+    await page.addInitScript(() => {
+      const key = 'calino-settings'
+      const raw = localStorage.getItem(key)
+      const persisted = raw ? JSON.parse(raw) : { state: {}, version: 1 }
+      persisted.state = { ...(persisted.state ?? {}), timeFormat: '12h' }
+      localStorage.setItem(key, JSON.stringify(persisted))
+    })
+
+    await page.goto('/day')
+    await expect(page.locator('[data-component="header"]')).toBeVisible()
+
+    const slot = page.locator('[data-hour="14:00"]')
+    await expect(slot).toHaveAttribute('aria-label', /2 PM/)
+    // Time-format preference must not change the DOM value selectors depend on.
+    await expect(slot).toHaveAttribute('data-hour', '14:00')
   })
 
   test('month view: arrow keys move between day cells', async ({ page }) => {

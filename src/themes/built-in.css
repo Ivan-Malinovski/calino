@@ -51,6 +51,10 @@
   --accent-strong: #8d643f;
   --accent-contrast: #ffffff;
   --accent-soft: #efe7db;
+  /* --accent-strong on an --accent-soft fill is 4.25:1 — just under AA at
+     14px — so text sitting on that surface (the settings active nav item)
+     uses this one step darker instead. 4.61:1 on --accent-soft. */
+  --accent-strong-on-soft: #865f3c;
 
   /* Text */
   --color-text-primary: #2c2823;
@@ -71,7 +75,7 @@
   /* A step darker than --accent-strong (#8d643f), so hover on a filled button
      still reads as "pressed toward" rather than lighting up. */
   --color-primary-hover: #785536;
-  --color-primary-light: rgba(176, 125, 79, 0.10);
+  --color-primary-light: rgba(176, 125, 79, 0.1);
   --color-accent-hover: #785536;
   --accent-hover: #785536;
   --color-accent-light: #efe7db;
@@ -80,7 +84,7 @@
      white and washes out on cream (#34a853 was 2.88:1, #ea4335 3.70:1). These
      values clear AA as text *and* improve white-on-fill for solid buttons. */
   --color-success: #277d3e;
-  --color-success-light: rgba(45, 125, 70, 0.10);
+  --color-success-light: rgba(45, 125, 70, 0.1);
   --color-danger-bg: rgba(234, 67, 53, 0.08);
   /* Yellow is the exception: darkening it far enough to read (#8d6902) turns it
      olive, so the fill keeps its brightness and text/icons use the -text pair. */
@@ -128,7 +132,8 @@
   --space-16: 64px;
 
   /* Font families */
-  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   --font-serif: 'Newsreader', Georgia, 'Times New Roman', serif;
   --font-mono: 'SF Mono', 'Fira Code', 'Fira Mono', 'Roboto Mono', monospace;
 
@@ -206,14 +211,14 @@
   --modal-blur: blur(3px);
   --modal-border: transparent;
   --popover-border: var(--color-border);
-  --modal-shadow: 0 24px 80px rgba(0, 0, 0, 0.18), 0 6px 20px rgba(0, 0, 0, 0.10);
+  --modal-shadow: 0 24px 80px rgba(0, 0, 0, 0.18), 0 6px 20px rgba(0, 0, 0, 0.1);
 
   /* Mobile floating nav pill tokens */
   --nav-canvas-track: #f0ebe1;
   --nav-switcher-track: var(--side);
   --ink-4: #c2bcae;
   --toggle-off: #e3ddd0;
-  --shadow-pill: 0 16px 36px rgba(44, 40, 33, 0.20), 0 2px 10px rgba(44, 40, 33, 0.10);
+  --shadow-pill: 0 16px 36px rgba(44, 40, 33, 0.2), 0 2px 10px rgba(44, 40, 33, 0.1);
   --shadow-tile-active: 0 3px 8px color-mix(in srgb, var(--accent) 35%, transparent);
 
   /* Layout */
@@ -257,6 +262,11 @@
   --accent-strong: #c9956a;
   --accent-contrast: #1a1816;
   --accent-soft: rgba(201, 149, 106, 0.18);
+  /* The dark --accent-soft is translucent, compositing to ~#42372d over
+     --panel. --accent-strong itself is only 4.40:1 there, so lighten one
+     step for this surface: 5.42:1. (The light theme darkens instead —
+     same token, mirrored direction.) */
+  --accent-strong-on-soft: #d9a87c;
 
   /* Text */
   --color-text-primary: #f0ece6;
@@ -264,6 +274,10 @@
   --color-text-muted: #989086;
   --color-text: #f0ece6;
   --color-text-tertiary: #989086;
+  /* The light default #d93025 was darkened for AA on white, which left it
+     at 3.32:1 on the dark --panel behind the 10px "now" label. Lighten it
+     for dark: 5.20:1 on --panel, 4.82:1 on --side. */
+  --color-current-time: #ef6a5e;
 
   /* Borders */
   --color-border: rgba(240, 236, 230, 0.09);
@@ -283,7 +297,7 @@
   /* Status */
   --color-success: #6aaa85;
   --color-success-light: rgba(106, 170, 133, 0.12);
-  --color-danger-bg: rgba(212, 135, 127, 0.10);
+  --color-danger-bg: rgba(212, 135, 127, 0.1);
   --color-warning: #d4a54f;
   --color-warning-text: #d4a54f;
   --color-error: #d4877f;
@@ -323,7 +337,8 @@
   --space-16: 64px;
 
   /* Font families — same as light */
-  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   --font-serif: 'Newsreader', Georgia, 'Times New Roman', serif;
   --font-mono: 'SF Mono', 'Fira Code', 'Fira Mono', 'Roboto Mono', monospace;
 
@@ -390,12 +405,12 @@
   /* Modal / popover tokens */
   --modal-bg: #2d2a24;
   --popover-bg: #383229;
-  --modal-scrim: rgba(0, 0, 0, 0.60);
+  --modal-scrim: rgba(0, 0, 0, 0.6);
   --modal-blur: blur(4px);
   --modal-border: transparent;
   --modal-card-border: 1px solid rgba(255, 247, 235, 0.08);
   --popover-border: rgba(255, 247, 235, 0.14);
-  --modal-shadow: 0 2px 4px rgba(0, 0, 0, 0.40), 0 20px 60px rgba(0, 0, 0, 0.65);
+  --modal-shadow: 0 2px 4px rgba(0, 0, 0, 0.4), 0 20px 60px rgba(0, 0, 0, 0.65);
 
   /* Mobile floating nav pill tokens */
   --nav-canvas-track: #312e2a;
@@ -444,7 +459,7 @@
 }
 
 /* ── Modal card — double-bezel edge (default theme) ─────────── */
-[data-theme='light']:not([data-theme-id]) [data-component="modal-card"] {
+[data-theme='light']:not([data-theme-id]) [data-component='modal-card'] {
   border: 1px solid rgba(255, 255, 255, 0.4);
   box-shadow:
     0 0 0 1px rgba(0, 0, 0, 0.06),

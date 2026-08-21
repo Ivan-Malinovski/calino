@@ -41,7 +41,7 @@ import {
   TASK_PILL_LAYOUT_MINUTES,
 } from '../lib/eventLayout'
 import { eventCardVariants } from '../lib/eventAnimations'
-import { pad2, toLocalDateString, toEventInstant } from '@/lib/datetime'
+import { formatTime, pad2, toLocalDateString, toEventInstant } from '@/lib/datetime'
 import { HOURS } from '@/lib/hours'
 import { getTimezoneAbbr, getSecondaryHourLabel } from '@/lib/timezoneHelper'
 import { AnimatePresence, motion } from 'framer-motion'
@@ -102,12 +102,7 @@ function HourCell({
   let timeContent: React.ReactNode = primaryTime
 
   if (isDualTz && secondaryTimezone) {
-    const secLabel = getSecondaryHourLabel(
-      hour.getHours(),
-      baseDate,
-      secondaryTimezone,
-      timeFormat
-    )
+    const secLabel = getSecondaryHourLabel(hour.getHours(), baseDate, secondaryTimezone, timeFormat)
     timeContent = (
       <div className={styles.timeRow}>
         <span className={styles.primaryTime}>{primaryTime}</span>
@@ -131,7 +126,7 @@ function HourCell({
         // stop lands on an unnamed "blank". The date comes from `dateStr`, not
         // from `hour` — HOURS is a module-load constant anchored to real
         // today, so its calendar date goes stale as soon as the user navigates.
-        aria-label={`${format(parseISO(dateStr), 'EEEE, MMMM d, yyyy')} ${format(hour, 'HH:mm')}`}
+        aria-label={`${format(parseISO(dateStr), 'EEEE, MMMM d, yyyy')} ${formatTime(hour, timeFormat, 'hour')}`}
         tabIndex={isFocusAnchor ? 0 : -1}
         onClick={() => onCellClick(hour)}
         onMouseDown={(e) => onDragStart(hour, e)}
@@ -207,11 +202,11 @@ export function DayView({
   // so they fall through to the global handlers). Enter/Space on a focused
   // slot opens the quick-create modal (same handler as a click).
   const gridBodyRef = useRef<HTMLDivElement>(null)
-  const { handleKeyDown: handleGridKeyDown, focusAnchor, setFocusAnchor } = useRovingGrid(
-    gridBodyRef,
-    '[data-hour]',
-    gridDelta
-  )
+  const {
+    handleKeyDown: handleGridKeyDown,
+    focusAnchor,
+    setFocusAnchor,
+  } = useRovingGrid(gridBodyRef, '[data-hour]', gridDelta)
   // Both refs point at the same element (the hour-grid body): `bodyRef` for
   // scroll-to-now / context-menu geometry, `gridBodyRef` for roving focus.
   const bodyAndGridRef = useCallback((el: HTMLDivElement | null) => {
@@ -338,8 +333,7 @@ export function DayView({
   )
   const secondaryTzAbbr = useMemo(
     () =>
-      secondaryTimezoneLabel ||
-      (secondaryTimezone ? getTimezoneAbbr(date, secondaryTimezone) : ''),
+      secondaryTimezoneLabel || (secondaryTimezone ? getTimezoneAbbr(date, secondaryTimezone) : ''),
     [date, secondaryTimezone, secondaryTimezoneLabel]
   )
   const dateKey = format(date, 'yyyy-MM-dd')
