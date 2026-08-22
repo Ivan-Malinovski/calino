@@ -577,7 +577,20 @@
 }
 
 .cardTaskCollapseToggle {
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  z-index: 2;
+  margin: 0;
   color: var(--event-color, var(--accent));
+  transform: translateY(-50%);
+}
+
+/* Keep the disclosure outside the clipped drag surface so a long title can
+   never hide it. The task card already reserves trailing padding for it. */
+.task .cardTaskCollapseToggle {
+  width: 20px;
+  height: 20px;
 }
 
 .dotTaskCollapseToggle {

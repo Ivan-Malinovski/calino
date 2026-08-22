@@ -1,5 +1,6 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo } from 'react'
 import type { CalendarEvent } from '@/types'
+import { useSettingsStore } from '@/store/settingsStore'
 import {
   getTaskChildrenMap,
   getTaskParentsWithManyDescendants,
@@ -15,14 +16,19 @@ export interface TaskCollapseState {
 }
 
 /**
- * Local disclosure state for a task surface. Large trees start collapsed, but
- * every manual toggle becomes an explicit override until the surface unmounts.
+ * Shared disclosure state for every task surface. Large trees start collapsed,
+ * but every manual toggle becomes an explicit persisted override.
  */
 export function useTaskCollapse(
   events: CalendarEvent[],
   threshold = SUBTASK_AUTO_COLLAPSE_THRESHOLD
 ): TaskCollapseState {
-  const [overrides, setOverrides] = useState<ReadonlyMap<string, boolean>>(() => new Map())
+  const persistedOverrides = useSettingsStore((state) => state.taskCollapseOverrides)
+  const updateSettings = useSettingsStore((state) => state.updateSettings)
+  const overrides = useMemo(
+    () => new Map(Object.entries(persistedOverrides ?? {})),
+    [persistedOverrides]
+  )
 
   const childrenByParent = useMemo(() => getTaskChildrenMap(events), [events])
   const defaultCollapsed = useMemo(
@@ -71,16 +77,17 @@ export function useTaskCollapse(
 
   const toggleTask = useCallback(
     (taskId: string): void => {
-      setOverrides((previous) => {
-        const next = new Map(previous)
-        const currentlyCollapsed = previous.has(taskId)
-          ? previous.get(taskId) === true
-          : defaultCollapsed.has(taskId)
-        next.set(taskId, !currentlyCollapsed)
-        return next
+      const currentlyCollapsed = overrides.has(taskId)
+        ? overrides.get(taskId) === true
+        : defaultCollapsed.has(taskId)
+      updateSettings({
+        taskCollapseOverrides: {
+          ...(persistedOverrides ?? {}),
+          [taskId]: !currentlyCollapsed,
+        },
       })
     },
-    [defaultCollapsed]
+    [defaultCollapsed, overrides, persistedOverrides, updateSettings]
   )
 
   return { collapsedTaskIds, hasSubtasks, descendantCount, isCollapsed, toggleTask }

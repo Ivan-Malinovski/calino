@@ -4,6 +4,18 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { useVirtualizer, type Virtualizer } from '@tanstack/react-virtual'
 import { createPortal } from 'react-dom'
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, parseISO, startOfDay } from 'date-fns'
+import {
+  DndContext,
+  DragOverlay,
+  MouseSensor,
+  TouchSensor,
+  useDraggable,
+  useDroppable,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragStartEvent,
+} from '@dnd-kit/core'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
 import { useContextMenuStore } from '@/store/contextMenuStore'
@@ -13,11 +25,13 @@ import type { CalendarEvent } from '@/types'
 import { ContextMenu } from '@/components/common/ContextMenu'
 import { EmptyState } from '@/components/common/EmptyState'
 import { getEventColor } from '@/lib/eventColor'
-import { formatEventTime, toEventInstant } from '@/lib/datetime'
+import { formatEventTime, pad2, toEventInstant, toZoneWallClock } from '@/lib/datetime'
+import { safeCalDAVUpdate } from '@/lib/caldavHelpers'
+import { extractOriginalEventId } from '@/lib/events'
 import { LocationLink } from './LocationLink'
 import { useDateChangeMotion } from '@/hooks/useDateChangeMotion'
 import { useTaskContextMenuItems } from '../hooks/useTaskContextMenuItems'
-import { filterTasksByCollapsedAncestors } from '@/lib/taskTree'
+import { filterTasksByCollapsedAncestors, getTaskChildrenMap } from '@/lib/taskTree'
 import { useTaskCollapse } from '../hooks/useTaskCollapse'
 import { TaskCollapseToggle } from './TaskCollapseToggle'
 import styles from './AgendaView.module.css'
@@ -31,6 +45,117 @@ interface DayGroup {
   type: 'day' | 'skip'
   days: Date[]
   hasEvents: boolean
+}
+
+function AgendaDropZone({
+  dateKey,
+  className,
+  children,
+}: {
+  dateKey: string
+  className?: string
+  children: React.ReactNode
+}): JSX.Element {
+  const { setNodeRef, isOver } = useDroppable({ id: dateKey })
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`${className ?? ''} ${isOver ? styles.agendaDropOver : ''}`}
+      data-date={dateKey}
+      data-component="agenda-day-drop-zone"
+    >
+      {children}
+    </div>
+  )
+}
+
+function AgendaInsertDropZone({
+  dateKey,
+  position,
+}: {
+  dateKey: string
+  position: number
+}): JSX.Element {
+  const { setNodeRef, isOver } = useDroppable({ id: `agenda-between:${dateKey}:${position}` })
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`${styles.agendaInsertDropZone} ${isOver ? styles.agendaInsertDropOver : ''}`}
+      data-component="agenda-insert-drop-zone"
+      data-drop-position={position}
+      data-drop-state={isOver ? 'insert' : undefined}
+      aria-hidden="true"
+    />
+  )
+}
+
+function AgendaDraggableItem({
+  event,
+  className,
+  disabled,
+  dataComponent,
+  indentDepth = 0,
+  dropTargetId,
+  children,
+  onClick,
+  onKeyDown,
+  onContextMenu,
+}: {
+  event: CalendarEvent
+  className: string
+  disabled: boolean
+  dataComponent?: string
+  indentDepth?: number
+  dropTargetId?: string
+  children: React.ReactNode
+  onClick: (event: React.MouseEvent) => void
+  onKeyDown: (event: React.KeyboardEvent) => void
+  onContextMenu: (event: React.MouseEvent) => void
+}): JSX.Element {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: event.id,
+    disabled,
+  })
+  const { setNodeRef: setDropNodeRef, isOver: isDropOver } = useDroppable({
+    id: dropTargetId ?? `agenda-item-${event.id}`,
+    disabled: !dropTargetId,
+  })
+
+  const style = {
+    ...(transform
+      ? {
+          transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+          zIndex: 2,
+        }
+      : {}),
+    ...(indentDepth > 0 ? { marginLeft: `${12 + indentDepth * 18}px` } : {}),
+  } as React.CSSProperties
+  const setNodeRefs = (node: HTMLDivElement | null): void => {
+    setNodeRef(node)
+    setDropNodeRef(node)
+  }
+
+  return (
+    <div
+      ref={setNodeRefs}
+      style={style}
+      className={`${className} ${isDragging ? styles.agendaDragging : ''} ${isDropOver && dropTargetId ? styles.agendaTaskDropOver : ''}`}
+      data-component={dataComponent}
+      data-drop-state={isDropOver && dropTargetId ? 'make-subtask' : undefined}
+      {...attributes}
+      {...listeners}
+      onClick={onClick}
+      onKeyDown={onKeyDown}
+      onContextMenu={onContextMenu}
+    >
+      {children}
+      {isDropOver && dropTargetId && (
+        <span className={styles.agendaTaskDropHint}>Make subtask</span>
+      )}
+    </div>
+  )
 }
 
 function MonthScrollRestorer({
@@ -91,11 +216,16 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
   const taskCollapse = useTaskCollapse(events)
   const timeFormat = useSettingsStore((state) => state.timeFormat)
   const deleteEvent = useCalendarStore((state) => state.deleteEvent)
+  const updateEvent = useCalendarStore((state) => state.updateEvent)
   // Shared with the tasks list and the sidebar so ticking a task off behaves
   // the same wherever it is done — including the recurring-occurrence path.
   const { toggleComplete } = useTaskContextMenuItems(null)
   const addEvent = useCalendarStore((state) => state.addEvent)
-  const { deleteEvent: deleteCalDAVEvent, createEvent: createCalDAVEvent } = useCalDAV()
+  const {
+    deleteEvent: deleteCalDAVEvent,
+    createEvent: createCalDAVEvent,
+    updateEvent: caldavUpdateEvent,
+  } = useCalDAV()
   const closeMenu = useContextMenuStore((state) => state.closeMenu)
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; day: Date } | null>(null)
   const [eventContextMenu, setEventContextMenu] = useState<{
@@ -106,6 +236,35 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
 
   const fadePastDaysInAgenda = useSettingsStore((state) => state.fadePastDaysInAgenda)
   const useCategoryColors = useSettingsStore((state) => state.useCategoryColors)
+
+  const sensors = useSensors(
+    useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } })
+  )
+
+  const [activeDragEvent, setActiveDragEvent] = useState<CalendarEvent | null>(null)
+
+  const taskDepthById = useMemo(() => {
+    const eventById = new Map(events.map((event) => [event.id, event]))
+    const depths = new Map<string, number>()
+
+    for (const event of events) {
+      if (event.type !== 'task') continue
+      let depth = 0
+      let parentId = event.parentTaskId
+      const visited = new Set<string>()
+      while (parentId && !visited.has(parentId)) {
+        visited.add(parentId)
+        const parent = eventById.get(parentId)
+        if (!parent || parent.type !== 'task') break
+        depth += 1
+        parentId = parent.parentTaskId
+      }
+      depths.set(event.id, depth)
+    }
+
+    return depths
+  }, [events])
 
   const getEventBarColor = (event: CalendarEvent): string =>
     getEventColor(event, { categories, calendars, useCategoryColors })
@@ -141,6 +300,111 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
     e.preventDefault()
     e.stopPropagation()
     setEventContextMenu({ x: e.clientX, y: e.clientY, event })
+  }
+
+  const handleDragStart = (dragEvent: DragStartEvent): void => {
+    const dragged = events.find((event) => event.id === String(dragEvent.active.id))
+    setActiveDragEvent(dragged ?? null)
+  }
+
+  const handleDragEnd = async ({ over }: DragEndEvent): Promise<void> => {
+    const originalEvent = activeDragEvent
+    setActiveDragEvent(null)
+    if (!originalEvent || !over) return
+
+    const overId = String(over.id)
+    if (overId.startsWith('agenda-task:')) {
+      if (originalEvent.type !== 'task') return
+      const targetId = overId.slice('agenda-task:'.length)
+      if (targetId === originalEvent.id || originalEvent.parentTaskId === targetId) return
+      if (originalEvent.recurrence || originalEvent.rruleString) return
+      if (extractOriginalEventId(originalEvent.id)) return
+      if (calendars.find((calendar) => calendar.id === originalEvent.calendarId)?.readOnly) return
+
+      const childrenByParent = getTaskChildrenMap(events)
+      const descendants = new Set<string>()
+      const pending = [originalEvent.id]
+      while (pending.length > 0) {
+        const parentId = pending.pop()!
+        for (const child of childrenByParent.get(parentId) ?? []) {
+          if (descendants.has(child.id)) continue
+          descendants.add(child.id)
+          pending.push(child.id)
+        }
+      }
+      if (descendants.has(targetId)) return
+
+      const targetEvent = events.find((event) => event.id === targetId)
+      if (!targetEvent || targetEvent.type !== 'task') return
+      const updates: Partial<CalendarEvent> = { parentTaskId: targetId }
+      updateEvent(originalEvent.id, updates)
+      await safeCalDAVUpdate(
+        caldavUpdateEvent,
+        originalEvent.calendarId,
+        { ...originalEvent, ...updates },
+        updates,
+        'Failed to sync task hierarchy change'
+      )
+      return
+    }
+
+    const dayStr = overId.startsWith('agenda-between:') ? overId.split(':')[1] : overId
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dayStr)) return
+    if (originalEvent.recurrence || originalEvent.rruleString) return
+    if (extractOriginalEventId(originalEvent.id)) return
+    if (calendars.find((calendar) => calendar.id === originalEvent.calendarId)?.readOnly) return
+
+    const sourceDate = format(
+      toEventInstant(
+        originalEvent.type === 'task'
+          ? originalEvent.dueDate || originalEvent.start
+          : originalEvent.start,
+        originalEvent.timezone
+      ),
+      'yyyy-MM-dd'
+    )
+    const isTask = originalEvent.type === 'task'
+    const shouldPromoteTask = isTask && Boolean(originalEvent.parentTaskId)
+    if (sourceDate === dayStr && !shouldPromoteTask) return
+
+    const originalStart = toEventInstant(originalEvent.start, originalEvent.timezone)
+    const originalEnd = toEventInstant(originalEvent.end, originalEvent.timezone)
+    const durationMs = originalEnd.getTime() - originalStart.getTime()
+    const newStart = originalEvent.isAllDay
+      ? parseISO(`${dayStr}T00:00:00`)
+      : parseISO(
+          `${dayStr}T${pad2(originalStart.getHours())}:${pad2(originalStart.getMinutes())}:00`
+        )
+    const newEnd = new Date(newStart.getTime() + durationMs)
+    let newDueDate = dayStr
+    if (isTask && originalEvent.dueDate) {
+      const originalDueDate = toEventInstant(originalEvent.dueDate, originalEvent.timezone)
+      const hasTime =
+        originalEvent.dueDate.includes('T') &&
+        !originalEvent.dueDate.endsWith('T00:00:00') &&
+        !originalEvent.dueDate.endsWith('T00:00')
+      if (hasTime) {
+        const dueTime = `${pad2(originalDueDate.getHours())}:${pad2(originalDueDate.getMinutes())}:00`
+        newDueDate = originalEvent.timezone
+          ? toZoneWallClock(new Date(`${dayStr}T${dueTime}`).toISOString(), originalEvent.timezone)
+          : `${dayStr}T${dueTime}`
+      }
+    }
+
+    const updates: Partial<CalendarEvent> = {
+      start: newStart.toISOString(),
+      end: newEnd.toISOString(),
+      ...(isTask ? { dueDate: newDueDate, parentTaskId: undefined } : {}),
+    }
+
+    updateEvent(originalEvent.id, updates)
+    await safeCalDAVUpdate(
+      caldavUpdateEvent,
+      originalEvent.calendarId,
+      { ...originalEvent, ...updates },
+      updates,
+      'Failed to sync dragged item'
+    )
   }
 
   const { eventsByDate, dayGroups } = useMemo(() => {
@@ -322,315 +586,393 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
   }, [dayGroups, virtualizer])
 
   const renderSkipRow = (group: DayGroup): JSX.Element => {
-    const first = group.days[0]
-    const last = group.days[group.days.length - 1]
-    const freeDays = group.days.length - 1
-    const label = `${format(first, 'EEE MMM d')} – ${format(last, 'EEE MMM d')} · ${freeDays} day${freeDays === 1 ? '' : 's'} free`
-
     return (
-      <div className={styles.agendaSkip} key={`skip-${format(first, 'yyyy-MM-dd')}`}>
-        <div className={styles.agendaSkipLine} />
-        <span className={styles.agendaSkipLabel}>{label}</span>
-        <div className={styles.agendaSkipLine} />
+      <div className={styles.agendaSkip} key={`skip-${format(group.days[0], 'yyyy-MM-dd')}`}>
+        {group.days.map((day) => {
+          const dateKey = format(day, 'yyyy-MM-dd')
+          return (
+            <AgendaDropZone key={dateKey} dateKey={dateKey} className={styles.agendaSkipDay}>
+              <div className={styles.agendaSkipLine} />
+              <span className={styles.agendaSkipLabel}>{format(day, 'EEE MMM d')}</span>
+              <div className={styles.agendaSkipLine} />
+            </AgendaDropZone>
+          )
+        })}
       </div>
     )
   }
 
   return (
-    <div
-      ref={containerRef}
-      className={`${containerClass} ${isScrolled ? styles.containerShadow : ''}`}
-      onScroll={handleScroll}
+    <DndContext
+      sensors={sensors}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+      onDragCancel={() => setActiveDragEvent(null)}
     >
-      {/* Keyed by month, not by `currentDate`: in the month+agenda split a day
+      <div
+        ref={containerRef}
+        className={`${containerClass} ${isScrolled ? styles.containerShadow : ''}`}
+        onScroll={handleScroll}
+      >
+        {/* Keyed by month, not by `currentDate`: in the month+agenda split a day
           tap also sets the date, and re-running the transition on every tap
           would be noise. */}
-      <AnimatePresence mode="wait">
-        <motion.div key={monthKey} className={styles.monthPane} {...monthChangeMotion}>
-          <MonthScrollRestorer
-            currentDate={currentDate}
-            dayGroups={dayGroups}
-            virtualizer={virtualizer}
-            scrolledMonthRef={scrolledMonthRef}
-          />
-          {allGroupsEmpty ? (
-            <EmptyState
-              title="Nothing scheduled this month"
-              description="Your agenda is clear. Add an event to get started."
-              action={
-                <button
-                  className={styles.agendaAdd}
-                  onClick={() => handleCreateEvent(new Date())}
-                  data-component="agenda-empty-add"
-                >
-                  + Create event
-                </button>
-              }
+        <AnimatePresence mode="wait">
+          <motion.div key={monthKey} className={styles.monthPane} {...monthChangeMotion}>
+            <MonthScrollRestorer
+              currentDate={currentDate}
+              dayGroups={dayGroups}
+              virtualizer={virtualizer}
+              scrolledMonthRef={scrolledMonthRef}
             />
-          ) : (
-            // flexShrink: 0 — .monthPane is a flex column, and this spacer's height
-            // is the virtual list's total size, not something to compress.
-            <div
-              style={{
-                position: 'relative',
-                flexShrink: 0,
-                height: `${virtualizer.getTotalSize()}px`,
-              }}
-            >
-              {virtualizer.getVirtualItems().map((virtualRow) => {
-                const group = dayGroups[virtualRow.index]
-                const firstKey = format(group.days[0], 'yyyy-MM-dd')
+            {allGroupsEmpty ? (
+              <EmptyState
+                title="Nothing scheduled this month"
+                description="Your agenda is clear. Add an event to get started."
+                action={
+                  <button
+                    className={styles.agendaAdd}
+                    onClick={() => handleCreateEvent(new Date())}
+                    data-component="agenda-empty-add"
+                  >
+                    + Create event
+                  </button>
+                }
+              />
+            ) : (
+              // flexShrink: 0 — .monthPane is a flex column, and this spacer's height
+              // is the virtual list's total size, not something to compress.
+              <div
+                style={{
+                  position: 'relative',
+                  flexShrink: 0,
+                  height: `${virtualizer.getTotalSize()}px`,
+                }}
+              >
+                {virtualizer.getVirtualItems().map((virtualRow) => {
+                  const group = dayGroups[virtualRow.index]
+                  const firstKey = format(group.days[0], 'yyyy-MM-dd')
 
-                const row = ((): JSX.Element => {
-                  if (group.type === 'skip') {
-                    return renderSkipRow(group)
-                  }
+                  const row = ((): JSX.Element => {
+                    if (group.type === 'skip') {
+                      return renderSkipRow(group)
+                    }
 
-                  const day = group.days[0]
-                  const dateKey = firstKey
-                  const sortedEvents = eventsByDate.get(dateKey) || []
-                  const isEmpty = !group.hasEvents
-                  const isToday = dateKey === format(new Date(), 'yyyy-MM-dd')
+                    const day = group.days[0]
+                    const dateKey = firstKey
+                    const sortedEvents = eventsByDate.get(dateKey) || []
+                    const isEmpty = !group.hasEvents
+                    const isToday = dateKey === format(new Date(), 'yyyy-MM-dd')
+
+                    return (
+                      <div key={dateKey} onContextMenu={(e) => handleContextMenu(e, day)}>
+                        <div
+                          className={`${styles.agendaDayHeader} ${isEmpty ? styles.isEmpty : ''} ${isToday ? styles.isToday : ''}`}
+                        >
+                          <div className={styles.agendaDayLabel}>
+                            <span className={styles.agendaDow}>{format(day, 'EEEE')}</span>
+                            <span className={styles.agendaDate}>{format(day, 'MMM d, yyyy')}</span>
+                          </div>
+                          {!isEmpty && (
+                            <button
+                              className={styles.agendaAdd}
+                              onClick={() => handleCreateEvent(day)}
+                            >
+                              + Add
+                            </button>
+                          )}
+                        </div>
+
+                        {!isEmpty && (
+                          <>
+                            <AgendaInsertDropZone dateKey={dateKey} position={0} />
+                            <AnimatePresence initial={false} mode="popLayout">
+                              {sortedEvents.map(({ event }, index) => {
+                                if (event.type === 'task') {
+                                  return (
+                                    <motion.div
+                                      key={event.id}
+                                      className={styles.agendaAnimatedItem}
+                                      layout
+                                      initial={{ opacity: 0 }}
+                                      animate={{ opacity: 1 }}
+                                      exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+                                      transition={{ duration: 0.14, ease: 'easeOut' }}
+                                    >
+                                      <AgendaDraggableItem
+                                        event={event}
+                                        className={`${styles.agendaTask} ${
+                                          event.completed ? styles.agendaTaskCompleted : ''
+                                        }`}
+                                        dataComponent="agenda-task"
+                                        indentDepth={taskDepthById.get(event.id) ?? 0}
+                                        dropTargetId={`agenda-task:${event.id}`}
+                                        disabled={
+                                          !!event.recurrence ||
+                                          !!event.rruleString ||
+                                          !!extractOriginalEventId(event.id) ||
+                                          calendars.find(
+                                            (calendar) => calendar.id === event.calendarId
+                                          )?.readOnly === true
+                                        }
+                                        onClick={(e) => handleEventClick(e, event)}
+                                        onKeyDown={(e) => {
+                                          if (e.key === 'Enter' || e.key === ' ') {
+                                            e.preventDefault()
+                                            handleEventClick(
+                                              e as unknown as React.MouseEvent,
+                                              event
+                                            )
+                                          }
+                                        }}
+                                        onContextMenu={(e) => handleEventContextMenu(e, event)}
+                                      >
+                                        <div className={styles.agendaTaskBar} />
+                                        <div
+                                          className={styles.agendaTaskBody}
+                                          data-task-depth={taskDepthById.get(event.id) ?? 0}
+                                        >
+                                          <div className={styles.agendaTaskMain}>
+                                            <span className={styles.agendaTaskTime}>
+                                              {event.start.includes('T00:00')
+                                                ? 'Due'
+                                                : formatEventTime(
+                                                    event.start,
+                                                    event.timezone,
+                                                    timeFormat
+                                                  )}
+                                            </span>
+                                            <button
+                                              type="button"
+                                              className={styles.agendaTaskIcon}
+                                              role="checkbox"
+                                              aria-checked={!!event.completed}
+                                              aria-label={
+                                                event.completed
+                                                  ? `Mark "${event.title}" as incomplete`
+                                                  : `Mark "${event.title}" as complete`
+                                              }
+                                              onPointerDown={(e) => e.stopPropagation()}
+                                              onClick={(e) => {
+                                                // The whole card opens the task; the
+                                                // check has to claim its own click.
+                                                e.stopPropagation()
+                                                void toggleComplete(event)
+                                              }}
+                                            >
+                                              {event.completed ? '✓' : '○'}
+                                            </button>
+                                            <span className={styles.agendaTaskTitle}>
+                                              {event.title}
+                                            </span>
+                                            {taskCollapse.hasSubtasks(event.id) && (
+                                              <TaskCollapseToggle
+                                                taskTitle={event.title}
+                                                collapsed={taskCollapse.isCollapsed(event.id)}
+                                                hiddenCount={taskCollapse.descendantCount(event.id)}
+                                                onToggle={() => taskCollapse.toggleTask(event.id)}
+                                                className={styles.agendaTaskCollapseToggle}
+                                              />
+                                            )}
+                                          </div>
+                                          {event.location && (
+                                            <div className={styles.agendaEventSub}>
+                                              {event.location}
+                                            </div>
+                                          )}
+                                        </div>
+                                      </AgendaDraggableItem>
+                                      <AgendaInsertDropZone
+                                        dateKey={dateKey}
+                                        position={index + 1}
+                                      />
+                                    </motion.div>
+                                  )
+                                }
+
+                                return (
+                                  <motion.div
+                                    key={event.id}
+                                    className={styles.agendaAnimatedItem}
+                                    layout
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+                                    transition={{ duration: 0.14, ease: 'easeOut' }}
+                                  >
+                                    <AgendaDraggableItem
+                                      event={event}
+                                      className={styles.agendaEvent}
+                                      dataComponent="agenda-event"
+                                      disabled={
+                                        !!event.recurrence ||
+                                        !!event.rruleString ||
+                                        !!extractOriginalEventId(event.id) ||
+                                        calendars.find(
+                                          (calendar) => calendar.id === event.calendarId
+                                        )?.readOnly === true
+                                      }
+                                      onClick={(e) => handleEventClick(e, event)}
+                                      onKeyDown={(e) => {
+                                        if (e.key === 'Enter' || e.key === ' ') {
+                                          e.preventDefault()
+                                          handleEventClick(e as unknown as React.MouseEvent, event)
+                                        }
+                                      }}
+                                      onContextMenu={(e) => handleEventContextMenu(e, event)}
+                                    >
+                                      <div
+                                        className={styles.agendaEventBar}
+                                        style={{ background: getEventBarColor(event) }}
+                                      />
+                                      <div className={styles.agendaEventBody}>
+                                        <div className={styles.agendaEventMain}>
+                                          <span className={styles.agendaEventTime}>
+                                            {event.isAllDay
+                                              ? 'All day'
+                                              : formatEventTime(
+                                                  event.start,
+                                                  event.timezone,
+                                                  timeFormat
+                                                )}
+                                          </span>
+                                          <span className={styles.agendaEventTitle}>
+                                            {event.title}
+                                          </span>
+                                        </div>
+                                        {event.location && (
+                                          <div className={styles.agendaEventSub}>
+                                            <LocationLink
+                                              location={event.location}
+                                              className={styles.agendaLocationLink}
+                                            />
+                                          </div>
+                                        )}
+                                      </div>
+                                    </AgendaDraggableItem>
+                                    <AgendaInsertDropZone dateKey={dateKey} position={index + 1} />
+                                  </motion.div>
+                                )
+                              })}
+                            </AnimatePresence>
+                            <div className={styles.agendaDivider} />
+                          </>
+                        )}
+
+                        {isEmpty && <div className={styles.agendaDivider} />}
+                      </div>
+                    )
+                  })()
+
+                  const isPast = (() => {
+                    if (fadePastDaysInAgenda === 'never') return false
+                    const isDayPast = group.days[group.days.length - 1] < startOfDay(new Date())
+                    if (!isDayPast) return false
+                    if (fadePastDaysInAgenda === 'all') return true
+                    return isCurrentMonthView
+                  })()
 
                   return (
                     <div
-                      key={dateKey}
-                      data-date={dateKey}
-                      onContextMenu={(e) => handleContextMenu(e, day)}
+                      key={group.type === 'skip' ? `skip-${firstKey}` : firstKey}
+                      ref={virtualizer.measureElement}
+                      data-index={virtualRow.index}
+                      className={isPast ? styles.isPast : ''}
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        transform: `translateY(${virtualRow.start}px)`,
+                      }}
                     >
-                      <div
-                        className={`${styles.agendaDayHeader} ${isEmpty ? styles.isEmpty : ''} ${isToday ? styles.isToday : ''}`}
-                      >
-                        <div className={styles.agendaDayLabel}>
-                          <span className={styles.agendaDow}>{format(day, 'EEEE')}</span>
-                          <span className={styles.agendaDate}>{format(day, 'MMM d, yyyy')}</span>
-                        </div>
-                        {!isEmpty && (
-                          <button
-                            className={styles.agendaAdd}
-                            onClick={() => handleCreateEvent(day)}
-                          >
-                            + Add
-                          </button>
-                        )}
-                      </div>
-
-                      {!isEmpty && (
-                        <>
-                          {sortedEvents.map(({ event }) => {
-                            if (event.type === 'task') {
-                              return (
-                                <div
-                                  key={event.id}
-                                  className={`${styles.agendaTask} ${
-                                    event.completed ? styles.agendaTaskCompleted : ''
-                                  }`}
-                                  data-component="agenda-task"
-                                  role="button"
-                                  tabIndex={0}
-                                  onClick={(e) => handleEventClick(e, event)}
-                                  onKeyDown={(e) => {
-                                    if (e.key === 'Enter' || e.key === ' ') {
-                                      e.preventDefault()
-                                      handleEventClick(e as unknown as React.MouseEvent, event)
-                                    }
-                                  }}
-                                  onContextMenu={(e) => handleEventContextMenu(e, event)}
-                                >
-                                  <div className={styles.agendaTaskBar} />
-                                  <div className={styles.agendaTaskBody}>
-                                    <div className={styles.agendaTaskMain}>
-                                      <span className={styles.agendaTaskTime}>
-                                        {event.start.includes('T00:00')
-                                          ? 'Due'
-                                          : formatEventTime(
-                                              event.start,
-                                              event.timezone,
-                                              timeFormat
-                                            )}
-                                      </span>
-                                      <button
-                                        type="button"
-                                        className={styles.agendaTaskIcon}
-                                        role="checkbox"
-                                        aria-checked={!!event.completed}
-                                        aria-label={
-                                          event.completed
-                                            ? `Mark "${event.title}" as incomplete`
-                                            : `Mark "${event.title}" as complete`
-                                        }
-                                        onClick={(e) => {
-                                          // The whole card opens the task; the
-                                          // check has to claim its own click.
-                                          e.stopPropagation()
-                                          void toggleComplete(event)
-                                        }}
-                                      >
-                                        {event.completed ? '✓' : '○'}
-                                      </button>
-                                      <span className={styles.agendaTaskTitle}>{event.title}</span>
-                                      {taskCollapse.hasSubtasks(event.id) && (
-                                        <TaskCollapseToggle
-                                          taskTitle={event.title}
-                                          collapsed={taskCollapse.isCollapsed(event.id)}
-                                          hiddenCount={taskCollapse.descendantCount(event.id)}
-                                          onToggle={() => taskCollapse.toggleTask(event.id)}
-                                          className={styles.agendaTaskCollapseToggle}
-                                        />
-                                      )}
-                                    </div>
-                                    {event.location && (
-                                      <div className={styles.agendaEventSub}>{event.location}</div>
-                                    )}
-                                  </div>
-                                </div>
-                              )
-                            }
-
-                            return (
-                              <div
-                                key={event.id}
-                                className={styles.agendaEvent}
-                                role="button"
-                                tabIndex={0}
-                                onClick={(e) => handleEventClick(e, event)}
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter' || e.key === ' ') {
-                                    e.preventDefault()
-                                    handleEventClick(e as unknown as React.MouseEvent, event)
-                                  }
-                                }}
-                                onContextMenu={(e) => handleEventContextMenu(e, event)}
-                              >
-                                <div
-                                  className={styles.agendaEventBar}
-                                  style={{ background: getEventBarColor(event) }}
-                                />
-                                <div className={styles.agendaEventBody}>
-                                  <div className={styles.agendaEventMain}>
-                                    <span className={styles.agendaEventTime}>
-                                      {event.isAllDay
-                                        ? 'All day'
-                                        : formatEventTime(event.start, event.timezone, timeFormat)}
-                                    </span>
-                                    <span className={styles.agendaEventTitle}>{event.title}</span>
-                                  </div>
-                                  {event.location && (
-                                    <div className={styles.agendaEventSub}>
-                                      <LocationLink
-                                        location={event.location}
-                                        className={styles.agendaLocationLink}
-                                      />
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            )
-                          })}
-                          <div className={styles.agendaDivider} />
-                        </>
+                      {group.type === 'skip' ? (
+                        row
+                      ) : (
+                        <AgendaDropZone dateKey={firstKey} className={styles.agendaDayDropZone}>
+                          {row}
+                        </AgendaDropZone>
                       )}
-
-                      {isEmpty && <div className={styles.agendaDivider} />}
                     </div>
                   )
-                })()
-
-                const isPast = (() => {
-                  if (fadePastDaysInAgenda === 'never') return false
-                  const isDayPast = group.days[group.days.length - 1] < startOfDay(new Date())
-                  if (!isDayPast) return false
-                  if (fadePastDaysInAgenda === 'all') return true
-                  return isCurrentMonthView
-                })()
-
-                return (
-                  <div
-                    key={group.type === 'skip' ? `skip-${firstKey}` : firstKey}
-                    ref={virtualizer.measureElement}
-                    data-index={virtualRow.index}
-                    className={isPast ? styles.isPast : ''}
-                    style={{
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      width: '100%',
-                      transform: `translateY(${virtualRow.start}px)`,
-                    }}
-                  >
-                    {row}
-                  </div>
-                )
-              })}
-            </div>
-          )}
-        </motion.div>
-      </AnimatePresence>
-      {contextMenu && (
-        <ContextMenu
-          x={contextMenu.x}
-          y={contextMenu.y}
-          menuId="agenda-context"
-          onClose={() => setContextMenu(null)}
-          items={[
-            {
-              label: 'Create event',
-              onClick: () => {
-                handleCreateEvent(contextMenu.day)
-                setContextMenu(null)
-              },
-            },
-            {
-              label: 'Create task',
-              onClick: () => {
-                handleCreateTask(contextMenu.day)
-                setContextMenu(null)
-              },
-            },
-          ]}
-        />
-      )}
-      {eventContextMenu &&
-        createPortal(
+                })}
+              </div>
+            )}
+          </motion.div>
+        </AnimatePresence>
+        {contextMenu && (
           <ContextMenu
-            x={eventContextMenu.x}
-            y={eventContextMenu.y}
-            menuId={`agenda-event-${eventContextMenu.event.id}`}
-            onClose={() => {
-              closeMenu()
-              setEventContextMenu(null)
-            }}
+            x={contextMenu.x}
+            y={contextMenu.y}
+            menuId="agenda-context"
+            onClose={() => setContextMenu(null)}
             items={[
               {
-                label: 'Edit',
+                label: 'Create event',
                 onClick: () => {
-                  openModal(
-                    undefined,
-                    undefined,
-                    eventContextMenu.event.id,
-                    eventContextMenu.event.type === 'task' ? 'task' : 'event'
-                  )
-                  setEventContextMenu(null)
+                  handleCreateEvent(contextMenu.day)
+                  setContextMenu(null)
                 },
               },
               {
-                label: 'Delete',
+                label: 'Create task',
                 onClick: () => {
-                  deleteEventWithUndo({
-                    event: eventContextMenu.event,
-                    deleteEvent,
-                    addEvent,
-                    createCalDAVEvent,
-                    deleteCalDAVEvent,
-                    onAfterDelete: () => setEventContextMenu(null),
-                  })
+                  handleCreateTask(contextMenu.day)
+                  setContextMenu(null)
                 },
-                danger: true,
               },
             ]}
-          />,
-          document.body
+          />
         )}
-    </div>
+        {eventContextMenu &&
+          createPortal(
+            <ContextMenu
+              x={eventContextMenu.x}
+              y={eventContextMenu.y}
+              menuId={`agenda-event-${eventContextMenu.event.id}`}
+              onClose={() => {
+                closeMenu()
+                setEventContextMenu(null)
+              }}
+              items={[
+                {
+                  label: 'Edit',
+                  onClick: () => {
+                    openModal(
+                      undefined,
+                      undefined,
+                      eventContextMenu.event.id,
+                      eventContextMenu.event.type === 'task' ? 'task' : 'event'
+                    )
+                    setEventContextMenu(null)
+                  },
+                },
+                {
+                  label: 'Delete',
+                  onClick: () => {
+                    deleteEventWithUndo({
+                      event: eventContextMenu.event,
+                      deleteEvent,
+                      addEvent,
+                      createCalDAVEvent,
+                      deleteCalDAVEvent,
+                      onAfterDelete: () => setEventContextMenu(null),
+                    })
+                  },
+                  danger: true,
+                },
+              ]}
+            />,
+            document.body
+          )}
+      </div>
+      <DragOverlay dropAnimation={null}>
+        {activeDragEvent ? (
+          <div className={styles.agendaDragOverlay}>
+            <span>{activeDragEvent.title}</span>
+          </div>
+        ) : null}
+      </DragOverlay>
+    </DndContext>
   )
 }

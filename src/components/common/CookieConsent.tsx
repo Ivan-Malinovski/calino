@@ -18,7 +18,7 @@ export function CookieConsent(): JSX.Element | null {
   if (!isVisible) return null
 
   return (
-    <div className={styles.banner}>
+    <div className={styles.banner} data-component="cookie-consent">
       <div className={styles.content}>
         <span className={styles.text}>
           We use local storage to save your data. No tracking cookies.

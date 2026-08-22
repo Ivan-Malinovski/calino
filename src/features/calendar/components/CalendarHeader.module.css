@@ -783,6 +783,12 @@
        height so the bar stays put either way. */
     min-height: 44px;
   }
+  .navArrow,
+  .navToday {
+    min-width: 44px;
+    min-height: 44px;
+    height: 44px;
+  }
 
   /* 44px minimum tap target on touch surfaces (see EventPreviewPopup). */
   .iconButton {
@@ -828,7 +834,6 @@
   .navigator {
     transform: translate(10px, 0);
   }
-
 }
 
 /* ≤500px (compact mobile): hide Today, search/settings, smaller year */

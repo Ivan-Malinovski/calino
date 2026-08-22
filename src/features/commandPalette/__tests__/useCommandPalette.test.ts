@@ -166,6 +166,7 @@ vi.mock('@/store/settingsStore', () => ({
       contactsEnabled: false,
       taskDueDateReminders: true,
       overdueTaskBadge: false,
+      taskCollapseOverrides: {},
       updateSettings: vi.fn(),
       resetSettings: vi.fn(),
     }

@@ -199,30 +199,31 @@ export function OnboardingModal({ onAddCalendar }: OnboardingModalProps): JSX.El
         aria-labelledby="onboarding-title"
       >
         <h2 className={styles.title} id="onboarding-title">
-          Your calendar stays private
+          Start with your calendar
         </h2>
 
         <p className={styles.description}>
-          All your events are stored locally in your browser. Calino doesn't send any data to
-          external servers.
+          Try Calino with sample events, or connect your own CalDAV account. Your data stays in your
+          browser and Calino does not send it to external servers.
         </p>
 
-        <p className={styles.description}>
-          <strong>To keep your events safe</strong>, connect a CalDAV account (iCloud, Nextcloud,
-          FastMail) — this syncs your calendar to your own server, so your data is never lost if you
-          clear browser data. Alternatively, you can back up and transfer your data using the
-          export/import feature in Settings.
-        </p>
+        <details className={styles.details}>
+          <summary>How your data stays safe</summary>
+          <p>
+            Connect a CalDAV account (iCloud, Nextcloud, FastMail) to sync your calendar to your own
+            server. You can also back up and transfer your data using export/import in Settings.
+          </p>
+        </details>
 
         {isNative && (
-          <p className={styles.description}>
+          <p className={`${styles.description} ${styles.secondaryDescription}`}>
             Calino can remind you before events start. Continuing will ask for notification
             permission.
           </p>
         )}
 
         {!isNative && (
-          <p className={styles.description}>
+          <p className={`${styles.description} ${styles.secondaryDescription}`}>
             There's also an{' '}
             <a
               href={`https://github.com/${config.githubRepo}/releases`}
@@ -238,45 +239,43 @@ export function OnboardingModal({ onAddCalendar }: OnboardingModalProps): JSX.El
         {demoError && <p className={styles.errorMessage}>{demoError}</p>}
 
         <div className={styles.footer}>
+          {!__CALINO_SELF_HOSTED__ && (
+            <button
+              className={styles.demoButton}
+              onClick={handleLoadDemoData}
+              disabled={isLoadingDemo}
+              data-component="demo-button"
+            >
+              {isLoadingDemo && (
+                <svg
+                  className={styles.demoButtonSpinner}
+                  width="14"
+                  height="14"
+                  viewBox="0 0 14 14"
+                  fill="none"
+                  aria-hidden="true"
+                  data-component="demo-spinner"
+                >
+                  <circle
+                    cx="7"
+                    cy="7"
+                    r="5.5"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeDasharray="20 12"
+                  />
+                </svg>
+              )}
+              {isLoadingDemo ? 'Loading…' : 'Try with sample data'}
+            </button>
+          )}
           <button className={styles.addButton} onClick={handleAddCalendar}>
             Add CalDAV Account
           </button>
-          {!__CALINO_SELF_HOSTED__ && (
-            <>
-              <button
-                className={styles.demoButton}
-                onClick={handleLoadDemoData}
-                disabled={isLoadingDemo}
-                data-component="demo-button"
-              >
-                {isLoadingDemo && (
-                  <svg
-                    className={styles.demoButtonSpinner}
-                    width="14"
-                    height="14"
-                    viewBox="0 0 14 14"
-                    fill="none"
-                    aria-hidden="true"
-                    data-component="demo-spinner"
-                  >
-                    <circle
-                      cx="7"
-                      cy="7"
-                      r="5.5"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                      strokeLinecap="round"
-                      strokeDasharray="20 12"
-                    />
-                  </svg>
-                )}
-                {isLoadingDemo ? 'Loading…' : 'Try with sample data'}
-              </button>
-              <button className={styles.skipButton} onClick={handleDismiss}>
-                I'll do it later
-              </button>
-            </>
-          )}
+          <button className={styles.skipButton} onClick={handleDismiss}>
+            I'll do it later
+          </button>
         </div>
       </div>
     </div>

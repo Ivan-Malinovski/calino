@@ -8,7 +8,7 @@
 .container {
   flex: 1 1 auto;
   overflow-y: auto;
-  padding: 4px 0 72px;
+  padding: 4px 0 24px;
   background: var(--canvas, #faf8f3);
 }
 

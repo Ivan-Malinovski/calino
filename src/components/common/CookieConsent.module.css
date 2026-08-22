@@ -34,6 +34,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
+  min-width: 0;
 }
 
 .link {
@@ -56,6 +57,39 @@
   font-weight: 500;
   transition: background-color 0.15s;
   white-space: nowrap;
+}
+
+/* The mobile navigation pill is another fixed bottom surface. Keep the
+   notice above the pill rather than letting the two compete for the same
+   pixels. FloatingNavPill updates this variable when its expanded height
+   changes; the fallback covers the first paint before that measurement. */
+@media (max-width: 768px) {
+  .banner {
+    left: 16px;
+    right: 16px;
+    bottom: calc(var(--mobile-nav-height, 57px) + 32px + var(--safe-area-bottom, 0px));
+  }
+
+  .content {
+    width: 100%;
+    box-sizing: border-box;
+    align-items: center;
+  }
+
+  .text {
+    flex: 1 1 auto;
+    line-height: 1.4;
+  }
+
+  .dismiss {
+    min-width: 44px;
+    min-height: 44px;
+    padding: 8px 10px;
+  }
+
+  body.text-input-focused .banner {
+    bottom: calc(16px + var(--safe-area-bottom, 0px));
+  }
 }
 
 .dismiss:hover {

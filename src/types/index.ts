@@ -361,6 +361,8 @@ export interface UserSettings {
    *  when it sits before everything. Stored by view rather than by index so
    *  it survives reordering and views being switched off. */
   viewDividerAfter: ViewType | null
+  /** Explicit per-task overrides for the automatic subtask collapse state. */
+  taskCollapseOverrides: Record<string, boolean>
 }
 
 export type SettingsState = UserSettings

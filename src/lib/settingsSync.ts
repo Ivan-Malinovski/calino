@@ -52,6 +52,7 @@ export const SYNCABLE_SETTINGS: (keyof UserSettings)[] = [
   'hideCompletedTasksInMonthView',
   'useCategoryColors',
   'journalEnabled',
+  'taskCollapseOverrides',
 ]
 
 // ─── Serialization ────────────────────────────────────────────────────────────

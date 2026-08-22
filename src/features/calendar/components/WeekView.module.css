@@ -35,6 +35,7 @@
   display: grid;
   grid-template-columns: repeat(var(--day-count, 7), 1fr);
   flex: 1;
+  min-width: 0;
   overflow: hidden;
 }
 
@@ -175,6 +176,7 @@
   align-items: center;
   padding: var(--space-1, 4px);
   border-right: 1px solid var(--line-2, rgba(var(--ink-raw), 0.05));
+  min-width: 0;
   min-height: 48px;
   overflow: visible;
 }
@@ -225,11 +227,6 @@
 }
 
 .dayHeader.today .dayNumber {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
   background: var(--accent-strong, var(--accent, #b07d4f));
   color: var(--accent-contrast, #fff);
   border-radius: 50%;
@@ -245,6 +242,11 @@
 }
 
 .dayNumber {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
   font-size: 14px;
   font-weight: 500;
   color: var(--ink-2, #6f6a62);
@@ -263,6 +265,7 @@
   display: grid;
   grid-template-columns: repeat(var(--day-count, 7), 1fr);
   flex: 1;
+  min-width: 0;
   position: relative;
   min-height: calc(24 * var(--hour-height, 60px));
 }
@@ -431,6 +434,13 @@
 }
 
 @media (max-width: 768px) {
+  .mobileFrame {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+  }
+
   .mobileContainer {
     /* Pinching compresses the days horizontally so more of the week fits.
        `--day-scale` is set inline by the pinch handler; the fallback keeps
@@ -441,6 +451,41 @@
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
     flex: 1;
+    height: 100%;
+  }
+
+  .mobileContinuationCue {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    max-width: calc(100% - 20px);
+    padding: 7px 8px 7px 10px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-full, 999px);
+    background: color-mix(in srgb, var(--panel) 92%, transparent);
+    box-shadow: var(--shadow-card);
+    color: var(--ink-2);
+    font-size: 11px;
+    font-weight: 600;
+    pointer-events: none;
+  }
+
+  .mobileContinuationCue button {
+    width: 24px;
+    height: 24px;
+    flex: 0 0 24px;
+    border: none;
+    border-radius: 50%;
+    background: var(--hover-bg);
+    color: var(--ink-2);
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+    pointer-events: auto;
   }
 
   .mobileContainer::-webkit-scrollbar {

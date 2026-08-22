@@ -125,6 +125,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   // Divider defaults to the boundary between the calendar views and the
   // tools, which is what the groups encode.
   viewDividerAfter: DEFAULT_DIVIDER_AFTER,
+  taskCollapseOverrides: {},
 }
 
 export const useSettingsStore = create<SettingsStore>()(

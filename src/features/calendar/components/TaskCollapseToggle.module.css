@@ -4,8 +4,8 @@
   margin-left: auto;
   align-items: center;
   justify-content: center;
-  width: 14px;
-  height: 14px;
+  width: 20px;
+  height: 20px;
   padding: 0;
   border: 0;
   background: transparent;
@@ -25,9 +25,16 @@
 }
 
 .toggle svg {
-  width: 9px;
-  height: 9px;
+  width: 12px;
+  height: 12px;
+  transform-box: fill-box;
+  transform-origin: center;
   transition: transform var(--dur-fast) var(--ease-out, ease-out);
+  will-change: transform;
+}
+
+.toggle[data-collapsed='true'] svg {
+  transform: rotate(180deg);
 }
 
 .toggle[data-collapsed='false'] svg {

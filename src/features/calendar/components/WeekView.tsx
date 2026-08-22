@@ -267,6 +267,8 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
   const [isScrolled, setIsScrolled] = useState(false)
   const [scale, setScale] = useState(1)
   const [dayScale, setDayScale] = useState(1)
+  const [mobileWeekCanScroll, setMobileWeekCanScroll] = useState(false)
+  const [mobileWeekHintVisible, setMobileWeekHintVisible] = useState(true)
   const windowHeight = useWindowHeight()
   const stretchFactor = windowHeight > 1570 ? windowHeight / 1570 : 1
   const effectiveScale = scale * stretchFactor
@@ -576,6 +578,29 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
     () => eachDayOfInterval({ start: rangeStart, end: rangeEnd }),
     [rangeStart, rangeEnd]
   )
+
+  // The mobile week intentionally uses a horizontally scrollable strip. Keep
+  // a small, dismissible affordance visible until the user has demonstrated
+  // that they know how to reveal the remaining days.
+  useLayoutEffect(() => {
+    if (!isMobile) return
+    const el = mobileScrollRef.current
+    if (!el) return
+
+    const update = (): void => {
+      setMobileWeekCanScroll(el.scrollWidth > el.clientWidth + 1)
+      if (el.scrollLeft > 4) setMobileWeekHintVisible(false)
+    }
+
+    update()
+    el.addEventListener('scroll', update, { passive: true })
+    const observer = new ResizeObserver(update)
+    observer.observe(el)
+    return () => {
+      el.removeEventListener('scroll', update)
+      observer.disconnect()
+    }
+  }, [isMobile, dayScale, weekDays.length])
 
   const { allDayEventsMap, eventsMap, timedFragmentsMap } = useMemo(() => {
     const weekEvents = getEventsForDateRange(
@@ -1009,201 +1034,224 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
   }, [date, firstDayOfWeek])
 
   const renderMobileContent = () => (
-    <div
-      ref={mobileScrollRef}
-      className={styles.mobileContainer}
-      data-component="week-mobile-scroll"
-      {...{ [SWIPE_SCROLLER_ATTR]: true }}
-    >
-      <div className={styles.mobileHeader} data-component="week-mobile-header">
-        <div className={styles.weekNumberHeader}>
-          {isDualTz ? (
-            <div className={styles.timeZoneHeaders}>
-              <span>{localTzAbbr}</span>
-              <span>{secondaryTzAbbr}</span>
-            </div>
-          ) : (
-            `W${weekNumber}`
-          )}
-        </div>
-        <div className={styles.headerDays}>
-          {weekDays.map((day, idx) => {
-            const dayKey = format(day, 'yyyy-MM-dd')
-            const headerItems = mobileHeaderItemsMap.get(dayKey) ?? EMPTY_EVENTS
-            const isExpanded = expandedHeaderDays.has(dayKey)
-            // Collapsing only pays for itself when the chip hides more than it
-            const canToggle = headerItems.length > MOBILE_HEADER_ITEM_LIMIT
-            const visibleItems =
-              isExpanded || !canToggle
-                ? headerItems
-                : headerItems.slice(0, MOBILE_HEADER_ITEM_LIMIT)
-            const hiddenCount = headerItems.length - visibleItems.length
-            const dayLabel = format(day, 'EEEE d MMMM')
-            return (
-              <div
-                key={day.toISOString()}
-                className={`${styles.dayHeader} ${isToday(day) ? styles.today : ''} ${
-                  headerItems.length > 0 ? styles.hasAllDayEvents : ''
-                }`}
-                data-component="week-mobile-day-header"
-              >
-                <div className={styles.dayName}>{format(day, 'EEE')}</div>
-                <div className={styles.dayNumber}>{format(day, 'd')}</div>
-                {/* All-day events and untimed tasks live here rather than in a
+    <div className={styles.mobileFrame}>
+      <div
+        ref={mobileScrollRef}
+        className={styles.mobileContainer}
+        data-component="week-mobile-scroll"
+        {...{ [SWIPE_SCROLLER_ATTR]: true }}
+      >
+        <div className={styles.mobileHeader} data-component="week-mobile-header">
+          <div className={styles.weekNumberHeader}>
+            {isDualTz ? (
+              <div className={styles.timeZoneHeaders}>
+                <span>{localTzAbbr}</span>
+                <span>{secondaryTzAbbr}</span>
+              </div>
+            ) : (
+              `W${weekNumber}`
+            )}
+          </div>
+          <div className={styles.headerDays}>
+            {weekDays.map((day, idx) => {
+              const dayKey = format(day, 'yyyy-MM-dd')
+              const headerItems = mobileHeaderItemsMap.get(dayKey) ?? EMPTY_EVENTS
+              const isExpanded = expandedHeaderDays.has(dayKey)
+              // Collapsing only pays for itself when the chip hides more than it
+              const canToggle = headerItems.length > MOBILE_HEADER_ITEM_LIMIT
+              const visibleItems =
+                isExpanded || !canToggle
+                  ? headerItems
+                  : headerItems.slice(0, MOBILE_HEADER_ITEM_LIMIT)
+              const hiddenCount = headerItems.length - visibleItems.length
+              const dayLabel = format(day, 'EEEE d MMMM')
+              return (
+                <div
+                  key={day.toISOString()}
+                  className={`${styles.dayHeader} ${isToday(day) ? styles.today : ''} ${
+                    headerItems.length > 0 ? styles.hasAllDayEvents : ''
+                  }`}
+                  data-component="week-mobile-day-header"
+                >
+                  <div className={styles.dayName}>{format(day, 'EEE')}</div>
+                  <div className={styles.dayNumber}>{format(day, 'd')}</div>
+                  {/* All-day events and untimed tasks live here rather than in a
                     separate footer, so they sit in the same DOM column as the
                     day and inherit its width — the footer was laid out against
                     the viewport while these columns scroll horizontally, which
                     put items under the wrong day and squeezed titles to
                     nothing (#120). */}
-                {headerItems.length > 0 && (
-                  <div className={styles.allDayEventsInHeader}>
-                    {visibleItems.map((item) => (
-                      <EventCard
-                        key={item.isFragment ? `${item.id}-${dayKey}` : item.id}
-                        event={item}
-                        compact
-                        monthView
-                        enableResize={false}
-                        hideFragmentTitle={item.isFragment && !item.isFirstFragment && idx !== 0}
-                        taskHasSubtasks={item.type === 'task' && taskCollapse.hasSubtasks(item.id)}
-                        taskSubtasksCollapsed={
-                          item.type === 'task' && taskCollapse.isCollapsed(item.id)
-                        }
-                        taskSubtaskCount={
-                          item.type === 'task' ? taskCollapse.descendantCount(item.id) : undefined
-                        }
-                        onToggleTaskSubtasks={
-                          item.type === 'task'
-                            ? () => taskCollapse.toggleTask(item.id)
-                            : undefined
-                        }
-                      />
-                    ))}
-                    {/* Sits at the bottom of the stack, where the items it
+                  {headerItems.length > 0 && (
+                    <div className={styles.allDayEventsInHeader}>
+                      {visibleItems.map((item) => (
+                        <EventCard
+                          key={item.isFragment ? `${item.id}-${dayKey}` : item.id}
+                          event={item}
+                          compact
+                          monthView
+                          enableResize={false}
+                          hideFragmentTitle={item.isFragment && !item.isFirstFragment && idx !== 0}
+                          taskHasSubtasks={
+                            item.type === 'task' && taskCollapse.hasSubtasks(item.id)
+                          }
+                          taskSubtasksCollapsed={
+                            item.type === 'task' && taskCollapse.isCollapsed(item.id)
+                          }
+                          taskSubtaskCount={
+                            item.type === 'task' ? taskCollapse.descendantCount(item.id) : undefined
+                          }
+                          onToggleTaskSubtasks={
+                            item.type === 'task'
+                              ? () => taskCollapse.toggleTask(item.id)
+                              : undefined
+                          }
+                        />
+                      ))}
+                      {/* Sits at the bottom of the stack, where the items it
                         stands for would be — under the date it read as a badge
                         on the day number instead. Sized like one item row: the
                         24px WCAG AA target is the bar that applies to a tap
                         this cheap to undo, and 44px cost more space than the
                         rows it was hiding. */}
-                    {canToggle && (
-                      <button
-                        type="button"
-                        className={styles.headerMoreItems}
-                        aria-expanded={isExpanded}
-                        aria-label={
-                          isExpanded
-                            ? `Show fewer all-day items on ${dayLabel}`
-                            : `Show ${hiddenCount} more all-day items on ${dayLabel}`
-                        }
-                        onClick={() => toggleHeaderDay(dayKey)}
-                      >
-                        {isExpanded ? 'Less' : `+${hiddenCount} more`}
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
-            )
-          })}
-        </div>
-      </div>
-      <div className={styles.mobileBody} data-component="week-mobile-body">
-        <div className={styles.timeColumn} data-component="week-mobile-time-column">
-          {HOURS.map((hour) => {
-            const primaryTime = format(hour, timeFormat === '24h' ? 'HH:mm' : 'h a')
-            if (isDualTz && secondaryTimezone) {
-              const secLabel = getSecondaryHourLabel(
-                hour.getHours(),
-                date,
-                secondaryTimezone,
-                timeFormat
+                      {canToggle && (
+                        <button
+                          type="button"
+                          className={styles.headerMoreItems}
+                          aria-expanded={isExpanded}
+                          aria-label={
+                            isExpanded
+                              ? `Show fewer all-day items on ${dayLabel}`
+                              : `Show ${hiddenCount} more all-day items on ${dayLabel}`
+                          }
+                          onClick={() => toggleHeaderDay(dayKey)}
+                        >
+                          {isExpanded ? 'Less' : `+${hiddenCount} more`}
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
               )
+            })}
+          </div>
+        </div>
+        <div className={styles.mobileBody} data-component="week-mobile-body">
+          <div className={styles.timeColumn} data-component="week-mobile-time-column">
+            {HOURS.map((hour) => {
+              const primaryTime = format(hour, timeFormat === '24h' ? 'HH:mm' : 'h a')
+              if (isDualTz && secondaryTimezone) {
+                const secLabel = getSecondaryHourLabel(
+                  hour.getHours(),
+                  date,
+                  secondaryTimezone,
+                  timeFormat
+                )
+                return (
+                  <div key={hour.toISOString()} className={styles.timeCell}>
+                    <div className={styles.timeRow}>
+                      <span className={styles.primaryTime}>{primaryTime}</span>
+                      <span className={styles.secondaryTime}>
+                        {secLabel.time}
+                        {secLabel.dayDelta && (
+                          <span className={styles.dayDelta}>{secLabel.dayDelta}</span>
+                        )}
+                      </span>
+                    </div>
+                  </div>
+                )
+              }
               return (
                 <div key={hour.toISOString()} className={styles.timeCell}>
-                  <div className={styles.timeRow}>
-                    <span className={styles.primaryTime}>{primaryTime}</span>
-                    <span className={styles.secondaryTime}>
-                      {secLabel.time}
-                      {secLabel.dayDelta && (
-                        <span className={styles.dayDelta}>{secLabel.dayDelta}</span>
-                      )}
-                    </span>
+                  {primaryTime}
+                </div>
+              )
+            })}
+          </div>
+          <div
+            ref={daysAndGridRef}
+            className={styles.daysContainer}
+            data-component="week-grid"
+            onKeyDown={handleGridKeyDownWithEdge}
+          >
+            {selectionOverlay}
+            {weekDays.map((day) => {
+              const dayKey = format(day, 'yyyy-MM-dd')
+              return (
+                <div
+                  key={day.toISOString()}
+                  className={`${styles.dayColumn} ${isToday(day) ? styles.todayColumn : ''}`}
+                  data-component="week-mobile-day-column"
+                  onContextMenu={(e) => {
+                    e.preventDefault()
+                    openMenu('weekview')
+                    const rect = e.currentTarget.getBoundingClientRect()
+                    const y = e.clientY - rect.top
+                    const hourClicked = Math.max(
+                      0,
+                      Math.min(23, Math.floor((y / rect.height) * 24))
+                    )
+                    setContextMenu({ x: e.clientX, y: e.clientY, day, hour: hourClicked })
+                  }}
+                >
+                  <div className={styles.hourCells}>
+                    {HOUR_KEYS.map((hourKey) => (
+                      <DroppableCell
+                        key={`${dayKey}-${hourKey}`}
+                        dateKey={dayKey}
+                        hourKey={hourKey}
+                        isFocusAnchor={isCellFocusAnchor(dayKey, hourKey)}
+                        onClick={handleCellClick}
+                        onMouseDown={handleDragStartFromCell}
+                        onKeyDown={handleCellKeyDown}
+                      />
+                    ))}
+                  </div>
+                  <div className={styles.eventsOverlay}>
+                    {dropPreview?.dateKey === dayKey && (
+                      <DropPreviewBand preview={dropPreview} timeFormat={timeFormat} />
+                    )}
+                    <WeekDayColumn
+                      events={eventsMap.get(dayKey) ?? EMPTY_EVENTS}
+                      fragments={timedFragmentsMap.get(dayKey) ?? EMPTY_EVENTS}
+                      timedTasks={timedTasksMap.get(dayKey) ?? EMPTY_EVENTS}
+                      calendars={calendars}
+                      hourHeight={hourHeight}
+                      openModal={openModal}
+                      taskHasSubtasks={taskCollapse.hasSubtasks}
+                      taskIsCollapsed={taskCollapse.isCollapsed}
+                      taskDescendantCount={taskCollapse.descendantCount}
+                      onToggleTaskSubtasks={taskCollapse.toggleTask}
+                    />
+                    {isToday(day) && (
+                      <CurrentTimeIndicator
+                        hourHeight={hourHeight}
+                        timeFormat={timeFormat}
+                        showLabel={false}
+                      />
+                    )}
                   </div>
                 </div>
               )
-            }
-            return (
-              <div key={hour.toISOString()} className={styles.timeCell}>
-                {primaryTime}
-              </div>
-            )
-          })}
-        </div>
-        <div
-          ref={daysAndGridRef}
-          className={styles.daysContainer}
-          data-component="week-grid"
-          onKeyDown={handleGridKeyDownWithEdge}
-        >
-          {selectionOverlay}
-          {weekDays.map((day) => {
-            const dayKey = format(day, 'yyyy-MM-dd')
-            return (
-              <div
-                key={day.toISOString()}
-                className={`${styles.dayColumn} ${isToday(day) ? styles.todayColumn : ''}`}
-                data-component="week-mobile-day-column"
-                onContextMenu={(e) => {
-                  e.preventDefault()
-                  openMenu('weekview')
-                  const rect = e.currentTarget.getBoundingClientRect()
-                  const y = e.clientY - rect.top
-                  const hourClicked = Math.max(0, Math.min(23, Math.floor((y / rect.height) * 24)))
-                  setContextMenu({ x: e.clientX, y: e.clientY, day, hour: hourClicked })
-                }}
-              >
-                <div className={styles.hourCells}>
-                  {HOUR_KEYS.map((hourKey) => (
-                    <DroppableCell
-                      key={`${dayKey}-${hourKey}`}
-                      dateKey={dayKey}
-                      hourKey={hourKey}
-                      isFocusAnchor={isCellFocusAnchor(dayKey, hourKey)}
-                      onClick={handleCellClick}
-                      onMouseDown={handleDragStartFromCell}
-                      onKeyDown={handleCellKeyDown}
-                    />
-                  ))}
-                </div>
-                <div className={styles.eventsOverlay}>
-                  {dropPreview?.dateKey === dayKey && (
-                    <DropPreviewBand preview={dropPreview} timeFormat={timeFormat} />
-                  )}
-                  <WeekDayColumn
-                    events={eventsMap.get(dayKey) ?? EMPTY_EVENTS}
-                    fragments={timedFragmentsMap.get(dayKey) ?? EMPTY_EVENTS}
-                    timedTasks={timedTasksMap.get(dayKey) ?? EMPTY_EVENTS}
-                    calendars={calendars}
-                    hourHeight={hourHeight}
-                    openModal={openModal}
-                    taskHasSubtasks={taskCollapse.hasSubtasks}
-                    taskIsCollapsed={taskCollapse.isCollapsed}
-                    taskDescendantCount={taskCollapse.descendantCount}
-                    onToggleTaskSubtasks={taskCollapse.toggleTask}
-                  />
-                  {isToday(day) && (
-                    <CurrentTimeIndicator
-                      hourHeight={hourHeight}
-                      timeFormat={timeFormat}
-                      showLabel={false}
-                    />
-                  )}
-                </div>
-              </div>
-            )
-          })}
+            })}
+          </div>
         </div>
       </div>
+      {mobileWeekCanScroll && mobileWeekHintVisible && (
+        <div
+          className={styles.mobileContinuationCue}
+          data-component="week-mobile-continuation"
+          role="status"
+        >
+          <span>Swipe for more days</span>
+          <button
+            type="button"
+            aria-label="Dismiss week view tip"
+            onClick={() => setMobileWeekHintVisible(false)}
+          >
+            ×
+          </button>
+        </div>
+      )}
     </div>
   )
 

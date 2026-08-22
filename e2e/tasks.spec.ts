@@ -236,38 +236,81 @@ test('large subtask trees collapse with a chevron across task views', async ({ p
     )
   })
 
-  const assertCollapsed = async (route: string): Promise<void> => {
+  const assertTaskState = async (route: string, expanded: boolean): Promise<void> => {
     const parent = page
       .locator(
         route === '/agenda' ? '[data-component="agenda-task"]' : '[data-component="event-card"]'
       )
       .filter({ hasText: 'Collapse parent' })
-      .first()
+      .last()
     await expect(parent).toBeVisible()
     const toggle = parent.locator('[data-component="task-collapse-toggle"]')
-    await expect(toggle).toHaveAttribute('aria-expanded', 'false')
-    await expect(page.getByText('Collapse child one')).not.toBeVisible()
+    await expect(toggle).toBeVisible()
+    await expect(toggle.locator('svg')).toBeVisible()
+    const toggleBox = await toggle.boundingBox()
+    expect(toggleBox?.width).toBeGreaterThan(0)
+    expect(toggleBox?.height).toBeGreaterThan(0)
+    await expect(toggle).toHaveAttribute('aria-expanded', expanded ? 'true' : 'false')
+    if (expanded) {
+      await expect(page.getByText('Collapse child one')).toBeVisible()
+    } else {
+      await expect(page.getByText('Collapse child one')).not.toBeVisible()
+    }
   }
 
-  for (const route of ['/month', '/week', '/agenda', '/day']) {
+  await page.goto('/month')
+  await assertTaskState('/month', false)
+  await page
+    .locator('[data-component="event-card"]')
+    .filter({ hasText: 'Collapse parent' })
+    .last()
+    .locator('[data-component="task-collapse-toggle"]')
+    .click()
+  await assertTaskState('/month', true)
+
+  // The setting is shared by all task surfaces, so the expansion made in the
+  // month view is immediately visible in the week view.
+  await page.goto('/week')
+  await assertTaskState('/week', true)
+  await page
+    .locator('[data-component="event-card"]')
+    .filter({ hasText: 'Collapse parent' })
+    .last()
+    .locator('[data-component="task-collapse-toggle"]')
+    .click()
+
+  for (const route of ['/month', '/agenda', '/day']) {
     await page.goto(route)
-    await assertCollapsed(route)
+    await assertTaskState(route, false)
   }
 
   await page.goto('/tasks')
   const taskRow = page.locator('[data-component="task-row"]').filter({ hasText: 'Collapse parent' })
   const taskToggle = taskRow.getByRole('button', { name: /Expand subtasks for "Collapse parent"/ })
+  const taskChevron = taskRow.locator('[data-component="task-collapse-toggle"] svg')
+  const collapsedTransform = await taskChevron.evaluate(
+    (element) => getComputedStyle(element).transform
+  )
   await expect(taskToggle).toHaveAttribute('aria-expanded', 'false')
   await taskToggle.click()
+  await expect(taskChevron).not.toHaveCSS('transform', collapsedTransform)
   await expect(
     page.locator('[data-component="task-row"]').filter({ hasText: 'Collapse child one' })
   ).toBeVisible()
 
+  // A hard refresh keeps the explicit expansion in the persisted settings.
+  await page.reload()
+  await expect(
+    page
+      .locator('[data-component="task-row"]')
+      .filter({ hasText: 'Collapse parent' })
+      .getByRole('button', { name: /Collapse subtasks for "Collapse parent"/ })
+  ).toHaveAttribute('aria-expanded', 'true')
+
   await taskRow.getByText('Collapse parent').click()
   const modal = page.locator('[data-component="modal-card"]')
-  const modalToggle = modal.getByRole('button', { name: /Expand subtasks for "Collapse parent"/ })
-  await expect(modalToggle).toHaveAttribute('aria-expanded', 'false')
-  await modalToggle.click()
+  const modalToggle = modal.getByRole('button', { name: /Collapse subtasks for "Collapse parent"/ })
+  await expect(modalToggle).toHaveAttribute('aria-expanded', 'true')
   await expect(modal.getByRole('button', { name: 'Collapse child one' })).toBeVisible()
 })
 

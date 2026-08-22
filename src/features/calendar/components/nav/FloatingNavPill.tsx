@@ -133,6 +133,17 @@ export function FloatingNavPill({
     []
   )
 
+  // CookieConsent is a separate fixed surface. Publish the pill's measured
+  // height so that the notice can stack above the expanded sheet as well as
+  // the collapsed row, without duplicating the sheet's layout math in CSS.
+  useEffect(() => {
+    const root = document.documentElement
+    root.style.setProperty('--mobile-nav-height', `${Math.max(measuredHeight, 57)}px`)
+    return () => {
+      root.style.removeProperty('--mobile-nav-height')
+    }
+  }, [measuredHeight])
+
   // border-radius is no longer a MotionValue: it is a pure function of state,
   // so a CSS class + `transition: border-radius` gets it off the rAF loop
   // entirely (one fewer JS-driven style write per frame, one fewer animate()
@@ -424,6 +435,8 @@ export function FloatingNavPill({
                     onClick={handleToggleSwitcher}
                     aria-label="Show all views"
                     aria-expanded={viewSwitcherExpanded}
+                    aria-current={isOnBaseRoute ? undefined : 'page'}
+                    data-component="nav-more"
                   >
                     <span
                       className={isOnBaseRoute ? styles.switcherLabel : styles.switcherLabelActive}
@@ -471,6 +484,16 @@ export function FloatingNavPill({
   )
 }
 
+function EllipsisIcon(): JSX.Element {
+  return (
+    <svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+      <circle cx="4" cy="10" r="1.8" />
+      <circle cx="10" cy="10" r="1.8" />
+      <circle cx="16" cy="10" r="1.8" />
+    </svg>
+  )
+}
+
 function HamburgerIcon(): JSX.Element {
   return (
     <svg
@@ -500,16 +523,6 @@ function BackArrowIcon(): JSX.Element {
       strokeLinejoin="round"
     >
       <path d="M12 4L6 10l6 6" />
-    </svg>
-  )
-}
-
-function EllipsisIcon(): JSX.Element {
-  return (
-    <svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor">
-      <circle cx="4" cy="10" r="1.8" />
-      <circle cx="10" cy="10" r="1.8" />
-      <circle cx="16" cy="10" r="1.8" />
     </svg>
   )
 }

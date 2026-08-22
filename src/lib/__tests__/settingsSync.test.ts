@@ -124,6 +124,12 @@ describe('settingsSync', () => {
       expect(parsed.settings.timezone).toBe('Asia/Tokyo')
       expect(parsed.settings.themeMode).toBe('dark')
     })
+
+    it('should include task collapse overrides', () => {
+      useSettingsStore.getState().updateSettings({ taskCollapseOverrides: { parent: true } })
+      const parsed = JSON.parse(serializeSettings()) as SettingsSyncPayload
+      expect(parsed.settings.taskCollapseOverrides).toEqual({ parent: true })
+    })
   })
 
   describe('deserializeSettings', () => {

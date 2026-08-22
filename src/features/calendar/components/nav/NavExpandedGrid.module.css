@@ -33,7 +33,7 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  height: 32px;
+  min-height: 44px;
   border: none;
   background: var(--panel);
   border-radius: 9px;
@@ -58,7 +58,7 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  height: 32px;
+  min-height: 44px;
   border: none;
   border-right: 1px solid var(--line);
   background: transparent;
@@ -69,7 +69,8 @@
 }
 
 .settingsToggleZone {
-  width: 30px;
+  width: 44px;
+  min-height: 44px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -118,7 +119,7 @@
   -webkit-touch-callout: none;
   position: relative;
   z-index: 1;
-  height: 40px;
+  min-height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -213,4 +214,3 @@
   font-weight: 700;
   color: #fff;
 }
-

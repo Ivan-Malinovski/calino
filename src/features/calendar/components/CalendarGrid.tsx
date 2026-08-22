@@ -1791,7 +1791,7 @@ const DroppableDay = React.memo(function DroppableDay({
                       monthView
                       clickDisabled
                       taskHasSubtasks={taskHasSubtasks(task.id)}
-                      taskSubtasksCollapsed={taskIsCollapsed(task.id)}
+                      taskSubtasksCollapsed={collapsedTaskIds.has(task.id)}
                       taskSubtaskCount={taskDescendantCount(task.id)}
                       onToggleTaskSubtasks={() => onToggleTaskSubtasks(task.id)}
                     />
@@ -1892,7 +1892,7 @@ const DroppableDay = React.memo(function DroppableDay({
                       enableResize={false}
                       monthView
                       taskHasSubtasks={taskHasSubtasks(task.id)}
-                      taskSubtasksCollapsed={taskIsCollapsed(task.id)}
+                      taskSubtasksCollapsed={collapsedTaskIds.has(task.id)}
                       taskSubtaskCount={taskDescendantCount(task.id)}
                       onToggleTaskSubtasks={() => onToggleTaskSubtasks(task.id)}
                     />

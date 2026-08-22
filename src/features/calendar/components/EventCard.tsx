@@ -634,23 +634,14 @@ export const EventCard = React.memo(function EventCard({
                   {formatEventTime(event.dueDate, event.timezone, timeFormat)}
                 </div>
               )}
-              {showTaskCollapse && !dotMode && onToggleTaskSubtasks && (
-                <TaskCollapseToggle
-                  taskTitle={event.title}
-                  collapsed={taskSubtasksCollapsed}
-                  hiddenCount={taskSubtaskCount}
-                  onToggle={onToggleTaskSubtasks}
-                  className={styles.cardTaskCollapseToggle}
-                />
-              )}
             </div>
-            {showTaskCollapse && dotMode && onToggleTaskSubtasks && (
+            {showTaskCollapse && onToggleTaskSubtasks && (
               <TaskCollapseToggle
                 taskTitle={event.title}
                 collapsed={taskSubtasksCollapsed}
                 hiddenCount={taskSubtaskCount}
                 onToggle={onToggleTaskSubtasks}
-                className={styles.dotTaskCollapseToggle}
+                className={dotMode ? styles.dotTaskCollapseToggle : styles.cardTaskCollapseToggle}
               />
             )}
           </>

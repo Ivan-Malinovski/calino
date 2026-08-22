@@ -23,6 +23,7 @@ describe('settingsStore', () => {
     expect(settings.enableDesktopNotifications).toBe(true)
     expect(settings.enableSoundAlerts).toBe(false)
     expect(settings.conflictResolution).toBe('server-wins')
+    expect(settings.taskCollapseOverrides).toEqual({})
   })
 
   it('updates settings with updateSettings', () => {
@@ -49,6 +50,17 @@ describe('settingsStore', () => {
     expect(settings.timeFormat).toBe('24h')
     expect(settings.dateFormat).toBe('dd/MM/yyyy')
     expect(settings.firstDayOfWeek).toBe(1)
+  })
+
+  it('stores task collapse overrides as settings', () => {
+    useSettingsStore.getState().updateSettings({
+      taskCollapseOverrides: { parent: true, expandedParent: false },
+    })
+
+    expect(useSettingsStore.getState().taskCollapseOverrides).toEqual({
+      parent: true,
+      expandedParent: false,
+    })
   })
 
   it('resetSettings restores default values', () => {

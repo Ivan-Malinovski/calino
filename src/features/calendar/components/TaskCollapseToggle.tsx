@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import type { JSX, MouseEvent, PointerEvent } from 'react'
 import styles from './TaskCollapseToggle.module.css'
 
@@ -16,10 +17,19 @@ export function TaskCollapseToggle({
   onToggle,
   className,
 }: TaskCollapseToggleProps): JSX.Element {
-  const label = collapsed ? `Expand subtasks for "${taskTitle}"` : `Collapse subtasks for "${taskTitle}"`
+  const [visualCollapsed, setVisualCollapsed] = useState(collapsed)
+
+  useEffect(() => {
+    setVisualCollapsed(collapsed)
+  }, [collapsed])
+
+  const label = visualCollapsed
+    ? `Expand subtasks for "${taskTitle}"`
+    : `Collapse subtasks for "${taskTitle}"`
 
   const handleClick = (event: MouseEvent<HTMLButtonElement>): void => {
     event.stopPropagation()
+    setVisualCollapsed((previous) => !previous)
     onToggle()
   }
 
@@ -32,9 +42,9 @@ export function TaskCollapseToggle({
       type="button"
       className={`${styles.toggle} ${className ?? ''}`}
       data-component="task-collapse-toggle"
-      data-collapsed={collapsed}
-      aria-expanded={!collapsed}
-      aria-label={hiddenCount && collapsed ? `${label} (${hiddenCount} hidden)` : label}
+      data-collapsed={visualCollapsed}
+      aria-expanded={!visualCollapsed}
+      aria-label={hiddenCount && visualCollapsed ? `${label} (${hiddenCount} hidden)` : label}
       title={label}
       onClick={handleClick}
       onPointerDown={handlePointerDown}
@@ -43,7 +53,7 @@ export function TaskCollapseToggle({
         <path
           d="M6 4l4 4-4 4"
           stroke="currentColor"
-          strokeWidth="1.5"
+          strokeWidth="2"
           strokeLinecap="round"
           strokeLinejoin="round"
         />
