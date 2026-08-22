@@ -229,12 +229,26 @@ test.describe('Journal view', () => {
     await page.goto('/journal')
 
     await expect(page.getByText('Shipped the thing')).toBeVisible()
-    await expect(page.getByText('Long walk')).toBeVisible()
+    await expect(
+      page.locator('[data-component="journal-entry-row"]').filter({ hasText: 'Long walk' })
+    ).toBeVisible()
 
     await hideCalendar(page, 'personal')
 
     await expect(page.getByText('Long walk')).toBeHidden()
     await expect(page.getByText('Shipped the thing')).toBeVisible()
+  })
+
+  test('an empty month shows the list without an editor placeholder', async ({ page }) => {
+    await page.setViewportSize({ width: 1800, height: 900 })
+    await page.goto('/journal')
+    await page.getByRole('button', { name: 'Next', exact: true }).click()
+
+    await expect(page.getByText('Nothing written yet')).toBeVisible()
+    await expect(page.locator('[data-component="journal-editor"]')).toHaveCount(0)
+    await expect(page.locator('[data-component="journal-editor-empty"]')).toHaveCount(0)
+
+    await expect(page.locator('[data-component="journal-editor"]')).toHaveCount(0)
   })
 
   test('a new entry can be filed into a chosen calendar', async ({ page }) => {
@@ -265,7 +279,10 @@ test.describe('Journal view', () => {
       })
       .toBe(true)
 
-    await page.getByRole('button', { name: 'Save entry' }).click()
+    await expect(page.locator('[data-component="journal-save-status"]')).toContainText(
+      /Saved|saved locally/,
+      { timeout: 15_000 }
+    )
 
     await expect(page.getByText('Filed elsewhere')).toBeVisible()
 
@@ -273,6 +290,247 @@ test.describe('Journal view', () => {
     // was stored against 'personal' rather than the default calendar.
     await hideCalendar(page, 'personal')
     await expect(page.getByText('Filed elsewhere')).toBeHidden()
+  })
+
+  test('uses a split editor and selects entries with one click', async ({ page }) => {
+    await page.setViewportSize({ width: 1800, height: 900 })
+    await page.goto('/journal')
+
+    await expect(page.locator('[data-component="journal-entry-list"]')).toBeVisible()
+    await expect(page.locator('[data-component="journal-editor"]')).toBeHidden()
+    await page
+      .locator('[data-component="journal-entry-row"]')
+      .filter({ hasText: 'Long walk' })
+      .click()
+    await expect(page.locator('[data-component="journal-editor"]')).toBeVisible()
+    await expect(page.locator('[data-component="journal-editor"] h1')).toHaveText('Long walk')
+    await expect(page.locator('[data-component="journal-read-view"]')).toBeVisible()
+    const editorHeader = await page
+      .locator('[data-component="journal-editor-header"]')
+      .boundingBox()
+    const readSurface = await page.locator('[data-component="journal-read-view"]').boundingBox()
+    expect(editorHeader).not.toBeNull()
+    expect(readSurface).not.toBeNull()
+    expect(readSurface!.y - (editorHeader!.y + editorHeader!.height)).toBeLessThan(36)
+  })
+
+  test('toggles the editor by clicking the selected entry', async ({ page }) => {
+    await page.setViewportSize({ width: 1800, height: 900 })
+    await page.goto('/journal')
+
+    const activeRow = page
+      .locator('[data-component="journal-entry-row"]')
+      .filter({ hasText: 'Long walk' })
+    await expect(activeRow).not.toHaveAttribute('aria-current', 'true')
+    await activeRow.click()
+    await expect(activeRow).toHaveAttribute('aria-current', 'true')
+    await expect(page.locator('[data-component="journal-editor"]')).toBeVisible()
+    await activeRow.click()
+    await expect(page.locator('[data-component="journal-editor"]')).toBeHidden()
+  })
+
+  test('editor shell follows the available viewport height', async ({ page }) => {
+    await page.setViewportSize({ width: 1800, height: 800 })
+    await page.goto('/journal')
+    await page
+      .locator('[data-component="journal-entry-row"]')
+      .filter({ hasText: 'Long walk' })
+      .click()
+    const editor = page.locator('[data-component="journal-editor"]')
+    const footer = page.locator('[data-component="journal-editor-footer"]')
+    const smallEditor = await editor.boundingBox()
+    const smallFooter = await footer.boundingBox()
+    expect(smallEditor).not.toBeNull()
+    expect(smallFooter).not.toBeNull()
+
+    await page.setViewportSize({ width: 1800, height: 1100 })
+    await expect(editor).toBeVisible()
+    const largeEditor = await editor.boundingBox()
+    const largeFooter = await footer.boundingBox()
+    expect(largeEditor).not.toBeNull()
+    expect(largeFooter).not.toBeNull()
+    expect(largeEditor!.height - smallEditor!.height).toBeGreaterThan(200)
+    expect(
+      largeFooter!.y + largeFooter!.height - (smallFooter!.y + smallFooter!.height)
+    ).toBeGreaterThan(200)
+  })
+
+  test('autosaves drafts, tags, and Markdown read mode', async ({ page }) => {
+    await page.setViewportSize({ width: 1800, height: 900 })
+    await page.goto('/journal')
+    await page
+      .locator('[data-component="journal-entry-row"]')
+      .filter({ hasText: 'Shipped the thing' })
+      .click()
+    await page.getByRole('button', { name: 'Write' }).click()
+
+    const body = page.locator('[data-component="journal-body-input"]')
+    await body.fill('# A heading\n\n**Bold text** and [a link](https://example.com)')
+    await expect(page.locator('[data-component="journal-save-status"]')).toContainText(
+      'Unsaved changes'
+    )
+    await expect(page.locator('[data-component="journal-save-status"]')).toContainText('Saved', {
+      timeout: 5_000,
+    })
+    await page.reload()
+    await page
+      .locator('[data-component="journal-entry-row"]')
+      .filter({ hasText: 'Shipped the thing' })
+      .click()
+    await page.getByRole('button', { name: 'Write' }).click()
+    await expect(page.locator('[data-component="journal-body-input"]')).toHaveValue(/A heading/)
+
+    const writeSurface = await page.locator('[data-component="journal-body-input"]').boundingBox()
+
+    await page.getByLabel('Add tag').fill(' Personal ')
+    await page.getByLabel('Add tag').press('Enter')
+    await expect(page.locator('[data-component="journal-tags"]')).toContainText('personal')
+    await page.getByRole('button', { name: 'Remove tag personal' }).click()
+    await expect(page.locator('[data-component="journal-tags"]')).not.toContainText('personal')
+
+    await page.getByRole('button', { name: 'Read' }).click()
+    const readView = page.locator('[data-component="journal-read-view"]')
+    await expect(readView.getByRole('heading', { name: 'A heading' })).toBeVisible()
+    const readSurface = await readView.boundingBox()
+    expect(writeSurface).not.toBeNull()
+    expect(readSurface).not.toBeNull()
+    expect(readSurface!.x).toBeCloseTo(writeSurface!.x, 0)
+    expect(readSurface!.width).toBeCloseTo(writeSurface!.width, 0)
+    await expect(readView.getByRole('link', { name: 'a link' })).toHaveAttribute('target', '_blank')
+    await readView.dblclick({ position: { x: 20, y: 20 } })
+    await expect(page.locator('[data-component="journal-body-input"]')).toBeVisible()
+
+    await page.getByRole('button', { name: 'Read' }).click()
+    await page.keyboard.press('ArrowLeft')
+    await expect(page.getByRole('heading', { name: 'Long walk', exact: true })).toBeVisible()
+  })
+
+  test('date editing can be dismissed without changing the entry', async ({ page }) => {
+    await page.setViewportSize({ width: 1800, height: 900 })
+    await page.goto('/journal')
+    await page
+      .locator('[data-component="journal-entry-row"]')
+      .filter({ hasText: 'Long walk' })
+      .click()
+    await page.getByTitle('Click to change date').click()
+    await expect(page.locator('input[type="date"]')).toBeVisible()
+    await page.locator('input[type="date"]').press('Escape')
+    await expect(page.locator('input[type="date"]')).toBeHidden()
+    await expect(page.getByTitle('Click to change date')).toBeVisible()
+  })
+
+  test('wraps Markdown shortcuts without losing the selected text', async ({ page }) => {
+    await page.setViewportSize({ width: 1800, height: 900 })
+    await page.goto('/journal')
+    await page
+      .locator('[data-component="journal-entry-row"]')
+      .filter({ hasText: 'Long walk' })
+      .click()
+    await page.getByRole('button', { name: 'Write' }).click()
+    const body = page.locator('[data-component="journal-body-input"]')
+    await body.fill('format this')
+    await body.selectText()
+    await body.press('Control+b')
+    await expect(body).toHaveValue('**format this**')
+    await body.press('Control+i')
+    await expect(body).toHaveValue('***format this***')
+  })
+
+  test('opens the editor as a narrow overlay and dismisses it with Escape', async ({ page }) => {
+    await page.setViewportSize({ width: 900, height: 900 })
+    await page.goto('/journal')
+    await expect(page.locator('[data-component="journal-editor"]')).toBeHidden()
+    await page
+      .locator('[data-component="journal-entry-row"]')
+      .filter({ hasText: 'Long walk' })
+      .click()
+    const editor = page.locator('[data-component="journal-editor"]')
+    const backButton = page.getByRole('button', { name: '← All entries' })
+    const deleteButton = editor.getByRole('button', { name: 'Delete entry' })
+    await expect(backButton).toBeVisible()
+    await expect(editor.locator('[data-component="journal-read-view"]')).toBeVisible()
+    const backBox = await backButton.boundingBox()
+    const deleteBox = await deleteButton.boundingBox()
+    expect(backBox).not.toBeNull()
+    expect(deleteBox).not.toBeNull()
+    expect(Math.abs(backBox!.y - deleteBox!.y)).toBeLessThan(8)
+    await page.keyboard.press('Escape')
+    await expect(page.locator('[data-component="journal-editor"]')).toBeHidden()
+  })
+
+  test('keeps the mobile journal list close to its toolbar', async ({ page }) => {
+    await page.setViewportSize({ width: 900, height: 900 })
+    await page.goto('/journal')
+    const toolbar = await page.locator('[data-component="journal-toolbar"]').boundingBox()
+    const listHeader = await page.locator('[data-component="journal-list-header"]').boundingBox()
+    expect(toolbar).not.toBeNull()
+    expect(listHeader).not.toBeNull()
+    expect(listHeader!.y - (toolbar!.y + toolbar!.height)).toBeLessThan(24)
+  })
+
+  test('heals selection when switching from All to a filtered Month scope', async ({ page }) => {
+    await page.setViewportSize({ width: 1800, height: 900 })
+    await page.addInitScript(
+      ({ calendarKey }: { calendarKey: string }) => {
+        const raw = localStorage.getItem(calendarKey)
+        if (!raw) return
+        const parsed = JSON.parse(raw)
+        parsed.state.events.push({
+          id: 'old-journal-entry',
+          calendarId: 'work',
+          title: 'Older thought',
+          description: 'From another month.',
+          start: '2020-01-02',
+          end: '2020-01-02',
+          isAllDay: true,
+          type: 'journal',
+        })
+        localStorage.setItem(calendarKey, JSON.stringify(parsed))
+      },
+      { calendarKey: STORAGE_KEYS.calendar }
+    )
+    await page.goto('/journal')
+    await page.locator('[data-component="journal-mode-all"]').click()
+    await page
+      .locator('[data-component="journal-entry-row"]')
+      .filter({ hasText: 'Older thought' })
+      .click()
+    await page.locator('[data-component="journal-mode-month"]').click()
+    await expect(
+      page.locator('[data-component="journal-entry-row"]').filter({ hasText: 'Older thought' })
+    ).toBeHidden()
+    await expect(page.locator('[data-component="journal-editor"] h1')).toHaveText('Long walk')
+  })
+
+  test('deleting the selected entry selects the next one and keeps undo available', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 900, height: 900 })
+    await page.goto('/journal')
+    await page
+      .locator('[data-component="journal-entry-row"]')
+      .filter({ hasText: 'Shipped the thing' })
+      .click()
+    await page
+      .locator('[data-component="journal-editor"]')
+      .getByRole('button', { name: 'Delete entry' })
+      .click()
+    const deletedRow = page
+      .locator('[data-component="journal-entry-row"]')
+      .filter({ hasText: 'Shipped the thing' })
+    await expect
+      .poll(async () => {
+        if ((await deletedRow.count()) === 0) return 0
+        return Number(await deletedRow.evaluate((element) => getComputedStyle(element).opacity))
+      })
+      .toBeLessThan(1)
+    await expect(page.getByRole('button', { name: '← All entries' })).toBeHidden()
+    await expect(
+      page.locator('[data-component="journal-entry-row"]').filter({ hasText: 'Long walk' })
+    ).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Undo' })).toBeVisible()
+    await page.getByRole('button', { name: 'Undo' }).click()
+    await expect(page.getByText('Shipped the thing')).toBeVisible()
   })
 
   // The three move tests share collections on the process-wide mock store
@@ -302,7 +560,10 @@ test.describe('Journal view', () => {
       // Edit it: the calendar picker now appears on existing entries too (#89).
       await page.getByText('Relocatable entry').first().dblclick()
       await pickJournalCalendar(page, 'j-personal')
-      await page.getByRole('button', { name: 'Save changes' }).click()
+      await expect(page.locator('[data-component="journal-save-status"]')).toContainText(
+        /Saved|saved locally/,
+        { timeout: 15_000 }
+      )
 
       // The VJOURNAL moved on the server: j-personal has it, j-work is empty.
       await expect
@@ -343,7 +604,10 @@ test.describe('Journal view', () => {
 
       await page.getByText('Relocatable entry').first().dblclick()
       await pickJournalCalendar(page, 'default')
-      await page.getByRole('button', { name: 'Save changes' }).click()
+      await expect(page.locator('[data-component="journal-save-status"]')).toContainText(
+        /Saved|saved locally/,
+        { timeout: 15_000 }
+      )
 
       // The server copy is gone…
       await expect
@@ -375,7 +639,10 @@ test.describe('Journal view', () => {
 
       await page.getByText('Offline thought').first().dblclick()
       await pickJournalCalendar(page, 'j-work')
-      await page.getByRole('button', { name: 'Save changes' }).click()
+      await expect(page.locator('[data-component="journal-save-status"]')).toContainText(
+        /Saved|saved locally/,
+        { timeout: 15_000 }
+      )
 
       // The VJOURNAL now exists on the server under j-work/.
       await expect
@@ -403,9 +670,16 @@ test.describe('Journal view', () => {
       await expect(page.getByText('Round trip').first()).toBeVisible()
 
       // CalDAV → Offline: the server copy is deleted, the entry stays local.
-      await page.getByText('Round trip').first().dblclick()
+      // The split pane uses a narrow-screen editor overlay; return to the
+      // list before selecting the same entry again.
+      const backToEntries = page.getByRole('button', { name: '← All entries' })
+      if (await backToEntries.isVisible().catch(() => false)) await backToEntries.click()
+      await page.getByText('Round trip').first().click()
       await pickJournalCalendar(page, 'default')
-      await page.getByRole('button', { name: 'Save changes' }).click()
+      await expect(page.locator('[data-component="journal-save-status"]')).toContainText(
+        /Saved|saved locally/,
+        { timeout: 15_000 }
+      )
       await expect
         .poll(async () => Object.keys((await dump(page, baseURL!, J_WORK)) ?? {}).length, {
           timeout: 15_000,
@@ -416,9 +690,14 @@ test.describe('Journal view', () => {
       // Offline → CalDAV: the entry must be re-created as a fresh resource — a
       // stale resourceHref/etag from the deleted copy must not be reused (the
       // pre-fix entry kept them, leaving a dangling link to a 404).
-      await page.getByText('Round trip').first().dblclick()
+      const backToEntriesAgain = page.getByRole('button', { name: '← All entries' })
+      if (await backToEntriesAgain.isVisible().catch(() => false)) await backToEntriesAgain.click()
+      await page.getByText('Round trip').first().click()
       await pickJournalCalendar(page, 'j-work')
-      await page.getByRole('button', { name: 'Save changes' }).click()
+      await expect(page.locator('[data-component="journal-save-status"]')).toContainText(
+        /Saved|saved locally/,
+        { timeout: 15_000 }
+      )
       await expect
         .poll(async () => Object.keys((await dump(page, baseURL!, J_WORK)) ?? {}).length, {
           timeout: 15_000,

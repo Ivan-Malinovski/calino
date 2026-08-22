@@ -1,487 +1,505 @@
 import type { JSX } from 'react'
 import React, {
-  useState,
-  useMemo,
+  memo,
   useCallback,
-  useRef,
   useEffect,
   useLayoutEffect,
-  memo,
+  useMemo,
+  useRef,
+  useState,
 } from 'react'
 import { format, parseISO } from 'date-fns'
-// useNavigate removed — unused
-import { useVirtualizer } from '@tanstack/react-virtual'
+import { Trash2 } from 'lucide-react'
 import { useCalendarStore, isJournalEntryVisible } from '@/store/calendarStore'
 import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
 import { v4 as uuidv4 } from 'uuid'
 import { MarkdownView } from '@/lib/markdown'
+import { wrapMarkdownSelection } from '@/lib/markdownHelpers'
 import { showToast } from '@/lib/toast'
 import { deleteEventWithUndo } from '@/lib/deleteWithUndo'
-import { buildEventIndex } from '@/lib/events'
 import { toLocalDateString } from '@/lib/datetime'
-import { putAttachments, getAttachments, deleteAttachments } from '@/lib/attachmentStore'
-import type { Calendar, CalendarEvent, CalendarAttachment } from '@/types'
+import { putAttachments, getAttachments } from '@/lib/attachmentStore'
+import type { Calendar, CalendarAttachment, CalendarEvent } from '@/types'
 import { AttachmentSection } from './AttachmentSection'
 import { syncJournalEntryToServer } from '../lib/journalSync'
 import styles from './JournalView.module.css'
 
-// ── Shared compose form ──────────────────────────────────────────────────────
+type EditorMode = 'write' | 'read'
+type SaveStatus = 'saved' | 'unsaved' | 'saving' | 'error'
 
-interface JournalComposeFormProps {
-  editingId: string | null
-  editingDate: string
-  title: string
-  body: string
-  selectedCategories: string[]
-  attachments: CalendarAttachment[]
-  url: string
-  relatedTo: string[]
-  titleRef: React.RefObject<HTMLInputElement | null>
-  bodyRef: React.RefObject<HTMLTextAreaElement | null>
-  saveHint: string
-  closing?: boolean
-  formatEntryDate: (dateStr: string) => { day: string; weekday: string; monthYear: string }
-  /** Calendars the entry may be saved into (writable only). */
-  writableCalendars: Calendar[]
-  calendarId: string
-  onCalendarChange: (calendarId: string) => void
-  onTitleChange: (value: string) => void
-  onBodyChange: (value: string) => void
-  onDateChange: (value: string) => void
-  onCategoriesChange: (categories: string[]) => void
-  onAttachmentsChange: (attachments: CalendarAttachment[]) => void
-  onUrlChange: (url: string) => void
-  onRelatedToChange: (ids: string[]) => void
-  onSave: () => void
-  onCancel: () => void
+interface DateParts {
+  day: string
+  weekday: string
+  monthYear: string
 }
 
-function JournalComposeForm({
-  editingId,
-  editingDate,
-  title,
-  body,
-  selectedCategories,
-  attachments,
-  url,
-  relatedTo,
-  titleRef,
-  bodyRef,
-  // saveHint available but not rendered in compose form currently
-  closing,
-  formatEntryDate,
-  writableCalendars,
-  calendarId,
-  onCalendarChange,
-  onTitleChange,
-  onBodyChange,
-  onDateChange,
-  onCategoriesChange,
-  onAttachmentsChange,
-  onUrlChange,
-  onRelatedToChange,
-  onSave,
-  onCancel,
-}: JournalComposeFormProps): JSX.Element {
-  const categories = useCalendarStore((state) => state.categories)
-  const events = useCalendarStore((state) => state.events)
-  const [showDatePicker, setShowDatePicker] = useState(false)
-  const [showAddPanel, setShowAddPanel] = useState(false)
-  const { day, weekday, monthYear } = formatEntryDate(editingDate)
-  // #89: the picker appears when composing AND when editing an existing
-  // entry. Moving an entry between collections works end-to-end now — the
-  // CalDAV move machinery from #86 serialises VJOURNALs through the same
-  // engine as events — so an edit may retarget the entry's calendar too.
-  const showCalendarPicker = writableCalendars.length > 1
+function formatEntryDate(dateStr: string): DateParts {
+  const date = parseISO(dateStr)
+  return {
+    day: format(date, 'd'),
+    weekday: format(date, 'EEE').toUpperCase(),
+    monthYear: format(date, 'MMM yyyy').toUpperCase(),
+  }
+}
 
-  // Determine which add sections have content
-  const hasCategories = selectedCategories.length > 0
-  const hasUrl = url.length > 0
-  const hasRelated = relatedTo.length > 0
-  // const hasAnyContent = hasCategories || hasUrl || hasAttachments || hasRelated
+function wordCount(text: string): number {
+  const trimmed = text.trim()
+  return trimmed ? trimmed.split(/\s+/u).length : 0
+}
 
-  // Non-journal events on the same day for linking
-  const sameDayEvents = useMemo(() => {
-    const dayKey = editingDate // yyyy-MM-dd
-    return events.filter(
-      (e) => e.type !== 'journal' && e.id !== editingId && e.start.startsWith(dayKey)
-    )
-  }, [events, editingId, editingDate])
+interface TagEditorProps {
+  tags: string[]
+  onChange: (tags: string[]) => void
+  className?: string
+}
 
-  const otherDayEvents = useMemo(() => {
-    const dayKey = editingDate
-    return events.filter(
-      (e) => e.type !== 'journal' && e.id !== editingId && !e.start.startsWith(dayKey)
-    )
-  }, [events, editingId, editingDate])
-
-  const [showAllRelated, setShowAllRelated] = useState(false)
-  const linkableEvents = showAllRelated ? [...sameDayEvents, ...otherDayEvents] : sameDayEvents
+function TagEditor({ tags, onChange, className }: TagEditorProps): JSX.Element {
+  const [value, setValue] = useState('')
+  const commit = (): void => {
+    const tag = value.trim().toLowerCase()
+    if (tag) onChange([...new Set([...tags, tag])])
+    setValue('')
+  }
 
   return (
-    <div className={`${styles.compose} ${closing ? styles.closing : ''}`}>
-      <div className={styles.composeDateCol}>
-        {showDatePicker ? (
-          <input
-            type="date"
-            className={styles.dateInput}
-            value={editingDate}
-            onChange={(e) => {
-              onDateChange(e.target.value)
-              setShowDatePicker(false)
-            }}
-            onBlur={() => setShowDatePicker(false)}
-            autoFocus
-          />
-        ) : (
+    <div className={`${styles.tags} ${className || ''}`} data-component="journal-tags">
+      {tags.map((tag) => (
+        <span className={styles.tag} key={tag}>
+          {tag}
           <button
-            className={styles.dateButton}
-            onClick={() => setShowDatePicker(true)}
-            title="Click to change date"
+            type="button"
+            aria-label={`Remove tag ${tag}`}
+            onClick={() => onChange(tags.filter((item) => item !== tag))}
           >
-            <span className={styles.composeDay}>{day}</span>
-            <span className={styles.composeWeekday}>{weekday}</span>
-            <span className={styles.composeMonthYear}>{monthYear}</span>
+            ×
           </button>
-        )}
-      </div>
-      <div className={styles.composeFields}>
-        <input
-          ref={titleRef}
-          type="text"
-          placeholder="Title (optional)"
-          value={title}
-          onChange={(e) => onTitleChange(e.target.value)}
-        />
-        <textarea
-          ref={bodyRef}
-          placeholder="Write something…"
-          rows={8}
-          value={body}
-          onChange={(e) => onBodyChange(e.target.value)}
-        />
-        {showCalendarPicker && (
-          /* Chips rather than a <select>: the writable calendars are few (this
-             only renders past one), and a full-width OS dropdown was the
-             heaviest thing on a page built out of hairlines. Same idiom as the
-             category picker below, so the colour dot reads the same way. */
-          <div
-            className={styles.calendarRow}
-            role="radiogroup"
-            aria-label="Calendar"
-            data-component="journal-calendar-select"
-          >
-            {writableCalendars.map((cal) => {
-              const isSelected = cal.id === calendarId
-              return (
-                <button
-                  key={cal.id}
-                  type="button"
-                  role="radio"
-                  aria-checked={isSelected}
-                  className={`${styles.calendarChip} ${isSelected ? styles.calendarChipActive : ''}`}
-                  style={{ '--chip-color': cal.color } as React.CSSProperties}
-                  data-component="journal-calendar-chip"
-                  data-calendar-id={cal.id}
-                  onClick={() => onCalendarChange(cal.id)}
-                >
-                  <span
-                    className={styles.calendarDot}
-                    style={{ backgroundColor: isSelected ? cal.color : 'transparent' }}
-                  />
-                  {cal.name}
-                </button>
-              )
-            })}
-          </div>
-        )}
-        {/* Add panel — categories, link, attachments */}
-        {
-          <div className={styles.addPanel}>
-            {!showAddPanel ? (
-              <button
-                type="button"
-                className={styles.addToggle}
-                onClick={() => setShowAddPanel(true)}
-              >
-                + More
-              </button>
-            ) : (
-              <div className={styles.addPanelContent}>
-                <button
-                  type="button"
-                  className={styles.addToggle}
-                  onClick={() => setShowAddPanel(false)}
-                >
-                  − Hide
-                </button>
-
-                {/* Categories */}
-                {categories.length > 0 && (
-                  <div className={styles.addSection}>
-                    <div className={styles.addSectionHeader}>
-                      <span className={styles.addSectionLabel}>Categories</span>
-                      {hasCategories && (
-                        <button
-                          type="button"
-                          className={styles.removeFieldButton}
-                          onClick={() => onCategoriesChange([])}
-                        >
-                          ×
-                        </button>
-                      )}
-                    </div>
-                    <div className={styles.categoryPicker}>
-                      {categories.map((cat) => {
-                        const isSelected = selectedCategories.includes(cat.name)
-                        return (
-                          <button
-                            key={cat.id}
-                            type="button"
-                            className={`${styles.categoryChip} ${isSelected ? styles.categoryChipActive : ''}`}
-                            style={
-                              {
-                                '--chip-color': cat.color,
-                              } as React.CSSProperties
-                            }
-                            onClick={() => {
-                              if (isSelected) {
-                                onCategoriesChange(selectedCategories.filter((c) => c !== cat.name))
-                              } else {
-                                onCategoriesChange([...selectedCategories, cat.name])
-                              }
-                            }}
-                          >
-                            <span
-                              className={styles.categoryDot}
-                              style={{ backgroundColor: cat.color }}
-                            />
-                            {cat.name}
-                          </button>
-                        )
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                {/* URL */}
-                <div className={styles.addSection}>
-                  <div className={styles.addSectionHeader}>
-                    <span className={styles.addSectionLabel}>Link</span>
-                    {hasUrl && (
-                      <button
-                        type="button"
-                        className={styles.removeFieldButton}
-                        onClick={() => onUrlChange('')}
-                      >
-                        ×
-                      </button>
-                    )}
-                  </div>
-                  <input
-                    type="url"
-                    className={styles.urlInput}
-                    placeholder="https://example.com"
-                    value={url}
-                    onChange={(e) => onUrlChange(e.target.value)}
-                  />
-                </div>
-
-                {/* Attachments */}
-                <div className={styles.addSection}>
-                  <AttachmentSection
-                    attachments={attachments}
-                    onAttachmentsChange={onAttachmentsChange}
-                    eventId={editingId || 'new'}
-                    showLabel={false}
-                  />
-                </div>
-
-                {/* Related To */}
-                <div className={styles.addSection}>
-                  <div className={styles.addSectionHeader}>
-                    <span className={styles.addSectionLabel}>Related to</span>
-                    {hasRelated && (
-                      <button
-                        type="button"
-                        className={styles.removeFieldButton}
-                        onClick={() => onRelatedToChange([])}
-                      >
-                        ×
-                      </button>
-                    )}
-                  </div>
-                  {linkableEvents.length > 0 || (showAllRelated && otherDayEvents.length > 0) ? (
-                    <>
-                      <div className={styles.relatedList}>
-                        {linkableEvents.map((event) => {
-                          const isSelected = relatedTo.includes(event.id)
-                          return (
-                            <button
-                              key={event.id}
-                              type="button"
-                              className={`${styles.relatedChip} ${isSelected ? styles.relatedChipActive : ''}`}
-                              onClick={() => {
-                                if (isSelected) {
-                                  onRelatedToChange(relatedTo.filter((id) => id !== event.id))
-                                } else {
-                                  onRelatedToChange([...relatedTo, event.id])
-                                }
-                              }}
-                            >
-                              <span className={styles.relatedChipTitle}>
-                                {event.title || '(untitled)'}
-                              </span>
-                              <span className={styles.relatedChipDate}>
-                                {event.start.split('T')[1]?.slice(0, 5) || ''}
-                              </span>
-                            </button>
-                          )
-                        })}
-                      </div>
-                      {otherDayEvents.length > 0 && (
-                        <button
-                          type="button"
-                          className={styles.relatedToggle}
-                          onClick={() => setShowAllRelated(!showAllRelated)}
-                        >
-                          {showAllRelated
-                            ? '↑ Hide other days'
-                            : `+ ${otherDayEvents.length} other event${otherDayEvents.length === 1 ? '' : 's'}`}
-                        </button>
-                      )}
-                    </>
-                  ) : (
-                    <div className={styles.relatedEmpty}>No events on this day to link</div>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-        }
-        <div className={styles.composeActions}>
-          <button className={styles.btnGhost} onClick={onCancel}>
-            Cancel
-          </button>
-          <button className={styles.btnAccent} onClick={onSave}>
-            {editingId ? 'Save changes' : 'Save entry'}
-          </button>
-        </div>
-      </div>
+        </span>
+      ))}
+      <input
+        className={styles.tagInput}
+        aria-label="Add tag"
+        placeholder="+ tag"
+        value={value}
+        onChange={(event) => setValue(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter') {
+            event.preventDefault()
+            commit()
+          }
+        }}
+        onBlur={commit}
+      />
     </div>
   )
 }
 
-// ── Entry card ───────────────────────────────────────────────────────────────
-
-interface JournalEntryCardProps {
+interface JournalEditorProps {
   entry: CalendarEvent
-  isLast: boolean
-  confirmDeleteId: string | null
-  formatEntryDate: (dateStr: string) => { day: string; weekday: string; monthYear: string }
-  eventIndex: Map<string, CalendarEvent>
-  onDoubleClick: (entry: CalendarEvent) => void
-  onDelete: (entryId: string) => void
+  writableCalendars: Calendar[]
+  events: CalendarEvent[]
+  mode: EditorMode
+  status: SaveStatus
+  focusVersion: number
+  overlayOpen: boolean
+  onChange: (updates: Partial<CalendarEvent>) => void
+  onModeChange: (mode: EditorMode) => void
+  onNavigate: (direction: -1 | 1) => void
+  onDelete: () => void
+  onCloseNarrow: () => void
 }
 
-/**
- * One journal entry in the list. Memoized so that typing in the compose form
- * (which re-renders the parent JournalView on every keystroke) does not
- * re-render every rendered entry card and its Markdown body — the props are
- * stable unless the entry itself, the delete-confirm state, or the callbacks
- * change (finding 3.1).
- */
-const JournalEntryCard = memo(function JournalEntryCard({
+function JournalEditor({
   entry,
-  isLast,
-  confirmDeleteId,
-  formatEntryDate,
-  eventIndex,
-  onDoubleClick,
+  writableCalendars,
+  events,
+  mode,
+  status,
+  focusVersion,
+  overlayOpen,
+  onChange,
+  onModeChange,
+  onNavigate,
   onDelete,
-}: JournalEntryCardProps): JSX.Element {
+  onCloseNarrow,
+}: JournalEditorProps): JSX.Element {
+  const titleRef = useRef<HTMLInputElement>(null)
+  const bodyRef = useRef<HTMLTextAreaElement>(null)
+  const [showDatePicker, setShowDatePicker] = useState(false)
+  const [showMore, setShowMore] = useState(
+    Boolean(entry.url || entry.attachments?.length || entry.relatedTo?.length)
+  )
+  const [attachments, setAttachments] = useState<CalendarAttachment[]>(entry.attachments || [])
   const { day, weekday, monthYear } = formatEntryDate(entry.start)
+
+  const relatedEvents = useMemo(
+    () =>
+      events.filter(
+        (event) =>
+          event.type !== 'journal' && event.id !== entry.id && event.start.startsWith(entry.start)
+      ),
+    [events, entry.id, entry.start]
+  )
+
+  useEffect(() => {
+    let active = true
+    setAttachments(entry.attachments || [])
+    getAttachments(entry.id)
+      .then((loaded) => {
+        if (active && loaded.length > 0) setAttachments(loaded)
+      })
+      .catch(() => {})
+    return () => {
+      active = false
+    }
+  }, [entry.id, entry.attachments])
+
+  useEffect(() => {
+    setShowMore(Boolean(entry.url || entry.attachments?.length || entry.relatedTo?.length))
+  }, [entry.id, entry.url, entry.attachments, entry.relatedTo])
+
+  useEffect(() => {
+    if (focusVersion > 0) requestAnimationFrame(() => titleRef.current?.focus())
+  }, [focusVersion])
+
+  useEffect(() => {
+    if (mode !== 'read') return
+    const onKeyDown = (event: KeyboardEvent): void => {
+      if (
+        event.key !== 'ArrowLeft' &&
+        event.key !== 'ArrowRight' &&
+        event.key !== 'ArrowUp' &&
+        event.key !== 'ArrowDown'
+      )
+        return
+      if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement)
+        return
+      event.preventDefault()
+      onNavigate(event.key === 'ArrowLeft' || event.key === 'ArrowUp' ? -1 : 1)
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [mode, onNavigate])
+
+  const updateBody = (value: string): void => onChange({ description: value })
+  const updateTags = (tags: string[]): void =>
+    onChange({ categories: tags.length ? tags : undefined })
+  const wrapSelection = (marker: string): void => {
+    const textarea = bodyRef.current
+    if (!textarea) return
+    const result = wrapMarkdownSelection(
+      textarea.value,
+      textarea.selectionStart,
+      textarea.selectionEnd,
+      marker
+    )
+    updateBody(result.value)
+    requestAnimationFrame(() => {
+      textarea.focus()
+      textarea.setSelectionRange(result.selectionStart, result.selectionEnd)
+    })
+  }
+  const handleBodyKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>): void => {
+    if ((event.metaKey || event.ctrlKey) && (event.key === 'b' || event.key === 'i')) {
+      event.preventDefault()
+      wrapSelection(event.key === 'b' ? '**' : '*')
+    }
+  }
+  const handleAttachmentsChange = (next: CalendarAttachment[]): void => {
+    setAttachments(next)
+    onChange({ attachments: next.length ? next : undefined })
+    putAttachments(entry.id, next).catch(() => showToast('Failed to save attachments locally'))
+  }
+  const statusLabel =
+    status === 'unsaved'
+      ? 'Unsaved changes'
+      : status === 'saving'
+        ? 'Saving…'
+        : status === 'error'
+          ? 'Sync failed'
+          : entry.description?.trim()
+            ? 'Saved'
+            : 'Draft saved locally'
+
+  return (
+    <section
+      className={`${styles.editorPane} ${overlayOpen ? styles.editorOpen : ''}`}
+      data-component="journal-editor"
+    >
+      <div className={styles.editorTopbar}>
+        <button className={styles.backButton} type="button" onClick={onCloseNarrow}>
+          ← All entries
+        </button>
+      </div>
+
+      <div className={styles.editorHeader} data-component="journal-editor-header">
+        <div className={styles.editorDateRow}>
+          {showDatePicker ? (
+            <input
+              type="date"
+              className={styles.dateInput}
+              value={entry.start}
+              onChange={(event) => {
+                onChange({ start: event.target.value, end: event.target.value })
+                setShowDatePicker(false)
+              }}
+              onBlur={() => setShowDatePicker(false)}
+              onKeyDown={(event) => {
+                if (event.key === 'Escape') {
+                  event.preventDefault()
+                  setShowDatePicker(false)
+                }
+              }}
+              autoFocus
+            />
+          ) : (
+            <button
+              className={styles.dateButton}
+              type="button"
+              title="Click to change date"
+              onClick={() => setShowDatePicker(true)}
+            >
+              <span className={styles.editorDay}>{day}</span>
+              <span className={styles.editorWeekday}>{weekday}</span>
+              <span className={styles.editorMonthYear}>{monthYear}</span>
+            </button>
+          )}
+        </div>
+        <div className={styles.editorHeading}>
+          {mode === 'write' ? (
+            <input
+              ref={titleRef}
+              className={styles.titleInput}
+              data-component="journal-title-input"
+              placeholder="Title (optional)"
+              value={entry.title || ''}
+              onChange={(event) => onChange({ title: event.target.value })}
+            />
+          ) : (
+            <h1 className={styles.editorTitle}>{entry.title || 'Untitled entry'}</h1>
+          )}
+          <TagEditor
+            tags={entry.categories || []}
+            onChange={updateTags}
+            className={styles.headerTags}
+          />
+          {writableCalendars.length > 1 && (
+            <div className={styles.calendarRow} role="radiogroup" aria-label="Calendar">
+              {writableCalendars.map((calendar) => {
+                const selected = calendar.id === entry.calendarId
+                return (
+                  <button
+                    key={calendar.id}
+                    type="button"
+                    role="radio"
+                    aria-checked={selected}
+                    className={`${styles.calendarChip} ${selected ? styles.calendarChipActive : ''}`}
+                    data-component="journal-calendar-chip"
+                    data-calendar-id={calendar.id}
+                    style={{ '--chip-color': calendar.color } as React.CSSProperties}
+                    onClick={() => onChange({ calendarId: calendar.id })}
+                  >
+                    <span
+                      className={styles.calendarDot}
+                      style={{ backgroundColor: selected ? calendar.color : 'transparent' }}
+                    />
+                    {calendar.name}
+                  </button>
+                )
+              })}
+            </div>
+          )}
+        </div>
+        <button
+          className={styles.editorDelete}
+          type="button"
+          onClick={onDelete}
+          aria-label="Delete entry"
+          title="Delete entry"
+        >
+          <Trash2 size={15} strokeWidth={1.8} />
+        </button>
+      </div>
+
+      <div className={styles.editorScroll}>
+        {mode === 'write' ? (
+          <textarea
+            ref={bodyRef}
+            className={styles.bodyInput}
+            data-component="journal-body-input"
+            placeholder="Write something…"
+            value={entry.description || ''}
+            onChange={(event) => updateBody(event.target.value)}
+            onKeyDown={handleBodyKeyDown}
+          />
+        ) : (
+          <article
+            className={styles.readView}
+            data-component="journal-read-view"
+            onDoubleClick={() => {
+              onModeChange('write')
+              requestAnimationFrame(() => bodyRef.current?.focus())
+            }}
+          >
+            <MarkdownView text={entry.description || ''} />
+          </article>
+        )}
+
+        <div className={styles.moreSection}>
+          <button
+            type="button"
+            className={styles.moreToggle}
+            onClick={() => setShowMore((value) => !value)}
+          >
+            {showMore ? '− Less' : '+ More'}
+          </button>
+          {showMore && (
+            <div className={styles.moreContent}>
+              <input
+                type="url"
+                className={styles.urlInput}
+                aria-label="Entry link"
+                placeholder="https://example.com"
+                value={entry.url || ''}
+                onChange={(event) => onChange({ url: event.target.value || undefined })}
+              />
+              <AttachmentSection
+                attachments={attachments}
+                onAttachmentsChange={handleAttachmentsChange}
+                eventId={entry.id}
+                showLabel={false}
+              />
+              {relatedEvents.length > 0 && (
+                <div className={styles.relatedList}>
+                  {relatedEvents.map((event) => {
+                    const selected = entry.relatedTo?.includes(event.id) ?? false
+                    return (
+                      <button
+                        type="button"
+                        key={event.id}
+                        className={`${styles.relatedChip} ${selected ? styles.relatedChipActive : ''}`}
+                        onClick={() => {
+                          const related = entry.relatedTo || []
+                          onChange({
+                            relatedTo: selected
+                              ? related.filter((id) => id !== event.id)
+                              : [...related, event.id],
+                          })
+                        }}
+                      >
+                        {event.title || '(untitled)'}
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className={styles.editorBottom} data-component="journal-editor-footer">
+        <div className={styles.editorBottomInfo}>
+          <div className={styles.modeSwitch} role="group" aria-label="Editor mode">
+            <button
+              type="button"
+              className={mode === 'write' ? styles.modeActive : ''}
+              onClick={() => onModeChange('write')}
+            >
+              Write
+            </button>
+            <button
+              type="button"
+              className={mode === 'read' ? styles.modeActive : ''}
+              onClick={() => onModeChange('read')}
+            >
+              Read
+            </button>
+          </div>
+          {mode === 'write' && (
+            <>
+              <span>{wordCount(entry.description || '')} words</span>
+              <span>{navigator.userAgent.includes('Mac') ? '⌘' : 'Ctrl'} + B / I to format</span>
+            </>
+          )}
+          {mode === 'read' && <span>Markdown supported</span>}
+        </div>
+        <div className={styles.editorBottomActions}>
+          <span className={styles.saveStatus} data-component="journal-save-status">
+            <span className={`${styles.statusDot} ${styles[`status${status}`]}`} />
+            {statusLabel}
+          </span>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+interface JournalEntryRowProps {
+  entry: CalendarEvent
+  selected: boolean
+  removing: boolean
+  confirmDelete: boolean
+  onSelect: () => void
+  onDelete: () => void
+}
+
+const JournalEntryRow = memo(function JournalEntryRow({
+  entry,
+  selected,
+  removing,
+  confirmDelete,
+  onSelect,
+  onDelete,
+}: JournalEntryRowProps): JSX.Element {
+  const date = formatEntryDate(entry.start)
   return (
     <article
-      className={`${styles.entry} ${isLast ? styles.entryNoBorder : ''}`}
+      className={`${styles.entryRow} ${selected ? styles.entrySelected : ''} ${removing ? styles.entryRemoving : ''}`}
+      data-component="journal-entry-row"
       data-date={entry.start}
-      onDoubleClick={() => onDoubleClick(entry)}
+      data-entry-id={entry.id}
+      aria-current={selected ? 'true' : undefined}
+      onClick={onSelect}
     >
-      <div className={styles.dateCol}>
-        <span className={styles.dayNum}>{day}</span>
-        <span className={styles.weekday}>{weekday}</span>
-        <span className={styles.monthYear}>{monthYear}</span>
+      <div className={styles.rowDate}>
+        <strong>{date.day}</strong>
+        <span>{date.weekday}</span>
+        <small>{date.monthYear}</small>
       </div>
-      <div className={styles.content}>
-        {entry.title && <div className={styles.summary}>{entry.title}</div>}
-        <MarkdownView className={styles.body} text={entry.description || ''} />
+      <div className={styles.rowContent}>
+        <div className={styles.rowTitle}>{entry.title || 'Untitled entry'}</div>
+        <div className={styles.rowSnippet}>{entry.description || 'No text yet'}</div>
         {entry.categories && entry.categories.length > 0 && (
-          <div className={styles.entryCategories}>
-            {entry.categories.map((cat) => (
-              <span key={cat} className={styles.entryCategoryTag}>
-                {cat}
-              </span>
+          <div className={styles.rowTags}>
+            {entry.categories.map((tag) => (
+              <span key={tag}>{tag}</span>
             ))}
-          </div>
-        )}
-        {entry.url && (
-          <a
-            href={entry.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={styles.entryLink}
-          >
-            🔗 {entry.url}
-          </a>
-        )}
-        {entry.relatedTo && entry.relatedTo.length > 0 && (
-          <div className={styles.entryRelated}>
-            {entry.relatedTo.map((relId) => {
-              const relatedEvent = eventIndex.get(relId)
-              if (!relatedEvent) return null
-              return (
-                <span key={relId} className={styles.entryRelatedTag}>
-                  ↗ {relatedEvent.title || '(untitled)'}
-                </span>
-              )
-            })}
           </div>
         )}
       </div>
       <button
-        className={`${styles.deleteBtn} ${confirmDeleteId === entry.id ? styles.deleteBtnConfirm : ''}`}
-        title={confirmDeleteId === entry.id ? 'Click to confirm delete' : 'Delete entry'}
-        onClick={(e) => {
-          e.stopPropagation()
-          onDelete(entry.id)
+        type="button"
+        className={`${styles.rowDelete} ${confirmDelete ? styles.rowDeleteConfirm : ''}`}
+        aria-label={confirmDelete ? 'Confirm delete entry' : 'Delete entry'}
+        title={confirmDelete ? 'Click to confirm delete' : 'Delete entry'}
+        onClick={(event) => {
+          event.stopPropagation()
+          onDelete()
         }}
       >
-        <svg
-          viewBox="0 0 16 16"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path d="M2 4h12" />
-          <path d="M5.333 4V2.667a1.333 1.333 0 011.334-1.334h2.666a1.333 1.333 0 011.334 1.334V4" />
-          <path d="M12.667 4v9.333a1.333 1.333 0 01-1.334 1.334H4.667a1.333 1.333 0 01-1.334-1.334V4" />
-        </svg>
+        ×
       </button>
     </article>
   )
 })
 
-// ── Main component ───────────────────────────────────────────────────────────
-
 export function JournalView(): JSX.Element {
-  // const navigate = useNavigate()
   const events = useCalendarStore((state) => state.events)
   const addEvent = useCalendarStore((state) => state.addEvent)
   const updateEvent = useCalendarStore((state) => state.updateEvent)
   const deleteEvent = useCalendarStore((state) => state.deleteEvent)
   const calendars = useCalendarStore((state) => state.calendars)
+  const currentDate = useCalendarStore((state) => state.currentDate)
   const {
     createEvent: createCalDAVEvent,
     updateEvent: updateCalDAVEvent,
@@ -489,346 +507,287 @@ export function JournalView(): JSX.Element {
     deleteEventByHref: deleteCalDAVEventByHref,
   } = useCalDAV()
 
-  const [isComposing, setIsComposing] = useState(false)
-  const [isClosing, setIsClosing] = useState(false)
-  const [editingId, setEditingId] = useState<string | null>(null)
-  const [title, setTitle] = useState('')
-  const [body, setBody] = useState('')
-  // Never observed: both paths that open the compose form (handleStartEdit and
-  // handleStartCompose) set editingDate first. Kept local anyway so the two
-  // spellings can't drift — see the note on handleStartCompose.
-  const [editingDate, setEditingDate] = useState(toLocalDateString(new Date()))
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([])
-  const [attachments, setAttachments] = useState<CalendarAttachment[]>([])
-  const [url, setUrl] = useState('')
-  const [relatedTo, setRelatedTo] = useState<string[]>([])
-  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<'month' | 'all'>('month')
-  const [calendarId, setCalendarId] = useState<string>('')
+  const [editorMode, setEditorMode] = useState<EditorMode>('read')
+  const [listOnly, setListOnly] = useState(true)
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [overlayOpen, setOverlayOpen] = useState(false)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  const [focusVersion, setFocusVersion] = useState(0)
+  const [saveStatuses, setSaveStatuses] = useState<Record<string, SaveStatus>>({})
+  const [removingIds, setRemovingIds] = useState<Set<string>>(new Set())
+  const [listFade, setListFade] = useState({ top: false, bottom: false })
+  const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0 })
   const segmentedRef = useRef<HTMLDivElement>(null)
-  const pageRef = useRef<HTMLDivElement>(null)
+  const listScrollRef = useRef<HTMLDivElement>(null)
   const tabRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
-  const [indicatorStyle, setIndicatorStyle] = useState<{ left: number; width: number }>({
-    left: 0,
-    width: 0,
-  })
-
-  // Use store's currentDate for month filtering
-  const currentDate = useCalendarStore((state) => state.currentDate)
-
-  const titleInputRef = useRef<HTMLInputElement>(null)
-  const bodyInputRef = useRef<HTMLTextAreaElement>(null)
-
-  // Refs for stable values used in callbacks (#9)
   const eventsRef = useRef(events)
   const calendarsRef = useRef(calendars)
-  // Keep refs in sync with state
+  const syncBaseRef = useRef<Map<string, CalendarEvent>>(new Map())
+  const timersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
+  const removalTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
+  const removingIdsRef = useRef<Set<string>>(new Set())
+  const draftIdsRef = useRef<Set<string>>(new Set())
+  const flushPendingRef = useRef<() => void>(() => {})
+
   useEffect(() => {
     eventsRef.current = events
-  })
+  }, [events])
   useEffect(() => {
     calendarsRef.current = calendars
-  })
+  }, [calendars])
 
-  // Entries live in calendars, so the sidebar's visibility checkboxes gate them
-  // exactly like events and tasks (issue #88).
   const visibleCalendarIds = useMemo(
-    () => new Set(calendars.filter((c) => c.isVisible).map((c) => c.id)),
+    () =>
+      new Set(calendars.filter((calendar) => calendar.isVisible).map((calendar) => calendar.id)),
     [calendars]
   )
-  const visibleJournalEntries = useMemo(
-    () => events.filter((e) => isJournalEntryVisible(e, visibleCalendarIds)),
+  const visibleEntries = useMemo(
+    () => events.filter((event) => isJournalEntryVisible(event, visibleCalendarIds)),
     [events, visibleCalendarIds]
   )
+  const entries = useMemo(() => {
+    const filtered =
+      viewMode === 'month'
+        ? visibleEntries.filter((entry) => entry.start.startsWith(currentDate.slice(0, 7)))
+        : visibleEntries
+    return [...filtered].sort((a, b) => b.start.localeCompare(a.start) || b.id.localeCompare(a.id))
+  }, [currentDate, viewMode, visibleEntries])
+  const updateListFade = useCallback((): void => {
+    const element = listScrollRef.current
+    if (!element) return
+    const top = element.scrollTop > 1
+    const bottom = element.scrollTop + element.clientHeight < element.scrollHeight - 1
+    setListFade((current) =>
+      current.top === top && current.bottom === bottom ? current : { top, bottom }
+    )
+  }, [])
+  const activeId = selectedId
+  const selectedEntry = entries.find((entry) => entry.id === activeId) || null
+  const writableCalendars = useMemo(
+    () => calendars.filter((calendar) => !calendar.readOnly),
+    [calendars]
+  )
+  const defaultCalendarId = useMemo(
+    () =>
+      (writableCalendars.find((calendar) => calendar.isDefault) || writableCalendars[0])?.id ||
+      'default',
+    [writableCalendars]
+  )
 
-  const writableCalendars = useMemo(() => calendars.filter((c) => !c.readOnly), [calendars])
-  const defaultCalendarId = useMemo(() => {
-    const preferred = writableCalendars.find((c) => c.isDefault) ?? writableCalendars[0]
-    return preferred?.id ?? 'default'
-  }, [writableCalendars])
-
-  // Group journal entries by month
-  const groupedEntries = useMemo(() => {
-    const journalEntries = visibleJournalEntries
-
-    let filtered: typeof journalEntries
-    if (viewMode === 'month') {
-      const monthKey = currentDate.slice(0, 7) // yyyy-MM
-      filtered = journalEntries.filter((e) => e.start.startsWith(monthKey))
-    } else {
-      filtered = [...journalEntries].sort((a, b) => b.start.localeCompare(a.start))
-    }
-
-    // Group by month
-    const groups = new Map<string, typeof journalEntries>()
-    for (const entry of filtered) {
-      const monthKey = entry.start.slice(0, 7)
-      const existing = groups.get(monthKey) || []
-      existing.push(entry)
-      groups.set(monthKey, existing)
-    }
-
-    return [...groups.entries()]
-      .sort(([a], [b]) => b.localeCompare(a)) // newest month first
-      .map(([monthKey, entries]) => ({
-        monthKey,
-        entries: entries.sort((a, b) => b.start.localeCompare(a.start)),
-      }))
-  }, [visibleJournalEntries, currentDate, viewMode])
-
-  // Flat sorted list for virtualized 'all' mode
-  const allEntries = useMemo(() => {
-    if (viewMode !== 'all') return []
-    return [...visibleJournalEntries].sort((a, b) => b.start.localeCompare(a.start))
-  }, [visibleJournalEntries, viewMode])
-
-  // Virtualizer for 'all' mode
-  const virtualizer = useVirtualizer({
-    count: allEntries.length,
-    getScrollElement: () => pageRef.current,
-    estimateSize: () => 120,
-    overscan: 5,
-  })
-
-  const totalCount = visibleJournalEntries.length
-
-  // Index events by id so related-event lookups in the entry list are O(1).
-  const eventIndex = useMemo(() => buildEventIndex(events), [events])
-
-  // Focus input when composing
+  const setStatus = useCallback(
+    (id: string, status: SaveStatus) =>
+      setSaveStatuses((current) => ({ ...current, [id]: status })),
+    []
+  )
+  const syncEntry = useCallback(
+    (id: string): void => {
+      timersRef.current.delete(id)
+      const entry = eventsRef.current.find((event) => event.id === id)
+      if (!entry) return
+      if (!entry.description?.trim()) {
+        setStatus(id, 'saved')
+        return
+      }
+      const existing = syncBaseRef.current.get(id)
+      const targetCalendar = calendarsRef.current.find(
+        (calendar) => calendar.id === entry.calendarId
+      )
+      if (!targetCalendar || (entry.calendarId === 'default' && !existing?.resourceHref)) {
+        syncBaseRef.current.set(id, { ...entry })
+        setStatus(id, 'saved')
+        return
+      }
+      setStatus(id, 'saving')
+      if (!existing) {
+        createCalDAVEvent(entry.calendarId, entry)
+          .then(() => {
+            syncBaseRef.current.set(id, {
+              ...(eventsRef.current.find((item) => item.id === id) || entry),
+            })
+            setStatus(id, 'saved')
+          })
+          .catch(() => setStatus(id, 'error'))
+        return
+      }
+      syncJournalEntryToServer({
+        existing,
+        targetCalendarId: entry.calendarId,
+        syncedEntry: entry,
+        updateCalDAVEvent,
+        createCalDAVEvent,
+        deleteCalDAVEventByHref,
+        showToast: (message) => {
+          showToast(message)
+          setStatus(id, 'error')
+        },
+      })
+      syncBaseRef.current.set(id, { ...entry })
+      setStatus(id, 'saved')
+    },
+    [createCalDAVEvent, deleteCalDAVEventByHref, setStatus, updateCalDAVEvent]
+  )
+  const scheduleSync = useCallback(
+    (id: string): void => {
+      const timer = timersRef.current.get(id)
+      if (timer) clearTimeout(timer)
+      setStatus(id, 'unsaved')
+      timersRef.current.set(
+        id,
+        setTimeout(() => syncEntry(id), 500)
+      )
+    },
+    [setStatus, syncEntry]
+  )
+  const flushEntry = useCallback(
+    (id: string): void => {
+      const timer = timersRef.current.get(id)
+      if (timer) {
+        clearTimeout(timer)
+        syncEntry(id)
+      }
+    },
+    [syncEntry]
+  )
   useEffect(() => {
-    if (isComposing) {
-      setTimeout(() => titleInputRef.current?.focus(), 80)
+    flushPendingRef.current = () => {
+      for (const id of timersRef.current.keys()) flushEntry(id)
     }
-  }, [isComposing])
+    return () => flushPendingRef.current()
+  }, [flushEntry])
+  useEffect(
+    () => () => {
+      for (const timer of removalTimersRef.current.values()) clearTimeout(timer)
+    },
+    []
+  )
 
-  // Reset confirmDeleteId when switching entries or entering/exiting compose
+  useEffect(() => {
+    if (selectedId && !selectedEntry) {
+      setSelectedId(entries[0]?.id || null)
+      setOverlayOpen(false)
+    }
+  }, [entries, selectedEntry, selectedId])
   useEffect(() => {
     setConfirmDeleteId(null)
-  }, [editingId, isComposing])
-
-  // Sliding indicator for view mode tabs
+  }, [selectedId])
+  useLayoutEffect(() => {
+    updateListFade()
+    window.addEventListener('resize', updateListFade)
+    return () => window.removeEventListener('resize', updateListFade)
+  }, [entries.length, listOnly, updateListFade, viewMode])
   useLayoutEffect(() => {
     const container = segmentedRef.current
-    const activeTab = tabRefs.current.get(viewMode)
-    if (container && activeTab) {
+    const tab = tabRefs.current.get(viewMode)
+    if (container && tab) {
       const containerRect = container.getBoundingClientRect()
-      const tabRect = activeTab.getBoundingClientRect()
-      setIndicatorStyle({
-        left: tabRect.left - containerRect.left,
-        width: tabRect.width,
-      })
+      const tabRect = tab.getBoundingClientRect()
+      setIndicatorStyle({ left: tabRect.left - containerRect.left, width: tabRect.width })
     }
   }, [viewMode])
-
-  const handleSaveEntry = (): void => {
-    const trimmedBody = body.trim()
-    if (!trimmedBody) {
-      bodyInputRef.current?.focus()
-      return
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent): void => {
+      if (event.key === 'Escape' && overlayOpen) {
+        if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement)
+          return
+        event.preventDefault()
+        flushPendingRef.current()
+        setOverlayOpen(false)
+        setListOnly(true)
+      }
     }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [overlayOpen])
 
-    const trimmedTitle = title.trim()
+  const handleSelect = useCallback(
+    (id: string): void => {
+      if (selectedId === id) {
+        flushEntry(id)
+        const open = listOnly
+        setListOnly(!open)
+        setOverlayOpen(open)
+        if (open) setEditorMode('read')
+        return
+      }
+      if (selectedId && selectedId !== id) flushEntry(selectedId)
+      if (!draftIdsRef.current.has(id) && !syncBaseRef.current.has(id)) {
+        const entry = eventsRef.current.find((event) => event.id === id)
+        if (entry) syncBaseRef.current.set(id, { ...entry })
+      }
+      setSelectedId(id)
+      setOverlayOpen(true)
+      setEditorMode('read')
+      setListOnly(false)
+    },
+    [flushEntry, listOnly, selectedId]
+  )
+  const handleCreate = useCallback((): void => {
+    flushPendingRef.current()
+    const today = toLocalDateString(new Date())
+    const date =
+      viewMode === 'month' && !today.startsWith(currentDate.slice(0, 7))
+        ? `${currentDate.slice(0, 7)}-01`
+        : today
     const now = new Date().toISOString()
-    const currentEvents = eventsRef.current
-    const currentCalendars = calendarsRef.current
-
-    if (editingId) {
-      // Update existing entry
-      const existing = currentEvents.find((e) => e.id === editingId)
-      if (existing) {
-        const updates: Partial<CalendarEvent> = {
-          title: trimmedTitle,
-          description: trimmedBody,
-          start: editingDate,
-          end: editingDate,
-          lastModified: now,
-          calendarId,
-          categories: selectedCategories.length > 0 ? selectedCategories : undefined,
-          url: url || undefined,
-          attachments: attachments.length > 0 ? attachments : undefined,
-          relatedTo: relatedTo.length > 0 ? relatedTo : undefined,
-          // Moving to the Offline calendar deletes the server resource; drop
-          // the now-stale server metadata so the entry is a clean local-only
-          // record (no dangling href/etag/syncStatus pointing at a 404).
-          ...(calendarId === 'default'
-            ? { resourceHref: undefined, etag: undefined, syncStatus: undefined }
-            : {}),
-        }
-        updateEvent(editingId, updates)
-
-        const syncedEntry: CalendarEvent = { ...existing, ...updates }
-        // Push to the server, routing by where the entry came from and where
-        // it is going (see syncJournalEntryToServer — shared with
-        // JournalDayModal so the branches can't drift apart).
-        const syncToServer = (): void =>
-          syncJournalEntryToServer({
-            existing,
-            targetCalendarId: calendarId,
-            syncedEntry,
-            updateCalDAVEvent,
-            createCalDAVEvent,
-            deleteCalDAVEventByHref,
-            showToast,
-          })
-
-        // Sync attachments to IDB, then push to server
-        if (attachments.length > 0) {
-          putAttachments(editingId, attachments)
-            .then(() => syncToServer())
-            .catch(() => {
-              showToast('Failed to save attachments locally')
-            })
-        } else {
-          deleteAttachments(editingId).catch(() => {})
-          syncToServer()
-        }
+    const id = uuidv4()
+    addEvent({
+      id,
+      calendarId: defaultCalendarId,
+      title: '',
+      description: '',
+      start: date,
+      end: date,
+      isAllDay: true,
+      type: 'journal',
+      created: now,
+      lastModified: now,
+    })
+    draftIdsRef.current.add(id)
+    syncBaseRef.current.delete(id)
+    setSaveStatuses((current) => ({ ...current, [id]: 'unsaved' }))
+    setSelectedId(id)
+    setOverlayOpen(true)
+    setEditorMode('write')
+    setListOnly(false)
+    setFocusVersion((version) => version + 1)
+  }, [addEvent, currentDate, defaultCalendarId, viewMode])
+  const handleChange = useCallback(
+    (updates: Partial<CalendarEvent>): void => {
+      const activeId = selectedId || entries[0]?.id
+      if (!activeId) return
+      if (!draftIdsRef.current.has(activeId) && !syncBaseRef.current.has(activeId)) {
+        const entry = eventsRef.current.find((event) => event.id === activeId)
+        if (entry) syncBaseRef.current.set(activeId, { ...entry })
       }
-    } else {
-      // Create new entry — honour the picker, falling back to the default
-      // calendar when it was never shown (single writable calendar).
-      const defaultCalendar =
-        currentCalendars.find((c) => c.id === calendarId) ??
-        currentCalendars.find((c) => c.isDefault) ??
-        currentCalendars[0]
-      const newId = uuidv4()
-      const newEntry: CalendarEvent = {
-        id: newId,
-        calendarId: defaultCalendar?.id || 'default',
-        title: trimmedTitle,
-        description: trimmedBody,
-        start: editingDate,
-        end: editingDate,
-        isAllDay: true,
-        type: 'journal',
-        created: now,
-        lastModified: now,
-        categories: selectedCategories.length > 0 ? selectedCategories : undefined,
-        url: url || undefined,
-        attachments: attachments.length > 0 ? attachments : undefined,
-        relatedTo: relatedTo.length > 0 ? relatedTo : undefined,
+      const safeUpdates: Partial<CalendarEvent> = {
+        ...updates,
+        lastModified: new Date().toISOString(),
       }
-      addEvent(newEntry)
-      if (attachments.length > 0) {
-        // Await IDB write before pushing to server (C2 race condition fix)
-        putAttachments(newId, attachments)
-          .then(() => {
-            // Clean up the 'new' key used during composition
-            deleteAttachments('new').catch(() => {})
-            if (defaultCalendar?.id !== 'default') {
-              createCalDAVEvent(newEntry.calendarId, newEntry).catch(() => {
-                showToast('Failed to sync entry. It will be retried.')
-              })
-            }
-          })
-          .catch(() => {
-            showToast('Failed to save attachments locally')
-          })
-      } else {
-        deleteAttachments('new').catch(() => {})
-        if (defaultCalendar?.id !== 'default') {
-          createCalDAVEvent(newEntry.calendarId, newEntry).catch(() => {
-            showToast('Failed to sync entry. It will be retried.')
-          })
-        }
-      }
-    }
-
-    setIsClosing(true)
-    setTimeout(() => {
-      setIsComposing(false)
-      setIsClosing(false)
-      setEditingId(null)
-      setTitle('')
-      setBody('')
-      setSelectedCategories([])
-      setAttachments([])
-      setUrl('')
-      setRelatedTo([])
-    }, 200)
-  }
-
-  // Keyboard shortcuts — use ref for handleSaveEntry to avoid stale closure (#10)
-  const handleSaveEntryRef = useRef(handleSaveEntry)
-  useEffect(() => {
-    handleSaveEntryRef.current = handleSaveEntry
-  })
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape' && isComposing) {
-        setIsClosing(true)
-        setTimeout(() => {
-          setIsComposing(false)
-          setIsClosing(false)
-          setTitle('')
-          setBody('')
-        }, 200)
-      }
-      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && isComposing) {
-        e.preventDefault()
-        handleSaveEntryRef.current()
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isComposing])
-
-  const handleStartEdit = useCallback((entry: CalendarEvent): void => {
-    setEditingId(entry.id)
-    setCalendarId(entry.calendarId)
-    setTitle(entry.title || '')
-    setBody(entry.description || '')
-    setEditingDate(entry.start)
-    setSelectedCategories(entry.categories || [])
-    setUrl(entry.url || '')
-    setRelatedTo(entry.relatedTo || [])
-    setIsComposing(true)
-    // Open add panel if entry has any extra content
-    // setShowAddPanel(hasExtra) — JournalComposeForm manages its own state
-    // Load attachments from IndexedDB
-    getAttachments(entry.id)
-      .then((loaded) => {
-        setAttachments(loaded.length > 0 ? loaded : entry.attachments || [])
-      })
-      .catch(() => {
-        setAttachments(entry.attachments || [])
-      })
-  }, [])
-
-  const handleStartCompose = useCallback((): void => {
-    // If already composing, close with animation
-    if (isComposing) {
-      setIsClosing(true)
-      setTimeout(() => {
-        setIsComposing(false)
-        setIsClosing(false)
-        setEditingId(null)
-        setTitle('')
-        setBody('')
-      }, 200)
-      return
-    }
-    setEditingId(null)
-    setTitle('')
-    setBody('')
-    // Local, not UTC: DTSTART for a journal entry is a floating date, so a UTC
-    // "today" files evening entries west of UTC under tomorrow (issue #116).
-    // This is the line the fix turns on — it sets the date every new entry gets.
-    setEditingDate(toLocalDateString(new Date()))
-    setSelectedCategories([])
-    setAttachments([])
-    setUrl('')
-    setRelatedTo([])
-    setCalendarId(defaultCalendarId)
-    setIsComposing(true)
-  }, [isComposing, defaultCalendarId])
-
-  const handleDelete = useCallback(
+      if (safeUpdates.categories)
+        safeUpdates.categories = [
+          ...new Set(safeUpdates.categories.map((tag) => tag.trim().toLowerCase()).filter(Boolean)),
+        ]
+      updateEvent(activeId, safeUpdates)
+      scheduleSync(activeId)
+    },
+    [entries, scheduleSync, selectedId, updateEvent]
+  )
+  const handleDeleteSelected = useCallback(
     (entryId: string): void => {
-      if (confirmDeleteId === entryId) {
-        const entry = eventsRef.current.find((e) => e.id === entryId)
-        if (entry) {
+      if (removingIdsRef.current.has(entryId)) return
+      removingIdsRef.current.add(entryId)
+      setRemovingIds(new Set(removingIdsRef.current))
+      const index = entries.findIndex((entry) => entry.id === entryId)
+      const next = entries[index + 1] || entries[index - 1]
+      setOverlayOpen(false)
+      const timer = setTimeout(() => {
+        removalTimersRef.current.delete(entryId)
+        removingIdsRef.current.delete(entryId)
+        setRemovingIds(new Set(removingIdsRef.current))
+        flushEntry(entryId)
+        const entry = eventsRef.current.find((event) => event.id === entryId)
+        if (entry)
           deleteEventWithUndo({
             event: entry,
             deleteEvent,
@@ -836,226 +795,129 @@ export function JournalView(): JSX.Element {
             createCalDAVEvent,
             deleteCalDAVEvent,
           })
-        }
-        setConfirmDeleteId(null)
-      } else {
-        // First click — show confirm
+        const pendingTimer = timersRef.current.get(entryId)
+        if (pendingTimer) clearTimeout(pendingTimer)
+        timersRef.current.delete(entryId)
+        syncBaseRef.current.delete(entryId)
+        draftIdsRef.current.delete(entryId)
+        setSelectedId(next?.id || null)
+      }, 220)
+      removalTimersRef.current.set(entryId, timer)
+    },
+    [addEvent, createCalDAVEvent, deleteCalDAVEvent, deleteEvent, entries, flushEntry]
+  )
+  const handleListDelete = useCallback(
+    (entryId: string): void => {
+      if (confirmDeleteId !== entryId) {
         setConfirmDeleteId(entryId)
+        return
       }
+      handleDeleteSelected(entryId)
+      setConfirmDeleteId(null)
     },
-    [confirmDeleteId, deleteEvent, deleteCalDAVEvent, addEvent, createCalDAVEvent]
+    [confirmDeleteId, handleDeleteSelected]
   )
-
-  const isMac = /Mac|iPod|iPhone|iPad/.test(navigator.userAgent)
-
-  // Format date for display in entry. The month/year line is what tells apart
-  // two entries on the same day number — the list has no month headings, and
-  // in 'all' mode it spans every year on record (issue #85).
-  const formatEntryDate = useCallback(
-    (dateStr: string): { day: string; weekday: string; monthYear: string } => {
-      const d = parseISO(dateStr)
-      return {
-        day: format(d, 'd'),
-        weekday: format(d, 'EEE').toUpperCase(),
-        monthYear: format(d, 'MMM yyyy').toUpperCase(),
-      }
+  const handleNavigate = useCallback(
+    (direction: -1 | 1): void => {
+      const index = entries.findIndex((entry) => entry.id === activeId)
+      const next = entries[index + direction]
+      if (next) handleSelect(next.id)
     },
-    []
+    [activeId, entries, handleSelect]
   )
-
-  const handleCancel = useCallback(() => {
-    setIsClosing(true)
-    setTimeout(() => {
-      setIsComposing(false)
-      setIsClosing(false)
-      setEditingId(null)
-      setTitle('')
-      setBody('')
-      setSelectedCategories([])
-      setAttachments([])
-      setUrl('')
-      setRelatedTo([])
-    }, 200)
-  }, [])
-
-  // Renders a single journal entry card (or inline compose form when editing).
-  // `isLast` suppresses the bottom divider — computed explicitly rather than
-  // via CSS :last-child since 'all' mode wraps each entry in its own
-  // virtualized container, which would make :last-child match every entry.
-  const renderEntryCard = (entry: CalendarEvent, isLast = false): JSX.Element => {
-    if (editingId === entry.id) {
-      return (
-        <JournalComposeForm
-          editingId={editingId}
-          editingDate={editingDate}
-          title={title}
-          body={body}
-          selectedCategories={selectedCategories}
-          attachments={attachments}
-          url={url}
-          relatedTo={relatedTo}
-          titleRef={titleInputRef}
-          bodyRef={bodyInputRef}
-          saveHint={`${isMac ? '⌘' : 'Ctrl+'} Return to save · Esc to cancel`}
-          formatEntryDate={formatEntryDate}
-          writableCalendars={writableCalendars}
-          calendarId={calendarId}
-          onCalendarChange={setCalendarId}
-          onTitleChange={setTitle}
-          onBodyChange={setBody}
-          onDateChange={setEditingDate}
-          onCategoriesChange={setSelectedCategories}
-          onAttachmentsChange={setAttachments}
-          onUrlChange={setUrl}
-          onRelatedToChange={setRelatedTo}
-          onSave={handleSaveEntry}
-          onCancel={handleCancel}
-        />
-      )
-    }
-
-    return (
-      <JournalEntryCard
-        key={entry.id}
-        entry={entry}
-        isLast={isLast}
-        confirmDeleteId={confirmDeleteId}
-        formatEntryDate={formatEntryDate}
-        eventIndex={eventIndex}
-        onDoubleClick={handleStartEdit}
-        onDelete={handleDelete}
-      />
-    )
-  }
 
   return (
-    <div className={styles.page} ref={pageRef}>
+    <div className={styles.page} data-component="journal-view">
       <div className={styles.inner}>
-        {/* Top bar */}
-        <div className={styles.bar}>
+        <div className={styles.bar} data-component="journal-toolbar">
           <div className={styles.count}>
-            <b>{totalCount}</b> {totalCount === 1 ? 'entry' : 'entries'}
+            <b>{visibleEntries.length}</b> {visibleEntries.length === 1 ? 'entry' : 'entries'}
           </div>
           <div className={styles.barControls}>
             <div className={styles.segmentedControl} ref={segmentedRef}>
-              <div
-                className={styles.tabIndicator}
-                style={{ left: indicatorStyle.left, width: indicatorStyle.width }}
-              />
-              <button
-                ref={(el) => {
-                  if (el) tabRefs.current.set('month', el)
-                }}
-                className={`${styles.segmentTab} ${viewMode === 'month' ? styles.segmentTabActive : ''}`}
-                data-component="journal-mode-month"
-                onClick={() => setViewMode('month')}
-              >
-                Month
-              </button>
-              <button
-                ref={(el) => {
-                  if (el) tabRefs.current.set('all', el)
-                }}
-                className={`${styles.segmentTab} ${viewMode === 'all' ? styles.segmentTabActive : ''}`}
-                data-component="journal-mode-all"
-                onClick={() => setViewMode('all')}
-              >
-                All
-              </button>
+              <div className={styles.tabIndicator} style={indicatorStyle} />
+              {(['month', 'all'] as const).map((mode) => (
+                <button
+                  key={mode}
+                  ref={(element) => {
+                    if (element) tabRefs.current.set(mode, element)
+                  }}
+                  className={`${styles.segmentTab} ${viewMode === mode ? styles.segmentTabActive : ''}`}
+                  data-component={`journal-mode-${mode}`}
+                  type="button"
+                  onClick={() => setViewMode(mode)}
+                >
+                  {mode === 'month' ? 'Month' : 'All'}
+                </button>
+              ))}
             </div>
             <button
               className={styles.addEntry}
               data-component="journal-new-entry"
-              onClick={handleStartCompose}
+              type="button"
+              onClick={handleCreate}
             >
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 14 14"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-              >
-                <path d="M7 1v12M1 7h12" />
-              </svg>
-              New<span className={styles.addEntryFull}> entry</span>
+              <span aria-hidden="true">+</span> New
+              <span className={styles.addEntryFull}> entry</span>
             </button>
           </div>
         </div>
-
-        {/* Compose form (at top when composing new entry only) */}
-        {isComposing && !editingId && (
-          <JournalComposeForm
-            editingId={editingId}
-            editingDate={editingDate}
-            title={title}
-            body={body}
-            selectedCategories={selectedCategories}
-            attachments={attachments}
-            url={url}
-            relatedTo={relatedTo}
-            titleRef={titleInputRef}
-            bodyRef={bodyInputRef}
-            saveHint={`${isMac ? '⌘' : 'Ctrl+'} Return to save · Esc to cancel`}
-            closing={isClosing}
-            formatEntryDate={formatEntryDate}
-            writableCalendars={writableCalendars}
-            calendarId={calendarId}
-            onCalendarChange={setCalendarId}
-            onTitleChange={setTitle}
-            onBodyChange={setBody}
-            onDateChange={setEditingDate}
-            onCategoriesChange={setSelectedCategories}
-            onAttachmentsChange={setAttachments}
-            onUrlChange={setUrl}
-            onRelatedToChange={setRelatedTo}
-            onSave={handleSaveEntry}
-            onCancel={handleCancel}
-          />
-        )}
-
-        {/* Entry list */}
-        {groupedEntries.length === 0 && !isComposing ? (
-          <div className={styles.empty}>
-            <h2 className={styles.emptyTitle}>Nothing written yet</h2>
-            Start capturing your days — one entry at a time.
-          </div>
-        ) : viewMode === 'month' ? (
-          /* Month mode — bounded, no virtualization needed */
-          groupedEntries.map(({ monthKey, entries }) => (
-            <section key={monthKey} className={styles.monthGroup}>
-              {entries.map((entry, index) => (
-                <React.Fragment key={entry.id}>
-                  {renderEntryCard(entry, index === entries.length - 1)}
-                </React.Fragment>
-              ))}
-            </section>
-          ))
-        ) : (
-          /* All mode — virtualized flat list */
-          <div style={{ position: 'relative', height: `${virtualizer.getTotalSize()}px` }}>
-            {virtualizer.getVirtualItems().map((virtualRow) => {
-              const entry = allEntries[virtualRow.index]
-              return (
-                <div
-                  key={entry.id}
-                  ref={virtualizer.measureElement}
-                  data-index={virtualRow.index}
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
-                    transform: `translateY(${virtualRow.start}px)`,
-                  }}
-                >
-                  {renderEntryCard(entry, virtualRow.index === allEntries.length - 1)}
+        <div className={`${styles.layout} ${listOnly ? styles.layoutListOnly : ''}`}>
+          <aside className={styles.listPane} data-component="journal-entry-list">
+            <div className={styles.listHeader} data-component="journal-list-header">
+              <span>
+                {viewMode === 'month'
+                  ? format(parseISO(`${currentDate.slice(0, 7)}-01`), 'MMMM yyyy')
+                  : 'All entries'}
+              </span>
+            </div>
+            <div
+              ref={listScrollRef}
+              className={`${styles.listScroll} ${listFade.top ? styles.listScrollFadeTop : ''} ${listFade.bottom ? styles.listScrollFadeBottom : ''}`}
+              data-component="journal-list-scroll"
+              onScroll={updateListFade}
+            >
+              {entries.length === 0 ? (
+                <div className={styles.empty}>
+                  <h2>Nothing written yet</h2>Start capturing your days — one entry at a time.
                 </div>
-              )
-            })}
-          </div>
-        )}
+              ) : (
+                entries.map((entry) => (
+                  <JournalEntryRow
+                    key={entry.id}
+                    entry={entry}
+                    selected={entry.id === activeId}
+                    removing={removingIds.has(entry.id)}
+                    confirmDelete={confirmDeleteId === entry.id}
+                    onSelect={() => handleSelect(entry.id)}
+                    onDelete={() => handleListDelete(entry.id)}
+                  />
+                ))
+              )}
+            </div>
+          </aside>
+          {selectedEntry && (!listOnly || overlayOpen) ? (
+            <JournalEditor
+              key={selectedEntry.id}
+              entry={selectedEntry}
+              writableCalendars={writableCalendars}
+              events={events}
+              mode={editorMode}
+              status={saveStatuses[selectedEntry.id] || 'saved'}
+              focusVersion={focusVersion}
+              overlayOpen={overlayOpen}
+              onChange={handleChange}
+              onModeChange={setEditorMode}
+              onNavigate={handleNavigate}
+              onDelete={() => handleDeleteSelected(selectedEntry.id)}
+              onCloseNarrow={() => {
+                flushPendingRef.current()
+                setOverlayOpen(false)
+                setListOnly(true)
+              }}
+            />
+          ) : null}
+        </div>
       </div>
     </div>
   )

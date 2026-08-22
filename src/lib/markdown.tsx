@@ -15,7 +15,17 @@ export interface MarkdownProps {
 export function MarkdownView({ text, className }: MarkdownProps): JSX.Element {
   return (
     <div className={className}>
-      <Markdown remarkPlugins={[remarkGfm]}>{text}</Markdown>
+      <Markdown
+        remarkPlugins={[remarkGfm]}
+        components={{
+          a: ({ node, ...props }) => {
+            void node
+            return <a {...props} target="_blank" rel="noopener noreferrer" />
+          },
+        }}
+      >
+        {text}
+      </Markdown>
     </div>
   )
 }
