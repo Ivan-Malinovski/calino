@@ -830,7 +830,10 @@
 
 @media (max-width: 600px) {
   .page {
-    padding-bottom: calc(84px + var(--safe-area-bottom));
+    /* The app shell already reserves the floating navigation's clearance on
+       compact mobile. Keeping another page-level reservation leaves a large
+       empty strip beneath the journal list. */
+    padding-bottom: 0;
   }
   .pageEditorOpen {
     padding-bottom: 0;

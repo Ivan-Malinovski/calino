@@ -486,6 +486,17 @@ test.describe('Journal view', () => {
     expect(editor!.y + editor!.height).toBeGreaterThan(692)
   })
 
+  test('compact mobile list reaches the floating navigation', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 700 })
+    await page.goto('/journal')
+
+    const list = await page.locator('[data-component="journal-entry-list"]').boundingBox()
+    const nav = await page.locator('[data-component="floating-nav-pill"]').boundingBox()
+    expect(list).not.toBeNull()
+    expect(nav).not.toBeNull()
+    expect(list!.y + list!.height).toBeGreaterThan(nav!.y - 8)
+  })
+
   test('keeps the mobile journal list close to its toolbar', async ({ page }) => {
     await page.setViewportSize({ width: 900, height: 900 })
     await page.goto('/journal')
