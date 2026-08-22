@@ -9,6 +9,7 @@ import { DUR_FAST } from '@/lib/motion'
 import { useSettingsStore } from '@/store/settingsStore'
 import type { CalendarEvent } from '@/types'
 import { LocationLink } from './LocationLink'
+import { TaskCollapseToggle } from './TaskCollapseToggle'
 import styles from './DayEventsPopup.module.css'
 
 /** Breathing room kept between the popup and the edge of the window. */
@@ -77,6 +78,10 @@ interface DayEventsPopupProps {
   position: { x: number; y: number }
   onClose: () => void
   onEventClick: (event: CalendarEvent) => void
+  taskHasSubtasks?: (taskId: string) => boolean
+  taskIsCollapsed?: (taskId: string) => boolean
+  taskDescendantCount?: (taskId: string) => number
+  onToggleTaskSubtasks?: (taskId: string) => void
 }
 
 export function DayEventsPopup({
@@ -85,6 +90,10 @@ export function DayEventsPopup({
   position,
   onClose,
   onEventClick,
+  taskHasSubtasks,
+  taskIsCollapsed,
+  taskDescendantCount,
+  onToggleTaskSubtasks,
 }: DayEventsPopupProps): JSX.Element {
   const popupRef = useRef<HTMLDivElement>(null)
   const timeFormat = useSettingsStore((state) => state.timeFormat)
@@ -167,6 +176,17 @@ export function DayEventsPopup({
                   </div>
                 )}
               </div>
+              {event.type === 'task' &&
+                taskHasSubtasks?.(event.id) &&
+                taskIsCollapsed &&
+                onToggleTaskSubtasks && (
+                  <TaskCollapseToggle
+                    taskTitle={event.title}
+                    collapsed={taskIsCollapsed(event.id)}
+                    hiddenCount={taskDescendantCount?.(event.id)}
+                    onToggle={() => onToggleTaskSubtasks(event.id)}
+                  />
+                )}
             </div>
           ))}
         </div>

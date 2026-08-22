@@ -29,6 +29,7 @@ import { useContextMenuStore } from '@/store/contextMenuStore'
 import { hapticIfEnabled } from '@/lib/haptics'
 import { useTaskContextMenuItems } from '../hooks/useTaskContextMenuItems'
 import { useTaskCollapse } from '../hooks/useTaskCollapse'
+import { getTaskDescendantIds } from '@/lib/taskTree'
 import { TaskContextMenu } from './TaskContextMenu'
 import { TaskCollapseToggle } from './TaskCollapseToggle'
 import type { CalendarEvent } from '@/types'
@@ -366,6 +367,13 @@ export function TodoView(): JSX.Element {
   }, [events, calendars])
 
   const taskCollapse = useTaskCollapse(events)
+  const collapsedDescendantIds = useMemo(() => {
+    const ids = new Set<string>()
+    for (const taskId of taskCollapse.collapsedTaskIds) {
+      for (const descendantId of getTaskDescendantIds(tasks, taskId)) ids.add(descendantId)
+    }
+    return ids
+  }, [tasks, taskCollapse.collapsedTaskIds])
 
   const taskCalendars = useMemo(
     () =>
@@ -553,7 +561,12 @@ export function TodoView(): JSX.Element {
     }
 
     return result
-  }, [filteredTasks, filter, recentlyCompleted])
+      .map((group) => ({
+        ...group,
+        tasks: group.tasks.filter((task) => !collapsedDescendantIds.has(task.id)),
+      }))
+      .filter((group) => group.tasks.length > 0)
+  }, [collapsedDescendantIds, filteredTasks, filter, recentlyCompleted])
 
   const handleToggleComplete = useCallback(
     async (task: TaskWithColor): Promise<void> => {

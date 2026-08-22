@@ -281,7 +281,7 @@ export const EventCard = React.memo(function EventCard({
   })
   const isTask = event.type === 'task'
   const isSubtask = isTask && Boolean(event.parentTaskId)
-  const showTaskCollapse = isTask && taskHasSubtasks && Boolean(onToggleTaskSubtasks) && !dotMode
+  const showTaskCollapse = isTask && taskHasSubtasks && Boolean(onToggleTaskSubtasks)
   // Reschedule + done/not-done for task pills, shared with the tasks list and
   // the sidebar. Delete stays this card's own — it also drives the recurring
   // this/all dialog below.
@@ -599,50 +599,61 @@ export const EventCard = React.memo(function EventCard({
           </button>
         )}
         {isTask ? (
-          <div
-            className={`${styles.dragContent} ${showTaskCollapse ? styles.dragContentWithCollapse : ''}`}
-            onPointerDown={(e) => {
-              e.stopPropagation()
-              pointerStartPos.current = { x: e.clientX, y: e.clientY }
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault()
-                e.stopPropagation()
-                handleClick(e as unknown as React.MouseEvent)
-              }
-            }}
-            {...listeners}
-            {...attributes}
-          >
-            {isSubtask && monthView && !dotMode && (
-              <span className={styles.subtaskMarker} aria-hidden="true" title="Subtask">
-                ↳
-              </span>
-            )}
+          <>
             <div
-              className={styles.title}
-              title={event.title}
-              style={hideFragmentTitle ? { visibility: 'hidden' } : undefined}
-              aria-hidden={hideFragmentTitle || undefined}
+              className={`${styles.dragContent} ${showTaskCollapse ? styles.dragContentWithCollapse : ''}`}
+              onPointerDown={(e) => {
+                e.stopPropagation()
+                pointerStartPos.current = { x: e.clientX, y: e.clientY }
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  handleClick(e as unknown as React.MouseEvent)
+                }
+              }}
+              {...listeners}
+              {...attributes}
             >
-              {event.title}
-            </div>
-            {!hideDueTime && hasDueTime(event) && event.dueDate && (
-              <div className={styles.dueDate}>
-                {formatEventTime(event.dueDate, event.timezone, timeFormat)}
+              {isSubtask && monthView && !dotMode && (
+                <span className={styles.subtaskMarker} aria-hidden="true" title="Subtask">
+                  ↳
+                </span>
+              )}
+              <div
+                className={styles.title}
+                title={event.title}
+                style={hideFragmentTitle ? { visibility: 'hidden' } : undefined}
+                aria-hidden={hideFragmentTitle || undefined}
+              >
+                {event.title}
               </div>
-            )}
-            {showTaskCollapse && onToggleTaskSubtasks && (
+              {!hideDueTime && hasDueTime(event) && event.dueDate && (
+                <div className={styles.dueDate}>
+                  {formatEventTime(event.dueDate, event.timezone, timeFormat)}
+                </div>
+              )}
+              {showTaskCollapse && !dotMode && onToggleTaskSubtasks && (
+                <TaskCollapseToggle
+                  taskTitle={event.title}
+                  collapsed={taskSubtasksCollapsed}
+                  hiddenCount={taskSubtaskCount}
+                  onToggle={onToggleTaskSubtasks}
+                  className={styles.cardTaskCollapseToggle}
+                />
+              )}
+            </div>
+            {showTaskCollapse && dotMode && onToggleTaskSubtasks && (
               <TaskCollapseToggle
                 taskTitle={event.title}
                 collapsed={taskSubtasksCollapsed}
                 hiddenCount={taskSubtaskCount}
                 onToggle={onToggleTaskSubtasks}
-                className={styles.cardTaskCollapseToggle}
+                className={styles.dotTaskCollapseToggle}
               />
             )}
-          </div>
+          </>
         ) : (
           <>
             <div

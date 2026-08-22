@@ -576,20 +576,26 @@ export function CalendarGrid(): JSX.Element {
   // history rather than with the 42 cells actually on screen (issue #73).
   const tasksMap = useMemo(() => {
     const map = new Map<string, CalendarEvent[]>()
-    const visibleCalendarIds = calendars.filter((c) => c.isVisible).map((c) => c.id)
-    const taskCalendarsWithTasks = calendars
-      .filter((c) => c.showTasksInViews !== false)
-      .map((c) => c.id)
     for (const day of days) {
       const dayKey = format(day, 'yyyy-MM-dd')
       const dayTasks = getTasksForDay(events, dayKey).filter(
         (event) =>
-          visibleCalendarIds.includes(event.calendarId) &&
-          taskCalendarsWithTasks.includes(event.calendarId) &&
+          calendars.some((calendar) => calendar.isVisible && calendar.id === event.calendarId) &&
+          calendars.some(
+            (calendar) => calendar.showTasksInViews !== false && calendar.id === event.calendarId
+          ) &&
           !(hideCompletedTasksInMonthView && event.completed) &&
           (selectedCategoryNames.length === 0 ||
             event.categories?.some((c) => selectedCategoryNames.includes(c)))
       )
+      if (dayTasks.length > 0) map.set(dayKey, dayTasks)
+    }
+    return map
+  }, [days, events, calendars, hideCompletedTasksInMonthView, selectedCategoryNames])
+
+  const visibleTasksMap = useMemo(() => {
+    const map = new Map<string, CalendarEvent[]>()
+    for (const [dayKey, dayTasks] of tasksMap) {
       const visibleTasks = filterTasksByCollapsedAncestors(
         dayTasks,
         events,
@@ -598,14 +604,7 @@ export function CalendarGrid(): JSX.Element {
       if (visibleTasks.length > 0) map.set(dayKey, visibleTasks)
     }
     return map
-  }, [
-    days,
-    events,
-    calendars,
-    hideCompletedTasksInMonthView,
-    selectedCategoryNames,
-    taskCollapse.collapsedTaskIds,
-  ])
+  }, [tasksMap, events, taskCollapse.collapsedTaskIds])
 
   // `events` and `rangeExpansionVersion` are both kept as deps for
   // defense-in-depth (see WeekView for the rationale). R4.1/R4.3 review fix.
@@ -1038,7 +1037,7 @@ export function CalendarGrid(): JSX.Element {
     compressWeekRows,
     rowHeight,
     eventsMap,
-    tasksMap,
+    visibleTasksMap,
   ])
 
   if (showAgendaSplit) {
@@ -1135,7 +1134,7 @@ export function CalendarGrid(): JSX.Element {
                           {days.slice(weekIdx * 7, weekIdx * 7 + 7).map((day, idx) => {
                             const dateKey = format(day, 'yyyy-MM-dd')
                             const dayEvents = eventsMap.get(dateKey) || []
-                            const dayTasks = tasksMap.get(dateKey) || []
+                            const dayTasks = visibleTasksMap.get(dateKey) || []
                             const isCurrentMonth = isSameMonth(day, date)
                             const isTodayDate = isToday(day)
                             const dayOfWeek = getDay(day)
@@ -1150,6 +1149,7 @@ export function CalendarGrid(): JSX.Element {
                                 monthChangeMotion={monthChangeMotion}
                                 dayEvents={dayEvents}
                                 dayTasks={dayTasks}
+                                popupTaskItems={tasksMap.get(dateKey) || []}
                                 hasJournal={journalDates.has(dateKey)}
                                 journalEnabled={journalEnabled}
                                 isCurrentMonth={isCurrentMonth}
@@ -1166,6 +1166,7 @@ export function CalendarGrid(): JSX.Element {
                                 taskIsCollapsed={taskCollapse.isCollapsed}
                                 taskDescendantCount={taskCollapse.descendantCount}
                                 onToggleTaskSubtasks={taskCollapse.toggleTask}
+                                collapsedTaskIds={taskCollapse.collapsedTaskIds}
                                 onDayClick={handleDayClick}
                                 onDayDoubleClick={handleDayDoubleClick}
                                 onDayNumberClick={handleDayNumberClick}
@@ -1325,7 +1326,7 @@ export function CalendarGrid(): JSX.Element {
                     {days.slice(weekIdx * 7, weekIdx * 7 + 7).map((day, idx) => {
                       const dateKey = format(day, 'yyyy-MM-dd')
                       const dayEvents = eventsMap.get(dateKey) || []
-                      const dayTasks = tasksMap.get(dateKey) || []
+                      const dayTasks = visibleTasksMap.get(dateKey) || []
                       const isCurrentMonth = isSameMonth(day, date)
                       const isTodayDate = isToday(day)
                       const dayOfWeek = getDay(day)
@@ -1340,6 +1341,7 @@ export function CalendarGrid(): JSX.Element {
                           monthChangeMotion={monthChangeMotion}
                           dayEvents={dayEvents}
                           dayTasks={dayTasks}
+                          popupTaskItems={tasksMap.get(dateKey) || []}
                           hasJournal={journalDates.has(dateKey)}
                           journalEnabled={journalEnabled}
                           isCurrentMonth={isCurrentMonth}
@@ -1360,6 +1362,7 @@ export function CalendarGrid(): JSX.Element {
                           taskIsCollapsed={taskCollapse.isCollapsed}
                           taskDescendantCount={taskCollapse.descendantCount}
                           onToggleTaskSubtasks={taskCollapse.toggleTask}
+                          collapsedTaskIds={taskCollapse.collapsedTaskIds}
                           onDayClick={handleDayClick}
                           onDayDoubleClick={handleDayDoubleClick}
                           onDayNumberClick={handleDayNumberClick}
@@ -1434,6 +1437,7 @@ interface DroppableDayProps {
   isWeekStart: boolean
   dayEvents: CalendarEvent[]
   dayTasks: CalendarEvent[]
+  popupTaskItems: CalendarEvent[]
   hasJournal: boolean
   journalEnabled: boolean
   isCurrentMonth: boolean
@@ -1451,6 +1455,7 @@ interface DroppableDayProps {
   taskIsCollapsed: (taskId: string) => boolean
   taskDescendantCount: (taskId: string) => number
   onToggleTaskSubtasks: (taskId: string) => void
+  collapsedTaskIds: ReadonlySet<string>
   onDayClick: (day: Date) => void
   onDayDoubleClick: (day: Date) => void
   onDayNumberClick: (day: Date) => void
@@ -1473,6 +1478,7 @@ const DroppableDay = React.memo(function DroppableDay({
   monthChangeMotion,
   dayEvents,
   dayTasks,
+  popupTaskItems,
   hasJournal,
   journalEnabled,
   isCurrentMonth,
@@ -1489,6 +1495,7 @@ const DroppableDay = React.memo(function DroppableDay({
   taskIsCollapsed,
   taskDescendantCount,
   onToggleTaskSubtasks,
+  collapsedTaskIds,
   onDayClick,
   onDayDoubleClick,
   onDayNumberClick,
@@ -1526,10 +1533,14 @@ const DroppableDay = React.memo(function DroppableDay({
   ])
   const hiddenCount =
     Math.max(0, dayEvents.length - eventLimit) + Math.max(0, dayTasks.length - taskLimit)
-  const popupItems = useMemo(
-    () => (dayTasks.length > 0 ? [...dayEvents, ...dayTasks] : dayEvents),
-    [dayEvents, dayTasks]
-  )
+  const popupItems = useMemo(() => {
+    const visiblePopupTasks = filterTasksByCollapsedAncestors(
+      popupTaskItems,
+      popupTaskItems,
+      collapsedTaskIds
+    )
+    return visiblePopupTasks.length > 0 ? [...dayEvents, ...visiblePopupTasks] : dayEvents
+  }, [collapsedTaskIds, dayEvents, popupTaskItems])
   // Multi-day fragments carry a lane shared across every day they span, so a
   // fragment's vertical position must be identical in every cell for the pill
   // to read as one continuous band. Any lane a fragment doesn't occupy is
@@ -1915,6 +1926,10 @@ const DroppableDay = React.memo(function DroppableDay({
           position={popupPosition}
           onClose={() => setShowPopup(false)}
           onEventClick={handlePopupEventClick}
+          taskHasSubtasks={taskHasSubtasks}
+          taskIsCollapsed={taskIsCollapsed}
+          taskDescendantCount={taskDescendantCount}
+          onToggleTaskSubtasks={onToggleTaskSubtasks}
         />
       )}
       {contextMenu && (

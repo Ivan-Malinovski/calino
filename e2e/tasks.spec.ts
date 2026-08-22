@@ -345,6 +345,7 @@ test.describe('mobile task surfaces', () => {
     const childCard = page.locator('[data-component="event-card"][aria-label^="Mobile child"]')
     await expect(parentCard).toBeVisible()
     await expect(childCard).toHaveAttribute('aria-label', /subtask/i)
+    await expect(parentCard.locator('[data-component="task-collapse-toggle"]')).toBeVisible()
 
     // Compact mobile month cards are intentionally density indicators and pass
     // taps through to the day cell. Use the week surface for the preview check,

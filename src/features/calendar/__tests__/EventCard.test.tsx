@@ -102,6 +102,30 @@ describe('EventCard', () => {
     expect(handleClick).not.toHaveBeenCalled()
   })
 
+  it('keeps the mobile month collapse control visible on a task dot', () => {
+    const task: CalendarEvent = {
+      ...mockEvent,
+      type: 'task',
+      title: 'Mobile parent task',
+    }
+
+    render(
+      <EventCard
+        event={task}
+        dotMode
+        clickDisabled
+        taskHasSubtasks
+        taskSubtasksCollapsed
+        taskSubtaskCount={4}
+        onToggleTaskSubtasks={vi.fn()}
+      />
+    )
+
+    expect(
+      screen.getByRole('button', { name: /Expand subtasks for "Mobile parent task"/ })
+    ).toBeVisible()
+  })
+
   it('disables task completion on read-only calendars', () => {
     const store = useCalendarStore.getState()
     store.updateCalendar('default', { readOnly: true })

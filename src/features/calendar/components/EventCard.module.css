@@ -580,6 +580,16 @@
   color: var(--event-color, var(--accent));
 }
 
+.dotTaskCollapseToggle {
+  position: absolute;
+  top: 50%;
+  right: -8px;
+  z-index: 2;
+  margin: 0;
+  color: var(--event-color, var(--accent));
+  transform: translateY(-50%);
+}
+
 .task .dragContentWithCollapse .title {
   min-width: 0;
   flex: 1;
@@ -734,6 +744,7 @@
   height: 6px;
   width: 6px;
   min-width: 6px;
+  overflow: visible;
   border-radius: 50%;
   background: var(--event-color, var(--accent));
   border: none;
