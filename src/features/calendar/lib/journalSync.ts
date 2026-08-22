@@ -17,7 +17,7 @@ import type { CalendarEvent } from '@/types'
  *   deletes the local record, losing the entry everywhere.
  * - Offline → Offline: nothing to sync.
  */
-export function syncJournalEntryToServer(opts: {
+export async function syncJournalEntryToServer(opts: {
   existing: CalendarEvent
   targetCalendarId: string
   syncedEntry: CalendarEvent
@@ -25,7 +25,7 @@ export function syncJournalEntryToServer(opts: {
   createCalDAVEvent: (calendarId: string, event: CalendarEvent) => Promise<void>
   deleteCalDAVEventByHref: (calendarId: string, href: string) => Promise<void>
   showToast: (message: string) => void
-}): void {
+}): Promise<boolean> {
   const {
     existing,
     targetCalendarId,
@@ -37,18 +37,31 @@ export function syncJournalEntryToServer(opts: {
   } = opts
 
   if (existing.calendarId !== 'default' && targetCalendarId !== 'default') {
-    updateCalDAVEvent(targetCalendarId, syncedEntry).catch(() => {
-      showToast('Failed to sync update. It will be retried.')
-    })
+    return updateCalDAVEvent(targetCalendarId, syncedEntry).then(
+      () => true,
+      () => {
+        showToast('Failed to sync update. It will be retried.')
+        return false
+      }
+    )
   } else if (existing.calendarId === 'default' && targetCalendarId !== 'default') {
-    createCalDAVEvent(targetCalendarId, syncedEntry).catch(() => {
-      showToast('Failed to sync update. It will be retried.')
-    })
+    return createCalDAVEvent(targetCalendarId, syncedEntry).then(
+      () => true,
+      () => {
+        showToast('Failed to sync update. It will be retried.')
+        return false
+      }
+    )
   } else if (existing.calendarId !== 'default' && targetCalendarId === 'default') {
     if (existing.resourceHref) {
-      deleteCalDAVEventByHref(existing.calendarId, existing.resourceHref).catch(() => {
-        showToast('Failed to sync update. It will be retried.')
-      })
+      return deleteCalDAVEventByHref(existing.calendarId, existing.resourceHref).then(
+        () => true,
+        () => {
+          showToast('Failed to sync update. It will be retried.')
+          return false
+        }
+      )
     }
   }
+  return Promise.resolve(true)
 }

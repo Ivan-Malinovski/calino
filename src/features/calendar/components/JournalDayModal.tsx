@@ -185,8 +185,8 @@ export function JournalDayModal({
         // it is going (see syncJournalEntryToServer — shared with JournalView
         // so the branches can't drift apart).
         const syncedEntry: CalendarEvent = { ...existing, ...updates }
-        const syncToServer = (): void =>
-          syncJournalEntryToServer({
+        const syncToServer = (): void => {
+          void syncJournalEntryToServer({
             existing,
             targetCalendarId: calendarId,
             syncedEntry,
@@ -195,6 +195,7 @@ export function JournalDayModal({
             deleteCalDAVEventByHref,
             showToast,
           })
+        }
 
         // Sync attachments to IDB, then push to server
         if (attachments.length > 0) {

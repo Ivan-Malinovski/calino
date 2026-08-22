@@ -459,7 +459,17 @@ const JournalEntryRow = memo(function JournalEntryRow({
       data-date={entry.start}
       data-entry-id={entry.id}
       aria-current={selected ? 'true' : undefined}
+      aria-label={`${entry.title || 'Untitled entry'}, ${date.monthYear}`}
+      role="button"
+      tabIndex={0}
       onClick={onSelect}
+      onKeyDown={(event) => {
+        if (event.target !== event.currentTarget) return
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault()
+          onSelect()
+        }
+      }}
     >
       <div className={styles.rowDate}>
         <strong>{date.day}</strong>
@@ -619,11 +629,15 @@ export function JournalView(): JSX.Element {
         deleteCalDAVEventByHref,
         showToast: (message) => {
           showToast(message)
-          setStatus(id, 'error')
         },
+      }).then((synced) => {
+        if (!synced) {
+          setStatus(id, 'error')
+          return
+        }
+        syncBaseRef.current.set(id, { ...entry })
+        setStatus(id, 'saved')
       })
-      syncBaseRef.current.set(id, { ...entry })
-      setStatus(id, 'saved')
     },
     [createCalDAVEvent, deleteCalDAVEventByHref, setStatus, updateCalDAVEvent]
   )
@@ -672,9 +686,18 @@ export function JournalView(): JSX.Element {
     setConfirmDeleteId(null)
   }, [selectedId])
   useLayoutEffect(() => {
+    const element = listScrollRef.current
     updateListFade()
     window.addEventListener('resize', updateListFade)
-    return () => window.removeEventListener('resize', updateListFade)
+    if (!element || typeof ResizeObserver === 'undefined') {
+      return () => window.removeEventListener('resize', updateListFade)
+    }
+    const observer = new ResizeObserver(updateListFade)
+    observer.observe(element)
+    return () => {
+      observer.disconnect()
+      window.removeEventListener('resize', updateListFade)
+    }
   }, [entries.length, listOnly, updateListFade, viewMode])
   useLayoutEffect(() => {
     const container = segmentedRef.current
@@ -825,9 +848,14 @@ export function JournalView(): JSX.Element {
     },
     [activeId, entries, handleSelect]
   )
+  const editorEntry = selectedEntry && (!listOnly || overlayOpen) ? selectedEntry : null
+  const editorVisible = Boolean(editorEntry)
 
   return (
-    <div className={styles.page} data-component="journal-view">
+    <div
+      className={`${styles.page} ${editorVisible ? styles.pageEditorOpen : ''}`}
+      data-component="journal-view"
+    >
       <div className={styles.inner}>
         <div className={styles.bar} data-component="journal-toolbar">
           <div className={styles.count}>
@@ -875,6 +903,8 @@ export function JournalView(): JSX.Element {
               ref={listScrollRef}
               className={`${styles.listScroll} ${listFade.top ? styles.listScrollFadeTop : ''} ${listFade.bottom ? styles.listScrollFadeBottom : ''}`}
               data-component="journal-list-scroll"
+              data-fade-top={listFade.top ? 'true' : 'false'}
+              data-fade-bottom={listFade.bottom ? 'true' : 'false'}
               onScroll={updateListFade}
             >
               {entries.length === 0 ? (
@@ -896,20 +926,20 @@ export function JournalView(): JSX.Element {
               )}
             </div>
           </aside>
-          {selectedEntry && (!listOnly || overlayOpen) ? (
+          {editorEntry ? (
             <JournalEditor
-              key={selectedEntry.id}
-              entry={selectedEntry}
+              key={editorEntry.id}
+              entry={editorEntry}
               writableCalendars={writableCalendars}
               events={events}
               mode={editorMode}
-              status={saveStatuses[selectedEntry.id] || 'saved'}
+              status={saveStatuses[editorEntry.id] || 'saved'}
               focusVersion={focusVersion}
               overlayOpen={overlayOpen}
               onChange={handleChange}
               onModeChange={setEditorMode}
               onNavigate={handleNavigate}
-              onDelete={() => handleDeleteSelected(selectedEntry.id)}
+              onDelete={() => handleDeleteSelected(editorEntry.id)}
               onCloseNarrow={() => {
                 flushPendingRef.current()
                 setOverlayOpen(false)

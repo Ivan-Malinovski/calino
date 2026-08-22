@@ -329,6 +329,21 @@ test.describe('Journal view', () => {
     await expect(page.locator('[data-component="journal-editor"]')).toBeHidden()
   })
 
+  test('journal entries can toggle the editor with the keyboard', async ({ page }) => {
+    await page.setViewportSize({ width: 1800, height: 900 })
+    await page.goto('/journal')
+
+    const row = page
+      .locator('[data-component="journal-entry-row"]')
+      .filter({ hasText: 'Long walk' })
+    await row.focus()
+    await expect(row).toBeFocused()
+    await page.keyboard.press('Enter')
+    await expect(page.locator('[data-component="journal-editor"]')).toBeVisible()
+    await page.keyboard.press('Space')
+    await expect(page.locator('[data-component="journal-editor"]')).toBeHidden()
+  })
+
   test('editor shell follows the available viewport height', async ({ page }) => {
     await page.setViewportSize({ width: 1800, height: 800 })
     await page.goto('/journal')
@@ -458,6 +473,21 @@ test.describe('Journal view', () => {
     await expect(page.locator('[data-component="journal-editor"]')).toBeHidden()
   })
 
+  test('fills the smallest mobile viewport when the editor is open', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 700 })
+    await page.goto('/journal')
+    await page
+      .locator('[data-component="journal-entry-row"]')
+      .filter({ hasText: 'Long walk' })
+      .click()
+
+    const editor = await page.locator('[data-component="journal-editor"]').boundingBox()
+    const nav = await page.locator('[data-component="floating-nav-pill"]').boundingBox()
+    expect(editor).not.toBeNull()
+    expect(nav).not.toBeNull()
+    expect(editor!.y + editor!.height).toBeGreaterThan(nav!.y - 8)
+  })
+
   test('keeps the mobile journal list close to its toolbar', async ({ page }) => {
     await page.setViewportSize({ width: 900, height: 900 })
     await page.goto('/journal')
@@ -466,6 +496,20 @@ test.describe('Journal view', () => {
     expect(toolbar).not.toBeNull()
     expect(listHeader).not.toBeNull()
     expect(listHeader!.y - (toolbar!.y + toolbar!.height)).toBeLessThan(24)
+  })
+
+  test('only shows list fades at the edges that can scroll', async ({ page }) => {
+    await page.setViewportSize({ width: 900, height: 320 })
+    await page.goto('/journal')
+
+    const list = page.locator('[data-component="journal-list-scroll"]')
+    await expect(list).toHaveAttribute('data-fade-top', 'false')
+    await expect(list).toHaveAttribute('data-fade-bottom', 'true')
+    await list.evaluate((element) => {
+      element.scrollTop = element.scrollHeight
+    })
+    await expect(list).toHaveAttribute('data-fade-top', 'true')
+    await expect(list).toHaveAttribute('data-fade-bottom', 'false')
   })
 
   test('heals selection when switching from All to a filtered Month scope', async ({ page }) => {
