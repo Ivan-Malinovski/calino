@@ -484,6 +484,8 @@ test.describe('Journal view', () => {
     const editor = await page.locator('[data-component="journal-editor"]').boundingBox()
     expect(editor).not.toBeNull()
     expect(editor!.y + editor!.height).toBeGreaterThan(692)
+    await expect(page.locator('[data-component="journal-editor-footer"]')).toBeVisible()
+    await expect(page.locator('[data-component="floating-nav-pill"]')).toBeHidden()
   })
 
   test('keeps the mobile journal list close to its toolbar', async ({ page }) => {
