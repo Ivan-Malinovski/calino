@@ -94,6 +94,13 @@ test.describe('accessibility scans', () => {
 
     const results = await scan(page)
     expect(seriousOrCritical(results)).toEqual([])
+
+    const advancedToggle = page.locator('[data-component="event-advanced-toggle"]')
+    await advancedToggle.click()
+    await expect(advancedToggle).toHaveAttribute('aria-expanded', 'true')
+
+    const expandedResults = await scan(page)
+    expect(seriousOrCritical(expandedResults)).toEqual([])
   })
 
   test('command palette has no serious or critical violations', async ({ page }) => {

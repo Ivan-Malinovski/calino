@@ -184,7 +184,43 @@ describe('EventModal', () => {
     store.openModal()
 
     render(<EventModal />)
-    expect(screen.getByPlaceholderText('Location')).toBeInTheDocument()
+    expect(screen.getByLabelText('Location')).toBeInTheDocument()
+  })
+
+  it('exposes advanced options as an accessible disclosure', () => {
+    const store = useCalendarStore.getState()
+    store.openModal()
+
+    render(<EventModal />)
+
+    const toggle = screen.getByRole('button', { name: /show more options/i })
+    const advanced = document.querySelector('[data-component="event-advanced-options"]')
+    expect(advanced).not.toBeNull()
+
+    expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    expect(toggle).toHaveAttribute('aria-controls', advanced?.id)
+    expect(advanced).toHaveAttribute('aria-hidden', 'true')
+    expect(advanced).toHaveAttribute('inert')
+
+    fireEvent.click(toggle)
+
+    expect(toggle).toHaveAttribute('aria-expanded', 'true')
+    expect(advanced).toHaveAttribute('aria-hidden', 'false')
+    expect(advanced).not.toHaveAttribute('inert')
+  })
+
+  it('labels the description removal action', () => {
+    const store = useCalendarStore.getState()
+    store.openModal()
+
+    render(<EventModal />)
+    fireEvent.click(screen.getByRole('button', { name: /add description/i }))
+
+    const remove = screen.getByRole('button', { name: 'Remove description' })
+    expect(remove).toBeInTheDocument()
+
+    fireEvent.click(remove)
+    expect(screen.queryByPlaceholderText('Add description...')).not.toBeInTheDocument()
   })
 
   it('shows only calendars that support events when creating an event', () => {
@@ -355,9 +391,9 @@ describe('EventModal', () => {
     // No await anywhere above: both the store write and the close are done by
     // the time the click handler returns.
     expect(useCalendarStore.getState().isModalOpen).toBe(false)
-    expect(
-      useCalendarStore.getState().events.some((e) => e.title === 'Instant Close Test')
-    ).toBe(true)
+    expect(useCalendarStore.getState().events.some((e) => e.title === 'Instant Close Test')).toBe(
+      true
+    )
     expect(screen.queryByRole('button', { name: /saving/i })).not.toBeInTheDocument()
   })
 

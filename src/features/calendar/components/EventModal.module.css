@@ -22,7 +22,9 @@
   max-height: 90vh;
   border-radius: var(--radius-lg);
   background: var(--modal-bg, #faf9f7);
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   box-shadow: var(--modal-shadow);
   border: var(--modal-card-border, 1px solid rgba(255, 255, 255, 0.4));
   font-family: var(--font-sans, 'Inter', sans-serif);
@@ -359,16 +361,28 @@
 }
 
 .modalBody {
-  padding: 14px 22px;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  padding: 14px 22px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* Desktop uses a dedicated scrolling region so the header and footer stay
+   reachable. Mobile keeps the same region but adds the sheet's larger gutters
+   and grouped field surfaces below. */
+.modalScroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+  padding-bottom: 10px;
 }
 
-/* Desktop: transparent pass-through wrappers so .modalBody's own flex/gap
-   controls spacing exactly as before. Mobile turns these into the scrolling
-   region and the tinted field groups (see the max-width: 768px block). */
-.modalScroll,
 .modalGroup {
   display: contents;
 }
@@ -570,11 +584,14 @@
 }
 
 .modalFooter {
+  flex-shrink: 0;
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: var(--space-2);
-  padding: 5px 0;
+  padding: 12px 0 14px;
+  border-top: 1px solid var(--color-border-subtle);
+  background: var(--modal-bg, #faf9f7);
 }
 
 .modalActions {
@@ -1115,6 +1132,7 @@
 
 .moreOptionsWrapper {
   display: block;
+  flex: 0 0 auto;
   overflow: hidden;
   max-height: 0;
   opacity: 0;
@@ -1424,7 +1442,7 @@
   background: var(--color-accent-light, rgba(59, 130, 246, 0.08));
   font-size: 12px;
   font-family: var(--font-sans, 'Inter', sans-serif);
-  color: var(--accent-strong, var(--color-accent, #3b82f6));
+  color: var(--accent-strong-on-soft, var(--accent-strong, var(--color-accent, #3b82f6)));
   line-height: 1;
 }
 
@@ -1438,7 +1456,7 @@
   border: none;
   border-radius: 50%;
   background: transparent;
-  color: var(--accent-strong, var(--color-accent, #3b82f6));
+  color: var(--accent-strong-on-soft, var(--accent-strong, var(--color-accent, #3b82f6)));
   font-size: 13px;
   line-height: 1;
   cursor: pointer;

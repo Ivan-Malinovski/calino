@@ -18,6 +18,20 @@ function TrapHarness({ active }: { active: boolean }) {
   )
 }
 
+function HiddenDescendantHarness({ active }: { active: boolean }) {
+  const ref = useRef<HTMLDivElement>(null)
+  useFocusTrap(ref, active)
+  return (
+    <div ref={ref}>
+      <button data-testid="visible">visible</button>
+      <div aria-hidden="true">
+        <button data-testid="hidden">hidden</button>
+      </div>
+      <button data-testid="last-visible">last visible</button>
+    </div>
+  )
+}
+
 describe('useFocusTrap', () => {
   it('moves focus into the container when activated', () => {
     const { getByTestId } = render(<TrapHarness active />)
@@ -51,5 +65,16 @@ describe('useFocusTrap', () => {
 
     rerender(<TrapHarness active={false} />)
     expect(document.activeElement).toBe(outside)
+  })
+
+  it('ignores focusable descendants of hidden ancestors', () => {
+    const { getByTestId } = render(<HiddenDescendantHarness active />)
+    const lastVisible = getByTestId('last-visible')
+    const visible = getByTestId('visible')
+
+    lastVisible.focus()
+    fireEvent.keyDown(document, { key: 'Tab' })
+
+    expect(document.activeElement).toBe(visible)
   })
 })

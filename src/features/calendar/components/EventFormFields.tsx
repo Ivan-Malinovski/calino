@@ -120,13 +120,12 @@ interface EventFormFieldsProps {
   attendees: CalendarAttendee[]
   onAttendeesChange: (attendees: CalendarAttendee[]) => void
   organizer: CalendarOrganizer | undefined
+  editingEvent?: CalendarEvent
   /** Event window the availability check is run against. */
   startIso: string
   endIso: string
   /** Excluded from the availability scan so an event never clashes with itself. */
   excludeEventId?: string
-  /** Seeds the mailto: invitation. Absent while composing a new event. */
-  editingEvent?: CalendarEvent
 }
 
 const TRAVEL_DURATION_OPTIONS: { value: number | undefined; label: string }[] = [
@@ -200,16 +199,17 @@ export function EventFormFields({
   attendees,
   onAttendeesChange,
   organizer,
+  editingEvent,
   startIso,
   endIso,
   excludeEventId,
-  editingEvent,
 }: EventFormFieldsProps): JSX.Element {
   // Instance-scoped ids for the label↔input pairs: hard-coded ids would
   // collide if two forms ever mounted side by side (same pattern as
   // RecurrenceDialog/DeleteDialog).
   const startDateId = useId()
   const endDateId = useId()
+  const advancedOptionsId = useId()
   const [moreOpen, setMoreOpen] = useState(false)
   const [reminderDropdownOpen, setReminderDropdownOpen] = useState(false)
   const [reminderMenuPos, setReminderMenuPos] = useState({ top: 0, left: 0 })
@@ -222,6 +222,10 @@ export function EventFormFields({
   const startDateRef = useRef<HTMLInputElement>(null)
   const endDateRef = useRef<HTMLInputElement>(null)
   useScrollInput([startDateRef, endDateRef])
+
+  const setAdvancedOpen = (open: boolean): void => {
+    setMoreOpen(open)
+  }
 
   // Close reminder dropdown on outside click. The menu is portaled to
   // document.body, so it's outside the button's subtree — check both.
@@ -246,7 +250,7 @@ export function EventFormFields({
   // when the form receives new props from the parent.
   const handleRecurringToggle = (next: boolean): void => {
     if (next && !recurring) {
-      setMoreOpen(true)
+      setAdvancedOpen(true)
     }
     onRecurringChange(next)
   }
@@ -384,7 +388,15 @@ export function EventFormFields({
         <button
           type="button"
           className={styles.chevronButton}
-          onClick={() => setMoreOpen(!moreOpen)}
+          onClick={() => setAdvancedOpen(!moreOpen)}
+          aria-expanded={moreOpen}
+          aria-controls={advancedOptionsId}
+          aria-label={`${moreOpen ? 'Hide' : 'Show'} more options${
+            attendees.length > 0
+              ? `, ${attendees.length} ${attendees.length === 1 ? 'guest' : 'guests'}`
+              : ''
+          }`}
+          data-component="event-advanced-toggle"
         >
           <svg
             aria-hidden="true"
@@ -406,8 +418,11 @@ export function EventFormFields({
       </div>
 
       <div
+        id={advancedOptionsId}
         className={`${styles.moreOptionsWrapper} ${moreOpen ? styles.moreOptionsOpen : styles.moreOptionsClosed}`}
         aria-hidden={!moreOpen}
+        inert={!moreOpen}
+        data-component="event-advanced-options"
       >
         <div className={styles.moreOptionsSection}>
           <RecurrenceFields
@@ -573,10 +588,10 @@ export function EventFormFields({
             attendees={attendees}
             onAttendeesChange={onAttendeesChange}
             organizer={organizer}
+            event={editingEvent}
             startIso={startIso}
             endIso={endIso}
             excludeEventId={excludeEventId}
-            event={editingEvent}
           />
         </div>
       </div>

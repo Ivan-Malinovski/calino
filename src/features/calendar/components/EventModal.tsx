@@ -695,13 +695,6 @@ export function EventModal(): JSX.Element | null {
           ...(eventActionsMailto
             ? [
                 {
-                  label: 'Email attendees',
-                  dataComponent: 'email-attendees-btn',
-                  onClick: () => {
-                    window.location.href = eventActionsMailto.uri
-                  },
-                },
-                {
                   label:
                     eventActionsMailto.recipients.length === 1
                       ? 'Copy attendee email'
@@ -1843,46 +1836,52 @@ export function EventModal(): JSX.Element | null {
                     attendees={attendees}
                     onAttendeesChange={setAttendees}
                     organizer={organizer}
+                    editingEvent={existingEventForMode ?? undefined}
                     startIso={isAllDay ? `${startDate}T00:00:00` : `${startDate}T${startTime}:00`}
                     endIso={isAllDay ? `${endDate}T23:59:59` : `${endDate}T${endTime}:00`}
                     excludeEventId={originalEventId ?? selectedEventId ?? undefined}
-                    editingEvent={existingEventForMode ?? undefined}
                   />
                 )}
               </div>
 
               <div className={styles.modalGroup}>
                 <div className={styles.modalRow2}>
-                  <input
-                    type="text"
-                    placeholder="Location"
-                    value={location}
-                    onChange={(e) => setLocation(e.target.value)}
-                    className={styles.modalInput}
-                    data-component="event-location-input"
-                  />
+                  <div className={styles.modalField}>
+                    <label htmlFor="event-location-input">Location</label>
+                    <input
+                      id="event-location-input"
+                      type="text"
+                      placeholder="Add a location"
+                      value={location}
+                      onChange={(e) => setLocation(e.target.value)}
+                      className={styles.modalInput}
+                      data-component="event-location-input"
+                    />
+                  </div>
 
-                  <select
-                    id="calendar-select"
-                    aria-label="Calendar"
-                    value={calendarId}
-                    onChange={(e) => handleCalendarChange(e.target.value)}
-                    className={styles.modalSelect}
-                    data-component="event-calendar-select"
-                    disabled={isCurrentCalendarReadOnly}
-                  >
-                    {isCurrentCalendarReadOnly &&
-                      !compatibleCalendars.some((cal) => cal.id === calendarId) && (
-                        <option value={calendarId}>
-                          {calendars.find((c) => c.id === calendarId)?.name} (read-only)
+                  <div className={styles.modalField}>
+                    <label htmlFor="calendar-select">Calendar</label>
+                    <select
+                      id="calendar-select"
+                      value={calendarId}
+                      onChange={(e) => handleCalendarChange(e.target.value)}
+                      className={styles.modalSelect}
+                      data-component="event-calendar-select"
+                      disabled={isCurrentCalendarReadOnly}
+                    >
+                      {isCurrentCalendarReadOnly &&
+                        !compatibleCalendars.some((cal) => cal.id === calendarId) && (
+                          <option value={calendarId}>
+                            {calendars.find((c) => c.id === calendarId)?.name} (read-only)
+                          </option>
+                        )}
+                      {compatibleCalendars.map((cal) => (
+                        <option key={cal.id} value={cal.id}>
+                          {cal.name}
                         </option>
-                      )}
-                    {compatibleCalendars.map((cal) => (
-                      <option key={cal.id} value={cal.id}>
-                        {cal.name}
-                      </option>
-                    ))}
-                  </select>
+                      ))}
+                    </select>
+                  </div>
                 </div>
 
                 {isCurrentCalendarReadOnly && (
@@ -1946,6 +1945,7 @@ export function EventModal(): JSX.Element | null {
                       <button
                         type="button"
                         className={styles.removeFieldButton}
+                        aria-label="Remove description"
                         onClick={() => {
                           setShowDescription(false)
                           setDescription('')
@@ -1974,7 +1974,7 @@ export function EventModal(): JSX.Element | null {
                   className={`${styles.modalDelete} ${confirmDelete ? styles.modalDeleteConfirm : ''}`}
                   onClick={handleDelete}
                 >
-                  {confirmDelete ? 'Click again to confirm' : 'Delete'}
+                  {confirmDelete ? 'Confirm delete' : 'Delete'}
                 </button>
               )}
               <div className={styles.modalActions}>

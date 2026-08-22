@@ -25,9 +25,14 @@ export function useFocusTrap(containerRef: RefObject<HTMLElement | null>, active
     const previouslyFocused = document.activeElement as HTMLElement | null
 
     const getFocusable = (): HTMLElement[] =>
-      Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(
-        (el) => !el.hasAttribute('hidden') && el.getAttribute('aria-hidden') !== 'true'
-      )
+      Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter((el) => {
+        if (el.hasAttribute('hidden') || el.getAttribute('aria-hidden') === 'true') return false
+        // A collapsed disclosure may keep its contents mounted for a height
+        // transition. Its descendants are still in the selector above, so
+        // inspect ancestors as well as the element itself. This keeps focus
+        // from entering controls that are visually and semantically hidden.
+        return !el.closest('[aria-hidden="true"], [inert]')
+      })
 
     // If focus isn't already inside the container, move it in.
     if (!container.contains(document.activeElement)) {

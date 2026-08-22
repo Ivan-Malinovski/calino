@@ -144,6 +144,7 @@ export function AttachmentSection({
                 type="button"
                 className={styles.removeAttachment}
                 title="Remove attachment"
+                aria-label={`Remove ${att.filename || 'attachment'}`}
                 onClick={() => handleRemove(index)}
               >
                 ×
