@@ -163,6 +163,13 @@
     padding-bottom: 0;
   }
 
+  /* Journal's narrow editor is a full-screen surface. Let it extend behind
+     the floating pill while it is open; the list-only state keeps the normal
+     clearance so its last row remains reachable. */
+  .main[data-view='journal']:has([data-component='journal-editor']) {
+    padding-bottom: 0;
+  }
+
   /* The pill hides itself while a text input is focused (see
      useTextInputFocused), but this reserved clearance doesn't know that —
      left alone it shows up as a bare strip of .main's own background
@@ -172,18 +179,6 @@
   }
 }
 
-@media (max-width: 600px) {
-  /* In the most compact layout the journal editor owns the whole screen.
-     Hide the floating navigation while it is open so its footer is not
-     covered and the editor does not leave a reserved strip underneath. */
-  .main[data-view='journal']:has([data-component='journal-editor']) {
-    padding-bottom: 0;
-  }
-
-  body:has([data-component='journal-editor']) [data-component='floating-nav-pill'] {
-    display: none;
-  }
-}
 .agendaSidebar {
   position: relative;
   flex: 0 0 auto;
