@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { screen } from '@testing-library/react'
+import { fireEvent, screen } from '@testing-library/react'
 import { render } from '@/test/caldavRender'
 import userEvent from '@testing-library/user-event'
 import { BrowserRouter } from 'react-router'
@@ -58,10 +58,9 @@ describe('JournalView compose date (#116)', () => {
 
     // The date renders as a button; clicking it swaps in the <input type="date">
     // holding the raw yyyy-MM-dd the entry will be saved with.
-    await user.click(screen.getByTitle('Click to change date'))
+    fireEvent.click(screen.getByTitle('Click to change date'))
 
-    const dateInput = document.querySelector<HTMLInputElement>('input[type="date"]')
-    expect(dateInput).not.toBeNull()
-    expect(dateInput!.value).toBe(LOCAL_DAY)
+    const dateInput = await screen.findByDisplayValue(LOCAL_DAY)
+    expect(dateInput).toHaveAttribute('type', 'date')
   })
 })
