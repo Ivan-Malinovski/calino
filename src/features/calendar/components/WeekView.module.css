@@ -344,7 +344,7 @@
   position: absolute;
   left: 2px;
   right: 2px;
-  background: rgba(176, 125, 79, 0.2);
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
   border: 2px solid var(--accent, #b07d4f);
   border-radius: var(--radius-sm);
   pointer-events: none;

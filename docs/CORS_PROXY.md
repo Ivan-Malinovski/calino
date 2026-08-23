@@ -35,11 +35,19 @@ We host a public CORS proxy at `https://proxy.calino.io` for Calino users who ca
 
 **Important:** This proxy is restricted to Calino users only. It checks the Origin header and will reject requests from outside `calino.io` domains.
 
-**Privacy note:** This proxy sees your IP and CalDAV server URL, but **not** your credentials or calendar data. See Privacy Considerations below.
+**Privacy note:** The proxy necessarily receives the authenticated CalDAV
+requests and responses. The hosted service is designed not to log credentials or
+calendar bodies, but its operator could technically observe them in memory while
+requests are being handled. Use a proxy you operate or configure CORS directly
+when that matters. See Privacy Considerations below.
 
 ### 3. Self-Hosted Cloudflare Worker
 
-Deploy your own proxy for maximum privacy:
+Deploy your own proxy if you trust the Worker operator and are prepared to
+harden the example for your deployment. This minimal example accepts an
+arbitrary HTTPS target and follows redirects, so it is a reference example,
+not a drop-in internet-facing SSRF defense. The bundled Docker proxy below
+supports target allowlisting and does not follow redirects.
 
 **`worker.js`**
 
@@ -198,12 +206,19 @@ If you use the Calino-hosted proxy at `proxy.calino.io`:
 - The URL of your CalDAV server
 - Request metadata (HTTP method, timing, response size)
 
-**We CANNOT see:**
+**We do not intentionally log:**
 
-- Your username or password (sent in `Authorization` header, not logged)
-- Your calendar event data (request/response bodies are not logged)
-- The content of your calendars or events
+- Authorization headers and request/response bodies
+
+The proxy still terminates the browser's connection and forwards the
+authenticated request, so the operator could observe credentials and calendar
+content in process memory. HTTPS protects the browser-to-proxy hop, not the
+proxy operator from seeing what the proxy handles.
 
 ### Using any proxy (including self-hosted)
 
-The same applies to any CORS proxy you use - the operator can see connection metadata but not your credentials or calendar data. For maximum privacy, add CORS headers directly to your CalDAV server instead of using a proxy.
+The operator of any proxy can potentially see credentials and calendar data
+while forwarding requests, even if the service does not retain or log them. For
+maximum privacy, add CORS headers directly to your CalDAV server instead of
+using a proxy. If you do run a proxy, restrict both allowed origins and target
+hosts, and serve it over HTTPS.

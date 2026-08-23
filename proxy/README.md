@@ -53,5 +53,11 @@ don't block it as mixed content.
   Calino instance) and ideally `ALLOWED_TARGETS` (to your CalDAV host) so it
   can't be used as an open relay.
 
+When the proxy is enabled from the repository root with
+`docker compose --profile proxy up -d`, the equivalent Compose variables are
+`CALINO_PROXY_ALLOWED_ORIGINS` and `CALINO_PROXY_ALLOWED_TARGETS` in the root
+`.env` file. The standalone `proxy/docker-compose.yml` uses the names in the
+table above directly.
+
 See [`../docs/CORS_PROXY.md`](../docs/CORS_PROXY.md) for all proxy options
 (hosted, Cloudflare Worker, self-hosted).

@@ -4,6 +4,13 @@ All notable changes to Calino will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- **Adjustable themes** let you tune light and dark palettes with live color,
+  radius, density, shadow, and event-tint controls. Changes persist locally and
+  through settings sync, with contrast warnings for combinations that fall
+  below WCAG AA.
+
 ## [0.30.0] - 2026-08-21
 
 ### Added

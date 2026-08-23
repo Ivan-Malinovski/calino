@@ -265,8 +265,8 @@
 }
 
 .removeBtn:hover {
-  color: var(--color-error, #ea4335);
-  background: rgba(234, 67, 53, 0.08);
+  color: var(--color-error);
+  background: var(--error-bg);
 }
 
 /* ── Buttons ────────────────────────────────────────────────────────────── */
@@ -366,7 +366,7 @@
 .warn {
   margin-top: 12px;
   padding: 10px 12px;
-  background: rgba(234, 67, 53, 0.06);
+  background: var(--error-bg);
   border-radius: var(--radius-sm);
   font-size: 13px;
   color: var(--ink);

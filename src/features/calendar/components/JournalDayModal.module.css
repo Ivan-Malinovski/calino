@@ -157,7 +157,7 @@
 }
 
 .entryFocused {
-  background: rgba(196, 168, 154, 0.08);
+  background: var(--selected-bg);
 }
 
 .entryHeader {
@@ -189,7 +189,7 @@
 }
 
 .entryEditBtn:hover {
-  background: var(--surface-hover);
+  background: var(--color-bg-hover);
   color: var(--ink);
 }
 
@@ -699,13 +699,13 @@
 
 .btnDelete:hover {
   background: var(--color-error-muted, #c47068);
-  color: #fff;
+  color: var(--color-bg-primary, #fff);
   border-color: var(--color-error-muted, #c47068);
 }
 
 .btnDeleteConfirm {
   background: var(--color-error-muted, #c47068);
-  color: #fff;
+  color: var(--color-bg-primary, #fff);
   border-color: var(--color-error-muted, #c47068);
 }
 

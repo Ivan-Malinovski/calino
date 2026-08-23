@@ -14,7 +14,7 @@
 
 </div>
 
-**Calino is a browser-based CalDAV client that connects directly to your calendar server.** No other accounts required — it runs as a static page, and data stays entirely between your browser and your CalDAV server.
+**Calino is a local-first, browser-based calendar client that connects to your calendar services.** No Calino account is required: the app is a static page, stores its working data locally, and syncs with the CalDAV/CardDAV servers you configure. Optional webcal feeds, CORS proxies, AI photo extraction, map links, and hosted fonts are separate network integrations.
 
 If you've been looking for a beautiful, modern browser-based CalDAV calendar that doesn't come as part of a bloated suite, Calino has you covered.
 
@@ -27,13 +27,13 @@ If you've been looking for a beautiful, modern browser-based CalDAV calendar tha
 
 ### CalDAV Proxy
 
-Due to the browser based nature of Calino, Calino requires your CalDAV server to support CORS. If that's not an option, you can use Calino's hosted proxy URL during setup: https://proxy.calino.io
+Due to the browser-based nature of Calino, a web CalDAV/CardDAV server must allow requests from your Calino origin with CORS headers. If that's not an option, you can use a proxy URL during setup; Calino provides `https://proxy.calino.io` as a convenience.
 
-With that said, I urge you to either selfhost Calino or at least use your own proxy, to minimize the amount of data being sent to servers that are not your own. `proxy.calino.io` is solely for convenience, please don't rely on it. To run your own proxy, see [`docs/CORS_PROXY.md`](./docs/CORS_PROXY.md).
+With a proxy, requests pass through the proxy operator, so use your own proxy or configure CORS directly when that matters. The hosted proxy sees connection metadata and request URLs, but is designed not to log credentials or calendar bodies. See [`docs/CORS_PROXY.md`](./docs/CORS_PROXY.md) for the hosted proxy's limits and self-hosting options.
 
 ## Android app
 
-Like Calino in your browser? You'll love it on your phone. A native Android app is now available with everything you enjoy about Calino, but better notifications and very optional LLM support (BYOK), so you can take picture of a poster, screenshot or slide, and easily add the events to your CalDAV calendar. Find the latest .apk in the [GitHub Releases page](https://github.com/Ivan-Malinovski/calino/releases).
+Like Calino in your browser? A native Android app is available with OS-level reminders, background calendar mirroring, and optional BYOK AI photo extraction. The AI provider receives the image and prompt when you choose to use that feature. Find the latest APK in the [GitHub Releases page](https://github.com/Ivan-Malinovski/calino/releases).
 
 ---
 
@@ -64,7 +64,7 @@ I have made it as close as possible, as to what I envision the perfect CalDAV no
 - Auto-enabled when contacts are found — no extra setup
 
 ### Time & Calendar
-- Auto timezone detection with manual override
+- Auto-detected local timezone with an optional secondary timezone display
 - 12h/24h toggle
 - Multiple calendars with custom colors
 - Compact recurring events (no giant blocks cluttering your week)
@@ -83,7 +83,7 @@ I have made it as close as possible, as to what I envision the perfect CalDAV no
 - Categories sync via iCalendar CATEGORIES property (RFC 5545)
 
 ### Desktop Integration
-- **PWA** — install as a native app (*offline / service-worker support requires self-hosting; GitHub Pages strips the `Service-Worker-Allowed` header. See "Service Worker" below.*)
+- **PWA** — install as a native app. Offline caching is opt-in and requires a deployment that serves the service worker with `Service-Worker-Allowed: /`.
 - **Desktop notifications** with customizable reminders
 - Sync retry: failed CalDAV operations are automatically retried; manual retry button in sidebar
 
@@ -100,42 +100,43 @@ I have made it as close as possible, as to what I envision the perfect CalDAV no
 - Optimized mobile view
 
 ### Android app
-An Android APK is published on the [GitHub Releases page](https://github.com/Ivan-Malinovski/calino/releases) — not distributed via Play Store (yet). Since it isn't signed by a Play Store, Android will ask you to allow installs from your browser/file manager the first time ("install unknown apps") — this is expected.
+An Android APK is published on the [GitHub Releases page](https://github.com/Ivan-Malinovski/calino/releases) — it is not distributed via Google Play. Because it is sideloaded, Android may ask you to allow installs from your browser or file manager.
 
 For notification reminders to actually fire reliably, some phone makers (Xiaomi/MIUI especially, also Oppo, Realme, Honor, OnePlus, and others) aggressively kill background apps to save battery, which silently breaks scheduled reminders. Check [dontkillmyapp.com](https://dontkillmyapp.com/) for your device and set Calino's battery/power mode to "No restrictions" or equivalent.
 
-### Security
-- **App-level encryption is obfuscation, not security.** Credentials in localStorage are encrypted with a key bundled with the app. Anyone with the JS bundle can derive the same key. For stronger protection, use the master-password setup wizard (`/setup`) — the key is derived from your password and never leaves the device.
-- **No telemetry, no analytics.** Nothing leaves your browser except CalDAV traffic to your own server
-- **Serverless by design.** There's nothing to breach on Calino's side — the app is just static HTML/JS
-- **Docker hardening.** Runs as non-root, minimal base image, no shell access
+### Security and privacy
+- **Local-first storage.** Calendar data, settings, contacts, and credentials are stored in the browser/device storage. Large attachments, photos, and raw ICS data use IndexedDB.
+- **Credential warning.** The default local credential protection uses a key bundled with the app; it is obfuscation against casual inspection, not protection from someone who can read the app bundle and storage. For stronger protection, use the master-password setup wizard (`/setup`), which derives the key from a password that stays on the device.
+- **No tracking analytics.** Calino does not include telemetry or analytics. Network requests can still go to the CalDAV/CardDAV servers, webcal feeds, configured proxy, optional map/font services, and an AI provider when those features are used.
+- **Serverless by design.** The hosted app has no Calino account database or application backend; your configured integrations still have their own operators and privacy policies.
+- **Docker hardening.** The bundled production image uses Caddy with security headers and container hardening; see [`docs/DOCKER.md`](./docs/DOCKER.md).
 - **Self-hosted account preloading.** Ship Calino with preconfigured CalDAV accounts protected by a master password. Generate the config via the browser-based `/setup` wizard — no Node.js required. See [`docs/SELF_HOSTED_CONFIG.md`](./docs/SELF_HOSTED_CONFIG.md)
 
 ### Limitations
 - No enterprise features
-- No invitation functionality
-- No sharing functionality
+- No server-side calendar sharing or invitation scheduling
+- Attendee details can be stored in iCalendar data and emailed via a local `mailto:` invite, but Calino is not an invitation service
 
 ---
 
-## Self hosting Quick Start
+## Self-hosting quick start
 
 ```bash
 pnpm install
 pnpm dev
 ```
 
-Open http://localhost:5173
+Open http://localhost:5173. The Vite dev server is intended for development; use the production build or Docker for a deployment.
 
 ## Docker
 
 The fastest way to self-host. Pre-built multi-arch images (amd64 + arm64) are on GHCR:
 
 ```bash
-docker run -d -p 8080:8080 ghcr.io/ivan-malinovski/calino:main
+docker run -d -p 8080:8080 ghcr.io/ivan-malinovski/calino:latest
 ```
 
-> **Tip:** Use `:main` for the latest development build, or pin to a specific version tag (e.g. `:v0.20.0`) for stability.
+> **Tip:** `:latest` and `:main` point to the latest stable release published from a version tag. Pin a version tag without the leading `v` (for example `:0.30.0`) when you need a fixed image.
 
 Or clone and customize:
 
@@ -157,7 +158,7 @@ Calino is a static React app — host it anywhere that serves HTML/JS.
 1. Build: `pnpm build`
 2. Serve the `dist/` folder (make sure SPA fallback is configured — see below)
 
-All user data, including CalDAV credentials, lives in the browser's `localStorage`. There is no backend or any central Calino server.
+Most user data, including CalDAV account metadata and credentials, lives in the browser's `localStorage`; large raw ICS documents, attachments, and contact photos use IndexedDB. There is no backend or central Calino application server.
 
 **Config (in-app):** Click the gear icon or use `Cmd/Ctrl+K` → "Settings" → add your CalDAV server URL, username, and password.
 
@@ -175,11 +176,11 @@ pnpm build
 
 Calino is a Vite SPA. Any static host works as long as it rewrites all unknown paths to `/index.html` (so client-side routes like `/week` and `/day` resolve on refresh).
 
-**GitHub Pages** — deploy via GitHub Actions:
-1. Fork the repo
-2. Edit `.github/workflows/deploy.yml` — change `VITE_SITE_URL` to `https://<your-user>.github.io/<your-repo>`
-3. Settings → Pages → Source: **GitHub Actions**
-4. Push to `main`
+**GitHub Pages** — the repository workflow deploys the project site for the
+upstream repository. For a fork, update the workflow's `VITE_SITE_URL` and
+the Vite `base` path if you are deploying under a project subpath, enable
+Settings → Pages → Source: **GitHub Actions**, then push to `main`. A custom
+domain or a host that serves the app at `/` does not need a subpath base.
 
 **Caddy** (example):
 ```caddy
@@ -189,7 +190,7 @@ yourcaldav.server.com {
     handle @cors {
         header {
             Access-Control-Allow-Origin "*" # or your selfhosted Calino instance URL
-            Access-Control-Allow-Methods "GET, POST, PUT, DELETE, PROPFIND, PROPPATCH, REPORT, OPTIONS, MKCOL, COPY, MOVE"
+            Access-Control-Allow-Methods "GET, POST, PUT, DELETE, PROPFIND, PROPPATCH, REPORT, OPTIONS, MKCOL, MKCALENDAR, COPY, MOVE"
             Access-Control-Allow-Headers "Authorization, Content-Type, Depth, Prefer, If-None-Match, If-Match"
             Access-Control-Expose-Headers "ETag"
         }
@@ -198,7 +199,7 @@ yourcaldav.server.com {
 
     header {
         Access-Control-Allow-Origin "*"
-        Access-Control-Allow-Methods "GET, POST, PUT, DELETE, PROPFIND, PROPPATCH, REPORT, OPTIONS, MKCOL, COPY, MOVE"
+        Access-Control-Allow-Methods "GET, POST, PUT, DELETE, PROPFIND, PROPPATCH, REPORT, OPTIONS, MKCOL, MKCALENDAR, COPY, MOVE"
         Access-Control-Allow-Headers "Authorization, Content-Type, Depth, Prefer, If-None-Match, If-Match"
         Access-Control-Expose-Headers "ETag"
         -Server
@@ -210,7 +211,7 @@ yourcaldav.server.com {
 
 > **Tip:** Replace `*` with your Calino origin in production (e.g. `https://calendar.example.com`) to avoid letting arbitrary sites read your calendar.
 
-**Service Worker / Offline Mode:** The service worker is disabled by default. To enable offline support, build with `CALINO_ENABLE_SW=true` and make sure your host returns `Service-Worker-Allowed: /`. See [`docs/DOCKER.md`](./docs/DOCKER.md) for Docker setup.
+**Service Worker / Offline Mode:** The service worker is disabled by default. To enable offline support, build with `CALINO_ENABLE_SW=true` and make sure the final host serves `/sw.js` with `Service-Worker-Allowed: /`. The service worker caches the app shell; CalDAV synchronization still needs network access. See [`docs/DOCKER.md`](./docs/DOCKER.md) for Docker setup.
 
 ### Supported CalDAV Servers
 - Baikal
@@ -225,7 +226,7 @@ If adding headers to your CalDAV server:
 ```
 Access-Control-Allow-Origin: <your-calino-origin>
 Access-Control-Allow-Headers: Authorization, Content-Type, Depth, If-Match, If-None-Match
-Access-Control-Allow-Methods: GET, PUT, POST, DELETE, PROPFIND, PROPPATCH, REPORT, OPTIONS, MKCOL, COPY, MOVE
+Access-Control-Allow-Methods: GET, PUT, POST, DELETE, PROPFIND, PROPPATCH, REPORT, OPTIONS, MKCOL, MKCALENDAR, COPY, MOVE
 Access-Control-Expose-Headers: ETag, DAV, Allow
 ```
 
@@ -244,6 +245,11 @@ docker compose --profile proxy up -d
 ```
 
 Then set the **Proxy URL** in Calino settings to `http://<your-host>:8081`. It's a separate, zero-dependency container ([`proxy/`](./proxy)) that you can also run standalone or as a Cloudflare Worker. See [`docs/CORS_PROXY.md`](./docs/CORS_PROXY.md) for all options.
+
+For an internet-facing proxy, do not leave the defaults open: set both
+`CALINO_PROXY_ALLOWED_ORIGINS` and `CALINO_PROXY_ALLOWED_TARGETS` to your
+Calino origin and CalDAV host(s). Put the proxy behind HTTPS as well. These
+restrictions reduce open-relay and SSRF risk; see [`docs/CORS_PROXY.md`](./docs/CORS_PROXY.md).
 
 # Screenshots
 
@@ -264,11 +270,13 @@ Then set the **Proxy URL** in Calino settings to `http://<your-host>:8081`. It's
 
 ## Tech Stack
 
-React 19 + TypeScript + Vite, Zustand v5, tsdav (CalDAV), date-fns, chrono-node, @dnd-kit, framer-motion, Fuse.js, ical.js, Vitest
+React 19 + TypeScript + Vite, Zustand v5, tsdav (CalDAV), CardDAV, date-fns,
+chrono-node, @dnd-kit, framer-motion, Fuse.js, ical.js, Vitest, and Playwright.
 
 ---
 
-**Disclaimer:** This project is entirely vibe coded by [Minimax M2.7](https://minimax.io) and [Xiaomi MiMo v2.5 (Pro)](https://mimo.xiaomi.com/), but thoroughly tested with real calendars. Issues may still arise. Bug reports are very welcome.
+Calino is actively developed and tested against real calendar workflows. Issues
+may still arise; bug reports are very welcome.
 
 ## License
 

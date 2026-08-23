@@ -82,7 +82,9 @@ The image supports **amd64** (x86) and **arm64** (Apple Silicon, Raspberry Pi 4+
 
 ### Pull from GHCR (no build needed)
 
-Pre-built multi-arch images are published to GitHub Container Registry on every push to `main` and on version tags:
+Pre-built multi-arch images are published to GitHub Container Registry from
+version tags. The `main` and `latest` moving tags are updated for stable
+version releases; ordinary `main` pushes run CI but do not publish an image:
 
 ```bash
 # Latest from main
@@ -142,7 +144,12 @@ The Docker setup follows least-privilege principles:
 
 ### Content Security Policy
 
-Calino does **not** ship a `Content-Security-Policy` header because the app connects to **user-configured CalDAV servers** at arbitrary origins — a static CSP would break the app for most deployments. If your CalDAV server has a fixed origin, you can add a CSP header in your reverse proxy. A reasonable starting point:
+Calino does **not** ship an HTTP `Content-Security-Policy` response header
+because the app connects to **user-configured CalDAV servers** at arbitrary
+origins — a static header would break the app for most deployments. The HTML
+does contain a permissive meta CSP with `connect-src 'self' https:` as a
+baseline. If your CalDAV server has a fixed origin, add a stricter response
+header in your reverse proxy. A reasonable starting point:
 
 ```
 Content-Security-Policy: default-src 'self'; connect-src 'self' https://your-caldav.example.com; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self';
@@ -249,9 +256,12 @@ Calino app container is unchanged). In Calino settings set:
 - **Proxy URL** — `http://<your-host>:8081` (put it behind HTTPS in production)
 
 To restrict which Calino origins may use it, set `CALINO_PROXY_ALLOWED_ORIGINS`
-in your `.env` (comma-separated; empty = open to any origin). Credentials and
-calendar bodies are passed through and never logged. Full details, including a
-Cloudflare Worker alternative, are in [`CORS_PROXY.md`](./CORS_PROXY.md).
+in your `.env` (comma-separated; empty = open to any origin). For an
+internet-facing proxy, also set `CALINO_PROXY_ALLOWED_TARGETS` to the allowed
+CalDAV host suffixes. Credentials and calendar bodies are passed through and
+never logged, but the proxy operator can see them in memory; use HTTPS and
+trust the operator. Full details, including a Cloudflare Worker alternative,
+are in [`CORS_PROXY.md`](./CORS_PROXY.md).
 
 ## Troubleshooting
 

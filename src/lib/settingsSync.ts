@@ -6,7 +6,11 @@
  */
 
 import { safeLocalStorage } from '@/lib/storage'
-import { useSettingsStore } from '@/store/settingsStore'
+import {
+  DEFAULT_ADJUSTABLE_THEME,
+  normalizeAdjustableTheme,
+  useSettingsStore,
+} from '@/store/settingsStore'
 import type { UserSettings } from '@/types'
 
 // ─── Version ──────────────────────────────────────────────────────────────────
@@ -49,6 +53,7 @@ export const SYNCABLE_SETTINGS: (keyof UserSettings)[] = [
   'themeMode',
   'lightTheme',
   'darkTheme',
+  'adjustableTheme',
   'hideCompletedTasksInMonthView',
   'useCategoryColors',
   'journalEnabled',
@@ -135,6 +140,13 @@ export function mergeSettings(
     if (key in remoteSettings) {
       const value = remoteSettings[key]
       if (value !== undefined) {
+        if (key === 'adjustableTheme') {
+          merged.adjustableTheme = normalizeAdjustableTheme(
+            value,
+            localSettings.adjustableTheme ?? DEFAULT_ADJUSTABLE_THEME
+          )
+          continue
+        }
         ;(merged as Record<string, unknown>)[key] = value
       }
     }

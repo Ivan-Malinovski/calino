@@ -6,12 +6,12 @@ Calino syncs user settings (theme, first day of week, time format, etc.) across 
 
 CalDAV is designed for calendar data (VEVENT, VTODO, VJOURNAL). There is no standard way to sync arbitrary JSON settings via CalDAV. Options considered:
 
-| Approach | Problem |
-|----------|---------|
-| Store JSON file via WebDAV PUT | CalDAV calendar collections reject non-iCalendar files (405 Method Not Allowed on Baikal/SabreDAV) |
-| Store in a VEVENT DESCRIPTION field | iCalendar 75-octet line folding breaks long base64 payloads |
-| Store in a VTODO | Pollutes task lists, confusing users |
-| Create a separate WebDAV collection | Not supported by all CalDAV servers; requires non-standard PROPFIND |
+| Approach                            | Problem                                                                                            |
+| ----------------------------------- | -------------------------------------------------------------------------------------------------- |
+| Store JSON file via WebDAV PUT      | CalDAV calendar collections reject non-iCalendar files (405 Method Not Allowed on Baikal/SabreDAV) |
+| Store in a VEVENT DESCRIPTION field | iCalendar 75-octet line folding breaks long base64 payloads                                        |
+| Store in a VTODO                    | Pollutes task lists, confusing users                                                               |
+| Create a separate WebDAV collection | Not supported by all CalDAV servers; requires non-standard PROPFIND                                |
 
 **Chosen approach**: A dedicated calendar collection containing a single VEVENT with the settings payload encoded as base64 in the `ATTACH` property.
 
@@ -32,14 +32,14 @@ calDAV Server
 
 ### The Settings VEVENT
 
-A single VEVENT with a fixed UID lives inside the collection:
+A single VEVENT with the literal UID `calino-settings` lives inside the collection:
 
 ```ical
 BEGIN:VCALENDAR
 VERSION:2.0
 PRODID:-//Calino//Settings Sync//EN
 BEGIN:VEVENT
-UID:00000000-calino-0000-calino-000000000000
+UID:calino-settings
 DTSTAMP:20260609T185530Z
 DTSTART:19700101T000000Z
 DTEND:19700101T000001Z
@@ -52,14 +52,14 @@ END:VEVENT
 END:VCALENDAR
 ```
 
-| Field | Purpose |
-|-------|---------|
-| `UID` | Fixed UUID shared across all Calino instances — ensures exactly one settings event exists |
-| `DTSTART` | Unix epoch (1970-01-01) — keeps the event out of every real calendar view |
-| `TRANSP:TRANSPARENT` | Never blocks time in any calendar view |
-| `CLASS:PRIVATE` | Hidden in shared calendar contexts |
-| `X-CALINO-VERSION` | Schema version for future migration support |
-| `ATTACH;ENCODING=BASE64;FMTTYPE=app/json` | The actual settings payload |
+| Field                                     | Purpose                                                                                      |
+| ----------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `UID`                                     | Fixed literal shared across all Calino instances — ensures exactly one settings event exists |
+| `DTSTART`                                 | Unix epoch (1970-01-01) — keeps the event out of every real calendar view                    |
+| `TRANSP:TRANSPARENT`                      | Never blocks time in any calendar view                                                       |
+| `CLASS:PRIVATE`                           | Hidden in shared calendar contexts                                                           |
+| `X-CALINO-VERSION`                        | Schema version for future migration support                                                  |
+| `ATTACH;ENCODING=BASE64;FMTTYPE=app/json` | The actual settings payload                                                                  |
 
 ### Settings Payload Format
 
@@ -71,12 +71,16 @@ The `ATTACH` field contains base64-encoded JSON:
   "syncedAt": "2026-06-09T18:55:30.755Z",
   "settings": {
     "timezone": "Europe/Copenhagen",
+    "secondaryTimezoneEnabled": false,
+    "secondaryTimezone": null,
+    "secondaryTimezoneLabel": null,
     "dateFormat": "dd/MM/yyyy",
     "timeFormat": "12h",
     "firstDayOfWeek": 1,
     "defaultDuration": 60,
     "defaultView": "month",
     "showWeekNumbers": true,
+    "showWeekNumbersInSidebar": true,
     "eventDensity": "comfortable",
     "defaultReminderMinutes": 15,
     "defaultEventColor": "#4285F4",
@@ -86,11 +90,40 @@ The `ATTACH` field contains base64-encoded JSON:
     "compressPastWeeks": true,
     "monthViewEventLimit": 3,
     "themeMode": "auto",
-    "lightTheme": "default-light",
-    "darkTheme": "default-dark",
+    "lightTheme": "built-in",
+    "darkTheme": "built-in-dark",
+    "adjustableTheme": {
+      "light": {
+        "canvas": "#f7f4ee",
+        "panel": "#fffdfa",
+        "accent": "#b07d4f",
+        "accentContrast": "#ffffff",
+        "text": "#2c2823",
+        "mutedText": "#70695f",
+        "border": "#e4ded4",
+        "cornerRadius": 10,
+        "density": 100,
+        "shadowStrength": 70,
+        "eventTint": 10
+      },
+      "dark": {
+        "canvas": "#17181b",
+        "panel": "#22252a",
+        "accent": "#87a7ff",
+        "accentContrast": "#16181d",
+        "text": "#eef1f5",
+        "mutedText": "#a7afba",
+        "border": "#3b414b",
+        "cornerRadius": 10,
+        "density": 100,
+        "shadowStrength": 60,
+        "eventTint": 18
+      }
+    },
     "hideCompletedTasksInMonthView": true,
     "useCategoryColors": true,
-    "journalEnabled": false
+    "journalEnabled": false,
+    "taskCollapseOverrides": {}
   }
 }
 ```
@@ -98,13 +131,15 @@ The `ATTACH` field contains base64-encoded JSON:
 ### What's Synced vs. What's Not
 
 **Synced** (UI preferences):
+
 - Timezone, date/time format, first day of week
 - Default view, event density, week numbers
-- Theme mode, light/dark theme names
+- Theme mode, light/dark theme names, and both Adjustable theme profiles
 - Notification preferences
 - Category colors, completed task visibility
 
 **NOT synced** (local-only):
+
 - CalDAV account credentials
 - Sync configuration (enabled, interval, conflict resolution)
 - Onboarding state
@@ -120,14 +155,16 @@ Remote DTSTAMP > lastSyncedAt  →  Remote wins (server was updated since our la
 Remote DTSTAMP ≤ lastSyncedAt  →  Local wins (we're up to date or ahead)
 ```
 
-| Scenario | Result |
-|----------|--------|
-| Change setting on Device A, push | Device A's `lastSyncedAt` updated |
-| Device B syncs | Remote DTSTAMP > B's `lastSyncedAt` → B gets A's changes |
-| Device B changes setting locally | B's `lastSyncedAt` unchanged (only set on pull) |
-| Device B syncs again | If no remote change, local wins; if remote changed, remote wins |
+| Scenario                         | Result                                                                                  |
+| -------------------------------- | --------------------------------------------------------------------------------------- |
+| Change setting on Device A, push | Device A writes the new VEVENT and updates its local-modified timestamp                 |
+| Device B syncs                   | Remote DTSTAMP > B's `lastSyncedAt` → B gets A's changes                                |
+| Device B changes setting locally | B's local-modified timestamp changes; `lastSyncedAt` still records the last remote pull |
+| Device B syncs again             | If no remote change, local wins; if remote changed, remote wins                         |
 
-**Key**: `lastSyncedAt` is only updated after a successful **pull**, not after a push. This ensures remote changes always win if they happened after our last sync.
+**Key**: `lastSyncedAt` is updated after a successful **pull**. A successful push updates
+`lastModified` instead. The comparison is against the last remote `DTSTAMP`, so a
+remote write that happened after the last pull can still win.
 
 ## Sync Flow
 
@@ -161,7 +198,7 @@ When a CalDAV account is added:
 1. After calendars are fetched, check for `Calino Settings` calendar
 2. If found and no `primaryAccountId` set → auto-enable sync
 3. Pull settings from the discovered calendar
-4. Show toast: *"Calino Settings found — sync enabled automatically."*
+4. Show toast: _"Calino Settings found — sync enabled automatically."_
 
 ## ETag Handling
 
@@ -197,18 +234,19 @@ CalDAV servers may return relative hrefs in PROPFIND/REPORT responses (e.g., `/d
 
 ## localStorage Keys
 
-| Key | Purpose |
-|-----|---------|
-| `calino.settingsSync.primaryAccountId` | Account ID used for sync (presence = sync active) |
-| `calino.settingsSync.etag` | ETag of the last-synced settings VEVENT |
-| `calino.settingsSync.lastSyncedAt` | ISO timestamp of last successful pull |
+| Key                                    | Purpose                                                           |
+| -------------------------------------- | ----------------------------------------------------------------- |
+| `calino.settingsSync.primaryAccountId` | Account ID used for sync (presence = sync active)                 |
+| `calino.settingsSync.etag`             | ETag of the last-synced settings VEVENT                           |
+| `calino.settingsSync.lastModified`     | Millisecond timestamp of the last successful local settings write |
+| `calino.settingsSync.lastSyncedAt`     | ISO timestamp of the last successful pull                         |
 
 ## Files
 
-| File | Purpose |
-|------|---------|
-| `src/lib/settingsSync.ts` | Serialization, deserialization, merge, conflict resolution, localStorage helpers |
-| `src/hooks/useSettingsSync.ts` | React hook: enable/disable/push/pull/discover |
-| `src/features/caldav/client/CalDAVClient.ts` | CalDAV operations: discover, fetch, put, delete settings calendar/VEVENT |
-| `src/features/caldav/hooks/useCalDAV.ts` | Auto-discovery on account add, settings pull after calendar sync |
-| `src/features/settings/components/GeneralSettings.tsx` | UI: sync section, account picker, error messages |
+| File                                                   | Purpose                                                                          |
+| ------------------------------------------------------ | -------------------------------------------------------------------------------- |
+| `src/lib/settingsSync.ts`                              | Serialization, deserialization, merge, conflict resolution, localStorage helpers |
+| `src/hooks/useSettingsSync.ts`                         | React hook: enable/disable/push/pull/discover                                    |
+| `src/features/caldav/client/CalDAVClient.ts`           | CalDAV operations: discover, fetch, put, delete settings calendar/VEVENT         |
+| `src/features/caldav/hooks/useCalDAV.ts`               | Auto-discovery on account add, settings pull after calendar sync                 |
+| `src/features/settings/components/GeneralSettings.tsx` | UI: sync section, account picker, error messages                                 |

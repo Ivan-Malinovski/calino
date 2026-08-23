@@ -21,7 +21,7 @@ The setup wizard runs entirely in your browser — credentials never leave your 
 
 **2. Add your CalDAV accounts and/or webcal subscriptions:**
 
-Enter the server URL, username, and password for each CalDAV account (test the connection before adding), and/or a name + `.ics`/`webcal://` URL for each calendar subscription. Neither is required — you can ship a config with just accounts, just subscriptions, or both.
+Enter the server URL, username, and password for each CalDAV account (test the connection before adding), and/or a name + `.ics`/`webcal://` URL for each calendar subscription. Either collection may be empty, but the generated config keeps both `accounts` and `webcalSubscriptions` arrays so it passes the build-time schema.
 
 **3. Set a master password:**
 
@@ -234,7 +234,7 @@ The encryption script (`scripts/encrypt-password.mjs`) and the browser (`src/lib
 ### Auto-Connect Flow
 
 1. `App.tsx` mounts → calls `configStore.loadConfigFile()`
-2. `loadConfigFile()` fetches `/calino.config.json`, validates, caches
+2. `loadConfigFile()` reads the build-time `__CALINO_CONFIG__` constant, validates, and caches it
 3. If config exists and master password is in localStorage → calls `unlock(storedPassword)`
 4. `unlock()` decrypts all account passwords → sets `isUnlocked = true`
 5. `useCalDAV` effect watches `isUnlocked` → triggers auto-connect
@@ -266,11 +266,11 @@ If two `addAccount()` calls run concurrently, they read the same state, both pus
 
 `configLoader.ts` validates the config strictly:
 - `version` must be `1`
-- `accounts` must be a non-empty array
+- `accounts` must be an array (it may be empty when webcal subscriptions are configured)
 - Each account needs `name`, `url`, `username` (non-empty strings)
 - `password` must have `ciphertext`, `iv`, `salt` (strings) — checked via `isMasterEncryptedData()`
 - Invalid accounts are skipped with a warning, not fatal
-- Returns `null` if file missing or invalid (silent failure)
+- Returns `null` if no config was injected, the envelope is invalid, or both collections are empty
 
 ### localStorage Keys
 

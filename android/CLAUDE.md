@@ -1,221 +1,198 @@
 # Android (Capacitor) wrapper
 
-This directory is a generated Capacitor Gradle project — a thin native shell that loads
-the same web app built from `../src`. There is **one codebase**, not two: editing
-`src/` changes both the web app and the Android app. See root `capacitor.config.ts`
-for the Capacitor config (`appId: calino.malinov.ski`, `webDir: 'dist'`).
+The Android project is a tracked Capacitor/Gradle shell around the web app. It
+loads the bundle built from `src/`, so there is one product implementation, not
+separate web and Android calendar code. Native Java is used only where Android
+provides capabilities the browser cannot: notifications, calendar mirroring,
+background sync, shortcuts, status-bar/insets, haptics, and share intents.
 
-Native code only needs to be touched for things the web platform genuinely cannot do
-(OS notifications, home-screen shortcuts, status bar, haptics, hardware back button).
-Everything else is plain React work in `src/`.
+The root [`capacitor.config.ts`](../capacitor.config.ts) defines app id
+`calino.malinov.ski` and `webDir: 'dist'`. Capacitor-generated files can be
+refreshed by `npx cap sync android`; preserve the custom code under
+`android/app/src/main/java/calino/malinov/ski/` and the native scripts when
+resolving sync changes.
 
-## Local build environment (this machine — Bazzite, not portable, not committed)
+## Prerequisites
 
-- Dedicated Distrobox container **`android-sdk`** (Fedora 41), isolated from the host
-  image and from the user's other `dev` distrobox.
-- Inside: JDK 17 + JDK 21 (Gradle/AGP needs 21 — fails with "invalid source release: 21"
-  on JDK 17 alone), Android SDK cmdline-tools, `platform-tools`,
-  `build-tools;36.0.0`/`35.0.0`, `platforms;android-36` (matches
-  `android/variables.gradle`'s `compileSdkVersion 36`).
-- `ANDROID_HOME`/`PATH` set in the container's `~/.bashrc`.
-- Project directory is visible inside the container via Distrobox's shared home mount.
-- `adb` is exported to the **host** via `distrobox-export --bin` (`~/.local/bin/adb`) —
-  run `adb` directly from the host shell, no need to enter the container for it.
+For a normal Android build, use JDK 21, Android SDK platform/build tools for
+API 36, and the SDK platform tools (`adb`). The Gradle wrapper and Android
+Gradle Plugin versions are pinned in this directory, so do not rely on a
+system Gradle installation.
 
-## Build / install workflow
+On the original development machine these tools are inside a Distrobox named
+`android-sdk`; that is a local convenience, not a repository requirement. A
+different machine may use a regular JDK/Android SDK installation or its own
+container. The repository path is intentionally not assumed below; replace
+`<repo>` with the checkout path when using Distrobox.
 
-> **Note on `cap:run`:** Do not use `pnpm cap:run` (or `cap run android`). It will fail for two reasons:
-> 1. It requires Java on the host (which is deliberately only kept inside the `android-sdk` distrobox).
-> 2. Capacitor's CLI crashes with "Invalid target ID" when dealing with mDNS wireless ADB device names (e.g., `adb-... (2)._adb-tls-connect._tcp`) due to spaces and parentheses in the name.
-> Instead, always follow the manual distrobox build steps below.
+## Build and install
 
-1. On host: `pnpm build && npx cap sync android` — copies the fresh web bundle and any
-   plugin config into the native project.
-2. Build APK inside the container:
-   `distrobox enter android-sdk -- bash -c 'cd /var/home/ivan/dev/calino/android && ./gradlew assembleDebug'`
-   (or `installDebug` to build + push to a connected device in one step).
-3. Debug APK: `android/app/build/outputs/apk/debug/app-debug.apk`.
-4. Install: `adb -s <device-id> install -r <apk-path>` (device-id needed if the same
-   phone shows up twice in `adb devices` — see below).
+From the repository root, build the web bundle and sync it into Android:
 
-## Debug and release install side by side
+```bash
+pnpm build
+npx cap sync android
+```
 
-The `debug` build type sets `applicationIdSuffix ".debug"` and
-`versionNameSuffix "-debug"`, so it installs as a separate app
-(`calino.malinov.ski.debug`, "Calino Debug") alongside the release build. Android
-scopes app storage — including the WebView `localStorage` where Calino keeps settings
-and API keys — by `applicationId`, so installing a debug build no longer wipes the
-release app's data.
+Then build from `android/` with the Gradle wrapper:
 
-The debug variant overrides its own resources in `app/src/debug/res/`, which shadow the
-same-named ones in `app/src/main/res/`:
+```bash
+cd android
+./gradlew assembleDebug
+```
 
-- `values/strings.xml` — launcher name, `package_name`, `custom_url_scheme`.
-- `mipmap-*/ic_launcher*` — white mark on a flat violet tile, so the two are trivially
-  distinguishable on the launcher. Regenerate with `scripts/gen-debug-icons.sh`
-  (ImageMagick) after any change to the release icon; it derives sizes from
-  `app/src/main/res` and never writes there.
+On a machine using the local Distrobox, the equivalent is:
 
-For fast iteration without a rebuild/reinstall cycle each time, point
-`capacitor.config.ts`'s `server.url` at a running `pnpm dev` server (LAN IP) — the
-installed APK then behaves like a browser tab pointed at that URL and hot-reloads.
-Revert before committing/shipping — the app should load the bundled `dist/` in normal use.
+```bash
+distrobox enter android-sdk -- bash -lc 'cd <repo>/android && ./gradlew assembleDebug'
+```
 
-## Phone connection: wireless ADB (no cable)
+The debug APK is
+`android/app/build/outputs/apk/debug/app-debug.apk`. Install it with an
+explicit device when more than one device is listed:
 
-Uses Android's **Wireless debugging** (Developer options), paired once then reconnected:
+```bash
+adb devices
+adb -s <device-id> install -r android/app/build/outputs/apk/debug/app-debug.apk
+```
 
-1. Phone: Developer options → Wireless debugging → "Pair device with pairing code" →
-   shows a pairing IP:port + 6-digit code.
-2. `adb pair <pairing-ip:port> <code>`
-3. The main Wireless debugging screen shows a **different** IP:port for regular
-   connections — `adb connect <connect-ip:port>`.
-4. The same device often shows up twice in `adb devices` (direct IP:port, and mDNS as
-   `adb-<guid>._adb-tls-connect._tcp`) — use `adb -s <ip:port>` to disambiguate.
-5. The connect IP:port changes if the wireless debugging session resets or the phone's
-   IP changes — re-pair if `adb connect` stalls or fails.
+`pnpm cap:run` / `npx cap run android` is valid when Java, the Android SDK, and
+a usable device target are available on the host. On the original machine the
+manual workflow above is more reliable because Java is container-only and
+wireless ADB mDNS names have caused Capacitor CLI target-parsing failures.
+
+For rapid UI iteration, temporarily set `server.url` in
+`capacitor.config.ts` to a reachable `pnpm dev` URL (use
+`CALINO_DEV_HOST=0.0.0.0` when LAN access is required). Revert that change
+before committing or shipping so the app uses the bundled `dist/` files.
+
+## Debug and release variants
+
+The debug build has `applicationIdSuffix ".debug"` and
+`versionNameSuffix "-debug"`, so it installs beside the release app as
+`calino.malinov.ski.debug` / “Calino Debug”. The separate application id also
+separates WebView localStorage, settings, and credentials.
+
+Debug launcher resources live under `android/app/src/debug/res/` and are
+intentionally distinguishable from release resources. If the release icon
+changes, regenerate the debug icon variants with:
+
+```bash
+android/scripts/gen-debug-icons.sh
+```
+
+That script requires ImageMagick and only writes debug resources.
+
+The release version name and version code come from the root `package.json`
+version at Gradle configuration time. Do not hand-edit `android/app/build.gradle`
+for a version bump. The code is derived as
+`major * 1_000_000 + minor * 1_000 + patch`; prerelease suffixes do not affect
+the numeric code.
+
+## Signing and releases
+
+`assembleRelease` is signed only when the gitignored
+`android/keystore.properties` points to the release keystore. Without that
+file it produces an unsigned APK. Never commit the keystore or its passwords.
+
+For a local signed build:
+
+```bash
+cd android
+./gradlew assembleRelease
+```
+
+The output is
+`android/app/build/outputs/apk/release/app-release.apk`.
+
+The `v*` tag workflow in
+[`.github/workflows/android.yml`](../.github/workflows/android.yml)
+builds the web app, syncs Capacitor, signs the release with repository secrets,
+and attaches the APK to the GitHub Release. APKs are currently distributed
+through GitHub Releases, not Google Play. Back up the release keystore outside
+the repository; losing it prevents future APKs from upgrading existing
+release installs.
+
+Because debug and release now use different application ids, they can coexist.
+An old pre-split debug APK may still use the plain
+`calino.malinov.ski` id; uninstall that legacy package before installing a
+release APK if Android reports a signature/package conflict:
+
+```bash
+adb -s <device-id> uninstall calino.malinov.ski
+```
+
+## Wireless ADB
+
+With Android Developer options → Wireless debugging enabled:
+
+```bash
+adb pair <pairing-ip:port> <six-digit-code>
+adb connect <connect-ip:port>
+adb devices
+```
+
+The pairing endpoint and regular connection endpoint are different. If the
+same phone appears more than once, use its direct `ip:port` device id with
+`adb -s`. The address can change when wireless debugging or the phone's
+network resets.
 
 ## Debugging
 
-- `chrome://inspect` remote DevTools has been unreliable (reported empty Console/Network
-  on this device). Prefer `adb logcat`: Capacitor forwards all WebView `console.*` calls
-  to logcat tagged `Capacitor/Console`:
+`chrome://inspect` may be useful for WebView inspection, but if it does not
+show reliable console/network output, use logcat:
+
+```bash
+adb -s <device-id> logcat -v time "Capacitor:V" "Capacitor/Console:V" "chromium:V" "*:S"
+```
+
+## Calendar mirror and background sync
+
+The optional `enableCalendarMirror` setting exports Calino events one way into
+Android `CalendarContract`. It does not sync Android calendar edits back into
+Calino and does not touch the user's Google/Exchange rows. The mirror is
+implemented by `CalendarMirrorPlugin` and `CalendarMirrorWriter`; the
+`_SYNC_ID` and account-name scoping are its ownership boundary.
+
+The mirror exists mainly to let an installed calendar app raise reliable OS
+reminders. If no calendar app is available, Calino keeps its own local
+notification scheduling instead. VTODO and VJOURNAL items remain in Calino
+because `CalendarContract` is an event/reminder provider, not their source of
+truth. Detached recurrence instances are flattened for the read-only mirror.
+
+`HeadlessSyncWorker` is a WorkManager job, normally hourly with network
+required, that refreshes the mirror while the app is closed. It runs the same
+TypeScript CalDAV/iCalendar engine in the second Vite entry
+`headless.html`, inside a bare WebView at `https://localhost` so it shares the
+foreground app's localStorage. It writes the Android provider, not the app's
+foreground Zustand/localStorage state. Its reconcile is partial: it only
+authoritatively refreshes calendars it fetched and refuses to replace data
+with an empty result when nothing was fetched.
+
+When changing this path, keep these invariants intact:
+
+- the headless page must remain at `https://localhost`;
+- the headless page must not write localStorage;
+- the native bridge must remain limited to the DAV HTTP and provider operations
+  it actually needs;
+- mirror ownership must stay scoped to Calino's account name and sync ids.
+
+## Common device-side gotchas
+
+- A mirrored calendar can exist in `CalendarContract` while being hidden by the
+  calendar app's own display list. Check the provider before diagnosing a
+  sync failure:
+
+  ```bash
+  adb shell "content query --uri content://com.android.calendar/calendars --projection _id:name:visible:sync_events"
   ```
-  adb logcat -v time "Capacitor:V" "Capacitor/Console:V" "chromium:V" "*:S"
-  ```
 
-## Release builds
-
-- Signing key: `android/keystore/calino-release.jks` (PKCS12, self-signed, 10000-day
-  validity), password + alias in `android/keystore.properties` — both gitignored, never
-  commit them. `android/app/build.gradle` reads `keystore.properties` if present and
-  signs the `release` build type with it; without the file, `assembleRelease` produces
-  an **unsigned** APK.
-- `versionCode`/`versionName` are derived from the root `package.json` `version` field
-  at Gradle configure time (`versionCode = major*1000000 + minor*1000 + patch`) — bump
-  the version there (e.g. via `scripts/release.sh`), don't hand-edit `build.gradle`.
-- Local signed build: `distrobox enter android-sdk -- bash -c 'cd /var/home/ivan/dev/calino/android && ./gradlew assembleRelease'`
-  → `android/app/build/outputs/apk/release/app-release.apk`.
-- **CI**: `.github/workflows/android.yml` builds and signs the release APK and attaches
-  it to the GitHub Release on every `vX.Y.Z` tag push (same trigger `docker.yml` uses,
-  and the same tag `scripts/release.sh` creates the release from). The keystore and its
-  passwords live as repo secrets (`ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`,
-  `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`) — `ANDROID_KEYSTORE_BASE64` is
-  `base64 -w0 android/keystore/calino-release.jks`. Losing the keystore means all future
-  releases sign with a different key and can't upgrade-in-place over past installs, so
-  back it up somewhere durable outside this repo (password manager, etc.).
-- Distributed via GitHub Releases only for now (no Play Store yet).
-
-## Debug vs. release signature conflict
-
-Debug builds installed via this workflow are signed with Android's auto-generated debug
-key; release APKs (local or from CI) are signed with `keystore/calino-release.jks`.
-Android refuses to install an APK over an existing app with the same `applicationId` if
-the signing certificate doesn't match ("App not installed as package conflicts with an
-existing package by the same name") — uninstalling an *older* package name doesn't help
-if a debug build under the *current* appId is still on the device. Fix: uninstall the
-existing app first (`adb uninstall calino.malinov.ski`), then install the release APK.
-
-Since the debug/release split above, the two use different `applicationId`s and can't
-collide this way — but neither can upgrade over the other, which is the point. A device
-carrying a pre-split debug install (signed with the debug key under the plain
-`calino.malinov.ski` id) still needs that one uninstalled before a release APK will go on.
-
-## Calendar mirror (`CalendarMirrorPlugin`)
-
-One-way, read-only export of Calino's events into `CalendarContract`, behind the
-`enableCalendarMirror` setting (off by default). Driven from `src/hooks/useCalendarMirror.ts`;
-payload mapping and the content hash live in `src/lib/calendarMirror.ts`.
-
-- **Not a sync adapter.** No account authenticator, nothing flows back. We pass
-  `CALLER_IS_SYNCADAPTER=true` only because the provider restricts calendar creation and
-  the `ACCOUNT_TYPE`/`OWNER_ACCOUNT`/`CALENDAR_ACCESS_LEVEL` columns to that caller, and
-  because sync-adapter deletes actually remove rows rather than tombstoning them.
-  Calendars use `ACCOUNT_TYPE_LOCAL` with account name `Calino`.
-- **Ownership is `_SYNC_ID`.** Mirrored calendars carry the Calino calendar id, mirrored
-  events the Calino event id, and every query/delete is scoped to our own account name —
-  the plugin can't touch the user's Google or Exchange data. `SYNC_DATA1` holds a hash
-  computed in TS so reconcile skips unchanged events instead of rewriting (and re-alarming)
-  the whole mirror each sync.
-- **Reminders are the point.** `@capacitor/local-notifications` only schedules while the app
-  is alive. But the provider *stores* reminders without posting them — in AOSP the calendar
-  **app** raises the notification off the provider's broadcast. So `hasCalendarApp()` gates
-  this: only when a calendar app is present does `calendarMirrorStore` go `active`, and only
-  then does `useNotifications` stand its own scheduling down. With no calendar app the status
-  is `no-calendar-app` and Calino keeps scheduling locally. Don't remove that check — it's the
-  difference between reliable reminders and silent ones.
-- **Provider constraints worth remembering:** a recurring event must carry `DURATION` and no
-  `DTEND`; all-day events need `DTSTART` at midnight *UTC* with `EVENT_TIMEZONE` = `UTC`;
-  `ALLOWED_REMINDERS` must list `METHOD_ALERT` or some calendar apps ignore our reminder rows.
-- Detached recurrence instances are flattened — mirrored as standalone events, with their
-  `RECURRENCE-ID` added to the master's `EXDATE` — rather than using the provider's
-  `ORIGINAL_INSTANCE_TIME` exception model, which buys nothing for a read-only mirror.
-- Package visibility: the `<queries>` block for `ACTION_INSERT` + `vnd.android.cursor.dir/event`
-  is required on Android 11+, otherwise `hasCalendarApp()` always reports false.
-
-The reconcile itself lives in `CalendarMirrorWriter`, deliberately free of Capacitor types so
-both the plugin and the background worker below drive the same code. `DavHttp` is split out of
-`DavHttpPlugin` for the same reason.
-
-## Background sync (`HeadlessSyncWorker`)
-
-The mirror alone only solves half the problem: the OS reliably alarms whatever is in
-`CalendarContract`, but nothing puts an event created on *another* device there until Calino
-next opens. This worker is the other half — a WorkManager periodic job (hourly, network
-required), scheduled when `enableCalendarMirror` goes on and cancelled when it goes off.
-
-- **It runs the real TypeScript engine in a bare WebView.** Reimplementing CalDAV and
-  iCalendar parsing in Java would mean two engines to keep in step, against the one-codebase
-  premise. `src/headless.ts` is the entry point, built as a second Vite entry
-  (`headless.html`, see `vite.config.ts`).
-- **There is no Capacitor here, and there cannot be.** `Bridge` requires an
-  `AppCompatActivity` (check its constructor before assuming otherwise), a worker has none,
-  and Android 10+ forbids starting an activity from the background. So the worker serves the
-  page itself via `shouldInterceptRequest` and injects a plain `@JavascriptInterface`
-  (`CalinoHeadless`) exposing just DAV HTTP and the provider write. `src/lib/webFetch.ts`
-  checks for that bridge *before* `Capacitor.isNativePlatform()`, which is false on this page.
-- **The page must be served from `https://localhost`** — byte for byte the origin Capacitor
-  uses. That is the whole trick: same origin means the same `localStorage`, so the worker
-  reads the accounts, credentials and calendar visibility the app already stored. Change the
-  origin and it silently syncs nothing, because it sees no accounts.
-- **The headless page never writes `localStorage`.** The foreground app holds its own
-  in-memory zustand copy and rehydrates only at startup, so a background write would race it.
-  The provider is the only thing the worker mutates; the app re-mirrors from its own state
-  when it next opens and the two converge. There is a test pinning this.
-- Its reconcile is `partial`: authoritative only for the calendars it actually fetched, so it
-  cannot delete webcal-derived rows it never syncs. It also refuses to write an empty payload
-  — with nothing fetched, "no events" is indistinguishable from a network failure.
-
-## Known OS-level gotchas (not code bugs)
-
-- **A mirrored calendar that "doesn't appear" is usually a display preference, not a sync
-  failure.** Calendar apps keep their own "calendars to display" list, and a calendar they
-  have never seen before arrives unticked. Disabling the mirror deletes our calendars and
-  re-enabling mints new rows with fresh `_id`s, so every reset orphans that preference and
-  the calendars look missing again. Verify against the provider before debugging code:
-  `adb shell "content query --uri content://com.android.calendar/calendars --projection _id:name:visible:sync_events"`
-  — if our rows are there with `visible=1`, the mirror is fine and it's the app's list.
-  Same command with `/events` (`--where "calendar_id=N"`) and `/reminders` confirms the rest.
-- **WorkManager refuses to force-run periodic work before its first slot.**
-  `adb shell cmd jobscheduler run -f -n androidx.work.systemjobscheduler <pkg> <id>` reports
-  "Running job [FORCED]" and then logs *"Delaying execution … because it is being executed
-  before schedule"* — the run does not happen. To actually observe a background sync, build
-  with `DEFAULT_INTERVAL_MINUTES` at WorkManager's 15-minute floor and wait. Note the job id
-  changes every time the app re-enqueues on launch, so re-read it from `dumpsys jobscheduler`
-  rather than reusing one.
-- **OEM battery optimization** (MIUI, Oppo/Realme/Honor, etc.) can silently kill
-  background alarms/notifications even when correctly scheduled via AlarmManager. Fix is
-  a phone-side setting (set the app's battery/power mode to "No restrictions"), not code.
-  This bites `HeadlessSyncWorker` hardest, and the symptom is easy to misread as a code bug:
-  on the test Xiaomi, a job that cold-starts the process gets the process **frozen** before
-  `doWork()` runs, so *nothing at all* is logged — not even the first line of the method —
-  while `dumpsys jobscheduler` cheerfully reports "Running job [FORCED]". Bring the app to
-  the foreground and the frozen worker resumes from exactly where it stopped. A worker that
-  is frozen mid-pass also thaws with every elapsed timer firing at once, which is why the
-  headless DAV transport ignores abort signals (see `webFetch.ts`). If you need to observe a
-  run, keep the process warm: `adb shell svc power stayon true` plus a foreground launch.
-- A fresh install/reinstall resets Android's OS-level permission grants (e.g.
-  `POST_NOTIFICATIONS`) independent of the app's own persisted settings — always check
-  real permission state before relying on it, don't just trust an app setting.
-- AlarmManager does not guarantee sub-minute precision; a 10-20s delay on a scheduled
-  notification is normal, not a bug.
+- WorkManager periodic work has a system-enforced minimum interval and is not a
+  precise alarm. A forced job can still be delayed by the OS.
+- OEM battery optimization (notably MIUI, Oppo/Realme, Honor, and similar
+  devices) can suspend background work and notifications. Set Calino to “No
+  restrictions” when testing those paths.
+- Reinstalling resets Android permission grants independently of Calino's
+  stored settings. Check the actual notification/calendar permission state.
+- AlarmManager notifications are not guaranteed to fire at the exact second;
+  a small delay is normal.

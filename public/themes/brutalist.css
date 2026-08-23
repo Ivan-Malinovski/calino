@@ -81,8 +81,9 @@
   --popover-bg: var(--side);
   --modal-scrim: rgba(0, 0, 0, 0.7);
   --modal-blur: none;
-  --modal-border: 2px solid #000000;
-  --popover-border: 2px solid #000000;
+  --modal-border: #000000;
+  --popover-border: #000000;
+  --modal-card-border: 2px solid #000000;
   --modal-shadow: 6px 6px 0 #000000;
 
   /* Typography — raw sans */
@@ -517,8 +518,9 @@
   --popover-bg: #333333;
   --modal-scrim: rgba(0, 0, 0, 0.85);
   --modal-blur: none;
-  --modal-border: 2px solid rgba(240, 240, 240, 0.12);
-  --popover-border: 2px solid rgba(240, 240, 240, 0.12);
+  --modal-border: rgba(240, 240, 240, 0.12);
+  --popover-border: rgba(240, 240, 240, 0.12);
+  --modal-card-border: 2px solid rgba(240, 240, 240, 0.12);
   --modal-shadow: 6px 6px 0 #000000;
 
   --font-serif: 'Arial Black', Impact, sans-serif;

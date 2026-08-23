@@ -88,7 +88,7 @@ function RelationValue({
     >
       {target.displayName}
       {otherBook && (
-        <span style={{ color: 'var(--text-muted)', fontSize: 12 }}> · {otherBook.name}</span>
+        <span style={{ color: 'var(--color-text-muted)', fontSize: 12 }}> · {otherBook.name}</span>
       )}
     </button>
   )
@@ -603,7 +603,7 @@ export function ContactDetail({
                     borderRadius: 'var(--radius-sm)',
                     border: '1px solid var(--line)',
                     background: hasBirthdayEvent ? 'var(--color-bg-tertiary)' : 'transparent',
-                    color: hasBirthdayEvent ? 'var(--text-muted)' : 'var(--accent)',
+                    color: hasBirthdayEvent ? 'var(--color-text-muted)' : 'var(--accent)',
                     cursor: hasBirthdayEvent ? 'default' : 'pointer',
                     fontSize: 11,
                     fontFamily: 'inherit',
@@ -644,7 +644,7 @@ export function ContactDetail({
                     borderRadius: 'var(--radius-sm)',
                     border: '1px solid var(--line)',
                     background: hasAnniversaryEvent ? 'var(--color-bg-tertiary)' : 'transparent',
-                    color: hasAnniversaryEvent ? 'var(--text-muted)' : 'var(--accent)',
+                    color: hasAnniversaryEvent ? 'var(--color-text-muted)' : 'var(--accent)',
                     cursor: hasAnniversaryEvent ? 'default' : 'pointer',
                     fontSize: 11,
                     fontFamily: 'inherit',
@@ -689,7 +689,7 @@ export function ContactDetail({
                   wordBreak: 'break-all',
                   margin: 0,
                   padding: 'var(--space-2)',
-                  background: 'var(--bg-secondary)',
+                  background: 'var(--color-bg-secondary)',
                   borderRadius: 'var(--radius-sm)',
                   maxHeight: '200px',
                   overflow: 'auto',

@@ -303,6 +303,27 @@ export type ThemeMode = 'light' | 'dark' | 'auto'
 /** Strength of a calendar's colour on its event cards — default theme only. */
 export type EventTint = 'subtle' | 'balanced' | 'vivid'
 export type MapProvider = 'google' | 'apple' | 'osm' | 'mapy' | 'geo'
+export type AdjustableFontFamily = 'system' | 'serif' | 'mono'
+
+export interface AdjustableThemeProfile {
+  canvas: string
+  panel: string
+  accent: string
+  accentContrast: string
+  text: string
+  mutedText: string
+  border: string
+  fontFamily: AdjustableFontFamily
+  cornerRadius: number
+  density: number
+  shadowStrength: number
+  eventTint: number
+}
+
+export interface AdjustableThemeSettings {
+  light: AdjustableThemeProfile
+  dark: AdjustableThemeProfile
+}
 
 export interface UserSettings {
   timezone: string
@@ -337,6 +358,7 @@ export interface UserSettings {
   darkTheme: string
   mochaAccent: string
   eventTint: EventTint
+  adjustableTheme: AdjustableThemeSettings
   caldavDebugMode: boolean
   hideCompletedTasksInMonthView: boolean
   useCategoryColors: boolean

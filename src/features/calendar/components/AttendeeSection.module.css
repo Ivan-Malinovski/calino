@@ -276,7 +276,7 @@
 }
 
 .emailButton:hover {
-  background: var(--color-surface-hover, #f1f3f4);
+  background: var(--color-bg-hover);
 }
 
 .privacyNote {

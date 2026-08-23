@@ -46,7 +46,7 @@
   background: var(--color-bg-secondary);
   color: var(--color-text-secondary);
   border: 1px solid var(--color-border);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-card, none);
   font-size: var(--font-size-xs, 0.75rem);
   white-space: nowrap;
   max-width: 90vw;

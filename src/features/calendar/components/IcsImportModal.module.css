@@ -47,7 +47,7 @@
   text-transform: uppercase;
   letter-spacing: 0.03em;
   color: var(--color-text-secondary, #5f6368);
-  background: var(--color-surface-hover, #f1f3f4);
+  background: var(--color-bg-hover);
   border-radius: 4px;
 }
 

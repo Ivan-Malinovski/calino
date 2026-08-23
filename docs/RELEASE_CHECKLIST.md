@@ -6,13 +6,14 @@ What to verify before cutting a release. The automated half is what
 ## Automated
 
 ```bash
-./scripts/release.sh --dry-run    # typecheck + lint + tests + build + container healthcheck
-pnpm audit                        # should report zero HIGH/CRITICAL
-pnpm test:e2e                     # Playwright smoke suite
+./scripts/release.sh --dry-run    # typecheck + lint + unit + E2E + build + Docker checks
+pnpm audit                        # optional dependency vulnerability review
 ```
 
-The dry run picks the first free host port from 8080 up for the container
-healthcheck; pin it with `HEALTH_PORT=…` if you need a specific one.
+The release script runs the full Playwright suite unless `--no-e2e` is passed,
+and runs the Docker build/probes unless `--no-docker` is passed. It picks the
+first free host port from 8080 up for the container checks; pin it with
+`HEALTH_PORT=…` if you need a specific one.
 
 Then cut the release:
 
@@ -20,10 +21,11 @@ Then cut the release:
 ./scripts/release.sh --patch      # or --minor / --major
 ```
 
-That bumps `package.json`, commits, tags `vX.Y.Z`, pushes, and creates the
-GitHub Release from the matching `## [X.Y.Z]` section of `CHANGELOG.md` — so
-promote `## [Unreleased]` to the new version number *before* running it, or the
-release falls back to generated commit notes.
+That bumps `package.json`, promotes `## [Unreleased]` when needed, commits,
+tags `vX.Y.Z`, pushes, and creates the GitHub Release from the matching
+`CHANGELOG.md` section. A pre-existing version section is used as-is; if there
+is no usable changelog section, the release falls back to generated commit
+notes.
 
 ## Manual
 

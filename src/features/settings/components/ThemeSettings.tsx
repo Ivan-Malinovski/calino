@@ -1,10 +1,15 @@
 import { useEffect, useMemo } from 'react'
 import type { CSSProperties, JSX } from 'react'
-import { useSettingsStore, THEME_MODE_OPTIONS } from '@/store/settingsStore'
+import {
+  useSettingsStore,
+  THEME_MODE_OPTIONS,
+  DEFAULT_ADJUSTABLE_THEME,
+} from '@/store/settingsStore'
 import { useTheme } from '@/components/ThemeContext'
 import { getThemePreviewCSS } from '@/lib/themes'
-import type { ThemeMode, EventTint } from '@/types'
+import type { AdjustableThemeProfile, AdjustableThemeSettings, ThemeMode, EventTint } from '@/types'
 import styles from './Settings.module.css'
+import { AdjustableThemeControls } from './AdjustableThemeControls'
 
 const MOCHA_ACCENTS = [
   { label: 'Blue', value: '#89b4fa' },
@@ -19,9 +24,11 @@ const MOCHA_ACCENTS = [
 function MiniCalendarPreview({
   themeId,
   variant,
+  profile,
 }: {
   themeId: string
   variant: 'light' | 'dark' | 'system'
+  profile?: AdjustableThemeProfile
 }): JSX.Element {
   // Extract theme colors from the theme's CSS (dynamically reflects the selected theme)
   const css = getThemePreviewCSS(themeId)
@@ -30,15 +37,19 @@ function MiniCalendarPreview({
     return match ? match[1].trim() : fallback
   }
 
-  const canvas = extract('--canvas', '#faf8f3')
-  const panel = extract('--panel', '#ffffff')
-  const accent = extract('--accent', '#b07d4f')
-  const accentMixLight = css.includes('--accent-soft')
-    ? extract('--accent-soft', `color-mix(in srgb, ${accent} 12%, ${canvas})`)
-    : `color-mix(in srgb, ${accent} 12%, ${canvas})`
-  const accentMixDark = css.includes('--accent-soft')
-    ? extract('--accent-soft', `color-mix(in srgb, ${accent} 20%, #1a1816)`)
-    : `color-mix(in srgb, ${accent} 20%, #1a1816)`
+  const canvas = profile?.canvas ?? extract('--canvas', '#faf8f3')
+  const panel = profile?.panel ?? extract('--panel', '#ffffff')
+  const accent = profile?.accent ?? extract('--accent', '#b07d4f')
+  const accentMixLight = profile
+    ? `color-mix(in srgb, ${accent} 14%, transparent)`
+    : css.includes('--accent-soft')
+      ? extract('--accent-soft', `color-mix(in srgb, ${accent} 12%, ${canvas})`)
+      : `color-mix(in srgb, ${accent} 12%, ${canvas})`
+  const accentMixDark = profile
+    ? `color-mix(in srgb, ${accent} 18%, transparent)`
+    : css.includes('--accent-soft')
+      ? extract('--accent-soft', `color-mix(in srgb, ${accent} 20%, #1a1816)`)
+      : `color-mix(in srgb, ${accent} 20%, #1a1816)`
 
   const isSystem = variant === 'system'
   const bg = isSystem ? `linear-gradient(135deg, ${canvas} 50%, #1a1816 50%)` : canvas
@@ -92,18 +103,42 @@ function extractThemeProps(css: string): {
   }
 }
 
+function getAdjustableProfile(
+  themeId: string,
+  adjustableTheme: AdjustableThemeSettings
+): AdjustableThemeProfile | undefined {
+  if (themeId === 'adjustable-light') return adjustableTheme.light
+  if (themeId === 'adjustable-dark') return adjustableTheme.dark
+  return undefined
+}
+
 function ThemePreviewCard({
   name,
   css,
+  profile,
   isActive,
   onClick,
 }: {
   name: string
   css: string
+  profile?: AdjustableThemeProfile
   isActive: boolean
   onClick: () => void
 }): JSX.Element {
-  const props = useMemo(() => extractThemeProps(css), [css])
+  const props = useMemo(() => {
+    const extracted = extractThemeProps(css)
+    if (!profile) return extracted
+    return {
+      ...extracted,
+      bg: profile.canvas,
+      panel: profile.panel,
+      accent: profile.accent,
+      text: profile.text,
+      radiusSm: `${profile.cornerRadius * 0.4}px`,
+      radiusMd: `${profile.cornerRadius * 0.75}px`,
+      radiusLg: `${profile.cornerRadius * 1.1}px`,
+    }
+  }, [css, profile])
 
   return (
     <button
@@ -165,9 +200,10 @@ export function ThemeSettings(): JSX.Element {
   const darkTheme = useSettingsStore((s) => s.darkTheme)
   const mochaAccent = useSettingsStore((s) => s.mochaAccent)
   const eventTint = useSettingsStore((s) => s.eventTint)
+  const adjustableTheme = useSettingsStore((s) => s.adjustableTheme) ?? DEFAULT_ADJUSTABLE_THEME
   const updateSettings = useSettingsStore((s) => s.updateSettings)
   const showEventIcons = useSettingsStore((s) => s.showEventIcons)
-  const { loadedThemes, refetchThemes } = useTheme()
+  const { loadedThemes, refetchThemes, effectiveMode } = useTheme()
 
   useEffect(() => {
     refetchThemes()
@@ -177,9 +213,17 @@ export function ThemeSettings(): JSX.Element {
   // built-in theme is actually in use. Show it if either slot uses one — which
   // slot is live depends on the current mode.
   const usesBuiltInTheme = lightTheme === 'built-in' || darkTheme === 'built-in-dark'
+  const usesAdjustableTheme =
+    effectiveMode === 'dark' ? darkTheme === 'adjustable-dark' : lightTheme === 'adjustable-light'
 
-  const lightThemes = loadedThemes.filter((t) => !t.isDark)
-  const darkThemes = loadedThemes.filter((t) => t.isDark)
+  const adjustableLast = (theme: { id: string }): number =>
+    theme.id.startsWith('adjustable-') ? 1 : 0
+  const lightThemes = loadedThemes
+    .filter((t) => !t.isDark)
+    .sort((a, b) => adjustableLast(a) - adjustableLast(b))
+  const darkThemes = loadedThemes
+    .filter((t) => t.isDark)
+    .sort((a, b) => adjustableLast(a) - adjustableLast(b))
 
   return (
     <section
@@ -226,6 +270,16 @@ export function ThemeSettings(): JSX.Element {
                           : lightTheme
                   }
                   variant={isLight ? 'light' : isDark ? 'dark' : 'system'}
+                  profile={getAdjustableProfile(
+                    isLight
+                      ? lightTheme
+                      : isDark
+                        ? darkTheme
+                        : effectiveMode === 'dark'
+                          ? darkTheme
+                          : lightTheme,
+                    adjustableTheme
+                  )}
                 />
                 <div className={styles.themeCardLabel}>
                   {isSystem ? 'System' : opt.label}
@@ -233,7 +287,7 @@ export function ThemeSettings(): JSX.Element {
                     <svg
                       viewBox="0 0 9 9"
                       fill="none"
-                      stroke="#fff"
+                      stroke="var(--accent-contrast, #fff)"
                       strokeWidth="1.8"
                       strokeLinecap="round"
                       aria-hidden="true"
@@ -257,12 +311,17 @@ export function ThemeSettings(): JSX.Element {
             <div className={styles.rowDesc}>Color palette used in light mode</div>
           </div>
         </div>
-        <div className={styles.themePreviewGrid}>
+        <div
+          className={styles.themePreviewGrid}
+          data-component="theme-preview-grid"
+          data-theme-mode="light"
+        >
           {lightThemes.map((t) => (
             <ThemePreviewCard
               key={t.id}
               name={t.name}
               css={getThemePreviewCSS(t.id)}
+              profile={getAdjustableProfile(t.id, adjustableTheme)}
               isActive={lightTheme === t.id}
               onClick={() => updateSettings({ lightTheme: t.id })}
             />
@@ -279,12 +338,17 @@ export function ThemeSettings(): JSX.Element {
             <div className={styles.rowDesc}>Color palette used in dark mode</div>
           </div>
         </div>
-        <div className={styles.themePreviewGrid}>
+        <div
+          className={styles.themePreviewGrid}
+          data-component="theme-preview-grid"
+          data-theme-mode="dark"
+        >
           {darkThemes.map((t) => (
             <ThemePreviewCard
               key={t.id}
               name={t.name}
               css={getThemePreviewCSS(t.id)}
+              profile={getAdjustableProfile(t.id, adjustableTheme)}
               isActive={darkTheme === t.id}
               onClick={() => updateSettings({ darkTheme: t.id })}
             />
@@ -344,6 +408,25 @@ export function ThemeSettings(): JSX.Element {
               </select>
             </div>
           </div>
+        )}
+        {usesAdjustableTheme && (
+          <AdjustableThemeControls
+            mode={effectiveMode}
+            profile={adjustableTheme[effectiveMode]}
+            onChange={(profile) =>
+              updateSettings({
+                adjustableTheme: { ...adjustableTheme, [effectiveMode]: profile },
+              })
+            }
+            onReset={() =>
+              updateSettings({
+                adjustableTheme: {
+                  ...adjustableTheme,
+                  [effectiveMode]: DEFAULT_ADJUSTABLE_THEME[effectiveMode],
+                },
+              })
+            }
+          />
         )}
         <div
           className={styles.row}

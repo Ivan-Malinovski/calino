@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { renderHook } from '@testing-library/react'
+import { act, renderHook } from '@testing-library/react'
 import { ThemeProvider } from '../ThemeProvider'
 import type { ReactNode } from 'react'
 
@@ -40,8 +40,15 @@ vi.mock('../ThemeContext', () => ({
 // Mock matchMedia
 const mockAddEventListener = vi.fn()
 const mockRemoveEventListener = vi.fn()
+let mediaChangeHandler: ((event: MediaQueryListEvent) => void) | undefined
 
 beforeEach(() => {
+  mediaChangeHandler = undefined
+  mockAddEventListener.mockImplementation(
+    (_event: string, handler: (event: MediaQueryListEvent) => void) => {
+      mediaChangeHandler = handler
+    }
+  )
   Object.defineProperty(window, 'matchMedia', {
     writable: true,
     value: vi.fn().mockImplementation((query: string) => ({
@@ -90,5 +97,17 @@ describe('Bug #107: ThemeProvider unnecessary media listener registration', () =
     const { unmount } = renderHook(() => ThemeProvider({ children: null }))
     unmount()
     expect(mockRemoveEventListener).toHaveBeenCalledWith('change', expect.any(Function))
+  })
+
+  it('updates the effective mode when the system preference changes', () => {
+    currentThemeMode = 'auto'
+    renderHook(() => ThemeProvider({ children: null }))
+    expect(document.documentElement).toHaveAttribute('data-theme', 'light')
+
+    act(() => {
+      mediaChangeHandler?.({ matches: true } as MediaQueryListEvent)
+    })
+
+    expect(document.documentElement).toHaveAttribute('data-theme', 'dark')
   })
 })

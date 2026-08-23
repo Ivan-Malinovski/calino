@@ -12,6 +12,8 @@ import type {
   ViewType,
   ThemeMode,
   MapProvider,
+  AdjustableThemeSettings,
+  AdjustableFontFamily,
 } from '@/types'
 import { config, DEFAULT_CALENDAR_COLOR, EVENT_COLORS as _EVENT_COLORS_FROM_CONFIG } from '@/config'
 import { ALL_VIEWS, DEFAULT_DIVIDER_AFTER } from '@/features/calendar/viewRoutes'
@@ -70,6 +72,89 @@ function getEuropeDefaultFirstDay(): FirstDayOfWeek {
   return 1
 }
 
+export const DEFAULT_ADJUSTABLE_THEME: AdjustableThemeSettings = {
+  light: {
+    canvas: '#f7f4ee',
+    panel: '#fffdfa',
+    accent: '#9a6b43',
+    accentContrast: '#ffffff',
+    text: '#2c2823',
+    mutedText: '#70695f',
+    border: '#e4ded4',
+    fontFamily: 'system',
+    cornerRadius: 10,
+    density: 100,
+    shadowStrength: 70,
+    eventTint: 10,
+  },
+  dark: {
+    canvas: '#17181b',
+    panel: '#22252a',
+    accent: '#87a7ff',
+    accentContrast: '#16181d',
+    text: '#eef1f5',
+    mutedText: '#a7afba',
+    border: '#3b414b',
+    fontFamily: 'system',
+    cornerRadius: 10,
+    density: 100,
+    shadowStrength: 60,
+    eventTint: 18,
+  },
+}
+
+const HEX_COLOR = /^#[0-9a-f]{6}$/i
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null
+}
+
+function safeColor(value: unknown, fallback: string): string {
+  return typeof value === 'string' && HEX_COLOR.test(value) ? value : fallback
+}
+
+function safeRange(value: unknown, fallback: number, min: number, max: number): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return fallback
+  return Math.min(max, Math.max(min, Math.round(value)))
+}
+
+function safeFontFamily(value: unknown, fallback: AdjustableFontFamily): AdjustableFontFamily {
+  return value === 'system' || value === 'serif' || value === 'mono' ? value : fallback
+}
+
+/** Normalize partial or malformed adjustable theme data at a state boundary. */
+export function normalizeAdjustableTheme(
+  value: unknown,
+  fallback: AdjustableThemeSettings = DEFAULT_ADJUSTABLE_THEME
+): AdjustableThemeSettings {
+  const source = isRecord(value) ? value : {}
+  const normalizeProfile = (
+    candidate: unknown,
+    defaults: AdjustableThemeSettings['light']
+  ): AdjustableThemeSettings['light'] => {
+    const profile = isRecord(candidate) ? candidate : {}
+    return {
+      canvas: safeColor(profile.canvas, defaults.canvas),
+      panel: safeColor(profile.panel, defaults.panel),
+      accent: safeColor(profile.accent, defaults.accent),
+      accentContrast: safeColor(profile.accentContrast, defaults.accentContrast),
+      text: safeColor(profile.text, defaults.text),
+      mutedText: safeColor(profile.mutedText, defaults.mutedText),
+      border: safeColor(profile.border, defaults.border),
+      fontFamily: safeFontFamily(profile.fontFamily, defaults.fontFamily),
+      cornerRadius: safeRange(profile.cornerRadius, defaults.cornerRadius, 0, 24),
+      density: safeRange(profile.density, defaults.density, 80, 120),
+      shadowStrength: safeRange(profile.shadowStrength, defaults.shadowStrength, 0, 100),
+      eventTint: safeRange(profile.eventTint, defaults.eventTint, 4, 30),
+    }
+  }
+
+  return {
+    light: normalizeProfile(source.light, fallback.light),
+    dark: normalizeProfile(source.dark, fallback.dark),
+  }
+}
+
 const DEFAULT_SETTINGS: UserSettings = {
   timezone: getBrowserTimezone(),
   secondaryTimezoneEnabled: false,
@@ -106,6 +191,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   eventTint: 'subtle',
   mochaAccent: '#89b4fa',
   caldavDebugMode: false,
+  adjustableTheme: DEFAULT_ADJUSTABLE_THEME,
   hideCompletedTasksInMonthView: true,
   useCategoryColors: true,
   showEventIcons: true,
@@ -134,7 +220,16 @@ export const useSettingsStore = create<SettingsStore>()(
       ...DEFAULT_SETTINGS,
 
       updateSettings: (updates: Partial<UserSettings>): void => {
-        set(updates)
+        set((state) => {
+          if (updates.adjustableTheme === undefined) return updates
+          return {
+            ...updates,
+            adjustableTheme: normalizeAdjustableTheme(
+              updates.adjustableTheme,
+              state.adjustableTheme
+            ),
+          }
+        })
       },
 
       resetSettings: (): void => {
@@ -144,15 +239,20 @@ export const useSettingsStore = create<SettingsStore>()(
     {
       name: 'calino-settings',
       storage: createJSONStorage(() => safeLocalStorage),
-      version: 2,
+      version: 3,
       // Blind spread: any key the persisted state carries wins, including
       // ones from a newer version after a downgrade. That is safe for
       // viewOrder specifically because it is reconciled against ALL_VIEWS on
       // every read rather than trusted as-is.
-      migrate: (persistedState: unknown) => ({
-        ...DEFAULT_SETTINGS,
-        ...(persistedState as Partial<UserSettings>),
-      }),
+      migrate: (persistedState: unknown) => {
+        const persisted = (persistedState ?? {}) as Partial<UserSettings>
+        const adjustableTheme = persisted.adjustableTheme
+        return {
+          ...DEFAULT_SETTINGS,
+          ...persisted,
+          adjustableTheme: normalizeAdjustableTheme(adjustableTheme),
+        }
+      },
     }
   )
 )

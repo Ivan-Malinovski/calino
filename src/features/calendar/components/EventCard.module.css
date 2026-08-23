@@ -298,8 +298,8 @@
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background: var(--surface-1, #fff);
-  color: var(--ink-1);
+  background: var(--color-surface, var(--panel, #fff));
+  color: var(--color-text-primary, var(--ink));
   display: flex;
   align-items: center;
   justify-content: center;

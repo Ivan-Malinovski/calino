@@ -1,0 +1,286 @@
+/* Theme: Adjustable | both */
+/*
+ * The controls for this theme live in Appearance settings. The --adjustable-*
+ * values are written by ThemeProvider so the profile can be edited live while
+ * this stylesheet supplies the complete Calino token contract.
+ */
+
+[data-theme='light'] {
+  --canvas: var(--adjustable-canvas, #f7f4ee);
+  --panel: var(--adjustable-panel, #fffdfa);
+  --side: color-mix(in srgb, var(--canvas) 88%, var(--ink));
+  --color-bg: var(--canvas);
+  --color-bg-primary: var(--canvas);
+  --color-bg-secondary: var(--panel);
+  --color-bg-tertiary: color-mix(in srgb, var(--canvas) 78%, var(--ink));
+  --color-bg-hover: color-mix(in srgb, var(--accent) 8%, var(--panel));
+  --color-bg-input: var(--panel);
+  --color-surface: var(--panel);
+  --color-surface-raised: var(--panel);
+  --color-surface-glass: color-mix(in srgb, var(--panel) 88%, transparent);
+
+  --ink: var(--adjustable-text, #2c2823);
+  --ink-2: color-mix(in srgb, var(--ink) 72%, var(--adjustable-muted-text, #70695f));
+  --ink-3: var(--adjustable-muted-text, #70695f);
+  --ink-3-dimmed: var(--ink-3);
+  --color-text: var(--ink);
+  --color-text-primary: var(--ink);
+  --color-text-secondary: var(--ink-2);
+  --color-text-muted: var(--ink-3);
+  --color-text-tertiary: var(--ink-3);
+
+  --line: var(--adjustable-border, #e4ded4);
+  --font-sans: var(
+    --adjustable-font,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    Roboto,
+    sans-serif
+  );
+  --line-2: color-mix(in srgb, var(--line) 60%, transparent);
+  --color-border: var(--line);
+  --color-border-light: var(--line-2);
+  --color-border-subtle: var(--line-2);
+  --color-border-visible: var(--line);
+  --color-border-glass: var(--line-2);
+
+  --accent: var(--adjustable-accent, #9a6b43);
+  --accent-strong: var(--accent);
+  --accent-strong-on-soft: var(--accent);
+  --accent-contrast: var(--adjustable-accent-contrast, #ffffff);
+  --accent-soft: color-mix(in srgb, var(--accent) 14%, transparent);
+  --color-accent: var(--accent);
+  --color-accent-hover: color-mix(in srgb, var(--accent) 82%, #000);
+  --color-accent-light: var(--accent-soft);
+  --color-primary: var(--accent);
+  --color-primary-hover: var(--color-accent-hover);
+  --color-primary-light: var(--accent-soft);
+
+  --color-success: #277d3e;
+  --color-success-light: color-mix(in srgb, var(--color-success) 12%, transparent);
+  --color-warning: #a56d00;
+  --color-warning-text: #7a5700;
+  --color-error: #c8351f;
+  --color-error-muted: #a9544b;
+  --color-danger: var(--color-error);
+  --color-danger-bg: color-mix(in srgb, var(--color-error) 10%, transparent);
+  --color-info: var(--accent);
+  --color-current-time: var(--color-error);
+
+  --hover-bg: color-mix(in srgb, var(--accent) 8%, transparent);
+  --selected-bg: color-mix(in srgb, var(--accent) 14%, var(--canvas));
+  --focus-ring: color-mix(in srgb, var(--accent) 28%, transparent);
+  --chip-bg: color-mix(in srgb, var(--accent) 14%, transparent);
+  --tag-bg: color-mix(in srgb, var(--accent) 8%, transparent);
+  --tag-border: color-mix(in srgb, var(--accent) 45%, var(--line));
+  --panel-hover: var(--hover-bg);
+  --surface-bg: color-mix(in srgb, var(--ink) 4%, transparent);
+  --surface-bg-strong: color-mix(in srgb, var(--ink) 7%, transparent);
+  --error-bg: color-mix(in srgb, var(--color-error) 10%, transparent);
+  --error-bg-strong: color-mix(in srgb, var(--color-error) 16%, transparent);
+  --error-border: color-mix(in srgb, var(--color-error) 30%, transparent);
+  --day-cell-today-bg: color-mix(in srgb, var(--accent) 14%, var(--canvas));
+  --day-cell-hover-bg: color-mix(in srgb, var(--accent) 10%, var(--canvas));
+  --day-number-hover-bg: color-mix(in srgb, var(--accent) 18%, var(--canvas));
+  --day-column-today-bg: color-mix(in srgb, var(--accent) 6%, var(--canvas));
+
+  --color-overlay: rgb(0 0 0 / 0.5);
+  --color-focus: var(--accent);
+  --color-scrollbar: color-mix(in srgb, var(--line) 85%, var(--ink));
+  --color-scrollbar-hover: var(--ink-3);
+
+  --radius-sm: calc(var(--adjustable-radius, 10px) * 0.4);
+  --radius-md: calc(var(--adjustable-radius, 10px) * 0.75);
+  --radius-lg: calc(var(--adjustable-radius, 10px) * 1.1);
+  --radius-xl: calc(var(--adjustable-radius, 10px) * 1.5);
+  --radius-full: 9999px;
+  --event-border-radius: calc(var(--adjustable-radius, 10px) * 0.7);
+  --today-btn-radius: var(--radius-md);
+  --day-cell-radius: var(--radius-sm);
+  --view-switcher-radius: var(--radius-md);
+  --view-switcher-indicator-radius: var(--radius-sm);
+  --space-1: calc(4px * var(--adjustable-density, 1));
+  --space-2: calc(8px * var(--adjustable-density, 1));
+  --space-3: calc(12px * var(--adjustable-density, 1));
+  --space-4: calc(16px * var(--adjustable-density, 1));
+  --space-5: calc(20px * var(--adjustable-density, 1));
+  --space-6: calc(24px * var(--adjustable-density, 1));
+  --space-8: calc(32px * var(--adjustable-density, 1));
+  --space-10: calc(40px * var(--adjustable-density, 1));
+  --space-12: calc(48px * var(--adjustable-density, 1));
+  --space-16: calc(64px * var(--adjustable-density, 1));
+
+  --shadow-rgb: 44, 40, 33;
+  --shadow-opacity: var(--adjustable-shadow-strength, 0.7);
+  --shadow-event: 0 1px 3px rgb(var(--shadow-rgb) / calc(0.08 * var(--shadow-opacity)));
+  --shadow-event-hover: 0 4px 12px rgb(var(--shadow-rgb) / calc(0.14 * var(--shadow-opacity)));
+  --shadow-card: 0 2px 8px rgb(var(--shadow-rgb) / calc(0.1 * var(--shadow-opacity)));
+  --shadow-sidebar: 2px 0 14px rgb(var(--shadow-rgb) / calc(0.08 * var(--shadow-opacity)));
+  --shadow-topbar: 0 2px 8px rgb(var(--shadow-rgb) / calc(0.06 * var(--shadow-opacity)));
+  --shadow-glass: 0 0 0 1px rgb(255 255 255 / 0.1) inset;
+  --shadow-inset: inset 0 1px 2px rgb(var(--shadow-rgb) / calc(0.08 * var(--shadow-opacity)));
+  --shadow-pill: 0 16px 36px rgb(var(--shadow-rgb) / calc(0.16 * var(--shadow-opacity)));
+  --shadow-tile-active: 0 3px 8px color-mix(in srgb, var(--accent) 35%, transparent);
+  --shadow-today: inset 0 0 0 1.5px color-mix(in srgb, var(--accent) 68%, transparent);
+
+  --ink-raw: 44, 40, 33;
+  --event-bg-mix: calc(var(--adjustable-event-tint, 10) * 1%);
+  --event-bg-mix-hover: calc(var(--adjustable-event-tint, 10) * 1.35%);
+  --event-rail-mix: 50%;
+  --event-marker-mix: 55%;
+  --event-ink-2: var(--ink-2);
+  --event-ink-3: var(--ink-3);
+  --modal-bg: var(--panel);
+  --popover-bg: var(--panel);
+  --modal-scrim: var(--color-overlay);
+  --modal-blur: blur(3px);
+  --modal-border: var(--line);
+  --modal-card-border: 1px solid var(--line);
+  --popover-border: var(--line);
+  --modal-shadow: var(--shadow-card);
+  --nav-canvas-track: var(--color-bg-tertiary);
+  --nav-switcher-track: var(--panel);
+  --ink-4: var(--ink-3);
+  --toggle-off: var(--line);
+}
+
+[data-theme='dark'] {
+  --canvas: var(--adjustable-canvas, #17181b);
+  --panel: var(--adjustable-panel, #22252a);
+  --side: color-mix(in srgb, var(--canvas) 88%, var(--ink));
+  --color-bg: var(--canvas);
+  --color-bg-primary: var(--canvas);
+  --color-bg-secondary: var(--panel);
+  --color-bg-tertiary: color-mix(in srgb, var(--canvas) 76%, var(--ink));
+  --color-bg-hover: color-mix(in srgb, var(--accent) 12%, var(--panel));
+  --color-bg-input: var(--color-bg-tertiary);
+  --color-surface: var(--panel);
+  --color-surface-raised: var(--color-bg-tertiary);
+  --color-surface-glass: color-mix(in srgb, var(--panel) 88%, transparent);
+
+  --ink: var(--adjustable-text, #eef1f5);
+  --ink-2: color-mix(in srgb, var(--ink) 72%, var(--adjustable-muted-text, #a7afba));
+  --ink-3: var(--adjustable-muted-text, #a7afba);
+  --ink-3-dimmed: var(--ink-3);
+  --color-text: var(--ink);
+  --color-text-primary: var(--ink);
+  --color-text-secondary: var(--ink-2);
+  --color-text-muted: var(--ink-3);
+  --color-text-tertiary: var(--ink-3);
+
+  --line: var(--adjustable-border, #3b414b);
+  --font-sans: var(
+    --adjustable-font,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    Roboto,
+    sans-serif
+  );
+  --line-2: color-mix(in srgb, var(--line) 70%, transparent);
+  --color-border: var(--line);
+  --color-border-light: var(--line-2);
+  --color-border-subtle: var(--line-2);
+  --color-border-visible: var(--line);
+  --color-border-glass: var(--line-2);
+
+  --accent: var(--adjustable-accent, #87a7ff);
+  --accent-strong: var(--accent);
+  --accent-strong-on-soft: var(--accent);
+  --accent-contrast: var(--adjustable-accent-contrast, #16181d);
+  --accent-soft: color-mix(in srgb, var(--accent) 18%, transparent);
+  --color-accent: var(--accent);
+  --color-accent-hover: color-mix(in srgb, var(--accent) 78%, #fff);
+  --color-accent-light: var(--accent-soft);
+  --color-primary: var(--accent);
+  --color-primary-hover: var(--color-accent-hover);
+  --color-primary-light: var(--accent-soft);
+
+  --color-success: #69db7c;
+  --color-success-light: color-mix(in srgb, var(--color-success) 16%, transparent);
+  --color-warning: #ffd43b;
+  --color-warning-text: #f7d774;
+  --color-error: #ff6b6b;
+  --color-error-muted: #ff8787;
+  --color-danger: var(--color-error);
+  --color-danger-bg: color-mix(in srgb, var(--color-error) 16%, transparent);
+  --color-info: var(--accent);
+  --color-current-time: var(--color-error);
+
+  --hover-bg: color-mix(in srgb, var(--accent) 12%, transparent);
+  --selected-bg: color-mix(in srgb, var(--accent) 20%, var(--canvas));
+  --focus-ring: color-mix(in srgb, var(--accent) 35%, transparent);
+  --chip-bg: color-mix(in srgb, var(--accent) 16%, transparent);
+  --tag-bg: color-mix(in srgb, var(--accent) 10%, transparent);
+  --tag-border: color-mix(in srgb, var(--accent) 45%, transparent);
+  --panel-hover: var(--hover-bg);
+  --surface-bg: color-mix(in srgb, var(--ink) 6%, transparent);
+  --surface-bg-strong: color-mix(in srgb, var(--ink) 10%, transparent);
+  --error-bg: color-mix(in srgb, var(--color-error) 12%, transparent);
+  --error-bg-strong: color-mix(in srgb, var(--color-error) 20%, transparent);
+  --error-border: color-mix(in srgb, var(--color-error) 45%, transparent);
+  --day-cell-today-bg: color-mix(in srgb, var(--accent) 14%, var(--canvas));
+  --day-cell-hover-bg: color-mix(in srgb, var(--accent) 10%, var(--canvas));
+  --day-number-hover-bg: color-mix(in srgb, var(--accent) 18%, var(--canvas));
+  --day-column-today-bg: color-mix(in srgb, var(--accent) 6%, var(--canvas));
+
+  --color-overlay: rgb(0 0 0 / 0.68);
+  --color-focus: var(--accent);
+  --color-scrollbar: color-mix(in srgb, var(--line) 85%, var(--ink));
+  --color-scrollbar-hover: var(--ink-3);
+
+  --radius-sm: calc(var(--adjustable-radius, 10px) * 0.4);
+  --radius-md: calc(var(--adjustable-radius, 10px) * 0.75);
+  --radius-lg: calc(var(--adjustable-radius, 10px) * 1.1);
+  --radius-xl: calc(var(--adjustable-radius, 10px) * 1.5);
+  --radius-full: 9999px;
+  --event-border-radius: calc(var(--adjustable-radius, 10px) * 0.7);
+  --today-btn-radius: var(--radius-md);
+  --day-cell-radius: var(--radius-sm);
+  --view-switcher-radius: var(--radius-md);
+  --view-switcher-indicator-radius: var(--radius-sm);
+  --space-1: calc(4px * var(--adjustable-density, 1));
+  --space-2: calc(8px * var(--adjustable-density, 1));
+  --space-3: calc(12px * var(--adjustable-density, 1));
+  --space-4: calc(16px * var(--adjustable-density, 1));
+  --space-5: calc(20px * var(--adjustable-density, 1));
+  --space-6: calc(24px * var(--adjustable-density, 1));
+  --space-8: calc(32px * var(--adjustable-density, 1));
+  --space-10: calc(40px * var(--adjustable-density, 1));
+  --space-12: calc(48px * var(--adjustable-density, 1));
+  --space-16: calc(64px * var(--adjustable-density, 1));
+
+  --shadow-rgb: 0, 0, 0;
+  --shadow-opacity: var(--adjustable-shadow-strength, 0.6);
+  --shadow-event: 0 1px 3px rgb(var(--shadow-rgb) / calc(0.12 * var(--shadow-opacity)));
+  --shadow-event-hover: 0 4px 12px rgb(var(--shadow-rgb) / calc(0.22 * var(--shadow-opacity)));
+  --shadow-card: 0 2px 8px rgb(var(--shadow-rgb) / calc(0.22 * var(--shadow-opacity)));
+  --shadow-sidebar: none;
+  --shadow-topbar: none;
+  --shadow-glass: 0 0 0 1px rgb(255 255 255 / 0.08) inset;
+  --shadow-inset: inset 0 1px 2px rgb(var(--shadow-rgb) / calc(0.2 * var(--shadow-opacity)));
+  --shadow-pill: 0 16px 36px rgb(var(--shadow-rgb) / calc(0.4 * var(--shadow-opacity)));
+  --shadow-tile-active: 0 3px 8px color-mix(in srgb, var(--accent) 40%, transparent);
+  --shadow-today: inset 0 0 0 1.5px color-mix(in srgb, var(--accent) 68%, transparent);
+
+  --ink-raw: 238, 241, 245;
+  --event-bg-mix: calc(var(--adjustable-event-tint, 18) * 1%);
+  --event-bg-mix-hover: calc(var(--adjustable-event-tint, 18) * 1.3%);
+  --event-rail-mix: 65%;
+  --event-marker-mix: 70%;
+  --event-ink-2: var(--ink-2);
+  --event-ink-3: var(--ink-3);
+  --modal-bg: var(--panel);
+  --popover-bg: var(--color-bg-tertiary);
+  --modal-scrim: var(--color-overlay);
+  --modal-blur: blur(4px);
+  --modal-border: var(--line);
+  --modal-card-border: 1px solid var(--line);
+  --popover-border: var(--line);
+  --modal-shadow: var(--shadow-card);
+  --nav-canvas-track: var(--color-bg-tertiary);
+  --nav-switcher-track: var(--panel);
+  --ink-4: var(--ink-3);
+  --toggle-off: var(--line);
+}

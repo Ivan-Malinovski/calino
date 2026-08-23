@@ -109,7 +109,7 @@ export function MergeDuplicatesModal({
     <Modal isOpen={isOpen} onClose={onClose} title="Merge Duplicates">
       <div className={styles.modalBody} style={{ maxHeight: '60vh', overflow: 'auto' }}>
         {visibleGroups.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '24px 0', color: 'var(--text-muted)' }}>
+          <div style={{ textAlign: 'center', padding: '24px 0', color: 'var(--color-text-muted)' }}>
             <div style={{ fontSize: 32, marginBottom: 8 }}>✨</div>
             <div>No duplicates found</div>
           </div>
@@ -142,7 +142,7 @@ export function MergeDuplicatesModal({
                   >
                     {group.confidence.toUpperCase()}
                   </span>
-                  <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{group.reason}</span>
+                  <span style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>{group.reason}</span>
                 </div>
 
                 {/* Contact cards */}
@@ -191,7 +191,7 @@ export function MergeDuplicatesModal({
                         </div>
                         <div
                           style={{
-                            color: 'var(--text-muted)',
+                            color: 'var(--color-text-muted)',
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
                             whiteSpace: 'nowrap',

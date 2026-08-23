@@ -295,7 +295,7 @@
   opacity: 1;
 }
 .rowDelete:hover {
-  background: rgba(196, 112, 104, 0.12);
+  background: var(--error-bg);
   color: var(--color-error-muted, #c47068);
 }
 .rowDeleteConfirm {
@@ -453,7 +453,7 @@
   background: var(--accent);
 }
 .statussaving {
-  background: #d7a34a;
+  background: var(--color-warning);
   animation: pulse 1s infinite;
 }
 .statuserror {

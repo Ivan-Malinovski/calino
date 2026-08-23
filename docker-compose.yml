@@ -46,6 +46,9 @@ services:
       # Leave empty to allow any origin, or restrict to your Calino instance(s),
       # e.g. ALLOWED_ORIGINS=https://calendar.example.com
       - ALLOWED_ORIGINS=${CALINO_PROXY_ALLOWED_ORIGINS:-}
+      # Leave empty to allow any public HTTPS target, or restrict to your
+      # CalDAV host(s), e.g. ALLOWED_TARGETS=dav.example.com
+      - ALLOWED_TARGETS=${CALINO_PROXY_ALLOWED_TARGETS:-}
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true

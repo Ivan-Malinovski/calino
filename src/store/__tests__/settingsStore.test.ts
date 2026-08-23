@@ -41,6 +41,25 @@ describe('settingsStore', () => {
     expect(settings.defaultView).toBe('week')
   })
 
+  it('normalizes malformed adjustable profiles at the store boundary', () => {
+    useSettingsStore.getState().updateSettings({
+      adjustableTheme: {
+        light: {
+          accent: '#123456',
+          cornerRadius: 99,
+          density: 1,
+        },
+      } as never,
+    })
+
+    const profile = useSettingsStore.getState().adjustableTheme.light
+    expect(profile.accent).toBe('#123456')
+    expect(profile.cornerRadius).toBe(24)
+    expect(profile.density).toBe(80)
+    expect(profile.panel).toBe('#fffdfa')
+    expect(useSettingsStore.getState().adjustableTheme.dark.accent).toBe('#87a7ff')
+  })
+
   it('updateSettings only changes provided fields', () => {
     const store = useSettingsStore.getState()
 
@@ -253,6 +272,27 @@ describe('settingsStore', () => {
       expect(result.firstDayOfWeek).toBe(1)
       expect(result.defaultDuration).toBe(60)
       expect(result.defaultView).toBe('month')
+    })
+
+    it('fills missing adjustable theme profile fields during migration', () => {
+      const result = getMigrate()({
+        adjustableTheme: { dark: { accent: '#ff4060' } },
+      }) as { adjustableTheme: { light: Record<string, unknown>; dark: Record<string, unknown> } }
+
+      expect(result.adjustableTheme.dark.accent).toBe('#ff4060')
+      expect(result.adjustableTheme.dark.cornerRadius).toBe(10)
+      expect(result.adjustableTheme.light.accent).toBe('#9a6b43')
+    })
+
+    it('rejects invalid colors and clamps migrated numeric values', () => {
+      const result = getMigrate()({
+        adjustableTheme: {
+          light: { accent: 'red', shadowStrength: 1000 },
+        },
+      }) as { adjustableTheme: { light: Record<string, unknown> } }
+
+      expect(result.adjustableTheme.light.accent).toBe('#9a6b43')
+      expect(result.adjustableTheme.light.shadowStrength).toBe(100)
     })
 
     it('handles undefined persisted state gracefully', () => {

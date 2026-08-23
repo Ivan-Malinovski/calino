@@ -175,6 +175,18 @@ describe('settingsSync', () => {
       const merged = mergeSettings(local, remote as Parameters<typeof mergeSettings>[1])
       expect(merged.caldavDebugMode).toBe(local.caldavDebugMode)
     })
+
+    it('deep-merges and normalizes partial adjustable profiles', () => {
+      const local = useSettingsStore.getState()
+      const merged = mergeSettings(local, {
+        adjustableTheme: { dark: { accent: '#123456', density: 999 } },
+      } as Parameters<typeof mergeSettings>[1])
+
+      expect(merged.adjustableTheme.dark.accent).toBe('#123456')
+      expect(merged.adjustableTheme.dark.density).toBe(120)
+      expect(merged.adjustableTheme.dark.panel).toBe(local.adjustableTheme.dark.panel)
+      expect(merged.adjustableTheme.light).toEqual(local.adjustableTheme.light)
+    })
   })
 
   describe('resolveConflict', () => {

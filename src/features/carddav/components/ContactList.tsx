@@ -283,8 +283,8 @@ export function ContactList({ onNewContact, loading }: ContactListProps = {}): J
               fontSize: '11px',
               borderRadius: 'var(--radius-sm)',
               border: '1px solid var(--line)',
-              background: 'var(--bg-secondary)',
-              color: 'var(--text-primary)',
+              background: 'var(--color-bg-secondary)',
+              color: 'var(--color-text-primary)',
               cursor: 'pointer',
             }}
           >

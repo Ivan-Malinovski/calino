@@ -598,8 +598,8 @@
 .priorityHigh {
   padding: 2px 7px;
   border-radius: 6px;
-  background: color-mix(in srgb, #b0584a 15%, var(--canvas, #faf8f3));
-  color: #a4503f;
+  background: var(--error-bg);
+  color: var(--color-error);
 }
 
 .priorityMed {

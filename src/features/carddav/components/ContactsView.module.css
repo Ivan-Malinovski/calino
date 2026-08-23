@@ -104,7 +104,7 @@
 .heroAvatar span {
   font-size: 22px;
   font-weight: 600;
-  color: #fff;
+  color: var(--accent-contrast, #fff);
   letter-spacing: 0.02em;
   user-select: none;
 }
@@ -641,24 +641,24 @@
 
 .btnDeleteConfirm {
   background: var(--color-error-muted, #c47068) !important;
-  color: #fff !important;
+  color: var(--color-bg-primary, #fff) !important;
   border-color: var(--color-error-muted, #c47068) !important;
 }
 
 .btnDeleteConfirm svg {
-  color: #fff;
+  color: var(--color-bg-primary, #fff);
 }
 
 .btnDeleteConfirm:hover {
-  background: #b55a52 !important;
-  border-color: #b55a52 !important;
+  background: var(--color-error) !important;
+  border-color: var(--color-error) !important;
 }
 
 .btnDeleteLabel {
   font-size: 11px;
   font-weight: 500;
   margin-left: 6px;
-  color: #fff;
+  color: var(--color-bg-primary, #fff);
 }
 
 /* ============================================================================

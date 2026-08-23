@@ -15,7 +15,7 @@ export function MemberName({ uid }: { uid: string }): JSX.Element {
   return (
     <span
       data-component="member-name"
-      style={{ fontSize: 12, color: 'var(--text-secondary)' }}
+      style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}
       title={uid}
     >
       {target ? target.displayName : uid}
@@ -138,7 +138,7 @@ export function ContactPicker({
             listStyle: 'none',
             maxHeight: 200,
             overflowY: 'auto',
-            background: 'var(--surface)',
+            background: 'var(--color-surface)',
             border: '1px solid var(--line)',
             borderRadius: 'var(--radius-md)',
             boxShadow: 'var(--shadow-md, 0 4px 12px rgb(0 0 0 / 0.15))',

@@ -296,7 +296,7 @@ export function ContactFormFields({ value, onChange }: ContactFormFieldsProps): 
               strokeWidth="1.5"
               strokeLinecap="round"
               strokeLinejoin="round"
-              style={{ color: 'var(--text-muted)' }}
+              style={{ color: 'var(--color-text-muted)' }}
             >
               <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
               <circle cx="12" cy="13" r="4" />
@@ -310,7 +310,7 @@ export function ContactFormFields({ value, onChange }: ContactFormFieldsProps): 
           onChange={handlePhotoUpload}
           style={{ display: 'none' }}
         />
-        <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+        <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>
           {photoUploading ? (
             'Processing...'
           ) : local.photo ? (
@@ -337,7 +337,7 @@ export function ContactFormFields({ value, onChange }: ContactFormFieldsProps): 
                 style={{
                   background: 'none',
                   border: 'none',
-                  color: 'var(--text-muted)',
+                  color: 'var(--color-text-muted)',
                   cursor: 'pointer',
                   padding: 0,
                   fontSize: 12,
@@ -882,7 +882,7 @@ export function ContactFormFields({ value, onChange }: ContactFormFieldsProps): 
               padding: 8,
             }}
           >
-            <div style={{ color: 'var(--text-muted)', fontSize: 12, marginBottom: 8 }}>
+            <div style={{ color: 'var(--color-text-muted)', fontSize: 12, marginBottom: 8 }}>
               Select contacts to add as members:
             </div>
             {(local.memberUids || []).length > 0 && (

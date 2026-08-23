@@ -27,6 +27,10 @@ const devHost = process.env.CALINO_DEV_HOST
 
 export default defineConfig({
   base: '/',
+  // The app reads these non-VITE_ build-time values from import.meta.env.
+  // Keep the allowlist narrow: CALINO_DEV_* and other server-only settings
+  // must not be exposed to browser code.
+  envPrefix: ['VITE_', 'CALINO_GITHUB_REPO', 'CALINO_CONTACT_EMAIL', 'CALINO_ENABLE_SW'],
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
     __CALINO_CONFIG__: JSON.stringify(calinoConfig),

@@ -169,7 +169,7 @@ export function ImportExportModal({
             alignItems: 'center',
             marginBottom: 12,
             fontSize: 13,
-            color: 'var(--text-secondary)',
+            color: 'var(--color-text-secondary)',
           }}
         >
           <span>
@@ -249,7 +249,7 @@ export function ImportExportModal({
                 <div
                   style={{
                     fontSize: 11,
-                    color: 'var(--text-muted)',
+                    color: 'var(--color-text-muted)',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
                     whiteSpace: 'nowrap',
@@ -281,7 +281,7 @@ export function ImportExportModal({
         {/* Import button */}
         <div className={styles.modalFooter}>
           {importing ? (
-            <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
+            <span style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>
               Importing {imported}/{selectedCount}...
             </span>
           ) : (
