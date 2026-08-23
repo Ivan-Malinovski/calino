@@ -99,6 +99,8 @@
   },
   "surface": {
     "close": "Close",
+    "addCaldavCalendarTitle": "Add CalDAV Calendar",
+    "editCaldavAccountTitle": "Edit CalDAV Account",
     "recurrenceApplyChanges": "How would you like to apply these changes?",
     "icsDropTitle": "Drop .ics file to import events",
     "icsDropHint": "You'll pick the calendar next",
