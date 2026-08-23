@@ -7,6 +7,8 @@ import {
   TIME_FORMAT_OPTIONS,
   MAP_PROVIDER_OPTIONS,
 } from '@/store/settingsStore'
+import { LANGUAGE_OPTIONS } from '@/lib/languages'
+import type { Language } from '@/types'
 import { useSettingsSync } from '@/hooks/useSettingsSync'
 import { classifySyncError, CORS_HEADER_SNIPPET } from '@/features/caldav/client/errorMessages'
 import styles from './Settings.module.css'
@@ -134,6 +136,7 @@ function formatSyncError(error: string): JSX.Element {
 }
 
 export function GeneralSettings(): JSX.Element {
+  const language = useSettingsStore((s) => s.language)
   const dateFormat = useSettingsStore((s) => s.dateFormat)
   const timeFormat = useSettingsStore((s) => s.timeFormat)
   const firstDayOfWeek = useSettingsStore((s) => s.firstDayOfWeek)
@@ -305,15 +308,27 @@ export function GeneralSettings(): JSX.Element {
           className={styles.row}
           data-component="setting-row"
           data-setting="language"
-          data-value="en"
+          data-value={language}
         >
           <div className={styles.rowInfo}>
             <div className={styles.rowLabel}>Language</div>
             <div className={styles.rowDesc}>Interface language</div>
           </div>
           <div className={styles.rowControl}>
-            <select className={styles.select} defaultValue="en" aria-label="Language">
-              <option value="en">English</option>
+            <select
+              className={styles.select}
+              value={language}
+              aria-label="Language"
+              onChange={(e) => updateSettings({ language: e.target.value as Language })}
+            >
+              {/* Names stay in their own language and are never translated —
+                  someone stranded in a language they can't read has to be able
+                  to find their own in this list. */}
+              {LANGUAGE_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
             </select>
           </div>
         </div>

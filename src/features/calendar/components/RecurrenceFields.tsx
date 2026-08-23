@@ -1,6 +1,6 @@
 import type { JSX } from 'react'
 import type { RecurrenceRule } from '@/types'
-import { getWeekdayLabels } from './weekdayLabels'
+import { getWeekdayLabels, getShortMonthNames } from './weekdayLabels'
 import styles from './EventModal.module.css'
 
 const RECURRENCE_OPTIONS: { value: RecurrenceRule['frequency']; label: string }[] = [
@@ -10,20 +10,7 @@ const RECURRENCE_OPTIONS: { value: RecurrenceRule['frequency']; label: string }[
   { value: 'yearly', label: 'Yearly' },
 ]
 
-const MONTH_SHORT = [
-  'Jan',
-  'Feb',
-  'Mar',
-  'Apr',
-  'May',
-  'Jun',
-  'Jul',
-  'Aug',
-  'Sep',
-  'Oct',
-  'Nov',
-  'Dec',
-]
+
 
 // --- Monthly pattern helpers ---
 
@@ -203,6 +190,7 @@ interface YearlyMonthPickerProps {
 }
 
 function YearlyMonthPicker({ byMonth, onByMonthChange }: YearlyMonthPickerProps): JSX.Element {
+  const monthShort = getShortMonthNames()
   const toggle = (m: number): void => {
     if (byMonth.includes(m)) {
       onByMonthChange(byMonth.filter((x) => x !== m))
@@ -212,7 +200,7 @@ function YearlyMonthPicker({ byMonth, onByMonthChange }: YearlyMonthPickerProps)
   }
   return (
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-      {MONTH_SHORT.map((label, idx) => {
+      {monthShort.map((label, idx) => {
         const m = idx + 1
         const selected = byMonth.length === 0 || byMonth.includes(m)
         return (

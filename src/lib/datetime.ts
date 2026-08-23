@@ -1,7 +1,82 @@
 import { format, parseISO } from 'date-fns'
+import { da as daLocale, de as deLocale } from 'date-fns/locale'
+import type { Locale } from 'date-fns'
 import { fromZonedTime, formatInTimeZone } from 'date-fns-tz'
 import { normalizeTzid } from '@/lib/timezoneRegistry'
+import { currentLanguage } from '@/lib/i18n'
 import type { TimeFormat } from '@/types'
+
+// ─── Locale-aware display formatting ─────────────────────────────────────────
+//
+// IMPORTANT: only *display* formatting belongs here. Patterns like
+// `'yyyy-MM-dd'` are used ~93 times across the app as locale-neutral storage
+// and routing keys (map keys, ICS fields, URL params) — running those through
+// a locale would corrupt stored data. Keep using bare `format()` for those,
+// or better, `toLocalDateString` below.
+
+/** date-fns locales for the languages we ship. `en-US` is date-fns's default. */
+const DATE_FNS_LOCALES: Record<string, Locale | undefined> = {
+  en: undefined,
+  da: daLocale,
+  de: deLocale,
+}
+
+/** The date-fns locale matching the active UI language. */
+export function getDateFnsLocale(): Locale | undefined {
+  return DATE_FNS_LOCALES[currentLanguage()]
+}
+
+/**
+ * Format a date for *display*, in the active UI language.
+ *
+ * Use this — never bare `format()` — whenever the output contains a month or
+ * weekday name, or an ordering a reader would notice.
+ */
+export function formatDisplayDate(date: Date | string, pattern: string): string {
+  const d = typeof date === 'string' ? parseISO(date) : date
+  return format(d, pattern, { locale: getDateFnsLocale() })
+}
+
+/** `'December 2024'` — month and year, e.g. the calendar header. */
+export function formatMonthYear(date: Date | string): string {
+  return formatDisplayDate(date, 'MMMM yyyy')
+}
+
+/** `'Dec 2024'` — abbreviated month and year. */
+export function formatMonthYearShort(date: Date | string): string {
+  return formatDisplayDate(date, 'MMM yyyy')
+}
+
+/** `'Tuesday'` — full weekday name. */
+export function formatWeekdayLong(date: Date | string): string {
+  return formatDisplayDate(date, 'EEEE')
+}
+
+/** `'Tue'` — abbreviated weekday name. */
+export function formatWeekdayShort(date: Date | string): string {
+  return formatDisplayDate(date, 'EEE')
+}
+
+/** `'Dec 31'` — day and abbreviated month. */
+export function formatDayMonth(date: Date | string): string {
+  return formatDisplayDate(date, 'MMM d')
+}
+
+/**
+ * `'Tuesday, 31 December 2024'` — a full, unambiguous date.
+ *
+ * Note this uses one pattern for every locale rather than the mix of US
+ * (`EEEE, MMMM d, yyyy`) and EU (`EEEE, d MMMM yyyy`) orderings the codebase
+ * had grown; date-fns's locale data handles the rest.
+ */
+export function formatFullDate(date: Date | string): string {
+  return formatDisplayDate(date, 'PPPP')
+}
+
+/** `'31 Dec 2024'` — a compact but unambiguous date. */
+export function formatMediumDate(date: Date | string): string {
+  return formatDisplayDate(date, 'PP')
+}
 
 /** Zero-pad a number to 2 digits (e.g. 9 → '09'). */
 export function pad2(n: number): string {
@@ -37,7 +112,7 @@ export function formatTime(
 ): string {
   const d = typeof date === 'string' ? parseISO(date) : date
   const pattern = timeFormat === '24h' ? 'HH:mm' : variant === 'hour' ? 'h a' : 'h:mm a'
-  return format(d, pattern)
+  return format(d, pattern, { locale: getDateFnsLocale() })
 }
 
 /**
@@ -47,7 +122,7 @@ export function formatTime(
 export function formatDateLong(date: Date | string, timeFormat: TimeFormat = '24h'): string {
   const d = typeof date === 'string' ? parseISO(date) : date
   const timePattern = timeFormat === '24h' ? 'HH:mm' : 'h:mm a'
-  return format(d, `MMM d, yyyy ${timePattern}`)
+  return formatDisplayDate(d, `MMM d, yyyy ${timePattern}`)
 }
 
 /**

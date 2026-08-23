@@ -30,6 +30,7 @@ import {
 } from '@/features/caldav/client/errorMessages'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
+import { getMonthNames } from './weekdayLabels'
 import { useCalDAVSyncStore } from '@/store/caldavSyncStore'
 import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
 import { useUpdateCheck } from '@/hooks/useUpdateCheck'
@@ -273,20 +274,7 @@ export function Sidebar({
 
   const currentYear = new Date().getFullYear()
   const years = Array.from({ length: 11 }, (_, i) => currentYear - 5 + i)
-  const months = [
-    'January',
-    'February',
-    'March',
-    'April',
-    'May',
-    'June',
-    'July',
-    'August',
-    'September',
-    'October',
-    'November',
-    'December',
-  ]
+  const months = getMonthNames()
 
   const handleMonthClick = (): void => {
     setShowMonthDropdown(!showMonthDropdown)

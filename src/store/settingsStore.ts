@@ -15,6 +15,7 @@ import type {
   AdjustableThemeSettings,
   AdjustableFontFamily,
 } from '@/types'
+import { getBrowserLanguage } from '@/lib/languages'
 import { config, DEFAULT_CALENDAR_COLOR, EVENT_COLORS as _EVENT_COLORS_FROM_CONFIG } from '@/config'
 import { ALL_VIEWS, DEFAULT_DIVIDER_AFTER } from '@/features/calendar/viewRoutes'
 
@@ -156,6 +157,7 @@ export function normalizeAdjustableTheme(
 }
 
 const DEFAULT_SETTINGS: UserSettings = {
+  language: getBrowserLanguage(),
   timezone: getBrowserTimezone(),
   secondaryTimezoneEnabled: false,
   secondaryTimezone: null,
@@ -239,7 +241,7 @@ export const useSettingsStore = create<SettingsStore>()(
     {
       name: 'calino-settings',
       storage: createJSONStorage(() => safeLocalStorage),
-      version: 3,
+      version: 4,
       // Blind spread: any key the persisted state carries wins, including
       // ones from a newer version after a downgrade. That is safe for
       // viewOrder specifically because it is reconciled against ALL_VIEWS on

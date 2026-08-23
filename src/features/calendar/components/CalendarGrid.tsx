@@ -38,6 +38,7 @@ import {
 import { pad2, toEventInstant, toZoneWallClock } from '@/lib/datetime'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
+import { getWeekdayLabels } from './weekdayLabels'
 import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
 import { useIsMobile, useIsCompactMobile } from '@/hooks/useIsMobile'
 import { useDateChangeMotion, type DateChangeMotion } from '@/hooks/useDateChangeMotion'
@@ -147,6 +148,7 @@ export function CalendarGrid(): JSX.Element {
   const isOverlayOpen = useCalendarStore((state) => state.isOverlayOpen)
   const navigate = useNavigate()
   const firstDayOfWeek = useSettingsStore((state) => state.firstDayOfWeek)
+  const language = useSettingsStore((state) => state.language)
   const compactRecurringEvents = useSettingsStore((state) => state.compactRecurringEvents ?? false)
   const compressPastWeeks = useSettingsStore((state) => state.compressPastWeeks ?? false)
   const monthViewEventLimit = useSettingsStore((state) => state.monthViewEventLimit ?? 0)
@@ -505,11 +507,10 @@ export function CalendarGrid(): JSX.Element {
     )
   }
 
-  const weekdays = useMemo(() => {
-    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-    const idx = firstDayOfWeek || 0
-    return [...days.slice(idx), ...days.slice(0, idx)]
-  }, [firstDayOfWeek])
+  const weekdays = useMemo(
+    () => getWeekdayLabels(firstDayOfWeek || 0),
+    [firstDayOfWeek, language]
+  )
 
   const date = useMemo(() => parseISO(currentDate), [currentDate])
 

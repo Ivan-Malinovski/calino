@@ -119,6 +119,7 @@ vi.mock('@/store/calendarStore', () => ({
 vi.mock('@/store/settingsStore', () => ({
   useSettingsStore: vi.fn((selector: (state: SettingsStore) => unknown) => {
     const state: SettingsStore = {
+      language: 'en',
       timezone: 'UTC',
       secondaryTimezoneEnabled: false,
       secondaryTimezone: null,
