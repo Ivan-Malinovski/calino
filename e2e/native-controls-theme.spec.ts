@@ -2,6 +2,23 @@ import { test, expect } from '@playwright/test'
 import { clearState, STORAGE_KEYS } from './fixtures/localstorage'
 
 test.describe('native controls follow the active theme', () => {
+  test('adjustable corner radius does not round month cells', async ({ page }) => {
+    await clearState(page)
+    await page.goto('/settings')
+    await page.getByRole('button', { name: 'Appearance' }).click()
+    await page.locator('[data-component="theme-mode-option"][data-value="light"]').click()
+    await page
+      .locator('[data-component="theme-preview-card"][data-theme-id="Adjustable"]')
+      .first()
+      .click()
+    await page.goto('/month')
+
+    await expect(page.locator('[data-component="calendar-grid"] [data-date]').first()).toHaveCSS(
+      'border-radius',
+      '0px'
+    )
+  })
+
   test('keeps Adjustable themes at the end of each theme row and shows event previews', async ({
     page,
   }) => {

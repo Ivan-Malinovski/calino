@@ -37,7 +37,7 @@ test.describe('Week view — sliding window navigation', () => {
     await expect(weekTitle(page)).toHaveText('Aug 11 – 17')
     await expect(page.getByText('W32')).toBeVisible()
 
-    const nextDay = page.getByRole('button', { name: 'Show next day' })
+    const nextDay = page.locator('[data-component="week-title-next"]')
     await expect(nextDay).toHaveAttribute('title', 'Show next day')
     await nextDay.click()
 
@@ -53,7 +53,7 @@ test.describe('Week view — sliding window navigation', () => {
     await seedWeekView(page, 1)
     await page.goto('/week')
 
-    const nextDay = page.getByRole('button', { name: 'Show next day' })
+    const nextDay = page.locator('[data-component="week-title-next"]')
     await nextDay.focus()
     await page.keyboard.press('Enter')
     await expect(weekTitle(page)).toHaveText('Aug 13 – 19')
@@ -76,9 +76,9 @@ test.describe('Week view — sliding window navigation', () => {
     await seedWeekView(page)
     await page.goto('/week')
 
-    const controls = page.locator('[data-component="week-window-controls"]')
-    await expect(controls).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Show previous day' })).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Show next day' })).toBeVisible()
+    await expect(page.locator('[data-component="header"] h1')).toHaveText('Aug 12 – 18')
+    await expect(page.locator('[data-component="week-title-previous"]')).toBeVisible()
+    await expect(page.locator('[data-component="week-title-next"]')).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Next', exact: true })).toBeVisible()
   })
 })

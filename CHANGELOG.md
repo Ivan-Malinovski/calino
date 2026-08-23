@@ -14,31 +14,44 @@ All notable changes to Calino will be documented in this file.
 - **English, Danish, and German interface languages** can be selected in
   Settings. Natural-language parsing remains English-only.
 
-## [0.30.0] - 2026-08-21
+- **Nested tasks** can be created inline, then expanded or collapsed from the
+  task list, agenda, and calendar views. Your disclosure choices persist and
+  can follow you through settings sync.
 
-### Added
+- **Sliding week navigation** lets you move through a seven-day window one day
+  at a time while keeping the normal week controls available.
 
-- **Drag across day cells in month view to create an all-day event** spanning the days you swept, instead of clicking one day and editing the end date by hand.
+- **Journal entries have a split workspace** for browsing dates and editing the
+  selected entry, with layouts adapted for smaller screens.
 
-- **The command palette treats plain phrases as events.** Typing "lunch" or "team offsite friday" offers to create it, while any matching existing events and calendars still appear below.
+- **Drag across day cells in month view to create an all-day event** spanning
+  the days you swept, instead of clicking one day and editing the end date by
+  hand.
 
-- **"every other day/week/month/monday" sets up a fortnightly series** from the command palette, alongside the existing "every day" and "every weekday" phrasings.
+- **The command palette treats plain phrases as events.** Typing "lunch" or
+  "team offsite friday" offers to create it, while matching existing events
+  and calendars still appear below.
 
-- **Multi-day all-day events now span the week.** An event that runs across several days appears as one continuous pill across every covered day in week view, on desktop and mobile, with overlapping events staying aligned.
+- **Fortnightly recurrence phrases** such as "every other day/week/month" or
+  "every other monday" are understood by the command palette.
 
 ### Changed
 
-- **Long all-day event titles stay easy to follow.** A spanning event's name appears once per week and flows across the days it covers instead of being repeated or cut off at each cell boundary. Month view uses the same treatment.
+- Calendar dates, weekday names, and time displays now follow the selected
+  interface language and locale conventions.
 
-### Fixed
+- **Multi-day all-day events span the week** as one continuous pill across
+  covered days in week view, on desktop and mobile, with overlapping events
+  staying aligned.
 
-- **Repeat phrases stay out of the event title.** "gym every other day" is titled "Gym", not "Gym every other day", and the command palette row shows the repeat ("Every 2 days") with a ↻ badge, the same way existing recurring events do.
+- Long all-day event titles flow across the days they cover instead of being
+  repeated or cut off at each cell boundary. Month view uses the same treatment.
 
-- **Quick-add now keeps the recurrence you typed.** "gym every monday" created a single event because the parsed rule never reached the saved event, and plain "every &lt;weekday&gt;" was not recognised as a repeat at all.
+- Calendar, agenda, journal, task, contact, settings, and sync surfaces now
+  share the translated interface and locale-aware controls.
 
-- **"dinner tonight" creates a timed evening event** instead of an all-day one that secretly carried a 22:00 start. Same for "this morning", "this afternoon", "this evening" and "friday night".
-
-- **Casual time-of-day words stay out of the title** — "dinner tonight" is titled "Dinner", and "meeting starting at 3pm" is titled "Meeting".
+- Month, agenda, journal, and mobile calendar layouts have been refined for
+  more flexible resizing and navigation.
 
 ## [0.30.0] - 2026-08-21
 

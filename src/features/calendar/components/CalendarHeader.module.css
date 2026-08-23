@@ -106,13 +106,35 @@
 .weekWindowControls {
   display: inline-flex;
   align-items: center;
-  gap: 1px;
+  gap: 0;
   height: 38px;
   padding: 0 2px;
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
   box-shadow: 0 1px 2px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.05 * var(--shadow-opacity, 1)));
+}
+
+.weekWindowLabel {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  color: var(--ink-2);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  user-select: none;
+}
+
+.weekWindowLabel {
+  padding: 0 6px;
+  color: var(--ink-2);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .weekWindowArrow {
@@ -240,6 +262,32 @@
   color: var(--ink);
   margin: 0;
   line-height: 1;
+}
+
+.weekTitleArrow {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  color: var(--ink-3);
+  background: transparent;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: color 0.14s, background 0.14s;
+}
+
+.weekTitleArrow:hover {
+  color: var(--ink);
+  background: transparent;
+}
+
+.weekTitleArrow:active {
+  transform: scale(0.9);
+  transition-duration: 0.05s;
 }
 
 /* Directional title change. Short and small on purpose: it should register as
@@ -840,6 +888,10 @@
     height: 44px;
   }
 
+  .navigator {
+    height: 44px;
+  }
+
   .weekWindowControls {
     height: 44px;
     padding: 0 2px;
@@ -880,20 +932,21 @@
     display: none;
   }
 
-  /* Mobile visual nudge: shift the entire .navigator (segmented control
-     containing prev / today / next) 10px right + 3px up, and lift the
-     month title 10px up + 10px right.
-
-     Translating .navigator itself moves all three buttons as one unit.
-     The parent's `overflow: hidden` (which keeps the rounded corners
-     crisp) travels with the element, so the buttons stay clipped
-     correctly and the whole control visibly shifts as a block —
-     unlike translating individual buttons, which clipped at the
-     navigator's boundary and made the icon appear to drift inside a
-     stationary button. */
-  .navigator {
-    transform: translate(10px, 0);
+  [data-view='week'] .titleGroup {
+    flex: 0 0 auto;
+    justify-content: flex-start;
+    margin-left: 10px;
+    padding-left: 0;
+    top: 0;
+    gap: 8px;
   }
+
+  [data-view='week'] .viewTitle {
+    white-space: nowrap;
+  }
+
+  /* Keep the two week-view navigators separated. The day stepper has its own
+     label below, so it no longer needs to overlap the regular pager. */
 }
 
 /* ≤500px (compact mobile): hide Today, search/settings, smaller year */
@@ -906,6 +959,16 @@
 
   .navToday {
     display: none;
+  }
+
+  /* Show the date moved by the one-day stepper. The week range remains the
+     central title; the two controls flank it instead of duplicating it. */
+  .weekWindowLabel {
+    display: flex;
+  }
+
+  .navigator {
+    height: 44px;
   }
 
   .rightCluster {

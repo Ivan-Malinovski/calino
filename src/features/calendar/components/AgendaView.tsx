@@ -51,11 +51,13 @@ interface DayGroup {
 function AgendaDropZone({
   dateKey,
   className,
+  style,
   children,
 }: {
   dateKey: string
   className?: string
-  children: React.ReactNode
+  style?: React.CSSProperties
+  children?: React.ReactNode
 }): JSX.Element {
   const { setNodeRef, isOver } = useDroppable({ id: dateKey })
 
@@ -65,6 +67,7 @@ function AgendaDropZone({
       className={`${className ?? ''} ${isOver ? styles.agendaDropOver : ''}`}
       data-date={dateKey}
       data-component="agenda-day-drop-zone"
+      style={style}
     >
       {children}
     </div>
@@ -589,18 +592,31 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
   }, [dayGroups, virtualizer])
 
   const renderSkipRow = (group: DayGroup): JSX.Element => {
+    const first = group.days[0]
+    const last = group.days[group.days.length - 1]
+    const freeDays = group.days.length - 1
+    const label = `${formatDisplayDate(first, 'EEE MMM d')} – ${formatDisplayDate(last, 'EEE MMM d')} · ${freeDays} day${freeDays === 1 ? '' : 's'} free`
+
     return (
-      <div className={styles.agendaSkip} key={`skip-${format(group.days[0], 'yyyy-MM-dd')}`}>
-        {group.days.map((day) => {
-          const dateKey = format(day, 'yyyy-MM-dd')
-          return (
-            <AgendaDropZone key={dateKey} dateKey={dateKey} className={styles.agendaSkipDay}>
-              <div className={styles.agendaSkipLine} />
-              <span className={styles.agendaSkipLabel}>{formatDisplayDate(day, 'EEE MMM d')}</span>
-              <div className={styles.agendaSkipLine} />
-            </AgendaDropZone>
-          )
-        })}
+      <div className={styles.agendaSkip} key={`skip-${format(first, 'yyyy-MM-dd')}`}>
+        <div className={styles.agendaSkipVisual}>
+          <div className={styles.agendaSkipLine} />
+          <span className={styles.agendaSkipLabel} data-component="agenda-free-range">
+            {label}
+          </span>
+          <div className={styles.agendaSkipLine} />
+        </div>
+        {group.days.map((day, index) => (
+          <AgendaDropZone
+            key={format(day, 'yyyy-MM-dd')}
+            dateKey={format(day, 'yyyy-MM-dd')}
+            className={styles.agendaSkipDropZone}
+            style={{
+              left: `${(index / group.days.length) * 100}%`,
+              width: `${100 / group.days.length}%`,
+            }}
+          />
+        ))}
       </div>
     )
   }
@@ -643,8 +659,8 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
                 }
               />
             ) : (
-              // flexShrink: 0 — .monthPane is a flex column, and this spacer's height
-              // is the virtual list's total size, not something to compress.
+              /* flexShrink: 0 — .monthPane is a flex column, and this spacer's height
+                 is the virtual list's total size, not something to compress. */
               <div
                 style={{
                   position: 'relative',
@@ -652,147 +668,46 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
                   height: `${virtualizer.getTotalSize()}px`,
                 }}
               >
-                {virtualizer.getVirtualItems().map((virtualRow) => {
-                  const group = dayGroups[virtualRow.index]
-                  const firstKey = format(group.days[0], 'yyyy-MM-dd')
+              {virtualizer.getVirtualItems().map((virtualRow) => {
+                const group = dayGroups[virtualRow.index]
+                const firstKey = format(group.days[0], 'yyyy-MM-dd')
 
-                  const row = ((): JSX.Element => {
-                    if (group.type === 'skip') {
-                      return renderSkipRow(group)
-                    }
+                const row = ((): JSX.Element => {
+                  if (group.type === 'skip') {
+                    return renderSkipRow(group)
+                  }
 
-                    const day = group.days[0]
-                    const dateKey = firstKey
-                    const sortedEvents = eventsByDate.get(dateKey) || []
-                    const isEmpty = !group.hasEvents
-                    const isToday = dateKey === format(new Date(), 'yyyy-MM-dd')
+                  const day = group.days[0]
+                  const dateKey = firstKey
+                  const sortedEvents = eventsByDate.get(dateKey) || []
+                  const isEmpty = !group.hasEvents
+                  const isToday = dateKey === format(new Date(), 'yyyy-MM-dd')
 
-                    return (
-                      <div key={dateKey} onContextMenu={(e) => handleContextMenu(e, day)}>
-                        <div
-                          className={`${styles.agendaDayHeader} ${isEmpty ? styles.isEmpty : ''} ${isToday ? styles.isToday : ''}`}
-                        >
-                          <div className={styles.agendaDayLabel}>
-                            <span className={styles.agendaDow}>{format(day, 'EEEE')}</span>
-                            <span className={styles.agendaDate}>{format(day, 'MMM d, yyyy')}</span>
-                          </div>
-                          {!isEmpty && (
-                            <button
-                              className={styles.agendaAdd}
-                              onClick={() => handleCreateEvent(day)}
-                            >
-                              + {t('common:actions.add')}
-                            </button>
-                          )}
+                  return (
+                    <div key={dateKey} onContextMenu={(e) => handleContextMenu(e, day)}>
+                      <div
+                        className={`${styles.agendaDayHeader} ${isEmpty ? styles.isEmpty : ''} ${isToday ? styles.isToday : ''}`}
+                      >
+                        <div className={styles.agendaDayLabel}>
+                          <span className={styles.agendaDow}>{format(day, 'EEEE')}</span>
+                          <span className={styles.agendaDate}>{format(day, 'MMM d, yyyy')}</span>
                         </div>
-
                         {!isEmpty && (
-                          <>
-                            <AgendaInsertDropZone dateKey={dateKey} position={0} />
-                            <AnimatePresence initial={false} mode="popLayout">
-                              {sortedEvents.map(({ event }, index) => {
-                                if (event.type === 'task') {
-                                  return (
-                                    <motion.div
-                                      key={event.id}
-                                      className={styles.agendaAnimatedItem}
-                                      layout
-                                      initial={{ opacity: 0 }}
-                                      animate={{ opacity: 1 }}
-                                      exit={{ opacity: 0, height: 0, marginBottom: 0 }}
-                                      transition={{ duration: 0.14, ease: 'easeOut' }}
-                                    >
-                                      <AgendaDraggableItem
-                                        event={event}
-                                        className={`${styles.agendaTask} ${
-                                          event.completed ? styles.agendaTaskCompleted : ''
-                                        }`}
-                                        dataComponent="agenda-task"
-                                        indentDepth={taskDepthById.get(event.id) ?? 0}
-                                        dropTargetId={`agenda-task:${event.id}`}
-                                        disabled={
-                                          !!event.recurrence ||
-                                          !!event.rruleString ||
-                                          !!extractOriginalEventId(event.id) ||
-                                          calendars.find(
-                                            (calendar) => calendar.id === event.calendarId
-                                          )?.readOnly === true
-                                        }
-                                        onClick={(e) => handleEventClick(e, event)}
-                                        onKeyDown={(e) => {
-                                          if (e.key === 'Enter' || e.key === ' ') {
-                                            e.preventDefault()
-                                            handleEventClick(
-                                              e as unknown as React.MouseEvent,
-                                              event
-                                            )
-                                          }
-                                        }}
-                                        onContextMenu={(e) => handleEventContextMenu(e, event)}
-                                      >
-                                        <div className={styles.agendaTaskBar} />
-                                        <div
-                                          className={styles.agendaTaskBody}
-                                          data-task-depth={taskDepthById.get(event.id) ?? 0}
-                                        >
-                                          <div className={styles.agendaTaskMain}>
-                                            <span className={styles.agendaTaskTime}>
-                                              {event.start.includes('T00:00')
-                                                ? 'Due'
-                                                : formatEventTime(
-                                                    event.start,
-                                                    event.timezone,
-                                                    timeFormat
-                                                  )}
-                                            </span>
-                                            <button
-                                              type="button"
-                                              className={styles.agendaTaskIcon}
-                                              role="checkbox"
-                                              aria-checked={!!event.completed}
-                                              aria-label={
-                                                event.completed
-                                                  ? `Mark "${event.title}" as incomplete`
-                                                  : `Mark "${event.title}" as complete`
-                                              }
-                                              onPointerDown={(e) => e.stopPropagation()}
-                                              onClick={(e) => {
-                                                // The whole card opens the task; the
-                                                // check has to claim its own click.
-                                                e.stopPropagation()
-                                                void toggleComplete(event)
-                                              }}
-                                            >
-                                              {event.completed ? '✓' : '○'}
-                                            </button>
-                                            <span className={styles.agendaTaskTitle}>
-                                              {event.title}
-                                            </span>
-                                            {taskCollapse.hasSubtasks(event.id) && (
-                                              <TaskCollapseToggle
-                                                taskTitle={event.title}
-                                                collapsed={taskCollapse.isCollapsed(event.id)}
-                                                hiddenCount={taskCollapse.descendantCount(event.id)}
-                                                onToggle={() => taskCollapse.toggleTask(event.id)}
-                                                className={styles.agendaTaskCollapseToggle}
-                                              />
-                                            )}
-                                          </div>
-                                          {event.location && (
-                                            <div className={styles.agendaEventSub}>
-                                              {event.location}
-                                            </div>
-                                          )}
-                                        </div>
-                                      </AgendaDraggableItem>
-                                      <AgendaInsertDropZone
-                                        dateKey={dateKey}
-                                        position={index + 1}
-                                      />
-                                    </motion.div>
-                                  )
-                                }
+                          <button
+                            className={styles.agendaAdd}
+                            onClick={() => handleCreateEvent(day)}
+                          >
+                            + {t('common:actions.add')}
+                          </button>
+                        )}
+                      </div>
 
+                      {!isEmpty && (
+                        <>
+                          <AgendaInsertDropZone dateKey={dateKey} position={0} />
+                          <AnimatePresence initial={false} mode="popLayout">
+                            {sortedEvents.map(({ event }, index) => {
+                              if (event.type === 'task') {
                                 return (
                                   <motion.div
                                     key={event.id}
@@ -805,8 +720,12 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
                                   >
                                     <AgendaDraggableItem
                                       event={event}
-                                      className={styles.agendaEvent}
-                                      dataComponent="agenda-event"
+                                      className={`${styles.agendaTask} ${
+                                        event.completed ? styles.agendaTaskCompleted : ''
+                                      }`}
+                                      dataComponent="agenda-task"
+                                      indentDepth={taskDepthById.get(event.id) ?? 0}
+                                      dropTargetId={`agenda-task:${event.id}`}
                                       disabled={
                                         !!event.recurrence ||
                                         !!event.rruleString ||
@@ -819,86 +738,183 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
                                       onKeyDown={(e) => {
                                         if (e.key === 'Enter' || e.key === ' ') {
                                           e.preventDefault()
-                                          handleEventClick(e as unknown as React.MouseEvent, event)
+                                            handleEventClick(
+                                              e as unknown as React.MouseEvent,
+                                              event
+                                            )
                                         }
                                       }}
                                       onContextMenu={(e) => handleEventContextMenu(e, event)}
                                     >
+                                      <div className={styles.agendaTaskBar} />
                                       <div
-                                        className={styles.agendaEventBar}
-                                        style={{ background: getEventBarColor(event) }}
-                                      />
-                                      <div className={styles.agendaEventBody}>
-                                        <div className={styles.agendaEventMain}>
-                                          <span className={styles.agendaEventTime}>
-                                            {event.isAllDay
-                                              ? 'All day'
+                                        className={styles.agendaTaskBody}
+                                        data-task-depth={taskDepthById.get(event.id) ?? 0}
+                                      >
+                                        <div className={styles.agendaTaskMain}>
+                                          <span className={styles.agendaTaskTime}>
+                                            {event.start.includes('T00:00')
+                                              ? 'Due'
                                               : formatEventTime(
                                                   event.start,
                                                   event.timezone,
                                                   timeFormat
                                                 )}
                                           </span>
-                                          <span className={styles.agendaEventTitle}>
+                                          <button
+                                            type="button"
+                                            className={styles.agendaTaskIcon}
+                                            role="checkbox"
+                                            aria-checked={!!event.completed}
+                                            aria-label={
+                                              event.completed
+                                                ? `Mark "${event.title}" as incomplete`
+                                                : `Mark "${event.title}" as complete`
+                                            }
+                                            onPointerDown={(e) => e.stopPropagation()}
+                                            onClick={(e) => {
+                                              // The whole card opens the task; the
+                                              // check has to claim its own click.
+                                              e.stopPropagation()
+                                              void toggleComplete(event)
+                                            }}
+                                          >
+                                            {event.completed ? '✓' : '○'}
+                                          </button>
+                                          <span className={styles.agendaTaskTitle}>
                                             {event.title}
                                           </span>
+                                          {taskCollapse.hasSubtasks(event.id) && (
+                                            <TaskCollapseToggle
+                                              taskTitle={event.title}
+                                              collapsed={taskCollapse.isCollapsed(event.id)}
+                                              hiddenCount={taskCollapse.descendantCount(event.id)}
+                                              onToggle={() => taskCollapse.toggleTask(event.id)}
+                                              className={styles.agendaTaskCollapseToggle}
+                                            />
+                                          )}
                                         </div>
                                         {event.location && (
                                           <div className={styles.agendaEventSub}>
-                                            <LocationLink
-                                              location={event.location}
-                                              className={styles.agendaLocationLink}
-                                            />
+                                            {event.location}
                                           </div>
                                         )}
                                       </div>
                                     </AgendaDraggableItem>
-                                    <AgendaInsertDropZone dateKey={dateKey} position={index + 1} />
+                                      <AgendaInsertDropZone
+                                        dateKey={dateKey}
+                                        position={index + 1}
+                                      />
                                   </motion.div>
                                 )
-                              })}
-                            </AnimatePresence>
-                            <div className={styles.agendaDivider} />
-                          </>
-                        )}
+                              }
 
-                        {isEmpty && <div className={styles.agendaDivider} />}
-                      </div>
-                    )
-                  })()
-
-                  const isPast = (() => {
-                    if (fadePastDaysInAgenda === 'never') return false
-                    const isDayPast = group.days[group.days.length - 1] < startOfDay(new Date())
-                    if (!isDayPast) return false
-                    if (fadePastDaysInAgenda === 'all') return true
-                    return isCurrentMonthView
-                  })()
-
-                  return (
-                    <div
-                      key={group.type === 'skip' ? `skip-${firstKey}` : firstKey}
-                      ref={virtualizer.measureElement}
-                      data-index={virtualRow.index}
-                      className={isPast ? styles.isPast : ''}
-                      style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        width: '100%',
-                        transform: `translateY(${virtualRow.start}px)`,
-                      }}
-                    >
-                      {group.type === 'skip' ? (
-                        row
-                      ) : (
-                        <AgendaDropZone dateKey={firstKey} className={styles.agendaDayDropZone}>
-                          {row}
-                        </AgendaDropZone>
+                              return (
+                                <motion.div
+                                  key={event.id}
+                                  className={styles.agendaAnimatedItem}
+                                  layout
+                                  initial={{ opacity: 0 }}
+                                  animate={{ opacity: 1 }}
+                                  exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+                                  transition={{ duration: 0.14, ease: 'easeOut' }}
+                                >
+                                  <AgendaDraggableItem
+                                    event={event}
+                                    className={styles.agendaEvent}
+                                    dataComponent="agenda-event"
+                                    disabled={
+                                      !!event.recurrence ||
+                                      !!event.rruleString ||
+                                      !!extractOriginalEventId(event.id) ||
+                                        calendars.find(
+                                          (calendar) => calendar.id === event.calendarId
+                                        )?.readOnly === true
+                                    }
+                                    onClick={(e) => handleEventClick(e, event)}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter' || e.key === ' ') {
+                                        e.preventDefault()
+                                        handleEventClick(e as unknown as React.MouseEvent, event)
+                                      }
+                                    }}
+                                    onContextMenu={(e) => handleEventContextMenu(e, event)}
+                                  >
+                                    <div
+                                      className={styles.agendaEventBar}
+                                      style={{ background: getEventBarColor(event) }}
+                                    />
+                                    <div className={styles.agendaEventBody}>
+                                      <div className={styles.agendaEventMain}>
+                                        <span className={styles.agendaEventTime}>
+                                          {event.isAllDay
+                                            ? 'All day'
+                                            : formatEventTime(
+                                                event.start,
+                                                event.timezone,
+                                                timeFormat
+                                              )}
+                                        </span>
+                                        <span className={styles.agendaEventTitle}>
+                                          {event.title}
+                                        </span>
+                                      </div>
+                                      {event.location && (
+                                        <div className={styles.agendaEventSub}>
+                                          <LocationLink
+                                            location={event.location}
+                                            className={styles.agendaLocationLink}
+                                          />
+                                        </div>
+                                      )}
+                                    </div>
+                                  </AgendaDraggableItem>
+                                  <AgendaInsertDropZone dateKey={dateKey} position={index + 1} />
+                                </motion.div>
+                              )
+                            })}
+                          </AnimatePresence>
+                          <div className={styles.agendaDivider} />
+                        </>
                       )}
+
+                      {isEmpty && <div className={styles.agendaDivider} />}
                     </div>
                   )
-                })}
+                })()
+
+                const isPast = (() => {
+                  if (fadePastDaysInAgenda === 'never') return false
+                  const isDayPast = group.days[group.days.length - 1] < startOfDay(new Date())
+                  if (!isDayPast) return false
+                  if (fadePastDaysInAgenda === 'all') return true
+                  return isCurrentMonthView
+                })()
+
+                return (
+                  <div
+                    key={group.type === 'skip' ? `skip-${firstKey}` : firstKey}
+                    ref={virtualizer.measureElement}
+                    data-index={virtualRow.index}
+                    className={isPast ? styles.isPast : ''}
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      transform: `translateY(${virtualRow.start}px)`,
+                    }}
+                  >
+                    {group.type === 'skip' ? (
+                      row
+                    ) : (
+                      <AgendaDropZone dateKey={firstKey} className={styles.agendaDayDropZone}>
+                        {row}
+                      </AgendaDropZone>
+                    )}
+                  </div>
+                )
+              })}
               </div>
             )}
           </motion.div>

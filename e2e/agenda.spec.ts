@@ -198,4 +198,25 @@ test('agenda indents subtasks and moves tasks and events between days', async ({
     ])
 
   await expect(page.locator(`[data-date="${today}"]`)).toBeVisible()
+
+  const agendaEvent = page
+    .locator('[data-component="agenda-event"]')
+    .filter({ hasText: 'Agenda event' })
+    .first()
+  await agendaEvent.hover()
+  await expect
+    .poll(() =>
+      agendaEvent.evaluate((element) => getComputedStyle(element.parentElement as Element).overflow)
+    )
+    .toBe('visible')
+})
+
+test('agenda collapses consecutive empty dates into a free-range row', async ({ page }) => {
+  await clearState(page)
+  await seedAgendaItems(page)
+  await page.goto('/agenda')
+
+  const freeRanges = page.locator('[data-component="agenda-free-range"]')
+  await expect(freeRanges.first()).toContainText(/free$/)
+  await expect.poll(() => freeRanges.count()).toBeGreaterThan(0)
 })

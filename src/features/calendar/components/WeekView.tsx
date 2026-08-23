@@ -300,11 +300,18 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
   useEffect(() => {
     const previous = previousVisibleWindowRef.current
     previousVisibleWindowRef.current = visibleWindowStart
-    if (previous === visibleWindowStart || !containerRef.current) return
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    const container = containerRef.current
+    if (previous === visibleWindowStart || !container) return
+    if (
+      (typeof window.matchMedia === 'function' &&
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches) ||
+      typeof container.animate !== 'function'
+    ) {
+      return
+    }
 
     const direction = visibleWindowStart > previous ? 1 : -1
-    const animation = containerRef.current.animate(
+    const animation = container.animate(
       [
         { transform: `translateX(${direction * 8}px)`, opacity: 0.82 },
         { transform: 'translateX(0)', opacity: 1 },
