@@ -18,7 +18,6 @@ import {
 import {
   format,
   startOfWeek,
-  endOfWeek,
   eachDayOfInterval,
   startOfDay,
   endOfDay,
@@ -28,7 +27,7 @@ import {
   addWeeks,
   addDays,
 } from 'date-fns'
-import { pad2, toLocalDateString, toEventInstant } from '@/lib/datetime'
+import { pad2, toLocalDateString, toEventInstant, formatDisplayDate } from '@/lib/datetime'
 import { hasDueTime } from '@/lib/events'
 import type { CalendarEvent } from '@/types'
 import { useCalendarStore, getTasksForDay } from '@/store/calendarStore'
@@ -64,6 +63,8 @@ import { duplicateEventWithSync } from '@/lib/duplicateWithSync'
 import { assignSpanLanes, compareDayEvents, makeDayFragments } from '../lib/multiDayFragments'
 import { filterTasksByCollapsedAncestors } from '@/lib/taskTree'
 import { useTaskCollapse } from '../hooks/useTaskCollapse'
+import { useTranslation } from 'react-i18next'
+import { setWeekWindowStart, useWeekWindowStart } from '../weekWindow'
 
 const BASE_HOUR_HEIGHT = 60
 /** Narrowest the mobile day columns compress to, as a fraction of their normal
@@ -142,7 +143,7 @@ const DroppableCell = React.memo(function DroppableCell({
   // Screen-reader name for the focused slot: without it the roving tab stop
   // lands on an unnamed "blank". Derived from the same data attributes the
   // handlers read, so the memo still holds.
-  const ariaLabel = `${format(parseISO(dateKey), 'EEEE, MMMM d, yyyy')} ${hourKey}`
+  const ariaLabel = `${formatDisplayDate(parseISO(dateKey), 'EEEE, MMMM d, yyyy')} ${hourKey}`
 
   return (
     <div
@@ -201,7 +202,7 @@ const DayHeader = React.memo(function DayHeader({
       ref={setNodeRef}
       className={`${styles.dayHeader} ${isTodayDay ? styles.today : ''} ${allDayEvents.length > 0 ? styles.hasAllDayEvents : ''} ${isOver && activeIsTimed ? styles.dayHeaderDropActive : ''}`}
     >
-      <div className={styles.dayName}>{format(day, 'EEE')}</div>
+      <div className={styles.dayName}>{formatDisplayDate(day, 'EEE')}</div>
       <div className={styles.dayNumber}>{format(day, 'd')}</div>
       {allDayEvents.length > 0 && (
         <div className={styles.allDayEventsInHeader}>
@@ -228,6 +229,7 @@ const DayHeader = React.memo(function DayHeader({
 })
 
 export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Element {
+  const { t } = useTranslation('calendar')
   const currentDate = useCalendarStore((state) => state.currentDate)
   const events = useCalendarStore((state) => state.events)
   const calendars = useCalendarStore((state) => state.calendars)
@@ -240,6 +242,7 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
   const storeUpdateEvent = useCalendarStore((state) => state.updateEvent)
   const setCurrentDate = useCalendarStore((state) => state.setCurrentDate)
   const firstDayOfWeek = useSettingsStore((state) => state.firstDayOfWeek)
+  const weekWindowStart = useWeekWindowStart()
   const timeFormat = useSettingsStore((state) => state.timeFormat)
   const secondaryTimezoneEnabled = useSettingsStore((state) => state.secondaryTimezoneEnabled)
   const secondaryTimezone = useSettingsStore((state) => state.secondaryTimezone)
@@ -278,6 +281,38 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
   const mobileScrollRef = useRef<HTMLDivElement>(null)
   const daysContainerRef = useRef<HTMLDivElement>(null)
   const hourHeight = BASE_HOUR_HEIGHT * effectiveScale
+
+  // The seven-day view has a rolling, non-persisted anchor. The fallback is
+  // the normal aligned week so the first render is stable even before the
+  // header's reset effect has run.
+  const visibleWindowStart =
+    dayCount === 7
+      ? weekWindowStart ??
+        format(startOfWeek(parseISO(currentDate), { weekStartsOn: firstDayOfWeek || 0 }), 'yyyy-MM-dd')
+      : currentDate
+  const visibleWindowDate = useMemo(() => parseISO(visibleWindowStart), [visibleWindowStart])
+  const visibleWindowEnd = format(addDays(visibleWindowDate, dayCount - 1), 'yyyy-MM-dd')
+
+  // A small physical nudge makes a one-day step read as a window moving
+  // through the calendar. The title has its own directional animation; this
+  // keeps the grid motion subtle and skips it for reduced-motion users.
+  const previousVisibleWindowRef = useRef(visibleWindowStart)
+  useEffect(() => {
+    const previous = previousVisibleWindowRef.current
+    previousVisibleWindowRef.current = visibleWindowStart
+    if (previous === visibleWindowStart || !containerRef.current) return
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+
+    const direction = visibleWindowStart > previous ? 1 : -1
+    const animation = containerRef.current.animate(
+      [
+        { transform: `translateX(${direction * 8}px)`, opacity: 0.82 },
+        { transform: 'translateX(0)', opacity: 1 },
+      ],
+      { duration: 180, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' }
+    )
+    return () => animation.cancel()
+  }, [visibleWindowStart])
 
   // Roving-tabindex arrow navigation across the 7×24 hour-slot grid: ←/→ move
   // between day columns, ↑/↓ between hour slots (matching the month view's
@@ -318,8 +353,14 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
             : addDays(date, direction === 'next' ? dayCount : -dayCount)
         )
       )
+      if (dayCount === 7) {
+        setWeekWindowStart(
+          format(addDays(visibleWindowDate, direction === 'next' ? 7 : -7), 'yyyy-MM-dd'),
+          true
+        )
+      }
     },
-    [currentDate, setCurrentDate, dayCount]
+    [currentDate, setCurrentDate, dayCount, visibleWindowDate]
   )
 
   const handleGridKeyDownWithEdge = useCallback(
@@ -339,9 +380,12 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
   const isCellFocusAnchor = useCallback(
     (dayKey: string, hourKey: string): boolean =>
       anchorDate === null
-        ? dayKey === currentDate && hourKey === '00:00'
+        ? dayKey ===
+            (currentDate >= visibleWindowStart && currentDate <= visibleWindowEnd
+              ? currentDate
+              : visibleWindowStart) && hourKey === '00:00'
         : anchorDate === dayKey && anchorHour === hourKey,
-    [anchorDate, anchorHour, currentDate]
+    [anchorDate, anchorHour, currentDate, visibleWindowStart, visibleWindowEnd]
   )
 
   // When the visible week changes (header pager or edge paging), drop the
@@ -349,7 +393,7 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
   // the edge-paging effect below so the restore wins when both fire.
   useEffect(() => {
     setFocusAnchor(null)
-  }, [currentDate, setFocusAnchor])
+  }, [currentDate, weekWindowStart, setFocusAnchor])
 
   useEffect(() => {
     if (!edgeArrowRef.current) return
@@ -373,7 +417,7 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
       target.focus()
       setFocusAnchor(target)
     }
-  }, [currentDate, setFocusAnchor])
+  }, [currentDate, weekWindowStart, setFocusAnchor])
 
   useEffect(() => {
     if (openMenuId !== null && openMenuId !== 'weekview' && contextMenu) {
@@ -427,8 +471,12 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
       // correctness grounds; `setCurrentDate` takes a local date everywhere
       // else it is called.
       setCurrentDate(toLocalDateString(newDate))
+      if (dayCount === 7) {
+        const delta = direction === 'left' || direction === 'up' ? 7 : -7
+        setWeekWindowStart(format(addDays(visibleWindowDate, delta), 'yyyy-MM-dd'), true)
+      }
     },
-    [currentDate, setCurrentDate, dayCount]
+    [currentDate, setCurrentDate, dayCount, visibleWindowDate]
   )
 
   const handlePinch = useCallback((scaleValue: number) => {
@@ -549,30 +597,30 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
   }, [isMobile])
 
   const date = useMemo(() => parseISO(currentDate), [currentDate])
+  const displayDate = dayCount === 7 ? visibleWindowDate : date
 
   const localTzAbbr = useMemo(
-    () => getTimezoneAbbr(date, timezone || Intl.DateTimeFormat().resolvedOptions().timeZone),
-    [date, timezone]
+    () => getTimezoneAbbr(displayDate, timezone || Intl.DateTimeFormat().resolvedOptions().timeZone),
+    [displayDate, timezone]
   )
   const secondaryTzAbbr = useMemo(
     () =>
-      secondaryTimezoneLabel || (secondaryTimezone ? getTimezoneAbbr(date, secondaryTimezone) : ''),
-    [date, secondaryTimezone, secondaryTimezoneLabel]
+      secondaryTimezoneLabel || (secondaryTimezone ? getTimezoneAbbr(displayDate, secondaryTimezone) : ''),
+    [displayDate, secondaryTimezone, secondaryTimezoneLabel]
   )
 
-  // Range start/end: a full calendar week (aligned to firstDayOfWeek) when
-  // dayCount === 7, otherwise a rolling window of `dayCount` days anchored on
-  // the current date (used by the 3-day view).
+  // Range start/end: the seven-day view uses the shared rolling window anchor;
+  // the 3-day view remains a rolling window anchored on currentDate.
   const { rangeStart, rangeEnd } = useMemo(() => {
     if (dayCount === 7) {
       return {
-        rangeStart: startOfWeek(date, { weekStartsOn: firstDayOfWeek || 0 }),
-        rangeEnd: endOfWeek(date, { weekStartsOn: firstDayOfWeek || 0 }),
+        rangeStart: startOfDay(visibleWindowDate),
+        rangeEnd: endOfDay(addDays(visibleWindowDate, 6)),
       }
     }
     const start = startOfDay(date)
     return { rangeStart: start, rangeEnd: endOfDay(addDays(start, dayCount - 1)) }
-  }, [date, firstDayOfWeek, dayCount])
+  }, [date, visibleWindowDate, dayCount])
 
   const weekDays = useMemo(
     () => eachDayOfInterval({ start: rangeStart, end: rangeEnd }),
@@ -702,14 +750,14 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
   }, [weekDays, allDayEventsMap, tasksMap])
 
   const bodyRef = useRef<HTMLDivElement>(null)
-  const lastDateRef = useRef(date.toISOString())
+  const lastDateRef = useRef(displayDate.toISOString())
   const hasScrolledForDate = useRef(false)
   const isCurrentWeek = weekDays.some((d) => isToday(d))
 
   useLayoutEffect(() => {
     if (isMobile || !bodyRef.current) return
 
-    const currentDateStr = date.toISOString()
+    const currentDateStr = displayDate.toISOString()
 
     if (lastDateRef.current !== currentDateStr) {
       lastDateRef.current = currentDateStr
@@ -755,7 +803,7 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
     })
 
     return () => cancelAnimationFrame(rafId)
-  }, [eventsMap, date, isMobile, hourHeight, isCurrentWeek])
+  }, [eventsMap, displayDate, isMobile, hourHeight, isCurrentWeek])
 
   useLayoutEffect(() => {
     if (isMobile) return
@@ -1029,9 +1077,8 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
   }
 
   const weekNumber = useMemo(() => {
-    const weekStart = startOfWeek(date, { weekStartsOn: firstDayOfWeek || 0 })
-    return getISOWeek(weekStart)
-  }, [date, firstDayOfWeek])
+    return getISOWeek(rangeStart)
+  }, [rangeStart])
 
   const renderMobileContent = () => (
     <div className={styles.mobileFrame}>
@@ -1064,7 +1111,7 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
                   ? headerItems
                   : headerItems.slice(0, MOBILE_HEADER_ITEM_LIMIT)
               const hiddenCount = headerItems.length - visibleItems.length
-              const dayLabel = format(day, 'EEEE d MMMM')
+              const dayLabel = formatDisplayDate(day, 'EEEE d MMMM')
               return (
                 <div
                   key={day.toISOString()}
@@ -1073,7 +1120,7 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
                   }`}
                   data-component="week-mobile-day-header"
                 >
-                  <div className={styles.dayName}>{format(day, 'EEE')}</div>
+                  <div className={styles.dayName}>{formatDisplayDate(day, 'EEE')}</div>
                   <div className={styles.dayNumber}>{format(day, 'd')}</div>
                   {/* All-day events and untimed tasks live here rather than in a
                     separate footer, so they sit in the same DOM column as the
@@ -1120,12 +1167,15 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
                           aria-expanded={isExpanded}
                           aria-label={
                             isExpanded
-                              ? `Show fewer all-day items on ${dayLabel}`
-                              : `Show ${hiddenCount} more all-day items on ${dayLabel}`
+                              ? t('views.week.showFewerAllDayItems', { date: dayLabel })
+                              : t('views.week.showMoreAllDayItems', {
+                                  count: hiddenCount,
+                                  date: dayLabel,
+                                })
                           }
                           onClick={() => toggleHeaderDay(dayKey)}
                         >
-                          {isExpanded ? 'Less' : `+${hiddenCount} more`}
+                          {isExpanded ? t('views.week.less') : t('views.week.moreCount', { count: hiddenCount })}
                         </button>
                       )}
                     </div>
@@ -1138,7 +1188,7 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
         <div className={styles.mobileBody} data-component="week-mobile-body">
           <div className={styles.timeColumn} data-component="week-mobile-time-column">
             {HOURS.map((hour) => {
-              const primaryTime = format(hour, timeFormat === '24h' ? 'HH:mm' : 'h a')
+              const primaryTime = formatDisplayDate(hour, timeFormat === '24h' ? 'HH:mm' : 'h a')
               if (isDualTz && secondaryTimezone) {
                 const secLabel = getSecondaryHourLabel(
                   hour.getHours(),
@@ -1242,10 +1292,10 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
           data-component="week-mobile-continuation"
           role="status"
         >
-          <span>Swipe for more days</span>
+          <span>{t('views.week.swipeForMoreDays')}</span>
           <button
             type="button"
-            aria-label="Dismiss week view tip"
+            aria-label={t('views.week.dismissWeekViewTip')}
             onClick={() => setMobileWeekHintVisible(false)}
           >
             ×
@@ -1299,7 +1349,7 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
         >
           <div className={styles.timeColumn}>
             {HOURS.map((hour) => {
-              const primaryTime = format(hour, timeFormat === '24h' ? 'HH:mm' : 'h a')
+              const primaryTime = formatDisplayDate(hour, timeFormat === '24h' ? 'HH:mm' : 'h a')
               if (isDualTz && secondaryTimezone) {
                 const secLabel = getSecondaryHourLabel(
                   hour.getHours(),
@@ -1481,7 +1531,7 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
           }}
           items={[
             {
-              label: 'Create event',
+              label: t('views.week.createEvent'),
               onClick: () => {
                 const hourStr =
                   contextMenu.hour !== undefined ? `T${pad2(contextMenu.hour)}:00` : ''
@@ -1490,7 +1540,7 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
               },
             },
             {
-              label: 'Create task',
+              label: t('views.week.createTask'),
               onClick: () => {
                 const dateStr = format(contextMenu.day, 'yyyy-MM-dd')
                 openModal(dateStr, undefined, undefined, 'task')

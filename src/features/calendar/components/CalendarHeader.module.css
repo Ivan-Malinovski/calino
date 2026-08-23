@@ -74,6 +74,15 @@
 }
 
 /* ---- Navigator (Grouped Segmented Control) ---- */
+.navigationGroup {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  grid-column: 2;
+  grid-row: 1;
+}
+
 .navigator {
   display: inline-flex;
   align-items: center;
@@ -92,6 +101,43 @@
   flex-shrink: 0;
   border-width: 1px;
   transition: opacity 0.2s ease, max-width 0.25s ease 0s, border-width 0s linear 0.2s;
+}
+
+.weekWindowControls {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  height: 38px;
+  padding: 0 2px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  box-shadow: 0 1px 2px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.05 * var(--shadow-opacity, 1)));
+}
+
+.weekWindowArrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 29px;
+  height: 32px;
+  padding: 0;
+  color: var(--ink-2);
+  background: transparent;
+  border: none;
+  border-radius: calc(var(--radius-md) - 2px);
+  cursor: pointer;
+  transition: background 0.14s, color 0.14s;
+}
+
+.weekWindowArrow:hover {
+  background: var(--hover-bg);
+  color: var(--ink);
+}
+
+.weekWindowArrow:active {
+  transform: scale(0.9);
+  transition-duration: 0.05s;
 }
 
 .navigatorHidden {
@@ -711,6 +757,10 @@
 }
 
 [data-sidebar-collapsed] .navigator {
+  grid-column: auto;
+}
+
+[data-sidebar-collapsed] .navigationGroup {
   grid-column: 3;
 }
 
@@ -788,6 +838,16 @@
     min-width: 44px;
     min-height: 44px;
     height: 44px;
+  }
+
+  .weekWindowControls {
+    height: 44px;
+    padding: 0 2px;
+  }
+
+  .weekWindowArrow {
+    width: 38px;
+    height: 40px;
   }
 
   /* 44px minimum tap target on touch surfaces (see EventPreviewPopup). */

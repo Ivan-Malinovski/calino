@@ -58,7 +58,8 @@ import { useReducedMotion } from './hooks/useReducedMotion'
 import { VIEW_ROUTES, URL_TO_VIEW } from './features/calendar/viewRoutes'
 import { useViewCycleOrder } from './features/calendar/useOrderedViews'
 import { getNavigatedDate } from './features/calendar/dateNavigation'
-import { format, parseISO } from 'date-fns'
+import { addDays, format, parseISO, startOfWeek } from 'date-fns'
+import { getWeekWindowStart, setWeekWindowStart } from './features/calendar/weekWindow'
 
 import './App.css'
 
@@ -517,7 +518,22 @@ function CalendarApp(): JSX.Element {
       }
 
       const state = useCalendarStore.getState()
-      const newDate = getNavigatedDate(view, parseISO(state.currentDate), direction)
+      const currentDate = parseISO(state.currentDate)
+      const newDate = getNavigatedDate(view, currentDate, direction)
+      if (view === 'week') {
+        const windowStart =
+          getWeekWindowStart() ??
+          format(
+            startOfWeek(currentDate, {
+              weekStartsOn: useSettingsStore.getState().firstDayOfWeek || 0,
+            }),
+            'yyyy-MM-dd'
+          )
+        setWeekWindowStart(
+          format(addDays(parseISO(windowStart), direction === 'next' ? 7 : -7), 'yyyy-MM-dd'),
+          true
+        )
+      }
       state.setCurrentDate(format(newDate, 'yyyy-MM-dd'))
     },
     [isMobile]
@@ -573,6 +589,14 @@ function CalendarApp(): JSX.Element {
         e.preventDefault()
         const today = toLocalDateString(new Date())
         useCalendarStore.getState().setCurrentDate(today)
+        setWeekWindowStart(
+          format(
+            startOfWeek(parseISO(today), {
+              weekStartsOn: useSettingsStore.getState().firstDayOfWeek || 0,
+            }),
+            'yyyy-MM-dd'
+          )
+        )
         return
       }
 

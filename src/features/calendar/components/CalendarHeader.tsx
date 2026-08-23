@@ -1,8 +1,10 @@
 import type { JSX } from 'react'
 import React, { useState, useCallback, useEffect, useRef, useLayoutEffect } from 'react'
-import { format, parseISO, startOfWeek, endOfWeek, addDays, isToday } from 'date-fns'
+import { format, parseISO, startOfWeek, addDays, isToday } from 'date-fns'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useNavigate } from 'react-router'
+import { useTranslation } from 'react-i18next'
+import { formatDisplayDate, formatMonthYear } from '@/lib/datetime'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
 import { QuickSettingsPanel } from './QuickSettingsPanel'
@@ -15,6 +17,11 @@ import { VIEW_ROUTES, ALL_VIEWS } from '../viewRoutes'
 import { useVisibleViews, useSwitcherItems, useReorderSwitcher } from '../useOrderedViews'
 import { useTabReorder } from './useTabReorder'
 import { getNavigatedDate } from '../dateNavigation'
+import {
+  consumeWindowDateChangeHandoff,
+  setWeekWindowStart,
+  useWeekWindowStart,
+} from '../weekWindow'
 import type { ViewType } from '@/types'
 import styles from './CalendarHeader.module.css'
 
@@ -27,6 +34,7 @@ export function CalendarHeader({
   onToggleSidebar,
   onOpenCommandPalette,
 }: CalendarHeaderProps): JSX.Element {
+  const { t } = useTranslation(['calendar', 'common'])
   const navigate = useNavigate()
   const prefersReducedMotion = useReducedMotion()
   const currentDate = useCalendarStore((state) => state.currentDate)
@@ -34,6 +42,7 @@ export function CalendarHeader({
   const setCurrentDate = useCalendarStore((state) => state.setCurrentDate)
   const setCurrentView = useCalendarStore((state) => state.setCurrentView)
   const firstDayOfWeek = useSettingsStore((state) => state.firstDayOfWeek)
+  const weekWindowStart = useWeekWindowStart()
   const journalEnabled = useSettingsStore((state) => state.journalEnabled)
   const contactsEnabled = useSettingsStore((state) => state.contactsEnabled)
   const sidebarWidth = useSettingsStore((state) => state.sidebarWidth)
@@ -297,37 +306,62 @@ export function CalendarHeader({
   const date = parseISO(currentDate)
   const year = format(date, 'yyyy')
 
+  // Week browsing is deliberately separate from currentDate. This keeps a
+  // one-day window step from changing the selected date used by other views
+  // and by the sidebar, while still letting the regular pager move a week at
+  // a time.
+  const visibleWeekStart =
+    weekWindowStart
+      ? parseISO(weekWindowStart)
+      : startOfWeek(date, { weekStartsOn: firstDayOfWeek || 0 })
+  const previousCurrentDateRef = useRef(currentDate)
+
+  useEffect(() => {
+    if (currentView !== 'week') return
+    const currentDateChanged = previousCurrentDateRef.current !== currentDate
+    previousCurrentDateRef.current = currentDate
+    if (currentDateChanged && consumeWindowDateChangeHandoff()) return
+    // Entering week view, selecting a date elsewhere, and changing the
+    // calendar's first weekday all establish a fresh aligned window.
+    setWeekWindowStart(
+      format(
+        startOfWeek(parseISO(currentDate), { weekStartsOn: firstDayOfWeek || 0 }),
+        'yyyy-MM-dd'
+      )
+    )
+  }, [currentView, currentDate, firstDayOfWeek])
+
   const getTitle = (): { month: string; year: string } | string => {
     switch (currentView) {
       case 'month':
-        return { month: format(date, 'MMMM'), year }
+        return { month: formatDisplayDate(date, 'MMMM'), year }
       case 'year':
         return year
       case 'week': {
-        const weekStart = startOfWeek(date, { weekStartsOn: firstDayOfWeek })
-        const weekEnd = endOfWeek(date, { weekStartsOn: firstDayOfWeek })
-        if (format(weekStart, 'MMM') === format(weekEnd, 'MMM')) {
-          return `${format(weekStart, 'MMM d')} – ${format(weekEnd, 'd')}`
+        const weekStart = visibleWeekStart
+        const weekEnd = addDays(weekStart, 6)
+        if (formatDisplayDate(weekStart, 'MMM') === formatDisplayDate(weekEnd, 'MMM')) {
+          return `${formatDisplayDate(weekStart, 'MMM d')} – ${formatDisplayDate(weekEnd, 'd')}`
         }
-        return `${format(weekStart, 'MMM d')} – ${format(weekEnd, 'MMM d')}`
+        return `${formatDisplayDate(weekStart, 'MMM d')} – ${formatDisplayDate(weekEnd, 'MMM d')}`
       }
       case '3day': {
         const end = addDays(date, 2)
-        if (format(date, 'MMM') === format(end, 'MMM')) {
-          return `${format(date, 'MMM d')} – ${format(end, 'd')}`
+        if (formatDisplayDate(date, 'MMM') === formatDisplayDate(end, 'MMM')) {
+          return `${formatDisplayDate(date, 'MMM d')} – ${formatDisplayDate(end, 'd')}`
         }
-        return `${format(date, 'MMM d')} – ${format(end, 'MMM d')}`
+        return `${formatDisplayDate(date, 'MMM d')} – ${formatDisplayDate(end, 'MMM d')}`
       }
       case 'day':
-        return format(date, 'EEE, MMMM d')
+        return formatDisplayDate(date, 'EEE, MMMM d')
       case 'agenda':
-        return format(date, 'MMMM')
+        return formatDisplayDate(date, 'MMMM')
       case 'todo':
-        return 'Tasks'
+        return t('views.header.tasksTitle')
       case 'contacts':
-        return 'Contacts'
+        return t('views.header.contactsTitle')
       default:
-        return format(date, 'MMMM')
+        return formatDisplayDate(date, 'MMMM')
     }
   }
 
@@ -338,9 +372,11 @@ export function CalendarHeader({
   // movement along the calendar rather than a silent text swap. Keyed off the
   // rendered label, not the date, so same-label navigation (a day step inside
   // the current month, or "Today" when already there) stays still.
-  const titleLabel = typeof title === 'object' ? `${title.month} ${title.year}` : title
+  const titleLabel = typeof title === 'object' ? formatMonthYear(date) : title
+  const titleAnchorKey =
+    currentView === 'week' ? format(visibleWeekStart, 'yyyy-MM-dd') : currentDate
   const prevTitleRef = useRef(titleLabel)
-  const prevDateRef = useRef(currentDate)
+  const prevTitleAnchorRef = useRef(titleAnchorKey)
   const [titleTransition, setTitleTransition] = useState<{
     dir: 'next' | 'prev'
     seq: number
@@ -348,14 +384,14 @@ export function CalendarHeader({
 
   useLayoutEffect(() => {
     if (prevTitleRef.current === titleLabel) {
-      prevDateRef.current = currentDate
+      prevTitleAnchorRef.current = titleAnchorKey
       return
     }
-    const forward = currentDate > prevDateRef.current
+    const forward = titleAnchorKey > prevTitleAnchorRef.current
     prevTitleRef.current = titleLabel
-    prevDateRef.current = currentDate
+    prevTitleAnchorRef.current = titleAnchorKey
     setTitleTransition((prev) => ({ dir: forward ? 'next' : 'prev', seq: (prev?.seq ?? 0) + 1 }))
-  }, [titleLabel, currentDate])
+  }, [titleLabel, titleAnchorKey])
 
   // Remounting on `seq` is what replays the CSS animation; the class picks the
   // direction. Reduced motion is handled in the stylesheet.
@@ -396,12 +432,27 @@ export function CalendarHeader({
 
   const handleNavigate = (direction: 'prev' | 'next'): void => {
     const newDate = getNavigatedDate(currentView, date, direction)
+    if (currentView === 'week') {
+      setWeekWindowStart(
+        format(addDays(visibleWeekStart, direction === 'next' ? 7 : -7), 'yyyy-MM-dd'),
+        true
+      )
+    }
     setCurrentDate(format(newDate, 'yyyy-MM-dd'))
   }
 
   const handleToday = (): void => {
-    setCurrentDate(format(new Date(), 'yyyy-MM-dd'))
+    const today = new Date()
+    const todayString = format(today, 'yyyy-MM-dd')
+    setCurrentDate(todayString)
+    setWeekWindowStart(format(startOfWeek(today, { weekStartsOn: firstDayOfWeek || 0 }), 'yyyy-MM-dd'))
     window.dispatchEvent(new CustomEvent('calino:jumpToToday'))
+  }
+
+  const handleWeekWindowStep = (direction: 'prev' | 'next'): void => {
+    setWeekWindowStart(
+      format(addDays(visibleWeekStart, direction === 'next' ? 1 : -1), 'yyyy-MM-dd')
+    )
   }
 
   // Clicking the header title takes you back to month view from anywhere else;
@@ -424,10 +475,12 @@ export function CalendarHeader({
 
   // Per-tab hover sub-menu items. Absent entries render as a plain tab.
   const tabMenus: Partial<Record<ViewType, { label: string; onClick: () => void }[]>> = {
-    week: [{ label: '3-day', onClick: () => handleViewChange('3day') }],
+    week: [{ label: t('views.header.threeDayTab'), onClick: () => handleViewChange('3day') }],
     agenda: [
       {
-        label: agendaSidebarOpen ? 'Hide sidebar' : 'Sidebar',
+        label: agendaSidebarOpen
+          ? t('views.header.hideSidebar')
+          : t('views.header.sidebarTab'),
         onClick: () => updateSettings({ agendaSidebarOpen: !agendaSidebarOpen }),
       },
     ],
@@ -439,9 +492,15 @@ export function CalendarHeader({
       if (!dir) return
 
       const newDate = getNavigatedDate(currentView, date, dir)
+      if (currentView === 'week') {
+        setWeekWindowStart(
+          format(addDays(visibleWeekStart, dir === 'next' ? 7 : -7), 'yyyy-MM-dd'),
+          true
+        )
+      }
       setCurrentDate(format(newDate, 'yyyy-MM-dd'))
     },
-    [currentView, date, setCurrentDate]
+    [currentView, date, setCurrentDate, visibleWeekStart]
   )
 
   const { bind } = useGestures({
@@ -469,32 +528,60 @@ export function CalendarHeader({
         <span className={styles.brandName}>Calino</span>
       </div>
       {/* Hamburger — shown by CSS when sidebar collapsed or at compact breakpoint */}
-      <button className={styles.hamburger} onClick={onToggleSidebar} aria-label="Toggle menu">
+      <button
+        className={styles.hamburger}
+        onClick={onToggleSidebar}
+        aria-label={t('views.header.toggleMenu')}
+      >
         <HamburgerIcon />
       </button>
 
-      {/* Navigator - prev/today/next */}
-      <div
+      {/* Navigator - prev/today/next, plus the one-day week-window stepper */}
+      <div className={styles.navigationGroup}>
+        <div
         className={`${styles.navigator} ${currentView === 'todo' || currentView === 'contacts' ? styles.navigatorHidden : ''}`}
         aria-hidden={currentView === 'todo' || currentView === 'contacts'}
-      >
+        >
         <button
           className={styles.navArrow}
           onClick={() => handleNavigate('prev')}
-          aria-label="Previous"
+          aria-label={t('common:actions.previous')}
         >
           <ChevronLeft />
         </button>
         <button className={styles.navToday} onClick={handleToday} data-component="today-button">
-          Today
+          {t('common:actions.today')}
         </button>
         <button
           className={styles.navArrow}
           onClick={() => handleNavigate('next')}
-          aria-label="Next"
+          aria-label={t('common:actions.next')}
         >
           <ChevronRight />
         </button>
+        </div>
+        {currentView === 'week' && (
+          <div className={styles.weekWindowControls} data-component="week-window-controls">
+            <button
+              className={styles.weekWindowArrow}
+              onClick={() => handleWeekWindowStep('prev')}
+              aria-label={t('views.week.showPreviousDay')}
+              title={t('views.week.showPreviousDay')}
+              data-action="previous-week-window-day"
+            >
+              <ChevronLeft size={14} />
+            </button>
+            <button
+              className={styles.weekWindowArrow}
+              onClick={() => handleWeekWindowStep('next')}
+              aria-label={t('views.week.showNextDay')}
+              title={t('views.week.showNextDay')}
+              data-action="next-week-window-day"
+            >
+              <ChevronRight size={14} />
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Title — click returns to month view from anywhere (jumps to today when
@@ -504,7 +591,11 @@ export function CalendarHeader({
         onClick={handleTitleClick}
         role="button"
         tabIndex={0}
-        aria-label={currentView === 'month' ? 'Go to today' : 'Go to month view'}
+        aria-label={
+          currentView === 'month'
+            ? t('views.header.goToToday')
+            : t('views.header.goToMonthView')
+        }
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault()
@@ -551,7 +642,7 @@ export function CalendarHeader({
             <motion.button
               className={`${styles.iconButton} ${styles.todayButton}`}
               onClick={handleToday}
-              aria-label="Go to today"
+              aria-label={t('views.header.goToToday')}
               data-component="today-button-icon"
               initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.6 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -567,7 +658,7 @@ export function CalendarHeader({
         <button
           className={styles.iconButton}
           onClick={onOpenCommandPalette}
-          aria-label="Search or commands"
+          aria-label={t('views.header.searchOrCommands')}
         >
           <SearchIcon />
         </button>
@@ -616,7 +707,7 @@ export function CalendarHeader({
                     zIndex: isDragging ? 2 : undefined,
                   }}
                   data-component="view-switcher-divider"
-                  aria-label="Tab group divider — drag, or use Alt+arrow keys, to move"
+                  aria-label={t('views.header.tabDividerLabel')}
                   onPointerDown={(e) => tabReorder.onTabPointerDown(e, index)}
                   onKeyDown={(e) => tabReorder.onTabKeyDown(e, index)}
                   // It only exists to be repositioned; a click does nothing.
@@ -846,7 +937,7 @@ export function CalendarHeader({
           <button
             className={styles.iconButton}
             onClick={() => navigate('/settings')}
-            aria-label="Settings"
+            aria-label={t('views.header.settings')}
           >
             <SettingsIcon />
           </button>
