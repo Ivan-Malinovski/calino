@@ -7,6 +7,7 @@
   display: flex;
   flex-direction: column;
   flex: 1;
+  min-height: 0;
   background: var(--panel);
   overflow: auto;
   /* Hide scrollbar visually to prevent horizontal layout squish on month change, 
@@ -24,6 +25,7 @@
   flex: 1;
   display: flex;
   flex-direction: column;
+  min-height: 0;
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   overflow: hidden;
@@ -137,7 +139,7 @@
     background var(--dur-fast),
     color var(--dur-fast);
   height: 100%;
-  min-height: var(--day-cell-height, 100px);
+  min-height: var(--month-row-min-height, var(--day-cell-height, 100px));
 }
 
 .weekNumber:hover {
@@ -509,7 +511,8 @@
 }
 
 .splitHandleH {
-  height: 3px;
+  position: relative;
+  height: 12px;
   cursor: row-resize;
   flex-shrink: 0;
   /* The drag owns the gesture. React attaches `onTouchStart` passively at the
@@ -521,9 +524,30 @@
   transition: background 0.2s;
 }
 
+.splitHandleH::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 36px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--ink-3, #a39d93);
+  opacity: 0.65;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  transition: opacity 0.2s, width 0.2s;
+}
+
 .splitHandleH:hover,
 .splitHandleH:active {
   background: rgba(var(--ink-raw, 44, 40, 33), 0.1);
+}
+
+.splitHandleH:hover::before,
+.splitHandleH:active::before {
+  width: 44px;
+  opacity: 0.9;
 }
 
 /* ---- Weekend Dimming ---- */
@@ -651,7 +675,7 @@
     border-top: 1px solid var(--line);
   }
 
-  /* Thinner resize handle on small screens */
+  /* Keep the nested split control touch-friendly on small screens */
   .splitHandle,
   .splitHandleH {
     height: 12px;

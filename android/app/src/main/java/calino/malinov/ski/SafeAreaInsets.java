@@ -50,19 +50,24 @@ final class SafeAreaInsets {
         final int[] last = { -1, -1, -1, -1 };
 
         ViewCompat.setOnApplyWindowInsetsListener(content, (v, insets) -> {
-            Insets bars = insets.getInsets(WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout());
+            Insets statusBars = insets.getInsets(
+                WindowInsetsCompat.Type.statusBars() | WindowInsetsCompat.Type.displayCutout()
+            );
+            Insets navigationBars = insets.getInsets(
+                WindowInsetsCompat.Type.navigationBars() | WindowInsetsCompat.Type.displayCutout()
+            );
 
             // The keyboard is handled natively (Keyboard.resize = Native
             // resizes the WebView window itself), so the gesture-bar inset is
             // already gone from the visible viewport while the IME is up.
             // Reporting it again would double-pad the bottom.
-            int bottom = insets.isVisible(WindowInsetsCompat.Type.ime()) ? 0 : bars.bottom;
+            int bottom = insets.isVisible(WindowInsetsCompat.Type.ime()) ? 0 : navigationBars.bottom;
 
             float density = activity.getResources().getDisplayMetrics().density;
-            int top = (int) (bars.top / density);
-            int right = (int) (bars.right / density);
+            int top = (int) (statusBars.top / density);
+            int right = (int) (Math.max(statusBars.right, navigationBars.right) / density);
             int bottomDp = (int) (bottom / density);
-            int left = (int) (bars.left / density);
+            int left = (int) (Math.max(statusBars.left, navigationBars.left) / density);
 
             if (top != last[0] || right != last[1] || bottomDp != last[2] || left != last[3]) {
                 last[0] = top;
@@ -77,12 +82,24 @@ final class SafeAreaInsets {
             return insets;
         });
 
+        // Request immediately as well as from MainActivity lifecycle hooks.
+        // Some OEMs dispatch the first insets before the WebView has attached,
+        // leaving the listener with no later callback until the window changes.
+        ViewCompat.requestApplyInsets(content);
+
         return () -> {
             last[0] = -1;
             last[1] = -1;
             last[2] = -1;
             last[3] = -1;
         };
+    }
+
+    static void request(Activity activity) {
+        View content = activity.findViewById(android.R.id.content);
+        if (content != null) {
+            ViewCompat.requestApplyInsets(content);
+        }
     }
 
     private static String script(int top, int right, int bottom, int left) {

@@ -1,11 +1,14 @@
 package calino.malinov.ski;
 
+import android.content.res.Configuration;
 import android.os.Bundle;
 import android.webkit.WebView;
 import com.getcapacitor.BridgeActivity;
 import com.getcapacitor.WebViewListener;
 
 public class MainActivity extends BridgeActivity {
+    private Runnable invalidateSafeArea = () -> {};
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         registerPlugin(DynamicShortcutsPlugin.class);
@@ -19,17 +22,42 @@ public class MainActivity extends BridgeActivity {
 
         // Safety net for OEM WebViews that Capacitor's own safe-area handling
         // skips — see SafeAreaInsets and issue #95.
-        final Runnable invalidateSafeArea = SafeAreaInsets.install(this, getBridge().getWebView());
+        invalidateSafeArea = SafeAreaInsets.install(this, getBridge().getWebView());
+        refreshSafeArea();
         getBridge()
             .addWebViewListener(
                 new WebViewListener() {
                     @Override
                     public void onPageCommitVisible(WebView view, String url) {
                         super.onPageCommitVisible(view, url);
-                        invalidateSafeArea.run();
-                        view.requestApplyInsets();
+                        refreshSafeArea();
                     }
                 }
             );
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        refreshSafeArea();
+    }
+
+    @Override
+    public void onWindowFocusChanged(boolean hasFocus) {
+        super.onWindowFocusChanged(hasFocus);
+        if (hasFocus) {
+            refreshSafeArea();
+        }
+    }
+
+    @Override
+    public void onConfigurationChanged(Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
+        refreshSafeArea();
+    }
+
+    private void refreshSafeArea() {
+        invalidateSafeArea.run();
+        SafeAreaInsets.request(this);
     }
 }

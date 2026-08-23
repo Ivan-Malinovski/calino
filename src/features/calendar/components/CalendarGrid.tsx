@@ -85,6 +85,8 @@ const gridDelta = (key: string): number | null =>
           ? 7
           : null
 
+const DEFAULT_MONTH_AGENDA_GRID_RATIO = 0.4
+
 // Shared by the button and span forms of the journal indicator (see the
 // compact-mobile branch in DroppableDay).
 const journalIndicatorIcon = (
@@ -216,6 +218,7 @@ export function CalendarGrid(): JSX.Element {
   const createDragStartRef = useRef<string | null>(null)
   const createDragEndRef = useRef<string | null>(null)
   const gridRatioRef = useRef(gridRatio)
+  const lastGridTapRef = useRef(0)
   const splitRatioRef = useRef(splitRatio)
   const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const scrollCooldownRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -625,6 +628,10 @@ export function CalendarGrid(): JSX.Element {
     if (!top) return
     top.style.flex = `0 0 ${ratio * 100}%`
     top.style.maxHeight = `${(800 * ratio) / 0.6}px`
+    // The measured content floor is useful for the initial layout, but it
+    // must not win over a live drag. Otherwise dragging the divider upward
+    // stops at the old floor and makes a second adjustment appear broken.
+    top.style.minHeight = '0px'
   }
 
   // A re-render from anywhere else mid-drag (a store update, the height
@@ -636,12 +643,26 @@ export function CalendarGrid(): JSX.Element {
     if (isDraggingGridRef.current) applyGridRatio(gridRatioRef.current)
   })
 
+  const resetGridRatio = (): void => {
+    isDraggingGridRef.current = false
+    gridRatioRef.current = DEFAULT_MONTH_AGENDA_GRID_RATIO
+    applyGridRatio(DEFAULT_MONTH_AGENDA_GRID_RATIO)
+    setGridRatio(DEFAULT_MONTH_AGENDA_GRID_RATIO)
+    updateSettings({ monthAgendaGridRatio: DEFAULT_MONTH_AGENDA_GRID_RATIO })
+  }
+
+  const handleGridResizeDoubleClick = (e: React.MouseEvent): void => {
+    e.preventDefault()
+    e.stopPropagation()
+    resetGridRatio()
+  }
+
   const handleGridResizeStart = (e: React.MouseEvent): void => {
     e.preventDefault()
     // Clean up any previous resize
     resizeCleanupRef.current?.()
     const startY = e.clientY
-    const startRatio = gridRatio
+    const startRatio = gridRatioRef.current
     const containerHeight = (e.currentTarget.parentElement as HTMLElement).getBoundingClientRect()
       .height
     isDraggingGridRef.current = true
@@ -667,13 +688,22 @@ export function CalendarGrid(): JSX.Element {
   const handleGridResizeTouchStart = (e: React.TouchEvent): void => {
     // No `preventDefault()` here — React registers touch handlers passively, so
     // it never worked. `.splitHandleH { touch-action: none }` does the job.
+    const now = Date.now()
+    if (now - lastGridTapRef.current < 350) {
+      lastGridTapRef.current = 0
+      resetGridRatio()
+      return
+    }
+    lastGridTapRef.current = now
     resizeCleanupRef.current?.()
     const startY = e.touches[0].clientY
-    const startRatio = gridRatio
+    const startRatio = gridRatioRef.current
     const containerHeight = (e.currentTarget.parentElement as HTMLElement).getBoundingClientRect()
       .height
     isDraggingGridRef.current = true
     const onMove = (ev: TouchEvent): void => {
+      // A moved touch is a drag, not the first half of a double-tap.
+      lastGridTapRef.current = 0
       const delta = (ev.touches[0].clientY - startY) / containerHeight
       const next = Math.min(0.85, Math.max(0.35, startRatio + delta))
       gridRatioRef.current = next
@@ -914,17 +944,51 @@ export function CalendarGrid(): JSX.Element {
       0
     )
   }, [compressWeekRows, weekNumbers, days])
+
+  // The week-number column used to hold every row at the zoomed 100px floor,
+  // even when the available viewport was shorter. That made the month grow
+  // beyond its scroller on medium-height windows. Keep the zoom value as an
+  // upper bound, but lower the floor to the row share the current grid can
+  // actually accommodate. The compressed rows use half the full-row share,
+  // matching their flex weight; their day cells still retain the 50px content
+  // minimum used by the compressed styling.
+  const [adaptiveRowFloor, setAdaptiveRowFloor] = useState(rowHeight)
+  const measureAdaptiveRowFloor = useCallback((): void => {
+    const grid = gridScrollRef.current
+    if (!grid || weekNumbers.length === 0) return
+    const header = grid.querySelector<HTMLElement>('[data-component="calendar-grid-header"]')
+    const available = grid.clientHeight - (header?.offsetHeight ?? 0)
+    if (available <= 0) return
+
+    const compressed = Math.min(compressedWeekCount, weekNumbers.length)
+    const weight = weekNumbers.length - compressed + compressed * 0.5
+    const fullRowShare = available / weight
+    const floorShare = compressed > 0 ? fullRowShare * 0.5 : fullRowShare
+    const next = Math.max(0, Math.floor(Math.min(rowHeight, floorShare)))
+
+    setAdaptiveRowFloor((previous) => (previous === next ? previous : next))
+  }, [compressedWeekCount, rowHeight, weekNumbers.length])
+
+  useLayoutEffect(() => {
+    measureAdaptiveRowFloor()
+    const grid = gridScrollRef.current
+    if (!grid || typeof ResizeObserver === 'undefined') return
+
+    const observer = new ResizeObserver(measureAdaptiveRowFloor)
+    observer.observe(grid)
+    return () => observer.disconnect()
+  }, [measureAdaptiveRowFloor])
+
   const autoCapacity = useMonthEventCapacity({
     enabled: autoLimitEnabled,
     gridRef: gridScrollRef,
     headerSelector: '[data-component="calendar-grid-header"]',
     weekCount: weekNumbers.length,
     compressedWeekCount,
-    // The week-number column carries `min-height: var(--day-cell-height)`, so
-    // with it on show a row can't be shorter than the row-height setting
-    // however short the window is — the grid scrolls instead. With it off
-    // nothing holds the row open and only the flex share is real.
-    rowHeightFloor: showWeekNumbers ? rowHeight : 0,
+    // Keep automatic event capacity aligned with the adaptive row floor. The
+    // floor is lowered on short windows, so Auto can reduce the number of
+    // cards before the grid needs to fall back to scrolling.
+    rowHeightFloor: showWeekNumbers ? adaptiveRowFloor : 0,
   })
   // Auto is on but nothing has been measured yet (first paint, or a hidden
   // grid): fall back to the old default rather than rendering every event.
@@ -937,12 +1001,13 @@ export function CalendarGrid(): JSX.Element {
   // Directional transition when the calendar moves to another month.
   const monthChangeMotion = useDateChangeMotion(currentDate.slice(0, 7))
 
-  // In the month+agenda split the grid gets a fixed share of the height, but
-  // its content doesn't: a 6-week month is a whole row taller than a 5-week
-  // one, and compressed past weeks change it again. When the share came up
-  // short the grid just scrolled (`.grid` is `overflow: auto`), hiding days.
-  // So the share becomes a floor-and-ceiling instead: never shorter than the
-  // weeks actually need, never so tall the agenda is squeezed out.
+  // In the month+agenda split the grid gets a share of the height, but its
+  // content doesn't: a 6-week month is a whole row taller than a 5-week one,
+  // and compressed past weeks change it again. Measure the content so the
+  // initial layout can avoid unnecessary clipping, while keeping the chosen
+  // divider position authoritative. If the user makes the grid smaller than
+  // its content, the grid's own overflow scrolls instead of moving the
+  // divider back to a remembered minimum.
   const AGENDA_MIN_SHARE = 0.25
   const splitContainerRef = useRef<HTMLDivElement>(null)
   const gridTopRef = useRef<HTMLDivElement>(null)
@@ -996,7 +1061,8 @@ export function CalendarGrid(): JSX.Element {
 
       // Leave the agenda a usable share even in a 6-week month.
       const cap = container.clientHeight * (1 - AGENDA_MIN_SHARE)
-      const next = Math.min(needed, cap)
+      const requested = container.clientHeight * gridRatioRef.current
+      const next = Math.min(needed, cap, requested)
 
       if (!hasMeasuredRef.current) {
         // First run: no previous height to travel from, so don't defer.
@@ -1038,6 +1104,7 @@ export function CalendarGrid(): JSX.Element {
     rowHeight,
     eventsMap,
     visibleTasksMap,
+    gridRatio,
   ])
 
   if (showAgendaSplit) {
@@ -1063,6 +1130,7 @@ export function CalendarGrid(): JSX.Element {
                   style={
                     {
                       '--day-cell-height': `${rowHeight}px`,
+                      '--month-row-min-height': `${showWeekNumbers ? adaptiveRowFloor : 0}px`,
                       '--slide-x': monthChangeMotion.initial
                         ? `${monthChangeMotion.initial.x || 0}px`
                         : '0px',
@@ -1211,8 +1279,11 @@ export function CalendarGrid(): JSX.Element {
             className={styles.splitHandleH}
             data-no-pull-refresh
             data-resize-handle
+            aria-label="Resize calendar and agenda. Double-click to reset"
+            title="Drag to resize · Double-click to reset"
             onMouseDown={handleGridResizeStart}
             onTouchStart={handleGridResizeTouchStart}
+            onDoubleClick={handleGridResizeDoubleClick}
           />
           <div className={styles.agendaBottom} style={{ flex: 1 }}>
             {bottomPanelDay ? (
@@ -1264,6 +1335,7 @@ export function CalendarGrid(): JSX.Element {
             style={
               {
                 '--day-cell-height': `${rowHeight}px`,
+                '--month-row-min-height': `${showWeekNumbers ? adaptiveRowFloor : 0}px`,
                 '--slide-x': monthChangeMotion.initial
                   ? `${monthChangeMotion.initial.x || 0}px`
                   : '0px',

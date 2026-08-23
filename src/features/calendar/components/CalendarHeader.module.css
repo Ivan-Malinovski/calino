@@ -16,7 +16,7 @@
   display: grid;
   grid-template-columns: var(--header-brand-col, 277px) minmax(max-content, max-content) minmax(max-content, max-content) 1fr auto;
   align-items: center;
-  padding: 18px 16px 18px 0;
+  padding: calc(18px + var(--safe-area-top, 0px)) 16px 18px 0;
   background: var(--canvas);
   position: relative;
   z-index: 100;
