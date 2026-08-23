@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from 'react'
+import i18n from '@/lib/i18n'
 
 const DRAG_THRESHOLD_PX = 6
 
@@ -219,7 +220,13 @@ export function useTabReorder(
 
       event.preventDefault()
       onReorder(index, to)
-      announce(`${items[index].label} moved to position ${to + 1} of ${items.length}`)
+      announce(
+        i18n.t('calendar:views.header.tabMovedAnnouncement', {
+          label: items[index].label,
+          position: to + 1,
+          total: items.length,
+        })
+      )
       return true
     },
     [enabled, items, onReorder, announce]

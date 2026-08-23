@@ -49,9 +49,15 @@ export function initI18n(lng: Language = getBrowserLanguage()): typeof i18n {
   return i18n
 }
 
-/** The active language, narrowed to one we ship. */
+/**
+ * The active language, narrowed to one we ship.
+ *
+ * Reads `i18n.language`, not `resolvedLanguage` — the latter lags behind a
+ * `changeLanguage()` call until the async `languageChanged` event settles,
+ * which made every locale-aware date formatter one switch behind.
+ */
 export function currentLanguage(): Language {
-  return normalizeLanguage(i18n.resolvedLanguage ?? i18n.language) ?? FALLBACK_LANGUAGE
+  return normalizeLanguage(i18n.language) ?? FALLBACK_LANGUAGE
 }
 
 /**

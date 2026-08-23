@@ -1,6 +1,7 @@
 import type { Contact, PendingContactChange } from '@/features/carddav/types'
 import type { CalendarEvent } from '@/types'
 import { showToast } from './toast'
+import i18n from './i18n'
 
 interface DeleteContactWithUndoOptions {
   contact: Contact
@@ -85,7 +86,7 @@ export function deleteContactWithUndo({
   syncAccount?.(contact.accountId)?.catch(() => {})
 
   // Show undo toast
-  showToast('Contact deleted', {
+  showToast(i18n.t('errors:undo.contactDeleted'), {
     duration: 8000,
     onUndo: () => {
       // If the delete has not been replayed yet, cancelling it is enough —

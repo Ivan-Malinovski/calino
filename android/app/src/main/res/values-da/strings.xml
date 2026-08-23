@@ -1,0 +1,16 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Calino</string>
+    <string name="title_activity_main">Calino</string>
+    <string name="package_name">calino.malinov.ski</string>
+    <string name="custom_url_scheme">calino.malinov.ski</string>
+
+    <string name="shortcut_new_event_short">Ny begivenhed</string>
+    <string name="shortcut_new_event_long">Opret ny begivenhed</string>
+    <string name="shortcut_new_task_short">Ny opgave</string>
+    <string name="shortcut_new_task_long">Opret ny opgave</string>
+    <string name="shortcut_search_short">Søg</string>
+    <string name="shortcut_search_long">Søg i Calino</string>
+    <string name="shortcut_ai_photo_short">Fotoimport</string>
+    <string name="shortcut_ai_photo_long">Opret begivenhed fra foto</string>
+</resources>

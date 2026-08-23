@@ -2,12 +2,13 @@ import type { JSX, CSSProperties } from 'react'
 import { useState, useCallback, useRef, useEffect, useLayoutEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router'
 import { motion, useMotionValue, animate, type PanInfo } from 'framer-motion'
+import { useTranslation } from 'react-i18next'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
 import { hapticIfEnabled } from '@/lib/haptics'
 import { useTextInputFocused } from '@/hooks/useTextInputFocused'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
-import { VIEW_ROUTES, URL_TO_VIEW, ALL_VIEWS } from '../../viewRoutes'
+import { VIEW_LABEL_KEYS, VIEW_ROUTES, URL_TO_VIEW, ALL_VIEWS } from '../../viewRoutes'
 import type { ViewType } from '@/types'
 import { NavExpandedGrid } from './NavExpandedGrid'
 import { NavCreateDrawer } from './NavCreateDrawer'
@@ -18,11 +19,7 @@ interface FloatingNavPillProps {
   onOpenSearch: () => void
 }
 
-const BASE_VIEWS: { value: ViewType; label: string }[] = [
-  { value: 'month', label: 'Month' },
-  { value: 'week', label: 'Week' },
-  { value: 'agenda', label: 'Agenda' },
-]
+const BASE_VIEWS: ViewType[] = ['month', 'week', 'agenda']
 
 const PILL_EASE = [0.65, 0, 0.35, 1] as const
 const PILL_TRANSITION = { duration: 0.24, ease: PILL_EASE }
@@ -34,6 +31,7 @@ export function FloatingNavPill({
   onToggleSidebar,
   onOpenSearch,
 }: FloatingNavPillProps): JSX.Element {
+  const { t } = useTranslation('calendar')
   const navigate = useNavigate()
   const location = useLocation()
   const currentView = useCalendarStore((state) => state.currentView)
@@ -290,7 +288,7 @@ export function FloatingNavPill({
   )
 
   const activeIndex = BASE_VIEWS.findIndex(
-    (view) => currentView === view.value || (view.value === 'week' && currentView === '3day')
+    (view) => currentView === view || (view === 'week' && currentView === '3day')
   )
 
   // Which column the selector sits in: the matching base view, or the trailing
@@ -376,7 +374,9 @@ export function FloatingNavPill({
                 transition={chromeTransition}
                 tabIndex={viewSwitcherExpanded ? -1 : undefined}
                 aria-hidden={viewSwitcherExpanded || undefined}
-                aria-label={isOnSettingsRoute ? 'Back to calendar' : 'Toggle sidebar'}
+                aria-label={
+                  isOnSettingsRoute ? t('surface.navBackToCalendar') : t('views.header.toggleMenu')
+                }
               >
                 {isOnSettingsRoute ? <BackArrowIcon /> : <HamburgerIcon />}
               </motion.button>
@@ -410,20 +410,19 @@ export function FloatingNavPill({
                   {BASE_VIEWS.map((view, index) => {
                     const isActive =
                       isOnBaseRoute &&
-                      (currentView === view.value ||
-                        (view.value === 'week' && currentView === '3day'))
+                      (currentView === view || (view === 'week' && currentView === '3day'))
                     return (
                       <button
-                        key={view.value}
+                        key={view}
                         type="button"
                         className={styles.switcherBtn}
                         style={{ gridColumn: index + 1 }}
-                        onClick={() => handleViewChange(view.value)}
+                        onClick={() => handleViewChange(view)}
                       >
                         <span
                           className={isActive ? styles.switcherLabelActive : styles.switcherLabel}
                         >
-                          {view.label}
+                          {t(VIEW_LABEL_KEYS[view])}
                         </span>
                       </button>
                     )
@@ -433,7 +432,7 @@ export function FloatingNavPill({
                     className={styles.switcherBtn}
                     style={{ gridColumn: BASE_VIEWS.length + 1 }}
                     onClick={handleToggleSwitcher}
-                    aria-label="Show all views"
+                    aria-label={t('surface.navShowAllViews')}
                     aria-expanded={viewSwitcherExpanded}
                     aria-current={isOnBaseRoute ? undefined : 'page'}
                     data-component="nav-more"
@@ -465,7 +464,9 @@ export function FloatingNavPill({
                 transition={chromeTransition}
                 tabIndex={viewSwitcherExpanded ? -1 : undefined}
                 aria-hidden={viewSwitcherExpanded || undefined}
-                aria-label={createDrawerOpen ? 'Close create menu' : 'Create'}
+                aria-label={
+                  createDrawerOpen ? t('surface.closeCreateMenu') : t('surface.navCreate')
+                }
                 aria-expanded={createDrawerOpen}
               >
                 <motion.span

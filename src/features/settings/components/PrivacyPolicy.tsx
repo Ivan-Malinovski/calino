@@ -1,109 +1,87 @@
 import type { JSX } from 'react'
 import { useNavigate } from 'react-router'
+import { useTranslation } from 'react-i18next'
 import { config } from '@/config'
 import styles from './PrivacyPolicy.module.css'
 
 export function PrivacyPolicy(): JSX.Element {
   const navigate = useNavigate()
+  const { t } = useTranslation('settings')
 
   return (
     <main className={styles.container} id="main-content" tabIndex={-1}>
       <div className={styles.header}>
         <button onClick={() => navigate(-1)} className={styles.backButton}>
-          ← Back
+          {t('privacy.back')}
         </button>
-        <h1>Privacy Policy</h1>
+        <h1>{t('privacy.title')}</h1>
       </div>
 
       <div className={styles.content}>
-        <p className={styles.lastUpdated}>Last updated: July 2026</p>
+        <p className={styles.lastUpdated}>{t('privacy.lastUpdated')}</p>
 
         <section>
-          <h2>1. Your Data Stays on Your Device</h2>
-          <p>
-            Calino is a local-first calendar application. All your calendar events, settings, and
-            preferences are stored locally in your browser using IndexedDB and localStorage. We do
-            not have access to your personal data.
-          </p>
+          <h2>{t('privacy.section1.heading')}</h2>
+          <p>{t('privacy.section1.body')}</p>
         </section>
 
         <section>
-          <h2>2. CalDAV Sync (Optional)</h2>
+          <h2>{t('privacy.section2.heading')}</h2>
           <p>
-            Calino can sync with CalDAV servers (like Nextcloud, ownCloud, or other CalDAV-compliant
-            services) you personally configure. When you add a CalDAV account:
+            {t('privacy.section2.intro')}
           </p>
           <ul>
             <li>
-              Your credentials (username/password) are stored only in your browser&apos;s
-              localStorage
+              {t('privacy.section2.item1')}
             </li>
-            <li>Data is transferred directly between your browser and your CalDAV server</li>
-            <li>We never see or store your credentials on any external server</li>
+            <li>{t('privacy.section2.item2')}</li>
+            <li>{t('privacy.section2.item3')}</li>
           </ul>
         </section>
 
         <section>
-          <h2>3. CORS Proxy (Optional)</h2>
-          <p>
-            If your CalDAV server does not support CORS, you can optionally use a CORS proxy to
-            enable browser access.
-          </p>
-          <p>
-            <strong>Calino-hosted proxy (proxy.calino.io):</strong> We provide a public CORS proxy
-            at <code>proxy.calino.io</code>. If you use this option:
-          </p>
+          <h2>{t('privacy.section3.heading')}</h2>
+          <p>{t('privacy.section3.intro')}</p>
+          <p><strong>{t('privacy.section3.hostedProxyLabel')}</strong> {t('privacy.section3.hostedProxyIntro', { proxy: 'proxy.calino.io' })}</p>
           <ul>
             <li>
-              We can see your IP address, country, and the full URL of each request (which can
-              sometimes include parts of your account path, depending on your CalDAV server)
+              {t('privacy.section3.item1')}
             </li>
             <li>
-              We <strong>cannot</strong> see your password or calendar event data
+              {t('privacy.section3.item2')}
             </li>
-            <li>Credentials are sent in the Authorization header (not logged)</li>
-            <li>Request/response bodies containing calendar data are not logged</li>
+            <li>{t('privacy.section3.item3')}</li>
+            <li>{t('privacy.section3.item4')}</li>
           </ul>
           <p>
-            <strong>Third-party or self-hosted proxies:</strong> The same principles apply — the
-            proxy operator sees connection metadata but not your credentials or calendar content.
+            <strong>{t('privacy.section3.thirdPartyLabel')}</strong> {t('privacy.section3.thirdPartyBody')}
           </p>
           <p>
-            For maximum privacy, add CORS headers directly to your CalDAV server instead of using a
-            proxy.
+            {t('privacy.section3.maxPrivacy')}
           </p>
         </section>
 
         <section>
-          <h2>4. Cookies & Local Storage</h2>
-          <p>Calino uses localStorage to store:</p>
+          <h2>{t('privacy.section4.heading')}</h2>
+          <p>{t('privacy.section4.intro')}</p>
           <ul>
-            <li>Your preferences and settings</li>
-            <li>
-              CalDAV account credentials, obfuscated with a key stored in the app itself. This
-              protects against casual inspection of localStorage (e.g. another site or extension
-              accessing it by mistake), but is not strong encryption against someone with access to
-              both the app source and your browser storage.
-            </li>
+            <li>{t('privacy.section4.item1')}</li>
+            <li>{t('privacy.section4.item2')}</li>
           </ul>
           <p>
-            We do not use tracking cookies, analytics, or third-party services that collect personal
-            information.
+            {t('privacy.section4.outro')}
           </p>
         </section>
 
         <section>
-          <h2>5. No Account Required</h2>
-          <p>
-            Calino does not require registration or an account. You can use the app immediately
-            without providing any personal information.
-          </p>
+          <h2>{t('privacy.section5.heading')}</h2>
+          <p>{t('privacy.section5.body')}</p>
         </section>
 
         <section>
-          <h2>6. Contact</h2>
+          <h2>{t('privacy.section6.heading')}</h2>
           <p>
-            If you have questions about this privacy policy, please contact:
+            {t('privacy.section6.body')}
             <br />
             <a href={`mailto:${config.contactEmail}`}>{config.contactEmail}</a>
           </p>

@@ -1,1 +1,18 @@
-{}
+{
+  "progress": {
+    "checkingConnection": "Kontrollerer forbindelse…",
+    "lookingForCalendars": "Leder efter kalendere…",
+    "savingAccount": "Gemmer konto…",
+    "syncingEvents": "Synkroniserer begivenheder…",
+    "checkingForContacts": "Kontrollerer, om der er kontakter…",
+    "importingCalendar": "Importerer {{name}}…",
+    "downloadingCalendars_one": "Henter begivenheder fra {{count}} kalender…",
+    "downloadingCalendars_other": "Henter begivenheder fra {{count}} kalendere…",
+    "savingEvent": "Gemmer begivenhed…",
+    "savingEvents": "Gemmer begivenheder…",
+    "deletingEvent": "Sletter begivenhed…",
+    "creatingCalendar": "Opretter kalender…",
+    "savingCalendar": "Gemmer kalender…",
+    "deletingCalendar": "Sletter kalender…"
+  }
+}

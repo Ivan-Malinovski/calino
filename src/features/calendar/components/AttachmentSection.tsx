@@ -1,4 +1,5 @@
 import type { JSX } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { CalendarAttachment } from '@/types'
 import { putAttachments, deleteAttachments } from '@/lib/attachmentStore'
 import { showToast } from '@/lib/toast'
@@ -24,6 +25,7 @@ export function AttachmentSection({
   showLabel = true,
   compact = false,
 }: AttachmentSectionProps): JSX.Element {
+  const { t } = useTranslation('calendar')
   const storageKey = eventId || 'new'
 
   const handleRemove = (index: number): void => {
@@ -94,7 +96,7 @@ export function AttachmentSection({
     <div className={compact ? styles.attachmentFieldCompact : styles.modalField}>
       {showLabel && (
         <div className={styles.fieldHeader}>
-          <label className={styles.label}>Attachments</label>
+          <label className={styles.label}>{t('surface.attachments')}</label>
           {attachments.length > 0 && (
             <span className={styles.attachmentCount}>{attachments.length}</span>
           )}
@@ -117,7 +119,7 @@ export function AttachmentSection({
               <button
                 type="button"
                 className={styles.attachmentName}
-                title="Click to download"
+                title={t('surface.clickToDownload')}
                 onClick={() => {
                   if (att.href) {
                     const a = document.createElement('a')
@@ -143,8 +145,8 @@ export function AttachmentSection({
               <button
                 type="button"
                 className={styles.removeAttachment}
-                title="Remove attachment"
-                aria-label={`Remove ${att.filename || 'attachment'}`}
+                title={t('surface.removeAttachment')}
+                aria-label={t('surface.removeNamedAttachment', { name: att.filename || t('surface.attachment') })}
                 onClick={() => handleRemove(index)}
               >
                 ×

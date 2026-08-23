@@ -2,6 +2,7 @@ import type { JSX } from 'react'
 import { useEffect, useState } from 'react'
 import { formatDistanceToNow } from 'date-fns'
 import { Capacitor } from '@capacitor/core'
+import { useTranslation } from 'react-i18next'
 import { listModels, testConnection } from '@/features/aiVision/client'
 import {
   DEFAULT_BASE_URLS,
@@ -18,10 +19,10 @@ interface TestState {
   hint?: string
 }
 
-const PROVIDER_OPTIONS: { value: AIProvider; label: string }[] = [
-  { value: 'anthropic', label: 'Anthropic' },
-  { value: 'openai', label: 'OpenAI' },
-  { value: 'custom', label: 'Custom (OpenAI-compatible)' },
+const PROVIDER_OPTIONS: { value: AIProvider; labelKey: string }[] = [
+  { value: 'anthropic', labelKey: 'aiVision.provider.anthropic' },
+  { value: 'openai', labelKey: 'aiVision.provider.openai' },
+  { value: 'custom', labelKey: 'aiVision.provider.custom' },
 ]
 
 function EyeIcon({ open }: { open: boolean }): JSX.Element {
@@ -82,6 +83,7 @@ function RefreshIcon(): JSX.Element {
 }
 
 export function AIVisionSettings(): JSX.Element {
+  const { t } = useTranslation('settings')
   const isNative = Capacitor.isNativePlatform()
 
   const provider = useAIVisionSettingsStore((s) => s.provider)
@@ -113,7 +115,7 @@ export function AIVisionSettings(): JSX.Element {
     try {
       const key = await getApiKey()
       if (!key) {
-        setModelFetchError('No API key saved yet.')
+        setModelFetchError(t('aiVision.apiKey.noKeySaved'))
         return
       }
       const fetched = await listModels({ provider, baseUrl, apiKey: key, model })
@@ -152,7 +154,7 @@ export function AIVisionSettings(): JSX.Element {
     setTestState({ status: 'testing' })
     const key = await getApiKey()
     if (!key) {
-      setTestState({ status: 'error', message: 'No API key saved yet.' })
+      setTestState({ status: 'error', message: t('aiVision.apiKey.noKeySaved') })
       return
     }
     const result: TestConnectionResult = await testConnection({
@@ -189,14 +191,14 @@ export function AIVisionSettings(): JSX.Element {
       return (
         <div className={styles.accountStatus}>
           <div className={`${styles.statusDot} ${styles.statusDotOk}`} />
-          Last verified {when} — vision-capable
+          {t('aiVision.lastVerified.capable', { when })}
         </div>
       )
     }
     return (
       <div className={styles.accountStatus}>
         <div className={`${styles.statusDot} ${styles.statusDotWarn}`} />
-        Last verified {when} — model may not support images
+        {t('aiVision.lastVerified.maybeNotCapable', { when })}
       </div>
     )
   }
@@ -206,20 +208,19 @@ export function AIVisionSettings(): JSX.Element {
       className={`${styles.section} ${styles.sectionActive}`}
       data-component="ai-vision-settings"
     >
-      <h1 className={styles.pageTitle}>AI Photo Import</h1>
+      <h1 className={styles.pageTitle}>{t('aiVision.title')}</h1>
       <p className={styles.rowDesc} style={{ padding: '0 20px', marginBottom: 16 }}>
-        Use your own API key to auto-fill event details from a photo. Available when creating a new
-        event on Android.
+        {t('aiVision.intro')}
       </p>
 
       {!isNative && (
-        <div className={styles.accountHint}>This feature is only available in the Android app.</div>
+        <div className={styles.accountHint}>{t('aiVision.androidOnly')}</div>
       )}
 
       {isNative && (
         <>
           <div className={styles.group}>
-            <div className={styles.groupLabel}>Provider</div>
+            <div className={styles.groupLabel}>{t('aiVision.provider.groupLabel')}</div>
             <div
               className={styles.row}
               data-component="setting-row"
@@ -227,19 +228,19 @@ export function AIVisionSettings(): JSX.Element {
               data-value={provider}
             >
               <div className={styles.rowInfo}>
-                <div className={styles.rowLabel}>Provider</div>
-                <div className={styles.rowDesc}>Which vision AI service to send photos to</div>
+                <div className={styles.rowLabel}>{t('aiVision.provider.label')}</div>
+                <div className={styles.rowDesc}>{t('aiVision.provider.desc')}</div>
               </div>
               <div className={styles.rowControl}>
                 <select
                   className={styles.select}
                   value={provider}
-                  aria-label="AI provider"
+                  aria-label={t('aiVision.provider.ariaLabel')}
                   onChange={(e) => setProvider(e.target.value as AIProvider)}
                 >
                   {PROVIDER_OPTIONS.map((opt) => (
                     <option key={opt.value} value={opt.value}>
-                      {opt.label}
+                      {t(opt.labelKey)}
                     </option>
                   ))}
                 </select>
@@ -252,11 +253,11 @@ export function AIVisionSettings(): JSX.Element {
               data-setting="ai-vision-base-url"
             >
               <div className={styles.rowInfo}>
-                <div className={styles.rowLabel}>Base URL</div>
+                <div className={styles.rowLabel}>{t('aiVision.baseUrl.label')}</div>
                 <div className={styles.rowDesc}>
                   {provider === 'custom'
-                    ? "Full OpenAI- or Anthropic-compatible API root, including /v1 — it's used exactly as entered. Add /anthropic to the path if it speaks Anthropic's API."
-                    : 'Requests are sent here'}
+                    ? t('aiVision.baseUrl.descCustom')
+                    : t('aiVision.baseUrl.descPreset')}
                 </div>
               </div>
               <div className={styles.rowControl}>
@@ -265,8 +266,8 @@ export function AIVisionSettings(): JSX.Element {
                     type="text"
                     className={styles.formInput}
                     value={baseUrl}
-                    placeholder="https://api.example.com/v1"
-                    aria-label="Base URL"
+                    placeholder={t('aiVision.baseUrl.placeholder')}
+                    aria-label={t('aiVision.baseUrl.ariaLabel')}
                     onChange={(e) => setBaseUrl(e.target.value)}
                   />
                 ) : (
@@ -283,8 +284,8 @@ export function AIVisionSettings(): JSX.Element {
               data-setting="ai-vision-api-key"
             >
               <div className={styles.rowInfo}>
-                <div className={styles.rowLabel}>API Key</div>
-                <div className={styles.rowDesc}>Stored encrypted on this device only</div>
+                <div className={styles.rowLabel}>{t('aiVision.apiKey.label')}</div>
+                <div className={styles.rowDesc}>{t('aiVision.apiKey.desc')}</div>
               </div>
               <div className={styles.rowControl}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -292,8 +293,12 @@ export function AIVisionSettings(): JSX.Element {
                     type={showKey ? 'text' : 'password'}
                     className={styles.formInput}
                     value={apiKeyInput}
-                    placeholder={keySaved ? '••••••••••••' : 'Enter API key'}
-                    aria-label="API key"
+                    placeholder={
+                      keySaved
+                        ? t('aiVision.apiKey.placeholderSaved')
+                        : t('aiVision.apiKey.placeholderEmpty')
+                    }
+                    aria-label={t('aiVision.apiKey.ariaLabel')}
                     autoComplete="off"
                     onChange={(e) => setApiKeyInput(e.target.value)}
                     onBlur={() => {
@@ -303,7 +308,9 @@ export function AIVisionSettings(): JSX.Element {
                   <button
                     type="button"
                     className={styles.rowBtn}
-                    aria-label={showKey ? 'Hide API key' : 'Show API key'}
+                    aria-label={
+                      showKey ? t('aiVision.apiKey.hideAriaLabel') : t('aiVision.apiKey.showAriaLabel')
+                    }
                     onClick={() => setShowKey((v) => !v)}
                   >
                     <EyeIcon open={showKey} />
@@ -317,25 +324,25 @@ export function AIVisionSettings(): JSX.Element {
                 style={{ padding: '0 20px 12px', marginTop: -6 }}
               >
                 <div className={`${styles.statusDot} ${styles.statusDotOk}`} />
-                Key saved
+                {t('aiVision.apiKey.saved')}
                 <button
                   type="button"
                   className={styles.rowBtn}
                   style={{ marginLeft: 8 }}
                   onClick={() => void handleClearKey()}
                 >
-                  Clear
+                  {t('aiVision.apiKey.clear')}
                 </button>
               </div>
             )}
 
             <div className={styles.row} data-component="setting-row" data-setting="ai-vision-model">
               <div className={styles.rowInfo}>
-                <div className={styles.rowLabel}>Model</div>
+                <div className={styles.rowLabel}>{t('aiVision.model.label')}</div>
                 <div className={styles.rowDesc}>
                   {modelFetchError
-                    ? "Couldn't fetch model list — enter a model id manually."
-                    : 'Vision-capable model used to read photos'}
+                    ? t('aiVision.model.descError')
+                    : t('aiVision.model.descReady')}
                 </div>
               </div>
               <div className={styles.rowControl}>
@@ -345,15 +352,15 @@ export function AIVisionSettings(): JSX.Element {
                       type="text"
                       className={styles.formInput}
                       value={model}
-                      placeholder="model id"
-                      aria-label="Model id"
+                      placeholder={t('aiVision.model.placeholder')}
+                      aria-label={t('aiVision.model.idAriaLabel')}
                       onChange={(e) => setModel(e.target.value)}
                     />
                   ) : (
                     <select
                       className={styles.select}
                       value={model}
-                      aria-label="Model"
+                      aria-label={t('aiVision.model.ariaLabel')}
                       onChange={(e) => setModel(e.target.value)}
                     >
                       {modelOptions.map((m) => (
@@ -366,7 +373,7 @@ export function AIVisionSettings(): JSX.Element {
                   <button
                     type="button"
                     className={styles.rowBtn}
-                    aria-label="Refresh model list"
+                    aria-label={t('aiVision.model.refreshAriaLabel')}
                     disabled={modelsLoading || !hasApiKey()}
                     onClick={() => void fetchModels()}
                   >
@@ -380,32 +387,32 @@ export function AIVisionSettings(): JSX.Element {
           <div className={styles.group}>
             <div className={styles.row} data-component="setting-row" data-setting="ai-vision-test">
               <div className={styles.rowInfo}>
-                <div className={styles.rowLabel}>Test Connection</div>
-                <div className={styles.rowDesc}>
-                  Verify the key works and the model can read images
-                </div>
+                <div className={styles.rowLabel}>{t('aiVision.test.label')}</div>
+                <div className={styles.rowDesc}>{t('aiVision.test.desc')}</div>
                 {testState?.status === 'testing' && (
                   <div className={styles.accountStatus}>
                     <div className={`${styles.statusDot} ${styles.statusDotTesting}`} />
-                    Testing…
+                    {t('aiVision.test.testing')}
                   </div>
                 )}
                 {testState?.status === 'ok' && (
                   <div className={styles.accountStatus}>
                     <div className={`${styles.statusDot} ${styles.statusDotOk}`} />
-                    Connection OK — vision-capable
+                    {t('aiVision.test.ok')}
                   </div>
                 )}
                 {testState?.status === 'warn' && (
                   <div className={styles.accountStatus}>
                     <div className={`${styles.statusDot} ${styles.statusDotWarn}`} />
-                    {testState.hint ?? "Key works, but this model doesn't appear to support images"}
+                    {testState.hint ?? t('aiVision.test.warnDefault')}
                   </div>
                 )}
                 {testState?.status === 'error' && (
                   <div className={styles.accountStatus}>
                     <div className={`${styles.statusDot} ${styles.statusDotWarn}`} />
-                    {testState.message ? `Failed — ${testState.message}` : 'Connection failed'}
+                    {testState.message
+                      ? t('aiVision.test.failed', { message: testState.message })
+                      : t('aiVision.test.failedGeneric')}
                   </div>
                 )}
                 {!testState && renderLastVerified()}
@@ -419,7 +426,9 @@ export function AIVisionSettings(): JSX.Element {
                   data-component="action-button"
                   data-action="test-ai-vision-connection"
                 >
-                  {testState?.status === 'testing' ? 'Testing…' : 'Test connection'}
+                  {testState?.status === 'testing'
+                    ? t('aiVision.test.buttonTesting')
+                    : t('aiVision.test.button')}
                 </button>
               </div>
             </div>

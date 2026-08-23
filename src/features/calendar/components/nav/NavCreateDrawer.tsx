@@ -1,4 +1,5 @@
 import type { JSX } from 'react'
+import { useTranslation } from 'react-i18next'
 import { motion, type PanInfo } from 'framer-motion'
 import { Capacitor } from '@capacitor/core'
 import { useCalendarStore } from '@/store/calendarStore'
@@ -45,6 +46,7 @@ export function NavCreateDrawer({
   onDragProgress,
   onDragActiveChange,
 }: NavCreateDrawerProps): JSX.Element {
+  const { t } = useTranslation('calendar')
   const { aiState, importFromCamera } = useAIPhotoImport()
   const hasAiApiKey = useAIVisionSettingsStore((s) => s.apiKeyEncrypted !== null)
   const reducedMotion = useReducedMotion()
@@ -106,13 +108,13 @@ export function NavCreateDrawer({
         type="button"
         className={styles.handle}
         onClick={onClose}
-        aria-label="Close create menu"
+        aria-label={t('surface.closeCreateMenu')}
       />
       <motion.div className={styles.rows} variants={container} initial="hidden" animate="visible">
         <motion.div className={styles.rowWrapper} variants={rows}>
           <button type="button" className={styles.rowMain} onClick={handleNewEvent}>
             <CalendarIcon size={18} />
-            <span>New Event</span>
+            <span>{t('surface.newEvent')}</span>
           </button>
           {isNative && hasAiApiKey && (
             <button
@@ -120,7 +122,7 @@ export function NavCreateDrawer({
               className={styles.rowAction}
               onClick={handleAIImport}
               disabled={aiBusy}
-              aria-label="Import event from photo"
+              aria-label={t('surface.importEventFromPhoto')}
             >
               {aiBusy ? <span className={styles.rowActionSpinner} /> : <AIPhotoIcon />}
             </button>
@@ -128,7 +130,7 @@ export function NavCreateDrawer({
         </motion.div>
         <motion.button type="button" className={styles.row} variants={rows} onClick={handleNewTask}>
           <TaskCheckIcon size={18} />
-          <span>New Task</span>
+          <span>{t('surface.newTask')}</span>
         </motion.button>
         <motion.button
           type="button"
@@ -137,7 +139,7 @@ export function NavCreateDrawer({
           onClick={handleNewJournal}
         >
           <JournalIcon />
-          <span>New Journal Entry</span>
+          <span>{t('surface.newJournalEntry')}</span>
         </motion.button>
       </motion.div>
     </motion.div>

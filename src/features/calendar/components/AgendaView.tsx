@@ -25,7 +25,8 @@ import type { CalendarEvent } from '@/types'
 import { ContextMenu } from '@/components/common/ContextMenu'
 import { EmptyState } from '@/components/common/EmptyState'
 import { getEventColor } from '@/lib/eventColor'
-import { formatEventTime, pad2, toEventInstant, toZoneWallClock } from '@/lib/datetime'
+import { formatEventTime, pad2, toEventInstant, toZoneWallClock, formatDisplayDate } from '@/lib/datetime'
+import { useTranslation } from 'react-i18next'
 import { safeCalDAVUpdate } from '@/lib/caldavHelpers'
 import { extractOriginalEventId } from '@/lib/events'
 import { LocationLink } from './LocationLink'
@@ -114,6 +115,7 @@ function AgendaDraggableItem({
   onKeyDown: (event: React.KeyboardEvent) => void
   onContextMenu: (event: React.MouseEvent) => void
 }): JSX.Element {
+  const { t } = useTranslation('calendar')
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: event.id,
     disabled,
@@ -152,7 +154,7 @@ function AgendaDraggableItem({
     >
       {children}
       {isDropOver && dropTargetId && (
-        <span className={styles.agendaTaskDropHint}>Make subtask</span>
+        <span className={styles.agendaTaskDropHint}>{t('surface.agendaMakeSubtask')}</span>
       )}
     </div>
   )
@@ -203,6 +205,7 @@ function MonthScrollRestorer({
 }
 
 export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): JSX.Element {
+  const { t } = useTranslation(['calendar', 'common'])
   const containerClass = `${styles.container} ${embedded ? styles.embedded : ''}`
   const currentDate = useCalendarStore((state) => state.currentDate)
   const calendars = useCalendarStore((state) => state.calendars)
@@ -593,7 +596,7 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
           return (
             <AgendaDropZone key={dateKey} dateKey={dateKey} className={styles.agendaSkipDay}>
               <div className={styles.agendaSkipLine} />
-              <span className={styles.agendaSkipLabel}>{format(day, 'EEE MMM d')}</span>
+              <span className={styles.agendaSkipLabel}>{formatDisplayDate(day, 'EEE MMM d')}</span>
               <div className={styles.agendaSkipLine} />
             </AgendaDropZone>
           )
@@ -627,15 +630,15 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
             />
             {allGroupsEmpty ? (
               <EmptyState
-                title="Nothing scheduled this month"
-                description="Your agenda is clear. Add an event to get started."
+                title={t('views.agenda.emptyTitle')}
+                description={t('views.agenda.emptyDescription')}
                 action={
                   <button
                     className={styles.agendaAdd}
                     onClick={() => handleCreateEvent(new Date())}
                     data-component="agenda-empty-add"
                   >
-                    + Create event
+                    + {t('views.week.createEvent')}
                   </button>
                 }
               />
@@ -678,7 +681,7 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
                               className={styles.agendaAdd}
                               onClick={() => handleCreateEvent(day)}
                             >
-                              + Add
+                              + {t('common:actions.add')}
                             </button>
                           )}
                         </div>
@@ -908,14 +911,14 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
             onClose={() => setContextMenu(null)}
             items={[
               {
-                label: 'Create event',
+                label: t('views.week.createEvent'),
                 onClick: () => {
                   handleCreateEvent(contextMenu.day)
                   setContextMenu(null)
                 },
               },
               {
-                label: 'Create task',
+                label: t('views.week.createTask'),
                 onClick: () => {
                   handleCreateTask(contextMenu.day)
                   setContextMenu(null)
@@ -936,7 +939,7 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
               }}
               items={[
                 {
-                  label: 'Edit',
+                  label: t('common:actions.edit'),
                   onClick: () => {
                     openModal(
                       undefined,
@@ -948,7 +951,7 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
                   },
                 },
                 {
-                  label: 'Delete',
+                  label: t('common:actions.delete'),
                   onClick: () => {
                     deleteEventWithUndo({
                       event: eventContextMenu.event,

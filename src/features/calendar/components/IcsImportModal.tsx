@@ -1,7 +1,8 @@
 import type { JSX } from 'react'
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { format, parseISO } from 'date-fns'
+import { parseISO } from 'date-fns'
+import { useTranslation } from 'react-i18next'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useSettingsStore, EVENT_COLORS } from '@/store/settingsStore'
 import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
@@ -9,6 +10,8 @@ import { useModalDismiss } from '@/hooks/useModalDismiss'
 import { parseICALData } from '@/features/caldav/adapter/iCalendarAdapter'
 import { showToast } from '@/lib/toast'
 import { withProgress } from '@/store/progressStore'
+import { formatDisplayDate } from '@/lib/datetime'
+import i18n from '@/lib/i18n'
 import type { CalendarEvent } from '@/types'
 import shell from './AddCalendarModal.module.css'
 import styles from './IcsImportModal.module.css'
@@ -34,16 +37,17 @@ function describeWhen(event: CalendarEvent, timeFormat: string): string {
   try {
     const date = parseISO(iso)
     if (Number.isNaN(date.getTime())) return ''
-    if (event.isAllDay) return format(date, 'd MMM yyyy')
-    return format(date, timeFormat === '12h' ? 'd MMM yyyy, h:mm a' : 'd MMM yyyy, HH:mm')
+    if (event.isAllDay) return formatDisplayDate(date, 'd MMM yyyy')
+    return formatDisplayDate(date, timeFormat === '12h' ? 'd MMM yyyy, h:mm a' : 'd MMM yyyy, HH:mm')
   } catch {
     return ''
   }
 }
 
-const KIND_LABELS: Record<string, string> = {
-  task: 'Task',
-  journal: 'Journal',
+function kindLabel(type: string): string | undefined {
+  if (type === 'task') return i18n.t('modals.icsImport.kindTask', { ns: 'calendar' })
+  if (type === 'journal') return i18n.t('modals.icsImport.kindJournal', { ns: 'calendar' })
+  return undefined
 }
 
 /**
@@ -59,6 +63,7 @@ export function IcsImportModal({
   onClose,
   onImported,
 }: IcsImportModalProps): JSX.Element | null {
+  const { t } = useTranslation(['calendar', 'common'])
   const calendars = useCalendarStore((state) => state.calendars)
   const writableCalendars = useMemo(() => calendars.filter((c) => !c.readOnly), [calendars])
 
@@ -126,7 +131,6 @@ export function IcsImportModal({
   // "events" while the file is only VEVENTs — which is the overwhelmingly
   // common case — and the broader "items" once tasks or journals are in play.
   const noun = parsed.some((e) => e.type === 'task' || e.type === 'journal') ? 'item' : 'event'
-  const plural = (n: number): string => (n === 1 ? noun : `${noun}s`)
 
   const handleConfirm = async (): Promise<void> => {
     if (!icsText || isImportingRef.current) return
@@ -137,7 +141,7 @@ export function IcsImportModal({
     if (targetCalendarId === NEW_CALENDAR_OPTION) {
       const name = newCalendarName.trim() || fileName?.replace(/\.ics$/i, '').trim() || ''
       if (!name) {
-        setError('Enter a name for the new calendar')
+        setError(t('modals.icsImport.enterCalendarName'))
         return
       }
       calendarId = crypto.randomUUID()
@@ -152,7 +156,7 @@ export function IcsImportModal({
         source: 'local',
       })
     } else {
-      calendarName = calendars.find((c) => c.id === calendarId)?.name ?? 'calendar'
+      calendarName = calendars.find((c) => c.id === calendarId)?.name ?? t('modals.icsImport.calendarFallback')
     }
 
     isImportingRef.current = true
@@ -193,7 +197,11 @@ export function IcsImportModal({
       // tracks itself, and a few hundred short-lived tasks would flicker the
       // pill instead of showing steady progress. `owned` silences those.
       await withProgress(
-        `Importing ${incoming.length} ${plural(incoming.length)}…`,
+        i18n.t('modals.icsImport.importingProgress', {
+          count: incoming.length,
+          context: noun,
+          ns: 'calendar',
+        }),
         async (report) => {
           let done = 0
           report({ done, total: groups.size })
@@ -208,13 +216,23 @@ export function IcsImportModal({
       const skipped = parsed.length - incoming.length
       showToast(
         skipped > 0
-          ? `Imported ${incoming.length} into ${calendarName} (${skipped} already there)`
-          : `Imported ${incoming.length} ${plural(incoming.length)} into ${calendarName}`
+          ? i18n.t('modals.icsImport.importedSkipped', {
+              count: incoming.length,
+              calendarName,
+              skipped,
+              ns: 'calendar',
+            })
+          : i18n.t('modals.icsImport.imported', {
+              count: incoming.length,
+              context: noun,
+              calendarName,
+              ns: 'calendar',
+            })
       )
       onImported?.(incoming.length, calendarName)
       requestClose()
     } catch {
-      setError('Failed to import. Please check the file and try again.')
+      setError(t('modals.icsImport.importFailed'))
     } finally {
       isImportingRef.current = false
       setIsImporting(false)
@@ -242,9 +260,13 @@ export function IcsImportModal({
       >
         <div className={shell.modalHeader}>
           <h3 className={shell.modalTitle} id="ics-import-modal-title">
-            Import {parsed.length} {plural(parsed.length)}
+            {t('modals.icsImport.title', { count: parsed.length, context: noun })}
           </h3>
-          <button className={shell.modalClose} onClick={requestClose} aria-label="Close">
+          <button
+            className={shell.modalClose}
+            onClick={requestClose}
+            aria-label={t('common:actions.close')}
+          >
             ✕
           </button>
         </div>
@@ -252,37 +274,41 @@ export function IcsImportModal({
         <p className={styles.summary}>
           {fileName && <span className={styles.fileName}>{fileName}</span>}
           {fileName && ' — '}
-          Choose which calendar these should be added to.
+          {t('modals.icsImport.chooseCalendar')}
         </p>
 
         {parseFailed ? (
           <p className={shell.errorMessage} data-component="ics-import-parse-error">
-            This file could not be read as a calendar file. Please check it and try again.
+            {t('modals.icsImport.parseError')}
           </p>
         ) : parsed.length === 0 ? (
           <p className={styles.emptyState} data-component="ics-import-empty">
-            No events, tasks, or journal entries were found in this file.
+            {t('modals.icsImport.emptyResult')}
           </p>
         ) : (
           <div className={styles.previewList} data-component="ics-import-preview">
             {parsed.slice(0, PREVIEW_LIMIT).map((event, i) => (
               <div key={`${event.id}-${i}`} className={styles.previewRow}>
-                <span className={styles.previewTitle}>{event.title || '(untitled)'}</span>
-                {event.type && KIND_LABELS[event.type] && (
-                  <span className={styles.previewKind}>{KIND_LABELS[event.type]}</span>
+                <span className={styles.previewTitle}>
+                  {event.title || t('modals.icsImport.untitled')}
+                </span>
+                {event.type && kindLabel(event.type) && (
+                  <span className={styles.previewKind}>{kindLabel(event.type)}</span>
                 )}
                 <span className={styles.previewWhen}>{describeWhen(event, timeFormat)}</span>
               </div>
             ))}
             {parsed.length > PREVIEW_LIMIT && (
-              <div className={styles.previewMore}>+{parsed.length - PREVIEW_LIMIT} more</div>
+              <div className={styles.previewMore}>
+                {t('modals.icsImport.moreCount', { count: parsed.length - PREVIEW_LIMIT })}
+              </div>
             )}
           </div>
         )}
 
         <div className={shell.formGroup}>
           <label htmlFor="icsImportTarget" className={shell.formLabel}>
-            Add to
+            {t('modals.icsImport.addTo')}
           </label>
           <select
             id="icsImportTarget"
@@ -295,7 +321,7 @@ export function IcsImportModal({
             data-component="ics-target-calendar-select"
             data-testid="ics-import-calendar-select"
           >
-            <option value={NEW_CALENDAR_OPTION}>New calendar…</option>
+            <option value={NEW_CALENDAR_OPTION}>{t('modals.icsImport.newCalendarOption')}</option>
             {writableCalendars.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name}
@@ -308,19 +334,21 @@ export function IcsImportModal({
           <>
             <div className={shell.formGroup}>
               <label htmlFor="icsImportNewName" className={shell.formLabel}>
-                Calendar name
+                {t('modals.icsImport.calendarNameLabel')}
               </label>
               <input
                 id="icsImportNewName"
                 className={shell.input}
-                placeholder={fileName?.replace(/\.ics$/i, '') || 'Imported calendar'}
+                placeholder={
+                  fileName?.replace(/\.ics$/i, '') || t('modals.icsImport.importedCalendarPlaceholder')
+                }
                 value={newCalendarName}
                 onChange={(e) => setNewCalendarName(e.target.value)}
                 data-testid="ics-import-new-calendar-name"
               />
             </div>
             <div className={shell.formGroup}>
-              <label className={shell.formLabel}>Color</label>
+              <label className={shell.formLabel}>{t('modals.icsImport.colorLabel')}</label>
               <div className={shell.colorGrid}>
                 {EVENT_COLORS.map((c) => (
                   <button
@@ -329,7 +357,7 @@ export function IcsImportModal({
                     className={`${shell.colorOption} ${newCalendarColor === c ? shell.colorSelected : ''}`}
                     style={{ backgroundColor: c }}
                     onClick={() => setNewCalendarColor(c)}
-                    aria-label={`Select color ${c}`}
+                    aria-label={t('modals.icsImport.selectColor', { color: c })}
                   />
                 ))}
               </div>
@@ -339,8 +367,7 @@ export function IcsImportModal({
 
         {duplicateCount > 0 && (
           <p className={styles.duplicateNote} data-component="ics-import-duplicates">
-            {duplicateCount} of these {duplicateCount === 1 ? 'is' : 'are'} already in this calendar
-            and will be skipped.
+            {t('modals.icsImport.duplicateNote', { count: duplicateCount })}
           </p>
         )}
 
@@ -353,7 +380,7 @@ export function IcsImportModal({
             onClick={requestClose}
             disabled={isImporting}
           >
-            Cancel
+            {t('common:actions.cancel')}
           </button>
           <button
             type="button"
@@ -363,7 +390,7 @@ export function IcsImportModal({
             aria-busy={isImporting}
             data-testid="ics-import-confirm"
           >
-            {isImporting ? 'Importing…' : 'Import'}
+            {isImporting ? t('modals.icsImport.importing') : t('modals.icsImport.importAction')}
           </button>
         </div>
       </div>

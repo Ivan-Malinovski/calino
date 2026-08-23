@@ -1,5 +1,6 @@
 import type { JSX, KeyboardEvent } from 'react'
 import { useMemo, useRef, useCallback, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useContactStore } from '@/store/contactStore'
 import type { Contact } from '../types'
 import { initializeContactSearchIndex, searchContacts } from '../lib/contactSearchIndex'
@@ -139,6 +140,7 @@ interface ContactListProps {
 }
 
 export function ContactList({ onNewContact, loading }: ContactListProps = {}): JSX.Element {
+  const { t } = useTranslation('contacts')
   const searchQuery = useContactStore((s) => s.searchQuery)
   const setSearchQuery = useContactStore((s) => s.setSearchQuery)
   const selectedContactId = useContactStore((s) => s.selectedContactId)
@@ -231,10 +233,10 @@ export function ContactList({ onNewContact, loading }: ContactListProps = {}): J
           ref={inputRef}
           type="text"
           className={styles.searchInput}
-          placeholder="Search contacts…"
+          placeholder={t('list.searchContacts')}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          aria-label="Search contacts"
+          aria-label={t('list.searchContacts')}
         />
         {searchQuery && (
           <button
@@ -244,7 +246,7 @@ export function ContactList({ onNewContact, loading }: ContactListProps = {}): J
               setSearchQuery('')
               inputRef.current?.focus()
             }}
-            aria-label="Clear search"
+            aria-label={t('list.clearSearch')}
           >
             <svg
               viewBox="0 0 24 24"
@@ -263,11 +265,9 @@ export function ContactList({ onNewContact, loading }: ContactListProps = {}): J
 
       {/* Meta bar: count + new button */}
       <div className={styles.metaBar}>
-        <span className={styles.count}>
-          {filteredContacts.length} {filteredContacts.length === 1 ? 'contact' : 'contacts'}
-        </span>
+        <span className={styles.count}>{t('list.contactCount', { count: filteredContacts.length })}</span>
         <button type="button" className={styles.newBtn} onClick={onNewContact}>
-          + New
+          {t('list.newContact')}
         </button>
       </div>
 
@@ -288,7 +288,7 @@ export function ContactList({ onNewContact, loading }: ContactListProps = {}): J
               cursor: 'pointer',
             }}
           >
-            <option value="">All address books</option>
+            <option value="">{t('list.allAddressBooks')}</option>
             {addressBooks
               .filter((ab) => ab.isVisible)
               .map((ab) => (
@@ -303,7 +303,7 @@ export function ContactList({ onNewContact, loading }: ContactListProps = {}): J
       {/* Active tag filter */}
       {selectedTag && (
         <div className={styles.tagFilter}>
-          <span className={styles.tagFilterLabel}>Filtered by:</span>
+          <span className={styles.tagFilterLabel}>{t('list.filteredBy')}</span>
           <span className={styles.tagFilterTag}>{selectedTag}</span>
           <button
             type="button"
@@ -321,13 +321,13 @@ export function ContactList({ onNewContact, loading }: ContactListProps = {}): J
           <div className={styles.emptyState}>
             {searchQuery ? (
               <>
-                <span className={styles.emptyTitle}>No matches</span>
-                <span>No contacts match &ldquo;{searchQuery}&rdquo;</span>
+                <span className={styles.emptyTitle}>{t('list.noMatches')}</span>
+                <span>{t('list.noContactsMatch', { query: searchQuery })}</span>
               </>
             ) : (
               <>
-                <span className={styles.emptyTitle}>No contacts</span>
-                <span>Sync your CardDAV account to see contacts here.</span>
+                <span className={styles.emptyTitle}>{t('list.noContacts')}</span>
+                <span>{t('list.syncToSeeContacts')}</span>
               </>
             )}
           </div>

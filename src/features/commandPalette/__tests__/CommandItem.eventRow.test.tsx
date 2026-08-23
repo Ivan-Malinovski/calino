@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
+import i18n from '@/lib/i18n'
 import { renderCommandItemContent } from '../components/CommandItem'
 import type { EventResult } from '../types'
 
@@ -22,6 +23,7 @@ describe('command palette — event result row', () => {
         } as EventResult,
         type: 'event',
         timeFormat,
+        t: i18n.getFixedT(null, 'commands'),
       })
     )
 

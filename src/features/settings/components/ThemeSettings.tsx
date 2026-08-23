@@ -1,5 +1,6 @@
 import { useEffect, useMemo } from 'react'
 import type { CSSProperties, JSX } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   useSettingsStore,
   THEME_MODE_OPTIONS,
@@ -12,13 +13,13 @@ import styles from './Settings.module.css'
 import { AdjustableThemeControls } from './AdjustableThemeControls'
 
 const MOCHA_ACCENTS = [
-  { label: 'Blue', value: '#89b4fa' },
-  { label: 'Lavender', value: '#b4befe' },
-  { label: 'Mauve', value: '#cba6f7' },
-  { label: 'Pink', value: '#f5c2e7' },
-  { label: 'Teal', value: '#94e2d5' },
-  { label: 'Green', value: '#a6e3a1' },
-  { label: 'Peach', value: '#fab387' },
+  { labelKey: 'theme.mochaAccent.blue', value: '#89b4fa' },
+  { labelKey: 'theme.mochaAccent.lavender', value: '#b4befe' },
+  { labelKey: 'theme.mochaAccent.mauve', value: '#cba6f7' },
+  { labelKey: 'theme.mochaAccent.pink', value: '#f5c2e7' },
+  { labelKey: 'theme.mochaAccent.teal', value: '#94e2d5' },
+  { labelKey: 'theme.mochaAccent.green', value: '#a6e3a1' },
+  { labelKey: 'theme.mochaAccent.peach', value: '#fab387' },
 ]
 
 function MiniCalendarPreview({
@@ -195,6 +196,7 @@ function ThemePreviewCard({
 }
 
 export function ThemeSettings(): JSX.Element {
+  const { t } = useTranslation('settings')
   const themeMode = useSettingsStore((s) => s.themeMode)
   const lightTheme = useSettingsStore((s) => s.lightTheme)
   const darkTheme = useSettingsStore((s) => s.darkTheme)
@@ -230,7 +232,7 @@ export function ThemeSettings(): JSX.Element {
       className={`${styles.section} ${styles.sectionActive}`}
       data-component="theme-settings"
     >
-      <h1 className={styles.pageTitle}>Appearance</h1>
+      <h1 className={styles.pageTitle}>{t('theme.title')}</h1>
       <div className={styles.group}>
         <div
           className={`${styles.row} ${styles.rowSubhead}`}
@@ -239,12 +241,12 @@ export function ThemeSettings(): JSX.Element {
           data-value={themeMode}
         >
           <div className={styles.rowInfo}>
-            <div className={styles.rowLabel}>Appearance</div>
-            <div className={styles.rowDesc}>Choose how Calino looks</div>
+            <div className={styles.rowLabel}>{t('theme.appearance.label')}</div>
+            <div className={styles.rowDesc}>{t('theme.appearance.desc')}</div>
           </div>
         </div>
         <div className={styles.themeCards}>
-          {(THEME_MODE_OPTIONS as { value: ThemeMode; label: string }[]).map((opt) => {
+          {(THEME_MODE_OPTIONS as { value: ThemeMode; labelKey: string }[]).map((opt) => {
             const isActive = themeMode === opt.value
             const isLight = opt.value === 'light'
             const isDark = opt.value === 'dark'
@@ -282,7 +284,7 @@ export function ThemeSettings(): JSX.Element {
                   )}
                 />
                 <div className={styles.themeCardLabel}>
-                  {isSystem ? 'System' : opt.label}
+                  {isSystem ? t('theme.appearance.system') : t(opt.labelKey)}
                   <div className={styles.tcCheck}>
                     <svg
                       viewBox="0 0 9 9"
@@ -307,8 +309,8 @@ export function ThemeSettings(): JSX.Element {
           data-value={lightTheme}
         >
           <div className={styles.rowInfo}>
-            <div className={styles.rowLabel}>Light Theme</div>
-            <div className={styles.rowDesc}>Color palette used in light mode</div>
+            <div className={styles.rowLabel}>{t('theme.lightTheme.label')}</div>
+            <div className={styles.rowDesc}>{t('theme.lightTheme.desc')}</div>
           </div>
         </div>
         <div
@@ -334,8 +336,8 @@ export function ThemeSettings(): JSX.Element {
           data-value={darkTheme}
         >
           <div className={styles.rowInfo}>
-            <div className={styles.rowLabel}>Dark Theme</div>
-            <div className={styles.rowDesc}>Color palette used in dark mode</div>
+            <div className={styles.rowLabel}>{t('theme.darkTheme.label')}</div>
+            <div className={styles.rowDesc}>{t('theme.darkTheme.desc')}</div>
           </div>
         </div>
         <div
@@ -357,13 +359,13 @@ export function ThemeSettings(): JSX.Element {
         {darkTheme === 'catppuccin-mocha' && (
           <div className={styles.row} data-component="setting-row" data-setting="mocha-accent">
             <div className={styles.rowInfo}>
-              <div className={styles.rowLabel}>Catppuccin accent</div>
-              <div className={styles.rowDesc}>Used for selection, focus, and primary actions</div>
+              <div className={styles.rowLabel}>{t('theme.mochaAccent.label')}</div>
+              <div className={styles.rowDesc}>{t('theme.mochaAccent.desc')}</div>
             </div>
             <div
               className={styles.mochaAccentOptions}
               role="group"
-              aria-label="Catppuccin accent color"
+              aria-label={t('theme.mochaAccent.ariaLabel')}
             >
               {MOCHA_ACCENTS.map((accent) => (
                 <button
@@ -371,9 +373,9 @@ export function ThemeSettings(): JSX.Element {
                   className={`${styles.mochaAccentOption} ${mochaAccent === accent.value ? styles.mochaAccentOptionActive : ''}`}
                   style={{ '--mocha-accent': accent.value } as CSSProperties}
                   onClick={() => updateSettings({ mochaAccent: accent.value })}
-                  aria-label={`Use ${accent.label} accent`}
+                  aria-label={t('theme.mochaAccent.useAccent', { name: t(accent.labelKey) })}
                   aria-pressed={mochaAccent === accent.value}
-                  title={accent.label}
+                  title={t(accent.labelKey)}
                   type="button"
                 />
               ))}
@@ -388,23 +390,20 @@ export function ThemeSettings(): JSX.Element {
             data-value={eventTint}
           >
             <div className={styles.rowInfo}>
-              <div className={styles.rowLabel}>Event colour strength</div>
-              <div className={styles.rowDesc}>
-                How much of a calendar&rsquo;s colour shows on its events. Stronger settings make
-                calendars easier to tell apart at a glance.
-              </div>
+              <div className={styles.rowLabel}>{t('theme.eventTint.label')}</div>
+              <div className={styles.rowDesc}>{t('theme.eventTint.desc')}</div>
             </div>
             <div className={styles.rowControl}>
               <select
                 className={styles.select}
                 style={{ minWidth: '120px' }}
                 value={eventTint}
-                aria-label="Event colour strength"
+                aria-label={t('theme.eventTint.ariaLabel')}
                 onChange={(e) => updateSettings({ eventTint: e.target.value as EventTint })}
               >
-                <option value="subtle">Subtle</option>
-                <option value="balanced">Balanced</option>
-                <option value="vivid">Vivid</option>
+                <option value="subtle">{t('theme.eventTint.subtle')}</option>
+                <option value="balanced">{t('theme.eventTint.balanced')}</option>
+                <option value="vivid">{t('theme.eventTint.vivid')}</option>
               </select>
             </div>
           </div>
@@ -435,10 +434,8 @@ export function ThemeSettings(): JSX.Element {
           data-value={String(showEventIcons)}
         >
           <div className={styles.rowInfo}>
-            <div className={styles.rowLabel}>Event icons</div>
-            <div className={styles.rowDesc}>
-              Show a matching icon on events based on their title (e.g. a coffee cup for "Coffee")
-            </div>
+            <div className={styles.rowLabel}>{t('theme.showEventIcons.label')}</div>
+            <div className={styles.rowDesc}>{t('theme.showEventIcons.desc')}</div>
           </div>
           <div className={styles.rowControl}>
             <label
@@ -449,7 +446,7 @@ export function ThemeSettings(): JSX.Element {
               <input
                 type="checkbox"
                 checked={showEventIcons}
-                aria-label="Show event icons"
+                aria-label={t('theme.showEventIcons.ariaLabel')}
                 onChange={() => updateSettings({ showEventIcons: !showEventIcons })}
               />
               <span className={styles.pill} />
@@ -457,21 +454,21 @@ export function ThemeSettings(): JSX.Element {
             </label>
           </div>
         </div>
-        <div className={`${styles.row} ${styles.rowDisabled}`} title="Not available yet">
+        <div className={`${styles.row} ${styles.rowDisabled}`} title={t('theme.fontSize.notAvailable')}>
           <div className={styles.rowInfo}>
-            <div className={styles.rowLabel}>Font Size</div>
-            <div className={styles.rowDesc}>Affects text density throughout the app</div>
+            <div className={styles.rowLabel}>{t('theme.fontSize.label')}</div>
+            <div className={styles.rowDesc}>{t('theme.fontSize.desc')}</div>
           </div>
           <div className={styles.rowControl}>
             <div className={styles.seg}>
               <button className={`${styles.segTab} ${styles.segTabActive}`} type="button">
-                Small
+                {t('theme.fontSize.small')}
               </button>
               <button className={styles.segTab} type="button">
-                Default
+                {t('theme.fontSize.default')}
               </button>
               <button className={styles.segTab} type="button">
-                Large
+                {t('theme.fontSize.large')}
               </button>
             </div>
           </div>

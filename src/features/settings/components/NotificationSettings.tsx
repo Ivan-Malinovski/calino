@@ -1,5 +1,6 @@
 import type { JSX } from 'react'
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Capacitor } from '@capacitor/core'
 import { useSettingsStore } from '@/store/settingsStore'
@@ -35,6 +36,7 @@ const CALENDAR_PERMISSION_DENIED_TOAST =
   'Calendar access is blocked. Grant it in Android app settings to sync events to your device calendar.'
 
 export function NotificationSettings(): JSX.Element {
+  const { t } = useTranslation('settings')
   const enableDesktopNotifications = useSettingsStore((s) => s.enableDesktopNotifications)
   const enableCalendarMirror = useSettingsStore((s) => s.enableCalendarMirror)
   const mirrorStatus = useCalendarMirrorStore((s) => s.status)
@@ -126,10 +128,10 @@ export function NotificationSettings(): JSX.Element {
       className={`${styles.section} ${styles.sectionActive}`}
       data-component="notification-settings"
     >
-      <h1 className={styles.pageTitle}>Notifications</h1>
+      <h1 className={styles.pageTitle}>{t('notifications.title')}</h1>
 
       <div className={styles.group}>
-        <div className={styles.groupLabel}>Events</div>
+        <div className={styles.groupLabel}>{t('notifications.events')}</div>
         <div
           className={styles.row}
           data-component="setting-row"
@@ -137,8 +139,8 @@ export function NotificationSettings(): JSX.Element {
           data-value={String(enableDesktopNotifications)}
         >
           <div className={styles.rowInfo}>
-            <div className={styles.rowLabel}>Event Reminders</div>
-            <div className={styles.rowDesc}>Get notified before events start</div>
+            <div className={styles.rowLabel}>{t('notifications.eventReminders.label')}</div>
+            <div className={styles.rowDesc}>{t('notifications.eventReminders.desc')}</div>
           </div>
           <div className={styles.rowControl}>
             <label
@@ -149,7 +151,7 @@ export function NotificationSettings(): JSX.Element {
               <input
                 type="checkbox"
                 checked={enableDesktopNotifications}
-                aria-label="Event reminders"
+                aria-label={t('notifications.eventReminders.ariaLabel')}
                 onChange={handleEnableNotifications}
                 disabled={permissionStatus === 'denied'}
               />
@@ -165,15 +167,15 @@ export function NotificationSettings(): JSX.Element {
           data-value={String(enableSoundAlerts)}
         >
           <div className={styles.rowInfo}>
-            <div className={styles.rowLabel}>Sound Alerts</div>
-            <div className={styles.rowDesc}>Play a sound when events are about to start</div>
+            <div className={styles.rowLabel}>{t('notifications.soundAlerts.label')}</div>
+            <div className={styles.rowDesc}>{t('notifications.soundAlerts.desc')}</div>
           </div>
           <div className={styles.rowControl}>
             <label className={styles.toggle} data-component="toggle" data-setting="sound-alerts">
               <input
                 type="checkbox"
                 checked={enableSoundAlerts}
-                aria-label="Sound alerts"
+                aria-label={t('notifications.soundAlerts.ariaLabel')}
                 onChange={() => updateSettings({ enableSoundAlerts: !enableSoundAlerts })}
               />
               <span className={styles.pill} />
@@ -185,7 +187,7 @@ export function NotificationSettings(): JSX.Element {
 
       {supportsCalendarMirror && (
         <div className={styles.group}>
-          <div className={styles.groupLabel}>Device calendar</div>
+          <div className={styles.groupLabel}>{t('notifications.deviceCalendar')}</div>
           <div
             className={styles.row}
             data-component="setting-row"
@@ -193,19 +195,19 @@ export function NotificationSettings(): JSX.Element {
             data-value={String(enableCalendarMirror)}
           >
             <div className={styles.rowInfo}>
-              <div className={styles.rowLabel}>Sync to Android Calendar (beta)</div>
+              <div className={styles.rowLabel}>{t('notifications.calendarMirror.label')}</div>
               <div className={styles.rowDesc}>
                 {!enableCalendarMirror
-                  ? 'Copy your events into the device calendar so Android delivers reminders even when Calino is closed, and widgets, Wear OS and Android Auto can see them. Read-only — nothing is written back to your CalDAV server.'
+                  ? t('notifications.calendarMirror.descOff')
                   : mirrorStatus === 'active'
-                    ? 'Android is delivering your reminders. Events are visible to widgets, Wear OS and Android Auto.'
+                    ? t('notifications.calendarMirror.descActive')
                     : mirrorStatus === 'no-calendar-app'
-                      ? 'Events are synced, but no calendar app is installed to raise reminders — Calino is still handling those itself.'
+                      ? t('notifications.calendarMirror.descNoCalendarApp')
                       : mirrorStatus === 'denied'
-                        ? 'Calendar access is unavailable. Re-grant it in Android app settings.'
+                        ? t('notifications.calendarMirror.descDenied')
                         : mirrorStatus === 'failed'
-                          ? `Could not write to the device calendar${mirrorError ? `: ${mirrorError}` : '.'}`
-                          : 'Syncing…'}
+                          ? mirrorError ? t('notifications.calendarMirror.descFailed', { error: mirrorError }) : t('notifications.calendarMirror.descFailedNoDetail')
+                          : t('notifications.calendarMirror.descSyncing')}
               </div>
             </div>
             <div className={styles.rowControl}>
@@ -217,7 +219,7 @@ export function NotificationSettings(): JSX.Element {
                 <input
                   type="checkbox"
                   checked={enableCalendarMirror}
-                  aria-label="Sync to Android Calendar (beta)"
+                  aria-label={t('notifications.calendarMirror.ariaLabel')}
                   onChange={handleToggleCalendarMirror}
                 />
                 <span className={styles.pill} />
@@ -231,9 +233,9 @@ export function NotificationSettings(): JSX.Element {
             data-setting="calendar-mirror-info"
           >
             <div className={styles.rowInfo}>
-              <div className={styles.rowLabel}>How this works</div>
+              <div className={styles.rowLabel}>{t('notifications.calendarMirrorInfo.label')}</div>
               <div className={styles.rowDesc}>
-                What gets copied, who delivers your reminders, and what to expect in beta
+                {t('notifications.calendarMirrorInfo.desc')}
               </div>
             </div>
             <div className={styles.rowControl}>
@@ -244,7 +246,7 @@ export function NotificationSettings(): JSX.Element {
                 data-action="calendar-mirror-info"
                 type="button"
               >
-                Learn more
+                {t('notifications.calendarMirrorInfo.learnMore')}
               </button>
             </div>
           </div>
@@ -254,73 +256,43 @@ export function NotificationSettings(): JSX.Element {
       <Modal
         isOpen={showMirrorInfo}
         onClose={() => setShowMirrorInfo(false)}
-        title="Sync to Android Calendar"
+        title={t('notifications.calendarMirrorModal.title')}
       >
         <div className={styles.infoBody}>
           <p>
-            Calino copies your events into Android&apos;s own calendar database — the same one your
-            calendar widget, Wear OS watch and Android Auto read from. Those apps can&apos;t see
-            Calino&apos;s storage, so this is what makes your events show up in them.
+            {t('notifications.calendarMirrorModal.intro')}
           </p>
 
           <div className={styles.infoSection}>
-            <h3>Why it makes reminders more reliable</h3>
-            <p>
-              On its own, Calino can only schedule a reminder while it&apos;s running. Android
-              schedules reminders for events in its calendar whether or not Calino has been opened,
-              so while this is on, Android delivers them and Calino stands down — you won&apos;t get
-              two notifications for the same event.
-            </p>
-            <p>
-              This needs a calendar app installed to actually raise the notification. If you
-              don&apos;t have one, Calino says so above and keeps handling reminders itself.
-            </p>
+            <h3>{t('notifications.calendarMirrorModal.reliabilityTitle')}</h3>
+            <p>{t('notifications.calendarMirrorModal.reliabilityP1')}</p>
+            <p>{t('notifications.calendarMirrorModal.reliabilityP2')}</p>
           </div>
 
           <div className={styles.infoSection}>
-            <h3>It only goes one way</h3>
+            <h3>{t('notifications.calendarMirrorModal.oneWayTitle')}</h3>
             <ul>
-              <li>
-                The mirrored calendars are read-only. Calino stays the only thing that writes to
-                your CalDAV server, and nothing you do in another calendar app comes back.
-              </li>
-              <li>Only calendars you&apos;ve set to visible are copied.</li>
-              <li>
-                Turning this off deletes the mirrored calendars again, leaving your other calendars
-                untouched.
-              </li>
+              <li>{t('notifications.calendarMirrorModal.oneWayItem1')}</li>
+              <li>{t('notifications.calendarMirrorModal.oneWayItem2')}</li>
+              <li>{t('notifications.calendarMirrorModal.oneWayItem3')}</li>
             </ul>
           </div>
 
           <div className={styles.infoSection}>
-            <h3>Staying up to date</h3>
-            <p>
-              About once an hour Calino checks your server in the background, so an event you add on
-              another device gets to your phone and reminds you even if you haven&apos;t opened
-              Calino since. Nothing is sent anywhere new — it&apos;s the same connection to your own
-              server that the app already uses.
-            </p>
+            <h3>{t('notifications.calendarMirrorModal.stayingUpToDateTitle')}</h3>
+            <p>{t('notifications.calendarMirrorModal.stayingUpToDateP1')}</p>
           </div>
 
           <div className={styles.infoSection}>
-            <h3>Why it&apos;s in beta</h3>
-            <p>
-              The background check is at the mercy of your phone&apos;s battery settings. Xiaomi,
-              Samsung, OPPO, OnePlus and Huawei devices in particular freeze background apps
-              aggressively, and will silently skip it. If your events seem stale, set Calino to{' '}
-              <strong>No restrictions</strong> in Android&apos;s battery settings for the app.
-            </p>
-            <p>
-              If a mirrored calendar doesn&apos;t appear in your calendar app, it&apos;s usually
-              hidden rather than missing — new calendars often arrive unticked in that app&apos;s
-              own list of calendars to display.
-            </p>
+            <h3>{t('notifications.calendarMirrorModal.betaTitle')}</h3>
+            <p>{t('notifications.calendarMirrorModal.betaP1')}</p>
+            <p>{t('notifications.calendarMirrorModal.betaP2')}</p>
           </div>
         </div>
       </Modal>
 
       <div className={styles.group}>
-        <div className={styles.groupLabel}>Tasks</div>
+        <div className={styles.groupLabel}>{t('notifications.tasks')}</div>
         <div
           className={styles.row}
           data-component="setting-row"
@@ -328,8 +300,8 @@ export function NotificationSettings(): JSX.Element {
           data-value={String(taskDueDateReminders)}
         >
           <div className={styles.rowInfo}>
-            <div className={styles.rowLabel}>Task Due Date Reminders</div>
-            <div className={styles.rowDesc}>Notify when a task&apos;s due date arrives</div>
+            <div className={styles.rowLabel}>{t('notifications.taskDueDateReminders.label')}</div>
+            <div className={styles.rowDesc}>{t('notifications.taskDueDateReminders.desc')}</div>
           </div>
           <div className={styles.rowControl}>
             <label
@@ -340,7 +312,7 @@ export function NotificationSettings(): JSX.Element {
               <input
                 type="checkbox"
                 checked={taskDueDateReminders}
-                aria-label="Task due date reminders"
+                aria-label={t('notifications.taskDueDateReminders.ariaLabel')}
                 onChange={() => updateSettings({ taskDueDateReminders: !taskDueDateReminders })}
               />
               <span className={styles.pill} />
@@ -355,8 +327,8 @@ export function NotificationSettings(): JSX.Element {
           data-value={String(overdueTaskBadge)}
         >
           <div className={styles.rowInfo}>
-            <div className={styles.rowLabel}>Overdue Task Badge</div>
-            <div className={styles.rowDesc}>Show a badge on the app icon for overdue tasks</div>
+            <div className={styles.rowLabel}>{t('notifications.overdueTaskBadge.label')}</div>
+            <div className={styles.rowDesc}>{t('notifications.overdueTaskBadge.desc')}</div>
           </div>
           <div className={styles.rowControl}>
             <label
@@ -367,7 +339,7 @@ export function NotificationSettings(): JSX.Element {
               <input
                 type="checkbox"
                 checked={overdueTaskBadge}
-                aria-label="Overdue task badge"
+                aria-label={t('notifications.overdueTaskBadge.ariaLabel')}
                 onChange={() => updateSettings({ overdueTaskBadge: !overdueTaskBadge })}
               />
               <span className={styles.pill} />
@@ -380,13 +352,13 @@ export function NotificationSettings(): JSX.Element {
       <div className={styles.group}>
         <div className={styles.row} data-component="setting-row" data-setting="test-notification">
           <div className={styles.rowInfo}>
-            <div className={styles.rowLabel}>Test Notification</div>
+          <div className={styles.rowLabel}>{t('notifications.test.label')}</div>
             <div className={styles.rowDesc}>
               {permissionStatus === 'default'
-                ? 'Click to enable notifications and test'
+                ? t('notifications.test.descDefault')
                 : permissionStatus === 'denied'
-                  ? 'Notifications are blocked in browser settings'
-                  : 'Send a test notification'}
+                  ? t('notifications.test.descDenied')
+                  : t('notifications.test.descReady')}
             </div>
           </div>
           <div className={styles.rowControl}>
@@ -398,7 +370,7 @@ export function NotificationSettings(): JSX.Element {
               data-action="test-notification"
               type="button"
             >
-              {permissionStatus === 'default' ? 'Enable & Test' : 'Send Test'}
+              {permissionStatus === 'default' ? t('notifications.test.enableAndTest') : t('notifications.test.sendTest')}
             </button>
           </div>
         </div>

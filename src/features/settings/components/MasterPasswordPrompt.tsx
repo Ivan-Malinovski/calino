@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useLocation } from 'react-router'
 import { useConfigStore } from '../../../store/configStore'
+import { useTranslation } from 'react-i18next'
 import { useFocusTrap } from '@/hooks/useFocusTrap'
 import styles from './MasterPasswordPrompt.module.css'
 
@@ -42,6 +43,7 @@ function setBlockedUntil(ts: number): void {
 }
 
 export function MasterPasswordPrompt() {
+  const { t } = useTranslation('settings')
   const location = useLocation()
   const { hasPreconfiguredAccounts, isUnlocked, unlock } = useConfigStore()
   const [password, setPassword] = useState('')
@@ -98,11 +100,9 @@ export function MasterPasswordPrompt() {
         setBlockedUntil(blockedUntil)
         setBlocked(true)
         setRemainingSeconds(Math.ceil(BLOCK_DURATION_MS / 1000))
-        setError(`Too many attempts. Try again in 1 minute.`)
+        setError(t('masterPassword.tooManyAttempts'))
       } else {
-        setError(
-          `Wrong password. ${MAX_ATTEMPTS - newAttempts} attempt${MAX_ATTEMPTS - newAttempts === 1 ? '' : 's'} remaining.`
-        )
+        setError(t('masterPassword.wrongPassword', { count: MAX_ATTEMPTS - newAttempts }))
       }
 
       setPassword('')
@@ -146,20 +146,20 @@ export function MasterPasswordPrompt() {
       className={styles.overlay}
       role="dialog"
       aria-modal="true"
-      aria-label="Unlock CalDAV accounts"
+      aria-label={t('masterPassword.overlayAriaLabel')}
     >
       <div className={styles.modal}>
         <div className={styles.header}>
           <div className={styles.icon}>🔐</div>
-          <h2 className={styles.title}>Unlock CalDAV Accounts</h2>
+          <h2 className={styles.title}>{t('masterPassword.title')}</h2>
           <p className={styles.subtitle}>
-            Enter your master password to connect to preconfigured accounts.
+            {t('masterPassword.subtitle')}
           </p>
         </div>
 
         <div className={styles.inputGroup}>
           <label className={styles.label} htmlFor="master-password">
-            Master Password
+            {t('masterPassword.label')}
           </label>
           <input
             ref={inputRef}
@@ -172,7 +172,7 @@ export function MasterPasswordPrompt() {
               setError('')
             }}
             onKeyDown={handleKeyDown}
-            placeholder="Enter master password"
+            placeholder={t('masterPassword.placeholder')}
             autoComplete="current-password"
             disabled={loading || blocked}
           />
@@ -188,9 +188,9 @@ export function MasterPasswordPrompt() {
             {loading ? (
               <span className={styles.spinner} />
             ) : blocked ? (
-              `Wait ${remainingSeconds}s`
+              t('masterPassword.wait', { seconds: remainingSeconds })
             ) : (
-              'Unlock'
+              t('masterPassword.unlock')
             )}
           </button>
         </div>

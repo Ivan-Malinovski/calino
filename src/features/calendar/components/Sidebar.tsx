@@ -30,7 +30,7 @@ import {
 } from '@/features/caldav/client/errorMessages'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
-import { getMonthNames } from './weekdayLabels'
+import { getMonthNames, getNarrowWeekdayLabels } from './weekdayLabels'
 import { useCalDAVSyncStore } from '@/store/caldavSyncStore'
 import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
 import { useUpdateCheck } from '@/hooks/useUpdateCheck'
@@ -43,19 +43,23 @@ import { CreateCalendarModal } from './CreateCalendarModal'
 import { DeleteCalendarDialog } from './DeleteCalendarDialog'
 import { EmptyState } from '@/components/common/EmptyState'
 import { MiniTasksSection } from './MiniTasksSection'
+import { useTranslation } from 'react-i18next'
+import { formatDisplayDate } from '@/lib/datetime'
 import styles from './Sidebar.module.css'
 
 let hasAutoSyncedCalendars = false
 const CALENDAR_COLOR_PRESETS = [...CALENDAR_COLORS.slice(0, 4), '#7B1FA2']
 
 /**
- * Tail of a "changed locally, but …" toast. The local edit already succeeded,
- * so this only has to explain why the server didn't get it — without pasting a
- * raw `TypeError` into the sentence.
+ * The machine-readable reason tail of a "changed locally, but …" toast, when
+ * one is available. The local edit already succeeded, so this only exists to
+ * explain why the server didn't get it — without pasting a raw `TypeError`
+ * into the sentence. `null` means no specific reason could be determined, and
+ * the caller falls back to a whole generic sentence instead.
  */
-function serverFailureDetail(error: unknown): string {
-  if (!(error instanceof Error)) return "the server didn't get the change."
-  return `the server didn't get it: ${syncErrorReason(classifySyncError(error.message), error.message)}`
+function serverFailureReason(error: unknown): string | null {
+  if (!(error instanceof Error)) return null
+  return syncErrorReason(classifySyncError(error.message), error.message)
 }
 
 interface SidebarProps {
@@ -71,6 +75,7 @@ export function Sidebar({
   isCollapsed: controlledCollapsed,
   onCollapsedChange,
 }: SidebarProps): JSX.Element {
+  const { t } = useTranslation(['calendar', 'common'])
   const prefersReducedMotion = useReducedMotion()
   const [internalCollapsed, setInternalCollapsed] = useState(false)
   const isCollapsed = controlledCollapsed ?? internalCollapsed
@@ -179,7 +184,7 @@ export function Sidebar({
   const handleSyncAll = async (): Promise<void> => {
     if (accountIds.length === 0 || isSyncingAll) return
     if (globalSyncStatus === 'syncing') {
-      showToast('Calendars are already syncing.')
+      showToast(t('views.sidebar.calendarsAlreadySyncing'))
       return
     }
     // A manual request made before the mount effect runs becomes the initial
@@ -188,12 +193,12 @@ export function Sidebar({
     setIsSyncingAll(true)
     try {
       await runSyncAll()
-      showToast('All calendars synced.')
+      showToast(t('views.sidebar.allCalendarsSynced'))
     } catch (error) {
       showToast(
         error instanceof Error
           ? shortSyncErrorMessage(classifySyncError(error.message), error.message)
-          : 'Failed to sync calendars'
+          : t('views.sidebar.failedToSyncCalendars')
       )
     } finally {
       setIsSyncingAll(false)
@@ -233,7 +238,7 @@ export function Sidebar({
     // Same guard handleSyncAll applies: a per-calendar sync must not overlap a
     // sync-all already in flight for the same account.
     if (globalSyncStatus === 'syncing') {
-      showToast('Calendars are already syncing.')
+      showToast(t('views.sidebar.calendarsAlreadySyncing'))
       return
     }
     setSyncingCalendarId(calendarId)
@@ -340,7 +345,12 @@ export function Sidebar({
         try {
           await updateCalDAVCalendar(editingId, { name: newName })
         } catch (error) {
-          showToast(`Renamed locally, but ${serverFailureDetail(error)}`)
+          const reason = serverFailureReason(error)
+          showToast(
+            reason
+              ? t('views.sidebar.renamedLocallyButFailedReason', { reason })
+              : t('views.sidebar.renamedLocallyButFailed')
+          )
         }
       }
     }
@@ -366,7 +376,12 @@ export function Sidebar({
       try {
         await updateCalDAVCalendar(calendarId, { color })
       } catch (error) {
-        showToast(`Color changed locally, but ${serverFailureDetail(error)}`)
+        const reason = serverFailureReason(error)
+        showToast(
+          reason
+            ? t('views.sidebar.colorChangedLocallyButFailedReason', { reason })
+            : t('views.sidebar.colorChangedLocallyButFailed')
+        )
       }
     }
   }
@@ -444,11 +459,10 @@ export function Sidebar({
     return eachDayOfInterval({ start: calendarStart, end: calendarEnd })
   }, [effectiveMiniDate, firstDayOfWeek])
 
-  const weekdays = useMemo(() => {
-    const days = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
-    const idx = firstDayOfWeek || 0
-    return [...days.slice(idx), ...days.slice(0, idx)]
-  }, [firstDayOfWeek])
+  const weekdays = useMemo(
+    () => getNarrowWeekdayLabels(firstDayOfWeek || 0),
+    [firstDayOfWeek]
+  )
 
   const miniWeeks = useMemo(() => {
     const weeks: Date[][] = []
@@ -566,14 +580,14 @@ export function Sidebar({
               <button
                 onClick={handlePrevMonth}
                 className={styles.miniNavBtn}
-                aria-label="Previous month"
+                aria-label={t('views.sidebar.previousMonth')}
               >
                 <ChevronLeft />
               </button>
               <div style={{ position: 'relative' }} ref={dropdownRef}>
                 <span className={styles.miniMonth}>
                   <button onClick={handleMonthClick} className={styles.miniMonthButton}>
-                    {format(effectiveMiniDate, 'MMMM')}
+                    {formatDisplayDate(effectiveMiniDate, 'MMMM')}
                   </button>
                   {showMonthDropdown && (
                     <div className={styles.yearDropdown}>
@@ -615,7 +629,7 @@ export function Sidebar({
               <button
                 onClick={handleNextMonth}
                 className={styles.miniNavBtn}
-                aria-label="Next month"
+                aria-label={t('views.sidebar.nextMonth')}
               >
                 <ChevronRight />
               </button>
@@ -666,7 +680,7 @@ export function Sidebar({
               onClick={handleToday}
               data-component="sidebar-today-button"
             >
-              Today
+              {t('common:actions.today')}
             </button>
           </div>
 
@@ -680,7 +694,7 @@ export function Sidebar({
                 aria-controls="sidebar-calendars"
                 data-component="calendar-section-toggle"
               >
-                <span className={styles.sectionTitle}>Calendars</span>
+                <span className={styles.sectionTitle}>{t('views.sidebar.calendars')}</span>
                 {calendars.length > 0 && (
                   <span className={styles.sectionCount}>
                     {calendars.filter((calendar) => calendar.isVisible).length}/{calendars.length}
@@ -694,8 +708,8 @@ export function Sidebar({
                 <button
                   className={`${styles.addCalendarButton} ${isSyncingAll || globalSyncStatus === 'syncing' ? styles.headerSyncing : ''}`}
                   onClick={handleSyncAll}
-                  title="Sync all calendars"
-                  aria-label="Sync all calendars"
+                  title={t('views.sidebar.syncAllCalendars')}
+                  aria-label={t('views.sidebar.syncAllCalendars')}
                   data-component="sync-all-calendars"
                   disabled={accountIds.length === 0 || isSyncingAll}
                 >
@@ -718,8 +732,8 @@ export function Sidebar({
                     const rect = e.currentTarget.getBoundingClientRect()
                     setAddCalendarMenu({ x: rect.left, y: rect.bottom + 4 })
                   }}
-                  title="Add calendar"
-                  aria-label="Add calendar"
+                  title={t('views.sidebar.addCalendar')}
+                  aria-label={t('views.sidebar.addCalendar')}
                 >
                   <PlusIcon />
                 </button>
@@ -737,16 +751,16 @@ export function Sidebar({
                 >
                   {calendars.length === 0 && (
                     <EmptyState
-                      title="No calendars yet"
-                      description="Add a CalDAV account to sync events, or continue offline."
+                      title={t('views.sidebar.noCalendarsYet')}
+                      description={t('views.sidebar.noCalendarsYetDescription')}
                       action={
                         <button
                           className={styles.addCalendarButton}
                           onClick={() => setShowAddCalendar(true)}
-                          aria-label="Add a CalDAV account"
+                          aria-label={t('views.sidebar.addCaldavAccount')}
                           data-component="sidebar-empty-add"
                         >
-                          + Add a CalDAV account
+                          + {t('views.sidebar.addCaldavAccount')}
                         </button>
                       }
                     />
@@ -764,7 +778,7 @@ export function Sidebar({
                         className={styles.checkbox}
                         data-component="calendar-visibility-toggle"
                         data-calendar-id={calendar.id}
-                        aria-label={`Show ${calendar.name}`}
+                        aria-label={t('views.sidebar.showCalendarName', { name: calendar.name })}
                       />
                       <div
                         className={styles.colorPicker}
@@ -780,7 +794,7 @@ export function Sidebar({
                               current === calendar.id ? null : calendar.id
                             )
                           }}
-                          aria-label={`Change ${calendar.name} color`}
+                          aria-label={t('views.sidebar.changeCalendarColor', { name: calendar.name })}
                           aria-expanded={colorPickerCalendarId === calendar.id}
                           aria-controls={`calendar-color-picker-${calendar.id}`}
                         />
@@ -789,7 +803,7 @@ export function Sidebar({
                             id={`calendar-color-picker-${calendar.id}`}
                             className={styles.colorPickerMenu}
                             role="group"
-                            aria-label={`Color picker for ${calendar.name}`}
+                            aria-label={t('views.sidebar.colorPickerFor', { name: calendar.name })}
                             data-component="calendar-color-picker"
                           >
                             <div className={styles.colorPresets}>
@@ -803,7 +817,7 @@ export function Sidebar({
                                     event.preventDefault()
                                     handleColorChange(calendar.id, color)
                                   }}
-                                  aria-label={`Use ${color} for ${calendar.name}`}
+                                  aria-label={t('views.sidebar.useColorFor', { color, name: calendar.name })}
                                 />
                               ))}
                               <span
@@ -822,7 +836,7 @@ export function Sidebar({
                                   onChange={(event) =>
                                     handleColorChange(calendar.id, event.target.value)
                                   }
-                                  aria-label={`Custom color for ${calendar.name}`}
+                                  aria-label={t('views.sidebar.customColorFor', { name: calendar.name })}
                                 />
                               </span>
                             </div>
@@ -851,8 +865,8 @@ export function Sidebar({
                         <button
                           className={`${styles.syncButton} ${syncingCalendarId === calendar.id || syncState.status === 'syncing' || globalSyncStatus === 'syncing' ? styles.syncing : ''} ${syncStatus[calendar.id] === 'success' ? styles.success : ''} ${syncStatus[calendar.id] === 'error' ? styles.error : ''}`}
                           onClick={() => handleSyncCalendar(calendar.id, calendar.accountId)}
-                          title="Sync calendar"
-                          aria-label={`Sync ${calendar.name}`}
+                          title={t('views.sidebar.syncCalendar')}
+                          aria-label={t('views.sidebar.syncCalendarName', { name: calendar.name })}
                           disabled={!!syncingCalendarId}
                         >
                           {syncStatus[calendar.id] === 'success' ? (
@@ -918,7 +932,7 @@ export function Sidebar({
                   aria-controls="sidebar-categories"
                   data-component="category-section-toggle"
                 >
-                  <span className={styles.sectionTitle}>Categories</span>
+                  <span className={styles.sectionTitle}>{t('views.sidebar.categories')}</span>
                   <ChevronDown
                     className={`${styles.chevron} ${isCategoriesExpanded ? styles.chevronExpanded : ''}`}
                   />
@@ -962,7 +976,7 @@ export function Sidebar({
                         ))}
                       </div>
                       <div className={styles.categoryToggle}>
-                        <span className={styles.categoryToggleLabel}>Use category colors</span>
+                        <span className={styles.categoryToggleLabel}>{t('views.sidebar.useCategoryColors')}</span>
                         <label className={styles.categoryToggleSwitch}>
                           <input
                             type="checkbox"
@@ -1002,11 +1016,11 @@ export function Sidebar({
                 y={addCalendarMenu.y}
                 items={[
                   {
-                    label: 'Add CalDAV Account',
+                    label: t('views.sidebar.addCaldavAccountMenu'),
                     onClick: () => setShowAddCalendar(true),
                   },
                   {
-                    label: 'Subscribe to Calendar (.ics)',
+                    label: t('views.sidebar.subscribeToCalendar'),
                     onClick: () => setShowSubscribeCalendar(true),
                   },
                 ]}
@@ -1044,7 +1058,7 @@ export function Sidebar({
                           error.message,
                           'Delete'
                         )
-                      : 'Failed to delete calendar'
+                      : t('views.sidebar.failedToDeleteCalendar')
                   )
                 }
               }
@@ -1058,8 +1072,8 @@ export function Sidebar({
                 items={[
                   {
                     label: calendars.find((c) => c.id === contextMenu.calendarId)?.showTasksInViews
-                      ? 'Hide Tasks in Views'
-                      : 'Show Tasks in Views',
+                      ? t('views.sidebar.hideTasksInViews')
+                      : t('views.sidebar.showTasksInViews'),
                     onClick: () => {
                       const calendar = calendars.find((c) => c.id === contextMenu.calendarId)
                       if (calendar) {
@@ -1072,8 +1086,8 @@ export function Sidebar({
                   },
                   {
                     label: hideCompletedTasksInMonthView
-                      ? 'Show Completed Tasks'
-                      : 'Hide Completed Tasks',
+                      ? t('views.sidebar.showCompletedTasks')
+                      : t('views.sidebar.hideCompletedTasks'),
                     onClick: () => {
                       updateSettings({
                         hideCompletedTasksInMonthView: !hideCompletedTasksInMonthView,
@@ -1082,7 +1096,7 @@ export function Sidebar({
                     },
                   },
                   {
-                    label: 'Export Calendar (.ics)',
+                    label: t('views.sidebar.exportCalendar'),
                     dataComponent: 'export-calendar-ics',
                     onClick: () => {
                       const calendar = calendars.find((c) => c.id === contextMenu.calendarId)
@@ -1095,9 +1109,7 @@ export function Sidebar({
                           useCalendarStore.getState().events
                         )
                         showToast(
-                          count === 1
-                            ? `Exported 1 event from ${calendar.name}`
-                            : `Exported ${count} events from ${calendar.name}`
+                          t('views.sidebar.exportedEvents', { count, calendarName: calendar.name })
                         )
                       }
                       closeContextMenu()
@@ -1107,7 +1119,7 @@ export function Sidebar({
                   ...(calendars.find((c) => c.id === contextMenu.calendarId)?.accountId
                     ? [
                         {
-                          label: 'Rename',
+                          label: t('views.sidebar.rename'),
                           onClick: () => {
                             const calendar = calendars.find((c) => c.id === contextMenu.calendarId)
                             if (calendar) {
@@ -1118,7 +1130,7 @@ export function Sidebar({
                           },
                         },
                         {
-                          label: 'Create Calendar Here',
+                          label: t('views.sidebar.createCalendarHere'),
                           onClick: () => {
                             const calendar = calendars.find((c) => c.id === contextMenu.calendarId)
                             if (calendar?.accountId) {
@@ -1129,7 +1141,7 @@ export function Sidebar({
                           },
                         },
                         {
-                          label: 'Delete',
+                          label: t('common:actions.delete'),
                           onClick: () => {
                             const calendar = calendars.find((c) => c.id === contextMenu.calendarId)
                             if (calendar) {
@@ -1143,7 +1155,7 @@ export function Sidebar({
                       ]
                     : [
                         {
-                          label: 'Remove',
+                          label: t('common:actions.remove'),
                           onClick: () => {
                             deleteCalendar(contextMenu.calendarId)
                             closeContextMenu()
@@ -1166,6 +1178,7 @@ export function Sidebar({
 }
 
 function UpdateIndicator(): JSX.Element {
+  const { t } = useTranslation('calendar')
   const prefersReducedMotion = useReducedMotion()
   const { hasUpdate, latestVersion, releaseUrl, dismiss } = useUpdateCheck()
   const [showPopup, setShowPopup] = useState(false)
@@ -1243,13 +1256,14 @@ function UpdateIndicator(): JSX.Element {
               onMouseLeave={handleMouseLeave}
             >
               <p className={styles.updatePopupText}>
-                <span className={styles.updatePopupVersion}>Calino {latestVersion}</span> is
-                available
+                {t('views.sidebar.updateAvailable', { version: latestVersion })}
               </p>
-              <p className={styles.updatePopupCurrent}>You have {config.appVersion}</p>
+              <p className={styles.updatePopupCurrent}>
+                {t('views.sidebar.updateCurrentVersion', { version: config.appVersion })}
+              </p>
               <div className={styles.updatePopupActions}>
                 <button className={styles.updateDismissBtn} onClick={dismiss}>
-                  Dismiss
+                  {t('views.sidebar.updateDismiss')}
                 </button>
                 <a
                   href={releaseUrl ?? `https://github.com/${config.githubRepo}`}
@@ -1257,7 +1271,7 @@ function UpdateIndicator(): JSX.Element {
                   rel="noopener noreferrer"
                   className={styles.updateViewBtn}
                 >
-                  View release
+                  {t('views.sidebar.updateViewRelease')}
                 </a>
               </div>
             </motion.div>

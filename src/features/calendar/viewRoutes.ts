@@ -38,6 +38,19 @@ export interface ViewMeta {
   group: 'calendar' | 'tools'
 }
 
+/** Translation keys for labels shared by the desktop and mobile switchers. */
+export const VIEW_LABEL_KEYS: Record<ViewType, string> = {
+  month: 'views.header.monthTab',
+  year: 'views.header.yearTab',
+  week: 'views.header.weekTab',
+  '3day': 'views.header.weekTab',
+  day: 'views.header.dayTab',
+  agenda: 'views.header.agendaTab',
+  todo: 'views.header.tasksTab',
+  journal: 'views.header.journalTab',
+  contacts: 'views.header.contactsTab',
+}
+
 // Canonical ordering of all switchable views. This is the *default* order —
 // the user's own arrangement lives in settings (`viewOrder`) and is
 // reconciled against this list by `useOrderedViews`, so adding a view here

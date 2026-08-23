@@ -12,6 +12,7 @@ import { useState, useCallback, useEffect, useRef } from 'react'
 import { toast as sonnerToast } from 'sonner'
 import { showToast } from '@/lib/toast'
 import { classifySyncError, shortSyncErrorMessage } from '@/features/caldav/client/errorMessages'
+import i18n from '@/lib/i18n'
 import { useSettingsStore } from '@/store/settingsStore'
 import {
   serializeSettings,
@@ -48,7 +49,13 @@ import type { CalDAVAccount } from '@/features/caldav/types'
  * hand-kept mirror of that function's substring ladder.
  */
 function showErrorToast(message: string): void {
-  sonnerToast.error(shortSyncErrorMessage(classifySyncError(message), message, 'Settings sync'))
+  sonnerToast.error(
+    shortSyncErrorMessage(
+      classifySyncError(message),
+      message,
+      i18n.t('errors:settingsSync.subject')
+    )
+  )
 }
 
 // ─── Return type ──────────────────────────────────────────────────────────────
@@ -133,7 +140,7 @@ export function useSettingsSync(): UseSettingsSyncReturn {
     if (inFlightRef.current) return false
     const accountId = getPrimaryAccountId()
     if (!accountId) {
-      setError('Sync not properly configured')
+      setError(i18n.t('errors:settingsSync.notConfigured'))
       return false
     }
 
@@ -143,18 +150,18 @@ export function useSettingsSync(): UseSettingsSyncReturn {
     try {
       const calUrl = await resolveSettingsCalendarUrl(accountId)
       if (!calUrl) {
-        setError('Settings calendar not found')
+        setError(i18n.t('errors:settingsSync.calendarNotFound'))
         return false
       }
 
       const account = accountStorage.getAccountById(accountId)
       if (!account) {
-        setError('Account not found')
+        setError(i18n.t('errors:settingsSync.accountNotFound'))
         return false
       }
       const credential = await getCredentialById(account.credentialId)
       if (!credential) {
-        setError('Credentials not found')
+        setError(i18n.t('errors:settingsSync.credentialsNotFound'))
         return false
       }
 
@@ -191,7 +198,7 @@ export function useSettingsSync(): UseSettingsSyncReturn {
       if (isMountedRef.current) forceRender((n) => n + 1)
       return true
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Pull failed'
+      const msg = err instanceof Error ? err.message : i18n.t('errors:settingsSync.pullFailed')
       console.error('[SettingsSync] Pull failed:', err)
       if (isMountedRef.current) setError(msg)
       return false
@@ -210,7 +217,7 @@ export function useSettingsSync(): UseSettingsSyncReturn {
       }
       const accountId = getPrimaryAccountId()
       if (!accountId) {
-        setError('Sync not properly configured')
+        setError(i18n.t('errors:settingsSync.notConfigured'))
         return
       }
 
@@ -222,8 +229,8 @@ export function useSettingsSync(): UseSettingsSyncReturn {
           console.log('[SettingsSync] Push: resolving calendar URL...')
         const calUrl = await resolveSettingsCalendarUrl(accountId)
         if (!calUrl) {
-          setError('Settings calendar not found')
-          showErrorToast('Settings calendar not found')
+          setError(i18n.t('errors:settingsSync.calendarNotFound'))
+          showErrorToast(i18n.t('errors:settingsSync.calendarNotFound'))
           return
         }
         if (useSettingsStore.getState().caldavDebugMode)
@@ -231,14 +238,14 @@ export function useSettingsSync(): UseSettingsSyncReturn {
 
         const account = accountStorage.getAccountById(accountId)
         if (!account) {
-          setError('Account not found')
-          showErrorToast('Account not found')
+          setError(i18n.t('errors:settingsSync.accountNotFound'))
+          showErrorToast(i18n.t('errors:settingsSync.accountNotFound'))
           return
         }
         const credential = await getCredentialById(account.credentialId)
         if (!credential) {
-          setError('Credentials not found')
-          showErrorToast('Credentials not found')
+          setError(i18n.t('errors:settingsSync.credentialsNotFound'))
+          showErrorToast(i18n.t('errors:settingsSync.credentialsNotFound'))
           return
         }
 
@@ -256,10 +263,10 @@ export function useSettingsSync(): UseSettingsSyncReturn {
         setLastSyncedAt(new Date().toISOString())
         if (isMountedRef.current) {
           forceRender((n) => n + 1)
-          showToast('Settings saved to server.')
+          showToast(i18n.t('errors:sync.settingsSaved'))
         }
       } catch (err) {
-        const msg = err instanceof Error ? err.message : 'Push failed'
+        const msg = err instanceof Error ? err.message : i18n.t('errors:settingsSync.pushFailed')
         console.error('[SettingsSync] Push failed:', err)
         if (isMountedRef.current) setError(msg)
         const is412 =
@@ -318,13 +325,13 @@ export function useSettingsSync(): UseSettingsSyncReturn {
       setError(null)
       try {
         const account = accountStorage.getAccountById(accountId)
-        if (!account) throw new Error('Account not found')
+        if (!account) throw new Error(i18n.t('errors:settingsSync.accountNotFound'))
         const credential = await getCredentialById(account.credentialId)
-        if (!credential) throw new Error('Credentials not found')
+        if (!credential) throw new Error(i18n.t('errors:settingsSync.credentialsNotFound'))
 
         const client = await createCalDAVClient(account.serverUrl, credential, account.proxyUrl)
         const calendars = accountStorage.getCalendarsByAccountId(accountId)
-        if (calendars.length === 0) throw new Error('No calendars found')
+        if (calendars.length === 0) throw new Error(i18n.t('errors:settingsSync.noCalendarsFound'))
         const calendarHomeUrl = deriveCalendarHomeUrl(account.serverUrl, calendars[0].url)
 
         const discovered = await client.discoverSettingsCalendar(calendarHomeUrl)
@@ -356,14 +363,14 @@ export function useSettingsSync(): UseSettingsSyncReturn {
         // A pre-existing but empty settings calendar gets the softer wording;
         // a brand-new calendar (nothing discovered) keeps the generic message.
         const toastMessage = !discovered
-          ? 'Settings sync enabled.'
+          ? i18n.t('errors:sync.settingsSyncEnabled')
           : hasExistingSettings
-            ? 'Calino Settings found — sync enabled.'
-            : 'Calino Settings calendar found — sync enabled.'
+            ? i18n.t('errors:sync.settingsFoundEnabled')
+            : i18n.t('errors:sync.settingsCalendarFoundEnabled')
         showToast(toastMessage)
         if (isMountedRef.current) forceRender((n) => n + 1)
       } catch (err) {
-        const msg = err instanceof Error ? err.message : 'Failed to enable sync'
+        const msg = err instanceof Error ? err.message : i18n.t('errors:settingsSync.enableFailed')
         console.error('[SettingsSync] Enable failed:', err)
         if (isMountedRef.current) setError(msg)
         clearSyncKeys()
@@ -428,15 +435,15 @@ export function useSettingsSync(): UseSettingsSyncReturn {
 
         showToast(
           applied
-            ? 'Calino Settings found — sync enabled automatically.'
-            : 'Calino Settings calendar found — sync enabled.'
+            ? i18n.t('errors:sync.settingsFoundEnabledAuto')
+            : i18n.t('errors:sync.settingsCalendarFoundEnabled')
         )
       } catch (err) {
         // Distinct from `discoverSettingsCalendar` returning null (no settings
         // calendar exists yet — a normal, silent no-op above). Reaching here
         // means an actual request failed, which previously only logged to the
         // console — the user had zero signal that auto-discovery broke.
-        const msg = err instanceof Error ? err.message : 'Auto-discovery failed'
+        const msg = err instanceof Error ? err.message : i18n.t('errors:settingsSync.autoDiscoveryFailed')
         console.warn('[SettingsSync] Auto-discovery failed:', err)
         if (isMountedRef.current) showErrorToast(msg)
       }

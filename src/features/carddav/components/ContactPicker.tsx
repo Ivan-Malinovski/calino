@@ -1,5 +1,6 @@
 import type { JSX } from 'react'
 import { useState, useMemo, useRef, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { Contact } from '../types'
 import { useContactStore } from '@/store/contactStore'
 import { resolveContactRef, toContactRef } from '../lib/contactRefs'
@@ -54,6 +55,7 @@ export function ContactPicker({
   placeholder,
   'data-component': dataComponent,
 }: ContactPickerProps): JSX.Element {
+  const { t } = useTranslation('contacts')
   const contacts = useContactStore((s) => s.contacts)
   const selected = resolveContactRef(value, contacts)
 
@@ -102,7 +104,7 @@ export function ContactPicker({
         aria-expanded={open}
         aria-autocomplete="list"
         data-component={dataComponent}
-        placeholder={placeholder ?? 'Search contacts…'}
+        placeholder={placeholder ?? t('list.searchContacts')}
         value={query}
         className={styles.input}
         style={{ width: '100%' }}

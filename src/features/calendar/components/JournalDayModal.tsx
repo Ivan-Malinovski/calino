@@ -16,6 +16,7 @@ import { useIsMobile } from '@/hooks/useIsMobile'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { useSheetSwipeDismiss } from '@/hooks/useSheetSwipeDismiss'
 import styles from './JournalDayModal.module.css'
+import { useTranslation } from 'react-i18next'
 
 interface JournalDayModalProps {
   isOpen: boolean
@@ -35,6 +36,7 @@ export function JournalDayModal({
   startInCompose = false,
   onClose,
 }: JournalDayModalProps): JSX.Element | null {
+  const { t } = useTranslation('calendar')
   const events = useCalendarStore((state) => state.events)
   const addEvent = useCalendarStore((state) => state.addEvent)
   const updateEvent = useCalendarStore((state) => state.updateEvent)
@@ -432,7 +434,7 @@ export function JournalDayModal({
         aria-modal="true"
       >
         <div className={styles.dragHandle} aria-hidden="true" />
-        <button className={styles.close} onClick={onClose} aria-label="Close">
+        <button className={styles.close} onClick={onClose} aria-label={t('surface.close')}>
           <svg
             viewBox="0 0 16 16"
             fill="none"
@@ -456,7 +458,7 @@ export function JournalDayModal({
               <div className={styles.entries}>
                 {entries.length === 0 && (
                   <div className={styles.emptyState}>
-                    <p>No entries for this day</p>
+                    <p>{t('surface.journalNoEntries')}</p>
                     <button className={styles.btnAccent} onClick={handleStartCompose}>
                       Write something
                     </button>
@@ -484,7 +486,7 @@ export function JournalDayModal({
                               e.stopPropagation()
                               handleStartEdit(entry)
                             }}
-                            aria-label="Edit entry"
+                            aria-label={t('surface.journalEditEntry')}
                           >
                             <svg
                               viewBox="0 0 16 16"
@@ -534,14 +536,14 @@ export function JournalDayModal({
                 ref={titleInputRef}
                 className={styles.inputTitle}
                 type="text"
-                placeholder="Title (optional)"
+                placeholder={t('surface.journalTitlePlaceholder')}
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
               />
               <textarea
                 ref={bodyInputRef}
                 className={styles.inputBody}
-                placeholder="Write something…"
+                placeholder={t('surface.journalWritePlaceholder')}
                 rows={5}
                 value={body}
                 onChange={(e) => setBody(e.target.value)}
@@ -593,7 +595,7 @@ export function JournalDayModal({
                     {categories.length > 0 && (
                       <div className={styles.addSection}>
                         <div className={styles.addSectionHeader}>
-                          <span className={styles.addSectionLabel}>Categories</span>
+                    <span className={styles.addSectionLabel}>{t('surface.journalCategories')}</span>
                           {selectedCategories.length > 0 && (
                             <button
                               type="button"
@@ -638,7 +640,7 @@ export function JournalDayModal({
                     {/* URL */}
                     <div className={styles.addSection}>
                       <div className={styles.addSectionHeader}>
-                        <span className={styles.addSectionLabel}>Link</span>
+                        <span className={styles.addSectionLabel}>{t('surface.journalLink')}</span>
                         {url.length > 0 && (
                           <button
                             type="button"
@@ -678,7 +680,7 @@ export function JournalDayModal({
                       return (
                         <div className={styles.addSection}>
                           <div className={styles.addSectionHeader}>
-                            <span className={styles.addSectionLabel}>Related to</span>
+                            <span className={styles.addSectionLabel}>{t('surface.journalRelatedTo')}</span>
                             {relatedTo.length > 0 && (
                               <button
                                 type="button"

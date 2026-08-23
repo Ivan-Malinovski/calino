@@ -1,6 +1,7 @@
 import type { JSX } from 'react'
 import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
+import { Trans, useTranslation } from 'react-i18next'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useModalDismiss } from '@/hooks/useModalDismiss'
 import styles from './DeleteDialog.module.css'
@@ -20,6 +21,7 @@ export function DeleteCalendarDialog({
   onClose,
   onConfirm,
 }: DeleteCalendarDialogProps): JSX.Element | null {
+  const { t } = useTranslation(['calendar', 'common'])
   const [confirmText, setConfirmText] = useState('')
   const events = useCalendarStore((state) => state.events)
   const dialogRef = useRef<HTMLDivElement>(null)
@@ -67,29 +69,39 @@ export function DeleteCalendarDialog({
       >
         <div className={styles.header}>
           <h3 className={styles.title} id="delete-dialog-title">
-            Delete Calendar
+            {t('modals.deleteCalendar.title')}
           </h3>
-          <button className={styles.closeButton} onClick={handleClose} aria-label="Close">
+          <button
+            className={styles.closeButton}
+            onClick={handleClose}
+            aria-label={t('common:actions.close')}
+          >
             ✕
           </button>
         </div>
 
         <div className={styles.content}>
           <p className={styles.calendarName}>
-            You are about to delete the calendar <strong>“{calendarName}”</strong>.
+            <Trans
+              t={t}
+              i18nKey="modals.deleteCalendar.confirmMessage"
+              values={{ calendarName }}
+              components={{ strong: <strong /> }}
+            />
           </p>
 
           {eventCount > 0 && (
             <p className={styles.warning}>
-              This will permanently delete{' '}
-              <strong>
-                {eventCount} event{eventCount !== 1 ? 's' : ''}
-              </strong>{' '}
-              from both Calino and the server. This action cannot be undone.
+              <Trans
+                t={t}
+                i18nKey="modals.deleteCalendar.warning"
+                count={eventCount}
+                components={{ strong: <strong /> }}
+              />
             </p>
           )}
 
-          <p className={styles.confirmLabel}>Type the calendar name to confirm:</p>
+          <p className={styles.confirmLabel}>{t('modals.deleteCalendar.typeToConfirm')}</p>
           <input
             type="text"
             value={confirmText}
@@ -102,7 +114,7 @@ export function DeleteCalendarDialog({
 
         <div className={styles.footer}>
           <button className={styles.cancelButton} onClick={handleClose}>
-            Cancel
+            {t('common:actions.cancel')}
           </button>
           <button
             className={styles.deleteButton}
@@ -110,7 +122,7 @@ export function DeleteCalendarDialog({
             disabled={confirmText !== calendarName}
             style={{ opacity: confirmText !== calendarName ? 0.5 : 1 }}
           >
-            Delete Calendar
+            {t('modals.deleteCalendar.title')}
           </button>
         </div>
       </div>

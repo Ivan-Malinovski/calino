@@ -1,5 +1,6 @@
 import type { JSX } from 'react'
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { v4 as uuidv4 } from 'uuid'
 import { useContactStore } from '@/store/contactStore'
 import { useCalendarStore } from '@/store/calendarStore'
@@ -26,12 +27,8 @@ import styles from './ContactsView.module.css'
 
 type ContactEventKind = 'birthday' | 'anniversary'
 
-const ADD_TO_CALENDAR_TOAST: Record<ContactEventKind, string> = {
-  birthday: 'Birthday added to calendar',
-  anniversary: 'Anniversary added to calendar',
-}
-
 export function ContactsView(): JSX.Element {
+  const { t } = useTranslation('contacts')
   const selectedContactId = useContactStore((s) => s.selectedContactId)
   const getContactById = useContactStore((s) => s.getContactById)
   const setSelectedContactId = useContactStore((s) => s.setSelectedContactId)
@@ -134,7 +131,7 @@ export function ContactsView(): JSX.Element {
   // "+ New" — if 1 address book go straight to form, if >1 show picker
   const handleNewClick = (): void => {
     if (visibleAddressBooks.length === 0) {
-      showToast('No address book available')
+      showToast(t('view.noAddressBookAvailable'))
       return
     }
     if (visibleAddressBooks.length === 1) {
@@ -367,7 +364,7 @@ export function ContactsView(): JSX.Element {
   const handleAddContactEventToCalendar = useCallback(
     async (kind: ContactEventKind, contact: Contact): Promise<void> => {
       if (targetCalendars.length === 0) {
-        showToast('No calendar available')
+        showToast(t('view.noCalendarAvailable'))
         return
       }
       if (targetCalendars.length > 1) {
@@ -377,7 +374,10 @@ export function ContactsView(): JSX.Element {
 
       const event = buildContactEvent(kind, contact, targetCalendars[0].id)
       if (!event) return
-      await addContactEventToCalendar(event, ADD_TO_CALENDAR_TOAST[kind])
+      await addContactEventToCalendar(
+        event,
+        kind === 'birthday' ? t('view.birthdayAddedToCalendar') : t('view.anniversaryAddedToCalendar')
+      )
     },
     [targetCalendars, buildContactEvent, addContactEventToCalendar]
   )
@@ -390,7 +390,10 @@ export function ContactsView(): JSX.Element {
 
       const event = buildContactEvent(kind, contact, calendarId)
       if (!event) return
-      await addContactEventToCalendar(event, ADD_TO_CALENDAR_TOAST[kind])
+      await addContactEventToCalendar(
+        event,
+        kind === 'birthday' ? t('view.birthdayAddedToCalendar') : t('view.anniversaryAddedToCalendar')
+      )
     },
     [calendarPicker, buildContactEvent, addContactEventToCalendar]
   )
@@ -411,7 +414,7 @@ export function ContactsView(): JSX.Element {
             position: relative, so it lands under the "+ New" button */}
         {showPicker && visibleAddressBooks.length > 1 && (
           <div className={styles.addressBookPicker} ref={pickerRef}>
-            <div className={styles.addressBookPickerLabel}>Choose address book</div>
+            <div className={styles.addressBookPickerLabel}>{t('view.chooseAddressBook')}</div>
             {visibleAddressBooks.map((ab) => (
               <button
                 key={ab.id}
@@ -441,7 +444,7 @@ export function ContactsView(): JSX.Element {
               <path d="M19 12H5" />
               <path d="m12 19-7-7 7-7" />
             </svg>
-            Contacts
+            {t('view.contacts')}
           </button>
         )}
 
@@ -483,7 +486,7 @@ export function ContactsView(): JSX.Element {
                 <path d="M34 35v-2a8 8 0 0 0-8-8H14a8 8 0 0 0-8 8v2" />
                 <circle cx="20" cy="12" r="8" />
               </svg>
-              <p>Select a contact</p>
+              <p>{t('view.selectAContact')}</p>
             </div>
           )
         )}
@@ -505,7 +508,11 @@ export function ContactsView(): JSX.Element {
       <Modal
         isOpen={calendarPicker !== null}
         onClose={() => setCalendarPicker(null)}
-        title={calendarPicker?.kind === 'anniversary' ? 'Add anniversary to' : 'Add birthday to'}
+        title={
+          calendarPicker?.kind === 'anniversary'
+            ? t('view.addAnniversaryTo')
+            : t('view.addBirthdayTo')
+        }
       >
         <div className={styles.calendarPickerList}>
           {targetCalendars.map((cal) => (

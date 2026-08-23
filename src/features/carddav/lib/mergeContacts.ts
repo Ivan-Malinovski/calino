@@ -1,8 +1,14 @@
 import type { Contact, ContactAddress } from '../types'
 
+export type DuplicateReason =
+  | { kind: 'sameEmail'; value: string }
+  | { kind: 'samePhone'; value: string }
+  | { kind: 'sameNameAndOrg'; value: string }
+  | { kind: 'sameContact' }
+
 export interface DuplicateGroup {
   contacts: Contact[]
-  reason: string
+  reason: DuplicateReason
   confidence: 'high' | 'medium' | 'low'
 }
 
@@ -72,7 +78,7 @@ function normalizePhone(phone: string): string {
 
 export function findDuplicateGroups(contacts: Contact[]): DuplicateGroup[] {
   const uf = new UnionFind()
-  const reasons = new Map<string, string>() // rootId -> reason
+  const reasons = new Map<string, DuplicateReason>() // rootId -> reason
 
   // Phase 1: High confidence — same email or phone
   const emailIndex = new Map<string, string[]>()
@@ -102,7 +108,7 @@ export function findDuplicateGroups(contacts: Contact[]): DuplicateGroup[] {
     }
     const root = uf.find(ids[0]!)
     if (!reasons.has(root)) {
-      reasons.set(root, `Same email: ${email}`)
+      reasons.set(root, { kind: 'sameEmail', value: email })
     }
   }
 
@@ -113,7 +119,7 @@ export function findDuplicateGroups(contacts: Contact[]): DuplicateGroup[] {
     }
     const root = uf.find(ids[0]!)
     if (!reasons.has(root)) {
-      reasons.set(root, `Same phone: ${phone}`)
+      reasons.set(root, { kind: 'samePhone', value: phone })
     }
   }
 
@@ -141,7 +147,7 @@ export function findDuplicateGroups(contacts: Contact[]): DuplicateGroup[] {
         const root = uf.find(ids[0]!)
         const [name] = key.split('|')
         if (!reasons.has(root)) {
-          reasons.set(root, `Same name and organization: ${name}`)
+          reasons.set(root, { kind: 'sameNameAndOrg', value: name! })
         }
       }
     }
@@ -158,11 +164,11 @@ export function findDuplicateGroups(contacts: Contact[]): DuplicateGroup[] {
     if (groupContacts.length < 2) continue
 
     // Determine confidence
-    const reason = reasons.get(root) ?? 'Same contact'
+    const reason: DuplicateReason = reasons.get(root) ?? { kind: 'sameContact' }
     let confidence: DuplicateGroup['confidence'] = 'low'
-    if (reason.startsWith('Same email') || reason.startsWith('Same phone')) {
+    if (reason.kind === 'sameEmail' || reason.kind === 'samePhone') {
       confidence = 'high'
-    } else if (reason.startsWith('Same name')) {
+    } else if (reason.kind === 'sameNameAndOrg') {
       confidence = 'medium'
     }
 

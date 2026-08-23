@@ -1,5 +1,6 @@
 import type { JSX } from 'react'
 import { useState, useEffect, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { v4 as uuidv4 } from 'uuid'
 import type { Contact } from '../types'
 import { Modal } from '@/components/common/Modal'
@@ -57,6 +58,7 @@ export function ContactFormModal({
   onSave,
   onDelete,
 }: ContactFormModalProps): JSX.Element {
+  const { t } = useTranslation(['contacts', 'common'])
   const [formState, setFormState] = useState<Partial<Contact>>(EMPTY_CONTACT)
   const [title, setTitle] = useState('')
   const [isSaving, setIsSaving] = useState(false)
@@ -136,8 +138,8 @@ export function ContactFormModal({
     // Validate: at least one of displayName, givenName, or familyName must be non-empty
     if (!enteredName && !formState.givenName?.trim() && !formState.familyName?.trim()) {
       // Could show a validation error here; for now, force givenName as fallback
-      setFormState((prev) => ({ ...prev, displayName: 'New Contact' }))
-      setTitle('New Contact')
+      setFormState((prev) => ({ ...prev, displayName: t('form.newContact') }))
+      setTitle(t('form.newContact'))
       return false
     }
 
@@ -220,7 +222,7 @@ export function ContactFormModal({
         <div className={eventModalStyles.titleInputWrapper} style={{ flex: 1 }}>
           <input
             type="text"
-            placeholder={contact ? contact.displayName || 'New Contact' : 'New Contact'}
+            placeholder={contact ? contact.displayName || t('form.newContact') : t('form.newContact')}
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             onBlur={handleTitleBlur}
@@ -232,7 +234,7 @@ export function ContactFormModal({
           type="button"
           className={eventModalStyles.modalClose}
           onClick={onClose}
-          aria-label="Close"
+          aria-label={t('common:actions.close')}
         >
           ×
         </button>
@@ -248,13 +250,13 @@ export function ContactFormModal({
         <div style={{ flex: 1 }}>
           {isEditMode && onDelete && (
             <button type="button" className={eventModalStyles.modalDelete} onClick={handleDelete}>
-              Delete
+              {t('common:actions.delete')}
             </button>
           )}
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <button type="button" className={eventModalStyles.modalCancel} onClick={handleCancel}>
-            Cancel
+            {t('common:actions.cancel')}
           </button>
           <button
             type="button"
@@ -264,7 +266,7 @@ export function ContactFormModal({
             aria-busy={isSaving}
           >
             {isSaving && <span className={eventModalStyles.modalSaveSpinner} aria-hidden="true" />}
-            Save
+            {t('common:actions.save')}
           </button>
         </div>
       </div>

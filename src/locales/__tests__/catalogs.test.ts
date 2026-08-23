@@ -40,6 +40,21 @@ describe('translation catalogs', () => {
   })
 
   describe.each(translationLanguages)('%s', (lang) => {
+    it('translates representative settings copy', () => {
+      const source = flatten(resources[FALLBACK_LANGUAGE].settings as Catalog)
+      const target = flatten(resources[lang].settings as Catalog)
+
+      for (const key of [
+        'general.dateFormat.label',
+        'general.language.desc',
+        'calendar.defaultView.label',
+        'notifications.eventReminders.desc',
+        'data.exportCalendar.desc',
+      ]) {
+        expect(target[key], `${lang} settings.${key}`).not.toBe(source[key])
+      }
+    })
+
     it.each([...NAMESPACES])('%s has the same keys as en', (ns) => {
       const source = flatten(resources[FALLBACK_LANGUAGE][ns] as Catalog)
       const target = flatten(resources[lang][ns] as Catalog)

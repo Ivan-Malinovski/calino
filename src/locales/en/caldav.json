@@ -1,1 +1,18 @@
-{}
+{
+  "progress": {
+    "checkingConnection": "Checking connection…",
+    "lookingForCalendars": "Looking for calendars…",
+    "savingAccount": "Saving account…",
+    "syncingEvents": "Syncing events…",
+    "checkingForContacts": "Checking for contacts…",
+    "importingCalendar": "Importing {{name}}…",
+    "downloadingCalendars_one": "Downloading events from {{count}} calendar…",
+    "downloadingCalendars_other": "Downloading events from {{count}} calendars…",
+    "savingEvent": "Saving event…",
+    "savingEvents": "Saving events…",
+    "deletingEvent": "Deleting event…",
+    "creatingCalendar": "Creating calendar…",
+    "savingCalendar": "Saving calendar…",
+    "deletingCalendar": "Deleting calendar…"
+  }
+}

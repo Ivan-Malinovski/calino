@@ -1,4 +1,5 @@
 import { useMemo, useState, type JSX } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { CalendarAttendee, CalendarOrganizer, AttendeePartstat, CalendarEvent } from '@/types'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
@@ -20,12 +21,6 @@ interface AttendeeSectionProps {
   event?: CalendarEvent
 }
 
-const AVAILABILITY_LABELS: Record<Availability, string> = {
-  available: 'Free',
-  busy: 'Busy',
-  unknown: 'Unknown',
-}
-
 const AVAILABILITY_CLASSES: Record<Availability, string> = {
   available: styles.availabilityAvailable,
   busy: styles.availabilityBusy,
@@ -33,14 +28,6 @@ const AVAILABILITY_CLASSES: Record<Availability, string> = {
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-
-const PARTSTAT_LABELS: Record<AttendeePartstat, string> = {
-  ACCEPTED: 'Accepted',
-  DECLINED: 'Declined',
-  TENTATIVE: 'Tentative',
-  'NEEDS-ACTION': 'Pending',
-  DELEGATED: 'Delegated',
-}
 
 const PARTSTAT_CLASSES: Record<AttendeePartstat, string> = {
   ACCEPTED: styles.partstatAccepted,
@@ -76,8 +63,23 @@ export function AttendeeSection({
   excludeEventId,
   event,
 }: AttendeeSectionProps): JSX.Element {
+  const { t } = useTranslation('calendar')
   const [inputValue, setInputValue] = useState('')
   const [inputError, setInputError] = useState('')
+
+  const availabilityLabels: Record<Availability, string> = {
+    available: t('modals.attendees.availability.free'),
+    busy: t('modals.attendees.availability.busy'),
+    unknown: t('modals.attendees.availability.unknown'),
+  }
+
+  const partstatLabels: Record<AttendeePartstat, string> = {
+    ACCEPTED: t('modals.attendees.partstat.accepted'),
+    DECLINED: t('modals.attendees.partstat.declined'),
+    TENTATIVE: t('modals.attendees.partstat.tentative'),
+    'NEEDS-ACTION': t('modals.attendees.partstat.pending'),
+    DELEGATED: t('modals.attendees.partstat.delegated'),
+  }
 
   const events = useCalendarStore((state) => state.events)
   const timeFormat = useSettingsStore((state) => state.timeFormat)
@@ -119,7 +121,7 @@ export function AttendeeSection({
   const handleEmailAttendees = (): void => {
     if (!mailto) return
     if (mailto.truncated) {
-      showToast('Description shortened to fit your mail client')
+      showToast(t('modals.attendees.descriptionShortened'))
     }
     window.location.href = mailto.uri
   }
@@ -129,12 +131,12 @@ export function AttendeeSection({
     if (!email) return
 
     if (!EMAIL_RE.test(email)) {
-      setInputError('Invalid email address')
+      setInputError(t('modals.attendees.invalidEmail'))
       return
     }
 
     if (attendees.some((a) => a.email.toLowerCase() === email)) {
-      setInputError('Already added')
+      setInputError(t('modals.attendees.alreadyAdded'))
       return
     }
 
@@ -169,7 +171,7 @@ export function AttendeeSection({
   return (
     <div className={styles.attendeeSection}>
       <div className={styles.sectionHeader}>
-        <div className={styles.sectionLabel}>Attendees</div>
+        <div className={styles.sectionLabel}>{t('modals.attendees.sectionLabel')}</div>
         {mailto && (
           <button
             type="button"
@@ -178,14 +180,14 @@ export function AttendeeSection({
             data-component="email-attendees-btn"
             data-mailto={mailto.uri}
           >
-            Email attendees
+            {t('modals.attendees.emailAttendees')}
           </button>
         )}
       </div>
 
       {organizer && (
         <div className={styles.organizerBadge}>
-          <span className={styles.organizerLabel}>Organizer</span>
+          <span className={styles.organizerLabel}>{t('modals.attendees.organizer')}</span>
           <span className={styles.organizerName}>
             {organizer.name || getDisplayName(organizer.email, organizer.name)}
           </span>
@@ -207,10 +209,13 @@ export function AttendeeSection({
                   className={`${styles.availabilityBadge} ${AVAILABILITY_CLASSES[availability.get(att.email)!]}`}
                   data-component="attendee-availability"
                   data-availability={availability.get(att.email)}
-                  aria-label={`${att.name || att.email}: ${AVAILABILITY_LABELS[availability.get(att.email)!]} at this time`}
+                  aria-label={t('modals.attendees.availabilityAt', {
+                    name: att.name || att.email,
+                    status: availabilityLabels[availability.get(att.email)!],
+                  })}
                 >
                   <span className={styles.availabilityDot} aria-hidden="true" />
-                  {AVAILABILITY_LABELS[availability.get(att.email)!]}
+                  {availabilityLabels[availability.get(att.email)!]}
                 </span>
               )}
               {att.partstat && (
@@ -218,14 +223,14 @@ export function AttendeeSection({
                   className={`${styles.partstatBadge} ${PARTSTAT_CLASSES[att.partstat]}`}
                   data-testid={`partstat-${att.partstat}`}
                 >
-                  {PARTSTAT_LABELS[att.partstat]}
+                  {partstatLabels[att.partstat]}
                 </span>
               )}
               <button
                 type="button"
                 className={styles.removeAttendeeButton}
                 onClick={() => handleRemove(att.email)}
-                aria-label={`Remove ${att.name || att.email}`}
+                aria-label={t('modals.attendees.removeAttendee', { name: att.name || att.email })}
               >
                 ×
               </button>
@@ -237,12 +242,12 @@ export function AttendeeSection({
       <div className={styles.addAttendeeRow}>
         <input
           type="email"
-          placeholder="Add attendee email..."
+          placeholder={t('modals.attendees.addAttendeePlaceholder')}
           value={inputValue}
           onChange={(e) => handleInputChange(e.target.value)}
           onKeyDown={handleKeyDown}
           className={styles.addAttendeeInput}
-          aria-label="Add attendee email"
+          aria-label={t('modals.attendees.addAttendeeAria')}
         />
         <button
           type="button"
@@ -250,7 +255,7 @@ export function AttendeeSection({
           onClick={handleAdd}
           disabled={!inputValue.trim()}
         >
-          Add
+          {t('modals.attendees.add')}
         </button>
       </div>
       {inputError && (
@@ -261,17 +266,13 @@ export function AttendeeSection({
 
       {conflictCount > 0 && (
         <div className={styles.conflictBanner} role="status" data-component="attendee-conflicts">
-          {conflictCount === 1
-            ? '1 attendee has a scheduling conflict at this time.'
-            : `${conflictCount} attendees have scheduling conflicts at this time.`}{' '}
-          You can still save.
+          {t('modals.attendees.conflictWarning', { count: conflictCount })}{' '}
+          {t('modals.attendees.canStillSave')}
         </div>
       )}
 
       {conflictCount > 0 && (
-        <div className={styles.privacyNote}>
-          Based on events in your own calendars that name this person.
-        </div>
+        <div className={styles.privacyNote}>{t('modals.attendees.privacyNote')}</div>
       )}
     </div>
   )

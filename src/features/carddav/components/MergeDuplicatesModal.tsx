@@ -1,5 +1,6 @@
 import type { JSX } from 'react'
 import { useState, useMemo, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Modal } from '@/components/common/Modal'
 import { useContactStore } from '@/store/contactStore'
 import { useCardDAV } from '@/features/carddav/hooks/useCardDAV'
@@ -21,10 +22,24 @@ const CONFIDENCE_COLORS: Record<string, string> = {
   low: '#999',
 }
 
+function formatReason(t: (key: string, opts?: Record<string, unknown>) => string, reason: DuplicateGroup['reason']): string {
+  switch (reason.kind) {
+    case 'sameEmail':
+      return t('merge.reasonSameEmail', { value: reason.value })
+    case 'samePhone':
+      return t('merge.reasonSamePhone', { value: reason.value })
+    case 'sameNameAndOrg':
+      return t('merge.reasonSameNameAndOrg', { value: reason.value })
+    default:
+      return t('merge.reasonSameContact')
+  }
+}
+
 export function MergeDuplicatesModal({
   isOpen,
   onClose,
 }: MergeDuplicatesModalProps): JSX.Element | null {
+  const { t } = useTranslation(['contacts', 'common'])
   const contacts = useContactStore((s) => s.contacts)
   const updateContact = useContactStore((s) => s.updateContact)
   const deleteContact = useContactStore((s) => s.deleteContact)
@@ -98,7 +113,7 @@ export function MergeDuplicatesModal({
         syncAccount(accountId).catch(() => {})
       }
 
-      showToast(`Merged ${group.contacts.length} contacts`, {
+      showToast(t('merge.mergedContacts', { count: group.contacts.length }), {
         duration: 8000,
       })
     },
@@ -106,12 +121,12 @@ export function MergeDuplicatesModal({
   )
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Merge Duplicates">
+    <Modal isOpen={isOpen} onClose={onClose} title={t('merge.title')}>
       <div className={styles.modalBody} style={{ maxHeight: '60vh', overflow: 'auto' }}>
         {visibleGroups.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '24px 0', color: 'var(--color-text-muted)' }}>
             <div style={{ fontSize: 32, marginBottom: 8 }}>✨</div>
-            <div>No duplicates found</div>
+            <div>{t('merge.noDuplicatesFound')}</div>
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -140,9 +155,11 @@ export function MergeDuplicatesModal({
                       fontWeight: 600,
                     }}
                   >
-                    {group.confidence.toUpperCase()}
+                    {t(`merge.confidence.${group.confidence}`)}
                   </span>
-                  <span style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>{group.reason}</span>
+                  <span style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>
+                    {formatReason(t, group.reason)}
+                  </span>
                 </div>
 
                 {/* Contact cards */}
@@ -187,7 +204,7 @@ export function MergeDuplicatesModal({
                             whiteSpace: 'nowrap',
                           }}
                         >
-                          {contact.displayName || '(no name)'}
+                          {contact.displayName || t('import.noName')}
                         </div>
                         <div
                           style={{
@@ -212,7 +229,7 @@ export function MergeDuplicatesModal({
                     onClick={() => handleMerge(group)}
                     style={{ fontSize: 12, padding: 'var(--space-1) var(--space-3)' }}
                   >
-                    Merge {group.contacts.length} contacts
+                    {t('merge.mergeCount', { count: group.contacts.length })}
                   </button>
                 </div>
               </div>
@@ -223,7 +240,7 @@ export function MergeDuplicatesModal({
         {/* Footer */}
         <div className={styles.modalFooter}>
           <button type="button" className={styles.btnCancel} onClick={onClose}>
-            Done
+            {t('common:actions.done')}
           </button>
         </div>
       </div>

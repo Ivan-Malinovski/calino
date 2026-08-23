@@ -1,5 +1,6 @@
 import type { JSX } from 'react'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   formatReportForClipboard,
   runDiagnostics,
@@ -16,20 +17,6 @@ interface DiagnosticsPanelProps {
   autoRun?: boolean
 }
 
-const STATUS_TEXT: Record<DiagnosticCheck['status'], string> = {
-  pass: 'Pass',
-  fail: 'Fail',
-  warn: 'Warning',
-  skipped: 'Skipped',
-  unknown: 'Unknown',
-}
-
-const SUMMARY_TEXT: Record<DiagnosticsReport['summary'], string> = {
-  ok: 'Everything checks out.',
-  degraded: 'Sync will work, but your server could be configured better.',
-  broken: 'Something is wrong with this server.',
-}
-
 /**
  * Runs `runDiagnostics` and renders the checks as they arrive.
  *
@@ -38,6 +25,7 @@ const SUMMARY_TEXT: Record<DiagnosticsReport['summary'], string> = {
  * check is usually the answer — the user shouldn't wait for the rest.
  */
 export function DiagnosticsPanel({ options, autoRun = false }: DiagnosticsPanelProps): JSX.Element {
+  const { t } = useTranslation('settings')
   const [checks, setChecks] = useState<DiagnosticCheck[]>([])
   const [report, setReport] = useState<DiagnosticsReport | null>(null)
   const [running, setRunning] = useState(false)
@@ -101,7 +89,7 @@ export function DiagnosticsPanel({ options, autoRun = false }: DiagnosticsPanelP
           disabled={running}
           data-action="run-diagnostics"
         >
-          {running ? 'Running…' : checks.length > 0 ? 'Run again' : 'Run diagnostics'}
+          {running ? t('diagnostics.running') : checks.length > 0 ? t('diagnostics.runAgain') : t('diagnostics.runDiagnostics')}
         </button>
         <button
           type="button"
@@ -109,9 +97,9 @@ export function DiagnosticsPanel({ options, autoRun = false }: DiagnosticsPanelP
           onClick={() => void run(true)}
           disabled={running}
           data-action="run-write-test"
-          title="Creates a temporary event on your server and deletes it again"
+          title={t('diagnostics.runWithWriteTestTitle')}
         >
-          Run with write test
+          {t('diagnostics.runWithWriteTest')}
         </button>
         {report && (
           <button
@@ -120,14 +108,13 @@ export function DiagnosticsPanel({ options, autoRun = false }: DiagnosticsPanelP
             onClick={() => void handleCopy()}
             data-action="copy-report"
           >
-            {copied ? 'Copied' : 'Copy report'}
+            {copied ? t('diagnostics.copied') : t('diagnostics.copyReport')}
           </button>
         )}
       </div>
 
       <p className={styles.note}>
-        The write test creates one temporary event on your server and deletes it immediately.
-        Everything else only reads.
+        {t('diagnostics.note')}
       </p>
 
       {checks.length > 0 && (
@@ -151,17 +138,17 @@ export function DiagnosticsPanel({ options, autoRun = false }: DiagnosticsPanelP
                   <span
                     className={styles.badge}
                     data-status={check.status}
-                    aria-label={STATUS_TEXT[check.status]}
+                    aria-label={t(`diagnostics.status.${check.status}`)}
                   >
-                    {STATUS_TEXT[check.status]}
+                    {t(`diagnostics.status.${check.status}`)}
                   </span>
                   <span className={styles.checkLabel}>{check.label}</span>
                   {check.evidence === 'inferred' && (
                     <span
                       className={styles.inferred}
-                      title="Your browser hides the relevant header, so this was deduced from how the server behaved."
+                      title={t('diagnostics.inferredTitle')}
                     >
-                      inferred
+                      {t('diagnostics.inferred')}
                     </span>
                   )}
                 </button>
@@ -171,7 +158,7 @@ export function DiagnosticsPanel({ options, autoRun = false }: DiagnosticsPanelP
                     {check.raw && <pre className={styles.raw}>{check.raw}</pre>}
                     {check.fix && (
                       <>
-                        <div className={styles.fixLabel}>How to fix</div>
+                        <div className={styles.fixLabel}>{t('diagnostics.howToFix')}</div>
                         <pre className={styles.fix}>{check.fix}</pre>
                       </>
                     )}
@@ -185,12 +172,11 @@ export function DiagnosticsPanel({ options, autoRun = false }: DiagnosticsPanelP
 
       {report && (
         <div className={styles.summary} data-summary={report.summary}>
-          {SUMMARY_TEXT[report.summary]}
+          {t(`diagnostics.summary.${report.summary}`)}
           {report.platform === 'web' && !report.viaProxy && (
             <span className={styles.summaryNote}>
               {' '}
-              Checks marked “inferred” could not be read directly — browsers hide a server's CORS
-              headers from JavaScript.
+              {t('diagnostics.corsNote')}
             </span>
           )}
         </div>

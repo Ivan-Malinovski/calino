@@ -1,5 +1,6 @@
 import type { JSX } from 'react'
 import { useId, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useAnimatedClose } from '@/hooks/useAnimatedClose'
 import { useModalDismiss } from '@/hooks/useModalDismiss'
 import type { RecurrenceEditMode } from '@/types'
@@ -19,6 +20,7 @@ export function RecurrenceDialog({
   onConfirm,
   isTask = false,
 }: RecurrenceDialogProps): JSX.Element | null {
+  const { t } = useTranslation('calendar')
   const noun = isTask ? 'task' : 'event'
   const nounPlural = isTask ? 'tasks' : 'events'
   const { rendered, closing, requestClose } = useAnimatedClose(isOpen, onClose, 150)
@@ -42,7 +44,7 @@ export function RecurrenceDialog({
           <h2 id={titleId} className={styles.title}>
             Edit recurring {noun}
           </h2>
-          <button className={styles.closeButton} onClick={requestClose} aria-label="Close">
+          <button className={styles.closeButton} onClick={requestClose} aria-label={t('surface.close')}>
             <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none">
               <path
                 d="M18 6L6 18M6 6L18 18"
@@ -54,7 +56,7 @@ export function RecurrenceDialog({
           </button>
         </div>
         <div className={styles.content}>
-          <p className={styles.message}>How would you like to apply these changes?</p>
+          <p className={styles.message}>{t('surface.recurrenceApplyChanges')}</p>
           <div className={styles.buttons}>
             <button type="button" className={styles.actionButton} onClick={() => onConfirm('all')}>
               All {nounPlural}

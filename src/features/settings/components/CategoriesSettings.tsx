@@ -1,5 +1,6 @@
 import type { JSX } from 'react'
 import { useState, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
 import { EVENT_COLORS } from '@/store/settingsStore'
@@ -14,6 +15,7 @@ function KeywordInput({
   onChange: (keywords: string[]) => void
 }): JSX.Element {
   const [inputValue, setInputValue] = useState('')
+  const { t } = useTranslation('settings')
 
   const handleKeyDown = (e: React.KeyboardEvent): void => {
     if (e.key === 'Enter' || e.key === ',') {
@@ -33,14 +35,14 @@ function KeywordInput({
   }
 
   return (
-    <div className={styles.keywordInput} role="list" aria-label="Keywords">
+    <div className={styles.keywordInput} role="list" aria-label={t('categories.keywords.ariaLabel')}>
       {keywords.map((keyword) => (
         <span key={keyword} className={styles.keywordTag} role="listitem">
           {keyword}
           <button
             type="button"
             className={styles.keywordRemove}
-            aria-label={`Remove keyword ${keyword}`}
+            aria-label={t('categories.keywords.removeKeyword', { keyword })}
             onClick={() => removeKeyword(keyword)}
           >
             ×
@@ -53,14 +55,15 @@ function KeywordInput({
         value={inputValue}
         onChange={(e) => setInputValue(e.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder={keywords.length === 0 ? 'Type keywords separated by comma' : ''}
-        aria-label="Add keyword"
+        placeholder={keywords.length === 0 ? t('categories.keywords.placeholder') : ''}
+        aria-label={t('categories.keywords.addAriaLabel')}
       />
     </div>
   )
 }
 
 export function CategoriesSettings(): JSX.Element {
+  const { t } = useTranslation('settings')
   const categories = useCalendarStore((s) => s.categories)
   const calendars = useCalendarStore((s) => s.calendars)
   const addCategory = useCalendarStore((s) => s.addCategory)
@@ -279,7 +282,7 @@ export function CategoriesSettings(): JSX.Element {
       className={`${styles.section} ${styles.sectionActive}`}
       data-component="categories-settings"
     >
-      <h1 className={styles.pageTitle}>Categories</h1>
+      <h1 className={styles.pageTitle}>{t('categories.title')}</h1>
 
       <div className={styles.group}>
         <div
@@ -289,8 +292,8 @@ export function CategoriesSettings(): JSX.Element {
           data-value={String(useCategoryColors)}
         >
           <div>
-            <div className={styles.rowLabel}>Use category colors for events</div>
-            <div className={styles.rowDesc}>When disabled, events use their calendar color</div>
+            <div className={styles.rowLabel}>{t('categories.useCategoryColors.label')}</div>
+            <div className={styles.rowDesc}>{t('categories.useCategoryColors.desc')}</div>
           </div>
           <label
             className={styles.toggle}
@@ -300,7 +303,7 @@ export function CategoriesSettings(): JSX.Element {
             <input
               type="checkbox"
               checked={useCategoryColors}
-              aria-label="Use category colors for events"
+              aria-label={t('categories.useCategoryColors.ariaLabel')}
               onChange={() => updateSettings({ useCategoryColors: !useCategoryColors })}
             />
             <span className={styles.pill} />
@@ -340,7 +343,7 @@ export function CategoriesSettings(): JSX.Element {
                         key={color}
                         className={`${styles.swatch} ${styles.swatchSm} ${editCategoryColor === color ? styles.swatchActive : ''}`}
                         style={{ '--swatch-color': color } as React.CSSProperties}
-                        aria-label={`Color ${color}`}
+                        aria-label={t('categories.color.swatchAriaLabel', { color })}
                         onMouseDown={(e) => {
                           e.preventDefault()
                           setEditCategoryColor(color)
@@ -367,7 +370,7 @@ export function CategoriesSettings(): JSX.Element {
                           setEditCategoryName('')
                           setEditCategoryColor('')
                         }}
-                        aria-label={`Custom color for category ${category.name}`}
+                        aria-label={t('categories.color.customAriaLabel', { name: category.name })}
                       />
                     </span>
                   </div>
@@ -378,7 +381,7 @@ export function CategoriesSettings(): JSX.Element {
                     onChange={(e) => setEditCategoryName(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && handleUpdateCategory(category.id)}
                     autoFocus
-                    aria-label="Category name"
+                    aria-label={t('categories.editName')}
                   />
                   <span className={styles.catCount}>
                     {getEventCountForCategory(category.name)} events
@@ -393,7 +396,7 @@ export function CategoriesSettings(): JSX.Element {
                     }
                     role="button"
                     tabIndex={0}
-                    aria-label={`Edit category ${category.name}`}
+                    aria-label={t('categories.editAriaLabel', { name: category.name })}
                     onClick={() => {
                       setEditingCategoryId(category.id)
                       setEditCategoryName(category.name)
@@ -412,7 +415,7 @@ export function CategoriesSettings(): JSX.Element {
                     style={{ cursor: 'pointer' }}
                     role="button"
                     tabIndex={0}
-                    aria-label={`Edit category ${category.name}`}
+                    aria-label={t('categories.editAriaLabel', { name: category.name })}
                     onClick={() => {
                       setEditingCategoryId(category.id)
                       setEditCategoryName(category.name)
@@ -435,10 +438,10 @@ export function CategoriesSettings(): JSX.Element {
                     <button
                       className={`${styles.catBtn} ${styles.catBtnDanger}`}
                       onClick={() => handleDeleteCategory(category.id)}
-                      aria-label={`Delete category ${category.name}`}
+                      aria-label={t('categories.deleteAriaLabel', { name: category.name })}
                       type="button"
                     >
-                      Delete
+                      {t('categories.delete')}
                     </button>
                   </div>
                 </>
@@ -451,12 +454,12 @@ export function CategoriesSettings(): JSX.Element {
               <input
                 type="text"
                 className={styles.formInput}
-                placeholder="Category name"
+                placeholder={t('categories.addForm.namePlaceholder')}
                 value={newCategoryName}
                 onChange={(e) => setNewCategoryName(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleAddCategory()}
                 autoFocus
-                aria-label="New category name"
+                aria-label={t('categories.addForm.nameAriaLabel')}
               />
               <div className={`${styles.swatches} ${styles.catSwatches}`}>
                 {EVENT_COLORS.map((color) => (
@@ -464,7 +467,7 @@ export function CategoriesSettings(): JSX.Element {
                     key={color}
                     className={`${styles.swatch} ${styles.swatchSm} ${newCategoryColor === color ? styles.swatchActive : ''}`}
                     style={{ '--swatch-color': color } as React.CSSProperties}
-                    aria-label={`Color ${color}`}
+                    aria-label={t('categories.color.swatchAriaLabel', { color })}
                     onClick={() => setNewCategoryColor(color)}
                     type="button"
                   />
@@ -480,19 +483,19 @@ export function CategoriesSettings(): JSX.Element {
                     type="color"
                     value={newCategoryColor}
                     onChange={(e) => setNewCategoryColor(e.target.value)}
-                    aria-label="Custom color for new category"
+                    aria-label={t('categories.color.customNewAriaLabel')}
                   />
                 </span>
               </div>
               <button className={styles.actionBtn} onClick={handleAddCategory} type="button">
-                Add
+                {t('categories.addForm.add')}
               </button>
               <button
                 className={styles.actionBtn}
                 onClick={() => setShowAddCategory(false)}
                 type="button"
               >
-                Cancel
+                {t('categories.addForm.cancel')}
               </button>
             </div>
           ) : (
@@ -513,7 +516,7 @@ export function CategoriesSettings(): JSX.Element {
               >
                 <path d="M8 2v12M2 8h12" />
               </svg>
-              Add category
+              {t('categories.addCategory')}
             </button>
           )}
         </div>
@@ -522,9 +525,9 @@ export function CategoriesSettings(): JSX.Element {
       {/* Auto-categorize Rules */}
       <div className={styles.group} data-component="auto-categorize-rules">
         <div className={styles.autoCatHeader}>
-          <div className={styles.autoCatTitle}>Auto-categorize</div>
+          <div className={styles.autoCatTitle}>{t('categories.autoCategorize.title')}</div>
           <div className={styles.autoCatDesc}>
-            Assign categories to events automatically based on keywords in the title
+            {t('categories.autoCategorize.desc')}
           </div>
         </div>
 
@@ -548,9 +551,9 @@ export function CategoriesSettings(): JSX.Element {
                         className={styles.ruleSelect}
                         value={editRuleCategoryId}
                         onChange={(e) => setEditRuleCategoryId(e.target.value)}
-                        aria-label="Select category"
+                        aria-label={t('categories.autoCategorize.selectCategoryAriaLabel')}
                       >
-                        <option value="">Select category</option>
+                        <option value="">{t('categories.autoCategorize.selectCategory')}</option>
                         {categories.map((cat) => (
                           <option key={cat.id} value={cat.id}>
                             {cat.name}
@@ -562,10 +565,10 @@ export function CategoriesSettings(): JSX.Element {
                         onClick={() => handleUpdateRule(rule.id)}
                         type="button"
                       >
-                        Save
+                          {t('categories.autoCategorize.save')}
                       </button>
                       <button className={styles.actionBtn} onClick={cancelEditRule} type="button">
-                        Cancel
+                        {t('categories.autoCategorize.cancel')}
                       </button>
                     </div>
                   </>
@@ -604,14 +607,14 @@ export function CategoriesSettings(): JSX.Element {
                           onClick={() => startEditRule(rule)}
                           type="button"
                         >
-                          Edit
+                          {t('categories.autoCategorize.edit')}
                         </button>
                         <button
                           className={`${styles.catBtn} ${styles.catBtnDanger}`}
                           onClick={() => handleDeleteRule(rule.id)}
                           type="button"
                         >
-                          Delete
+                          {t('categories.autoCategorize.delete')}
                         </button>
                       </div>
                     </div>
@@ -630,9 +633,9 @@ export function CategoriesSettings(): JSX.Element {
                   className={styles.ruleSelect}
                   value={newRuleCategoryId}
                   onChange={(e) => setNewRuleCategoryId(e.target.value)}
-                  aria-label="Select category for new rule"
+                  aria-label={t('categories.autoCategorize.selectCategoryForNewRuleAriaLabel')}
                 >
-                  <option value="">Select category</option>
+                  <option value="">{t('categories.autoCategorize.selectCategory')}</option>
                   {categories.map((cat) => (
                     <option key={cat.id} value={cat.id}>
                       {cat.name}
@@ -683,7 +686,7 @@ export function CategoriesSettings(): JSX.Element {
               >
                 <path d="M8 2v12M2 8h12" />
               </svg>
-              Add auto-categorize rule
+              {t('categories.autoCategorize.addRule')}
             </button>
           )}
 
@@ -696,10 +699,10 @@ export function CategoriesSettings(): JSX.Element {
                 data-action="apply-rules-to-existing"
                 type="button"
               >
-                Apply rules to existing events
+                {t('categories.autoCategorize.applyToExisting')}
               </button>
               <span className={styles.applySectionText}>
-                Retroactively categorize events that match your rules
+                {t('categories.autoCategorize.applyToExistingDesc')}
               </span>
             </div>
           )}

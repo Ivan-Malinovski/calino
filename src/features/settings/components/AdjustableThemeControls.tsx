@@ -1,4 +1,5 @@
 import type { CSSProperties, JSX } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { AdjustableThemeProfile } from '@/types'
 import { ADJUSTABLE_FONT_STACKS } from '@/lib/themes/adjustableFonts'
 import styles from './Settings.module.css'
@@ -12,26 +13,38 @@ interface AdjustableThemeControlsProps {
   onReset: () => void
 }
 
-const COLOR_CONTROLS: { key: ColorKey; label: string; description: string }[] = [
-  { key: 'canvas', label: 'Canvas', description: 'Main page background' },
-  { key: 'panel', label: 'Surface', description: 'Cards, dialogs, and panels' },
-  { key: 'accent', label: 'Accent', description: 'Actions, selection, and focus' },
-  { key: 'accentContrast', label: 'Accent text', description: 'Text on accent fills' },
-  { key: 'text', label: 'Primary text', description: 'Main readable text' },
-  { key: 'mutedText', label: 'Muted text', description: 'Secondary and quiet text' },
-  { key: 'border', label: 'Borders', description: 'Dividers and field outlines' },
+const COLOR_CONTROLS: { key: ColorKey; labelKey: string; descKey: string }[] = [
+  { key: 'canvas', labelKey: 'theme.adjustable.colors.canvas.label', descKey: 'theme.adjustable.colors.canvas.desc' },
+  { key: 'panel', labelKey: 'theme.adjustable.colors.panel.label', descKey: 'theme.adjustable.colors.panel.desc' },
+  { key: 'accent', labelKey: 'theme.adjustable.colors.accent.label', descKey: 'theme.adjustable.colors.accent.desc' },
+  { key: 'accentContrast', labelKey: 'theme.adjustable.colors.accentContrast.label', descKey: 'theme.adjustable.colors.accentContrast.desc' },
+  { key: 'text', labelKey: 'theme.adjustable.colors.text.label', descKey: 'theme.adjustable.colors.text.desc' },
+  { key: 'mutedText', labelKey: 'theme.adjustable.colors.mutedText.label', descKey: 'theme.adjustable.colors.mutedText.desc' },
+  { key: 'border', labelKey: 'theme.adjustable.colors.border.label', descKey: 'theme.adjustable.colors.border.desc' },
 ]
 
 const FONT_OPTIONS = [
-  { value: 'system', label: 'System sans' },
-  { value: 'serif', label: 'Newsreader serif' },
-  { value: 'mono', label: 'Monospace' },
+  { value: 'system', labelKey: 'theme.adjustable.font.system' },
+  { value: 'serif', labelKey: 'theme.adjustable.font.serif' },
+  { value: 'mono', labelKey: 'theme.adjustable.font.mono' },
 ] as const
 
 const PREVIEW_EVENTS = [
-  { title: 'Design review', meta: '10:00 – 11:00 · Meeting room', color: 'var(--preview-accent)' },
-  { title: 'Lunch with Alex', meta: '12:30 – 13:15 · Café Flora', color: '#6e9f84' },
-  { title: 'Focus time', meta: '14:00 – 15:30', color: '#8c82b8' },
+  {
+    titleKey: 'theme.adjustable.previewEvent1Title',
+    metaKey: 'theme.adjustable.previewEvent1Meta',
+    color: 'var(--preview-accent)',
+  },
+  {
+    titleKey: 'theme.adjustable.previewEvent2Title',
+    metaKey: 'theme.adjustable.previewEvent2Meta',
+    color: '#6e9f84',
+  },
+  {
+    titleKey: 'theme.adjustable.previewEvent3Title',
+    metaKey: 'theme.adjustable.previewEvent3Meta',
+    color: '#8c82b8',
+  },
 ]
 
 function relativeLuminance(hex: string): number {
@@ -50,6 +63,7 @@ function contrastRatio(foreground: string, background: string): number {
 }
 
 function AdjustableEventPreview({ profile }: { profile: AdjustableThemeProfile }): JSX.Element {
+  const { t } = useTranslation('settings')
   const previewStyle = {
     '--preview-canvas': profile.canvas,
     '--preview-panel': profile.panel,
@@ -71,27 +85,27 @@ function AdjustableEventPreview({ profile }: { profile: AdjustableThemeProfile }
     >
       <div className={styles.adjustablePreviewHeader}>
         <div>
-          <div className={styles.adjustableControlLabel}>Event card preview</div>
+          <div className={styles.adjustableControlLabel}>{t('theme.adjustable.previewLabel')}</div>
           <div className={styles.adjustableControlDescription}>
-            See how this palette feels in the calendar.
+            {t('theme.adjustable.previewDesc')}
           </div>
         </div>
-        <span className={styles.adjustablePreviewLive}>Live</span>
+        <span className={styles.adjustablePreviewLive}>{t('theme.adjustable.live')}</span>
       </div>
       <div className={styles.adjustablePreviewStage}>
         <div className={styles.adjustablePreviewDate}>
-          <strong>Today</strong>
-          <span>Tuesday, 23 August</span>
+          <strong>{t('theme.adjustable.previewToday')}</strong>
+          <span>{t('theme.adjustable.previewDate')}</span>
         </div>
         <div className={styles.adjustablePreviewCards}>
           {PREVIEW_EVENTS.map((event) => (
             <div
               className={styles.adjustablePreviewCard}
-              key={event.title}
+              key={event.titleKey}
               style={{ '--preview-event-color': event.color } as CSSProperties}
             >
-              <div className={styles.adjustablePreviewCardTitle}>{event.title}</div>
-              <div className={styles.adjustablePreviewCardMeta}>{event.meta}</div>
+              <div className={styles.adjustablePreviewCardTitle}>{t(event.titleKey)}</div>
+              <div className={styles.adjustablePreviewCardMeta}>{t(event.metaKey)}</div>
             </div>
           ))}
         </div>
@@ -106,68 +120,67 @@ export function AdjustableThemeControls({
   onChange,
   onReset,
 }: AdjustableThemeControlsProps): JSX.Element {
+  const { t } = useTranslation('settings')
   const update = (key: keyof AdjustableThemeProfile, value: string | number): void => {
     onChange({ ...profile, [key]: value } as AdjustableThemeProfile)
   }
   const contrastWarnings = [
-    contrastRatio(profile.text, profile.canvas) < 4.5 &&
-      'Primary text is below WCAG AA on the canvas.',
-    contrastRatio(profile.text, profile.panel) < 4.5 &&
-      'Primary text is below WCAG AA on surfaces.',
+    contrastRatio(profile.text, profile.canvas) < 4.5 && t('theme.adjustable.contrast.textCanvas'),
+    contrastRatio(profile.text, profile.panel) < 4.5 && t('theme.adjustable.contrast.textPanel'),
     contrastRatio(profile.mutedText, profile.canvas) < 4.5 &&
-      'Muted text is below WCAG AA on the canvas.',
+      t('theme.adjustable.contrast.mutedTextCanvas'),
     contrastRatio(profile.accentContrast, profile.accent) < 4.5 &&
-      'Accent text is below WCAG AA on accent fills.',
+      t('theme.adjustable.contrast.accentContrast'),
   ].filter((warning): warning is string => Boolean(warning))
   const contrastDetails =
-    contrastWarnings.length > 0 ? contrastWarnings.join(' ') : 'Colours meet WCAG AA.'
+    contrastWarnings.length > 0
+      ? contrastWarnings.join(' ')
+      : t('theme.adjustable.contrast.meetsAA')
 
   return (
     <div className={styles.adjustablePanel} data-component="adjustable-theme-controls">
       <div className={styles.adjustableHeader}>
         <div>
-          <div className={styles.rowLabel}>Adjustable theme · {mode}</div>
-          <div className={styles.rowDesc}>
-            Tune the active palette live. Changes are saved automatically on this device.
-          </div>
+          <div className={styles.rowLabel}>{t('theme.adjustable.headerLabel', { mode })}</div>
+          <div className={styles.rowDesc}>{t('theme.adjustable.desc')}</div>
         </div>
         <button type="button" className={styles.adjustableReset} onClick={onReset}>
-          Reset
+          {t('theme.adjustable.reset')}
         </button>
       </div>
 
       <AdjustableEventPreview profile={profile} />
 
       <label className={styles.adjustableFontControl}>
-        <span className={styles.adjustableControlLabel}>Font</span>
+        <span className={styles.adjustableControlLabel}>{t('theme.adjustable.font.label')}</span>
         <span className={styles.adjustableControlDescription}>
-          Typeface used across the interface
+          {t('theme.adjustable.font.desc')}
         </span>
         <select
           className={styles.select}
           value={profile.fontFamily}
-          aria-label="Theme font"
+          aria-label={t('theme.adjustable.font.ariaLabel')}
           onChange={(event) => update('fontFamily', event.currentTarget.value)}
         >
           {FONT_OPTIONS.map((font) => (
             <option key={font.value} value={font.value}>
-              {font.label}
+              {t(font.labelKey)}
             </option>
           ))}
         </select>
       </label>
 
       <div className={styles.adjustableColorGrid}>
-        {COLOR_CONTROLS.map(({ key, label, description }) => (
+        {COLOR_CONTROLS.map(({ key, labelKey, descKey }) => (
           <label className={styles.adjustableColorControl} key={key}>
-            <span className={styles.adjustableControlLabel}>{label}</span>
-            <span className={styles.adjustableControlDescription}>{description}</span>
+            <span className={styles.adjustableControlLabel}>{t(labelKey)}</span>
+            <span className={styles.adjustableControlDescription}>{t(descKey)}</span>
             <span className={styles.adjustableColorInputRow}>
               <input
                 type="color"
                 value={profile[key]}
                 onChange={(event) => update(key, event.currentTarget.value)}
-                aria-label={`${label} color`}
+                aria-label={t('theme.adjustable.colors.colorAriaLabel', { label: t(labelKey) })}
               />
               <code>{profile[key]}</code>
             </span>
@@ -178,7 +191,7 @@ export function AdjustableThemeControls({
       <div className={styles.adjustableRangeGrid}>
         <label className={styles.adjustableRangeControl}>
           <span>
-            <span className={styles.adjustableControlLabel}>Corner radius</span>
+            <span className={styles.adjustableControlLabel}>{t('theme.adjustable.cornerRadius')}</span>
             <output>{profile.cornerRadius}px</output>
           </span>
           <input
@@ -189,13 +202,13 @@ export function AdjustableThemeControls({
             step="1"
             value={profile.cornerRadius}
             onChange={(event) => update('cornerRadius', event.currentTarget.valueAsNumber)}
-            aria-label="Corner radius"
+            aria-label={t('theme.adjustable.cornerRadiusAriaLabel')}
           />
         </label>
 
         <label className={styles.adjustableRangeControl}>
           <span>
-            <span className={styles.adjustableControlLabel}>Density</span>
+            <span className={styles.adjustableControlLabel}>{t('theme.adjustable.density')}</span>
             <output>{profile.density}%</output>
           </span>
           <input
@@ -206,13 +219,15 @@ export function AdjustableThemeControls({
             step="5"
             value={profile.density}
             onChange={(event) => update('density', event.currentTarget.valueAsNumber)}
-            aria-label="Theme density"
+            aria-label={t('theme.adjustable.densityAriaLabel')}
           />
         </label>
 
         <label className={styles.adjustableRangeControl}>
           <span>
-            <span className={styles.adjustableControlLabel}>Shadow strength</span>
+            <span className={styles.adjustableControlLabel}>
+              {t('theme.adjustable.shadowStrength')}
+            </span>
             <output>{profile.shadowStrength}%</output>
           </span>
           <input
@@ -223,13 +238,13 @@ export function AdjustableThemeControls({
             step="5"
             value={profile.shadowStrength}
             onChange={(event) => update('shadowStrength', event.currentTarget.valueAsNumber)}
-            aria-label="Shadow strength"
+            aria-label={t('theme.adjustable.shadowStrengthAriaLabel')}
           />
         </label>
 
         <label className={styles.adjustableRangeControl}>
           <span>
-            <span className={styles.adjustableControlLabel}>Event tint</span>
+            <span className={styles.adjustableControlLabel}>{t('theme.adjustable.eventTint')}</span>
             <output>{profile.eventTint}%</output>
           </span>
           <input
@@ -240,19 +255,21 @@ export function AdjustableThemeControls({
             step="1"
             value={profile.eventTint}
             onChange={(event) => update('eventTint', event.currentTarget.valueAsNumber)}
-            aria-label="Event tint strength"
+            aria-label={t('theme.adjustable.eventTintAriaLabel')}
           />
         </label>
       </div>
       <div
         className={styles.adjustableContrastWarning}
         data-status={contrastWarnings.length > 0 ? 'warning' : 'ok'}
-        aria-label={`Contrast check: ${contrastDetails}`}
+        aria-label={t('theme.adjustable.contrast.ariaLabel', { details: contrastDetails })}
         title={contrastDetails}
       >
         <span className={styles.adjustableContrastDot} aria-hidden="true" />
         <span>
-          {contrastWarnings.length > 0 ? 'Contrast needs attention' : 'Contrast looks good'}
+          {contrastWarnings.length > 0
+            ? t('theme.adjustable.contrast.needsAttention')
+            : t('theme.adjustable.contrast.looksGood')}
         </span>
       </div>
     </div>

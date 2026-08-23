@@ -1,6 +1,8 @@
 import { useMemo, useCallback, useState } from 'react'
 import { format } from 'date-fns'
 import { useNavigate } from 'react-router'
+import i18n from '@/lib/i18n'
+import { formatDisplayDate } from '@/lib/datetime'
 import {
   useCalendarStore,
   selectOpenModal,
@@ -72,6 +74,9 @@ interface UseCommandPaletteProps {
   toggleSidebar?: () => void
   sidebarOpen?: boolean
 }
+
+
+const t = (key: string, opts?: Record<string, unknown>): string => i18n.t(`commands:${key}`, opts)
 
 function categoryToGroup(category: string): CommandPaletteItemGroup {
   if (category === 'event') return 'event'
@@ -390,8 +395,8 @@ export function useCommandPalette({ toggleSidebar, sidebarOpen }: UseCommandPale
       const parsedDate = parseNaturalLanguage(dateRef)
       const navCmd: Command = {
         id: 'nav-quick',
-        label: `Go to ${dateRef}`,
-        description: format(parsedDate.startDate, 'EEEE, d MMMM yyyy'),
+        label: t('palette.goTo', { dateRef }),
+        description: formatDisplayDate(parsedDate.startDate, 'EEEE, d MMMM yyyy'),
         category: 'navigation',
         keywords: ['navigate', 'go', 'date', dateRef],
         icon: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="12" height="11" rx="2"/><path d="M2 6.5h12M5.5 1.5v2M10.5 1.5v2"/></svg>',
@@ -403,7 +408,9 @@ export function useCommandPalette({ toggleSidebar, sidebarOpen }: UseCommandPale
           ) {
             setCurrentView('month')
           }
-          return `Navigated to ${format(parsedDate.startDate, 'EEEE, d MMMM yyyy')}`
+          return t('palette.navigatedTo', {
+            date: formatDisplayDate(parsedDate.startDate, 'EEEE, d MMMM yyyy'),
+          })
         },
       }
       return [commandToItem(navCmd)]
@@ -537,7 +544,7 @@ function eventToItem(
       } else {
         openModal(event.start, undefined, event.id)
       }
-      return { success: true, message: `Opened: ${event.title}` }
+      return { success: true, message: t('palette.opened', { title: event.title }) }
     },
     data: event,
     itemType: 'event',
@@ -552,7 +559,7 @@ function calendarToItem(cal: CalendarResult, navigate: (path: string) => void): 
     keywords: [],
     onSelect: async () => {
       navigate(`/settings?tab=calendars&calendar=${cal.id}`)
-      return { success: true, message: `Opened calendar: ${cal.name}` }
+      return { success: true, message: t('palette.openedCalendar', { name: cal.name }) }
     },
     data: cal,
     itemType: 'calendar',
@@ -600,8 +607,8 @@ function quickAddToItem(
         }
         return {
           success: true,
-          message: `Created task: ${qa.title}`,
-          linkText: 'Open',
+          message: t('palette.createdTask', { title: qa.title }),
+          linkText: t('palette.open'),
           onLinkClick: () => openModal(undefined, undefined, newEvent.id),
         }
       }
@@ -631,8 +638,8 @@ function quickAddToItem(
       }
       return {
         success: true,
-        message: `Created event: ${qa.title}`,
-        linkText: 'Open',
+        message: t('palette.createdEvent', { title: qa.title }),
+        linkText: t('palette.open'),
         onLinkClick: () => openModal(undefined, undefined, newEvent.id),
       }
     },

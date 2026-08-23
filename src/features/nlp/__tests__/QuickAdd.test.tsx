@@ -3,10 +3,26 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QuickAdd } from '../components/QuickAdd'
 
+vi.mock('@/store/settingsStore', () => ({
+  useSettingsStore: vi.fn((selector) => selector({ timeFormat: '12h', language: 'en' })),
+}))
+
 describe('QuickAdd Component', () => {
   it('renders input field', () => {
     render(<QuickAdd onAdd={() => {}} />)
     expect(screen.getByPlaceholderText(/add event/i)).toBeInTheDocument()
+  })
+
+  it('hides the English natural-language example outside English', async () => {
+    const { useSettingsStore } = await import('@/store/settingsStore')
+    vi.mocked(useSettingsStore).mockImplementation((selector) =>
+      selector({ timeFormat: '12h', language: 'da' } as never)
+    )
+
+    render(<QuickAdd onAdd={() => {}} />)
+
+    expect(screen.getByPlaceholderText('Add event')).toBeInTheDocument()
+    expect(screen.queryByPlaceholderText(/tomorrow at 2pm/i)).not.toBeInTheDocument()
   })
 
   it('shows Add Event button', () => {

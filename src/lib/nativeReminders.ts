@@ -1,9 +1,11 @@
 import { LocalNotifications } from '@capacitor/local-notifications'
 import { addMinutes, parseISO } from 'date-fns'
-import { toEventInstant } from '@/lib/datetime'
+import { toEventInstant, formatTime } from '@/lib/datetime'
 import type { CalendarEvent } from '@/types'
 import { getEffectiveReminders } from './notifications'
 import { openEventDeepLink } from './deepLink'
+import { useSettingsStore } from '@/store/settingsStore'
+import i18n from './i18n'
 
 const REMINDER_ACTION_TYPE = 'REMINDER_ACTIONS'
 const SNOOZE_ACTION_ID = 'snooze-5'
@@ -32,13 +34,13 @@ export async function checkNativeReminderPermission(): Promise<boolean> {
 }
 
 export async function scheduleTestReminder(): Promise<void> {
-  const timeStr = new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+  const timeStr = formatTime(new Date(), useSettingsStore.getState().timeFormat)
   await LocalNotifications.schedule({
     notifications: [
       {
         id: hashToInt32(`test:${Date.now()}`),
-        title: 'Test Notification',
-        body: `Notifications are working! It is currently ${timeStr}`,
+        title: i18n.t('errors:reminder.testNotificationTitle'),
+        body: i18n.t('errors:reminder.testNotificationBody', { time: timeStr }),
         schedule: { at: addMinutes(new Date(), 0.1) },
       },
     ],
@@ -47,7 +49,9 @@ export async function scheduleTestReminder(): Promise<void> {
 
 export async function registerReminderActions(): Promise<void> {
   await LocalNotifications.registerActionTypes({
-    types: [{ id: REMINDER_ACTION_TYPE, actions: [{ id: SNOOZE_ACTION_ID, title: 'Snooze 5m' }] }],
+    types: [
+      { id: REMINDER_ACTION_TYPE, actions: [{ id: SNOOZE_ACTION_ID, title: i18n.t('errors:reminder.snooze5m') }] },
+    ],
   })
 }
 
@@ -69,16 +73,13 @@ export function reminderInstant(event: CalendarEvent, minutesBefore: number): Da
  * toEventInstant for TZID events. Returns 'All day' for all-day events.
  */
 export function reminderBodyTime(event: CalendarEvent): string {
-  if (event.isAllDay) return 'All day'
-  return toEventInstant(event.start, event.timezone).toLocaleTimeString([], {
-    hour: 'numeric',
-    minute: '2-digit',
-  })
+  if (event.isAllDay) return i18n.t('errors:reminder.allDay')
+  return formatTime(toEventInstant(event.start, event.timezone), useSettingsStore.getState().timeFormat)
 }
 
 export function reminderBody(event: CalendarEvent): string {
-  if (event.isAllDay) return 'Starting today'
-  return `Starting at ${reminderBodyTime(event)}`
+  if (event.isAllDay) return i18n.t('errors:reminder.startingToday')
+  return i18n.t('errors:reminder.startingAt', { time: reminderBodyTime(event) })
 }
 
 export async function reconcileNativeReminders(events: CalendarEvent[]): Promise<void> {

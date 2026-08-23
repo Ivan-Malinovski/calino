@@ -9,6 +9,8 @@
  * lives here; the surfaces only decide how to render a code.
  */
 
+import i18n from '@/lib/i18n'
+
 export type SyncErrorCode =
   | 'cors'
   | 'network'
@@ -113,8 +115,12 @@ export function classifySyncError(message: string): SyncErrorCode {
  * categories are reported by several callers. `raw` is only used by `unknown`,
  * where we have nothing better to say than the original message.
  */
-export function shortSyncErrorMessage(code: SyncErrorCode, raw: string, subject = 'Sync'): string {
-  return `${subject} failed: ${syncErrorReason(code, raw)}`
+export function shortSyncErrorMessage(
+  code: SyncErrorCode,
+  raw: string,
+  subject = i18n.t('errors:sync.subjectDefault')
+): string {
+  return i18n.t('errors:sync.shortFailure', { subject, reason: syncErrorReason(code, raw) })
 }
 
 /**
@@ -125,26 +131,27 @@ export function shortSyncErrorMessage(code: SyncErrorCode, raw: string, subject 
 export function syncErrorReason(code: SyncErrorCode, raw: string): string {
   switch (code) {
     case 'cors':
-      return 'your server is blocking the connection (CORS).'
+      return i18n.t('errors:syncReason.cors')
     case 'network':
-      return "couldn't reach your server. It may be offline, or blocking CORS."
+      return i18n.t('errors:syncReason.network')
     case 'timeout':
-      return 'the server took too long to respond.'
+      return i18n.t('errors:syncReason.timeout')
     case 'auth':
-      return 'authentication error. Check your username and password.'
+      return i18n.t('errors:syncReason.auth')
     case 'forbidden':
-      return 'the server refused the change. You may not have write access to this calendar, or the server rejected the data.'
+      return i18n.t('errors:syncReason.forbidden')
     case 'quota':
-      return 'the server storage is full. Free up space on the server and try again.'
+      return i18n.t('errors:syncReason.quota')
     case 'rate-limited':
-      return 'the server is rate-limiting requests. Try again in a moment.'
+      return i18n.t('errors:syncReason.rateLimited')
     case 'not-found':
-      return "the resource wasn't found on the server."
+      return i18n.t('errors:syncReason.notFound')
     case 'conflict':
-      return 'this item changed on the server. Sync again to pick up the newer copy.'
+      return i18n.t('errors:syncReason.conflict')
     case 'server':
-      return 'the server returned an error. Check its logs.'
+      return i18n.t('errors:syncReason.server')
     case 'unknown':
+      // Raw server/exception text — not translatable.
       return raw
   }
 }
@@ -163,25 +170,26 @@ export function connectionErrorMessage(raw: string, code?: SyncErrorCode): strin
   switch (code ?? classifySyncError(raw)) {
     case 'cors':
     case 'network':
-      return "Couldn't reach the server. Check the address, or it may be offline or blocking cross-origin requests."
+      return i18n.t('errors:connection.corsOrNetwork')
     case 'timeout':
-      return 'The server took too long to respond.'
+      return i18n.t('errors:connection.timeout')
     // Deliberately short: `suggestAuthHint` renders directly below this and
     // supplies the app-specific-password guidance for providers that need it.
     case 'auth':
-      return 'The server rejected these credentials.'
+      return i18n.t('errors:connection.auth')
     case 'forbidden':
-      return 'The server refused the request. Check that you have write access to this calendar.'
+      return i18n.t('errors:connection.forbidden')
     case 'quota':
-      return 'The server storage is full. Free up space on the server and try again.'
+      return i18n.t('errors:connection.quota')
     case 'rate-limited':
-      return 'The server is rate-limiting requests. Try again in a moment.'
+      return i18n.t('errors:connection.rateLimited')
     case 'not-found':
-      return "The server answered, but there's nothing at that address. Check the URL path."
+      return i18n.t('errors:connection.notFound')
     case 'server':
-      return 'The server returned an error. Check its logs.'
+      return i18n.t('errors:connection.server')
     case 'conflict':
     case 'unknown':
+      // Raw server/exception text — not translatable.
       return raw
   }
 }

@@ -1,6 +1,7 @@
 import { createDAVClient } from 'tsdav'
 import { webFetch } from '@/lib/webFetch'
 import { basicAuthHeader } from './basicAuth'
+import i18n from '@/lib/i18n'
 
 const DISCOVERY_TIMEOUT_MS = 8_000
 
@@ -18,18 +19,17 @@ const KNOWN_CALENDAR_PROVIDERS: Record<
     baseUrl: string
     urlTemplate: string | null
     /**
-     * Guidance shown when the server rejects the credentials (401/403).
-     * Many providers (Fastmail, iCloud, Google) reject the account login
-     * password and require a provider-generated app-specific password.
+     * i18n key for guidance shown when the server rejects the credentials
+     * (401/403). Many providers (Fastmail, iCloud, Google) reject the account
+     * login password and require a provider-generated app-specific password.
      */
-    authHint: string | null
+    authHintKey: string | null
   }
 > = {
   'fastmail.com': {
     baseUrl: 'https://caldav.fastmail.com',
     urlTemplate: 'https://caldav.fastmail.com/dav/principals/user/{email}/',
-    authHint:
-      'Fastmail rejected these credentials. Fastmail requires an app-specific password for CalDAV — your normal login password will not work. Create one at Settings → Privacy & Security → Integrations → New App Password (grant it "Calendars (CalDAV)" access), then use your email as the username and that password.',
+    authHintKey: 'errors:connection.fastmailAuthHint',
   },
 }
 
@@ -69,7 +69,10 @@ export function suggestCalDAVUrl(serverUrl: string): string | null {
     for (const [domain, info] of Object.entries(KNOWN_CALENDAR_PROVIDERS)) {
       if (hostname === domain || hostname.endsWith('.' + domain)) {
         if (!info.urlTemplate) return null
-        return `For ${domain}, try entering: ${info.urlTemplate.replace('{email}', 'your-email@' + domain)}`
+        return i18n.t('errors:connection.urlHint', {
+          domain,
+          url: info.urlTemplate.replace('{email}', 'your-email@' + domain),
+        })
       }
     }
   } catch {
@@ -88,7 +91,7 @@ export function suggestAuthHint(serverUrl: string): string | null {
     const hostname = new URL(serverUrl).hostname
     for (const [domain, info] of Object.entries(KNOWN_CALENDAR_PROVIDERS)) {
       if (hostname === domain || hostname.endsWith('.' + domain)) {
-        return info.authHint
+        return info.authHintKey ? i18n.t(info.authHintKey) : null
       }
     }
   } catch {
@@ -440,14 +443,14 @@ export async function probeConnection(
     return {
       ok: false,
       status: result.status,
-      error: `Server returned status ${result.status}`,
+      error: i18n.t('errors:connection.badStatus', { status: result.status }),
       hint: hint ?? undefined,
     }
   } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : 'Unknown error'
+    const errorMsg = error instanceof Error ? error.message : i18n.t('errors:connection.unknownError')
     return {
       ok: false,
-      error: `Connection failed: ${errorMsg}. This may be a CORS issue - the server must allow cross-origin requests.`,
+      error: i18n.t('errors:connection.failedGeneric', { message: errorMsg }),
       hint: suggestCalDAVUrl(hintUrl) ?? undefined,
     }
   }

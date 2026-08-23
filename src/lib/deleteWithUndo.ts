@@ -1,5 +1,6 @@
 import type { CalendarEvent } from '@/types'
 import { showToast } from './toast'
+import i18n from './i18n'
 
 interface DeleteEventWithUndoOptions {
   event: CalendarEvent
@@ -21,7 +22,7 @@ export function deleteEventWithUndo({
   // Fire-and-forget CalDAV delete first so it can capture etag before local delete
   if (event.calendarId !== 'default') {
     deleteCalDAVEvent?.(event.calendarId, event.id).catch(() => {
-      showToast('Failed to sync deletion. It will be retried.')
+      showToast(i18n.t('errors:sync.deletionSyncRetry'))
     })
   }
 
@@ -30,13 +31,13 @@ export function deleteEventWithUndo({
   onAfterDelete?.()
 
   // Show undo toast
-  showToast('Event deleted', {
+  showToast(i18n.t('errors:undo.eventDeleted'), {
     duration: 8000,
     onUndo: () => {
       addEvent(event)
       if (event.calendarId !== 'default') {
         createCalDAVEvent?.(event.calendarId, event).catch(() => {
-          showToast('Failed to restore event.')
+          showToast(i18n.t('errors:sync.eventRestoreFailed'))
         })
       }
     },

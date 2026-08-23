@@ -1,1 +1,17 @@
-{}
+{
+  "actions": {
+    "today": "I dag",
+    "previous": "Forrige",
+    "next": "Næste",
+    "close": "Luk",
+    "cancel": "Annuller",
+    "remove": "Fjern",
+    "add": "Tilføj",
+    "edit": "Rediger",
+    "delete": "Slet",
+    "undo": "Fortryd",
+    "view": "Vis",
+    "done": "Færdig",
+    "save": "Gem"
+  }
+}

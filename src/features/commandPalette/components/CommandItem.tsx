@@ -1,6 +1,6 @@
 import type { JSX } from 'react'
-import { format, parseISO } from 'date-fns'
-import { formatTime } from '@/lib/datetime'
+import { parseISO } from 'date-fns'
+import { formatDisplayDate, formatTime } from '@/lib/datetime'
 import { describeRecurrenceRule } from '@/lib/recurrence'
 import type { Command, EventResult, CalendarResult, QuickAddResult } from '../types'
 import type { TimeFormat } from '@/types'
@@ -10,12 +10,14 @@ export interface CommandItemContentProps {
   item: Command | EventResult | CalendarResult | QuickAddResult
   type: 'command' | 'event' | 'calendar' | 'quick-add'
   timeFormat: TimeFormat
+  t: (key: string, opts?: Record<string, unknown>) => string
 }
 
 export function renderCommandItemContent({
   item,
   type,
   timeFormat,
+  t,
 }: CommandItemContentProps): JSX.Element {
   if (type === 'command') {
     const cmd = item as Command
@@ -52,14 +54,14 @@ export function renderCommandItemContent({
               <span
                 className={styles.recurringBadge}
                 title={event.recurrence}
-                aria-label="Recurring"
+                aria-label={t('palette.recurring')}
               >
                 ↻
               </span>
             )}
           </div>
           <div className={styles.desc}>
-            {format(start, 'EEE, d MMM yyyy')}
+            {formatDisplayDate(start, 'EEE, d MMM yyyy')}
             {!dayOnly && ` ${formatTime(start, timeFormat)}`}
             {event.recurrence && ` · ${event.recurrence}`}
           </div>
@@ -93,21 +95,25 @@ export function renderCommandItemContent({
         <span className={styles.icon}>{isTaskItem ? '○' : '+'}</span>
         <div className={styles.body}>
           <div className={styles.title}>
-            {isTaskItem ? 'Task: ' : 'Create: '}
+            {isTaskItem ? t('palette.task') : t('palette.create')}
             {qa.title}
             {recurrence && (
-              <span className={styles.recurringBadge} title={recurrence} aria-label="Recurring">
+              <span
+                className={styles.recurringBadge}
+                title={recurrence}
+                aria-label={t('palette.recurring')}
+              >
                 ↻
               </span>
             )}
           </div>
           <div className={styles.desc}>
-            {format(qa.startDate, 'EEEE, MMMM d')}
+            {formatDisplayDate(qa.startDate, 'EEEE, MMMM d')}
             {qa.endDate &&
               ` ${formatTime(qa.startDate, timeFormat)} – ${formatTime(qa.endDate, timeFormat)}`}
             {!qa.endDate && !qa.isAllDay && ` ${formatTime(qa.startDate, timeFormat)}`}
-            {qa.isAllDay && ' (all day)'}
-            {qa.location && ` at ${qa.location}`}
+            {qa.isAllDay && ` ${t('palette.allDay')}`}
+            {qa.location && ` ${t('palette.at', { location: qa.location })}`}
             {recurrence && ` · ${recurrence}`}
             <span className={styles.confidence}> · {confidencePercent}%</span>
           </div>
@@ -116,5 +122,5 @@ export function renderCommandItemContent({
     )
   }
 
-  return <div className={styles.title}>Unknown</div>
+  return <div className={styles.title}>{t('palette.unknown')}</div>
 }

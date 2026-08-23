@@ -1,1 +1,27 @@
-{}
+{
+  "list": {
+    "searchContacts": "Kontakte suchen…",
+    "clearSearch": "Suche löschen",
+    "contactCount_one": "{{count}} Kontakt",
+    "contactCount_other": "{{count}} Kontakte",
+    "newContact": "+ Neu",
+    "allAddressBooks": "Alle Adressbücher",
+    "filteredBy": "Gefiltert nach:",
+    "noMatches": "Keine Treffer",
+    "noContactsMatch": "Keine Kontakte passen zu „{{query}}“",
+    "noContacts": "Keine Kontakte",
+    "syncToSeeContacts": "Synchronisiere dein CardDAV-Konto, um hier Kontakte zu sehen."
+  },
+  "detail": {
+    "unknownContact": "Unbekannter Kontakt", "sendEmail": "E-Mail senden", "editContact": "Kontakt bearbeiten", "deleteContact": "Kontakt löschen", "clickAgainToConfirm": "Zum Bestätigen erneut klicken", "confirmQuestion": "Bestätigen?", "today": "(heute!)", "inDays_one": "(in {{count}} Tag)", "inDays_other": "(in {{count}} Tagen)", "yearsOld_one": "{{count}} Jahr alt", "yearsOld_other": "{{count}} Jahre alt", "onCalendar": "Im Kalender", "addToCalendar": "Zum Kalender hinzufügen",
+    "field": { "email": "E-MAIL", "phone": "TELEFON", "url": "URL", "im": "IM", "address": "ADRESSE", "language_one": "SPRACHE", "language_other": "SPRACHEN", "related": "VERKNÜPFT", "members": "MITGLIEDER", "tags": "TAGS", "xmlData": "XML-DATEN", "notes": "NOTIZEN", "birthday": "GEBURTSTAG", "anniversary": "JAHRESTAG" },
+    "type": { "home": "Privat", "work": "Arbeit", "mobile": "Mobil", "fax": "Fax", "other": "Andere", "preferred": "Bevorzugt" },
+    "relatedType": { "friend": "Freund/in", "coworker": "Kolleg/in", "family": "Familie", "child": "Kind", "spouse": "Ehepartner/in", "agent": "Vertretung", "emergency": "Notfall", "other": "Andere" }
+  },
+  "form": {
+    "clickToUploadPhoto": "Klicken, um ein Foto hochzuladen", "contactPhoto": "Kontaktfoto", "processing": "Verarbeitung...", "changePhoto": "Foto ändern", "clickToUploadAPhoto": "Klicken, um ein Foto hochzuladen", "name": "Name", "givenName": "Vorname", "familyName": "Nachname", "less": "Weniger", "moreNameOptions": "Weitere Namensoptionen", "additionalNames": "Weitere Namen", "prefixPlaceholder": "Präfix (z. B. Dr.)", "suffixPlaceholder": "Suffix (z. B. Jr.)", "nickname": "Spitzname", "organization": "Organisation", "department": "Abteilung", "roleTitle": "Rolle / Titel", "tags": "Tags", "removeTag": "Tag {{tag}} entfernen", "addTagPlaceholder": "Tag hinzufügen und Enter drücken", "emails": "E-Mails", "emailAddress": "E-Mail-Adresse", "removeEmail": "E-Mail entfernen", "addEmail": "+ E-Mail hinzufügen", "phones": "Telefonnummern", "phoneNumber": "Telefonnummer", "removePhone": "Telefonnummer entfernen", "addPhone": "+ Telefonnummer hinzufügen", "addresses": "Adressen", "removeAddress": "Adresse entfernen", "streetAddress": "Straße und Hausnummer", "cityRegion": "Ort / Region", "postalCode": "Postleitzahl", "country": "Land", "addAddress": "+ Adresse hinzufügen", "urls": "URLs", "removeUrl": "URL entfernen", "addUrl": "+ URL hinzufügen", "noteLabel": "Notiz (unterstützt <strong>Markdown</strong>)", "notePlaceholder": "Notiz schreiben... (unterstützt **fett**, *kursiv*, Listen usw.)", "languageCodePlaceholder": "Sprachcode (z. B. de)", "removeLanguage": "Sprache entfernen", "addLanguage": "+ Sprache hinzufügen", "relatedContacts": "Verknüpfte Kontakte", "searchContactsOrTypeName": "Kontakte suchen oder Namen eingeben", "removeRelatedContact": "Verknüpften Kontakt entfernen", "addRelatedContact": "+ Verknüpften Kontakt hinzufügen", "thisIsAGroup": "Dies ist eine Gruppe", "selectContactsToAddAsMembers": "Kontakte auswählen, die als Mitglieder hinzugefügt werden sollen:", "removeMember": "Mitglied entfernen", "addAMember": "Mitglied hinzufügen…", "extendedDataXml": "Erweiterte Daten (XML)", "xmlDataPlaceholder": "XML-Daten (RFC 6350 §6.3.1)...", "newContact": "Neuer Kontakt"
+  },
+  "import": { "title": "Kontakte importieren", "contactsFound_one": "{{count}} Kontakt gefunden", "contactsFound_other": "{{count}} Kontakte gefunden", "duplicates_one": "{{count}} Duplikat", "duplicates_other": "{{count}} Duplikate", "selectedCount_one": "{{count}} ausgewählt", "selectedCount_other": "{{count}} ausgewählt", "selectAll": "Alle auswählen", "deselectAll": "Auswahl aufheben", "skipDuplicates": "Duplikate überspringen", "noName": "(kein Name)", "dupeBadge": "DOPPELT", "importingProgress": "{{imported}}/{{total}} werden importiert...", "importCount_one": "{{count}} Kontakt importieren", "importCount_other": "{{count}} Kontakte importieren" },
+  "merge": { "title": "Duplikate zusammenführen", "noDuplicatesFound": "Keine Duplikate gefunden", "confidence": { "high": "HOCH", "medium": "MITTEL", "low": "NIEDRIG" }, "reasonSameEmail": "Gleiche E-Mail: {{value}}", "reasonSamePhone": "Gleiche Telefonnummer: {{value}}", "reasonSameNameAndOrg": "Gleicher Name und gleiche Organisation: {{value}}", "reasonSameContact": "Gleicher Kontakt", "mergeCount_one": "{{count}} Kontakt zusammenführen", "mergeCount_other": "{{count}} Kontakte zusammenführen", "mergedContacts_one": "{{count}} Kontakt zusammengeführt", "mergedContacts_other": "{{count}} Kontakte zusammengeführt" },
+  "view": { "noAddressBookAvailable": "Kein Adressbuch verfügbar", "noCalendarAvailable": "Kein Kalender verfügbar", "chooseAddressBook": "Adressbuch auswählen", "contacts": "Kontakte", "selectAContact": "Kontakt auswählen", "addAnniversaryTo": "Jahrestag hinzufügen für", "addBirthdayTo": "Geburtstag hinzufügen für", "birthdayAddedToCalendar": "Geburtstag zum Kalender hinzugefügt", "anniversaryAddedToCalendar": "Jahrestag zum Kalender hinzugefügt" }
+}
