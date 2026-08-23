@@ -20,6 +20,13 @@ test.describe('language settings', () => {
     await expect(language).toHaveAttribute('data-value', 'da')
 
     await page.goto('/month')
+    await page.getByRole('button', { name: 'Tilføj kalender', exact: true }).first().click()
+    await page.getByRole('button', { name: 'Tilføj CalDAV-konto', exact: true }).click()
+    await expect(
+      page.getByRole('dialog').getByRole('heading', { name: 'Tilføj CalDAV-kalender', exact: true })
+    ).toBeVisible()
+    await page.keyboard.press('Escape')
+
     await expect(page.getByRole('button', { name: 'Forrige', exact: true })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Næste', exact: true })).toBeVisible()
     const desktopSwitcher = page.locator('[data-component="view-switcher"]')

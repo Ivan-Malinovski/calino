@@ -274,7 +274,7 @@ export function AddCalendarModal({
       >
         <div className={styles.modalHeader}>
           <h3 className={styles.modalTitle} id="modal-title">
-            {isEdit ? 'Edit CalDAV Account' : 'Add CalDAV Calendar'}
+            {isEdit ? t('surface.editCaldavAccountTitle') : t('surface.addCaldavCalendarTitle')}
           </h3>
           <button className={styles.modalClose} onClick={requestClose} aria-label={t('surface.close')}>
             ✕

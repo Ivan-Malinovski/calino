@@ -403,8 +403,10 @@
       "tasksWithSubtasksCannotRepeat": "opgaver med underopgaver kan ikke gentages"
     }
   },
-    "surface": {
+  "surface": {
     "close": "Luk",
+    "addCaldavCalendarTitle": "Tilføj CalDAV-kalender",
+    "editCaldavAccountTitle": "Rediger CalDAV-konto",
     "recurrenceApplyChanges": "Hvordan vil du anvende disse ændringer?",
     "icsDropTitle": "Slip en .ics-fil for at importere begivenheder",
     "icsDropHint": "Du vælger kalenderen bagefter",

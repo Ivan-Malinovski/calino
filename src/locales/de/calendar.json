@@ -403,8 +403,10 @@
       "tasksWithSubtasksCannotRepeat": "tasks with subtasks cannot repeat"
     }
   },
-    "surface": {
+  "surface": {
     "close": "Schließen",
+    "addCaldavCalendarTitle": "CalDAV-Kalender hinzufügen",
+    "editCaldavAccountTitle": "CalDAV-Konto bearbeiten",
     "recurrenceApplyChanges": "Wie möchtest du diese Änderungen anwenden?",
     "icsDropTitle": ".ics-Datei ablegen, um Termine zu importieren",
     "icsDropHint": "Den Kalender wählst du als Nächstes aus",
