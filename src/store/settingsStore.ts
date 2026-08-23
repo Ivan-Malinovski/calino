@@ -259,89 +259,92 @@ export const useSettingsStore = create<SettingsStore>()(
   )
 )
 
-export const DATE_FORMAT_OPTIONS: { value: DateFormat; label: string }[] = [
-  { value: 'MM/dd/yyyy', label: 'MM/DD/YYYY (12/31/2024)' },
-  { value: 'dd/MM/yyyy', label: 'DD/MM/YYYY (31/12/2024)' },
-  { value: 'yyyy-MM-dd', label: 'YYYY-MM-DD (2024-12-31)' },
+export const DATE_FORMAT_OPTIONS: { value: DateFormat; labelKey: string }[] = [
+  { value: 'MM/dd/yyyy', labelKey: 'general.dateFormat.mmddyyyy' },
+  { value: 'dd/MM/yyyy', labelKey: 'general.dateFormat.ddmmyyyy' },
+  { value: 'yyyy-MM-dd', labelKey: 'general.dateFormat.yyyymmdd' },
 ]
 
-export const TIME_FORMAT_OPTIONS: { value: TimeFormat; label: string }[] = [
-  { value: '12h', label: '12-hour (2:30 PM)' },
-  { value: '24h', label: '24-hour (14:30)' },
+export const TIME_FORMAT_OPTIONS: { value: TimeFormat; labelKey: string }[] = [
+  { value: '12h', labelKey: 'general.timeFormat.12h' },
+  { value: '24h', labelKey: 'general.timeFormat.24h' },
 ]
 
-export const FIRST_DAY_OPTIONS: { value: FirstDayOfWeek; label: string }[] = [
-  { value: 0, label: 'Sunday' },
-  { value: 1, label: 'Monday' },
-  { value: 2, label: 'Tuesday' },
-  { value: 3, label: 'Wednesday' },
-  { value: 4, label: 'Thursday' },
-  { value: 5, label: 'Friday' },
-  { value: 6, label: 'Saturday' },
+export const FIRST_DAY_OPTIONS: { value: FirstDayOfWeek; labelKey: string }[] = [
+  { value: 0, labelKey: 'weekday.sunday' },
+  { value: 1, labelKey: 'weekday.monday' },
+  { value: 2, labelKey: 'weekday.tuesday' },
+  { value: 3, labelKey: 'weekday.wednesday' },
+  { value: 4, labelKey: 'weekday.thursday' },
+  { value: 5, labelKey: 'weekday.friday' },
+  { value: 6, labelKey: 'weekday.saturday' },
 ]
 
-export const DENSITY_OPTIONS: { value: EventDensity; label: string }[] = [
-  { value: 'comfortable', label: 'Comfortable' },
-  { value: 'compact', label: 'Compact' },
+export const DENSITY_OPTIONS: { value: EventDensity; labelKey: string }[] = [
+  { value: 'comfortable', labelKey: 'calendar.eventDensity.comfortable' },
+  { value: 'compact', labelKey: 'calendar.eventDensity.compact' },
 ]
 
-export const DURATION_OPTIONS: { value: DefaultDuration; label: string }[] = [
-  { value: 15, label: '15 minutes' },
-  { value: 30, label: '30 minutes' },
-  { value: 60, label: '1 hour' },
-  { value: 90, label: '1.5 hours' },
-  { value: 120, label: '2 hours' },
+export const DURATION_OPTIONS: { value: DefaultDuration; labelKey: string }[] = [
+  { value: 15, labelKey: 'calendar.defaultDuration.15min' },
+  { value: 30, labelKey: 'calendar.defaultDuration.30min' },
+  { value: 60, labelKey: 'calendar.defaultDuration.1hour' },
+  { value: 90, labelKey: 'calendar.defaultDuration.1.5hours' },
+  { value: 120, labelKey: 'calendar.defaultDuration.2hours' },
 ]
 
-export const VIEW_OPTIONS: { value: ViewType; label: string }[] = [
-  { value: 'month', label: 'Month' },
-  { value: 'week', label: 'Week' },
-  { value: 'day', label: 'Day' },
-  { value: 'agenda', label: 'Agenda' },
-  { value: 'todo', label: 'Tasks' },
+export const VIEW_OPTIONS: { value: ViewType; labelKey: string }[] = [
+  { value: 'month', labelKey: 'calendar.defaultView.month' },
+  { value: 'week', labelKey: 'calendar.defaultView.week' },
+  { value: 'day', labelKey: 'calendar.defaultView.day' },
+  { value: 'agenda', labelKey: 'calendar.defaultView.agenda' },
+  { value: 'todo', labelKey: 'calendar.defaultView.todo' },
 ]
 
 /**
  * Options for the per-event reminder chips. No "None" here — removing the last
  * chip is how an event ends up with no reminder.
  */
-export const REMINDER_OPTIONS: { value: number; label: string }[] = [
-  { value: 0, label: 'At time of event' },
-  { value: 5, label: '5 minutes before' },
-  { value: 15, label: '15 minutes before' },
-  { value: 30, label: '30 minutes before' },
-  { value: 60, label: '1 hour before' },
-  { value: 1440, label: '1 day before' },
+export const REMINDER_OPTIONS: { value: number; labelKey: string }[] = [
+  { value: 0, labelKey: 'calendar.defaultReminder.atTimeOfEvent' },
+  { value: 5, labelKey: 'calendar.defaultReminder.5minBefore' },
+  { value: 15, labelKey: 'calendar.defaultReminder.15minBefore' },
+  { value: 30, labelKey: 'calendar.defaultReminder.30minBefore' },
+  { value: 60, labelKey: 'calendar.defaultReminder.1hourBefore' },
+  { value: 1440, labelKey: 'calendar.defaultReminder.1dayBefore' },
 ]
 
 /**
  * Options for the "Default Reminder" setting, which seeds the new-event form.
  * "None" means a new event starts with no reminder at all.
  */
-export const DEFAULT_REMINDER_OPTIONS: { value: number | null; label: string }[] = [
-  { value: null, label: 'None' },
+export const DEFAULT_REMINDER_OPTIONS: { value: number | null; labelKey: string }[] = [
+  { value: null, labelKey: 'calendar.defaultReminder.none' },
   ...REMINDER_OPTIONS,
 ]
 
-export const CONFLICT_OPTIONS: { value: 'server-wins' | 'local-wins' | 'ask'; label: string }[] = [
-  { value: 'server-wins', label: 'Server wins (default)' },
-  { value: 'local-wins', label: 'Local wins' },
-  { value: 'ask', label: 'Ask me' },
+export const CONFLICT_OPTIONS: {
+  value: 'server-wins' | 'local-wins' | 'ask'
+  labelKey: string
+}[] = [
+  { value: 'server-wins', labelKey: 'conflict.serverWins' },
+  { value: 'local-wins', labelKey: 'conflict.localWins' },
+  { value: 'ask', labelKey: 'conflict.askMe' },
 ]
 
 // Re-export from config for backward compatibility.
 export const EVENT_COLORS = _EVENT_COLORS_FROM_CONFIG
 
-export const THEME_MODE_OPTIONS: { value: ThemeMode; label: string }[] = [
-  { value: 'light', label: 'Light' },
-  { value: 'dark', label: 'Dark' },
-  { value: 'auto', label: 'System' },
+export const THEME_MODE_OPTIONS: { value: ThemeMode; labelKey: string }[] = [
+  { value: 'light', labelKey: 'theme.appearance.light' },
+  { value: 'dark', labelKey: 'theme.appearance.dark' },
+  { value: 'auto', labelKey: 'theme.appearance.system' },
 ]
 
-export const MAP_PROVIDER_OPTIONS: { value: MapProvider; label: string }[] = [
-  { value: 'google', label: 'Google Maps' },
-  { value: 'apple', label: 'Apple Maps' },
-  { value: 'osm', label: 'OpenStreetMap' },
-  { value: 'mapy', label: 'mapy.com' },
-  { value: 'geo', label: 'Device default (geo:)' },
+export const MAP_PROVIDER_OPTIONS: { value: MapProvider; labelKey: string }[] = [
+  { value: 'google', labelKey: 'general.mapProvider.google' },
+  { value: 'apple', labelKey: 'general.mapProvider.apple' },
+  { value: 'osm', labelKey: 'general.mapProvider.osm' },
+  { value: 'mapy', labelKey: 'general.mapProvider.mapy' },
+  { value: 'geo', labelKey: 'general.mapProvider.geo' },
 ]

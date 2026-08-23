@@ -1,5 +1,6 @@
 import type { JSX } from 'react'
 import { useLayoutEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { format } from 'date-fns'
 import type { CalendarEvent, TaskPriority } from '@/types'
 import type { TaskTreeItem } from '@/lib/taskTree'
@@ -103,6 +104,7 @@ export function TaskFormFields({
   onAddSubtask,
   recurrence: recurrenceProps,
 }: TaskFormFieldsProps): JSX.Element {
+  const { t } = useTranslation('calendar')
   const dueDateRef = useRef<HTMLInputElement>(null)
   const timeFormat = useSettingsStore((state) => state.timeFormat)
   const firstDayOfWeek = useSettingsStore((state) => state.firstDayOfWeek)
@@ -152,7 +154,7 @@ export function TaskFormFields({
               checked={completed}
               onChange={(e) => onCompletedChange(e.target.checked)}
             />
-            <span>Completed</span>
+            <span>{t('surface.completed')}</span>
           </label>
         </div>
 
@@ -186,7 +188,7 @@ export function TaskFormFields({
         <div className={styles.field}>
           {parentTask && (
             <div className={styles.helperText} data-component="subtask-parent">
-              Subtask of: {parentTask.title}
+              {t('surface.subtaskOfLabel', { title: parentTask.title })}
             </div>
           )}
           <label className={styles.label} htmlFor="parent-task-select">
@@ -198,7 +200,7 @@ export function TaskFormFields({
             onChange={(e) => onParentTaskChange(e.target.value || undefined)}
             className={styles.select}
           >
-            <option value="">No parent</option>
+            <option value="">{t('surface.noParent')}</option>
             {parentTasks.map((task) => (
               <option key={task.id} value={task.id}>
                 {task.title}
@@ -223,7 +225,7 @@ export function TaskFormFields({
       {(subtasks.length > 0 || (rootTaskId && taskHasSubtasks(rootTaskId))) && (
         <div className={styles.subtaskList}>
           <div className={styles.subtaskHeading}>
-            <span className={styles.label}>Subtasks</span>
+            <span className={styles.label}>{t('surface.subtasks')}</span>
             {rootTaskId && rootTaskTitle && taskHasSubtasks(rootTaskId) && (
               <TaskCollapseToggle
                 taskTitle={rootTaskTitle}

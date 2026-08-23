@@ -2,7 +2,8 @@ import type { JSX } from 'react'
 import React, { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { format, parseISO, isSameDay } from 'date-fns'
-import { formatEventTime, toEventInstant } from '@/lib/datetime'
+import { useTranslation } from 'react-i18next'
+import { formatEventTime, formatDisplayDate, toEventInstant } from '@/lib/datetime'
 import { useDraggable } from '@dnd-kit/core'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
@@ -99,6 +100,7 @@ export const EventCard = React.memo(function EventCard({
   taskSubtaskCount,
   onToggleTaskSubtasks,
 }: EventCardProps): JSX.Element {
+  const { t } = useTranslation('calendar')
   const calendars = useCalendarStore((state) => state.calendars)
   const categories = useCalendarStore((state) => state.categories)
   const openModal = useCalendarStore((state) => state.openModal)
@@ -509,10 +511,25 @@ export const EventCard = React.memo(function EventCard({
         tabIndex={0}
         aria-label={
           isTask
-            ? `${event.title}${isSubtask ? ' (subtask)' : ''}${event.completed ? ' (completed)' : ''}${event.dueDate ? ` due ${formatEventTime(event.dueDate, event.timezone, timeFormat)}` : ''}`
+            ? event.isAllDay
+              ? t('modals.eventCard.allDayAriaLabel', { title: event.title })
+              : t('modals.eventCard.taskAriaLabel', {
+                  title: event.title,
+                  subtask: isSubtask ? t('modals.eventCard.subtaskSuffix') : '',
+                  completed: event.completed ? t('modals.eventCard.completedSuffix') : '',
+                  due: event.dueDate
+                    ? t('modals.eventCard.dueSuffix', {
+                        time: formatEventTime(event.dueDate, event.timezone, timeFormat),
+                      })
+                    : '',
+                })
             : event.isAllDay
-              ? `${event.title}, all day`
-              : `${event.title}, ${formatEventTime(event.start, event.timezone, timeFormat)} to ${formatEventTime(event.end, event.timezone, timeFormat)}`
+              ? t('modals.eventCard.allDayAriaLabel', { title: event.title })
+              : t('modals.eventCard.timedAriaLabel', {
+                  title: event.title,
+                  start: formatEventTime(event.start, event.timezone, timeFormat),
+                  end: formatEventTime(event.end, event.timezone, timeFormat),
+                })
         }
         {...(isMultiDay ? { 'data-multi-day': '' } : {})}
         {...(isTight ? { 'data-tight': '' } : {})}
@@ -523,8 +540,8 @@ export const EventCard = React.memo(function EventCard({
           ? {
               'data-no-drag': '',
               title: isReadOnlyCalendar
-                ? 'Click to view (read-only subscription)'
-                : 'Click to edit (recurring event)',
+                ? t('modals.eventCard.clickToViewReadOnly')
+                : t('modals.eventCard.clickToEditRecurring'),
             }
           : {})}
         className={`${styles.card} ${compact ? styles.compact : ''} ${isCurrentDragging || isDragging ? styles.dragging : ''} ${isResizing ? styles.resizing : ''} ${hideTopRadius ? styles.noTopRadius : ''} ${isTask ? styles.task : ''} ${isSubtask && monthView ? styles.subtask : ''} ${event.completed ? styles.completed : ''} ${event.completed ? styles.isDone : ''} ${isMobileMonth ? styles.mobileMonth : ''} ${monthView ? styles.monthView : ''} ${transparent ? styles.transparent : ''} ${isMultiDay ? styles.multiDay : ''} ${isFragmentMiddle ? styles.fragmentMiddle : ''} ${isFragmentFirst ? styles.fragmentFirst : ''} ${isFragmentLast ? styles.fragmentLast : ''} ${hasFragmentTitle ? styles.fragmentTitle : ''} ${dotMode ? styles.dot : ''} ${isTight ? styles.tight : ''} ${event.isFragment && isSharedHovered ? styles.hovered : ''} ${disableDirectEdit ? styles.noDrag : ''}`}
@@ -545,12 +562,12 @@ export const EventCard = React.memo(function EventCard({
       >
         {backgroundId && <EventBackground id={backgroundId} className={styles.keywordBackground} />}
         {isDragging && isDuplicateModifierHeld && (
-          <div className={styles.duplicateBadge} title="Drop to duplicate">
+          <div className={styles.duplicateBadge} title={t('modals.eventCard.dropToDuplicate')}>
             <DuplicateIcon />
           </div>
         )}
         {event.syncStatus === 'failed' && (
-          <div className={styles.syncFailedIcon} title="Sync failed - changes not saved to server">
+          <div className={styles.syncFailedIcon} title={t('modals.eventCard.syncFailed')}>
             <SyncWarningIcon />
           </div>
         )}
@@ -559,7 +576,7 @@ export const EventCard = React.memo(function EventCard({
             {event.attachments && event.attachments.length > 0 && (
               <div
                 className={styles.attachmentIcon}
-                title={`${event.attachments.length} attachment${event.attachments.length !== 1 ? 's' : ''}`}
+                title={t('modals.eventCard.attachmentCount', { count: event.attachments.length })}
               >
                 <svg
                   width="12"
@@ -589,7 +606,7 @@ export const EventCard = React.memo(function EventCard({
             className={`${styles.checkbox} ${styles.taskCheckbox}`}
             onClick={handleCheckboxClick}
             disabled={isReadOnlyCalendar}
-            aria-label="Toggle completion"
+            aria-label={t('modals.eventCard.toggleCompletion')}
           >
             {event.completed ? (
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -617,7 +634,7 @@ export const EventCard = React.memo(function EventCard({
               {...attributes}
             >
               {isSubtask && monthView && !dotMode && (
-                <span className={styles.subtaskMarker} aria-hidden="true" title="Subtask">
+                <span className={styles.subtaskMarker} aria-hidden="true" title={t('modals.eventCard.subtask')}>
                   ↳
                 </span>
               )}
@@ -675,14 +692,14 @@ export const EventCard = React.memo(function EventCard({
                 const timeText =
                   !compact && !event.isAllDay
                     ? isFragmentFirst
-                      ? `${formatEventTime(event.start, event.timezone, timeFormat)} - ${format(toEventInstant(event.originalEnd || event.end, event.timezone), 'MMM d')}`
+                      ? `${formatEventTime(event.start, event.timezone, timeFormat)} - ${formatDisplayDate(toEventInstant(event.originalEnd || event.end, event.timezone), 'MMM d')}`
                       : isFragmentMiddle
-                        ? `${format(toEventInstant(event.originalStart || event.start, event.timezone), 'MMM d')} - ${format(toEventInstant(event.originalEnd || event.end, event.timezone), 'MMM d')}`
+                        ? `${formatDisplayDate(toEventInstant(event.originalStart || event.start, event.timezone), 'MMM d')} - ${formatDisplayDate(toEventInstant(event.originalEnd || event.end, event.timezone), 'MMM d')}`
                         : isFragmentLast
-                          ? `${format(toEventInstant(event.originalStart || event.start, event.timezone), 'MMM d')} - ${formatEventTime(event.end, event.timezone, timeFormat)}`
+                          ? `${formatDisplayDate(toEventInstant(event.originalStart || event.start, event.timezone), 'MMM d')} - ${formatEventTime(event.end, event.timezone, timeFormat)}`
                           : `${formatEventTime(event.start, event.timezone, timeFormat)} - ${formatEventTime(event.end, event.timezone, timeFormat)}`
                     : event.isAllDay
-                      ? 'All day'
+                      ? t('modals.eventCard.allDay')
                       : null
                 const locText = event.location || null
                 // The zone rides on the time line rather than below it: a
@@ -745,7 +762,7 @@ export const EventCard = React.memo(function EventCard({
             }}
             items={[
               {
-                label: 'Edit',
+                label: t('modals.eventCard.edit'),
                 onClick: () => {
                   openModal(undefined, undefined, event.id)
                 },
@@ -762,7 +779,7 @@ export const EventCard = React.memo(function EventCard({
                 ? []
                 : [
                     {
-                      label: isTask ? 'Convert to event' : 'Convert to task',
+                      label: isTask ? t('modals.eventCard.convertToEvent') : t('modals.eventCard.convertToTask'),
                       onClick: async () => {
                         const newType = isTask ? 'event' : 'task'
                         // The event modal's calendar picker only offers
@@ -782,8 +799,8 @@ export const EventCard = React.memo(function EventCard({
                         ) {
                           showToast(
                             newType === 'task'
-                              ? `"${calendar.name}" doesn't support tasks`
-                              : `"${calendar.name}" doesn't support events`
+                              ? t('modals.eventCard.calendarDoesNotSupportTasks', { name: calendar.name })
+                              : t('modals.eventCard.calendarDoesNotSupportEvents', { name: calendar.name })
                           )
                           return
                         }
@@ -847,13 +864,13 @@ export const EventCard = React.memo(function EventCard({
                       icon: <EditIcon />,
                     },
                     {
-                      label: 'Duplicate',
+                      label: t('modals.eventCard.duplicate'),
                       onClick: () =>
                         duplicateEventWithSync({ eventId: event.id, createCalDAVEvent }),
                       icon: <DuplicateIcon />,
                     },
                     {
-                      label: 'Delete',
+                      label: t('modals.eventCard.delete'),
                       onClick: () => {
                         const isRecurring =
                           !!event.recurrence || !!event.rruleString || !!originalEventId

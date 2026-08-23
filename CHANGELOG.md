@@ -11,6 +11,9 @@ All notable changes to Calino will be documented in this file.
   through settings sync, with contrast warnings for combinations that fall
   below WCAG AA.
 
+- **English, Danish, and German interface languages** can be selected in
+  Settings. Natural-language parsing remains English-only.
+
 ## [0.30.0] - 2026-08-21
 
 ### Added

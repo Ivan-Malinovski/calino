@@ -1,7 +1,8 @@
 import type { JSX } from 'react'
 import { useState, useCallback, useEffect, useRef } from 'react'
-import { format, isValid } from 'date-fns'
-import { formatTime } from '@/lib/datetime'
+import { isValid } from 'date-fns'
+import { formatDisplayDate, formatTime } from '@/lib/datetime'
+import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/common/Button'
 import { Input } from '@/components/common/Input'
 import { useSettingsStore } from '@/store/settingsStore'
@@ -14,10 +15,12 @@ export interface QuickAddProps {
 }
 
 export function QuickAdd({ onAdd, onCancel }: QuickAddProps): JSX.Element {
+  const { t } = useTranslation(['calendar', 'common'])
   const [input, setInput] = useState('')
   const [preview, setPreview] = useState<NLPParseResult | null>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const timeFormat = useSettingsStore((state) => state.timeFormat)
+  const language = useSettingsStore((state) => state.language)
 
   const parseInput = useCallback((text: string) => {
     if (!text.trim()) {
@@ -64,8 +67,8 @@ export function QuickAdd({ onAdd, onCancel }: QuickAddProps): JSX.Element {
   }, [onCancel])
 
   const formatDate = (date: Date): string => {
-    if (!isValid(date)) return 'Invalid date'
-    return format(date, 'EEEE, MMMM d, yyyy')
+    if (!isValid(date)) return t('modals.quickAdd.invalidDate')
+    return formatDisplayDate(date, 'EEEE, MMMM d, yyyy')
   }
 
   return (
@@ -73,7 +76,11 @@ export function QuickAdd({ onAdd, onCancel }: QuickAddProps): JSX.Element {
       <div className={styles.inputWrapper}>
         <Input
           type="text"
-          placeholder="Add event: 'Meeting tomorrow at 2pm for 1 hour'"
+          placeholder={
+            language === 'en'
+              ? t('modals.quickAdd.placeholderNlp')
+              : t('modals.quickAdd.placeholderSimple')
+          }
           value={input}
           onChange={(e) => setInput(e.target.value)}
           autoFocus
@@ -85,12 +92,12 @@ export function QuickAdd({ onAdd, onCancel }: QuickAddProps): JSX.Element {
           <div className={styles.previewTitle}>{preview.title}</div>
           <div className={styles.previewDetails}>
             <div className={styles.previewRow}>
-              <span className={styles.previewLabel}>Date:</span>
+              <span className={styles.previewLabel}>{t('modals.quickAdd.dateLabel')}</span>
               <span>{formatDate(preview.startDate)}</span>
             </div>
             {!preview.isAllDay && preview.startDate && (
               <div className={styles.previewRow}>
-                <span className={styles.previewLabel}>Time:</span>
+                <span className={styles.previewLabel}>{t('modals.quickAdd.timeLabel')}</span>
                 <span>
                   {formatTime(preview.startDate, timeFormat)}
                   {preview.endDate && ` - ${formatTime(preview.endDate, timeFormat)}`}
@@ -99,24 +106,24 @@ export function QuickAdd({ onAdd, onCancel }: QuickAddProps): JSX.Element {
             )}
             {preview.isAllDay && (
               <div className={styles.previewRow}>
-                <span className={styles.previewLabel}>Type:</span>
-                <span>All day</span>
+                <span className={styles.previewLabel}>{t('modals.quickAdd.typeLabel')}</span>
+                <span>{t('modals.quickAdd.allDay')}</span>
               </div>
             )}
             {preview.location && (
               <div className={styles.previewRow}>
-                <span className={styles.previewLabel}>Location:</span>
+              <span className={styles.previewLabel}>{t('modals.quickAdd.locationLabel')}</span>
                 <span>{preview.location}</span>
               </div>
             )}
             {preview.recurrence && (
               <div className={styles.previewRow}>
-                <span className={styles.previewLabel}>Repeats:</span>
+              <span className={styles.previewLabel}>{t('modals.quickAdd.repeatsLabel')}</span>
                 <span>{preview.recurrence.frequency}</span>
               </div>
             )}
             <div className={styles.confidence}>
-              <span>Confidence:</span>
+              <span>{t('modals.quickAdd.confidence')}</span>
               <div className={styles.confidenceBar}>
                 <div
                   className={styles.confidenceFill}
@@ -131,18 +138,18 @@ export function QuickAdd({ onAdd, onCancel }: QuickAddProps): JSX.Element {
 
       {input && !preview && (
         <div className={styles.preview}>
-          <span className={styles.empty}>Press Enter to add event without parsing</span>
+          <span className={styles.empty}>{t('modals.quickAdd.empty')}</span>
         </div>
       )}
 
       <div className={styles.actions}>
         {onCancel && (
           <Button type="button" variant="secondary" onClick={handleCancel}>
-            Cancel
+            {t('common:actions.cancel')}
           </Button>
         )}
         <Button type="submit" disabled={!preview}>
-          Add Event
+          {t('modals.quickAdd.addEvent')}
         </Button>
       </div>
     </form>

@@ -323,7 +323,7 @@ describe('Bug #120: all-day items in the mobile week view', () => {
 
     // Under the date it read as a badge on the day number; among the items it
     // reads as the rows it stands in for.
-    const toggle = screen.getByRole('button', { name: /Show 1 more all-day items/ })
+    const toggle = screen.getByRole('button', { name: /Show 1 more all-day item/ })
     expect(toggle).toHaveTextContent('+1 more')
     expect(toggle).toHaveAttribute('aria-expanded', 'false')
     expect(toggle.previousElementSibling).not.toBeNull()

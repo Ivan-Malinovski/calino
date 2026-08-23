@@ -1,5 +1,6 @@
 import type { JSX } from 'react'
 import { useCallback, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { createPortal } from 'react-dom'
 import { useWebcalSubscriptions } from '@/features/webcal/hooks/useWebcalSubscriptions'
 import { useAnimatedClose } from '@/hooks/useAnimatedClose'
@@ -25,6 +26,7 @@ export function SubscribeCalendarModal({
   isOpen,
   onClose,
 }: SubscribeCalendarModalProps): JSX.Element | null {
+  const { t } = useTranslation('calendar')
   const [name, setName] = useState('')
   const [url, setUrl] = useState('')
   const [color, setColor] = useState<string>(EVENT_COLORS[0])
@@ -115,7 +117,7 @@ export function SubscribeCalendarModal({
           <h3 className={styles.modalTitle} id="subscribe-modal-title">
             Subscribe to Calendar
           </h3>
-          <button className={styles.modalClose} onClick={requestClose} aria-label="Close">
+          <button className={styles.modalClose} onClick={requestClose} aria-label={t('surface.close')}>
             ✕
           </button>
         </div>
@@ -127,7 +129,7 @@ export function SubscribeCalendarModal({
             <input
               id="subscribeName"
               className={styles.input}
-              placeholder="Holidays"
+              placeholder={t('surface.subscriptionNamePlaceholder')}
               value={name}
               onChange={(e) => setName(e.target.value)}
             />
@@ -139,7 +141,7 @@ export function SubscribeCalendarModal({
             <input
               id="subscribeUrl"
               className={styles.input}
-              placeholder="webcal://example.com/calendar.ics"
+              placeholder={t('surface.webcalUrlPlaceholder')}
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               required
@@ -167,7 +169,7 @@ export function SubscribeCalendarModal({
             </select>
           </div>
           <div className={styles.formGroup}>
-            <label className={styles.formLabel}>Color</label>
+            <label className={styles.formLabel}>{t('surface.color')}</label>
             <div className={styles.colorGrid}>
               {EVENT_COLORS.map((c) => (
                 <button
@@ -205,14 +207,14 @@ export function SubscribeCalendarModal({
                   strokeLinejoin="round"
                 />
               </svg>
-              <span>Proxy URL (optional)</span>
+              <span>{t('surface.proxyUrlOptional')}</span>
             </button>
             {showProxyField && (
               <>
                 <input
                   id="subscribeProxyUrl"
                   className={styles.input}
-                  placeholder="https://proxy.calino.io"
+                placeholder={t('surface.proxyUrlPlaceholder')}
                   value={proxyUrl}
                   onChange={(e) => setProxyUrl(e.target.value)}
                 />

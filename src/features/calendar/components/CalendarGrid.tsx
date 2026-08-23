@@ -35,7 +35,8 @@ import {
   addDays,
   differenceInCalendarDays,
 } from 'date-fns'
-import { pad2, toEventInstant, toZoneWallClock } from '@/lib/datetime'
+import { pad2, toEventInstant, toZoneWallClock, formatDisplayDate } from '@/lib/datetime'
+import { useTranslation } from 'react-i18next'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
 import { getWeekdayLabels } from './weekdayLabels'
@@ -124,6 +125,7 @@ const VIEW_ROUTES: Record<ViewType, string> = {
 const SCROLL_CHAIN_QUIET_MS = 500
 
 export function CalendarGrid(): JSX.Element {
+  const { t } = useTranslation('calendar')
   const currentDate = useCalendarStore((state) => state.currentDate)
   const events = useCalendarStore((state) => state.events)
   const calendars = useCalendarStore((state) => state.calendars)
@@ -1280,8 +1282,8 @@ export function CalendarGrid(): JSX.Element {
             className={styles.splitHandleH}
             data-no-pull-refresh
             data-resize-handle
-            aria-label="Resize calendar and agenda. Double-click to reset"
-            title="Drag to resize · Double-click to reset"
+            aria-label={t('views.grid.resizeCalendarAgenda')}
+            title={t('views.grid.dragToResize')}
             onMouseDown={handleGridResizeStart}
             onTouchStart={handleGridResizeTouchStart}
             onDoubleClick={handleGridResizeDoubleClick}
@@ -1577,6 +1579,7 @@ const DroppableDay = React.memo(function DroppableDay({
   openModal,
   selectionState,
 }: DroppableDayProps): JSX.Element {
+  const { t } = useTranslation('calendar')
   const { setNodeRef, isOver } = useDroppable({ id: dateKey })
   // In "Auto" mode the cell's height, not a setting, decides how much shows.
   // What fits depends on *which* items the day holds, not just how many: a
@@ -1703,7 +1706,7 @@ const DroppableDay = React.memo(function DroppableDay({
       {...(isOver ? { 'data-drop-target': '' } : {})}
       {...(selectionState ? { 'data-create-selection': selectionState } : {})}
       tabIndex={isFocusAnchor ? 0 : -1}
-      aria-label={format(day, 'EEEE, MMMM d, yyyy')}
+      aria-label={formatDisplayDate(day, 'EEEE, MMMM d, yyyy')}
       data-date={dateKey}
       onClick={() => onDayClick(day)}
       onDoubleClick={() => onDayDoubleClick(day)}
@@ -1733,7 +1736,7 @@ const DroppableDay = React.memo(function DroppableDay({
               e.stopPropagation()
               onDayNumberClick(day)
             }}
-            aria-label={`Open ${format(day, 'EEEE, MMMM d')} in day view`}
+            aria-label={t('views.grid.openDayView', { date: formatDisplayDate(day, 'EEEE, MMMM d') })}
           >
             {format(day, 'd')}
           </button>
@@ -1747,7 +1750,7 @@ const DroppableDay = React.memo(function DroppableDay({
               <span
                 className={styles.journalIndicator}
                 role="img"
-                aria-label={`Has journal entries for ${format(day, 'MMMM d')}`}
+                aria-label={t('views.grid.hasJournalEntriesFor', { date: formatDisplayDate(day, 'MMMM d') })}
               >
                 <span className={styles.journalIndicatorDot} />
                 {journalIndicatorIcon}
@@ -1755,8 +1758,8 @@ const DroppableDay = React.memo(function DroppableDay({
             ) : (
               <button
                 className={styles.journalIndicator}
-                title="View journal entries"
-                aria-label={`View journal entries for ${format(day, 'MMMM d')}`}
+                title={t('views.grid.viewJournalEntries')}
+                aria-label={t('views.grid.viewJournalEntriesFor', { date: formatDisplayDate(day, 'MMMM d') })}
                 onClick={(e) => {
                   e.stopPropagation()
                   onJournalIndicatorClick(day)
@@ -2013,14 +2016,14 @@ const DroppableDay = React.memo(function DroppableDay({
           onClose={() => setContextMenu(null)}
           items={[
             {
-              label: 'Create event',
+              label: t('views.week.createEvent'),
               onClick: () => {
                 openModal(format(day, 'yyyy-MM-dd'))
                 setContextMenu(null)
               },
             },
             {
-              label: 'Create task',
+              label: t('views.week.createTask'),
               onClick: () => {
                 openModal(format(day, 'yyyy-MM-dd'), undefined, undefined, 'task')
                 setContextMenu(null)
@@ -2029,7 +2032,7 @@ const DroppableDay = React.memo(function DroppableDay({
             ...(journalEnabled
               ? [
                   {
-                    label: 'New journal entry',
+                    label: t('views.grid.newJournalEntry'),
                     onClick: () => {
                       onOpenJournalModal(format(day, 'yyyy-MM-dd'))
                       setContextMenu(null)

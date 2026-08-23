@@ -5,7 +5,10 @@ import { addDays, addWeeks, addMonths, subWeeks, subMonths, format } from 'date-
 import type { ThemeMode } from '@/types'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useHistoryStore } from '@/store/historyStore'
-import { toLocalDateString } from '@/lib/datetime'
+import { toLocalDateString, formatDisplayDate } from '@/lib/datetime'
+import i18n from '@/lib/i18n'
+
+const t = (key: string, opts?: Record<string, unknown>): string => i18n.t(`commands:${key}`, opts)
 
 interface CommandFactoryDeps {
   navigate: (path: string) => void
@@ -88,8 +91,8 @@ const createNavigationCommands = (deps: CommandFactoryDeps): Command[] => {
   return [
     {
       id: 'nav-today',
-      label: 'Go to Today',
-      description: () => format(new Date(), 'EEEE, d MMMM yyyy'),
+      label: t('nav.goToToday'),
+      description: () => formatDisplayDate(new Date(), 'EEEE, d MMMM yyyy'),
       category: 'navigation',
       keywords: ['today', 'current', 'now', 'home'],
       shortcut: 'T',
@@ -97,28 +100,28 @@ const createNavigationCommands = (deps: CommandFactoryDeps): Command[] => {
       action: () => {
         const today = new Date()
         deps.setCurrentDate(format(today, 'yyyy-MM-dd'))
-        return 'Navigated to today'
+        return t('nav.navigatedToToday')
       },
     },
     {
       id: 'nav-tomorrow',
-      label: 'Go to Tomorrow',
-      description: () => format(addDays(new Date(), 1), 'EEEE, d MMMM yyyy'),
+      label: t('nav.goToTomorrow'),
+      description: () => formatDisplayDate(addDays(new Date(), 1), 'EEEE, d MMMM yyyy'),
       category: 'navigation',
       keywords: ['tomorrow', 'next day'],
       icon: ICONS.chevronRight,
       action: () => {
         const tomorrow = addDays(new Date(), 1)
         deps.setCurrentDate(format(tomorrow, 'yyyy-MM-dd'))
-        return 'Navigated to tomorrow'
+        return t('nav.navigatedToTomorrow')
       },
     },
     {
       id: 'nav-next-week',
-      label: 'Next Week',
+      label: t('nav.nextWeek'),
       description: () => {
         const next = addWeeks(new Date(), 1)
-        return `${format(next, 'd MMM')} – ${format(next, 'd MMM')}`
+        return `${formatDisplayDate(next, 'd MMM')} – ${formatDisplayDate(next, 'd MMM')}`
       },
       category: 'navigation',
       keywords: ['next week', 'forward'],
@@ -127,15 +130,15 @@ const createNavigationCommands = (deps: CommandFactoryDeps): Command[] => {
       action: () => {
         const next = addWeeks(new Date(), 1)
         deps.setCurrentDate(format(next, 'yyyy-MM-dd'))
-        return 'Navigated to next week'
+        return t('nav.navigatedToNextWeek')
       },
     },
     {
       id: 'nav-prev-week',
-      label: 'Previous Week',
+      label: t('nav.previousWeek'),
       description: () => {
         const prev = subWeeks(new Date(), 1)
-        return `${format(prev, 'd MMM')} – ${format(prev, 'd MMM')}`
+        return `${formatDisplayDate(prev, 'd MMM')} – ${formatDisplayDate(prev, 'd MMM')}`
       },
       category: 'navigation',
       keywords: ['previous week', 'last week', 'back'],
@@ -144,13 +147,13 @@ const createNavigationCommands = (deps: CommandFactoryDeps): Command[] => {
       action: () => {
         const prev = subWeeks(new Date(), 1)
         deps.setCurrentDate(format(prev, 'yyyy-MM-dd'))
-        return 'Navigated to previous week'
+        return t('nav.navigatedToPreviousWeek')
       },
     },
     {
       id: 'nav-next-month',
-      label: 'Next Month',
-      description: () => format(addMonths(new Date(), 1), 'MMMM yyyy'),
+      label: t('nav.nextMonth'),
+      description: () => formatDisplayDate(addMonths(new Date(), 1), 'MMMM yyyy'),
       category: 'navigation',
       keywords: ['next month'],
       icon: ICONS.skipForward,
@@ -158,13 +161,13 @@ const createNavigationCommands = (deps: CommandFactoryDeps): Command[] => {
       action: () => {
         const next = addMonths(new Date(), 1)
         deps.setCurrentDate(format(next, 'yyyy-MM-dd'))
-        return 'Navigated to next month'
+        return t('nav.navigatedToNextMonth')
       },
     },
     {
       id: 'nav-prev-month',
-      label: 'Previous Month',
-      description: () => format(subMonths(new Date(), 1), 'MMMM yyyy'),
+      label: t('nav.previousMonth'),
+      description: () => formatDisplayDate(subMonths(new Date(), 1), 'MMMM yyyy'),
       category: 'navigation',
       keywords: ['previous month', 'last month'],
       icon: ICONS.skipBack,
@@ -172,67 +175,67 @@ const createNavigationCommands = (deps: CommandFactoryDeps): Command[] => {
       action: () => {
         const prev = subMonths(new Date(), 1)
         deps.setCurrentDate(format(prev, 'yyyy-MM-dd'))
-        return 'Navigated to previous month'
+        return t('nav.navigatedToPreviousMonth')
       },
     },
     {
       id: 'view-month',
-      label: 'Month View',
+      label: t('nav.monthView'),
       category: 'navigation',
       keywords: ['month view', 'month', 'calendar'],
       icon: ICONS.calendar,
       action: () => {
         deps.setCurrentView('month')
         deps.navigate('/month')
-        return 'Switched to month view'
+        return t('nav.switchedToMonthView')
       },
     },
     {
       id: 'view-week',
-      label: 'Week View',
+      label: t('nav.weekView'),
       category: 'navigation',
       keywords: ['week view', 'week'],
       icon: ICONS.calendar,
       action: () => {
         deps.setCurrentView('week')
         deps.navigate('/week')
-        return 'Switched to week view'
+        return t('nav.switchedToWeekView')
       },
     },
     {
       id: 'view-day',
-      label: 'Day View',
+      label: t('nav.dayView'),
       category: 'navigation',
       keywords: ['day view', 'day', 'today'],
       icon: ICONS.calendar,
       action: () => {
         deps.setCurrentView('day')
         deps.navigate('/day')
-        return 'Switched to day view'
+        return t('nav.switchedToDayView')
       },
     },
     {
       id: 'view-agenda',
-      label: 'Agenda View',
+      label: t('nav.agendaView'),
       category: 'navigation',
       keywords: ['agenda view', 'agenda', 'list'],
       icon: ICONS.calendar,
       action: () => {
         deps.setCurrentView('agenda')
         deps.navigate('/agenda')
-        return 'Switched to agenda view'
+        return t('nav.switchedToAgendaView')
       },
     },
     {
       id: 'view-tasks',
-      label: 'Tasks View',
+      label: t('nav.tasksView'),
       category: 'navigation',
       keywords: ['tasks view', 'tasks', 'todo', 'task list'],
       icon: ICONS.calendar,
       action: () => {
         deps.setCurrentView('todo')
         deps.navigate('/tasks')
-        return 'Switched to tasks view'
+        return t('nav.switchedToTasksView')
       },
     },
   ]
@@ -241,90 +244,97 @@ const createNavigationCommands = (deps: CommandFactoryDeps): Command[] => {
 const createActionCommands = (deps: CommandFactoryDeps): Command[] => [
   {
     id: 'action-new-event',
-    label: 'Create Event',
+    label: t('actions.createEvent'),
     category: 'actions',
     keywords: ['new event', 'create', 'add', 'event'],
     shortcut: 'C',
     icon: ICONS.plus,
     action: () => {
       deps.openModal()
-      return 'Event modal opened'
+      return t('actions.eventModalOpened')
     },
   },
   {
     id: 'action-new-task',
-    label: 'New Task',
+    label: t('actions.newTask'),
     category: 'actions',
     keywords: ['new task', 'task', 'todo'],
     shortcut: 'K',
     icon: ICONS.circle,
     action: () => {
       deps.openModal(undefined, undefined, undefined, 'task')
-      return 'Task modal opened'
+      return t('actions.taskModalOpened')
     },
   },
   {
     id: 'action-undo',
-    label: 'Undo',
-    description: 'Revert the last change to your events',
+    label: t('actions.undo'),
+    description: t('actions.undoDescription'),
     category: 'actions',
     keywords: ['undo', 'revert', 'back', 'history'],
     shortcut: '⌘Z',
     icon: ICONS.undo,
     action: () => {
-      return useHistoryStore.getState().undo() ? 'Undone' : 'Nothing to undo'
+      return useHistoryStore.getState().undo() ? t('actions.undone') : t('actions.nothingToUndo')
     },
   },
   {
     id: 'action-redo',
-    label: 'Redo',
-    description: 'Reapply the last undone change',
+    label: t('actions.redo'),
+    description: t('actions.redoDescription'),
     category: 'actions',
     keywords: ['redo', 'reapply', 'forward', 'history'],
     shortcut: '⇧⌘Z',
     icon: ICONS.redo,
     action: () => {
-      return useHistoryStore.getState().redo() ? 'Redone' : 'Nothing to redo'
+      return useHistoryStore.getState().redo() ? t('actions.redone') : t('actions.nothingToRedo')
     },
   },
   {
     id: 'settings-open',
-    label: 'Open Settings',
+    label: t('actions.openSettings'),
     category: 'actions',
     keywords: ['settings', 'preferences', 'options', 'config'],
     icon: ICONS.settings,
     action: () => {
       deps.navigate('/settings')
-      return 'Opened settings'
+      return t('actions.openedSettings')
     },
   },
   {
     id: 'toggle-sidebar',
-    label: deps.sidebarOpen ? 'Hide Sidebar' : 'Show Sidebar',
+    label: deps.sidebarOpen ? t('actions.hideSidebar') : t('actions.showSidebar'),
     category: 'actions',
     keywords: ['sidebar', 'toggle', 'panel', 'show', 'hide'],
     icon: ICONS.sidebar,
     action: () => {
       deps.toggleSidebar?.()
-      return deps.sidebarOpen ? 'Sidebar shown' : 'Sidebar hidden'
+      return deps.sidebarOpen ? t('actions.sidebarShown') : t('actions.sidebarHidden')
     },
   },
   {
     id: 'toggle-dark-mode',
-    label: deps.themeMode === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode',
+    label: deps.themeMode === 'dark' ? t('actions.switchToLightMode') : t('actions.switchToDarkMode'),
     category: 'actions',
     keywords: ['dark mode', 'light mode', 'theme', 'toggle', 'appearance'],
     icon: deps.themeMode === 'dark' ? ICONS.sun : ICONS.moon,
     action: () => {
       const newMode: ThemeMode = deps.themeMode === 'dark' ? 'light' : 'dark'
       deps.updateSettings?.({ themeMode: newMode })
-      return `Switched to ${newMode} mode`
+      return newMode === 'dark' ? t('actions.switchedToDarkMode') : t('actions.switchedToLightMode')
     },
   },
   {
     id: 'toggle-theme-mode',
-    label: 'Cycle Theme (Light → Dark → System)',
-    description: `Current: ${deps.themeMode === 'auto' ? 'System' : deps.themeMode === 'dark' ? 'Dark' : 'Light'}`,
+    label: t('actions.cycleTheme'),
+    description: t('actions.currentThemeMode', {
+      mode:
+        deps.themeMode === 'auto'
+          ? t('actions.themeModeSystem')
+          : deps.themeMode === 'dark'
+            ? t('actions.themeModeDark')
+            : t('actions.themeModeLight'),
+    }),
     category: 'actions',
     keywords: ['theme', 'cycle', 'light', 'dark', 'system', 'appearance', 'mode'],
     icon:
@@ -334,42 +344,52 @@ const createActionCommands = (deps: CommandFactoryDeps): Command[] => [
       const currentIdx = order.indexOf(deps.themeMode ?? 'auto')
       const nextMode = order[(currentIdx + 1) % order.length]
       deps.updateSettings?.({ themeMode: nextMode })
-      const label = nextMode === 'auto' ? 'System' : nextMode === 'dark' ? 'Dark' : 'Light'
-      return `Theme set to ${label}`
+      const label =
+        nextMode === 'auto'
+          ? t('actions.themeModeSystem')
+          : nextMode === 'dark'
+            ? t('actions.themeModeDark')
+            : t('actions.themeModeLight')
+      return t('actions.themeSetTo', { mode: label })
     },
   },
   {
     id: 'toggle-time-format',
-    label: deps.timeFormat === '24h' ? 'Switch to 12-hour Format' : 'Switch to 24-hour Format',
+    label:
+      deps.timeFormat === '24h' ? t('actions.switchTo12Hour') : t('actions.switchTo24Hour'),
     category: 'actions',
     keywords: ['time format', '12h', '24h', 'clock', 'toggle'],
     icon: ICONS.clock,
     action: () => {
       const newFormat = deps.timeFormat === '24h' ? '12h' : '24h'
       deps.updateSettings?.({ timeFormat: newFormat })
-      return `Time format set to ${newFormat}`
+      return t('actions.timeFormatSetTo', { format: newFormat })
     },
   },
   {
     id: 'toggle-category-colors',
-    label: deps.useCategoryColors ? 'Disable Category Colors' : 'Enable Category Colors',
+    label: deps.useCategoryColors
+      ? t('actions.disableCategoryColors')
+      : t('actions.enableCategoryColors'),
     category: 'actions',
     keywords: ['category', 'colors', 'toggle', 'calendar color'],
     icon: ICONS.palette,
     action: () => {
       deps.updateSettings?.({ useCategoryColors: !deps.useCategoryColors })
-      return deps.useCategoryColors ? 'Category colors disabled' : 'Category colors enabled'
+      return deps.useCategoryColors
+        ? t('actions.categoryColorsDisabled')
+        : t('actions.categoryColorsEnabled')
     },
   },
   {
     id: 'sync-calendars',
-    label: 'Sync Calendars',
+    label: t('actions.syncCalendars'),
     category: 'actions',
     keywords: ['sync', 'caldav', 'refresh', 'update'],
     icon: ICONS.sync,
     action: () => {
       deps.triggerSync?.()
-      return 'Syncing calendars...'
+      return t('actions.syncingCalendars')
     },
   },
 ]
@@ -377,89 +397,91 @@ const createActionCommands = (deps: CommandFactoryDeps): Command[] => [
 const createSettingsCommands = (deps: CommandFactoryDeps): Command[] => [
   {
     id: 'debug-toggle',
-    label: 'Toggle CalDAV Debug Mode',
-    description: 'Enable or disable CalDAV sync debug logging',
+    label: t('settings.toggleDebugMode'),
+    description: t('settings.toggleDebugModeDescription'),
     category: 'settings',
     keywords: ['debug', 'caldav', 'sync', 'logging', 'console'],
     icon: ICONS.bug,
     action: () => {
       const newValue = !deps.caldavDebugMode
       deps.updateSettings?.({ caldavDebugMode: newValue })
-      return newValue ? 'CalDAV debug mode enabled' : 'CalDAV debug mode disabled'
+      return newValue ? t('settings.debugModeEnabled') : t('settings.debugModeDisabled')
     },
   },
   {
     id: 'toggle-journal',
-    label: deps.journalEnabled ? 'Disable Journal' : 'Enable Journal',
-    description: 'Attach freeform notes to days in your calendar',
+    label: deps.journalEnabled ? t('settings.disableJournal') : t('settings.enableJournal'),
+    description: t('settings.journalDescription'),
     category: 'settings',
     keywords: ['journal', 'notes', 'diary', 'enable', 'disable'],
     icon: ICONS.calendar,
     action: () => {
       const newValue = !deps.journalEnabled
       deps.updateSettings?.({ journalEnabled: newValue })
-      return newValue ? 'Journal enabled' : 'Journal disabled'
+      return newValue ? t('settings.journalEnabled') : t('settings.journalDisabled')
     },
   },
   {
     id: 'toggle-contacts',
-    label: deps.contactsEnabled ? 'Disable Contacts' : 'Enable Contacts',
-    description: 'Show and manage contacts in your calendar',
+    label: deps.contactsEnabled ? t('settings.disableContacts') : t('settings.enableContacts'),
+    description: t('settings.contactsDescription'),
     category: 'settings',
     keywords: ['contacts', 'people', 'address book', 'enable', 'disable'],
     icon: ICONS.calendar,
     action: () => {
       const newValue = !deps.contactsEnabled
       deps.updateSettings?.({ contactsEnabled: newValue })
-      return newValue ? 'Contacts enabled' : 'Contacts disabled'
+      return newValue ? t('settings.contactsEnabled') : t('settings.contactsDisabled')
     },
   },
   {
     id: 'toggle-week-numbers-sidebar',
     label: deps.showWeekNumbersInSidebar
-      ? 'Hide Week Numbers in Sidebar'
-      : 'Show Week Numbers in Sidebar',
-    description: 'Display ISO week numbers next to each row in the mini calendar',
+      ? t('settings.hideWeekNumbers')
+      : t('settings.showWeekNumbers'),
+    description: t('settings.weekNumbersDescription'),
     category: 'settings',
     keywords: ['week', 'numbers', 'sidebar', 'mini calendar', 'iso week'],
     icon: ICONS.sidebar,
     action: () => {
       const newValue = !deps.showWeekNumbersInSidebar
       deps.updateSettings?.({ showWeekNumbersInSidebar: newValue })
-      return newValue ? 'Week numbers shown in sidebar' : 'Week numbers hidden in sidebar'
+      return newValue ? t('settings.weekNumbersShown') : t('settings.weekNumbersHidden')
     },
   },
   {
     id: 'toggle-agenda-below-month',
     label: deps.agendaBelowMonthEnabled
-      ? 'Disable Agenda Below Month View'
-      : 'Enable Agenda Below Month View',
-    description: 'On tall, portrait-oriented screens, show an agenda panel below the month grid',
+      ? t('settings.disableAgendaBelowMonth')
+      : t('settings.enableAgendaBelowMonth'),
+    description: t('settings.agendaBelowMonthDescription'),
     category: 'settings',
     keywords: ['agenda', 'month', 'split', 'panel', 'portrait', 'layout'],
     icon: ICONS.sidebar,
     action: () => {
       const newValue = !deps.agendaBelowMonthEnabled
       deps.updateSettings?.({ agendaBelowMonthEnabled: newValue })
-      return newValue ? 'Agenda below month view enabled' : 'Agenda below month view disabled'
+      return newValue
+        ? t('settings.agendaBelowMonthEnabled')
+        : t('settings.agendaBelowMonthDisabled')
     },
   },
   {
     id: 'open-journal',
-    label: 'Open Journal',
-    description: 'Navigate to the Journal view',
+    label: t('settings.openJournal'),
+    description: t('settings.openJournalDescription'),
     category: 'navigation',
     keywords: ['journal', 'notes', 'diary', 'open', 'navigate'],
     icon: ICONS.calendar,
     action: () => {
       deps.navigate('/journal')
-      return 'Opened Journal'
+      return t('settings.openedJournal')
     },
   },
   {
     id: 'new-journal-entry',
-    label: 'New Journal Entry',
-    description: 'Create a new journal entry for today',
+    label: t('settings.newJournalEntry'),
+    description: t('settings.newJournalEntryDescription'),
     category: 'actions',
     keywords: ['journal', 'notes', 'diary', 'new', 'create', 'add'],
     icon: ICONS.plus,
@@ -470,8 +492,8 @@ const createSettingsCommands = (deps: CommandFactoryDeps): Command[] => [
   },
   {
     id: 'export-journal',
-    label: 'Export Journal as Markdown',
-    description: 'Download all journal entries as a .md file',
+    label: t('settings.exportJournal'),
+    description: t('settings.exportJournalDescription'),
     category: 'actions',
     keywords: ['journal', 'export', 'markdown', 'download', 'backup'],
     icon: ICONS.calendar,
@@ -482,9 +504,11 @@ const createSettingsCommands = (deps: CommandFactoryDeps): Command[] => [
         .sort((a, b) => b.start.localeCompare(a.start))
 
       if (journalEntries.length === 0) {
-        return 'No journal entries to export'
+        return t('settings.noJournalEntriesToExport')
       }
 
+      // Exported document content stays in English regardless of UI locale —
+      // this is the exported file's own content, not app UI chrome.
       let md = '# Journal\n\n'
       let currentDate = ''
 
@@ -514,73 +538,73 @@ const createSettingsCommands = (deps: CommandFactoryDeps): Command[] => [
       document.body.removeChild(a)
       URL.revokeObjectURL(url)
 
-      return `Exported ${journalEntries.length} journal entries`
+      return t('settings.exportedJournalEntries', { count: journalEntries.length })
     },
   },
   {
     id: 'settings-general',
-    label: 'General Settings',
+    label: t('settings.generalSettings'),
     category: 'settings',
     keywords: ['general', 'general settings'],
     icon: ICONS.settings,
     action: () => {
       deps.navigate('/settings?tab=general')
-      return 'Opened general settings'
+      return t('settings.openedGeneralSettings')
     },
   },
   {
     id: 'settings-theme',
-    label: 'Theme Settings',
+    label: t('settings.themeSettings'),
     category: 'settings',
     keywords: ['theme', 'dark mode', 'light mode', 'appearance'],
     icon: ICONS.settings,
     action: () => {
       deps.navigate('/settings?tab=theme')
-      return 'Opened theme settings'
+      return t('settings.openedThemeSettings')
     },
   },
   {
     id: 'settings-calendars',
-    label: 'Calendar Settings',
+    label: t('settings.calendarSettings'),
     category: 'settings',
     keywords: ['calendars', 'calendar settings'],
     icon: ICONS.settings,
     action: () => {
       deps.navigate('/settings?tab=calendar')
-      return 'Opened calendar settings'
+      return t('settings.openedCalendarSettings')
     },
   },
   {
     id: 'settings-events',
-    label: 'Event Settings',
+    label: t('settings.eventSettings'),
     category: 'settings',
     keywords: ['event defaults', 'event settings'],
     icon: ICONS.settings,
     action: () => {
       deps.navigate('/settings?tab=events')
-      return 'Opened event settings'
+      return t('settings.openedEventSettings')
     },
   },
   {
     id: 'settings-sync',
-    label: 'Sync Settings',
+    label: t('settings.syncSettings'),
     category: 'settings',
     keywords: ['sync settings', 'caldav', 'account'],
     icon: ICONS.settings,
     action: () => {
       deps.navigate('/settings?tab=caldav')
-      return 'Opened sync settings'
+      return t('settings.openedSyncSettings')
     },
   },
   {
     id: 'settings-data',
-    label: 'Data Settings',
+    label: t('settings.dataSettings'),
     category: 'settings',
     keywords: ['data', 'import', 'export', 'backup'],
     icon: ICONS.settings,
     action: () => {
       deps.navigate('/settings?tab=data')
-      return 'Opened data settings'
+      return t('settings.openedDataSettings')
     },
   },
 ]

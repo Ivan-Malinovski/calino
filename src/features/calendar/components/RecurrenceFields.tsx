@@ -1,13 +1,14 @@
 import type { JSX } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { RecurrenceRule } from '@/types'
 import { getWeekdayLabels, getShortMonthNames } from './weekdayLabels'
 import styles from './EventModal.module.css'
 
-const RECURRENCE_OPTIONS: { value: RecurrenceRule['frequency']; label: string }[] = [
-  { value: 'daily', label: 'Daily' },
-  { value: 'weekly', label: 'Weekly' },
-  { value: 'monthly', label: 'Monthly' },
-  { value: 'yearly', label: 'Yearly' },
+const RECURRENCE_OPTIONS: { value: RecurrenceRule['frequency']; labelKey: string }[] = [
+  { value: 'daily', labelKey: 'modals.recurrence.frequency.daily' },
+  { value: 'weekly', labelKey: 'modals.recurrence.frequency.weekly' },
+  { value: 'monthly', labelKey: 'modals.recurrence.frequency.monthly' },
+  { value: 'yearly', labelKey: 'modals.recurrence.frequency.yearly' },
 ]
 
 
@@ -66,6 +67,7 @@ function MonthlyPatternPicker({
   onByWeekdayChange,
   onByDayOrdinalsChange,
 }: MonthlyPatternPickerProps): JSX.Element {
+  const { t } = useTranslation('calendar')
   const pattern = detectMonthlyPattern(byWeekday, byDayOrdinals)
   const startDay = parseInt(startDate.split('-')[2] || '1', 10)
   const startMonth = parseInt(startDate.split('-')[1] || '1', 10)
@@ -102,18 +104,18 @@ function MonthlyPatternPicker({
             onByMonthDayChange([])
           }
         }}
-        aria-label="Monthly pattern"
+        aria-label={t('modals.recurrence.monthlyPattern')}
         className={styles.select}
         style={{ maxWidth: '220px' }}
       >
-        <option value="dayOfMonth">On day of the month</option>
-        <option value="nthWeekday">On the nth weekday</option>
-        <option value="lastWeekday">On the last weekday</option>
+        <option value="dayOfMonth">{t('modals.recurrence.onDayOfMonth')}</option>
+        <option value="nthWeekday">{t('modals.recurrence.onNthWeekday')}</option>
+        <option value="lastWeekday">{t('modals.recurrence.onLastWeekday')}</option>
       </select>
 
       {pattern === 'dayOfMonth' && (
         <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
-          <span>Day</span>
+          <span>{t('modals.recurrence.day')}</span>
           <select
             value={dayFromByMonthDay}
             onChange={(e) => onByMonthDayChange([parseInt(e.target.value, 10)])}
@@ -123,7 +125,7 @@ function MonthlyPatternPicker({
             {days31.map((d) => (
               <option key={d} value={d}>
                 {d}
-                {d === daysInMonth ? ' (last day)' : ''}
+                {d === daysInMonth ? ` ${t('modals.recurrence.lastDay')}` : ''}
               </option>
             ))}
           </select>
@@ -138,21 +140,13 @@ function MonthlyPatternPicker({
             <select
               value={posFromByDayOrdinals}
               onChange={(e) => onByDayOrdinalsChange([parseInt(e.target.value, 10)])}
-              aria-label="Nth weekday of the month"
+              aria-label={t('modals.recurrence.nthWeekdayOfMonth')}
               className={styles.select}
               style={{ width: '110px' }}
             >
               {[1, 2, 3, 4, 5].map((n) => (
                 <option key={n} value={n}>
-                  {n === 1
-                    ? 'First'
-                    : n === 2
-                      ? 'Second'
-                      : n === 3
-                        ? 'Third'
-                        : n === 4
-                          ? 'Fourth'
-                          : 'Fifth'}
+                  {t(`modals.recurrence.ordinal.${n}`)}
                 </option>
               ))}
             </select>
@@ -160,7 +154,7 @@ function MonthlyPatternPicker({
           <select
             value={nthFromByWeekday}
             onChange={(e) => onByWeekdayChange([parseInt(e.target.value, 10)])}
-            aria-label="Weekday"
+            aria-label={t('modals.recurrence.weekday')}
             className={styles.select}
             style={{ width: '120px' }}
           >
@@ -175,7 +169,7 @@ function MonthlyPatternPicker({
           </select>
           {pattern === 'lastWeekday' && (
             <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>
-              of the month
+              {t('modals.recurrence.ofTheMonth')}
             </span>
           )}
         </div>
@@ -190,6 +184,7 @@ interface YearlyMonthPickerProps {
 }
 
 function YearlyMonthPicker({ byMonth, onByMonthChange }: YearlyMonthPickerProps): JSX.Element {
+  const { t } = useTranslation('calendar')
   const monthShort = getShortMonthNames()
   const toggle = (m: number): void => {
     if (byMonth.includes(m)) {
@@ -222,9 +217,9 @@ function YearlyMonthPicker({ byMonth, onByMonthChange }: YearlyMonthPickerProps)
           onClick={() => onByMonthChange([])}
           className={styles.weekdayBtn}
           style={{ minWidth: '52px', fontSize: '11px' }}
-          aria-label="Reset months"
+          aria-label={t('modals.recurrence.resetMonths')}
         >
-          All
+          {t('modals.recurrence.all')}
         </button>
       )}
     </div>
@@ -252,6 +247,7 @@ export function RecurrenceToggle({
   disabled = false,
   disabledReason,
 }: RecurrenceToggleProps): JSX.Element {
+  const { t } = useTranslation('calendar')
   return (
     <label
       className={styles.checkbox}
@@ -264,7 +260,7 @@ export function RecurrenceToggle({
         disabled={disabled}
         onChange={(e) => onRecurringChange(e.target.checked)}
       />
-      <span>Recurring</span>
+      <span>{t('modals.recurrence.recurring')}</span>
       {disabled && disabledReason && (
         <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>
           ({disabledReason})
@@ -326,6 +322,7 @@ export function RecurrenceFields({
   onEndAfterCountChange,
   firstDayOfWeek,
 }: RecurrenceFieldsProps): JSX.Element {
+  const { t } = useTranslation('calendar')
   const weekdayLabels = getWeekdayLabels(firstDayOfWeek)
 
   const handleWeekdayToggle = (displayIndex: number): void => {
@@ -343,7 +340,7 @@ export function RecurrenceFields({
         <div className={styles.row}>
           <div className={styles.field}>
             <label className={styles.label} htmlFor="recurrence-select">
-              Repeat
+              {t('modals.recurrence.repeat')}
             </label>
             <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
               <select
@@ -354,11 +351,13 @@ export function RecurrenceFields({
               >
                 {RECURRENCE_OPTIONS.map((option) => (
                   <option key={option.value} value={option.value}>
-                    {option.label}
+                    {t(option.labelKey)}
                   </option>
                 ))}
               </select>
-              <span style={{ fontSize: '14px', color: 'var(--color-text-secondary)' }}>every</span>
+              <span style={{ fontSize: '14px', color: 'var(--color-text-secondary)' }}>
+                {t('modals.recurrence.every')}
+              </span>
               <input
                 id="interval-input"
                 type="number"
@@ -371,24 +370,10 @@ export function RecurrenceFields({
                 }}
                 className={styles.input}
                 style={{ width: '60px' }}
-                aria-label="Repeat interval"
+                aria-label={t('modals.recurrence.repeatInterval')}
               />
               <span style={{ fontSize: '14px', color: 'var(--color-text-secondary)' }}>
-                {recurrence === 'daily'
-                  ? interval === 1
-                    ? 'day'
-                    : 'days'
-                  : recurrence === 'weekly'
-                    ? interval === 1
-                      ? 'week'
-                      : 'weeks'
-                    : recurrence === 'monthly'
-                      ? interval === 1
-                        ? 'month'
-                        : 'months'
-                      : interval === 1
-                        ? 'year'
-                        : 'years'}
+                {t('modals.recurrence.intervalUnit', { count: interval, context: recurrence })}
               </span>
             </div>
           </div>
@@ -398,7 +383,7 @@ export function RecurrenceFields({
       {recurring && recurrence === 'weekly' && onByWeekdayChange && (
         <div className={styles.weekdayField}>
           <label className={styles.label} style={{ fontWeight: 600 }}>
-            On days:
+            {t('modals.recurrence.onDays')}
           </label>
           <div className={styles.weekdayRow}>
             {weekdayLabels.map((label, displayIndex) => {
@@ -410,7 +395,7 @@ export function RecurrenceFields({
                   className={`${styles.weekdayBtn} ${byWeekday.includes(actualWeekday) ? styles.excluded : ''}`}
                   onClick={() => handleWeekdayToggle(displayIndex)}
                   aria-pressed={byWeekday.includes(actualWeekday)}
-                  aria-label={`Include ${label}`}
+                  aria-label={t('modals.recurrence.includeDay', { day: label })}
                 >
                   {label}
                 </button>
@@ -427,7 +412,7 @@ export function RecurrenceFields({
         onByDayOrdinalsChange && (
           <div className={styles.field}>
             <label className={styles.label} style={{ fontWeight: 600 }}>
-              Monthly pattern
+              {t('modals.recurrence.monthlyPatternLabel')}
             </label>
             <MonthlyPatternPicker
               startDate={startDate}
@@ -446,7 +431,7 @@ export function RecurrenceFields({
       {recurring && recurrence === 'yearly' && onByMonthChange && (
         <div className={styles.field}>
           <label className={styles.label} style={{ fontWeight: 600 }}>
-            In months
+            {t('modals.recurrence.inMonths')}
           </label>
           <YearlyMonthPicker byMonth={byMonth} onByMonthChange={onByMonthChange} />
         </div>
@@ -456,7 +441,7 @@ export function RecurrenceFields({
         <div className={styles.row}>
           <div className={styles.field}>
             <label className={styles.label} htmlFor="end-condition-select">
-              Ends
+              {t('modals.recurrence.ends')}
             </label>
             <div
               style={{
@@ -472,9 +457,9 @@ export function RecurrenceFields({
                 onChange={(e) => onEndConditionChange(e.target.value as 'never' | 'on' | 'after')}
                 className={styles.select}
               >
-                <option value="never">Never</option>
-                <option value="on">On date</option>
-                <option value="after">After occurrences</option>
+                <option value="never">{t('modals.recurrence.never')}</option>
+                <option value="on">{t('modals.recurrence.onDate')}</option>
+                <option value="after">{t('modals.recurrence.afterOccurrences')}</option>
               </select>
               {endCondition === 'on' && (
                 <input
@@ -483,7 +468,7 @@ export function RecurrenceFields({
                   onChange={(e) => onEndOnDateChange(e.target.value)}
                   className={styles.input}
                   style={{ width: '160px' }}
-                  aria-label="End date"
+                  aria-label={t('modals.recurrence.endDate')}
                 />
               )}
               {endCondition === 'after' && (
@@ -499,10 +484,10 @@ export function RecurrenceFields({
                     }}
                     className={styles.input}
                     style={{ width: '70px' }}
-                    aria-label="Number of occurrences"
+                    aria-label={t('modals.recurrence.numberOfOccurrences')}
                   />
                   <span style={{ fontSize: '14px', color: 'var(--color-text-secondary)' }}>
-                    occurrence{endAfterCount === 1 ? '' : 's'}
+                    {t('modals.recurrence.occurrence', { count: endAfterCount })}
                   </span>
                 </>
               )}

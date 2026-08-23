@@ -34,8 +34,8 @@ vi.mock('@/store/calendarStore', () => {
   return { useCalendarStore }
 })
 
-vi.mock('@/store/settingsStore', () => ({
-  useSettingsStore: (
+vi.mock('@/store/settingsStore', () => {
+  const useSettingsStore = (
     selector: (s: {
       enableDesktopNotifications: boolean
       defaultReminderMinutes: number
@@ -44,8 +44,10 @@ vi.mock('@/store/settingsStore', () => ({
     selector({
       enableDesktopNotifications: currentEnableNotifications,
       defaultReminderMinutes: currentDefaultReminderMinutes,
-    }),
-}))
+    })
+  useSettingsStore.getState = () => ({ timeFormat: '24h' as const })
+  return { useSettingsStore }
+})
 
 function makeEvent(id: string, start: Date, overrides: Partial<CalendarEvent> = {}): CalendarEvent {
   return {

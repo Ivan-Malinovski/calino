@@ -1,5 +1,6 @@
 import type { JSX } from 'react'
 import { useState, useMemo, useCallback, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Modal } from '@/components/common/Modal'
 import { useContactStore } from '@/store/contactStore'
 import { useCardDAV } from '@/features/carddav/hooks/useCardDAV'
@@ -56,6 +57,7 @@ export function ImportExportModal({
   parsedContacts,
   onImportComplete,
 }: ImportExportModalProps): JSX.Element | null {
+  const { t } = useTranslation(['contacts', 'common'])
   const existingContacts = useContactStore((s) => s.contacts)
   const addContact = useContactStore((s) => s.addContact)
   const addPendingChange = useContactStore((s) => s.addPendingChange)
@@ -159,7 +161,7 @@ export function ImportExportModal({
   ])
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Import Contacts">
+    <Modal isOpen={isOpen} onClose={onClose} title={t('import.title')}>
       <div className={styles.modalBody} style={{ maxHeight: '60vh', overflow: 'auto' }}>
         {/* Summary */}
         <div
@@ -173,14 +175,14 @@ export function ImportExportModal({
           }}
         >
           <span>
-            {parsedContacts.length} contacts found
+            {t('import.contactsFound', { count: parsedContacts.length })}
             {dupeCount > 0 && (
               <span style={{ color: 'var(--color-warning)', marginLeft: 8 }}>
-                {dupeCount} duplicate{dupeCount !== 1 ? 's' : ''}
+                {t('import.duplicates', { count: dupeCount })}
               </span>
             )}
           </span>
-          <span>{selectedCount} selected</span>
+          <span>{t('import.selectedCount', { count: selectedCount })}</span>
         </div>
 
         {/* Batch actions */}
@@ -191,7 +193,7 @@ export function ImportExportModal({
             onClick={selectAll}
             style={{ fontSize: 11, padding: '3px 8px' }}
           >
-            Select All
+            {t('import.selectAll')}
           </button>
           <button
             type="button"
@@ -199,7 +201,7 @@ export function ImportExportModal({
             onClick={deselectAll}
             style={{ fontSize: 11, padding: '3px 8px' }}
           >
-            Deselect All
+            {t('import.deselectAll')}
           </button>
           {dupeCount > 0 && (
             <button
@@ -208,7 +210,7 @@ export function ImportExportModal({
               onClick={skipDuplicates}
               style={{ fontSize: 11, padding: '3px 8px' }}
             >
-              Skip Duplicates
+              {t('import.skipDuplicates')}
             </button>
           )}
         </div>
@@ -244,7 +246,7 @@ export function ImportExportModal({
                     whiteSpace: 'nowrap',
                   }}
                 >
-                  {contact.displayName || '(no name)'}
+                  {contact.displayName || t('import.noName')}
                 </div>
                 <div
                   style={{
@@ -271,7 +273,7 @@ export function ImportExportModal({
                     flexShrink: 0,
                   }}
                 >
-                  DUPE
+                  {t('import.dupeBadge')}
                 </span>
               )}
             </label>
@@ -282,12 +284,12 @@ export function ImportExportModal({
         <div className={styles.modalFooter}>
           {importing ? (
             <span style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>
-              Importing {imported}/{selectedCount}...
+              {t('import.importingProgress', { imported, total: selectedCount })}
             </span>
           ) : (
             <>
               <button type="button" className={styles.btnCancel} onClick={onClose}>
-                Cancel
+                {t('common:actions.cancel')}
               </button>
               <button
                 type="button"
@@ -295,7 +297,7 @@ export function ImportExportModal({
                 onClick={handleImport}
                 disabled={selectedCount === 0}
               >
-                Import {selectedCount} Contact{selectedCount !== 1 ? 's' : ''}
+                {t('import.importCount', { count: selectedCount })}
               </button>
             </>
           )}

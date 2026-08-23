@@ -1,5 +1,6 @@
 import type { JSX } from 'react'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
 import { getCredentialById } from '@/features/caldav/client/credentials'
 import type { DiagnosticsOptions } from '@/features/caldav/client/diagnostics'
@@ -17,6 +18,7 @@ interface TestState {
 }
 
 export function CalDAVSettings(): JSX.Element {
+  const { t } = useTranslation('settings')
   const [isAddingAccount, setIsAddingAccount] = useState(false)
   const [editingAccount, setEditingAccount] = useState<CalDAVAccount | null>(null)
   // Keyed by account id so testing one account never shows a spinner on another.
@@ -43,7 +45,7 @@ export function CalDAVSettings(): JSX.Element {
   }
 
   const handleRemoveSubscription = (id: string): void => {
-    if (!confirm('Remove this calendar subscription? Its events will be deleted locally.')) {
+    if (!confirm(t('caldav.confirmRemoveSubscription'))) {
       return
     }
     removeSubscription(id)
@@ -78,7 +80,7 @@ export function CalDAVSettings(): JSX.Element {
     if (!credential) {
       setTestStates((prev) => ({
         ...prev,
-        [account.id]: { status: 'error', message: 'Credentials not found' },
+        [account.id]: { status: 'error', message: t('caldav.credentialsNotFound') },
       }))
       return
     }
@@ -100,11 +102,7 @@ export function CalDAVSettings(): JSX.Element {
   }
 
   const handleDeleteAccount = async (id: string): Promise<void> => {
-    if (
-      !confirm(
-        'Are you sure you want to remove this account? Calendar data will be preserved locally.'
-      )
-    ) {
+    if (!confirm(t('caldav.confirmRemoveAccount'))) {
       return
     }
     clearTestState(id)
@@ -118,7 +116,7 @@ export function CalDAVSettings(): JSX.Element {
       return (
         <div className={styles.accountStatus}>
           <div className={`${styles.statusDot} ${styles.statusDotTesting}`} />
-          Testing…
+          {t('caldav.testing')}
         </div>
       )
     }
@@ -126,7 +124,7 @@ export function CalDAVSettings(): JSX.Element {
       return (
         <div className={styles.accountStatus}>
           <div className={`${styles.statusDot} ${styles.statusDotOk}`} />
-          Connection OK
+          {t('caldav.connectionOk')}
         </div>
       )
     }
@@ -134,7 +132,9 @@ export function CalDAVSettings(): JSX.Element {
       return (
         <div className={styles.accountStatus}>
           <div className={`${styles.statusDot} ${styles.statusDotWarn}`} />
-          {test.message ? `Failed — ${test.message}` : 'Connection failed'}
+          {test.message
+            ? t('caldav.failedWithMessage', { message: test.message })
+            : t('caldav.connectionFailed')}
         </div>
       )
     }
@@ -143,8 +143,8 @@ export function CalDAVSettings(): JSX.Element {
       <div className={styles.accountStatus}>
         <div className={`${styles.statusDot} ${styles.statusDotOk}`} />
         {account.lastSyncAt
-          ? `Synced · ${new Date(account.lastSyncAt).toLocaleDateString()}`
-          : 'Connected'}
+          ? t('caldav.syncedOn', { date: new Date(account.lastSyncAt).toLocaleDateString() })
+          : t('caldav.connected')}
       </div>
     )
   }
@@ -154,10 +154,10 @@ export function CalDAVSettings(): JSX.Element {
       className={`${styles.section} ${styles.sectionActive}`}
       data-component="caldav-settings"
     >
-      <h1 className={styles.pageTitle}>Sync</h1>
+      <h1 className={styles.pageTitle}>{t('caldav.title')}</h1>
 
       <div className={styles.group} data-component="connected-accounts">
-        <div className={styles.groupLabel}>Connected Accounts</div>
+        <div className={styles.groupLabel}>{t('caldav.connectedAccounts')}</div>
         {accounts.map((account) => {
           const test = testStates[account.id]
           return (
@@ -195,41 +195,41 @@ export function CalDAVSettings(): JSX.Element {
                     className={styles.rowBtn}
                     onClick={() => handleTestAccount(account.id)}
                     disabled={test?.status === 'testing'}
-                    aria-label={`Test connection for ${account.name}`}
+                    aria-label={t('caldav.testAriaLabel', { name: account.name })}
                     data-component="action-button"
                     data-action="test-account"
                     type="button"
                   >
-                    Test
+                    {t('caldav.test')}
                   </button>
                   <button
                     className={styles.rowBtn}
                     onClick={() => void handleDiagnose(account)}
-                    aria-label={`Run diagnostics for ${account.name}`}
+                    aria-label={t('caldav.diagnoseAriaLabel', { name: account.name })}
                     aria-expanded={diagnosing?.accountId === account.id}
                     data-component="action-button"
                     data-action="diagnose-account"
                     type="button"
                   >
-                    Diagnose
+                    {t('caldav.diagnose')}
                   </button>
                   <button
                     className={styles.rowBtn}
                     onClick={() => handleEditAccount(account)}
-                    aria-label={`Edit ${account.name}`}
+                    aria-label={t('caldav.editAriaLabel', { name: account.name })}
                     data-component="action-button"
                     data-action="edit-account"
                     type="button"
                   >
-                    Edit
+                    {t('caldav.edit')}
                   </button>
                   <button
                     className={styles.disconnect}
                     onClick={() => handleDeleteAccount(account.id)}
-                    aria-label={`Disconnect ${account.name}`}
+                    aria-label={t('caldav.disconnectAriaLabel', { name: account.name })}
                     type="button"
                   >
-                    Disconnect
+                    {t('caldav.disconnect')}
                   </button>
                 </div>
               </div>
@@ -265,7 +265,7 @@ export function CalDAVSettings(): JSX.Element {
       </div>
 
       <div className={styles.group} data-component="webcal-subscriptions">
-        <div className={styles.groupLabel}>Calendar Subscriptions</div>
+        <div className={styles.groupLabel}>{t('caldav.calendarSubscriptions')}</div>
         {subscriptions.map((subscription) => (
           <div key={subscription.id} data-component="subscription-row-wrapper">
             <div
@@ -299,10 +299,10 @@ export function CalDAVSettings(): JSX.Element {
                     className={`${styles.statusDot} ${subscription.lastError ? styles.statusDotWarn : styles.statusDotOk}`}
                   />
                   {subscription.lastError
-                    ? `Failed — ${subscription.lastError}`
+                    ? t('caldav.failedWithMessage', { message: subscription.lastError })
                     : subscription.lastFetchedAt
-                      ? `Synced · ${new Date(subscription.lastFetchedAt).toLocaleDateString()}`
-                      : 'Not yet synced'}
+                      ? t('caldav.syncedOn', { date: new Date(subscription.lastFetchedAt).toLocaleDateString() })
+                      : t('caldav.notYetSynced')}
                 </div>
               </div>
               <div className={styles.accountActions}>
@@ -310,21 +310,21 @@ export function CalDAVSettings(): JSX.Element {
                   className={styles.rowBtn}
                   onClick={() => handleSyncSubscription(subscription.id)}
                   disabled={syncingSubscriptionId === subscription.id}
-                  aria-label={`Sync ${subscription.name} now`}
+                  aria-label={t('caldav.syncAriaLabel', { name: subscription.name })}
                   data-component="action-button"
                   data-action="sync-subscription"
                   type="button"
                 >
-                  {syncingSubscriptionId === subscription.id ? 'Syncing…' : 'Sync now'}
+                  {syncingSubscriptionId === subscription.id ? t('caldav.syncing') : t('caldav.syncNow')}
                 </button>
                 {!subscription.isPreconfigured && (
                   <button
                     className={styles.disconnect}
                     onClick={() => handleRemoveSubscription(subscription.id)}
-                    aria-label={`Remove ${subscription.name}`}
+                    aria-label={t('caldav.removeAriaLabel', { name: subscription.name })}
                     type="button"
                   >
-                    Remove
+                    {t('caldav.remove')}
                   </button>
                 )}
               </div>
@@ -349,7 +349,7 @@ export function CalDAVSettings(): JSX.Element {
           >
             <path d="M8 2v12M2 8h12" />
           </svg>
-          Subscribe to calendar (.ics)
+          {t('caldav.subscribe')}
         </button>
       </div>
 

@@ -1,5 +1,6 @@
 import type { JSX } from 'react'
 import { useCallback, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { createPortal } from 'react-dom'
 import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
 import { CalDAVConnectionError } from '@/features/caldav/client/errors'
@@ -36,6 +37,7 @@ export function AddCalendarModal({
   mode = 'add',
   account,
 }: AddCalendarModalProps): JSX.Element | null {
+  const { t } = useTranslation('calendar')
   const [connectionStatus, setConnectionStatus] = useState<'idle' | 'success' | 'error'>('idle')
   const [connectionError, setConnectionError] = useState<string>('')
   const [connectionHint, setConnectionHint] = useState<string>('')
@@ -274,7 +276,7 @@ export function AddCalendarModal({
           <h3 className={styles.modalTitle} id="modal-title">
             {isEdit ? 'Edit CalDAV Account' : 'Add CalDAV Calendar'}
           </h3>
-          <button className={styles.modalClose} onClick={requestClose} aria-label="Close">
+          <button className={styles.modalClose} onClick={requestClose} aria-label={t('surface.close')}>
             ✕
           </button>
         </div>
@@ -287,7 +289,7 @@ export function AddCalendarModal({
               id="accountName"
               name="accountName"
               className={styles.input}
-              placeholder="My Calendar Server"
+              placeholder={t('surface.calendarServerPlaceholder')}
               defaultValue={account?.name}
             />
           </div>
@@ -299,12 +301,12 @@ export function AddCalendarModal({
               id="serverUrl"
               name="serverUrl"
               className={styles.input}
-              placeholder="https://caldav.example.com"
+              placeholder={t('surface.caldavUrlPlaceholder')}
               defaultValue={account?.serverUrl}
               onChange={(e) => setUrlDraft(e.target.value)}
               required
             />
-            <span className={styles.formHint}>Enter the full URL of your CalDAV server</span>
+              <span className={styles.formHint}>{t('surface.caldavUrlHint')}</span>
             {isCleartextUrl(urlDraft) && <div className={styles.formWarn}>{CLEARTEXT_WARNING}</div>}
           </div>
           <div className={styles.formGroup}>
@@ -331,7 +333,7 @@ export function AddCalendarModal({
                   strokeLinejoin="round"
                 />
               </svg>
-              <span>Proxy URL (optional)</span>
+                <span>{t('surface.proxyUrlOptional')}</span>
             </button>
             {showProxyField && (
               <>
@@ -339,7 +341,7 @@ export function AddCalendarModal({
                   id="proxyUrl"
                   name="proxyUrl"
                   className={styles.input}
-                  placeholder="https://proxy.calino.io"
+                  placeholder={t('surface.proxyUrlPlaceholder')}
                   defaultValue={account?.proxyUrl ?? undefined}
                 />
                 <span className={styles.proxyInfoText}>
@@ -377,11 +379,11 @@ export function AddCalendarModal({
               required={!isEdit}
             />
             {isEdit && (
-              <span className={styles.formHint}>Leave blank to keep your current password</span>
+              <span className={styles.formHint}>{t('surface.passwordHint')}</span>
             )}
           </div>
           {connectionStatus === 'success' && (
-            <p className={styles.successMessage}>✓ Connection successful!</p>
+                <p className={styles.successMessage}>{t('surface.connectionSuccessful')}</p>
           )}
           {connectionStatus === 'error' && <p className={styles.errorMessage}>{connectionError}</p>}
           {connectionHint && <div className={styles.hintMessage}>{connectionHint}</div>}

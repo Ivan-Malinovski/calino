@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { parseISO } from 'date-fns'
 import type { CalendarEvent } from '@/types'
-import { toEventInstant } from '@/lib/datetime'
+import { toEventInstant, formatTime } from '@/lib/datetime'
 import { reminderInstant, reminderBodyTime, reminderBody } from '../nativeReminders'
 
 // The helpers under test are pure; mock the Capacitor plugin and the deep-link
@@ -50,10 +50,7 @@ describe('nativeReminders - TZID reminder timing', () => {
 
   it('renders the body time as the device-local display of the true instant', () => {
     const event = makeEvent({ timezone: 'Europe/Copenhagen' })
-    const display = toEventInstant(event.start, event.timezone).toLocaleTimeString([], {
-      hour: 'numeric',
-      minute: '2-digit',
-    })
+    const display = formatTime(toEventInstant(event.start, event.timezone), '24h')
     expect(reminderBodyTime(event)).toBe(display)
     expect(reminderBody(event)).toBe(`Starting at ${display}`)
   })

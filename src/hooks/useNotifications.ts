@@ -18,9 +18,10 @@ import {
   cancelAllNativeReminders,
 } from '@/lib/nativeReminders'
 import { useCalendarMirrorStore, mirrorOwnsReminders } from '@/store/calendarMirrorStore'
-import { toEventInstant } from '@/lib/datetime'
+import { toEventInstant, formatTime } from '@/lib/datetime'
 import { parseISO, isWithinInterval, addMinutes, addHours, addDays, isAfter } from 'date-fns'
 import { toast } from 'sonner'
+import i18n from '@/lib/i18n'
 import type { CalendarEvent } from '@/types'
 
 const CHECK_INTERVAL_MS = 60 * 1000
@@ -208,9 +209,11 @@ export function useNotifications(): void {
 
             const timeStr = event.isAllDay
               ? 'All day'
-              : startInstant.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+              : formatTime(startInstant, useSettingsStore.getState().timeFormat)
 
-            const body = event.isAllDay ? `Starting today` : `Starting at ${timeStr}`
+            const body = event.isAllDay
+              ? i18n.t('errors:reminder.startingToday')
+              : i18n.t('errors:reminder.startingAt', { time: timeStr })
 
             showNotification(event.title, body, event.id, event.start)
 
@@ -219,7 +222,7 @@ export function useNotifications(): void {
               description: body,
               duration: 10000,
               action: {
-                label: 'Snooze 5m',
+                label: i18n.t('errors:reminder.snooze5m'),
                 onClick: () => {
                   snoozeReminder(event.id, event.start, event.title, body, 5)
                 },
@@ -238,7 +241,7 @@ export function useNotifications(): void {
           description: snoozed.body,
           duration: 8000,
           action: {
-            label: 'View',
+            label: i18n.t('common:actions.view'),
             onClick: () => {
               const eventDateStr = snoozed.eventDate.split('T')[0]
               window.location.href = `/?date=${eventDateStr}&event=${snoozed.eventId}`

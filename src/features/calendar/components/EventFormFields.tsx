@@ -2,6 +2,8 @@ import type { JSX } from 'react'
 import { useId, useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { v4 as uuidv4 } from 'uuid'
+import { useTranslation } from 'react-i18next'
+import type { TFunction } from 'i18next'
 import type {
   RecurrenceRule,
   Reminder,
@@ -12,7 +14,7 @@ import type {
 } from '@/types'
 import { useSettingsStore } from '@/store/settingsStore'
 import { useScrollInput } from '@/hooks/useScrollInput'
-import { daysBetween, addDays, addMinutesToTimeStr, deviceTimezone } from '@/lib/datetime'
+import { daysBetween, addDays, addMinutesToTimeStr, deviceTimezone, getDateFnsLocale } from '@/lib/datetime'
 import { formatInTimeZone } from 'date-fns-tz'
 import { AttachmentSection } from './AttachmentSection'
 import { AttendeeSection } from './AttendeeSection'
@@ -52,7 +54,7 @@ function foreignZoneTimes(
     // name the day when it differs — otherwise the times alone would mislead.
     const startDay = formatInTimeZone(startInstant, eventTimezone, 'yyyy-MM-dd')
     if (startDay !== startDate) {
-      start = `${formatInTimeZone(startInstant, eventTimezone, 'MMM d')}, ${start}`
+      start = `${formatInTimeZone(startInstant, eventTimezone, 'MMM d', { locale: getDateFnsLocale() })}, ${start}`
     }
   } catch {
     // Unknown zone: better to show nothing than a wrong time.
@@ -128,29 +130,36 @@ interface EventFormFieldsProps {
   excludeEventId?: string
 }
 
-const TRAVEL_DURATION_OPTIONS: { value: number | undefined; label: string }[] = [
-  { value: undefined, label: 'None' },
-  { value: 5, label: '5 min' },
-  { value: 10, label: '10 min' },
-  { value: 15, label: '15 min' },
-  { value: 20, label: '20 min' },
-  { value: 30, label: '30 min' },
-  { value: 45, label: '45 min' },
-  { value: 60, label: '1 hour' },
-  { value: 90, label: '1.5 hours' },
-  { value: 120, label: '2 hours' },
+const TRAVEL_DURATION_VALUES: (number | undefined)[] = [
+  undefined,
+  5,
+  10,
+  15,
+  20,
+  30,
+  45,
+  60,
+  90,
+  120,
 ]
 
-const REMINDER_OPTIONS: { value: number; label: string }[] = [
-  { value: 0, label: 'At time of event' },
-  { value: 5, label: '5 minutes before' },
-  { value: 10, label: '10 minutes before' },
-  { value: 15, label: '15 minutes before' },
-  { value: 30, label: '30 minutes before' },
-  { value: 60, label: '1 hour before' },
-  { value: 120, label: '2 hours before' },
-  { value: 1440, label: '1 day before' },
-]
+const REMINDER_VALUES: number[] = [0, 5, 10, 15, 30, 60, 120, 1440]
+
+/** Renders a travel-duration select option's label, e.g. "45 min" / "1.5 hours". */
+function travelDurationLabel(value: number | undefined, t: TFunction): string {
+  if (value === undefined) return t('modals.eventForm.travelDuration.none')
+  if (value === 90) return t('modals.eventForm.travelDuration.oneAndHalfHours')
+  if (value % 60 === 0) return t('modals.eventForm.hoursShort', { count: value / 60 })
+  return t('modals.eventForm.minutesShort', { count: value })
+}
+
+/** Renders a reminder option's label, e.g. "10 minutes before" / "1 day before". */
+function reminderLabel(value: number, t: TFunction): string {
+  if (value === 0) return t('modals.eventForm.reminder.atTimeOfEvent')
+  if (value % 1440 === 0) return t('modals.eventForm.reminder.daysBefore', { count: value / 1440 })
+  if (value % 60 === 0) return t('modals.eventForm.reminder.hoursBefore', { count: value / 60 })
+  return t('modals.eventForm.reminder.minutesBefore', { count: value })
+}
 
 export function EventFormFields({
   isAllDay,
@@ -204,6 +213,7 @@ export function EventFormFields({
   endIso,
   excludeEventId,
 }: EventFormFieldsProps): JSX.Element {
+  const { t } = useTranslation('calendar')
   // Instance-scoped ids for the label↔input pairs: hard-coded ids would
   // collide if two forms ever mounted side by side (same pattern as
   // RecurrenceDialog/DeleteDialog).
@@ -260,7 +270,7 @@ export function EventFormFields({
       <div className={styles.dateTimeRow}>
         <div className={styles.dateTimeGroup}>
           <label className={styles.label} htmlFor={startDateId}>
-            Start
+            {t('modals.eventForm.start')}
           </label>
           <div className={styles.dateTimeInputs}>
             <input
@@ -311,7 +321,7 @@ export function EventFormFields({
                 }}
                 className={styles.input}
                 dataComponent="event-start-time"
-                ariaLabel="Start time"
+                ariaLabel={t('modals.eventForm.startTime')}
               />
             )}
           </div>
@@ -319,7 +329,7 @@ export function EventFormFields({
 
         <div className={styles.dateTimeGroup}>
           <label className={styles.label} htmlFor={endDateId}>
-            End
+            {t('modals.eventForm.end')}
           </label>
           <div className={styles.dateTimeInputs}>
             <input
@@ -339,7 +349,7 @@ export function EventFormFields({
                 onChange={onEndTimeChange}
                 className={styles.input}
                 dataComponent="event-end-time"
-                ariaLabel="End time"
+                ariaLabel={t('modals.eventForm.endTime')}
               />
             )}
           </div>
@@ -359,7 +369,7 @@ export function EventFormFields({
         if (!foreign) return null
         return (
           <div className={styles.foreignZoneNote} data-component="event-foreign-zone">
-            {foreign.times} in {foreign.zoneLabel}
+            {t('modals.eventForm.foreignZoneTimes', { times: foreign.times, zone: foreign.zoneLabel })}
           </div>
         )
       })()}
@@ -371,7 +381,7 @@ export function EventFormFields({
             checked={isAllDay}
             onChange={(e) => onIsAllDayChange(e.target.checked)}
           />
-          <span>All day</span>
+          <span>{t('modals.eventForm.allDay')}</span>
         </label>
 
         <label className={styles.checkbox}>
@@ -380,7 +390,7 @@ export function EventFormFields({
             checked={transparency === 'transparent'}
             onChange={(e) => onTransparencyChange(e.target.checked ? 'transparent' : 'opaque')}
           />
-          <span>Available</span>
+          <span>{t('modals.eventForm.available')}</span>
         </label>
 
         <RecurrenceToggle recurring={recurring} onRecurringChange={handleRecurringToggle} />
@@ -391,11 +401,16 @@ export function EventFormFields({
           onClick={() => setAdvancedOpen(!moreOpen)}
           aria-expanded={moreOpen}
           aria-controls={advancedOptionsId}
-          aria-label={`${moreOpen ? 'Hide' : 'Show'} more options${
+          aria-label={
             attendees.length > 0
-              ? `, ${attendees.length} ${attendees.length === 1 ? 'guest' : 'guests'}`
-              : ''
-          }`}
+              ? t(
+                  moreOpen
+                    ? 'modals.eventForm.hideMoreOptionsWithGuests'
+                    : 'modals.eventForm.showMoreOptionsWithGuests',
+                  { count: attendees.length }
+                )
+              : t(moreOpen ? 'modals.eventForm.hideMoreOptions' : 'modals.eventForm.showMoreOptions')
+          }
           data-component="event-advanced-toggle"
         >
           <svg
@@ -413,7 +428,7 @@ export function EventFormFields({
           >
             <path d="M6 9l6 6 6-6" />
           </svg>
-          <span style={{ fontSize: '12px', marginLeft: '4px' }}>More</span>
+          <span style={{ fontSize: '12px', marginLeft: '4px' }}>{t('modals.eventForm.more')}</span>
         </button>
       </div>
 
@@ -452,7 +467,7 @@ export function EventFormFields({
           <div className={`${styles.row} ${recurring && moreOpen ? styles.divider : ''}`}>
             <div className={styles.field}>
               <label className={styles.label} htmlFor="travel-duration-select">
-                Travel time
+                {t('modals.eventForm.travelTime')}
               </label>
               <select
                 id="travel-duration-select"
@@ -462,25 +477,26 @@ export function EventFormFields({
                 }
                 className={styles.select}
               >
-                {TRAVEL_DURATION_OPTIONS.map((option) => (
-                  <option key={option.label} value={option.value ?? ''}>
-                    {option.label}
+                {TRAVEL_DURATION_VALUES.map((value) => (
+                  <option key={value ?? 'none'} value={value ?? ''}>
+                    {travelDurationLabel(value, t)}
                   </option>
                 ))}
               </select>
             </div>
 
             <div className={styles.field}>
-              <label className={styles.label}>Reminders</label>
+              <label className={styles.label}>{t('modals.eventForm.reminders')}</label>
               <div className={styles.reminderList}>
                 {reminders.map((reminder) => (
                   <span key={reminder.id} className={styles.reminderChip}>
-                    {REMINDER_OPTIONS.find((o) => o.value === reminder.minutesBefore)?.label ??
-                      `${reminder.minutesBefore} min`}
+                    {reminderLabel(reminder.minutesBefore, t)}
                     <button
                       type="button"
                       className={styles.reminderChipRemove}
-                      aria-label={`Remove ${reminder.minutesBefore} min reminder`}
+                      aria-label={t('modals.eventForm.removeReminder', {
+                        label: reminderLabel(reminder.minutesBefore, t),
+                      })}
                       onClick={() => {
                         onRemindersChange(reminders.filter((r) => r.id !== reminder.id))
                       }}
@@ -494,7 +510,7 @@ export function EventFormFields({
                     ref={reminderAddBtnRef}
                     type="button"
                     className={styles.reminderAddBtn}
-                    aria-label="Add reminder"
+                    aria-label={t('modals.eventForm.addReminder')}
                     onClick={() => {
                       setReminderDropdownOpen((o) => {
                         if (!o && reminderAddBtnRef.current) {
@@ -505,7 +521,7 @@ export function EventFormFields({
                       })
                     }}
                   >
-                    + Add
+                    {t('modals.eventForm.addShort')}
                   </button>
                   {reminderDropdownOpen &&
                     createPortal(
@@ -519,28 +535,32 @@ export function EventFormFields({
                           left: reminderMenuPos.left,
                         }}
                       >
-                        {REMINDER_OPTIONS.filter(
-                          (opt) => !reminders.some((r) => r.minutesBefore === opt.value)
-                        ).map((option) => (
+                        {REMINDER_VALUES.filter(
+                          (value) => !reminders.some((r) => r.minutesBefore === value)
+                        ).map((value) => (
                           <button
-                            key={option.value}
+                            key={value}
                             type="button"
                             className={styles.reminderDropdownItem}
                             role="option"
                             onClick={() => {
                               onRemindersChange([
                                 ...reminders,
-                                { id: uuidv4(), minutesBefore: option.value, method: 'popup' },
+                                { id: uuidv4(), minutesBefore: value, method: 'popup' },
                               ])
                               setReminderDropdownOpen(false)
                             }}
                           >
-                            {option.label}
+                            {reminderLabel(value, t)}
                           </button>
                         ))}
-                        {REMINDER_OPTIONS.every((opt) =>
-                          reminders.some((r) => r.minutesBefore === opt.value)
-                        ) && <div className={styles.reminderDropdownEmpty}>All options added</div>}
+                        {REMINDER_VALUES.every((value) =>
+                          reminders.some((r) => r.minutesBefore === value)
+                        ) && (
+                          <div className={styles.reminderDropdownEmpty}>
+                            {t('modals.eventForm.allOptionsAdded')}
+                          </div>
+                        )}
                       </div>,
                       document.body
                     )}
@@ -552,7 +572,7 @@ export function EventFormFields({
           {/* Related to */}
           {candidateEvents.length > 0 && (
             <div className={styles.categoriesContainer}>
-              <div className={styles.categoriesLabel}>Related to</div>
+              <div className={styles.categoriesLabel}>{t('modals.eventForm.relatedTo')}</div>
               <div className={styles.categoriesList}>
                 {candidateEvents.map((ev) => (
                   <button

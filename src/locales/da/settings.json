@@ -1,1 +1,702 @@
-{}
+{
+  "nav": {
+    "title": "Indstillinger",
+    "general": "Generelt",
+    "appearance": "Udseende",
+    "calendar": "Kalender",
+    "categories": "Kategorier",
+    "notifications": "Notifikationer",
+    "sync": "Synkronisering",
+    "data": "Data",
+    "aiVision": "AI-fotoimport",
+    "backToCalendar": "Tilbage til kalenderen",
+    "settingsCategories": "Indstillingskategorier"
+  },
+  "saved": "Gemt",
+  "general": {
+    "title": "Generelt",
+    "dateFormat": {
+      "label": "Datoformat",
+      "desc": "Sådan vises datoer i hele appen",
+      "ariaLabel": "Datoformat",
+      "mmddyyyy": "MM/DD/YYYY (12/31/2024)",
+      "ddmmyyyy": "DD/MM/YYYY (31/12/2024)",
+      "yyyymmdd": "YYYY-MM-DD (2024-12-31)"
+    },
+    "mapProvider": {
+      "label": "Kortudbyder",
+      "desc": "Tjeneste, der bruges til at åbne begivenheders placeringer",
+      "ariaLabel": "Kortudbyder",
+      "google": "Google Maps",
+      "apple": "Apple Maps",
+      "osm": "OpenStreetMap",
+      "mapy": "mapy.com",
+      "geo": "Enhedens standardindstilling (geo:)"
+    },
+    "timeFormat": {
+      "label": "Tidsformat",
+      "desc": "Visning af klokkeslæt i 12- eller 24-timers format",
+      "ariaLabel": "Tidsformat",
+      "12h": "12-timers format (2:30 PM)",
+      "24h": "24-timers format (14:30)"
+    },
+    "firstDayOfWeek": {
+      "label": "Ugens første dag",
+      "desc": "Ugens start i uge- og dagsvisning",
+      "ariaLabel": "Ugens første dag"
+    },
+    "language": { "label": "Sprog", "desc": "Brugerfladens sprog", "ariaLabel": "Sprog" },
+    "journal": {
+      "label": "Journal",
+      "desc": "Knyt fritekstnoter til dage i din kalender",
+      "ariaLabel": "Journal"
+    },
+    "contacts": {
+      "label": "Kontakter",
+      "desc": "Administrér din adressebog med CardDAV-synkronisering",
+      "ariaLabel": "Kontakter"
+    },
+    "haptics": {
+      "label": "Haptisk feedback",
+      "desc": "Vibrér ved tryk, stryg og lange tryk. Slå det fra, hvis det føles trægt.",
+      "ariaLabel": "Haptisk feedback"
+    },
+    "settingsSync": {
+      "groupLabel": "Synkronisering",
+      "label": "Synkronisering af CalDAV-indstillinger",
+      "descEnabled": "Henter automatisk indstillinger. Gem ændringer manuelt med knappen nedenfor.",
+      "descDisabled": "Aktivér for at synkronisere dine indstillinger på tværs af enheder via CalDAV",
+      "syncing": "Synkroniserer…",
+      "syncedAt": "Synkroniseret {{time}}",
+      "disableAriaLabel": "Deaktivér synkronisering af indstillinger",
+      "enable": "Aktivér",
+      "somethingWrong": "Noget gik galt"
+    },
+    "syncNow": {
+      "label": "Synkronisér nu",
+      "desc": "Gem dine lokale indstillinger på serveren",
+      "saving": "Gemmer...",
+      "save": "Gem"
+    },
+    "accountPicker": {
+      "title": "Aktivér synkronisering af indstillinger",
+      "description": "Dette opretter en kalender med navnet <strong>Calino Settings</strong> på din CalDAV-server. Den indeholder én begivenhed, der gemmer dine præferencer (tema, ugens første dag osv.) som JSON-data.",
+      "descriptionSmall": "Kalenderen er skjult i Calinos sidepanel, men kan være synlig i andre CalDAV-klienter. Den påvirker ikke dine øvrige kalendere og kan til enhver tid slettes fra indstillingerne.",
+      "chooseAccount": "Vælg en konto, der skal synkroniseres med:",
+      "settingUp": "Konfigurerer…",
+      "cancel": "Annuller"
+    },
+    "disableSync": {
+      "title": "Deaktivér synkronisering af indstillinger?",
+      "description": "Dine indstillinger synkroniseres ikke længere på tværs af enheder. Vil du også slette indstillingsfilen fra serveren?",
+      "keepFile": "Behold filen",
+      "deleteAndDisable": "Slet og deaktivér"
+    },
+    "syncError": {
+      "cors": "Din server blokerer forbindelsen. Det betyder som regel, at CORS-headere ikke er konfigureret. Kontrollér, at din CalDAV-server sender dem og besvarer OPTIONS:",
+      "corsHelp": "Synkronisering → din konto → <strong>Diagnosticér</strong> viser, hvilken del der mangler. Se <link>Baikal CORS-dokumentationen</link> for hjælp.",
+      "network": "Kunne ikke nå din CalDAV-server. Kontrollér internetforbindelsen, og sørg for, at serveren er tilgængelig — en manglende CORS-header ser ens ud herfra, så prøv <strong>Diagnosticér</strong> under Synkronisering, hvis serveren er oppe.",
+      "timeout": "Din CalDAV-server var for længe om at svare. Den kan være overbelastet — prøv igen om lidt.",
+      "auth": "Godkendelsen mislykkedes. Kontrollér dit CalDAV-brugernavn og din adgangskode. Mange udbydere kræver en appspecifik adgangskode frem for kontoadgangskoden.",
+      "forbidden": "Serveren afviste ændringen. Du har muligvis ikke skriveadgang til kalenderen, eller serveren afviste dataene.",
+      "quota": "Serverens lagerplads er fuld. Frigør plads på serveren, og prøv igen.",
+      "rateLimited": "Serveren begrænser antallet af forespørgsler. Prøv igen om lidt.",
+      "notFound": "Indstillingskalenderen blev ikke fundet på serveren. Den kan være blevet slettet. Prøv at deaktivere og aktivere synkronisering igen.",
+      "conflict": "Dine indstillinger blev ændret på en anden enhed, siden denne enhed sidst synkroniserede. Synkronisér igen for at hente den nyere version.",
+      "server": "Din CalDAV-server returnerede en fejl. Problemet er på serversiden — kontrollér dens logfiler."
+    }
+  },
+  "weekday": {
+    "sunday": "Søndag",
+    "monday": "Mandag",
+    "tuesday": "Tirsdag",
+    "wednesday": "Onsdag",
+    "thursday": "Torsdag",
+    "friday": "Fredag",
+    "saturday": "Lørdag"
+  },
+  "calendar": {
+    "title": "Kalender",
+    "display": "Visning",
+    "defaultView": {
+      "label": "Standardvisning",
+      "desc": "Visningen, der vises, når du åbner appen",
+      "ariaLabel": "Standardvisning",
+      "month": "Måned",
+      "week": "Uge",
+      "day": "Dag",
+      "agenda": "Dagsorden",
+      "todo": "Opgaver"
+    },
+    "showWeekNumbers": {
+      "label": "Vis ugenumre",
+      "desc": "Vis ISO-ugenumre til venstre for hver række",
+      "ariaLabel": "Vis ugenumre"
+    },
+    "showWeekNumbersInSidebar": {
+      "label": "Vis ugenumre i sidepanelet",
+      "desc": "Vis ISO-ugenumre ved siden af hver række i minikalenderen",
+      "ariaLabel": "Vis ugenumre i sidepanelet"
+    },
+    "eventDensity": {
+      "label": "Tæthed for begivenhedsvisning",
+      "desc": "Hvor kompakt begivenhedsfelterne vises i gitteret",
+      "ariaLabel": "Tæthed for begivenheder",
+      "notAvailable": "Ikke tilgængelig endnu",
+      "compact": "Kompakt",
+      "comfortable": "Rummelig"
+    },
+    "agendaBelowMonth": {
+      "label": "Opdelt dagsorden under månedsvisning",
+      "desc": "Vis et dagsordenspanel under månedsgitteret på høje skærme i stående format",
+      "ariaLabel": "Opdelt dagsorden under månedsvisning"
+    },
+    "secondaryTimezoneGroup": "Sekundær tidszone",
+    "secondaryTimezoneEnabled": {
+      "label": "Vis sekundær tidszone",
+      "desc": "Vis en ekstra tidszone i tidsgitrene for dag og uge",
+      "ariaLabel": "Vis sekundær tidszone"
+    },
+    "secondaryTimezone": {
+      "label": "Sekundær tidszone",
+      "desc": "Vælg den tidszone, der skal vises sammen med lokal tid",
+      "ariaLabel": "Sekundær tidszone",
+      "presets": "Forudindstillinger",
+      "allTimezones": "Alle tidszoner"
+    },
+    "secondaryTimezoneLabel": {
+      "label": "Tilpasset etiket",
+      "desc": "Valgfri kort etiket (f.eks. NYC, HQ, maks. 8 tegn)",
+      "placeholder": "f.eks. NYC",
+      "ariaLabel": "Etiket for sekundær tidszone"
+    },
+    "gridBehaviour": "Gitteradfærd",
+    "compactRecurringEvents": {
+      "label": "Kompakte tilbagevendende begivenheder",
+      "desc": "Vis tilbagevendende begivenheder som små felter i månedsvisningen",
+      "ariaLabel": "Kompakte tilbagevendende begivenheder"
+    },
+    "compressPastWeeks": {
+      "label": "Kompakte tidligere uger",
+      "desc": "Reducér højden på rækker, der allerede er passeret",
+      "ariaLabel": "Kompakte tidligere uger"
+    },
+    "fadePastDays": {
+      "label": "Nedton tidligere dage i dagsordenen",
+      "desc": "Gør tidligere dage en smule nedtonede",
+      "ariaLabel": "Nedton tidligere dage",
+      "never": "Aldrig",
+      "current": "Denne måned",
+      "all": "Alle"
+    },
+    "hideCompletedTasks": {
+      "label": "Skjul fuldførte opgaver",
+      "desc": "Vis ikke afsluttede opgaver i kalendergitteret",
+      "ariaLabel": "Skjul fuldførte opgaver"
+    },
+    "monthViewEventLimit": {
+      "label": "Begivenheder før sammenfoldning",
+      "desc": "Antal begivenheder, der vises pr. dag, før \"+N flere\" vises. Automatisk tilpasser antallet til pladsen i dagcellen og følger vinduets størrelse, når den ændres.",
+      "ariaLabel": "Begivenheder før sammenfoldning",
+      "auto": "Automatisk"
+    },
+    "newEventDefaults": "Standardindstillinger for nye begivenheder",
+    "defaultDuration": {
+      "label": "Standardvarighed",
+      "desc": "Varigheden af en ny begivenhed, når den oprettes ved at klikke på en dag",
+      "ariaLabel": "Standardvarighed",
+      "customAriaLabel": "Tilpasset varighed i minutter",
+      "custom": "Tilpasset…",
+      "unit": "min",
+      "15min": "15 minutter",
+      "30min": "30 minutter",
+      "1hour": "1 time",
+      "1.5hours": "1,5 time",
+      "2hours": "2 timer"
+    },
+    "defaultCalendar": {
+      "label": "Standardkalender",
+      "desc": "Den kalender, som nye begivenheder tilføjes til",
+      "ariaLabel": "Standardkalender"
+    },
+    "defaultReminder": {
+      "label": "Standardpåmindelse",
+      "desc": "Påmindelsen, som nye begivenheder starter med",
+      "ariaLabel": "Standardpåmindelse",
+      "none": "Ingen",
+      "atTimeOfEvent": "Ved begivenhedens start",
+      "5minBefore": "5 minutter før",
+      "15minBefore": "15 minutter før",
+      "30minBefore": "30 minutter før",
+      "1hourBefore": "1 time før",
+      "1dayBefore": "1 dag før"
+    }
+  },
+  "conflict": {
+    "serverWins": "Serveren vinder (standard)",
+    "localWins": "Den lokale version vinder",
+    "askMe": "Spørg mig"
+  },
+  "theme": {
+    "title": "Udseende",
+    "appearance": {
+      "label": "Udseende",
+      "desc": "Vælg, hvordan Calino ser ud",
+      "light": "Lys",
+      "dark": "Mørk",
+      "system": "System"
+    },
+    "lightTheme": { "label": "Lyst tema", "desc": "Farvepalet, der bruges i lys tilstand" },
+    "darkTheme": { "label": "Mørkt tema", "desc": "Farvepalet, der bruges i mørk tilstand" },
+    "mochaAccent": {
+      "label": "Catppuccin-accent",
+      "desc": "Bruges til markering, fokus og primære handlinger",
+      "ariaLabel": "Catppuccin-accentfarve",
+      "useAccent": "Brug {{name}} som accent",
+      "blue": "Blå",
+      "lavender": "Lavendel",
+      "mauve": "Mauve",
+      "pink": "Lyserød",
+      "teal": "Blågrøn",
+      "green": "Grøn",
+      "peach": "Fersken"
+    },
+    "eventTint": {
+      "label": "Styrke på begivenhedsfarve",
+      "desc": "Hvor meget af kalenderens farve der vises på dens begivenheder. Stærkere indstillinger gør det lettere at skelne kalendere fra hinanden med et blik.",
+      "ariaLabel": "Styrke på begivenhedsfarve",
+      "subtle": "Diskret",
+      "balanced": "Balanceret",
+      "vivid": "Kraftig"
+    },
+    "showEventIcons": {
+      "label": "Begivenhedsikoner",
+      "desc": "Vis et passende ikon på begivenheder ud fra deres titel (f.eks. en kaffekop til \"Kaffe\")",
+      "ariaLabel": "Vis begivenhedsikoner"
+    },
+    "fontSize": {
+      "label": "Skriftstørrelse",
+      "desc": "Påvirker teksttætheden i hele appen",
+      "notAvailable": "Ikke tilgængelig endnu",
+      "small": "Lille",
+      "default": "Standard",
+      "large": "Stor"
+    },
+    "adjustable": {
+      "headerLabel": "Justerbart tema · {{mode}}",
+      "desc": "Juster den aktive palet direkte. Ændringer gemmes automatisk på denne enhed.",
+      "reset": "Nulstil",
+      "previewLabel": "Forhåndsvisning af begivenhedskort",
+      "previewDesc": "Se, hvordan denne palet ser ud i kalenderen.",
+      "live": "Direkte",
+      "previewToday": "I dag",
+      "previewDate": "Tirsdag den 23. august",
+      "previewEvent1Title": "Designgennemgang",
+      "previewEvent1Meta": "10:00 – 11:00 · Mødelokale",
+      "previewEvent2Title": "Frokost med Alex",
+      "previewEvent2Meta": "12:30 – 13:15 · Café Flora",
+      "previewEvent3Title": "Fordybelsestid",
+      "previewEvent3Meta": "14:00 – 15:30",
+      "font": {
+        "label": "Skrifttype",
+        "desc": "Skrifttype, der bruges i hele brugerfladen",
+        "ariaLabel": "Skrifttype for tema",
+        "system": "Systemets sans-serif",
+        "serif": "Newsreader serif",
+        "mono": "Fast bredde"
+      },
+      "colors": {
+        "canvas": { "label": "Lærred", "desc": "Sidens primære baggrund" },
+        "panel": { "label": "Flade", "desc": "Kort, dialogbokse og paneler" },
+        "accent": { "label": "Accent", "desc": "Handlinger, markering og fokus" },
+        "accentContrast": { "label": "Accenttekst", "desc": "Tekst på accentfarvede flader" },
+        "text": { "label": "Primær tekst", "desc": "Den primære læsbare tekst" },
+        "mutedText": { "label": "Nedtonet tekst", "desc": "Sekundær og afdæmpet tekst" },
+        "border": { "label": "Kanter", "desc": "Skillelinjer og konturers omrids" },
+        "colorAriaLabel": "Farve for {{label}}"
+      },
+      "cornerRadius": "Hjørneafrunding",
+      "cornerRadiusAriaLabel": "Hjørneafrunding",
+      "density": "Tæthed",
+      "densityAriaLabel": "Temaets tæthed",
+      "shadowStrength": "Skyggestyrke",
+      "shadowStrengthAriaLabel": "Skyggestyrke",
+      "eventTint": "Begivenhedsfarve",
+      "eventTintAriaLabel": "Styrke på begivenhedsfarve",
+      "contrast": {
+        "ariaLabel": "Kontrastkontrol: {{details}}",
+        "textCanvas": "Primær tekst ligger under WCAG AA på lærredet.",
+        "textPanel": "Primær tekst ligger under WCAG AA på flader.",
+        "mutedTextCanvas": "Nedtonet tekst ligger under WCAG AA på lærredet.",
+        "accentContrast": "Accenttekst ligger under WCAG AA på accentfarvede flader.",
+        "meetsAA": "Farverne opfylder WCAG AA.",
+        "needsAttention": "Kontrasten kræver opmærksomhed",
+        "looksGood": "Kontrasten ser god ud"
+      }
+    }
+  },
+  "categories": {
+    "title": "Kategorier",
+    "useCategoryColors": {
+      "label": "Brug kategorifarver til begivenheder",
+      "desc": "Når det er deaktiveret, bruger begivenheder kalenderens farve",
+      "ariaLabel": "Brug kategorifarver til begivenheder"
+    },
+    "keywords": {
+      "ariaLabel": "Nøgleord",
+      "removeKeyword": "Fjern nøgleordet {{keyword}}",
+      "placeholder": "Skriv nøgleord adskilt med kommaer",
+      "addAriaLabel": "Tilføj nøgleord"
+    },
+    "color": {
+      "swatchAriaLabel": "Farven {{color}}",
+      "customAriaLabel": "Tilpasset farve for kategorien {{name}}",
+      "customNewAriaLabel": "Tilpasset farve for ny kategori"
+    },
+    "editName": "Kategorinavn",
+    "eventCount_one": "{{count}} begivenhed",
+    "eventCount_other": "{{count}} begivenheder",
+    "editAriaLabel": "Redigér kategorien {{name}}",
+    "delete": "Slet",
+    "deleteAriaLabel": "Slet kategorien {{name}}",
+    "addForm": {
+      "namePlaceholder": "Kategorinavn",
+      "nameAriaLabel": "Navn på ny kategori",
+      "add": "Tilføj",
+      "cancel": "Annuller"
+    },
+    "addCategory": "Tilføj kategori",
+    "autoCategorize": {
+      "title": "Automatisk kategorisering",
+      "desc": "Tildel automatisk kategorier til begivenheder ud fra nøgleord i titlen",
+      "selectCategory": "Vælg kategori",
+      "selectCategoryAriaLabel": "Vælg kategori",
+      "selectCategoryForNewRuleAriaLabel": "Vælg kategori til ny regel",
+      "save": "Gem",
+      "cancel": "Annuller",
+      "edit": "Redigér",
+      "delete": "Slet",
+      "add": "Tilføj",
+      "matchCount_one": "{{count}} match",
+      "matchCount_other": "{{count}} match",
+      "uncategorizedCount": "({{count}} uden kategori)",
+      "countInCalendar": "{{count}} i {{name}}",
+      "unknownCalendar": "Ukendt",
+      "willMatch_one": "Matcher {{count}} begivenhed",
+      "willMatch_other": "Matcher {{count}} begivenheder",
+      "currentlyUncategorized": " ({{count}} uden kategori i øjeblikket)",
+      "addRule": "Tilføj regel for automatisk kategorisering",
+      "applyToExisting": "Anvend regler på eksisterende begivenheder",
+      "applyToExistingDesc": "Kategorisér tidligere begivenheder, der matcher dine regler"
+    }
+  },
+  "notifications": {
+    "title": "Notifikationer",
+    "events": "Begivenheder",
+    "eventReminders": {
+      "label": "Påmindelser om begivenheder",
+      "desc": "Få besked, før begivenheder starter",
+      "ariaLabel": "Påmindelser om begivenheder"
+    },
+    "soundAlerts": {
+      "label": "Lydalarmer",
+      "desc": "Afspil en lyd, når begivenheder snart starter",
+      "ariaLabel": "Lydalarmer"
+    },
+    "deviceCalendar": "Enhedskalender",
+    "calendarMirror": {
+      "label": "Synkronisér med Android-kalender (beta)",
+      "ariaLabel": "Synkronisér med Android-kalender (beta)",
+      "descOff": "Kopiér dine begivenheder til enhedens kalender, så Android leverer påmindelser, også når Calino er lukket, og widgets, Wear OS og Android Auto kan se dem. Skrivebeskyttet — intet skrives tilbage til din CalDAV-server.",
+      "descActive": "Android leverer dine påmindelser. Begivenheder er synlige i widgets, Wear OS og Android Auto.",
+      "descNoCalendarApp": "Begivenhederne er synkroniseret, men ingen kalenderapp er installeret til at vise påmindelser — Calino håndterer dem stadig selv.",
+      "descDenied": "Adgang til kalenderen er ikke tilgængelig. Giv adgang igen i Android-appens indstillinger.",
+      "descFailed": "Kunne ikke skrive til enhedens kalender: {{error}}",
+      "descFailedNoDetail": "Kunne ikke skrive til enhedens kalender.",
+      "descSyncing": "Synkroniserer…"
+    },
+    "calendarMirrorInfo": {
+      "label": "Sådan fungerer det",
+      "desc": "Hvad der kopieres, hvem der leverer dine påmindelser, og hvad du kan forvente i beta",
+      "learnMore": "Få mere at vide"
+    },
+    "calendarMirrorModal": {
+      "title": "Synkronisér med Android-kalender",
+      "intro": "Calino kopierer dine begivenheder til Androids egen kalenderdatabase — den samme som din kalenderwidget, Wear OS-ur og Android Auto læser fra. De apps kan ikke se Calinos lager, så det er sådan, dine begivenheder bliver synlige i dem.",
+      "reliabilityTitle": "Derfor bliver påmindelser mere pålidelige",
+      "reliabilityP1": "Alene kan Calino kun planlægge en påmindelse, mens appen kører. Android planlægger påmindelser for begivenheder i sin kalender, uanset om Calino har været åbnet, så når dette er slået til, leverer Android dem, og Calino træder tilbage — du får ikke to notifikationer om den samme begivenhed.",
+      "reliabilityP2": "Det kræver, at en kalenderapp er installeret, for at notifikationen faktisk kan vises. Hvis du ikke har en, fortæller Calino det ovenfor og fortsætter selv med at håndtere påmindelser.",
+      "oneWayTitle": "Det går kun én vej",
+      "oneWayItem1": "De spejlede kalendere er skrivebeskyttede. Calino er fortsat den eneste app, der skriver til din CalDAV-server, og intet, du gør i en anden kalenderapp, kommer tilbage.",
+      "oneWayItem2": "Kun kalendere, du har sat til synlige, kopieres.",
+      "oneWayItem3": "Når du slår dette fra, slettes de spejlede kalendere igen, mens dine øvrige kalendere forbliver urørte.",
+      "stayingUpToDateTitle": "Holdes opdateret",
+      "stayingUpToDateP1": "Omtrent én gang i timen kontrollerer Calino din server i baggrunden, så en begivenhed, du tilføjer på en anden enhed, når din telefon og påminder dig, selv hvis du ikke har åbnet Calino siden. Intet sendes til et nyt sted — det er den samme forbindelse til din egen server, som appen allerede bruger.",
+      "betaTitle": "Derfor er funktionen i beta",
+      "betaP1": "Baggrundskontrollen afhænger af telefonens batteriindstillinger. Især enheder fra Xiaomi, Samsung, OPPO, OnePlus og Huawei fryser baggrundsapps aggressivt og kan springe den over uden varsel. Hvis dine begivenheder virker forældede, skal du vælge <strong>Ingen begrænsninger</strong> for Calino i Androids batteriindstillinger.",
+      "betaP2": "Hvis en spejlet kalender ikke vises i din kalenderapp, er den som regel skjult frem for manglende — nye kalendere ankommer ofte uden markering i den pågældende apps egen liste over kalendere, der skal vises."
+    },
+    "tasks": "Opgaver",
+    "taskDueDateReminders": {
+      "label": "Påmindelser om opgavers forfaldsdato",
+      "desc": "Giv besked, når en opgaves forfaldsdato indtræffer",
+      "ariaLabel": "Påmindelser om opgavers forfaldsdato"
+    },
+    "overdueTaskBadge": {
+      "label": "Mærke for forfaldne opgaver",
+      "desc": "Vis et mærke på appikonet for forfaldne opgaver",
+      "ariaLabel": "Mærke for forfaldne opgaver"
+    },
+    "test": {
+      "label": "Testnotifikation",
+      "descDefault": "Klik for at aktivere og teste notifikationer",
+      "descDenied": "Notifikationer er blokeret i browserindstillingerne",
+      "descReady": "Send en testnotifikation",
+      "enableAndTest": "Aktivér og test",
+      "sendTest": "Send test"
+    },
+    "permissionDeniedToast": "Notifikationer er blokeret. Opdatér webstedets tilladelser i browserindstillingerne for at aktivere påmindelser.",
+    "calendarPermissionDeniedToast": "Adgang til kalenderen er blokeret. Giv adgang i Android-appens indstillinger for at synkronisere begivenheder til enhedens kalender."
+  },
+  "caldav": {
+    "title": "Synkronisering",
+    "connectedAccounts": "Forbundne konti",
+    "test": "Test",
+    "testAriaLabel": "Test forbindelsen for {{name}}",
+    "diagnose": "Diagnosticér",
+    "diagnoseAriaLabel": "Kør diagnosticering for {{name}}",
+    "edit": "Redigér",
+    "editAriaLabel": "Redigér {{name}}",
+    "disconnect": "Afbryd forbindelsen",
+    "disconnectAriaLabel": "Afbryd forbindelsen til {{name}}",
+    "testing": "Tester…",
+    "connectionOk": "Forbindelsen er OK",
+    "connectionFailed": "Forbindelsen mislykkedes",
+    "failedWithMessage": "Mislykkedes — {{message}}",
+    "syncedOn": "Synkroniseret · {{date}}",
+    "connected": "Forbundet",
+    "addAccount": "Tilføj kalenderkonto",
+    "calendarSubscriptions": "Kalenderabonnementer",
+    "syncNow": "Synkronisér nu",
+    "syncing": "Synkroniserer…",
+    "syncAriaLabel": "Synkronisér {{name}} nu",
+    "remove": "Fjern",
+    "removeAriaLabel": "Fjern {{name}}",
+    "notYetSynced": "Endnu ikke synkroniseret",
+    "subscribe": "Abonnér på kalender (.ics)",
+    "confirmRemoveSubscription": "Vil du fjerne dette kalenderabonnement? Dets begivenheder slettes lokalt.",
+    "confirmRemoveAccount": "Er du sikker på, at du vil fjerne denne konto? Kalenderdata bevares lokalt.",
+    "credentialsNotFound": "Loginoplysninger blev ikke fundet"
+  },
+  "data": {
+    "title": "Data",
+    "importExport": "Import og eksport",
+    "exportCalendar": {
+      "label": "Eksportér kalender",
+      "desc": "Download alle begivenheder som en standard-.ics-fil",
+      "exporting": "Eksporterer...",
+      "export": "Eksportér .ics"
+    },
+    "importCalendar": {
+      "label": "Importér kalender",
+      "desc": "Tilføj begivenheder fra en .ics- eller .json-fil",
+      "importing": "Importerer...",
+      "chooseFile": "Vælg fil…"
+    },
+    "importedEvents_one": "Importerede {{count}} begivenhed",
+    "importedEvents_other": "Importerede {{count}} begivenheder",
+    "noEventsInJson": "Ingen begivenheder fundet i JSON-filen",
+    "importFailed": "Kunne ikke importere filen. Kontrollér formatet.",
+    "contacts": "Kontakter",
+    "exportContacts": {
+      "label": "Eksportér kontakter",
+      "desc": "Download alle kontakter som en standard-.vcf-fil",
+      "export": "Eksportér .vcf"
+    },
+    "importContacts": {
+      "label": "Importér kontakter",
+      "desc": "Tilføj kontakter fra en .vcf-fil",
+      "chooseFile": "Vælg fil…"
+    },
+    "mergeDuplicates": {
+      "label": "Flet dubletter",
+      "desc": "Find og flet kontakter med samme e-mailadresse, telefonnummer eller navn",
+      "merge": "Flet…"
+    },
+    "noContactsInFile": "Ingen kontakter fundet i filen",
+    "failedToParseVCard": "Kunne ikke fortolke vCard-filen",
+    "noContactsToExport": "Ingen kontakter at eksportere",
+    "exportedContacts_one": "Eksporterede {{count}} kontakt",
+    "exportedContacts_other": "Eksporterede {{count}} kontakter",
+    "dataIssues": "Dataproblemer",
+    "noIssues": "Ugyldige eller ødelagte begivenheder (f.eks. med startdato efter slutdato) vises her, så du kan rette eller slette dem.",
+    "brokenEventsIntro": "Disse begivenheder har en startdato efter slutdatoen og kan ikke vises. Du kan rette dem ved at bytte datoerne om eller slette dem helt.",
+    "untitledEvent": "Begivenhed uden titel",
+    "start": "Start: {{date}}",
+    "end": "Slut: {{date}}",
+    "fix": "Ret",
+    "delete": "Slet",
+    "fixAll": "Ret alle ({{count}})",
+    "deleteAll": "Slet alle",
+    "duplicateUidIntro": "Disse begivenheder deler det samme unikke ID (UID) på din server, men gemmes som separate elementer. Calino kan kun vise én fra hvert sæt — de andre skjules for at holde kalenderen stabil. Det skyldes som regel en massekopiering i en anden app. Løs problemet ved at give hver begivenhed et unikt UID på serveren og derefter synkronisere igen.",
+    "duplicateUid": "Dubleret UID: {{uid}}",
+    "kept": "Beholdt",
+    "hidden": "Skjult",
+    "deleting": "Sletter…",
+    "dismiss": "Luk",
+    "dangerZone": "Farezone",
+    "deleteAllEvents": {
+      "label": "Slet alle begivenheder",
+      "desc": "Fjern alle begivenheder permanent fra denne kalender. Dette kan ikke fortrydes.",
+      "confirm": "Slette alle begivenheder? Dette kan ikke fortrydes.",
+      "action": "Slet alle begivenheder"
+    },
+    "resetApp": {
+      "label": "Nulstil Calino",
+      "desc": "Slet alle data, indstillinger og tilknyttede konti, og begynd forfra.",
+      "confirm": "Er du sikker på, at du vil slette alle lokale data? Dette kan ikke fortrydes.",
+      "action": "Nulstil appen"
+    },
+    "duplicateDeleted": "Dubleret begivenhed slettet",
+    "duplicateDeleteFailed": "Kunne ikke slette den dublerede begivenhed. Prøv igen."
+  },
+  "aiVision": {
+    "title": "AI-fotoimport",
+    "intro": "Brug din egen API-nøgle til automatisk at udfylde begivenhedsoplysninger fra et foto. Tilgængelig ved oprettelse af en ny begivenhed på Android.",
+    "androidOnly": "Denne funktion er kun tilgængelig i Android-appen.",
+    "provider": {
+      "groupLabel": "Udbyder",
+      "label": "Udbyder",
+      "desc": "Den AI-tjeneste til billedanalyse, som fotos sendes til",
+      "ariaLabel": "AI-udbyder",
+      "anthropic": "Anthropic",
+      "openai": "OpenAI",
+      "custom": "Tilpasset (OpenAI-kompatibel)"
+    },
+    "baseUrl": {
+      "label": "Basis-URL",
+      "descCustom": "Fuld API-rod, der er kompatibel med OpenAI eller Anthropic, inklusive /v1 — den bruges præcis som indtastet. Tilføj /anthropic til stien, hvis den bruger Anthropics API.",
+      "descPreset": "Anmodninger sendes hertil",
+      "placeholder": "https://api.example.com/v1",
+      "ariaLabel": "Basis-URL"
+    },
+    "apiKey": {
+      "label": "API-nøgle",
+      "desc": "Gemmes krypteret kun på denne enhed",
+      "placeholderSaved": "••••••••••••",
+      "placeholderEmpty": "Indtast API-nøgle",
+      "ariaLabel": "API-nøgle",
+      "showAriaLabel": "Vis API-nøgle",
+      "hideAriaLabel": "Skjul API-nøgle",
+      "saved": "Nøgle gemt",
+      "clear": "Ryd",
+      "noKeySaved": "Ingen API-nøgle gemt endnu."
+    },
+    "model": {
+      "label": "Model",
+      "descError": "Kunne ikke hente modellisten — indtast et model-id manuelt.",
+      "descReady": "Model med billedunderstøttelse, der bruges til at læse fotos",
+      "placeholder": "model-id",
+      "idAriaLabel": "Model-id",
+      "ariaLabel": "Model",
+      "refreshAriaLabel": "Opdatér modellisten"
+    },
+    "test": {
+      "label": "Test forbindelse",
+      "desc": "Kontrollér, at nøglen virker, og at modellen kan læse billeder",
+      "testing": "Tester…",
+      "ok": "Forbindelsen er OK — understøtter billeder",
+      "warnDefault": "Nøglen virker, men denne model ser ikke ud til at understøtte billeder",
+      "failed": "Mislykkedes — {{message}}",
+      "failedGeneric": "Forbindelsen mislykkedes",
+      "button": "Test forbindelse",
+      "buttonTesting": "Tester…"
+    },
+    "lastVerified": {
+      "capable": "Senest bekræftet {{when}} — understøtter billeder",
+      "maybeNotCapable": "Senest bekræftet {{when}} — modellen understøtter muligvis ikke billeder"
+    }
+  },
+  "privacy": {
+    "back": "← Tilbage",
+    "title": "Privatlivspolitik",
+    "lastUpdated": "Senest opdateret: juli 2026",
+    "section1": {
+      "heading": "1. Dine data bliver på din enhed",
+      "body": "Calino er en kalenderapp med data lokalt først. Alle dine kalenderbegivenheder, indstillinger og præferencer gemmes lokalt i browseren ved hjælp af IndexedDB og localStorage. Vi har ikke adgang til dine personlige data."
+    },
+    "section2": {
+      "heading": "2. CalDAV-synkronisering (valgfrit)",
+      "intro": "Calino kan synkronisere med CalDAV-servere (f.eks. Nextcloud, ownCloud eller andre CalDAV-kompatible tjenester), som du selv konfigurerer. Når du tilføjer en CalDAV-konto:",
+      "item1": "Dine loginoplysninger (brugernavn/adgangskode) gemmes kun i browserens localStorage",
+      "item2": "Data overføres direkte mellem browseren og din CalDAV-server",
+      "item3": "Vi ser eller gemmer aldrig dine loginoplysninger på en ekstern server"
+    },
+    "section3": {
+      "heading": "3. CORS-proxy (valgfrit)",
+      "intro": "Hvis din CalDAV-server ikke understøtter CORS, kan du vælge at bruge en CORS-proxy for at give browseren adgang.",
+      "hostedProxyIntro": "Vi stiller en offentlig CORS-proxy til rådighed på {{proxy}}. Hvis du bruger denne mulighed:",
+      "hostedProxyLabel": "Proxy hostet af Calino (proxy.calino.io):",
+      "item1": "Vi kan se din IP-adresse, dit land og den fulde URL for hver forespørgsel (som undertiden kan indeholde dele af din kontosti, afhængigt af din CalDAV-server)",
+      "item2": "Vi kan <strong>ikke</strong> se din adgangskode eller kalenderbegivenhedsdata",
+      "item3": "Loginoplysninger sendes i Authorization-headeren (logges ikke)",
+      "item4": "Forespørgsels- og svarbrødtekster med kalenderdata logges ikke",
+      "thirdPartyLabel": "Tredjeparts- eller selvhostede proxyer:",
+      "thirdPartyBody": "De samme principper gælder — proxyoperatøren ser forbindelsesmetadata, men ikke dine loginoplysninger eller kalenderindhold.",
+      "maxPrivacy": "For maksimal beskyttelse af privatlivet bør du tilføje CORS-headere direkte på din CalDAV-server i stedet for at bruge en proxy."
+    },
+    "section4": {
+      "heading": "4. Cookies og lokal lagring",
+      "intro": "Calino bruger localStorage til at gemme:",
+      "item1": "Dine præferencer og indstillinger",
+      "item2": "Loginoplysninger til CalDAV-konti, sløret med en nøgle, der er gemt i selve appen. Det beskytter mod uformel inspektion af localStorage (f.eks. hvis et andet websted eller en udvidelse får adgang ved en fejl), men er ikke stærk kryptering mod en person med adgang til både appens kildekode og browserens lager.",
+      "outro": "Vi bruger ikke sporingscookies, analyseværktøjer eller tredjepartstjenester, der indsamler personlige oplysninger."
+    },
+    "section5": {
+      "heading": "5. Ingen konto påkrævet",
+      "body": "Calino kræver ikke registrering eller en konto. Du kan bruge appen med det samme uden at afgive personlige oplysninger."
+    },
+    "section6": {
+      "heading": "6. Kontakt",
+      "body": "Hvis du har spørgsmål om denne privatlivspolitik, bedes du kontakte:"
+    }
+  },
+  "masterPassword": {
+    "overlayAriaLabel": "Lås CalDAV-konti op",
+    "title": "Lås CalDAV-konti op",
+    "subtitle": "Indtast din hovedadgangskode for at oprette forbindelse til forudkonfigurerede konti.",
+    "label": "Hovedadgangskode",
+    "placeholder": "Indtast hovedadgangskode",
+    "unlock": "Lås op",
+    "wait": "Vent {{seconds}} sek.",
+    "tooManyAttempts": "For mange forsøg. Prøv igen om 1 minut.",
+    "wrongPassword_one": "Forkert adgangskode. {{count}} forsøg tilbage.",
+    "wrongPassword_other": "Forkert adgangskode. {{count}} forsøg tilbage."
+  },
+  "diagnostics": {
+    "runDiagnostics": "Kør diagnosticering",
+    "runAgain": "Kør igen",
+    "running": "Kører…",
+    "runWithWriteTest": "Kør med skrivetest",
+    "runWithWriteTestTitle": "Opretter en midlertidig begivenhed på serveren og sletter den igen",
+    "copyReport": "Kopiér rapport",
+    "copied": "Kopieret",
+    "note": "Skrivetesten opretter én midlertidig begivenhed på serveren og sletter den straks igen. Alt andet læser kun.",
+    "inferred": "udledt",
+    "inferredTitle": "Din browser skjuler den relevante header, så dette blev udledt af serverens opførsel.",
+    "howToFix": "Sådan løses det",
+    "status": {
+      "pass": "Bestået",
+      "fail": "Fejl",
+      "warn": "Advarsel",
+      "skipped": "Sprunget over",
+      "unknown": "Ukendt"
+    },
+    "summary": {
+      "ok": "Alt ser korrekt ud.",
+      "degraded": "Synkroniseringen vil fungere, men serveren kan konfigureres bedre.",
+      "broken": "Der er noget galt med denne server."
+    },
+    "corsNote": " Kontroller markeret som “udledt” kunne ikke læses direkte — browsere skjuler en servers CORS-headere for JavaScript."
+  }
+}

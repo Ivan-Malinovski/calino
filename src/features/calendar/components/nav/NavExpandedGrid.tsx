@@ -7,10 +7,11 @@ import { hapticIfEnabled } from '@/lib/haptics'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { SettingsIcon, TuneIcon } from '@/components/common/icons'
 import { QuickSettingsPanel } from '../QuickSettingsPanel'
-import { VIEW_ROUTES, URL_TO_VIEW } from '../../viewRoutes'
+import { VIEW_LABEL_KEYS, VIEW_ROUTES, URL_TO_VIEW } from '../../viewRoutes'
 import { useVisibleViews, useReorderViews } from '../../useOrderedViews'
 import { useGridReorder } from './useGridReorder'
 import type { ViewType } from '@/types'
+import { useTranslation } from 'react-i18next'
 import styles from './NavExpandedGrid.module.css'
 
 interface NavExpandedGridProps {
@@ -56,6 +57,7 @@ export function NavExpandedGrid({
   onDragProgress,
   onDragActiveChange,
 }: NavExpandedGridProps): JSX.Element {
+  const { t } = useTranslation('calendar')
   const navigate = useNavigate()
   const location = useLocation()
   const setCurrentView = useCalendarStore((state) => state.setCurrentView)
@@ -147,23 +149,23 @@ export function NavExpandedGrid({
         type="button"
         className={styles.handle}
         onClick={onCollapse}
-        aria-label="Collapse view switcher"
+        aria-label={t('surface.navCollapseSwitcher')}
       />
       <div className={styles.utilityRow}>
         <button type="button" className={styles.searchTile} onClick={handleSearchClick}>
           <SearchIcon />
-          <span>Search</span>
+          <span>{t('surface.navSearch')}</span>
         </button>
         <div className={styles.settingsTile}>
           <button type="button" className={styles.settingsZone} onClick={handleSettingsClick}>
             <SettingsIcon size={14} />
-            <span>Settings</span>
+            <span>{t('surface.navSettings')}</span>
           </button>
           <button
             type="button"
             className={`${styles.settingsToggleZone} ${quickSettingsOpen ? styles.settingsToggleZoneActive : ''}`}
             onClick={onToggleQuickSettings}
-            aria-label="Quick settings"
+            aria-label={t('surface.navQuickSettings')}
             aria-expanded={quickSettingsOpen}
           >
             <TuneIcon size={16} />
@@ -179,9 +181,9 @@ export function NavExpandedGrid({
 
       {reorderMode && (
         <div className={styles.reorderBar}>
-          <span>Drag to rearrange</span>
+            <span>{t('surface.navRearrange')}</span>
           <button type="button" className={styles.reorderDone} onClick={exitReorderMode}>
-            Done
+            {t('surface.navDone')}
           </button>
         </div>
       )}
@@ -237,7 +239,7 @@ export function NavExpandedGrid({
               onClick={() => handleTileClick(view.value)}
             >
               <span className={isActive ? styles.tileLabelActive : styles.tileLabel}>
-                {view.label}
+                {t(VIEW_LABEL_KEYS[view.value])}
               </span>
             </motion.button>
           )

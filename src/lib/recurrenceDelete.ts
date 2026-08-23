@@ -2,6 +2,7 @@ import type { CalendarEvent, RecurrenceEditMode } from '@/types'
 import { buildMasterTruncation, getFutureOverrideIds, isFirstOccurrence } from './recurrenceSplit'
 import { deleteEventWithUndo } from './deleteWithUndo'
 import { showToast } from './toast'
+import i18n from './i18n'
 
 /**
  * Resolves the ISO start of the occurrence the user acted on.
@@ -93,7 +94,7 @@ export async function deleteRecurringOccurrence({
         clickedEvent?.recurrenceId ? [clickedEvent.id] : []
       )
     } catch {
-      showToast('Failed to delete this occurrence. The event was kept.')
+      showToast(i18n.t('errors:sync.occurrenceDeleteFailed'))
       return false
     }
     return true
@@ -126,7 +127,7 @@ export async function deleteRecurringOccurrence({
         removedOverrideIds
       )
     } catch {
-      showToast('Failed to delete this and following events. The series was kept.')
+      showToast(i18n.t('errors:sync.seriesDeleteFailed'))
       return false
     }
     return true

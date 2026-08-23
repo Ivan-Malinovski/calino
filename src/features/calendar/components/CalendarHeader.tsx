@@ -13,7 +13,7 @@ import { useGestures } from '@/hooks/useGestures'
 import { useAnimatedClose } from '@/hooks/useAnimatedClose'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { DUR_FAST, EASE_POP } from '@/lib/motion'
-import { VIEW_ROUTES, ALL_VIEWS } from '../viewRoutes'
+import { VIEW_LABEL_KEYS, VIEW_ROUTES, ALL_VIEWS } from '../viewRoutes'
 import { useVisibleViews, useSwitcherItems, useReorderSwitcher } from '../useOrderedViews'
 import { useTabReorder } from './useTabReorder'
 import { getNavigatedDate } from '../dateNavigation'
@@ -404,13 +404,18 @@ export function CalendarHeader({
 
   const visibleViews = useVisibleViews()
   const switcherItems = useSwitcherItems()
+  const localizedSwitcherItems = switcherItems.map((item) =>
+    item.kind === 'view'
+      ? { ...item, label: t(VIEW_LABEL_KEYS[item.view.value], { ns: 'calendar' }) }
+      : item
+  )
   const reorderSwitcher = useReorderSwitcher()
 
   // Screen-reader feedback for keyboard reordering, which has no visual
   // "picked up / dropped" cue of its own.
   const [reorderAnnouncement, setReorderAnnouncement] = useState('')
   const tabReorder = useTabReorder(
-    switcherItems,
+    localizedSwitcherItems,
     viewTabRefs,
     reorderSwitcher,
     // Reordering by drag only makes sense while the tabs are actually
@@ -687,7 +692,7 @@ export function CalendarHeader({
             }}
             data-component="view-switcher-indicator"
           />
-          {switcherItems.map((item, index) => {
+          {localizedSwitcherItems.map((item, index) => {
             const isDragging = tabReorder.draggingId === item.id
             const shift = tabReorder.shiftFor(index)
 
@@ -748,7 +753,7 @@ export function CalendarHeader({
                   handleViewChange(view.value)
                 }}
               >
-                {view.label}
+                {item.label}
               </button>
             )
             return (
@@ -915,7 +920,7 @@ export function CalendarHeader({
                     role="menuitem"
                     tabIndex={isViewDropdownOpen ? 0 : -1}
                   >
-                    {view.label}
+                    {t(VIEW_LABEL_KEYS[view.value], { ns: 'calendar' })}
                   </button>
                 </React.Fragment>
               ))}

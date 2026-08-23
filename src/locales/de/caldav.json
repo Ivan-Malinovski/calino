@@ -1,1 +1,18 @@
-{}
+{
+  "progress": {
+    "checkingConnection": "Verbindung wird geprüft …",
+    "checkingForContacts": "Nach Kontakten wird gesucht …",
+    "creatingCalendar": "Kalender wird erstellt …",
+    "deletingCalendar": "Kalender wird gelöscht …",
+    "deletingEvent": "Ereignis wird gelöscht …",
+    "downloadingCalendars_one": "Ereignisse aus {{count}} Kalender werden heruntergeladen …",
+    "downloadingCalendars_other": "Ereignisse aus {{count}} Kalendern werden heruntergeladen …",
+    "importingCalendar": "{{name}} wird importiert …",
+    "lookingForCalendars": "Nach Kalendern wird gesucht …",
+    "savingAccount": "Konto wird gespeichert …",
+    "savingCalendar": "Kalender wird gespeichert …",
+    "savingEvent": "Ereignis wird gespeichert …",
+    "savingEvents": "Ereignisse werden gespeichert …",
+    "syncingEvents": "Ereignisse werden synchronisiert …"
+  }
+}

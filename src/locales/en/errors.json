@@ -1,1 +1,97 @@
-{}
+{
+  "undo": {
+    "eventDeleted": "Event deleted",
+    "contactDeleted": "Contact deleted"
+  },
+  "sync": {
+    "eventSyncRetry": "Failed to sync event with CalDAV server. It will be retried.",
+    "deletionSyncRetry": "Failed to sync deletion. It will be retried.",
+    "eventRestoreFailed": "Failed to restore event.",
+    "duplicateSyncRetry": "Failed to sync the duplicated event. It will be retried.",
+    "genericSyncRetry": "Failed to sync with CalDAV server. It will be retried.",
+    "deletionSyncRetryGeneric": "Failed to sync deletion with CalDAV server. It will be retried.",
+    "occurrenceDeleteFailed": "Failed to delete this occurrence. The event was kept.",
+    "seriesDeleteFailed": "Failed to delete this and following events. The series was kept.",
+    "settingsSaved": "Settings saved to server.",
+    "settingsSyncEnabled": "Settings sync enabled.",
+    "settingsFoundEnabled": "Calino Settings found — sync enabled.",
+    "settingsCalendarFoundEnabled": "Calino Settings calendar found — sync enabled.",
+    "settingsFoundEnabledAuto": "Calino Settings found — sync enabled automatically.",
+    "shortFailure": "{{subject}} failed: {{reason}}",
+    "subjectDefault": "Sync"
+  },
+  "syncReason": {
+    "cors": "your server is blocking the connection (CORS).",
+    "network": "couldn't reach your server. It may be offline, or blocking CORS.",
+    "timeout": "the server took too long to respond.",
+    "auth": "authentication error. Check your username and password.",
+    "forbidden": "the server refused the change. You may not have write access to this calendar, or the server rejected the data.",
+    "quota": "the server storage is full. Free up space on the server and try again.",
+    "rateLimited": "the server is rate-limiting requests. Try again in a moment.",
+    "notFound": "the resource wasn't found on the server.",
+    "conflict": "this item changed on the server. Sync again to pick up the newer copy.",
+    "server": "the server returned an error. Check its logs."
+  },
+  "connection": {
+    "corsOrNetwork": "Couldn't reach the server. Check the address, or it may be offline or blocking cross-origin requests.",
+    "timeout": "The server took too long to respond.",
+    "auth": "The server rejected these credentials.",
+    "forbidden": "The server refused the request. Check that you have write access to this calendar.",
+    "quota": "The server storage is full. Free up space on the server and try again.",
+    "rateLimited": "The server is rate-limiting requests. Try again in a moment.",
+    "notFound": "The server answered, but there's nothing at that address. Check the URL path.",
+    "server": "The server returned an error. Check its logs.",
+    "badStatus": "Server returned status {{status}}",
+    "failedGeneric": "Connection failed: {{message}}. This may be a CORS issue - the server must allow cross-origin requests.",
+    "urlHint": "For {{domain}}, try entering: {{url}}",
+    "unknownError": "Unknown error",
+    "fastmailAuthHint": "Fastmail rejected these credentials. Fastmail requires an app-specific password for CalDAV — your normal login password will not work. Create one at Settings → Privacy & Security → Integrations → New App Password (grant it \"Calendars (CalDAV)\" access), then use your email as the username and that password."
+  },
+  "broken": {
+    "foundEvents_one": "Found 1 broken event with invalid dates.",
+    "foundEvents_other": "Found {{count}} broken events with invalid dates.",
+    "foundDuplicateUids_one": "Found 1 set of events sharing a duplicate ID on your server.",
+    "foundDuplicateUids_other": "Found {{count}} sets of events sharing a duplicate ID on your server."
+  },
+  "reminder": {
+    "allDay": "All day",
+    "startingToday": "Starting today",
+    "startingAt": "Starting at {{time}}",
+    "snooze5m": "Snooze 5m",
+    "testNotificationTitle": "Test Notification",
+    "testNotificationBody": "Notifications are working! It is currently {{time}}"
+  },
+  "settingsSync": {
+    "notConfigured": "Sync not properly configured",
+    "calendarNotFound": "Settings calendar not found",
+    "accountNotFound": "Account not found",
+    "credentialsNotFound": "Credentials not found",
+    "pullFailed": "Pull failed",
+    "pushFailed": "Push failed",
+    "noCalendarsFound": "No calendars found",
+    "enableFailed": "Failed to enable sync",
+    "autoDiscoveryFailed": "Auto-discovery failed",
+    "subject": "Settings sync"
+  },
+  "pending": {
+    "event": "event",
+    "thisEvent": "this event",
+    "staleEtagUpdateConflict": "Couldn't save \"{{title}}\" — it changed on the server while this edit was queued. Your version is saved locally.",
+    "staleEtagDeleteConflict": "Couldn't delete \"{{title}}\" — it changed on the server while this delete was queued. The event stays on the server.",
+    "moveFailedWithCalendar": "Couldn't move \"{{title}}\" to {{calendar}}. It may still be in its old calendar.",
+    "moveFailedNoCalendar": "Couldn't move \"{{title}}\". It may still be in its old calendar.",
+    "moveCleanupPending": "Moved \"{{title}}\", but the old copy in {{calendar}} couldn't be removed yet. Retrying.",
+    "staleCopyWithCalendar": "Couldn't remove the old copy of a moved event from {{calendar}}. It may show up twice — delete the duplicate manually.",
+    "staleCopyNoCalendar": "Couldn't remove the old copy of a moved event. It may show up twice — delete the duplicate manually."
+  },
+  "account": {
+    "couldNotConnect": "Could not connect with these settings"
+  },
+  "headless": {
+    "accountCredentialsMissing": "Skipping account {{account}}: credentials are gone",
+    "calendarFailed": "Calendar {{calendar}} failed: {{error}}",
+    "accountFailed": "Account {{account}} failed: {{error}}",
+    "noCalendarsFetched": "No calendars fetched; leaving the mirror untouched",
+    "syncDone": "Background sync done: {{events}} events across {{calendars}} calendars from {{accounts}} account(s)"
+  }
+}

@@ -1,5 +1,6 @@
 import type { CalendarEvent } from '@/types'
 import { showToast } from './toast'
+import i18n from './i18n'
 
 type CalDAVUpdateFn = (calendarId: string, event: CalendarEvent) => Promise<void>
 
@@ -12,7 +13,7 @@ export async function safeCalDAVUpdate(
   // Partial<CalendarEvent>, not Record<string, unknown>: the loose type let a
   // misspelled field name through the compiler and straight onto the server.
   updates: Partial<CalendarEvent>,
-  errorMessage = 'Failed to sync with CalDAV server. It will be retried.'
+  errorMessage = i18n.t('errors:sync.genericSyncRetry')
 ): Promise<boolean> {
   try {
     await caldavUpdateEvent(calendarId, { ...event, ...updates })
@@ -27,7 +28,7 @@ export async function safeCalDAVDelete(
   caldavDeleteEvent: CalDAVDeleteFn,
   calendarId: string,
   eventId: string,
-  errorMessage = 'Failed to sync deletion with CalDAV server. It will be retried.'
+  errorMessage = i18n.t('errors:sync.deletionSyncRetryGeneric')
 ): Promise<boolean> {
   try {
     await caldavDeleteEvent(calendarId, eventId)

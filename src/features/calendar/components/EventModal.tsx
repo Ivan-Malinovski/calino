@@ -2,7 +2,8 @@ import type { JSX } from 'react'
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import { format, parseISO } from 'date-fns'
-import { pad2, toEventInstant, deviceTimezone } from '@/lib/datetime'
+import { useTranslation } from 'react-i18next'
+import { pad2, toEventInstant, deviceTimezone, formatDisplayDate } from '@/lib/datetime'
 import { v4 as uuidv4 } from 'uuid'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
@@ -65,6 +66,7 @@ async function runNetworkWrites(writes: Array<() => Promise<void>>): Promise<voi
 }
 
 export function EventModal(): JSX.Element | null {
+  const { t } = useTranslation(['calendar', 'common'])
   const isModalOpen = useCalendarStore((state) => state.isModalOpen)
   const selectedEventId = useCalendarStore((state) => state.selectedEventId)
   const selectedDate = useCalendarStore((state) => state.selectedDate)
@@ -676,11 +678,11 @@ export function EventModal(): JSX.Element | null {
       await navigator.clipboard.writeText(eventActionsMailto.recipients.join(', '))
       showToast(
         eventActionsMailto.recipients.length === 1
-          ? 'Address copied'
-          : `${eventActionsMailto.recipients.length} addresses copied`
+          ? t('modals.eventModal.addressCopied')
+          : t('modals.eventModal.addressesCopied', { count: eventActionsMailto.recipients.length })
       )
     } catch {
-      showToast('Could not access the clipboard')
+      showToast(t('modals.eventModal.couldNotAccessClipboard'))
     }
   }
 
@@ -688,7 +690,7 @@ export function EventModal(): JSX.Element | null {
     existingEventForMode
       ? [
           {
-            label: 'Download .ics',
+            label: t('modals.eventModal.downloadIcs'),
             dataComponent: 'export-event-ics',
             onClick: () => exportSingleEventIcs(existingEventForMode),
           },
@@ -697,8 +699,8 @@ export function EventModal(): JSX.Element | null {
                 {
                   label:
                     eventActionsMailto.recipients.length === 1
-                      ? 'Copy attendee email'
-                      : 'Copy attendee emails',
+                      ? t('modals.eventModal.copyAttendeeEmail')
+                      : t('modals.eventModal.copyAttendeeEmails'),
                   dataComponent: 'copy-attendee-emails',
                   onClick: () => void copyAttendeeEmails(),
                 },
@@ -784,11 +786,11 @@ export function EventModal(): JSX.Element | null {
   const taskRecurrenceDisabledReason = !isTaskMode
     ? undefined
     : !dueDate
-      ? 'needs a due date'
+      ? t('modals.eventModal.needsDueDate')
       : parentTaskId
-        ? 'subtasks cannot repeat'
+        ? t('modals.eventModal.subtasksCannotRepeat')
         : directSubtasks.length > 0
-          ? 'tasks with subtasks cannot repeat'
+          ? t('modals.eventModal.tasksWithSubtasksCannotRepeat')
           : undefined
   const recurrenceAllowed = !isTaskMode || !taskRecurrenceDisabledReason
 
@@ -945,7 +947,7 @@ export function EventModal(): JSX.Element | null {
     if (isSavingRef.current) return
 
     if (!title.trim()) {
-      showToast('Title is required')
+      showToast(t('modals.eventModal.titleRequired'))
       return
     }
 
@@ -953,7 +955,9 @@ export function EventModal(): JSX.Element | null {
       // R3.4 — end-before-start. Toast text mirrors what saveEvent shows
       // when the same condition is hit via the recurrence-dialog path.
       showToast(
-        isAllDay ? 'End date must be on or after start date' : 'End time must be after start time'
+        isAllDay
+          ? t('modals.eventModal.endDateBeforeStart')
+          : t('modals.eventModal.endTimeBeforeStart')
       )
       return
     }
@@ -1010,7 +1014,7 @@ export function EventModal(): JSX.Element | null {
       }
 
       if (!title.trim()) {
-        showToast('Title is required')
+        showToast(t('modals.eventModal.titleRequired'))
         return
       }
 
@@ -1024,7 +1028,9 @@ export function EventModal(): JSX.Element | null {
       // sync with it — the previous inline copy didn't skip tasks).
       if (isTimeRangeInvalid) {
         showToast(
-          isAllDay ? 'End date must be on or after start date' : 'End time must be after start time'
+          isAllDay
+            ? t('modals.eventModal.endDateBeforeStart')
+            : t('modals.eventModal.endTimeBeforeStart')
         )
         return
       }
@@ -1145,13 +1151,13 @@ export function EventModal(): JSX.Element | null {
         if (mode === 'this' && originalEventId) {
           const masterEvent = events.find((e) => e.id === originalEventId)
           if (!masterEvent) {
-            showToast('Master event not found. Cannot edit single occurrence.')
+            showToast(t('modals.eventModal.masterEventNotFoundEditOccurrence'))
             return
           }
 
           const originalOccurrenceDate = occurrenceKey
           if (!originalOccurrenceDate) {
-            showToast('Invalid event data. Cannot edit single occurrence.')
+            showToast(t('modals.eventModal.invalidEventDataEditOccurrence'))
             return
           }
 
@@ -1226,13 +1232,13 @@ export function EventModal(): JSX.Element | null {
           // occurrence onward with the updated properties.
           const masterEvent = events.find((e) => e.id === originalEventId)
           if (!masterEvent) {
-            showToast('Master event not found. Cannot split series.')
+            showToast(t('modals.eventModal.masterEventNotFoundSplit'))
             return
           }
 
           const originalOccurrenceDate = occurrenceKey
           if (!originalOccurrenceDate) {
-            showToast('Invalid event data. Cannot split series.')
+            showToast(t('modals.eventModal.invalidEventDataSplit'))
             return
           }
 
@@ -1308,7 +1314,7 @@ export function EventModal(): JSX.Element | null {
             } catch {
               // `createEvent` queues a pending change and marks the event
               // failed; the toast is what tells the user it did.
-              showToast('Failed to sync new series with CalDAV server. It will be retried.')
+              showToast(t('modals.eventModal.failedToSyncNewSeries'))
             }
           })
         } else {
@@ -1531,7 +1537,7 @@ export function EventModal(): JSX.Element | null {
 
   const handleRecurrenceDialogConfirm = (mode: RecurrenceEditMode): void => {
     if (!title.trim()) {
-      showToast('Title is required')
+      showToast(t('modals.eventModal.titleRequired'))
       return
     }
     saveEvent(mode)
@@ -1587,7 +1593,7 @@ export function EventModal(): JSX.Element | null {
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
-        aria-label={title || 'Event modal'}
+        aria-label={title || t('modals.eventModal.eventModalFallbackLabel')}
         data-component="modal-card"
       >
         {/* Entrance animation lives entirely on this inner wrapper via plain
@@ -1606,7 +1612,7 @@ export function EventModal(): JSX.Element | null {
                 type="button"
                 className={styles.titleEditIcon}
                 onClick={() => titleInputRef.current?.focus()}
-                aria-label="Focus title input"
+                aria-label={t('modals.eventModal.focusTitleInput')}
               >
                 <svg
                   aria-hidden="true"
@@ -1627,7 +1633,11 @@ export function EventModal(): JSX.Element | null {
                 <input
                   ref={titleInputRef}
                   type="text"
-                  placeholder={isTaskMode ? 'Task title' : 'Event title'}
+                  placeholder={
+                    isTaskMode
+                      ? t('modals.eventModal.taskTitlePlaceholder')
+                      : t('modals.eventModal.eventTitlePlaceholder')
+                  }
                   value={title}
                   onChange={(e) => handleTitleChange(e.target.value)}
                   onKeyDown={handleTitleKeyDown}
@@ -1636,7 +1646,7 @@ export function EventModal(): JSX.Element | null {
                   required
                   onInvalid={(e) => {
                     e.preventDefault()
-                    showToast('Title is required')
+                    showToast(t('modals.eventModal.titleRequired'))
                   }}
                 />
                 {showSuggestions && (
@@ -1668,15 +1678,19 @@ export function EventModal(): JSX.Element | null {
                     </span>
                     <span className={styles.nlpChipText}>
                       {nlpSuggestion.isAllDay
-                        ? format(nlpSuggestion.startDate, 'EEE, MMM d')
-                        : format(nlpSuggestion.startDate, 'EEE, MMM d · h:mm a')}
-                      {nlpSuggestion.recurrence ? ' · repeats' : ''}
+                        ? formatDisplayDate(nlpSuggestion.startDate, 'EEE, MMM d')
+                        : formatDisplayDate(nlpSuggestion.startDate, 'EEE, MMM d · h:mm a')}
+                      {nlpSuggestion.recurrence ? t('modals.eventModal.nlpChipRepeats') : ''}
                     </span>
                     <kbd className={styles.nlpChipKbd}>Tab</kbd>
                   </button>
                 )}
               </div>
-              <button className={styles.modalClose} onClick={animateClose} aria-label="Close">
+              <button
+                className={styles.modalClose}
+                onClick={animateClose}
+                aria-label={t('common:actions.close')}
+              >
                 ×
               </button>
             </div>
@@ -1847,11 +1861,11 @@ export function EventModal(): JSX.Element | null {
               <div className={styles.modalGroup}>
                 <div className={styles.modalRow2}>
                   <div className={styles.modalField}>
-                    <label htmlFor="event-location-input">Location</label>
+                    <label htmlFor="event-location-input">{t('modals.eventModal.location')}</label>
                     <input
                       id="event-location-input"
                       type="text"
-                      placeholder="Add a location"
+                      placeholder={t('modals.eventModal.addLocationPlaceholder')}
                       value={location}
                       onChange={(e) => setLocation(e.target.value)}
                       className={styles.modalInput}
@@ -1860,7 +1874,7 @@ export function EventModal(): JSX.Element | null {
                   </div>
 
                   <div className={styles.modalField}>
-                    <label htmlFor="calendar-select">Calendar</label>
+                    <label htmlFor="calendar-select">{t('modals.eventModal.calendar')}</label>
                     <select
                       id="calendar-select"
                       value={calendarId}
@@ -1872,7 +1886,9 @@ export function EventModal(): JSX.Element | null {
                       {isCurrentCalendarReadOnly &&
                         !compatibleCalendars.some((cal) => cal.id === calendarId) && (
                           <option value={calendarId}>
-                            {calendars.find((c) => c.id === calendarId)?.name} (read-only)
+                            {t('modals.eventModal.readOnlyOption', {
+                              name: calendars.find((c) => c.id === calendarId)?.name,
+                            })}
                           </option>
                         )}
                       {compatibleCalendars.map((cal) => (
@@ -1886,8 +1902,7 @@ export function EventModal(): JSX.Element | null {
 
                 {isCurrentCalendarReadOnly && (
                   <p className={styles.readOnlyNotice} data-component="readonly-calendar-notice">
-                    This calendar is a read-only subscription — events sync from the source and
-                    can&apos;t be edited here.
+                    {t('modals.eventModal.readOnlyCalendarNotice')}
                   </p>
                 )}
               </div>
@@ -1896,7 +1911,7 @@ export function EventModal(): JSX.Element | null {
                 {categories.length > 0 && (
                   <div className={styles.modalRow2}>
                     <div className={styles.categoriesContainer}>
-                      <div className={styles.categoriesLabel}>Categories</div>
+                      <div className={styles.categoriesLabel}>{t('modals.eventModal.categories')}</div>
                       <div className={styles.categoriesList}>
                         {categories.map((cat) => (
                           <button
@@ -1936,16 +1951,16 @@ export function EventModal(): JSX.Element | null {
                     className={styles.modalAddDesc}
                     onClick={() => setShowDescription(true)}
                   >
-                    + Add description
+                    {t('modals.eventModal.addDescription')}
                   </button>
                 ) : (
                   <div className={styles.modalField}>
                     <div className={styles.fieldHeader}>
-                      <label className={styles.label}>Description</label>
+                      <label className={styles.label}>{t('modals.eventModal.description')}</label>
                       <button
                         type="button"
                         className={styles.removeFieldButton}
-                        aria-label="Remove description"
+                        aria-label={t('modals.eventModal.removeDescription')}
                         onClick={() => {
                           setShowDescription(false)
                           setDescription('')
@@ -1955,7 +1970,7 @@ export function EventModal(): JSX.Element | null {
                       </button>
                     </div>
                     <textarea
-                      placeholder="Add description..."
+                      placeholder={t('modals.eventModal.addDescriptionPlaceholder')}
                       value={description}
                       onChange={(e) => setDescription(e.target.value)}
                       className={`${styles.modalInput} ${styles.modalTextarea}`}
@@ -1974,13 +1989,13 @@ export function EventModal(): JSX.Element | null {
                   className={`${styles.modalDelete} ${confirmDelete ? styles.modalDeleteConfirm : ''}`}
                   onClick={handleDelete}
                 >
-                  {confirmDelete ? 'Confirm delete' : 'Delete'}
+                  {confirmDelete ? t('modals.eventModal.confirmDelete') : t('modals.eventModal.delete')}
                 </button>
               )}
               <div className={styles.modalActions}>
                 <div className={styles.modalActionsLeft}>
                   <button type="button" className={styles.modalCancel} onClick={animateClose}>
-                    Cancel
+                    {t('common:actions.cancel')}
                   </button>
                   {eventActions.length > 0 && (
                     <div className={styles.actionsMenuWrap}>
@@ -1994,10 +2009,10 @@ export function EventModal(): JSX.Element | null {
                             setActionsMenuOpen(false)
                           }
                         }}
-                        aria-label="Event actions"
+                        aria-label={t('modals.eventModal.eventActions')}
                         aria-haspopup="menu"
                         aria-expanded={actionsMenuOpen}
-                        title="Event actions"
+                        title={t('modals.eventModal.eventActions')}
                         data-component="event-actions-menu-btn"
                       >
                         <svg
@@ -2052,7 +2067,7 @@ export function EventModal(): JSX.Element | null {
                   {/* No in-flight state: the save is applied locally and the
                       modal closes on the same tick, with the global progress
                       pill carrying the server write from there. */}
-                  <span>{isEditing ? 'Save' : 'Create'}</span>
+                  <span>{isEditing ? t('modals.eventModal.save') : t('modals.eventModal.create')}</span>
                 </button>
               </div>
             </div>

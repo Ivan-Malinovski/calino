@@ -1,7 +1,7 @@
 import { type JSX, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { format } from 'date-fns'
-import { formatEventTime } from '@/lib/datetime'
+import { useTranslation } from 'react-i18next'
+import { formatDisplayDate, formatEventTime } from '@/lib/datetime'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { useModalDismiss } from '@/hooks/useModalDismiss'
@@ -95,10 +95,11 @@ export function DayEventsPopup({
   taskDescendantCount,
   onToggleTaskSubtasks,
 }: DayEventsPopupProps): JSX.Element {
+  const { t } = useTranslation('calendar')
   const popupRef = useRef<HTMLDivElement>(null)
   const timeFormat = useSettingsStore((state) => state.timeFormat)
   const prefersReducedMotion = useReducedMotion()
-  const dateLabel = format(date, 'EEEE, MMMM d')
+  const dateLabel = formatDisplayDate(date, 'EEEE, MMMM d')
   const placement = usePlacement(popupRef, position)
 
   // Focus trap + Escape + focus restore, shared with every other dialog.
@@ -131,7 +132,7 @@ export function DayEventsPopup({
         onContextMenu={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
-        aria-label={`Events for ${dateLabel}`}
+        aria-label={t('modals.dayEvents.ariaLabel', { date: dateLabel })}
         tabIndex={-1}
         initial={prefersReducedMotion ? false : { opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -139,9 +140,9 @@ export function DayEventsPopup({
         transition={{ duration: prefersReducedMotion ? 0 : DUR_FAST }}
       >
         <div className={styles.header}>
-          <span className={styles.date}>{format(date, 'EEEE, MMMM d')}</span>
+          <span className={styles.date}>{dateLabel}</span>
           <span className={styles.count}>
-            {events.length} event{events.length !== 1 ? 's' : ''}
+            {t('modals.dayEvents.eventCount', { count: events.length })}
           </span>
         </div>
         <div className={styles.eventList}>
@@ -167,7 +168,7 @@ export function DayEventsPopup({
                 <div className={styles.eventTitle}>{event.title}</div>
                 <div className={styles.eventTime}>
                   {event.isAllDay
-                    ? 'All day'
+                    ? t('modals.dayEvents.allDay')
                     : `${formatEventTime(event.start, event.timezone, timeFormat)} - ${formatEventTime(event.end, event.timezone, timeFormat)}`}
                 </div>
                 {event.location && (

@@ -1,5 +1,6 @@
 import type { JSX } from 'react'
 import { useState, useEffect, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { createPortal } from 'react-dom'
 import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
 import { useModalDismiss } from '@/hooks/useModalDismiss'
@@ -18,6 +19,7 @@ export function CreateCalendarModal({
   onClose,
   accountId,
 }: CreateCalendarModalProps): JSX.Element | null {
+  const { t } = useTranslation('calendar')
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [color, setColor] = useState<string>(EVENT_COLORS[0])
@@ -105,7 +107,7 @@ export function CreateCalendarModal({
           <h3 className={styles.modalTitle} id="modal-title">
             Create Calendar
           </h3>
-          <button className={styles.modalClose} onClick={handleClose} aria-label="Close">
+          <button className={styles.modalClose} onClick={handleClose} aria-label={t('surface.close')}>
             ✕
           </button>
         </div>
@@ -123,7 +125,7 @@ export function CreateCalendarModal({
               id="calendarName"
               name="calendarName"
               className={styles.input}
-              placeholder="My Calendar"
+              placeholder={t('surface.calendarNamePlaceholder')}
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
@@ -137,13 +139,13 @@ export function CreateCalendarModal({
               id="calendarDescription"
               name="calendarDescription"
               className={styles.input}
-              placeholder="Work meetings, personal events, etc."
+              placeholder={t('surface.calendarDescriptionPlaceholder')}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
             />
           </div>
           <div className={styles.formGroup}>
-            <label className={styles.formLabel}>Color</label>
+            <label className={styles.formLabel}>{t('surface.color')}</label>
             <div className={styles.colorGrid}>
               {EVENT_COLORS.map((c) => (
                 <button

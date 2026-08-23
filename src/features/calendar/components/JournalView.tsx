@@ -22,6 +22,7 @@ import { putAttachments, getAttachments } from '@/lib/attachmentStore'
 import type { Calendar, CalendarAttachment, CalendarEvent } from '@/types'
 import { AttachmentSection } from './AttachmentSection'
 import { syncJournalEntryToServer } from '../lib/journalSync'
+import { useTranslation } from 'react-i18next'
 import styles from './JournalView.module.css'
 
 type EditorMode = 'write' | 'read'
@@ -54,6 +55,7 @@ interface TagEditorProps {
 }
 
 function TagEditor({ tags, onChange, className }: TagEditorProps): JSX.Element {
+  const { t } = useTranslation('calendar')
   const [value, setValue] = useState('')
   const commit = (): void => {
     const tag = value.trim().toLowerCase()
@@ -68,7 +70,7 @@ function TagEditor({ tags, onChange, className }: TagEditorProps): JSX.Element {
           {tag}
           <button
             type="button"
-            aria-label={`Remove tag ${tag}`}
+            aria-label={t('surface.journalRemoveTag', { tag })}
             onClick={() => onChange(tags.filter((item) => item !== tag))}
           >
             ×
@@ -77,8 +79,8 @@ function TagEditor({ tags, onChange, className }: TagEditorProps): JSX.Element {
       ))}
       <input
         className={styles.tagInput}
-        aria-label="Add tag"
-        placeholder="+ tag"
+        aria-label={t('surface.journalAddTag')}
+        placeholder={t('surface.journalTagPlaceholder')}
         value={value}
         onChange={(event) => setValue(event.target.value)}
         onKeyDown={(event) => {
@@ -122,6 +124,7 @@ function JournalEditor({
   onDelete,
   onCloseNarrow,
 }: JournalEditorProps): JSX.Element {
+  const { t } = useTranslation('calendar')
   const titleRef = useRef<HTMLInputElement>(null)
   const bodyRef = useRef<HTMLTextAreaElement>(null)
   const [showDatePicker, setShowDatePicker] = useState(false)
@@ -255,7 +258,7 @@ function JournalEditor({
             <button
               className={styles.dateButton}
               type="button"
-              title="Click to change date"
+              title={t('surface.journalChangeDate')}
               onClick={() => setShowDatePicker(true)}
             >
               <span className={styles.editorDay}>{day}</span>
@@ -270,12 +273,12 @@ function JournalEditor({
               ref={titleRef}
               className={styles.titleInput}
               data-component="journal-title-input"
-              placeholder="Title (optional)"
+              placeholder={t('surface.journalTitlePlaceholder')}
               value={entry.title || ''}
               onChange={(event) => onChange({ title: event.target.value })}
             />
           ) : (
-            <h1 className={styles.editorTitle}>{entry.title || 'Untitled entry'}</h1>
+            <h1 className={styles.editorTitle}>{entry.title || t('surface.journalUntitled')}</h1>
           )}
           <TagEditor
             tags={entry.categories || []}
@@ -283,7 +286,7 @@ function JournalEditor({
             className={styles.headerTags}
           />
           {writableCalendars.length > 1 && (
-            <div className={styles.calendarRow} role="radiogroup" aria-label="Calendar">
+            <div className={styles.calendarRow} role="radiogroup" aria-label={t('surface.journalCalendar')}>
               {writableCalendars.map((calendar) => {
                 const selected = calendar.id === entry.calendarId
                 return (
@@ -313,8 +316,8 @@ function JournalEditor({
           className={styles.editorDelete}
           type="button"
           onClick={onDelete}
-          aria-label="Delete entry"
-          title="Delete entry"
+          aria-label={t('surface.journalDeleteEntry')}
+          title={t('surface.journalDeleteEntry')}
         >
           <Trash2 size={15} strokeWidth={1.8} />
         </button>
@@ -326,7 +329,7 @@ function JournalEditor({
             ref={bodyRef}
             className={styles.bodyInput}
             data-component="journal-body-input"
-            placeholder="Write something…"
+            placeholder={t('surface.journalWritePlaceholder')}
             value={entry.description || ''}
             onChange={(event) => updateBody(event.target.value)}
             onKeyDown={handleBodyKeyDown}
@@ -357,7 +360,7 @@ function JournalEditor({
               <input
                 type="url"
                 className={styles.urlInput}
-                aria-label="Entry link"
+                aria-label={t('surface.journalEntryLink')}
                 placeholder="https://example.com"
                 value={entry.url || ''}
                 onChange={(event) => onChange({ url: event.target.value || undefined })}
@@ -399,7 +402,7 @@ function JournalEditor({
 
       <div className={styles.editorBottom} data-component="journal-editor-footer">
         <div className={styles.editorBottomInfo}>
-          <div className={styles.modeSwitch} role="group" aria-label="Editor mode">
+          <div className={styles.modeSwitch} role="group" aria-label={t('surface.journalEditorMode')}>
             <button
               type="button"
               className={mode === 'write' ? styles.modeActive : ''}
@@ -421,7 +424,7 @@ function JournalEditor({
               <span>{navigator.userAgent.includes('Mac') ? '⌘' : 'Ctrl'} + B / I to format</span>
             </>
           )}
-          {mode === 'read' && <span>Markdown supported</span>}
+          {mode === 'read' && <span>{t('surface.journalMarkdownSupported')}</span>}
         </div>
         <div className={styles.editorBottomActions}>
           <span className={styles.saveStatus} data-component="journal-save-status">
@@ -504,6 +507,7 @@ const JournalEntryRow = memo(function JournalEntryRow({
 })
 
 export function JournalView(): JSX.Element {
+  const { t } = useTranslation('calendar')
   const events = useCalendarStore((state) => state.events)
   const addEvent = useCalendarStore((state) => state.addEvent)
   const updateEvent = useCalendarStore((state) => state.updateEvent)
@@ -909,7 +913,7 @@ export function JournalView(): JSX.Element {
             >
               {entries.length === 0 ? (
                 <div className={styles.empty}>
-                  <h2>Nothing written yet</h2>Start capturing your days — one entry at a time.
+                  <h2>{t('surface.journalEmptyTitle')}</h2>{t('surface.journalEmptyDescription')}
                 </div>
               ) : (
                 entries.map((entry) => (

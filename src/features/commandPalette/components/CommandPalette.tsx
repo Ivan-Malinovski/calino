@@ -2,6 +2,7 @@ import type { JSX } from 'react'
 import { useEffect, useCallback, useState, useMemo, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { Command } from 'cmdk'
+import { useTranslation } from 'react-i18next'
 import { useSettingsStore } from '@/store/settingsStore'
 import { useCommandPalette } from '../hooks/useCommandPalette'
 import { renderCommandItemContent } from './CommandItem'
@@ -15,15 +16,6 @@ interface CommandPaletteProps {
   toggleSidebar?: () => void
   sidebarOpen?: boolean
 }
-
-const PLACEHOLDERS = [
-  'Hang out with Batman tomorrow at 9',
-  'Toggle dark mode',
-  'Sync calendars',
-  'Go to next week',
-  'Toggle sidebar',
-  'New event',
-]
 
 const TYPING_SPEED = 45
 const PAUSE_AFTER_TYPING = 2000
@@ -43,16 +35,19 @@ const GROUP_ORDER: CommandPaletteItemGroup[] = [
   'calendars',
 ]
 
-function getCategoryLabel(category: CommandPaletteItemGroup): string {
+function getCategoryLabel(
+  t: (key: string) => string,
+  category: CommandPaletteItemGroup
+): string {
   const labels: Record<CommandPaletteItemGroup, string> = {
-    navigation: 'Navigation',
-    actions: 'Actions',
-    settings: 'Settings',
-    calendars: 'Calendars',
-    event: 'Events',
-    task: 'Tasks',
-    journal: 'Journal',
-    'quick-add': 'Quick Add',
+    navigation: t('palette.category.navigation'),
+    actions: t('palette.category.actions'),
+    settings: t('palette.category.settings'),
+    calendars: t('palette.category.calendars'),
+    event: t('palette.category.events'),
+    task: t('palette.category.tasks'),
+    journal: t('palette.category.journal'),
+    'quick-add': t('palette.category.quickAdd'),
   }
   return labels[category] || category
 }
@@ -63,6 +58,19 @@ export function CommandPalette({
   toggleSidebar,
   sidebarOpen,
 }: CommandPaletteProps): JSX.Element | null {
+  const { t } = useTranslation('commands')
+  const language = useSettingsStore((state) => state.language)
+  const placeholders = useMemo(
+    () => [
+      ...(language === 'en' ? [t('palette.placeholder.hangOut')] : []),
+      t('palette.placeholder.toggleDarkMode'),
+      t('palette.placeholder.syncCalendars'),
+      ...(language === 'en' ? [t('palette.placeholder.goToNextWeek')] : []),
+      t('palette.placeholder.toggleSidebar'),
+      t('palette.placeholder.newEvent'),
+    ],
+    [language, t]
+  )
   const inputRef = useRef<HTMLInputElement>(null)
   const [placeholderIndex, setPlaceholderIndex] = useState(0)
   const [displayedText, setDisplayedText] = useState('')
@@ -135,7 +143,7 @@ export function CommandPalette({
   useEffect(() => {
     if (!isOpen || query) return
 
-    const target = PLACEHOLDERS[placeholderIndex]
+    const target = placeholders[placeholderIndex]
     let timeout: ReturnType<typeof setTimeout>
 
     if (isTyping) {
@@ -154,7 +162,7 @@ export function CommandPalette({
           setDisplayedText(displayedText.slice(0, -1))
         }, ERASING_SPEED)
       } else {
-        setPlaceholderIndex((i) => (i + 1) % PLACEHOLDERS.length)
+        setPlaceholderIndex((i) => (i + 1) % placeholders.length)
         setIsTyping(true)
       }
     }
@@ -271,14 +279,14 @@ export function CommandPalette({
       className={`${styles.container} ${closing ? styles.closing : ''}`}
       role="dialog"
       aria-modal="true"
-      aria-label="Command palette"
+      aria-label={t('palette.commandPalette')}
       data-component="command-palette"
       onClick={(e) => {
         if (e.target === e.currentTarget) requestClose()
       }}
     >
       <div className={styles.modal} onKeyDown={handleKeyDown}>
-        <Command label="Command palette" shouldFilter={false} loop className={styles.command}>
+        <Command label={t('palette.commandPalette')} shouldFilter={false} loop className={styles.command}>
           <div className={styles.inputWrapper}>
             <svg
               className={styles.inputIcon}
@@ -305,20 +313,20 @@ export function CommandPalette({
                 className={styles.input}
               />
             </div>
-            {!query && <span className={styles.escBadge}>Esc</span>}
+            {!query && <span className={styles.escBadge}>{t('palette.esc')}</span>}
           </div>
 
           <Command.List className={styles.results}>
             <Command.Empty className={styles.empty}>
               {query
-                ? 'No results found. Try a different search term.'
-                : 'Type to search commands, events, or calendars.'}
+                ? t('palette.noResults')
+                : t('palette.typeToSearch')}
             </Command.Empty>
 
             {groupedItems.map(({ group, items: groupItems }, groupIdx) => (
               <Command.Group
                 key={group}
-                heading={getCategoryLabel(group)}
+                heading={getCategoryLabel(t, group)}
                 value={group}
                 className={styles.group}
               >
@@ -334,6 +342,7 @@ export function CommandPalette({
                       item: item.data,
                       type: item.itemType,
                       timeFormat,
+                      t,
                     })}
                   </Command.Item>
                 ))}
@@ -344,15 +353,15 @@ export function CommandPalette({
           <div className={styles.footer}>
             <span className={styles.hint}>
               <span className={styles.hintKbd}>↑↓</span>
-              Navigate
+              {t('palette.navigate')}
             </span>
             <span className={styles.hint}>
               <span className={styles.hintKbd}>↵</span>
-              Select
+              {t('palette.select')}
             </span>
             <span className={styles.hint}>
               <span className={styles.hintKbd}>Esc</span>
-              Close
+              {t('palette.close')}
             </span>
           </div>
         </Command>

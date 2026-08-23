@@ -4,7 +4,9 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { createPortal } from 'react-dom'
 import { Link } from 'react-router'
-import { format, parseISO, isToday, isBefore, startOfDay } from 'date-fns'
+import { parseISO, isToday, isBefore, startOfDay } from 'date-fns'
+import { useTranslation } from 'react-i18next'
+import { formatDayMonth } from '@/lib/datetime'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
 import { nextOpenOccurrence, materializeOccurrence } from '@/lib/occurrenceExpansion'
@@ -21,6 +23,7 @@ interface MiniTasksSectionProps {
 }
 
 export function MiniTasksSection({ isExpanded, onToggle }: MiniTasksSectionProps): JSX.Element {
+  const { t } = useTranslation('calendar')
   const prefersReducedMotion = useReducedMotion()
   const events = useCalendarStore((state) => state.events)
   const calendars = useCalendarStore((state) => state.calendars)
@@ -263,7 +266,7 @@ export function MiniTasksSection({ isExpanded, onToggle }: MiniTasksSectionProps
         data-component="tasks-header"
       >
         <div className={styles.tasksHeaderLeft}>
-          <span className={styles.tasksTitle}>Tasks</span>
+          <span className={styles.tasksTitle}>{t('modals.miniTasks.title')}</span>
           {activeCount > 0 && <span className={styles.tasksCount}>{activeCount}</span>}
         </div>
         <svg
@@ -287,7 +290,7 @@ export function MiniTasksSection({ isExpanded, onToggle }: MiniTasksSectionProps
       {isExpanded && (
         <div className={styles.tasksList}>
           {upcomingTasks.length === 0 ? (
-            <div className={styles.tasksEmpty}>No upcoming tasks</div>
+            <div className={styles.tasksEmpty}>{t('modals.miniTasks.empty')}</div>
           ) : (
             <>
               <AnimatePresence>
@@ -340,8 +343,8 @@ export function MiniTasksSection({ isExpanded, onToggle }: MiniTasksSectionProps
                       aria-checked={task.completed}
                       aria-label={
                         task.completed
-                          ? `Mark "${task.title}" as incomplete`
-                          : `Mark "${task.title}" as complete`
+                          ? t('modals.miniTasks.markIncomplete', { title: task.title })
+                          : t('modals.miniTasks.markComplete', { title: task.title })
                       }
                     >
                       <svg
@@ -377,7 +380,7 @@ export function MiniTasksSection({ isExpanded, onToggle }: MiniTasksSectionProps
                             // Tooltip-style aria — surfaces the "this row has
                             // hidden subtasks" affordance to screen readers
                             // without taking focus from the row.
-                            aria-label={`${subtaskCount} open subtask${subtaskCount === 1 ? '' : 's'}`}
+                            aria-label={t('modals.miniTasks.openSubtasks', { count: subtaskCount })}
                           >
                             ↳ {subtaskCount}
                           </span>
@@ -392,11 +395,11 @@ export function MiniTasksSection({ isExpanded, onToggle }: MiniTasksSectionProps
                           }`}
                         >
                           {isToday(parseISO(task.dueDate))
-                            ? 'Today'
-                            : format(parseISO(task.dueDate), 'MMM d')}
+                            ? t('modals.miniTasks.today')
+                            : formatDayMonth(task.dueDate)}
                         </span>
                       ) : (
-                        <span className={styles.taskDue}>No date</span>
+                        <span className={styles.taskDue}>{t('modals.miniTasks.noDate')}</span>
                       )}
                     </button>
                   </motion.div>
@@ -431,7 +434,7 @@ export function MiniTasksSection({ isExpanded, onToggle }: MiniTasksSectionProps
                 />
               )}
               <Link to="/tasks" className={styles.tasksViewAll}>
-                View all →
+                {t('modals.miniTasks.viewAll')}
               </Link>
             </>
           )}

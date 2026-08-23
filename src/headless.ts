@@ -30,6 +30,7 @@ import { getCredentialById } from '@/features/caldav/client/credentials'
 import { createCalDAVClient } from '@/features/caldav/client/CalDAVClient'
 import { parseICALData } from '@/features/caldav/adapter/iCalendarAdapter'
 import { buildMirrorPayload, MIRROR_PAST_DAYS, MIRROR_FUTURE_DAYS } from '@/lib/calendarMirror'
+import { initHeadlessI18n } from '@/lib/i18nHeadless'
 
 const DAY_MS = 24 * 60 * 60 * 1000
 
@@ -61,6 +62,9 @@ interface HeadlessResult {
 export async function runHeadlessSync(): Promise<HeadlessResult> {
   const bridge = getHeadlessBridge()
   if (!bridge) throw new Error('runHeadlessSync called outside the headless WebView')
+  const i18n = await initHeadlessI18n()
+  const t = (key: string, options?: Record<string, unknown>): string =>
+    i18n.t(`errors:${key}`, options)
 
   // Visibility and colour live only in the app's store, so it is the authority
   // on what gets mirrored — the same source the foreground pass uses.
@@ -83,7 +87,7 @@ export async function runHeadlessSync(): Promise<HeadlessResult> {
     try {
       const credentials = await getCredentialById(account.credentialId)
       if (!credentials) {
-        bridge.log(`Skipping account ${account.name}: credentials are gone`)
+        bridge.log(t('headless.accountCredentialsMissing', { account: account.name }))
         continue
       }
       const client = await createCalDAVClient(account.serverUrl, credentials, account.proxyUrl)
@@ -96,12 +100,12 @@ export async function runHeadlessSync(): Promise<HeadlessResult> {
           }
           fetched.push(visibleById.get(calendar.id)!)
         } catch (error) {
-          bridge.log(`Calendar ${calendar.name} failed: ${String(error)}`)
+          bridge.log(t('headless.calendarFailed', { calendar: calendar.name, error: String(error) }))
         }
       }
       accountsSynced++
     } catch (error) {
-      bridge.log(`Account ${account.name} failed: ${String(error)}`)
+      bridge.log(t('headless.accountFailed', { account: account.name, error: String(error) }))
     }
   }
 
@@ -109,13 +113,21 @@ export async function runHeadlessSync(): Promise<HeadlessResult> {
     // Writing an empty payload here would be indistinguishable from "the user
     // deleted everything" — and with nothing fetched we have no evidence of
     // that. Leave the mirror as the app last left it.
-    bridge.log('No calendars fetched; leaving the mirror untouched')
+    bridge.log(t('headless.noCalendarsFetched'))
     return { accounts: accountsSynced, calendars: 0, events: 0 }
   }
 
   const payload = buildMirrorPayload(events, fetched)
   const result = JSON.parse(bridge.mirrorSync(JSON.stringify(payload))) as { error?: string }
   if (result.error) throw new Error(result.error)
+
+  bridge.log(
+    t('headless.syncDone', {
+      events: payload.events.length,
+      calendars: payload.calendars.length,
+      accounts: accountsSynced,
+    })
+  )
 
   return {
     accounts: accountsSynced,
@@ -127,11 +139,7 @@ export async function runHeadlessSync(): Promise<HeadlessResult> {
 const bridge = getHeadlessBridge()
 if (bridge) {
   runHeadlessSync()
-    .then((result) => {
-      bridge.log(
-        `Background sync done: ${result.events} events across ${result.calendars} calendars ` +
-          `from ${result.accounts} account(s)`
-      )
+    .then(() => {
       bridge.finish('')
     })
     .catch((error: unknown) => {

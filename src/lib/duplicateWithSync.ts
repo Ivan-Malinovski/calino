@@ -1,6 +1,7 @@
 import type { CalendarEvent } from '@/types'
 import { useCalendarStore } from '@/store/calendarStore'
 import { showToast } from './toast'
+import i18n from './i18n'
 
 interface DuplicateEventWithSyncOptions {
   /** Id of the event to copy. */
@@ -40,7 +41,7 @@ export function duplicateEventWithSync({
   const copy = useCalendarStore.getState().events.find((e) => e.id === newId)
   if (copy && copy.calendarId !== 'default') {
     createCalDAVEvent?.(copy.calendarId, copy).catch(() => {
-      showToast('Failed to sync the duplicated event. It will be retried.')
+      showToast(i18n.t('errors:sync.duplicateSyncRetry'))
     })
   }
 

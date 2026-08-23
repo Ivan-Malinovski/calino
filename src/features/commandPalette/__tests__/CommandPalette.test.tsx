@@ -21,7 +21,7 @@ vi.mock('@/store/calendarStore', () => ({
 
 vi.mock('@/store/settingsStore', () => ({
   useSettingsStore: vi.fn((selector) => {
-    return selector({ timeFormat: '12h' })
+    return selector({ timeFormat: '12h', language: 'en' })
   }),
 }))
 

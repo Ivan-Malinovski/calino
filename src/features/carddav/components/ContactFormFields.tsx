@@ -1,5 +1,6 @@
 import type { JSX } from 'react'
 import { useState, useCallback, useEffect, useRef } from 'react'
+import { Trans, useTranslation } from 'react-i18next'
 import imageCompression from 'browser-image-compression'
 import type { Contact, ContactEmail, ContactPhone, ContactAddress, ContactUrl } from '../types'
 import { ContactPicker, MemberName } from './ContactPicker'
@@ -12,6 +13,7 @@ interface ContactFormFieldsProps {
 }
 
 export function ContactFormFields({ value, onChange }: ContactFormFieldsProps): JSX.Element {
+  const { t } = useTranslation(['contacts', 'common'])
   // Local partial state derived from props
   const [local, setLocal] = useState<Partial<Contact>>(value)
   const valueRef = useRef(value)
@@ -278,12 +280,12 @@ export function ContactFormFields({ value, onChange }: ContactFormFieldsProps): 
             background: local.photo ? 'none' : 'var(--color-bg-tertiary)',
             transition: 'border-color 0.2s',
           }}
-          title="Click to upload photo"
+          title={t('form.clickToUploadPhoto')}
         >
           {local.photo ? (
             <img
               src={local.photo}
-              alt="Contact photo"
+              alt={t('form.contactPhoto')}
               style={{ width: '100%', height: '100%', objectFit: 'cover' }}
             />
           ) : (
@@ -312,7 +314,7 @@ export function ContactFormFields({ value, onChange }: ContactFormFieldsProps): 
         />
         <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>
           {photoUploading ? (
-            'Processing...'
+            t('form.processing')
           ) : local.photo ? (
             <>
               <button
@@ -328,7 +330,7 @@ export function ContactFormFields({ value, onChange }: ContactFormFieldsProps): 
                   fontFamily: 'inherit',
                 }}
               >
-                Change photo
+                {t('form.changePhoto')}
               </button>
               {' · '}
               <button
@@ -344,22 +346,22 @@ export function ContactFormFields({ value, onChange }: ContactFormFieldsProps): 
                   fontFamily: 'inherit',
                 }}
               >
-                Remove
+                {t('common:actions.remove')}
               </button>
             </>
           ) : (
-            'Click to upload a photo'
+            t('form.clickToUploadAPhoto')
           )}
         </div>
       </div>
 
       {/* ---- Name block ---- */}
       <div className={styles.modalField}>
-        <label className={styles.label}>Name</label>
+        <label className={styles.label}>{t('form.name')}</label>
         <div className={styles.row}>
           <input
             type="text"
-            placeholder="Given name"
+            placeholder={t('form.givenName')}
             value={local.givenName || ''}
             onChange={(e) => update({ givenName: e.target.value })}
             className={styles.input}
@@ -367,7 +369,7 @@ export function ContactFormFields({ value, onChange }: ContactFormFieldsProps): 
           />
           <input
             type="text"
-            placeholder="Family name"
+            placeholder={t('form.familyName')}
             value={local.familyName || ''}
             onChange={(e) => update({ familyName: e.target.value })}
             className={styles.input}
@@ -379,14 +381,14 @@ export function ContactFormFields({ value, onChange }: ContactFormFieldsProps): 
           className={styles.moreToggle}
           onClick={() => setShowMoreNames((v) => !v)}
         >
-          {showMoreNames ? 'Less' : 'More name options'}
+          {showMoreNames ? t('form.less') : t('form.moreNameOptions')}
         </button>
         {showMoreNames && (
           <div className={`${styles.moreOptionsWrapper} ${styles.moreOptionsOpen}`}>
             <div className={styles.moreOptionsSection}>
               <input
                 type="text"
-                placeholder="Additional names"
+                placeholder={t('form.additionalNames')}
                 value={local.additionalNames || ''}
                 onChange={(e) => update({ additionalNames: e.target.value })}
                 className={styles.input}
@@ -394,7 +396,7 @@ export function ContactFormFields({ value, onChange }: ContactFormFieldsProps): 
               <div className={styles.row}>
                 <input
                   type="text"
-                  placeholder="Prefix (e.g. Dr.)"
+                  placeholder={t('form.prefixPlaceholder')}
                   value={local.prefixes || ''}
                   onChange={(e) => update({ prefixes: e.target.value })}
                   className={styles.input}
@@ -402,7 +404,7 @@ export function ContactFormFields({ value, onChange }: ContactFormFieldsProps): 
                 />
                 <input
                   type="text"
-                  placeholder="Suffix (e.g. Jr.)"
+                  placeholder={t('form.suffixPlaceholder')}
                   value={local.suffixes || ''}
                   onChange={(e) => update({ suffixes: e.target.value })}
                   className={styles.input}
@@ -416,10 +418,10 @@ export function ContactFormFields({ value, onChange }: ContactFormFieldsProps): 
 
       {/* ---- Nickname ---- */}
       <div className={styles.modalField}>
-        <label className={styles.label}>Nickname</label>
+        <label className={styles.label}>{t('form.nickname')}</label>
         <input
           type="text"
-          placeholder="Nickname"
+          placeholder={t('form.nickname')}
           value={local.nickname || ''}
           onChange={(e) => update({ nickname: e.target.value })}
           className={styles.input}
@@ -428,11 +430,11 @@ export function ContactFormFields({ value, onChange }: ContactFormFieldsProps): 
 
       {/* ---- Organization block ---- */}
       <div className={styles.modalField}>
-        <label className={styles.label}>Organization</label>
+        <label className={styles.label}>{t('form.organization')}</label>
         <div className={styles.row}>
           <input
             type="text"
-            placeholder="Organization"
+            placeholder={t('form.organization')}
             value={local.organization || ''}
             onChange={(e) => update({ organization: e.target.value })}
             className={styles.input}
@@ -440,7 +442,7 @@ export function ContactFormFields({ value, onChange }: ContactFormFieldsProps): 
           />
           <input
             type="text"
-            placeholder="Department"
+            placeholder={t('form.department')}
             value={local.department || ''}
             onChange={(e) => update({ department: e.target.value })}
             className={styles.input}
@@ -449,7 +451,7 @@ export function ContactFormFields({ value, onChange }: ContactFormFieldsProps): 
         </div>
         <input
           type="text"
-          placeholder="Role / Title"
+          placeholder={t('form.roleTitle')}
           value={local.role || ''}
           onChange={(e) => update({ role: e.target.value })}
           className={styles.input}
@@ -459,7 +461,7 @@ export function ContactFormFields({ value, onChange }: ContactFormFieldsProps): 
 
       {/* ---- Categories / Tags ---- */}
       <div className={styles.modalField}>
-        <label className={styles.label}>Tags</label>
+        <label className={styles.label}>{t('form.tags')}</label>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 6 }}>
           {(local.categories || []).map((cat, i) => (
             <span
@@ -495,7 +497,7 @@ export function ContactFormFields({ value, onChange }: ContactFormFieldsProps): 
                   lineHeight: 1,
                   opacity: 0.7,
                 }}
-                aria-label={`Remove tag ${cat}`}
+                aria-label={t('form.removeTag', { tag: cat })}
               >
                 ×
               </button>
@@ -504,7 +506,7 @@ export function ContactFormFields({ value, onChange }: ContactFormFieldsProps): 
         </div>
         <input
           type="text"
-          placeholder="Add a tag and press Enter"
+          placeholder={t('form.addTagPlaceholder')}
           className={styles.input}
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
@@ -522,7 +524,7 @@ export function ContactFormFields({ value, onChange }: ContactFormFieldsProps): 
 
       {/* ---- Emails ---- */}
       <div className={styles.modalField}>
-        <label className={styles.label}>Emails</label>
+        <label className={styles.label}>{t('form.emails')}</label>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           {(local.emails || []).map((email, i) => (
             <div key={i} className={styles.modalFieldRow}>
@@ -532,14 +534,14 @@ export function ContactFormFields({ value, onChange }: ContactFormFieldsProps): 
                 className={styles.input}
                 style={{ flex: 0, minWidth: 100 }}
               >
-                <option value="home">Home</option>
-                <option value="work">Work</option>
-                <option value="other">Other</option>
-                <option value="pref">Preferred</option>
+                <option value="home">{t('detail.type.home')}</option>
+                <option value="work">{t('detail.type.work')}</option>
+                <option value="other">{t('detail.type.other')}</option>
+                <option value="pref">{t('detail.type.preferred')}</option>
               </select>
               <input
                 type="email"
-                placeholder="Email address"
+                placeholder={t('form.emailAddress')}
                 value={email.value}
                 onChange={(e) => updateEmail(i, 'value', e.target.value)}
                 className={styles.input}
@@ -549,21 +551,21 @@ export function ContactFormFields({ value, onChange }: ContactFormFieldsProps): 
                 type="button"
                 className={styles.removeFieldButton}
                 onClick={() => removeEmail(i)}
-                aria-label="Remove email"
+                aria-label={t('form.removeEmail')}
               >
                 ×
               </button>
             </div>
           ))}
           <button type="button" className={styles.modalAddDesc} onClick={addEmail}>
-            + Add email
+            {t('form.addEmail')}
           </button>
         </div>
       </div>
 
       {/* ---- Phones ---- */}
       <div className={styles.modalField}>
-        <label className={styles.label}>Phones</label>
+        <label className={styles.label}>{t('form.phones')}</label>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           {(local.phones || []).map((phone, i) => (
             <div key={i} className={styles.modalFieldRow}>
@@ -573,16 +575,16 @@ export function ContactFormFields({ value, onChange }: ContactFormFieldsProps): 
                 className={styles.input}
                 style={{ flex: 0, minWidth: 100 }}
               >
-                <option value="home">Home</option>
-                <option value="work">Work</option>
-                <option value="cell">Cell</option>
-                <option value="fax">Fax</option>
-                <option value="other">Other</option>
-                <option value="pref">Preferred</option>
+                <option value="home">{t('detail.type.home')}</option>
+                <option value="work">{t('detail.type.work')}</option>
+                <option value="cell">{t('detail.type.mobile')}</option>
+                <option value="fax">{t('detail.type.fax')}</option>
+                <option value="other">{t('detail.type.other')}</option>
+                <option value="pref">{t('detail.type.preferred')}</option>
               </select>
               <input
                 type="tel"
-                placeholder="Phone number"
+                placeholder={t('form.phoneNumber')}
                 value={phone.value}
                 onChange={(e) => updatePhone(i, 'value', e.target.value)}
                 className={styles.input}
@@ -592,21 +594,21 @@ export function ContactFormFields({ value, onChange }: ContactFormFieldsProps): 
                 type="button"
                 className={styles.removeFieldButton}
                 onClick={() => removePhone(i)}
-                aria-label="Remove phone"
+                aria-label={t('form.removePhone')}
               >
                 ×
               </button>
             </div>
           ))}
           <button type="button" className={styles.modalAddDesc} onClick={addPhone}>
-            + Add phone
+            {t('form.addPhone')}
           </button>
         </div>
       </div>
 
       {/* ---- Addresses ---- */}
       <div className={styles.modalField}>
-        <label className={styles.label}>Addresses</label>
+        <label className={styles.label}>{t('form.addresses')}</label>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {(local.addresses || []).map((addr, i) => (
             <div
@@ -633,16 +635,16 @@ export function ContactFormFields({ value, onChange }: ContactFormFieldsProps): 
                   className={styles.input}
                   style={{ flex: 0, minWidth: 100 }}
                 >
-                  <option value="home">Home</option>
-                  <option value="work">Work</option>
-                  <option value="other">Other</option>
-                  <option value="pref">Preferred</option>
+                  <option value="home">{t('detail.type.home')}</option>
+                  <option value="work">{t('detail.type.work')}</option>
+                  <option value="other">{t('detail.type.other')}</option>
+                  <option value="pref">{t('detail.type.preferred')}</option>
                 </select>
                 <button
                   type="button"
                   className={styles.removeFieldButton}
                   onClick={() => removeAddress(i)}
-                  aria-label="Remove address"
+                  aria-label={t('form.removeAddress')}
                 >
                   ×
                 </button>
@@ -650,7 +652,7 @@ export function ContactFormFields({ value, onChange }: ContactFormFieldsProps): 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 <input
                   type="text"
-                  placeholder="Street address"
+                  placeholder={t('form.streetAddress')}
                   value={addr.street}
                   onChange={(e) => updateAddress(i, 'street', e.target.value)}
                   className={styles.input}
@@ -658,7 +660,7 @@ export function ContactFormFields({ value, onChange }: ContactFormFieldsProps): 
                 <div className={styles.row}>
                   <input
                     type="text"
-                    placeholder="City / Region"
+                    placeholder={t('form.cityRegion')}
                     value={addr.city}
                     onChange={(e) => updateAddress(i, 'city', e.target.value)}
                     className={styles.input}
@@ -666,7 +668,7 @@ export function ContactFormFields({ value, onChange }: ContactFormFieldsProps): 
                   />
                   <input
                     type="text"
-                    placeholder="Postal code"
+                    placeholder={t('form.postalCode')}
                     value={addr.postalCode}
                     onChange={(e) => updateAddress(i, 'postalCode', e.target.value)}
                     className={styles.input}
@@ -676,7 +678,7 @@ export function ContactFormFields({ value, onChange }: ContactFormFieldsProps): 
                 <div className={styles.row}>
                   <input
                     type="text"
-                    placeholder="Country"
+                    placeholder={t('form.country')}
                     value={addr.country}
                     onChange={(e) => updateAddress(i, 'country', e.target.value)}
                     className={styles.input}
@@ -688,14 +690,14 @@ export function ContactFormFields({ value, onChange }: ContactFormFieldsProps): 
             </div>
           ))}
           <button type="button" className={styles.modalAddDesc} onClick={addAddress}>
-            + Add address
+            {t('form.addAddress')}
           </button>
         </div>
       </div>
 
       {/* ---- URLs ---- */}
       <div className={styles.modalField}>
-        <label className={styles.label}>URLs</label>
+        <label className={styles.label}>{t('form.urls')}</label>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           {(local.urls || []).map((url, i) => (
             <div key={i} className={styles.modalFieldRow}>
@@ -705,10 +707,10 @@ export function ContactFormFields({ value, onChange }: ContactFormFieldsProps): 
                 className={styles.input}
                 style={{ flex: 0, minWidth: 100 }}
               >
-                <option value="home">Home</option>
-                <option value="work">Work</option>
-                <option value="other">Other</option>
-                <option value="pref">Preferred</option>
+                <option value="home">{t('detail.type.home')}</option>
+                <option value="work">{t('detail.type.work')}</option>
+                <option value="other">{t('detail.type.other')}</option>
+                <option value="pref">{t('detail.type.preferred')}</option>
               </select>
               <input
                 type="url"
@@ -722,21 +724,21 @@ export function ContactFormFields({ value, onChange }: ContactFormFieldsProps): 
                 type="button"
                 className={styles.removeFieldButton}
                 onClick={() => removeUrl(i)}
-                aria-label="Remove URL"
+                aria-label={t('form.removeUrl')}
               >
                 ×
               </button>
             </div>
           ))}
           <button type="button" className={styles.modalAddDesc} onClick={addUrl}>
-            + Add URL
+            {t('form.addUrl')}
           </button>
         </div>
       </div>
 
       {/* ---- Birthday ---- */}
       <div className={styles.modalField}>
-        <label className={styles.label}>Birthday</label>
+        <label className={styles.label}>{t('detail.field.birthday')}</label>
         <input
           type="date"
           value={local.birthday || ''}
@@ -747,7 +749,7 @@ export function ContactFormFields({ value, onChange }: ContactFormFieldsProps): 
 
       {/* ---- Anniversary ---- */}
       <div className={styles.modalField}>
-        <label className={styles.label}>Anniversary</label>
+        <label className={styles.label}>{t('detail.field.anniversary')}</label>
         <input
           type="date"
           value={local.anniversary || ''}
@@ -759,10 +761,10 @@ export function ContactFormFields({ value, onChange }: ContactFormFieldsProps): 
       {/* ---- Note ---- */}
       <div className={styles.modalField}>
         <label className={styles.label}>
-          Note (supports <strong>markdown</strong>)
+          <Trans i18nKey="contacts:form.noteLabel" components={{ strong: <strong /> }} />
         </label>
         <textarea
-          placeholder="Write a note... (supports **bold**, *italic*, lists, etc.)"
+          placeholder={t('form.notePlaceholder')}
           value={local.note || ''}
           onChange={(e) => update({ note: e.target.value })}
           className={`${styles.input} ${styles.modalTextarea}`}
@@ -773,7 +775,7 @@ export function ContactFormFields({ value, onChange }: ContactFormFieldsProps): 
 
       {/* ---- Languages ---- */}
       <div className={styles.modalField}>
-        <label className={styles.label}>Languages</label>
+        <label className={styles.label}>{t('detail.field.language_other')}</label>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           {(local.langs || []).map((lang, i) => (
             <div key={i} className={styles.modalFieldRow}>
@@ -783,14 +785,14 @@ export function ContactFormFields({ value, onChange }: ContactFormFieldsProps): 
                 className={styles.input}
                 style={{ flex: 0, minWidth: 100 }}
               >
-                <option value="home">Home</option>
-                <option value="work">Work</option>
-                <option value="other">Other</option>
-                <option value="pref">Preferred</option>
+                <option value="home">{t('detail.type.home')}</option>
+                <option value="work">{t('detail.type.work')}</option>
+                <option value="other">{t('detail.type.other')}</option>
+                <option value="pref">{t('detail.type.preferred')}</option>
               </select>
               <input
                 type="text"
-                placeholder="Language code (e.g. en)"
+                placeholder={t('form.languageCodePlaceholder')}
                 value={lang.value}
                 onChange={(e) => updateLang(i, 'value', e.target.value)}
                 className={styles.input}
@@ -800,21 +802,21 @@ export function ContactFormFields({ value, onChange }: ContactFormFieldsProps): 
                 type="button"
                 className={styles.removeFieldButton}
                 onClick={() => removeLang(i)}
-                aria-label="Remove language"
+                aria-label={t('form.removeLanguage')}
               >
                 ×
               </button>
             </div>
           ))}
           <button type="button" className={styles.modalAddDesc} onClick={addLang}>
-            + Add language
+            {t('form.addLanguage')}
           </button>
         </div>
       </div>
 
       {/* ---- Related Contacts ---- */}
       <div className={styles.modalField}>
-        <label className={styles.label}>Related Contacts</label>
+        <label className={styles.label}>{t('form.relatedContacts')}</label>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           {(local.related || []).map((rel, i) => (
             <div key={i} className={styles.modalFieldRow}>
@@ -824,35 +826,35 @@ export function ContactFormFields({ value, onChange }: ContactFormFieldsProps): 
                 className={styles.input}
                 style={{ flex: 0, minWidth: 110 }}
               >
-                <option value="friend">Friend</option>
-                <option value="co-worker">Co-worker</option>
-                <option value="family">Family</option>
-                <option value="child">Child</option>
-                <option value="spouse">Spouse</option>
-                <option value="agent">Agent</option>
-                <option value="emergency">Emergency</option>
-                <option value="other">Other</option>
+                <option value="friend">{t('detail.relatedType.friend')}</option>
+                <option value="co-worker">{t('detail.relatedType.coworker')}</option>
+                <option value="family">{t('detail.relatedType.family')}</option>
+                <option value="child">{t('detail.relatedType.child')}</option>
+                <option value="spouse">{t('detail.relatedType.spouse')}</option>
+                <option value="agent">{t('detail.relatedType.agent')}</option>
+                <option value="emergency">{t('detail.relatedType.emergency')}</option>
+                <option value="other">{t('detail.type.other')}</option>
               </select>
               <ContactPicker
                 value={rel.value}
                 onChange={(v) => updateRelated(i, 'value', v)}
                 excludeIds={local.id ? [local.id] : []}
                 allowFreeText
-                placeholder="Search contacts, or type a name"
+                placeholder={t('form.searchContactsOrTypeName')}
                 data-component="related-contact-picker"
               />
               <button
                 type="button"
                 className={styles.removeFieldButton}
                 onClick={() => removeRelated(i)}
-                aria-label="Remove related contact"
+                aria-label={t('form.removeRelatedContact')}
               >
                 ×
               </button>
             </div>
           ))}
           <button type="button" className={styles.modalAddDesc} onClick={addRelated}>
-            + Add related contact
+            {t('form.addRelatedContact')}
           </button>
         </div>
       </div>
@@ -865,14 +867,14 @@ export function ContactFormFields({ value, onChange }: ContactFormFieldsProps): 
             checked={local.isGroup || false}
             onChange={(e) => update({ isGroup: e.target.checked })}
           />
-          This is a group
+          {t('form.thisIsAGroup')}
         </label>
       </div>
 
       {/* ---- Group Members ---- */}
       {local.isGroup && (
         <div className={styles.modalField}>
-          <label className={styles.label}>Members</label>
+          <label className={styles.label}>{t('detail.field.members')}</label>
           <div
             style={{
               maxHeight: 200,
@@ -883,7 +885,7 @@ export function ContactFormFields({ value, onChange }: ContactFormFieldsProps): 
             }}
           >
             <div style={{ color: 'var(--color-text-muted)', fontSize: 12, marginBottom: 8 }}>
-              Select contacts to add as members:
+              {t('form.selectContactsToAddAsMembers')}
             </div>
             {(local.memberUids || []).length > 0 && (
               <div style={{ marginBottom: 8 }}>
@@ -900,7 +902,7 @@ export function ContactFormFields({ value, onChange }: ContactFormFieldsProps): 
                         const memberUids = (local.memberUids || []).filter((u) => u !== uid)
                         update({ memberUids })
                       }}
-                      aria-label="Remove member"
+                      aria-label={t('form.removeMember')}
                     >
                       ×
                     </button>
@@ -925,7 +927,7 @@ export function ContactFormFields({ value, onChange }: ContactFormFieldsProps): 
                 ...(local.id ? [local.id] : []),
                 ...(local.memberUids || []).map(normalizeContactRef),
               ]}
-              placeholder="Add a member…"
+              placeholder={t('form.addAMember')}
               data-component="member-contact-picker"
             />
           </div>
@@ -934,9 +936,9 @@ export function ContactFormFields({ value, onChange }: ContactFormFieldsProps): 
 
       {/* ---- Extended Data (XML) ---- */}
       <div className={styles.modalField}>
-        <label className={styles.label}>Extended Data (XML)</label>
+        <label className={styles.label}>{t('form.extendedDataXml')}</label>
         <textarea
-          placeholder="XML data (RFC 6350 §6.3.1)..."
+          placeholder={t('form.xmlDataPlaceholder')}
           value={local.xmlData || ''}
           onChange={(e) => update({ xmlData: e.target.value || null })}
           className={`${styles.input} ${styles.modalTextarea}`}

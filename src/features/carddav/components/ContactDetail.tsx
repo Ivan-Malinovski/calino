@@ -1,11 +1,13 @@
 import { useState, useMemo } from 'react'
 import type { JSX } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { Contact } from '../types'
 import { useContactStore } from '@/store/contactStore'
 import { MarkdownView } from '@/lib/markdown'
 import { getInitials, getAvatarColor } from '../lib/avatars'
 import { isContactRef, resolveContactRef, buildContactLookup } from '../lib/contactRefs'
 import * as contactDates from '../lib/contactDates'
+import { formatDisplayDate } from '@/lib/datetime'
 import styles from './ContactsView.module.css'
 
 // ---------------------------------------------------------------------------
@@ -18,11 +20,7 @@ function formatDate(dateStr: string): string {
   try {
     const date = contactDates.parseDateOnly(dateStr)
     if (!date) return dateStr
-    return date.toLocaleDateString(undefined, {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    })
+    return formatDisplayDate(date, 'MMMM d, yyyy')
   } catch {
     return dateStr
   }
@@ -46,6 +44,7 @@ function RelationValue({
   /** Memoized id → contact map, built once in the parent (see #2.2). */
   contactLookup: Map<string, Contact>
 }): JSX.Element {
+  const { t } = useTranslation('contacts')
   const addressBooks = useContactStore((s) => s.addressBooks)
   const setSelectedContactId = useContactStore((s) => s.setSelectedContactId)
 
@@ -59,7 +58,7 @@ function RelationValue({
     const unresolvedRef = isContactRef(value)
     return (
       <span className={styles.infoFieldValue} title={unresolvedRef ? value : undefined}>
-        {unresolvedRef ? 'Unknown Contact' : value}
+        {unresolvedRef ? t('detail.unknownContact') : value}
       </span>
     )
   }
@@ -118,38 +117,38 @@ function formatAddress(addr: Contact['addresses'][0]): string {
 // Label maps
 // ---------------------------------------------------------------------------
 
-const EMAIL_TYPE_LABELS: Record<string, string> = {
-  home: 'Home',
-  work: 'Work',
-  other: 'Other',
-  pref: 'Preferred',
+const EMAIL_TYPE_KEYS: Record<string, string> = {
+  home: 'detail.type.home',
+  work: 'detail.type.work',
+  other: 'detail.type.other',
+  pref: 'detail.type.preferred',
 }
 
-const PHONE_TYPE_LABELS: Record<string, string> = {
-  home: 'Home',
-  work: 'Work',
-  cell: 'Mobile',
-  fax: 'Fax',
-  other: 'Other',
-  pref: 'Preferred',
+const PHONE_TYPE_KEYS: Record<string, string> = {
+  home: 'detail.type.home',
+  work: 'detail.type.work',
+  cell: 'detail.type.mobile',
+  fax: 'detail.type.fax',
+  other: 'detail.type.other',
+  pref: 'detail.type.preferred',
 }
 
-const ADDRESS_TYPE_LABELS: Record<string, string> = {
-  home: 'Home',
-  work: 'Work',
-  other: 'Other',
-  pref: 'Preferred',
+const ADDRESS_TYPE_KEYS: Record<string, string> = {
+  home: 'detail.type.home',
+  work: 'detail.type.work',
+  other: 'detail.type.other',
+  pref: 'detail.type.preferred',
 }
 
-const RELATED_TYPE_LABELS: Record<string, string> = {
-  friend: 'Friend',
-  'co-worker': 'Co-worker',
-  family: 'Family',
-  child: 'Child',
-  spouse: 'Spouse',
-  agent: 'Agent',
-  emergency: 'Emergency',
-  other: 'Other',
+const RELATED_TYPE_KEYS: Record<string, string> = {
+  friend: 'detail.relatedType.friend',
+  'co-worker': 'detail.relatedType.coworker',
+  family: 'detail.relatedType.family',
+  child: 'detail.relatedType.child',
+  spouse: 'detail.relatedType.spouse',
+  agent: 'detail.relatedType.agent',
+  emergency: 'detail.relatedType.emergency',
+  other: 'detail.relatedType.other',
 }
 
 // ---------------------------------------------------------------------------
@@ -189,7 +188,13 @@ export function ContactDetail({
   onAddAnniversaryToCalendar,
   hasAnniversaryEvent = false,
 }: ContactDetailProps): JSX.Element {
+  const { t } = useTranslation('contacts')
   const [inlineEditing, setInlineEditing] = useState<InlineEdit | null>(null)
+
+  function typeLabel(keys: Record<string, string>, type: string): string {
+    const key = keys[type]
+    return key ? t(key) : type
+  }
 
   // One subscription + one O(N) pass, memoized: every RelationValue renders
   // against this map instead of each subscribing to the whole contacts array
@@ -320,7 +325,7 @@ export function ContactDetail({
                 <rect x="2" y="4" width="20" height="16" rx="2" />
                 <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
               </svg>
-              Send email
+              {t('detail.sendEmail')}
             </a>
           </div>
         </div>
@@ -330,8 +335,8 @@ export function ContactDetail({
             type="button"
             className={styles.iconBtn}
             onClick={onEdit}
-            title="Edit contact"
-            aria-label="Edit contact"
+            title={t('detail.editContact')}
+            aria-label={t('detail.editContact')}
           >
             <svg
               width="16"
@@ -351,8 +356,8 @@ export function ContactDetail({
             type="button"
             className={`${styles.iconBtn} ${confirmDelete ? styles.btnDeleteConfirm : ''}`}
             onClick={onDelete}
-            title={confirmDelete ? 'Click again to confirm' : 'Delete contact'}
-            aria-label="Delete contact"
+            title={confirmDelete ? t('detail.clickAgainToConfirm') : t('detail.deleteContact')}
+            aria-label={t('detail.deleteContact')}
           >
             <svg
               width="16"
@@ -368,7 +373,7 @@ export function ContactDetail({
               <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
               <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
             </svg>
-            {confirmDelete && <span className={styles.btnDeleteLabel}>Confirm?</span>}
+            {confirmDelete && <span className={styles.btnDeleteLabel}>{t('detail.confirmQuestion')}</span>}
           </button>
         </div>
       </div>
@@ -383,11 +388,11 @@ export function ContactDetail({
               {/* Emails */}
               {contact.emails.length > 0 && (
                 <div className={styles.infoField}>
-                  <span className={styles.infoFieldLabel}>EMAIL</span>
+                  <span className={styles.infoFieldLabel}>{t('detail.field.email')}</span>
                   {contact.emails.map((email, i) => (
                     <div key={`email-${i}`} className={styles.infoFieldGrid}>
                       <span className={styles.infoFieldSub}>
-                        {EMAIL_TYPE_LABELS[email.type] ?? email.type}
+                        {typeLabel(EMAIL_TYPE_KEYS, email.type)}
                       </span>
                       {inlineEditing?.field === `email_${i}` ? (
                         <input
@@ -419,11 +424,11 @@ export function ContactDetail({
               {/* Phones */}
               {contact.phones.length > 0 && (
                 <div className={styles.infoField}>
-                  <span className={styles.infoFieldLabel}>PHONE</span>
+                  <span className={styles.infoFieldLabel}>{t('detail.field.phone')}</span>
                   {contact.phones.map((phone, i) => (
                     <div key={`phone-${i}`} className={styles.infoFieldGrid}>
                       <span className={styles.infoFieldSub}>
-                        {PHONE_TYPE_LABELS[phone.type] ?? phone.type}
+                        {typeLabel(PHONE_TYPE_KEYS, phone.type)}
                       </span>
                       {inlineEditing?.field === `phone_${i}` ? (
                         <input
@@ -455,11 +460,11 @@ export function ContactDetail({
               {/* URLs */}
               {contact.urls.length > 0 && (
                 <div className={styles.infoField}>
-                  <span className={styles.infoFieldLabel}>URL</span>
+                  <span className={styles.infoFieldLabel}>{t('detail.field.url')}</span>
                   {contact.urls.map((url, i) => (
                     <div key={`url-${i}`} className={styles.infoFieldGrid}>
                       <span className={styles.infoFieldSub}>
-                        {EMAIL_TYPE_LABELS[url.type] ?? url.type}
+                        {typeLabel(EMAIL_TYPE_KEYS, url.type)}
                       </span>
                       <span className={styles.infoFieldValue}>
                         <a
@@ -478,13 +483,13 @@ export function ContactDetail({
               {/* Instant messaging */}
               {contact.ims.length > 0 && (
                 <div className={styles.infoField}>
-                  <span className={styles.infoFieldLabel}>IM</span>
+                  <span className={styles.infoFieldLabel}>{t('detail.field.im')}</span>
                   {contact.ims.map((im, i) => (
                     <div key={`im-${i}`} className={styles.infoFieldGrid}>
                       <span className={styles.infoFieldSub}>
                         {im.protocol !== 'other'
                           ? im.protocol.toUpperCase()
-                          : (EMAIL_TYPE_LABELS[im.type] ?? im.type)}
+                          : typeLabel(EMAIL_TYPE_KEYS, im.type)}
                       </span>
                       <span className={styles.infoFieldValue}>{im.value}</span>
                     </div>
@@ -500,10 +505,10 @@ export function ContactDetail({
                     if (!formatted) return null
                     return (
                       <div key={`addr-${i}`} className={styles.infoField}>
-                        <span className={styles.infoFieldLabel}>ADDRESS</span>
+                        <span className={styles.infoFieldLabel}>{t('detail.field.address')}</span>
                         <div className={styles.infoFieldGrid}>
                           <span className={styles.infoFieldSub}>
-                            {ADDRESS_TYPE_LABELS[addr.type] ?? addr.type}
+                            {typeLabel(ADDRESS_TYPE_KEYS, addr.type)}
                           </span>
                           <span className={styles.infoFieldValue}>
                             {formatted.split('\n').map((line, j) => (
@@ -523,11 +528,11 @@ export function ContactDetail({
               {/* Languages */}
               {contact.langs && contact.langs.length > 0 && (
                 <div className={styles.infoField}>
-                  <span className={styles.infoFieldLabel}>LANGUAGE</span>
+                  <span className={styles.infoFieldLabel}>{t('detail.field.language')}</span>
                   {contact.langs.map((lang, i) => (
                     <div key={`lang-${i}`} className={styles.infoFieldGrid}>
                       <span className={styles.infoFieldSub}>
-                        {EMAIL_TYPE_LABELS[lang.type] ?? lang.type}
+                        {typeLabel(EMAIL_TYPE_KEYS, lang.type)}
                       </span>
                       <span className={styles.infoFieldValue}>{lang.value}</span>
                     </div>
@@ -538,11 +543,11 @@ export function ContactDetail({
               {/* Related contacts */}
               {contact.related && contact.related.length > 0 && (
                 <div className={styles.infoField}>
-                  <span className={styles.infoFieldLabel}>RELATED</span>
+                  <span className={styles.infoFieldLabel}>{t('detail.field.related')}</span>
                   {contact.related.map((rel, i) => (
                     <div key={`rel-${i}`} className={styles.infoFieldGrid}>
                       <span className={styles.infoFieldSub}>
-                        {RELATED_TYPE_LABELS[rel.type] ?? rel.type}
+                        {typeLabel(RELATED_TYPE_KEYS, rel.type)}
                       </span>
                       <RelationValue
                         value={rel.value}
@@ -557,7 +562,7 @@ export function ContactDetail({
               {/* Group members */}
               {contact.isGroup && contact.memberUids.length > 0 && (
                 <div className={styles.infoField}>
-                  <span className={styles.infoFieldLabel}>MEMBERS</span>
+                  <span className={styles.infoFieldLabel}>{t('detail.field.members')}</span>
                   {contact.memberUids.map((uid, i) => (
                     <div key={`member-${i}`} className={styles.infoFieldGrid}>
                       <RelationValue
@@ -580,18 +585,20 @@ export function ContactDetail({
             <div className={styles.birthdayCard}>
               <span className={styles.birthdayEmoji}>{'\uD83C\uDF82'}</span>
               <div className={styles.birthdayLabel}>
-                BIRTHDAY
+                {t('detail.field.birthday')}
                 {daysUntilNext(contact.birthday) > 0 && (
                   <span className={styles.birthdayCountdown}>
-                    (in {daysUntilNext(contact.birthday)} days)
+                    {t('detail.inDays', { count: daysUntilNext(contact.birthday) })}
                   </span>
                 )}
                 {daysUntilNext(contact.birthday) === 0 && (
-                  <span className={styles.birthdayCountdown}>(today!)</span>
+                  <span className={styles.birthdayCountdown}>{t('detail.today')}</span>
                 )}
               </div>
               <div className={styles.birthdayDate}>{formatDate(contact.birthday)}</div>
-              <div className={styles.birthdayAge}>{getAge(contact.birthday)} years old</div>
+              <div className={styles.birthdayAge}>
+                {t('detail.yearsOld', { count: getAge(contact.birthday) })}
+              </div>
               {onAddBirthdayToCalendar && (
                 <button
                   type="button"
@@ -611,7 +618,7 @@ export function ContactDetail({
                     transition: 'background 0.2s, color 0.2s',
                   }}
                 >
-                  {hasBirthdayEvent ? '✓ On calendar' : '📅 Add to calendar'}
+                  {hasBirthdayEvent ? `✓ ${t('detail.onCalendar')}` : `📅 ${t('detail.addToCalendar')}`}
                 </button>
               )}
             </div>
@@ -622,14 +629,14 @@ export function ContactDetail({
             <div className={styles.birthdayCard}>
               <span className={styles.birthdayEmoji}>{'\u2764\uFE0F'}</span>
               <div className={styles.birthdayLabel}>
-                ANNIVERSARY
+                {t('detail.field.anniversary')}
                 {daysUntilNext(contact.anniversary) > 0 && (
                   <span className={styles.birthdayCountdown}>
-                    (in {daysUntilNext(contact.anniversary)} days)
+                    {t('detail.inDays', { count: daysUntilNext(contact.anniversary) })}
                   </span>
                 )}
                 {daysUntilNext(contact.anniversary) === 0 && (
-                  <span className={styles.birthdayCountdown}>(today!)</span>
+                  <span className={styles.birthdayCountdown}>{t('detail.today')}</span>
                 )}
               </div>
               <div className={styles.birthdayDate}>{formatDate(contact.anniversary)}</div>
@@ -652,7 +659,9 @@ export function ContactDetail({
                     transition: 'background 0.2s, color 0.2s',
                   }}
                 >
-                  {hasAnniversaryEvent ? '\u2713 On calendar' : '\uD83D\uDCC5 Add to calendar'}
+                  {hasAnniversaryEvent
+                    ? `\u2713 ${t('detail.onCalendar')}`
+                    : `\uD83D\uDCC5 ${t('detail.addToCalendar')}`}
                 </button>
               )}
             </div>
@@ -661,7 +670,7 @@ export function ContactDetail({
           {/* Categories card */}
           {contact.categories.length > 0 && (
             <div className={styles.categoriesCard}>
-              <div className={styles.asideSectionLabel}>TAGS</div>
+              <div className={styles.asideSectionLabel}>{t('detail.field.tags')}</div>
               <div className={styles.tagList}>
                 {contact.categories.map((cat) => (
                   <button
@@ -680,7 +689,7 @@ export function ContactDetail({
           {/* XML data card */}
           {contact.xmlData && (
             <div className={styles.categoriesCard}>
-              <div className={styles.asideSectionLabel}>XML DATA</div>
+              <div className={styles.asideSectionLabel}>{t('detail.field.xmlData')}</div>
               <pre
                 style={{
                   fontSize: '11px',
@@ -705,7 +714,7 @@ export function ContactDetail({
         {contact.note && (
           <div className={styles.notesFull}>
             <div className={styles.notesCard}>
-              <div className={styles.notesTitle}>NOTES</div>
+              <div className={styles.notesTitle}>{t('detail.field.notes')}</div>
               {inlineEditing?.field === 'note' ? (
                 <textarea
                   className={styles.inlineInput}

@@ -1,5 +1,6 @@
 import type { JSX } from 'react'
 import { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { createPortal } from 'react-dom'
 import { showToast } from '@/lib/toast'
 import { IcsImportModal } from './IcsImportModal'
@@ -22,6 +23,7 @@ function isIcsFile(file: File): boolean {
  *     boolean makes the overlay strobe.
  */
 export function IcsDropZone(): JSX.Element | null {
+  const { t } = useTranslation('calendar')
   const [isDragging, setIsDragging] = useState(false)
   const [pendingIcs, setPendingIcs] = useState<{ text: string; fileName: string } | null>(null)
   const depthRef = useRef(0)
@@ -98,8 +100,8 @@ export function IcsDropZone(): JSX.Element | null {
         createPortal(
           <div className={styles.overlay} data-component="ics-drop-overlay">
             <div className={styles.panel}>
-              <span className={styles.title}>Drop .ics file to import events</span>
-              <span className={styles.hint}>You&apos;ll pick the calendar next</span>
+              <span className={styles.title}>{t('surface.icsDropTitle')}</span>
+              <span className={styles.hint}>{t('surface.icsDropHint')}</span>
             </div>
           </div>,
           document.body

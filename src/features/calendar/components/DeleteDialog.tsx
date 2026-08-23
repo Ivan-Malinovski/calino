@@ -1,5 +1,6 @@
 import type { JSX } from 'react'
 import { useId, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useAnimatedClose } from '@/hooks/useAnimatedClose'
 import { useModalDismiss } from '@/hooks/useModalDismiss'
 import type { RecurrenceEditMode } from '@/types'
@@ -19,8 +20,8 @@ export function DeleteDialog({
   onConfirm,
   isTask = false,
 }: DeleteDialogProps): JSX.Element | null {
-  const noun = isTask ? 'task' : 'event'
-  const nounPlural = isTask ? 'tasks' : 'events'
+  const { t } = useTranslation(['calendar', 'common'])
+  const context = isTask ? 'task' : 'event'
   const { rendered, closing, requestClose } = useAnimatedClose(isOpen, onClose, 150)
   const modalRef = useRef<HTMLDivElement>(null)
   const titleId = useId()
@@ -40,9 +41,13 @@ export function DeleteDialog({
       >
         <div className={styles.header}>
           <h2 id={titleId} className={styles.title}>
-            Delete recurring {noun}
+            {t('modals.deleteDialog.title', { context })}
           </h2>
-          <button className={styles.closeButton} onClick={requestClose} aria-label="Close">
+          <button
+            className={styles.closeButton}
+            onClick={requestClose}
+            aria-label={t('common:actions.close')}
+          >
             <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none">
               <path
                 d="M18 6L6 18M6 6L18 18"
@@ -54,23 +59,23 @@ export function DeleteDialog({
           </button>
         </div>
         <div className={styles.content}>
-          <p className={styles.message}>How would you like to delete this {noun}?</p>
+          <p className={styles.message}>{t('modals.deleteDialog.message', { context })}</p>
           <div className={styles.buttons}>
             <button type="button" className={styles.deleteButton} onClick={() => onConfirm('all')}>
-              All {nounPlural}
+              {t('modals.deleteDialog.all', { context })}
             </button>
             <button type="button" className={styles.deleteButton} onClick={() => onConfirm('this')}>
-              This {noun} only
+              {t('modals.deleteDialog.thisOnly', { context })}
             </button>
             <button
               type="button"
               className={styles.deleteButton}
               onClick={() => onConfirm('future')}
             >
-              This and following {nounPlural}
+              {t('modals.deleteDialog.thisAndFollowing', { context })}
             </button>
             <button type="button" className={styles.cancelButton} onClick={requestClose}>
-              Cancel
+              {t('common:actions.cancel')}
             </button>
           </div>
         </div>

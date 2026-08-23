@@ -3,6 +3,7 @@ import { useMemo, useState, useRef, useEffect, useLayoutEffect, useCallback } fr
 import { createPortal } from 'react-dom'
 import { motion } from 'framer-motion'
 import { useVirtualizer } from '@tanstack/react-virtual'
+import { useTranslation } from 'react-i18next'
 import {
   DndContext,
   DragOverlay,
@@ -151,6 +152,7 @@ type VirtualItem =
   | { type: 'task'; key: string; task: TaskWithColor; depth: number }
 
 export function TodoView(): JSX.Element {
+  const { t } = useTranslation('calendar')
   const events = useCalendarStore((state) => state.events)
   const calendars = useCalendarStore((state) => state.calendars)
   const openModal = useCalendarStore((state) => state.openModal)
@@ -423,7 +425,7 @@ export function TodoView(): JSX.Element {
         onClick={() => setIsProjectMenuOpen(!isProjectMenuOpen)}
         aria-expanded={isProjectMenuOpen}
         aria-haspopup="menu"
-        aria-label="Filter tasks by project"
+        aria-label={t('surface.todoFilterProjects')}
         data-component="task-project-filter"
       >
         {selectedProject && (
@@ -1200,14 +1202,14 @@ export function TodoView(): JSX.Element {
                   className={styles.composerCheck}
                   onClick={handleComposerSubmitClick}
                   onMouseDown={(e) => e.preventDefault()}
-                  aria-label="Add task"
+                  aria-label={t('surface.addTask')}
                   data-component="composer-submit"
                 />
                 <input
                   ref={composerRef}
                   type="text"
                   className={styles.composerInput}
-                  placeholder="What needs doing?"
+                  placeholder={t('surface.taskComposerPlaceholder')}
                   onKeyDown={handleComposerKeyDown}
                   onBlur={() => setComposing(false)}
                 />
@@ -1217,8 +1219,8 @@ export function TodoView(): JSX.Element {
             {/* Empty State */}
             {groupedTasks.length === 0 && (
               <div className={styles.emptyState}>
-                <span className={styles.emptyTitle}>All clear</span>
-                <p className={styles.emptyMessage}>Nothing here right now.</p>
+                <span className={styles.emptyTitle}>{t('surface.allClear')}</span>
+                <p className={styles.emptyMessage}>{t('surface.nothingHere')}</p>
                 <button
                   className={styles.emptyCreateBtn}
                   onClick={() => {

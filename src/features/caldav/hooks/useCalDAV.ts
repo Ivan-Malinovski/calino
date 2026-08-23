@@ -2,6 +2,7 @@ import { useState, useCallback, useContext, useEffect, useMemo } from 'react'
 import { addDays } from 'date-fns'
 import type { CalendarEvent } from '@/types'
 import { showToast, showBrokenEventsNotification, showDuplicateUidNotification } from '@/lib/toast'
+import i18n from '@/lib/i18n'
 import type {
   CalDAVAccount,
   CalDAVCalendar,
@@ -465,19 +466,22 @@ export function useCalDAVInstance(): UseCalDAVReturn {
             // explanation. Say so instead.
             const staleCalendar = allCalendars.find((c) => c.id === change.calendarId)
             showToast(
-              `Couldn't remove the old copy of a moved event${
-                staleCalendar ? ` from ${staleCalendar.name}` : ''
-              }. It may show up twice — delete the duplicate manually.`
+              staleCalendar
+                ? i18n.t('errors:pending.staleCopyWithCalendar', { calendar: staleCalendar.name })
+                : i18n.t('errors:pending.staleCopyNoCalendar')
             )
           } else if (change.type === 'move') {
             // A move that never lands leaves the event stranded in its old
             // calendar with a 'failed' sync status and no explanation. Say so.
-            const title = pendingChangeTitle(change)
+            const title = pendingChangeTitle(change) || i18n.t('errors:pending.event')
             const targetCalendar = allCalendars.find((c) => c.id === change.calendarId)
             showToast(
-              `Couldn't move "${title || 'event'}"${
-                targetCalendar ? ` to ${targetCalendar.name}` : ''
-              }. It may still be in its old calendar.`
+              targetCalendar
+                ? i18n.t('errors:pending.moveFailedWithCalendar', {
+                    title,
+                    calendar: targetCalendar.name,
+                  })
+                : i18n.t('errors:pending.moveFailedNoCalendar', { title })
             )
           } else {
             // create / update / delete carry user content — dropping them
@@ -613,7 +617,9 @@ export function useCalDAVInstance(): UseCalDAVReturn {
                   // loop — surface the conflict and keep the local edit (it
                   // stays in the store with syncStatus 'failed').
                   showToast(
-                    `Couldn't save "${pendingChangeTitle(change) || 'this event'}" — it changed on the server while this edit was queued. Your version is saved locally.`
+                    i18n.t('errors:pending.staleEtagUpdateConflict', {
+                      title: pendingChangeTitle(change) || i18n.t('errors:pending.thisEvent'),
+                    })
                   )
                   lastAttemptAtByChangeId.delete(change.id)
                   retryAfterByChangeId.delete(change.id)
@@ -764,7 +770,9 @@ export function useCalDAVInstance(): UseCalDAVReturn {
                   // delete again). Mirrors the update path's second-412
                   // handling.
                   showToast(
-                    `Couldn't delete "${pendingChangeTitle(change) || 'this event'}" — it changed on the server while this delete was queued. The event stays on the server.`
+                    i18n.t('errors:pending.staleEtagDeleteConflict', {
+                      title: pendingChangeTitle(change) || i18n.t('errors:pending.thisEvent'),
+                    })
                   )
                   lastAttemptAtByChangeId.delete(change.id)
                   retryAfterByChangeId.delete(change.id)
@@ -978,7 +986,7 @@ export function useCalDAVInstance(): UseCalDAVReturn {
 
         console.log('[CalDAV] addAccount: creating client...')
         const client = await createCalDAVClient(discoveredUrl, credential, proxyUrl)
-        reportProgress({ label: 'Looking for calendars…' })
+        reportProgress({ label: i18n.t('caldav:progress.lookingForCalendars') })
         console.log('[CalDAV] addAccount: fetching calendars...')
         const serverCalendars = await client.fetchCalendars()
         console.log('[CalDAV] addAccount: found', serverCalendars.length, 'calendars')
@@ -1081,9 +1089,7 @@ export function useCalDAVInstance(): UseCalDAVReturn {
         const progressTotal = serverCalendars.length * 2
         let progressDone = 0
         reportProgress({
-          label: `Downloading events from ${serverCalendars.length} calendar${
-            serverCalendars.length === 1 ? '' : 's'
-          }…`,
+          label: i18n.t('caldav:progress.downloadingCalendars', { count: serverCalendars.length }),
           done: 0,
           total: progressTotal,
         })
@@ -1109,7 +1115,7 @@ export function useCalDAVInstance(): UseCalDAVReturn {
         // Store writes stay serial and in calendar order, so the
         // already-seen-this-pass dedup below behaves exactly as before.
         for (const { cal, fetchedEvents } of fetchedPerCalendar) {
-          reportProgress({ label: `Importing ${calendarLabel(cal)}…` })
+          reportProgress({ label: i18n.t('caldav:progress.importingCalendar', { name: calendarLabel(cal) }) })
           const { items: parsedWithHref } = await collectParsedWithHref(fetchedEvents, cal.id)
 
           // Detect independent events illegally sharing a UID across resources.
@@ -1184,7 +1190,7 @@ export function useCalDAVInstance(): UseCalDAVReturn {
         }
 
         // After calendar sync, check for CardDAV support
-        reportProgress({ label: 'Checking for contacts…', done: undefined, total: undefined })
+        reportProgress({ label: i18n.t('caldav:progress.checkingForContacts'), done: undefined, total: undefined })
         try {
           const { createCardDAVClient } = await import('@/features/carddav/client/CardDAVClient')
           const carddavClient = await createCardDAVClient(serverUrl, credential, proxyUrl ?? null)
@@ -1287,9 +1293,9 @@ export function useCalDAVInstance(): UseCalDAVReturn {
               // server while being empty — that's a fresh-install case,
               // and the user hasn't actually had anything synced yet.
               if (appliedRemote) {
-                showToast('Calino Settings found — sync enabled automatically.')
+                showToast(i18n.t('errors:sync.settingsFoundEnabledAuto'))
               } else {
-                showToast('Calino Settings calendar found — sync enabled.')
+                showToast(i18n.t('errors:sync.settingsCalendarFoundEnabled'))
               }
             }
           }
@@ -2004,7 +2010,7 @@ export function useCalDAVInstance(): UseCalDAVReturn {
       // Editing an account can be the longest wait in the app: a server probe
       // followed, when the principal changed, by a full calendar re-fetch and
       // event sync. Narrate the stages so it doesn't read as a hang.
-      return withProgress('Checking connection…', async (reportProgress) => {
+      return withProgress(i18n.t('caldav:progress.checkingConnection'), async (reportProgress) => {
         const account = storage.getAccountById(accountId)
         if (!account) {
           return
@@ -2031,10 +2037,10 @@ export function useCalDAVInstance(): UseCalDAVReturn {
           updates.serverUrl
         )
         if (!probe.ok) {
-          throw new Error(probe.error ?? 'Could not connect with these settings')
+          throw new Error(probe.error ?? i18n.t('errors:account.couldNotConnect'))
         }
         const resolvedUrl = probe.resolvedUrl ?? effectiveUrl
-        reportProgress({ label: 'Saving account…' })
+        reportProgress({ label: i18n.t('caldav:progress.savingAccount') })
 
         // Only a different principal invalidates the calendars stored for this
         // account — a rename or password rotation leaves their URLs valid.
@@ -2065,7 +2071,7 @@ export function useCalDAVInstance(): UseCalDAVReturn {
             username: updates.username,
             password: effectivePassword,
           }
-          reportProgress({ label: 'Looking for calendars…' })
+          reportProgress({ label: i18n.t('caldav:progress.lookingForCalendars') })
           const client = await createCalDAVClient(resolvedUrl, freshCredential, proxyUrl)
           const serverCalendars = await client.fetchCalendars()
 
@@ -2108,7 +2114,7 @@ export function useCalDAVInstance(): UseCalDAVReturn {
           }
         }
 
-        reportProgress({ label: 'Syncing events…' })
+        reportProgress({ label: i18n.t('caldav:progress.syncingEvents') })
         await syncAccount(accountId)
 
         setAccounts(storage.getAllAccounts())
@@ -2177,7 +2183,7 @@ export function useCalDAVInstance(): UseCalDAVReturn {
         // Offline / sample-data mode: no CalDAV accounts configured, so there is
         // nothing to sync. Skip silently instead of surfacing a sync error.
         if (allAccounts.length === 0) return
-        showToast('Failed to sync event with CalDAV server. It will be retried.')
+        showToast(i18n.t('errors:sync.eventSyncRetry'))
         return
       }
 
@@ -2260,7 +2266,7 @@ export function useCalDAVInstance(): UseCalDAVReturn {
       // are already in the store and there is nothing to sync.
       if (!calendar || !account) {
         if (allAccounts.length === 0) return
-        showToast('Failed to sync event with CalDAV server. It will be retried.')
+        showToast(i18n.t('errors:sync.eventSyncRetry'))
         return
       }
 
@@ -2384,7 +2390,7 @@ export function useCalDAVInstance(): UseCalDAVReturn {
           data: JSON.stringify(masterWithSequence),
         })
         setSyncState((prev) => ({ ...prev, pendingChanges: prev.pendingChanges + 1 }))
-        showToast('Failed to sync with CalDAV server. It will be retried.')
+        showToast(i18n.t('errors:sync.genericSyncRetry'))
         throw error
       }
 
@@ -2456,7 +2462,7 @@ export function useCalDAVInstance(): UseCalDAVReturn {
         // Offline / sample-data mode: no CalDAV accounts configured, so there is
         // nothing to sync. Skip silently instead of surfacing a sync error.
         if (allAccounts.length === 0) return
-        showToast('Failed to sync event with CalDAV server. It will be retried.')
+        showToast(i18n.t('errors:sync.eventSyncRetry'))
         return
       }
 
@@ -2573,7 +2579,10 @@ export function useCalDAVInstance(): UseCalDAVReturn {
               }),
             })
             showToast(
-              `Moved "${event.title}", but the old copy in ${sourceCalendar!.name} couldn't be removed yet. Retrying.`
+              i18n.t('errors:pending.moveCleanupPending', {
+                title: event.title,
+                calendar: sourceCalendar!.name,
+              })
             )
           }
 
@@ -2713,7 +2722,7 @@ export function useCalDAVInstance(): UseCalDAVReturn {
         // Offline / sample-data mode: no CalDAV accounts configured, so there is
         // nothing to sync. Skip silently instead of surfacing a sync error.
         if (allAccounts.length === 0) return
-        showToast('Failed to sync event with CalDAV server. It will be retried.')
+        showToast(i18n.t('errors:sync.eventSyncRetry'))
         // Re-add to store so the user can see the failure
         if (eventData) {
           storeUpdateEvent(eventId, { syncStatus: 'failed' })
@@ -2999,34 +3008,34 @@ export function useCalDAVInstance(): UseCalDAVReturn {
 
   // Background syncs are deliberately absent: they run on a timer with no one
   // waiting on them, and the sidebar already animates while they do.
-  const trackedCreateEvent = useMemo(() => tracked('Saving event…', createEvent), [createEvent])
+  const trackedCreateEvent = useMemo(() => tracked(i18n.t('caldav:progress.savingEvent'), createEvent), [createEvent])
   const trackedCreateEventGroup = useMemo(
-    () => tracked('Saving events…', createEventGroup),
+    () => tracked(i18n.t('caldav:progress.savingEvents'), createEventGroup),
     [createEventGroup]
   )
-  const trackedUpdateEvent = useMemo(() => tracked('Saving event…', updateEventFn), [updateEventFn])
+  const trackedUpdateEvent = useMemo(() => tracked(i18n.t('caldav:progress.savingEvent'), updateEventFn), [updateEventFn])
   const trackedSaveRecurrenceOverride = useMemo(
-    () => tracked('Saving event…', saveRecurrenceOverrideFn),
+    () => tracked(i18n.t('caldav:progress.savingEvent'), saveRecurrenceOverrideFn),
     [saveRecurrenceOverrideFn]
   )
   const trackedDeleteEvent = useMemo(
-    () => tracked('Deleting event…', deleteEventFn),
+    () => tracked(i18n.t('caldav:progress.deletingEvent'), deleteEventFn),
     [deleteEventFn]
   )
   const trackedDeleteEventByHref = useMemo(
-    () => tracked('Deleting event…', deleteEventByHref),
+    () => tracked(i18n.t('caldav:progress.deletingEvent'), deleteEventByHref),
     [deleteEventByHref]
   )
   const trackedCreateCalendar = useMemo(
-    () => tracked('Creating calendar…', createCalDAVCalendar),
+    () => tracked(i18n.t('caldav:progress.creatingCalendar'), createCalDAVCalendar),
     [createCalDAVCalendar]
   )
   const trackedUpdateCalendar = useMemo(
-    () => tracked('Saving calendar…', updateCalDAVCalendar),
+    () => tracked(i18n.t('caldav:progress.savingCalendar'), updateCalDAVCalendar),
     [updateCalDAVCalendar]
   )
   const trackedDeleteCalendar = useMemo(
-    () => tracked('Deleting calendar…', deleteCalDAVCalendar),
+    () => tracked(i18n.t('caldav:progress.deletingCalendar'), deleteCalDAVCalendar),
     [deleteCalDAVCalendar]
   )
 

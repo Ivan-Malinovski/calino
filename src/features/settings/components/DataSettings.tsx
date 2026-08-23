@@ -1,4 +1,5 @@
 import type { JSX } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useState, useRef } from 'react'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
@@ -22,6 +23,7 @@ import type { Contact } from '@/features/carddav/types'
 import styles from './Settings.module.css'
 
 export function DataSettings(): JSX.Element {
+  const { t } = useTranslation('settings')
   const [isExporting, setIsExporting] = useState(false)
   const [isImporting, setIsImporting] = useState(false)
   const [importStatus, setImportStatus] = useState<{
@@ -76,9 +78,9 @@ export function DataSettings(): JSX.Element {
           for (const event of data.events) {
             useCalendarStore.getState().addEvent(event)
           }
-          setImportStatus({ type: 'success', message: `Imported ${data.events.length} events` })
+          setImportStatus({ type: 'success', message: t('data.importedEvents', { count: data.events.length }) })
         } else {
-          setImportStatus({ type: 'error', message: 'No events found in JSON file' })
+          setImportStatus({ type: 'error', message: t('data.noEventsInJson') })
         }
       } else if (fileName.endsWith('.ics')) {
         // Don't import directly — hand off to the shared review modal so the
@@ -88,7 +90,7 @@ export function DataSettings(): JSX.Element {
         setPendingIcs({ text, fileName: file.name })
       }
     } catch {
-      setImportStatus({ type: 'error', message: 'Failed to import file. Please check the format.' })
+      setImportStatus({ type: 'error', message: t('data.importFailed') })
     } finally {
       setIsImporting(false)
       if (fileInputRef.current) fileInputRef.current.value = ''
@@ -99,7 +101,7 @@ export function DataSettings(): JSX.Element {
   }
 
   const handleIcsImported = (count: number): void => {
-    setImportStatus({ type: 'success', message: `Imported ${count} events` })
+    setImportStatus({ type: 'success', message: t('data.importedEvents', { count }) })
     setTimeout(() => setImportStatus(null), 3000)
   }
 
@@ -111,16 +113,16 @@ export function DataSettings(): JSX.Element {
     try {
       await caldav.deleteEventByHref(issue.calendarId, href)
       removeDuplicateUidResource(issue.uid, issue.calendarId, href)
-      showToast('Duplicate event deleted')
+      showToast(t('data.duplicateDeleted'))
     } catch {
-      showToast('Failed to delete event. Please try again.')
+      showToast(t('data.duplicateDeleteFailed'))
     } finally {
       setDeletingHref(null)
     }
   }
 
   const handleClearData = async (): Promise<void> => {
-    if (!confirm('Are you sure you want to delete all local data? This cannot be undone.')) return
+    if (!confirm(t('data.resetApp.confirm'))) return
     localStorage.clear()
     sessionStorage.clear()
     window.location.reload()
@@ -153,14 +155,14 @@ export function DataSettings(): JSX.Element {
       const parsed = parseVCardFile(content, targetAbId, accountId)
 
       if (parsed.length === 0) {
-        showToast('No contacts found in file')
+        showToast(t('data.noContactsInFile'))
         return
       }
 
       setParsedImportContacts(parsed)
       setIsImportOpen(true)
     } catch {
-      showToast('Failed to parse vCard file')
+      showToast(t('data.failedToParseVCard'))
     } finally {
       if (contactFileInputRef.current) contactFileInputRef.current.value = ''
     }
@@ -168,24 +170,24 @@ export function DataSettings(): JSX.Element {
 
   const handleContactExport = (): void => {
     if (contacts.length === 0) {
-      showToast('No contacts to export')
+      showToast(t('data.noContactsToExport'))
       return
     }
     const vcf = contactsToVCardFile(contacts)
     downloadFile(vcf, 'contacts.vcf')
-    showToast(`Exported ${contacts.length} contacts`)
+    showToast(t('data.exportedContacts', { count: contacts.length }))
   }
 
   return (
     <section className={`${styles.section} ${styles.sectionActive}`} data-component="data-settings">
-      <h1 className={styles.pageTitle}>Data</h1>
+      <h1 className={styles.pageTitle}>{t('data.title')}</h1>
 
       <div className={styles.group}>
-        <div className={styles.groupLabel}>Import &amp; Export</div>
+        <div className={styles.groupLabel}>{t('data.importExport')}</div>
         <div className={styles.actionRow}>
           <div className={styles.rowInfo}>
-            <div className={styles.rowLabel}>Export Calendar</div>
-            <div className={styles.rowDesc}>Download all events as a standard .ics file</div>
+            <div className={styles.rowLabel}>{t('data.exportCalendar.label')}</div>
+            <div className={styles.rowDesc}>{t('data.exportCalendar.desc')}</div>
           </div>
           <button
             className={styles.actionBtn}
@@ -195,13 +197,13 @@ export function DataSettings(): JSX.Element {
             data-action="export-ics"
             type="button"
           >
-            {isExporting ? 'Exporting...' : 'Export .ics'}
+            {isExporting ? t('data.exportCalendar.exporting') : t('data.exportCalendar.export')}
           </button>
         </div>
         <div className={styles.actionRow}>
           <div className={styles.rowInfo}>
-            <div className={styles.rowLabel}>Import Calendar</div>
-            <div className={styles.rowDesc}>Add events from a .ics or .json file</div>
+            <div className={styles.rowLabel}>{t('data.importCalendar.label')}</div>
+            <div className={styles.rowDesc}>{t('data.importCalendar.desc')}</div>
           </div>
           <button
             className={styles.actionBtn}
@@ -211,7 +213,7 @@ export function DataSettings(): JSX.Element {
             data-action="import-calendar"
             type="button"
           >
-            {isImporting ? 'Importing...' : 'Choose file…'}
+            {isImporting ? t('data.importCalendar.importing') : t('data.importCalendar.chooseFile')}
           </button>
         </div>
         {importStatus && (
@@ -244,34 +246,32 @@ export function DataSettings(): JSX.Element {
 
       {/* Contacts */}
       <div className={styles.group}>
-        <div className={styles.groupLabel}>Contacts</div>
+        <div className={styles.groupLabel}>{t('data.contacts')}</div>
         <div className={styles.actionRow}>
           <div className={styles.rowInfo}>
-            <div className={styles.rowLabel}>Export Contacts</div>
-            <div className={styles.rowDesc}>Download all contacts as a standard .vcf file</div>
+            <div className={styles.rowLabel}>{t('data.exportContacts.label')}</div>
+            <div className={styles.rowDesc}>{t('data.exportContacts.desc')}</div>
           </div>
           <button className={styles.actionBtn} onClick={handleContactExport} type="button">
-            Export .vcf
+            {t('data.exportContacts.export')}
           </button>
         </div>
         <div className={styles.actionRow}>
           <div className={styles.rowInfo}>
-            <div className={styles.rowLabel}>Import Contacts</div>
-            <div className={styles.rowDesc}>Add contacts from a .vcf file</div>
+            <div className={styles.rowLabel}>{t('data.importContacts.label')}</div>
+            <div className={styles.rowDesc}>{t('data.importContacts.desc')}</div>
           </div>
           <button className={styles.actionBtn} onClick={handleContactImportClick} type="button">
-            Choose file…
+            {t('data.importContacts.chooseFile')}
           </button>
         </div>
         <div className={styles.actionRow}>
           <div className={styles.rowInfo}>
-            <div className={styles.rowLabel}>Merge Duplicates</div>
-            <div className={styles.rowDesc}>
-              Find and merge contacts with the same email, phone, or name
-            </div>
+            <div className={styles.rowLabel}>{t('data.mergeDuplicates.label')}</div>
+            <div className={styles.rowDesc}>{t('data.mergeDuplicates.desc')}</div>
           </div>
           <button className={styles.actionBtn} onClick={() => setIsMergeOpen(true)} type="button">
-            Merge…
+            {t('data.mergeDuplicates.merge')}
           </button>
         </div>
         <input
@@ -286,18 +286,16 @@ export function DataSettings(): JSX.Element {
 
       {/* Broken Events */}
       <div className={styles.group} data-component="broken-events">
-        <div className={styles.groupLabel}>Data Issues</div>
+        <div className={styles.groupLabel}>{t('data.dataIssues')}</div>
         {brokenEvents.length === 0 && duplicateUidIssues.length === 0 && (
           <div className={styles.rowDesc} style={{ padding: '12px 20px 16px' }}>
-            Invalid or broken events (e.g. start date after end date) will appear here, allowing you
-            to fix or delete them.
+            {t('data.noIssues')}
           </div>
         )}
         {brokenEvents.length > 0 && (
           <>
             <p className={styles.rowDesc} style={{ padding: '12px 20px 0' }}>
-              These events have a start date after their end date and cannot be displayed. You can
-              fix them by swapping the dates, or delete them entirely.
+              {t('data.brokenEventsIntro')}
             </p>
 
             <div className={styles.brokenList}>
@@ -431,18 +429,16 @@ export function DataSettings(): JSX.Element {
       </div>
 
       <div className={`${styles.group} ${styles.dangerZone}`}>
-        <div className={`${styles.groupLabel} ${styles.dangerZoneLabel}`}>Danger Zone</div>
+        <div className={`${styles.groupLabel} ${styles.dangerZoneLabel}`}>{t('data.dangerZone')}</div>
         <div className={styles.actionRow}>
           <div className={styles.rowInfo}>
-            <div className={styles.rowLabel}>Delete All Events</div>
-            <div className={styles.rowDesc}>
-              Permanently remove every event from this calendar. This cannot be undone.
-            </div>
+            <div className={styles.rowLabel}>{t('data.deleteAllEvents.label')}</div>
+            <div className={styles.rowDesc}>{t('data.deleteAllEvents.desc')}</div>
           </div>
           <button
             className={`${styles.actionBtn} ${styles.actionBtnDanger}`}
             onClick={() => {
-              if (confirm('Delete all events? This cannot be undone.')) {
+              if (confirm(t('data.deleteAllEvents.confirm'))) {
                 const allEvents = useCalendarStore.getState().events
                 allEvents.forEach((e) => useCalendarStore.getState().deleteEvent(e.id))
               }
@@ -451,15 +447,13 @@ export function DataSettings(): JSX.Element {
             data-action="delete-all-events"
             type="button"
           >
-            Delete all events
+            {t('data.deleteAllEvents.action')}
           </button>
         </div>
         <div className={styles.actionRow}>
           <div className={styles.rowInfo}>
-            <div className={styles.rowLabel}>Reset Calino</div>
-            <div className={styles.rowDesc}>
-              Erase all data, settings, and connected accounts and start fresh.
-            </div>
+            <div className={styles.rowLabel}>{t('data.resetApp.label')}</div>
+            <div className={styles.rowDesc}>{t('data.resetApp.desc')}</div>
           </div>
           <button
             className={`${styles.actionBtn} ${styles.actionBtnDanger}`}
@@ -468,7 +462,7 @@ export function DataSettings(): JSX.Element {
             data-action="reset-app"
             type="button"
           >
-            Reset app
+            {t('data.resetApp.action')}
           </button>
         </div>
       </div>

@@ -1,10 +1,12 @@
 import { useMemo, type JSX } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useSettingsStore, DURATION_OPTIONS, DEFAULT_REMINDER_OPTIONS } from '@/store/settingsStore'
 import { useCalendarStore } from '@/store/calendarStore'
 import { getSupportedTimezones, TIMEZONE_PRESETS } from '@/lib/timezoneHelper'
 import styles from './Settings.module.css'
 
 export function CalendarSettings(): JSX.Element {
+  const { t } = useTranslation('settings')
   const defaultView = useSettingsStore((s) => s.defaultView)
   const showWeekNumbers = useSettingsStore((s) => s.showWeekNumbers)
   const showWeekNumbersInSidebar = useSettingsStore((s) => s.showWeekNumbersInSidebar)
@@ -34,10 +36,10 @@ export function CalendarSettings(): JSX.Element {
       className={`${styles.section} ${styles.sectionActive}`}
       data-component="calendar-settings"
     >
-      <h1 className={styles.pageTitle}>Calendar</h1>
+      <h1 className={styles.pageTitle}>{t('calendar.title')}</h1>
 
       <div className={styles.group}>
-        <div className={styles.groupLabel}>Display</div>
+        <div className={styles.groupLabel}>{t('calendar.display')}</div>
         <div
           className={styles.row}
           data-component="setting-row"
@@ -45,16 +47,16 @@ export function CalendarSettings(): JSX.Element {
           data-value={defaultView}
         >
           <div className={styles.rowInfo}>
-            <div className={styles.rowLabel}>Default View</div>
-            <div className={styles.rowDesc}>The view shown when you open the app</div>
+            <div className={styles.rowLabel}>{t('calendar.defaultView.label')}</div>
+            <div className={styles.rowDesc}>{t('calendar.defaultView.desc')}</div>
           </div>
           <div className={styles.rowControl}>
-            <div className={styles.seg} role="radiogroup" aria-label="Default view">
+            <div className={styles.seg} role="radiogroup" aria-label={t('calendar.defaultView.ariaLabel')}>
               {[
-                { value: 'month', label: 'Month' },
-                { value: 'week', label: 'Week' },
-                { value: 'day', label: 'Day' },
-                { value: 'agenda', label: 'Agenda' },
+                { value: 'month', label: t('calendar.defaultView.month') },
+                { value: 'week', label: t('calendar.defaultView.week') },
+                { value: 'day', label: t('calendar.defaultView.day') },
+                { value: 'agenda', label: t('calendar.defaultView.agenda') },
               ].map((opt) => (
                 <button
                   key={opt.value}
@@ -82,8 +84,8 @@ export function CalendarSettings(): JSX.Element {
           data-value={String(showWeekNumbers)}
         >
           <div className={styles.rowInfo}>
-            <div className={styles.rowLabel}>Show Week Numbers</div>
-            <div className={styles.rowDesc}>Display ISO week numbers on the left of each row</div>
+            <div className={styles.rowLabel}>{t('calendar.showWeekNumbers.label')}</div>
+            <div className={styles.rowDesc}>{t('calendar.showWeekNumbers.desc')}</div>
           </div>
           <div className={styles.rowControl}>
             <label
@@ -94,7 +96,7 @@ export function CalendarSettings(): JSX.Element {
               <input
                 type="checkbox"
                 checked={showWeekNumbers}
-                aria-label="Show week numbers"
+                aria-label={t('calendar.showWeekNumbers.ariaLabel')}
                 onChange={() => updateSettings({ showWeekNumbers: !showWeekNumbers })}
               />
               <span className={styles.pill} />
@@ -109,10 +111,8 @@ export function CalendarSettings(): JSX.Element {
           data-value={String(showWeekNumbersInSidebar)}
         >
           <div className={styles.rowInfo}>
-            <div className={styles.rowLabel}>Show Week Numbers in Sidebar</div>
-            <div className={styles.rowDesc}>
-              Display ISO week numbers next to each row in the mini calendar
-            </div>
+            <div className={styles.rowLabel}>{t('calendar.showWeekNumbersInSidebar.label')}</div>
+            <div className={styles.rowDesc}>{t('calendar.showWeekNumbersInSidebar.desc')}</div>
           </div>
           <div className={styles.rowControl}>
             <label
@@ -123,7 +123,7 @@ export function CalendarSettings(): JSX.Element {
               <input
                 type="checkbox"
                 checked={showWeekNumbersInSidebar}
-                aria-label="Show week numbers in sidebar"
+                aria-label={t('calendar.showWeekNumbersInSidebar.ariaLabel')}
                 onChange={() =>
                   updateSettings({ showWeekNumbersInSidebar: !showWeekNumbersInSidebar })
                 }
@@ -138,17 +138,17 @@ export function CalendarSettings(): JSX.Element {
           data-component="setting-row"
           data-setting="event-density"
           data-value={eventDensity}
-          title="Not available yet"
+          title={t('calendar.eventDensity.notAvailable')}
         >
           <div className={styles.rowInfo}>
-            <div className={styles.rowLabel}>Event Display Density</div>
-            <div className={styles.rowDesc}>How compact event chips appear in the grid</div>
+            <div className={styles.rowLabel}>{t('calendar.eventDensity.label')}</div>
+            <div className={styles.rowDesc}>{t('calendar.eventDensity.desc')}</div>
           </div>
           <div className={styles.rowControl}>
-            <div className={styles.seg} role="radiogroup" aria-label="Event density">
+            <div className={styles.seg} role="radiogroup" aria-label={t('calendar.eventDensity.ariaLabel')}>
               {[
-                { value: 'compact', label: 'Compact' },
-                { value: 'comfortable', label: 'Comfortable' },
+                { value: 'compact', label: t('calendar.eventDensity.compact') },
+                { value: 'comfortable', label: t('calendar.eventDensity.comfortable') },
               ].map((opt) => (
                 <button
                   key={opt.value}
@@ -174,10 +174,8 @@ export function CalendarSettings(): JSX.Element {
           data-value={String(agendaBelowMonthEnabled)}
         >
           <div className={styles.rowInfo}>
-            <div className={styles.rowLabel}>Split Agenda Below Month View</div>
-            <div className={styles.rowDesc}>
-              On tall, portrait-oriented screens, show an agenda panel below the month grid
-            </div>
+            <div className={styles.rowLabel}>{t('calendar.agendaBelowMonth.label')}</div>
+            <div className={styles.rowDesc}>{t('calendar.agendaBelowMonth.desc')}</div>
           </div>
           <div className={styles.rowControl}>
             <label
@@ -188,7 +186,7 @@ export function CalendarSettings(): JSX.Element {
               <input
                 type="checkbox"
                 checked={agendaBelowMonthEnabled}
-                aria-label="Split agenda below month view"
+                aria-label={t('calendar.agendaBelowMonth.ariaLabel')}
                 onChange={() =>
                   updateSettings({ agendaBelowMonthEnabled: !agendaBelowMonthEnabled })
                 }
@@ -201,7 +199,7 @@ export function CalendarSettings(): JSX.Element {
       </div>
 
       <div className={styles.group}>
-        <div className={styles.groupLabel}>Secondary Timezone</div>
+        <div className={styles.groupLabel}>{t('calendar.secondaryTimezoneGroup')}</div>
         <div
           className={styles.row}
           data-component="setting-row"
@@ -209,10 +207,8 @@ export function CalendarSettings(): JSX.Element {
           data-value={String(secondaryTimezoneEnabled)}
         >
           <div className={styles.rowInfo}>
-            <div className={styles.rowLabel}>Show Secondary Timezone</div>
-            <div className={styles.rowDesc}>
-              Display an additional timezone in Day and Week time grids
-            </div>
+            <div className={styles.rowLabel}>{t('calendar.secondaryTimezoneEnabled.label')}</div>
+            <div className={styles.rowDesc}>{t('calendar.secondaryTimezoneEnabled.desc')}</div>
           </div>
           <div className={styles.rowControl}>
             <label
@@ -223,7 +219,7 @@ export function CalendarSettings(): JSX.Element {
               <input
                 type="checkbox"
                 checked={secondaryTimezoneEnabled}
-                aria-label="Show secondary timezone"
+                aria-label={t('calendar.secondaryTimezoneEnabled.ariaLabel')}
                 onChange={() =>
                   updateSettings({
                     secondaryTimezoneEnabled: !secondaryTimezoneEnabled,
@@ -247,26 +243,24 @@ export function CalendarSettings(): JSX.Element {
               data-value={secondaryTimezone || ''}
             >
               <div className={styles.rowInfo}>
-                <div className={styles.rowLabel}>Secondary Timezone</div>
-                <div className={styles.rowDesc}>
-                  Select the timezone to display alongside local time
-                </div>
+                <div className={styles.rowLabel}>{t('calendar.secondaryTimezone.label')}</div>
+                <div className={styles.rowDesc}>{t('calendar.secondaryTimezone.desc')}</div>
               </div>
               <div className={styles.rowControl}>
                 <select
                   className={styles.select}
                   value={secondaryTimezone || 'UTC'}
-                  aria-label="Secondary timezone"
+                  aria-label={t('calendar.secondaryTimezone.ariaLabel')}
                   onChange={(e) => updateSettings({ secondaryTimezone: e.target.value })}
                 >
-                  <optgroup label="Presets">
+                  <optgroup label={t('calendar.secondaryTimezone.presets')}>
                     {TIMEZONE_PRESETS.map((tz) => (
                       <option key={`preset-${tz.value}`} value={tz.value}>
                         {tz.label}
                       </option>
                     ))}
                   </optgroup>
-                  <optgroup label="All Timezones">
+                  <optgroup label={t('calendar.secondaryTimezone.allTimezones')}>
                     {allTimezones.map((tz) => (
                       <option key={`all-${tz}`} value={tz}>
                         {tz}
@@ -283,19 +277,17 @@ export function CalendarSettings(): JSX.Element {
               data-value={secondaryTimezoneLabel || ''}
             >
               <div className={styles.rowInfo}>
-                <div className={styles.rowLabel}>Custom Label</div>
-                <div className={styles.rowDesc}>
-                  Optional short label (e.g. NYC, HQ, max 8 characters)
-                </div>
+                <div className={styles.rowLabel}>{t('calendar.secondaryTimezoneLabel.label')}</div>
+                <div className={styles.rowDesc}>{t('calendar.secondaryTimezoneLabel.desc')}</div>
               </div>
               <div className={styles.rowControl}>
                 <input
                   type="text"
                   className={styles.textInput}
                   maxLength={8}
-                  placeholder="e.g. NYC"
+                  placeholder={t('calendar.secondaryTimezoneLabel.placeholder')}
                   value={secondaryTimezoneLabel ?? ''}
-                  aria-label="Secondary timezone label"
+                  aria-label={t('calendar.secondaryTimezoneLabel.ariaLabel')}
                   onChange={(e) => {
                     const val = e.target.value.slice(0, 8)
                     const trimmed = val.trim()
@@ -309,7 +301,7 @@ export function CalendarSettings(): JSX.Element {
       </div>
 
       <div className={styles.group}>
-        <div className={styles.groupLabel}>Grid Behaviour</div>
+        <div className={styles.groupLabel}>{t('calendar.gridBehaviour')}</div>
         <div
           className={styles.row}
           data-component="setting-row"
@@ -317,10 +309,8 @@ export function CalendarSettings(): JSX.Element {
           data-value={String(compactRecurringEvents)}
         >
           <div className={styles.rowInfo}>
-            <div className={styles.rowLabel}>Compact Recurring Events</div>
-            <div className={styles.rowDesc}>
-              Show recurring events as minimal chips in month view
-            </div>
+            <div className={styles.rowLabel}>{t('calendar.compactRecurringEvents.label')}</div>
+            <div className={styles.rowDesc}>{t('calendar.compactRecurringEvents.desc')}</div>
           </div>
           <div className={styles.rowControl}>
             <label
@@ -331,7 +321,7 @@ export function CalendarSettings(): JSX.Element {
               <input
                 type="checkbox"
                 checked={compactRecurringEvents}
-                aria-label="Compact recurring events"
+                aria-label={t('calendar.compactRecurringEvents.ariaLabel')}
                 onChange={() => updateSettings({ compactRecurringEvents: !compactRecurringEvents })}
               />
               <span className={styles.pill} />
@@ -346,8 +336,8 @@ export function CalendarSettings(): JSX.Element {
           data-value={String(compressPastWeeks)}
         >
           <div className={styles.rowInfo}>
-            <div className={styles.rowLabel}>Compact Past Weeks</div>
-            <div className={styles.rowDesc}>Reduce height of rows that have already passed</div>
+            <div className={styles.rowLabel}>{t('calendar.compressPastWeeks.label')}</div>
+            <div className={styles.rowDesc}>{t('calendar.compressPastWeeks.desc')}</div>
           </div>
           <div className={styles.rowControl}>
             <label
@@ -358,7 +348,7 @@ export function CalendarSettings(): JSX.Element {
               <input
                 type="checkbox"
                 checked={compressPastWeeks}
-                aria-label="Compact past weeks"
+                aria-label={t('calendar.compressPastWeeks.ariaLabel')}
                 onChange={() => updateSettings({ compressPastWeeks: !compressPastWeeks })}
               />
               <span className={styles.pill} />
@@ -373,15 +363,15 @@ export function CalendarSettings(): JSX.Element {
           data-value={fadePastDaysInAgenda}
         >
           <div className={styles.rowInfo}>
-            <div className={styles.rowLabel}>Fade Past Days in Agenda</div>
-            <div className={styles.rowDesc}>Make past days look slightly faded out</div>
+            <div className={styles.rowLabel}>{t('calendar.fadePastDays.label')}</div>
+            <div className={styles.rowDesc}>{t('calendar.fadePastDays.desc')}</div>
           </div>
           <div className={styles.rowControl}>
-            <div className={styles.seg} role="radiogroup" aria-label="Fade past days">
+            <div className={styles.seg} role="radiogroup" aria-label={t('calendar.fadePastDays.ariaLabel')}>
               {[
-                { value: 'never', label: 'Never' },
-                { value: 'current', label: 'Current month' },
-                { value: 'all', label: 'All' },
+                { value: 'never', label: t('calendar.fadePastDays.never') },
+                { value: 'current', label: t('calendar.fadePastDays.current') },
+                { value: 'all', label: t('calendar.fadePastDays.all') },
               ].map((opt) => (
                 <button
                   key={opt.value}
@@ -409,8 +399,8 @@ export function CalendarSettings(): JSX.Element {
           data-value={String(hideCompletedTasksInMonthView)}
         >
           <div className={styles.rowInfo}>
-            <div className={styles.rowLabel}>Hide Completed Tasks</div>
-            <div className={styles.rowDesc}>Don't show done tasks in the calendar grid</div>
+            <div className={styles.rowLabel}>{t('calendar.hideCompletedTasks.label')}</div>
+            <div className={styles.rowDesc}>{t('calendar.hideCompletedTasks.desc')}</div>
           </div>
           <div className={styles.rowControl}>
             <label
@@ -421,7 +411,7 @@ export function CalendarSettings(): JSX.Element {
               <input
                 type="checkbox"
                 checked={hideCompletedTasksInMonthView}
-                aria-label="Hide completed tasks"
+                aria-label={t('calendar.hideCompletedTasks.ariaLabel')}
                 onChange={() =>
                   updateSettings({ hideCompletedTasksInMonthView: !hideCompletedTasksInMonthView })
                 }
@@ -438,21 +428,18 @@ export function CalendarSettings(): JSX.Element {
           data-value={String(monthViewEventLimit)}
         >
           <div className={styles.rowInfo}>
-            <div className={styles.rowLabel}>Events Before Rollup</div>
-            <div className={styles.rowDesc}>
-              How many events to show per day before showing "+N more". Auto fits as many as the day
-              cell has room for, and follows the window as it resizes.
-            </div>
+            <div className={styles.rowLabel}>{t('calendar.monthViewEventLimit.label')}</div>
+            <div className={styles.rowDesc}>{t('calendar.monthViewEventLimit.desc')}</div>
           </div>
           <div className={styles.rowControl}>
             <select
               className={styles.select}
               style={{ minWidth: '120px' }}
               value={monthViewEventLimit}
-              aria-label="Events before rollup"
+              aria-label={t('calendar.monthViewEventLimit.ariaLabel')}
               onChange={(e) => updateSettings({ monthViewEventLimit: Number(e.target.value) })}
             >
-              <option value={0}>Auto</option>
+              <option value={0}>{t('calendar.monthViewEventLimit.auto')}</option>
               <option value={2}>2</option>
               <option value={3}>3</option>
               <option value={4}>4</option>
@@ -463,7 +450,7 @@ export function CalendarSettings(): JSX.Element {
       </div>
 
       <div className={styles.group}>
-        <div className={styles.groupLabel}>New Event Defaults</div>
+        <div className={styles.groupLabel}>{t('calendar.newEventDefaults')}</div>
         <div
           className={styles.row}
           data-component="setting-row"
@@ -471,16 +458,14 @@ export function CalendarSettings(): JSX.Element {
           data-value={String(defaultDuration)}
         >
           <div className={styles.rowInfo}>
-            <div className={styles.rowLabel}>Default Duration</div>
-            <div className={styles.rowDesc}>
-              Length of a new event when created by clicking a day
-            </div>
+            <div className={styles.rowLabel}>{t('calendar.defaultDuration.label')}</div>
+            <div className={styles.rowDesc}>{t('calendar.defaultDuration.desc')}</div>
           </div>
           <div className={styles.rowControl}>
             <select
               className={`${styles.select} ${styles.selectCompact}`}
               value={isCustomDuration ? 'custom' : String(defaultDuration)}
-              aria-label="Default duration"
+              aria-label={t('calendar.defaultDuration.ariaLabel')}
               onChange={(e) => {
                 if (e.target.value === 'custom') {
                   if (!isCustomDuration) updateSettings({ defaultDuration: 45 })
@@ -491,10 +476,10 @@ export function CalendarSettings(): JSX.Element {
             >
               {DURATION_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>
-                  {opt.label}
+                  {t(opt.labelKey)}
                 </option>
               ))}
-              <option value="custom">Custom…</option>
+              <option value="custom">{t('calendar.defaultDuration.custom')}</option>
             </select>
             {isCustomDuration && (
               <span className={styles.numberInputWrap}>
@@ -505,14 +490,14 @@ export function CalendarSettings(): JSX.Element {
                   max={1440}
                   step={5}
                   value={defaultDuration}
-                  aria-label="Custom duration in minutes"
+                  aria-label={t('calendar.defaultDuration.customAriaLabel')}
                   onChange={(e) => {
                     const n = Number(e.target.value)
                     if (!Number.isFinite(n) || e.target.value === '') return
                     updateSettings({ defaultDuration: Math.min(1440, Math.max(1, Math.round(n))) })
                   }}
                 />
-                <span className={styles.numberInputUnit}>min</span>
+                <span className={styles.numberInputUnit}>{t('calendar.defaultDuration.unit')}</span>
               </span>
             )}
           </div>
@@ -524,14 +509,14 @@ export function CalendarSettings(): JSX.Element {
           data-value={defaultCalendar?.id || ''}
         >
           <div className={styles.rowInfo}>
-            <div className={styles.rowLabel}>Default Calendar</div>
-            <div className={styles.rowDesc}>Which calendar new events are added to</div>
+            <div className={styles.rowLabel}>{t('calendar.defaultCalendar.label')}</div>
+            <div className={styles.rowDesc}>{t('calendar.defaultCalendar.desc')}</div>
           </div>
           <div className={styles.rowControl}>
             <select
               className={styles.select}
               value={defaultCalendar?.id || ''}
-              aria-label="Default calendar"
+              aria-label={t('calendar.defaultCalendar.ariaLabel')}
               onChange={(e) => {
                 calendars.forEach((cal) => {
                   updateCalendar(cal.id, { isDefault: cal.id === e.target.value })
@@ -553,14 +538,14 @@ export function CalendarSettings(): JSX.Element {
           data-value={defaultReminderMinutes === null ? 'none' : String(defaultReminderMinutes)}
         >
           <div className={styles.rowInfo}>
-            <div className={styles.rowLabel}>Default Reminder</div>
-            <div className={styles.rowDesc}>The reminder new events start with</div>
+            <div className={styles.rowLabel}>{t('calendar.defaultReminder.label')}</div>
+            <div className={styles.rowDesc}>{t('calendar.defaultReminder.desc')}</div>
           </div>
           <div className={styles.rowControl}>
             <select
               className={styles.select}
               value={defaultReminderMinutes === null ? '' : defaultReminderMinutes}
-              aria-label="Default reminder"
+              aria-label={t('calendar.defaultReminder.ariaLabel')}
               onChange={(e) =>
                 updateSettings({
                   defaultReminderMinutes: e.target.value === '' ? null : Number(e.target.value),
@@ -568,8 +553,8 @@ export function CalendarSettings(): JSX.Element {
               }
             >
               {DEFAULT_REMINDER_OPTIONS.map((opt) => (
-                <option key={opt.label} value={opt.value ?? ''}>
-                  {opt.label}
+                <option key={opt.labelKey} value={opt.value ?? ''}>
+                  {t(opt.labelKey)}
                 </option>
               ))}
             </select>

@@ -1,10 +1,12 @@
 import { type JSX, useRef, useEffect, useState, useCallback, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { format, parseISO, isSameDay } from 'date-fns'
+import { useTranslation } from 'react-i18next'
 import { v4 as uuidv4 } from 'uuid'
 import {
   formatTime,
   formatEventTime,
+  formatDisplayDate,
   toEventInstant,
   daysBetween,
   addDays,
@@ -45,22 +47,13 @@ interface EventPreviewPopupProps {
   clickedEventId: string
 }
 
-const REMINDER_LABELS: Record<number, string> = {
-  0: 'At time of event',
-  5: '5 minutes before',
-  10: '10 minutes before',
-  15: '15 minutes before',
-  30: '30 minutes before',
-  60: '1 hour before',
-  120: '2 hours before',
-  1440: '1 day before',
-}
 
 export function EventPreviewPopup({
   event,
   position,
   clickedEventId,
 }: EventPreviewPopupProps): JSX.Element {
+  const { t } = useTranslation(['calendar', 'common'])
   const popupRef = useRef<HTMLDivElement>(null)
   const timeFormat = useSettingsStore((state) => state.timeFormat)
   const dateFormat = useSettingsStore((state) => state.dateFormat)
@@ -224,27 +217,27 @@ export function EventPreviewPopup({
   const [pendingUpdates, setPendingUpdates] = useState<Partial<CalendarEvent> | null>(null)
 
   const getEventDate = (): string => {
-    if (editDate) return format(parseISO(editDate), dateFormatPattern)
+    if (editDate) return formatDisplayDate(parseISO(editDate), dateFormatPattern)
     if (isTask && event.dueDate) {
-      return format(dueInstantFor(event.dueDate), dateFormatPattern)
+      return formatDisplayDate(dueInstantFor(event.dueDate), dateFormatPattern)
     }
-    return format(instantFor(effectiveStart), dateFormatPattern)
+    return formatDisplayDate(instantFor(effectiveStart), dateFormatPattern)
   }
 
   const getEventTime = (): string => {
     if (isTask) {
       if (!event.dueDate) {
-        return 'No due date'
+        return t('modals.eventPreview.noDueDate')
       }
       // For tasks with an actual time (not midnight), show the time
       if (hasDueTime(event)) {
         return formatEventTime(event.dueDate, event.timezone, timeFormat)
       }
       // For all-day tasks or tasks with no specific time
-      return format(parseISO(event.dueDate), dateFormatPattern)
+      return formatDisplayDate(parseISO(event.dueDate), dateFormatPattern)
     }
     if (event.isAllDay) {
-      return 'All day'
+      return t('modals.eventPreview.allDay')
     }
     if (editTime) {
       // The draft is device-frame 'HH:mm' already — never run it through the
@@ -355,7 +348,7 @@ export function EventPreviewPopup({
       // the start independently. Refuse to persist an inverted range rather
       // than silently saving start > end (issue #44).
       if (new Date(updates.end).getTime() <= new Date(updates.start).getTime()) {
-        showToast('End must be after start')
+        showToast(t('modals.eventPreview.endMustBeAfterStart'))
         return
       }
     }
@@ -365,13 +358,13 @@ export function EventPreviewPopup({
         .getState()
         .events.find((candidate) => candidate.id === originalEventId)
       if (!masterEvent) {
-        showToast('Master event not found. Cannot edit this occurrence.')
+        showToast(t('modals.eventPreview.masterEventNotFoundThisOccurrence'))
         return
       }
       try {
         await saveRecurrenceOverride(event.calendarId, masterEvent, { ...event, ...updates })
       } catch {
-        showToast('Failed to update this occurrence. The original event was kept.')
+        showToast(t('modals.eventPreview.failedToUpdateOccurrence'))
         return
       }
       setHasChanges(false)
@@ -417,7 +410,7 @@ export function EventPreviewPopup({
 
       if (existingException) {
         if (!masterEvent) {
-          showToast('Master event not found. Cannot edit single occurrence.')
+          showToast(t('modals.eventPreview.masterEventNotFoundSingleOccurrence'))
           return
         }
         const masterWithoutLegacyExdate = {
@@ -432,7 +425,7 @@ export function EventPreviewPopup({
             ...pendingUpdates,
           })
         } catch {
-          showToast('Failed to update this occurrence. The original event was kept.')
+          showToast(t('modals.eventPreview.failedToUpdateOccurrence'))
           return
         }
       } else {
@@ -477,7 +470,7 @@ export function EventPreviewPopup({
               exceptionEvent
             )
           } catch {
-            showToast('Failed to update this occurrence. The original event was kept.')
+            showToast(t('modals.eventPreview.failedToUpdateOccurrence'))
             return
           }
         }
@@ -804,7 +797,7 @@ export function EventPreviewPopup({
               startEditing('date')
             }}
           >
-            {format(instantFor(event.originalStart || event.start), dateFormatPattern)}
+            {formatDisplayDate(instantFor(event.originalStart || event.start), dateFormatPattern)}
           </span>
           <span> - </span>
           <input
@@ -819,8 +812,14 @@ export function EventPreviewPopup({
       )
     }
     if (isMultiDay) {
-      const startDisplay = format(instantFor(event.originalStart || event.start), dateFormatPattern)
-      const endDisplay = format(instantFor(event.originalEnd || event.end), dateFormatPattern)
+      const startDisplay = formatDisplayDate(
+        instantFor(event.originalStart || event.start),
+        dateFormatPattern
+      )
+      const endDisplay = formatDisplayDate(
+        instantFor(event.originalEnd || event.end),
+        dateFormatPattern
+      )
       return (
         <>
           <span
@@ -873,7 +872,7 @@ export function EventPreviewPopup({
             onChange={(value) => handleFieldChange('time', value)}
             className={styles.inlineInput}
             dataComponent="event-preview-start-time"
-            ariaLabel="Start time"
+            ariaLabel={t('modals.eventForm.startTime')}
             autoFocus
           />
           {!isTask && (
@@ -885,7 +884,7 @@ export function EventPreviewPopup({
                 onChange={(value) => handleFieldChange('endTime', value)}
                 className={styles.inlineInput}
                 dataComponent="event-preview-end-time"
-                ariaLabel="End time"
+                ariaLabel={t('modals.eventForm.endTime')}
               />
             </>
           )}
@@ -945,7 +944,7 @@ export function EventPreviewPopup({
     }
     return (
       <div className={styles.addDescription} onClick={() => startEditing('description')}>
-        + Add description
+        {t('modals.eventModal.addDescription')}
       </div>
     )
   }
@@ -954,7 +953,10 @@ export function EventPreviewPopup({
     if (!event.reminders || event.reminders.length === 0) return null
     const minutes = event.reminders[0]?.minutesBefore
     if (minutes === undefined) return null
-    return REMINDER_LABELS[minutes] || `${minutes} minutes before`
+    if (minutes === 0) return t('modals.eventPreview.reminderAtTimeOfEvent')
+    if (minutes % 1440 === 0) return t('modals.eventPreview.reminderDaysBefore', { count: minutes / 1440 })
+    if (minutes % 60 === 0) return t('modals.eventPreview.reminderHoursBefore', { count: minutes / 60 })
+    return t('modals.eventPreview.reminderMinutesBefore', { count: minutes })
   }
 
   const reminderLabel = getReminderLabel()
@@ -1029,7 +1031,11 @@ export function EventPreviewPopup({
                     />
                     {renderTitle()}
                   </div>
-                  <button className={styles.closeBtn} onClick={animateClose} aria-label="Close">
+                  <button
+                    className={styles.closeBtn}
+                    onClick={animateClose}
+                    aria-label={t('common:actions.close')}
+                  >
                     <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none">
                       <path
                         d="M12 4L4 12M4 4L12 12"
@@ -1054,22 +1060,26 @@ export function EventPreviewPopup({
                         onChange={() => void handleTaskCompletion(currentTask)}
                         aria-label={
                           taskCompleted
-                            ? `Mark "${currentTask.title}" as incomplete`
-                            : `Mark "${currentTask.title}" as complete`
+                            ? t('modals.eventPreview.markIncomplete', { title: currentTask.title })
+                            : t('modals.eventPreview.markComplete', { title: currentTask.title })
                         }
                       />
-                      <span>{taskCompleted ? 'Completed' : 'Mark complete'}</span>
+                      <span>
+                        {taskCompleted
+                          ? t('modals.eventPreview.completed')
+                          : t('modals.eventPreview.markCompleteShort')}
+                      </span>
                     </label>
                   )}
                   {isTask && parentTask && (
                     <div className={styles.taskRelationship} data-component="task-preview-parent">
                       <span aria-hidden="true">↳</span>
-                      <span>Subtask of {parentTask.title}</span>
+                      <span>{t('modals.eventPreview.subtaskOf', { title: parentTask.title })}</span>
                     </div>
                   )}
                   {isTask && directSubtasks.length > 0 && (
                     <div className={styles.previewSubtasks} data-component="task-preview-subtasks">
-                      <div className={styles.previewSubtasksLabel}>Subtasks</div>
+                      <div className={styles.previewSubtasksLabel}>{t('modals.eventPreview.subtasks')}</div>
                       {directSubtasks.map((subtask) => (
                         <div className={styles.previewSubtaskRow} key={subtask.id}>
                           <input
@@ -1083,8 +1093,8 @@ export function EventPreviewPopup({
                             onChange={() => void handleTaskCompletion(subtask)}
                             aria-label={
                               subtask.completed
-                                ? `Mark "${subtask.title}" as incomplete`
-                                : `Mark "${subtask.title}" as complete`
+                                ? t('modals.eventPreview.markIncomplete', { title: subtask.title })
+                                : t('modals.eventPreview.markComplete', { title: subtask.title })
                             }
                           />
                           <button
@@ -1143,7 +1153,7 @@ export function EventPreviewPopup({
                         startEditing('time')
                       }
                     }}
-                    aria-label="Edit time"
+                    aria-label={t('modals.eventPreview.editTime')}
                   >
                     <svg
                       aria-hidden="true"
@@ -1182,7 +1192,7 @@ export function EventPreviewPopup({
                           startEditing('location')
                         }
                       }}
-                      aria-label="Edit location"
+                      aria-label={t('modals.eventPreview.editLocation')}
                     >
                       <svg
                         aria-hidden="true"
@@ -1215,7 +1225,9 @@ export function EventPreviewPopup({
                         location={editLocation || event.location || ''}
                         className={styles.locationMapLink}
                         iconOnly
-                        ariaLabel={`Open ${editLocation || event.location} in Maps (new tab)`}
+                        ariaLabel={t('modals.eventPreview.openInMaps', {
+                          location: editLocation || event.location,
+                        })}
                       />
                     </div>
                   )}
@@ -1245,7 +1257,11 @@ export function EventPreviewPopup({
                           strokeLinejoin="round"
                         />
                       </svg>
-                      <span>{Math.round(event.travelDuration)} min travel</span>
+                      <span>
+                        {t('modals.eventPreview.minTravel', {
+                          count: Math.round(event.travelDuration),
+                        })}
+                      </span>
                     </div>
                   )}
 
@@ -1299,7 +1315,7 @@ export function EventPreviewPopup({
                           strokeLinecap="round"
                         />
                       </svg>
-                      <span>Priority: {event.priority}</span>
+                      <span>{t('modals.eventPreview.priority', { priority: event.priority })}</span>
                     </div>
                   )}
 
@@ -1322,12 +1338,12 @@ export function EventPreviewPopup({
                           strokeLinejoin="round"
                         />
                       </svg>
-                      <span>Completed</span>
+                      <span>{t('modals.eventPreview.completed')}</span>
                     </div>
                   )}
 
                   <div className={styles.description}>
-                    <div className={styles.descriptionLabel}>Description</div>
+                    <div className={styles.descriptionLabel}>{t('modals.eventPreview.description')}</div>
                     {renderDescription()}
                   </div>
                 </div>
@@ -1337,7 +1353,7 @@ export function EventPreviewPopup({
                     <button
                       className={styles.saveBtn}
                       onClick={saveChanges}
-                      aria-label="Save changes"
+                      aria-label={t('modals.eventPreview.saveChanges')}
                     >
                       <svg
                         aria-hidden="true"
@@ -1357,14 +1373,16 @@ export function EventPreviewPopup({
                     </button>
                   )}
                   <button className={styles.openBtn} onClick={handleOpen}>
-                    {isTask ? 'Open task' : 'Open event'}
+                    {isTask ? t('modals.eventPreview.openTask') : t('modals.eventPreview.openEvent')}
                   </button>
                   {mailto && (
                     <button
                       className={styles.exportBtn}
                       onClick={handleEmailAttendees}
-                      aria-label={`Email ${mailto.recipients.length} attendee${mailto.recipients.length === 1 ? '' : 's'}`}
-                      title="Email attendees"
+                      aria-label={t('modals.eventPreview.emailAttendeesCount', {
+                        count: mailto.recipients.length,
+                      })}
+                      title={t('modals.eventPreview.emailAttendees')}
                       data-component="email-attendees-btn"
                       data-mailto={mailto.uri}
                     >
@@ -1394,7 +1412,11 @@ export function EventPreviewPopup({
                       </svg>
                     </button>
                   )}
-                  <button className={styles.deleteBtn} onClick={handleDelete} aria-label="Delete">
+                  <button
+                    className={styles.deleteBtn}
+                    onClick={handleDelete}
+                    aria-label={t('modals.eventPreview.delete')}
+                  >
                     <svg aria-hidden="true" width="14" height="14" viewBox="0 0 14 14" fill="none">
                       <path
                         d="M2 4H12M5 4V2H9V4M4 4V12H10V4"

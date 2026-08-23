@@ -18,10 +18,12 @@ import {
   getDay,
   addDays,
 } from 'date-fns'
+import { useTranslation } from 'react-i18next'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
 import type { ViewType } from '@/types'
-import { toEventInstant } from '@/lib/datetime'
+import { toEventInstant, formatDisplayDate } from '@/lib/datetime'
+import { getNarrowWeekdayLabels } from './weekdayLabels'
 import styles from './YearView.module.css'
 
 const VIEW_ROUTES: Record<ViewType, string> = {
@@ -37,6 +39,7 @@ const VIEW_ROUTES: Record<ViewType, string> = {
 }
 
 export function YearView(): JSX.Element {
+  const { t } = useTranslation('calendar')
   const currentDate = useCalendarStore((state) => state.currentDate)
   const events = useCalendarStore((state) => state.events)
   const setCurrentDate = useCalendarStore((state) => state.setCurrentDate)
@@ -53,11 +56,10 @@ export function YearView(): JSX.Element {
     [date]
   )
 
-  const weekdayInitials = useMemo(() => {
-    const days = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
-    const idx = firstDayOfWeek || 0
-    return [...days.slice(idx), ...days.slice(0, idx)]
-  }, [firstDayOfWeek])
+  const weekdayInitials = useMemo(
+    () => getNarrowWeekdayLabels(firstDayOfWeek || 0),
+    [firstDayOfWeek]
+  )
 
   const eventDayKeys = useMemo(() => {
     const yearStart = startOfYear(date)
@@ -125,7 +127,7 @@ export function YearView(): JSX.Element {
                 }
               }}
             >
-              <div className={styles.monthHeader}>{format(m, 'MMMM')}</div>
+              <div className={styles.monthHeader}>{formatDisplayDate(m, 'MMMM')}</div>
               <div className={`${styles.weekdayRow} ${showWeekNumbers ? styles.withWeekNum : ''}`}>
                 {showWeekNumbers && <span className={styles.weekdayInitial} aria-hidden="true" />}
                 {weekdayInitials.map((w, i) => (
@@ -146,7 +148,7 @@ export function YearView(): JSX.Element {
                       {showWeekNumbers && (
                         <button
                           className={styles.weekNum}
-                          title={`Week ${getISOWeek(thursday)}`}
+                          title={t('views.year.weekNumber', { number: getISOWeek(thursday) })}
                           onClick={(e) => handleWeekClick(week[0], e)}
                         >
                           {getISOWeek(thursday)}

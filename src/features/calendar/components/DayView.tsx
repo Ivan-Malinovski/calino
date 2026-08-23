@@ -18,6 +18,8 @@ import {
 } from '@dnd-kit/core'
 import { format, startOfDay, endOfDay, parseISO, isToday, addDays, addMinutes } from 'date-fns'
 import { useCalendarStore, getTasksForDay } from '@/store/calendarStore'
+import { useTranslation } from 'react-i18next'
+import { formatDisplayDate } from '@/lib/datetime'
 import { filterTasksByCollapsedAncestors } from '@/lib/taskTree'
 import { useTaskCollapse } from '../hooks/useTaskCollapse'
 import { useSettingsStore } from '@/store/settingsStore'
@@ -99,7 +101,7 @@ function HourCell({
 }: HourCellProps): JSX.Element {
   const droppableId = `${dateStr}-${format(hour, 'HH:mm')}`
   const { setNodeRef } = useDroppable({ id: droppableId })
-  const primaryTime = format(hour, timeFormat === '24h' ? 'HH:mm' : 'h a')
+  const primaryTime = formatDisplayDate(hour, timeFormat === '24h' ? 'HH:mm' : 'h a')
 
   let timeContent: React.ReactNode = primaryTime
 
@@ -128,7 +130,7 @@ function HourCell({
         // stop lands on an unnamed "blank". The date comes from `dateStr`, not
         // from `hour` — HOURS is a module-load constant anchored to real
         // today, so its calendar date goes stale as soon as the user navigates.
-        aria-label={`${format(parseISO(dateStr), 'EEEE, MMMM d, yyyy')} ${formatTime(hour, timeFormat, 'hour')}`}
+        aria-label={`${formatDisplayDate(parseISO(dateStr), 'EEEE, MMMM d, yyyy')} ${formatTime(hour, timeFormat, 'hour')}`}
         tabIndex={isFocusAnchor ? 0 : -1}
         onClick={() => onCellClick(hour)}
         onMouseDown={(e) => onDragStart(hour, e)}
@@ -150,6 +152,7 @@ export function DayView({
   selectedDate: propDate,
   onBack,
 }: { selectedDate?: string; onBack?: () => void } = {}): JSX.Element {
+  const { t } = useTranslation('calendar')
   const storeDate = useCalendarStore((state) => state.currentDate)
   const currentDate = propDate || storeDate
   const events = useCalendarStore((state) => state.events)
@@ -872,7 +875,11 @@ export function DayView({
             </div>
           )}
           {onBack && (
-            <button className={styles.backButton} onClick={onBack} aria-label="Back to agenda">
+            <button
+              className={styles.backButton}
+              onClick={onBack}
+              aria-label={t('views.day.backToAgenda')}
+            >
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                 <path
                   d="M10 3L5 8L10 13"
@@ -885,7 +892,7 @@ export function DayView({
             </button>
           )}
           <div className={styles.dayInfo}>
-            <div className={styles.dayName}>{format(date, 'EEEE')}</div>
+            <div className={styles.dayName}>{formatDisplayDate(date, 'EEEE')}</div>
             <div className={`${styles.dayNumber} ${isCurrentDay ? styles.today : ''}`}>
               {format(date, 'd')}
             </div>
@@ -963,7 +970,7 @@ export function DayView({
           }}
           items={[
             {
-              label: 'Create event',
+              label: t('views.week.createEvent'),
               onClick: () => {
                 const hourStr =
                   contextMenu.hour !== undefined ? `T${pad2(contextMenu.hour)}:00` : ''
@@ -972,7 +979,7 @@ export function DayView({
               },
             },
             {
-              label: 'Create task',
+              label: t('views.week.createTask'),
               onClick: () => {
                 const dateStr = format(date, 'yyyy-MM-dd')
                 openModal(dateStr, undefined, undefined, 'task')

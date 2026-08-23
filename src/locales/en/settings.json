@@ -1,1 +1,712 @@
-{}
+{
+  "nav": {
+    "title": "Settings",
+    "general": "General",
+    "appearance": "Appearance",
+    "calendar": "Calendar",
+    "categories": "Categories",
+    "notifications": "Notifications",
+    "sync": "Sync",
+    "data": "Data",
+    "aiVision": "AI Photo Import",
+    "backToCalendar": "Back to Calendar",
+    "settingsCategories": "Settings categories"
+  },
+  "saved": "Saved",
+  "general": {
+    "title": "General",
+    "dateFormat": {
+      "label": "Date Format",
+      "desc": "How dates appear throughout the app",
+      "ariaLabel": "Date format",
+      "mmddyyyy": "MM/DD/YYYY (12/31/2024)",
+      "ddmmyyyy": "DD/MM/YYYY (31/12/2024)",
+      "yyyymmdd": "YYYY-MM-DD (2024-12-31)"
+    },
+    "mapProvider": {
+      "label": "Map Provider",
+      "desc": "Service used to open event locations",
+      "ariaLabel": "Map provider",
+      "google": "Google Maps",
+      "apple": "Apple Maps",
+      "osm": "OpenStreetMap",
+      "mapy": "mapy.com",
+      "geo": "Device default (geo:)"
+    },
+    "timeFormat": {
+      "label": "Time Format",
+      "desc": "12-hour or 24-hour time display",
+      "ariaLabel": "Time format",
+      "12h": "12-hour (2:30 PM)",
+      "24h": "24-hour (14:30)"
+    },
+    "firstDayOfWeek": {
+      "label": "First Day of Week",
+      "desc": "Start of the week in week and day views",
+      "ariaLabel": "First day of week"
+    },
+    "language": {
+      "label": "Language",
+      "desc": "Interface language",
+      "ariaLabel": "Language"
+    },
+    "journal": {
+      "label": "Journal",
+      "desc": "Attach freeform notes to days in your calendar",
+      "ariaLabel": "Journal"
+    },
+    "contacts": {
+      "label": "Contacts",
+      "desc": "Manage your address book with CardDAV sync",
+      "ariaLabel": "Contacts"
+    },
+    "haptics": {
+      "label": "Haptic Feedback",
+      "desc": "Vibrate on taps, swipes and long presses. Turn off if it feels sluggish.",
+      "ariaLabel": "Haptic feedback"
+    },
+    "settingsSync": {
+      "groupLabel": "Sync",
+      "label": "CalDAV Settings Sync",
+      "descEnabled": "Pulls settings automatically. Save changes manually with the button below.",
+      "descDisabled": "Enable to sync your settings across devices via CalDAV",
+      "syncing": "Syncing…",
+      "syncedAt": "Synced {{time}}",
+      "disableAriaLabel": "Disable settings sync",
+      "enable": "Enable",
+      "somethingWrong": "Something went wrong"
+    },
+    "syncNow": {
+      "label": "Sync Now",
+      "desc": "Save your local settings to the server",
+      "saving": "Saving...",
+      "save": "Save"
+    },
+    "accountPicker": {
+      "title": "Enable Settings Sync",
+      "description": "This will create a <strong>Calino Settings</strong> calendar on your CalDAV server. It contains a single event that stores your preferences (theme, first day of week, etc.) as JSON data.",
+      "descriptionSmall": "The calendar is hidden from Calino's sidebar but may be visible in other CalDAV clients. It does not affect your other calendars and can be deleted at any time from settings.",
+      "chooseAccount": "Choose an account to sync with:",
+      "settingUp": "Setting up…",
+      "cancel": "Cancel"
+    },
+    "disableSync": {
+      "title": "Disable Settings Sync?",
+      "description": "Your settings will no longer sync across devices. Would you also like to delete the settings file from your server?",
+      "keepFile": "Keep File",
+      "deleteAndDisable": "Delete & Disable"
+    },
+    "syncError": {
+      "cors": "Your server is blocking the connection. This usually means CORS headers aren't configured. Check that your CalDAV server sends these, and that it answers OPTIONS:",
+      "corsHelp": "Sync → your account → <strong>Diagnose</strong> will tell you which part is missing. See <link>Baikal CORS docs</link> for help.",
+      "network": "Couldn't reach your CalDAV server. Check your internet connection and make sure the server is online — a missing CORS header looks identical from here, so try <strong>Diagnose</strong> under Sync if the server is up.",
+      "timeout": "Your CalDAV server took too long to respond. It may be overloaded — try again in a moment.",
+      "auth": "Authentication failed. Check your CalDAV username and password. Many providers require an app-specific password rather than your account password.",
+      "forbidden": "The server refused the change. You may not have write access to this calendar, or the server rejected the data.",
+      "quota": "Your server storage is full. Free up space on the server and try again.",
+      "rateLimited": "The server is rate-limiting requests. Try again in a moment.",
+      "notFound": "The settings calendar wasn't found on your server. It may have been deleted. Try disabling and re-enabling sync.",
+      "conflict": "Your settings were changed on another device since this one last synced. Sync again to pick up the newer copy.",
+      "server": "Your CalDAV server returned an error. This is a problem on the server side — check its logs."
+    }
+  },
+  "weekday": {
+    "sunday": "Sunday",
+    "monday": "Monday",
+    "tuesday": "Tuesday",
+    "wednesday": "Wednesday",
+    "thursday": "Thursday",
+    "friday": "Friday",
+    "saturday": "Saturday"
+  },
+  "calendar": {
+    "title": "Calendar",
+    "display": "Display",
+    "defaultView": {
+      "label": "Default View",
+      "desc": "The view shown when you open the app",
+      "ariaLabel": "Default view",
+      "month": "Month",
+      "week": "Week",
+      "day": "Day",
+      "agenda": "Agenda",
+      "todo": "Tasks"
+    },
+    "showWeekNumbers": {
+      "label": "Show Week Numbers",
+      "desc": "Display ISO week numbers on the left of each row",
+      "ariaLabel": "Show week numbers"
+    },
+    "showWeekNumbersInSidebar": {
+      "label": "Show Week Numbers in Sidebar",
+      "desc": "Display ISO week numbers next to each row in the mini calendar",
+      "ariaLabel": "Show week numbers in sidebar"
+    },
+    "eventDensity": {
+      "label": "Event Display Density",
+      "desc": "How compact event chips appear in the grid",
+      "ariaLabel": "Event density",
+      "notAvailable": "Not available yet",
+      "compact": "Compact",
+      "comfortable": "Comfortable"
+    },
+    "agendaBelowMonth": {
+      "label": "Split Agenda Below Month View",
+      "desc": "On tall, portrait-oriented screens, show an agenda panel below the month grid",
+      "ariaLabel": "Split agenda below month view"
+    },
+    "secondaryTimezoneGroup": "Secondary Timezone",
+    "secondaryTimezoneEnabled": {
+      "label": "Show Secondary Timezone",
+      "desc": "Display an additional timezone in Day and Week time grids",
+      "ariaLabel": "Show secondary timezone"
+    },
+    "secondaryTimezone": {
+      "label": "Secondary Timezone",
+      "desc": "Select the timezone to display alongside local time",
+      "ariaLabel": "Secondary timezone",
+      "presets": "Presets",
+      "allTimezones": "All Timezones"
+    },
+    "secondaryTimezoneLabel": {
+      "label": "Custom Label",
+      "desc": "Optional short label (e.g. NYC, HQ, max 8 characters)",
+      "placeholder": "e.g. NYC",
+      "ariaLabel": "Secondary timezone label"
+    },
+    "gridBehaviour": "Grid Behaviour",
+    "compactRecurringEvents": {
+      "label": "Compact Recurring Events",
+      "desc": "Show recurring events as minimal chips in month view",
+      "ariaLabel": "Compact recurring events"
+    },
+    "compressPastWeeks": {
+      "label": "Compact Past Weeks",
+      "desc": "Reduce height of rows that have already passed",
+      "ariaLabel": "Compact past weeks"
+    },
+    "fadePastDays": {
+      "label": "Fade Past Days in Agenda",
+      "desc": "Make past days look slightly faded out",
+      "ariaLabel": "Fade past days",
+      "never": "Never",
+      "current": "Current month",
+      "all": "All"
+    },
+    "hideCompletedTasks": {
+      "label": "Hide Completed Tasks",
+      "desc": "Don't show done tasks in the calendar grid",
+      "ariaLabel": "Hide completed tasks"
+    },
+    "monthViewEventLimit": {
+      "label": "Events Before Rollup",
+      "desc": "How many events to show per day before showing \"+N more\". Auto fits as many as the day cell has room for, and follows the window as it resizes.",
+      "ariaLabel": "Events before rollup",
+      "auto": "Auto"
+    },
+    "newEventDefaults": "New Event Defaults",
+    "defaultDuration": {
+      "label": "Default Duration",
+      "desc": "Length of a new event when created by clicking a day",
+      "ariaLabel": "Default duration",
+      "customAriaLabel": "Custom duration in minutes",
+      "custom": "Custom…",
+      "unit": "min",
+      "15min": "15 minutes",
+      "30min": "30 minutes",
+      "1hour": "1 hour",
+      "1.5hours": "1.5 hours",
+      "2hours": "2 hours"
+    },
+    "defaultCalendar": {
+      "label": "Default Calendar",
+      "desc": "Which calendar new events are added to",
+      "ariaLabel": "Default calendar"
+    },
+    "defaultReminder": {
+      "label": "Default Reminder",
+      "desc": "The reminder new events start with",
+      "ariaLabel": "Default reminder",
+      "none": "None",
+      "atTimeOfEvent": "At time of event",
+      "5minBefore": "5 minutes before",
+      "15minBefore": "15 minutes before",
+      "30minBefore": "30 minutes before",
+      "1hourBefore": "1 hour before",
+      "1dayBefore": "1 day before"
+    }
+  },
+  "conflict": {
+    "serverWins": "Server wins (default)",
+    "localWins": "Local wins",
+    "askMe": "Ask me"
+  },
+  "theme": {
+    "title": "Appearance",
+    "appearance": {
+      "label": "Appearance",
+      "desc": "Choose how Calino looks",
+      "light": "Light",
+      "dark": "Dark",
+      "system": "System"
+    },
+    "lightTheme": {
+      "label": "Light Theme",
+      "desc": "Color palette used in light mode"
+    },
+    "darkTheme": {
+      "label": "Dark Theme",
+      "desc": "Color palette used in dark mode"
+    },
+    "mochaAccent": {
+      "label": "Catppuccin accent",
+      "desc": "Used for selection, focus, and primary actions",
+      "ariaLabel": "Catppuccin accent color",
+      "useAccent": "Use {{name}} accent",
+      "blue": "Blue",
+      "lavender": "Lavender",
+      "mauve": "Mauve",
+      "pink": "Pink",
+      "teal": "Teal",
+      "green": "Green",
+      "peach": "Peach"
+    },
+    "eventTint": {
+      "label": "Event colour strength",
+      "desc": "How much of a calendar's colour shows on its events. Stronger settings make calendars easier to tell apart at a glance.",
+      "ariaLabel": "Event colour strength",
+      "subtle": "Subtle",
+      "balanced": "Balanced",
+      "vivid": "Vivid"
+    },
+    "showEventIcons": {
+      "label": "Event icons",
+      "desc": "Show a matching icon on events based on their title (e.g. a coffee cup for \"Coffee\")",
+      "ariaLabel": "Show event icons"
+    },
+    "fontSize": {
+      "label": "Font Size",
+      "desc": "Affects text density throughout the app",
+      "notAvailable": "Not available yet",
+      "small": "Small",
+      "default": "Default",
+      "large": "Large"
+    },
+    "adjustable": {
+      "headerLabel": "Adjustable theme · {{mode}}",
+      "desc": "Tune the active palette live. Changes are saved automatically on this device.",
+      "reset": "Reset",
+      "previewLabel": "Event card preview",
+      "previewDesc": "See how this palette feels in the calendar.",
+      "live": "Live",
+      "previewToday": "Today",
+      "previewDate": "Tuesday, 23 August",
+      "previewEvent1Title": "Design review",
+      "previewEvent1Meta": "10:00 – 11:00 · Meeting room",
+      "previewEvent2Title": "Lunch with Alex",
+      "previewEvent2Meta": "12:30 – 13:15 · Café Flora",
+      "previewEvent3Title": "Focus time",
+      "previewEvent3Meta": "14:00 – 15:30",
+      "font": {
+        "label": "Font",
+        "desc": "Typeface used across the interface",
+        "ariaLabel": "Theme font",
+        "system": "System sans",
+        "serif": "Newsreader serif",
+        "mono": "Monospace"
+      },
+      "colors": {
+        "canvas": { "label": "Canvas", "desc": "Main page background" },
+        "panel": { "label": "Surface", "desc": "Cards, dialogs, and panels" },
+        "accent": { "label": "Accent", "desc": "Actions, selection, and focus" },
+        "accentContrast": { "label": "Accent text", "desc": "Text on accent fills" },
+        "text": { "label": "Primary text", "desc": "Main readable text" },
+        "mutedText": { "label": "Muted text", "desc": "Secondary and quiet text" },
+        "border": { "label": "Borders", "desc": "Dividers and field outlines" },
+        "colorAriaLabel": "{{label}} color"
+      },
+      "cornerRadius": "Corner radius",
+      "cornerRadiusAriaLabel": "Corner radius",
+      "density": "Density",
+      "densityAriaLabel": "Theme density",
+      "shadowStrength": "Shadow strength",
+      "shadowStrengthAriaLabel": "Shadow strength",
+      "eventTint": "Event tint",
+      "eventTintAriaLabel": "Event tint strength",
+      "contrast": {
+        "ariaLabel": "Contrast check: {{details}}",
+        "textCanvas": "Primary text is below WCAG AA on the canvas.",
+        "textPanel": "Primary text is below WCAG AA on surfaces.",
+        "mutedTextCanvas": "Muted text is below WCAG AA on the canvas.",
+        "accentContrast": "Accent text is below WCAG AA on accent fills.",
+        "meetsAA": "Colours meet WCAG AA.",
+        "needsAttention": "Contrast needs attention",
+        "looksGood": "Contrast looks good"
+      }
+    }
+  },
+  "categories": {
+    "title": "Categories",
+    "useCategoryColors": {
+      "label": "Use category colors for events",
+      "desc": "When disabled, events use their calendar color",
+      "ariaLabel": "Use category colors for events"
+    },
+    "keywords": {
+      "ariaLabel": "Keywords",
+      "removeKeyword": "Remove keyword {{keyword}}",
+      "placeholder": "Type keywords separated by comma",
+      "addAriaLabel": "Add keyword"
+    },
+    "color": {
+      "swatchAriaLabel": "Color {{color}}",
+      "customAriaLabel": "Custom color for category {{name}}",
+      "customNewAriaLabel": "Custom color for new category"
+    },
+    "editName": "Category name",
+    "eventCount_one": "{{count}} event",
+    "eventCount_other": "{{count}} events",
+    "editAriaLabel": "Edit category {{name}}",
+    "delete": "Delete",
+    "deleteAriaLabel": "Delete category {{name}}",
+    "addForm": {
+      "namePlaceholder": "Category name",
+      "nameAriaLabel": "New category name",
+      "add": "Add",
+      "cancel": "Cancel"
+    },
+    "addCategory": "Add category",
+    "autoCategorize": {
+      "title": "Auto-categorize",
+      "desc": "Assign categories to events automatically based on keywords in the title",
+      "selectCategory": "Select category",
+      "selectCategoryAriaLabel": "Select category",
+      "selectCategoryForNewRuleAriaLabel": "Select category for new rule",
+      "save": "Save",
+      "cancel": "Cancel",
+      "edit": "Edit",
+      "delete": "Delete",
+      "add": "Add",
+      "matchCount_one": "{{count}} match",
+      "matchCount_other": "{{count}} matches",
+      "uncategorizedCount": "({{count}} uncategorized)",
+      "countInCalendar": "{{count}} in {{name}}",
+      "unknownCalendar": "Unknown",
+      "willMatch_one": "Will match {{count}} event",
+      "willMatch_other": "Will match {{count}} events",
+      "currentlyUncategorized": " ({{count}} currently uncategorized)",
+      "addRule": "Add auto-categorize rule",
+      "applyToExisting": "Apply rules to existing events",
+      "applyToExistingDesc": "Retroactively categorize events that match your rules"
+    }
+  },
+  "notifications": {
+    "title": "Notifications",
+    "events": "Events",
+    "eventReminders": {
+      "label": "Event Reminders",
+      "desc": "Get notified before events start",
+      "ariaLabel": "Event reminders"
+    },
+    "soundAlerts": {
+      "label": "Sound Alerts",
+      "desc": "Play a sound when events are about to start",
+      "ariaLabel": "Sound alerts"
+    },
+    "deviceCalendar": "Device calendar",
+    "calendarMirror": {
+      "label": "Sync to Android Calendar (beta)",
+      "ariaLabel": "Sync to Android Calendar (beta)",
+      "descOff": "Copy your events into the device calendar so Android delivers reminders even when Calino is closed, and widgets, Wear OS and Android Auto can see them. Read-only — nothing is written back to your CalDAV server.",
+      "descActive": "Android is delivering your reminders. Events are visible to widgets, Wear OS and Android Auto.",
+      "descNoCalendarApp": "Events are synced, but no calendar app is installed to raise reminders — Calino is still handling those itself.",
+      "descDenied": "Calendar access is unavailable. Re-grant it in Android app settings.",
+      "descFailed": "Could not write to the device calendar: {{error}}",
+      "descFailedNoDetail": "Could not write to the device calendar.",
+      "descSyncing": "Syncing…"
+    },
+    "calendarMirrorInfo": {
+      "label": "How this works",
+      "desc": "What gets copied, who delivers your reminders, and what to expect in beta",
+      "learnMore": "Learn more"
+    },
+    "calendarMirrorModal": {
+      "title": "Sync to Android Calendar",
+      "intro": "Calino copies your events into Android's own calendar database — the same one your calendar widget, Wear OS watch and Android Auto read from. Those apps can't see Calino's storage, so this is what makes your events show up in them.",
+      "reliabilityTitle": "Why it makes reminders more reliable",
+      "reliabilityP1": "On its own, Calino can only schedule a reminder while it's running. Android schedules reminders for events in its calendar whether or not Calino has been opened, so while this is on, Android delivers them and Calino stands down — you won't get two notifications for the same event.",
+      "reliabilityP2": "This needs a calendar app installed to actually raise the notification. If you don't have one, Calino says so above and keeps handling reminders itself.",
+      "oneWayTitle": "It only goes one way",
+      "oneWayItem1": "The mirrored calendars are read-only. Calino stays the only thing that writes to your CalDAV server, and nothing you do in another calendar app comes back.",
+      "oneWayItem2": "Only calendars you've set to visible are copied.",
+      "oneWayItem3": "Turning this off deletes the mirrored calendars again, leaving your other calendars untouched.",
+      "stayingUpToDateTitle": "Staying up to date",
+      "stayingUpToDateP1": "About once an hour Calino checks your server in the background, so an event you add on another device gets to your phone and reminds you even if you haven't opened Calino since. Nothing is sent anywhere new — it's the same connection to your own server that the app already uses.",
+      "betaTitle": "Why it's in beta",
+      "betaP1": "The background check is at the mercy of your phone's battery settings. Xiaomi, Samsung, OPPO, OnePlus and Huawei devices in particular freeze background apps aggressively, and will silently skip it. If your events seem stale, set Calino to <strong>No restrictions</strong> in Android's battery settings for the app.",
+      "betaP2": "If a mirrored calendar doesn't appear in your calendar app, it's usually hidden rather than missing — new calendars often arrive unticked in that app's own list of calendars to display."
+    },
+    "tasks": "Tasks",
+    "taskDueDateReminders": {
+      "label": "Task Due Date Reminders",
+      "desc": "Notify when a task's due date arrives",
+      "ariaLabel": "Task due date reminders"
+    },
+    "overdueTaskBadge": {
+      "label": "Overdue Task Badge",
+      "desc": "Show a badge on the app icon for overdue tasks",
+      "ariaLabel": "Overdue task badge"
+    },
+    "test": {
+      "label": "Test Notification",
+      "descDefault": "Click to enable notifications and test",
+      "descDenied": "Notifications are blocked in browser settings",
+      "descReady": "Send a test notification",
+      "enableAndTest": "Enable & Test",
+      "sendTest": "Send Test"
+    },
+    "permissionDeniedToast": "Notifications are blocked. Update site permissions in your browser settings to enable reminders.",
+    "calendarPermissionDeniedToast": "Calendar access is blocked. Grant it in Android app settings to sync events to your device calendar."
+  },
+  "caldav": {
+    "title": "Sync",
+    "connectedAccounts": "Connected Accounts",
+    "test": "Test",
+    "testAriaLabel": "Test connection for {{name}}",
+    "diagnose": "Diagnose",
+    "diagnoseAriaLabel": "Run diagnostics for {{name}}",
+    "edit": "Edit",
+    "editAriaLabel": "Edit {{name}}",
+    "disconnect": "Disconnect",
+    "disconnectAriaLabel": "Disconnect {{name}}",
+    "testing": "Testing…",
+    "connectionOk": "Connection OK",
+    "connectionFailed": "Connection failed",
+    "failedWithMessage": "Failed — {{message}}",
+    "syncedOn": "Synced · {{date}}",
+    "connected": "Connected",
+    "addAccount": "Add calendar account",
+    "calendarSubscriptions": "Calendar Subscriptions",
+    "syncNow": "Sync now",
+    "syncing": "Syncing…",
+    "syncAriaLabel": "Sync {{name}} now",
+    "remove": "Remove",
+    "removeAriaLabel": "Remove {{name}}",
+    "notYetSynced": "Not yet synced",
+    "subscribe": "Subscribe to calendar (.ics)",
+    "confirmRemoveSubscription": "Remove this calendar subscription? Its events will be deleted locally.",
+    "confirmRemoveAccount": "Are you sure you want to remove this account? Calendar data will be preserved locally.",
+    "credentialsNotFound": "Credentials not found"
+  },
+  "data": {
+    "title": "Data",
+    "importExport": "Import & Export",
+    "exportCalendar": {
+      "label": "Export Calendar",
+      "desc": "Download all events as a standard .ics file",
+      "exporting": "Exporting...",
+      "export": "Export .ics"
+    },
+    "importCalendar": {
+      "label": "Import Calendar",
+      "desc": "Add events from a .ics or .json file",
+      "importing": "Importing...",
+      "chooseFile": "Choose file…"
+    },
+    "importedEvents_one": "Imported {{count}} event",
+    "importedEvents_other": "Imported {{count}} events",
+    "noEventsInJson": "No events found in JSON file",
+    "importFailed": "Failed to import file. Please check the format.",
+    "contacts": "Contacts",
+    "exportContacts": {
+      "label": "Export Contacts",
+      "desc": "Download all contacts as a standard .vcf file",
+      "export": "Export .vcf"
+    },
+    "importContacts": {
+      "label": "Import Contacts",
+      "desc": "Add contacts from a .vcf file",
+      "chooseFile": "Choose file…"
+    },
+    "mergeDuplicates": {
+      "label": "Merge Duplicates",
+      "desc": "Find and merge contacts with the same email, phone, or name",
+      "merge": "Merge…"
+    },
+    "noContactsInFile": "No contacts found in file",
+    "failedToParseVCard": "Failed to parse vCard file",
+    "noContactsToExport": "No contacts to export",
+    "exportedContacts_one": "Exported {{count}} contact",
+    "exportedContacts_other": "Exported {{count}} contacts",
+    "dataIssues": "Data Issues",
+    "noIssues": "Invalid or broken events (e.g. start date after end date) will appear here, allowing you to fix or delete them.",
+    "brokenEventsIntro": "These events have a start date after their end date and cannot be displayed. You can fix them by swapping the dates, or delete them entirely.",
+    "untitledEvent": "Untitled Event",
+    "start": "Start: {{date}}",
+    "end": "End: {{date}}",
+    "fix": "Fix",
+    "delete": "Delete",
+    "fixAll": "Fix All ({{count}})",
+    "deleteAll": "Delete All",
+    "duplicateUidIntro": "These events share the same unique ID (UID) on your server but are stored as separate items. Calino can only show one of each set — the others are hidden to keep your calendar stable. This usually comes from a bulk copy made in another app. To fix it, give each event a unique UID on your server, then sync again.",
+    "duplicateUid": "Duplicate UID: {{uid}}",
+    "kept": "Kept",
+    "hidden": "Hidden",
+    "deleting": "Deleting…",
+    "dismiss": "Dismiss",
+    "dangerZone": "Danger Zone",
+    "deleteAllEvents": {
+      "label": "Delete All Events",
+      "desc": "Permanently remove every event from this calendar. This cannot be undone.",
+      "confirm": "Delete all events? This cannot be undone.",
+      "action": "Delete all events"
+    },
+    "resetApp": {
+      "label": "Reset Calino",
+      "desc": "Erase all data, settings, and connected accounts and start fresh.",
+      "confirm": "Are you sure you want to delete all local data? This cannot be undone.",
+      "action": "Reset app"
+    },
+    "duplicateDeleted": "Duplicate event deleted",
+    "duplicateDeleteFailed": "Failed to delete event. Please try again."
+  },
+  "aiVision": {
+    "title": "AI Photo Import",
+    "intro": "Use your own API key to auto-fill event details from a photo. Available when creating a new event on Android.",
+    "androidOnly": "This feature is only available in the Android app.",
+    "provider": {
+      "groupLabel": "Provider",
+      "label": "Provider",
+      "desc": "Which vision AI service to send photos to",
+      "ariaLabel": "AI provider",
+      "anthropic": "Anthropic",
+      "openai": "OpenAI",
+      "custom": "Custom (OpenAI-compatible)"
+    },
+    "baseUrl": {
+      "label": "Base URL",
+      "descCustom": "Full OpenAI- or Anthropic-compatible API root, including /v1 — it's used exactly as entered. Add /anthropic to the path if it speaks Anthropic's API.",
+      "descPreset": "Requests are sent here",
+      "placeholder": "https://api.example.com/v1",
+      "ariaLabel": "Base URL"
+    },
+    "apiKey": {
+      "label": "API Key",
+      "desc": "Stored encrypted on this device only",
+      "placeholderSaved": "••••••••••••",
+      "placeholderEmpty": "Enter API key",
+      "ariaLabel": "API key",
+      "showAriaLabel": "Show API key",
+      "hideAriaLabel": "Hide API key",
+      "saved": "Key saved",
+      "clear": "Clear",
+      "noKeySaved": "No API key saved yet."
+    },
+    "model": {
+      "label": "Model",
+      "descError": "Couldn't fetch model list — enter a model id manually.",
+      "descReady": "Vision-capable model used to read photos",
+      "placeholder": "model id",
+      "idAriaLabel": "Model id",
+      "ariaLabel": "Model",
+      "refreshAriaLabel": "Refresh model list"
+    },
+    "test": {
+      "label": "Test Connection",
+      "desc": "Verify the key works and the model can read images",
+      "testing": "Testing…",
+      "ok": "Connection OK — vision-capable",
+      "warnDefault": "Key works, but this model doesn't appear to support images",
+      "failed": "Failed — {{message}}",
+      "failedGeneric": "Connection failed",
+      "button": "Test connection",
+      "buttonTesting": "Testing…"
+    },
+    "lastVerified": {
+      "capable": "Last verified {{when}} — vision-capable",
+      "maybeNotCapable": "Last verified {{when}} — model may not support images"
+    }
+  },
+  "privacy": {
+    "back": "← Back",
+    "title": "Privacy Policy",
+    "lastUpdated": "Last updated: July 2026",
+    "section1": {
+      "heading": "1. Your Data Stays on Your Device",
+      "body": "Calino is a local-first calendar application. All your calendar events, settings, and preferences are stored locally in your browser using IndexedDB and localStorage. We do not have access to your personal data."
+    },
+    "section2": {
+      "heading": "2. CalDAV Sync (Optional)",
+      "intro": "Calino can sync with CalDAV servers (like Nextcloud, ownCloud, or other CalDAV-compliant services) you personally configure. When you add a CalDAV account:",
+      "item1": "Your credentials (username/password) are stored only in your browser's localStorage",
+      "item2": "Data is transferred directly between your browser and your CalDAV server",
+      "item3": "We never see or store your credentials on any external server"
+    },
+    "section3": {
+      "heading": "3. CORS Proxy (Optional)",
+      "intro": "If your CalDAV server does not support CORS, you can optionally use a CORS proxy to enable browser access.",
+      "hostedProxyIntro": "We provide a public CORS proxy at {{proxy}}. If you use this option:",
+      "hostedProxyLabel": "Calino-hosted proxy (proxy.calino.io):",
+      "item1": "We can see your IP address, country, and the full URL of each request (which can sometimes include parts of your account path, depending on your CalDAV server)",
+      "item2": "We <strong>cannot</strong> see your password or calendar event data",
+      "item3": "Credentials are sent in the Authorization header (not logged)",
+      "item4": "Request/response bodies containing calendar data are not logged",
+      "thirdPartyLabel": "Third-party or self-hosted proxies:",
+      "thirdPartyBody": "The same principles apply — the proxy operator sees connection metadata but not your credentials or calendar content.",
+      "maxPrivacy": "For maximum privacy, add CORS headers directly to your CalDAV server instead of using a proxy."
+    },
+    "section4": {
+      "heading": "4. Cookies & Local Storage",
+      "intro": "Calino uses localStorage to store:",
+      "item1": "Your preferences and settings",
+      "item2": "CalDAV account credentials, obfuscated with a key stored in the app itself. This protects against casual inspection of localStorage (e.g. another site or extension accessing it by mistake), but is not strong encryption against someone with access to both the app source and your browser storage.",
+      "outro": "We do not use tracking cookies, analytics, or third-party services that collect personal information."
+    },
+    "section5": {
+      "heading": "5. No Account Required",
+      "body": "Calino does not require registration or an account. You can use the app immediately without providing any personal information."
+    },
+    "section6": {
+      "heading": "6. Contact",
+      "body": "If you have questions about this privacy policy, please contact:"
+    }
+  },
+  "masterPassword": {
+    "overlayAriaLabel": "Unlock CalDAV accounts",
+    "title": "Unlock CalDAV Accounts",
+    "subtitle": "Enter your master password to connect to preconfigured accounts.",
+    "label": "Master Password",
+    "placeholder": "Enter master password",
+    "unlock": "Unlock",
+    "wait": "Wait {{seconds}}s",
+    "tooManyAttempts": "Too many attempts. Try again in 1 minute.",
+    "wrongPassword_one": "Wrong password. {{count}} attempt remaining.",
+    "wrongPassword_other": "Wrong password. {{count}} attempts remaining."
+  },
+  "diagnostics": {
+    "runDiagnostics": "Run diagnostics",
+    "runAgain": "Run again",
+    "running": "Running…",
+    "runWithWriteTest": "Run with write test",
+    "runWithWriteTestTitle": "Creates a temporary event on your server and deletes it again",
+    "copyReport": "Copy report",
+    "copied": "Copied",
+    "note": "The write test creates one temporary event on your server and deletes it immediately. Everything else only reads.",
+    "inferred": "inferred",
+    "inferredTitle": "Your browser hides the relevant header, so this was deduced from how the server behaved.",
+    "howToFix": "How to fix",
+    "status": {
+      "pass": "Pass",
+      "fail": "Fail",
+      "warn": "Warning",
+      "skipped": "Skipped",
+      "unknown": "Unknown"
+    },
+    "summary": {
+      "ok": "Everything checks out.",
+      "degraded": "Sync will work, but your server could be configured better.",
+      "broken": "Something is wrong with this server."
+    },
+    "corsNote": " Checks marked “inferred” could not be read directly — browsers hide a server's CORS headers from JavaScript."
+  }
+}

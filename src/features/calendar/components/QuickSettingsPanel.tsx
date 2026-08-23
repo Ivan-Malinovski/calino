@@ -1,5 +1,6 @@
 import type { JSX } from 'react'
 import { useNavigate } from 'react-router'
+import { useTranslation } from 'react-i18next'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { useSettingsStore } from '@/store/settingsStore'
 import { useConfigStore } from '@/store/configStore'
@@ -26,6 +27,7 @@ export function QuickSettingsPanel({
   onNavigate,
   hideAllSettingsLink,
 }: QuickSettingsPanelProps): JSX.Element {
+  const { t } = useTranslation('calendar')
   const navigate = useNavigate()
   const themeMode = useSettingsStore((state) => state.themeMode)
   const showWeekNumbers = useSettingsStore((state) => state.showWeekNumbers)
@@ -45,11 +47,11 @@ export function QuickSettingsPanel({
   return (
     <>
       <div className={styles.quickSettingsItem}>
-        <span className={styles.quickSettingsLabel}>Theme</span>
+        <span className={styles.quickSettingsLabel}>{t('surface.theme')}</span>
         <div
           className={styles.themeModeGroup}
           role="radiogroup"
-          aria-label="Theme mode"
+          aria-label={t('surface.themeMode')}
           data-component="theme-mode-group"
         >
           {(['auto', 'light', 'dark'] as const).map((mode) => (
@@ -61,8 +63,8 @@ export function QuickSettingsPanel({
               className={`${styles.themeModeBtn} ${themeMode === mode ? styles.themeModeActive : ''}`}
               onClick={() => updateSettings({ themeMode: mode })}
               data-component={`theme-mode-${mode}`}
-              title={mode === 'auto' ? 'Auto' : mode === 'light' ? 'Light' : 'Dark'}
-              aria-label={mode === 'auto' ? 'Auto' : mode === 'light' ? 'Light' : 'Dark'}
+              title={t(`surface.themeModes.${mode}`)}
+              aria-label={t(`surface.themeModes.${mode}`)}
             >
               {mode === 'auto' ? (
                 <ThemeAutoIcon mobile={isMobile} />
@@ -76,23 +78,23 @@ export function QuickSettingsPanel({
         </div>
       </div>
       <div className={styles.quickSettingsItem}>
-        <span className={styles.quickSettingsLabel}>Week numbers</span>
+        <span className={styles.quickSettingsLabel}>{t('surface.weekNumbers')}</span>
         <button
           className={`${styles.toggleSwitch} ${showWeekNumbers ? styles.toggleActive : ''}`}
           onClick={() => updateSettings({ showWeekNumbers: !showWeekNumbers })}
-          aria-label="Toggle week numbers"
+          aria-label={t('surface.weekNumbers')}
         >
           <span className={styles.toggleThumb} />
         </button>
       </div>
       <div className={styles.quickSettingsItem}>
-        <span className={styles.quickSettingsLabel}>Hide completed tasks</span>
+        <span className={styles.quickSettingsLabel}>{t('surface.hideCompletedTasks')}</span>
         <button
           className={`${styles.toggleSwitch} ${hideCompletedTasksInMonthView ? styles.toggleActive : ''}`}
           onClick={() =>
             updateSettings({ hideCompletedTasksInMonthView: !hideCompletedTasksInMonthView })
           }
-          aria-label="Toggle hide completed tasks"
+          aria-label={t('surface.hideCompletedTasks')}
         >
           <span className={styles.toggleThumb} />
         </button>
@@ -106,15 +108,15 @@ export function QuickSettingsPanel({
           >
             {!hideAllSettingsLink && (
               <button className={styles.quickSettingsLink} onClick={goToSettings}>
-                All settings →
+                {t('surface.allSettings')}
               </button>
             )}
             {hasPreconfiguredAccounts && (
               <button
                 className={styles.quickSettingsLock}
                 onClick={() => lock()}
-                aria-label="Lock Calino"
-                title="Lock"
+                aria-label={t('surface.lockCalino')}
+                title={t('surface.lock')}
               >
                 <svg
                   width="16"

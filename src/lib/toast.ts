@@ -1,4 +1,5 @@
 import { toast as sonner } from 'sonner'
+import i18n from './i18n'
 
 export interface ShowToastOptions {
   onUndo?: () => void
@@ -20,7 +21,7 @@ export function showToast(message: string, options?: ShowToastOptions): void {
 
   if (options?.onUndo) {
     opts.action = {
-      label: 'Undo',
+      label: i18n.t('common:actions.undo'),
       onClick: () => {
         options.onUndo?.()
       },
@@ -38,14 +39,11 @@ export function showToast(message: string, options?: ShowToastOptions): void {
 }
 
 export function showBrokenEventsNotification(count: number): void {
-  const message =
-    count === 1
-      ? 'Found 1 broken event with invalid dates.'
-      : `Found ${count} broken events with invalid dates.`
+  const message = i18n.t('errors:broken.foundEvents', { count })
 
   showToast(message, {
     duration: 8000,
-    linkText: 'View',
+    linkText: i18n.t('common:actions.view'),
     onLinkClick: () => {
       window.location.href = '/settings?tab=data'
     },
@@ -53,14 +51,11 @@ export function showBrokenEventsNotification(count: number): void {
 }
 
 export function showDuplicateUidNotification(count: number): void {
-  const message =
-    count === 1
-      ? 'Found 1 set of events sharing a duplicate ID on your server.'
-      : `Found ${count} sets of events sharing a duplicate ID on your server.`
+  const message = i18n.t('errors:broken.foundDuplicateUids', { count })
 
   showToast(message, {
     duration: 8000,
-    linkText: 'View',
+    linkText: i18n.t('common:actions.view'),
     onLinkClick: () => {
       window.location.href = '/settings?tab=data'
     },

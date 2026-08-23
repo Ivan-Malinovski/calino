@@ -1,6 +1,7 @@
 import type { JSX } from 'react'
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
+import { useTranslation } from 'react-i18next'
 import { Capacitor } from '@capacitor/core'
 import { GeneralSettings } from './GeneralSettings'
 import { ThemeSettings } from './ThemeSettings'
@@ -21,14 +22,14 @@ type SettingsTab =
 
 interface NavItem {
   id: SettingsTab
-  label: string
+  labelKey: string
   icon: JSX.Element
 }
 
 const BASE_NAV_ITEMS: NavItem[] = [
   {
     id: 'general',
-    label: 'General',
+    labelKey: 'nav.general',
     icon: (
       <svg
         className={styles.navIcon}
@@ -45,7 +46,7 @@ const BASE_NAV_ITEMS: NavItem[] = [
   },
   {
     id: 'theme',
-    label: 'Appearance',
+    labelKey: 'nav.appearance',
     icon: (
       <svg
         className={styles.navIcon}
@@ -66,7 +67,7 @@ const BASE_NAV_ITEMS: NavItem[] = [
   },
   {
     id: 'calendar',
-    label: 'Calendar',
+    labelKey: 'nav.calendar',
     icon: (
       <svg
         className={styles.navIcon}
@@ -84,7 +85,7 @@ const BASE_NAV_ITEMS: NavItem[] = [
   },
   {
     id: 'categories',
-    label: 'Categories',
+    labelKey: 'nav.categories',
     icon: (
       <svg
         className={styles.navIcon}
@@ -103,7 +104,7 @@ const BASE_NAV_ITEMS: NavItem[] = [
   },
   {
     id: 'notifications',
-    label: 'Notifications',
+    labelKey: 'nav.notifications',
     icon: (
       <svg
         className={styles.navIcon}
@@ -121,7 +122,7 @@ const BASE_NAV_ITEMS: NavItem[] = [
   },
   {
     id: 'caldav',
-    label: 'Sync',
+    labelKey: 'nav.sync',
     icon: (
       <svg
         className={styles.navIcon}
@@ -139,7 +140,7 @@ const BASE_NAV_ITEMS: NavItem[] = [
   },
   {
     id: 'data',
-    label: 'Data',
+    labelKey: 'nav.data',
     icon: (
       <svg
         className={styles.navIcon}
@@ -160,7 +161,7 @@ const BASE_NAV_ITEMS: NavItem[] = [
 
 const AI_VISION_NAV_ITEM: NavItem = {
   id: 'aiVision',
-  label: 'AI Photo Import',
+  labelKey: 'nav.aiVision',
   icon: (
     <svg
       className={styles.navIcon}
@@ -190,10 +191,11 @@ const VALID_TABS: SettingsTab[] = [
 ]
 
 export function SettingsPage(): JSX.Element {
+  const { t } = useTranslation('settings')
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const isMobile = useIsMobile()
-  const NAV_ITEMS: NavItem[] = Capacitor.isNativePlatform()
+  const navItems: NavItem[] = Capacitor.isNativePlatform()
     ? [...BASE_NAV_ITEMS, AI_VISION_NAV_ITEM]
     : BASE_NAV_ITEMS
   const brokenEventsCount = useCalendarStore((state) => state.brokenEvents.length)
@@ -255,9 +257,9 @@ export function SettingsPage(): JSX.Element {
     <div className={styles.container} data-component="settings-page">
       <div className={styles.body}>
         <aside className={styles.nav} data-component="settings-sidebar">
-          <h2 className={styles.navTitle}>Settings</h2>
-          <nav className={styles.navList} aria-label="Settings">
-            {NAV_ITEMS.map((item) => (
+            <h2 className={styles.navTitle}>{t('nav.title')}</h2>
+          <nav className={styles.navList} aria-label={t('nav.title')}>
+            {navItems.map((item) => (
               <button
                 key={item.id}
                 className={`${styles.navItem} ${activeTab === item.id ? styles.navItemActive : ''}`}
@@ -267,7 +269,7 @@ export function SettingsPage(): JSX.Element {
                 onClick={() => setActiveTab(item.id)}
               >
                 {item.icon}
-                {item.label}
+                {t(item.labelKey)}
                 {item.id === 'data' && dataIssuesCount > 0 && (
                   <span className={styles.navBadge}>{dataIssuesCount}</span>
                 )}
@@ -299,7 +301,7 @@ export function SettingsPage(): JSX.Element {
               >
                 <path d="M2.5 7.5L6 11l5.5-8" />
               </svg>
-              Saved
+              {t('saved')}
             </span>
           </div>
           <div className={styles.header}>
@@ -314,7 +316,7 @@ export function SettingsPage(): JSX.Element {
               >
                 <path d="M9 2L4 7l5 5" />
               </svg>
-              Back to Calendar
+              {t('nav.backToCalendar')}
             </button>
           </div>
           {isMobile ? (
@@ -323,12 +325,12 @@ export function SettingsPage(): JSX.Element {
                   pageTitle h1 is the page heading, so this list title steps
                   down to h2 (a level decrease, not a skip). */}
               {activeTab ? (
-                <h2 className={styles.mobileTitle}>Settings</h2>
+                <h2 className={styles.mobileTitle}>{t('nav.title')}</h2>
               ) : (
-                <h1 className={styles.mobileTitle}>Settings</h1>
+                <h1 className={styles.mobileTitle}>{t('nav.title')}</h1>
               )}
-              <nav className={styles.categoryList} aria-label="Settings categories">
-                {NAV_ITEMS.map((item) => {
+              <nav className={styles.categoryList} aria-label={t('nav.settingsCategories')}>
+                {navItems.map((item) => {
                   const isOpen = activeTab === item.id
                   return (
                     <div key={item.id} className={styles.accordionItem}>
@@ -340,7 +342,7 @@ export function SettingsPage(): JSX.Element {
                         onClick={() => setActiveTab(isOpen ? null : item.id)}
                       >
                         {item.icon}
-                        <span className={styles.categoryLabel}>{item.label}</span>
+                        <span className={styles.categoryLabel}>{t(item.labelKey)}</span>
                         <span className={styles.categoryTrailing}>
                           {item.id === 'data' && dataIssuesCount > 0 && (
                             <span className={styles.navBadge}>{dataIssuesCount}</span>
