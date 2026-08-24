@@ -81,6 +81,13 @@ async function seedTzStore(page: Page): Promise<void> {
   )
 }
 
+async function settleInitialSync(page: Page): Promise<void> {
+  await page.locator('[data-component="sync-all-calendars"]').click()
+  await expect(
+    page.getByText(/All calendars synced\.|Calendars are already syncing\.|Sync failed/).first()
+  ).toBeVisible({ timeout: 15_000 })
+}
+
 test.describe('Journal entry date across the UTC boundary (#116)', () => {
   test.beforeEach(async ({ page, baseURL }) => {
     await clearState(page)
@@ -103,7 +110,10 @@ test.describe('Journal entry date across the UTC boundary (#116)', () => {
 
   test('a new entry defaults to the local day, not the UTC day', async ({ page }) => {
     await page.goto('/journal')
-    await page.locator('[data-component="journal-new-entry"]').click()
+    await settleInitialSync(page)
+    const newEntry = page.locator('[data-component="journal-new-entry"]')
+    await expect(newEntry).toBeVisible()
+    await newEntry.click()
     // Wait for the compose form to actually be up before reaching into it —
     // on a cold load the persisted store can hydrate late and swap the view
     // out from under the click. journal.spec.ts settles the same way.
@@ -117,7 +127,10 @@ test.describe('Journal entry date across the UTC boundary (#116)', () => {
 
   test('the entry stored on the server carries the local DTSTART', async ({ page, baseURL }) => {
     await page.goto('/journal')
-    await page.locator('[data-component="journal-new-entry"]').click()
+    await settleInitialSync(page)
+    const newEntry = page.locator('[data-component="journal-new-entry"]')
+    await expect(newEntry).toBeVisible()
+    await newEntry.click()
 
     const titleField = page.getByPlaceholder('Title (optional)')
     await expect(titleField).toBeVisible()
@@ -134,7 +147,11 @@ test.describe('Journal entry date across the UTC boundary (#116)', () => {
       })
       .toBe(true)
 
-    await page.getByRole('button', { name: 'Save entry' }).click()
+    // Journal edits are persisted automatically; wait for the debounced sync
+    // rather than looking for the old explicit Save button.
+    await expect(page.locator('[data-component="journal-save-status"]')).toHaveText('Saved', {
+      timeout: 15_000,
+    })
     await expect(page.getByText('Debug Journal')).toBeVisible()
 
     await expect

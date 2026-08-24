@@ -512,7 +512,10 @@ export const EventCard = React.memo(function EventCard({
         aria-label={
           isTask
             ? event.isAllDay
-              ? t('modals.eventCard.allDayAriaLabel', { title: event.title })
+              ? t('modals.eventCard.allDayAriaLabel', {
+                  title: event.title,
+                  subtask: isSubtask ? t('modals.eventCard.subtaskSuffix') : '',
+                })
               : t('modals.eventCard.taskAriaLabel', {
                   title: event.title,
                   subtask: isSubtask ? t('modals.eventCard.subtaskSuffix') : '',

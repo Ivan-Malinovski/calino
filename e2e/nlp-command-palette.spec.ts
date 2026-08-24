@@ -24,8 +24,9 @@ test.describe('command palette — NLP event routing', () => {
 
   const openPalette = async (page: import('@playwright/test').Page) => {
     await page.goto('/month')
-    await expect(page.locator('[data-component="header"]')).toBeVisible()
-    await page.getByRole('button', { name: 'Search or commands' }).click()
+    const searchButton = page.getByRole('button', { name: 'Search or commands' })
+    await expect(searchButton).toBeVisible()
+    await searchButton.click()
     const palette = page.locator('[data-component="command-palette"]')
     await expect(palette).toBeVisible({ timeout: 5_000 })
     return palette.locator('input').first()

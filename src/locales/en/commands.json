@@ -111,6 +111,8 @@
     "openedDataSettings": "Opened data settings"
   },
   "palette": {
+    "goTo": "Go to {{dateRef}}",
+    "navigatedTo": "Navigated to {{date}}",
     "placeholder": {
       "hangOut": "Hang out with Batman tomorrow at 9",
       "toggleDarkMode": "Toggle dark mode",

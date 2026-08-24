@@ -327,7 +327,7 @@
       "subtaskSuffix": " (subtask)",
       "completedSuffix": " (completed)",
       "dueSuffix": " due {{time}}",
-      "allDayAriaLabel": "{{title}}, all day",
+      "allDayAriaLabel": "{{title}}{{subtask}}, all day",
       "timedAriaLabel": "{{title}}, {{start}} to {{end}}",
       "clickToViewReadOnly": "Zum Anzeigen klicken (read-only subscription)",
       "clickToEditRecurring": "Click to edit (recurring event)",

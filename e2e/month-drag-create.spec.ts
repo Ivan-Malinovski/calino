@@ -117,7 +117,20 @@ test.describe('month drag-to-create', () => {
     await expect(page.locator('[data-component="calendar-grid"]').first()).toBeVisible()
 
     // Drag starting ON the existing event card, sweeping to an empty cell.
-    await dragAcrossDays(page, '2026-08-08', '2026-08-09')
+    // The center of a day cell may be empty even when its card is present, so
+    // use the card's actual bounds for the drag origin.
+    const eventCard = page.locator('[data-component="event-card"]').filter({ hasText: 'Existing' })
+    const eventBox = (await eventCard.boundingBox())!
+    const targetCell = page.locator('[data-date="2026-08-09"]')
+    const targetBox = (await targetCell.boundingBox())!
+    await page.mouse.move(eventBox.x + eventBox.width / 2, eventBox.y + eventBox.height / 2)
+    await page.mouse.down()
+    await page.mouse.move(
+      targetBox.x + targetBox.width / 2,
+      targetBox.y + targetBox.height / 2,
+      { steps: 12 }
+    )
+    await page.mouse.up()
 
     // No modal should open from a create-drag that began on a card; the
     // dnd-kit move (or nothing) owns that press. The modal must stay closed.

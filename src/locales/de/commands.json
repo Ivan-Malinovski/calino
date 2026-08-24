@@ -111,6 +111,7 @@
     "openedDataSettings": "Dateneinstellungen geöffnet"
   },
   "palette": {
+    "goTo": "Zu {{dateRef}} wechseln", "navigatedTo": "Zu {{date}} gewechselt",
     "placeholder": {
       "hangOut": "Morgen um 9 mit Batman treffen",
       "toggleDarkMode": "Dunklen Modus umschalten",

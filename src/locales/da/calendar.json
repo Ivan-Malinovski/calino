@@ -327,7 +327,7 @@
       "subtaskSuffix": " (underopgave)",
       "completedSuffix": " (fuldført)",
       "dueSuffix": " forfalder {{time}}",
-      "allDayAriaLabel": "{{title}}, all dag",
+      "allDayAriaLabel": "{{title}}{{subtask}}, all dag",
       "timedAriaLabel": "{{title}}, {{start}} til {{end}}",
       "clickToViewReadOnly": "Klik for at se (skrivebeskyttet abonnement)",
       "clickToEditRecurring": "Klik for at redigere (gentagen begivenhed)",
