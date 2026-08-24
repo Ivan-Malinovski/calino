@@ -231,8 +231,20 @@ export interface TaskOccurrencePlan {
   removedOverrideIds: string[]
 }
 
+/**
+ * A complete event/category reconciliation applied as one store transaction.
+ * Event IDs are upserted in input order (the last occurrence wins), while
+ * deletions are applied first so an upsert for the same ID wins deterministically.
+ */
+export interface CalendarEventChanges {
+  upserts: CalendarEvent[]
+  deleteIds: string[]
+  categories?: Category[]
+}
+
 export interface CalendarActions {
   addEvent: (event: CalendarEvent) => void
+  applyEventChanges: (changes: CalendarEventChanges) => void
   updateEvent: (id: string, updates: Partial<CalendarEvent>) => void
   completeTask: (id: string, completed: boolean) => CalendarEvent[]
   completeTaskOccurrence: (

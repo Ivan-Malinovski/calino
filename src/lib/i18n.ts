@@ -9,11 +9,17 @@
  */
 import i18n from 'i18next'
 import { initReactI18next } from 'react-i18next'
-import { resources, NAMESPACES, DEFAULT_NAMESPACE } from '@/locales'
-import { FALLBACK_LANGUAGE, getBrowserLanguage, normalizeLanguage } from '@/lib/languages'
+import { resources, NAMESPACES, DEFAULT_NAMESPACE, loadLanguageResources } from '@/locales'
+import {
+  FALLBACK_LANGUAGE,
+  getBrowserLanguage,
+  normalizeLanguage,
+  SUPPORTED_LANGUAGES,
+} from '@/lib/languages'
 import type { Language } from '@/types'
 
 let initialized = false
+let languageRequest = 0
 
 /**
  * Initialize i18next. Safe to call more than once — later calls are ignored,
@@ -30,7 +36,7 @@ export function initI18n(lng: Language = getBrowserLanguage()): typeof i18n {
     resources,
     lng,
     fallbackLng: FALLBACK_LANGUAGE,
-    supportedLngs: [...Object.keys(resources)],
+    supportedLngs: [...SUPPORTED_LANGUAGES],
     ns: [...NAMESPACES],
     defaultNS: DEFAULT_NAMESPACE,
     // React escapes interpolated values already; escaping again would render
@@ -49,6 +55,12 @@ export function initI18n(lng: Language = getBrowserLanguage()): typeof i18n {
   return i18n
 }
 
+/** Load a language's local chunk before initializing the foreground UI. */
+export async function initI18nAsync(lng: Language = getBrowserLanguage()): Promise<typeof i18n> {
+  await loadLanguageResources(lng)
+  return initI18n(lng)
+}
+
 /**
  * The active language, narrowed to one we ship.
  *
@@ -65,6 +77,14 @@ export function currentLanguage(): Language {
  * browser's own hyphenation and spellcheck read it.
  */
 export async function setLanguage(lng: Language): Promise<void> {
+  const request = ++languageRequest
+  const catalog = await loadLanguageResources(lng)
+  if (request !== languageRequest) return
+  if (initialized && !i18n.hasResourceBundle(lng, DEFAULT_NAMESPACE)) {
+    for (const namespace of NAMESPACES) {
+      i18n.addResourceBundle(lng, namespace, catalog[namespace], true, true)
+    }
+  }
   if (i18n.language !== lng) await i18n.changeLanguage(lng)
   if (typeof document !== 'undefined') document.documentElement.lang = lng
 }

@@ -12,7 +12,8 @@ import { ContextMenu } from '@/components/common/ContextMenu'
 import { RecurringIcon } from '@/components/common/icons'
 import { DeleteDialog } from './DeleteDialog'
 import type { CalendarEvent } from '@/types'
-import { getEventColor } from '@/lib/eventColor'
+import { getEventColorFromSources } from '@/lib/eventColor'
+import { isUUID } from '@/lib/uuid'
 import { useGestures } from '@/hooks/useGestures'
 import { useContextMenuStore } from '@/store/contextMenuStore'
 import { useHoveredEventStore } from '@/store/hoveredEventStore'
@@ -101,8 +102,19 @@ export const EventCard = React.memo(function EventCard({
   onToggleTaskSubtasks,
 }: EventCardProps): JSX.Element {
   const { t } = useTranslation('calendar')
-  const calendars = useCalendarStore((state) => state.calendars)
-  const categories = useCalendarStore((state) => state.categories)
+  const useCategoryColors = useSettingsStore((state) => state.useCategoryColors)
+  const calendar = useCalendarStore((state) =>
+    state.calendars.find((candidate) => candidate.id === event.calendarId)
+  )
+  const category = useCalendarStore((state) => {
+    if (!useCategoryColors) return undefined
+    const categoryValue = event.categories?.[0]
+    if (!categoryValue) return undefined
+
+    return state.categories.find((candidate) =>
+      isUUID(categoryValue) ? candidate.id === categoryValue : candidate.name === categoryValue
+    )
+  })
   const openModal = useCalendarStore((state) => state.openModal)
   const openPreview = useCalendarStore((state) => state.openPreview)
   const closePreview = useCalendarStore((state) => state.closePreview)
@@ -175,7 +187,7 @@ export const EventCard = React.memo(function EventCard({
 
   const isRecurring = !!event.recurrence || !!event.rruleString
   const isRecurringInstance = !!originalEventId
-  const isReadOnlyCalendar = calendars.find((c) => c.id === event.calendarId)?.readOnly === true
+  const isReadOnlyCalendar = calendar?.readOnly === true
   // Drag-and-drop is disabled for any recurring event (master or generated
   // instance) and for exceptions. The "which occurrence?" question has to
   // be answered via the RecurrenceDialog in the modal, so we force the user
@@ -275,10 +287,9 @@ export const EventCard = React.memo(function EventCard({
     }
   }, [isCurrentDragging])
 
-  const useCategoryColors = useSettingsStore((state) => state.useCategoryColors)
-  const eventColor = getEventColor(event, {
-    categories,
-    calendars,
+  const eventColor = getEventColorFromSources(event, {
+    categoryColor: category?.color,
+    calendarColor: calendar?.color,
     useCategoryColors,
   })
   const isTask = event.type === 'task'
@@ -795,7 +806,6 @@ export const EventCard = React.memo(function EventCard({
                         // Save button — which requires calendarId to be in
                         // compatibleCalendars — is permanently disabled.
                         const requiredComponent = newType === 'task' ? 'VTODO' : 'VEVENT'
-                        const calendar = calendars.find((c) => c.id === event.calendarId)
                         if (
                           calendar?.supportedComponents &&
                           !calendar.supportedComponents.includes(requiredComponent)
@@ -946,7 +956,11 @@ function arePropsEqual(prev: EventCardProps, next: EventCardProps): boolean {
     prev.dotMode !== next.dotMode ||
     prev.hideDueTime !== next.hideDueTime ||
     prev.clickDisabled !== next.clickDisabled ||
-    prev.hideFragmentTitle !== next.hideFragmentTitle
+    prev.hideFragmentTitle !== next.hideFragmentTitle ||
+    prev.taskHasSubtasks !== next.taskHasSubtasks ||
+    prev.taskSubtasksCollapsed !== next.taskSubtasksCollapsed ||
+    prev.taskSubtaskCount !== next.taskSubtaskCount ||
+    prev.onToggleTaskSubtasks !== next.onToggleTaskSubtasks
   ) {
     return false
   }
@@ -965,6 +979,7 @@ function arePropsEqual(prev: EventCardProps, next: EventCardProps): boolean {
     a.completed === b.completed &&
     a.location === b.location &&
     a.type === b.type &&
+    a.color === b.color &&
     a.dueDate === b.dueDate &&
     a.syncStatus === b.syncStatus &&
     a.travelDuration === b.travelDuration &&

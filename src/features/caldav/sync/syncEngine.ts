@@ -4,7 +4,7 @@ import { CalDAVClient } from '../client/CalDAVClient'
 import {
   eventToICAL,
   eventsToICAL,
-  parseICALData,
+  parseICALDataAsync,
   taskToICAL,
   journalToICAL,
 } from '../adapter/iCalendarAdapter'
@@ -109,7 +109,7 @@ export class SyncEngine {
         () => {}
       )
 
-      const events = parseICALData(serverEvent.data, this.calendarId)
+      const events = await parseICALDataAsync(serverEvent.data, this.calendarId)
       for (let event of events) {
         // Store inline attachments in IndexedDB, keep only metadata in zustand
         if (event.attachments && event.attachments.length > 0) {

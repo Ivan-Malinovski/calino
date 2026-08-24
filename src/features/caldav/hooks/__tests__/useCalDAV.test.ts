@@ -34,6 +34,7 @@ vi.mock('@/lib/toast', async (importOriginal) => {
 import * as discovery from '../../client/discovery'
 import * as credentials from '../../client/credentials'
 import * as accountStorage from '../../sync/accountStorage'
+import * as iCalendarAdapter from '../../adapter/iCalendarAdapter'
 import * as CalDAVClientModule from '../../client/CalDAVClient'
 import * as SyncEngineModule from '../../sync/syncEngine'
 import { useCalDAVInstance as useCalDAV } from '../useCalDAV'
@@ -131,6 +132,9 @@ describe('useCalDAV', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.mocked(iCalendarAdapter.parseICALDataAsync).mockImplementation((data, calendarId) =>
+      Promise.resolve(iCalendarAdapter.parseICALData(data, calendarId))
+    )
 
     // Default mock returns for store lookups
     mockAccountStorage.getAllAccounts.mockReturnValue([])

@@ -1,8 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { Profiler } from 'react'
+import { act, render, screen, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { EventCard } from '../components/EventCard'
 import { useCalendarStore } from '@/store/calendarStore'
+import { useSettingsStore } from '@/store/settingsStore'
 import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
 import type { CalendarEvent } from '@/types'
 
@@ -48,11 +50,108 @@ describe('EventCard', () => {
       isDefault: true,
       showTasksInViews: true,
     })
+    useSettingsStore.setState({ useCategoryColors: true })
   })
 
   it('renders event title', () => {
     render(<EventCard event={mockEvent} />)
     expect(screen.getByText('Test Meeting')).toBeInTheDocument()
+  })
+
+  it('uses event color, then category color, then calendar color', () => {
+    const store = useCalendarStore.getState()
+    store.addCategory({ id: 'work', name: 'Work', color: '#00AA00' })
+
+    const { container, rerender } = render(
+      <EventCard event={{ ...mockEvent, categories: ['Work'] }} />
+    )
+    const card = () => container.querySelector<HTMLElement>('[data-component="event-card"]')!
+
+    expect(card().style.getPropertyValue('--event-color')).toBe('#00AA00')
+
+    act(() => {
+      store.updateCategory('work', { color: '#00BB00' })
+    })
+    expect(card().style.getPropertyValue('--event-color')).toBe('#00BB00')
+
+    rerender(<EventCard event={{ ...mockEvent, color: '#AA0000', categories: ['Work'] }} />)
+    expect(card().style.getPropertyValue('--event-color')).toBe('#AA0000')
+
+    rerender(<EventCard event={{ ...mockEvent, categories: ['Unknown'] }} />)
+    expect(card().style.getPropertyValue('--event-color')).toBe('#4285F4')
+  })
+
+  it('does not rerender for unrelated calendar or category updates', () => {
+    const store = useCalendarStore.getState()
+    store.addCalendar({
+      id: 'unrelated-calendar',
+      name: 'Unrelated',
+      color: '#111111',
+      isVisible: true,
+      isDefault: false,
+      showTasksInViews: true,
+    })
+    store.addCategory({ id: 'unrelated-category', name: 'Unrelated', color: '#222222' })
+
+    const commits: number[] = []
+    render(
+      <Profiler id="event-card" onRender={() => commits.push(1)}>
+        <EventCard event={mockEvent} />
+      </Profiler>
+    )
+    commits.length = 0
+
+    store.updateCalendar('unrelated-calendar', { color: '#333333' })
+    store.updateCategory('unrelated-category', { color: '#444444' })
+
+    expect(commits).toHaveLength(0)
+  })
+
+  it('rerenders when the selected calendar changes', () => {
+    const store = useCalendarStore.getState()
+    store.updateCalendar('default', { readOnly: false, color: '#123456' })
+    const commits: number[] = []
+
+    render(
+      <Profiler id="event-card" onRender={() => commits.push(1)}>
+        <EventCard event={{ ...mockEvent, calendarId: 'default' }} />
+      </Profiler>
+    )
+    commits.length = 0
+
+    act(() => {
+      store.updateCalendar('default', { color: '#654321', readOnly: true })
+    })
+
+    expect(commits.length).toBeGreaterThan(0)
+  })
+
+  it('updates task disclosure controls when their props change', () => {
+    const task: CalendarEvent = {
+      ...mockEvent,
+      type: 'task',
+      title: 'Disclosure task',
+    }
+    const toggle = vi.fn()
+    const { rerender } = render(<EventCard event={task} />)
+
+    expect(
+      screen.queryByRole('button', { name: /subtasks for "Disclosure task"/ })
+    ).not.toBeInTheDocument()
+
+    rerender(
+      <EventCard
+        event={task}
+        taskHasSubtasks
+        taskSubtasksCollapsed
+        taskSubtaskCount={3}
+        onToggleTaskSubtasks={toggle}
+      />
+    )
+
+    expect(
+      screen.getByRole('button', { name: 'Expand subtasks for "Disclosure task" (3 hidden)' })
+    ).toHaveAttribute('aria-expanded', 'false')
   })
 
   it('marks a child task in month view', () => {

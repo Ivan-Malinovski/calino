@@ -2,16 +2,14 @@ import { useState, useCallback, useEffect } from 'react'
 import { v4 as uuidv4 } from 'uuid'
 import type { Calendar } from '@/types'
 import { fetchWebcalIcs, normalizeWebcalUrl } from '../fetchWebcal'
-import { parseICALData } from '@/features/caldav/adapter/iCalendarAdapter'
+import { parseICALDataAsync } from '@/features/caldav/adapter/iCalendarAdapter'
 import * as storage from '../subscriptionStorage'
 import type { WebcalSubscription } from '../types'
 import {
   useCalendarStore,
-  selectAddEvent,
-  selectUpdateEvent,
-  selectDeleteEvent,
   selectAddCalendar,
   selectDeleteCalendar,
+  selectApplyEventChanges,
 } from '@/store/calendarStore'
 import { useConfigStore } from '@/store/configStore'
 import { withProgress } from '@/store/progressStore'
@@ -52,11 +50,9 @@ function isDue(subscription: WebcalSubscription): boolean {
 export function useWebcalSubscriptions(): UseWebcalSubscriptionsReturn {
   const [subscriptions, setSubscriptions] = useState<WebcalSubscription[]>([])
 
-  const storeAddEvent = useCalendarStore(selectAddEvent)
-  const storeUpdateEvent = useCalendarStore(selectUpdateEvent)
-  const storeDeleteEvent = useCalendarStore(selectDeleteEvent)
   const storeAddCalendar = useCalendarStore(selectAddCalendar)
   const storeDeleteCalendar = useCalendarStore(selectDeleteCalendar)
+  const applyEventChanges = useCalendarStore(selectApplyEventChanges)
 
   useEffect(() => {
     setSubscriptions(storage.getAllSubscriptions())
@@ -71,7 +67,7 @@ export function useWebcalSubscriptions(): UseWebcalSubscriptionsReturn {
         const icsText = await fetchWebcalIcs(normalizedUrl, options.proxyUrl)
         report({ label: 'Importing events…' })
         const calendarId = uuidv4()
-        const events = parseICALData(icsText, calendarId)
+        const events = await parseICALDataAsync(icsText, calendarId)
 
         const calendar: Calendar = {
           id: calendarId,
@@ -84,9 +80,7 @@ export function useWebcalSubscriptions(): UseWebcalSubscriptionsReturn {
           readOnly: true,
         }
         storeAddCalendar(calendar)
-        for (const event of events) {
-          storeAddEvent(event)
-        }
+        applyEventChanges({ upserts: events, deleteIds: [] })
 
         const saved = storage.saveSubscription({
           calendarId,
@@ -102,7 +96,7 @@ export function useWebcalSubscriptions(): UseWebcalSubscriptionsReturn {
         return withFetchTime
       })
     },
-    [storeAddCalendar, storeAddEvent]
+    [storeAddCalendar, applyEventChanges]
   )
 
   const removeSubscription = useCallback(
@@ -126,7 +120,7 @@ export function useWebcalSubscriptions(): UseWebcalSubscriptionsReturn {
       try {
         const icsText = await fetchWebcalIcs(subscription.url, subscription.proxyUrl)
         report?.({ label: 'Importing events…' })
-        const freshEvents = parseICALData(icsText, subscription.calendarId)
+        const freshEvents = await parseICALDataAsync(icsText, subscription.calendarId)
         const freshById = new Map(freshEvents.map((e) => [e.id, e]))
 
         const existingEvents = useCalendarStore
@@ -134,10 +128,11 @@ export function useWebcalSubscriptions(): UseWebcalSubscriptionsReturn {
           .events.filter((e) => e.calendarId === subscription.calendarId)
         const existingById = new Map(existingEvents.map((e) => [e.id, e]))
 
+        const upserts: typeof freshEvents = []
         for (const [id, event] of freshById) {
           const existing = existingById.get(id)
           if (!existing) {
-            storeAddEvent(event)
+            upserts.push(event)
           } else if (
             // #112 — a feed without CREATED parses to `created: undefined`,
             // while the stored copy carries the stamp we gave it on first
@@ -151,14 +146,11 @@ export function useWebcalSubscriptions(): UseWebcalSubscriptionsReturn {
               lastModified: event.lastModified ?? existing.lastModified,
             })
           ) {
-            storeUpdateEvent(id, event)
+            upserts.push(event)
           }
         }
-        for (const [id] of existingById) {
-          if (!freshById.has(id)) {
-            storeDeleteEvent(id)
-          }
-        }
+        const deleteIds = [...existingById.keys()].filter((eventId) => !freshById.has(eventId))
+        applyEventChanges({ upserts, deleteIds })
 
         const now = new Date().toISOString()
         storage.updateSubscription(id, { lastFetchedAt: now, lastError: null })
@@ -173,7 +165,7 @@ export function useWebcalSubscriptions(): UseWebcalSubscriptionsReturn {
         )
       }
     },
-    [storeAddEvent, storeUpdateEvent, storeDeleteEvent]
+    [applyEventChanges]
   )
 
   const syncSubscription = useCallback(

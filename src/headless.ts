@@ -25,12 +25,13 @@
 import type { Calendar, CalendarEvent } from '@/types'
 import type { CalDAVCalendar } from '@/features/caldav/types'
 import { getHeadlessBridge } from '@/lib/headlessBridge'
-import { getAllAccounts, getCalendarsByAccountId } from '@/features/caldav/sync/accountStorage'
-import { getCredentialById } from '@/features/caldav/client/credentials'
+import { getAllAccounts, getAllCalendars } from '@/features/caldav/sync/accountStorage'
+import { getAllCredentials } from '@/features/caldav/client/credentials'
 import { createCalDAVClient } from '@/features/caldav/client/CalDAVClient'
-import { parseICALData } from '@/features/caldav/adapter/iCalendarAdapter'
+import { parseICALDataAsync } from '@/features/caldav/adapter/iCalendarAdapter'
 import { buildMirrorPayload, MIRROR_PAST_DAYS, MIRROR_FUTURE_DAYS } from '@/lib/calendarMirror'
 import { initHeadlessI18n } from '@/lib/i18nHeadless'
+import { CALDAV_FETCH_CONCURRENCY, mapWithConcurrency } from '@/lib/mapWithConcurrency'
 
 const DAY_MS = 24 * 60 * 60 * 1000
 
@@ -77,31 +78,60 @@ export async function runHeadlessSync(): Promise<HeadlessResult> {
   const events: CalendarEvent[] = []
   const fetched: Calendar[] = []
   let accountsSynced = 0
+  const credentialsById = new Map(
+    (await getAllCredentials()).map((credentials) => [credentials.id, credentials])
+  )
+  const calendarsByAccountId = new Map<string, CalDAVCalendar[]>()
+
+  for (const calendar of getAllCalendars()) {
+    if (!calendar.accountId) continue
+    const accountCalendars = calendarsByAccountId.get(calendar.accountId)
+    if (accountCalendars) accountCalendars.push(calendar)
+    else calendarsByAccountId.set(calendar.accountId, [calendar])
+  }
 
   for (const account of getAllAccounts()) {
-    const targets = getCalendarsByAccountId(account.id).filter((calendar: CalDAVCalendar) =>
+    const targets = (calendarsByAccountId.get(account.id) ?? []).filter((calendar) =>
       visibleById.has(calendar.id)
     )
     if (targets.length === 0) continue
 
     try {
-      const credentials = await getCredentialById(account.credentialId)
+      const credentials = credentialsById.get(account.credentialId)
       if (!credentials) {
         bridge.log(t('headless.accountCredentialsMissing', { account: account.name }))
         continue
       }
       const client = await createCalDAVClient(account.serverUrl, credentials, account.proxyUrl)
 
-      for (const calendar of targets) {
-        try {
-          const resources = await client.fetchEvents(calendar.url, rangeStart, rangeEnd)
-          for (const resource of resources) {
-            events.push(...parseICALData(resource.data, calendar.id))
+      const calendarResults = await mapWithConcurrency(
+        targets,
+        CALDAV_FETCH_CONCURRENCY,
+        async (calendar) => {
+          try {
+            const resources = await client.fetchEvents(calendar.url, rangeStart, rangeEnd)
+            return { calendar, resources }
+          } catch (error) {
+            bridge.log(
+              t('headless.calendarFailed', { calendar: calendar.name, error: String(error) })
+            )
+            return undefined
           }
-          fetched.push(visibleById.get(calendar.id)!)
-        } catch (error) {
-          bridge.log(t('headless.calendarFailed', { calendar: calendar.name, error: String(error) }))
         }
+      )
+
+      // mapWithConcurrency preserves target order, so network timing cannot
+      // change the mirror payload's ordering. Parse sequentially: ical.js's
+      // timezone registry is process-global, so source VTIMEZONE definitions
+      // from separate calendars must not interleave.
+      for (const result of calendarResults) {
+        if (!result) continue
+        const calendarEvents: CalendarEvent[] = []
+        for (const resource of result.resources) {
+          calendarEvents.push(...(await parseICALDataAsync(resource.data, result.calendar.id)))
+        }
+        events.push(...calendarEvents)
+        fetched.push(visibleById.get(result.calendar.id)!)
       }
       accountsSynced++
     } catch (error) {

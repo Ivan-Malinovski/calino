@@ -38,15 +38,8 @@ import { MasterPasswordPrompt } from './features/settings/components/MasterPassw
 import { useConfigStore } from './store/configStore'
 import { ThemeProvider } from './components/ThemeProvider'
 import { CalDAVProvider } from './features/caldav/hooks/CalDAVProvider'
-import { useCardDAV } from './features/carddav/hooks/useCardDAV'
-import { initContactPhotos } from './lib/contactPhotoSync'
-import { pruneRawIcs } from './lib/rawIcsStore'
 import { useCalDAV } from './features/caldav/hooks/useCalDAV'
-import { useNativeKeyboard } from './hooks/useNativeKeyboard'
-import { useNotifications } from './hooks/useNotifications'
-import { useCalendarMirror } from './hooks/useCalendarMirror'
 import { openEventDeepLink } from './lib/deepLink'
-import { AIPhotoImportRoot } from './features/aiVision/components/AIPhotoImportRoot'
 import { useAIPhotoImport } from './features/aiVision/useAIPhotoImport'
 import type { ViewType } from './types'
 
@@ -102,6 +95,7 @@ const CommandPalette = lazy(() =>
     default: m.CommandPalette,
   }))
 )
+const DeferredCalendarIntegrations = lazy(() => import('./components/DeferredCalendarIntegrations'))
 
 // Map each view to the lazy component that renders it, so the preloader can
 // warm the very object React will render. (`3day` renders WeekView too, with
@@ -328,6 +322,7 @@ function CalendarApp(): JSX.Element {
   const [paletteMounted, setPaletteMounted] = useState(false)
   const [isShortcutsHelpOpen, setIsShortcutsHelpOpen] = useState(false)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  const [integrationsMounted, setIntegrationsMounted] = useState(false)
   const sidebarCollapsed = useSettingsStore((state) => state.sidebarCollapsed)
   const agendaSidebarOpen = useSettingsStore((state) => state.agendaSidebarOpen)
   const agendaSidebarWidth = useSettingsStore((state) => state.agendaSidebarWidth)
@@ -337,19 +332,12 @@ function CalendarApp(): JSX.Element {
   const mainRef = useRef<HTMLElement>(null)
   const reducedMotion = useReducedMotion()
 
-  // Initialize CardDAV sync
-  useCardDAV()
-
-  // Contact photos live in IndexedDB, not in the persisted contact blob — put
-  // them back on the live contacts and mirror later edits out.
+  // Start non-critical integrations after the browser has had a chance to
+  // paint the calendar shell. A timer also works reliably in Capacitor, where
+  // an early requestAnimationFrame callback may never fire.
   useEffect(() => {
-    void initContactPhotos()
-  }, [])
-
-  // Sweep raw ICS blobs no sync or save has touched in months: their resources
-  // are gone from the server and nothing else will ever remove them.
-  useEffect(() => {
-    pruneRawIcs().catch(() => {})
+    const timer = setTimeout(() => setIntegrationsMounted(true), 0)
+    return () => clearTimeout(timer)
   }, [])
 
   // Mount the palette (closed) as soon as its chunk lands, one frame after the
@@ -419,17 +407,6 @@ function CalendarApp(): JSX.Element {
   useEffect(() => {
     if (isCommandPaletteOpen) setPaletteMounted(true)
   }, [isCommandPaletteOpen])
-
-  // Fire event/task reminders (web: polling + Notification API; native:
-  // real OS-scheduled notifications). Was defined but never mounted anywhere
-  // in the app — reminders have never actually fired, on web or native.
-  // Must run before useNotifications reads the mirror status, so the two
-  // don't both schedule reminders on the first pass after launch.
-  useCalendarMirror()
-  useNotifications()
-
-  // Keep the focused field above the Android on-screen keyboard.
-  useNativeKeyboard()
 
   useViewManager()
 
@@ -907,9 +884,13 @@ function CalendarApp(): JSX.Element {
       <ErrorBoundary fallback={null}>
         <EventModal />
       </ErrorBoundary>
-      <ErrorBoundary fallback={null}>
-        <AIPhotoImportRoot />
-      </ErrorBoundary>
+      {integrationsMounted && (
+        <ErrorBoundary fallback={null}>
+          <Suspense fallback={null}>
+            <DeferredCalendarIntegrations />
+          </Suspense>
+        </ErrorBoundary>
+      )}
       {isJournalModalOpen && journalModalDate && (
         <JournalDayModal
           isOpen={isJournalModalOpen}

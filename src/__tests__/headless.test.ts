@@ -3,19 +3,19 @@ import type { CalendarEvent } from '@/types'
 import type { HeadlessBridge } from '@/lib/headlessBridge'
 
 const mockGetAllAccounts = vi.fn()
-const mockGetCalendarsByAccountId = vi.fn()
-const mockGetCredentialById = vi.fn()
+const mockGetAllCalendars = vi.fn()
+const mockGetAllCredentials = vi.fn()
 const mockFetchEvents = vi.fn()
 const mockCreateClient = vi.fn()
 const mockParse = vi.fn()
 
 vi.mock('@/features/caldav/sync/accountStorage', () => ({
   getAllAccounts: () => mockGetAllAccounts(),
-  getCalendarsByAccountId: (id: string) => mockGetCalendarsByAccountId(id),
+  getAllCalendars: () => mockGetAllCalendars(),
 }))
 
 vi.mock('@/features/caldav/client/credentials', () => ({
-  getCredentialById: (id: string) => mockGetCredentialById(id),
+  getAllCredentials: () => mockGetAllCredentials(),
 }))
 
 vi.mock('@/features/caldav/client/CalDAVClient', () => ({
@@ -23,7 +23,7 @@ vi.mock('@/features/caldav/client/CalDAVClient', () => ({
 }))
 
 vi.mock('@/features/caldav/adapter/iCalendarAdapter', () => ({
-  parseICALData: (data: string, calendarId: string) => mockParse(data, calendarId),
+  parseICALDataAsync: (data: string, calendarId: string) => mockParse(data, calendarId),
 }))
 
 // Imported after the mocks are declared; the module only auto-runs when the
@@ -93,10 +93,12 @@ describe('runHeadlessSync', () => {
           credentialId: 'cred-1',
         },
       ])
-    mockGetCalendarsByAccountId
+    mockGetAllCalendars
       .mockReset()
-      .mockReturnValue([{ id: 'cal-1', url: 'https://dav.test/cal-1/', name: 'Personal' }])
-    mockGetCredentialById.mockReset().mockResolvedValue({ id: 'cred-1', password: 'pw' })
+      .mockReturnValue([
+        { id: 'cal-1', url: 'https://dav.test/cal-1/', name: 'Personal', accountId: 'acct-1' },
+      ])
+    mockGetAllCredentials.mockReset().mockResolvedValue([{ id: 'cred-1', password: 'pw' }])
     mockFetchEvents.mockReset().mockResolvedValue([{ url: 'a.ics', data: 'BEGIN:VCALENDAR' }])
     mockCreateClient.mockReset().mockResolvedValue({ fetchEvents: mockFetchEvents })
     mockParse.mockReset().mockImplementation((_data, calendarId) => [event('e1', calendarId)])
@@ -138,9 +140,9 @@ describe('runHeadlessSync', () => {
   })
 
   it('still mirrors the calendars that succeeded when one fails', async () => {
-    mockGetCalendarsByAccountId.mockReturnValue([
-      { id: 'cal-1', url: 'https://dav.test/cal-1/', name: 'Personal' },
-      { id: 'cal-2', url: 'https://dav.test/cal-2/', name: 'Work' },
+    mockGetAllCalendars.mockReturnValue([
+      { id: 'cal-1', url: 'https://dav.test/cal-1/', name: 'Personal', accountId: 'acct-1' },
+      { id: 'cal-2', url: 'https://dav.test/cal-2/', name: 'Work', accountId: 'acct-1' },
     ])
     persistCalendars([
       { id: 'cal-1', isVisible: true },

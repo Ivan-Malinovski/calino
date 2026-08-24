@@ -26,7 +26,7 @@ describe('CalDAVClient', () => {
   const mockCalendar = {
     url: 'https://caldav.example.com/calendars/test/default/',
     displayName: 'Default Calendar',
-    components: ['VEVENT', 'VTODO'],
+    components: ['VEVENT', 'VTODO', 'VJOURNAL'],
   }
 
   const mockEventObject = {
@@ -229,7 +229,7 @@ END:VCALENDAR`,
       expect(calendars).toHaveLength(1)
       expect(calendars[0].url).toBe(mockCalendar.url)
       expect(calendars[0].name).toBe(mockCalendar.displayName)
-      expect(calendars[0].supportedComponents).toEqual(['VEVENT', 'VTODO'])
+      expect(calendars[0].supportedComponents).toEqual(['VEVENT', 'VTODO', 'VJOURNAL'])
     })
 
     it('keeps only known calendar component metadata (VJOURNAL now included)', async () => {
@@ -500,6 +500,23 @@ END:VCALENDAR`,
       expect(result).toHaveLength(2)
       expect(result.find((obj) => obj.url === mockEventObject.url)).toBeDefined()
       expect(result.find((obj) => obj.url === mockTodoObject.url)).toBeDefined()
+    })
+
+    it('skips reports for components the calendar does not advertise', async () => {
+      await client.connect()
+      mockClientMethods.fetchCalendars.mockResolvedValue([
+        { ...mockCalendar, components: ['VEVENT'] },
+      ])
+      mockClientMethods.fetchCalendarObjects.mockResolvedValueOnce([mockEventObject])
+
+      const result = await client.fetchEvents(
+        mockCalendar.url,
+        '2024-01-01T00:00:00Z',
+        '2024-12-31T23:59:59Z'
+      )
+
+      expect(mockClientMethods.fetchCalendarObjects).toHaveBeenCalledTimes(1)
+      expect(result).toEqual([mockEventObject])
     })
 
     it('uses timeRange filter for VEVENTs', async () => {

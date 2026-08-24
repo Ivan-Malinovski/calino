@@ -1,14 +1,15 @@
 import ICAL from 'ical.js'
 // The package's own getVtimezoneComponent reads zone files with fs.readFileSync
-// (Node-only) and cannot run in the browser. Vite statically collects the raw
-// zone texts below instead; the eager glob makes every zone synchronously
-// available after module load, so the expansion/serialization paths never
-// fall back to a zone-less frame. Zones are parsed into TimezoneService lazily
-// on first use (registration cost is per-used-zone).
+// (Node-only) and cannot run in the browser. Vite collects same-origin raw zone
+// assets below; only zones requested through the registration path are parsed
+// into ICAL.Timezone instances.
 //
 import zoneIndex from '@touch4it/ical-timezones/zones.js'
 
 // Raw zone texts keyed by Vite's glob path (absolute); matched by suffix.
+// Synchronous recurrence expansion and export paths need a zone to be
+// available immediately. Keep the raw corpus in the module chunk, while
+// deferring the more expensive ICAL.Timezone parsing until a zone is used.
 const zoneTextLoaders = import.meta.glob(
   '../../node_modules/@touch4it/ical-timezones/zones/**/*.ics',
   {
@@ -18,19 +19,63 @@ const zoneTextLoaders = import.meta.glob(
   }
 ) as Record<string, string>
 
-const zoneFileCache = new Map<string, string>()
-function zoneText(filename: string): string | undefined {
-  const cached = zoneFileCache.get(filename)
-  if (cached !== undefined) return cached || undefined
-  const suffix = 'zones/' + filename
-  for (const key of Object.keys(zoneTextLoaders)) {
-    if (key.endsWith(suffix)) {
-      zoneFileCache.set(filename, zoneTextLoaders[key])
-      return zoneTextLoaders[key]
-    }
+const zoneLoadersByFilename = new Map<string, () => Promise<string>>()
+const zoneTextByFilename = new Map<string, string>()
+for (const [key, loader] of Object.entries(zoneTextLoaders)) {
+  const marker = key.lastIndexOf('zones/')
+  if (marker !== -1) {
+    const filename = key.slice(marker + 'zones/'.length)
+    zoneTextByFilename.set(filename, loader)
+    zoneLoadersByFilename.set(filename, () => Promise.resolve(loader))
   }
-  zoneFileCache.set(filename, '')
-  return undefined
+}
+
+const zoneTextCache = new Map<string, string | undefined>()
+const zoneTextPromises = new Map<string, Promise<string | undefined>>()
+
+function zoneTextLoader(filename: string): (() => Promise<string>) | undefined {
+  return zoneLoadersByFilename.get(filename)
+}
+
+async function zoneText(filename: string): Promise<string | undefined> {
+  if (zoneTextCache.has(filename)) return zoneTextCache.get(filename)
+
+  const existing = zoneTextPromises.get(filename)
+  if (existing) return existing
+
+  const loader = zoneTextLoader(filename)
+  if (!loader) {
+    zoneTextCache.set(filename, undefined)
+    return undefined
+  }
+
+  const promise = loader()
+    .then((text) => {
+      zoneTextCache.set(filename, text)
+      return text
+    })
+    .catch(() => {
+      zoneTextCache.set(filename, undefined)
+      return undefined
+    })
+  zoneTextPromises.set(filename, promise)
+  return promise
+}
+
+function registerZoneText(resolved: string, text: string): boolean {
+  // A source VTIMEZONE may have been registered between the caller's initial
+  // service check and this parse. Never replace that authoritative definition
+  // with packaged data.
+  if (ICAL.TimezoneService.has(resolved)) return true
+  try {
+    const comp = new ICAL.Component(ICAL.parse(text) as unknown as string[])
+    const vtimezone = comp.name === 'vcalendar' ? comp.getFirstSubcomponent('vtimezone') : comp
+    if (!vtimezone) return false
+    ICAL.TimezoneService.register(new ICAL.Timezone(vtimezone), resolved)
+    return true
+  } catch {
+    return false
+  }
 }
 
 /** Windows zone IDs to IANA. Covers the IDs a Windows/Outlook-produced
@@ -173,7 +218,14 @@ let primed = false
  * idempotent per alias, so an already-populated service is left untouched.
  */
 function primeService(): void {
-  if (primed) return
+  if (
+    primed &&
+    ICAL.TimezoneService.has('UTC') &&
+    ICAL.TimezoneService.has('Z') &&
+    ICAL.TimezoneService.has('GMT')
+  ) {
+    return
+  }
   const utc = ICAL.Timezone.utcTimezone
   if (!ICAL.TimezoneService.has('UTC')) ICAL.TimezoneService.register(utc, 'UTC')
   if (!ICAL.TimezoneService.has('Z')) ICAL.TimezoneService.register(utc, 'Z')
@@ -205,8 +257,11 @@ export function normalizeTzid(tzid: string): string {
  * ICAL.TimezoneService, so ICAL.RecurExpansion can expand a series in its
  * own zone and ICAL.helpers.updateTimezones can emit a VTIMEZONE.
  *
- * Synchronous and browser-safe: the raw zone texts are bundled by Vite and
- * parsed on first use. Returns true when the zone is available.
+ * Synchronous and browser-safe for zones already registered in
+ * TimezoneService. Zones packaged by @touch4it/ical-timezones are loaded by
+ * `ensureZoneRegisteredAsync`; a synchronous call cannot wait for a browser
+ * module asset and therefore returns false until that async path has loaded
+ * the zone.
  *
  * Lookup order is deliberate: the service is consulted (after a
  * non-destructive prime) before the package, so zones the CalDAV adapter
@@ -218,19 +273,46 @@ export function ensureZoneRegistered(tzid: string): boolean {
   const resolved = normalizeTzid(tzid)
   if (ICAL.TimezoneService.has(resolved)) return true
   if (resolved === 'UTC') return true
-  try {
-    const filename = (zoneIndex as Record<string, string>)[resolved]
-    const text = filename ? zoneText(filename) : undefined
-    if (!text) return false
-    const comp = new ICAL.Component(ICAL.parse(text) as unknown as string[])
-    // The zone file is a VCALENDAR wrapper; take the VTIMEZONE inside.
-    const vtimezone = comp.name === 'vcalendar' ? comp.getFirstSubcomponent('vtimezone') : comp
-    if (!vtimezone) return false
-    ICAL.TimezoneService.register(new ICAL.Timezone(vtimezone), resolved)
-    return true
-  } catch {
-    return false
-  }
+  const filename = (zoneIndex as Record<string, string>)[resolved]
+  const text = filename ? zoneTextCache.get(filename) ?? zoneTextByFilename.get(filename) : undefined
+  if (text) return registerZoneText(resolved, text)
+  return false
+}
+
+/**
+ * Load and register a packaged timezone, if one exists. Source-provided
+ * VTIMEZONE components always win: the service is checked both before and
+ * after the asynchronous asset load, so a server-provided definition cannot
+ * be replaced by the package's IANA definition while the load is in flight.
+ */
+export async function ensureZoneRegisteredAsync(tzid: string): Promise<boolean> {
+  primeService()
+  const resolved = normalizeTzid(tzid)
+  if (ICAL.TimezoneService.has(resolved) || resolved === 'UTC') return true
+
+  const filename = (zoneIndex as Record<string, string>)[resolved]
+  const text = filename ? await zoneText(filename) : undefined
+  if (!text) return false
+
+  // A source VTIMEZONE may have been registered while the zone asset loaded.
+  if (ICAL.TimezoneService.has(resolved)) return true
+
+  return registerZoneText(resolved, text)
+}
+
+/**
+ * Best-effort preload for a group of referenced TZIDs. Unknown or unavailable
+ * zones resolve to false and retain ical.js's normal floating/device-local
+ * fallback; one failed zone never prevents other zones from loading.
+ */
+export async function preloadTimezones(
+  tzids: Iterable<string>
+): Promise<ReadonlyMap<string, boolean>> {
+  const unique = [...new Set([...tzids].map((tzid) => tzid.trim()).filter(Boolean))]
+  const results = await Promise.all(
+    unique.map(async (tzid) => [tzid, await ensureZoneRegisteredAsync(tzid)] as const)
+  )
+  return new Map(results)
 }
 
 /**

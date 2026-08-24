@@ -3,11 +3,11 @@ import { useCallback, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { parseISO } from 'date-fns'
 import { useTranslation } from 'react-i18next'
-import { useCalendarStore } from '@/store/calendarStore'
+import { useCalendarStore, selectApplyEventChanges } from '@/store/calendarStore'
 import { useSettingsStore, EVENT_COLORS } from '@/store/settingsStore'
 import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
 import { useModalDismiss } from '@/hooks/useModalDismiss'
-import { parseICALData } from '@/features/caldav/adapter/iCalendarAdapter'
+import { parseICALData, parseICALDataAsync } from '@/features/caldav/adapter/iCalendarAdapter'
 import { showToast } from '@/lib/toast'
 import { withProgress } from '@/store/progressStore'
 import { formatDisplayDate } from '@/lib/datetime'
@@ -81,6 +81,7 @@ export function IcsImportModal({
   const isImportingRef = useRef(false)
 
   const caldav = useCalDAV()
+  const applyEventChanges = useCalendarStore(selectApplyEventChanges)
   const timeFormat = useSettingsStore((state) => state.timeFormat)
 
   // Closed synchronously rather than through useAnimatedClose: the parent
@@ -96,9 +97,8 @@ export function IcsImportModal({
   const dialogRef = useRef<HTMLDivElement>(null)
   useModalDismiss(dialogRef, isOpen, requestClose)
 
-  // Parsed once per file, not per render — parseICALData walks the whole
-  // document three times (events, tasks, journals). parseICALData already
-  // catches ICAL.parse failures per-component internally, but a malformed
+  // Parsed once per file, not per render. parseICALData catches ICAL.parse
+  // failures per-component internally, but a malformed
   // file can still hit an unexpected exception path (e.g. inside a type
   // mapper) — this MUST NOT throw during render, or the whole modal tree
   // (and anything above it) unmounts. Any parse failure degrades to "0
@@ -172,13 +172,11 @@ export function IcsImportModal({
           .map((e) => e.uid ?? e.id)
       )
 
-      const incoming = parseICALData(icsText, calendarId).filter(
+      const incoming = (await parseICALDataAsync(icsText, calendarId)).filter(
         (e) => !existing.has(e.uid ?? e.id)
       )
 
-      for (const event of incoming) {
-        useCalendarStore.getState().addEvent(event)
-      }
+      applyEventChanges({ upserts: incoming, deleteIds: [] })
 
       // Group by UID before pushing: a recurring series' master and its
       // overrides share one UID and MUST live in a single calendar object

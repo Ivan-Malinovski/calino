@@ -3,6 +3,26 @@ import type { Category } from '@/types/categories'
 import { DEFAULT_CALENDAR_COLOR } from '@/config'
 import { isUUID } from './uuid'
 
+export interface ResolvedEventColorSources {
+  calendarColor?: string
+  categoryColor?: string
+  useCategoryColors: boolean
+}
+
+/**
+ * Resolve an event color after the relevant calendar/category records have
+ * already been selected. Keeping this separate from `getEventColor` lets
+ * cards subscribe to only the records that can affect their own appearance.
+ */
+export function getEventColorFromSources(
+  event: CalendarEvent,
+  sources: ResolvedEventColorSources
+): string {
+  if (event.color) return event.color
+  if (sources.useCategoryColors && sources.categoryColor) return sources.categoryColor
+  return sources.calendarColor ?? DEFAULT_CALENDAR_COLOR
+}
+
 /**
  * Resolve the display color for an event.
  *
@@ -20,16 +40,18 @@ export function getEventColor(
     useCategoryColors: boolean
   }
 ): string {
-  if (event.color) return event.color
-
-  if (options.useCategoryColors && event.categories && event.categories.length > 0) {
-    const firstCategory = options.categories.find((cat) => {
-      const catValue = event.categories![0]
-      return isUUID(catValue) ? cat.id === catValue : cat.name === catValue
-    })
-    if (firstCategory?.color) return firstCategory.color
-  }
-
+  const categoryValue = event.categories?.[0]
+  const firstCategory =
+    options.useCategoryColors && categoryValue
+      ? options.categories.find((cat) =>
+          isUUID(categoryValue) ? cat.id === categoryValue : cat.name === categoryValue
+        )
+      : undefined
   const calendar = options.calendars.find((c) => c.id === event.calendarId)
-  return calendar?.color ?? DEFAULT_CALENDAR_COLOR
+
+  return getEventColorFromSources(event, {
+    categoryColor: firstCategory?.color,
+    calendarColor: calendar?.color,
+    useCategoryColors: options.useCategoryColors,
+  })
 }
