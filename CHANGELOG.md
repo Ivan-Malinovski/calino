@@ -4,6 +4,34 @@ All notable changes to Calino will be documented in this file.
 
 ## [Unreleased]
 
+## [0.31.1] - 2026-08-24
+
+### Changed
+
+- Calendar sync and rendering do less work: day view prepares its layout once
+  instead of on every pointer move, and event cards only re-render when their
+  own calendar or category changes.
+
+- The app reaches first paint sooner. Contacts sync, reminders, photo import,
+  and housekeeping now start after the calendar is on screen rather than
+  blocking it.
+
+- Only the selected language's translations are downloaded, and timezone
+  definitions are parsed the first time a zone is actually used.
+
+- CalDAV sync skips requests for components a server says it does not support,
+  so fewer pointless round trips are made against limited servers.
+
+- Dependencies updated.
+
+### Fixed
+
+- Deeply nested imported task chains no longer overflow the call stack when
+  collapse state is derived.
+
+- A server-provided timezone definition is no longer overwritten by the bundled
+  copy of that zone.
+
 ## [0.31.0] - 2026-08-24
 
 ### Added
