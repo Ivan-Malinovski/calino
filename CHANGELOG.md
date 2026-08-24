@@ -21,7 +21,7 @@ All notable changes to Calino will be documented in this file.
   can follow you through settings sync.
 
 - **Sliding week navigation** lets you move through a seven-day window one day
-  at a time while keeping the normal week controls available.
+  at a time while keeping the normal week controls available ([#127](https://github.com/Ivan-Malinovski/calino/issues/127)).
 
 - **Journal entries have a split workspace** for browsing dates and editing the
   selected entry, with layouts adapted for smaller screens.
