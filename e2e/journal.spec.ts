@@ -292,6 +292,51 @@ test.describe('Journal view', () => {
     await expect(page.getByText('Filed elsewhere')).toBeHidden()
   })
 
+  test.describe('empty journal bodies still synchronize', () => {
+    test.describe.configure({ mode: 'serial' })
+
+    test('creates a title-only journal and clears an existing body on the server', async ({
+      page,
+      baseURL,
+    }) => {
+      await clearState(page)
+      await seedMoveAccount(page, baseURL!)
+      await page.request.post(
+        `${baseURL}/mock-caldav/__test__/reset?prefix=${encodeURIComponent(J_WORK)}`
+      )
+      await page.request.put(`${baseURL}/mock-caldav${J_WORK}j-empty.ics`, {
+        data: MOVE_VJOURNAL('Clearable entry', 'Server text to clear.'),
+      })
+      await seedJournalMoveStore(page)
+
+      await page.goto('/journal')
+      await syncAll(page)
+      await page.getByText('Clearable entry').first().dblclick()
+      await page.getByRole('button', { name: 'Write' }).click()
+      await page.locator('[data-component="journal-body-input"]').fill('')
+      await expect
+        .poll(async () => {
+          const resources = (await dump(page, baseURL!, J_WORK)) ?? {}
+          return Object.values(resources).join('\n')
+        })
+        .not.toContain('Server text to clear.')
+
+      await clearState(page)
+      await seedMoveAccount(page, baseURL!)
+      await page.request.post(
+        `${baseURL}/mock-caldav/__test__/reset?prefix=${encodeURIComponent(J_WORK)}`
+      )
+      await seedJournalMoveStore(page)
+      await page.goto('/journal')
+      await page.locator('[data-component="journal-new-entry"]').click()
+      await pickJournalCalendar(page, 'j-work')
+      await page.getByPlaceholder('Title (optional)').fill('Title only')
+      await expect
+        .poll(async () => Object.values((await dump(page, baseURL!, J_WORK)) ?? {}).join('\n'))
+        .toContain('SUMMARY:Title only')
+    })
+  })
+
   test('uses a split editor and selects entries with one click', async ({ page }) => {
     await page.setViewportSize({ width: 1800, height: 900 })
     await page.goto('/journal')

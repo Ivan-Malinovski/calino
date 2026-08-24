@@ -8,7 +8,7 @@ import React, {
   useRef,
   useState,
 } from 'react'
-import { format, parseISO } from 'date-fns'
+import { parseISO } from 'date-fns'
 import { Trash2 } from 'lucide-react'
 import { useCalendarStore, isJournalEntryVisible } from '@/store/calendarStore'
 import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
@@ -17,7 +17,7 @@ import { MarkdownView } from '@/lib/markdown'
 import { wrapMarkdownSelection } from '@/lib/markdownHelpers'
 import { showToast } from '@/lib/toast'
 import { deleteEventWithUndo } from '@/lib/deleteWithUndo'
-import { toLocalDateString } from '@/lib/datetime'
+import { formatDisplayDate, formatMonthYear, toLocalDateString } from '@/lib/datetime'
 import { putAttachments, getAttachments } from '@/lib/attachmentStore'
 import type { Calendar, CalendarAttachment, CalendarEvent } from '@/types'
 import { AttachmentSection } from './AttachmentSection'
@@ -37,9 +37,9 @@ interface DateParts {
 function formatEntryDate(dateStr: string): DateParts {
   const date = parseISO(dateStr)
   return {
-    day: format(date, 'd'),
-    weekday: format(date, 'EEE').toUpperCase(),
-    monthYear: format(date, 'MMM yyyy').toUpperCase(),
+    day: formatDisplayDate(date, 'd'),
+    weekday: formatDisplayDate(date, 'EEE').toUpperCase(),
+    monthYear: formatDisplayDate(date, 'MMM yyyy').toUpperCase(),
   }
 }
 
@@ -219,7 +219,7 @@ function JournalEditor({
         ? 'Saving…'
         : status === 'error'
           ? 'Sync failed'
-          : entry.description?.trim()
+          : (entry.calendarId !== 'default' || entry.resourceHref) && status === 'saved'
             ? 'Saved'
             : 'Draft saved locally'
 
@@ -599,11 +599,20 @@ export function JournalView(): JSX.Element {
       timersRef.current.delete(id)
       const entry = eventsRef.current.find((event) => event.id === id)
       if (!entry) return
-      if (!entry.description?.trim()) {
+      const existing = syncBaseRef.current.get(id)
+      const isEmptyNewDraft =
+        draftIdsRef.current.has(id) &&
+        !existing &&
+        !entry.title.trim() &&
+        !entry.url &&
+        !entry.attachments?.length &&
+        !entry.categories?.length &&
+        !entry.relatedTo?.length &&
+        !entry.description?.trim()
+      if (isEmptyNewDraft) {
         setStatus(id, 'saved')
         return
       }
-      const existing = syncBaseRef.current.get(id)
       const targetCalendar = calendarsRef.current.find(
         (calendar) => calendar.id === entry.calendarId
       )
@@ -899,8 +908,8 @@ export function JournalView(): JSX.Element {
             <div className={styles.listHeader} data-component="journal-list-header">
               <span>
                 {viewMode === 'month'
-                  ? format(parseISO(`${currentDate.slice(0, 7)}-01`), 'MMMM yyyy')
-                  : 'All entries'}
+                  ? formatMonthYear(`${currentDate.slice(0, 7)}-01`)
+                  : t('surface.journalAllEntries')}
               </span>
             </div>
             <div

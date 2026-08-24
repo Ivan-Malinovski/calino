@@ -53,6 +53,18 @@ All notable changes to Calino will be documented in this file.
 - Month, agenda, journal, and mobile calendar layouts have been refined for
   more flexible resizing and navigation.
 
+### Fixed
+
+- Journal entries with a title but no body now sync correctly, and clearing an
+  existing entry's body is sent to the server instead of being treated as a
+  local-only draft.
+
+- Agenda, journal, and task dates and labels now follow the selected language,
+  including the German and Danish calendar surfaces.
+
+- Agenda task rows remain keyboard-accessible without nesting their completion
+  and subtask controls inside another interactive control.
+
 ## [0.30.0] - 2026-08-21
 
 ### Added

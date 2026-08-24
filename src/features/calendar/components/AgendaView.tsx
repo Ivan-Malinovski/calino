@@ -106,6 +106,7 @@ function AgendaDraggableItem({
   onClick,
   onKeyDown,
   onContextMenu,
+  disableKeyboardAttributes = false,
 }: {
   event: CalendarEvent
   className: string
@@ -117,6 +118,7 @@ function AgendaDraggableItem({
   onClick: (event: React.MouseEvent) => void
   onKeyDown: (event: React.KeyboardEvent) => void
   onContextMenu: (event: React.MouseEvent) => void
+  disableKeyboardAttributes?: boolean
 }): JSX.Element {
   const { t } = useTranslation('calendar')
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
@@ -149,7 +151,7 @@ function AgendaDraggableItem({
       className={`${className} ${isDragging ? styles.agendaDragging : ''} ${isDropOver && dropTargetId ? styles.agendaTaskDropOver : ''}`}
       data-component={dataComponent}
       data-drop-state={isDropOver && dropTargetId ? 'make-subtask' : undefined}
-      {...attributes}
+      {...(disableKeyboardAttributes ? {} : attributes)}
       {...listeners}
       onClick={onClick}
       onKeyDown={onKeyDown}
@@ -689,8 +691,8 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
                         className={`${styles.agendaDayHeader} ${isEmpty ? styles.isEmpty : ''} ${isToday ? styles.isToday : ''}`}
                       >
                         <div className={styles.agendaDayLabel}>
-                          <span className={styles.agendaDow}>{format(day, 'EEEE')}</span>
-                          <span className={styles.agendaDate}>{format(day, 'MMM d, yyyy')}</span>
+                          <span className={styles.agendaDow}>{formatDisplayDate(day, 'EEEE')}</span>
+                          <span className={styles.agendaDate}>{formatDisplayDate(day, 'PP')}</span>
                         </div>
                         {!isEmpty && (
                           <button
@@ -745,6 +747,7 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
                                         }
                                       }}
                                       onContextMenu={(e) => handleEventContextMenu(e, event)}
+                                      disableKeyboardAttributes
                                     >
                                       <div className={styles.agendaTaskBar} />
                                       <div
@@ -754,7 +757,7 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
                                         <div className={styles.agendaTaskMain}>
                                           <span className={styles.agendaTaskTime}>
                                             {event.start.includes('T00:00')
-                                              ? 'Due'
+                                              ? t('surface.agendaDue')
                                               : formatEventTime(
                                                   event.start,
                                                   event.timezone,
@@ -766,11 +769,12 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
                                             className={styles.agendaTaskIcon}
                                             role="checkbox"
                                             aria-checked={!!event.completed}
-                                            aria-label={
+                                            aria-label={t(
                                               event.completed
-                                                ? `Mark "${event.title}" as incomplete`
-                                                : `Mark "${event.title}" as complete`
-                                            }
+                                                ? 'modals.eventPreview.markIncomplete'
+                                                : 'modals.eventPreview.markComplete',
+                                              { title: event.title }
+                                            )}
                                             onPointerDown={(e) => e.stopPropagation()}
                                             onClick={(e) => {
                                               // The whole card opens the task; the
@@ -781,9 +785,19 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
                                           >
                                             {event.completed ? '✓' : '○'}
                                           </button>
-                                          <span className={styles.agendaTaskTitle}>
+                                          <button
+                                            type="button"
+                                            className={styles.agendaTaskTitle}
+                                            onClick={(e) => {
+                                              e.stopPropagation()
+                                              handleEventClick(
+                                                e as unknown as React.MouseEvent,
+                                                event
+                                              )
+                                            }}
+                                          >
                                             {event.title}
-                                          </span>
+                                          </button>
                                           {taskCollapse.hasSubtasks(event.id) && (
                                             <TaskCollapseToggle
                                               taskTitle={event.title}
@@ -848,7 +862,7 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
                                       <div className={styles.agendaEventMain}>
                                         <span className={styles.agendaEventTime}>
                                           {event.isAllDay
-                                            ? 'All day'
+                                            ? t('surface.agendaAllDay')
                                             : formatEventTime(
                                                 event.start,
                                                 event.timezone,

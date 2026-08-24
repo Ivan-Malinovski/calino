@@ -182,7 +182,14 @@
     "navShowAllViews": "Show all views",
     "navCreate": "Create",
     "navBackToCalendar": "Back to calendar",
-    "agendaMakeSubtask": "Make subtask"
+    "agendaMakeSubtask": "Make subtask",
+    "agendaDue": "Due",
+    "agendaAllDay": "All day",
+    "today": "Today",
+    "tomorrow": "Tomorrow",
+    "expandSubtasks": "Expand subtasks for \"{{title}}\"",
+    "collapseSubtasks": "Collapse subtasks for \"{{title}}\"",
+    "hiddenCount": "{{count}} hidden"
   },
   "modals": {
     "deleteCalendar": {
