@@ -35,7 +35,8 @@ All notable changes to Calino will be documented in this file.
   and calendars still appear below.
 
 - **Fortnightly recurrence phrases** such as "every other day/week/month" or
-  "every other monday" are understood by the command palette.
+  "every other monday" are understood by the command palette. This extends the
+  recurring-task work tracked in [#96](https://github.com/Ivan-Malinovski/calino/issues/96).
 
 ### Changed
 
@@ -60,6 +61,8 @@ All notable changes to Calino will be documented in this file.
 - Journal entries with a title but no body now sync correctly, and clearing an
   existing entry's body is sent to the server instead of being treated as a
   local-only draft.
+
+- **Journal entries use the local calendar day at UTC boundaries** ([#116](https://github.com/Ivan-Malinovski/calino/issues/116)), so an evening entry west of UTC is no longer filed under tomorrow.
 
 - Agenda, journal, and task dates and labels now follow the selected language,
   including the German and Danish calendar surfaces.
