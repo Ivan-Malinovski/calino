@@ -4,6 +4,8 @@ All notable changes to Calino will be documented in this file.
 
 ## [Unreleased]
 
+## [0.31.0] - 2026-08-24
+
 ### Added
 
 - **Adjustable themes** let you tune light and dark palettes with live color,
