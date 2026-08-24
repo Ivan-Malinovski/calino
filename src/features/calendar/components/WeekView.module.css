@@ -454,40 +454,6 @@
     height: 100%;
   }
 
-  .mobileContinuationCue {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    z-index: 20;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    max-width: calc(100% - 20px);
-    padding: 7px 8px 7px 10px;
-    border: 1px solid var(--line);
-    border-radius: var(--radius-full, 999px);
-    background: color-mix(in srgb, var(--panel) 92%, transparent);
-    box-shadow: var(--shadow-card);
-    color: var(--ink-2);
-    font-size: 11px;
-    font-weight: 600;
-    pointer-events: none;
-  }
-
-  .mobileContinuationCue button {
-    width: 24px;
-    height: 24px;
-    flex: 0 0 24px;
-    border: none;
-    border-radius: 50%;
-    background: var(--hover-bg);
-    color: var(--ink-2);
-    font-size: 16px;
-    line-height: 1;
-    cursor: pointer;
-    pointer-events: auto;
-  }
-
   .mobileContainer::-webkit-scrollbar {
     display: none;
   }

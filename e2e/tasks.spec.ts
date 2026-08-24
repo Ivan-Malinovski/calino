@@ -76,7 +76,9 @@ test('renders imported subtasks beneath their parent', async ({ page }) => {
 
   await parent.click()
   await expect(
-    page.locator('[data-component="modal-card"]').getByRole('button', { name: 'Book hotel' })
+    page
+      .locator('[data-component="modal-card"]')
+      .getByRole('button', { name: 'Book hotel', exact: true })
   ).toBeVisible()
 })
 
@@ -163,8 +165,10 @@ test('month task cards and task surfaces expose subtask completion controls', as
 
   await preview.getByRole('button', { name: 'Open task' }).click()
   const modal = page.locator('[data-component="modal-card"]')
-  await expect(modal.getByRole('button', { name: 'Surface child' })).toBeVisible()
-  await expect(modal.getByRole('button', { name: 'Surface grandchild' })).toBeVisible()
+  await expect(modal.getByRole('button', { name: 'Surface child', exact: true })).toBeVisible()
+  await expect(
+    modal.getByRole('button', { name: 'Surface grandchild', exact: true })
+  ).toBeVisible()
   await expect(
     modal.getByRole('checkbox', { name: 'Mark "Surface grandchild" as incomplete' })
   ).toBeChecked()

@@ -7,10 +7,11 @@ import { useSettingsStore, EVENT_COLORS } from '@/store/settingsStore'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useContactStore } from '@/store/contactStore'
 import { useConfigStore } from '@/store/configStore'
-import { parseICALData } from '@/features/caldav/adapter/iCalendarAdapter'
+import { parseICALDataAsync } from '@/features/caldav/adapter/iCalendarAdapter'
 import { parseVCard } from '@/features/carddav/adapter/vCardAdapter'
 import { requestNativeReminderPermission } from '@/lib/nativeReminders'
 import { config } from '@/config'
+import { createUuid } from '@/lib/uuid'
 import styles from './OnboardingModal.module.css'
 
 const isNative = Capacitor.isNativePlatform()
@@ -25,7 +26,6 @@ export function OnboardingModal({ onAddCalendar }: OnboardingModalProps): JSX.El
 
   const hasCompletedOnboarding = useSettingsStore((state) => state.hasCompletedOnboarding)
   const updateSettings = useSettingsStore((state) => state.updateSettings)
-  const addEvent = useCalendarStore((state) => state.addEvent)
   const addCategory = useCalendarStore((state) => state.addCategory)
   const categories = useCalendarStore((state) => state.categories)
   const calendars = useCalendarStore((state) => state.calendars)
@@ -102,7 +102,7 @@ export function OnboardingModal({ onAddCalendar }: OnboardingModalProps): JSX.El
       const defaultCalendar = calendars.find((c) => c.isDefault) ?? calendars[0]
       const calendarId = defaultCalendar?.id ?? 'default'
 
-      const events = parseICALData(icsData, calendarId)
+      const events = await parseICALDataAsync(icsData, calendarId)
 
       // Auto-create missing categories (mirrors useCalDAV.ts auto-creation logic)
       const newCategoryNames: string[] = []
@@ -119,13 +119,13 @@ export function OnboardingModal({ onAddCalendar }: OnboardingModalProps): JSX.El
 
       for (const catName of newCategoryNames) {
         addCategory({
-          id: crypto.randomUUID(),
+          id: createUuid(),
           name: catName,
           color: EVENT_COLORS[Math.floor(Math.random() * EVENT_COLORS.length)],
         })
       }
 
-      events.forEach((event) => addEvent(event))
+      useCalendarStore.getState().applyEventChanges({ upserts: events, deleteIds: [] })
 
       // Enable journal feature if sample data contains journal entries
       const hasJournals = events.some((e) => e.type === 'journal')

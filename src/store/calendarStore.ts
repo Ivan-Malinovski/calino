@@ -12,6 +12,7 @@ import type {
   EventType,
   DuplicateUidIssue,
   TaskOccurrencePlan,
+  CalendarEventChanges,
 } from '@/types'
 import type { Category, AutoCategoryRule } from '@/types/categories'
 import type { ExtractedEventFields } from '@/features/aiVision/types'
@@ -32,6 +33,7 @@ import { deleteAttachments } from '@/lib/attachmentStore'
 import { deleteRawIcs, deleteRawIcsForCalendar } from '@/lib/rawIcsStore'
 import { useSettingsStore } from '@/store/settingsStore'
 import { toZoneWallClock } from '@/lib/datetime'
+import { createUuid } from '@/lib/uuid'
 
 // Memo cache for getEventsForDateRange. Keyed by the range; a cached result is
 // reused only when its stored `version` matches the current
@@ -62,12 +64,15 @@ interface RangeCacheEntry {
   result: CalendarEvent[]
 }
 const rangeExpansionCache = new Map<string, RangeCacheEntry>()
-const bumpRangeExpansionVersion = (): void => {
+const nextRangeExpansionVersion = (): number => {
   rangeExpansionVersion++
+  return rangeExpansionVersion
+}
+const bumpRangeExpansionVersion = (): void => {
   // Keep the store property in sync so subscribers and memo deps see
   // the bump. The action setter is inlined to avoid an import cycle
   // (the setter is defined inside the create() call below).
-  useCalendarStore.setState({ rangeExpansionVersion })
+  useCalendarStore.setState({ rangeExpansionVersion: nextRangeExpansionVersion() })
 }
 
 // ---------------------------------------------------------------------------
@@ -452,6 +457,7 @@ export function getTasksForDay(events: CalendarEvent[], dayKey: string): Calenda
 export const selectOpenModal = (state: CalendarStore) => state.openModal
 export const selectOpenJournalModal = (state: CalendarStore) => state.openJournalModal
 export const selectAddEvent = (state: CalendarStore) => state.addEvent
+export const selectApplyEventChanges = (state: CalendarStore) => state.applyEventChanges
 export const selectUpdateEvent = (state: CalendarStore) => state.updateEvent
 
 export const selectDeleteEvent = (state: CalendarStore) => state.deleteEvent
@@ -592,6 +598,117 @@ export const useCalendarStore = create<CalendarStore>()(
           return { events: [...state.events, finalEvent] }
         })
         bumpRangeExpansionVersion()
+      },
+
+      applyEventChanges: (changes: CalendarEventChanges): void => {
+        const upserts = changes.upserts ?? []
+        const deleteIds = changes.deleteIds ?? []
+        const incomingCategories = changes.categories ?? []
+        if (upserts.length === 0 && deleteIds.length === 0 && incomingCategories.length === 0) {
+          return
+        }
+
+        // Include the version bump in the same set() call as the data changes.
+        // Calling bumpRangeExpansionVersion() afterwards would cause Zustand's
+        // persist middleware to serialize the complete store a second time.
+        const nextVersion = nextRangeExpansionVersion()
+        const deleteIdSet = new Set(deleteIds)
+        const upsertIds = new Set(upserts.map((event) => event.id))
+        // Keep batch reconciliation's IndexedDB cleanup in step with
+        // deleteEvent. An ID being replaced is excluded because its new raw
+        // data or attachments may already have been written by the importer.
+        for (const event of get().events) {
+          if (deleteIdSet.has(event.id) && !upsertIds.has(event.id)) {
+            void deleteAttachments(event.id).catch(() => {})
+            if (event.resourceHref) void deleteRawIcs(event.resourceHref).catch(() => {})
+          }
+        }
+        set((state) => {
+          const categories = [...state.categories]
+          for (const category of incomingCategories) {
+            // Match addCategory's name-based deduplication, including its
+            // case-sensitive comparison for backwards compatibility.
+            if (!categories.some((existing) => existing.name === category.name)) {
+              categories.push(category)
+            }
+          }
+
+          let events = state.events.filter((event) => !deleteIdSet.has(event.id))
+          const eventIndexes = new Map<string, number>()
+          for (let index = 0; index < events.length; index++) {
+            // Existing single-event insertion replaces the first matching ID;
+            // keep that behavior if legacy persisted data contains duplicates.
+            if (!eventIndexes.has(events[index].id)) eventIndexes.set(events[index].id, index)
+          }
+
+          const brokenEvents = [...state.brokenEvents]
+          for (const rawEvent of upserts) {
+            const event: CalendarEvent =
+              !rawEvent.isAllDay && rawEvent.timezone
+                ? {
+                    ...rawEvent,
+                    start: toZoneWallClock(rawEvent.start, rawEvent.timezone),
+                    end: toZoneWallClock(rawEvent.end, rawEvent.timezone),
+                    ...(rawEvent.dueDate
+                      ? { dueDate: toZoneWallClock(rawEvent.dueDate, rawEvent.timezone) }
+                      : {}),
+                  }
+                : rawEvent
+
+            if (event.start > event.end && !event.isAllDay) {
+              const reason = `start (${event.start}) > end (${event.end})`
+              console.warn(
+                `[Calendar] Broken event detected:\n` +
+                  `  id: ${event.id}\n` +
+                  `  title: ${event.title}\n` +
+                  `  calendar: ${event.calendarId}\n` +
+                  `  start: ${event.start}\n` +
+                  `  end: ${event.end}`
+              )
+              if (!brokenEvents.some((broken) => broken.event.id === event.id)) {
+                brokenEvents.push({ event, reason, detectedAt: new Date().toISOString() })
+              }
+              // Match updateEvent's quarantine behavior: an invalid
+              // replacement must not leave the previous valid copy visible.
+              events = events.filter((existing) => existing.id !== event.id)
+              eventIndexes.clear()
+              for (let index = 0; index < events.length; index++) {
+                if (!eventIndexes.has(events[index].id)) eventIndexes.set(events[index].id, index)
+              }
+              continue
+            }
+
+            const eventIndex = eventIndexes.get(event.id)
+            const existingEvent = eventIndex === undefined ? undefined : events[eventIndex]
+            const autoCategoryNames = applyAutoCategories(
+              event.title,
+              state.autoCategoryRules,
+              categories
+            )
+            const finalEvent: CalendarEvent = {
+              ...event,
+              categories: [...new Set([...(event.categories ?? []), ...autoCategoryNames])],
+              // CREATED is write-once for an existing event when a server
+              // refresh omits the property. New events receive the same local
+              // timestamp as addEvent.
+              created: event.created ?? existingEvent?.created ?? new Date().toISOString(),
+            }
+
+            if (eventIndex === undefined) {
+              eventIndexes.set(event.id, events.length)
+              events.push(finalEvent)
+            } else {
+              events[eventIndex] = finalEvent
+            }
+          }
+
+          return {
+            events,
+            brokenEvents,
+            categories,
+            rangeExpansionVersion: nextVersion,
+          }
+        })
       },
 
       updateEvent: (id: string, updates: Partial<CalendarEvent>): void => {
@@ -920,7 +1037,7 @@ export const useCalendarStore = create<CalendarStore>()(
 
         const newEvent: CalendarEvent = {
           ...eventToDuplicate,
-          id: crypto.randomUUID(),
+          id: createUuid(),
           uid: undefined,
           title: addCopySuffix ? `${eventToDuplicate.title} (copy)` : eventToDuplicate.title,
           recurrenceId: undefined,

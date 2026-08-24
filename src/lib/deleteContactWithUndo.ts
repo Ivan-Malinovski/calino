@@ -2,6 +2,7 @@ import type { Contact, PendingContactChange } from '@/features/carddav/types'
 import type { CalendarEvent } from '@/types'
 import { showToast } from './toast'
 import i18n from './i18n'
+import { createUuid } from './uuid'
 
 interface DeleteContactWithUndoOptions {
   contact: Contact
@@ -64,7 +65,7 @@ export function deleteContactWithUndo({
 
   // Queue pending delete for CardDAV sync. The snapshot carries url/etag/account
   // because the contact is already gone from the store by now.
-  const changeId = crypto.randomUUID()
+  const changeId = createUuid()
   const snapshot: PendingDeleteSnapshot = {
     url: contact.url,
     etag: contact.etag,
@@ -110,7 +111,7 @@ export function deleteContactWithUndo({
       void restoreCalendarEvents?.(removedCalendarEvents)
 
       addPendingChange({
-        id: crypto.randomUUID(),
+        id: createUuid(),
         type: 'create',
         contactId: restored.id,
         addressBookId: restored.addressBookId,

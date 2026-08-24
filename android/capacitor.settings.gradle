@@ -9,7 +9,7 @@ include ':capacitor-filesystem'
 project(':capacitor-filesystem').projectDir = new File('../node_modules/.pnpm/@capacitor+filesystem@8.1.2_@capacitor+core@8.5.0/node_modules/@capacitor/filesystem/android')
 
 include ':capgo-capacitor-share-target'
-project(':capgo-capacitor-share-target').projectDir = new File('../node_modules/.pnpm/@capgo+capacitor-share-target@8.0.44_@capacitor+core@8.5.0/node_modules/@capgo/capacitor-share-target/android')
+project(':capgo-capacitor-share-target').projectDir = new File('../node_modules/.pnpm/@capgo+capacitor-share-target@8.0.49_@capacitor+core@8.5.0/node_modules/@capgo/capacitor-share-target/android')
 
 include ':capacitor-app'
 project(':capacitor-app').projectDir = new File('../node_modules/.pnpm/@capacitor+app@8.1.1_@capacitor+core@8.5.0/node_modules/@capacitor/app/android')

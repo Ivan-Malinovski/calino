@@ -406,6 +406,34 @@ export function DayView({
   const timedTasks = useMemo(() => dayTasks.filter((t) => hasDueTime(t)), [dayTasks])
   const untimedTasks = useMemo(() => dayTasks.filter((t) => !hasDueTime(t)), [dayTasks])
 
+  // Geometry is independent of pointer-preview and create-drag state. Keep
+  // all expensive event preparation behind the two data inputs that can
+  // actually change the layout so those interactions only rebuild JSX and
+  // the preview overlay.
+  const dayEventLayout = useMemo(() => {
+    const sortedEvents = [...dayEvents].sort(
+      (a, b) =>
+        toEventInstant(a.start, a.timezone).getTime() -
+        toEventInstant(b.start, b.timezone).getTime()
+    )
+    const transparentEvents = sortedEvents.filter((e) => e.transparency === 'transparent')
+    const taskById = new Map(timedTasks.map((task) => [task.id, task]))
+    const taskLayoutItems = timedTasks.map((task) => ({
+      ...task,
+      end: format(
+        addMinutes(toEventInstant(task.start, task.timezone), TASK_PILL_LAYOUT_MINUTES),
+        "yyyy-MM-dd'T'HH:mm:ss"
+      ),
+    }))
+
+    return {
+      sortedEvents,
+      transparentEvents,
+      taskById,
+      positionedEvents: positionEvents([...sortedEvents, ...taskLayoutItems]),
+    }
+  }, [dayEvents, timedTasks])
+
   const [isScrolled, setIsScrolled] = useState(false)
   const lastDateRef = useRef(date.toISOString())
   const hasScrolledForDate = useRef(false)
@@ -436,13 +464,8 @@ export function DayView({
           fraction * bodyRef.current.scrollHeight - bodyRef.current.clientHeight * 0.3
         bodyRef.current.scrollTo({ top: Math.max(0, scrollTop), behavior: 'smooth' })
       } else if (dayEvents.length > 0) {
-        // Scroll to first event
-        const sortedEvents = [...dayEvents].sort(
-          (a, b) =>
-            toEventInstant(a.start, a.timezone).getTime() -
-            toEventInstant(b.start, b.timezone).getTime()
-        )
-        const firstEvent = sortedEvents[0]
+        // Reuse the sorted data used by the event layout below.
+        const firstEvent = dayEventLayout.sortedEvents[0]
         const eventStart = toEventInstant(firstEvent.start, firstEvent.timezone)
         const hours = eventStart.getHours()
         const minutes = eventStart.getMinutes()
@@ -455,7 +478,7 @@ export function DayView({
     })
 
     return () => cancelAnimationFrame(rafId)
-  }, [dayEvents, date])
+  }, [dayEvents, date, dayEventLayout.sortedEvents])
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>): void => {
     setIsScrolled(e.currentTarget.scrollTop > 0)
@@ -673,13 +696,7 @@ export function DayView({
   }
 
   const renderEvents = (): JSX.Element => {
-    const sortedEvents = [...dayEvents].sort(
-      (a, b) =>
-        toEventInstant(a.start, a.timezone).getTime() -
-        toEventInstant(b.start, b.timezone).getTime()
-    )
-
-    const transparentEvents = sortedEvents.filter((e) => e.transparency === 'transparent')
+    const { transparentEvents, taskById, positionedEvents } = dayEventLayout
 
     const elements: JSX.Element[] = []
     // Single transition override applied to every motion.div below —
@@ -724,22 +741,6 @@ export function DayView({
         </motion.div>
       )
     }
-
-    // Timed tasks share the event column algorithm so overlapping items sit
-    // side by side. They have zero duration, so `positionEvents` (strict
-    // overlap test) would never collide them — give each a nominal interval
-    // matching the pill's visual footprint for layout only, and render the
-    // original task.
-    const taskById = new Map(timedTasks.map((task) => [task.id, task]))
-    const taskLayoutItems = timedTasks.map((task) => ({
-      ...task,
-      end: format(
-        addMinutes(toEventInstant(task.start, task.timezone), TASK_PILL_LAYOUT_MINUTES),
-        "yyyy-MM-dd'T'HH:mm:ss"
-      ),
-    }))
-
-    const positionedEvents = positionEvents([...sortedEvents, ...taskLayoutItems])
 
     for (const { event, column, totalColumns } of positionedEvents) {
       const task = taskById.get(event.id)

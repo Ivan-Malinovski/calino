@@ -4,6 +4,7 @@ import type { AddressBook, Contact } from '../types'
 import { parseVCard, contactToVCard } from '../adapter/vCardAdapter'
 import { buildProxyUrl } from '@/features/caldav/client/CalDAVClient'
 import { webFetch } from '@/lib/webFetch'
+import { createUuid } from '@/lib/uuid'
 import {
   CardDAVConflictError,
   CardDAVPermissionError,
@@ -286,7 +287,7 @@ export class CardDAVClient {
       this.cachedCollectionProps.set(ab.url, collectionProps)
 
       results.push({
-        id: ab.url || crypto.randomUUID(),
+        id: ab.url || createUuid(),
         accountId: '', // Will be set by caller
         url: ab.url || '',
         name: typeof ab.displayName === 'string' ? ab.displayName : 'Unnamed Address Book',

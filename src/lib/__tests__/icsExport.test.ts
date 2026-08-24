@@ -6,6 +6,7 @@ import {
   exportCalendarIcs,
   exportAllEventsIcs,
 } from '../icsExport'
+import { ensureZoneRegisteredAsync } from '../timezoneRegistry'
 import { parseICALData } from '@/features/caldav/adapter/iCalendarAdapter'
 import type { Calendar, CalendarEvent } from '@/types'
 
@@ -181,7 +182,8 @@ describe('download helpers', () => {
     expect(clicked[0]!.download).toMatch(/^calino-export-\d{4}-\d{2}-\d{2}\.ics$/)
   })
   describe('Phase 2 C4 buildVCalendar VTIMEZONE', () => {
-    it('emits a VTIMEZONE and folds lines', () => {
+    it('emits a VTIMEZONE and folds lines', async () => {
+      await ensureZoneRegisteredAsync('Europe/Copenhagen')
       const ics = buildVCalendar([
         makeEvent({
           start: '2026-03-10T09:00:00',

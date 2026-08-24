@@ -35,6 +35,7 @@ import { TaskContextMenu } from './TaskContextMenu'
 import { TaskCollapseToggle } from './TaskCollapseToggle'
 import type { CalendarEvent } from '@/types'
 import styles from './TodoView.module.css'
+import { formatDisplayDate } from '@/lib/datetime'
 
 type FilterType = 'all' | 'active' | 'completed'
 
@@ -91,7 +92,10 @@ function getPriorityClass(priority?: number): string {
   return ''
 }
 
-function getDueLabel(task: TaskWithColor): { text: string; className: string } {
+function getDueLabel(
+  task: TaskWithColor,
+  translate: (key: string) => string
+): { text: string; className: string } {
   if (!task.dueDate) return { text: '—', className: '' }
 
   const today = startOfDay(new Date())
@@ -100,14 +104,14 @@ function getDueLabel(task: TaskWithColor): { text: string; className: string } {
   const diffDays = Math.round(diffMs / 86400000)
 
   if (diffDays < 0) {
-    return { text: format(parseISO(task.dueDate), 'MMM d'), className: styles.dueOverdue }
+    return { text: formatDisplayDate(task.dueDate, 'MMM d'), className: styles.dueOverdue }
   }
-  if (diffDays === 0) return { text: 'Today', className: styles.dueToday }
-  if (diffDays === 1) return { text: 'Tomorrow', className: '' }
+  if (diffDays === 0) return { text: translate('surface.today'), className: styles.dueToday }
+  if (diffDays === 1) return { text: translate('surface.tomorrow'), className: '' }
   if (diffDays <= 6) {
-    return { text: format(parseISO(task.dueDate), 'EEE'), className: '' }
+    return { text: formatDisplayDate(task.dueDate, 'EEE'), className: '' }
   }
-  return { text: format(parseISO(task.dueDate), 'MMM d'), className: '' }
+  return { text: formatDisplayDate(task.dueDate, 'MMM d'), className: '' }
 }
 
 /**
@@ -117,7 +121,7 @@ function getDueLabel(task: TaskWithColor): { text: string; className: string } {
  */
 function formatOccurrenceDate(iso: string, isAllDay: boolean | undefined): string {
   try {
-    return format(parseISO(iso), isAllDay ? 'EEE, d MMM yyyy' : 'EEE, d MMM yyyy, HH:mm')
+    return formatDisplayDate(parseISO(iso), isAllDay ? 'EEE, d MMM yyyy' : 'EEE, d MMM yyyy, HH:mm')
   } catch {
     return iso
   }
@@ -894,7 +898,7 @@ export function TodoView(): JSX.Element {
   const renderTask = useCallback(
     (item: Extract<VirtualItem, { type: 'task' }>, transform?: string, index?: number) => {
       const task = item.task
-      const dueInfo = getDueLabel(task)
+      const dueInfo = getDueLabel(task, (key) => t(key))
       const isActive = activeTaskId === task.id
       return (
         <div

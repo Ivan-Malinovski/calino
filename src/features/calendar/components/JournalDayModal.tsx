@@ -1,7 +1,7 @@
 import type { JSX } from 'react'
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { motion } from 'framer-motion'
-import { format, parseISO } from 'date-fns'
+import { parseISO } from 'date-fns'
 import { useCalendarStore, getJournalEntriesForDate } from '@/store/calendarStore'
 import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
 import { v4 as uuidv4 } from 'uuid'
@@ -17,6 +17,7 @@ import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { useSheetSwipeDismiss } from '@/hooks/useSheetSwipeDismiss'
 import styles from './JournalDayModal.module.css'
 import { useTranslation } from 'react-i18next'
+import { formatDisplayDate } from '@/lib/datetime'
 
 interface JournalDayModalProps {
   isOpen: boolean
@@ -96,9 +97,9 @@ export function JournalDayModal({
 
   // Parse the date for display
   const dateObj = parseISO(date)
-  const dayNum = format(dateObj, 'd')
-  const weekday = format(dateObj, 'EEEE')
-  const monthYear = format(dateObj, 'MMMM yyyy')
+  const dayNum = formatDisplayDate(dateObj, 'd')
+  const weekday = formatDisplayDate(dateObj, 'EEEE')
+  const monthYear = formatDisplayDate(dateObj, 'MMMM yyyy')
 
   // Reset mode when modal opens
   useEffect(() => {

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { BrowserRouter } from 'react-router'
 import { WeekView } from '../WeekView'
@@ -6,6 +6,7 @@ import { useCalendarStore } from '@/store/calendarStore'
 import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
 import { useGestures } from '@/hooks/useGestures'
 import { useIsMobile } from '@/hooks/useIsMobile'
+import { clearWeekWindowStart } from '@/features/calendar/weekWindow'
 
 vi.mock('@/features/caldav/hooks/useCalDAV')
 vi.mock('@/hooks/useGestures')
@@ -22,6 +23,7 @@ const renderWithRouter = (component: React.ReactElement) => {
 describe('WeekView', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    clearWeekWindowStart()
 
     mockUseCalDAV.mockReturnValue({
       accounts: [],
@@ -55,6 +57,10 @@ describe('WeekView', () => {
       showTasksInViews: true,
     })
     store.setCurrentDate('2024-03-15')
+  })
+
+  afterEach(() => {
+    clearWeekWindowStart()
   })
 
   it('renders week view with day headers', () => {
@@ -256,6 +262,7 @@ describe('WeekView', () => {
 describe('WeekView keyboard navigation', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    clearWeekWindowStart()
 
     mockUseCalDAV.mockReturnValue({
       accounts: [],

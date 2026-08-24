@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import ICAL from 'ical.js'
 import {
   eventToICAL,
@@ -8,6 +8,7 @@ import {
   parseICALEvent,
   parseICALTask,
   taskToICAL,
+  parseICALDataAsync,
 } from '../iCalendarAdapter'
 import {
   calendarEventToIcalComponent,
@@ -16,6 +17,7 @@ import {
   recurrenceIdICALString,
 } from '../icalTypeMapping'
 import type { CalendarEvent, Reminder } from '@/types'
+import { ensureZoneRegisteredAsync } from '@/lib/timezoneRegistry'
 
 describe('iCalendarAdapter', () => {
   describe('eventToICAL', () => {
@@ -1021,6 +1023,53 @@ END:VCALENDAR`
   })
 
   describe('parseICALData', () => {
+    it('parses a mixed document with one ICAL.parse call', () => {
+      const parseSpy = vi.spyOn(ICAL, 'parse')
+      const iCalData = `BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+UID:single-parse-event
+SUMMARY:Event
+DTSTART:20240315T140000Z
+DTEND:20240315T150000Z
+END:VEVENT
+BEGIN:VTODO
+UID:single-parse-task
+SUMMARY:Task
+DUE:20240315
+END:VTODO
+BEGIN:VJOURNAL
+UID:single-parse-journal
+SUMMARY:Journal
+DTSTART:20240315T140000Z
+END:VJOURNAL
+END:VCALENDAR`
+
+      expect(parseICALData(iCalData, 'cal-1').map((event) => event.id)).toEqual([
+        'single-parse-event',
+        'single-parse-task',
+        'single-parse-journal',
+      ])
+      expect(parseSpy).toHaveBeenCalledTimes(1)
+      parseSpy.mockRestore()
+    })
+
+    it('preloads referenced packaged zones before async mapping', async () => {
+      const iCalData = `BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+UID:async-zone-event
+SUMMARY:Zoned event
+DTSTART;TZID=Europe/Copenhagen:20240315T140000
+DTEND;TZID=Europe/Copenhagen:20240315T150000
+END:VEVENT
+END:VCALENDAR`
+
+      const result = await parseICALDataAsync(iCalData, 'cal-1')
+      expect(result).toHaveLength(1)
+      expect(result[0]?.timezone).toBe('Europe/Copenhagen')
+    })
+
     it('parses both events and tasks from combined iCal data', () => {
       const iCalData = `BEGIN:VCALENDAR
 VERSION:2.0
@@ -2253,84 +2302,87 @@ END:VCALENDAR`
       expect(out).not.toContain('RRULE')
     })
 
-  // ---------------------------------------------------------------------
-  // Phase 2 (C3) — serialization: never TZID-on-UTC, floating stays floating
-  // ---------------------------------------------------------------------
-  describe('Phase 2 C3 serialization', () => {
-    it('a .000Z instant on a TZID event becomes the zone wall clock, never TZID=...Z', () => {
-      const event: CalendarEvent = {
-        id: 'tzid-z',
-        calendarId: 'cal-1',
-        title: 'Z Instant',
-        // 2024-03-10T02:30:00Z = 2024-03-09 21:30 America/New_York (EST, before
-        // US spring-forward on Mar 10).
-        start: '2024-03-10T02:30:00.000Z',
-        end: '2024-03-10T03:30:00.000Z',
-        isAllDay: false,
-        timezone: 'America/New_York',
-      }
-      const out = eventToICAL(event)
-      expect(out).toContain('DTSTART;TZID=America/New_York:20240309T213000')
-      expect(out).not.toMatch(/TZID=America\/New_York:[0-9]{8}T[0-9]{6}Z/)
-      expect(out).not.toContain('DTSTART:20240310T023000Z')
-    })
+    // ---------------------------------------------------------------------
+    // Phase 2 (C3) — serialization: never TZID-on-UTC, floating stays floating
+    // ---------------------------------------------------------------------
+    describe('Phase 2 C3 serialization', () => {
+      it('a .000Z instant on a TZID event becomes the zone wall clock, never TZID=...Z', () => {
+        const event: CalendarEvent = {
+          id: 'tzid-z',
+          calendarId: 'cal-1',
+          title: 'Z Instant',
+          // 2024-03-10T02:30:00Z = 2024-03-09 21:30 America/New_York (EST, before
+          // US spring-forward on Mar 10).
+          start: '2024-03-10T02:30:00.000Z',
+          end: '2024-03-10T03:30:00.000Z',
+          isAllDay: false,
+          timezone: 'America/New_York',
+        }
+        const out = eventToICAL(event)
+        expect(out).toContain('DTSTART;TZID=America/New_York:20240309T213000')
+        expect(out).not.toMatch(/TZID=America\/New_York:[0-9]{8}T[0-9]{6}Z/)
+        expect(out).not.toContain('DTSTART:20240310T023000Z')
+      })
 
-    it('a naive string without a TZID stays floating (no Z, no TZID)', () => {
-      const event: CalendarEvent = {
-        id: 'floating',
-        calendarId: 'cal-1',
-        title: 'Floating',
-        start: '2024-03-10T02:30:00',
-        end: '2024-03-10T03:30:00',
-        isAllDay: false,
-      }
-      const out = eventToICAL(event)
-      expect(out).toContain('DTSTART:20240310T023000')
-      expect(out).not.toContain('DTSTART:20240310T013000Z')
-      expect(out).not.toMatch(/DTSTART;TZID=/)
-      expect(out).not.toMatch(/DTSTART:[0-9]{8}T[0-9]{6}Z/)
-    })
+      it('a naive string without a TZID stays floating (no Z, no TZID)', () => {
+        const event: CalendarEvent = {
+          id: 'floating',
+          calendarId: 'cal-1',
+          title: 'Floating',
+          start: '2024-03-10T02:30:00',
+          end: '2024-03-10T03:30:00',
+          isAllDay: false,
+        }
+        const out = eventToICAL(event)
+        expect(out).toContain('DTSTART:20240310T023000')
+        expect(out).not.toContain('DTSTART:20240310T013000Z')
+        expect(out).not.toMatch(/DTSTART;TZID=/)
+        expect(out).not.toMatch(/DTSTART:[0-9]{8}T[0-9]{6}Z/)
+      })
 
-    it('a UTC-valued EXDATE on a zoned series converts to the zone wall clock', () => {
-      const event: CalendarEvent = {
-        id: 'exdate-utc',
-        calendarId: 'cal-1',
-        title: 'Zoned with UTC EXDATE',
-        start: '2024-06-01T10:00:00',
-        end: '2024-06-01T11:00:00',
-        isAllDay: false,
-        timezone: 'Europe/Copenhagen',
-        rruleString: 'FREQ=DAILY',
-        // 2024-06-01T00:00:00Z = 02:00 CEST.
-        excludedDates: ['2024-06-01T00:00:00.000Z'],
-      }
-      const out = eventToICAL(event)
-      expect(out).toContain('EXDATE;TZID=Europe/Copenhagen:20240601T020000')
-      expect(out).not.toMatch(/EXDATE;TZID=Europe\/Copenhagen:[0-9]{8}T[0-9]{6}Z/)
-    })
+      it('a UTC-valued EXDATE on a zoned series converts to the zone wall clock', () => {
+        const event: CalendarEvent = {
+          id: 'exdate-utc',
+          calendarId: 'cal-1',
+          title: 'Zoned with UTC EXDATE',
+          start: '2024-06-01T10:00:00',
+          end: '2024-06-01T11:00:00',
+          isAllDay: false,
+          timezone: 'Europe/Copenhagen',
+          rruleString: 'FREQ=DAILY',
+          // 2024-06-01T00:00:00Z = 02:00 CEST.
+          excludedDates: ['2024-06-01T00:00:00.000Z'],
+        }
+        const out = eventToICAL(event)
+        expect(out).toContain('EXDATE;TZID=Europe/Copenhagen:20240601T020000')
+        expect(out).not.toMatch(/EXDATE;TZID=Europe\/Copenhagen:[0-9]{8}T[0-9]{6}Z/)
+      })
 
-    it('a UTC-valued RECURRENCE-ID on a zoned event converts to the zone wall clock', () => {
-      const event: CalendarEvent = {
-        id: 'recid-utc',
-        calendarId: 'cal-1',
-        title: 'Override',
-        start: '2024-03-10T02:30:00',
-        end: '2024-03-10T03:30:00',
-        isAllDay: false,
-        timezone: 'America/New_York',
-        // 2024-03-10T02:30:00Z = 2024-03-09 21:30 EST.
-        recurrenceId: '2024-03-10T02:30:00.000Z',
-      }
-      const out = eventToICAL(event)
-      expect(out).toContain('RECURRENCE-ID;TZID=America/New_York:20240309T213000')
-      expect(out).not.toMatch(/RECURRENCE-ID;TZID=America\/New_York:[0-9]{8}T[0-9]{6}Z/)
-      // The patch match key must agree with the emitted form.
-      expect(recurrenceIdICALString(event)).toContain('RECURRENCE-ID;TZID=America/New_York:20240309T213000')
+      it('a UTC-valued RECURRENCE-ID on a zoned event converts to the zone wall clock', () => {
+        const event: CalendarEvent = {
+          id: 'recid-utc',
+          calendarId: 'cal-1',
+          title: 'Override',
+          start: '2024-03-10T02:30:00',
+          end: '2024-03-10T03:30:00',
+          isAllDay: false,
+          timezone: 'America/New_York',
+          // 2024-03-10T02:30:00Z = 2024-03-09 21:30 EST.
+          recurrenceId: '2024-03-10T02:30:00.000Z',
+        }
+        const out = eventToICAL(event)
+        expect(out).toContain('RECURRENCE-ID;TZID=America/New_York:20240309T213000')
+        expect(out).not.toMatch(/RECURRENCE-ID;TZID=America\/New_York:[0-9]{8}T[0-9]{6}Z/)
+        // The patch match key must agree with the emitted form.
+        expect(recurrenceIdICALString(event)).toContain(
+          'RECURRENCE-ID;TZID=America/New_York:20240309T213000'
+        )
+      })
     })
-  })
   })
   describe('Phase 2 C4 VTIMEZONE emission', () => {
-    it('emits a VTIMEZONE for a referenced TZID', () => {
+    it('emits a VTIMEZONE for a referenced TZID', async () => {
+      await ensureZoneRegisteredAsync('Europe/Copenhagen')
       const event: CalendarEvent = {
         id: 'tzid-vtz',
         calendarId: 'cal-1',
@@ -2380,9 +2432,7 @@ END:VCALENDAR`
     })
 
     it('parses a file with mixed CRLF/LF line endings', () => {
-      const mixed = bareIcs
-        .map((line, i) => line + (i % 2 === 0 ? '\r\n' : '\n'))
-        .join('')
+      const mixed = bareIcs.map((line, i) => line + (i % 2 === 0 ? '\r\n' : '\n')).join('')
       const events = parseICALData(mixed, 'cal-1')
       expect(events).toHaveLength(1)
       expect(events[0].title).toBe('Bare LF meeting')

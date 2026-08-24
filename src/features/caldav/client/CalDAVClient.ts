@@ -436,61 +436,54 @@ export class CalDAVClient {
 
     // A regular sync needs the complete VEVENT listing so an absent resource
     // can be identified as a remote deletion. Initial imports may stay bounded.
-    const eventObjects = await client.fetchCalendarObjects({
-      calendar,
-      ...(includeAllEvents
-        ? {
-            filters: {
-              'comp-filter': {
-                _attributes: { name: 'VCALENDAR' },
-                'comp-filter': { _attributes: { name: 'VEVENT' } },
-              },
-            },
-          }
-        : {
-            timeRange: { start, end },
-          }),
-    })
+    // When the server advertised a component set, avoid reports for components
+    // it explicitly does not support. Missing metadata retains the historical
+    // all-component fallback for compatibility with incomplete servers.
+    const advertisedComponents = (calendar as { components?: string[] }).components
+    const supports = (component: string): boolean =>
+      !Array.isArray(advertisedComponents) || advertisedComponents.includes(component)
+    const requests: Promise<Array<{ url: string; data?: unknown; etag?: string }>>[] = []
 
-    // Fetch VTODOs with custom filter (tsdav defaults to VEVENT only)
-    const todoObjects = await client.fetchCalendarObjects({
-      calendar,
-      filters: {
-        'comp-filter': {
-          _attributes: {
-            name: 'VCALENDAR',
-          },
+    if (supports('VEVENT')) {
+      requests.push(
+        client.fetchCalendarObjects({
+          calendar,
+          ...(includeAllEvents
+            ? {
+                filters: {
+                  'comp-filter': {
+                    _attributes: { name: 'VCALENDAR' },
+                    'comp-filter': { _attributes: { name: 'VEVENT' } },
+                  },
+                },
+              }
+            : {
+                timeRange: { start, end },
+              }),
+        })
+      )
+    }
+
+    const componentRequest = (component: 'VTODO' | 'VJOURNAL') =>
+      client.fetchCalendarObjects({
+        calendar,
+        filters: {
           'comp-filter': {
-            _attributes: {
-              name: 'VTODO',
-            },
+            _attributes: { name: 'VCALENDAR' },
+            'comp-filter': { _attributes: { name: component } },
           },
         },
-      },
-    })
+      })
 
-    // Fetch VJOURNALs with custom filter
-    const journalObjects = await client.fetchCalendarObjects({
-      calendar,
-      filters: {
-        'comp-filter': {
-          _attributes: {
-            name: 'VCALENDAR',
-          },
-          'comp-filter': {
-            _attributes: {
-              name: 'VJOURNAL',
-            },
-          },
-        },
-      },
-    })
+    if (supports('VTODO')) requests.push(componentRequest('VTODO'))
+    if (supports('VJOURNAL')) requests.push(componentRequest('VJOURNAL'))
 
-    const allItems = [...eventObjects, ...todoObjects, ...journalObjects]
+    const allItems = (await Promise.all(requests)).flat()
 
     // Remove duplicates by URL - store raw server URLs consistently
     const uniqueByUrl = new Map<string, { url: string; data: string; etag?: string }>()
     for (const obj of allItems) {
+      if (typeof obj.url !== 'string' || typeof obj.data !== 'string') continue
       if (!uniqueByUrl.has(obj.url)) {
         uniqueByUrl.set(obj.url, {
           url: obj.url,

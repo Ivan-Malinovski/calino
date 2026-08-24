@@ -110,7 +110,7 @@ test.describe('deleting synced resources', () => {
     await expect(modal).toBeVisible()
     const deleteButton = modal.getByRole('button', { name: 'Delete' })
     await deleteButton.click()
-    await modal.getByRole('button', { name: /Click again to confirm/ }).click()
+    await deleteButton.click()
 
     await expect(page.getByText(/Failed to sync deletion/)).toHaveCount(0)
     await expect.poll(async () => Object.keys(await dump(page, baseURL!)).length).toBe(0)
@@ -156,8 +156,9 @@ test.describe('deleting synced resources', () => {
 
     await page.locator('main').getByText('Fallback etag task').first().click()
     await expect(modal).toBeVisible()
-    await modal.getByRole('button', { name: 'Delete' }).click()
-    await modal.getByRole('button', { name: /Click again to confirm/ }).click()
+    const deleteButton = modal.getByRole('button', { name: 'Delete' })
+    await deleteButton.click()
+    await deleteButton.click()
 
     await expect(page.getByText(/Failed to sync deletion/)).toHaveCount(0)
     await expect

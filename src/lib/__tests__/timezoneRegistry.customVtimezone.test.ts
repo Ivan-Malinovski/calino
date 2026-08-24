@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import ICAL from 'ical.js'
-import { ensureZoneRegistered, resolveZone } from '../timezoneRegistry'
+import { ensureZoneRegistered, ensureZoneRegisteredAsync, resolveZone } from '../timezoneRegistry'
 
 /**
  * Regression test for the verified bug: iCalendarAdapter.parseICALEvent
@@ -118,12 +118,18 @@ describe('timezoneRegistry: source-registered custom VTIMEZONE survives', () => 
     expect(zone!.tzid).toBe('Custom/Office.Late')
   })
 
-  it('IANA zones still register from the package and resolve (no regression)', () => {
-    expect(ensureZoneRegistered('Europe/Copenhagen')).toBe(true)
+  it('IANA zones still register from the package and resolve (no regression)', async () => {
+    expect(await ensureZoneRegisteredAsync('Europe/Copenhagen')).toBe(true)
     const zone = resolveZone('Europe/Copenhagen')
     expect(zone).toBeDefined()
     expect(zone!.tzid).toBe('Europe/Copenhagen')
     // Package data still carries the DST rule.
     expect(utcHourOf(zone!, { year: 2026, month: 7, day: 1, hour: 10 })).toBe(8)
+  })
+
+  it('keeps a source VTIMEZONE authoritative during async package preload', async () => {
+    const sourceZone = registerSourceVtimezone('Europe/Copenhagen')
+    expect(await ensureZoneRegisteredAsync('Europe/Copenhagen')).toBe(true)
+    expect(ICAL.TimezoneService.get('Europe/Copenhagen')).toBe(sourceZone)
   })
 })

@@ -270,8 +270,6 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
   const [isScrolled, setIsScrolled] = useState(false)
   const [scale, setScale] = useState(1)
   const [dayScale, setDayScale] = useState(1)
-  const [mobileWeekCanScroll, setMobileWeekCanScroll] = useState(false)
-  const [mobileWeekHintVisible, setMobileWeekHintVisible] = useState(true)
   const windowHeight = useWindowHeight()
   const stretchFactor = windowHeight > 1570 ? windowHeight / 1570 : 1
   const effectiveScale = scale * stretchFactor
@@ -300,11 +298,18 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
   useEffect(() => {
     const previous = previousVisibleWindowRef.current
     previousVisibleWindowRef.current = visibleWindowStart
-    if (previous === visibleWindowStart || !containerRef.current) return
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    const container = containerRef.current
+    if (previous === visibleWindowStart || !container) return
+    if (
+      (typeof window.matchMedia === 'function' &&
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches) ||
+      typeof container.animate !== 'function'
+    ) {
+      return
+    }
 
     const direction = visibleWindowStart > previous ? 1 : -1
-    const animation = containerRef.current.animate(
+    const animation = container.animate(
       [
         { transform: `translateX(${direction * 8}px)`, opacity: 0.82 },
         { transform: 'translateX(0)', opacity: 1 },
@@ -626,29 +631,6 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
     () => eachDayOfInterval({ start: rangeStart, end: rangeEnd }),
     [rangeStart, rangeEnd]
   )
-
-  // The mobile week intentionally uses a horizontally scrollable strip. Keep
-  // a small, dismissible affordance visible until the user has demonstrated
-  // that they know how to reveal the remaining days.
-  useLayoutEffect(() => {
-    if (!isMobile) return
-    const el = mobileScrollRef.current
-    if (!el) return
-
-    const update = (): void => {
-      setMobileWeekCanScroll(el.scrollWidth > el.clientWidth + 1)
-      if (el.scrollLeft > 4) setMobileWeekHintVisible(false)
-    }
-
-    update()
-    el.addEventListener('scroll', update, { passive: true })
-    const observer = new ResizeObserver(update)
-    observer.observe(el)
-    return () => {
-      el.removeEventListener('scroll', update)
-      observer.disconnect()
-    }
-  }, [isMobile, dayScale, weekDays.length])
 
   const { allDayEventsMap, eventsMap, timedFragmentsMap } = useMemo(() => {
     const weekEvents = getEventsForDateRange(
@@ -1286,22 +1268,6 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
           </div>
         </div>
       </div>
-      {mobileWeekCanScroll && mobileWeekHintVisible && (
-        <div
-          className={styles.mobileContinuationCue}
-          data-component="week-mobile-continuation"
-          role="status"
-        >
-          <span>{t('views.week.swipeForMoreDays')}</span>
-          <button
-            type="button"
-            aria-label={t('views.week.dismissWeekViewTip')}
-            onClick={() => setMobileWeekHintVisible(false)}
-          >
-            ×
-          </button>
-        </div>
-      )}
     </div>
   )
 

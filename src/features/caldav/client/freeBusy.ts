@@ -1,5 +1,6 @@
 import ICAL from 'ical.js'
 import type { FreeBusyPeriod, FreeBusyType } from '@/lib/freeBusyCalculator'
+import { createUuid } from '@/lib/uuid'
 
 const FBTYPES: FreeBusyType[] = ['BUSY', 'BUSY-UNAVAILABLE', 'BUSY-TENTATIVE', 'FREE']
 
@@ -94,7 +95,7 @@ export function buildFreeBusyRequestIcs(
     'PRODID:-//Calino//Calendar//EN',
     'METHOD:REQUEST',
     'BEGIN:VFREEBUSY',
-    `UID:${crypto.randomUUID()}`,
+    `UID:${createUuid()}`,
     `DTSTAMP:${toIcalUtcStamp(new Date())}`,
     `DTSTART:${toIcalUtcStamp(start)}`,
     `DTEND:${toIcalUtcStamp(end)}`,

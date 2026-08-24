@@ -524,6 +524,7 @@ export function CalendarHeader({
       className={styles.header}
       style={{ '--header-brand-col': brandColumnWidth } as React.CSSProperties}
       data-sidebar-collapsed={sidebarCollapsed || undefined}
+      data-view={currentView}
       {...bind}
       data-component="header"
     >
@@ -565,49 +566,44 @@ export function CalendarHeader({
           <ChevronRight />
         </button>
         </div>
-        {currentView === 'week' && (
-          <div className={styles.weekWindowControls} data-component="week-window-controls">
-            <button
-              className={styles.weekWindowArrow}
-              onClick={() => handleWeekWindowStep('prev')}
-              aria-label={t('views.week.showPreviousDay')}
-              title={t('views.week.showPreviousDay')}
-              data-action="previous-week-window-day"
-            >
-              <ChevronLeft size={14} />
-            </button>
-            <button
-              className={styles.weekWindowArrow}
-              onClick={() => handleWeekWindowStep('next')}
-              aria-label={t('views.week.showNextDay')}
-              title={t('views.week.showNextDay')}
-              data-action="next-week-window-day"
-            >
-              <ChevronRight size={14} />
-            </button>
-          </div>
-        )}
       </div>
 
       {/* Title — click returns to month view from anywhere (jumps to today when
           already in month) */}
       <div
         className={styles.titleGroup}
-        onClick={handleTitleClick}
-        role="button"
-        tabIndex={0}
+        onClick={currentView === 'week' ? undefined : handleTitleClick}
+        role={currentView === 'week' ? undefined : 'button'}
+        tabIndex={currentView === 'week' ? undefined : 0}
         aria-label={
-          currentView === 'month'
-            ? t('views.header.goToToday')
-            : t('views.header.goToMonthView')
+          currentView === 'week'
+            ? undefined
+            : currentView === 'month'
+              ? t('views.header.goToToday')
+              : t('views.header.goToMonthView')
         }
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault()
-            handleTitleClick()
-          }
-        }}
+        onKeyDown={
+          currentView === 'week'
+            ? undefined
+            : (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  handleTitleClick()
+                }
+              }
+        }
       >
+        {currentView === 'week' && (
+          <button
+            className={styles.weekTitleArrow}
+            onClick={() => handleWeekWindowStep('prev')}
+            aria-label={t('views.week.showPreviousDay')}
+            title={t('views.week.showPreviousDay')}
+            data-component="week-title-previous"
+          >
+            <ChevronLeft size={18} />
+          </button>
+        )}
         {typeof title === 'object' ? (
           <>
             <h1 key={`m${titleAnimKey}`} className={`${styles.monthTitle} ${titleAnimClass}`}>
@@ -621,6 +617,17 @@ export function CalendarHeader({
           <h1 key={`v${titleAnimKey}`} className={`${styles.viewTitle} ${titleAnimClass}`}>
             {title}
           </h1>
+        )}
+        {currentView === 'week' && (
+          <button
+            className={styles.weekTitleArrow}
+            onClick={() => handleWeekWindowStep('next')}
+            aria-label={t('views.week.showNextDay')}
+            title={t('views.week.showNextDay')}
+            data-component="week-title-next"
+          >
+            <ChevronRight size={18} />
+          </button>
         )}
       </div>
 

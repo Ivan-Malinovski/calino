@@ -178,7 +178,8 @@
 }
 
 .agendaAnimatedItem {
-  overflow: hidden;
+  /* Let the card's hover lift and shadow extend above the animated wrapper. */
+  overflow: visible;
 }
 
 /* ---- Event Row ---- */
@@ -267,16 +268,22 @@
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  padding: 8px 12px;
+  padding: 8px 20px;
+  position: relative;
 }
 
-.agendaSkipDay {
+.agendaSkipVisual {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  flex: 1;
-  min-width: 0;
-  padding: 0 4px;
+  width: 100%;
+}
+
+.agendaSkipDropZone {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 100%;
 }
 
 .agendaSkipLine {
@@ -384,14 +391,28 @@
 }
 
 .agendaTaskTitle {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  text-align: left;
+  font: inherit;
   font-size: 13px;
   font-weight: 500;
   color: var(--ink, #2c2823);
+  cursor: pointer;
   min-width: 0;
   flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.agendaTaskTitle:focus-visible {
+  outline: 2px solid var(--accent, #b07d4f);
+  outline-offset: 2px;
+  border-radius: 2px;
 }
 
 .agendaTaskCompleted .agendaTaskTitle {

@@ -3,10 +3,9 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 // Must run before App renders so the first paint is already translated.
 import { startI18n } from './lib/i18nBridge'
+import { initI18n } from './lib/i18n'
 import App from './App.tsx'
 import { config } from './config'
-
-startI18n()
 
 // Register service worker when enabled (requires self-hosting with proper CSP headers)
 if (config.enableServiceWorker && 'serviceWorker' in navigator) {
@@ -17,8 +16,17 @@ if (config.enableServiceWorker && 'serviceWorker' in navigator) {
   })
 }
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <App />
-  </StrictMode>
-)
+const renderApp = (): void => {
+  createRoot(document.getElementById('root')!).render(
+    <StrictMode>
+      <App />
+    </StrictMode>
+  )
+}
+
+void startI18n()
+  .catch((error: unknown) => {
+    console.error('[i18n] startup catalog failed; falling back to English:', error)
+    initI18n('en')
+  })
+  .then(renderApp)

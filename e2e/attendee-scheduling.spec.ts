@@ -98,6 +98,8 @@ test.describe('attendees and scheduling', () => {
       .getByRole('button', { name: /Open event/i })
       .click()
 
+    await page.locator('[data-component="event-advanced-toggle"]').click()
+
     const attendeeInput = page.getByLabel('Add attendee email')
     await expect(attendeeInput).toBeVisible()
     await attendeeInput.fill(ATTENDEE)
@@ -129,6 +131,8 @@ test.describe('attendees and scheduling', () => {
       .locator('[data-component="event-preview"]')
       .getByRole('button', { name: /Open event/i })
       .click()
+
+    await page.locator('[data-component="event-advanced-toggle"]').click()
 
     const attendeeInput = page.getByLabel('Add attendee email')
     await attendeeInput.fill('stranger@elsewhere.test')

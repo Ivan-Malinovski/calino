@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { format } from 'date-fns'
 import { toZoneWallClock } from '@/lib/datetime'
+import { safeLocalStorage } from '@/lib/storage'
 import { useCalendarStore } from '../calendarStore'
 
 describe('calendarStore', () => {
@@ -223,9 +224,7 @@ describe('calendarStore', () => {
       useCalendarStore.getState().updateEvent('tz-task-allday-norm', {
         dueDate: '2026-02-14',
       })
-      const updated = useCalendarStore.getState().events.find(
-        (e) => e.id === 'tz-task-allday-norm'
-      )
+      const updated = useCalendarStore.getState().events.find((e) => e.id === 'tz-task-allday-norm')
       // A bare date must never be resolved through the zone — Feb 14 stays
       // Feb 14 in every runner timezone.
       expect(updated?.dueDate).toBe('2026-02-14')
@@ -2031,6 +2030,116 @@ describe('calendarStore', () => {
 
   // #112 — `created` becomes the CREATED property on the wire, so it has to
   // be stamped once and then left alone.
+  describe('batched event and category changes', () => {
+    it('applies categories, auto-categories, TZID normalization, and duplicate upserts in one persistence pass', () => {
+      const store = useCalendarStore.getState()
+      store.addAutoCategoryRule({
+        id: 'rule-meeting',
+        keywords: ['meeting'],
+        categoryId: 'cat-work',
+      })
+      const originalCreated = '2020-01-02T03:04:05.000Z'
+      store.applyEventChanges({
+        deleteIds: [],
+        categories: [{ id: 'cat-work', name: 'Work', color: '#FF0000' }],
+        upserts: [
+          {
+            id: 'batch-event',
+            calendarId: 'default',
+            title: 'First meeting',
+            start: '2026-03-10T14:00:00Z',
+            end: '2026-03-10T15:00:00Z',
+            dueDate: '2026-03-10T16:00:00Z',
+            timezone: 'America/New_York',
+            isAllDay: false,
+            created: originalCreated,
+          },
+          {
+            id: 'batch-event',
+            calendarId: 'default',
+            title: 'Updated meeting',
+            start: '2026-03-10T15:00:00Z',
+            end: '2026-03-10T16:00:00Z',
+            timezone: 'America/New_York',
+            isAllDay: false,
+          },
+        ],
+      })
+
+      const event = useCalendarStore.getState().events.find((item) => item.id === 'batch-event')!
+      expect(useCalendarStore.getState().categories).toEqual([
+        { id: 'cat-work', name: 'Work', color: '#FF0000' },
+      ])
+      expect(event.title).toBe('Updated meeting')
+      expect(event.start).toBe('2026-03-10T11:00:00')
+      expect(event.end).toBe('2026-03-10T12:00:00')
+      expect(event.categories).toEqual(['Work'])
+      expect(event.created).toBe(originalCreated)
+    })
+
+    it('persists one combined state update and invalidates the range cache once', () => {
+      const beforeVersion = useCalendarStore.getState().rangeExpansionVersion
+      const setItem = vi.spyOn(safeLocalStorage, 'setItem')
+      const subscriber = vi.fn()
+      const unsubscribe = useCalendarStore.subscribe(subscriber)
+
+      try {
+        useCalendarStore.getState().applyEventChanges({
+          deleteIds: [],
+          upserts: [
+            {
+              id: 'batch-persist',
+              calendarId: 'default',
+              title: 'Batch persisted',
+              start: '2026-03-10T10:00:00',
+              end: '2026-03-10T11:00:00',
+              isAllDay: false,
+            },
+          ],
+          categories: [{ id: 'cat-batch', name: 'Batch', color: '#00FF00' }],
+        })
+
+        expect(setItem).toHaveBeenCalledTimes(1)
+        expect(subscriber).toHaveBeenCalledTimes(1)
+        expect(useCalendarStore.getState().rangeExpansionVersion).toBe(beforeVersion + 1)
+      } finally {
+        unsubscribe()
+        setItem.mockRestore()
+      }
+    })
+
+    it('moves invalid upserts to brokenEvents and applies deletions in the same batch', () => {
+      const store = useCalendarStore.getState()
+      store.addEvent({
+        id: 'batch-delete',
+        calendarId: 'default',
+        title: 'To delete',
+        start: '2026-03-10T10:00:00',
+        end: '2026-03-10T11:00:00',
+        isAllDay: false,
+      })
+
+      store.applyEventChanges({
+        deleteIds: ['batch-delete'],
+        upserts: [
+          {
+            id: 'batch-broken',
+            calendarId: 'default',
+            title: 'Broken batch event',
+            start: '2026-03-10T15:00:00',
+            end: '2026-03-10T14:00:00',
+            isAllDay: false,
+          },
+        ],
+      })
+
+      const state = useCalendarStore.getState()
+      expect(state.events.some((event) => event.id === 'batch-delete')).toBe(false)
+      expect(state.events.some((event) => event.id === 'batch-broken')).toBe(false)
+      expect(state.brokenEvents.some((broken) => broken.event.id === 'batch-broken')).toBe(true)
+    })
+  })
+
   describe('creation timestamps', () => {
     const base = {
       calendarId: 'default',

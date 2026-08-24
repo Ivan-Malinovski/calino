@@ -6,7 +6,7 @@
  * former without the latter.
  */
 import { useSettingsStore } from '@/store/settingsStore'
-import { initI18n, setLanguage } from '@/lib/i18n'
+import { initI18nAsync, setLanguage } from '@/lib/i18n'
 
 /**
  * Initialize i18next from the persisted setting and follow it thereafter.
@@ -18,12 +18,16 @@ import { initI18n, setLanguage } from '@/lib/i18n'
  * want, and just as well, since `AndroidManifest.xml` declares
  * `configChanges="…|locale|…"` and never recreates the activity anyway.
  */
-export function startI18n(): void {
+export async function startI18n(): Promise<void> {
   const language = useSettingsStore.getState().language
-  initI18n(language)
+  await initI18nAsync(language)
   if (typeof document !== 'undefined') document.documentElement.lang = language
 
   useSettingsStore.subscribe((state, prev) => {
-    if (state.language !== prev.language) void setLanguage(state.language)
+    if (state.language !== prev.language) {
+      void setLanguage(state.language).catch((error: unknown) => {
+        console.error('[i18n] failed to switch language:', error)
+      })
+    }
   })
 }

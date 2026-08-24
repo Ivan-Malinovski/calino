@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest'
-import { resources, NAMESPACES } from '@/locales'
+import { beforeAll, describe, it, expect } from 'vitest'
+import { resources, NAMESPACES, loadLanguageResources } from '@/locales'
 import { SUPPORTED_LANGUAGES, FALLBACK_LANGUAGE } from '@/lib/languages'
 
 /**
@@ -10,6 +10,10 @@ import { SUPPORTED_LANGUAGES, FALLBACK_LANGUAGE } from '@/lib/languages'
  */
 
 type Catalog = Record<string, unknown>
+
+function catalog(language: (typeof SUPPORTED_LANGUAGES)[number]) {
+  return resources[language]!
+}
 
 /** Flatten a nested catalog into dotted key paths. */
 function flatten(obj: Catalog, prefix = ''): Record<string, string> {
@@ -33,16 +37,20 @@ function placeholders(value: string): string[] {
 const translationLanguages = SUPPORTED_LANGUAGES.filter((l) => l !== FALLBACK_LANGUAGE)
 
 describe('translation catalogs', () => {
+  beforeAll(async () => {
+    await Promise.all(SUPPORTED_LANGUAGES.map(loadLanguageResources))
+  })
+
   it('ships every namespace for every language', () => {
     for (const lang of SUPPORTED_LANGUAGES) {
-      expect(Object.keys(resources[lang]).sort()).toEqual([...NAMESPACES].sort())
+      expect(Object.keys(catalog(lang)).sort()).toEqual([...NAMESPACES].sort())
     }
   })
 
   describe.each(translationLanguages)('%s', (lang) => {
     it('translates representative settings copy', () => {
-      const source = flatten(resources[FALLBACK_LANGUAGE].settings as Catalog)
-      const target = flatten(resources[lang].settings as Catalog)
+      const source = flatten(catalog(FALLBACK_LANGUAGE).settings as Catalog)
+      const target = flatten(catalog(lang).settings as Catalog)
 
       for (const key of [
         'general.dateFormat.label',
@@ -56,8 +64,8 @@ describe('translation catalogs', () => {
     })
 
     it.each([...NAMESPACES])('%s has the same keys as en', (ns) => {
-      const source = flatten(resources[FALLBACK_LANGUAGE][ns] as Catalog)
-      const target = flatten(resources[lang][ns] as Catalog)
+      const source = flatten(catalog(FALLBACK_LANGUAGE)[ns] as Catalog)
+      const target = flatten(catalog(lang)[ns] as Catalog)
 
       const missing = Object.keys(source).filter((k) => !(k in target))
       const extra = Object.keys(target).filter((k) => !(k in source))
@@ -66,8 +74,8 @@ describe('translation catalogs', () => {
     })
 
     it.each([...NAMESPACES])('%s preserves every interpolation placeholder', (ns) => {
-      const source = flatten(resources[FALLBACK_LANGUAGE][ns] as Catalog)
-      const target = flatten(resources[lang][ns] as Catalog)
+      const source = flatten(catalog(FALLBACK_LANGUAGE)[ns] as Catalog)
+      const target = flatten(catalog(lang)[ns] as Catalog)
 
       const mismatched = Object.entries(source)
         .filter(([key, value]) => {
@@ -80,7 +88,7 @@ describe('translation catalogs', () => {
     })
 
     it.each([...NAMESPACES])('%s has no untranslated placeholder values', (ns) => {
-      const target = flatten(resources[lang][ns] as Catalog)
+      const target = flatten(catalog(lang)[ns] as Catalog)
       const empty = Object.entries(target)
         .filter(([, value]) => value.trim() === '')
         .map(([key]) => key)

@@ -97,7 +97,7 @@
   --radius-full: 9999px;
   --event-border-radius: calc(var(--adjustable-radius, 10px) * 0.7);
   --today-btn-radius: var(--radius-md);
-  --day-cell-radius: var(--radius-sm);
+  --day-cell-radius: 0;
   --view-switcher-radius: var(--radius-md);
   --view-switcher-indicator-radius: var(--radius-sm);
   --space-1: calc(4px * var(--adjustable-density, 1));
@@ -237,7 +237,7 @@
   --radius-full: 9999px;
   --event-border-radius: calc(var(--adjustable-radius, 10px) * 0.7);
   --today-btn-radius: var(--radius-md);
-  --day-cell-radius: var(--radius-sm);
+  --day-cell-radius: 0;
   --view-switcher-radius: var(--radius-md);
   --view-switcher-indicator-radius: var(--radius-sm);
   --space-1: calc(4px * var(--adjustable-density, 1));

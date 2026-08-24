@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
 import { EVENT_COLORS } from '@/store/settingsStore'
+import { createUuid } from '@/lib/uuid'
 import type { AutoCategoryRule } from '@/types/categories'
 import styles from './Settings.module.css'
 
@@ -101,7 +102,7 @@ export function CategoriesSettings(): JSX.Element {
   const handleAddCategory = (): void => {
     if (!newCategoryName.trim()) return
     addCategory({
-      id: crypto.randomUUID(),
+      id: createUuid(),
       name: newCategoryName.trim(),
       color: newCategoryColor,
     })
@@ -126,7 +127,7 @@ export function CategoriesSettings(): JSX.Element {
   const handleAddRule = (): void => {
     if (newRuleKeywords.length === 0 || !newRuleCategoryId) return
     addAutoCategoryRule({
-      id: crypto.randomUUID(),
+      id: createUuid(),
       keywords: newRuleKeywords,
       categoryId: newRuleCategoryId,
     })

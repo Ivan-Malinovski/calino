@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { JSX, MouseEvent, PointerEvent } from 'react'
 import styles from './TaskCollapseToggle.module.css'
+import { useTranslation } from 'react-i18next'
 
 interface TaskCollapseToggleProps {
   taskTitle: string
@@ -17,6 +18,7 @@ export function TaskCollapseToggle({
   onToggle,
   className,
 }: TaskCollapseToggleProps): JSX.Element {
+  const { t } = useTranslation('calendar')
   const [visualCollapsed, setVisualCollapsed] = useState(collapsed)
 
   useEffect(() => {
@@ -24,8 +26,8 @@ export function TaskCollapseToggle({
   }, [collapsed])
 
   const label = visualCollapsed
-    ? `Expand subtasks for "${taskTitle}"`
-    : `Collapse subtasks for "${taskTitle}"`
+    ? t('surface.expandSubtasks', { title: taskTitle })
+    : t('surface.collapseSubtasks', { title: taskTitle })
 
   const handleClick = (event: MouseEvent<HTMLButtonElement>): void => {
     event.stopPropagation()
@@ -44,7 +46,11 @@ export function TaskCollapseToggle({
       data-component="task-collapse-toggle"
       data-collapsed={visualCollapsed}
       aria-expanded={!visualCollapsed}
-      aria-label={hiddenCount && visualCollapsed ? `${label} (${hiddenCount} hidden)` : label}
+      aria-label={
+        hiddenCount && visualCollapsed
+          ? `${label} (${t('surface.hiddenCount', { count: hiddenCount })})`
+          : label
+      }
       title={label}
       onClick={handleClick}
       onPointerDown={handlePointerDown}

@@ -1,11 +1,7 @@
 import { useCallback, useMemo } from 'react'
 import type { CalendarEvent } from '@/types'
 import { useSettingsStore } from '@/store/settingsStore'
-import {
-  getTaskChildrenMap,
-  getTaskParentsWithManyDescendants,
-  SUBTASK_AUTO_COLLAPSE_THRESHOLD,
-} from '@/lib/taskTree'
+import { getTaskTreeIndex, SUBTASK_AUTO_COLLAPSE_THRESHOLD } from '@/lib/taskTree'
 
 export interface TaskCollapseState {
   collapsedTaskIds: ReadonlySet<string>
@@ -30,10 +26,10 @@ export function useTaskCollapse(
     [persistedOverrides]
   )
 
-  const childrenByParent = useMemo(() => getTaskChildrenMap(events), [events])
+  const taskTree = useMemo(() => getTaskTreeIndex(events), [events])
   const defaultCollapsed = useMemo(
-    () => getTaskParentsWithManyDescendants(events, threshold),
-    [events, threshold]
+    () => taskTree.getParentsWithManyDescendants(threshold),
+    [taskTree, threshold]
   )
 
   const collapsedTaskIds = useMemo(() => {
@@ -49,25 +45,13 @@ export function useTaskCollapse(
   }, [defaultCollapsed, overrides])
 
   const hasSubtasks = useCallback(
-    (taskId: string): boolean => (childrenByParent.get(taskId)?.length ?? 0) > 0,
-    [childrenByParent]
+    (taskId: string): boolean => taskTree.getDirectSubtasks(taskId).length > 0,
+    [taskTree]
   )
 
   const descendantCount = useCallback(
-    (taskId: string): number => {
-      const visited = new Set<string>()
-      const count = (id: string): number => {
-        let total = 0
-        for (const child of childrenByParent.get(id) ?? []) {
-          if (visited.has(child.id)) continue
-          visited.add(child.id)
-          total += 1 + count(child.id)
-        }
-        return total
-      }
-      return count(taskId)
-    },
-    [childrenByParent]
+    (taskId: string): number => taskTree.getDescendantCount(taskId),
+    [taskTree]
   )
 
   const isCollapsed = useCallback(

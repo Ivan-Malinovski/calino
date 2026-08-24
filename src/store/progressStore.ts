@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { createUuid } from '@/lib/uuid'
 
 export interface ProgressTask {
   id: string
@@ -28,7 +29,7 @@ interface ProgressState {
 export const useProgressStore = create<ProgressState>((set) => ({
   tasks: [],
   begin: (label, init) => {
-    const id = crypto.randomUUID()
+    const id = createUuid()
     set((state) => ({
       tasks: [...state.tasks, { id, label, ...init, startedAt: Date.now() }],
     }))

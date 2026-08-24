@@ -61,6 +61,7 @@ OPUS_AUDIT_PROMPT.md
 graphify-out/
 feedback.txt
 scripts/rrule_test.mjs
+scripts/dev-tailscale.sh
 
 # Command Code agent state (taste, plans, session data)
 .commandcode/

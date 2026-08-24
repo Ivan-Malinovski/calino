@@ -28,8 +28,6 @@
       "showMoreAllDayItems_other": "Show {{count}} more all-day items on {{date}}",
       "less": "Less",
       "moreCount": "+{{count}} more",
-      "swipeForMoreDays": "Swipe for more days",
-      "dismissWeekViewTip": "Dismiss week view tip",
       "showPreviousDay": "Show previous day",
       "showNextDay": "Show next day",
       "createEvent": "Create event",
@@ -184,7 +182,14 @@
     "navShowAllViews": "Show all views",
     "navCreate": "Create",
     "navBackToCalendar": "Back to calendar",
-    "agendaMakeSubtask": "Make subtask"
+    "agendaMakeSubtask": "Make subtask",
+    "agendaDue": "Due",
+    "agendaAllDay": "All day",
+    "today": "Today",
+    "tomorrow": "Tomorrow",
+    "expandSubtasks": "Expand subtasks for \"{{title}}\"",
+    "collapseSubtasks": "Collapse subtasks for \"{{title}}\"",
+    "hiddenCount": "{{count}} hidden"
   },
   "modals": {
     "deleteCalendar": {
@@ -418,7 +423,7 @@
       "subtaskSuffix": " (subtask)",
       "completedSuffix": " (completed)",
       "dueSuffix": " due {{time}}",
-      "allDayAriaLabel": "{{title}}, all day",
+      "allDayAriaLabel": "{{title}}{{subtask}}, all day",
       "timedAriaLabel": "{{title}}, {{start}} to {{end}}",
       "clickToViewReadOnly": "Click to view (read-only subscription)",
       "clickToEditRecurring": "Click to edit (recurring event)",

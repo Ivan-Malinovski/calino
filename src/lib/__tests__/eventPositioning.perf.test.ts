@@ -30,9 +30,18 @@ describe('positionEvents — R4.2 perf regression', () => {
       makeEvent({ id: `e${i}`, title: `Event ${i}`, ...day(10, 15) })
     )
 
-    const t0 = performance.now()
-    const result = positionEvents(events)
-    const elapsed = performance.now() - t0
+    // Vitest runs this file alongside many other workers. Warm the JIT and use
+    // the best of a few samples so an unrelated scheduler pause cannot turn a
+    // healthy algorithm into a release-blocking failure.
+    positionEvents(events)
+    const timings = Array.from({ length: 5 }, () => {
+      const t0 = performance.now()
+      const result = positionEvents(events)
+      return { elapsed: performance.now() - t0, result }
+    })
+    const { elapsed, result } = timings.reduce((best, current) =>
+      current.elapsed < best.elapsed ? current : best
+    )
 
     expect(result).toHaveLength(30)
     expect(elapsed).toBeLessThan(10)

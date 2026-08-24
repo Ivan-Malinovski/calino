@@ -24,7 +24,7 @@ import {
   deleteCredential,
   updateCredential,
 } from '../client/credentials'
-import { parseICALData } from '../adapter/iCalendarAdapter'
+import { parseICALDataAsync } from '../adapter/iCalendarAdapter'
 import { detectUidCollisions, type ParsedWithHref } from '../sync/detectUidCollisions'
 import { putAttachments } from '@/lib/attachmentStore'
 import { putRawIcs, deleteRawIcs } from '@/lib/rawIcsStore'
@@ -45,6 +45,7 @@ import { useSettingsStore } from '@/store/settingsStore'
 import { useCalDAVSyncStore } from '@/store/caldavSyncStore'
 import { useProgressStore, withProgress, isProgressOwned } from '@/store/progressStore'
 import { useConfigStore } from '@/store/configStore'
+import { createUuid } from '@/lib/uuid'
 import { EVENT_COLORS } from '@/store/settingsStore'
 import {
   selectAddEvent,
@@ -54,7 +55,7 @@ import {
   selectDeleteCalendar,
   selectUpdateCalendar,
   selectCalendars,
-  selectAddCategory,
+  selectApplyEventChanges,
 } from '@/store/calendarStore'
 
 const selectCalDavDebugMode = (state: { caldavDebugMode: boolean }) => state.caldavDebugMode
@@ -272,7 +273,7 @@ async function collectParsedWithHref(
     // costs a fall back to the previous from-scratch behaviour.
     await putRawIcs(eventData.url, calendarId, eventData.data, eventData.etag).catch(() => {})
 
-    const parsedEvents = parseICALData(eventData.data, calendarId)
+    const parsedEvents = await parseICALDataAsync(eventData.data, calendarId)
     if (parsedEvents.length === 0 && eventData.data.trim()) {
       hadParseFailures = true
     }
@@ -424,7 +425,7 @@ export function useCalDAVInstance(): UseCalDAVReturn {
   const storeDeleteCalendar = useCalendarStore(selectDeleteCalendar)
   const storeUpdateCalendar = useCalendarStore(selectUpdateCalendar)
   const storeCalendars = useCalendarStore(selectCalendars)
-  const storeAddCategory = useCalendarStore(selectAddCategory)
+  const applyEventChanges = useCalendarStore(selectApplyEventChanges)
   const caldavDebugMode = useSettingsStore(selectCalDavDebugMode)
   const conflictResolution = useSettingsStore(selectConflictResolution)
 
@@ -1068,6 +1069,7 @@ export function useCalDAVInstance(): UseCalDAVReturn {
         const start = '1970-01-01T00:00:00.000Z'
         const end = addDays(new Date(), 365).toISOString()
         const newCategoryNames: string[] = []
+        const pendingUpserts: CalendarEvent[] = []
         let eventsAdded = 0
 
         // Fresh connect — re-derive duplicate-UID issues from scratch (#22).
@@ -1146,9 +1148,9 @@ export function useCalDAVInstance(): UseCalDAVReturn {
             // any id already seen this sync pass as an update, not a fresh
             // add, so it doesn't end up duplicated in the store.
             if (accountExistingEventIds.has(parsedEvent.id)) {
-              storeUpdateEvent(parsedEvent.id, parsedEvent)
+              pendingUpserts.push(parsedEvent)
             } else {
-              storeAddEvent(parsedEvent)
+              pendingUpserts.push(parsedEvent)
               accountExistingEventIds.add(parsedEvent.id)
             }
             eventsAdded++
@@ -1156,6 +1158,13 @@ export function useCalDAVInstance(): UseCalDAVReturn {
           progressDone++
           reportProgress({ done: progressDone })
         }
+
+        const categoriesToAdd = newCategoryNames.map((catName) => ({
+          id: createUuid(),
+          name: catName,
+          color: EVENT_COLORS[Math.floor(Math.random() * EVENT_COLORS.length)],
+        }))
+        applyEventChanges({ upserts: pendingUpserts, deleteIds: [], categories: categoriesToAdd })
 
         console.log(`[CalDAV] addAccount: done — ${eventsAdded} events added`)
 
@@ -1179,14 +1188,6 @@ export function useCalDAVInstance(): UseCalDAVReturn {
             console.log('[CalDAV] Enabling journaling after addAccount (found journal entries)')
             updateSettings({ journalEnabled: true })
           }
-        }
-
-        for (const catName of newCategoryNames) {
-          storeAddCategory({
-            id: crypto.randomUUID(),
-            name: catName,
-            color: EVENT_COLORS[Math.floor(Math.random() * EVENT_COLORS.length)],
-          })
         }
 
         // After calendar sync, check for CardDAV support
@@ -1315,7 +1316,7 @@ export function useCalDAVInstance(): UseCalDAVReturn {
         useProgressStore.getState().end(progressId)
       }
     },
-    [storeAddEvent, storeUpdateEvent]
+    [applyEventChanges]
   )
 
   // Auto-connect to preconfigured accounts when unlocked
@@ -1658,6 +1659,8 @@ export function useCalDAVInstance(): UseCalDAVReturn {
             const calendarEventsById = new Map(calendarEvents.map((e) => [e.id, e]))
             const serverEventIds = new Set<string>()
             const newCategoryNames: string[] = []
+            const pendingUpserts: CalendarEvent[] = []
+            const pendingDeleteIds: string[] = []
 
             const { items: parsedWithHref, hadParseFailures } = await collectParsedWithHref(
               fetchedEvents,
@@ -1769,20 +1772,11 @@ export function useCalDAVInstance(): UseCalDAVReturn {
                 }
 
                 if (shouldUpdate) {
-                  storeUpdateEvent(parsedEvent.id, parsedEvent)
+                  pendingUpserts.push(parsedEvent)
                 }
               } else {
-                storeAddEvent(parsedEvent)
+                pendingUpserts.push(parsedEvent)
               }
-            }
-
-            // Auto-create categories from server
-            for (const catName of newCategoryNames) {
-              storeAddCategory({
-                id: crypto.randomUUID(),
-                name: catName,
-                color: EVENT_COLORS[Math.floor(Math.random() * EVENT_COLORS.length)],
-              })
             }
 
             // The complete collection listing makes absence an authoritative
@@ -1811,7 +1805,7 @@ export function useCalDAVInstance(): UseCalDAVReturn {
                   !serverEventIds.has(localEvent.id) &&
                   !pendingLocalChangeIds.has(localEvent.id)
                 ) {
-                  storeDeleteEvent(localEvent.id)
+                  pendingDeleteIds.push(localEvent.id)
                   // Drop the cached original too, but only when the resource
                   // itself is gone: a resource that merely lost one component
                   // still has authoritative bytes worth keeping.
@@ -1833,6 +1827,17 @@ export function useCalDAVInstance(): UseCalDAVReturn {
                 `[CalDAV] Skipping remote-deletion reconciliation for calendar ${cal.id}: one or more resources failed to parse this cycle.`
               )
             }
+
+            const categoriesToAdd = newCategoryNames.map((catName) => ({
+              id: createUuid(),
+              name: catName,
+              color: EVENT_COLORS[Math.floor(Math.random() * EVENT_COLORS.length)],
+            }))
+            applyEventChanges({
+              upserts: pendingUpserts,
+              deleteIds: pendingDeleteIds,
+              categories: categoriesToAdd,
+            })
           } catch (err) {
             // One calendar failing must not stop the rest from syncing: log,
             // accumulate, and let the account sync finish — the pending queue
@@ -1962,7 +1967,7 @@ export function useCalDAVInstance(): UseCalDAVReturn {
         throw new Error(`Sync finished with errors: ${syncErrors.join('; ')}`)
       }
     },
-    [conflictResolution]
+    [conflictResolution, applyEventChanges]
   )
 
   const syncAccount = useCallback(

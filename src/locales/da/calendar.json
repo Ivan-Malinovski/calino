@@ -23,13 +23,11 @@
       "tabMovedAnnouncement": "{{label}} flyttet til position {{position}} af {{total}}"
     },
     "week": {
-      "showFewerAllDayItems": "Vis færre heldagsindslag on {{date}}",
-      "showMoreAllDayItems_one": "Vis {{count}} flere heldagsindslag on {{date}}",
-      "showMoreAllDayItems_other": "Vis {{count}} flere heldagsindslags on {{date}}",
+      "showFewerAllDayItems": "Vis færre heldagsindslag den {{date}}",
+      "showMoreAllDayItems_one": "Vis {{count}} ekstra heldagsindslag den {{date}}",
+      "showMoreAllDayItems_other": "Vis {{count}} ekstra heldagsindslag den {{date}}",
       "less": "Mindre",
       "moreCount": "+{{count}} flere",
-      "swipeForMoreDays": "Stryg for flere dage",
-      "dismissWeekViewTip": "Luk tip om ugevisning",
       "showPreviousDay": "Vis forrige dag",
       "showNextDay": "Vis næste dag",
       "createEvent": "Opret begivenhed",
@@ -88,9 +86,9 @@
       "useColorFor": "Brug {{color}} til {{name}}",
       "customColorFor": "Brugerdefineret farve for {{name}}",
       "renamedLocallyButFailed": "Omdøbt lokalt, men serveren modtog ikke ændringen.",
-      "renamedLocallyButFailedReason": "Omdøbd locally, but the server didn't get it: {{reason}}",
-      "colorChangedLocallyButFailed": "Farve changed locally, but the server didn't get the change.",
-      "colorChangedLocallyButFailedReason": "Farve changed locally, but the server didn't get it: {{reason}}",
+      "renamedLocallyButFailedReason": "Omdøbt lokalt, men serveren modtog det ikke: {{reason}}",
+      "colorChangedLocallyButFailed": "Farven blev ændret lokalt, men serveren modtog ikke ændringen.",
+      "colorChangedLocallyButFailedReason": "Farven blev ændret lokalt, men serveren modtog ikke ændringen: {{reason}}",
       "updateAvailable": "Calino {{version}} er tilgængelig",
       "updateCurrentVersion": "Du har {{version}}",
       "updateDismiss": "Luk",
@@ -329,7 +327,7 @@
       "subtaskSuffix": " (underopgave)",
       "completedSuffix": " (fuldført)",
       "dueSuffix": " forfalder {{time}}",
-      "allDayAriaLabel": "{{title}}, all dag",
+      "allDayAriaLabel": "{{title}}{{subtask}}, all dag",
       "timedAriaLabel": "{{title}}, {{start}} til {{end}}",
       "clickToViewReadOnly": "Klik for at se (skrivebeskyttet abonnement)",
       "clickToEditRecurring": "Klik for at redigere (gentagen begivenhed)",
@@ -490,6 +488,13 @@
     "navShowAllViews": "Vis alle visninger",
     "navCreate": "Opret",
     "navBackToCalendar": "Tilbage til kalenderen",
-    "agendaMakeSubtask": "Gør til underopgave"
+    "agendaMakeSubtask": "Gør til underopgave",
+    "agendaDue": "Forfalder",
+    "agendaAllDay": "Hele dagen",
+    "today": "I dag",
+    "tomorrow": "I morgen",
+    "expandSubtasks": "Fold underopgaver ud for \"{{title}}\"",
+    "collapseSubtasks": "Fold underopgaver sammen for \"{{title}}\"",
+    "hiddenCount": "{{count}} skjulte"
   }
 }

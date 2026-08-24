@@ -1,5 +1,5 @@
 import ICAL from 'ical.js'
-import { ensureZoneRegistered } from '@/lib/timezoneRegistry'
+import { ensureZoneRegistered, preloadTimezones } from '@/lib/timezoneRegistry'
 import type { CalendarEvent } from '@/types'
 import { SETTINGS_EVENT_UID_PREFIX } from '@/lib/settingsSync'
 import {
@@ -43,8 +43,7 @@ function parseICalComponents(iCalData: string): ICAL.Component[] {
   // A single jCal document is `[name: string, props: [], comps: []]` — its
   // first element is a string. An array-of-documents has jCal documents (each
   // themselves arrays) as its elements, so the first element is not a string.
-  const isMultiDocument =
-    Array.isArray(jCal) && jCal.length > 0 && !(typeof jCal[0] === 'string')
+  const isMultiDocument = Array.isArray(jCal) && jCal.length > 0 && !(typeof jCal[0] === 'string')
 
   const documents = isMultiDocument ? (jCal as unknown[]) : [jCal]
   return documents.map((doc) => new ICAL.Component(doc as string | unknown[]))
@@ -62,6 +61,80 @@ function registerTimezones(comp: ICAL.Component): void {
   }
 }
 
+function parseComponentsForData(iCalData: string): ICAL.Component[] {
+  if (!iCalData || !iCalData.trim()) return []
+  return parseICalComponents(iCalData)
+}
+
+function collectReferencedTimezones(comp: ICAL.Component, timezoneIds: Set<string>): void {
+  // The TZID property belonging to a VTIMEZONE is a definition, not a request
+  // for package data. Registering those definitions before preloading keeps a
+  // server-provided VTIMEZONE authoritative.
+  if (comp.name !== 'vtimezone') {
+    for (const prop of comp.getAllProperties()) {
+      const tzid = prop.getParameter('tzid')
+      if (typeof tzid === 'string' && tzid.trim()) timezoneIds.add(tzid.trim())
+    }
+  }
+  for (const child of comp.getAllSubcomponents()) {
+    collectReferencedTimezones(child, timezoneIds)
+  }
+}
+
+function prepareComponentsForAsyncParsing(comps: ICAL.Component[]): Set<string> {
+  const timezoneIds = new Set<string>()
+  for (const comp of comps) {
+    registerTimezones(comp)
+    collectReferencedTimezones(comp, timezoneIds)
+  }
+  return timezoneIds
+}
+
+type ComponentKind = 'event' | 'task' | 'journal'
+
+function parseEventsFromComponents(
+  comps: ICAL.Component[],
+  calendarId: string,
+  only?: ComponentKind
+): { events: CalendarEvent[]; tasks: CalendarEvent[]; journals: CalendarEvent[] } {
+  const events: CalendarEvent[] = []
+  const tasks: CalendarEvent[] = []
+  const journals: CalendarEvent[] = []
+
+  for (const comp of comps) {
+    registerTimezones(comp)
+
+    if (!only || only === 'event')
+      for (const vevent of comp.getAllSubcomponents('vevent')) {
+        try {
+          events.push(icalEventToCalendarEvent(vevent, calendarId))
+        } catch (e) {
+          console.error('Failed to parse vevent:', e)
+        }
+      }
+
+    if (!only || only === 'task')
+      for (const vtodo of comp.getAllSubcomponents('vtodo')) {
+        try {
+          tasks.push(icalVtodoToCalendarEvent(vtodo, calendarId))
+        } catch (e) {
+          console.error('Failed to parse vtodo:', e)
+        }
+      }
+
+    if (!only || only === 'journal')
+      for (const vjournal of comp.getAllSubcomponents('vjournal')) {
+        try {
+          journals.push(icalVjournalToCalendarEvent(vjournal, calendarId))
+        } catch (e) {
+          console.error('Failed to parse vjournal:', e)
+        }
+      }
+  }
+
+  return { events, tasks, journals }
+}
+
 export function parseICALEvent(iCalData: string, calendarId: string): CalendarEvent[] {
   if (!iCalData || !iCalData.trim()) {
     return []
@@ -69,30 +142,13 @@ export function parseICALEvent(iCalData: string, calendarId: string): CalendarEv
 
   let comps: ICAL.Component[]
   try {
-    comps = parseICalComponents(iCalData)
+    comps = parseComponentsForData(iCalData)
   } catch (e) {
     console.error('ICAL.parse failed:', e)
     return []
   }
 
-  const events: CalendarEvent[] = []
-
-  for (const comp of comps) {
-    registerTimezones(comp)
-
-    const vevents = comp.getAllSubcomponents('vevent')
-    for (const vevent of vevents) {
-      try {
-        const event = icalEventToCalendarEvent(vevent, calendarId)
-        events.push(event)
-      } catch (e) {
-        console.error('Failed to parse vevent:', e)
-        continue
-      }
-    }
-  }
-
-  return events
+  return parseEventsFromComponents(comps, calendarId, 'event').events
 }
 
 export function parseICALTask(iCalData: string, calendarId: string): CalendarEvent[] {
@@ -102,37 +158,57 @@ export function parseICALTask(iCalData: string, calendarId: string): CalendarEve
 
   let comps: ICAL.Component[]
   try {
-    comps = parseICalComponents(iCalData)
+    comps = parseComponentsForData(iCalData)
   } catch (e) {
     console.error('ICAL.parse failed for tasks:', e)
     return []
   }
 
-  const tasks: CalendarEvent[] = []
-  for (const comp of comps) {
-    registerTimezones(comp)
-
-    const vtodos = comp.getAllSubcomponents('vtodo')
-    for (const vtodo of vtodos) {
-      try {
-        tasks.push(icalVtodoToCalendarEvent(vtodo, calendarId))
-      } catch (e) {
-        console.error('Failed to parse vtodo:', e)
-        continue
-      }
-    }
-  }
-  return tasks
+  return parseEventsFromComponents(comps, calendarId, 'task').tasks
 }
 
 export function parseICALData(iCalData: string, calendarId: string): CalendarEvent[] {
-  const events = parseICALEvent(iCalData, calendarId)
-  const tasks = parseICALTask(iCalData, calendarId)
-  const journals = parseICALJournal(iCalData, calendarId)
+  if (!iCalData || !iCalData.trim()) return []
+
+  let parsed: ReturnType<typeof parseEventsFromComponents>
+  try {
+    parsed = parseEventsFromComponents(parseComponentsForData(iCalData), calendarId)
+  } catch (e) {
+    console.error('ICAL.parse failed:', e)
+    return []
+  }
+
   // Filter out the Calino Settings sync event — it's not a real calendar event.
   // Match by prefix (R1.9) because the full UID is per-instance.
-  const all = [...events, ...tasks, ...journals]
+  const all = [...parsed.events, ...parsed.tasks, ...parsed.journals]
   return all.filter((e) => !e.id.startsWith(SETTINGS_EVENT_UID_PREFIX))
+}
+
+/**
+ * Async counterpart for network/import callers. The document is parsed once,
+ * source VTIMEZONEs are registered, referenced packaged zones are loaded, and
+ * only then are the components mapped. Unknown zones retain ical.js's normal
+ * fallback behavior because timezone preloading is best effort.
+ */
+export async function parseICALDataAsync(
+  iCalData: string,
+  calendarId: string
+): Promise<CalendarEvent[]> {
+  if (!iCalData || !iCalData.trim()) return []
+
+  let comps: ICAL.Component[]
+  try {
+    comps = parseComponentsForData(iCalData)
+  } catch (e) {
+    console.error('ICAL.parse failed:', e)
+    return []
+  }
+
+  await preloadTimezones(prepareComponentsForAsyncParsing(comps))
+  const parsed = parseEventsFromComponents(comps, calendarId)
+  return [...parsed.events, ...parsed.tasks, ...parsed.journals].filter(
+    (event) => !event.id.startsWith(SETTINGS_EVENT_UID_PREFIX)
+  )
 }
 
 /**
@@ -241,27 +317,13 @@ export function parseICALJournal(iCalData: string, calendarId: string): Calendar
 
   let comps: ICAL.Component[]
   try {
-    comps = parseICalComponents(iCalData)
+    comps = parseComponentsForData(iCalData)
   } catch (e) {
     console.error('ICAL.parse failed for journals:', e)
     return []
   }
 
-  const entries: CalendarEvent[] = []
-  for (const comp of comps) {
-    registerTimezones(comp)
-
-    const vjournals = comp.getAllSubcomponents('vjournal')
-    for (const vjournal of vjournals) {
-      try {
-        entries.push(icalVjournalToCalendarEvent(vjournal, calendarId))
-      } catch (e) {
-        console.error('Failed to parse vjournal:', e)
-        continue
-      }
-    }
-  }
-  return entries
+  return parseEventsFromComponents(comps, calendarId, 'journal').journals
 }
 
 export function journalToICAL(entry: CalendarEvent): string {

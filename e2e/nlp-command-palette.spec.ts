@@ -24,8 +24,9 @@ test.describe('command palette — NLP event routing', () => {
 
   const openPalette = async (page: import('@playwright/test').Page) => {
     await page.goto('/month')
-    await expect(page.locator('[data-component="header"]')).toBeVisible()
-    await page.getByRole('button', { name: 'Search or commands' }).click()
+    const searchButton = page.getByRole('button', { name: 'Search or commands' })
+    await expect(searchButton).toBeVisible()
+    await searchButton.click()
     const palette = page.locator('[data-component="command-palette"]')
     await expect(palette).toBeVisible({ timeout: 5_000 })
     return palette.locator('input').first()
@@ -62,6 +63,10 @@ test.describe('command palette — NLP event routing', () => {
   })
 
   test('"gym every monday" creates a repeating series, not one event', async ({ page }) => {
+    // Keep the assertion independent of the day the suite happens to run.
+    // Chrono interprets the weekday phrase as the next Monday; fixing the
+    // clock to early March leaves several Mondays in the displayed month.
+    await page.clock.setFixedTime('2026-03-04T12:00:00+01:00')
     // Quick-add bypasses the event modal, so the parsed recurrence has to be
     // attached in quickAddToItem. It wasn't: the rule was parsed and dropped,
     // and every "every …" phrase produced a single occurrence. Asserting on

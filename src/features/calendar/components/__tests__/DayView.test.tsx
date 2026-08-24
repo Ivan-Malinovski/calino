@@ -6,9 +6,15 @@ import { useCalendarStore } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
 import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
 import { useGestures } from '@/hooks/useGestures'
+import { positionEvents } from '@/lib/eventPositioning'
 
 vi.mock('@/features/caldav/hooks/useCalDAV')
 vi.mock('@/hooks/useGestures')
+vi.mock('@/lib/eventPositioning', async () => {
+  const actual =
+    await vi.importActual<typeof import('@/lib/eventPositioning')>('@/lib/eventPositioning')
+  return { ...actual, positionEvents: vi.fn(actual.positionEvents) }
+})
 
 const mockUseCalDAV = vi.mocked(useCalDAV)
 const mockUseGestures = vi.mocked(useGestures)
@@ -82,6 +88,51 @@ describe('DayView', () => {
 
     renderWithRouter(<DayView />)
     expect(screen.getByText('Team Meeting')).toBeInTheDocument()
+  })
+
+  it('reuses event geometry across unrelated rerenders', () => {
+    const store = useCalendarStore.getState()
+    store.addEvent({
+      id: 'memoized-layout-event',
+      calendarId: 'default',
+      title: 'Memoized Layout Event',
+      start: '2024-03-15T09:00:00',
+      end: '2024-03-15T10:00:00',
+      isAllDay: false,
+    })
+
+    const view = renderWithRouter(<DayView />)
+    const callsAfterInitialRender = vi.mocked(positionEvents).mock.calls.length
+    expect(callsAfterInitialRender).toBeGreaterThan(0)
+
+    view.rerender(
+      <BrowserRouter>
+        <DayView />
+      </BrowserRouter>
+    )
+
+    expect(positionEvents).toHaveBeenCalledTimes(callsAfterInitialRender)
+  })
+
+  it('does not recompute event geometry when create-drag starts', () => {
+    const store = useCalendarStore.getState()
+    store.addEvent({
+      id: 'create-drag-layout-event',
+      calendarId: 'default',
+      title: 'Create drag layout event',
+      start: '2024-03-15T09:00:00',
+      end: '2024-03-15T10:00:00',
+      isAllDay: false,
+    })
+
+    const { container } = renderWithRouter(<DayView />)
+    vi.mocked(positionEvents).mockClear()
+
+    const cell = container.querySelector<HTMLElement>('[data-hour="09:00"]')
+    if (!cell) throw new Error('hour cell not found')
+    fireEvent.mouseDown(cell, { button: 0 })
+
+    expect(positionEvents).not.toHaveBeenCalled()
   })
 
   it('renders all-day events in header', () => {

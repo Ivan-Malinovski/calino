@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 import type { CalendarEvent } from '@/types'
 import {
   filterTasksByCollapsedAncestors,
+  getTaskDescendants,
+  getTaskTreeIndex,
   getTaskParentsWithManyDescendants,
   getVisibleTaskDescendants,
 } from '../taskTree'
@@ -46,5 +48,41 @@ describe('task tree disclosure helpers', () => {
     expect(getVisibleTaskDescendants(events, 'parent', new Set())).toEqual([
       { task: events[1], depth: 0 },
     ])
+  })
+
+  it('reuses one index for an immutable events-array reference', () => {
+    const events = [task('parent'), task('child', 'parent')]
+    const first = getTaskTreeIndex(events)
+    const second = getTaskTreeIndex(events)
+
+    expect(second).toBe(first)
+    expect(first.getDescendants('parent')).toEqual([{ task: events[1], depth: 0 }])
+    expect(first.getDescendants('parent')).not.toBe(first.getDescendants('parent'))
+    expect(first.getParentsWithManyDescendants(1)).toBe(first.getParentsWithManyDescendants(1))
+  })
+
+  it('preserves depth-first stored order and suppresses duplicate IDs', () => {
+    const parent = task('parent')
+    const firstChild = task('first', 'parent')
+    const grandchild = task('grandchild', 'first')
+    const secondChild = task('second', 'parent')
+    const duplicate = task('first', 'parent')
+    const events = [parent, firstChild, grandchild, secondChild, duplicate]
+
+    expect(
+      getTaskDescendants(events, 'parent').map(({ task: item, depth }) => [item.id, depth])
+    ).toEqual([
+      ['first', 0],
+      ['grandchild', 1],
+      ['second', 0],
+    ])
+  })
+
+  it('handles deeply nested task chains without recursive stack overflow', () => {
+    const events = Array.from({ length: 3000 }, (_, index) =>
+      task(`task-${index}`, index === 0 ? undefined : `task-${index - 1}`)
+    )
+
+    expect(getTaskTreeIndex(events).getDescendantCount('task-0')).toBe(2999)
   })
 })
