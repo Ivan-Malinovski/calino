@@ -45,6 +45,7 @@ import { useSettingsStore } from '@/store/settingsStore'
 import { useCalDAVSyncStore } from '@/store/caldavSyncStore'
 import { useProgressStore, withProgress, isProgressOwned } from '@/store/progressStore'
 import { useConfigStore } from '@/store/configStore'
+import { createUuid } from '@/lib/uuid'
 import { EVENT_COLORS } from '@/store/settingsStore'
 import {
   selectAddEvent,
@@ -1183,7 +1184,7 @@ export function useCalDAVInstance(): UseCalDAVReturn {
 
         for (const catName of newCategoryNames) {
           storeAddCategory({
-            id: crypto.randomUUID(),
+            id: createUuid(),
             name: catName,
             color: EVENT_COLORS[Math.floor(Math.random() * EVENT_COLORS.length)],
           })
@@ -1779,7 +1780,7 @@ export function useCalDAVInstance(): UseCalDAVReturn {
             // Auto-create categories from server
             for (const catName of newCategoryNames) {
               storeAddCategory({
-                id: crypto.randomUUID(),
+                id: createUuid(),
                 name: catName,
                 color: EVENT_COLORS[Math.floor(Math.random() * EVENT_COLORS.length)],
               })

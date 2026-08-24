@@ -119,6 +119,29 @@ test.describe('smoke', () => {
     await expect(page.locator('[data-component="account-row"]')).toContainText(TEST_CALDAV_NAME)
   })
 
+  test('add CalDAV account works without crypto.randomUUID', async ({ page, baseURL }) => {
+    // Reproduce older WebKit builds that expose crypto.getRandomValues() but
+    // do not implement crypto.randomUUID().
+    await page.addInitScript(() => {
+      Object.defineProperty(globalThis.crypto, 'randomUUID', {
+        configurable: true,
+        value: undefined,
+      })
+    })
+
+    await gotoSettingsSync(page)
+    await page.getByText('Add calendar account').click()
+
+    const dialog = page.getByRole('dialog', { name: /add caldav calendar/i })
+    await dialog.getByLabel('Server URL').fill(`${baseURL}/mock-caldav/`)
+    await dialog.getByLabel('Username').fill('user')
+    await dialog.getByLabel('Password').fill('pass')
+    await dialog.getByLabel(/account name/i).fill('UUID fallback')
+    await dialog.getByRole('button', { name: 'Add Calendar' }).click()
+
+    await expect(dialog).toBeHidden({ timeout: 30_000 })
+  })
+
   test('settings persist across reload (localStorage round-trip)', async ({ page }) => {
     test.skip(
       !HAS_LIVE_CALDAV,

@@ -20,6 +20,7 @@ import { createCommandRegistry, type Command } from '../commands'
 import { parseNaturalLanguage } from '@/features/nlp'
 import { displayOccurrence, resolveRRuleString } from '@/lib/occurrenceExpansion'
 import { describeRecurrence } from '@/lib/recurrence'
+import { createUuid } from '@/lib/uuid'
 import type {
   CommandPaletteItem,
   CommandPaletteItemGroup,
@@ -585,7 +586,7 @@ function quickAddToItem(
 
       if (qa.isTask) {
         const newEvent = {
-          id: crypto.randomUUID(),
+          id: createUuid(),
           calendarId,
           title: qa.title,
           location: qa.location,
@@ -614,7 +615,7 @@ function quickAddToItem(
       }
 
       const newEvent = {
-        id: crypto.randomUUID(),
+          id: createUuid(),
         calendarId,
         title: qa.title,
         location: qa.location,

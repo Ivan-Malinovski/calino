@@ -12,6 +12,7 @@ import { showToast } from '@/lib/toast'
 import { withProgress } from '@/store/progressStore'
 import { formatDisplayDate } from '@/lib/datetime'
 import i18n from '@/lib/i18n'
+import { createUuid } from '@/lib/uuid'
 import type { CalendarEvent } from '@/types'
 import shell from './AddCalendarModal.module.css'
 import styles from './IcsImportModal.module.css'
@@ -144,7 +145,7 @@ export function IcsImportModal({
         setError(t('modals.icsImport.enterCalendarName'))
         return
       }
-      calendarId = crypto.randomUUID()
+      calendarId = createUuid()
       calendarName = name
       useCalendarStore.getState().addCalendar({
         id: calendarId,

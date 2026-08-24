@@ -8,6 +8,7 @@ import type {
   ContactLang,
   ContactRelated,
 } from '../types'
+import { createUuid } from '@/lib/uuid'
 
 // ---------------------------------------------------------------------------
 // RFC 6868 caret-encoding
@@ -704,7 +705,7 @@ export function parseVCard(
   const n = extractProperty(lines, 'N') || ''
   const nParts = n.split(';')
 
-  const uid = extractProperty(lines, 'UID') || crypto.randomUUID()
+  const uid = extractProperty(lines, 'UID') || createUuid()
   // NB: `Contact.url` is the CardDAV *resource href*, not the contact's website — the
   // website lives in `contact.urls`. Only the client knows the href, so it fills this in
   // after parsing. Deriving it from the vCard's URL property left every contact without a

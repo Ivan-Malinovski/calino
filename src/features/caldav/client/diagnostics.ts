@@ -27,6 +27,7 @@
 import { Capacitor } from '@capacitor/core'
 import { webFetch } from '@/lib/webFetch'
 import { isHeadless } from '@/lib/headlessBridge'
+import { createUuid } from '@/lib/uuid'
 import {
   discoverServerUrl,
   isDavStatus,
@@ -697,7 +698,7 @@ async function runWriteTest(ctx: {
   native: boolean
 }): Promise<void> {
   const { base, kind, authHeader, request, emit, native } = ctx
-  const uid = `calino-diagnostics-${crypto.randomUUID()}`
+  const uid = `calino-diagnostics-${createUuid()}`
   const extension = kind === 'caldav' ? '.ics' : '.vcf'
   const targetUrl = `${base.replace(/\/$/, '')}/${uid}${extension}`
   const contentType =

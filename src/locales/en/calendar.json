@@ -28,8 +28,6 @@
       "showMoreAllDayItems_other": "Show {{count}} more all-day items on {{date}}",
       "less": "Less",
       "moreCount": "+{{count}} more",
-      "swipeForMoreDays": "Swipe for more days",
-      "dismissWeekViewTip": "Dismiss week view tip",
       "showPreviousDay": "Show previous day",
       "showNextDay": "Show next day",
       "createEvent": "Create event",

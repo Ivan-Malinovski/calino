@@ -32,6 +32,7 @@ import { deleteAttachments } from '@/lib/attachmentStore'
 import { deleteRawIcs, deleteRawIcsForCalendar } from '@/lib/rawIcsStore'
 import { useSettingsStore } from '@/store/settingsStore'
 import { toZoneWallClock } from '@/lib/datetime'
+import { createUuid } from '@/lib/uuid'
 
 // Memo cache for getEventsForDateRange. Keyed by the range; a cached result is
 // reused only when its stored `version` matches the current
@@ -920,7 +921,7 @@ export const useCalendarStore = create<CalendarStore>()(
 
         const newEvent: CalendarEvent = {
           ...eventToDuplicate,
-          id: crypto.randomUUID(),
+          id: createUuid(),
           uid: undefined,
           title: addCopySuffix ? `${eventToDuplicate.title} (copy)` : eventToDuplicate.title,
           recurrenceId: undefined,

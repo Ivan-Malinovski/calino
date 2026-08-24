@@ -28,8 +28,6 @@
       "showMoreAllDayItems_other": "Vis {{count}} flere heldagsindslags on {{date}}",
       "less": "Mindre",
       "moreCount": "+{{count}} flere",
-      "swipeForMoreDays": "Stryg for flere dage",
-      "dismissWeekViewTip": "Luk tip om ugevisning",
       "showPreviousDay": "Vis forrige dag",
       "showNextDay": "Vis næste dag",
       "createEvent": "Opret begivenhed",

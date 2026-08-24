@@ -11,6 +11,7 @@ import { parseICALData } from '@/features/caldav/adapter/iCalendarAdapter'
 import { parseVCard } from '@/features/carddav/adapter/vCardAdapter'
 import { requestNativeReminderPermission } from '@/lib/nativeReminders'
 import { config } from '@/config'
+import { createUuid } from '@/lib/uuid'
 import styles from './OnboardingModal.module.css'
 
 const isNative = Capacitor.isNativePlatform()
@@ -119,7 +120,7 @@ export function OnboardingModal({ onAddCalendar }: OnboardingModalProps): JSX.El
 
       for (const catName of newCategoryNames) {
         addCategory({
-          id: crypto.randomUUID(),
+          id: createUuid(),
           name: catName,
           color: EVENT_COLORS[Math.floor(Math.random() * EVENT_COLORS.length)],
         })

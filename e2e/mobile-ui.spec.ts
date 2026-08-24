@@ -29,18 +29,6 @@ test.describe('mobile UI surfaces', () => {
     expect(gap).toBeGreaterThanOrEqual(0)
   })
 
-  test('signals that the mobile week continues horizontally', async ({ page }) => {
-    await clearState(page)
-    await page.goto('/week')
-
-    const cue = page.locator('[data-component="week-mobile-continuation"]')
-    await expect(cue).toBeVisible()
-    await expect(cue).toContainText('Swipe for more days')
-
-    await cue.getByRole('button', { name: 'Dismiss week view tip' }).click()
-    await expect(cue).toBeHidden()
-  })
-
   test('keeps the ellipsis affordance and marks secondary routes current', async ({ page }) => {
     await clearState(page)
     await page.goto('/tasks')
