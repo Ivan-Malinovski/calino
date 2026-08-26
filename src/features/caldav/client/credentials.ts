@@ -14,6 +14,7 @@ interface StoredCredential {
   serverUrl: string
   username: string
   password: string | EncryptedData
+  authMode?: 'basic' | 'browser-session'
 }
 
 export async function saveCredentials(
@@ -28,6 +29,7 @@ export async function saveCredentials(
     serverUrl: credentials.serverUrl,
     username: credentials.username,
     password: encryptedPassword,
+    authMode: credentials.authMode ?? 'basic',
   }
 
   stored.push(newCredential)
@@ -39,6 +41,7 @@ export async function saveCredentials(
     serverUrl: newCredential.serverUrl,
     username: newCredential.username,
     password: credentials.password,
+    authMode: newCredential.authMode,
   }
 }
 
@@ -84,6 +87,7 @@ export async function getAllCredentials(): Promise<CalDAVCredentials[]> {
       serverUrl: cred.serverUrl,
       username: cred.username,
       password,
+      authMode: cred.authMode ?? 'basic',
     })
   }
 
@@ -122,6 +126,7 @@ export async function updateCredential(
       serverUrl: updates.serverUrl ?? existing.serverUrl,
       username: updates.username ?? existing.username,
       password: updates.password ? await encryptPassword(updates.password) : existing.password,
+      authMode: updates.authMode ?? existing.authMode ?? 'basic',
     }
     localStorage.setItem(CREDENTIALS_KEY, JSON.stringify(stored))
   }

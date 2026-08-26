@@ -270,7 +270,7 @@ export class CalDAVClient {
   private proxyUrl: string | null
   private credentials: CalDAVCredentials
   // Cached base64 auth header — avoids re-encoding on every request
-  private authHeader: string
+  private authHeader: string | null
   // Cached calendar home URL — avoids re-discovery on every createCalendar
   private cachedCalendarHomeUrl: string | null = null
   // Proxy-aware fetch function (applied to all direct fetch calls)
@@ -281,7 +281,10 @@ export class CalDAVClient {
     this.proxyUrl = proxyUrl
     this.credentials = credentials
     // UTF-8-safe Basic auth (btoa alone mangles non-ASCII credentials).
-    this.authHeader = basicAuthHeader(credentials.username, credentials.password)
+    this.authHeader =
+      credentials.authMode === 'browser-session'
+        ? null
+        : basicAuthHeader(credentials.username, credentials.password)
     this.proxyFetch = proxyUrl ? createProxyFetch(proxyUrl) : fetchWithTimeout
   }
 
@@ -296,7 +299,8 @@ export class CalDAVClient {
       // anything above U+00FF — hand it the same UTF-8 header we use for
       // direct requests so every tsdav call authenticates identically.
       authMethod: 'Custom',
-      authFunction: async () => ({ Authorization: this.authHeader }),
+      authFunction: async (): Promise<Record<string, string>> =>
+        this.authHeader ? { Authorization: this.authHeader } : {},
       defaultAccountType: 'caldav',
       fetch: this.proxyUrl ? createProxyFetch(this.proxyUrl) : fetchWithTimeout,
     })
@@ -307,6 +311,10 @@ export class CalDAVClient {
       throw new Error('Client not connected. Call connect() first.')
     }
     return this.client
+  }
+
+  private get authorizationHeaders(): Record<string, string> {
+    return this.authHeader ? { Authorization: this.authHeader } : {}
   }
 
   async fetchCalendars(): Promise<CalDAVCalendar[]> {
@@ -348,10 +356,7 @@ export class CalDAVClient {
         const resourceTypes: string[] = cal.resourcetype ?? []
         return !resourceTypes.some(
           (rt) =>
-            rt === 'inbox' ||
-            rt === 'schedule-inbox' ||
-            rt === 'outbox' ||
-            rt === 'schedule-outbox'
+            rt === 'inbox' || rt === 'schedule-inbox' || rt === 'outbox' || rt === 'schedule-outbox'
         )
       })
       .map((cal, index) => {
@@ -524,7 +529,7 @@ export class CalDAVClient {
     const response = await this.proxyFetch(href, {
       method: 'GET',
       headers: {
-        Authorization: this.authHeader,
+        ...this.authorizationHeaders,
         Accept: 'text/calendar',
       },
     })
@@ -599,7 +604,7 @@ export class CalDAVClient {
         method: 'PROPFIND',
         headers: {
           'Content-Type': 'application/xml; charset=utf-8',
-          Authorization: this.authHeader,
+          ...this.authorizationHeaders,
           Depth: '0',
         },
         body: `<?xml version="1.0" encoding="UTF-8" ?>
@@ -772,7 +777,7 @@ export class CalDAVClient {
 
     const headers: Record<string, string> = {
       'Content-Type': 'application/xml; charset=utf-8',
-      Authorization: this.authHeader,
+      ...this.authorizationHeaders,
     }
 
     const response = await this.proxyFetch(calendarUrl, {
@@ -849,11 +854,7 @@ export class CalDAVClient {
   private async findCalendarHomeFromPrincipal(): Promise<string | null> {
     const baseUrl = this.serverUrl.replace(/\/$/, '')
     try {
-      const principalHref = await this.propfindFirstHref(
-        baseUrl,
-        'DAV:',
-        'current-user-principal'
-      )
+      const principalHref = await this.propfindFirstHref(baseUrl, 'DAV:', 'current-user-principal')
       if (!principalHref) return null
       const principalUrl = resolveDavHref(baseUrl, principalHref)
 
@@ -911,7 +912,7 @@ export class CalDAVClient {
       method: 'PROPFIND',
       headers: {
         'Content-Type': 'application/xml; charset=utf-8',
-        Authorization: this.authHeader,
+        ...this.authorizationHeaders,
         Depth: '0',
       },
       body,
@@ -986,7 +987,7 @@ export class CalDAVClient {
 
     const headers: Record<string, string> = {
       'Content-Type': 'application/xml; charset=utf-8',
-      Authorization: this.authHeader,
+      ...this.authorizationHeaders,
     }
 
     const response = await this.proxyFetch(calendarUrl, {
@@ -1007,7 +1008,7 @@ export class CalDAVClient {
     }
 
     const headers: Record<string, string> = {
-      Authorization: this.authHeader,
+      ...this.authorizationHeaders,
     }
 
     const response = await this.proxyFetch(calendarUrl, {
@@ -1109,7 +1110,7 @@ export class CalDAVClient {
 
     const headers: Record<string, string> = {
       'Content-Type': 'application/xml; charset=utf-8',
-      Authorization: this.authHeader,
+      ...this.authorizationHeaders,
     }
 
     try {
@@ -1206,7 +1207,7 @@ export class CalDAVClient {
 
     const headers: Record<string, string> = {
       'Content-Type': 'application/xml; charset=utf-8',
-      Authorization: this.authHeader,
+      ...this.authorizationHeaders,
       Depth: '1',
     }
 
@@ -1295,7 +1296,7 @@ export class CalDAVClient {
 
     const mkcolHeaders: Record<string, string> = {
       'Content-Type': 'application/xml; charset=utf-8',
-      Authorization: this.authHeader,
+      ...this.authorizationHeaders,
     }
 
     const mkcolResp = await this.proxyFetch(calUrl, {
@@ -1361,7 +1362,7 @@ export class CalDAVClient {
 
     const headers: Record<string, string> = {
       'Content-Type': 'application/xml; charset=utf-8',
-      Authorization: this.authHeader,
+      ...this.authorizationHeaders,
       Depth: '1',
     }
 
@@ -1601,7 +1602,7 @@ export class CalDAVClient {
       throw new Error('No network connection. Please check your internet connection.')
     }
     const headers: Record<string, string> = {
-      Authorization: this.authHeader,
+      ...this.authorizationHeaders,
     }
     const resp = await this.proxyFetch(settingsCalendarUrl, {
       method: 'DELETE',
@@ -1633,7 +1634,7 @@ export class CalDAVClient {
     try {
       const response = await this.proxyFetch(url ?? this.serverUrl, {
         method: 'OPTIONS',
-        headers: { Authorization: this.authHeader },
+        headers: this.authorizationHeaders,
       })
       const dav = response.headers?.get?.('dav') ?? ''
       return /calendar-auto-schedule/i.test(dav)
@@ -1656,7 +1657,7 @@ export class CalDAVClient {
         method: 'REPORT',
         headers: {
           'Content-Type': 'application/xml; charset=utf-8',
-          Authorization: this.authHeader,
+          ...this.authorizationHeaders,
           Depth: '1',
         },
         body: buildFreeBusyQueryXml(start, end),
@@ -1688,7 +1689,7 @@ export class CalDAVClient {
         method: 'POST',
         headers: {
           'Content-Type': 'text/calendar; charset=utf-8',
-          Authorization: this.authHeader,
+          ...this.authorizationHeaders,
           Originator: `mailto:${organizerEmail}`,
           Recipient: attendeeEmails.map((e) => `mailto:${e}`).join(', '),
         },

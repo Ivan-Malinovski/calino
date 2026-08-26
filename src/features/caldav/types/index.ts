@@ -77,6 +77,7 @@ export interface CalDAVCredentials {
   serverUrl: string
   username: string
   password: string
+  authMode?: 'basic' | 'browser-session'
 }
 
 export interface ServerInfo {

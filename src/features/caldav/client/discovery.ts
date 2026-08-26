@@ -333,7 +333,8 @@ function buildBaseUrl(serverBaseUrl: string, discoveredPath: string, finalOrigin
 export async function testConnection(
   serverUrl: string,
   credentials: { username: string; password: string },
-  proxyUrl?: string | null
+  proxyUrl?: string | null,
+  authMode: 'basic' | 'browser-session' = 'basic'
 ): Promise<boolean> {
   try {
     const fetchFn = proxyUrl ? createProxyFetch(proxyUrl) : webFetch
@@ -344,7 +345,11 @@ export async function testConnection(
         username: credentials.username,
         password: credentials.password,
       },
-      authMethod: 'Basic',
+      authMethod: 'Custom',
+      authFunction: async (): Promise<Record<string, string>> =>
+        authMode === 'browser-session'
+          ? {}
+          : { Authorization: basicAuthHeader(credentials.username, credentials.password) },
       defaultAccountType: 'caldav',
       fetch: fetchFn,
     })
@@ -382,7 +387,8 @@ export async function probeConnection(
   username: string,
   password: string,
   proxyUrl?: string | null,
-  originalUrl?: string
+  originalUrl?: string,
+  authMode: 'basic' | 'browser-session' = 'basic'
 ): Promise<ProbeResult> {
   const hintUrl = originalUrl || serverUrl
 
@@ -393,7 +399,9 @@ export async function probeConnection(
       const init: RequestInit = {
         method: 'PROPFIND',
         headers: {
-          Authorization: basicAuthHeader(username, password),
+          ...(authMode === 'browser-session'
+            ? {}
+            : { Authorization: basicAuthHeader(username, password) }),
           'Content-Type': 'application/xml',
           Depth: '0',
         },
@@ -447,7 +455,8 @@ export async function probeConnection(
       hint: hint ?? undefined,
     }
   } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : i18n.t('errors:connection.unknownError')
+    const errorMsg =
+      error instanceof Error ? error.message : i18n.t('errors:connection.unknownError')
     return {
       ok: false,
       error: i18n.t('errors:connection.failedGeneric', { message: errorMsg }),

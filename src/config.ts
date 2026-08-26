@@ -10,6 +10,12 @@ export const config = {
   defaultLightTheme: 'built-in',
   defaultDarkTheme: 'built-in',
   enableServiceWorker: import.meta.env.CALINO_ENABLE_SW === 'true',
+  browserSessionCalDAV: import.meta.env.VITE_CALINO_BROWSER_SESSION_DAV_URL
+    ? {
+        url: import.meta.env.VITE_CALINO_BROWSER_SESSION_DAV_URL,
+        name: import.meta.env.VITE_CALINO_BROWSER_SESSION_ACCOUNT_NAME || 'Calendar',
+      }
+    : null,
 }
 
 export const DEFAULT_CALENDAR_COLOR = '#4285F4'

@@ -47,6 +47,7 @@ import { useProgressStore, withProgress, isProgressOwned } from '@/store/progres
 import { useConfigStore } from '@/store/configStore'
 import { createUuid } from '@/lib/uuid'
 import { EVENT_COLORS } from '@/store/settingsStore'
+import { config as appConfig } from '@/config'
 import {
   selectAddEvent,
   selectUpdateEvent,
@@ -66,6 +67,7 @@ const isProcessingRef = { current: false }
 
 // Module-level guard for auto-connect (shared across all hook instances)
 let autoConnectDone = false
+let browserSessionConnectDone = false
 
 // Module-level guard: accounts already probed for CardDAV support. useCalDAV is
 // mounted by ~20 components, so without this every mount (including the churn
@@ -341,8 +343,7 @@ function tracked<A extends unknown[], R>(
   label: string,
   fn: (...args: A) => Promise<R>
 ): (...args: A) => Promise<R> {
-  return (...args: A) =>
-    isProgressOwned() ? fn(...args) : withProgress(label, () => fn(...args))
+  return (...args: A) => (isProgressOwned() ? fn(...args) : withProgress(label, () => fn(...args)))
 }
 
 export interface UseCalDAVReturn {
@@ -354,7 +355,8 @@ export interface UseCalDAVReturn {
     username: string,
     password: string,
     name: string,
-    proxyUrl?: string | null
+    proxyUrl?: string | null,
+    authMode?: 'basic' | 'browser-session'
   ) => Promise<void>
   removeAccount: (accountId: string) => Promise<void>
   updateAccount: (
@@ -948,7 +950,8 @@ export function useCalDAVInstance(): UseCalDAVReturn {
       username: string,
       password: string,
       name: string,
-      proxyUrl?: string | null
+      proxyUrl?: string | null,
+      authMode: 'basic' | 'browser-session' = 'basic'
     ): Promise<void> => {
       setSyncState((prev) => ({ ...prev, status: 'syncing', error: null }))
       useCalDAVSyncStore.getState().setStatus('syncing')
@@ -957,17 +960,21 @@ export function useCalDAVInstance(): UseCalDAVReturn {
       // itself: which stage, and how far through the calendars it is.
       const progress = useProgressStore.getState()
       const progressId = progress.begin('Connecting to server…')
-      const reportProgress = (patch: {
-        label?: string
-        done?: number
-        total?: number
-      }): void => useProgressStore.getState().update(progressId, patch)
+      const reportProgress = (patch: { label?: string; done?: number; total?: number }): void =>
+        useProgressStore.getState().update(progressId, patch)
 
       try {
         console.log('[CalDAV] addAccount: probing server...', serverUrl)
         // probeConnection handles discovery, the PROPFIND, and the base-URL
         // fallback in one pass, and reports *why* a failure happened.
-        const probe = await probeConnection(serverUrl, username, password, proxyUrl)
+        const probe = await probeConnection(
+          serverUrl,
+          username,
+          password,
+          proxyUrl,
+          undefined,
+          authMode
+        )
         console.log('[CalDAV] addAccount: probe result:', probe.ok, probe.status ?? '')
 
         if (!probe.ok) {
@@ -983,6 +990,7 @@ export function useCalDAVInstance(): UseCalDAVReturn {
           serverUrl: discoveredUrl,
           username,
           password,
+          authMode,
         })
 
         console.log('[CalDAV] addAccount: creating client...')
@@ -1117,7 +1125,9 @@ export function useCalDAVInstance(): UseCalDAVReturn {
         // Store writes stay serial and in calendar order, so the
         // already-seen-this-pass dedup below behaves exactly as before.
         for (const { cal, fetchedEvents } of fetchedPerCalendar) {
-          reportProgress({ label: i18n.t('caldav:progress.importingCalendar', { name: calendarLabel(cal) }) })
+          reportProgress({
+            label: i18n.t('caldav:progress.importingCalendar', { name: calendarLabel(cal) }),
+          })
           const { items: parsedWithHref } = await collectParsedWithHref(fetchedEvents, cal.id)
 
           // Detect independent events illegally sharing a UID across resources.
@@ -1191,7 +1201,11 @@ export function useCalDAVInstance(): UseCalDAVReturn {
         }
 
         // After calendar sync, check for CardDAV support
-        reportProgress({ label: i18n.t('caldav:progress.checkingForContacts'), done: undefined, total: undefined })
+        reportProgress({
+          label: i18n.t('caldav:progress.checkingForContacts'),
+          done: undefined,
+          total: undefined,
+        })
         try {
           const { createCardDAVClient } = await import('@/features/carddav/client/CardDAVClient')
           const carddavClient = await createCardDAVClient(serverUrl, credential, proxyUrl ?? null)
@@ -1371,6 +1385,24 @@ export function useCalDAVInstance(): UseCalDAVReturn {
     connectAccounts()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isUnlocked, hasPreconfiguredAccounts])
+
+  // A reverse proxy can authenticate both Calino and a same-origin DAV route
+  // with the browser's existing session. This managed account deliberately
+  // stores no reusable password and never sends an Authorization header.
+  useEffect(() => {
+    const managed = appConfig.browserSessionCalDAV
+    if (!managed || browserSessionConnectDone) return
+
+    const serverUrl = new URL(managed.url, window.location.origin).href
+    const existing = storage.getAllAccounts().some((account) => account.serverUrl === serverUrl)
+    browserSessionConnectDone = true
+    if (existing) return
+
+    void addAccount(serverUrl, '', '', managed.name, null, 'browser-session').catch((error) => {
+      browserSessionConnectDone = false
+      console.error('[CalDAV] Failed to connect browser-session account:', error)
+    })
+  }, [addAccount])
 
   const removeAccount = useCallback(async (accountId: string): Promise<void> => {
     const account = storage.getAccountById(accountId)
@@ -3013,12 +3045,18 @@ export function useCalDAVInstance(): UseCalDAVReturn {
 
   // Background syncs are deliberately absent: they run on a timer with no one
   // waiting on them, and the sidebar already animates while they do.
-  const trackedCreateEvent = useMemo(() => tracked(i18n.t('caldav:progress.savingEvent'), createEvent), [createEvent])
+  const trackedCreateEvent = useMemo(
+    () => tracked(i18n.t('caldav:progress.savingEvent'), createEvent),
+    [createEvent]
+  )
   const trackedCreateEventGroup = useMemo(
     () => tracked(i18n.t('caldav:progress.savingEvents'), createEventGroup),
     [createEventGroup]
   )
-  const trackedUpdateEvent = useMemo(() => tracked(i18n.t('caldav:progress.savingEvent'), updateEventFn), [updateEventFn])
+  const trackedUpdateEvent = useMemo(
+    () => tracked(i18n.t('caldav:progress.savingEvent'), updateEventFn),
+    [updateEventFn]
+  )
   const trackedSaveRecurrenceOverride = useMemo(
     () => tracked(i18n.t('caldav:progress.savingEvent'), saveRecurrenceOverrideFn),
     [saveRecurrenceOverrideFn]

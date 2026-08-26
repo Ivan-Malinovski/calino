@@ -6,10 +6,12 @@ services:
         - VITE_SITE_URL=${VITE_SITE_URL:-https://calino.io}
         - CALINO_ENABLE_SW=${CALINO_ENABLE_SW:-false}
         - CALINO_GITHUB_REPO=${CALINO_GITHUB_REPO:-ivan-malinovski/Calino}
+        - VITE_CALINO_BROWSER_SESSION_DAV_URL=${VITE_CALINO_BROWSER_SESSION_DAV_URL:-}
+        - VITE_CALINO_BROWSER_SESSION_ACCOUNT_NAME=${VITE_CALINO_BROWSER_SESSION_ACCOUNT_NAME:-Calendar}
         - CALINO_CONTACT_EMAIL=${CALINO_CONTACT_EMAIL:-calendar@malinov.ski}
         - CALINO_SELF_HOSTED=${CALINO_SELF_HOSTED:-true}
     ports:
-      - "8080:8080"
+      - '8080:8080'
     restart: unless-stopped
     # ⚠️ cap_drop ALL removed — Docker Desktop 4.7.1 (runc v1.0.3) has a bug
     # where it drops capabilities needed by the container init process itself,
@@ -22,7 +24,7 @@ services:
     mem_limit: 128m
     memswap_limit: 128m
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:8080/"]
+      test: ['CMD', 'wget', '-qO-', 'http://localhost:8080/']
       interval: 30s
       timeout: 3s
       start_period: 5s
@@ -30,18 +32,18 @@ services:
     logging:
       driver: json-file
       options:
-        max-size: "10m"
-        max-file: "3"
+        max-size: '10m'
+        max-file: '3'
 
   # Optional self-hosted CORS proxy for CalDAV servers that don't send CORS
   # headers. Off by default — enable with:  docker compose --profile proxy up -d
   # Then set the Proxy URL in Calino settings to http://<your-host>:8081
   caldav-proxy:
-    profiles: ["proxy"]
+    profiles: ['proxy']
     build:
       context: ./proxy
     ports:
-      - "8081:8081"
+      - '8081:8081'
     environment:
       # Leave empty to allow any origin, or restrict to your Calino instance(s),
       # e.g. ALLOWED_ORIGINS=https://calendar.example.com
@@ -56,7 +58,7 @@ services:
     mem_limit: 128m
     memswap_limit: 128m
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:8081/health"]
+      test: ['CMD', 'wget', '-qO-', 'http://localhost:8081/health']
       interval: 30s
       timeout: 3s
       start_period: 5s
@@ -64,5 +66,5 @@ services:
     logging:
       driver: json-file
       options:
-        max-size: "10m"
-        max-file: "3"
+        max-size: '10m'
+        max-file: '3'

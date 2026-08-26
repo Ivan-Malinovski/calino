@@ -41,12 +41,14 @@ docker compose up -d
 
 ## Environment Variables
 
-| Variable | Description | Default | Requires Rebuild |
-|----------|-------------|---------|:---:|
-| `VITE_SITE_URL` | Public URL for SEO / Open Graph meta tags. No trailing slash. | `https://calino.io` | ✅ |
-| `CALINO_GITHUB_REPO` | GitHub repo slug (shown in footer). | `ivan-malinovski/Calino` | ✅ |
-| `CALINO_CONTACT_EMAIL` | Contact email (shown in footer). | `calendar@malinov.ski` | ✅ |
-| `CALINO_ENABLE_SW` | Enable service worker for offline support. Requires `Service-Worker-Allowed: /` header from your reverse proxy. | `false` | ✅ |
+| Variable                                   | Description                                                                                                                                                                       | Default                  | Requires Rebuild |
+| ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------ | :--------------: |
+| `VITE_SITE_URL`                            | Public URL for SEO / Open Graph meta tags. No trailing slash.                                                                                                                     | `https://calino.io`      |        ✅        |
+| `CALINO_GITHUB_REPO`                       | GitHub repo slug (shown in footer).                                                                                                                                               | `ivan-malinovski/Calino` |        ✅        |
+| `CALINO_CONTACT_EMAIL`                     | Contact email (shown in footer).                                                                                                                                                  | `calendar@malinov.ski`   |        ✅        |
+| `CALINO_ENABLE_SW`                         | Enable service worker for offline support. Requires `Service-Worker-Allowed: /` header from your reverse proxy.                                                                   | `false`                  |        ✅        |
+| `VITE_CALINO_BROWSER_SESSION_DAV_URL`      | Automatically connect a DAV route authenticated by the browser's reverse-proxy session. Use a same-origin path such as `/dav/`; Calino omits HTTP Authorization for this account. | unset                    |        ✅        |
+| `VITE_CALINO_BROWSER_SESSION_ACCOUNT_NAME` | Display name for the browser-session DAV account.                                                                                                                                 | `Calendar`               |        ✅        |
 
 ## Architecture
 
@@ -66,15 +68,15 @@ The container is **stateless** — all user data lives in the browser's `localSt
 
 ### Why Caddy over nginx?
 
-| | nginx | Caddy |
-|-|-------|-------|
-| Config files | 3 (`nginx-main.conf`, `nginx.conf`, `nginx-security-headers.conf`) | 1 (`Caddyfile`) |
-| Security headers | Manual, shared via include (nginx inheritance gotcha) | Built-in `header` directive |
-| SPA fallback | `try_files` | `try_files` |
-| Gzip | Manual `gzip_types` list | `encode gzip` — auto-detects |
-| Server version hiding | `server_tokens off` (still sends `Server: nginx`) | `-Server` header (fully stripped) |
-| HTTPS | Manual cert config | Automatic (Let's Encrypt) if needed |
-| Image size | ~23 MB | ~15 MB |
+|                       | nginx                                                              | Caddy                               |
+| --------------------- | ------------------------------------------------------------------ | ----------------------------------- |
+| Config files          | 3 (`nginx-main.conf`, `nginx.conf`, `nginx-security-headers.conf`) | 1 (`Caddyfile`)                     |
+| Security headers      | Manual, shared via include (nginx inheritance gotcha)              | Built-in `header` directive         |
+| SPA fallback          | `try_files`                                                        | `try_files`                         |
+| Gzip                  | Manual `gzip_types` list                                           | `encode gzip` — auto-detects        |
+| Server version hiding | `server_tokens off` (still sends `Server: nginx`)                  | `-Server` header (fully stripped)   |
+| HTTPS                 | Manual cert config                                                 | Automatic (Let's Encrypt) if needed |
+| Image size            | ~23 MB                                                             | ~15 MB                              |
 
 ## Multi-Arch Builds
 
@@ -130,17 +132,17 @@ docker buildx build --platform linux/amd64,linux/arm64 -t your-registry/calino:l
 
 The Docker setup follows least-privilege principles:
 
-| Hardening | Status | Details |
-|-----------|:------:|---------|
-| Read-only filesystem | ✅ | `read_only: true` + `tmpfs` for temp dirs |
-| All capabilities dropped | ✅ | `cap_drop: ALL` |
-| No new privileges | ✅ | `no-new-privileges` |
-| Process limit | ✅ | `pids_limit: 256` |
-| Memory limit | ✅ | `mem_limit: 128m` (static site needs very little) |
-| Server header stripped | ✅ | `header -Server` in Caddyfile |
-| Security headers | ✅ | X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy |
-| Request body limit | ✅ | `max_size 1mb` |
-| Log rotation | ✅ | 3 × 10 MB max |
+| Hardening                | Status | Details                                                                      |
+| ------------------------ | :----: | ---------------------------------------------------------------------------- |
+| Read-only filesystem     |   ✅   | `read_only: true` + `tmpfs` for temp dirs                                    |
+| All capabilities dropped |   ✅   | `cap_drop: ALL`                                                              |
+| No new privileges        |   ✅   | `no-new-privileges`                                                          |
+| Process limit            |   ✅   | `pids_limit: 256`                                                            |
+| Memory limit             |   ✅   | `mem_limit: 128m` (static site needs very little)                            |
+| Server header stripped   |   ✅   | `header -Server` in Caddyfile                                                |
+| Security headers         |   ✅   | X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy |
+| Request body limit       |   ✅   | `max_size 1mb`                                                               |
+| Log rotation             |   ✅   | 3 × 10 MB max                                                                |
 
 ### Content Security Policy
 
@@ -210,11 +212,11 @@ server {
 
 ```yaml
 labels:
-  - "traefik.enable=true"
-  - "traefik.http.routers.calino.rule=Host(`calendar.example.com`)"
-  - "traefik.http.routers.calino.entrypoints=websecure"
-  - "traefik.http.routers.calino.tls.certresolver=letsencrypt"
-  - "traefik.http.services.calino.loadbalancer.server.port=8080"
+  - 'traefik.enable=true'
+  - 'traefik.http.routers.calino.rule=Host(`calendar.example.com`)'
+  - 'traefik.http.routers.calino.entrypoints=websecure'
+  - 'traefik.http.routers.calino.tls.certresolver=letsencrypt'
+  - 'traefik.http.services.calino.loadbalancer.server.port=8080'
 ```
 
 ### With Auth (Authelia / Authentik)
@@ -274,6 +276,7 @@ docker compose logs calino
 ```
 
 Common causes:
+
 - Port 8080 already in use → change the left side of `ports` in compose
 - Caddyfile syntax error → rebuild after editing `Caddyfile`
 

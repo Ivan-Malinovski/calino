@@ -35,7 +35,11 @@ export function OnboardingModal({ onAddCalendar }: OnboardingModalProps): JSX.El
 
   // Open state is derived from settings; every dismiss path flips it closed,
   // which the hook detects and animates out before unmounting.
-  const isOpen = !(hasCompletedOnboarding || hasPreconfiguredAccounts)
+  const isOpen = !(
+    hasCompletedOnboarding ||
+    hasPreconfiguredAccounts ||
+    config.browserSessionCalDAV
+  )
   const noop = useCallback(() => {}, [])
   const { rendered, closing } = useAnimatedClose(isOpen, noop, 200)
   const contentRef = useRef<HTMLDivElement>(null)

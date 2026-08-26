@@ -84,6 +84,27 @@ describe('Phase 0 verification: Bug A — btoa() on non-Latin-1 credentials (FIX
   })
 })
 
+describe('browser-session authentication', () => {
+  it('does not create or pass an Authorization header', async () => {
+    mockCreateDAVClient.mockResolvedValue(mockClientMethods)
+    const client = new CalDAVClient('https://calendar.example.com/dav/', {
+      ...baseCredentials,
+      username: '',
+      password: '',
+      authMode: 'browser-session',
+    })
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect((client as any).authHeader).toBeNull()
+
+    await client.connect()
+
+    expect(mockCreateDAVClient).toHaveBeenCalledOnce()
+    const options = mockCreateDAVClient.mock.calls[0][0]
+    await expect(options.authFunction?.({} as never)).resolves.toEqual({})
+  })
+})
+
 describe('Phase 0 verification: Bug B — fetchCalendars() drops VJOURNAL', () => {
   let client: CalDAVClient
 

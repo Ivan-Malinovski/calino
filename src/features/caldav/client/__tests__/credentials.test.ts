@@ -68,6 +68,39 @@ describe('credentials', () => {
 
       expect(result).toHaveLength(1)
       expect(result[0].id).toBe('1')
+      expect(result[0].authMode).toBe('basic')
+    })
+
+    it('preserves browser-session authentication mode', async () => {
+      const validData = JSON.stringify([
+        {
+          id: 'session',
+          serverUrl: 'https://calendar.example.com/dav/',
+          username: '',
+          password: '',
+          authMode: 'browser-session',
+        },
+      ])
+      const localStorageMock = {
+        getItem: vi.fn().mockReturnValue(validData),
+        setItem: vi.fn(),
+        removeItem: vi.fn(),
+        clear: vi.fn(),
+        key: vi.fn(),
+        length: 0,
+      }
+      Object.defineProperty(window, 'localStorage', { value: localStorageMock, writable: true })
+      Object.defineProperty(globalThis, 'localStorage', { value: localStorageMock, writable: true })
+
+      const result = await getAllCredentials()
+
+      expect(result).toHaveLength(1)
+      expect(result[0]).toMatchObject({
+        id: 'session',
+        authMode: 'browser-session',
+        username: '',
+        password: '',
+      })
     })
   })
 })

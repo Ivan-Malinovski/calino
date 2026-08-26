@@ -12,4 +12,6 @@ interface ImportMetaEnv {
   readonly CALINO_GITHUB_REPO?: string
   readonly CALINO_CONTACT_EMAIL?: string
   readonly CALINO_ENABLE_SW?: string
+  readonly VITE_CALINO_BROWSER_SESSION_DAV_URL?: string
+  readonly VITE_CALINO_BROWSER_SESSION_ACCOUNT_NAME?: string
 }

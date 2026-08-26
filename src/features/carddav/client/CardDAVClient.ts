@@ -231,7 +231,8 @@ export class CardDAVClient {
         username: this.credentials.username,
         password: this.credentials.password,
       },
-      authMethod: 'Basic',
+      authMethod: 'Custom',
+      authFunction: async () => this.authorizationHeaders,
       defaultAccountType: 'carddav',
       fetch: this.proxyUrl ? createProxyFetch(this.proxyUrl) : fetchWithTimeout,
     })
@@ -240,8 +241,11 @@ export class CardDAVClient {
   /**
    * Get the Authorization header value.
    */
-  private get authHeader(): string {
-    return `Basic ${btoa(`${this.credentials.username}:${this.credentials.password}`)}`
+  private get authorizationHeaders(): Record<string, string> {
+    if (this.credentials.authMode === 'browser-session') return {}
+    return {
+      Authorization: `Basic ${btoa(`${this.credentials.username}:${this.credentials.password}`)}`,
+    }
   }
 
   private getClient() {
@@ -637,7 +641,7 @@ export class CardDAVClient {
   }> {
     const headers: Record<string, string> = {
       'Content-Type': 'application/xml; charset=utf-8',
-      Authorization: this.authHeader,
+      ...this.authorizationHeaders,
       Depth: '0',
     }
 
@@ -703,7 +707,7 @@ export class CardDAVClient {
   private async fetchEtagForHref(url: string): Promise<string> {
     const headers: Record<string, string> = {
       'Content-Type': 'application/xml; charset=utf-8',
-      Authorization: this.authHeader,
+      ...this.authorizationHeaders,
       Depth: '0',
     }
 
@@ -814,7 +818,7 @@ export class CardDAVClient {
   }> {
     const headers: Record<string, string> = {
       'Content-Type': 'application/xml; charset=utf-8',
-      Authorization: this.authHeader,
+      ...this.authorizationHeaders,
     }
 
     // Step 1: well-known carddav
