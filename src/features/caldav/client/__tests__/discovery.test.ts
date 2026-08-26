@@ -102,6 +102,22 @@ describe('discovery', () => {
     })
   })
 
+  describe('well-known probe: redirect chain overshoots into a web UI', () => {
+    it('rejects Radicale .web and falls back to the configured DAV base', async () => {
+      const mockResponse = {
+        ok: false,
+        status: 403,
+        url: 'https://calendar.example.com/dav/.web/',
+        headers: new Headers(),
+      } as unknown as Response
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue(mockResponse))
+
+      const result = await discoverServerUrl('https://calendar.example.com/dav/')
+
+      expect(result).toBe('https://calendar.example.com/dav')
+    })
+  })
+
   // -----------------------------------------------------------------------
   // Well-known probe — direct 200 response (no redirect, unsupported)
   // -----------------------------------------------------------------------

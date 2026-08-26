@@ -222,7 +222,7 @@ async function probeWellKnownDirect(wellKnownUrl: string, baseUrl: string): Prom
     // If the final URL is still .well-known/caldav, no redirect happened.
     // RFC 5785 says the actual service MUST NOT be at .well-known, so this
     // means the server doesn't support well-known discovery.
-    if (isWellKnownPath(finalPath)) {
+    if (isWellKnownPath(finalPath) || isRadicaleWebPath(finalPath)) {
       return null
     }
 
@@ -233,6 +233,11 @@ async function probeWellKnownDirect(wellKnownUrl: string, baseUrl: string): Prom
   } finally {
     clearTimeout(timer)
   }
+}
+
+/** Radicale's browser UI is the end of a GET redirect chain, not a DAV root. */
+function isRadicaleWebPath(pathname: string): boolean {
+  return pathname.endsWith('/.web') || pathname.endsWith('/.web/')
 }
 
 /**
