@@ -997,8 +997,25 @@ export function useCalDAVInstance(): UseCalDAVReturn {
         const client = await createCalDAVClient(discoveredUrl, credential, proxyUrl)
         reportProgress({ label: i18n.t('caldav:progress.lookingForCalendars') })
         console.log('[CalDAV] addAccount: fetching calendars...')
-        const serverCalendars = await client.fetchCalendars()
+        let serverCalendars = await client.fetchCalendars()
         console.log('[CalDAV] addAccount: found', serverCalendars.length, 'calendars')
+
+        // A freshly provisioned reverse-proxy account has no collections yet,
+        // which otherwise leaves the UI without a valid target for its first
+        // event. Browser-session accounts are managed deployments, so
+        // bootstrap one server-backed collection.
+        if (serverCalendars.length === 0 && authMode === 'browser-session') {
+          const defaultCalendarName =
+            appConfig.browserSessionCalDAV?.defaultCalendarName || 'Personal'
+          reportProgress({ label: `Creating ${defaultCalendarName}…` })
+          const created = await client.createCalendar({
+            name: defaultCalendarName,
+            color: EVENT_COLORS[0],
+            components: ['VEVENT', 'VTODO'],
+          })
+          serverCalendars = [created]
+          console.log('[CalDAV] addAccount: created initial calendar', created.url)
+        }
 
         const newAccount = storage.saveAccount({
           name,
@@ -1271,14 +1288,15 @@ export function useCalDAVInstance(): UseCalDAVReturn {
             setLastSyncedAt,
           } = await import('@/lib/settingsSync')
           const existingPrimary = getPrimaryAccountId()
-          if (!existingPrimary) {
+          const firstServerCalendar = serverCalendars[0]
+          if (!existingPrimary && firstServerCalendar) {
             const { createCalDAVClient: createClient } = await import('../client/CalDAVClient')
             const settingsClient = await createClient(
               newAccount.serverUrl,
               credential,
               newAccount.proxyUrl
             )
-            const calHomeUrl = deriveCalendarHomeUrl(newAccount.serverUrl, serverCalendars[0].url)
+            const calHomeUrl = deriveCalendarHomeUrl(newAccount.serverUrl, firstServerCalendar.url)
             const discovered = await settingsClient.discoverSettingsCalendar(calHomeUrl)
             if (discovered) {
               setPrimaryAccountId(newAccount.id)
@@ -1394,14 +1412,32 @@ export function useCalDAVInstance(): UseCalDAVReturn {
     if (!managed || browserSessionConnectDone) return
 
     const serverUrl = new URL(managed.url, window.location.origin).href
-    const existing = storage.getAllAccounts().some((account) => account.serverUrl === serverUrl)
+    const existing = storage.getAllAccounts().find((account) => account.serverUrl === serverUrl)
     browserSessionConnectDone = true
-    if (existing) return
 
-    void addAccount(serverUrl, '', '', managed.name, null, 'browser-session').catch((error) => {
-      browserSessionConnectDone = false
-      console.error('[CalDAV] Failed to connect browser-session account:', error)
-    })
+    // Repair accounts persisted by older managed builds with zero calendars.
+    // There is no collection state to lose, so rerun normal account setup.
+    if (existing) {
+      if (storage.getCalendarsByAccountId(existing.id).length > 0) return
+      deleteCredential(existing.credentialId)
+      storage.deleteCalendarsByAccountId(existing.id)
+      storage.deleteAccount(existing.id)
+      setAccounts(storage.getAllAccounts())
+      setCalendars(storage.getAllCalendars())
+    }
+
+    void addAccount(serverUrl, '', '', managed.name, null, 'browser-session')
+      .then(() => {
+        const { calendars, events, deleteCalendar } = useCalendarStore.getState()
+        const offlineCal = calendars.find((calendar) => calendar.id === 'default')
+        if (offlineCal && !events.some((event) => event.calendarId === 'default')) {
+          deleteCalendar('default')
+        }
+      })
+      .catch((error) => {
+        browserSessionConnectDone = false
+        console.error('[CalDAV] Failed to connect browser-session account:', error)
+      })
   }, [addAccount])
 
   const removeAccount = useCallback(async (accountId: string): Promise<void> => {

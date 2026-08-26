@@ -1331,6 +1331,58 @@ describe('useCalDAV', () => {
   // addAccount — probes once, and carries the probe's hint on failure
   // -----------------------------------------------------------------------
   describe('addAccount', () => {
+    it('bootstraps an initial calendar for an empty browser-session account', async () => {
+      const createdCalendar: CalDAVCalendar = {
+        id: 'https://calendar.example.com/dav/user/personal/',
+        accountId: '',
+        url: 'https://calendar.example.com/dav/user/personal/',
+        name: 'Personal',
+        color: '#4285F4',
+        ctag: null,
+        syncToken: null,
+        isVisible: true,
+        isDefault: false,
+        supportedComponents: ['VEVENT', 'VTODO'],
+      }
+      const createCalendar = vi.fn().mockResolvedValue(createdCalendar)
+      mockCalDAVClient.createCalDAVClient.mockResolvedValue({
+        fetchCalendars: vi.fn().mockResolvedValue([]),
+        createCalendar,
+        fetchEvents: vi.fn().mockResolvedValue([]),
+      } as unknown as Awaited<ReturnType<typeof CalDAVClientModule.createCalDAVClient>>)
+      mockAccountStorage.saveAccount.mockReturnValue({
+        ...mockAccount,
+        id: 'managed-account',
+        serverUrl: 'https://calendar.example.com/dav/',
+        username: '',
+      })
+
+      const { result } = renderHook(() => useCalDAV())
+
+      await act(async () => {
+        await result.current.addAccount(
+          'https://calendar.example.com/dav/',
+          '',
+          '',
+          'Calendar',
+          null,
+          'browser-session'
+        )
+      })
+
+      expect(createCalendar).toHaveBeenCalledWith({
+        name: 'Personal',
+        color: '#4285F4',
+        components: ['VEVENT', 'VTODO'],
+      })
+      expect(mockAccountStorage.saveCalendar).toHaveBeenCalledWith(
+        expect.objectContaining({
+          url: createdCalendar.url,
+          accountId: 'managed-account',
+        })
+      )
+    })
+
     it('saves the credential against the probe-resolved URL', async () => {
       mockDiscovery.probeConnection.mockResolvedValue({
         ok: true,

@@ -14,4 +14,5 @@ interface ImportMetaEnv {
   readonly CALINO_ENABLE_SW?: string
   readonly VITE_CALINO_BROWSER_SESSION_DAV_URL?: string
   readonly VITE_CALINO_BROWSER_SESSION_ACCOUNT_NAME?: string
+  readonly VITE_CALINO_BROWSER_SESSION_DEFAULT_CALENDAR_NAME?: string
 }

@@ -14,6 +14,8 @@ export const config = {
     ? {
         url: import.meta.env.VITE_CALINO_BROWSER_SESSION_DAV_URL,
         name: import.meta.env.VITE_CALINO_BROWSER_SESSION_ACCOUNT_NAME || 'Calendar',
+        defaultCalendarName:
+          import.meta.env.VITE_CALINO_BROWSER_SESSION_DEFAULT_CALENDAR_NAME || 'Personal',
       }
     : null,
 }
