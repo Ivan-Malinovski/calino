@@ -1,7 +1,7 @@
 import type { JSX } from 'react'
 import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
-import { v4 as uuidv4 } from 'uuid'
+import { createUuid } from '@/lib/uuid'
 import type { Contact } from '../types'
 import { Modal } from '@/components/common/Modal'
 import { ContactFormFields } from './ContactFormFields'
@@ -146,7 +146,7 @@ export function ContactFormModal({
     const now = new Date().toISOString()
 
     const completeContact: Contact = {
-      id: contact?.id ?? uuidv4(),
+      id: contact?.id ?? createUuid(),
       addressBookId: contact?.addressBookId ?? addressBookId,
       accountId: contact?.accountId ?? accountId,
       url: contact?.url ?? '',

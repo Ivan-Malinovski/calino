@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { Modal } from '@/components/common/Modal'
 import { useContactStore } from '@/store/contactStore'
 import { useCardDAV } from '@/features/carddav/hooks/useCardDAV'
-import { v4 as uuidv4 } from 'uuid'
+import { createUuid } from '@/lib/uuid'
 import type { Contact } from '../types'
 import styles from '@/features/calendar/components/EventModal.module.css'
 
@@ -127,7 +127,7 @@ export function ImportExportModal({
 
       // Queue pending create for CardDAV
       addPendingChange({
-        id: uuidv4(),
+        id: createUuid(),
         type: 'create',
         contactId: c.id,
         addressBookId: c.addressBookId,

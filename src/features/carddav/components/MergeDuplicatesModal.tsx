@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { Modal } from '@/components/common/Modal'
 import { useContactStore } from '@/store/contactStore'
 import { useCardDAV } from '@/features/carddav/hooks/useCardDAV'
-import { v4 as uuidv4 } from 'uuid'
+import { createUuid } from '@/lib/uuid'
 import { findDuplicateGroups, mergeContacts, type DuplicateGroup } from '../lib/mergeContacts'
 import { showToast } from '@/lib/toast'
 import type { PendingDeleteSnapshot } from '@/lib/deleteContactWithUndo'
@@ -80,7 +80,7 @@ export function MergeDuplicatesModal({
           accountId: secondary.accountId,
         }
         addPendingChange({
-          id: uuidv4(),
+          id: createUuid(),
           type: 'delete',
           contactId: secondary.id,
           addressBookId: secondary.addressBookId,
@@ -92,7 +92,7 @@ export function MergeDuplicatesModal({
 
       // Queue update for primary
       addPendingChange({
-        id: uuidv4(),
+          id: createUuid(),
         type: 'update',
         contactId: primary!.id,
         addressBookId: primary!.addressBookId,

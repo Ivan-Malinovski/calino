@@ -4,7 +4,7 @@ import { motion } from 'framer-motion'
 import { parseISO } from 'date-fns'
 import { useCalendarStore, getJournalEntriesForDate } from '@/store/calendarStore'
 import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
-import { v4 as uuidv4 } from 'uuid'
+import { createUuid } from '@/lib/uuid'
 import { MarkdownView } from '@/lib/markdown'
 import { showToast } from '@/lib/toast'
 import { putAttachments, getAttachments, deleteAttachments } from '@/lib/attachmentStore'
@@ -219,7 +219,7 @@ export function JournalDayModal({
         currentCalendars.find((c) => c.id === calendarId) ??
         currentCalendars.find((c) => c.isDefault) ??
         currentCalendars[0]
-      const newId = uuidv4()
+      const newId = createUuid()
       const newEntry: CalendarEvent = {
         id: newId,
         calendarId: defaultCalendar?.id || 'default',

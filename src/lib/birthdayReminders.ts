@@ -1,4 +1,4 @@
-import { v4 as uuidv4 } from 'uuid'
+import { createUuid } from '@/lib/uuid'
 import type { CalendarEvent } from '@/types'
 import { toLocalDateString } from './datetime'
 import { makeDefaultReminders } from './notifications'
@@ -42,7 +42,7 @@ export function createBirthdayEvent(options: CreateBirthdayEventOptions): Calend
   const dateStr = annualStartDateStr(birthday)
 
   return {
-    id: uuidv4(),
+    id: createUuid(),
     calendarId,
     title: `🎂 ${contactName}'s birthday`,
     description: `Birthday of ${contactName}`,
@@ -76,7 +76,7 @@ export function createAnniversaryEvent(options: CreateAnniversaryEventOptions): 
   const dateStr = annualStartDateStr(anniversary)
 
   return {
-    id: uuidv4(),
+    id: createUuid(),
     calendarId,
     title: `💍 ${contactName}'s anniversary`,
     description: `Anniversary of ${contactName}`,

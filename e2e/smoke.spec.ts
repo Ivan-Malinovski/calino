@@ -142,6 +142,29 @@ test.describe('smoke', () => {
     await expect(dialog).toBeHidden({ timeout: 30_000 })
   })
 
+  test('add CalDAV account works without crypto.subtle', async ({ page, baseURL }) => {
+    // Reproduce the iPad Firefox/WebKit context reported in issue #128. It
+    // exposes secure random values but not the SubtleCrypto API.
+    await page.addInitScript(() => {
+      Object.defineProperty(globalThis.crypto, 'subtle', {
+        configurable: true,
+        value: undefined,
+      })
+    })
+
+    await gotoSettingsSync(page)
+    await page.getByText('Add calendar account').click()
+
+    const dialog = page.getByRole('dialog', { name: /add caldav calendar/i })
+    await dialog.getByLabel('Server URL').fill(`${baseURL}/mock-caldav/`)
+    await dialog.getByLabel('Username').fill('user')
+    await dialog.getByLabel('Password').fill('pass')
+    await dialog.getByLabel(/account name/i).fill('SubtleCrypto fallback')
+    await dialog.getByRole('button', { name: 'Add Calendar' }).click()
+
+    await expect(dialog).toBeHidden({ timeout: 30_000 })
+  })
+
   test('settings persist across reload (localStorage round-trip)', async ({ page }) => {
     test.skip(
       !HAS_LIVE_CALDAV,

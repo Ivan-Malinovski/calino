@@ -6,7 +6,7 @@ import type {
   UpdateCalendarOptions,
 } from '../types'
 import { basicAuthHeader } from './basicAuth'
-import { v4 as uuidv4 } from 'uuid'
+import { createUuid } from '@/lib/uuid'
 import { decodeBase64 } from '@/lib/settingsSync'
 import { webFetch } from '@/lib/webFetch'
 
@@ -371,7 +371,7 @@ export class CalDAVClient {
         const calendarOrder = Number(calendarOrderRaw)
 
         return {
-          id: cal.url || `cal-${index}-${uuidv4()}`,
+          id: cal.url || `cal-${index}-${createUuid()}`,
           // Note: accountId is NOT set here - the caller must set it
           // this.credentials.id is the credential ID, not the account ID
           url: cal.url || '',
@@ -766,7 +766,7 @@ export class CalDAVClient {
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-|-$/g, '')
     // Append short random suffix to prevent URI collisions
-    const randomSuffix = uuidv4().substring(0, 8)
+    const randomSuffix = createUuid().substring(0, 8)
     const calendarUri = `${baseUri}-${randomSuffix}`
     const calendarUrl = `${calendarHomeUrl}${calendarUri}/`
 

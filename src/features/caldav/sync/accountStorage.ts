@@ -1,5 +1,5 @@
 import type { CalDAVAccount, CalDAVCalendar, PendingChange } from '../types'
-import { v4 as uuidv4 } from 'uuid'
+import { createUuid } from '@/lib/uuid'
 
 const ACCOUNTS_KEY = 'calino_caldav_accounts'
 const PENDING_CHANGES_KEY = 'calino_pending_changes'
@@ -41,7 +41,7 @@ export function saveAccount(
   const newAccount: CalDAVAccount = {
     ...account,
     proxyUrl: account.proxyUrl ?? null,
-    id: uuidv4(),
+    id: createUuid(),
     createdAt: new Date().toISOString(),
     lastSyncAt: null,
   }
@@ -180,7 +180,7 @@ export function addPendingChange(
   } else {
     changes.push({
       ...change,
-      id: uuidv4(),
+      id: createUuid(),
       timestamp: now,
       retryCount: 0,
     })

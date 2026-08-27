@@ -1,5 +1,5 @@
 import type { CalDAVCredentials } from '../types'
-import { v4 as uuidv4 } from 'uuid'
+import { createUuid } from '@/lib/uuid'
 import {
   encryptPassword,
   decryptPassword,
@@ -24,7 +24,7 @@ export async function saveCredentials(
   const encryptedPassword = await encryptPassword(credentials.password)
 
   const newCredential: StoredCredential = {
-    id: uuidv4(),
+    id: createUuid(),
     serverUrl: credentials.serverUrl,
     username: credentials.username,
     password: encryptedPassword,

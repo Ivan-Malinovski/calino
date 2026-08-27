@@ -4,7 +4,7 @@ import { motion } from 'framer-motion'
 import { format, parseISO } from 'date-fns'
 import { useTranslation } from 'react-i18next'
 import { pad2, toEventInstant, deviceTimezone, formatDisplayDate } from '@/lib/datetime'
-import { v4 as uuidv4 } from 'uuid'
+import { createUuid } from '@/lib/uuid'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
 import { showToast } from '@/lib/toast'
@@ -1274,7 +1274,7 @@ export function EventModal(): JSX.Element | null {
 
           // Create the new series starting from the current occurrence
           const newSeriesEvent: CalendarEvent = {
-            id: uuidv4(),
+            id: createUuid(),
             calendarId: masterEvent.calendarId,
             title,
             description: description || undefined,
@@ -1468,7 +1468,7 @@ export function EventModal(): JSX.Element | null {
           isTaskMode && dueDate ? (dueAllDay ? dueDate : `${dueDate}T${taskTime}`) : undefined
 
         const newEvent: CalendarEvent = {
-          id: uuidv4(),
+          id: createUuid(),
           title,
           description: description || undefined,
           location: location || undefined,

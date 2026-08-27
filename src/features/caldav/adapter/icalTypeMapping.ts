@@ -1,5 +1,5 @@
 import ICAL from 'ical.js'
-import { v4 as uuidv4 } from 'uuid'
+import { createUuid } from '@/lib/uuid'
 import type {
   CalendarEvent,
   CalendarAttachment,
@@ -761,7 +761,7 @@ export function icalEventToCalendarEvent(
   const reminders: Reminder[] = []
   for (const valarm of vevent.getAllSubcomponents('valarm')) {
     const parsed = readAlarmReminder(valarm, dtstart)
-    if (parsed) reminders.push({ id: uuidv4(), ...parsed })
+    if (parsed) reminders.push({ id: createUuid(), ...parsed })
   }
 
   const travelDuration = parseAppleTravelDuration(vevent)
@@ -834,7 +834,7 @@ export function icalEventToCalendarEvent(
   }
 
   const attendees = parseAttendees(vevent)
-  const uid = event.uid || uuidv4()
+  const uid = event.uid || createUuid()
   const statusValue = vevent.getFirstPropertyValue('status')
   const eventStatus = typeof statusValue === 'string' ? statusValue.toUpperCase() : undefined
 
@@ -1466,7 +1466,7 @@ export function icalVtodoToCalendarEvent(vtodo: ICAL.Component, calendarId: stri
     })
     ?.getFirstValue()
 
-  const uid = uidProp ? (uidProp.getFirstValue() as string) : uuidv4()
+  const uid = uidProp ? (uidProp.getFirstValue() as string) : createUuid()
 
   // R2.7 — A master and its detached overrides legitimately share a UID
   // (RFC 5545 §3.8.4.7), and CalDAV keeps them in one resource. Deriving the
@@ -1811,7 +1811,7 @@ export function icalVjournalToCalendarEvent(
   }
 
   return {
-    id: uidProp ? (uidProp.getFirstValue() as string) : uuidv4(),
+    id: uidProp ? (uidProp.getFirstValue() as string) : createUuid(),
     calendarId,
     title: summaryProp ? (summaryProp.getFirstValue() as string) : '',
     description: descProp ? (descProp.getFirstValue() as string) : '',

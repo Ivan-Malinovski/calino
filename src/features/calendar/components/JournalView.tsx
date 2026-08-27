@@ -12,7 +12,7 @@ import { parseISO } from 'date-fns'
 import { Trash2 } from 'lucide-react'
 import { useCalendarStore, isJournalEntryVisible } from '@/store/calendarStore'
 import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
-import { v4 as uuidv4 } from 'uuid'
+import { createUuid } from '@/lib/uuid'
 import { MarkdownView } from '@/lib/markdown'
 import { wrapMarkdownSelection } from '@/lib/markdownHelpers'
 import { showToast } from '@/lib/toast'
@@ -766,7 +766,7 @@ export function JournalView(): JSX.Element {
         ? `${currentDate.slice(0, 7)}-01`
         : today
     const now = new Date().toISOString()
-    const id = uuidv4()
+    const id = createUuid()
     addEvent({
       id,
       calendarId: defaultCalendarId,

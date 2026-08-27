@@ -2,7 +2,7 @@ import { type JSX, useRef, useEffect, useState, useCallback, useMemo } from 'rea
 import { createPortal } from 'react-dom'
 import { format, parseISO, isSameDay } from 'date-fns'
 import { useTranslation } from 'react-i18next'
-import { v4 as uuidv4 } from 'uuid'
+import { createUuid } from '@/lib/uuid'
 import {
   formatTime,
   formatEventTime,
@@ -497,7 +497,7 @@ export function EventPreviewPopup({
       // keeps the master's type (task vs event) and task fields.
       const newSeriesEvent: CalendarEvent = {
         ...masterEvent,
-        id: uuidv4(),
+        id: createUuid(),
         // A new series is a new VTODO/VEVENT — reusing the master's UID would
         // collide with it on the server.
         uid: undefined,

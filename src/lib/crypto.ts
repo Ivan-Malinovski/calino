@@ -21,6 +21,10 @@
  * to unlock each session.
  */
 
+import { gcm } from '@noble/ciphers/aes.js'
+import { pbkdf2Async } from '@noble/hashes/pbkdf2.js'
+import { sha256 } from '@noble/hashes/sha2.js'
+
 // ─── App-level encryption (existing) ─────────────────────────────────────────
 
 const APP_SECRET = 'calino-caldav-v1-2024'
@@ -44,11 +48,58 @@ export interface MasterEncryptedData {
 
 let cachedKey: CryptoKey | null = null
 
+type NativeCrypto = Crypto & { subtle: SubtleCrypto }
+
+/**
+ * Some embedded/older WebKit contexts expose getRandomValues() without
+ * exposing crypto.subtle. Firefox for iOS is one example: its web content
+ * runs in Apple's WebKit even though the browser chrome is Firefox.
+ */
+function getNativeCrypto(): NativeCrypto | null {
+  const cryptoApi = globalThis.crypto
+  const subtle = cryptoApi?.subtle
+
+  if (
+    !cryptoApi ||
+    typeof cryptoApi.getRandomValues !== 'function' ||
+    !subtle ||
+    typeof subtle.importKey !== 'function' ||
+    typeof subtle.deriveKey !== 'function' ||
+    typeof subtle.encrypt !== 'function' ||
+    typeof subtle.decrypt !== 'function'
+  ) {
+    return null
+  }
+
+  return cryptoApi as NativeCrypto
+}
+
+function randomBytes(length: number): Uint8Array {
+  const cryptoApi = globalThis.crypto
+  if (!cryptoApi || typeof cryptoApi.getRandomValues !== 'function') {
+    throw new Error('This browser does not provide a secure random number generator')
+  }
+
+  return cryptoApi.getRandomValues(new Uint8Array(length))
+}
+
+async function deriveJavaScriptKey(password: string, salt: Uint8Array): Promise<Uint8Array> {
+  return pbkdf2Async(sha256, password, salt, {
+    c: PBKDF2_ITERATIONS,
+    dkLen: 32,
+  })
+}
+
 async function getEncryptionKey(): Promise<CryptoKey> {
   if (cachedKey) return cachedKey
 
+  const cryptoApi = getNativeCrypto()
+  if (!cryptoApi) {
+    throw new Error('Web Crypto is unavailable')
+  }
+
   const encoder = new TextEncoder()
-  const keyMaterial = await crypto.subtle.importKey(
+  const keyMaterial = await cryptoApi.subtle.importKey(
     'raw',
     encoder.encode(APP_SECRET),
     'PBKDF2',
@@ -56,7 +107,7 @@ async function getEncryptionKey(): Promise<CryptoKey> {
     ['deriveKey']
   )
 
-  cachedKey = await crypto.subtle.deriveKey(
+  cachedKey = await cryptoApi.subtle.deriveKey(
     {
       name: 'PBKDF2',
       salt: encoder.encode(APP_SALT),
@@ -72,8 +123,8 @@ async function getEncryptionKey(): Promise<CryptoKey> {
   return cachedKey
 }
 
-function toBase64(buffer: ArrayBuffer): string {
-  const bytes = new Uint8Array(buffer)
+function toBase64(buffer: ArrayBuffer | Uint8Array): string {
+  const bytes = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer)
   let binary = ''
   for (let i = 0; i < bytes.byteLength; i++) {
     binary += String.fromCharCode(bytes[i])
@@ -97,29 +148,49 @@ function fromBase64(base64: string): Uint8Array {
 }
 
 export async function encryptPassword(password: string): Promise<EncryptedData> {
-  const key = await getEncryptionKey()
   const encoder = new TextEncoder()
-  const iv = crypto.getRandomValues(new Uint8Array(12))
+  const iv = randomBytes(12)
+  const cryptoApi = getNativeCrypto()
 
-  const encrypted = await crypto.subtle.encrypt(
-    { name: 'AES-GCM', iv },
+  if (!cryptoApi) {
+    const key = await deriveJavaScriptKey(APP_SECRET, encoder.encode(APP_SALT))
+    const encrypted = gcm(key, iv).encrypt(encoder.encode(password))
+
+    return {
+      iv: toBase64(iv),
+      data: toBase64(encrypted),
+    }
+  }
+
+  const key = await getEncryptionKey()
+
+  const encrypted = await cryptoApi.subtle.encrypt(
+    { name: 'AES-GCM', iv: iv as unknown as BufferSource },
     key,
     encoder.encode(password)
   )
 
   return {
-    iv: toBase64(iv.buffer),
+    iv: toBase64(iv),
     data: toBase64(encrypted),
   }
 }
 
 export async function decryptPassword(encrypted: EncryptedData): Promise<string> {
-  const key = await getEncryptionKey()
   const decoder = new TextDecoder()
   const iv = fromBase64(encrypted.iv)
   const data = fromBase64(encrypted.data)
+  const cryptoApi = getNativeCrypto()
 
-  const decrypted = await crypto.subtle.decrypt(
+  if (!cryptoApi) {
+    const key = await deriveJavaScriptKey(APP_SECRET, new TextEncoder().encode(APP_SALT))
+    const decrypted = gcm(key, iv).decrypt(data)
+    return decoder.decode(decrypted)
+  }
+
+  const key = await getEncryptionKey()
+
+  const decrypted = await cryptoApi.subtle.decrypt(
     { name: 'AES-GCM', iv: new Uint8Array(iv) },
     key,
     new Uint8Array(data)
@@ -149,8 +220,13 @@ export function isEncryptedPassword(value: unknown): value is EncryptedData {
  * Each password has its own random salt.
  */
 async function deriveKeyFromPassword(password: string, salt: Uint8Array): Promise<CryptoKey> {
+  const cryptoApi = getNativeCrypto()
+  if (!cryptoApi) {
+    throw new Error('Web Crypto is unavailable')
+  }
+
   const encoder = new TextEncoder()
-  const keyMaterial = await crypto.subtle.importKey(
+  const keyMaterial = await cryptoApi.subtle.importKey(
     'raw',
     encoder.encode(password),
     'PBKDF2',
@@ -158,7 +234,7 @@ async function deriveKeyFromPassword(password: string, salt: Uint8Array): Promis
     ['deriveKey']
   )
 
-  return crypto.subtle.deriveKey(
+  return cryptoApi.subtle.deriveKey(
     {
       name: 'PBKDF2',
       salt: salt as unknown as BufferSource,
@@ -180,21 +256,34 @@ export async function encryptWithMasterPassword(
   plaintext: string,
   masterPassword: string
 ): Promise<MasterEncryptedData> {
-  const salt = crypto.getRandomValues(new Uint8Array(16))
-  const iv = crypto.getRandomValues(new Uint8Array(12))
-  const key = await deriveKeyFromPassword(masterPassword, salt)
+  const salt = randomBytes(16)
+  const iv = randomBytes(12)
   const encoder = new TextEncoder()
+  const cryptoApi = getNativeCrypto()
 
-  const encrypted = await crypto.subtle.encrypt(
-    { name: 'AES-GCM', iv },
+  if (!cryptoApi) {
+    const key = await deriveJavaScriptKey(masterPassword, salt)
+    const encrypted = gcm(key, iv).encrypt(encoder.encode(plaintext))
+
+    return {
+      ciphertext: toBase64(encrypted),
+      iv: toBase64(iv),
+      salt: toBase64(salt),
+    }
+  }
+
+  const key = await deriveKeyFromPassword(masterPassword, salt)
+
+  const encrypted = await cryptoApi.subtle.encrypt(
+    { name: 'AES-GCM', iv: iv as unknown as BufferSource },
     key,
     encoder.encode(plaintext)
   )
 
   return {
     ciphertext: toBase64(encrypted),
-    iv: toBase64(iv.buffer),
-    salt: toBase64(salt.buffer),
+    iv: toBase64(iv),
+    salt: toBase64(salt),
   }
 }
 
@@ -209,9 +298,17 @@ export async function decryptWithMasterPassword(
   const salt = fromBase64(encrypted.salt)
   const iv = fromBase64(encrypted.iv)
   const ciphertext = fromBase64(encrypted.ciphertext)
+  const cryptoApi = getNativeCrypto()
+
+  if (!cryptoApi) {
+    const key = await deriveJavaScriptKey(masterPassword, salt)
+    const decrypted = gcm(key, iv).decrypt(ciphertext)
+    return new TextDecoder().decode(decrypted)
+  }
+
   const key = await deriveKeyFromPassword(masterPassword, salt)
 
-  const decrypted = await crypto.subtle.decrypt(
+  const decrypted = await cryptoApi.subtle.decrypt(
     { name: 'AES-GCM', iv: new Uint8Array(iv) },
     key,
     new Uint8Array(ciphertext)

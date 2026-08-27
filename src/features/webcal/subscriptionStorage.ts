@@ -1,5 +1,5 @@
 import type { WebcalSubscription } from './types'
-import { v4 as uuidv4 } from 'uuid'
+import { createUuid } from '@/lib/uuid'
 
 const SUBSCRIPTIONS_KEY = 'calino_webcal_subscriptions'
 
@@ -9,7 +9,7 @@ export function saveSubscription(
   const subscriptions = getAllSubscriptions()
   const newSubscription: WebcalSubscription = {
     ...subscription,
-    id: uuidv4(),
+    id: createUuid(),
     lastFetchedAt: null,
     lastError: null,
   }

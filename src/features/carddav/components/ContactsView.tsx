@@ -1,7 +1,7 @@
 import type { JSX } from 'react'
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
-import { v4 as uuidv4 } from 'uuid'
+import { createUuid } from '@/lib/uuid'
 import { useContactStore } from '@/store/contactStore'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useCardDAV } from '@/features/carddav/hooks/useCardDAV'
@@ -243,7 +243,7 @@ export function ContactsView(): JSX.Element {
 
       // Queue pending update
       addPendingChange({
-        id: uuidv4(),
+        id: createUuid(),
         type: 'update',
         contactId: contact.id,
         addressBookId: contact.addressBookId,
@@ -271,7 +271,7 @@ export function ContactsView(): JSX.Element {
 
         // Queue pending create
         addPendingChange({
-          id: uuidv4(),
+        id: createUuid(),
           type: 'create',
           contactId: contact.id,
           addressBookId: contact.addressBookId,
@@ -290,7 +290,7 @@ export function ContactsView(): JSX.Element {
 
         // Queue pending update
         addPendingChange({
-          id: uuidv4(),
+        id: createUuid(),
           type: 'update',
           contactId: contact.id,
           addressBookId: contact.addressBookId,

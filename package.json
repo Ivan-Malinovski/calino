@@ -32,6 +32,8 @@
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
+    "@noble/ciphers": "^2.3.0",
+    "@noble/hashes": "^2.3.0",
     "@tanstack/react-virtual": "^3.14.10",
     "@touch4it/ical-timezones": "^1.9.0",
     "@use-gesture/react": "^10.3.1",

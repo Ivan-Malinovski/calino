@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react'
-import { v4 as uuidv4 } from 'uuid'
+import { createUuid } from '@/lib/uuid'
 import type { Calendar } from '@/types'
 import { fetchWebcalIcs, normalizeWebcalUrl } from '../fetchWebcal'
 import { parseICALDataAsync } from '@/features/caldav/adapter/iCalendarAdapter'
@@ -66,7 +66,7 @@ export function useWebcalSubscriptions(): UseWebcalSubscriptionsReturn {
       return withProgress('Adding subscription…', async (report) => {
         const icsText = await fetchWebcalIcs(normalizedUrl, options.proxyUrl)
         report({ label: 'Importing events…' })
-        const calendarId = uuidv4()
+        const calendarId = createUuid()
         const events = await parseICALDataAsync(icsText, calendarId)
 
         const calendar: Calendar = {

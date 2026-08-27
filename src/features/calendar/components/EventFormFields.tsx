@@ -1,7 +1,7 @@
 import type { JSX } from 'react'
 import { useId, useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { v4 as uuidv4 } from 'uuid'
+import { createUuid } from '@/lib/uuid'
 import { useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
 import type {
@@ -546,7 +546,7 @@ export function EventFormFields({
                             onClick={() => {
                               onRemindersChange([
                                 ...reminders,
-                                { id: uuidv4(), minutesBefore: value, method: 'popup' },
+                                { id: createUuid(), minutesBefore: value, method: 'popup' },
                               ])
                               setReminderDropdownOpen(false)
                             }}
