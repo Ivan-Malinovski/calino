@@ -31,7 +31,7 @@ import type { AddressInfo } from 'node:net'
  *                                              injection for partial-failure
  *                                              tests).
  *   - GET  /.well-known/caldav                → 301 redirect to /mock-caldav/dav/
- *   - PROPFIND /mock-caldav/dav/              → 207 with current-user-principal
+ *   - PROPFIND /mock-caldav/dav[/]            → 207 with current-user-principal
  *   - PROPFIND /dav/principals/...            → 207 with calendar-home-set
  *   - PROPFIND /dav/calendars/...             → 207 listing the collections
  *                                              of that account (account A:
@@ -598,7 +598,10 @@ export function caldavMockPlugin(): Plugin {
       }
 
       // 2) PROPFIND on the DAV base or root.
-      if ((path === '/dav/' || path === '/' || path === '') && method === 'PROPFIND') {
+      if (
+        (path === '/dav' || path === '/dav/' || path === '/' || path === '') &&
+        method === 'PROPFIND'
+      ) {
         return write207([
           responseTag(absolute('/dav/'), [
             {
@@ -720,7 +723,9 @@ export function caldavMockPlugin(): Plugin {
           reportBody += chunk
         })
         req.on('end', () => {
-          if (!reportBody.includes('sync-collection')) return calendarQueryReport(prefix, reportBody)
+          if (!reportBody.includes('sync-collection')) {
+            return calendarQueryReport(prefix, reportBody)
+          }
 
           if (owningCollection.rejectSyncToken) {
             res.writeHead(400, { 'Content-Type': 'text/plain' })

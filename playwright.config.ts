@@ -7,6 +7,8 @@ import { defineConfig, devices } from '@playwright/test'
 // Its own port keeps the suite self-contained and lets `pnpm dev` keep running.
 const PORT = Number(process.env.E2E_PORT ?? 5199)
 const BASE_URL = `http://localhost:${PORT}`
+const BROWSER_SESSION_PORT = Number(process.env.BROWSER_SESSION_E2E_PORT ?? PORT + 1)
+const BROWSER_SESSION_BASE_URL = `http://localhost:${BROWSER_SESSION_PORT}`
 const DAV_PORT = Number(process.env.DAV_PORT ?? 8099)
 const IS_CI = !!process.env.CI
 
@@ -57,12 +59,32 @@ export default defineConfig({
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
+      testIgnore: ['**/browser-session-dav.spec.ts'],
+    },
+    {
+      name: 'browser-session-dav',
+      testMatch: ['**/browser-session-dav.spec.ts'],
+      use: {
+        ...devices['Desktop Chrome'],
+        baseURL: BROWSER_SESSION_BASE_URL,
+      },
     },
   ],
   webServer: [
     {
-      command: `CALINO_E2E_MOCK=1 pnpm dev --port ${PORT} --strictPort`,
+      command: `CALINO_DEV_HOST=localhost CALINO_E2E_MOCK=1 pnpm dev --port ${PORT} --strictPort`,
       url: BASE_URL,
+      reuseExistingServer: !IS_CI,
+      timeout: 120_000,
+      stdout: 'ignore',
+      stderr: 'pipe',
+    },
+    {
+      // A separately compiled app instance exercises the deployment-time
+      // browser-session DAV configuration without auto-connecting every
+      // other E2E spec to a CalDAV account.
+      command: `CALINO_DEV_HOST=localhost CALINO_E2E_MOCK=1 VITE_CALINO_BROWSER_SESSION_DAV_URL=/mock-caldav/dav/ VITE_CALINO_BROWSER_SESSION_ACCOUNT_NAME='Managed Calendar' pnpm dev --port ${BROWSER_SESSION_PORT} --strictPort`,
+      url: BROWSER_SESSION_BASE_URL,
       reuseExistingServer: !IS_CI,
       timeout: 120_000,
       stdout: 'ignore',
