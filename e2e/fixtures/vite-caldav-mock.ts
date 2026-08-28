@@ -29,7 +29,9 @@ import type { AddressInfo } from 'node:net'
  *                                            → 204; the next N matching
  *                                              requests return 500 (fault
  *                                              injection for partial-failure
- *                                              tests).
+ *                                              tests). Optional `body=`
+ *                                              matches a substring of a
+ *                                              REPORT body (e.g. VTODO).
  *   - GET  /.well-known/caldav                → 301 redirect to /mock-caldav/dav/
  *   - PROPFIND /mock-caldav/dav/              → 207 with current-user-principal
  *   - PROPFIND /dav/principals/...            → 207 with calendar-home-set
@@ -298,6 +300,8 @@ interface FaultRule {
   method: string
   prefix: string
   remaining: number
+  /** When set, only REPORT bodies containing this substring match. */
+  bodyIncludes?: string
 }
 
 export function caldavMockPlugin(): Plugin {
@@ -524,6 +528,7 @@ export function caldavMockPlugin(): Plugin {
           method: (params.get('method') ?? 'DELETE').toUpperCase(),
           prefix: params.get('prefix') ?? '/dav/',
           remaining: Number(params.get('count') ?? '1'),
+          bodyIncludes: params.get('body') ?? undefined,
         })
         res.writeHead(204)
         res.end()
@@ -578,9 +583,11 @@ export function caldavMockPlugin(): Plugin {
         return
       }
 
-      // Fault check — runs before any real handling below.
+      // Fault check — runs before any real handling below. REPORT faults that
+      // match on body wait until the body is read (see calendar-query handler).
       const fault = faults.find(
-        (f) => f.method === method && path.startsWith(f.prefix) && f.remaining > 0
+        (f) =>
+          f.method === method && path.startsWith(f.prefix) && f.remaining > 0 && !f.bodyIncludes
       )
       if (fault) {
         fault.remaining -= 1
@@ -720,7 +727,23 @@ export function caldavMockPlugin(): Plugin {
           reportBody += chunk
         })
         req.on('end', () => {
-          if (!reportBody.includes('sync-collection')) return calendarQueryReport(prefix, reportBody)
+          const bodyFault = faults.find(
+            (f) =>
+              f.method === 'REPORT' &&
+              path.startsWith(f.prefix) &&
+              f.remaining > 0 &&
+              Boolean(f.bodyIncludes) &&
+              reportBody.includes(f.bodyIncludes as string)
+          )
+          if (bodyFault) {
+            bodyFault.remaining -= 1
+            if (bodyFault.remaining <= 0) faults.splice(faults.indexOf(bodyFault), 1)
+            res.writeHead(500, { 'Content-Type': 'text/plain' })
+            res.end('injected failure')
+            return
+          }
+          if (!reportBody.includes('sync-collection'))
+            return calendarQueryReport(prefix, reportBody)
 
           if (owningCollection.rejectSyncToken) {
             res.writeHead(400, { 'Content-Type': 'text/plain' })

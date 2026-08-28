@@ -260,6 +260,28 @@ async function fetchWithTimeout(url: RequestInfo | URL, init?: RequestInit): Pro
   }
 }
 
+export interface FetchedCalendarObject {
+  url: string
+  data: string
+  etag?: string
+}
+
+export interface FetchEventsResult {
+  objects: FetchedCalendarObject[]
+  /** True when at least one VEVENT/VTODO/VJOURNAL REPORT failed. */
+  hadComponentFailures: boolean
+}
+
+/** Accept the structured result or a bare array (test mocks). */
+export function unwrapFetchEvents(
+  result: FetchEventsResult | FetchedCalendarObject[]
+): FetchEventsResult {
+  if (Array.isArray(result)) {
+    return { objects: result, hadComponentFailures: false }
+  }
+  return result
+}
+
 export class CalDAVClient {
   private client: Awaited<ReturnType<typeof createDAVClient>> | null = null
   // Cache of raw DAV calendar objects from tsdav, keyed by URL matching.
@@ -427,7 +449,7 @@ export class CalDAVClient {
     start: string,
     end: string,
     includeAllEvents = false
-  ): Promise<{ url: string; data: string; etag?: string }[]> {
+  ): Promise<FetchEventsResult> {
     if (!navigator.onLine) {
       throw new Error('No network connection. Please check your internet connection.')
     }
@@ -478,10 +500,37 @@ export class CalDAVClient {
     if (supports('VTODO')) requests.push(componentRequest('VTODO'))
     if (supports('VJOURNAL')) requests.push(componentRequest('VJOURNAL'))
 
-    const allItems = (await Promise.all(requests)).flat()
+    // VEVENT/VTODO/VJOURNAL are independent listings. Promise.all would drop
+    // events if an empty VTODO query (or a timeout) threw. Fail closed only
+    // when every requested component query fails — a partial listing must not
+    // be treated as authoritative for remote deletions.
+    const settled = await Promise.allSettled(requests)
+    const fulfilled = settled.filter(
+      (
+        result
+      ): result is PromiseFulfilledResult<Array<{ url: string; data?: unknown; etag?: string }>> =>
+        result.status === 'fulfilled'
+    )
+    const rejected = settled.filter(
+      (result): result is PromiseRejectedResult => result.status === 'rejected'
+    )
+
+    if (fulfilled.length === 0 && rejected.length > 0) {
+      const reason = rejected[0].reason
+      throw reason instanceof Error ? reason : new Error(String(reason))
+    }
+
+    if (rejected.length > 0) {
+      console.warn(
+        '[CalDAV] Component query failed; calendar listing is incomplete',
+        rejected.map((result) => result.reason)
+      )
+    }
+
+    const allItems = fulfilled.flatMap((result) => result.value)
 
     // Remove duplicates by URL - store raw server URLs consistently
-    const uniqueByUrl = new Map<string, { url: string; data: string; etag?: string }>()
+    const uniqueByUrl = new Map<string, FetchedCalendarObject>()
     for (const obj of allItems) {
       if (typeof obj.url !== 'string' || typeof obj.data !== 'string') continue
       if (!uniqueByUrl.has(obj.url)) {
@@ -493,7 +542,10 @@ export class CalDAVClient {
       }
     }
 
-    return Array.from(uniqueByUrl.values())
+    return {
+      objects: Array.from(uniqueByUrl.values()),
+      hadComponentFailures: rejected.length > 0,
+    }
   }
 
   /**

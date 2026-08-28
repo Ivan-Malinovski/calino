@@ -14,7 +14,7 @@ import type {
   DeleteHrefPendingData,
   PendingChange,
 } from '../types'
-import { createCalDAVClient } from '../client/CalDAVClient'
+import { createCalDAVClient, unwrapFetchEvents } from '../client/CalDAVClient'
 import type { SyncCollectionChange } from '../client/CalDAVClient'
 import { probeConnection, expandProviderUrl, type ProbeResult } from '../client/discovery'
 import { CalDAVConnectionError } from '../client/errors'
@@ -1101,7 +1101,9 @@ export function useCalDAVInstance(): UseCalDAVReturn {
           CALDAV_FETCH_CONCURRENCY,
           async (cal) => {
             console.log('[CalDAV] addAccount: fetching events for', cal.name, cal.url)
-            const fetchedEvents = await client.fetchEvents(cal.url, start, end)
+            const { objects: fetchedEvents } = unwrapFetchEvents(
+              await client.fetchEvents(cal.url, start, end)
+            )
             progressDone++
             reportProgress({ done: progressDone })
             console.log(
@@ -1584,6 +1586,7 @@ export function useCalDAVInstance(): UseCalDAVReturn {
             const touchedHrefs: Set<string> | null = changes ? new Set<string>() : null
             const removedHrefs = new Set<string>()
             let fetchedEvents: { url: string; data: string; etag?: string }[]
+            let hadComponentFailures = false
 
             if (changes) {
               for (const change of changes) {
@@ -1642,8 +1645,12 @@ export function useCalDAVInstance(): UseCalDAVReturn {
                   storedToken ? ' (sync token unusable)' : ' (no stored sync token)'
                 }`
               )
-              fetchedEvents = await client.fetchEvents(cal.url, start, end, true)
-              fullyListedCalendarIds.add(cal.id)
+              const fetched = unwrapFetchEvents(await client.fetchEvents(cal.url, start, end, true))
+              fetchedEvents = fetched.objects
+              hadComponentFailures = fetched.hadComponentFailures
+              if (!hadComponentFailures) {
+                fullyListedCalendarIds.add(cal.id)
+              }
             }
 
             // Snapshot pending local changes after the network fetch, as late as
@@ -1794,7 +1801,7 @@ export function useCalDAVInstance(): UseCalDAVReturn {
             // back for it) and a changed resource that no longer contains a
             // component it used to — a deleted recurrence override, say.
             // Every other local event is simply not covered by this REPORT.
-            if (!hadParseFailures) {
+            if (!hadParseFailures && !hadComponentFailures) {
               const deletionCandidates = touchedHrefs
                 ? calendarEvents.filter(
                     (e) => e.resourceHref && touchedHrefs.has(hrefKey(e.resourceHref))
@@ -1821,10 +1828,15 @@ export function useCalDAVInstance(): UseCalDAVReturn {
             } else {
               // Reconciliation is incomplete, so the cursors stay where they
               // are: advancing them would retire the server's only mention of
-              // a resource we could not read. A body that failed to parse is
-              // never a deletion — it is retried next cycle.
+              // a resource we could not read. A body that failed to parse, or
+              // a component REPORT that threw, is never a deletion — it is
+              // retried next cycle.
               console.warn(
-                `[CalDAV] Skipping remote-deletion reconciliation for calendar ${cal.id}: one or more resources failed to parse this cycle.`
+                `[CalDAV] Skipping remote-deletion reconciliation for calendar ${cal.id}: ${
+                  hadComponentFailures
+                    ? 'one or more component queries failed this cycle.'
+                    : 'one or more resources failed to parse this cycle.'
+                }`
               )
             }
 
