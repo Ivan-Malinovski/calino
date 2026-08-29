@@ -103,6 +103,15 @@ function TokenInput({
     setDraft('')
   }
 
+  const removeToken = (token: string): void => {
+    // Include any text still being edited before removing the chip. This also
+    // handles keyboard activation, where the input may blur before onClick and
+    // React can otherwise run the click handler with the old token list.
+    const nextTokens = mergeTokens(tokens, draft)
+    setTokens(nextTokens.filter((candidate) => candidate !== token))
+    setDraft('')
+  }
+
   const onKeyDown = (event: KeyboardEvent<HTMLInputElement>): void => {
     event.stopPropagation()
     if (event.key === 'Enter' || event.key === ',') {
@@ -127,7 +136,8 @@ function TokenInput({
               type="button"
               className={styles.filterChipRemove}
               aria-label={removeLabel(token)}
-              onClick={() => setTokens(tokens.filter((candidate) => candidate !== token))}
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => removeToken(token)}
             >
               ×
             </button>

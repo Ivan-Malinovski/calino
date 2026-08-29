@@ -355,15 +355,15 @@
 }
 
 .filterChipRemove {
-  width: 17px;
-  height: 17px;
+  width: 24px;
+  height: 24px;
   padding: 0;
   border: 0;
   border-radius: 50%;
   color: inherit;
   background: transparent;
   font-size: 15px;
-  line-height: 15px;
+  line-height: 22px;
   cursor: pointer;
 }
 
@@ -684,7 +684,9 @@
    layouts, so they only lift on touch — where the extra size helps anyway.
    Kept here, last in the file, so source order settles the tie. */
 @media (pointer: coarse) {
-  .input {
+  .input,
+  .tokenInputField,
+  .filterTextInput {
     font-size: 16px;
   }
 }

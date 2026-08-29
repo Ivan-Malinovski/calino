@@ -106,8 +106,16 @@ test.describe('command palette event filters', () => {
   async function openPalette(page: import('@playwright/test').Page) {
     await page.goto('/month')
     const searchButton = page.getByRole('button', { name: 'Search or commands' })
-    await expect(searchButton).toBeVisible()
-    await searchButton.click()
+    if (await searchButton.isVisible()) {
+      await searchButton.click()
+    } else {
+      // On compact mobile layouts search lives in the expanded floating nav,
+      // not in the calendar header.
+      await page.locator('[data-component="nav-more"]').click()
+      const expandedNav = page.locator('[data-component="nav-expanded-grid"]')
+      await expect(expandedNav).toBeVisible()
+      await expandedNav.getByRole('button', { name: 'Search', exact: true }).click()
+    }
     const palette = page.locator('[data-component="command-palette"]')
     await expect(palette).toBeVisible()
     return palette
@@ -129,6 +137,13 @@ test.describe('command palette event filters', () => {
     expect(inputBox).not.toBeNull()
     expect(toggleBox).not.toBeNull()
     expect(toggleBox!.x).toBeGreaterThan(inputBox!.x + inputBox!.width)
+    await expect
+      .poll(() =>
+        palette.locator('[data-action="toggle-event-filters"] svg').evaluate((node) =>
+          getComputedStyle(node).transform
+        )
+      )
+      .not.toBe('none')
 
     await expect(
       palette.locator('[data-component="command-palette-chip"] > span').first()
@@ -160,6 +175,66 @@ test.describe('command palette event filters', () => {
       'data-open',
       'false'
     )
+    await expect(
+      palette.locator('[data-action="toggle-event-filters"] svg')
+    ).toHaveCSS('transform', 'none')
     await expect(palette.getByRole('option', { name: /Weekly roadmap/ })).toBeVisible()
+  })
+
+  test('keeps draft text when an existing include chip is removed', async ({ page }) => {
+    const palette = await openPalette(page)
+    await palette.getByRole('combobox').fill('Roadmap')
+    await palette.getByRole('button', { name: 'Filter events' }).click()
+
+    await palette.getByLabel('Include terms').fill('planning')
+    await palette.getByRole('button', { name: 'Remove included term Roadmap' }).click()
+
+    await expect(
+      palette.getByRole('button', { name: 'Remove included term planning' })
+    ).toBeVisible()
+    await expect(
+      palette.getByRole('button', { name: 'Remove included term Roadmap' })
+    ).toHaveCount(0)
+  })
+
+  test('keeps filter controls usable on a narrow viewport', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 })
+    const palette = await openPalette(page)
+    await palette.getByRole('button', { name: 'Filter events' }).click()
+
+    await expect(palette.getByLabel('Include terms')).toBeVisible()
+    await expect(palette.getByLabel('Location')).toBeVisible()
+    await expect(palette.getByRole('button', { name: 'Reset', exact: true })).toBeVisible()
+
+    const dimensions = await palette.evaluate((node) => ({
+      clientWidth: node.clientWidth,
+      scrollWidth: node.scrollWidth,
+    }))
+    expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth)
+  })
+
+  test('disables filter animations when reduced motion is requested', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' })
+    const palette = await openPalette(page)
+    await palette.getByRole('button', { name: 'Filter events' }).click()
+
+    const styles = await palette.evaluate((node) => {
+      const form = node.querySelector('[data-component="command-palette-filters"]')
+      const toggle = node.querySelector('[data-action="toggle-event-filters"] svg')
+      const transitionDuration = toggle ? getComputedStyle(toggle).transitionDuration : ''
+      return {
+        formAnimation: form ? getComputedStyle(form).animationName : '',
+        toggleTransitionMs: transitionDuration.endsWith('ms')
+          ? Number.parseFloat(transitionDuration)
+          : transitionDuration.endsWith('s')
+            ? Number.parseFloat(transitionDuration) * 1000
+            : Number.NaN,
+      }
+    })
+    expect(styles.formAnimation).toBe('none')
+    // The global reduced-motion rule clamps transitions to 0.01ms, which is
+    // the browser's effectively-instant value for this preference. Browsers
+    // serialize that duration as either milliseconds or seconds.
+    expect(styles.toggleTransitionMs).toBeLessThanOrEqual(0.01)
   })
 })

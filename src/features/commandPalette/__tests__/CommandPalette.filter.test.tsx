@@ -224,6 +224,20 @@ describe('CommandPalette filter mode', () => {
     ).toBeInTheDocument()
   })
 
+  it('keeps an unfinished token when an existing chip is removed', async () => {
+    const user = userEvent.setup()
+    const { rerender } = render(<CommandPalette isOpen onClose={vi.fn()} />)
+    await user.click(screen.getByRole('button', { name: 'Filter events' }))
+    rerender(<CommandPalette isOpen onClose={vi.fn()} />)
+
+    await user.type(screen.getByLabelText('Include terms'), 'planning')
+    await user.click(screen.getByRole('button', { name: 'Remove included term Roadmap' }))
+    rerender(<CommandPalette isOpen onClose={vi.fn()} />)
+
+    expect(screen.getByRole('button', { name: 'Remove included term planning' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Remove included term Roadmap' })).toBeNull()
+  })
+
   it('collapses only the form while filtered results remain visible', async () => {
     const user = userEvent.setup()
     const { rerender } = render(<CommandPalette isOpen onClose={vi.fn()} />)
