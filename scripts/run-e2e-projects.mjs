@@ -6,7 +6,8 @@
  * convenient single-server developer run; release checks use this runner so
  * one browser's state and server load cannot slow or perturb another.
  */
-import { spawn } from 'node:child_process'
+import { spawn, spawnSync } from 'node:child_process'
+import net from 'node:net'
 
 const projects = [
   { name: 'chromium', appPort: 5200, davPort: 8100 },
@@ -21,12 +22,19 @@ const davPortOffset = Number(process.env.DAV_PARALLEL_PORT_OFFSET ?? 0)
 const outputRoot = process.env.PLAYWRIGHT_OUTPUT_ROOT ?? 'e2e/test-results'
 const children = new Set()
 const outputBuffers = new Map()
+const childProjects = new Map()
 let interrupted = false
+let failureDetected = false
 
 function terminate(child, signal) {
   if (!child.pid) return
   if (process.platform === 'win32') {
-    child.kill(signal)
+    // `ChildProcess.kill` only targets pnpm.cmd on Windows. taskkill's tree
+    // switch also stops Playwright, Vite, and DAV descendants.
+    const result = spawnSync('taskkill.exe', ['/pid', String(child.pid), '/t', '/f'], {
+      stdio: 'ignore',
+    })
+    if (result.error || result.status !== 0) child.kill(signal)
     return
   }
 
@@ -37,6 +45,123 @@ function terminate(child, signal) {
   } catch {
     child.kill(signal)
   }
+}
+
+function portIsFree(port) {
+  return new Promise((resolve) => {
+    const server = net.createServer()
+    server.once('error', () => resolve(false))
+    server.listen(port, () => server.close(() => resolve(true)))
+  })
+}
+
+function portListenerPids(port) {
+  if (process.platform === 'win32') {
+    const script = `$ErrorActionPreference = 'SilentlyContinue'; Get-NetTCPConnection -State Listen -LocalPort ${port} | Select-Object -ExpandProperty OwningProcess`
+    const result = spawnSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', script], {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    })
+    return (result.stdout ?? '').trim().split(/\s+/).filter(Boolean)
+  }
+
+  const result = spawnSync('lsof', [`-tiTCP:${port}`, '-sTCP:LISTEN'], {
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'ignore'],
+  })
+  return (result.stdout ?? '').trim().split(/\s+/).filter(Boolean)
+}
+
+function isDescendant(pid, rootPid) {
+  if (pid === String(rootPid)) return true
+
+  if (process.platform === 'win32') {
+    const script = `$root = ${rootPid}; $current = ${pid}; while ($current -and $current -ne 0) { $process = Get-CimInstance Win32_Process -Filter \"ProcessId = $current\"; if (-not $process) { break }; if ($process.ParentProcessId -eq $root) { exit 0 }; $current = $process.ParentProcessId }; exit 1`
+    const result = spawnSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', script], {
+      stdio: 'ignore',
+    })
+    return result.status === 0
+  }
+
+  let current = Number(pid)
+  const root = Number(rootPid)
+  for (let depth = 0; depth < 32 && current > 1; depth += 1) {
+    const result = spawnSync('ps', ['-o', 'ppid=', '-p', String(current)], {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    })
+    const parent = Number((result.stdout ?? '').trim())
+    if (!parent) return false
+    if (parent === root) return true
+    current = parent
+  }
+  return false
+}
+
+function rememberProjectListeners(project) {
+  for (const port of [project.appPort, project.davPort]) {
+    for (const pid of portListenerPids(port)) {
+      if (pid !== String(process.pid) && isDescendant(pid, project.rootPid)) {
+        project.listenerPids.add(pid)
+      }
+    }
+  }
+}
+
+function startProjectPortTracking(project) {
+  const remember = () => rememberProjectListeners(project)
+  remember()
+  // The process group handles the immediate interrupt case; this slower
+  // tracker captures servers that detach before a test failure is reported.
+  project.listenerTracker = setInterval(remember, 500)
+  project.listenerTracker.unref()
+}
+
+function stopProjectPortTracking(project) {
+  if (project?.listenerTracker) clearInterval(project.listenerTracker)
+  if (project) {
+    project.listenerTracker = null
+    project.portsOwned = false
+  }
+}
+
+function killPid(pid, signal) {
+  if (process.platform === 'win32') {
+    const result = spawnSync('taskkill.exe', ['/pid', pid, '/t', '/f'], { stdio: 'ignore' })
+    if (result.error || result.status !== 0) {
+      try {
+        process.kill(Number(pid), signal)
+      } catch {
+        // The listener may have exited between discovery and cleanup.
+      }
+    }
+    return
+  }
+
+  try {
+    process.kill(Number(pid), signal)
+  } catch {
+    // The listener may have exited between discovery and cleanup.
+  }
+}
+
+function cleanupProjectPorts(project) {
+  if (!project?.portsOwned) return
+
+  if (project.listenerTracker) clearInterval(project.listenerTracker)
+  rememberProjectListeners(project)
+  for (const pid of project.listenerPids) killPid(pid, 'SIGTERM')
+  stopProjectPortTracking(project)
+}
+
+function stopAllChildren(signal) {
+  failureDetected = true
+  for (const child of children) terminateProject(child, childProjects.get(child), signal)
+}
+
+function terminateProject(child, project, signal) {
+  terminate(child, signal)
+  cleanupProjectPorts(project)
 }
 
 function prefix(project, channel, stream, chunk) {
@@ -56,10 +181,22 @@ function flush(project) {
   }
 }
 
-function runProject(project) {
+async function runProject(project) {
   const appPort = project.appPort + appPortOffset
   const davPort = project.davPort + davPortOffset
   const outputDir = `${outputRoot}/${project.name}`
+  const portsAvailable = await Promise.all([portIsFree(appPort), portIsFree(davPort)])
+  if (!portsAvailable.every(Boolean)) {
+    console.error(`[${project.name}] configured app/DAV ports are already in use`)
+    stopAllChildren('SIGTERM')
+    return { project: project.name, code: 1 }
+  }
+  if (interrupted || failureDetected) return { project: project.name, code: interrupted ? 130 : 1 }
+
+  project.appPort = appPort
+  project.davPort = davPort
+  project.portsOwned = true
+  project.listenerPids = new Set()
   const child = spawn(
     pnpm,
     [
@@ -77,6 +214,7 @@ function runProject(project) {
         // Vite keeps HMR on this server's unique app port when the host is
         // explicit, avoiding a shared default HMR port across projects.
         CALINO_DEV_HOST: 'localhost',
+        PLAYWRIGHT_PARALLEL_RUNNER: '1',
         E2E_PORT: String(appPort),
         DAV_PORT: String(davPort),
         PLAYWRIGHT_OUTPUT_DIR: outputDir,
@@ -86,6 +224,9 @@ function runProject(project) {
   )
 
   children.add(child)
+  childProjects.set(child, project)
+  project.rootPid = child.pid
+  startProjectPortTracking(project)
   child.stdout.on('data', (chunk) => prefix(project.name, 'stdout', process.stdout, chunk))
   child.stderr.on('data', (chunk) => prefix(project.name, 'stderr', process.stderr, chunk))
 
@@ -94,8 +235,18 @@ function runProject(project) {
     const finish = (result) => {
       if (settled) return
       settled = true
+
+      if (result.code !== 0 && !interrupted) {
+        // A failed browser can leave Playwright's Vite/DAV children alive.
+        // Stop the failed group and its siblings so the runner cannot hang or
+        // leak ports while waiting for the other projects.
+        stopAllChildren('SIGTERM')
+      }
+
       flush(project.name)
+      stopProjectPortTracking(project)
       children.delete(child)
+      childProjects.delete(child)
       resolve(result)
     }
 
@@ -116,7 +267,7 @@ function runProject(project) {
 for (const signal of ['SIGINT', 'SIGTERM']) {
   process.once(signal, () => {
     interrupted = true
-    for (const child of children) terminate(child, signal)
+    stopAllChildren(signal)
   })
 }
 

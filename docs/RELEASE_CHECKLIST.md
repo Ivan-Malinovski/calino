@@ -6,7 +6,7 @@ What to verify before cutting a release. The automated half is what
 ## Automated
 
 ```bash
-./scripts/release.sh --dry-run    # typecheck + lint + unit + E2E + build + Docker checks
+./scripts/release.sh --dry-run    # typecheck + lint + unit + E2E + Docker build/healthcheck
 pnpm audit                        # optional dependency vulnerability review
 ```
 
@@ -16,6 +16,15 @@ servers, one worker per browser, so they do not contend for the shared local
 test backend. It runs the Docker build/probes unless `--no-docker` is passed.
 It picks the first free host port from 8080 up for the container checks; pin it
 with `HEALTH_PORT=…` if you need a specific one.
+
+Running `./scripts/release.sh` without a release option only performs checks;
+it does not push source or images. `--dry-run` likewise never bumps, commits,
+tags, or pushes anything.
+
+When Docker or Podman is enabled, the Dockerfile performs the one production
+compilation used by the release image; the release script does not compile the
+bundle separately first. `--no-docker` keeps a local production build as a
+fallback, while `--docker-push` reuses the health-checked image when available.
 
 Then cut the release:
 

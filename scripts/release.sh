@@ -112,6 +112,28 @@ fi
 
 REPO=$(git remote get-url origin | sed 's/.*github.com[:/]\(.\+\)\.git$/\1/')
 
+DOCKER_TEST_CONTAINER_STARTED=false
+DOCKER_TEST_IMAGE_BUILT=false
+DOCKER_TEST_IMAGE_EXISTED=false
+DOCKER_TEST_IMAGE_ORIGINAL_ID=""
+
+cleanup_docker_test_image() {
+  if [ "$DOCKER_TEST_IMAGE_BUILT" = true ]; then
+    $ENGINE rmi calino:test > /dev/null 2>&1 || true
+    if [ "$DOCKER_TEST_IMAGE_EXISTED" = true ] && [ -n "$DOCKER_TEST_IMAGE_ORIGINAL_ID" ]; then
+      $ENGINE tag "$DOCKER_TEST_IMAGE_ORIGINAL_ID" calino:test > /dev/null 2>&1 || true
+    fi
+    DOCKER_TEST_IMAGE_BUILT=false
+  fi
+}
+
+cleanup_docker_artifacts() {
+  if [ "$DOCKER_TEST_CONTAINER_STARTED" = true ]; then
+    $ENGINE rm -f calino-release-test > /dev/null 2>&1 || true
+  fi
+  cleanup_docker_test_image
+}
+
 # ─── Version restore on abort ─────────────────────────────────────────────────
 # The bump has to happen before the build, since `pnpm build` bakes
 # __APP_VERSION__ into the bundle and the Docker image — testing an image
@@ -121,9 +143,11 @@ REPO=$(git remote get-url origin | sed 's/.*github.com[:/]\(.\+\)\.git$/\1/')
 # doesn't reach the commit.
 PKG_BACKUP=$(mktemp)
 CHANGELOG_BACKUP=$(mktemp)
+SAMPLE_EVENTS_BACKUP=$(mktemp)
 BUMPED=false
 CHANGELOG_PROMOTED=false
 COMMITTED=false
+SAMPLE_EVENTS_BACKED_UP=false
 
 restore_version() {
   if [ "$COMMITTED" = false ]; then
@@ -139,9 +163,12 @@ restore_version() {
       warn "CHANGELOG.md restored — '## [Unreleased]' put back"
     fi
   fi
-  rm -f "$PKG_BACKUP" "$CHANGELOG_BACKUP"
+  if [ "$SAMPLE_EVENTS_BACKED_UP" = true ]; then
+    cp "$SAMPLE_EVENTS_BACKUP" public/sample-events.ics
+  fi
+  rm -f "$PKG_BACKUP" "$CHANGELOG_BACKUP" "$SAMPLE_EVENTS_BACKUP"
 }
-trap restore_version EXIT
+trap 'cleanup_docker_artifacts; restore_version' EXIT
 
 # ─── Changelog extraction ─────────────────────────────────────────────────────
 # Pull the "## [x.y.z]" section out of CHANGELOG.md so the GitHub Release shows
@@ -322,9 +349,20 @@ if [ -n "$RELEASE_VERSION" ] && [ -z "$(extract_changelog "$RELEASE_VERSION")" ]
 fi
 
 # ─── Build ─────────────────────────────────────────────────────────────────────
-step "Build"
-pnpm build
-ok "Build succeeded"
+# With Docker enabled, the Dockerfile's build stage is the production build.
+# Running it here first would compile the same bundle twice. Keep a standalone
+# build for --no-docker checks, unless --docker-push will build the image below.
+if [ "$SKIP_DOCKER" = true ] && [ "$DOCKER_PUSH" = false ]; then
+  step "Build"
+  if [ "$DRY_RUN" = true ]; then
+    # `pnpm build` refreshes the checked-in sample calendar as part of its
+    # normal work. A dry run must leave the working tree byte-for-byte intact.
+    cp public/sample-events.ics "$SAMPLE_EVENTS_BACKUP"
+    SAMPLE_EVENTS_BACKED_UP=true
+  fi
+  pnpm build
+  ok "Build succeeded"
+fi
 
 # ─── Docker ────────────────────────────────────────────────────────────────────
 if [ "$SKIP_DOCKER" = false ]; then
@@ -335,9 +373,19 @@ if [ "$SKIP_DOCKER" = false ]; then
     fail "$ENGINE is not running. Start it, or use --no-docker"
   fi
 
+  # Preserve a caller-owned test tag while using the same name for the
+  # release check. The original image is restored by the EXIT cleanup after
+  # the tested image has been discarded.
+  if DOCKER_TEST_IMAGE_ORIGINAL_ID=$($ENGINE image inspect --format '{{.Id}}' calino:test 2>/dev/null); then
+    DOCKER_TEST_IMAGE_EXISTED=true
+  fi
+
   # Output is captured rather than discarded: `set -e` would otherwise abort
   # the whole release on a build failure having printed nothing at all, which
   # is the least useful way to learn the Dockerfile broke.
+  # Claim the temporary tag before starting the build so an interruption at
+  # any point still restores a pre-existing calino:test tag in the EXIT trap.
+  DOCKER_TEST_IMAGE_BUILT=true
   BUILD_STATUS=0
   BUILD_OUTPUT=$($ENGINE build -t calino:test . 2>&1) || BUILD_STATUS=$?
   if [ "$BUILD_STATUS" -ne 0 ]; then
@@ -356,15 +404,19 @@ if [ "$SKIP_DOCKER" = false ]; then
   # instead of the container and the check reports nonsense.
   probe() { curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:$HEALTH_PORT$1" 2>/dev/null || true; }
 
-  # An earlier aborted run can leave the container alive and holding the port,
-  # which would otherwise trip the conflict check below with a misleading message.
-  $ENGINE rm -f calino-release-test > /dev/null 2>&1 || true
+  # Never remove a container we did not create. The EXIT trap cleans up a
+  # container started by this run; an older or caller-owned one needs explicit
+  # attention instead of being silently destroyed.
+  if $ENGINE inspect calino-release-test > /dev/null 2>&1; then
+    fail "Container calino-release-test already exists. Stop it, or use another release-check setup"
+  fi
 
   # Fail loudly on a port conflict rather than silently testing the squatter.
   if [ "$(probe /)" != "000" ]; then
     fail "Something is already serving on port $HEALTH_PORT. Stop it, or pin another port with HEALTH_PORT=..."
   fi
 
+  DOCKER_TEST_CONTAINER_STARTED=true
   $ENGINE run -d --name calino-release-test -p "$HEALTH_PORT:8080" calino:test > /dev/null
 
   # Wait for container to be healthy
@@ -397,7 +449,10 @@ if [ "$SKIP_DOCKER" = false ]; then
   fi
 
   $ENGINE rm -f calino-release-test > /dev/null 2>&1
-  $ENGINE rmi calino:test > /dev/null 2>&1
+  DOCKER_TEST_CONTAINER_STARTED=false
+  if [ "$DOCKER_PUSH" = false ] || [ "$DRY_RUN" = true ]; then
+    cleanup_docker_test_image
+  fi
   ok "Container healthcheck passed"
 
   # Show what tags CI will generate
@@ -410,7 +465,7 @@ if [ "$SKIP_DOCKER" = false ]; then
 fi
 
 # ─── Docker push to GHCR ──────────────────────────────────────────────────────
-if [ "$DOCKER_PUSH" = true ]; then
+if [ "$DOCKER_PUSH" = true ] && [ "$DRY_RUN" = false ]; then
   step "Pushing image to GHCR ($ENGINE)"
 
   if ! $ENGINE info > /dev/null 2>&1; then
@@ -428,14 +483,30 @@ if [ "$DOCKER_PUSH" = true ]; then
   SHA_TAG="sha-$(git rev-parse --short HEAD)"
   IMAGE="ghcr.io/ivan-malinovski/calino"
 
-  # Build with all tags
-  step "Building with tags: main, latest, $VERSION_TAG, $SHA_TAG"
-  $ENGINE build \
-    -t "$IMAGE:main" \
-    -t "$IMAGE:latest" \
-    -t "$IMAGE:$VERSION_TAG" \
-    -t "$IMAGE:$SHA_TAG" \
-    .
+  if [ "$SKIP_DOCKER" = false ]; then
+    # The image just passed the container healthcheck; tag that exact image
+    # instead of compiling the application again for the registry tags.
+    step "Tagging tested image: main, latest, $VERSION_TAG, $SHA_TAG"
+    $ENGINE tag calino:test "$IMAGE:main"
+    $ENGINE tag calino:test "$IMAGE:latest"
+    $ENGINE tag calino:test "$IMAGE:$VERSION_TAG"
+    $ENGINE tag calino:test "$IMAGE:$SHA_TAG"
+  else
+    # With --no-docker there is no health-checked image to reuse, so the push
+    # build remains the single production compilation for this path.
+    step "Building with tags: main, latest, $VERSION_TAG, $SHA_TAG"
+    BUILD_STATUS=0
+    BUILD_OUTPUT=$($ENGINE build \
+      -t "$IMAGE:main" \
+      -t "$IMAGE:latest" \
+      -t "$IMAGE:$VERSION_TAG" \
+      -t "$IMAGE:$SHA_TAG" \
+      . 2>&1) || BUILD_STATUS=$?
+    if [ "$BUILD_STATUS" -ne 0 ]; then
+      echo "$BUILD_OUTPUT"
+      fail "$ENGINE build failed (exit $BUILD_STATUS)"
+    fi
+  fi
 
   # Push all tags
   step "Pushing tags"
@@ -444,6 +515,10 @@ if [ "$DOCKER_PUSH" = true ]; then
   $ENGINE push "$IMAGE:$VERSION_TAG"
   $ENGINE push "$IMAGE:$SHA_TAG"
 
+  if [ "$SKIP_DOCKER" = false ]; then
+    cleanup_docker_test_image
+  fi
+
   ok "Image pushed to GHCR"
   echo ""
   echo "  Tags pushed:"
@@ -451,6 +526,8 @@ if [ "$DOCKER_PUSH" = true ]; then
   echo "    - $IMAGE:latest"
   echo "    - $IMAGE:$VERSION_TAG"
   echo "    - $IMAGE:$SHA_TAG"
+elif [ "$DOCKER_PUSH" = true ]; then
+  warn "Dry run — skipping Docker image push"
 fi
 
 # ─── Commit & push ─────────────────────────────────────────────────────────────
@@ -467,7 +544,11 @@ if [ "$DRY_RUN" = false ] && { [ "$BUMPED" = true ] || [ "$CHANGELOG_PROMOTED" =
   ok "Release preparation committed"
 fi
 
-if [ "$SKIP_PUSH" = false ]; then
+if [ "$SKIP_PUSH" = false ] && {
+  [ -n "$RELEASE_VERSION" ] ||
+  [ "$BUMPED" = true ] ||
+  [ "$CHANGELOG_PROMOTED" = true ]
+}; then
   step "Pushing to $BRANCH"
   git push origin "$BRANCH"
 
@@ -516,6 +597,8 @@ if [ "$SKIP_PUSH" = false ]; then
   fi
 
   ok "Pushed to $BRANCH"
+elif [ "$SKIP_PUSH" = false ]; then
+  echo "  No release commit to push"
 fi
 
 # ─── Done ──────────────────────────────────────────────────────────────────────
