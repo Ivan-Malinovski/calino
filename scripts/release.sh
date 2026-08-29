@@ -261,7 +261,7 @@ ok "All tests passed"
 # Those only fail in a browser, so a release check without e2e is not a check.
 if [ "$SKIP_E2E" = false ]; then
   step "End-to-end tests"
-  pnpm test:e2e
+  node scripts/run-e2e-projects.mjs
   ok "End-to-end tests passed"
 else
   warn "Skipping end-to-end tests (--no-e2e)"

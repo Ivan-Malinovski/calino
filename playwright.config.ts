@@ -36,7 +36,7 @@ export default defineConfig({
   // Costs ~4.6m against ~2.3m; override with `--workers=N` for a quick loop.
   workers: 2,
   reporter: IS_CI ? [['github'], ['list']] : [['list']],
-  outputDir: './e2e/test-results',
+  outputDir: process.env.PLAYWRIGHT_OUTPUT_DIR ?? './e2e/test-results',
   timeout: 30_000,
   // 10s, not Playwright's 5s default. Nearly every assertion in this suite is
   // an eventual-consistency wait — a sync landing, a persisted store

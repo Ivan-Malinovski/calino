@@ -10,10 +10,12 @@ What to verify before cutting a release. The automated half is what
 pnpm audit                        # optional dependency vulnerability review
 ```
 
-The release script runs the full Playwright suite unless `--no-e2e` is passed,
-and runs the Docker build/probes unless `--no-docker` is passed. It picks the
-first free host port from 8080 up for the container checks; pin it with
-`HEALTH_PORT=…` if you need a specific one.
+The release script runs the full Playwright suite unless `--no-e2e` is passed.
+The three browser projects run concurrently with isolated app and DAV mock
+servers, one worker per browser, so they do not contend for the shared local
+test backend. It runs the Docker build/probes unless `--no-docker` is passed.
+It picks the first free host port from 8080 up for the container checks; pin it
+with `HEALTH_PORT=…` if you need a specific one.
 
 Then cut the release:
 
