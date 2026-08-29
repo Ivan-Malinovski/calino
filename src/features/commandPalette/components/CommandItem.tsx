@@ -1,4 +1,4 @@
-import type { JSX } from 'react'
+import type { CSSProperties, JSX } from 'react'
 import { parseISO } from 'date-fns'
 import { formatDisplayDate, formatTime } from '@/lib/datetime'
 import { describeRecurrenceRule } from '@/lib/recurrence'
@@ -38,18 +38,18 @@ export function renderCommandItemContent({
 
   if (type === 'event') {
     const event = item as EventResult
-    const calendarColor = '#4285F4'
+    const calendarColor = event.calendarColor || '#4285F4'
     // `new Date(...)` reads a bare 'yyyy-MM-dd' as UTC midnight, which shifts
     // the day itself west of Greenwich — parseISO keeps it local. Journal
     // entries are day-scoped, so they get no time either way.
     const start = parseISO(event.start)
-    const dayOnly = event.type === 'journal' || !event.start.includes('T')
+    const dayOnly = event.type === 'journal' || event.isAllDay === true || !event.start.includes('T')
     return (
       <>
         <span className={styles.eventColor} style={{ backgroundColor: calendarColor }} />
         <div className={styles.body}>
           <div className={styles.title}>
-            {event.title}
+            {highlightedText(event.title, event.highlightTerms)}
             {event.recurrence && (
               <span
                 className={styles.recurringBadge}
@@ -65,6 +65,24 @@ export function renderCommandItemContent({
             {!dayOnly && ` ${formatTime(start, timeFormat)}`}
             {event.recurrence && ` · ${event.recurrence}`}
           </div>
+          {(event.location || event.description || event.calendarName) && (
+            <div className={styles.eventMeta}>
+              {event.calendarName && (
+                <span
+                  className={styles.calendarBadge}
+                  style={{ '--calendar-color': calendarColor } as CSSProperties}
+                >
+                  {event.calendarName}
+                </span>
+              )}
+              {event.location && <span title={event.location}>{event.location}</span>}
+              {event.description && (
+                <span title={event.description}>
+                  {highlightedText(event.description, event.highlightTerms)}
+                </span>
+              )}
+            </div>
+          )}
         </div>
       </>
     )
@@ -123,4 +141,30 @@ export function renderCommandItemContent({
   }
 
   return <div className={styles.title}>{t('palette.unknown')}</div>
+}
+
+function highlightedText(text: string, terms?: string[]): JSX.Element {
+  const meaningfulTerms = (terms ?? []).map((term) => term.trim()).filter(Boolean)
+  if (meaningfulTerms.length === 0) return <>{text}</>
+
+  const pattern = new RegExp(
+    `(${meaningfulTerms
+      .sort((a, b) => b.length - a.length)
+      .map((term) => term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+      .join('|')})`,
+    'gi'
+  )
+  return (
+    <>
+      {text.split(pattern).map((part, index) =>
+        meaningfulTerms.some((term) => part.toLocaleLowerCase() === term.toLocaleLowerCase()) ? (
+          <mark className={styles.highlight} key={`${part}-${index}`}>
+            {part}
+          </mark>
+        ) : (
+          part
+        )
+      )}
+    </>
+  )
 }

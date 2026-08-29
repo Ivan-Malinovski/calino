@@ -6,7 +6,10 @@ import { useTranslation } from 'react-i18next'
 import { useSettingsStore } from '@/store/settingsStore'
 import { useCommandPalette } from '../hooks/useCommandPalette'
 import { renderCommandItemContent } from './CommandItem'
+import { CommandPaletteFilterForm } from './CommandPaletteFilterForm'
+import { EMPTY_COMMAND_PALETTE_FILTER } from '../lib/eventFilters'
 import { showToast } from '@/lib/toast'
+import { useFocusTrap } from '@/hooks/useFocusTrap'
 import type { CommandPaletteItem, CommandPaletteItemGroup } from '../types'
 import styles from './CommandPalette.module.css'
 
@@ -35,10 +38,7 @@ const GROUP_ORDER: CommandPaletteItemGroup[] = [
   'calendars',
 ]
 
-function getCategoryLabel(
-  t: (key: string) => string,
-  category: CommandPaletteItemGroup
-): string {
+function getCategoryLabel(t: (key: string) => string, category: CommandPaletteItemGroup): string {
   const labels: Record<CommandPaletteItemGroup, string> = {
     navigation: t('palette.category.navigation'),
     actions: t('palette.category.actions'),
@@ -72,6 +72,7 @@ export function CommandPalette({
     [language, t]
   )
   const inputRef = useRef<HTMLInputElement>(null)
+  const modalRef = useRef<HTMLDivElement>(null)
   const [placeholderIndex, setPlaceholderIndex] = useState(0)
   const [displayedText, setDisplayedText] = useState('')
   const [isTyping, setIsTyping] = useState(true)
@@ -79,13 +80,41 @@ export function CommandPalette({
   // parent flips isOpen false, so the closing animation can play.
   const [rendered, setRendered] = useState(isOpen)
   const [closing, setClosing] = useState(false)
-  const { query, setQuery, items } = useCommandPalette({
+  const paletteState = useCommandPalette({
     isOpen: rendered && !closing,
     toggleSidebar,
     sidebarOpen,
   })
+  const {
+    query,
+    setQuery,
+    items,
+    filter = EMPTY_COMMAND_PALETTE_FILTER,
+    setIncludedTerms = () => undefined,
+    setLocation = () => undefined,
+    setExcludedKeywords = () => undefined,
+    setFromDate = () => undefined,
+    setToDate = () => undefined,
+    resetFilters = () => undefined,
+    enterFilterMode = () => undefined,
+    toggleFilterForm = () => undefined,
+    resetPalette = () => undefined,
+    isFilterMode = false,
+    isFilterFormVisible = false,
+    filteredResultCount = 0,
+    activeFilterCount = 0,
+    invalidDateRange = false,
+  } = paletteState
+  const resetPaletteRef = useRef(resetPalette)
+  const setQueryRef = useRef(setQuery)
+  useEffect(() => {
+    resetPaletteRef.current = resetPalette
+    setQueryRef.current = setQuery
+  }, [resetPalette, setQuery])
 
   const timeFormat = useSettingsStore((state) => state.timeFormat)
+
+  useFocusTrap(modalRef, rendered && !closing)
 
   // Group items by category, preserving order
   const groupedItems = useMemo(() => {
@@ -134,7 +163,8 @@ export function CommandPalette({
       setRendered(false)
       setClosing(false)
       onCloseRef.current()
-      setQuery('')
+      setQueryRef.current('')
+      resetPaletteRef.current()
     }, 140) // matches .closing animation duration in CSS
     return () => clearTimeout(closeTimerRef.current)
   }, [closing])
@@ -195,6 +225,16 @@ export function CommandPalette({
     const focusAndSelect = (): void => {
       const el = inputRef.current
       if (!el) return
+      // The filter form can be opened immediately after the palette. Do not
+      // let delayed autofocus steal focus from a field while the user types.
+      const active = document.activeElement
+      const filterForm = modalRef.current?.querySelector('[data-component="command-palette-filters"]')
+      const activeIsFilterField = Boolean(active && filterForm?.contains(active))
+      const activeIsPaletteControl = Boolean(active && modalRef.current?.contains(active))
+      const activeIsFilterToggle = Boolean(
+        active?.closest('[data-action="toggle-event-filters"]')
+      )
+      if (activeIsFilterField || (activeIsPaletteControl && !activeIsFilterToggle)) return
       el.focus()
       try {
         el.setSelectionRange(0, el.value.length)
@@ -247,6 +287,10 @@ export function CommandPalette({
         justSelectedRef.current = false
         return
       }
+      // Buttons own their Enter activation. Letting the event reach this
+      // palette-level fallback would close the dialog before the chevron or
+      // Reset action can complete for keyboard users.
+      if ((e.target as HTMLElement).closest('button')) return
       requestClose()
     },
     [requestClose]
@@ -285,8 +329,13 @@ export function CommandPalette({
         if (e.target === e.currentTarget) requestClose()
       }}
     >
-      <div className={styles.modal} onKeyDown={handleKeyDown}>
-        <Command label={t('palette.commandPalette')} shouldFilter={false} loop className={styles.command}>
+      <div ref={modalRef} className={styles.modal} onKeyDown={handleKeyDown}>
+        <Command
+          label={t('palette.commandPalette')}
+          shouldFilter={false}
+          loop
+          className={styles.command}
+        >
           <div className={styles.inputWrapper}>
             <svg
               className={styles.inputIcon}
@@ -300,7 +349,7 @@ export function CommandPalette({
               <path d="M11 11l3.5 3.5" />
             </svg>
             <div className={styles.inputContainer}>
-              {!query && displayedText && (
+              {!query && !isFilterMode && displayedText && (
                 <span className={styles.placeholder}>
                   {displayedText}
                   <span className={styles.cursor} />
@@ -311,16 +360,78 @@ export function CommandPalette({
                 value={query}
                 onValueChange={setQuery}
                 className={styles.input}
+                placeholder={isFilterMode ? t('palette.filter.title') : undefined}
+                readOnly={isFilterMode}
+                aria-label={isFilterMode ? t('palette.filter.title') : t('palette.commandPalette')}
+                aria-readonly={isFilterMode}
               />
             </div>
-            {!query && <span className={styles.escBadge}>{t('palette.esc')}</span>}
+            {!query && !isFilterMode && <span className={styles.escBadge}>{t('palette.esc')}</span>}
+            <button
+              type="button"
+              className={styles.filterToggle}
+              data-action="toggle-event-filters"
+              data-open={isFilterMode && isFilterFormVisible}
+              aria-label={
+                isFilterMode && isFilterFormVisible
+                  ? t('palette.filter.collapse')
+                  : t('palette.filter.open')
+              }
+              aria-expanded={isFilterMode ? isFilterFormVisible : false}
+              title={
+                isFilterMode && isFilterFormVisible
+                  ? t('palette.filter.collapse')
+                  : t('palette.filter.open')
+              }
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') event.stopPropagation()
+              }}
+              onClick={isFilterMode ? toggleFilterForm : enterFilterMode}
+            >
+              <svg
+                viewBox="0 0 16 16"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="m10 3-5 5 5 5" />
+              </svg>
+            </button>
           </div>
+
+          {isFilterMode && isFilterFormVisible && (
+            <CommandPaletteFilterForm
+              filter={filter}
+              setIncludedTerms={setIncludedTerms}
+              setLocation={setLocation}
+              setExcludedKeywords={setExcludedKeywords}
+              setFromDate={setFromDate}
+              setToDate={setToDate}
+              onReset={resetFilters}
+              invalidDateRange={invalidDateRange}
+              t={t}
+            />
+          )}
+
+          {isFilterMode && (
+            <div className={styles.filterSummary} role="status" aria-live="polite">
+              <span>{t('palette.filter.activeCount', { count: activeFilterCount })}</span>
+              <span className={styles.filterSummaryCount}>
+                {t('palette.filter.matches', { count: filteredResultCount })}
+              </span>
+            </div>
+          )}
 
           <Command.List className={styles.results}>
             <Command.Empty className={styles.empty}>
-              {query
-                ? t('palette.noResults')
-                : t('palette.typeToSearch')}
+              {isFilterMode
+                ? t('palette.filter.noMatches')
+                : query
+                  ? t('palette.noResults')
+                  : t('palette.typeToSearch')}
             </Command.Empty>
 
             {groupedItems.map(({ group, items: groupItems }, groupIdx) => (

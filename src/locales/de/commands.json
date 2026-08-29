@@ -111,7 +111,9 @@
     "openedDataSettings": "Dateneinstellungen geöffnet"
   },
   "palette": {
-    "goTo": "Zu {{dateRef}} wechseln", "navigatedTo": "Zu {{date}} gewechselt",
+    "goTo": "Zu {{dateRef}} wechseln",
+    "navigatedTo": "Zu {{date}} gewechselt",
+    "opened": "{{title}} geöffnet",
     "placeholder": {
       "hangOut": "Morgen um 9 mit Batman treffen",
       "toggleDarkMode": "Dunklen Modus umschalten",
@@ -142,6 +144,29 @@
     "create": "Erstellen: ",
     "allDay": "(ganztägig)",
     "at": "um {{location}}",
-    "unknown": "Unbekannt"
+    "unknown": "Unbekannt",
+    "filter": {
+      "open": "Termine filtern",
+      "collapse": "Filter ausblenden",
+      "title": "Termine, Aufgaben und Journaleinträge filtern",
+      "help": "Mit Komma oder Enter Begriffe hinzufügen. Eingeschlossene Begriffe suchen in Titeln und Beschreibungen.",
+      "includeLabel": "Begriffe einschließen",
+      "includePlaceholder": "z. B. Planung, Team",
+      "locationLabel": "Ort",
+      "locationPlaceholder": "Jeder Ort",
+      "excludeLabel": "Schlüsselwörter ausschließen",
+      "excludePlaceholder": "z. B. abgesagt, privat",
+      "fromLabel": "Von",
+      "toLabel": "Bis",
+      "reset": "Zurücksetzen",
+      "activeCount_one": "{{count}} aktiver Filter",
+      "activeCount_other": "{{count}} aktive Filter",
+      "matches_one": "{{count}} Treffer",
+      "matches_other": "{{count}} Treffer",
+      "noMatches": "Keine passenden Einträge",
+      "invalidDateRange": "Das Anfangsdatum muss vor oder gleich dem Enddatum liegen.",
+      "removeTerm": "Eingeschlossenen Begriff {{term}} entfernen",
+      "removeExcludedKeyword": "Ausgeschlossenes Schlüsselwort {{term}} entfernen"
+    }
   }
 }

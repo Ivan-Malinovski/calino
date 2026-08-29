@@ -42,6 +42,13 @@ export interface EventResult {
   title: string
   start: string
   calendarId: string
+  isAllDay?: boolean
+  description?: string
+  location?: string
+  calendarName?: string
+  calendarColor?: string
+  /** Terms to highlight in filter-mode result text. */
+  highlightTerms?: string[]
   /** Which modal the result opens. Journal entries belong to the journal
    *  day modal, not the event modal. Absent means a plain event. */
   type?: CalendarEvent['type']

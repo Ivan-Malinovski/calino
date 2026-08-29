@@ -1,4 +1,4 @@
-import { useMemo, useCallback, useState } from 'react'
+import { useMemo, useCallback, useState, useEffect } from 'react'
 import { format } from 'date-fns'
 import { useNavigate } from 'react-router'
 import i18n from '@/lib/i18n'
@@ -18,9 +18,14 @@ import { makeDefaultReminders } from '@/lib/notifications'
 import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
 import { createCommandRegistry, type Command } from '../commands'
 import { parseNaturalLanguage } from '@/features/nlp'
-import { displayOccurrence, resolveRRuleString } from '@/lib/occurrenceExpansion'
+import { displayOccurrence, materializeOccurrence, resolveRRuleString } from '@/lib/occurrenceExpansion'
 import { describeRecurrence } from '@/lib/recurrence'
 import { createUuid } from '@/lib/uuid'
+import {
+  EMPTY_COMMAND_PALETTE_FILTER,
+  getFilteredEvents,
+  type CommandPaletteFilter,
+} from '../lib/eventFilters'
 import type {
   CommandPaletteItem,
   CommandPaletteItemGroup,
@@ -76,7 +81,6 @@ interface UseCommandPaletteProps {
   sidebarOpen?: boolean
 }
 
-
 const t = (key: string, opts?: Record<string, unknown>): string => i18n.t(`commands:${key}`, opts)
 
 function categoryToGroup(category: string): CommandPaletteItemGroup {
@@ -86,19 +90,82 @@ function categoryToGroup(category: string): CommandPaletteItemGroup {
   return 'navigation'
 }
 
-export function useCommandPalette({ toggleSidebar, sidebarOpen }: UseCommandPaletteProps): {
+export function useCommandPalette({ isOpen, toggleSidebar, sidebarOpen }: UseCommandPaletteProps): {
   query: string
   setQuery: (q: string) => void
   items: CommandPaletteItem[]
   executeSelected: (index?: number) => Promise<ExecuteResult | undefined>
   parseInput: (query: string) => ParsedInput
+  filter: CommandPaletteFilter
+  setIncludedTerms: (terms: string[]) => void
+  setLocation: (location: string) => void
+  setExcludedKeywords: (keywords: string[]) => void
+  setFromDate: (date: string) => void
+  setToDate: (date: string) => void
+  resetFilters: () => void
+  enterFilterMode: () => void
+  toggleFilterForm: () => void
+  resetPalette: () => void
+  isFilterMode: boolean
+  isFilterFormVisible: boolean
+  filteredResultCount: number
+  activeFilterCount: number
+  invalidDateRange: boolean
+  filteredResults: EventResult[]
 } {
   const navigate = useNavigate()
   const [query, setQueryState] = useState('')
+  const [filter, setFilterState] = useState<CommandPaletteFilter>(EMPTY_COMMAND_PALETTE_FILTER)
+  const [isFilterMode, setIsFilterMode] = useState(false)
+  const [isFilterFormVisible, setIsFilterFormVisible] = useState(false)
 
   const setQuery = useCallback((q: string) => {
     setQueryState(q)
   }, [])
+
+  const setIncludedTerms = useCallback((terms: string[]) => {
+    setFilterState((current) => ({ ...current, terms }))
+  }, [])
+  const setLocation = useCallback((location: string) => {
+    setFilterState((current) => ({ ...current, location }))
+  }, [])
+  const setExcludedKeywords = useCallback((excludedKeywords: string[]) => {
+    setFilterState((current) => ({ ...current, excludedKeywords }))
+  }, [])
+  const setFromDate = useCallback((fromDate: string) => {
+    setFilterState((current) => ({ ...current, fromDate }))
+  }, [])
+  const setToDate = useCallback((toDate: string) => {
+    setFilterState((current) => ({ ...current, toDate }))
+  }, [])
+  const resetFilters = useCallback(() => {
+    setFilterState(EMPTY_COMMAND_PALETTE_FILTER)
+  }, [])
+  const enterFilterMode = useCallback(() => {
+    const handoff = query.trim()
+    setFilterState((current) =>
+      handoff && current.terms.length === 0 ? { ...current, terms: [handoff] } : current
+    )
+    setQueryState('')
+    setIsFilterMode(true)
+    setIsFilterFormVisible(true)
+  }, [query])
+  const toggleFilterForm = useCallback(() => {
+    setIsFilterFormVisible((visible) => !visible)
+  }, [])
+  const resetPalette = useCallback(() => {
+    setFilterState(EMPTY_COMMAND_PALETTE_FILTER)
+    setIsFilterMode(false)
+    setIsFilterFormVisible(false)
+  }, [])
+
+  useEffect(() => {
+    if (!isOpen) {
+      setFilterState(EMPTY_COMMAND_PALETTE_FILTER)
+      setIsFilterMode(false)
+      setIsFilterFormVisible(false)
+    }
+  }, [isOpen])
   const setCurrentView = useCalendarStore(selectSetCurrentView)
   const setCurrentDate = useCalendarStore(selectSetCurrentDate)
   const openModal = useCalendarStore(selectOpenModal)
@@ -328,6 +395,7 @@ export function useCommandPalette({ toggleSidebar, sidebarOpen }: UseCommandPale
           title: event.title,
           start: shape ? shape.occStartStr : event.start,
           calendarId: event.calendarId,
+          isAllDay: event.isAllDay,
           type: event.type,
           recurrence: shape ? describeRecurrence(event) : undefined,
         })
@@ -355,8 +423,63 @@ export function useCommandPalette({ toggleSidebar, sidebarOpen }: UseCommandPale
     [calendars]
   )
 
+  const filteredData = useMemo(
+    () =>
+      isOpen
+        ? getFilteredEvents(events, filter)
+        : { matches: [], invalidDateRange: false },
+    [events, filter, isOpen]
+  )
+
+  const filteredResults = useMemo(
+    () =>
+      filteredData.matches.map(({ event, occurrence }) => {
+        const calendar = calendars.find((candidate) => candidate.id === event.calendarId)
+        const seriesEvent = event.recurrenceMasterId
+          ? events.find((candidate) => candidate.id === event.recurrenceMasterId)
+          : event
+        const hasRecurrence = Boolean(seriesEvent && resolveRRuleString(seriesEvent))
+        const displayStart =
+          event.type === 'task'
+            ? occurrence
+              ? materializeOccurrence(event, occurrence).dueDate ?? occurrence.occStartStr
+              : event.dueDate ?? event.start
+            : occurrence?.occStartStr ?? event.start
+        return {
+          id: event.recurrenceMasterId
+            ? event.id
+            : occurrence
+              ? `${event.id}-${occurrence.occKey}`
+              : event.id,
+          title: event.title,
+          start: displayStart,
+          calendarId: event.calendarId,
+          isAllDay: event.isAllDay,
+          type: event.type,
+          description: event.description,
+          location: event.location,
+          calendarName: calendar?.name,
+          calendarColor: calendar?.color,
+          recurrence: hasRecurrence && seriesEvent ? describeRecurrence(seriesEvent) : undefined,
+          highlightTerms: filter.terms,
+        }
+      }),
+    [calendars, events, filter.terms, filteredData.matches]
+  )
+
+  const activeFilterCount =
+    filter.terms.length +
+    (filter.location.trim() ? 1 : 0) +
+    filter.excludedKeywords.length +
+    (filter.fromDate ? 1 : 0) +
+    (filter.toDate ? 1 : 0)
+
   // Build the items list. cmdk's fuzzy filter operates on item.value.
   const items = useMemo((): CommandPaletteItem[] => {
+    if (isFilterMode) {
+      return filteredResults.map((event) => eventToItem(event, openModal, openJournalModal))
+    }
+
     // Empty query: top 8 default commands
     if (!query.trim()) {
       return commands.slice(0, 8).map(commandToItem)
@@ -484,6 +607,8 @@ export function useCommandPalette({ toggleSidebar, sidebarOpen }: UseCommandPale
     openModal,
     openJournalModal,
     navigate,
+    isFilterMode,
+    filteredResults,
   ])
 
   const executeSelected = useCallback(
@@ -502,6 +627,22 @@ export function useCommandPalette({ toggleSidebar, sidebarOpen }: UseCommandPale
     items,
     executeSelected,
     parseInput,
+    filter,
+    setIncludedTerms,
+    setLocation,
+    setExcludedKeywords,
+    setFromDate,
+    setToDate,
+    resetFilters,
+    enterFilterMode,
+    toggleFilterForm,
+    resetPalette,
+    isFilterMode,
+    isFilterFormVisible,
+    filteredResultCount: filteredResults.length,
+    activeFilterCount,
+    invalidDateRange: filteredData.invalidDateRange,
+    filteredResults,
   }
 }
 
@@ -615,7 +756,7 @@ function quickAddToItem(
       }
 
       const newEvent = {
-          id: createUuid(),
+        id: createUuid(),
         calendarId,
         title: qa.title,
         location: qa.location,
