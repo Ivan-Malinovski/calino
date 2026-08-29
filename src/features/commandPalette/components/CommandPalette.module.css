@@ -684,6 +684,31 @@
    layouts, so they only lift on touch — where the extra size helps anyway.
    Kept here, last in the file, so source order settles the tie. */
 @media (pointer: coarse) {
+  .filterToggle {
+    width: 44px;
+    height: 44px;
+  }
+
+  .resetButton {
+    min-height: 44px;
+    padding: 8px 0;
+  }
+
+  .tokenInput,
+  .filterTextInput {
+    min-height: 44px;
+  }
+
+  .tokenInputField {
+    height: 32px;
+  }
+
+  .filterChipRemove {
+    width: 44px;
+    height: 44px;
+    line-height: 42px;
+  }
+
   .input,
   .tokenInputField,
   .filterTextInput {
