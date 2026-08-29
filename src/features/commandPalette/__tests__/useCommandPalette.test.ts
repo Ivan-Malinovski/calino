@@ -371,4 +371,51 @@ describe('useCommandPalette', () => {
       expect(parsed.nlp?.title).toBe('Lunch')
     })
   })
+
+  describe('event filter mode', () => {
+    it('hands the query to the filter and replaces command results', () => {
+      const { result } = renderHook(() => useCommandPalette({ isOpen: true }))
+
+      act(() => {
+        result.current.setQuery('Team Meeting')
+      })
+      act(() => {
+        result.current.enterFilterMode()
+      })
+
+      expect(result.current.isFilterMode).toBe(true)
+      expect(result.current.isFilterFormVisible).toBe(true)
+      expect(result.current.query).toBe('')
+      expect(result.current.filter.terms).toEqual(['Team Meeting'])
+      expect(result.current.items.every((item) => item.itemType === 'event')).toBe(true)
+      expect(result.current.filteredResultCount).toBe(1)
+    })
+
+    it('updates live and reset keeps filter mode active', () => {
+      const { result } = renderHook(() => useCommandPalette({ isOpen: true }))
+
+      act(() => result.current.enterFilterMode())
+      act(() => result.current.setLocation('nowhere'))
+      expect(result.current.filteredResultCount).toBe(0)
+
+      act(() => result.current.resetFilters())
+      expect(result.current.isFilterMode).toBe(true)
+      expect(result.current.filter.location).toBe('')
+      expect(result.current.filteredResultCount).toBe(1)
+    })
+
+    it('resets filter mode and filters when the palette closes', () => {
+      const { result, rerender } = renderHook(({ isOpen }) => useCommandPalette({ isOpen }), {
+        initialProps: { isOpen: true },
+      })
+
+      act(() => result.current.enterFilterMode())
+      expect(result.current.isFilterMode).toBe(true)
+      rerender({ isOpen: false })
+
+      expect(result.current.isFilterMode).toBe(false)
+      expect(result.current.isFilterFormVisible).toBe(false)
+      expect(result.current.filter.terms).toEqual([])
+    })
+  })
 })

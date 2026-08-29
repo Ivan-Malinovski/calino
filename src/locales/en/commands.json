@@ -113,6 +113,7 @@
   "palette": {
     "goTo": "Go to {{dateRef}}",
     "navigatedTo": "Navigated to {{date}}",
+    "opened": "Opened {{title}}",
     "placeholder": {
       "hangOut": "Hang out with Batman tomorrow at 9",
       "toggleDarkMode": "Toggle dark mode",
@@ -143,6 +144,29 @@
     "create": "Create: ",
     "allDay": "(all day)",
     "at": "at {{location}}",
-    "unknown": "Unknown"
+    "unknown": "Unknown",
+    "filter": {
+      "open": "Filter events",
+      "collapse": "Hide filters",
+      "title": "Filter events, tasks, and journal entries",
+      "help": "Use commas or Enter to add terms. Included terms match titles or descriptions.",
+      "includeLabel": "Include terms",
+      "includePlaceholder": "e.g. planning, team",
+      "locationLabel": "Location",
+      "locationPlaceholder": "Any location",
+      "excludeLabel": "Exclude keywords",
+      "excludePlaceholder": "e.g. cancelled, private",
+      "fromLabel": "From",
+      "toLabel": "To",
+      "reset": "Reset",
+      "activeCount_one": "{{count}} active filter",
+      "activeCount_other": "{{count}} active filters",
+      "matches_one": "{{count}} match",
+      "matches_other": "{{count}} matches",
+      "noMatches": "No matching records",
+      "invalidDateRange": "The from date must be on or before the to date.",
+      "removeTerm": "Remove included term {{term}}",
+      "removeExcludedKeyword": "Remove excluded keyword {{term}}"
+    }
   }
 }

@@ -48,7 +48,10 @@
   border: 1px solid var(--popover-border, var(--line, rgba(var(--ink-raw), 0.09)));
   border-radius: var(--radius-lg);
   box-shadow:
-    var(--modal-shadow, 0 8px 32px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.14 * var(--shadow-opacity, 1)))),
+    var(
+      --modal-shadow,
+      0 8px 32px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.14 * var(--shadow-opacity, 1)))
+    ),
     0 2px 6px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.08 * var(--shadow-opacity, 1)));
   overflow: hidden;
   height: fit-content;
@@ -86,6 +89,8 @@
   flex-direction: column;
   width: 100%;
   min-width: 0;
+  max-height: 80vh;
+  overflow-y: auto;
 }
 
 .inputWrapper {
@@ -95,6 +100,37 @@
   padding: 14px 18px;
   flex-shrink: 0;
   border-bottom: 1px solid var(--popover-border, var(--line-2, rgba(var(--ink-raw), 0.05)));
+}
+
+.filterToggle {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  border: 0;
+  border-radius: 7px;
+  color: var(--ink-3, #a39d93);
+  background: transparent;
+  cursor: pointer;
+}
+
+.filterToggle:hover,
+.filterToggle:focus-visible {
+  color: var(--accent-strong, var(--accent, #b07d4f));
+  background: var(--accent-soft, #efe7db);
+}
+
+.filterToggle svg {
+  width: 17px;
+  height: 17px;
+  transform-origin: center;
+  transition: transform 180ms ease;
+}
+
+.filterToggle[data-open='true'] svg {
+  transform: rotate(-90deg);
 }
 
 .inputIcon {
@@ -185,6 +221,243 @@
   max-height: 320px;
   padding: 4px 0;
   min-width: 0;
+}
+
+@keyframes filterFormReveal {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.filterForm {
+  padding: 16px 18px 14px;
+  border-bottom: 1px solid var(--popover-border, var(--line-2, rgba(var(--ink-raw), 0.05)));
+  background: color-mix(in srgb, var(--canvas, #faf8f3) 35%, var(--popover-bg, var(--panel, #fff)));
+  animation: filterFormReveal 180ms ease-out both;
+}
+
+.filterHeading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: 14px;
+}
+
+.filterTitle {
+  margin: 0;
+  color: var(--ink, #2c2823);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.filterHelp {
+  margin: 4px 0 0;
+  color: var(--ink-3, #a39d93);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.resetButton {
+  flex: 0 0 auto;
+  border: 0;
+  padding: 3px 0;
+  color: var(--accent-strong, var(--accent, #b07d4f));
+  background: transparent;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.resetButton:hover,
+.resetButton:focus-visible {
+  text-decoration: underline;
+}
+
+.filterField {
+  min-width: 0;
+}
+
+.filterLabel {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--ink-2, #6f6a62);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.tokenInput,
+.filterTextInput {
+  min-height: 34px;
+  box-sizing: border-box;
+  border: 1px solid var(--popover-border, var(--line, rgba(var(--ink-raw), 0.12)));
+  border-radius: 7px;
+  background: var(--popover-bg, var(--panel, #fff));
+  color: var(--ink, #2c2823);
+  font: inherit;
+  font-size: 13px;
+}
+
+.tokenInput {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+  padding: 4px 7px;
+}
+
+.tokenInput:focus-within,
+.filterTextInput:focus {
+  border-color: var(--accent, #b07d4f);
+  outline: 2px solid color-mix(in srgb, var(--accent, #b07d4f) 20%, transparent);
+  outline-offset: 0;
+}
+
+.tokenInputField {
+  flex: 1 1 100px;
+  min-width: 80px;
+  height: 24px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+}
+
+.tokenInputField::placeholder,
+.filterTextInput::placeholder {
+  color: var(--ink-3, #a39d93);
+}
+
+.filterChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  padding: 3px 5px 3px 8px;
+  border: 1px solid color-mix(in srgb, var(--accent, #b07d4f) 28%, var(--popover-border, #ddd));
+  border-radius: 999px;
+  background: var(--accent-soft, #efe7db);
+  color: var(--ink-2, #6f6a62);
+  font-size: 12px;
+}
+
+.filterChip span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.filterChipRemove {
+  width: 17px;
+  height: 17px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  color: inherit;
+  background: transparent;
+  font-size: 15px;
+  line-height: 15px;
+  cursor: pointer;
+}
+
+.filterChipRemove:hover,
+.filterChipRemove:focus-visible {
+  color: var(--ink, #2c2823);
+  background: rgba(var(--ink-raw), 0.1);
+}
+
+.filterGrid,
+.filterDates {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+  margin-top: 12px;
+}
+
+.filterTextInput {
+  width: 100%;
+  padding: 7px 9px;
+}
+
+.filterDates {
+  margin-top: 10px;
+}
+
+.invalidInput {
+  border-color: var(--danger, #b65c5c);
+}
+
+.filterError {
+  margin: 8px 0 0;
+  color: var(--danger, #b65c5c);
+  font-size: 11px;
+}
+
+.filterSummary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 18px;
+  border-bottom: 1px solid var(--popover-border, var(--line-2, rgba(var(--ink-raw), 0.05)));
+  color: var(--ink-3, #a39d93);
+  font-size: 12px;
+}
+
+.filterSummaryCount {
+  color: var(--accent-strong, var(--accent, #b07d4f));
+  font-weight: 600;
+}
+
+.highlight {
+  padding: 0 1px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--accent, #b07d4f) 24%, transparent);
+  color: inherit;
+}
+
+.eventMeta {
+  display: flex;
+  gap: 7px;
+  min-width: 0;
+  margin-top: 2px;
+  color: var(--ink-3, #a39d93);
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.calendarBadge {
+  flex: 0 0 auto;
+  max-width: 130px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--calendar-color, #4285f4) 13%, transparent);
+  color: var(--ink-2, #6f6a62);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .filterToggle svg,
+  .filterForm {
+    animation: none;
+    transition: none;
+  }
+}
+
+@media (max-width: 520px) {
+  .filterGrid,
+  .filterDates {
+    grid-template-columns: 1fr;
+  }
 }
 
 .results:empty {
@@ -371,7 +644,8 @@
   flex-shrink: 0;
 }
 
-@media (max-width: 768px) { /* sync with config.ts MOBILE_BREAKPOINT */
+@media (max-width: 768px) {
+  /* sync with config.ts MOBILE_BREAKPOINT */
   /* The ↑↓/↵/Esc hints assume a keyboard-driven desktop user — on mobile
      there's no keyboard to hint at, and the footer just eats screen space. */
   .footer {

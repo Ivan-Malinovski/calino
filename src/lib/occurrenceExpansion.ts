@@ -438,6 +438,17 @@ function* occurrencesFrom(
   }
 }
 
+/**
+ * Yield occurrences strictly after a cursor in the same calendar frame used
+ * by the views. Consumers that need an open-ended search can stop at the
+ * first qualifying occurrence without inventing a date horizon.
+ */
+export function* occurrencesAfter(master: CalendarEvent, cursor: Date): Generator<Date> {
+  const rruleString = resolveRRuleString(master)
+  if (!rruleString) return
+  yield* occurrencesFrom(master, cursor, rruleString)
+}
+
 export function nextOpenOccurrence(
   master: CalendarEvent,
   overridesByRecurrenceId: Map<string, CalendarEvent>
