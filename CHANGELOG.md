@@ -4,6 +4,8 @@ All notable changes to Calino will be documented in this file.
 
 ## [Unreleased]
 
+## [0.32.0] - 2026-08-29
+
 ### Added
 
 - **Event filters in the command palette** — search all stored events, tasks,
