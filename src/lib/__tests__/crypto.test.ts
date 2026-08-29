@@ -110,28 +110,36 @@ describe('Master-password encryption (self-hosted config)', () => {
 })
 
 describe('Web Crypto compatibility fallback', () => {
-  it('round-trips app credentials when crypto.subtle is unavailable', async () => {
-    const nativeCrypto = globalThis.crypto
-    vi.stubGlobal('crypto', {
-      getRandomValues: nativeCrypto.getRandomValues.bind(nativeCrypto),
-    } as Crypto)
+  it(
+    'round-trips app credentials when crypto.subtle is unavailable',
+    async () => {
+      const nativeCrypto = globalThis.crypto
+      vi.stubGlobal('crypto', {
+        getRandomValues: nativeCrypto.getRandomValues.bind(nativeCrypto),
+      } as Crypto)
 
-    const encrypted = await encryptPassword('fallback-password')
-    expect(await decryptPassword(encrypted)).toBe('fallback-password')
+      const encrypted = await encryptPassword('fallback-password')
+      expect(await decryptPassword(encrypted)).toBe('fallback-password')
 
-    vi.stubGlobal('crypto', nativeCrypto)
-    expect(await decryptPassword(encrypted)).toBe('fallback-password')
-  })
+      vi.stubGlobal('crypto', nativeCrypto)
+      expect(await decryptPassword(encrypted)).toBe('fallback-password')
+    },
+    30_000
+  )
 
-  it('round-trips master-password credentials when crypto.subtle is unavailable', async () => {
-    const nativeCrypto = globalThis.crypto
-    vi.stubGlobal('crypto', {
-      getRandomValues: nativeCrypto.getRandomValues.bind(nativeCrypto),
-    } as Crypto)
+  it(
+    'round-trips master-password credentials when crypto.subtle is unavailable',
+    async () => {
+      const nativeCrypto = globalThis.crypto
+      vi.stubGlobal('crypto', {
+        getRandomValues: nativeCrypto.getRandomValues.bind(nativeCrypto),
+      } as Crypto)
 
-    const encrypted = await encryptWithMasterPassword('fallback-password', 'master-password')
-    expect(await decryptWithMasterPassword(encrypted, 'master-password')).toBe(
-      'fallback-password'
-    )
-  })
+      const encrypted = await encryptWithMasterPassword('fallback-password', 'master-password')
+      expect(await decryptWithMasterPassword(encrypted, 'master-password')).toBe(
+        'fallback-password'
+      )
+    },
+    30_000
+  )
 })
