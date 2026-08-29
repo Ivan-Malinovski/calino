@@ -10,7 +10,8 @@ All notable changes to Calino will be documented in this file.
   and journal entries by one or more title/description terms, location,
   exclusions, and inclusive date ranges. Results show their calendar, date,
   location, description, and highlighted matches; recurring series stay as one
-  row. The location search follows the direction discussed in [#132](https://github.com/Ivan-Malinovski/calino/issues/132).
+  row. The date-range and location controls follow the direction discussed in
+  the time/location picker request [#132](https://github.com/Ivan-Malinovski/calino/issues/132).
 
 ### Fixed
 
@@ -20,7 +21,8 @@ All notable changes to Calino will be documented in this file.
 
 - **Partial CalDAV component fetches no longer make calendars disappear** —
   successful event-like records are retained, while deletion reconciliation
-  and cursor advancement wait until all requested components succeed. Thanks
+  and cursor advancement wait until all requested components succeed. This
+  resolves [#134](https://github.com/Ivan-Malinovski/calino/issues/134). Thanks
   to [@josephsellers](https://github.com/josephsellers) for [#135](https://github.com/Ivan-Malinovski/calino/pull/135).
 
 ## [0.31.1] - 2026-08-24
