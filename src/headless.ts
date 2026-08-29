@@ -27,7 +27,7 @@ import type { CalDAVCalendar } from '@/features/caldav/types'
 import { getHeadlessBridge } from '@/lib/headlessBridge'
 import { getAllAccounts, getAllCalendars } from '@/features/caldav/sync/accountStorage'
 import { getAllCredentials } from '@/features/caldav/client/credentials'
-import { createCalDAVClient } from '@/features/caldav/client/CalDAVClient'
+import { createCalDAVClient, unwrapFetchEvents } from '@/features/caldav/client/CalDAVClient'
 import { parseICALDataAsync } from '@/features/caldav/adapter/iCalendarAdapter'
 import { buildMirrorPayload, MIRROR_PAST_DAYS, MIRROR_FUTURE_DAYS } from '@/lib/calendarMirror'
 import { initHeadlessI18n } from '@/lib/i18nHeadless'
@@ -109,7 +109,9 @@ export async function runHeadlessSync(): Promise<HeadlessResult> {
         CALDAV_FETCH_CONCURRENCY,
         async (calendar) => {
           try {
-            const resources = await client.fetchEvents(calendar.url, rangeStart, rangeEnd)
+            const { objects: resources } = unwrapFetchEvents(
+              await client.fetchEvents(calendar.url, rangeStart, rangeEnd)
+            )
             return { calendar, resources }
           } catch (error) {
             bridge.log(

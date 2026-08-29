@@ -142,6 +142,45 @@ END:VCALENDAR`,
     await expect(page.locator('#priority-select')).toHaveValue('')
   })
 
+  test('shows events when a VTODO calendar-query fails', async ({ page, baseURL }) => {
+    await clearState(page)
+    await seedAccount(page, {
+      id: 'mock-account',
+      name: 'Mock Radicale',
+      serverUrl: `${baseURL}/mock-caldav/dav/`,
+      username: 'user',
+      password: 'pass',
+    })
+
+    const day = new Date().toISOString().slice(0, 10).replaceAll('-', '')
+    const calendarUrl = `${baseURL}/mock-caldav/dav/calendars/user/personal/`
+    await page.request.put(`${calendarUrl}partial-vevent.ics`, {
+      data: `BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+UID:partial-vevent
+DTSTART:${day}T120000Z
+DTEND:${day}T130000Z
+SUMMARY:Survives VTODO query failure
+END:VEVENT
+END:VCALENDAR`,
+    })
+
+    await page.request.post(
+      `${baseURL}/mock-caldav/__test__/fail?method=REPORT&prefix=${encodeURIComponent(
+        '/dav/calendars/user/personal/'
+      )}&count=5&body=VTODO`
+    )
+
+    await page.goto('/month')
+    const syncAll = page.locator('[data-component="sync-all-calendars"]')
+    await expect(syncAll).toBeEnabled({ timeout: 10_000 })
+    await syncAll.click()
+    await expect(page.getByText('Survives VTODO query failure').first()).toBeVisible({
+      timeout: 10_000,
+    })
+  })
+
   test('edits a recurring event at its original CalDAV href without duplicating it', async ({
     page,
     baseURL,

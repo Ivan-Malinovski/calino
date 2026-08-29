@@ -497,9 +497,10 @@ END:VCALENDAR`,
 
       expect(mockClientMethods.fetchCalendarObjects).toHaveBeenCalledTimes(3)
 
-      expect(result).toHaveLength(2)
-      expect(result.find((obj) => obj.url === mockEventObject.url)).toBeDefined()
-      expect(result.find((obj) => obj.url === mockTodoObject.url)).toBeDefined()
+      expect(result.hadComponentFailures).toBe(false)
+      expect(result.objects).toHaveLength(2)
+      expect(result.objects.find((obj) => obj.url === mockEventObject.url)).toBeDefined()
+      expect(result.objects.find((obj) => obj.url === mockTodoObject.url)).toBeDefined()
     })
 
     it('skips reports for components the calendar does not advertise', async () => {
@@ -516,7 +517,7 @@ END:VCALENDAR`,
       )
 
       expect(mockClientMethods.fetchCalendarObjects).toHaveBeenCalledTimes(1)
-      expect(result).toEqual([mockEventObject])
+      expect(result).toEqual({ objects: [mockEventObject], hadComponentFailures: false })
     })
 
     it('uses timeRange filter for VEVENTs', async () => {
@@ -605,7 +606,7 @@ END:VCALENDAR`,
         '2024-12-31T23:59:59Z'
       )
 
-      expect(result).toHaveLength(1)
+      expect(result.objects).toHaveLength(1)
     })
 
     it('returns empty array when no events or tasks found', async () => {
@@ -622,7 +623,8 @@ END:VCALENDAR`,
         '2024-12-31T23:59:59Z'
       )
 
-      expect(result).toHaveLength(0)
+      expect(result.objects).toHaveLength(0)
+      expect(result.hadComponentFailures).toBe(false)
     })
 
     // Bug 16: calendar lookup uses raw URL matching
@@ -640,7 +642,7 @@ END:VCALENDAR`,
         '2024-12-31T23:59:59Z'
       )
 
-      expect(result).toHaveLength(1)
+      expect(result.objects).toHaveLength(1)
     })
 
     // Bug 16: event URLs should be raw, not proxy-prefixed
@@ -663,8 +665,8 @@ END:VCALENDAR`,
         '2024-12-31T23:59:59Z'
       )
 
-      expect(result[0].url).toBe(mockEventObject.url)
-      expect(result[0].url).not.toContain('proxy.example.com')
+      expect(result.objects[0].url).toBe(mockEventObject.url)
+      expect(result.objects[0].url).not.toContain('proxy.example.com')
     })
 
     // Bug 20: offline detection
@@ -675,6 +677,36 @@ END:VCALENDAR`,
       await expect(
         client.fetchEvents(mockCalendar.url, '2024-01-01T00:00:00Z', '2024-12-31T23:59:59Z')
       ).rejects.toThrow('No network connection')
+    })
+
+    it('keeps VEVENTs when a VTODO query throws', async () => {
+      await client.connect()
+
+      mockClientMethods.fetchCalendarObjects
+        .mockResolvedValueOnce([mockEventObject])
+        .mockRejectedValueOnce(new Error('Collection query failed: 404'))
+        .mockResolvedValueOnce([])
+
+      const result = await client.fetchEvents(
+        mockCalendar.url,
+        '2024-01-01T00:00:00Z',
+        '2024-12-31T23:59:59Z'
+      )
+
+      expect(result.hadComponentFailures).toBe(true)
+      expect(result.objects).toEqual([mockEventObject])
+    })
+
+    it('throws when every component query fails', async () => {
+      await client.connect()
+
+      mockClientMethods.fetchCalendarObjects.mockRejectedValue(
+        new Error('Collection query failed: 504')
+      )
+
+      await expect(
+        client.fetchEvents(mockCalendar.url, '2024-01-01T00:00:00Z', '2024-12-31T23:59:59Z')
+      ).rejects.toThrow('Collection query failed: 504')
     })
   })
 

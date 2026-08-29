@@ -18,9 +18,13 @@ vi.mock('@/features/caldav/client/credentials', () => ({
   getAllCredentials: () => mockGetAllCredentials(),
 }))
 
-vi.mock('@/features/caldav/client/CalDAVClient', () => ({
-  createCalDAVClient: (...args: unknown[]) => mockCreateClient(...args),
-}))
+vi.mock('@/features/caldav/client/CalDAVClient', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/features/caldav/client/CalDAVClient')>()
+  return {
+    ...actual,
+    createCalDAVClient: (...args: unknown[]) => mockCreateClient(...args),
+  }
+})
 
 vi.mock('@/features/caldav/adapter/iCalendarAdapter', () => ({
   parseICALDataAsync: (data: string, calendarId: string) => mockParse(data, calendarId),

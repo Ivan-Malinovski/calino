@@ -1,6 +1,6 @@
 import type { CalendarEvent } from '@/types'
 import type { SyncResult, ConflictResolution } from '../types'
-import { CalDAVClient } from '../client/CalDAVClient'
+import { CalDAVClient, unwrapFetchEvents } from '../client/CalDAVClient'
 import {
   eventToICAL,
   eventsToICAL,
@@ -95,7 +95,9 @@ export class SyncEngine {
       throw new Error(`Calendar not found: ${this.calendarId}`)
     }
 
-    const serverEventsRaw = await this.client.fetchEvents(calendar.url, start, end, true)
+    const { objects: serverEventsRaw, hadComponentFailures } = unwrapFetchEvents(
+      await this.client.fetchEvents(calendar.url, start, end, true)
+    )
 
     const parsedEvents: CalendarEvent[] = []
     const allCategoryNames = new Set<string>()
@@ -171,9 +173,11 @@ export class SyncEngine {
       }
     }
 
-    for (const localEvent of existingEvents) {
-      if (!serverEventIds.has(localEvent.id)) {
-        result.deleted.push(localEvent.id)
+    if (!hadComponentFailures) {
+      for (const localEvent of existingEvents) {
+        if (!serverEventIds.has(localEvent.id)) {
+          result.deleted.push(localEvent.id)
+        }
       }
     }
 
