@@ -4,6 +4,25 @@ All notable changes to Calino will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- **Event filters in the command palette** — search all stored events, tasks,
+  and journal entries by one or more title/description terms, location,
+  exclusions, and inclusive date ranges. Results show their calendar, date,
+  location, description, and highlighted matches; recurring series stay as one
+  row. The location search follows the direction discussed in [#132](https://github.com/Ivan-Malinovski/calino/issues/132).
+
+### Fixed
+
+- **Desktop notification icons no longer 404** — browser reminders now use
+  Calino's packaged app icon instead of the missing `/appicon.jpg` asset,
+  resolving the notification failure reported in [#131](https://github.com/Ivan-Malinovski/calino/issues/131).
+
+- **Partial CalDAV component fetches no longer make calendars disappear** —
+  successful event-like records are retained, while deletion reconciliation
+  and cursor advancement wait until all requested components succeed. Thanks
+  to [@josephsellers](https://github.com/josephsellers) for [#135](https://github.com/Ivan-Malinovski/calino/pull/135).
+
 ## [0.31.1] - 2026-08-24
 
 ### Changed
