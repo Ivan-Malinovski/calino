@@ -13,7 +13,13 @@ vi.mock('../../client/discovery')
 vi.mock('../../client/credentials')
 vi.mock('../../sync/accountStorage')
 vi.mock('../../adapter/iCalendarAdapter')
-vi.mock('../../client/CalDAVClient')
+vi.mock('../../client/CalDAVClient', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../client/CalDAVClient')>()
+  return {
+    ...actual,
+    createCalDAVClient: vi.fn(),
+  }
+})
 vi.mock('../../sync/syncEngine', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../sync/syncEngine')>()
   return {
@@ -2261,6 +2267,32 @@ describe('useCalDAV', () => {
 
       // The server event should have been added
       expect(store.events.find((e) => e.id === 'server-evt-1')).toBeDefined()
+    })
+
+    it('does not delete local events when a component query failed', async () => {
+      act(() => {
+        useCalendarStore.getState().addEvent({ ...mockEvent, id: 'local-kept' })
+      })
+      const serverEvent = { ...mockEvent, id: 'server-evt-1', title: 'From server' }
+      const iCalendarAdapter = await import('../../adapter/iCalendarAdapter')
+      vi.mocked(iCalendarAdapter.parseICALData).mockReturnValue([serverEvent])
+      mockCalDAVClient.createCalDAVClient.mockResolvedValue({
+        fetchEvents: vi.fn().mockResolvedValue({
+          objects: [{ url: 'https://...', data: 'ical-data', etag: 'etag1' }],
+          hadComponentFailures: true,
+        }),
+        fetchCalendars: vi.fn().mockResolvedValue([mockCalendar]),
+      } as any)
+
+      const { result } = renderHook(() => useCalDAV())
+      await waitFor(() => expect(result.current.accounts.length).toBe(1))
+      await act(async () => {
+        await result.current.syncAccount('acc-1')
+      })
+
+      const ids = useCalendarStore.getState().events.map((e) => e.id)
+      expect(ids).toContain('local-kept')
+      expect(ids).toContain('server-evt-1')
     })
 
     it('keeps local changes that are still waiting to be pushed', async () => {
