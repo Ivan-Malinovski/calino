@@ -24,7 +24,7 @@ import {
   deleteCredential,
   updateCredential,
 } from '../client/credentials'
-import { parseICALDataAsync } from '../adapter/iCalendarAdapter'
+import { parseICALDataAsyncWithStatus } from '../adapter/iCalendarAdapter'
 import { detectUidCollisions, type ParsedWithHref } from '../sync/detectUidCollisions'
 import { putAttachments } from '@/lib/attachmentStore'
 import { putRawIcs, deleteRawIcs } from '@/lib/rawIcsStore'
@@ -259,7 +259,10 @@ async function collectParsedWithHref(
   const result: ParsedWithHref[] = []
   let hadParseFailures = false
   for (const eventData of fetchedEvents) {
-    if (!eventData.data) continue
+    if (!eventData.data || !eventData.data.trim()) {
+      hadParseFailures = true
+      continue
+    }
 
     // Keep the server's own bytes so a later save can patch them instead of
     // rebuilding the resource from the modelled subset (which drops GEO, X-
@@ -273,11 +276,9 @@ async function collectParsedWithHref(
     // costs a fall back to the previous from-scratch behaviour.
     await putRawIcs(eventData.url, calendarId, eventData.data, eventData.etag).catch(() => {})
 
-    const parsedEvents = await parseICALDataAsync(eventData.data, calendarId)
-    if (parsedEvents.length === 0 && eventData.data.trim()) {
-      hadParseFailures = true
-    }
-    for (let parsedEvent of parsedEvents) {
+    const parsed = await parseICALDataAsyncWithStatus(eventData.data, calendarId)
+    if (parsed.hadParseFailures) hadParseFailures = true
+    for (let parsedEvent of parsed.events) {
       // Cache inline attachments in IndexedDB, keep only metadata in the store
       if (parsedEvent.attachments && parsedEvent.attachments.length > 0) {
         const hasInline = parsedEvent.attachments.some((att) => att.href.startsWith('data:'))
@@ -1101,26 +1102,37 @@ export function useCalDAVInstance(): UseCalDAVReturn {
           CALDAV_FETCH_CONCURRENCY,
           async (cal) => {
             console.log('[CalDAV] addAccount: fetching events for', cal.name, cal.url)
-            const { objects: fetchedEvents } = unwrapFetchEvents(
-              await client.fetchEvents(cal.url, start, end)
-            )
+            const fetched = unwrapFetchEvents(await client.fetchEvents(cal.url, start, end))
             progressDone++
             reportProgress({ done: progressDone })
             console.log(
               '[CalDAV] addAccount: got',
-              fetchedEvents.length,
+              fetched.objects.length,
               'event objects for',
               cal.name
             )
-            return { cal, fetchedEvents }
+            return {
+              cal,
+              fetchedEvents: fetched.objects,
+              hadComponentFailures: fetched.hadComponentFailures,
+            }
           }
         )
 
         // Store writes stay serial and in calendar order, so the
         // already-seen-this-pass dedup below behaves exactly as before.
+        // A resource that could not be parsed is still present on the server,
+        // but its absence from the parsed list is not evidence of deletion.
+        // Keep that state per calendar so its cursor cannot skip the resource
+        // on the next sync.
+        const calendarsWithParseFailures = new Set<string>()
         for (const { cal, fetchedEvents } of fetchedPerCalendar) {
           reportProgress({ label: i18n.t('caldav:progress.importingCalendar', { name: calendarLabel(cal) }) })
-          const { items: parsedWithHref } = await collectParsedWithHref(fetchedEvents, cal.id)
+          const { items: parsedWithHref, hadParseFailures } = await collectParsedWithHref(
+            fetchedEvents,
+            cal.id
+          )
+          if (hadParseFailures) calendarsWithParseFailures.add(cal.id)
 
           // Detect independent events illegally sharing a UID across resources.
           // Keep one deterministically; record the rest as data issues (#22).
@@ -1174,7 +1186,18 @@ export function useCalDAVInstance(): UseCalDAVReturn {
         // truthful description of what we hold, and the next sync can go
         // incremental. Captured-before is deliberate: anything written to the
         // server during the import is simply reported again next cycle.
-        for (const cal of serverCalendars) {
+        for (const { cal, hadComponentFailures } of fetchedPerCalendar) {
+          if (hadComponentFailures || calendarsWithParseFailures.has(cal.id)) {
+            // The successful component reports are still useful for importing
+            // events, but their combined listing is incomplete or could not be
+            // fully read. Keep the server cursors unset so the next sync
+            // retries the missing component/resource instead of skipping past
+            // it.
+            console.warn(
+              `[CalDAV] addAccount: leaving cursors unset for ${cal.id}; the initial listing was incomplete.`
+            )
+            continue
+          }
           const stored = storage.getAllCalendars().find((c) => c.url === cal.url)
           if (!stored) continue
           if (cal.syncToken) storage.updateCalendar(stored.id, { syncToken: cal.syncToken })

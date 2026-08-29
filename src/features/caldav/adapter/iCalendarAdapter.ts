@@ -96,10 +96,16 @@ function parseEventsFromComponents(
   comps: ICAL.Component[],
   calendarId: string,
   only?: ComponentKind
-): { events: CalendarEvent[]; tasks: CalendarEvent[]; journals: CalendarEvent[] } {
+): {
+  events: CalendarEvent[]
+  tasks: CalendarEvent[]
+  journals: CalendarEvent[]
+  hadComponentParseFailures: boolean
+} {
   const events: CalendarEvent[] = []
   const tasks: CalendarEvent[] = []
   const journals: CalendarEvent[] = []
+  let hadComponentParseFailures = false
 
   for (const comp of comps) {
     registerTimezones(comp)
@@ -109,6 +115,7 @@ function parseEventsFromComponents(
         try {
           events.push(icalEventToCalendarEvent(vevent, calendarId))
         } catch (e) {
+          hadComponentParseFailures = true
           console.error('Failed to parse vevent:', e)
         }
       }
@@ -118,6 +125,7 @@ function parseEventsFromComponents(
         try {
           tasks.push(icalVtodoToCalendarEvent(vtodo, calendarId))
         } catch (e) {
+          hadComponentParseFailures = true
           console.error('Failed to parse vtodo:', e)
         }
       }
@@ -127,61 +135,83 @@ function parseEventsFromComponents(
         try {
           journals.push(icalVjournalToCalendarEvent(vjournal, calendarId))
         } catch (e) {
+          hadComponentParseFailures = true
           console.error('Failed to parse vjournal:', e)
         }
       }
   }
 
-  return { events, tasks, journals }
+  return { events, tasks, journals, hadComponentParseFailures }
+}
+
+export interface ParsedICALDataResult {
+  events: CalendarEvent[]
+  /**
+   * True when the resource could not be fully interpreted. This includes an
+   * invalid/empty document and a document where one component was dropped by
+   * the type mapper. A valid document with only unsupported components, or
+   * only Calino's filtered settings event, is not a failure.
+   */
+  hadParseFailures: boolean
+}
+
+function userEventsFromParsed(
+  parsed: ReturnType<typeof parseEventsFromComponents>
+): CalendarEvent[] {
+  const all = [...parsed.events, ...parsed.tasks, ...parsed.journals]
+  return all.filter((event) => !event.id.startsWith(SETTINGS_EVENT_UID_PREFIX))
+}
+
+function parseICALDataComponents(
+  iCalData: string
+): { components: ICAL.Component[]; hadParseFailures: boolean } {
+  if (!iCalData || !iCalData.trim()) {
+    return { components: [], hadParseFailures: true }
+  }
+
+  try {
+    const components = parseComponentsForData(iCalData)
+    // ICAL.parse is intentionally permissive for some non-iCalendar text.
+    // A top-level component other than VCALENDAR is not a trustworthy
+    // collection resource, even if it happens to contain a mappable child.
+    const hadParseFailures =
+      components.length === 0 || components.some((component) => component.name !== 'vcalendar')
+    return { components, hadParseFailures }
+  } catch (e) {
+    console.error('ICAL.parse failed:', e)
+    return { components: [], hadParseFailures: true }
+  }
 }
 
 export function parseICALEvent(iCalData: string, calendarId: string): CalendarEvent[] {
-  if (!iCalData || !iCalData.trim()) {
-    return []
-  }
-
-  let comps: ICAL.Component[]
-  try {
-    comps = parseComponentsForData(iCalData)
-  } catch (e) {
-    console.error('ICAL.parse failed:', e)
-    return []
-  }
-
-  return parseEventsFromComponents(comps, calendarId, 'event').events
+  const { components } = parseICALDataComponents(iCalData)
+  return parseEventsFromComponents(components, calendarId, 'event').events
 }
 
 export function parseICALTask(iCalData: string, calendarId: string): CalendarEvent[] {
-  if (!iCalData || !iCalData.trim()) {
-    return []
-  }
-
-  let comps: ICAL.Component[]
-  try {
-    comps = parseComponentsForData(iCalData)
-  } catch (e) {
-    console.error('ICAL.parse failed for tasks:', e)
-    return []
-  }
-
-  return parseEventsFromComponents(comps, calendarId, 'task').tasks
+  const { components } = parseICALDataComponents(iCalData)
+  return parseEventsFromComponents(components, calendarId, 'task').tasks
 }
 
 export function parseICALData(iCalData: string, calendarId: string): CalendarEvent[] {
-  if (!iCalData || !iCalData.trim()) return []
+  const { events } = parseICALDataWithStatus(iCalData, calendarId)
+  return events
+}
 
-  let parsed: ReturnType<typeof parseEventsFromComponents>
+function parseICALDataWithStatus(iCalData: string, calendarId: string): ParsedICALDataResult {
+  const { components, hadParseFailures: invalidDocument } = parseICALDataComponents(iCalData)
+  if (invalidDocument) return { events: [], hadParseFailures: true }
+
   try {
-    parsed = parseEventsFromComponents(parseComponentsForData(iCalData), calendarId)
+    const parsed = parseEventsFromComponents(components, calendarId)
+    return {
+      events: userEventsFromParsed(parsed),
+      hadParseFailures: parsed.hadComponentParseFailures,
+    }
   } catch (e) {
-    console.error('ICAL.parse failed:', e)
-    return []
+    console.error('ICAL component parse failed:', e)
+    return { events: [], hadParseFailures: true }
   }
-
-  // Filter out the Calino Settings sync event — it's not a real calendar event.
-  // Match by prefix (R1.9) because the full UID is per-instance.
-  const all = [...parsed.events, ...parsed.tasks, ...parsed.journals]
-  return all.filter((e) => !e.id.startsWith(SETTINGS_EVENT_UID_PREFIX))
 }
 
 /**
@@ -190,25 +220,31 @@ export function parseICALData(iCalData: string, calendarId: string): CalendarEve
  * only then are the components mapped. Unknown zones retain ical.js's normal
  * fallback behavior because timezone preloading is best effort.
  */
+export async function parseICALDataAsyncWithStatus(
+  iCalData: string,
+  calendarId: string
+): Promise<ParsedICALDataResult> {
+  const { components, hadParseFailures: invalidDocument } = parseICALDataComponents(iCalData)
+  if (invalidDocument) return { events: [], hadParseFailures: true }
+
+  try {
+    await preloadTimezones(prepareComponentsForAsyncParsing(components))
+    const parsed = parseEventsFromComponents(components, calendarId)
+    return {
+      events: userEventsFromParsed(parsed),
+      hadParseFailures: parsed.hadComponentParseFailures,
+    }
+  } catch (e) {
+    console.error('ICAL component parse failed:', e)
+    return { events: [], hadParseFailures: true }
+  }
+}
+
 export async function parseICALDataAsync(
   iCalData: string,
   calendarId: string
 ): Promise<CalendarEvent[]> {
-  if (!iCalData || !iCalData.trim()) return []
-
-  let comps: ICAL.Component[]
-  try {
-    comps = parseComponentsForData(iCalData)
-  } catch (e) {
-    console.error('ICAL.parse failed:', e)
-    return []
-  }
-
-  await preloadTimezones(prepareComponentsForAsyncParsing(comps))
-  const parsed = parseEventsFromComponents(comps, calendarId)
-  return [...parsed.events, ...parsed.tasks, ...parsed.journals].filter(
-    (event) => !event.id.startsWith(SETTINGS_EVENT_UID_PREFIX)
-  )
+  return (await parseICALDataAsyncWithStatus(iCalData, calendarId)).events
 }
 
 /**

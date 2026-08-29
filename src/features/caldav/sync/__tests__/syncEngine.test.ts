@@ -85,7 +85,11 @@ describe('SyncEngine', () => {
         },
       ])
 
-      const result = await engine.fullSync('2024-01-01T00:00:00Z', '2024-12-31T23:59:59Z', [local])
+      const result = await engine.fullSync(
+        '2024-01-01T00:00:00Z',
+        '2024-12-31T23:59:59Z',
+        [local]
+      )
 
       // Server event has same sequence as local — should NOT be marked as updated
       expect(result.result.updated).not.toContain('event-1')
@@ -155,6 +159,18 @@ describe('SyncEngine', () => {
       const result = await engine.fullSync('2024-01-01T00:00:00Z', '2024-12-31T23:59:59Z', [local])
 
       expect(result.result.updated).not.toContain('event-1')
+    })
+
+    it('does not treat missing events as deleted after a partial component fetch', async () => {
+      const local = makeEvent()
+      mockClient.fetchEvents = vi.fn().mockResolvedValue({
+        objects: [],
+        hadComponentFailures: true,
+      })
+
+      const result = await engine.fullSync('2024-01-01T00:00:00Z', '2024-12-31T23:59:59Z', [local])
+
+      expect(result.result.deleted).not.toContain(local.id)
     })
   })
 

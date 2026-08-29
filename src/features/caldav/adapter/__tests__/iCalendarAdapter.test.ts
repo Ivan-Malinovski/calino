@@ -9,6 +9,7 @@ import {
   parseICALTask,
   taskToICAL,
   parseICALDataAsync,
+  parseICALDataAsyncWithStatus,
 } from '../iCalendarAdapter'
 import {
   calendarEventToIcalComponent,
@@ -1068,6 +1069,52 @@ END:VCALENDAR`
       const result = await parseICALDataAsync(iCalData, 'cal-1')
       expect(result).toHaveLength(1)
       expect(result[0]?.timezone).toBe('Europe/Copenhagen')
+    })
+
+    it('reports malformed components without hiding successfully parsed siblings', async () => {
+      const iCalData = `BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+UID:good-event
+DTSTART:20260315T140000Z
+DTEND:20260315T150000Z
+SUMMARY:Good event
+END:VEVENT
+BEGIN:VEVENT
+UID:bad-event
+DTSTART:not-a-date
+SUMMARY:Bad event
+END:VEVENT
+END:VCALENDAR`
+
+      const result = await parseICALDataAsyncWithStatus(iCalData, 'cal-1')
+
+      expect(result.events.map((event) => event.uid)).toEqual(['good-event'])
+      expect(result.hadParseFailures).toBe(true)
+    })
+
+    it('does not treat a filtered settings-only resource as a parse failure', async () => {
+      const iCalData = `BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+UID:calino-settings
+DTSTART:20260315T140000Z
+DTEND:20260315T140000Z
+SUMMARY:Calino Settings
+END:VEVENT
+END:VCALENDAR`
+
+      const result = await parseICALDataAsyncWithStatus(iCalData, 'cal-1')
+
+      expect(result.events).toEqual([])
+      expect(result.hadParseFailures).toBe(false)
+    })
+
+    it('reports empty resource bodies as parse failures', async () => {
+      await expect(parseICALDataAsyncWithStatus('  \n', 'cal-1')).resolves.toEqual({
+        events: [],
+        hadParseFailures: true,
+      })
     })
 
     it('parses both events and tasks from combined iCal data', () => {

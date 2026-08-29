@@ -141,6 +141,12 @@ describe('useCalDAV', () => {
     vi.mocked(iCalendarAdapter.parseICALDataAsync).mockImplementation((data, calendarId) =>
       Promise.resolve(iCalendarAdapter.parseICALData(data, calendarId))
     )
+    vi.mocked(iCalendarAdapter.parseICALDataAsyncWithStatus).mockImplementation(
+      async (data, calendarId) => {
+        const events = (await iCalendarAdapter.parseICALDataAsync(data, calendarId)) ?? []
+        return { events, hadParseFailures: !data.trim() || events.length === 0 }
+      }
+    )
 
     // Default mock returns for store lookups
     mockAccountStorage.getAllAccounts.mockReturnValue([])
@@ -1376,6 +1382,106 @@ describe('useCalDAV', () => {
 
       expect(mockCredentials.saveCredentials).not.toHaveBeenCalled()
     })
+
+    it('does not advance cursors for a calendar with a partial initial fetch', async () => {
+      const completeCalendar = {
+        ...mockCalendar,
+        id: 'cal-complete',
+        url: 'https://caldav.example.com/cal/complete/',
+        ctag: 'ctag-complete',
+        syncToken: 'sync-complete',
+      }
+      const partialCalendar = {
+        ...mockCalendar,
+        id: 'cal-partial',
+        url: 'https://caldav.example.com/cal/partial/',
+        ctag: 'ctag-partial',
+        syncToken: 'sync-partial',
+      }
+      const storedCalendars = [
+        { ...completeCalendar, ctag: null, syncToken: null, accountId: mockAccount.id },
+        { ...partialCalendar, ctag: null, syncToken: null, accountId: mockAccount.id },
+      ]
+      mockAccountStorage.saveAccount.mockReturnValue(mockAccount)
+      mockAccountStorage.getAllCalendars.mockReturnValue(storedCalendars)
+
+      const fetchEvents = vi
+        .fn()
+        .mockImplementation((url: string) =>
+          Promise.resolve(
+            url === partialCalendar.url
+              ? { objects: [], hadComponentFailures: true }
+              : { objects: [], hadComponentFailures: false }
+          )
+        )
+      mockCalDAVClient.createCalDAVClient.mockResolvedValue({
+        fetchCalendars: vi.fn().mockResolvedValue([completeCalendar, partialCalendar]),
+        fetchEvents,
+      } as any)
+
+      const { result } = renderHook(() => useCalDAV())
+
+      await act(async () => {
+        await result.current.addAccount('https://caldav.example.com', 'user', 'pw', 'Acct')
+      })
+
+      expect(mockAccountStorage.updateCalendar).toHaveBeenCalledWith('cal-complete', {
+        syncToken: 'sync-complete',
+      })
+      expect(mockAccountStorage.updateCalendar).toHaveBeenCalledWith('cal-complete', {
+        ctag: 'ctag-complete',
+      })
+      expect(mockAccountStorage.updateCalendar).not.toHaveBeenCalledWith(
+        'cal-partial',
+        expect.objectContaining({ syncToken: 'sync-partial' })
+      )
+      expect(mockAccountStorage.updateCalendar).not.toHaveBeenCalledWith(
+        'cal-partial',
+        expect.objectContaining({ ctag: 'ctag-partial' })
+      )
+    })
+
+    it('does not advance cursors when an initial resource cannot be parsed', async () => {
+      const calendar = {
+        ...mockCalendar,
+        ctag: 'ctag-parse-failure',
+        syncToken: 'sync-parse-failure',
+      }
+      const storedCalendar = { ...calendar, ctag: null, syncToken: null, accountId: mockAccount.id }
+      mockAccountStorage.saveAccount.mockReturnValue(mockAccount)
+      mockAccountStorage.getAllCalendars.mockReturnValue([storedCalendar])
+      mockCalDAVClient.createCalDAVClient.mockResolvedValue({
+        fetchCalendars: vi.fn().mockResolvedValue([calendar]),
+        fetchEvents: vi.fn().mockResolvedValue({
+          objects: [
+            { url: 'valid.ics', data: 'valid-data' },
+            { url: 'broken.ics', data: 'broken-data' },
+          ],
+          hadComponentFailures: false,
+        }),
+      } as any)
+      vi.mocked(iCalendarAdapter.parseICALDataAsyncWithStatus).mockImplementation((data) =>
+        Promise.resolve({
+          events: data === 'valid-data' ? [{ ...mockEvent, calendarId: calendar.id }] : [],
+          hadParseFailures: data === 'broken-data',
+        })
+      )
+
+      const { result } = renderHook(() => useCalDAV())
+
+      await act(async () => {
+        await result.current.addAccount('https://caldav.example.com', 'user', 'pw', 'Acct')
+      })
+
+      expect(mockAccountStorage.updateCalendar).not.toHaveBeenCalledWith(
+        calendar.id,
+        expect.objectContaining({ syncToken: calendar.syncToken })
+      )
+      expect(mockAccountStorage.updateCalendar).not.toHaveBeenCalledWith(
+        calendar.id,
+        expect.objectContaining({ ctag: calendar.ctag })
+      )
+    })
   })
 
   // -----------------------------------------------------------------------
@@ -2269,7 +2375,19 @@ describe('useCalDAV', () => {
       expect(store.events.find((e) => e.id === 'server-evt-1')).toBeDefined()
     })
 
-    it('does not delete local events when a component query failed', async () => {
+    it('retains events and cursors when a component query failed', async () => {
+      const storedCalendar = {
+        ...mockCalendar,
+        ctag: 'ctag-old',
+        syncToken: 'sync-old',
+      }
+      const serverCalendar = {
+        ...storedCalendar,
+        ctag: 'ctag-new',
+        syncToken: 'sync-new',
+      }
+      mockAccountStorage.getAllCalendars.mockReturnValue([storedCalendar])
+      mockAccountStorage.getCalendarsByAccountId.mockReturnValue([storedCalendar])
       act(() => {
         useCalendarStore.getState().addEvent({ ...mockEvent, id: 'local-kept' })
       })
@@ -2281,7 +2399,12 @@ describe('useCalDAV', () => {
           objects: [{ url: 'https://...', data: 'ical-data', etag: 'etag1' }],
           hadComponentFailures: true,
         }),
-        fetchCalendars: vi.fn().mockResolvedValue([mockCalendar]),
+        fetchCalendars: vi.fn().mockResolvedValue([serverCalendar]),
+        syncCollection: vi.fn().mockResolvedValue({
+          changes: [],
+          newSyncToken: null,
+          tokenInvalidated: true,
+        }),
       } as any)
 
       const { result } = renderHook(() => useCalDAV())
@@ -2293,6 +2416,14 @@ describe('useCalDAV', () => {
       const ids = useCalendarStore.getState().events.map((e) => e.id)
       expect(ids).toContain('local-kept')
       expect(ids).toContain('server-evt-1')
+      expect(mockAccountStorage.updateCalendar).not.toHaveBeenCalledWith(
+        'cal-1',
+        expect.objectContaining({ syncToken: 'sync-new' })
+      )
+      expect(mockAccountStorage.updateCalendar).not.toHaveBeenCalledWith(
+        'cal-1',
+        expect.objectContaining({ ctag: 'ctag-new' })
+      )
     })
 
     it('keeps local changes that are still waiting to be pushed', async () => {

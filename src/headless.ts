@@ -28,7 +28,7 @@ import { getHeadlessBridge } from '@/lib/headlessBridge'
 import { getAllAccounts, getAllCalendars } from '@/features/caldav/sync/accountStorage'
 import { getAllCredentials } from '@/features/caldav/client/credentials'
 import { createCalDAVClient, unwrapFetchEvents } from '@/features/caldav/client/CalDAVClient'
-import { parseICALDataAsync } from '@/features/caldav/adapter/iCalendarAdapter'
+import { parseICALDataAsyncWithStatus } from '@/features/caldav/adapter/iCalendarAdapter'
 import { buildMirrorPayload, MIRROR_PAST_DAYS, MIRROR_FUTURE_DAYS } from '@/lib/calendarMirror'
 import { initHeadlessI18n } from '@/lib/i18nHeadless'
 import { CALDAV_FETCH_CONCURRENCY, mapWithConcurrency } from '@/lib/mapWithConcurrency'
@@ -109,10 +109,14 @@ export async function runHeadlessSync(): Promise<HeadlessResult> {
         CALDAV_FETCH_CONCURRENCY,
         async (calendar) => {
           try {
-            const { objects: resources } = unwrapFetchEvents(
+            const fetched = unwrapFetchEvents(
               await client.fetchEvents(calendar.url, rangeStart, rangeEnd)
             )
-            return { calendar, resources }
+            return {
+              calendar,
+              resources: fetched.objects,
+              hadComponentFailures: fetched.hadComponentFailures,
+            }
           } catch (error) {
             bridge.log(
               t('headless.calendarFailed', { calendar: calendar.name, error: String(error) })
@@ -128,9 +132,33 @@ export async function runHeadlessSync(): Promise<HeadlessResult> {
       // from separate calendars must not interleave.
       for (const result of calendarResults) {
         if (!result) continue
+        if (result.hadComponentFailures) {
+          // A partial listing is not authoritative. Omitting this calendar
+          // from the payload makes native reconciliation leave its existing
+          // provider rows alone until every component query succeeds.
+          bridge.log(
+            t('headless.calendarFailed', {
+              calendar: result.calendar.name,
+              error: 'component query failed; mirror left unchanged',
+            })
+          )
+          continue
+        }
         const calendarEvents: CalendarEvent[] = []
+        let hadParseFailures = false
         for (const resource of result.resources) {
-          calendarEvents.push(...(await parseICALDataAsync(resource.data, result.calendar.id)))
+          const parsed = await parseICALDataAsyncWithStatus(resource.data, result.calendar.id)
+          if (parsed.hadParseFailures) hadParseFailures = true
+          calendarEvents.push(...parsed.events)
+        }
+        if (hadParseFailures) {
+          bridge.log(
+            t('headless.calendarFailed', {
+              calendar: result.calendar.name,
+              error: 'resource parse failed; mirror left unchanged',
+            })
+          )
+          continue
         }
         events.push(...calendarEvents)
         fetched.push(visibleById.get(result.calendar.id)!)

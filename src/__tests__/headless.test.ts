@@ -28,6 +28,10 @@ vi.mock('@/features/caldav/client/CalDAVClient', async (importOriginal) => {
 
 vi.mock('@/features/caldav/adapter/iCalendarAdapter', () => ({
   parseICALDataAsync: (data: string, calendarId: string) => mockParse(data, calendarId),
+  parseICALDataAsyncWithStatus: async (data: string, calendarId: string) => {
+    const events = await mockParse(data, calendarId)
+    return { events, hadParseFailures: Boolean(data.trim() && events.length === 0) }
+  },
 }))
 
 // Imported after the mocks are declared; the module only auto-runs when the
@@ -162,6 +166,59 @@ describe('runHeadlessSync', () => {
     expect(result.calendars).toBe(1)
     const payload = JSON.parse(bridge.synced[0]) as { calendars: { id: string }[] }
     expect(payload.calendars.map((c) => c.id)).toEqual(['cal-1'])
+  })
+
+  it('leaves a calendar out of the mirror when a component query fails', async () => {
+    mockGetAllCalendars.mockReturnValue([
+      { id: 'cal-1', url: 'https://dav.test/cal-1/', name: 'Personal', accountId: 'acct-1' },
+      { id: 'cal-2', url: 'https://dav.test/cal-2/', name: 'Work', accountId: 'acct-1' },
+    ])
+    persistCalendars([
+      { id: 'cal-1', isVisible: true },
+      { id: 'cal-2', isVisible: true },
+    ])
+    mockFetchEvents.mockImplementation((url: string) => {
+      if (url.endsWith('cal-1/')) {
+        return Promise.resolve({
+          objects: [{ url: 'partial.ics', data: 'BEGIN:VCALENDAR' }],
+          hadComponentFailures: true,
+        })
+      }
+      return Promise.resolve({
+        objects: [{ url: 'complete.ics', data: 'BEGIN:VCALENDAR' }],
+        hadComponentFailures: false,
+      })
+    })
+
+    const result = await runHeadlessSync()
+
+    expect(result).toEqual({ accounts: 1, calendars: 1, events: 1 })
+    const payload = JSON.parse(bridge.synced[0]) as {
+      calendars: { id: string }[]
+      events: { calendarId: string }[]
+    }
+    // The native side reconciles only calendars present in this payload. The
+    // partial calendar is therefore untouched, including its existing rows.
+    expect(payload.calendars.map((calendar) => calendar.id)).toEqual(['cal-2'])
+    expect(payload.events.map((event) => event.calendarId)).toEqual(['cal-2'])
+  })
+
+  it('leaves a calendar out of the mirror when a resource cannot be parsed', async () => {
+    mockFetchEvents.mockResolvedValue({
+      objects: [
+        { url: 'valid.ics', data: 'valid-data' },
+        { url: 'broken.ics', data: 'broken-data' },
+      ],
+      hadComponentFailures: false,
+    })
+    mockParse.mockImplementation((data: string, calendarId: string) =>
+      data === 'valid-data' ? [event('e1', calendarId)] : []
+    )
+
+    const result = await runHeadlessSync()
+
+    expect(result).toEqual({ accounts: 1, calendars: 0, events: 0 })
+    expect(bridge.synced).toEqual([])
   })
 
   it('never writes to the app store it reads from', async () => {
