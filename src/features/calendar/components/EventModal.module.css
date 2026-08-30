@@ -480,6 +480,48 @@
   flex: 1;
 }
 
+.locationPicker {
+  position: relative;
+  width: 100%;
+}
+
+.locationSuggestions {
+  position: fixed;
+  z-index: 300;
+  max-height: 200px;
+  overflow-y: auto;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  background: var(--popover-bg, #fff);
+  border: 1px solid var(--popover-border, rgba(0, 0, 0, 0.08));
+  border-radius: 10px;
+  box-shadow: var(--modal-shadow, 0 8px 24px rgba(0, 0, 0, 0.14));
+  animation: slideDown var(--dur-fast) ease-out;
+}
+
+.locationSuggestion {
+  display: block;
+  width: 100%;
+  min-height: 32px;
+  padding: 7px 10px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-primary, #1a1a1a);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.locationSuggestion:hover,
+.locationSuggestion:focus-visible,
+.locationSuggestionActive {
+  background: var(--color-bg-hover, rgba(0, 0, 0, 0.05));
+  outline: none;
+}
+
 .modalChecks {
   display: flex;
   align-items: center;
@@ -955,9 +997,16 @@
      zooming the page on focus. */
   .input,
   .select,
-  .modalSelect {
+  .modalSelect,
+  .modalInput {
     height: 44px;
     font-size: 16px;
+  }
+
+  .locationSuggestion {
+    min-height: 44px;
+    padding-top: 10px;
+    padding-bottom: 10px;
   }
 
   /* Stack the Start and End groups onto their own rows on mobile. Two 1fr

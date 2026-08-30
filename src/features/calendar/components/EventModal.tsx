@@ -27,6 +27,7 @@ import type {
 import { putAttachments, getAttachments, deleteAttachments } from '@/lib/attachmentStore'
 import { TaskFormFields } from './TaskFormFields'
 import { EventFormFields } from './EventFormFields'
+import { LocationPicker } from './LocationPicker'
 import { RecurrenceDialog } from './RecurrenceDialog'
 import { DeleteDialog } from './DeleteDialog'
 import { getInitialFormState, addMinutesToTimeStr } from './eventModalState'
@@ -1862,13 +1863,12 @@ export function EventModal(): JSX.Element | null {
                 <div className={styles.modalRow2}>
                   <div className={styles.modalField}>
                     <label htmlFor="event-location-input">{t('modals.eventModal.location')}</label>
-                    <input
+                    <LocationPicker
                       id="event-location-input"
-                      type="text"
                       placeholder={t('modals.eventModal.addLocationPlaceholder')}
                       value={location}
-                      onChange={(e) => setLocation(e.target.value)}
-                      className={styles.modalInput}
+                      events={events}
+                      onChange={setLocation}
                       data-component="event-location-input"
                     />
                   </div>
