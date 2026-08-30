@@ -4,6 +4,8 @@ All notable changes to Calino will be documented in this file.
 
 ## [Unreleased]
 
+## [0.33.0] - 2026-08-30
+
 ### Added
 
 - **Quicker event entry** — the event form now offers an editable time picker
