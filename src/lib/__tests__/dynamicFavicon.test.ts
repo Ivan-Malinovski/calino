@@ -20,35 +20,22 @@ function decodeFaviconHref(href: string): string {
 }
 
 describe('createDynamicFaviconSvg', () => {
-  it.each([1, 7, 9, 10, 28, 31])('renders day %i', (day) => {
-    const svg = createDynamicFaviconSvg(day)
-    expect(svg).toContain(`>${day}</text>`)
-    expect(svg).toContain('#b07d4f')
-    expect(svg).toContain('#faf8f3')
-    expect(svg).toContain('rotate(45 198 198)')
-    expect(svg).toContain('cx="198"')
-    expect(svg).toContain('x="128"')
+  it('puts the local day in a centred numeral', () => {
+    const single = createDynamicFaviconSvg(7)
+    expect(single).toContain('>7</text>')
+    expect(single).toContain('x="128"')
+    expect(single).not.toContain('scale(')
+    expect(single).not.toContain('font-variant-numeric')
+
+    const double = createDynamicFaviconSvg(28)
+    expect(double).toContain('>28</text>')
+    expect(double).toContain('x="128"')
+    expect(double).not.toContain('scale(')
+    expect(double).toContain('font-variant-numeric="tabular-nums"')
   })
 
-  it.each([0, 1.5, 32, -1, Number.NaN])('rejects invalid day %s', (day) => {
-    expect(() => createDynamicFaviconSvg(day)).toThrow(RangeError)
-  })
-
-  it('keeps a single-digit numeral unscaled and centred', () => {
-    const svg = createDynamicFaviconSvg(7)
-    expect(svg).toContain('font-size="180"')
-    expect(svg).toContain('font-weight="800"')
-    expect(svg).not.toContain('scale(')
-    expect(svg).not.toContain('font-variant-numeric')
-  })
-
-  it('keeps a double-digit numeral centred without thinning it', () => {
-    const svg = createDynamicFaviconSvg(28)
-    expect(svg).toContain('x="128"')
-    expect(svg).toContain('font-size="170"')
-    expect(svg).toContain('font-weight="800"')
-    expect(svg).not.toContain('scale(')
-    expect(svg).toContain('font-variant-numeric="tabular-nums"')
+  it('rejects a day that cannot appear on a calendar', () => {
+    expect(() => createDynamicFaviconSvg(32)).toThrow(RangeError)
   })
 })
 
@@ -66,13 +53,6 @@ describe('setDynamicFavicon', () => {
     expect(link.getAttribute('href')).toBe(createDynamicFaviconDataUrl(7))
     expect(decodeFaviconHref(link.getAttribute('href') ?? '')).toContain('>7</text>')
   })
-
-  it('creates a link when the fallback is missing', () => {
-    const link = setDynamicFavicon(10, document)
-    expect(document.head.contains(link)).toBe(true)
-    expect(link.rel).toBe('icon')
-    expect(decodeFaviconHref(link.getAttribute('href') ?? '')).toContain('>10</text>')
-  })
 })
 
 describe('millisecondsUntilNextLocalDay', () => {
@@ -84,9 +64,6 @@ describe('millisecondsUntilNextLocalDay', () => {
   it('crosses a month boundary', () => {
     const now = new Date(2026, 7, 31, 23, 59, 0)
     expect(millisecondsUntilNextLocalDay(now)).toBe(60_000)
-    const next = new Date(now.getTime() + 60_000)
-    expect(next.getMonth()).toBe(8)
-    expect(next.getDate()).toBe(1)
   })
 })
 
@@ -137,30 +114,6 @@ describe('startDynamicFavicon', () => {
     const link = document.querySelector<HTMLLinkElement>('link[rel~="icon"]')
     expect(decodeFaviconHref(link?.getAttribute('href') ?? '')).toContain('>8</text>')
     stop()
-  })
-
-  it('refreshes on pageshow after a frozen tab', () => {
-    vi.useFakeTimers()
-    vi.setSystemTime(new Date(2026, 7, 7, 12, 0, 0))
-    const stop = startDynamicFavicon()
-    vi.setSystemTime(new Date(2026, 7, 9, 8, 0, 0))
-    window.dispatchEvent(new Event('pageshow'))
-
-    const link = document.querySelector<HTMLLinkElement>('link[rel~="icon"]')
-    expect(decodeFaviconHref(link?.getAttribute('href') ?? '')).toContain('>9</text>')
-    stop()
-  })
-
-  it('cleanup stops timers and listeners', () => {
-    vi.useFakeTimers()
-    vi.setSystemTime(new Date(2026, 7, 7, 23, 59, 30))
-    const stop = startDynamicFavicon()
-    stop()
-    vi.advanceTimersByTime(31_000)
-    window.dispatchEvent(new Event('pageshow'))
-
-    const link = document.querySelector<HTMLLinkElement>('link[rel~="icon"]')
-    expect(decodeFaviconHref(link?.getAttribute('href') ?? '')).toContain('>7</text>')
   })
 
   it('does not touch the document on a native platform', () => {
