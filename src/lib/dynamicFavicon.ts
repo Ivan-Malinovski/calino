@@ -11,15 +11,15 @@ export function createDynamicFaviconSvg(day: number): string {
   }
 
   const singleDigit = day < 10
-  const fontSize = singleDigit ? 142 : 136
-  const letterSpacing = singleDigit ? '-0.05em' : '-0.04em'
-  const numericAttributes = singleDigit
-    ? ''
-    : ' font-variant-numeric="tabular-nums" transform="translate(128 0) scale(0.9 1) translate(-128 0)"'
+  // Sized to stay readable at 16px tab size next to Google Calendar's day icon.
+  // Extra-bold, not black: 900 turns double digits into a blob at favicon size.
+  const fontSize = singleDigit ? 180 : 170
+  const letterSpacing = singleDigit ? '-0.06em' : '-0.08em'
+  const numericAttributes = singleDigit ? '' : ' font-variant-numeric="tabular-nums"'
 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
   <rect width="256" height="256" rx="56" fill="#b07d4f"/>
-  <text x="128" y="178" text-anchor="middle" fill="#faf8f3" font-family="${FONT_FAMILY}" font-size="${fontSize}" font-weight="700" letter-spacing="${letterSpacing}"${numericAttributes}>${day}</text>
+  <text x="128" y="190" text-anchor="middle" fill="#faf8f3" font-family="${FONT_FAMILY}" font-size="${fontSize}" font-weight="800" letter-spacing="${letterSpacing}"${numericAttributes}>${day}</text>
   <circle cx="198" cy="198" r="38" fill="#b07d4f"/>
   <rect x="180" y="180" width="36" height="36" rx="6" fill="#faf8f3" transform="rotate(45 198 198)"/>
 </svg>`

@@ -36,16 +36,18 @@ describe('createDynamicFaviconSvg', () => {
 
   it('keeps a single-digit numeral unscaled and centred', () => {
     const svg = createDynamicFaviconSvg(7)
-    expect(svg).toContain('font-size="142"')
-    expect(svg).not.toContain('scale(0.9 1)')
+    expect(svg).toContain('font-size="180"')
+    expect(svg).toContain('font-weight="800"')
+    expect(svg).not.toContain('scale(')
     expect(svg).not.toContain('font-variant-numeric')
   })
 
-  it('uses the compressed double-digit treatment without shifting the centre', () => {
+  it('keeps a double-digit numeral centred without thinning it', () => {
     const svg = createDynamicFaviconSvg(28)
     expect(svg).toContain('x="128"')
-    expect(svg).toContain('font-size="136"')
-    expect(svg).toContain('scale(0.9 1)')
+    expect(svg).toContain('font-size="170"')
+    expect(svg).toContain('font-weight="800"')
+    expect(svg).not.toContain('scale(')
     expect(svg).toContain('font-variant-numeric="tabular-nums"')
   })
 })
