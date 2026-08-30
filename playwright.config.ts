@@ -9,6 +9,7 @@ const PORT = Number(process.env.E2E_PORT ?? 5199)
 const BASE_URL = `http://localhost:${PORT}`
 const DAV_PORT = Number(process.env.DAV_PORT ?? 8099)
 const IS_CI = !!process.env.CI
+const IS_PARALLEL_RUNNER = process.env.PLAYWRIGHT_PARALLEL_RUNNER === '1'
 
 export default defineConfig({
   testDir: './e2e',
@@ -36,7 +37,7 @@ export default defineConfig({
   // Costs ~4.6m against ~2.3m; override with `--workers=N` for a quick loop.
   workers: 2,
   reporter: IS_CI ? [['github'], ['list']] : [['list']],
-  outputDir: './e2e/test-results',
+  outputDir: process.env.PLAYWRIGHT_OUTPUT_DIR ?? './e2e/test-results',
   timeout: 30_000,
   // 10s, not Playwright's 5s default. Nearly every assertion in this suite is
   // an eventual-consistency wait — a sync landing, a persisted store
@@ -71,7 +72,7 @@ export default defineConfig({
     {
       command: `CALINO_E2E_MOCK=1 pnpm dev --port ${PORT} --strictPort`,
       url: BASE_URL,
-      reuseExistingServer: !IS_CI,
+      reuseExistingServer: !IS_CI && !IS_PARALLEL_RUNNER,
       timeout: 120_000,
       stdout: 'ignore',
       stderr: 'pipe',
@@ -86,7 +87,7 @@ export default defineConfig({
       command: `node e2e/fixtures/dav-server.mjs`,
       url: `https://localhost:${DAV_PORT}/good/`,
       ignoreHTTPSErrors: true,
-      reuseExistingServer: !IS_CI,
+      reuseExistingServer: !IS_CI && !IS_PARALLEL_RUNNER,
       timeout: 30_000,
       stdout: 'ignore',
       stderr: 'pipe',

@@ -33,6 +33,10 @@ layouts. Vitest excludes E2E files and runs its unit tests in both
   CORS tests rather than a separate HTTP mock origin.
 - The E2E server uses port `5199`; the diagnostics fixture uses HTTPS port
   `8099`. Override them with `E2E_PORT` and `DAV_PORT` respectively.
+- Release checks use `scripts/run-e2e-projects.mjs`, which assigns each browser
+  its own app and DAV ports (`5200`/`8100` upward); HMR stays on each app's own
+  port. Shift those ranges with `E2E_PARALLEL_PORT_OFFSET` and
+  `DAV_PARALLEL_PORT_OFFSET` if a local service occupies one of them.
 - `index.html` permits `connect-src 'self' https:`. Custom HTTPS fixtures must
   account for that; the diagnostics fixture uses a self-signed certificate.
 - `page.addInitScript()` runs on every navigation, including reloads. Seed
