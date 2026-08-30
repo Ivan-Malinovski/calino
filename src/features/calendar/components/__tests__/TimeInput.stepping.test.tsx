@@ -4,12 +4,10 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { TimeInput } from '../TimeInput'
 
 /**
- * Date fields adjust on scroll (via `useScrollInput`) and on arrow keys
- * (natively, being `<input type="date">`). The desktop time field is a
- * `type="text"` input, so it got neither — this wires both up in 15-minute
- * steps, matching the step `useScrollInput` uses for native time inputs.
+ * Date fields adjust on scroll (via `useScrollInput`) and the desktop time
+ * field offers the same 15-minute increments in its editable picker.
  */
-describe('TimeInput — scroll and arrow-key stepping', () => {
+describe('TimeInput — scroll and quarter-hour picker', () => {
   const renderInput = (value = '09:00', timeFormat: '24h' | '12h' = '24h') => {
     const onChange = vi.fn()
     render(
@@ -29,15 +27,19 @@ describe('TimeInput — scroll and arrow-key stepping', () => {
   // natively-attached listener picks up.
   const scroll = (el: Element, deltaY: number) => fireEvent.wheel(el, { deltaY })
 
-  it('steps forward 15 minutes on ArrowUp', () => {
+  it('selects the next quarter-hour with ArrowDown and Enter', () => {
     const { input, onChange } = renderInput('09:00')
-    fireEvent.keyDown(input, { key: 'ArrowUp' })
+    fireEvent.focus(input)
+    fireEvent.keyDown(input, { key: 'ArrowDown' })
+    fireEvent.keyDown(input, { key: 'Enter' })
     expect(onChange).toHaveBeenCalledWith('09:15')
   })
 
-  it('steps back 15 minutes on ArrowDown', () => {
+  it('selects the previous quarter-hour with ArrowUp and Enter', () => {
     const { input, onChange } = renderInput('09:00')
-    fireEvent.keyDown(input, { key: 'ArrowDown' })
+    fireEvent.focus(input)
+    fireEvent.keyDown(input, { key: 'ArrowUp' })
+    fireEvent.keyDown(input, { key: 'Enter' })
     expect(onChange).toHaveBeenCalledWith('08:45')
   })
 
@@ -80,13 +82,17 @@ describe('TimeInput — scroll and arrow-key stepping', () => {
 
   it('wraps backwards across midnight rather than producing a negative hour', () => {
     const { input, onChange } = renderInput('00:00')
-    fireEvent.keyDown(input, { key: 'ArrowDown' })
+    fireEvent.focus(input)
+    fireEvent.keyDown(input, { key: 'ArrowUp' })
+    fireEvent.keyDown(input, { key: 'Enter' })
     expect(onChange).toHaveBeenCalledWith('23:45')
   })
 
   it('wraps forwards across midnight', () => {
     const { input, onChange } = renderInput('23:45')
-    fireEvent.keyDown(input, { key: 'ArrowUp' })
+    fireEvent.focus(input)
+    fireEvent.keyDown(input, { key: 'ArrowDown' })
+    fireEvent.keyDown(input, { key: 'Enter' })
     expect(onChange).toHaveBeenCalledWith('00:00')
   })
 
@@ -94,18 +100,21 @@ describe('TimeInput — scroll and arrow-key stepping', () => {
     const { input, onChange } = renderInput('13:00', '12h')
     expect((input as HTMLInputElement).value).toBe('1:00 PM')
 
-    fireEvent.keyDown(input, { key: 'ArrowUp' })
+    fireEvent.focus(input)
+    fireEvent.keyDown(input, { key: 'ArrowDown' })
+    fireEvent.keyDown(input, { key: 'Enter' })
     expect(onChange).toHaveBeenCalledWith('13:15')
     expect((input as HTMLInputElement).value).toBe('1:15 PM')
   })
 
-  it('steps from what was just typed, not the last committed value', () => {
+  it('navigates from what was just typed, not the last committed value', () => {
     const { input, onChange } = renderInput('09:00')
 
     fireEvent.change(input, { target: { value: '11:30' } })
     onChange.mockClear()
 
-    fireEvent.keyDown(input, { key: 'ArrowUp' })
+    fireEvent.keyDown(input, { key: 'ArrowDown' })
+    fireEvent.keyDown(input, { key: 'Enter' })
     expect(onChange).toHaveBeenCalledWith('11:45')
   })
 
@@ -125,9 +134,12 @@ describe('TimeInput — scroll and arrow-key stepping', () => {
       </div>
     )
 
-    fireEvent.keyDown(screen.getByLabelText('Start time'), { key: 'ArrowUp' })
-    expect(onChange).toHaveBeenCalledWith('09:15')
+    const input = screen.getByLabelText('Start time')
+    fireEvent.focus(input)
+    fireEvent.keyDown(input, { key: 'ArrowDown' })
     expect(onOuterKeyDown).not.toHaveBeenCalled()
+    fireEvent.keyDown(input, { key: 'Enter' })
+    expect(onChange).toHaveBeenCalledWith('09:15')
   })
 
   it('still blurs on Enter', () => {

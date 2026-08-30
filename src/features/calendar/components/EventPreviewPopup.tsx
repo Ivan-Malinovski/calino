@@ -10,7 +10,6 @@ import {
   toEventInstant,
   daysBetween,
   addDays,
-  addMinutesToTimeStr,
   deviceTimezone,
 } from '@/lib/datetime'
 import { buildMasterTruncation } from '@/lib/recurrenceSplit'
@@ -46,7 +45,6 @@ interface EventPreviewPopupProps {
   position: { x: number; y: number }
   clickedEventId: string
 }
-
 
 export function EventPreviewPopup({
   event,
@@ -286,7 +284,7 @@ export function EventPreviewPopup({
       description: editDescription || undefined,
     }
 
-    if (isTask && editDate) {
+    if (isTask && (editDate || editTime)) {
       // Keep the task's own time unless the user actually edited it. The time
       // used to be read from the edit field alone, which is empty until that
       // field is opened — so editing just the date dropped the time and forced
@@ -296,6 +294,8 @@ export function EventPreviewPopup({
       const existingTime =
         hasDueTime(event) && event.dueDate ? format(dueInstantFor(event.dueDate), 'HH:mm') : ''
       const dueTime = editTime || existingTime
+      const dueDate =
+        editDate || format(dueInstantFor(event.dueDate ?? effectiveStart), 'yyyy-MM-dd')
       //
       // `end` moves with `start`. It was left behind before, which put the
       // task's end before its start — the store diverts that into
@@ -307,15 +307,15 @@ export function EventPreviewPopup({
         // dueDate/start/end are naive wall clocks in the event zone. Write a
         // device-frame Z instant and let the store re-frame all three via
         // toZoneWallClock, exactly like the non-task branch below.
-        const dueInstant = new Date(`${editDate}T${dueTime}:00`).toISOString()
+        const dueInstant = new Date(`${dueDate}T${dueTime}:00`).toISOString()
         updates.dueDate = dueInstant
         updates.start = dueInstant
         updates.end = dueInstant
         updates.isAllDay = false
       } else {
-        updates.dueDate = editDate
-        updates.start = `${editDate}T00:00:00`
-        updates.end = `${editDate}T23:59:59`
+        updates.dueDate = dueDate
+        updates.start = `${dueDate}T00:00:00`
+        updates.end = `${dueDate}T23:59:59`
         updates.isAllDay = true
       }
     } else if (!isTask && (editDate || editTime || editEndDate || editEndTime)) {
@@ -628,11 +628,16 @@ export function EventPreviewPopup({
       // Tasks use dueTime only; we guard on `!isTask` so we never auto-shift
       // task due-times (a task has a single time, not a range).
       if (value !== editTime && !isTask) {
-        const [sH, sM] = (editTime || '00:00').split(':').map(Number)
-        const [eH, eM] = (editEndTime || editTime || '00:00').split(':').map(Number)
-        const oldDuration = eH * 60 + eM - (sH * 60 + sM)
+        const startDate = editDate || format(instantFor(effectiveStart), 'yyyy-MM-dd')
+        const endDate = editEndDate || format(instantFor(effectiveEnd), 'yyyy-MM-dd')
+        const oldStart = new Date(`${startDate}T${editTime || '00:00'}:00`)
+        const oldEnd = new Date(`${endDate}T${editEndTime || editTime || '00:00'}:00`)
+        const oldDuration = (oldEnd.getTime() - oldStart.getTime()) / 60000
         const minutes = oldDuration > 0 ? oldDuration : defaultDuration
-        setEditEndTime(addMinutesToTimeStr(value, minutes))
+        const newEndInstant = new Date(`${startDate}T${value}:00`)
+        newEndInstant.setTime(newEndInstant.getTime() + minutes * 60000)
+        setEditEndDate(format(newEndInstant, 'yyyy-MM-dd'))
+        setEditEndTime(format(newEndInstant, 'HH:mm'))
       }
       setEditTime(value)
     } else if (field === 'endTime') {

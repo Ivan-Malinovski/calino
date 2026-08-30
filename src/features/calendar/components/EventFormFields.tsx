@@ -14,7 +14,8 @@ import type {
 } from '@/types'
 import { useSettingsStore } from '@/store/settingsStore'
 import { useScrollInput } from '@/hooks/useScrollInput'
-import { daysBetween, addDays, addMinutesToTimeStr, deviceTimezone, getDateFnsLocale } from '@/lib/datetime'
+import { daysBetween, addDays, deviceTimezone, getDateFnsLocale } from '@/lib/datetime'
+import { format } from 'date-fns'
 import { formatInTimeZone } from 'date-fns-tz'
 import { AttachmentSection } from './AttachmentSection'
 import { AttendeeSection } from './AttendeeSection'
@@ -310,14 +311,16 @@ export function EventFormFields({
                   // apply it to the new start. Fall back to defaultDuration from settings
                   // when the duration is non-positive (corrupt state) so we always emit a
                   // sane end.
-                  const [sH, sM] = startTime.split(':').map(Number)
-                  const [eH, eM] = endTime.split(':').map(Number)
-                  const oldDuration = eH * 60 + eM - (sH * 60 + sM)
+                  const oldStart = new Date(`${startDate}T${startTime}:00`)
+                  const oldEnd = new Date(`${endDate}T${endTime}:00`)
+                  const oldDuration = (oldEnd.getTime() - oldStart.getTime()) / 60000
                   const minutes = oldDuration > 0 ? oldDuration : defaultDuration
-                  const newEnd = addMinutesToTimeStr(newStart, minutes)
+                  const newEndInstant = new Date(`${startDate}T${newStart}:00`)
+                  newEndInstant.setTime(newEndInstant.getTime() + minutes * 60000)
 
                   onStartTimeChange(newStart)
-                  onEndTimeChange(newEnd)
+                  onEndDateChange(format(newEndInstant, 'yyyy-MM-dd'))
+                  onEndTimeChange(format(newEndInstant, 'HH:mm'))
                 }}
                 className={styles.input}
                 dataComponent="event-start-time"

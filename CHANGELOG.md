@@ -4,6 +4,14 @@ All notable changes to Calino will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- **Quicker event entry** — the event form now offers an editable time picker
+  with quarter-hour choices, keyboard navigation, and free-form times. It also
+  suggests locations you've used recently while letting you type any new
+  location. The picker works when creating an event and when editing one,
+  completing the time and location improvements requested in [#132](https://github.com/Ivan-Malinovski/calino/issues/132).
+
 ## [0.32.0] - 2026-08-29
 
 ### Added
