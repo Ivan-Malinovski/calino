@@ -6,6 +6,11 @@ import { startI18n } from './lib/i18nBridge'
 import { initI18n } from './lib/i18n'
 import App from './App.tsx'
 import { config } from './config'
+import { startDynamicFavicon } from './lib/dynamicFavicon'
+
+// Browser tab icon: current local day. No-ops on Capacitor; index.html keeps
+// /calino-icon.svg as the no-JavaScript fallback.
+startDynamicFavicon()
 
 // Register service worker when enabled (requires self-hosting with proper CSP headers)
 if (config.enableServiceWorker && 'serviceWorker' in navigator) {
