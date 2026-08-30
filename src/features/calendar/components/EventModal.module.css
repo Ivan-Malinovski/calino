@@ -452,6 +452,102 @@
   flex: 1;
 }
 
+/* TimeInput wraps its editable field so the Google Calendar-style menu can be
+   portaled out of the modal's clipped scrolling region. Keep the wrapper in
+   the same flex slot the input used to occupy. */
+.timeInputWrapper {
+  position: relative;
+  /* `contents` keeps TimeInput's wrapper transparent to the compact inline
+     layouts (notably EventPreviewPopup); the modal date row opts into a real
+     flex item below so its portaled menu still has a stable anchor. */
+  display: contents;
+  min-width: 0;
+}
+
+.dateTimeInputs > .timeInputWrapper {
+  display: block;
+  flex: 1;
+}
+
+.dateTimeInputs > .timeInputWrapper > .input {
+  width: 100%;
+}
+
+.timePickerViewport {
+  position: fixed;
+  z-index: 1100;
+  overflow: hidden;
+  border-radius: 10px;
+}
+
+.timePickerOptions {
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 4px 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  list-style: none;
+  background: var(--popover-bg, #fff);
+  border: 1px solid var(--popover-border, rgba(0, 0, 0, 0.08));
+  border-radius: 10px;
+  box-shadow: var(--modal-shadow, 0 8px 24px rgba(0, 0, 0, 0.14));
+  animation: slideDown var(--dur-fast) ease-out;
+}
+
+.timePickerOptions::-webkit-scrollbar {
+  display: none;
+}
+
+.timePickerFadeTop,
+.timePickerFadeBottom {
+  position: absolute;
+  right: 1px;
+  left: 1px;
+  z-index: 1;
+  height: 24px;
+  pointer-events: none;
+}
+
+.timePickerFadeTop {
+  top: 1px;
+  background: linear-gradient(to bottom, var(--popover-bg, #fff), transparent);
+}
+
+.timePickerFadeBottom {
+  bottom: 1px;
+  background: linear-gradient(to top, var(--popover-bg, #fff), transparent);
+}
+
+.timePickerOption {
+  display: block;
+  width: 100%;
+  min-height: 32px;
+  padding: 6px 14px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-primary, #1a1a1a);
+  font-size: 13px;
+  font-family: var(--font-sans, 'Inter', sans-serif);
+  line-height: 18px;
+  text-align: center;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+
+.timePickerOption:hover,
+.timePickerOptionActive {
+  background: var(--color-bg-hover, rgba(0, 0, 0, 0.06));
+}
+
+.timePickerOptionActive {
+  color: var(--color-text-primary, #1a1a1a);
+  font-weight: 600;
+}
+
 .modalField {
   display: flex;
   flex-direction: column;
@@ -478,6 +574,48 @@
 
 .modalFieldRow .modalInput:last-child {
   flex: 1;
+}
+
+.locationPicker {
+  position: relative;
+  width: 100%;
+}
+
+.locationSuggestions {
+  position: fixed;
+  z-index: 300;
+  max-height: 200px;
+  overflow-y: auto;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  background: var(--popover-bg, #fff);
+  border: 1px solid var(--popover-border, rgba(0, 0, 0, 0.08));
+  border-radius: 10px;
+  box-shadow: var(--modal-shadow, 0 8px 24px rgba(0, 0, 0, 0.14));
+  animation: slideDown var(--dur-fast) ease-out;
+}
+
+.locationSuggestion {
+  display: block;
+  width: 100%;
+  min-height: 32px;
+  padding: 7px 10px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-primary, #1a1a1a);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.locationSuggestion:hover,
+.locationSuggestion:focus-visible,
+.locationSuggestionActive {
+  background: var(--color-bg-hover, rgba(0, 0, 0, 0.05));
+  outline: none;
 }
 
 .modalChecks {
@@ -955,9 +1093,16 @@
      zooming the page on focus. */
   .input,
   .select,
-  .modalSelect {
+  .modalSelect,
+  .modalInput {
     height: 44px;
     font-size: 16px;
+  }
+
+  .locationSuggestion {
+    min-height: 44px;
+    padding-top: 10px;
+    padding-bottom: 10px;
   }
 
   /* Stack the Start and End groups onto their own rows on mobile. Two 1fr

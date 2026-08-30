@@ -187,6 +187,15 @@ test.describe('timezone correctness through the UI', () => {
     await preview.getByText('04:00 - 05:00').click()
     await expect(page.getByLabel('Start time')).toHaveValue('04:00')
     await expect(page.getByLabel('End time')).toHaveValue('05:00')
+
+    // The preview is itself a z-indexed popover. The time picker must remain
+    // clickable above it when portaled to the document body.
+    const startTime = page.getByLabel('Start time')
+    await startTime.click()
+    const options = page.locator('[data-component="time-picker-options"]')
+    await expect(options).toBeVisible()
+    await options.getByRole('option', { name: '04:15' }).click()
+    await expect(startTime).toHaveValue('04:15')
   })
 
   test('a cross-midnight TZID event stays on a single device day', async ({ page }) => {

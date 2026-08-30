@@ -34,6 +34,28 @@ test.describe('time format in event form', () => {
     await expect(startTime).toHaveValue('11:40')
   })
 
+  test('opens a quarter-hour picker and applies a selected time', async ({ page }) => {
+    await page.goto('/month')
+    await page.keyboard.press('c')
+
+    const startTime = page.locator('[data-component="event-start-time"]')
+    const options = page.locator('[data-component="time-picker-options"]')
+    await startTime.click()
+
+    await expect(options).toBeVisible()
+    const menuBox = await options.boundingBox()
+    const currentOptionBox = await options.getByRole('option', { name: '09:00' }).boundingBox()
+    expect(menuBox).not.toBeNull()
+    expect(currentOptionBox).not.toBeNull()
+    expect((currentOptionBox?.y ?? 0) - (menuBox?.y ?? 0)).toBeLessThan(45)
+    await expect(options.getByRole('option', { name: '10:15' })).toBeVisible()
+    await options.getByRole('option', { name: '10:15' }).click()
+
+    await expect(startTime).toHaveValue('10:15')
+    await expect(page.locator('[data-component="event-end-time"]')).toHaveValue('11:15')
+    await expect(options).toBeHidden()
+  })
+
   test('uses the selected 12-hour format when creating a task', async ({ page }) => {
     await page.goto('/settings')
     await page.getByRole('radio', { name: '12-hour (2:30 PM)' }).click()
