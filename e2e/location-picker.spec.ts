@@ -94,7 +94,7 @@ test.describe('event location picker', () => {
 
     await page.keyboard.press('c')
     const modal = page.getByRole('dialog')
-    const location = modal.locator('input[role="combobox"]')
+    const location = modal.locator('[data-component="event-location-input"]')
     await expect(location).toBeVisible()
     const inputHeightBeforeOpen = (await location.boundingBox())?.height
     await location.focus()
@@ -131,7 +131,7 @@ test.describe('event location picker', () => {
       .click()
 
     const editModal = page.getByRole('dialog')
-    const editLocation = editModal.locator('input[role="combobox"]')
+    const editLocation = editModal.locator('[data-component="event-location-input"]')
     await expect(editLocation).toHaveValue('Recent room')
     await editLocation.focus()
     await expect(page.locator('[data-component="location-picker-option"]')).toHaveCount(1)

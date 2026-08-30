@@ -4,10 +4,11 @@ import { clearState } from './fixtures/localstorage'
 const HEADER_DAYS = '[class*="header"] [class*="headerDays"] [class*="dayHeader"]'
 const BODY_DAYS = '[class*="body"] [data-component="week-grid"] [class*="dayColumn"]'
 
-function localDate(offset = 0): string {
+function weekStartDate(offset = 0): string {
   const date = new Date()
   date.setHours(12, 0, 0, 0)
-  date.setDate(date.getDate() + offset)
+  const daysSinceMonday = (date.getDay() + 6) % 7
+  date.setDate(date.getDate() - daysSinceMonday + offset)
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 }
 
@@ -25,8 +26,8 @@ async function seedAllDayEvent(page: Page): Promise<void> {
       id: 'week-header-width',
       title: 'A very long all-day event title that must stay inside its day',
       type: 'event',
-      start: `${localDate()}T00:00:00`,
-      end: `${localDate()}T23:59:59`,
+      start: `${weekStartDate()}T00:00:00`,
+      end: `${weekStartDate()}T23:59:59`,
       isAllDay: true,
       calendarId: 'default',
     },
@@ -45,8 +46,8 @@ async function seedAllDayEvent(page: Page): Promise<void> {
       id: 'week-header-today-alignment',
       title: 'Tomorrow all-day alignment',
       type: 'event',
-      start: `${localDate(1)}T00:00:00`,
-      end: `${localDate(1)}T23:59:59`,
+      start: `${weekStartDate(1)}T00:00:00`,
+      end: `${weekStartDate(1)}T23:59:59`,
       isAllDay: true,
       calendarId: 'default',
     },

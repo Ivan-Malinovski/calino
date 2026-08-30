@@ -4,16 +4,17 @@ import { clearState } from './fixtures/localstorage'
 const EVENT_ID = 'week-all-day-span'
 const EVENT_TITLE = 'Three day conference'
 
-function localDate(offset = 0): string {
+function weekStartDate(offset = 0): string {
   const date = new Date()
   date.setHours(12, 0, 0, 0)
-  date.setDate(date.getDate() + offset)
+  const daysSinceMonday = (date.getDay() + 6) % 7
+  date.setDate(date.getDate() - daysSinceMonday + offset)
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 }
 
 async function seedEvent(page: Page): Promise<void> {
-  const start = localDate()
-  const end = localDate(2)
+  const start = weekStartDate()
+  const end = weekStartDate(2)
   await page.addInitScript(
     ({ event }) => {
       try {
@@ -89,7 +90,7 @@ test.describe('Week view multi-day all-day events', () => {
     await expect(
       page.locator('[data-component="event-card"]').filter({ hasText: EVENT_TITLE }).first()
     ).toBeVisible()
-    await dragCardToCell(page, localDate(1))
+    await dragCardToCell(page, weekStartDate(1))
 
     const stored = await page.evaluate((id) => {
       const parsed = JSON.parse(localStorage.getItem('calino-storage') ?? '{}')
