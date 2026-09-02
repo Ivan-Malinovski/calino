@@ -7,7 +7,7 @@
     <meta name="theme-color" content="#faf9f7" />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self' 'sha256-Qh5qqVHNcx0NmWPlYwpmDet5mMrPYpSQ6hcLzJTT3ZM=' 'sha256-am6yAzlcRW7qKd6V78oFkolYjWok3WEYJJY8fqkSPgA='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; connect-src 'self' https:; img-src 'self' data:; font-src 'self' https://fonts.gstatic.com"
+      content="default-src 'self'; script-src 'self' 'sha256-Qh5qqVHNcx0NmWPlYwpmDet5mMrPYpSQ6hcLzJTT3ZM=' 'sha256-AQQMVAHv1tQqIVb/aeGQWZo8IWdCg5J5kzrOTtjqgCY='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; connect-src 'self' https:; img-src 'self' data:; font-src 'self' https://fonts.gstatic.com"
     />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -92,13 +92,21 @@
           var mode = settings.themeMode || 'auto';
           var isDark = mode === 'dark' || (mode === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
           var isMocha = isDark && settings.darkTheme === 'catppuccin-mocha';
-          var mochaAccent = settings.mochaAccent || '#89b4fa';
-          var background = isMocha ? '#1e1e2e' : (isDark ? '#1a1816' : '#faf8f3');
+          var isLatte = !isDark && settings.lightTheme === 'catppuccin-latte';
+          // Must match src/lib/themes/catppuccinAccents.ts
+          var mochaAccents = ['#89b4fa','#b4befe','#cba6f7','#f5c2e7','#94e2d5','#a6e3a1','#fab387'];
+          var latteAccents = ['#1e66f5','#7287fd','#8839ef','#ea76cb','#179299','#40a02b','#fe640b'];
+          var storedAccent = settings.mochaAccent || '#89b4fa';
+          var accentIndex = mochaAccents.indexOf(storedAccent);
+          if (accentIndex < 0) accentIndex = latteAccents.indexOf(storedAccent);
+          if (accentIndex < 0) accentIndex = 0;
+          var accent = (isLatte ? latteAccents : mochaAccents)[accentIndex];
+          var background = isMocha ? '#1e1e2e' : (isLatte ? '#eff1f5' : (isDark ? '#1a1816' : '#faf8f3'));
           document.documentElement.style.background = background;
           document.body.style.background = background;
-          if (isMocha) {
+          if (isMocha || isLatte) {
             var themeColor = document.querySelector('meta[name="theme-color"]');
-            if (themeColor) themeColor.setAttribute('content', mochaAccent);
+            if (themeColor) themeColor.setAttribute('content', accent);
           }
           document.body.style.transition = 'background 0.3s ease';
         } catch(e) {}

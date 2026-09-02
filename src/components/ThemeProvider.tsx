@@ -10,7 +10,13 @@ import {
 import { Capacitor } from '@capacitor/core'
 import { StatusBar, Style } from '@capacitor/status-bar'
 import { useSettingsStore } from '@/store/settingsStore'
-import { loadThemes, getThemeCSS, type ThemeInfo } from '@/lib/themes'
+import {
+  loadThemes,
+  getThemeCSS,
+  catppuccinFlavorForThemeId,
+  resolveCatppuccinAccent,
+  type ThemeInfo,
+} from '@/lib/themes'
 import { ADJUSTABLE_FONT_STACKS } from '@/lib/themes/adjustableFonts'
 import { ThemeContext } from './ThemeContext'
 
@@ -155,8 +161,12 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
 
     document.documentElement.setAttribute('data-theme', effectiveMode)
     document.documentElement.setAttribute('data-theme-mode', themeMode)
-    if (currentThemeId === 'catppuccin-mocha') {
-      document.documentElement.style.setProperty('--accent-custom', mochaAccent)
+    const catppuccinFlavor = catppuccinFlavorForThemeId(currentThemeId)
+    if (catppuccinFlavor) {
+      document.documentElement.style.setProperty(
+        '--accent-custom',
+        resolveCatppuccinAccent(mochaAccent, catppuccinFlavor)
+      )
     } else {
       document.documentElement.style.removeProperty('--accent-custom')
     }

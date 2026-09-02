@@ -4,6 +4,12 @@ All notable changes to Calino will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- **Catppuccin light** — the existing Catppuccin dark theme (Mocha) now has a
+  Latte companion under the same name, so Light/Dark/System can stay on
+  Catppuccin. The accent picker maps the same seven colours onto each flavour.
+
 ## [0.33.0] - 2026-08-30
 
 ### Added

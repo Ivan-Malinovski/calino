@@ -7,20 +7,15 @@ import {
   DEFAULT_ADJUSTABLE_THEME,
 } from '@/store/settingsStore'
 import { useTheme } from '@/components/ThemeContext'
-import { getThemePreviewCSS } from '@/lib/themes'
+import {
+  getThemePreviewCSS,
+  CATPPUCCIN_ACCENTS,
+  catppuccinPickerFlavor,
+  resolveCatppuccinAccent,
+} from '@/lib/themes'
 import type { AdjustableThemeProfile, AdjustableThemeSettings, ThemeMode, EventTint } from '@/types'
 import styles from './Settings.module.css'
 import { AdjustableThemeControls } from './AdjustableThemeControls'
-
-const MOCHA_ACCENTS = [
-  { labelKey: 'theme.mochaAccent.blue', value: '#89b4fa' },
-  { labelKey: 'theme.mochaAccent.lavender', value: '#b4befe' },
-  { labelKey: 'theme.mochaAccent.mauve', value: '#cba6f7' },
-  { labelKey: 'theme.mochaAccent.pink', value: '#f5c2e7' },
-  { labelKey: 'theme.mochaAccent.teal', value: '#94e2d5' },
-  { labelKey: 'theme.mochaAccent.green', value: '#a6e3a1' },
-  { labelKey: 'theme.mochaAccent.peach', value: '#fab387' },
-]
 
 function MiniCalendarPreview({
   themeId,
@@ -226,6 +221,21 @@ export function ThemeSettings(): JSX.Element {
   const darkThemes = loadedThemes
     .filter((t) => t.isDark)
     .sort((a, b) => adjustableLast(a) - adjustableLast(b))
+  const currentThemeId = effectiveMode === 'dark' ? darkTheme : lightTheme
+  const catppuccinFlavor = catppuccinPickerFlavor({
+    currentThemeId,
+    lightTheme,
+    darkTheme,
+  })
+  const catppuccinAccents = catppuccinFlavor
+    ? CATPPUCCIN_ACCENTS.map((accent) => ({
+        labelKey: accent.labelKey,
+        value: accent[catppuccinFlavor],
+      }))
+    : []
+  const activeCatppuccinAccent = catppuccinFlavor
+    ? resolveCatppuccinAccent(mochaAccent, catppuccinFlavor)
+    : ''
 
   return (
     <section
@@ -356,7 +366,7 @@ export function ThemeSettings(): JSX.Element {
             />
           ))}
         </div>
-        {darkTheme === 'catppuccin-mocha' && (
+        {catppuccinFlavor && (
           <div className={styles.row} data-component="setting-row" data-setting="mocha-accent">
             <div className={styles.rowInfo}>
               <div className={styles.rowLabel}>{t('theme.mochaAccent.label')}</div>
@@ -367,14 +377,14 @@ export function ThemeSettings(): JSX.Element {
               role="group"
               aria-label={t('theme.mochaAccent.ariaLabel')}
             >
-              {MOCHA_ACCENTS.map((accent) => (
+              {catppuccinAccents.map((accent) => (
                 <button
-                  key={accent.value}
-                  className={`${styles.mochaAccentOption} ${mochaAccent === accent.value ? styles.mochaAccentOptionActive : ''}`}
+                  key={accent.labelKey}
+                  className={`${styles.mochaAccentOption} ${activeCatppuccinAccent === accent.value ? styles.mochaAccentOptionActive : ''}`}
                   style={{ '--mocha-accent': accent.value } as CSSProperties}
                   onClick={() => updateSettings({ mochaAccent: accent.value })}
                   aria-label={t('theme.mochaAccent.useAccent', { name: t(accent.labelKey) })}
-                  aria-pressed={mochaAccent === accent.value}
+                  aria-pressed={activeCatppuccinAccent === accent.value}
                   title={t(accent.labelKey)}
                   type="button"
                 />
@@ -454,7 +464,10 @@ export function ThemeSettings(): JSX.Element {
             </label>
           </div>
         </div>
-        <div className={`${styles.row} ${styles.rowDisabled}`} title={t('theme.fontSize.notAvailable')}>
+        <div
+          className={`${styles.row} ${styles.rowDisabled}`}
+          title={t('theme.fontSize.notAvailable')}
+        >
           <div className={styles.rowInfo}>
             <div className={styles.rowLabel}>{t('theme.fontSize.label')}</div>
             <div className={styles.rowDesc}>{t('theme.fontSize.desc')}</div>
