@@ -39,6 +39,10 @@ describe('JournalView compose date (#116)', () => {
 
     const store = useCalendarStore.getState()
     store.setCurrentView('journal')
+    // JournalView keeps month view anchored to the selected month. Keep that
+    // month aligned with the frozen clock so the compose path uses the local
+    // day instead of its intentional cross-month fallback.
+    store.setCurrentDate(LOCAL_DAY)
     store.events.forEach((e) => store.deleteEvent(e.id))
   })
 

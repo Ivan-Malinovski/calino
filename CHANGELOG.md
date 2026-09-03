@@ -4,11 +4,19 @@ All notable changes to Calino will be documented in this file.
 
 ## [Unreleased]
 
+## [0.33.1] - 2026-09-03
+
 ### Added
 
 - **Catppuccin light** — the existing Catppuccin dark theme (Mocha) now has a
   Latte companion under the same name, so Light/Dark/System can stay on
   Catppuccin. The accent picker maps the same seven colours onto each flavour.
+
+- **Calendar day favicon** — the browser tab icon now shows today's local calendar day and updates automatically at midnight. Native apps continue to use the packaged app icon.
+
+### Fixed
+
+- **Smoother time picking** — filtered time lists now fit their results, and ArrowUp/ArrowDown updates both the selected time and its highlighted option while editing events and previews.
 
 ## [0.33.0] - 2026-08-30
 
