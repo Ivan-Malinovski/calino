@@ -8,29 +8,15 @@ All notable changes to Calino will be documented in this file.
 
 ### Added
 
-- **Catppuccin light** — the existing Catppuccin dark theme (Mocha) now has a
-  Latte companion under the same name, so Light/Dark/System can stay on
-  Catppuccin. The accent picker maps the same seven colours onto each flavour.
-  Thanks to [@josephsellers](https://github.com/josephsellers) in
-  [#141](https://github.com/Ivan-Malinovski/calino/pull/141).
+- **Catppuccin light** — the existing Catppuccin dark theme (Mocha) now has a Latte companion under the same name, so Light/Dark/System can stay on Catppuccin. The accent picker maps the same seven colours onto each flavour. Thanks to [@josephsellers](https://github.com/josephsellers) in [#141](https://github.com/Ivan-Malinovski/calino/pull/141).
 
-- **Calendar day favicon** — the browser tab icon now shows today's local
-  calendar day and updates automatically at midnight. Native apps continue to
-  use the packaged app icon. Contributed by
-  [@josephsellers](https://github.com/josephsellers) in
-  [#138](https://github.com/Ivan-Malinovski/calino/pull/138), addressing the
-  behaviour discussed in [#136](https://github.com/Ivan-Malinovski/calino/issues/136).
+- **Calendar day favicon** — the browser tab icon now shows today's local calendar day and updates automatically at midnight. Native apps continue to use the packaged app icon. Contributed by [@josephsellers](https://github.com/josephsellers) in [#138](https://github.com/Ivan-Malinovski/calino/pull/138), addressing the behaviour discussed in [#136](https://github.com/Ivan-Malinovski/calino/issues/136).
 
 ### Fixed
 
-- **Smoother time picking** — filtered time lists now fit their results, and
-  ArrowUp/ArrowDown updates both the selected time and its highlighted option
-  while editing events and previews. This completes the picker request in
-  [#132](https://github.com/Ivan-Malinovski/calino/issues/132).
+- **Smoother time picking** — filtered time lists now fit their results, and ArrowUp/ArrowDown updates both the selected time and its highlighted option while editing events and previews. This completes the picker request in [#132](https://github.com/Ivan-Malinovski/calino/issues/132).
 
-- **Reminder-only event edits** — changing only an event's reminders now marks
-  the event dirty and saves it, fixing [#142](https://github.com/Ivan-Malinovski/calino/issues/142)
-  in [#144](https://github.com/Ivan-Malinovski/calino/pull/144).
+- **Reminder-only event edits** — changing only an event's reminders now marks the event dirty and saves it, fixing [#142](https://github.com/Ivan-Malinovski/calino/issues/142) in [#144](https://github.com/Ivan-Malinovski/calino/pull/144).
 
 ## [0.33.0] - 2026-08-30
 
