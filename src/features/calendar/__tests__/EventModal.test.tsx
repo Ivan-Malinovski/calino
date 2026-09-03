@@ -766,6 +766,33 @@ describe('EventModal', () => {
     })
   })
 
+  it('saves an edit that changes only reminders (issue #142)', () => {
+    const store = useCalendarStore.getState()
+    store.addEvent({
+      id: 'reminder-event',
+      calendarId: 'default',
+      title: 'Reminder Event',
+      start: '2024-03-15T10:00:00',
+      end: '2024-03-15T11:00:00',
+      isAllDay: false,
+      reminders: [{ id: 'existing-reminder', minutesBefore: 15, method: 'popup' }],
+    })
+    store.openModal(undefined, undefined, 'reminder-event')
+    render(<EventModal />)
+
+    fireEvent.click(screen.getByRole('button', { name: /show more options/i }))
+    fireEvent.click(screen.getByRole('button', { name: /add reminder/i }))
+    fireEvent.click(screen.getByRole('option', { name: /30 minutes before/i }))
+    fireEvent.click(screen.getByRole('button', { name: /save/i }))
+
+    expect(useCalendarStore.getState().events.find((e) => e.id === 'reminder-event')?.reminders).toEqual(
+      expect.arrayContaining([
+        { id: 'existing-reminder', minutesBefore: 15, method: 'popup' },
+        expect.objectContaining({ minutesBefore: 30, method: 'popup' }),
+      ])
+    )
+  })
+
   describe('date field changes preserve start<=end (issue #44)', () => {
     it('shifts the end date along with the start date for an overnight event, keeping the range valid', () => {
       const store = useCalendarStore.getState()
