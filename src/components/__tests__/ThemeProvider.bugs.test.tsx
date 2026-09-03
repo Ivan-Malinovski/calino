@@ -29,6 +29,8 @@ vi.mock('@/store/settingsStore', () => {
 vi.mock('@/lib/themes', () => ({
   loadThemes: vi.fn().mockResolvedValue([]),
   getThemeCSS: vi.fn().mockReturnValue(''),
+  catppuccinFlavorForThemeId: vi.fn().mockReturnValue(null),
+  resolveCatppuccinAccent: vi.fn().mockReturnValue('#89b4fa'),
 }))
 
 vi.mock('../ThemeContext', () => ({
