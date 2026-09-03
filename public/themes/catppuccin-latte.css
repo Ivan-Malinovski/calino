@@ -1,0 +1,126 @@
+/* Theme: Catppuccin | light */
+
+/* Official Catppuccin Latte palette: https://catppuccin.com/palette
+   Token roles follow catppuccin-mocha.css. Overlay 0 is 2.3:1 on Latte paper,
+   so muted text uses Subtext 0 (style guide: legibility first). Scrim/shadow
+   inks use Text — Latte Crust is cream, not a dimming colour. */
+:root,
+[data-theme='light'] {
+  /* Backgrounds and surfaces */
+  --canvas: #eff1f5;
+  --panel: #e6e9ef;
+  --side: #dce0e8;
+  --color-bg: var(--canvas);
+  --color-bg-primary: var(--canvas);
+  --color-bg-secondary: var(--panel);
+  --color-bg-secondary-rgb: 230, 233, 239;
+  --color-bg-tertiary: #ccd0da;
+  --color-bg-hover: #ccd0da;
+  --color-bg-input: #ccd0da;
+  --color-surface: var(--panel);
+  --color-surface-raised: #ccd0da;
+  --color-surface-glass: rgba(230, 233, 239, 0.88);
+  --color-surface-hover: #bcc0cc;
+  --color-surface-elevated: #ccd0da;
+
+  /* Semantic design tokens */
+  --background: var(--color-bg-primary);
+  --background-subtle: var(--color-bg-tertiary);
+  --surface: var(--color-surface);
+  --surface-hover: var(--color-surface-hover);
+  --surface-elevated: var(--color-surface-elevated);
+  --border: var(--color-border);
+  --text: var(--color-text-primary);
+  --text-muted: var(--color-text-muted);
+  --primary: var(--color-primary);
+  --primary-hover: var(--color-primary-hover);
+  --success: var(--color-success);
+  --warning: var(--color-warning);
+  --danger: var(--color-danger);
+  --info: var(--color-info);
+
+  /* Text */
+  --ink: #4c4f69;
+  --ink-2: #5c5f77;
+  --ink-3: #6c6f85;
+  --color-text: var(--ink);
+  --color-text-primary: var(--ink);
+  --color-text-secondary: var(--ink-2);
+  --color-text-muted: var(--ink-3);
+  --color-text-tertiary: var(--ink-3);
+
+  /* Borders */
+  --line: #bcc0cc;
+  --line-2: #ccd0da;
+  --color-border: var(--line);
+  --color-border-light: var(--line-2);
+  --color-border-subtle: var(--line-2);
+  --color-border-visible: var(--line);
+  --color-border-glass: rgba(76, 79, 105, 0.12);
+
+  /* Primary and semantic states */
+  --accent: var(--accent-custom, #1e66f5);
+  --accent-contrast: #eff1f5;
+  --accent-soft: color-mix(in srgb, var(--accent) 16%, transparent);
+  --color-accent: var(--accent);
+  --color-accent-hover: color-mix(in srgb, var(--accent) 72%, #4c4f69);
+  --color-accent-light: var(--accent-soft);
+  --color-primary: var(--accent);
+  --color-primary-hover: color-mix(in srgb, var(--accent) 72%, #4c4f69);
+  --color-primary-light: var(--accent-soft);
+  --color-success: #40a02b;
+  --color-success-light: rgba(64, 160, 43, 0.16);
+  --color-warning: #df8e1d;
+  --color-error: #d20f39;
+  --color-error-muted: #e64553;
+  --color-danger: #d20f39;
+  --color-danger-bg: rgba(210, 15, 57, 0.16);
+  --color-info: #04a5e5;
+
+  /* Interaction, overlay, and native controls */
+  --hover-bg: color-mix(in srgb, var(--accent) 12%, transparent);
+  --selected-bg: color-mix(in srgb, var(--accent) 20%, var(--canvas));
+  --focus-ring: color-mix(in srgb, var(--accent) 35%, transparent);
+  --chip-bg: color-mix(in srgb, var(--accent) 16%, transparent);
+  --tag-bg: color-mix(in srgb, var(--accent) 10%, transparent);
+  --tag-border: color-mix(in srgb, var(--accent) 45%, transparent);
+  --surface-bg: rgba(76, 79, 105, 0.06);
+  --surface-bg-strong: rgba(76, 79, 105, 0.1);
+  --error-bg: rgba(210, 15, 57, 0.12);
+  --error-bg-strong: rgba(210, 15, 57, 0.2);
+  --error-border: rgba(210, 15, 57, 0.45);
+  --color-overlay: rgba(76, 79, 105, 0.45);
+  --color-focus: var(--accent);
+  --color-current-time: #d20f39;
+  --day-cell-today-bg: color-mix(in srgb, var(--accent) 14%, var(--canvas));
+  --day-cell-hover-bg: color-mix(in srgb, var(--accent) 10%, var(--canvas));
+  --day-number-hover-bg: color-mix(in srgb, var(--accent) 18%, var(--canvas));
+  --day-column-today-bg: color-mix(in srgb, var(--accent) 6%, var(--canvas));
+
+  /* Elevated UI */
+  --modal-bg: #e6e9ef;
+  --popover-bg: #ccd0da;
+  --modal-scrim: var(--color-overlay);
+  --modal-blur: blur(4px);
+  --modal-border: #bcc0cc;
+  --modal-card-border: 1px solid #bcc0cc;
+  --popover-border: #bcc0cc;
+  --modal-shadow: 0 20px 60px rgba(76, 79, 105, 0.2), 0 2px 6px rgba(76, 79, 105, 0.12);
+
+  /* Supporting component tokens */
+  --ink-raw: 76, 79, 105;
+  --event-bg-mix: 24%;
+  --event-bg-mix-hover: 30%;
+  --event-rail-mix: 100%;
+  --event-marker-mix: 100%;
+  --color-scrollbar: #bcc0cc;
+  --color-scrollbar-hover: #acb0be;
+  --shadow-event: 0 1px 2px rgba(76, 79, 105, 0.12);
+  --shadow-event-hover: 0 4px 12px rgba(76, 79, 105, 0.18);
+  --shadow-card: 0 2px 8px rgba(76, 79, 105, 0.12), 0 8px 20px rgba(76, 79, 105, 0.08);
+  --shadow-sidebar: none;
+  --shadow-topbar: none;
+  --shadow-today: inset 0 0 0 1.5px color-mix(in srgb, var(--accent) 68%, transparent);
+  --shadow-glass: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  --shadow-inset: inset 0 1px 2px rgba(76, 79, 105, 0.12);
+}

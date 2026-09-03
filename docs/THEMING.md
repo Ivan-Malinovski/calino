@@ -24,6 +24,8 @@ Calino's appearance is fully customizable via CSS. Themes are loaded at build ti
 | Xiaohongshu Dark | dark  | Dark variant of Xiaohongshu                                      |
 | Bauhaus          | both  | Bold geometric primary colors                                    |
 | Brutalist        | both  | High-contrast black/yellow, raw edges                            |
+| Catppuccin       | light | Official Latte palette with configurable accents                 |
+| Catppuccin       | dark  | Official Mocha palette with configurable accents                 |
 | Adjustable       | both  | User-controlled colors, radius, density, shadows, and event tint |
 
 Adjustable is also available from Appearance settings as **Adjustable Light**

@@ -80,9 +80,9 @@ test.describe('native controls follow the active theme', () => {
     await page.getByRole('button', { name: 'Appearance' }).click()
 
     await page.locator('[data-component="theme-mode-option"][data-value="dark"]').click()
-    const mochaCard = page.locator(
-      '[data-component="theme-preview-card"][data-theme-id="Catppuccin"]'
-    )
+    const mochaCard = page
+      .locator('[data-component="theme-preview-grid"][data-theme-mode="dark"]')
+      .locator('[data-component="theme-preview-card"][data-theme-id="Catppuccin"]')
     await expect(mochaCard).toBeVisible()
     await mochaCard.click()
 
@@ -145,6 +145,101 @@ test.describe('native controls follow the active theme', () => {
     await expect(page.locator('html')).toHaveCSS('background-color', 'rgb(30, 30, 46)')
     await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(30, 30, 46)')
     await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute('content', '#89b4fa')
+  })
+
+  test('Catppuccin is selectable, persists, and styles light controls', async ({ page }) => {
+    await clearState(page)
+    await page.goto('/settings')
+    await page.getByRole('button', { name: 'Appearance' }).click()
+
+    await page.locator('[data-component="theme-mode-option"][data-value="light"]').click()
+    const latteCard = page
+      .locator('[data-component="theme-preview-grid"][data-theme-mode="light"]')
+      .locator('[data-component="theme-preview-card"][data-theme-id="Catppuccin"]')
+    await expect(latteCard).toBeVisible()
+    await latteCard.click()
+
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'light')
+    await expect(page.locator('html')).toHaveAttribute('data-theme-id', 'catppuccin-latte')
+    await expect(latteCard).toHaveAttribute('data-active', 'true')
+    await expect(page.locator('html')).toHaveCSS('--color-bg-primary', '#eff1f5')
+    await expect(page.locator('html')).toHaveCSS('--color-text-primary', '#4c4f69')
+    await expect(page.locator('html')).toHaveCSS('--event-rail-mix', '100%')
+    await expect(page.locator('html')).toHaveCSS('--event-marker-mix', '100%')
+    await page.getByRole('button', { name: 'Use Mauve accent' }).click()
+    await expect(page.locator('html')).toHaveCSS('--color-accent', '#8839ef')
+    await page.goto('/month')
+    await expect(
+      page.locator('[data-component="calendar-grid"] [data-today] button').first()
+    ).toHaveCSS('color', 'rgb(239, 241, 245)')
+
+    await page.goto('/tasks')
+    await page.locator('[data-component="add-task-button"]').click()
+    await page.getByPlaceholder('What needs doing?').fill('Latte controls')
+    await page.getByPlaceholder('What needs doing?').press('Enter')
+    await expect(page.locator('#priority-select')).toBeVisible()
+
+    for (const selector of [
+      '#priority-select',
+      '[data-component="event-calendar-select"]',
+      '#due-date',
+    ]) {
+      await expect(page.locator(selector)).toHaveCSS('color-scheme', 'light')
+    }
+
+    await page.reload()
+    await expect(page.locator('html')).toHaveAttribute('data-theme-id', 'catppuccin-latte')
+    await expect(page.locator('html')).toHaveCSS('--color-accent', '#8839ef')
+    await expect(page.locator('html')).toHaveCSS('--color-bg-primary', '#eff1f5')
+    await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(239, 241, 245)')
+  })
+
+  test('Catppuccin accent follows the flavour across light and dark', async ({ page }) => {
+    await clearState(page)
+    await page.goto('/settings')
+    await page.getByRole('button', { name: 'Appearance' }).click()
+
+    await page.locator('[data-component="theme-mode-option"][data-value="light"]').click()
+    await page
+      .locator('[data-component="theme-preview-grid"][data-theme-mode="light"]')
+      .locator('[data-component="theme-preview-card"][data-theme-id="Catppuccin"]')
+      .click()
+    await page.getByRole('button', { name: 'Use Mauve accent' }).click()
+    await expect(page.locator('html')).toHaveCSS('--color-accent', '#8839ef')
+
+    await page.locator('[data-component="theme-mode-option"][data-value="dark"]').click()
+    await page
+      .locator('[data-component="theme-preview-grid"][data-theme-mode="dark"]')
+      .locator('[data-component="theme-preview-card"][data-theme-id="Catppuccin"]')
+      .click()
+    await expect(page.locator('html')).toHaveAttribute('data-theme-id', 'catppuccin-mocha')
+    await expect(page.locator('html')).toHaveCSS('--color-accent', '#cba6f7')
+  })
+
+  test('Catppuccin light paints the document before React loads', async ({ page }) => {
+    await page.addInitScript(
+      ({ settingsKey }: { settingsKey: string }) => {
+        localStorage.setItem(
+          settingsKey,
+          JSON.stringify({
+            state: {
+              themeMode: 'light',
+              lightTheme: 'catppuccin-latte',
+              mochaAccent: '#cba6f7',
+            },
+            version: 1,
+          })
+        )
+      },
+      { settingsKey: STORAGE_KEYS.settings }
+    )
+    await page.route('**/src/main.tsx', (route) => route.fulfill({ body: '' }))
+
+    await page.goto('/month')
+
+    await expect(page.locator('html')).toHaveCSS('background-color', 'rgb(239, 241, 245)')
+    await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(239, 241, 245)')
+    await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute('content', '#8839ef')
   })
 
   test('task selects and date inputs use the dark browser color scheme', async ({ page }) => {
