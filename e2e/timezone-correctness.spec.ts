@@ -196,6 +196,21 @@ test.describe('timezone correctness through the UI', () => {
     await expect(options).toBeVisible()
     await options.getByRole('option', { name: '04:15' }).click()
     await expect(startTime).toHaveValue('04:15')
+
+    // Reopening the picker from the preview must keep responding to repeated
+    // ArrowDown presses, not just the first one.
+    await startTime.click()
+    await startTime.press('ArrowDown')
+    await expect(startTime).toHaveValue('04:30')
+    await startTime.press('ArrowDown')
+    await expect(startTime).toHaveValue('04:45')
+    await expect(options.getByRole('option')).toHaveCount(96)
+    await expect(options.getByRole('option', { name: '04:45' })).toHaveAttribute(
+      'aria-selected',
+      'true'
+    )
+    await startTime.press('Enter')
+    await expect(startTime).toHaveValue('04:45')
   })
 
   test('a cross-midnight TZID event stays on a single device day', async ({ page }) => {

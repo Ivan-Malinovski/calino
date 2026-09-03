@@ -482,10 +482,13 @@
   border-radius: 10px;
 }
 
+/* Let filtered results determine the popup's height; inherit the viewport's
+   cap when the full list is long enough to need scrolling. */
 .timePickerOptions {
   box-sizing: border-box;
   width: 100%;
-  height: 100%;
+  height: auto;
+  max-height: inherit;
   margin: 0;
   padding: 4px 0;
   overflow-y: auto;

@@ -96,6 +96,7 @@ export function TimeInput({
   const [draft, setDraft] = useState(formattedValue)
   const [open, setOpen] = useState(false)
   const [hasTypedQuery, setHasTypedQuery] = useState(false)
+  const [showAllOptionsForKeyboard, setShowAllOptionsForKeyboard] = useState(false)
   const [highlightedIndex, setHighlightedIndex] = useState(-1)
   const [showTopFade, setShowTopFade] = useState(false)
   const [showBottomFade, setShowBottomFade] = useState(false)
@@ -128,7 +129,12 @@ export function TimeInput({
     })
   }, [draft, hasTypedQuery, resolvedTimeFormat])
 
-  const listIsOpen = open && matchingOptions.length > 0
+  // A complete value normally leaves a single filtered option. When the user
+  // starts keyboard navigation from that value, show the full sequence so the
+  // next/previous option is visible rather than highlighting an item that is
+  // not in the rendered list.
+  const visibleOptions = showAllOptionsForKeyboard ? TIME_OPTIONS : matchingOptions
+  const listIsOpen = open && visibleOptions.length > 0
 
   const indexForValue = useCallback((time: string): number => {
     const [hours, minutes] = time.split(':').map(Number)
@@ -168,6 +174,7 @@ export function TimeInput({
         setOpen(false)
         setHighlightedIndex(-1)
         setHasTypedQuery(false)
+        setShowAllOptionsForKeyboard(false)
       }
     }
     document.addEventListener('mousedown', handlePointerDown)
@@ -198,7 +205,7 @@ export function TimeInput({
       return
     }
     option.scrollIntoView?.({ block: 'nearest' })
-  }, [highlightedIndex, matchingOptions])
+  }, [highlightedIndex, visibleOptions])
 
   useLayoutEffect(() => {
     const menu = menuRef.current
@@ -215,7 +222,7 @@ export function TimeInput({
     updateScrollFades()
     menu.addEventListener('scroll', updateScrollFades)
     return () => menu.removeEventListener('scroll', updateScrollFades)
-  }, [listIsOpen, matchingOptions])
+  }, [listIsOpen, visibleOptions])
 
   const commit = (): void => {
     const parsed = parseTimeValue(draft, resolvedTimeFormat, true)
@@ -225,20 +232,20 @@ export function TimeInput({
 
   const selectSuggestion = (suggestion: string): void => {
     setDraft(formatTimeValue(suggestion, resolvedTimeFormat))
-    onChange(suggestion)
+    if (suggestion !== value) onChange(suggestion)
     setOpen(false)
     setHasTypedQuery(false)
+    setShowAllOptionsForKeyboard(false)
     setHighlightedIndex(-1)
   }
 
-  // Scroll-to-adjust and arrow-key stepping, matching what the date fields
-  // already do (natively for arrows, via `useScrollInput` for the wheel).
-  // Neither comes for free here: this is a `type="text"` input, so the browser
-  // gives it no stepper, and `useScrollInput` bails on anything that isn't a
-  // native date/time input.
+  // Wheel adjustment matches the 15-minute step used by the native mobile
+  // input. Arrow keys navigate the picker above instead of moving the text
+  // caret, which the surrounding modal's keyboard handlers would otherwise
+  // also receive.
   //
-  // Steps from the *draft* when it parses, so adjusting straight after typing
-  // continues from what's on screen rather than the last committed value.
+  // Wheel steps from the *draft* when it parses, so adjusting straight after
+  // typing continues from what's on screen rather than the last committed value.
   const step = useCallback(
     (direction: 1 | -1): void => {
       const base = parseTimeValue(draft, resolvedTimeFormat, true) ?? value
@@ -251,11 +258,12 @@ export function TimeInput({
 
   const handleKeyDown = (event: ReactKeyboardEvent<HTMLInputElement>): void => {
     if (event.key === 'Escape') {
-      if (!open || matchingOptions.length === 0) return
+      if (!open || visibleOptions.length === 0) return
       event.preventDefault()
       event.stopPropagation()
       setOpen(false)
       setHasTypedQuery(false)
+      setShowAllOptionsForKeyboard(false)
       setHighlightedIndex(-1)
       return
     }
@@ -268,32 +276,59 @@ export function TimeInput({
         setHasTypedQuery(false)
         setOpen(true)
       }
+
       const draftValue = parseTimeValue(draft, resolvedTimeFormat, true)
       const currentValue = draftValue ?? value
       const currentOption = TIME_OPTIONS[indexForValue(currentValue)]
-      // Once a complete quarter-hour has been typed, keep the full list
-      // available for arrow navigation so ArrowDown means "next" rather than
-      // re-selecting the sole exact match.
-      const options =
+      const hasExactSingleMatch =
         matchingOptions.length === 1 && matchingOptions[0] === currentOption
-          ? TIME_OPTIONS
-          : matchingOptions.length > 0
-            ? matchingOptions
-            : TIME_OPTIONS
-      setHighlightedIndex((current) => {
-        const currentOptionIndex = options.indexOf(currentOption)
-        const startingIndex = currentOptionIndex >= 0 ? currentOptionIndex : current
-        if (event.key === 'ArrowDown')
-          return startingIndex < options.length - 1 ? startingIndex + 1 : 0
-        return startingIndex > 0 ? startingIndex - 1 : options.length - 1
-      })
+      const shouldShowFullList =
+        showAllOptionsForKeyboard || hasExactSingleMatch || matchingOptions.length === 0
+      const options = shouldShowFullList ? TIME_OPTIONS : matchingOptions
+
+      // An unmatched query cannot be navigated. Restore the list so an arrow
+      // press still gives the user a useful way to recover without the popup's
+      // outer keyboard handlers seeing the event.
+      if (matchingOptions.length === 0) setHasTypedQuery(false)
+      if (hasExactSingleMatch) setShowAllOptionsForKeyboard(true)
+
+      const currentOptionIndex = options.indexOf(currentOption)
+      // Once a list is already being navigated, continue from the highlighted
+      // option. The exception is the first arrow from an exact filtered match:
+      // options switches to the full list, so its index must come from
+      // currentOption rather than the filtered-list index.
+      const switchingToFullList = hasExactSingleMatch && !showAllOptionsForKeyboard
+      const startingIndex =
+        !switchingToFullList && highlightedIndex >= 0 && highlightedIndex < options.length
+          ? highlightedIndex
+          : currentOptionIndex >= 0
+            ? currentOptionIndex
+            : highlightedIndex
+      const nextIndex =
+        event.key === 'ArrowDown'
+          ? startingIndex < options.length - 1
+            ? startingIndex + 1
+            : 0
+          : startingIndex > 0
+            ? startingIndex - 1
+            : options.length - 1
+      const nextOption = options[nextIndex]
+      if (nextOption) {
+        // Moving to an option commits that value immediately. Keep the full
+        // list visible after the first move because the new draft would
+        // otherwise filter the list down to the selected option.
+        setShowAllOptionsForKeyboard(true)
+        setDraft(formatTimeValue(nextOption, resolvedTimeFormat))
+        if (nextOption !== value) onChange(nextOption)
+      }
+      setHighlightedIndex(nextIndex)
       return
     }
 
     if (event.key === 'Enter' && listIsOpen && highlightedIndex >= 0) {
       event.preventDefault()
-      if (hasNavigatedRef.current || hasTypedQuery || TIME_OPTIONS[highlightedIndex] === value) {
-        selectSuggestion(matchingOptions[highlightedIndex] ?? TIME_OPTIONS[highlightedIndex])
+      if (hasNavigatedRef.current || hasTypedQuery || visibleOptions[highlightedIndex] === value) {
+        selectSuggestion(visibleOptions[highlightedIndex])
       }
       event.currentTarget.blur()
     }
@@ -340,6 +375,7 @@ export function TimeInput({
         onFocus={(event) => {
           setOpen(true)
           setHasTypedQuery(false)
+          setShowAllOptionsForKeyboard(false)
           hasNavigatedRef.current = false
           alignHighlightToTopRef.current = true
           setHighlightedIndex(indexForValue(value))
@@ -349,6 +385,7 @@ export function TimeInput({
           const nextDraft = event.target.value
           setDraft(nextDraft)
           setHasTypedQuery(true)
+          setShowAllOptionsForKeyboard(false)
           hasNavigatedRef.current = false
           setOpen(true)
           setHighlightedIndex(0)
@@ -359,6 +396,7 @@ export function TimeInput({
           commit()
           setOpen(false)
           setHasTypedQuery(false)
+          setShowAllOptionsForKeyboard(false)
           setHighlightedIndex(-1)
         }}
         onKeyDown={(event) => {
@@ -393,18 +431,18 @@ export function TimeInput({
                     left: menuPosition.left,
                     bottom: window.innerHeight - menuPosition.top + 4,
                     width: menuPosition.width,
-                    height: menuPosition.maxHeight,
+                    maxHeight: menuPosition.maxHeight,
                   }
                 : {
                     left: menuPosition.left,
                     top: menuPosition.bottom + 4,
                     width: menuPosition.width,
-                    height: menuPosition.maxHeight,
+                    maxHeight: menuPosition.maxHeight,
                   }
             }
           >
             <ul ref={menuRef} id={listboxId} role="listbox" className={styles.timePickerOptions}>
-              {matchingOptions.map((suggestion, index) => (
+              {visibleOptions.map((suggestion, index) => (
                 <li
                   key={suggestion}
                   ref={(element) => {

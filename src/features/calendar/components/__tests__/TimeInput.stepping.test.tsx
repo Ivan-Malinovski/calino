@@ -35,6 +35,17 @@ describe('TimeInput — scroll and quarter-hour picker', () => {
     expect(onChange).toHaveBeenCalledWith('09:15')
   })
 
+  it('continues through multiple options with repeated ArrowDown presses', () => {
+    const { input, onChange } = renderInput('09:00')
+    fireEvent.focus(input)
+    fireEvent.keyDown(input, { key: 'ArrowDown' })
+    expect(input).toHaveValue('09:15')
+    fireEvent.keyDown(input, { key: 'ArrowDown' })
+    expect(input).toHaveValue('09:30')
+    fireEvent.keyDown(input, { key: 'Enter' })
+    expect(onChange).toHaveBeenCalledWith('09:30')
+  })
+
   it('selects the previous quarter-hour with ArrowUp and Enter', () => {
     const { input, onChange } = renderInput('09:00')
     fireEvent.focus(input)
@@ -111,9 +122,13 @@ describe('TimeInput — scroll and quarter-hour picker', () => {
     const { input, onChange } = renderInput('09:00')
 
     fireEvent.change(input, { target: { value: '11:30' } })
+    expect(screen.getAllByRole('option')).toHaveLength(1)
     onChange.mockClear()
 
     fireEvent.keyDown(input, { key: 'ArrowDown' })
+    expect(input).toHaveValue('11:45')
+    expect(screen.getAllByRole('option')).toHaveLength(96)
+    expect(screen.getByRole('option', { name: '11:45' })).toHaveAttribute('aria-selected', 'true')
     fireEvent.keyDown(input, { key: 'Enter' })
     expect(onChange).toHaveBeenCalledWith('11:45')
   })
