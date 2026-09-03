@@ -802,6 +802,8 @@ export function EventModal(): JSX.Element | null {
     const attachmentsChanged = JSON.stringify(attachments) !== JSON.stringify(existingAttachments)
     const attendeesChanged =
       JSON.stringify(attendees) !== JSON.stringify(existingEventForMode.attendees || [])
+    const remindersChanged =
+      JSON.stringify(reminders) !== JSON.stringify(existingEventForMode.reminders || [])
 
     // R2.7 — Recurrence participates in BOTH branches now that tasks can
     // recur. Leaving it out of the task branch made a recurrence-only edit
@@ -844,7 +846,8 @@ export function EventModal(): JSX.Element | null {
           JSON.stringify(existingEventForMode.categories || []) ||
         JSON.stringify(relatedTo) !== JSON.stringify(existingEventForMode.relatedTo || []) ||
         attendeesChanged ||
-        attachmentsChanged
+        attachmentsChanged ||
+        remindersChanged
       )
     }
 
@@ -873,7 +876,8 @@ export function EventModal(): JSX.Element | null {
         JSON.stringify(existingEventForMode.categories || []) ||
       JSON.stringify(relatedTo) !== JSON.stringify(existingEventForMode.relatedTo || []) ||
       attendeesChanged ||
-      attachmentsChanged
+      attachmentsChanged ||
+      remindersChanged
     )
   }, [
     existingEventForMode,
@@ -908,6 +912,7 @@ export function EventModal(): JSX.Element | null {
     relatedTo,
     attendees,
     attachments,
+    reminders,
   ])
 
   const candidateEvents = useMemo(() => {
