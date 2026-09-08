@@ -16,33 +16,28 @@ function pad(num, len = 2) {
   return String(num).padStart(len, '0')
 }
 
-function updateICSDate(dateStr, monthDiff) {
+function daysInMonth(year, month) {
+  // Day 0 of the next month is the last day of this one.
+  return new Date(year, month, 0).getDate()
+}
+
+function updateICSDate(dateStr) {
   // Handles formats: YYYYMMDD, YYYYMMDDTHHMMSSZ
   if (!dateStr || dateStr.length < 8) return dateStr
 
-  const year = parseInt(dateStr.slice(0, 4), 10)
-  const month = parseInt(dateStr.slice(4, 6), 10)
   const day = parseInt(dateStr.slice(6, 8), 10)
 
   const now = new Date()
-  const targetYear = now.getFullYear()
-  const targetMonth = now.getMonth() + 1 // 1-indexed
+  const newYear = now.getFullYear()
+  const newMonth = now.getMonth() + 1 // 1-indexed
 
-  // Calculate target year considering month diff
-  let newYear = targetYear
-  let newMonth = targetMonth
+  // Shift to the current month, keeping the day of the month — but clamp it to
+  // the target month's length. Carrying a day straight across produced dates
+  // that do not exist (a sample event on the 31st landed on "September 31st"),
+  // which parsers then roll over into the following month.
+  const newDay = Math.min(day, daysInMonth(newYear, newMonth))
 
-  // If we're going back months, account for year change
-  if (monthDiff < 0) {
-    // Going backwards - e.g., March -> April 2026 is +1 month, but March 2025 -> April 2026 is +13
-  }
-
-  // Simple approach: shift to current month preserving day
-  const paddedDay = pad(day)
-  const paddedMonth = pad(newMonth)
-  const paddedYear = String(newYear)
-
-  let result = paddedYear + paddedMonth + paddedDay
+  let result = String(newYear) + pad(newMonth) + pad(newDay)
 
   // Preserve time part if present
   if (dateStr.length > 8) {
@@ -52,7 +47,7 @@ function updateICSDate(dateStr, monthDiff) {
   return result
 }
 
-function processLine(line, monthDiff) {
+function processLine(line) {
   // Match date patterns in iCalendar format
   // DTSTART;VALUE=DATE:20260301
   // DTSTART:20260303T100000Z
@@ -65,7 +60,7 @@ function processLine(line, monthDiff) {
   return line.replace(
     /((?:DTSTART|DTEND|DUE|DTSTAMP|CREATED|COMPLETED)(?:;[^:]*)?):(\d{8})(T\d{6}Z)?/g,
     (match, prefix, datePart, timePart) => {
-      const updatedDate = updateICSDate(datePart, monthDiff)
+      const updatedDate = updateICSDate(datePart)
       return `${prefix}:${updatedDate}${timePart || ''}`
     }
   )
@@ -74,27 +69,38 @@ function processLine(line, monthDiff) {
 async function main() {
   const icsContent = readFileSync(icsPath, 'utf-8')
 
-  // Dates will be shifted to current month by updateICSDate, so these reference
-  // values are only used for the log message below.
-  const sampleYear = 2026
-  const sampleMonth = 3 // March
-
   const now = new Date()
   const currentYear = now.getFullYear()
   const currentMonth = now.getMonth() + 1 // 1-indexed
 
-  const monthDiff = (currentYear - sampleYear) * 12 + (currentMonth - sampleMonth)
+  // The month the file currently sits in, read from its first date rather than
+  // hardcoded: this script rewrites the .ics in place, so the file's own
+  // content is the only accurate source month. A fixed "March 2026" constant
+  // silently skipped the update whenever the calendar reached that month.
+  const firstDate = icsContent.match(
+    /(?:DTSTART|DTEND|DUE|DTSTAMP|CREATED|COMPLETED)(?:;[^:\n]*)?:(\d{8})/
+  )
+  if (!firstDate) {
+    console.log('No dates found in sample-events.ics, nothing to update.')
+    return
+  }
+  const sampleYear = parseInt(firstDate[1].slice(0, 4), 10)
+  const sampleMonth = parseInt(firstDate[1].slice(4, 6), 10)
 
-  console.log(`Updating sample-events.ics: shifting ${sampleMonth}/${sampleYear} → ${currentMonth}/${currentYear} (offset: ${monthDiff} months)`)
-
-  if (monthDiff === 0) {
-    console.log('Already in current month, no update needed.')
+  if (sampleYear === currentYear && sampleMonth === currentMonth) {
+    console.log(
+      `sample-events.ics is already in ${currentMonth}/${currentYear}, no update needed.`
+    )
     return
   }
 
+  console.log(
+    `Updating sample-events.ics: shifting ${sampleMonth}/${sampleYear} → ${currentMonth}/${currentYear}`
+  )
+
   const updatedContent = icsContent
     .split('\n')
-    .map(line => processLine(line, monthDiff))
+    .map(line => processLine(line))
     .join('\n')
 
   writeFileSync(icsPath, updatedContent, 'utf-8')
