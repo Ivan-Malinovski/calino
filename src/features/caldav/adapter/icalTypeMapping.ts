@@ -1658,11 +1658,19 @@ export function calendarEventToIcalVtodo(
   // state, so a toggled task reverted on reload (completed = percentComplete >= 100).
   // Derive BOTH STATUS and PERCENT-COMPLETE from a single serializeStatus based
   // on `completed`; only a genuine IN-PROCESS / CANCELLED status is preserved.
-  const serializeStatus = task.completed
-    ? 'COMPLETED'
-    : task.taskStatus === 'IN-PROCESS' || task.taskStatus === 'CANCELLED'
-      ? task.taskStatus
-      : 'NEEDS-ACTION'
+  //
+  // CANCELLED is checked FIRST, before `completed`: the parser maps CANCELLED to
+  // `completed = true` (it renders as done but flagged for deletion), so keying
+  // off `completed` would rewrite every foreign client's cancelled task as
+  // COMPLETED and lose the flag the deletion flow keys on.
+  const serializeStatus =
+    task.taskStatus === 'CANCELLED'
+      ? 'CANCELLED'
+      : task.completed
+        ? 'COMPLETED'
+        : task.taskStatus === 'IN-PROCESS'
+          ? 'IN-PROCESS'
+          : 'NEEDS-ACTION'
 
   if (serializeStatus === 'COMPLETED') {
     vtodo.updatePropertyWithValue('percent-complete', 100)
