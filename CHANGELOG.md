@@ -14,6 +14,16 @@ All notable changes to Calino will be documented in this file.
   on their next write. Thanks to [@flyklmwl](https://github.com/flyklmwl) in
   [#146](https://github.com/Ivan-Malinovski/calino/pull/146).
 
+- **Calmer agenda** — agenda rows no longer fade and settle into place one by
+  one when you move between months, which stacked a fly-in on top of the page
+  transition and was most obtrusive in the Android app. Only the page itself
+  animates now; completing or deleting a task still collapses its row.
+
+- **Sample calendar dates are real dates** — the sample calendar is shifted into
+  the current month on each build, and an event on the 31st could land on a day
+  the month does not have (a "September 31st"), which calendar parsers roll over
+  into the following month. Days are now clamped to the target month's length.
+
 ## [0.33.1] - 2026-09-03
 
 ### Added
