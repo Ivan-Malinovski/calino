@@ -4,6 +4,8 @@ All notable changes to Calino will be documented in this file.
 
 ## [Unreleased]
 
+## [0.33.2] - 2026-09-08
+
 ### Fixed
 
 - **Task completion no longer reverts on refresh** — ticking a task done (or
