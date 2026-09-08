@@ -6,6 +6,7 @@ import {
   calendarEventToIcalVjournal,
   icalVjournalToCalendarEvent,
   icalVtodoToCalendarEvent,
+  calendarEventToIcalVtodo,
 } from '../icalTypeMapping'
 import type { CalendarEvent } from '@/types'
 
@@ -1045,5 +1046,78 @@ describe('VALARM reconciliation in patch mode', () => {
 
     expect(alarms).toHaveLength(2)
     expect(alarms.some((a) => a.toString() === before)).toBe(true)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// PR 146: VTODO status/percent must be self-consistent on write
+//
+// EventModal writes `completed` without touching taskStatus/percentComplete, so
+// a toggle there leaves the three contradicting each other. Serializing the
+// stale fields wrote an .ics that re-parsed to the OPPOSITE state, and the task
+// visibly reverted on the next refresh.
+// ---------------------------------------------------------------------------
+describe('PR 146: VTODO completion serialization', () => {
+  function roundTrip(task: Partial<CalendarEvent>): CalendarEvent {
+    const vtodo = new ICAL.Component('vtodo')
+    vtodo.updatePropertyWithValue('uid', 'pr146')
+    vtodo.updatePropertyWithValue('dtstamp', ICAL.Time.now())
+    calendarEventToIcalVtodo(
+      {
+        id: 'pr146',
+        uid: 'pr146',
+        title: 'probe',
+        type: 'task',
+        start: '2026-09-08T10:00:00',
+        end: '2026-09-08T11:00:00',
+        calendarId: 'c1',
+        isAllDay: false,
+        ...task,
+      } as CalendarEvent,
+      vtodo
+    )
+    // Re-parse exactly what would be stored on the server.
+    const cal = new ICAL.Component(['vcalendar', [], []])
+    cal.addSubcomponent(vtodo)
+    const reparsed = new ICAL.Component(ICAL.parse(cal.toString()))
+    return icalVtodoToCalendarEvent(reparsed.getFirstSubcomponent('vtodo')!, 'c1')
+  }
+
+  it('marking complete survives a round-trip despite a stale NEEDS-ACTION/0', () => {
+    const back = roundTrip({ completed: true, taskStatus: 'NEEDS-ACTION', percentComplete: 0 })
+    expect(back.completed).toBe(true)
+    expect(back.taskStatus).toBe('COMPLETED')
+  })
+
+  it('un-completing survives a round-trip despite a stale COMPLETED/100', () => {
+    const back = roundTrip({
+      completed: false,
+      taskStatus: 'COMPLETED',
+      percentComplete: 100,
+      completedAt: '2026-09-01T10:00:00Z',
+    })
+    expect(back.completed).toBe(false)
+    expect(back.taskStatus).toBe('NEEDS-ACTION')
+  })
+
+  it('keeps a genuine IN-PROCESS status and its percentage', () => {
+    const back = roundTrip({ completed: false, taskStatus: 'IN-PROCESS', percentComplete: 40 })
+    expect(back.taskStatus).toBe('IN-PROCESS')
+    expect(back.percentComplete).toBe(40)
+    expect(back.completed).toBe(false)
+  })
+
+  it('clamps an IN-PROCESS percentage below the 100 that means done', () => {
+    const back = roundTrip({ completed: false, taskStatus: 'IN-PROCESS', percentComplete: 100 })
+    expect(back.completed).toBe(false)
+    expect(back.percentComplete).toBeLessThan(100)
+  })
+
+  it('preserves CANCELLED, which the parser reports as completed', () => {
+    // icalVtodoToCalendarEvent maps CANCELLED to `completed: true`, so keying
+    // the written STATUS off `completed` would silently rewrite every foreign
+    // client's cancelled task as COMPLETED.
+    const back = roundTrip({ completed: true, taskStatus: 'CANCELLED' })
+    expect(back.taskStatus).toBe('CANCELLED')
   })
 })

@@ -1651,21 +1651,41 @@ export function calendarEventToIcalVtodo(
     vtodo.removeAllProperties('priority')
   }
 
-  if (task.percentComplete !== undefined) {
-    vtodo.updatePropertyWithValue('percent-complete', task.percentComplete)
+  // A sync merge can leave taskStatus/percentComplete contradicting the
+  // authoritative `completed` boolean: mark-complete keeps taskStatus=NEEDS-ACTION
+  // and percent=0, while un-complete keeps taskStatus=COMPLETED / percent=100.
+  // Trusting those stale fields made the written .ics re-serialize the wrong
+  // state, so a toggled task reverted on reload (completed = percentComplete >= 100).
+  // Derive BOTH STATUS and PERCENT-COMPLETE from a single serializeStatus based
+  // on `completed`; only a genuine IN-PROCESS / CANCELLED status is preserved.
+  //
+  // CANCELLED is checked FIRST, before `completed`: the parser maps CANCELLED to
+  // `completed = true` (it renders as done but flagged for deletion), so keying
+  // off `completed` would rewrite every foreign client's cancelled task as
+  // COMPLETED and lose the flag the deletion flow keys on.
+  const serializeStatus =
+    task.taskStatus === 'CANCELLED'
+      ? 'CANCELLED'
+      : task.completed
+        ? 'COMPLETED'
+        : task.taskStatus === 'IN-PROCESS'
+          ? 'IN-PROCESS'
+          : 'NEEDS-ACTION'
+
+  if (serializeStatus === 'COMPLETED') {
+    vtodo.updatePropertyWithValue('percent-complete', 100)
+  } else if (serializeStatus === 'IN-PROCESS' && task.percentComplete !== undefined) {
+    // keep a real in-progress percentage, but always < 100 (100 = done)
+    vtodo.updatePropertyWithValue(
+      'percent-complete',
+      Math.max(0, Math.min(99, task.percentComplete))
+    )
   } else {
+    // NEEDS-ACTION / CANCELLED — drop the stale percent so re-parse stays <100
     vtodo.removeAllProperties('percent-complete')
   }
 
-  if (task.taskStatus) {
-    // R2.5 — Serialize the full status union (NEEDS-ACTION / IN-PROCESS
-    // / COMPLETED / CANCELLED), not just COMPLETED / NEEDS-ACTION.
-    vtodo.updatePropertyWithValue('status', task.taskStatus)
-  } else if (task.completed) {
-    vtodo.updatePropertyWithValue('status', 'COMPLETED')
-  } else {
-    vtodo.updatePropertyWithValue('status', 'NEEDS-ACTION')
-  }
+  vtodo.updatePropertyWithValue('status', serializeStatus)
 
   if (task.completed) {
     // R2.5 — Preserve the original COMPLETED timestamp on re-serialize

@@ -4,6 +4,16 @@ All notable changes to Calino will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Task completion no longer reverts on refresh** — ticking a task done (or
+  undone) from the event form wrote a contradictory `.ics`, where `STATUS` and
+  `PERCENT-COMPLETE` disagreed with the completion itself, so the next sync read
+  the task back in its old state. `STATUS` and `PERCENT-COMPLETE` are now both
+  derived from the task's actual completion, and previously affected tasks heal
+  on their next write. Thanks to [@flyklmwl](https://github.com/flyklmwl) in
+  [#146](https://github.com/Ivan-Malinovski/calino/pull/146).
+
 ## [0.33.1] - 2026-09-03
 
 ### Added
