@@ -10,8 +10,14 @@ reverse proxy.
 **Docker Compose:**
 
 ```bash
-docker compose up -d --build
+docker compose up -d
 ```
+
+Compose pulls the published multi-architecture image
+`ghcr.io/ivan-malinovski/calino-proxy:latest`. Because the service also keeps
+the local build context, it can fall back to building from `Dockerfile` if the
+image is unavailable; use `docker compose up -d --build` to force a local
+rebuild.
 
 **Plain Node (18+):**
 

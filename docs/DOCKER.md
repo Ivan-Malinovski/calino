@@ -249,6 +249,11 @@ your reverse proxy, you can run the bundled proxy container — it's included in
 docker compose --profile proxy up -d
 ```
 
+The service pulls the published multi-architecture
+`ghcr.io/ivan-malinovski/calino-proxy:latest` image. It retains the local
+`proxy/` build context as a fallback; use `docker compose --profile proxy up -d
+--build` to force a local rebuild.
+
 This starts a small, separate `caldav-proxy` container on port **8081** (the
 Calino app container is unchanged). In Calino settings set:
 

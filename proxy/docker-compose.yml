@@ -1,13 +1,20 @@
 services:
   caldav-proxy:
+    # Pull the published multi-arch image by default. Compose falls back to
+    # this local build context when the image is unavailable; use --build to
+    # force a local rebuild while developing the proxy.
+    image: ${CALINO_PROXY_IMAGE:-ghcr.io/ivan-malinovski/calino-proxy:latest}
     build:
       context: .
     ports:
       - "8081:8081"
     environment:
       # Leave empty to allow any origin, or restrict to your Calino instance(s):
-      # - ALLOWED_ORIGINS=https://calendar.example.com
-      - PORT=8081
+      - PORT=${PORT:-8081}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-}
+      - ALLOWED_TARGETS=${ALLOWED_TARGETS:-}
+      - MAX_BODY_BYTES=${MAX_BODY_BYTES:-10485760}
+      - FETCH_TIMEOUT_MS=${FETCH_TIMEOUT_MS:-30000}
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true

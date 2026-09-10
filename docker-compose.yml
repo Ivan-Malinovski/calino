@@ -38,6 +38,10 @@ services:
   # Then set the Proxy URL in Calino settings to http://<your-host>:8081
   caldav-proxy:
     profiles: ["proxy"]
+    # Pull the published multi-arch image by default. Compose falls back to
+    # this local build context when the image is unavailable; use --build to
+    # force a local rebuild while developing the proxy.
+    image: ${CALINO_PROXY_IMAGE:-ghcr.io/ivan-malinovski/calino-proxy:latest}
     build:
       context: ./proxy
     ports:

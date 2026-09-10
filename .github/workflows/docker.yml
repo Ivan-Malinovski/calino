@@ -12,6 +12,17 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      publish_proxy:
+        description: Publish the proxy image to GHCR
+        required: false
+        type: boolean
+        default: false
+      proxy_tag:
+        description: Tag to publish for a manual proxy release
+        required: false
+        type: string
+        default: latest
 
 jobs:
   # ── Lint & Typecheck ──────────────────────────────────────────
@@ -123,6 +134,54 @@ jobs:
       - name: Cleanup
         if: always()
         run: docker rm -f calino-test
+
+  # ── Build & test the standalone proxy (all triggers) ──────────
+  proxy-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Build proxy for testing
+        uses: docker/build-push-action@v7
+        with:
+          context: ./proxy
+          load: true
+          tags: calino-proxy:test
+          cache-from: type=gha,scope=proxy-test
+          cache-to: type=gha,mode=max,scope=proxy-test
+
+      - name: Start proxy container
+        run: |
+          docker run -d --name calino-proxy-test \
+            -p 8081:8081 \
+            --tmpfs /tmp:rw,noexec,nosuid \
+            --health-cmd 'wget -qO- http://localhost:8081/health || exit 1' \
+            --health-interval 5s \
+            --health-timeout 3s \
+            --health-retries 5 \
+            calino-proxy:test
+
+      - name: Wait for proxy to become healthy
+        run: |
+          echo "Waiting for proxy container to become healthy..."
+          timeout 30 bash -c '
+            until docker inspect --format="{{.State.Health.Status}}" calino-proxy-test 2>/dev/null | grep -q healthy; do
+              sleep 2
+            done
+          '
+          curl -fsS http://localhost:8081/health
+
+      - name: Dump proxy logs on failure
+        if: failure()
+        run: docker logs calino-proxy-test
+
+      - name: Cleanup proxy
+        if: always()
+        run: docker rm -f calino-proxy-test
 
   # ── Publish to GHCR (release tags only, native per-arch runners) ──
   build:
@@ -259,3 +318,107 @@ jobs:
 
       - name: Verify manifest list
         run: docker buildx imagetools inspect ghcr.io/ivan-malinovski/calino:${{ steps.meta.outputs.version }}
+
+  # ── Publish proxy to GHCR (release tags or manual dispatch) ───
+  proxy-build:
+    if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.publish_proxy)
+    needs: [test, proxy-test]
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        include:
+          - platform: linux/amd64
+            runner: ubuntu-24.04
+            slug: linux-amd64
+          - platform: linux/arm64
+            runner: ubuntu-24.04-arm
+            slug: linux-arm64
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build & push proxy by digest
+        id: build
+        uses: docker/build-push-action@v7
+        with:
+          context: ./proxy
+          platforms: ${{ matrix.platform }}
+          outputs: type=image,name=ghcr.io/ivan-malinovski/calino-proxy,push-by-digest=true,name-canonical=true,push=true
+          cache-from: type=gha,scope=proxy-build-${{ matrix.slug }}
+          cache-to: type=gha,mode=max,scope=proxy-build-${{ matrix.slug }}
+
+      - name: Export proxy digest
+        run: |
+          mkdir -p /tmp/proxy-digests
+          digest="${{ steps.build.outputs.digest }}"
+          touch "/tmp/proxy-digests/${digest#sha256:}"
+
+      - name: Upload proxy digest
+        uses: actions/upload-artifact@v7
+        with:
+          name: proxy-digest-${{ matrix.slug }}
+          path: /tmp/proxy-digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  proxy-merge:
+    if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.publish_proxy)
+    needs: proxy-build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Download proxy digests
+        uses: actions/download-artifact@v8
+        with:
+          pattern: proxy-digest-*
+          merge-multiple: true
+          path: /tmp/proxy-digests
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract proxy metadata
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ghcr.io/ivan-malinovski/calino-proxy
+          tags: |
+            type=semver,pattern={{version}},enable=${{ startsWith(github.ref, 'refs/tags/v') }}
+            type=raw,value=latest,enable=${{ (startsWith(github.ref, 'refs/tags/v') && !contains(github.ref_name, '-')) || (github.event_name == 'workflow_dispatch' && inputs.proxy_tag == 'latest') }}
+            type=raw,value=main,enable=${{ startsWith(github.ref, 'refs/tags/v') && !contains(github.ref_name, '-') }}
+            type=raw,value=${{ inputs.proxy_tag }},enable=${{ github.event_name == 'workflow_dispatch' && inputs.proxy_tag != '' && inputs.proxy_tag != 'latest' }}
+            type=sha,prefix=sha-,format=short
+
+      - name: Create proxy manifest list & push
+        working-directory: /tmp/proxy-digests
+        run: |
+          # shellcheck disable=SC2046
+          docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+            $(printf 'ghcr.io/ivan-malinovski/calino-proxy@sha256:%s ' [0-9a-f]*) || exit 1
+        env:
+          DOCKER_METADATA_OUTPUT_JSON: ${{ steps.meta.outputs.json }}
+
+      - name: Verify proxy manifest list
+        run: docker buildx imagetools inspect ghcr.io/ivan-malinovski/calino-proxy:${{ github.event_name == 'workflow_dispatch' && inputs.proxy_tag || steps.meta.outputs.version }}

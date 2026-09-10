@@ -154,8 +154,13 @@ docker compose --profile proxy up -d
 
 ```bash
 cd proxy
-docker compose up -d --build
+docker compose up -d
 ```
+
+Compose pulls the published multi-architecture image
+`ghcr.io/ivan-malinovski/calino-proxy:latest` and falls back to the local
+`Dockerfile` if the image is unavailable. Add `--build` to force a local
+rebuild.
 
 Either way it serves the proxy on port `8081`. Then in Calino settings, enter:
 

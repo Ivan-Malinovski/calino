@@ -244,7 +244,11 @@ If you can't add CORS headers to your CalDAV server, run a tiny proxy yourself. 
 docker compose --profile proxy up -d
 ```
 
-Then set the **Proxy URL** in Calino settings to `http://<your-host>:8081`. It's a separate, zero-dependency container ([`proxy/`](./proxy)) that you can also run standalone or as a Cloudflare Worker. See [`docs/CORS_PROXY.md`](./docs/CORS_PROXY.md) for all options.
+This pulls the published multi-architecture `calino-proxy` image (and falls
+back to the local `proxy/` build context if it is unavailable). Then set the
+**Proxy URL** in Calino settings to `http://<your-host>:8081`. It's a separate,
+zero-dependency container that you can also run standalone or as a Cloudflare
+Worker. See [`docs/CORS_PROXY.md`](./docs/CORS_PROXY.md) for all options.
 
 For an internet-facing proxy, do not leave the defaults open: set both
 `CALINO_PROXY_ALLOWED_ORIGINS` and `CALINO_PROXY_ALLOWED_TARGETS` to your
