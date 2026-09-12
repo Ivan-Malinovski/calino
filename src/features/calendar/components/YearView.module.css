@@ -8,6 +8,9 @@
   overflow: auto;
   padding: var(--space-4);
   margin: 0 var(--grid-margin, 16px) 24px 0;
+  /* Query container: `.grid` sizes itself off this box's height (cqh), so the
+     year fills a tall window instead of stopping at a fixed 850px. */
+  container-type: size;
 }
 
 @media (max-width: 768px) { /* sync with config.ts MOBILE_BREAKPOINT */
@@ -25,27 +28,69 @@
   }
 }
 
+/* The mini-months are fluid (see .dayGrid), so the grid's width is what
+   decides how big a year gets. Two things bound it: the container's width, as
+   for any block, and a width worked back from the container's *height*, so
+   that `--year-rows` rows of cards fit without scrolling. Below a floor — a
+   card about the size this view has always drawn — the grid stops shrinking
+   and the container scrolls instead, as it did before. */
 .grid {
+  --year-cols: 4;
+  --year-rows: 3;
+  --year-gap: 14px;
+  --year-card-min: 224px;
+  /* The card height that stacks `--year-rows` of them in the container. */
+  --year-card-h: calc((100cqh - (var(--year-rows) - 1) * var(--year-gap)) / var(--year-rows));
+  /* The card width that yields that height. A card is 80–93px of chrome —
+     header, weekday row, cell gaps and padding, more as the type grows with the
+     card — plus six rows of square cells, each a seventh of what's left after
+     the 28px padding and 12px of column gaps. 102px of chrome errs towards a
+     little room at the bottom rather than a scrollbar for a few px. */
+  --year-card-w: calc(40px + (var(--year-card-h) - 102px) * 7 / 6);
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 14px;
+  grid-template-columns: repeat(var(--year-cols), 1fr);
+  gap: var(--year-gap);
+  margin: 0 auto;
+  max-width: max(
+    calc(var(--year-cols) * var(--year-card-min) + (var(--year-cols) - 1) * var(--year-gap)),
+    calc(var(--year-cols) * var(--year-card-w) + (var(--year-cols) - 1) * var(--year-gap))
+  );
+}
+
+/* The week-number column is 0.6 of a cell wide, so the same height comes
+   from a wider card: 7.6 tracks and one more gap. */
+.gridWithWeekNum {
+  --year-card-w: calc(42px + (var(--year-card-h) - 102px) * 7.6 / 6);
 }
 
 @media (max-width: 1100px) {
   .grid {
-    grid-template-columns: repeat(3, 1fr);
+    --year-cols: 3;
+    --year-rows: 4;
   }
 }
 
 @media (max-width: 768px) {
   .grid {
-    grid-template-columns: repeat(2, 1fr);
+    --year-cols: 2;
+    --year-rows: 6;
   }
 }
 
 @media (max-width: 500px) {
   .grid {
-    grid-template-columns: 1fr;
+    --year-cols: 1;
+    --year-rows: 12;
+    /* One column always scrolls; nothing to fit to. */
+    max-width: none;
+  }
+
+  /* A phone-width card is wider than a month wants to be: cells the full
+     width made each month a screen tall. Keep the card, cap the month. */
+  .weekdayRow,
+  .dayGrid {
+    max-width: 240px;
+    margin-inline: auto;
   }
 }
 
@@ -59,6 +104,8 @@
   flex-direction: column;
   cursor: pointer;
   transition: box-shadow 0.15s ease, border-color 0.15s ease;
+  /* Type inside the card scales with the card (cqw below). */
+  container-type: inline-size;
 }
 
 .month:hover {
@@ -72,7 +119,7 @@
   border: none;
   padding: 0 0 8px;
   text-align: center;
-  font-size: 14px;
+  font-size: clamp(14px, 4.5cqw, 20px);
   font-weight: 600;
   color: var(--ink, #2c2823);
   cursor: pointer;
@@ -83,17 +130,20 @@
   color: var(--accent-strong, var(--accent, #b07d4f));
 }
 
+/* Seven equal tracks the full width of the card: the cells are squares
+   (aspect-ratio) so the month grows with the card rather than sitting in a
+   fixed 224px box in the middle of it. */
 .weekdayRow {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
+  gap: 0 2px;
   width: 100%;
-  max-width: 224px;
-  margin: 0 auto 2px;
+  margin: 0 0 2px;
 }
 
 .weekdayInitial {
   text-align: center;
-  font-size: 10px;
+  font-size: clamp(10px, 3.2cqw, 14px);
   color: var(--ink-muted, var(--ink-3, #9c9384));
   line-height: 1.5;
 }
@@ -101,27 +151,25 @@
 .dayGrid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
   width: 100%;
-  max-width: 224px;
-  margin: 0 auto;
 }
 
 /* Leading ISO week-number column (when "Show week numbers" is enabled) */
 .weekdayRow.withWeekNum,
 .dayGrid.withWeekNum {
-  grid-template-columns: 20px repeat(7, 1fr);
-  max-width: 244px;
+  grid-template-columns: 0.6fr repeat(7, 1fr);
 }
 
 .weekNum {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 26px;
-  margin: 1px auto;
+  width: 100%;
+  height: 100%;
+  margin: 0;
   padding: 0;
-  font-size: 9.5px;
+  font-size: clamp(9.5px, 3cqw, 13px);
   font-variant-numeric: tabular-nums;
   color: var(--ink-muted, var(--ink-3, #9c9384));
   background: none;
@@ -138,9 +186,9 @@
 
 .day,
 .emptyDay {
-  width: 26px;
-  height: 26px;
-  margin: 1px auto;
+  width: 100%;
+  aspect-ratio: 1;
+  margin: 0;
 }
 
 .day {
@@ -148,7 +196,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 11px;
+  font-size: clamp(11px, 3.6cqw, 16px);
+  padding: 0;
   color: var(--ink, #2c2823);
   background: none;
   border: none;
@@ -179,11 +228,11 @@
 
 .eventDot {
   position: absolute;
-  bottom: 2px;
+  bottom: clamp(2px, 0.8cqw, 5px);
   left: 50%;
   transform: translateX(-50%);
-  width: 3px;
-  height: 3px;
+  width: clamp(3px, 1cqw, 5px);
+  height: clamp(3px, 1cqw, 5px);
   border-radius: 50%;
   background: var(--accent, #b07d4f);
 }
