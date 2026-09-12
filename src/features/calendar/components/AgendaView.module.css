@@ -362,6 +362,7 @@
 .agendaTaskBar {
   width: 3px;
   flex-shrink: 0;
+  /* Inline style carries the category/calendar colour, as on event rows. */
   background: var(--ink-3, #a39d93);
 }
 

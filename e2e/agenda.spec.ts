@@ -19,6 +19,7 @@ async function seedAgendaItems(page: Page): Promise<void> {
         const parsed = raw ? JSON.parse(raw) : { state: {}, version: 2 }
         parsed.state = {
           ...(parsed.state ?? {}),
+          categories: [{ id: 'agenda-cat', name: 'Focus', color: '#3b82f6' }],
           events: [
             ...(parsed.state?.events ?? []),
             {
@@ -29,6 +30,7 @@ async function seedAgendaItems(page: Page): Promise<void> {
               end: `${today}T10:00:00`,
               isAllDay: false,
               calendarId: 'default',
+              categories: ['Focus'],
             },
             {
               id: 'agenda-parent',
@@ -63,6 +65,7 @@ async function seedAgendaItems(page: Page): Promise<void> {
               isAllDay: true,
               calendarId: 'default',
               completed: false,
+              categories: ['Focus'],
             },
           ],
         }
@@ -209,6 +212,29 @@ test('agenda indents subtasks and moves tasks and events between days', async ({
       agendaEvent.evaluate((element) => getComputedStyle(element.parentElement as Element).overflow)
     )
     .toBe('visible')
+})
+
+test('agenda colours a task row by its category like an event row', async ({ page }) => {
+  await clearState(page)
+  await seedAgendaItems(page)
+  await page.goto('/agenda')
+
+  const today = localDate()
+  await expect(page.locator(`[data-date="${today}"]`)).toBeVisible()
+
+  // The bar is each row's first child; both rows are in the "Focus" category.
+  const eventBar = page
+    .locator('[data-component="agenda-event"]')
+    .filter({ hasText: 'Agenda event' })
+    .locator('> div')
+    .first()
+  const taskBar = page
+    .locator('[data-component="agenda-task"]')
+    .filter({ hasText: 'Agenda task' })
+    .locator('> div')
+    .first()
+  await expect(eventBar).toHaveCSS('background-color', 'rgb(59, 130, 246)')
+  await expect(taskBar).toHaveCSS('background-color', 'rgb(59, 130, 246)')
 })
 
 test('agenda collapses consecutive empty dates into a free-range row', async ({ page }) => {
