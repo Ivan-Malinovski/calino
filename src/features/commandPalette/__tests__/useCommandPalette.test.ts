@@ -82,6 +82,7 @@ vi.mock('@/store/calendarStore', () => ({
       addAutoCategoryRule: vi.fn(),
       updateAutoCategoryRule: vi.fn(),
       deleteAutoCategoryRule: vi.fn(),
+      applySyncedCategories: vi.fn(),
       toggleCategoryFilter: vi.fn(),
       setCurrentDate: vi.fn(),
       setCurrentView: vi.fn(),

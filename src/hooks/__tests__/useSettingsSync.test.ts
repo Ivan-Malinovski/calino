@@ -3,6 +3,7 @@ import { renderHook, act } from '@testing-library/react'
 import { createLocalStorageMock } from '@/test/storageMock'
 import { useSettingsSync } from '../useSettingsSync'
 import { useSettingsStore } from '@/store/settingsStore'
+import { useCalendarStore } from '@/store/calendarStore'
 import {
   getPrimaryAccountId,
   getEtag,
@@ -61,6 +62,7 @@ describe('useSettingsSync', () => {
     vi.clearAllMocks()
     storage.install()
     useSettingsStore.getState().resetSettings()
+    useCalendarStore.setState({ categories: [], autoCategoryRules: [] })
     vi.mocked(createCalDAVClient).mockResolvedValue(
       mockClient as unknown as Awaited<ReturnType<typeof createCalDAVClient>>
     )
@@ -281,6 +283,8 @@ describe('useSettingsSync', () => {
         version: 1,
         syncedAt: '2099-01-01T00:00:00Z',
         settings: { timezone: 'Pacific/Auckland' },
+        categories: [{ id: 'remote-work', name: 'Work', color: '#ff0000' }],
+        autoCategoryRules: [{ id: 'r1', keywords: ['standup'], categoryId: 'remote-work' }],
       }
       mockFetchSettingsEvent.mockResolvedValue({
         data:
@@ -301,6 +305,11 @@ describe('useSettingsSync', () => {
       const settings = useSettingsStore.getState()
       expect(settings.timezone).toBe('Pacific/Auckland')
       expect(getLastSyncedAt()).toBeTruthy()
+      const { categories, autoCategoryRules } = useCalendarStore.getState()
+      expect(categories).toEqual([{ id: 'remote-work', name: 'Work', color: '#ff0000' }])
+      expect(autoCategoryRules).toEqual([
+        { id: 'r1', keywords: ['standup'], categoryId: 'remote-work' },
+      ])
     })
 
     it('should return early when no remote event exists', async () => {

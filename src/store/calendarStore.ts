@@ -1215,6 +1215,16 @@ export const useCalendarStore = create<CalendarStore>()(
         }))
       },
 
+      applySyncedCategories: (
+        categories: Category[],
+        autoCategoryRules: AutoCategoryRule[]
+      ): void => {
+        set({ categories, autoCategoryRules })
+        // Same invalidation as addCategory/updateCategory: colours are read
+        // through the range-expansion cache.
+        bumpRangeExpansionVersion()
+      },
+
       toggleCategoryFilter: (categoryId: string): void => {
         const current = get().selectedCategoryIds
         const index = current.indexOf(categoryId)

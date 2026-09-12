@@ -4,6 +4,8 @@ import {
   serializeSettings,
   deserializeSettings,
   mergeSettings,
+  mergeCategories,
+  applyRemotePayload,
   resolveConflict,
   encodeBase64,
   decodeBase64,
@@ -25,6 +27,7 @@ import {
   type SettingsSyncPayload,
 } from '../settingsSync'
 import { useSettingsStore } from '@/store/settingsStore'
+import { useCalendarStore } from '@/store/calendarStore'
 
 describe('settingsSync', () => {
   const storage = createLocalStorageMock()
@@ -32,6 +35,7 @@ describe('settingsSync', () => {
   beforeEach(() => {
     storage.install()
     useSettingsStore.getState().resetSettings()
+    useCalendarStore.setState({ categories: [], autoCategoryRules: [] })
   })
 
   afterEach(() => {
@@ -130,6 +134,18 @@ describe('settingsSync', () => {
       const parsed = JSON.parse(serializeSettings()) as SettingsSyncPayload
       expect(parsed.settings.taskCollapseOverrides).toEqual({ parent: true })
     })
+
+    it('should include category colours and auto-category rules', () => {
+      useCalendarStore.setState({
+        categories: [{ id: 'c1', name: 'Work', color: '#ff0000' }],
+        autoCategoryRules: [{ id: 'r1', keywords: ['standup'], categoryId: 'c1' }],
+      })
+      const parsed = JSON.parse(serializeSettings()) as SettingsSyncPayload
+      expect(parsed.categories).toEqual([{ id: 'c1', name: 'Work', color: '#ff0000' }])
+      expect(parsed.autoCategoryRules).toEqual([
+        { id: 'r1', keywords: ['standup'], categoryId: 'c1' },
+      ])
+    })
   })
 
   describe('deserializeSettings', () => {
@@ -156,6 +172,105 @@ describe('settingsSync', () => {
     it('should return null for missing settings', () => {
       const payload = { version: SYNC_FORMAT_VERSION, syncedAt: '' }
       expect(deserializeSettings(JSON.stringify(payload))).toBeNull()
+    })
+
+    it('should leave the category lists out when the payload has none', () => {
+      // A payload from a build that predates category sync.
+      const payload = { version: SYNC_FORMAT_VERSION, syncedAt: '', settings: {} }
+      const result = deserializeSettings(JSON.stringify(payload))
+      expect(result?.categories).toBeUndefined()
+      expect(result?.autoCategoryRules).toBeUndefined()
+    })
+  })
+
+  describe('mergeCategories', () => {
+    const local = {
+      categories: [
+        { id: 'local-work', name: 'Work', color: '#111111' },
+        { id: 'local-home', name: 'Home', color: '#222222' },
+      ],
+      autoCategoryRules: [{ id: 'rule-home', keywords: ['chores'], categoryId: 'local-home' }],
+    }
+
+    it('should return the local lists untouched when the remote sent none', () => {
+      expect(mergeCategories(local, {})).toBe(local)
+    })
+
+    it('should return the local lists untouched when the remote matches them', () => {
+      const remote = {
+        categories: [{ id: 'other-device', name: 'Work', color: '#111111' }],
+        autoCategoryRules: [{ id: 'rule-home', keywords: ['chores'], categoryId: 'no-home-here' }],
+      }
+      // The remote rule can't be resolved, so it drops out and the local one stays.
+      expect(mergeCategories(local, remote)).toBe(local)
+    })
+
+    it('should take the remote colour for a name both sides have, keeping the local id', () => {
+      const merged = mergeCategories(local, {
+        categories: [{ id: 'remote-work', name: 'Work', color: '#ff0000' }],
+      })
+      expect(merged.categories).toEqual([
+        { id: 'local-work', name: 'Work', color: '#ff0000' },
+        { id: 'local-home', name: 'Home', color: '#222222' },
+      ])
+    })
+
+    it('should add a category only the remote has and keep one only the local has', () => {
+      const merged = mergeCategories(local, {
+        categories: [{ id: 'remote-gym', name: 'Gym', color: '#00ff00' }],
+      })
+      expect(merged.categories.map((c) => c.name)).toEqual(['Work', 'Home', 'Gym'])
+      expect(merged.categories[2].id).toBe('remote-gym')
+    })
+
+    it('should re-point remote rules at the local category of the same name', () => {
+      const merged = mergeCategories(local, {
+        categories: [{ id: 'remote-work', name: 'Work', color: '#111111' }],
+        autoCategoryRules: [{ id: 'rule-work', keywords: ['standup'], categoryId: 'remote-work' }],
+      })
+      expect(merged.autoCategoryRules).toEqual([
+        { id: 'rule-home', keywords: ['chores'], categoryId: 'local-home' },
+        { id: 'rule-work', keywords: ['standup'], categoryId: 'local-work' },
+      ])
+    })
+
+    it('should replace a local rule with the remote copy of the same id and drop unresolvable ones', () => {
+      const merged = mergeCategories(local, {
+        categories: [{ id: 'remote-home', name: 'Home', color: '#222222' }],
+        autoCategoryRules: [
+          { id: 'rule-home', keywords: ['chores', 'laundry'], categoryId: 'remote-home' },
+          { id: 'rule-orphan', keywords: ['?'], categoryId: 'no-such-category' },
+        ],
+      })
+      expect(merged.autoCategoryRules).toEqual([
+        { id: 'rule-home', keywords: ['chores', 'laundry'], categoryId: 'local-home' },
+      ])
+    })
+  })
+
+  describe('applyRemotePayload', () => {
+    it('should write settings and categories to their stores', () => {
+      useCalendarStore.setState({
+        categories: [{ id: 'local-work', name: 'Work', color: '#111111' }],
+        autoCategoryRules: [],
+      })
+      applyRemotePayload({
+        settings: { timezone: 'Pacific/Auckland' },
+        categories: [{ id: 'remote-work', name: 'Work', color: '#ff0000' }],
+        autoCategoryRules: [{ id: 'r1', keywords: ['standup'], categoryId: 'remote-work' }],
+      })
+      expect(useSettingsStore.getState().timezone).toBe('Pacific/Auckland')
+      const { categories, autoCategoryRules } = useCalendarStore.getState()
+      expect(categories).toEqual([{ id: 'local-work', name: 'Work', color: '#ff0000' }])
+      expect(autoCategoryRules).toEqual([
+        { id: 'r1', keywords: ['standup'], categoryId: 'local-work' },
+      ])
+    })
+
+    it('should leave the calendar store alone when the payload has no categories', () => {
+      const before = useCalendarStore.getState().categories
+      applyRemotePayload({ settings: { timezone: 'Pacific/Auckland' } })
+      expect(useCalendarStore.getState().categories).toBe(before)
     })
   })
 

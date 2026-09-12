@@ -17,7 +17,7 @@ import { useSettingsStore } from '@/store/settingsStore'
 import {
   serializeSettings,
   deserializeSettings,
-  mergeSettings,
+  applyRemotePayload,
   resolveConflict,
   encodeBase64,
   deriveCalendarHomeUrl,
@@ -113,22 +113,6 @@ export function useSettingsSync(): UseSettingsSyncReturn {
     return discovered?.url ?? null
   }
 
-  function resolveAndMerge(
-    localSettings: ReturnType<typeof useSettingsStore.getState>,
-    remoteSettings: {
-      settings: Partial<ReturnType<typeof useSettingsStore.getState>>
-      syncedAt: string
-    },
-    remoteDtstamp: string
-  ): ReturnType<typeof useSettingsStore.getState> {
-    const lastSynced = getLastSyncedAt() || '1970-01-01T00:00:00Z'
-    const winner = resolveConflict(lastSynced, remoteDtstamp || remoteSettings.syncedAt)
-    if (winner === 'remote') {
-      return { ...localSettings, ...mergeSettings(localSettings, remoteSettings.settings) }
-    }
-    return localSettings
-  }
-
   // ── Core operations ─────────────────────────────────────────────────────────
 
   // pull is defined before push so push can reference it in its dependency array.
@@ -189,9 +173,10 @@ export function useSettingsSync(): UseSettingsSyncReturn {
       }
 
       const dtstampIso = dtstampToISO(remote.dtstamp)
-      const localSettings = useSettingsStore.getState()
-      const merged = resolveAndMerge(localSettings, parsed, dtstampIso)
-      useSettingsStore.getState().updateSettings(merged)
+      const lastSynced = getLastSyncedAt() || '1970-01-01T00:00:00Z'
+      if (resolveConflict(lastSynced, dtstampIso || parsed.syncedAt) === 'remote') {
+        applyRemotePayload(parsed)
+      }
       setEtag(remote.etag)
       // Store the actual DTSTAMP from the server — shows when settings were truly last written
       setLastSyncedAt(dtstampIso || new Date().toISOString())

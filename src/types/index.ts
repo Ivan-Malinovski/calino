@@ -278,6 +278,8 @@ export interface CalendarActions {
   addAutoCategoryRule: (rule: AutoCategoryRule) => void
   updateAutoCategoryRule: (id: string, updates: Partial<AutoCategoryRule>) => void
   deleteAutoCategoryRule: (id: string) => void
+  /** Replace both lists at once, as settings sync does after merging a remote payload. */
+  applySyncedCategories: (categories: Category[], autoCategoryRules: AutoCategoryRule[]) => void
   toggleCategoryFilter: (categoryId: string) => void
   setCurrentDate: (date: string) => void
   setCurrentView: (view: ViewType) => void
