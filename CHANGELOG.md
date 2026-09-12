@@ -4,6 +4,45 @@ All notable changes to Calino will be documented in this file.
 
 ## [Unreleased]
 
+## [0.33.3] - 2026-09-12
+
+### Added
+
+- **Very early native Android preview** — a debug APK from the separate
+  native Android project is attached to this release as an experimental look
+  at where Calino on Android is heading. It is a very early alpha, has had
+  very little testing, and is not yet a replacement for the current Capacitor
+  wrapper. The wrapper will likely be deprecated once the native app is ready.
+  Please don't spend time reporting small missing pieces or polish issues yet;
+  feedback on the overall direction and experience is very welcome.
+
+### Fixed
+
+- **A year view that uses the screen** — month grids and their type now scale
+  with the available window instead of remaining postage-stamp sized on large
+  displays. Thanks to [@Pwnion](https://github.com/Pwnion) in
+  [#153](https://github.com/Ivan-Malinovski/calino/pull/153).
+
+- **Discoverable calendar navigation** — the Calino wordmark now acts as a
+  home button, and clickable calendar titles have visible hover and keyboard
+  focus affordances. Thanks to [@Pwnion](https://github.com/Pwnion) in
+  [#152](https://github.com/Ivan-Malinovski/calino/pull/152).
+
+- **Enter submits event and task titles** — pressing Enter in the title field
+  now creates or saves through the normal form validation path. Thanks to
+  [@Pwnion](https://github.com/Pwnion) in
+  [#151](https://github.com/Ivan-Malinovski/calino/pull/151).
+
+- **Category colours in the agenda** — task rows now use their category or
+  calendar colour just like event rows. Thanks to
+  [@Pwnion](https://github.com/Pwnion) in
+  [#156](https://github.com/Ivan-Malinovski/calino/pull/156).
+
+- **Complete category settings sync** — category colours and automatic
+  keyword rules now travel with Calino settings, with category IDs remapped
+  safely between devices. Thanks to [@Pwnion](https://github.com/Pwnion) in
+  [#157](https://github.com/Ivan-Malinovski/calino/pull/157).
+
 ## [0.33.2] - 2026-09-08
 
 ### Fixed
