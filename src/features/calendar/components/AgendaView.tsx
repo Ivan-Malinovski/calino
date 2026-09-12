@@ -760,7 +760,10 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
                                         onContextMenu={(e) => handleEventContextMenu(e, event)}
                                         disableKeyboardAttributes
                                       >
-                                        <div className={styles.agendaTaskBar} />
+                                        <div
+                                          className={styles.agendaTaskBar}
+                                          style={{ background: getEventBarColor(event) }}
+                                        />
                                         <div
                                           className={styles.agendaTaskBody}
                                           data-task-depth={taskDepthById.get(event.id) ?? 0}
