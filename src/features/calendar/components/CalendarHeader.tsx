@@ -460,8 +460,8 @@ export function CalendarHeader({
     )
   }
 
-  // Clicking the header title takes you back to month view from anywhere else;
-  // if you're already in month view it keeps the "jump to today" shortcut.
+  // The wordmark and the header title both act as "home": back to month view
+  // from anywhere else, and the "jump to today" shortcut once already there.
   const handleTitleClick = (): void => {
     if (currentView === 'month') {
       handleToday()
@@ -469,6 +469,8 @@ export function CalendarHeader({
       handleViewChange('month')
     }
   }
+  const homeLabel =
+    currentView === 'month' ? t('views.header.goToToday') : t('views.header.goToMonthView')
 
   const handleViewChange = useCallback(
     (view: ViewType) => {
@@ -529,10 +531,17 @@ export function CalendarHeader({
       data-component="header"
     >
       {/* Brand — hidden by CSS when sidebar collapsed or at compact breakpoint */}
-      <div className={styles.brand}>
-        <div className={styles.brandDiamond} />
+      <button
+        type="button"
+        className={styles.brand}
+        onClick={handleTitleClick}
+        aria-label={`Calino – ${homeLabel}`}
+        title={homeLabel}
+        data-component="brand-home"
+      >
+        <span className={styles.brandDiamond} />
         <span className={styles.brandName}>Calino</span>
-      </div>
+      </button>
       {/* Hamburger — shown by CSS when sidebar collapsed or at compact breakpoint */}
       <button
         className={styles.hamburger}
@@ -571,17 +580,12 @@ export function CalendarHeader({
       {/* Title — click returns to month view from anywhere (jumps to today when
           already in month) */}
       <div
-        className={styles.titleGroup}
+        className={`${styles.titleGroup} ${currentView === 'week' ? '' : styles.titleClickable}`}
         onClick={currentView === 'week' ? undefined : handleTitleClick}
         role={currentView === 'week' ? undefined : 'button'}
         tabIndex={currentView === 'week' ? undefined : 0}
-        aria-label={
-          currentView === 'week'
-            ? undefined
-            : currentView === 'month'
-              ? t('views.header.goToToday')
-              : t('views.header.goToMonthView')
-        }
+        aria-label={currentView === 'week' ? undefined : homeLabel}
+        title={currentView === 'week' ? undefined : homeLabel}
         onKeyDown={
           currentView === 'week'
             ? undefined
