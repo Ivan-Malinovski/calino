@@ -1,5 +1,5 @@
 import type { JSX } from 'react'
-import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
+import { useState, useMemo, useEffect, useRef, useCallback, useId } from 'react'
 import { motion } from 'framer-motion'
 import { format, parseISO } from 'date-fns'
 import { useTranslation } from 'react-i18next'
@@ -307,6 +307,10 @@ export function EventModal(): JSX.Element | null {
   // the form below would keep the last event's values, including its reminders.
   const wasModalOpen = useRef(false)
   const titleInputRef = useRef<HTMLInputElement>(null)
+  // The title input sits in the modal header, above the <form>, so it has to
+  // be tied to the form by id. Without that it is not a form control at all:
+  // Enter in it submits nothing, and its `required` never runs.
+  const formId = useId()
 
   useFocusTrap(dialogRef, isModalOpen && !isClosing)
 
@@ -1649,6 +1653,7 @@ export function EventModal(): JSX.Element | null {
                   onKeyDown={handleTitleKeyDown}
                   className={styles.modalTitle}
                   data-component="event-title-input"
+                  form={formId}
                   required
                   onInvalid={(e) => {
                     e.preventDefault()
@@ -1704,6 +1709,7 @@ export function EventModal(): JSX.Element | null {
           <hr className={styles.modalDivider} />
           <form
             key={`${selectedEventId}-${selectedDate}-${selectedEventType}`}
+            id={formId}
             onClick={(e) => {
               // Close suggestions when clicking outside the suggestions dropdown
               if (!(e.target as HTMLElement).closest(`.${styles.titleSuggestions}`)) {
