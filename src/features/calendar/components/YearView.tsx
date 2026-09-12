@@ -100,8 +100,8 @@ export function YearView(): JSX.Element {
   }
 
   return (
-    <div className={styles.container}>
-      <div className={styles.grid}>
+    <div className={styles.container} data-component="year-view">
+      <div className={`${styles.grid} ${showWeekNumbers ? styles.gridWithWeekNum : ''}`}>
         {months.map((m) => {
           const days = eachDayOfInterval({
             start: startOfWeek(startOfMonth(m), { weekStartsOn: firstDayOfWeek }),
@@ -119,6 +119,7 @@ export function YearView(): JSX.Element {
               className={styles.month}
               role="button"
               tabIndex={0}
+              data-component="year-month"
               onClick={() => handleMonthClick(m)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
@@ -171,6 +172,7 @@ export function YearView(): JSX.Element {
                           <button
                             key={dayKey}
                             className={`${styles.day} ${isTodayDate ? styles.today : ''}`}
+                            data-component="year-day"
                             onClick={(e) => handleDayClick(day, e)}
                           >
                             {format(day, 'd')}
