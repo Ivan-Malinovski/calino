@@ -11,7 +11,9 @@ import {
   normalizeAdjustableTheme,
   useSettingsStore,
 } from '@/store/settingsStore'
+import { useCalendarStore } from '@/store/calendarStore'
 import type { UserSettings } from '@/types'
+import type { AutoCategoryRule, Category } from '@/types/categories'
 
 // ─── Version ──────────────────────────────────────────────────────────────────
 
@@ -25,6 +27,21 @@ export interface SettingsSyncPayload {
   version: number
   syncedAt: string
   settings: Partial<UserSettings>
+  /**
+   * Category colours and the keyword rules that file events under them. They
+   * live in the calendar store, not the settings store, but they are as
+   * Calino-only as any setting: the name travels on each event as CATEGORIES,
+   * the colour has nowhere else to go. Optional because a payload written by
+   * an older build has neither, and that has to mean "leave mine alone".
+   */
+  categories?: Category[]
+  autoCategoryRules?: AutoCategoryRule[]
+}
+
+/** The two category lists as they sit in the calendar store. */
+export interface SyncedCategories {
+  categories: Category[]
+  autoCategoryRules: AutoCategoryRule[]
 }
 
 // ─── Syncable fields ──────────────────────────────────────────────────────────
@@ -95,10 +112,13 @@ export function serializeSettings(): string {
       ;(syncableSettings as Record<string, unknown>)[key] = state[key]
     }
   }
+  const calendarState = useCalendarStore.getState()
   const payload: SettingsSyncPayload = {
     version: SYNC_FORMAT_VERSION,
     syncedAt: new Date().toISOString(),
     settings: syncableSettings,
+    categories: calendarState.categories,
+    autoCategoryRules: calendarState.autoCategoryRules,
   }
   return JSON.stringify(payload, null, 2)
 }
@@ -110,6 +130,8 @@ export function serializeSettings(): string {
 export function deserializeSettings(json: string): {
   settings: Partial<UserSettings>
   syncedAt: string
+  categories?: Category[]
+  autoCategoryRules?: AutoCategoryRule[]
 } | null {
   try {
     const payload = JSON.parse(json) as SettingsSyncPayload
@@ -121,7 +143,15 @@ export function deserializeSettings(json: string): {
       console.warn('[SettingsSync] Invalid settings payload')
       return null
     }
-    return { settings: payload.settings, syncedAt: payload.syncedAt }
+    return {
+      settings: payload.settings,
+      syncedAt: payload.syncedAt,
+      // Anything that isn't a list is treated as "not sent".
+      ...(Array.isArray(payload.categories) ? { categories: payload.categories } : {}),
+      ...(Array.isArray(payload.autoCategoryRules)
+        ? { autoCategoryRules: payload.autoCategoryRules }
+        : {}),
+    }
   } catch (error) {
     console.warn('[SettingsSync] Failed to parse settings JSON:', error)
     return null
@@ -153,6 +183,98 @@ export function mergeSettings(
     }
   }
   return merged
+}
+
+/**
+ * Merge remote category lists onto local ones.
+ *
+ * Categories are keyed by *name*, not id. Every device mints its own id: sync
+ * creates an unseen CATEGORIES value as a new category with a fresh UUID and
+ * a random colour, so the same "Work" has a different id on every device.
+ * Events reference categories by name, so a name-keyed merge is what makes a
+ * remote colour land on the right thing. A rule references its category by id,
+ * so each remote rule is re-pointed through the name at the local category.
+ *
+ * The merge is additive on purpose. A remote colour wins for a name both sides
+ * have, a name only the remote has is added, and a name only the local side
+ * has is kept: a deletion can't travel this way regardless, because the
+ * server's events still carry the name and the next calendar sync would put
+ * the category straight back. Rules merge by their own id the same way.
+ *
+ * A remote payload with no lists at all — written by a build that didn't
+ * send them — leaves the local lists untouched.
+ */
+export function mergeCategories(
+  local: SyncedCategories,
+  remote: Partial<SyncedCategories>
+): SyncedCategories {
+  if (!remote.categories) return local
+
+  // Returns `local` itself when nothing differs, so callers can skip the
+  // store write (and the cache invalidation that comes with it).
+  let changed = false
+  const categories = local.categories.map((category) => {
+    const match = remote.categories!.find((c) => c.name === category.name)
+    if (!match || match.color === category.color) return category
+    changed = true
+    return { ...category, color: match.color }
+  })
+  const localNames = new Set(local.categories.map((c) => c.name))
+  const localIds = new Set(local.categories.map((c) => c.id))
+  for (const category of remote.categories) {
+    if (localNames.has(category.name) || localIds.has(category.id)) continue
+    categories.push(category)
+    localNames.add(category.name)
+    localIds.add(category.id)
+    changed = true
+  }
+
+  let autoCategoryRules = local.autoCategoryRules
+  if (remote.autoCategoryRules) {
+    // Remote rule → remote category → its name → the merged category's id.
+    const remoteNameById = new Map(remote.categories.map((c) => [c.id, c.name]))
+    const mergedIdByName = new Map(categories.map((c) => [c.name, c.id]))
+    const remapped: AutoCategoryRule[] = []
+    for (const rule of remote.autoCategoryRules) {
+      const name = remoteNameById.get(rule.categoryId)
+      const categoryId = name ? mergedIdByName.get(name) : undefined
+      if (categoryId) remapped.push({ ...rule, categoryId })
+    }
+    const remoteRuleIds = new Set(remapped.map((r) => r.id))
+    const kept = local.autoCategoryRules.filter((r) => !remoteRuleIds.has(r.id))
+    const next = [...kept, ...remapped]
+    if (JSON.stringify(next) !== JSON.stringify(local.autoCategoryRules)) {
+      autoCategoryRules = next
+      changed = true
+    }
+  }
+
+  return changed ? { categories, autoCategoryRules } : local
+}
+
+/**
+ * Apply a remote payload that has won conflict resolution: settings onto the
+ * settings store, categories onto the calendar store. The three places that
+ * pull settings — the hook, the account-add discovery and the post-sync
+ * pull in `useCalDAV` — all go through here so they can't drift.
+ */
+export function applyRemotePayload(remote: {
+  settings: Partial<UserSettings>
+  categories?: Category[]
+  autoCategoryRules?: AutoCategoryRule[]
+}): void {
+  const settingsStore = useSettingsStore.getState()
+  settingsStore.updateSettings(mergeSettings(settingsStore, remote.settings))
+
+  const calendarStore = useCalendarStore.getState()
+  const local: SyncedCategories = {
+    categories: calendarStore.categories,
+    autoCategoryRules: calendarStore.autoCategoryRules,
+  }
+  const merged = mergeCategories(local, remote)
+  if (merged !== local) {
+    calendarStore.applySyncedCategories(merged.categories, merged.autoCategoryRules)
+  }
 }
 
 // ─── Conflict resolution helpers ──────────────────────────────────────────────

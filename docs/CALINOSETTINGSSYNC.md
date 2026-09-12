@@ -124,9 +124,16 @@ The `ATTACH` field contains base64-encoded JSON:
     "useCategoryColors": true,
     "journalEnabled": false,
     "taskCollapseOverrides": {}
-  }
+  },
+  "categories": [{ "id": "…", "name": "Work", "color": "#b07d4f" }],
+  "autoCategoryRules": [{ "id": "…", "keywords": ["standup"], "categoryId": "…" }]
 }
 ```
+
+`categories` and `autoCategoryRules` come from the calendar store rather than
+the settings store. Both are optional in the payload: one written by a build
+that predates them has neither, and a reader treats that as "leave mine alone"
+rather than "delete everything".
 
 ### What's Synced vs. What's Not
 
@@ -136,7 +143,7 @@ The `ATTACH` field contains base64-encoded JSON:
 - Default view, event density, week numbers
 - Theme mode, light/dark theme names, and both Adjustable theme profiles
 - Notification preferences
-- Category colors, completed task visibility
+- Category colours and auto-category keyword rules, completed task visibility
 
 **NOT synced** (local-only):
 
@@ -166,6 +173,23 @@ Remote DTSTAMP ≤ lastSyncedAt  →  Local wins (we're up to date or ahead)
 `lastModified` instead. The comparison is against the last remote `DTSTAMP`, so a
 remote write that happened after the last pull can still win.
 
+### Categories
+
+Settings are scalars, so "remote wins" copies each one over. Categories are a
+list whose ids differ per device — calendar sync creates any `CATEGORIES` value
+it hasn't seen as a new category with a fresh UUID and a random colour — so the
+merge (`mergeCategories`) keys on **name**:
+
+- A name both sides have takes the remote colour and keeps the local id.
+- A name only the remote has is added.
+- A name only the local side has is kept. Deletions don't travel: the server's
+  events still carry the name, so the next calendar sync would recreate the
+  category anyway.
+
+Auto-category rules reference a category by id, so each remote rule is
+re-pointed through the category name at the local id; a rule whose category
+can't be resolved is dropped. Rules merge by their own id, remote copy winning.
+
 ## Sync Flow
 
 ### Pull (Automatic)
@@ -178,7 +202,7 @@ Happens as part of the normal CalDAV calendar sync cycle:
 4. Fetch settings VEVENT via REPORT (UID filter)
 5. Extract base64 from ATTACH, decode, parse JSON
 6. Compare `DTSTAMP` vs `lastSyncedAt`
-7. If remote wins → merge settings into Zustand store
+7. If remote wins → `applyRemotePayload`: merge settings into the settings store, categories into the calendar store
 8. Update `lastSyncedAt`
 
 ### Push (Manual)

@@ -40,6 +40,9 @@ function buildSettingsVCalendar(firstDayOfWeek: number): string {
     version: 1,
     syncedAt: new Date().toISOString(),
     settings: { firstDayOfWeek },
+    // Category colours ride along with the settings (issue #155).
+    categories: [{ id: 'remote-focus', name: 'Focus', color: '#3b82f6' }],
+    autoCategoryRules: [{ id: 'remote-rule', keywords: ['deep work'], categoryId: 'remote-focus' }],
   }
   const json = JSON.stringify(payload)
   // Match the base64 charset Calino uses: standard alphabet, padded.
@@ -155,6 +158,13 @@ test.describe('CalDAV settings sync', () => {
     await expect(
       page.getByRole('radio', { name: 'Sunday' })
     ).toHaveAttribute('aria-checked', 'true')
+
+    // The category came across with its colour, and its rule with it.
+    await page.locator('[data-component="settings-nav-item"][data-tab="categories"]').click()
+    await expect(
+      page.locator('[data-component="category-row"][data-category-name="Focus"]')
+    ).toHaveAttribute('data-category-color', '#3b82f6')
+    await expect(page.getByText('deep work')).toBeVisible()
   })
 
   // R1.22 regression — the auto-discovery toast must not lie.

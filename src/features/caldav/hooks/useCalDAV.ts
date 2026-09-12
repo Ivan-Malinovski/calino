@@ -1277,7 +1277,7 @@ export function useCalDAVInstance(): UseCalDAVReturn {
             deriveCalendarHomeUrl,
             dtstampToISO,
             deserializeSettings,
-            mergeSettings,
+            applyRemotePayload,
             resolveConflict,
             setLastSyncedAt,
           } = await import('@/lib/settingsSync')
@@ -1300,14 +1300,9 @@ export function useCalDAVInstance(): UseCalDAVReturn {
                 if (json) {
                   const parsed = deserializeSettings(json)
                   if (parsed) {
-                    const localSettings = useSettingsStore.getState()
                     const dtstampIso = dtstampToISO(remote.dtstamp)
                     const winner = resolveConflict(new Date(0).toISOString(), dtstampIso)
-                    const merged =
-                      winner === 'remote'
-                        ? mergeSettings(localSettings, parsed.settings)
-                        : localSettings
-                    useSettingsStore.getState().updateSettings(merged)
+                    if (winner === 'remote') applyRemotePayload(parsed)
                     appliedRemote = true
                   }
                 }
@@ -1938,7 +1933,7 @@ export function useCalDAVInstance(): UseCalDAVReturn {
             deriveCalendarHomeUrl,
             dtstampToISO,
             deserializeSettings,
-            mergeSettings,
+            applyRemotePayload,
             resolveConflict,
             setEtag,
             setLastSyncedAt,
@@ -1962,17 +1957,13 @@ export function useCalDAVInstance(): UseCalDAVReturn {
                   if (json) {
                     const parsed = deserializeSettings(json)
                     if (parsed) {
-                      const localSettings = useSettingsStore.getState()
                       const dtstampIso = dtstampToISO(remote.dtstamp)
                       const localSyncedAt = getLastSyncedAt()
                       const winner = resolveConflict(
                         localSyncedAt || '1970-01-01T00:00:00Z',
                         dtstampIso
                       )
-                      if (winner === 'remote') {
-                        const merged = mergeSettings(localSettings, parsed.settings)
-                        useSettingsStore.getState().updateSettings(merged)
-                      }
+                      if (winner === 'remote') applyRemotePayload(parsed)
                       setLastSyncedAt(new Date().toISOString())
                     }
                   }
