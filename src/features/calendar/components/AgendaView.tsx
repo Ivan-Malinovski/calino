@@ -48,6 +48,46 @@ interface EventWithDate {
   date: Date
 }
 
+/**
+ * Put each subtask directly under its parent, the way the tasks page lists
+ * them. The day's sort is by start time, which knows nothing about the tree,
+ * so a subtask that happened to be created first came out above its parent —
+ * indented under whatever row sat above it. A task whose parent is due on a
+ * different day has nothing here to sit under and keeps its sorted place.
+ */
+function nestSubtasksUnderParents(items: EventWithDate[]): EventWithDate[] {
+  const taskIds = new Set<string>()
+  for (const item of items) if (item.event.type === 'task') taskIds.add(item.event.id)
+  const parentOf = (item: EventWithDate): string | undefined => {
+    const parentId = item.event.type === 'task' ? item.event.parentTaskId : undefined
+    return parentId && taskIds.has(parentId) ? parentId : undefined
+  }
+
+  const childrenByParent = new Map<string, EventWithDate[]>()
+  for (const item of items) {
+    const parentId = parentOf(item)
+    if (!parentId) continue
+    const siblings = childrenByParent.get(parentId) ?? []
+    siblings.push(item)
+    childrenByParent.set(parentId, siblings)
+  }
+  if (childrenByParent.size === 0) return items
+
+  const ordered: EventWithDate[] = []
+  const placed = new Set<string>()
+  const place = (item: EventWithDate): void => {
+    if (placed.has(item.event.id)) return
+    placed.add(item.event.id)
+    ordered.push(item)
+    for (const child of childrenByParent.get(item.event.id) ?? []) place(child)
+  }
+  for (const item of items) if (!parentOf(item)) place(item)
+  // Malformed data can make a cycle with no root on this day; nothing is
+  // allowed to disappear because of it.
+  for (const item of items) place(item)
+  return ordered
+}
+
 interface DayGroup {
   type: 'day' | 'skip'
   days: Date[]
@@ -488,7 +528,9 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
       )
       eventMap.set(
         dateKey,
-        arr.filter(({ event }) => event.type !== 'task' || visibleTaskIds.has(event.id))
+        nestSubtasksUnderParents(
+          arr.filter(({ event }) => event.type !== 'task' || visibleTaskIds.has(event.id))
+        )
       )
     })
 

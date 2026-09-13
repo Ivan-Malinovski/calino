@@ -33,6 +33,31 @@ async function seedAgendaItems(page: Page): Promise<void> {
               categories: ['Focus'],
             },
             {
+              // Stored before its parent, so the day's start-time sort puts it
+              // first; the agenda has to move it under the parent regardless.
+              id: 'agenda-early-child',
+              title: 'Agenda early child',
+              type: 'task',
+              start: `${today}T00:00:00`,
+              end: `${today}T00:00:00`,
+              dueDate: today,
+              isAllDay: true,
+              calendarId: 'default',
+              parentTaskId: 'agenda-late-parent',
+              completed: false,
+            },
+            {
+              id: 'agenda-late-parent',
+              title: 'Agenda late parent',
+              type: 'task',
+              start: `${today}T00:00:00`,
+              end: `${today}T00:00:00`,
+              dueDate: today,
+              isAllDay: true,
+              calendarId: 'default',
+              completed: false,
+            },
+            {
               id: 'agenda-parent',
               title: 'Agenda parent',
               type: 'task',
@@ -212,6 +237,29 @@ test('agenda indents subtasks and moves tasks and events between days', async ({
       agendaEvent.evaluate((element) => getComputedStyle(element.parentElement as Element).overflow)
     )
     .toBe('visible')
+})
+
+test('agenda lists a subtask under its parent even when it sorts first', async ({ page }) => {
+  await clearState(page)
+  await seedAgendaItems(page)
+  await page.goto('/agenda')
+
+  const today = localDate()
+  const day = page.locator(`[data-date="${today}"]`)
+  await expect(day).toBeVisible()
+
+  const titles = await day
+    .locator('[data-component="agenda-task"] [class*="agendaTaskTitle"]')
+    .allTextContents()
+  const parentAt = titles.indexOf('Agenda late parent')
+  expect(parentAt).toBeGreaterThanOrEqual(0)
+  expect(titles[parentAt + 1]).toBe('Agenda early child')
+  await expect(
+    day
+      .locator('[data-component="agenda-task"]')
+      .filter({ hasText: 'Agenda early child' })
+      .locator('[data-task-depth]')
+  ).toHaveAttribute('data-task-depth', '1')
 })
 
 test('agenda colours a task row by its category like an event row', async ({ page }) => {
