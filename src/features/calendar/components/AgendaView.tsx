@@ -34,7 +34,7 @@ import {
 } from '@/lib/datetime'
 import { useTranslation } from 'react-i18next'
 import { safeCalDAVUpdate } from '@/lib/caldavHelpers'
-import { extractOriginalEventId } from '@/lib/events'
+import { extractOriginalEventId, hasDueTime } from '@/lib/events'
 import { LocationLink } from './LocationLink'
 import { useDateChangeMotion } from '@/hooks/useDateChangeMotion'
 import { useTaskContextMenuItems } from '../hooks/useTaskContextMenuItems'
@@ -770,13 +770,17 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
                                         >
                                           <div className={styles.agendaTaskMain}>
                                             <span className={styles.agendaTaskTime}>
-                                              {event.start.includes('T00:00')
-                                                ? t('surface.agendaDue')
-                                                : formatEventTime(
-                                                    event.start,
+                                              {/* Off dueDate/isAllDay, as the month pill
+                                                  and the form are: `start` is rewritten
+                                                  as a UTC instant by a drag, so a string
+                                                  check on it only held in UTC. */}
+                                              {hasDueTime(event) && event.dueDate
+                                                ? formatEventTime(
+                                                    event.dueDate,
                                                     event.timezone,
                                                     timeFormat
-                                                  )}
+                                                  )
+                                                : t('surface.agendaDue')}
                                             </span>
                                             <button
                                               type="button"

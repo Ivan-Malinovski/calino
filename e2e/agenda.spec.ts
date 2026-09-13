@@ -67,6 +67,31 @@ async function seedAgendaItems(page: Page): Promise<void> {
               completed: false,
               categories: ['Focus'],
             },
+            {
+              // A date-only task after a drag: the handlers rewrite `start` as
+              // a UTC instant (this is local midnight for UTC+10) while
+              // `dueDate` and `isAllDay` stay as the form saved them.
+              id: 'agenda-dragged',
+              title: 'Agenda dragged task',
+              type: 'task',
+              start: new Date(`${today}T00:00:00+10:00`).toISOString(),
+              end: new Date(`${today}T23:59:59+10:00`).toISOString(),
+              dueDate: today,
+              isAllDay: true,
+              calendarId: 'default',
+              completed: false,
+            },
+            {
+              id: 'agenda-timed',
+              title: 'Agenda timed task',
+              type: 'task',
+              start: `${today}T15:30:00`,
+              end: `${today}T15:30:00`,
+              dueDate: `${today}T15:30:00`,
+              isAllDay: false,
+              calendarId: 'default',
+              completed: false,
+            },
           ],
         }
         localStorage.setItem(calendarKey, JSON.stringify(parsed))
@@ -235,6 +260,27 @@ test('agenda colours a task row by its category like an event row', async ({ pag
     .first()
   await expect(eventBar).toHaveCSS('background-color', 'rgb(59, 130, 246)')
   await expect(taskBar).toHaveCSS('background-color', 'rgb(59, 130, 246)')
+})
+
+test("agenda reads a task's due time from dueDate, not from start", async ({ page }) => {
+  await clearState(page)
+  await seedAgendaItems(page)
+  await page.goto('/agenda')
+
+  const today = localDate()
+  await expect(page.locator(`[data-date="${today}"]`)).toBeVisible()
+
+  const taskTime = (title: string) =>
+    page
+      .locator('[data-component="agenda-task"]')
+      .filter({ hasText: title })
+      .locator('[class*="agendaTaskTime"]')
+
+  // Date-only stays "Due" however `start` has been rewritten.
+  await expect(taskTime('Agenda dragged task')).toHaveText('Due')
+  await expect(taskTime('Agenda task')).toHaveText('Due')
+  // A real due time still shows.
+  await expect(taskTime('Agenda timed task')).toHaveText(/3:30|15:30/)
 })
 
 test('agenda collapses consecutive empty dates into a free-range row', async ({ page }) => {
