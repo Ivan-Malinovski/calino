@@ -4,6 +4,29 @@ All notable changes to Calino will be documented in this file.
 
 ## [Unreleased]
 
+## [0.33.4] - 2026-09-14
+
+### Added
+
+- **New native Android build** — a newer debug preview of the standalone
+  native Calino Android app. It uses the same package name,
+  `calino.malinov.ski`, so it **will install over the old native Android
+  app**. It has more features and is significantly sleeker and less janky
+  than the old build. The basics have been tested, but not enough to trust it
+  with important data that is not backed up.
+
+### Fixed
+
+- **Agenda task times use the due date** — date-only tasks no longer appear
+  with an incorrect time after being moved. Thanks to
+  [@Pwnion](https://github.com/Pwnion) in
+  [#159](https://github.com/Ivan-Malinovski/calino/pull/159).
+
+- **Agenda subtasks stay with their parents** — subtasks are now listed
+  immediately beneath their parent when both are due on the same day. Thanks
+  to [@Pwnion](https://github.com/Pwnion) in
+  [#161](https://github.com/Ivan-Malinovski/calino/pull/161).
+
 ## [0.33.3] - 2026-09-12
 
 ### Added
