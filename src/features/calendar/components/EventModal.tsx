@@ -5,7 +5,7 @@ import { format, parseISO } from 'date-fns'
 import { useTranslation } from 'react-i18next'
 import { pad2, toEventInstant, deviceTimezone, formatDisplayDate } from '@/lib/datetime'
 import { createUuid } from '@/lib/uuid'
-import { useCalendarStore } from '@/store/calendarStore'
+import { calendarMutesReminders, useCalendarStore } from '@/store/calendarStore'
 import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
 import { showToast } from '@/lib/toast'
 import { safeCalDAVUpdate } from '@/lib/caldavHelpers'
@@ -646,7 +646,9 @@ export function EventModal(): JSX.Element | null {
   // A webcal subscription's calendar — mutation is blocked, matching
   // isCalendarReadOnly() in calendarStore.ts (store actions themselves stay
   // unguarded since sync writes to these calendars legitimately).
-  const isCurrentCalendarReadOnly = calendars.find((c) => c.id === calendarId)?.readOnly === true
+  const currentCalendar = calendars.find((c) => c.id === calendarId)
+  const isCurrentCalendarReadOnly = currentCalendar?.readOnly === true
+  const remindersMuted = calendarMutesReminders(currentCalendar)
   const isRecurringEvent = initialState.recurring
   const showSuggestions = !isEditing && titleSuggestions.length > 0
   const originalEventId = initialState.originalEventId
@@ -1851,6 +1853,7 @@ export function EventModal(): JSX.Element | null {
                     onTravelDurationChange={setTravelDuration}
                     reminders={reminders}
                     onRemindersChange={setReminders}
+                    remindersMuted={remindersMuted}
                     transparency={transparency}
                     onTransparencyChange={setTransparency}
                     relatedTo={relatedTo}
@@ -1922,7 +1925,9 @@ export function EventModal(): JSX.Element | null {
                 {categories.length > 0 && (
                   <div className={styles.modalRow2}>
                     <div className={styles.categoriesContainer}>
-                      <div className={styles.categoriesLabel}>{t('modals.eventModal.categories')}</div>
+                      <div className={styles.categoriesLabel}>
+                        {t('modals.eventModal.categories')}
+                      </div>
                       <div className={styles.categoriesList}>
                         {categories.map((cat) => (
                           <button
@@ -2000,7 +2005,9 @@ export function EventModal(): JSX.Element | null {
                   className={`${styles.modalDelete} ${confirmDelete ? styles.modalDeleteConfirm : ''}`}
                   onClick={handleDelete}
                 >
-                  {confirmDelete ? t('modals.eventModal.confirmDelete') : t('modals.eventModal.delete')}
+                  {confirmDelete
+                    ? t('modals.eventModal.confirmDelete')
+                    : t('modals.eventModal.delete')}
                 </button>
               )}
               <div className={styles.modalActions}>
@@ -2078,7 +2085,9 @@ export function EventModal(): JSX.Element | null {
                   {/* No in-flight state: the save is applied locally and the
                       modal closes on the same tick, with the global progress
                       pill carrying the server write from there. */}
-                  <span>{isEditing ? t('modals.eventModal.save') : t('modals.eventModal.create')}</span>
+                  <span>
+                    {isEditing ? t('modals.eventModal.save') : t('modals.eventModal.create')}
+                  </span>
                 </button>
               </div>
             </div>

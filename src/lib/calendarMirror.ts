@@ -271,7 +271,10 @@ export function buildMirrorPayload(
         rrule && exdates.length > 0
           ? exdates.map((iso) => toBasicFormat(iso, event.isAllDay)).join(',')
           : undefined,
-      reminders: getEffectiveReminders(event)
+      reminders: getEffectiveReminders(
+        event,
+        calendars.find((item) => item.id === event.calendarId)
+      )
         // METHOD_ALERT is the only method we register on the calendar; an
         // email VALARM is the server's job, not the phone's.
         .filter((reminder) => reminder.method !== 'email')

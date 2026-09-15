@@ -1,5 +1,6 @@
 import { format, addMinutes } from 'date-fns'
-import type { CalendarEvent, Reminder } from '@/types'
+import type { Calendar, CalendarEvent, Reminder } from '@/types'
+import { calendarMutesReminders, useCalendarStore } from '@/store/calendarStore'
 
 export type NotificationPermissionStatus = 'granted' | 'denied' | 'default'
 
@@ -21,7 +22,8 @@ export function makeDefaultReminders(defaultReminderMinutes: number | null): Rem
 }
 
 /**
- * Which reminders apply to an event: exactly the ones it carries.
+ * Which reminders apply to an event: exactly the ones it carries, unless its
+ * calendar is a muted webcal overlay.
  *
  * This used to substitute the "Default Reminder" setting whenever an event had
  * none, which meant every event notified whether or not it showed a reminder in
@@ -29,8 +31,15 @@ export function makeDefaultReminders(defaultReminderMinutes: number | null): Rem
  * list is indistinguishable from one that was never set. The default reminder is
  * now applied where it can be seen and edited: it seeds the new-event form (see
  * `makeDefaultReminders`), and what the form shows is what fires.
+ *
+ * `calendar` is optional so callers that already have the list (the Android
+ * mirror payload) do not have to go through the store. Web / native lookup
+ * falls back to the store, matching `isCalendarReadOnly`.
  */
-export function getEffectiveReminders(event: CalendarEvent): Reminder[] {
+export function getEffectiveReminders(event: CalendarEvent, calendar?: Calendar): Reminder[] {
+  const resolved =
+    calendar ?? useCalendarStore.getState().calendars.find((c) => c.id === event.calendarId)
+  if (calendarMutesReminders(resolved)) return []
   return event.reminders ?? []
 }
 

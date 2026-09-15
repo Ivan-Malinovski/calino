@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react'
 import { createUuid } from '@/lib/uuid'
-import type { Calendar } from '@/types'
+import type { Calendar, CalendarEvent } from '@/types'
 import { fetchWebcalIcs, normalizeWebcalUrl } from '../fetchWebcal'
 import { parseICALDataAsync } from '@/features/caldav/adapter/iCalendarAdapter'
 import * as storage from '../subscriptionStorage'
@@ -9,6 +9,7 @@ import {
   useCalendarStore,
   selectAddCalendar,
   selectDeleteCalendar,
+  selectUpdateCalendar,
   selectApplyEventChanges,
 } from '@/store/calendarStore'
 import { useConfigStore } from '@/store/configStore'
@@ -30,11 +31,23 @@ export interface AddWebcalSubscriptionOptions {
   refreshIntervalMinutes: number
   proxyUrl?: string | null
   isPreconfigured?: boolean
+  /** Opt in to the publisher's VALARMs. Absent/false = muted (the default). */
+  notifyReminders?: boolean
+}
+
+export interface UpdateWebcalSubscriptionOptions {
+  url: string
+  name: string
+  color: string
+  refreshIntervalMinutes: number
+  proxyUrl?: string | null
+  notifyReminders: boolean
 }
 
 interface UseWebcalSubscriptionsReturn {
   subscriptions: WebcalSubscription[]
   addSubscription: (options: AddWebcalSubscriptionOptions) => Promise<WebcalSubscription>
+  updateSubscription: (id: string, options: UpdateWebcalSubscriptionOptions) => Promise<void>
   removeSubscription: (id: string) => void
   syncSubscription: (id: string) => Promise<void>
   syncAll: (options?: { silent?: boolean }) => Promise<void>
@@ -52,6 +65,7 @@ export function useWebcalSubscriptions(): UseWebcalSubscriptionsReturn {
 
   const storeAddCalendar = useCalendarStore(selectAddCalendar)
   const storeDeleteCalendar = useCalendarStore(selectDeleteCalendar)
+  const storeUpdateCalendar = useCalendarStore(selectUpdateCalendar)
   const applyEventChanges = useCalendarStore(selectApplyEventChanges)
 
   useEffect(() => {
@@ -78,6 +92,7 @@ export function useWebcalSubscriptions(): UseWebcalSubscriptionsReturn {
           showTasksInViews: true,
           source: 'webcal',
           readOnly: true,
+          notifyReminders: options.notifyReminders === true,
         }
         storeAddCalendar(calendar)
         applyEventChanges({ upserts: events, deleteIds: [] })
@@ -97,6 +112,98 @@ export function useWebcalSubscriptions(): UseWebcalSubscriptionsReturn {
       })
     },
     [storeAddCalendar, applyEventChanges]
+  )
+
+  const replaceSubscriptionEvents = useCallback(
+    (calendarId: string, freshEvents: CalendarEvent[]): void => {
+      const freshById = new Map(freshEvents.map((e) => [e.id, e]))
+      const existingEvents = useCalendarStore
+        .getState()
+        .events.filter((e) => e.calendarId === calendarId)
+      const existingById = new Map(existingEvents.map((e) => [e.id, e]))
+
+      const upserts: typeof freshEvents = []
+      for (const [eventId, event] of freshById) {
+        const existing = existingById.get(eventId)
+        if (!existing) {
+          upserts.push(event)
+        } else if (
+          // #112 — a feed without CREATED parses to `created: undefined`,
+          // while the stored copy carries the stamp we gave it on first
+          // sight. Comparing those directly reports every event as changed
+          // on every refresh, so hold the local stamps steady here; the
+          // store keeps them anyway.
+          JSON.stringify(existing) !==
+          JSON.stringify({
+            ...event,
+            created: event.created ?? existing.created,
+            lastModified: event.lastModified ?? existing.lastModified,
+          })
+        ) {
+          upserts.push(event)
+        }
+      }
+      const deleteIds = [...existingById.keys()].filter((eventId) => !freshById.has(eventId))
+      applyEventChanges({ upserts, deleteIds })
+    },
+    [applyEventChanges]
+  )
+
+  const updateSubscription = useCallback(
+    async (id: string, options: UpdateWebcalSubscriptionOptions): Promise<void> => {
+      const subscription = storage.getSubscriptionById(id)
+      if (!subscription) return
+
+      const normalizedUrl = subscription.isPreconfigured
+        ? subscription.url
+        : normalizeWebcalUrl(options.url)
+      const nextProxy = options.proxyUrl ?? null
+      const feedChanged =
+        normalizedUrl !== subscription.url || nextProxy !== (subscription.proxyUrl ?? null)
+
+      const applyMeta = (extra?: { lastFetchedAt?: string; lastError?: string | null }): void => {
+        storeUpdateCalendar(subscription.calendarId, {
+          name: options.name,
+          color: options.color,
+          notifyReminders: options.notifyReminders,
+        })
+        storage.updateSubscription(id, {
+          name: options.name,
+          url: normalizedUrl,
+          refreshIntervalMinutes: options.refreshIntervalMinutes,
+          proxyUrl: nextProxy,
+          ...extra,
+        })
+        setSubscriptions((prev) =>
+          prev.map((s) =>
+            s.id === id
+              ? {
+                  ...s,
+                  name: options.name,
+                  url: normalizedUrl,
+                  refreshIntervalMinutes: options.refreshIntervalMinutes,
+                  proxyUrl: nextProxy,
+                  ...extra,
+                }
+              : s
+          )
+        )
+      }
+
+      if (!feedChanged) {
+        applyMeta()
+        return
+      }
+
+      await withProgress('Updating subscription…', async (report) => {
+        const icsText = await fetchWebcalIcs(normalizedUrl, nextProxy)
+        report({ label: 'Importing events…' })
+        const freshEvents = await parseICALDataAsync(icsText, subscription.calendarId)
+        replaceSubscriptionEvents(subscription.calendarId, freshEvents)
+        applyMeta({ lastFetchedAt: new Date().toISOString(), lastError: null })
+      })
+    },
+    [storeUpdateCalendar, replaceSubscriptionEvents]
   )
 
   const removeSubscription = useCallback(
@@ -121,36 +228,7 @@ export function useWebcalSubscriptions(): UseWebcalSubscriptionsReturn {
         const icsText = await fetchWebcalIcs(subscription.url, subscription.proxyUrl)
         report?.({ label: 'Importing events…' })
         const freshEvents = await parseICALDataAsync(icsText, subscription.calendarId)
-        const freshById = new Map(freshEvents.map((e) => [e.id, e]))
-
-        const existingEvents = useCalendarStore
-          .getState()
-          .events.filter((e) => e.calendarId === subscription.calendarId)
-        const existingById = new Map(existingEvents.map((e) => [e.id, e]))
-
-        const upserts: typeof freshEvents = []
-        for (const [id, event] of freshById) {
-          const existing = existingById.get(id)
-          if (!existing) {
-            upserts.push(event)
-          } else if (
-            // #112 — a feed without CREATED parses to `created: undefined`,
-            // while the stored copy carries the stamp we gave it on first
-            // sight. Comparing those directly reports every event as changed
-            // on every refresh, so hold the local stamps steady here; the
-            // store keeps them anyway.
-            JSON.stringify(existing) !==
-            JSON.stringify({
-              ...event,
-              created: event.created ?? existing.created,
-              lastModified: event.lastModified ?? existing.lastModified,
-            })
-          ) {
-            upserts.push(event)
-          }
-        }
-        const deleteIds = [...existingById.keys()].filter((eventId) => !freshById.has(eventId))
-        applyEventChanges({ upserts, deleteIds })
+        replaceSubscriptionEvents(subscription.calendarId, freshEvents)
 
         const now = new Date().toISOString()
         storage.updateSubscription(id, { lastFetchedAt: now, lastError: null })
@@ -165,7 +243,7 @@ export function useWebcalSubscriptions(): UseWebcalSubscriptionsReturn {
         )
       }
     },
-    [applyEventChanges]
+    [replaceSubscriptionEvents]
   )
 
   const syncSubscription = useCallback(
@@ -244,5 +322,12 @@ export function useWebcalSubscriptions(): UseWebcalSubscriptionsReturn {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isUnlocked, hasPreconfiguredWebcal])
 
-  return { subscriptions, addSubscription, removeSubscription, syncSubscription, syncAll }
+  return {
+    subscriptions,
+    addSubscription,
+    updateSubscription,
+    removeSubscription,
+    syncSubscription,
+    syncAll,
+  }
 }

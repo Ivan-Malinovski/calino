@@ -1,17 +1,27 @@
 import type { JSX } from 'react'
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { createPortal } from 'react-dom'
-import { useWebcalSubscriptions } from '@/features/webcal/hooks/useWebcalSubscriptions'
+import {
+  type AddWebcalSubscriptionOptions,
+  type UpdateWebcalSubscriptionOptions,
+} from '@/features/webcal/hooks/useWebcalSubscriptions'
+import type { WebcalSubscription } from '@/features/webcal/types'
 import { useAnimatedClose } from '@/hooks/useAnimatedClose'
 import { useModalDismiss } from '@/hooks/useModalDismiss'
 import { EVENT_COLORS } from '@/store/settingsStore'
+import { calendarMutesReminders, useCalendarStore } from '@/store/calendarStore'
 import { classifySyncError, syncErrorReason } from '@/features/caldav/client/errorMessages'
+import { normalizeWebcalUrl } from '@/features/webcal/fetchWebcal'
 import styles from './AddCalendarModal.module.css'
 
 interface SubscribeCalendarModalProps {
   isOpen: boolean
   onClose: () => void
+  mode?: 'add' | 'edit'
+  subscription?: WebcalSubscription
+  addSubscription: (options: AddWebcalSubscriptionOptions) => Promise<WebcalSubscription>
+  updateSubscription: (id: string, options: UpdateWebcalSubscriptionOptions) => Promise<void>
 }
 
 const REFRESH_OPTIONS = [
@@ -25,35 +35,58 @@ const REFRESH_OPTIONS = [
 export function SubscribeCalendarModal({
   isOpen,
   onClose,
+  mode = 'add',
+  subscription,
+  addSubscription,
+  updateSubscription,
 }: SubscribeCalendarModalProps): JSX.Element | null {
   const { t } = useTranslation('calendar')
+  const isEdit = mode === 'edit' && subscription !== undefined
+  const urlLocked = Boolean(isEdit && subscription.isPreconfigured)
+
   const [name, setName] = useState('')
   const [url, setUrl] = useState('')
   const [color, setColor] = useState<string>(EVENT_COLORS[0])
   const [refreshIntervalMinutes, setRefreshIntervalMinutes] = useState(60)
   const [showProxyField, setShowProxyField] = useState(false)
   const [proxyUrl, setProxyUrl] = useState('')
+  const [muteReminders, setMuteReminders] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState('')
 
-  const { addSubscription } = useWebcalSubscriptions()
   const formRef = useRef<HTMLFormElement>(null)
   const isSavingRef = useRef(false)
 
-  const resetForm = (): void => {
+  const resetForm = useCallback((): void => {
     setName('')
     setUrl('')
     setColor(EVENT_COLORS[0])
     setRefreshIntervalMinutes(60)
     setShowProxyField(false)
     setProxyUrl('')
+    setMuteReminders(true)
     setError('')
-  }
+  }, [])
+
+  useEffect(() => {
+    if (!isOpen || !isEdit || !subscription) return
+    const calendar = useCalendarStore
+      .getState()
+      .calendars.find((item) => item.id === subscription.calendarId)
+    setName((calendar?.name ?? subscription.name).trim())
+    setUrl(subscription.url)
+    setColor(calendar?.color ?? EVENT_COLORS[0])
+    setRefreshIntervalMinutes(subscription.refreshIntervalMinutes)
+    setProxyUrl(subscription.proxyUrl ?? '')
+    setShowProxyField(Boolean(subscription.proxyUrl))
+    setMuteReminders(calendarMutesReminders(calendar))
+    setError('')
+  }, [isOpen, isEdit, subscription])
 
   const doClose = useCallback((): void => {
     resetForm()
     onClose()
-  }, [onClose])
+  }, [onClose, resetForm])
   const { rendered, closing, requestClose } = useAnimatedClose(isOpen, doClose, 200)
   const dialogRef = useRef<HTMLDivElement>(null)
   useModalDismiss(dialogRef, rendered && !closing, requestClose)
@@ -66,24 +99,53 @@ export function SubscribeCalendarModal({
       return
     }
 
+    if (isEdit && subscription && !urlLocked) {
+      const nextUrl = normalizeWebcalUrl(url.trim())
+      const nextProxy = proxyUrl.trim() || null
+      const feedChanged =
+        nextUrl !== subscription.url || nextProxy !== (subscription.proxyUrl ?? null)
+      if (feedChanged && !confirm(t('surface.confirmChangeSubscriptionUrl'))) {
+        return
+      }
+    }
+
     isSavingRef.current = true
     setIsSaving(true)
     setError('')
 
+    const notifyReminders = !muteReminders
+    const displayName = name.trim() || (isEdit ? subscription!.name : 'Subscribed calendar')
+
     try {
-      await addSubscription({
-        url: url.trim(),
-        name: name.trim() || 'Subscribed calendar',
-        color,
-        refreshIntervalMinutes,
-        proxyUrl: proxyUrl.trim() || undefined,
-      })
+      if (isEdit && subscription) {
+        await updateSubscription(subscription.id, {
+          url: url.trim(),
+          name: displayName,
+          color,
+          refreshIntervalMinutes,
+          proxyUrl: proxyUrl.trim() || undefined,
+          notifyReminders,
+        })
+      } else {
+        await addSubscription({
+          url: url.trim(),
+          name: displayName,
+          color,
+          refreshIntervalMinutes,
+          proxyUrl: proxyUrl.trim() || undefined,
+          notifyReminders,
+        })
+      }
       requestClose()
     } catch (err) {
       setError(
         err instanceof Error
-          ? `Couldn't subscribe: ${syncErrorReason(classifySyncError(err.message), err.message)}`
-          : 'Failed to subscribe to calendar.'
+          ? isEdit
+            ? `Couldn't update: ${syncErrorReason(classifySyncError(err.message), err.message)}`
+            : `Couldn't subscribe: ${syncErrorReason(classifySyncError(err.message), err.message)}`
+          : isEdit
+            ? 'Failed to update calendar subscription.'
+            : 'Failed to subscribe to calendar.'
       )
     } finally {
       isSavingRef.current = false
@@ -115,9 +177,13 @@ export function SubscribeCalendarModal({
       >
         <div className={styles.modalHeader}>
           <h3 className={styles.modalTitle} id="subscribe-modal-title">
-            Subscribe to Calendar
+            {isEdit ? t('surface.editSubscriptionTitle') : t('surface.subscribeCalendarTitle')}
           </h3>
-          <button className={styles.modalClose} onClick={requestClose} aria-label={t('surface.close')}>
+          <button
+            className={styles.modalClose}
+            onClick={requestClose}
+            aria-label={t('surface.close')}
+          >
             ✕
           </button>
         </div>
@@ -145,6 +211,7 @@ export function SubscribeCalendarModal({
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               required
+              disabled={urlLocked}
             />
             <span className={styles.formHint}>
               This calendar is read-only — events are refreshed periodically and can&apos;t be
@@ -184,6 +251,20 @@ export function SubscribeCalendarModal({
             </div>
           </div>
           <div className={styles.formGroup}>
+            <label className={styles.muteRow} htmlFor="subscribe-mute-reminders">
+              <input
+                id="subscribe-mute-reminders"
+                type="checkbox"
+                checked={muteReminders}
+                onChange={(e) => setMuteReminders(e.target.checked)}
+                data-component="mute-reminders"
+                data-setting="mute-reminders"
+              />
+              <span className={styles.formLabel}>{t('surface.muteReminders')}</span>
+            </label>
+            <span className={styles.formHint}>{t('surface.muteRemindersHint')}</span>
+          </div>
+          <div className={styles.formGroup}>
             <button
               type="button"
               className={styles.chevronLabel}
@@ -214,7 +295,7 @@ export function SubscribeCalendarModal({
                 <input
                   id="subscribeProxyUrl"
                   className={styles.input}
-                placeholder={t('surface.proxyUrlPlaceholder')}
+                  placeholder={t('surface.proxyUrlPlaceholder')}
                   value={proxyUrl}
                   onChange={(e) => setProxyUrl(e.target.value)}
                 />
@@ -243,7 +324,15 @@ export function SubscribeCalendarModal({
               data-component="modal-save"
             >
               {isSaving && <span className={styles.buttonSpinner} aria-hidden="true" />}
-              <span>{isSaving ? 'Subscribing…' : 'Subscribe'}</span>
+              <span>
+                {isSaving
+                  ? isEdit
+                    ? 'Saving…'
+                    : 'Subscribing…'
+                  : isEdit
+                    ? 'Save Changes'
+                    : 'Subscribe'}
+              </span>
             </button>
           </div>
         </form>
