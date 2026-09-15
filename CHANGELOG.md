@@ -4,6 +4,26 @@ All notable changes to Calino will be documented in this file.
 
 ## [Unreleased]
 
+### Changed
+
+- **Subscribed `.ics` calendars no longer fire the publisher's reminders**
+  ([#165](https://github.com/Ivan-Malinovski/calino/issues/165)). Google and
+  most other iCal feeds include `VALARM`; Calino was scheduling those like
+  events you created, with no way to turn them off short of hiding the
+  calendar. New subscriptions mute by default. Existing ones go quiet on
+  upgrade — open the subscription in Settings → Sync → Edit if you wanted
+  those alarms. The event form and preview no longer show reminder chips
+  that will not fire. Android may still ring a previously mirrored alarm
+  until Calino next opens and rewrites the device calendar.
+
+### Added
+
+- **Edit for calendar subscriptions.** The row is no longer only Sync now /
+  Remove: Edit reopens the subscribe modal so you can fix a name, URL,
+  colour, refresh interval, proxy, or the mute toggle without deleting and
+  re-adding. Changing the URL re-fetches into the same calendar. Preconfigured
+  feeds keep their URL locked.
+
 ## [0.33.4] - 2026-09-14
 
 ### Added

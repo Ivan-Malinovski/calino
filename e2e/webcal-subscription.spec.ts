@@ -29,38 +29,46 @@ const ICS_FIXTURE = [
   `DTSTART:${y}${m}${d}T090000Z`,
   `DTEND:${y}${m}${d}T100000Z`,
   'SUMMARY:Webcal Test Event',
+  'BEGIN:VALARM',
+  'ACTION:DISPLAY',
+  'DESCRIPTION:Reminder',
+  'TRIGGER:-PT10M',
+  'END:VALARM',
   'END:VEVENT',
   'END:VCALENDAR',
   '',
 ].join('\r\n')
 
+async function subscribeTestFeed(page: import('@playwright/test').Page): Promise<void> {
+  await page.getByRole('button', { name: 'Add calendar' }).click()
+  await page.getByText('Subscribe to Calendar (.ics)').click()
+
+  const dialog = page.getByRole('dialog', { name: 'Subscribe to Calendar' })
+  await expect(dialog).toBeVisible()
+  await dialog.getByLabel('Name (optional)').fill('Test Feed')
+  await dialog.getByRole('textbox', { name: 'Calendar URL' }).fill(ICS_URL)
+  await expect(dialog.getByRole('textbox', { name: 'Calendar URL' })).toHaveValue(ICS_URL)
+  await dialog.getByRole('button', { name: 'Subscribe' }).click()
+  await expect(dialog).not.toBeVisible()
+}
+
 test.describe('Webcal calendar subscription', () => {
   test.beforeEach(async ({ page }) => {
     await clearState(page)
-    await page.route(ICS_URL, async (route) => {
+    await page.route('**/test-calendar.ics', async (route) => {
       await route.fulfill({ status: 200, contentType: 'text/calendar', body: ICS_FIXTURE })
     })
   })
 
-  test('subscribing adds a read-only calendar with the feed\'s events', async ({ page }) => {
+  test("subscribing adds a read-only calendar with the feed's events", async ({ page }) => {
     await page.goto('/')
-
-    await page.getByRole('button', { name: 'Add calendar' }).click()
-    await page.getByText('Subscribe to Calendar (.ics)').click()
-
-    await expect(page.getByRole('heading', { name: 'Subscribe to Calendar' })).toBeVisible()
-    await page.getByLabel('Name (optional)').fill('Test Feed')
-    await page.getByLabel('Calendar URL').fill(ICS_URL)
-    await page.locator('[data-component="modal-save"]').click()
-
-    // Modal closes once the subscription is added.
-    await expect(page.getByRole('heading', { name: 'Subscribe to Calendar' })).not.toBeVisible()
+    await subscribeTestFeed(page)
 
     // Today's month view is already showing (default), and the fixture
     // event is dated today, so it's in the visible range without navigation.
-    await page.goto('/month')
-
-    const eventCard = page.locator('[data-component="event-card"]', { hasText: 'Webcal Test Event' })
+    const eventCard = page.locator('[data-component="event-card"]', {
+      hasText: 'Webcal Test Event',
+    })
     await expect(eventCard).toBeVisible()
 
     // Read-only: dragging is disabled via data-no-drag on the card.
@@ -72,5 +80,29 @@ test.describe('Webcal calendar subscription', () => {
     await expect(page.locator('[data-component="readonly-calendar-notice"]')).toBeVisible()
     await expect(page.locator('[data-component="modal-save"]')).toBeDisabled()
     await expect(page.getByRole('button', { name: 'Delete' })).not.toBeVisible()
+
+    await page.locator('[data-component="event-advanced-toggle"]').click()
+    await expect(page.locator('[data-component="reminders-muted-notice"]')).toBeVisible()
+    await expect(page.getByRole('button', { name: /add reminder/i })).toHaveCount(0)
+  })
+
+  test('settings can edit a subscription and mute is on by default', async ({ page }) => {
+    await page.goto('/')
+    await subscribeTestFeed(page)
+
+    await page.goto('/settings?tab=caldav')
+    const row = page.locator('[data-component="subscription-row"]', { hasText: 'Test Feed' })
+    await expect(row).toBeVisible()
+    await row.locator('[data-action="edit-subscription"]').click()
+
+    const dialog = page.getByRole('dialog', { name: 'Edit subscription' })
+    await expect(dialog).toBeVisible()
+    await expect(dialog.getByRole('checkbox', { name: /mute reminders/i })).toBeChecked()
+    await dialog.getByLabel('Name (optional)').fill('School overlay')
+    await dialog.locator('[data-component="modal-save"]').click()
+    await expect(dialog).not.toBeVisible()
+    await expect(
+      page.locator('[data-component="subscription-row"]', { hasText: 'School overlay' })
+    ).toBeVisible()
   })
 })

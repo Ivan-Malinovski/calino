@@ -158,6 +158,24 @@
   color: var(--color-text-secondary, #5f6368);
 }
 
+.muteRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.muteRow .formLabel {
+  margin: 0;
+}
+
+.muteRow input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--accent-strong, var(--color-accent));
+}
+
 .formWarn {
   margin-top: 6px;
   padding: 10px 12px;

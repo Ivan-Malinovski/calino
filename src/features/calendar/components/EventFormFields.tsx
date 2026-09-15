@@ -112,6 +112,8 @@ interface EventFormFieldsProps {
   onTravelDurationChange: (duration: number | undefined) => void
   reminders: Reminder[]
   onRemindersChange: (reminders: Reminder[]) => void
+  /** Hide chips and the add control — the calendar will not fire these alarms. */
+  remindersMuted?: boolean
   transparency?: 'opaque' | 'transparent'
   onTransparencyChange: (transparency: 'opaque' | 'transparent') => void
   relatedTo: string[]
@@ -198,6 +200,7 @@ export function EventFormFields({
   onTravelDurationChange,
   reminders,
   onRemindersChange,
+  remindersMuted = false,
   transparency = 'opaque',
   onTransparencyChange,
   relatedTo,
@@ -372,7 +375,10 @@ export function EventFormFields({
         if (!foreign) return null
         return (
           <div className={styles.foreignZoneNote} data-component="event-foreign-zone">
-            {t('modals.eventForm.foreignZoneTimes', { times: foreign.times, zone: foreign.zoneLabel })}
+            {t('modals.eventForm.foreignZoneTimes', {
+              times: foreign.times,
+              zone: foreign.zoneLabel,
+            })}
           </div>
         )
       })()}
@@ -412,7 +418,9 @@ export function EventFormFields({
                     : 'modals.eventForm.showMoreOptionsWithGuests',
                   { count: attendees.length }
                 )
-              : t(moreOpen ? 'modals.eventForm.hideMoreOptions' : 'modals.eventForm.showMoreOptions')
+              : t(
+                  moreOpen ? 'modals.eventForm.hideMoreOptions' : 'modals.eventForm.showMoreOptions'
+                )
           }
           data-component="event-advanced-toggle"
         >
@@ -490,85 +498,91 @@ export function EventFormFields({
 
             <div className={styles.field}>
               <label className={styles.label}>{t('modals.eventForm.reminders')}</label>
-              <div className={styles.reminderList}>
-                {reminders.map((reminder) => (
-                  <span key={reminder.id} className={styles.reminderChip}>
-                    {reminderLabel(reminder.minutesBefore, t)}
-                    <button
-                      type="button"
-                      className={styles.reminderChipRemove}
-                      aria-label={t('modals.eventForm.removeReminder', {
-                        label: reminderLabel(reminder.minutesBefore, t),
-                      })}
-                      onClick={() => {
-                        onRemindersChange(reminders.filter((r) => r.id !== reminder.id))
-                      }}
-                    >
-                      ×
-                    </button>
-                  </span>
-                ))}
-                <div className={styles.reminderAddWrapper}>
-                  <button
-                    ref={reminderAddBtnRef}
-                    type="button"
-                    className={styles.reminderAddBtn}
-                    aria-label={t('modals.eventForm.addReminder')}
-                    onClick={() => {
-                      setReminderDropdownOpen((o) => {
-                        if (!o && reminderAddBtnRef.current) {
-                          const rect = reminderAddBtnRef.current.getBoundingClientRect()
-                          setReminderMenuPos({ top: rect.bottom + 4, left: rect.left })
-                        }
-                        return !o
-                      })
-                    }}
-                  >
-                    {t('modals.eventForm.addShort')}
-                  </button>
-                  {reminderDropdownOpen &&
-                    createPortal(
-                      <div
-                        ref={reminderMenuRef}
-                        className={styles.reminderDropdown}
-                        role="listbox"
-                        style={{
-                          position: 'fixed',
-                          top: reminderMenuPos.top,
-                          left: reminderMenuPos.left,
+              {remindersMuted ? (
+                <p className={styles.remindersMuted} data-component="reminders-muted-notice">
+                  {t('modals.eventForm.remindersMuted')}
+                </p>
+              ) : (
+                <div className={styles.reminderList}>
+                  {reminders.map((reminder) => (
+                    <span key={reminder.id} className={styles.reminderChip}>
+                      {reminderLabel(reminder.minutesBefore, t)}
+                      <button
+                        type="button"
+                        className={styles.reminderChipRemove}
+                        aria-label={t('modals.eventForm.removeReminder', {
+                          label: reminderLabel(reminder.minutesBefore, t),
+                        })}
+                        onClick={() => {
+                          onRemindersChange(reminders.filter((r) => r.id !== reminder.id))
                         }}
                       >
-                        {REMINDER_VALUES.filter(
-                          (value) => !reminders.some((r) => r.minutesBefore === value)
-                        ).map((value) => (
-                          <button
-                            key={value}
-                            type="button"
-                            className={styles.reminderDropdownItem}
-                            role="option"
-                            onClick={() => {
-                              onRemindersChange([
-                                ...reminders,
-                                { id: createUuid(), minutesBefore: value, method: 'popup' },
-                              ])
-                              setReminderDropdownOpen(false)
-                            }}
-                          >
-                            {reminderLabel(value, t)}
-                          </button>
-                        ))}
-                        {REMINDER_VALUES.every((value) =>
-                          reminders.some((r) => r.minutesBefore === value)
-                        ) && (
-                          <div className={styles.reminderDropdownEmpty}>
-                            {t('modals.eventForm.allOptionsAdded')}
-                          </div>
-                        )}
-                      </div>,
-                      document.body
-                    )}
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                  <div className={styles.reminderAddWrapper}>
+                    <button
+                      ref={reminderAddBtnRef}
+                      type="button"
+                      className={styles.reminderAddBtn}
+                      aria-label={t('modals.eventForm.addReminder')}
+                      onClick={() => {
+                        setReminderDropdownOpen((o) => {
+                          if (!o && reminderAddBtnRef.current) {
+                            const rect = reminderAddBtnRef.current.getBoundingClientRect()
+                            setReminderMenuPos({ top: rect.bottom + 4, left: rect.left })
+                          }
+                          return !o
+                        })
+                      }}
+                    >
+                      {t('modals.eventForm.addShort')}
+                    </button>
+                    {reminderDropdownOpen &&
+                      createPortal(
+                        <div
+                          ref={reminderMenuRef}
+                          className={styles.reminderDropdown}
+                          role="listbox"
+                          style={{
+                            position: 'fixed',
+                            top: reminderMenuPos.top,
+                            left: reminderMenuPos.left,
+                          }}
+                        >
+                          {REMINDER_VALUES.filter(
+                            (value) => !reminders.some((r) => r.minutesBefore === value)
+                          ).map((value) => (
+                            <button
+                              key={value}
+                              type="button"
+                              className={styles.reminderDropdownItem}
+                              role="option"
+                              onClick={() => {
+                                onRemindersChange([
+                                  ...reminders,
+                                  { id: createUuid(), minutesBefore: value, method: 'popup' },
+                                ])
+                                setReminderDropdownOpen(false)
+                              }}
+                            >
+                              {reminderLabel(value, t)}
+                            </button>
+                          ))}
+                          {REMINDER_VALUES.every((value) =>
+                            reminders.some((r) => r.minutesBefore === value)
+                          ) && (
+                            <div className={styles.reminderDropdownEmpty}>
+                              {t('modals.eventForm.allOptionsAdded')}
+                            </div>
+                          )}
+                        </div>,
+                        document.body
+                      )}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
 

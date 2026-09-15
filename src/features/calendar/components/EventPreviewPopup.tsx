@@ -20,7 +20,7 @@ import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { useSheetSwipeDismiss } from '@/hooks/useSheetSwipeDismiss'
 import { useSettingsStore } from '@/store/settingsStore'
-import { useCalendarStore } from '@/store/calendarStore'
+import { calendarMutesReminders, useCalendarStore } from '@/store/calendarStore'
 import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
 import { safeCalDAVUpdate } from '@/lib/caldavHelpers'
 import { DeleteDialog } from './DeleteDialog'
@@ -955,12 +955,17 @@ export function EventPreviewPopup({
   }
 
   const getReminderLabel = (): string | null => {
+    if (calendarMutesReminders(calendars.find((calendar) => calendar.id === event.calendarId))) {
+      return null
+    }
     if (!event.reminders || event.reminders.length === 0) return null
     const minutes = event.reminders[0]?.minutesBefore
     if (minutes === undefined) return null
     if (minutes === 0) return t('modals.eventPreview.reminderAtTimeOfEvent')
-    if (minutes % 1440 === 0) return t('modals.eventPreview.reminderDaysBefore', { count: minutes / 1440 })
-    if (minutes % 60 === 0) return t('modals.eventPreview.reminderHoursBefore', { count: minutes / 60 })
+    if (minutes % 1440 === 0)
+      return t('modals.eventPreview.reminderDaysBefore', { count: minutes / 1440 })
+    if (minutes % 60 === 0)
+      return t('modals.eventPreview.reminderHoursBefore', { count: minutes / 60 })
     return t('modals.eventPreview.reminderMinutesBefore', { count: minutes })
   }
 
@@ -1084,7 +1089,9 @@ export function EventPreviewPopup({
                   )}
                   {isTask && directSubtasks.length > 0 && (
                     <div className={styles.previewSubtasks} data-component="task-preview-subtasks">
-                      <div className={styles.previewSubtasksLabel}>{t('modals.eventPreview.subtasks')}</div>
+                      <div className={styles.previewSubtasksLabel}>
+                        {t('modals.eventPreview.subtasks')}
+                      </div>
                       {directSubtasks.map((subtask) => (
                         <div className={styles.previewSubtaskRow} key={subtask.id}>
                           <input
@@ -1348,7 +1355,9 @@ export function EventPreviewPopup({
                   )}
 
                   <div className={styles.description}>
-                    <div className={styles.descriptionLabel}>{t('modals.eventPreview.description')}</div>
+                    <div className={styles.descriptionLabel}>
+                      {t('modals.eventPreview.description')}
+                    </div>
                     {renderDescription()}
                   </div>
                 </div>
@@ -1378,7 +1387,9 @@ export function EventPreviewPopup({
                     </button>
                   )}
                   <button className={styles.openBtn} onClick={handleOpen}>
-                    {isTask ? t('modals.eventPreview.openTask') : t('modals.eventPreview.openEvent')}
+                    {isTask
+                      ? t('modals.eventPreview.openTask')
+                      : t('modals.eventPreview.openEvent')}
                   </button>
                   {mailto && (
                     <button

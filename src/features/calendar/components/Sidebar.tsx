@@ -39,6 +39,7 @@ import { exportCalendarIcs } from '@/lib/icsExport'
 import { AddCalendarModal } from './AddCalendarModal'
 import { SyncStatusIndicator } from './SyncStatusIndicator'
 import { SubscribeCalendarModal } from './SubscribeCalendarModal'
+import { useWebcalSubscriptions } from '@/features/webcal/hooks/useWebcalSubscriptions'
 import { CreateCalendarModal } from './CreateCalendarModal'
 import { DeleteCalendarDialog } from './DeleteCalendarDialog'
 import { EmptyState } from '@/components/common/EmptyState'
@@ -142,6 +143,7 @@ export function Sidebar({
     updateCalendar: updateCalDAVCalendar,
     deleteCalendarFromServer,
   } = useCalDAV()
+  const { addSubscription, updateSubscription } = useWebcalSubscriptions()
   const navigate = useNavigate()
 
   const accountIds = useMemo(
@@ -459,10 +461,7 @@ export function Sidebar({
     return eachDayOfInterval({ start: calendarStart, end: calendarEnd })
   }, [effectiveMiniDate, firstDayOfWeek])
 
-  const weekdays = useMemo(
-    () => getNarrowWeekdayLabels(firstDayOfWeek || 0),
-    [firstDayOfWeek]
-  )
+  const weekdays = useMemo(() => getNarrowWeekdayLabels(firstDayOfWeek || 0), [firstDayOfWeek])
 
   const miniWeeks = useMemo(() => {
     const weeks: Date[][] = []
@@ -794,7 +793,9 @@ export function Sidebar({
                               current === calendar.id ? null : calendar.id
                             )
                           }}
-                          aria-label={t('views.sidebar.changeCalendarColor', { name: calendar.name })}
+                          aria-label={t('views.sidebar.changeCalendarColor', {
+                            name: calendar.name,
+                          })}
                           aria-expanded={colorPickerCalendarId === calendar.id}
                           aria-controls={`calendar-color-picker-${calendar.id}`}
                         />
@@ -817,7 +818,10 @@ export function Sidebar({
                                     event.preventDefault()
                                     handleColorChange(calendar.id, color)
                                   }}
-                                  aria-label={t('views.sidebar.useColorFor', { color, name: calendar.name })}
+                                  aria-label={t('views.sidebar.useColorFor', {
+                                    color,
+                                    name: calendar.name,
+                                  })}
                                 />
                               ))}
                               <span
@@ -836,7 +840,9 @@ export function Sidebar({
                                   onChange={(event) =>
                                     handleColorChange(calendar.id, event.target.value)
                                   }
-                                  aria-label={t('views.sidebar.customColorFor', { name: calendar.name })}
+                                  aria-label={t('views.sidebar.customColorFor', {
+                                    name: calendar.name,
+                                  })}
                                 />
                               </span>
                             </div>
@@ -976,7 +982,9 @@ export function Sidebar({
                         ))}
                       </div>
                       <div className={styles.categoryToggle}>
-                        <span className={styles.categoryToggleLabel}>{t('views.sidebar.useCategoryColors')}</span>
+                        <span className={styles.categoryToggleLabel}>
+                          {t('views.sidebar.useCategoryColors')}
+                        </span>
                         <label className={styles.categoryToggleSwitch}>
                           <input
                             type="checkbox"
@@ -1008,6 +1016,8 @@ export function Sidebar({
           <SubscribeCalendarModal
             isOpen={showSubscribeCalendar}
             onClose={() => setShowSubscribeCalendar(false)}
+            addSubscription={addSubscription}
+            updateSubscription={updateSubscription}
           />
           {addCalendarMenu &&
             createPortal(
