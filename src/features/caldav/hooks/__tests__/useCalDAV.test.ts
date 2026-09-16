@@ -3345,6 +3345,8 @@ describe('useCalDAV', () => {
       expect(mockAccountStorage.removePendingChange).not.toHaveBeenCalled()
     })
 
+    // The store is empty here, so this also pins the #163 fallback: with no
+    // live copy of the event the queued snapshot's etag is what goes out.
     it('recovers from a stale-etag 412 by re-fetching the etag and re-applying once', async () => {
       const updateEvent = {
         ...mockEvent,
@@ -3396,6 +3398,106 @@ describe('useCalDAV', () => {
       expect(mockSyncEngineInstance.updateEvent.mock.calls[1][1]).toBe('"fresh"')
       expect(fetchEtag).toHaveBeenCalledWith('https://caldav.example.com/cal/main/evt-412.ics')
       expect(mockAccountStorage.updatePendingChangeRetry).not.toHaveBeenCalled()
+    })
+
+    // #163 — a 412 queues a snapshot carrying the etag the server just
+    // rejected. Replaying that etag cannot succeed and spends the single
+    // stale-etag recovery attempt, so the live store's etag has to win.
+    it('replays a queued update with the live store etag, not the one that already failed', async () => {
+      const href = 'https://caldav.example.com/cal/main/evt-163.ics'
+      useCalendarStore.getState().addEvent({
+        ...mockEvent,
+        id: 'evt-163',
+        etag: '"current"',
+        resourceHref: href,
+      })
+      queueWith({
+        id: 'pc-163',
+        type: 'update',
+        eventId: 'evt-163',
+        calendarId: 'cal-1',
+        // The snapshot still carries the dead etag from the failed direct write.
+        data: JSON.stringify({
+          ...mockEvent,
+          id: 'evt-163',
+          etag: '"dead"',
+          resourceHref: href,
+        }),
+        timestamp: '2025-01-01T00:00:00Z',
+        retryCount: 0,
+      })
+      mockAccountStorage.getAllAccounts.mockReturnValue([mockAccount])
+      mockAccountStorage.getAllCalendars.mockReturnValue([mockCalendar])
+      const fetchEtag = vi.fn().mockResolvedValue('"current"')
+      mockCalDAVClient.createCalDAVClient.mockResolvedValue({
+        fetchEvents: vi.fn().mockResolvedValue([]),
+        fetchCalendars: vi.fn().mockResolvedValue([]),
+        fetchEtag,
+      } as any)
+
+      renderHook(() => useCalDAV())
+
+      await waitFor(() => {
+        expect(mockAccountStorage.removePendingChange).toHaveBeenCalledWith('pc-163')
+      })
+
+      // One PUT, against the live etag. No 412, so no recovery PROPFIND.
+      expect(mockSyncEngineInstance.updateEvent).toHaveBeenCalledTimes(1)
+      expect(mockSyncEngineInstance.updateEvent.mock.calls[0][1]).toBe('"current"')
+      expect(fetchEtag).not.toHaveBeenCalled()
+    })
+
+    it('writes the etag recovery re-fetched back to the live store', async () => {
+      const href = 'https://caldav.example.com/cal/main/evt-163b.ics'
+      // Store and snapshot agree on a dead etag — nothing refreshed either
+      // between the failed direct write and this replay, so recovery runs.
+      useCalendarStore.getState().addEvent({
+        ...mockEvent,
+        id: 'evt-163b',
+        etag: '"dead"',
+        resourceHref: href,
+      })
+      queueWith({
+        id: 'pc-163b',
+        type: 'update',
+        eventId: 'evt-163b',
+        calendarId: 'cal-1',
+        data: JSON.stringify({
+          ...mockEvent,
+          id: 'evt-163b',
+          etag: '"dead"',
+          resourceHref: href,
+        }),
+        timestamp: '2025-01-01T00:00:00Z',
+        retryCount: 0,
+      })
+      mockAccountStorage.getAllAccounts.mockReturnValue([mockAccount])
+      mockAccountStorage.getAllCalendars.mockReturnValue([mockCalendar])
+      mockSyncEngineInstance.updateEvent
+        .mockRejectedValueOnce(
+          Object.assign(new Error(`PUT ${href} failed: HTTP 412: If-Match precondition failed`), {
+            status: 412,
+          })
+        )
+        .mockResolvedValueOnce({ url: href, etag: '"after-put"' })
+      mockCalDAVClient.createCalDAVClient.mockResolvedValue({
+        fetchEvents: vi.fn().mockResolvedValue([]),
+        fetchCalendars: vi.fn().mockResolvedValue([]),
+        fetchEtag: vi.fn().mockResolvedValue('"propfind"'),
+      } as any)
+
+      renderHook(() => useCalDAV())
+
+      await waitFor(() => {
+        expect(mockAccountStorage.removePendingChange).toHaveBeenCalledWith('pc-163b')
+      })
+
+      expect(mockSyncEngineInstance.updateEvent.mock.calls[1][1]).toBe('"propfind"')
+      // The etag the successful PUT returned lands in the store, so the next
+      // write starts from a live etag instead of repeating this recovery.
+      const stored = useCalendarStore.getState().events.find((e) => e.id === 'evt-163b')
+      expect(stored?.etag).toBe('"after-put"')
+      expect(stored?.syncStatus).toBe('synced')
     })
 
     it('drops an update that still 412s after a fresh etag, keeping the local edit', async () => {

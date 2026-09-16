@@ -589,6 +589,21 @@ export function useCalDAVInstance(): UseCalDAVReturn {
                 groupedEvents.some((candidate) => !candidate.recurrenceId)
               const masterForHref =
                 groupedEvents.find((candidate) => !candidate.recurrenceId) ?? event
+              // #163 — the etag in the queued payload is a snapshot taken when
+              // the direct write failed, so for a 412 it is exactly the etag
+              // the server just rejected. Replaying it 412s by construction and
+              // burns the single stale-etag recovery attempt on a request that
+              // could not have succeeded. The store's copy of the same resource
+              // is refreshed by every successful write and by every sync, so
+              // prefer it; the snapshot is only a fallback for an event that is
+              // no longer in the store.
+              //
+              // The If-Match here guards `masterForHref`'s resource, so that is
+              // the event whose etag must be current — for an override write
+              // that is a live sibling, not the queued payload at all.
+              const liveEtag = state.events.find(
+                (candidate) => candidate.id === masterForHref.id
+              )?.etag
               try {
                 const { url, etag } = await applyUpdateWithStaleEtagRecovery(
                   engine,
@@ -596,7 +611,7 @@ export function useCalDAVInstance(): UseCalDAVReturn {
                   event,
                   groupedEvents,
                   useGroup,
-                  event.etag || '',
+                  liveEtag || event.etag || '',
                   eventWriteHref(masterForHref, calendar)
                 )
                 for (const groupedEvent of groupedEvents) {
