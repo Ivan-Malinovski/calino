@@ -482,6 +482,16 @@ export function isCalendarReadOnly(calendarId: string): boolean {
   return calendar?.readOnly === true
 }
 
+/**
+ * Webcal overlays mute the publisher's VALARMs unless the user opted in
+ * (`notifyReminders: true`). Missing the field is muted — that is how existing
+ * subscriptions go quiet without a storage migration. Non-webcal calendars
+ * never mute here.
+ */
+export function calendarMutesReminders(calendar: Calendar | undefined): boolean {
+  return calendar?.source === 'webcal' && calendar.notifyReminders !== true
+}
+
 const DEFAULT_CALENDAR: Calendar = {
   id: 'default',
   name: 'Offline calendar',

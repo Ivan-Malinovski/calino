@@ -9,6 +9,7 @@ import { DiagnosticsPanel } from './DiagnosticsPanel'
 import { AddCalendarModal } from '@/features/calendar/components/AddCalendarModal'
 import { SubscribeCalendarModal } from '@/features/calendar/components/SubscribeCalendarModal'
 import { useWebcalSubscriptions } from '@/features/webcal/hooks/useWebcalSubscriptions'
+import type { WebcalSubscription } from '@/features/webcal/types'
 import styles from './Settings.module.css'
 
 interface TestState {
@@ -24,6 +25,7 @@ export function CalDAVSettings(): JSX.Element {
   // Keyed by account id so testing one account never shows a spinner on another.
   const [testStates, setTestStates] = useState<Record<string, TestState>>({})
   const [isSubscribing, setIsSubscribing] = useState(false)
+  const [editingSubscription, setEditingSubscription] = useState<WebcalSubscription | null>(null)
   const [syncingSubscriptionId, setSyncingSubscriptionId] = useState<string | null>(null)
   // The diagnostics panel needs the password, which lives in the credential
   // store rather than on the account — resolved once, when the row is opened.
@@ -33,7 +35,13 @@ export function CalDAVSettings(): JSX.Element {
   } | null>(null)
 
   const { accounts, removeAccount, testAccount } = useCalDAV()
-  const { subscriptions, removeSubscription, syncSubscription } = useWebcalSubscriptions()
+  const {
+    subscriptions,
+    addSubscription,
+    updateSubscription,
+    removeSubscription,
+    syncSubscription,
+  } = useWebcalSubscriptions()
 
   const handleSyncSubscription = async (id: string): Promise<void> => {
     setSyncingSubscriptionId(id)
@@ -301,11 +309,23 @@ export function CalDAVSettings(): JSX.Element {
                   {subscription.lastError
                     ? t('caldav.failedWithMessage', { message: subscription.lastError })
                     : subscription.lastFetchedAt
-                      ? t('caldav.syncedOn', { date: new Date(subscription.lastFetchedAt).toLocaleDateString() })
+                      ? t('caldav.syncedOn', {
+                          date: new Date(subscription.lastFetchedAt).toLocaleDateString(),
+                        })
                       : t('caldav.notYetSynced')}
                 </div>
               </div>
               <div className={styles.accountActions}>
+                <button
+                  className={styles.rowBtn}
+                  onClick={() => setEditingSubscription(subscription)}
+                  aria-label={t('caldav.editAriaLabel', { name: subscription.name })}
+                  data-component="action-button"
+                  data-action="edit-subscription"
+                  type="button"
+                >
+                  {t('caldav.edit')}
+                </button>
                 <button
                   className={styles.rowBtn}
                   onClick={() => handleSyncSubscription(subscription.id)}
@@ -315,7 +335,9 @@ export function CalDAVSettings(): JSX.Element {
                   data-action="sync-subscription"
                   type="button"
                 >
-                  {syncingSubscriptionId === subscription.id ? t('caldav.syncing') : t('caldav.syncNow')}
+                  {syncingSubscriptionId === subscription.id
+                    ? t('caldav.syncing')
+                    : t('caldav.syncNow')}
                 </button>
                 {!subscription.isPreconfigured && (
                   <button
@@ -362,7 +384,22 @@ export function CalDAVSettings(): JSX.Element {
           onClose={() => setEditingAccount(null)}
         />
       )}
-      <SubscribeCalendarModal isOpen={isSubscribing} onClose={() => setIsSubscribing(false)} />
+      <SubscribeCalendarModal
+        isOpen={isSubscribing}
+        onClose={() => setIsSubscribing(false)}
+        addSubscription={addSubscription}
+        updateSubscription={updateSubscription}
+      />
+      {editingSubscription && (
+        <SubscribeCalendarModal
+          isOpen
+          mode="edit"
+          subscription={editingSubscription}
+          addSubscription={addSubscription}
+          updateSubscription={updateSubscription}
+          onClose={() => setEditingSubscription(null)}
+        />
+      )}
     </section>
   )
 }

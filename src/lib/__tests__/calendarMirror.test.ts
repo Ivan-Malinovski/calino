@@ -200,6 +200,32 @@ describe('buildMirrorPayload', () => {
     expect(result.events.map((e) => e.id)).toEqual(['old-series'])
   })
 
+  it('does not mirror reminders from a muted webcal calendar', () => {
+    const webcal = {
+      id: 'webcal-1',
+      name: 'Overlay',
+      color: '#ea4335',
+      isVisible: true,
+      isDefault: false,
+      showTasksInViews: true,
+      source: 'webcal' as const,
+      readOnly: true,
+    }
+    const withAlarm = event({
+      calendarId: 'webcal-1',
+      reminders: [{ id: 'a', minutesBefore: 10, method: 'popup' }],
+    })
+    const muted = buildMirrorPayload([withAlarm], [...calendars, webcal], NOW)
+    expect(muted.events[0]?.reminders).toEqual([])
+
+    const optedIn = buildMirrorPayload(
+      [withAlarm],
+      [...calendars, { ...webcal, notifyReminders: true }],
+      NOW
+    )
+    expect(optedIn.events[0]?.reminders).toEqual([10])
+  })
+
   it('mirrors only the reminders an event carries, and drops email alarms', () => {
     // No substituted default: an event with no reminders mirrors none, so the
     // provider doesn't alarm an event the app itself shows as reminder-less.

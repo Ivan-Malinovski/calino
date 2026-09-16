@@ -75,6 +75,15 @@ describe('EventFormFields', () => {
     return utils
   }
 
+  it('hides reminder chips when the calendar is muted', () => {
+    renderWithMoreOptions({
+      reminders: [{ id: 'r1', minutesBefore: 15, method: 'popup' }],
+      remindersMuted: true,
+    })
+    expect(screen.getByText('Reminders in this calendar are muted.')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /add reminder/i })).not.toBeInTheDocument()
+  })
+
   beforeEach(() => {
     vi.clearAllMocks()
     ;(useSettingsStore as unknown as ReturnType<typeof vi.fn>).mockImplementation(
