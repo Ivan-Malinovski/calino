@@ -4,6 +4,14 @@ All notable changes to Calino will be documented in this file.
 
 ## [Unreleased]
 
+## [0.33.5] - 2026-09-16
+
+This is primarily a polish and reliability release. Calino is still evolving, but the overall experience is settling into a much better state.
+
+### Android
+
+- **Updated native Android preview.** The latest native Android APK (`v0.1.1`) is included with this release. It uses the same app identity as the older APK and will likely install over it, so take care and make sure anything important is backed up before upgrading. Follow the development of the native app over at [calino-android](https://github.com/Ivan-Malinovski/calino-android).
+
 ### Changed
 
 - **Subscribed `.ics` calendars no longer fire the publisher's reminders**
