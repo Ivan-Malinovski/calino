@@ -24,6 +24,16 @@ All notable changes to Calino will be documented in this file.
   re-adding. Changing the URL re-fetches into the same calendar. Preconfigured
   feeds keep their URL locked.
 
+### Fixed
+
+- **A queued edit no longer retries with the ETag the server just rejected**
+  ([#163](https://github.com/Ivan-Malinovski/calino/issues/163)). When a direct
+  write failed with `412 Precondition Failed`, the retry was replayed from a
+  snapshot still carrying that dead ETag, so it 412'd by construction — and
+  that doomed request consumed the one stale-ETag recovery attempt the retry
+  gets. The retry now sends the ETag the local store holds for the resource,
+  falling back to the snapshot only when the event is gone from the store.
+
 ## [0.33.4] - 2026-09-14
 
 ### Added
