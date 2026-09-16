@@ -113,8 +113,8 @@ importers:
         specifier: ^2.0.8
         version: 2.0.8(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       tsdav:
-        specifier: ^2.3.1
-        version: 2.3.1
+        specifier: ^2.3.3
+        version: 2.3.3
       uuid:
         specifier: ^14.0.2
         version: 14.0.2
@@ -3005,10 +3005,6 @@ packages:
   sax@1.1.4:
     resolution: {integrity: sha512-5f3k2PbGGp+YtKJjOItpg3P99IMD84E4HOvcfleTb5joCHNXYLsR9yWFPOYGgaeMPDubQILTCMdsFb2OMeOjtg==}
 
-  sax@1.4.4:
-    resolution: {integrity: sha512-1n3r/tGXO6b6VXMdFT54SHzT9ytu9yr7TaELowdYpMqY/Ao7EnlQGmAQ1+RatX7Tkkdm6hONI2owqNx2aZj5Sw==}
-    engines: {node: '>=11.0.0'}
-
   sax@1.6.1:
     resolution: {integrity: sha512-42tBVwLWnaQvW5zc4HbZrTuWccECCZfBi92FDuwtqxasH+JbPB3/FOKb1m222K42R4WxuxzzMsTswfzgtSu64Q==}
     engines: {node: '>=11.0.0'}
@@ -3238,8 +3234,8 @@ packages:
     peerDependencies:
       typescript: '>=4.8.4'
 
-  tsdav@2.3.1:
-    resolution: {integrity: sha512-hrVYM0CCn8JmIXy7pPnA2VIw5MXtjBLDVtZMumBcXRXBVQranD5IRZ1AWV4Ig+RzrqQqFGnHJi94VB+J/aGwTw==}
+  tsdav@2.3.3:
+    resolution: {integrity: sha512-MCsxZDYNy/ueyGzM5mrxZoYzToCYbCil0HDd7spGEMd/71cwviwJ6Ob/VbGVklzSg8Q1Tg//xAdyxVcVrzuEyQ==}
     engines: {node: '>=18'}
 
   tslib@2.8.1:
@@ -6506,8 +6502,6 @@ snapshots:
 
   sax@1.1.4: {}
 
-  sax@1.4.4: {}
-
   sax@1.6.1: {}
 
   saxes@6.0.0:
@@ -6770,7 +6764,7 @@ snapshots:
     dependencies:
       typescript: 5.9.3
 
-  tsdav@2.3.1:
+  tsdav@2.3.3:
     dependencies:
       debug: 4.4.3
       xml-js: 1.6.11
@@ -7014,7 +7008,7 @@ snapshots:
 
   xml-js@1.6.11:
     dependencies:
-      sax: 1.4.4
+      sax: 1.6.1
 
   xml-name-validator@5.0.0: {}
 
