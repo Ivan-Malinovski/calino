@@ -4,6 +4,31 @@ All notable changes to Calino will be documented in this file.
 
 ## [Unreleased]
 
+## [0.33.6] - 2026-09-17
+
+### Fixed
+
+- **An empty task or journal query no longer aborts a sync**
+  ([#134](https://github.com/Ivan-Malinovski/calino/issues/134)). Some CalDAV
+  servers answer an empty `calendar-query` with HTTP 207 wrapping a single
+  collection-level 404, which the CalDAV client read as a hard failure. A
+  thrown VTODO or VJOURNAL query meant no tasks or journals for that
+  calendar and skipped the remote-deletion reconciliation for them. The
+  `tsdav` bump to 2.3.3 treats that response shape as "no results", which is
+  the remaining half of the fix started in
+  [#135](https://github.com/Ivan-Malinovski/calino/pull/135). Thanks to
+  [@josephsellers](https://github.com/josephsellers) in
+  [#170](https://github.com/Ivan-Malinovski/calino/pull/170).
+
+### Internal
+
+- CI now uses `pnpm/action-setup` 6.1.0
+  ([#164](https://github.com/Ivan-Malinovski/calino/pull/164)).
+
+- The release e2e runner now skips a browser that cannot launch on the host
+  instead of failing the whole check and tearing down the browsers that can.
+  Set `E2E_REQUIRE_ALL_BROWSERS=1` to make a missing browser a hard error.
+
 ## [0.33.5] - 2026-09-16
 
 This is primarily a polish and reliability release. Calino is still evolving, but the overall experience is settling into a much better state.
