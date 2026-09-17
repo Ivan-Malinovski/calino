@@ -9,11 +9,64 @@
 import { spawn, spawnSync } from 'node:child_process'
 import net from 'node:net'
 
-const projects = [
+const allProjects = [
   { name: 'chromium', appPort: 5200, davPort: 8100 },
   { name: 'firefox', appPort: 5201, davPort: 8101 },
   { name: 'webkit', appPort: 5202, davPort: 8102 },
 ]
+
+/**
+ * A browser whose system libraries are missing fails `browserType.launch`
+ * in milliseconds, and because a failing project tears its siblings down
+ * that turns "webkit's deps aren't installed" into "the whole release check
+ * failed" — with the other browsers killed mid-run. Probe first and drop
+ * the project with a warning instead, so a box without e.g. WebKit's
+ * libicu/libflite still gets a real run out of the browsers it does have.
+ *
+ * Only a launch failure is tolerated. Anything else (a browser that starts
+ * and then fails tests) must still fail the release check, so the probe is
+ * deliberately narrow: it does not swallow test results.
+ *
+ * E2E_REQUIRE_ALL_BROWSERS=1 opts out — CI should set it so a missing
+ * browser is a hard error there rather than silent coverage loss.
+ */
+async function launchable(name) {
+  try {
+    const { [name]: browserType } = await import('@playwright/test')
+    const browser = await browserType.launch()
+    await browser.close()
+    return true
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    // Playwright wraps the useful sentence in box drawing, so the first line
+    // is only ever "browserType.launch:". Strip the border characters and
+    // take the first line that still says something.
+    const reason =
+      message
+        .split('\n')
+        .map((line) => line.replace(/[\u2554\u2557\u255a\u255d\u2551\u2550]/g, '').trim())
+        .find((line) => line && !line.endsWith('browserType.launch:')) ?? 'launch failed'
+    console.warn(
+      `\u26a0\ufe0f  Skipping the ${name} project \u2014 it cannot launch on this host.\n` +
+        `   ${reason}\n` +
+        `   Install its dependencies (\`pnpm exec playwright install-deps ${name}\`, or the\n` +
+        `   equivalent packages for this distribution) to include it in the release check.\n` +
+        `   Set E2E_REQUIRE_ALL_BROWSERS=1 to treat this as a failure instead.`,
+    )
+    return false
+  }
+}
+
+const requireAllBrowsers = process.env.E2E_REQUIRE_ALL_BROWSERS === '1'
+const launchChecks = await Promise.all(
+  allProjects.map(async (project) => (requireAllBrowsers ? true : await launchable(project.name))),
+)
+const projects = allProjects.filter((_, index) => launchChecks[index])
+
+if (projects.length === 0) {
+  console.error('No Playwright browser could launch on this host')
+  process.exit(1)
+}
 
 const pnpm = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm'
 const extraArgs = process.argv.slice(2)
@@ -271,13 +324,24 @@ for (const signal of ['SIGINT', 'SIGTERM']) {
   })
 }
 
-console.log(`Running ${projects.length} Playwright projects concurrently (one worker each)`)
+const skipped = allProjects.filter((project) => !projects.includes(project))
+console.log(
+  `Running ${projects.length} Playwright projects concurrently (one worker each): ` +
+    projects.map(({ name }) => name).join(', ')
+)
 const results = await Promise.all(projects.map(runProject))
 const failures = results.filter(({ code }) => code !== 0)
 
 if (failures.length > 0) {
   console.error(`\n${failures.length} Playwright project(s) failed: ${failures.map(({ project }) => project).join(', ')}`)
   process.exitCode = 1
+} else if (skipped.length > 0) {
+  // Never report a clean sweep when a browser never ran — the release check
+  // is only as wide as the browsers that actually launched.
+  console.log(
+    `\nPlaywright passed on ${projects.map(({ name }) => name).join(', ')} ` +
+      `(skipped: ${skipped.map(({ name }) => name).join(', ')})`
+  )
 } else {
   console.log('\nAll Playwright projects passed')
 }
