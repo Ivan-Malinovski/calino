@@ -38,14 +38,82 @@ import { extractOriginalEventId, hasDueTime } from '@/lib/events'
 import { LocationLink } from './LocationLink'
 import { useDateChangeMotion } from '@/hooks/useDateChangeMotion'
 import { useTaskContextMenuItems } from '../hooks/useTaskContextMenuItems'
-import { filterTasksByCollapsedAncestors, getTaskChildrenMap } from '@/lib/taskTree'
+import {
+  filterTasksByCollapsedAncestors,
+  getTaskChildrenMap,
+  getTaskDescendantIds,
+} from '@/lib/taskTree'
 import { useTaskCollapse } from '../hooks/useTaskCollapse'
 import { TaskCollapseToggle } from './TaskCollapseToggle'
+import { DayEventsPopup } from './DayEventsPopup'
 import styles from './AgendaView.module.css'
 
 interface EventWithDate {
   event: CalendarEvent
   date: Date
+}
+
+interface OrphanContext {
+  ancestors: CalendarEvent[]
+  position: 'only' | 'first' | 'middle' | 'last'
+}
+
+function getMissingTaskAncestors(
+  task: CalendarEvent,
+  visibleTaskIds: Set<string>,
+  taskById: Map<string, CalendarEvent>
+): CalendarEvent[] {
+  if (!task.parentTaskId || visibleTaskIds.has(task.parentTaskId)) return []
+  const ancestors: CalendarEvent[] = []
+  const visited = new Set<string>([task.id])
+  let parentId: string | undefined = task.parentTaskId
+  while (parentId && !visited.has(parentId)) {
+    visited.add(parentId)
+    const parent = taskById.get(parentId)
+    if (!parent || parent.type !== 'task') break
+    ancestors.unshift(parent)
+    parentId = parent.parentTaskId
+  }
+  return ancestors
+}
+
+function buildOrphanContexts(
+  items: EventWithDate[],
+  allEvents: CalendarEvent[]
+): Map<string, OrphanContext> {
+  const visibleTaskIds = new Set(
+    items.filter(({ event }) => event.type === 'task').map(({ event }) => event.id)
+  )
+  const taskById = new Map(
+    allEvents.filter((event) => event.type === 'task').map((event) => [event.id, event])
+  )
+  const contexts = new Map<string, OrphanContext>()
+  const groups = new Map<string, Array<{ task: CalendarEvent; ancestors: CalendarEvent[] }>>()
+  for (const { event } of items) {
+    if (event.type !== 'task') continue
+    const ancestors = getMissingTaskAncestors(event, visibleTaskIds, taskById)
+    if (ancestors.length === 0) continue
+    const key = ancestors.map((ancestor) => ancestor.id).join('/')
+    const siblings = groups.get(key) ?? []
+    siblings.push({ task: event, ancestors })
+    groups.set(key, siblings)
+  }
+  for (const siblings of groups.values()) {
+    siblings.forEach(({ task, ancestors }, index) => {
+      contexts.set(task.id, {
+        ancestors,
+        position:
+          siblings.length === 1
+            ? 'only'
+            : index === 0
+              ? 'first'
+              : index === siblings.length - 1
+                ? 'last'
+                : 'middle',
+      })
+    })
+  }
+  return contexts
 }
 
 /**
@@ -286,6 +354,11 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
     x: number
     y: number
     event: CalendarEvent
+  } | null>(null)
+  const [subtaskPopup, setSubtaskPopup] = useState<{
+    parent: CalendarEvent
+    subtasks: CalendarEvent[]
+    position: { x: number; y: number }
   } | null>(null)
 
   const fadePastDaysInAgenda = useSettingsStore((state) => state.fadePastDaysInAgenda)
@@ -571,6 +644,14 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
     return { eventsByDate: eventMap, dayGroups: groups }
   }, [date, events, getEventsForDateRange, embedded, taskCollapse.collapsedTaskIds])
 
+  const orphanContextsByDate = useMemo(() => {
+    const result = new Map<string, Map<string, OrphanContext>>()
+    for (const [dateKey, dayEvents] of eventsByDate) {
+      result.set(dateKey, buildOrphanContexts(dayEvents, events))
+    }
+    return result
+  }, [eventsByDate, events])
+
   const handleCreateEvent = (day: Date): void => {
     openModal(format(day, 'yyyy-MM-dd'))
   }
@@ -762,10 +843,29 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
                             <AnimatePresence initial={false}>
                               {sortedEvents.map(({ event }, index) => {
                                 if (event.type === 'task') {
+                                  const orphanContext = orphanContextsByDate
+                                    .get(dateKey)
+                                    ?.get(event.id)
+                                  const showAncestorLabels =
+                                    orphanContext?.position === 'only' ||
+                                    orphanContext?.position === 'first'
+                                  const hasLocalSubtasks = events.some(
+                                    (candidate) =>
+                                      candidate.type === 'task' &&
+                                      candidate.parentTaskId === event.id &&
+                                      candidate.dueDate != null &&
+                                      format(
+                                        toEventInstant(candidate.start, candidate.timezone),
+                                        'yyyy-MM-dd'
+                                      ) === dateKey
+                                  )
                                   return (
                                     <motion.div
                                       key={event.id}
-                                      className={styles.agendaAnimatedItem}
+                                      className={`${styles.agendaAnimatedItem} ${
+                                        orphanContext ? styles.agendaOrphanGroup : ''
+                                      }`}
+                                      data-orphan-position={orphanContext?.position}
                                       // Exit only: the row fades out when a task is completed or deleted.
                                       // Deliberately no `initial`/`animate`/`layout` — the month pane is
                                       // keyed by month, so an enter or layout animation re-ran for every
@@ -773,6 +873,28 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
                                       exit={{ opacity: 0, height: 0, marginBottom: 0 }}
                                       transition={{ duration: 0.14, ease: 'easeOut' }}
                                     >
+                                      {orphanContext && (
+                                        <div
+                                          className={`${styles.taskParentContext} ${
+                                            showAncestorLabels
+                                              ? ''
+                                              : styles.taskParentContextContinuation
+                                          }`}
+                                          data-component="task-parent-context"
+                                          aria-label={`Parent task${orphanContext.ancestors.length > 1 ? 's' : ''}: ${orphanContext.ancestors.map((ancestor) => ancestor.title).join(', ')}`}
+                                        >
+                                          {showAncestorLabels &&
+                                            orphanContext.ancestors.map((ancestor, depth) => (
+                                              <div
+                                                key={ancestor.id}
+                                                className={styles.taskParentContextLabel}
+                                                style={{ marginLeft: depth * 18 }}
+                                              >
+                                                {ancestor.title}
+                                              </div>
+                                            ))}
+                                        </div>
+                                      )}
                                       <AgendaDraggableItem
                                         event={event}
                                         className={`${styles.agendaTask} ${
@@ -858,7 +980,8 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
                                             >
                                               {event.title}
                                             </button>
-                                            {taskCollapse.hasSubtasks(event.id) && (
+                                            {taskCollapse.hasSubtasks(event.id) &&
+                                              hasLocalSubtasks && (
                                               <TaskCollapseToggle
                                                 taskTitle={event.title}
                                                 collapsed={taskCollapse.isCollapsed(event.id)}
@@ -867,6 +990,38 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
                                                 className={styles.agendaTaskCollapseToggle}
                                               />
                                             )}
+                                            {taskCollapse.hasSubtasks(event.id) &&
+                                              !hasLocalSubtasks && (
+                                                <button
+                                                  type="button"
+                                                  className={styles.agendaTaskSubtaskPopupButton}
+                                                  data-component="task-subtasks-popup-trigger"
+                                                  aria-label={`Show subtasks for "${event.title}"`}
+                                                  onPointerDown={(clickEvent) =>
+                                                    clickEvent.stopPropagation()
+                                                  }
+                                                  onClick={(clickEvent) => {
+                                                    clickEvent.stopPropagation()
+                                                    const rect =
+                                                      clickEvent.currentTarget.getBoundingClientRect()
+                                                    const descendantIds = new Set(
+                                                      getTaskDescendantIds(events, event.id)
+                                                    )
+                                                    setSubtaskPopup({
+                                                      parent: event,
+                                                      subtasks: events.filter((candidate) =>
+                                                        descendantIds.has(candidate.id)
+                                                      ),
+                                                      position: {
+                                                        x: rect.left,
+                                                        y: rect.bottom + 4,
+                                                      },
+                                                    })
+                                                  }}
+                                                >
+                                                  +{taskCollapse.descendantCount(event.id)}
+                                                </button>
+                                              )}
                                           </div>
                                           {event.location && (
                                             <div className={styles.agendaEventSub}>
@@ -1060,6 +1215,21 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
             document.body
           )}
       </div>
+      {subtaskPopup && (
+        <DayEventsPopup
+          date={new Date()}
+          events={subtaskPopup.subtasks}
+          position={subtaskPopup.position}
+          title={subtaskPopup.parent.title}
+          countLabel={`${subtaskPopup.subtasks.length} subtask${subtaskPopup.subtasks.length === 1 ? '' : 's'}`}
+          ariaLabel={`Subtasks for ${subtaskPopup.parent.title}`}
+          onClose={() => setSubtaskPopup(null)}
+          onEventClick={(event) => {
+            setSubtaskPopup(null)
+            openModal(undefined, undefined, event.id, 'task')
+          }}
+        />
+      )}
       <DragOverlay dropAnimation={null}>
         {activeDragEvent ? (
           <div className={styles.agendaDragOverlay}>

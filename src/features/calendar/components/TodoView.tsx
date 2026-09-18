@@ -33,6 +33,7 @@ import { useTaskCollapse } from '../hooks/useTaskCollapse'
 import { getTaskDescendantIds } from '@/lib/taskTree'
 import { TaskContextMenu } from './TaskContextMenu'
 import { TaskCollapseToggle } from './TaskCollapseToggle'
+import { DayEventsPopup } from './DayEventsPopup'
 import type { CalendarEvent } from '@/types'
 import styles from './TodoView.module.css'
 import { formatDisplayDate } from '@/lib/datetime'
@@ -153,7 +154,15 @@ const GROUP_LABELS: Record<string, string> = {
 
 type VirtualItem =
   | { type: 'header'; key: string; label: string; count: number; isOverdue?: boolean }
-  | { type: 'task'; key: string; task: TaskWithColor; depth: number }
+  | {
+      type: 'task'
+      key: string
+      task: TaskWithColor
+      depth: number
+      orphanAncestors?: TaskWithColor[]
+      orphanPosition?: 'only' | 'first' | 'middle' | 'last'
+      hasLocalSubtasks?: boolean
+    }
 
 export function TodoView(): JSX.Element {
   const { t } = useTranslation('calendar')
@@ -177,6 +186,11 @@ export function TodoView(): JSX.Element {
   // being dragged, so the keyboard/mouse focus ring on its row doesn't fight
   // the DragOverlay visual.
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null)
+  const [subtaskPopup, setSubtaskPopup] = useState<{
+    parent: TaskWithColor
+    subtasks: TaskWithColor[]
+    position: { x: number; y: number }
+  } | null>(null)
   // Tracks whether the pointer is currently over blank space (no task row
   // underneath) during a drag. Drives the ambient "drop here to promote to
   // root" hint on the list container, since there's no dedicated drop zone.
@@ -514,26 +528,14 @@ export function TodoView(): JSX.Element {
         return parseISO(a.dueDate).getTime() - parseISO(b.dueDate).getTime()
       })
 
-      // Group a complete branch by its root task so children with a different
-      // due date still remain under their parent.
+      // A task belongs to the group for its own due date. If its parent lands
+      // in another group, the renderer supplies the lightweight parent
+      // context there instead of moving the child to the parent's day.
       const grouped = new Map<string, TaskWithColor[]>()
-      const taskIds = new Set(sorted.map((task) => task.id))
-      const children = new Map<string, TaskWithColor[]>()
       for (const task of sorted) {
-        if (!task.parentTaskId || !taskIds.has(task.parentTaskId)) continue
-        const siblings = children.get(task.parentTaskId) ?? []
-        siblings.push(task)
-        children.set(task.parentTaskId, siblings)
-      }
-      const appendBranch = (task: TaskWithColor, branch: TaskWithColor[]): void => {
-        branch.push(task)
-        for (const child of children.get(task.id) ?? []) appendBranch(child, branch)
-      }
-      for (const task of sorted) {
-        if (task.parentTaskId && taskIds.has(task.parentTaskId)) continue
         const group = getTaskGroup(task)
         if (!grouped.has(group)) grouped.set(group, [])
-        appendBranch(task, grouped.get(group)!)
+        grouped.get(group)!.push(task)
       }
 
       // Add groups in order
@@ -831,6 +833,7 @@ export function TodoView(): JSX.Element {
 
   const flatItems: VirtualItem[] = useMemo(() => {
     const items: VirtualItem[] = []
+    const taskById = new Map(tasks.map((task) => [task.id, task]))
     for (const group of groupedTasks) {
       items.push({
         type: 'header',
@@ -847,17 +850,85 @@ export function TodoView(): JSX.Element {
         siblings.push(task)
         children.set(task.parentTaskId, siblings)
       }
-      const appendTask = (task: TaskWithColor, depth: number): void => {
-        items.push({ type: 'task', key: `task-${task.id}`, task, depth })
+      const appendTask = (
+        task: TaskWithColor,
+        depth: number,
+        orphanAncestors?: TaskWithColor[],
+        orphanPosition?: 'only' | 'first' | 'middle' | 'last'
+      ): void => {
+        items.push({
+          type: 'task',
+          key: `task-${task.id}`,
+          task,
+          depth,
+          orphanAncestors,
+          orphanPosition,
+          hasLocalSubtasks:
+            (children.get(task.id)?.length ?? 0) > 0 || taskCollapse.isCollapsed(task.id),
+        })
         if (taskCollapse.isCollapsed(task.id)) return
         for (const child of children.get(task.id) ?? []) appendTask(child, depth + 1)
       }
-      for (const task of group.tasks) {
-        if (!task.parentTaskId || !taskIds.has(task.parentTaskId)) appendTask(task, 0)
+
+      const roots = group.tasks.filter(
+        (task) => !task.parentTaskId || !taskIds.has(task.parentTaskId)
+      )
+      const rootContexts = new Map<
+        string,
+        Array<{ task: TaskWithColor; ancestors: TaskWithColor[] }>
+      >()
+      const contextlessRoots: TaskWithColor[] = []
+      for (const task of roots) {
+        const ancestors: TaskWithColor[] = []
+        const visited = new Set<string>([task.id])
+        let parentId = task.parentTaskId
+        while (parentId && !visited.has(parentId)) {
+          visited.add(parentId)
+          const parent = taskById.get(parentId)
+          if (!parent) break
+          ancestors.unshift(parent)
+          parentId = parent.parentTaskId
+        }
+        if (ancestors.length === 0) {
+          contextlessRoots.push(task)
+          continue
+        }
+        const key = ancestors.map((ancestor) => ancestor.id).join('/')
+        const siblings = rootContexts.get(key) ?? []
+        siblings.push({ task, ancestors })
+        rootContexts.set(key, siblings)
+      }
+
+      const emittedContexts = new Set<string>()
+      for (const root of roots) {
+        const contextEntry = [...rootContexts.entries()].find(([, siblings]) =>
+          siblings.some(({ task }) => task.id === root.id)
+        )
+        if (!contextEntry) {
+          if (contextlessRoots.some((task) => task.id === root.id)) appendTask(root, 0)
+          continue
+        }
+        const [contextKey, siblings] = contextEntry
+        if (emittedContexts.has(contextKey)) continue
+        emittedContexts.add(contextKey)
+        siblings.forEach(({ task, ancestors }, index) =>
+          appendTask(
+            task,
+            ancestors.length,
+            ancestors,
+            siblings.length === 1
+              ? 'only'
+              : index === 0
+                ? 'first'
+                : index === siblings.length - 1
+                  ? 'last'
+                  : 'middle'
+          )
+        )
       }
     }
     return items
-  }, [groupedTasks, taskCollapse.collapsedTaskIds])
+  }, [groupedTasks, taskCollapse, tasks])
 
   const virtualizer = useVirtualizer({
     count: flatItems.length,
@@ -914,8 +985,35 @@ export function TodoView(): JSX.Element {
             left: 0,
             width: '100%',
             transform,
-          }}
+            ...(item.orphanAncestors
+              ? { '--orphan-context-height': `${item.orphanAncestors.length * 27}px` }
+              : {}),
+          } as React.CSSProperties}
+          className={item.orphanAncestors ? styles.taskOrphanGroup : undefined}
+          data-orphan-position={item.orphanPosition}
         >
+          {item.orphanAncestors && (
+            <div
+              className={`${styles.taskParentContext} ${
+                item.orphanPosition === 'middle' || item.orphanPosition === 'last'
+                  ? styles.taskParentContextContinuation
+                  : ''
+              }`}
+              data-component="task-parent-context"
+              aria-label={`Parent task${item.orphanAncestors.length > 1 ? 's' : ''}: ${item.orphanAncestors.map((ancestor) => ancestor.title).join(', ')}`}
+            >
+              {(item.orphanPosition === 'only' || item.orphanPosition === 'first') &&
+                item.orphanAncestors.map((ancestor, depth) => (
+                  <div
+                    key={ancestor.id}
+                    className={styles.taskParentContextLabel}
+                    style={{ marginLeft: depth * 28 }}
+                  >
+                    {ancestor.title}
+                  </div>
+                ))}
+            </div>
+          )}
           <DraggableTaskRow taskId={task.id} isActive={isActive}>
             {({ dragAttributes, dragListeners, dragStyle, setDropRef, isOver }) => {
               const rowClass = [
@@ -992,7 +1090,7 @@ export function TodoView(): JSX.Element {
                   >
                     <div className={styles.taskTitleRow}>
                       <div className={styles.taskTitle}>{task.title}</div>
-                      {taskCollapse.hasSubtasks(task.id) && (
+                      {taskCollapse.hasSubtasks(task.id) && item.hasLocalSubtasks && (
                         <TaskCollapseToggle
                           taskTitle={task.title}
                           collapsed={taskCollapse.isCollapsed(task.id)}
@@ -1000,6 +1098,27 @@ export function TodoView(): JSX.Element {
                           onToggle={() => taskCollapse.toggleTask(task.id)}
                           className={styles.taskCollapseToggle}
                         />
+                      )}
+                      {taskCollapse.hasSubtasks(task.id) && !item.hasLocalSubtasks && (
+                        <button
+                          type="button"
+                          className={styles.taskSubtaskPopupButton}
+                          data-component="task-subtasks-popup-trigger"
+                          aria-label={`Show subtasks for "${task.title}"`}
+                          onPointerDown={(event) => event.stopPropagation()}
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            const rect = event.currentTarget.getBoundingClientRect()
+                            const descendantIds = new Set(getTaskDescendantIds(tasks, task.id))
+                            setSubtaskPopup({
+                              parent: task,
+                              subtasks: tasks.filter((candidate) => descendantIds.has(candidate.id)),
+                              position: { x: rect.left, y: rect.bottom + 4 },
+                            })
+                          }}
+                        >
+                          +{taskCollapse.descendantCount(task.id)}
+                        </button>
                       )}
                     </div>
                     {task.description && <div className={styles.taskNote}>{task.description}</div>}
@@ -1071,6 +1190,8 @@ export function TodoView(): JSX.Element {
       cancelLongPress,
       virtualizer,
       taskCollapse,
+      tasks,
+      t,
     ]
   )
 
@@ -1344,6 +1465,22 @@ export function TodoView(): JSX.Element {
           menuId={`task-${taskMenu.task.id}`}
           onEdit={() => handleTaskClick(taskMenu.task)}
           onClose={closeTaskMenu}
+        />
+      )}
+      {subtaskPopup && (
+        <DayEventsPopup
+          date={new Date()}
+          events={subtaskPopup.subtasks}
+          position={subtaskPopup.position}
+          title={subtaskPopup.parent.title}
+          countLabel={`${subtaskPopup.subtasks.length} subtask${subtaskPopup.subtasks.length === 1 ? '' : 's'}`}
+          ariaLabel={`Subtasks for ${subtaskPopup.parent.title}`}
+          onClose={() => setSubtaskPopup(null)}
+          onEventClick={(event) => {
+            setSubtaskPopup(null)
+            const task = tasks.find((candidate) => candidate.id === event.id)
+            if (task) handleTaskClick(task)
+          }}
         />
       )}
     </div>

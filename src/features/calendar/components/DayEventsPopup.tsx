@@ -78,6 +78,9 @@ interface DayEventsPopupProps {
   position: { x: number; y: number }
   onClose: () => void
   onEventClick: (event: CalendarEvent) => void
+  title?: string
+  countLabel?: string
+  ariaLabel?: string
   taskHasSubtasks?: (taskId: string) => boolean
   taskIsCollapsed?: (taskId: string) => boolean
   taskDescendantCount?: (taskId: string) => number
@@ -90,6 +93,9 @@ export function DayEventsPopup({
   position,
   onClose,
   onEventClick,
+  title,
+  countLabel,
+  ariaLabel,
   taskHasSubtasks,
   taskIsCollapsed,
   taskDescendantCount,
@@ -132,7 +138,7 @@ export function DayEventsPopup({
         onContextMenu={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
-        aria-label={t('modals.dayEvents.ariaLabel', { date: dateLabel })}
+        aria-label={ariaLabel ?? t('modals.dayEvents.ariaLabel', { date: dateLabel })}
         tabIndex={-1}
         initial={prefersReducedMotion ? false : { opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -140,9 +146,9 @@ export function DayEventsPopup({
         transition={{ duration: prefersReducedMotion ? 0 : DUR_FAST }}
       >
         <div className={styles.header}>
-          <span className={styles.date}>{dateLabel}</span>
+          <span className={styles.date}>{title ?? dateLabel}</span>
           <span className={styles.count}>
-            {t('modals.dayEvents.eventCount', { count: events.length })}
+            {countLabel ?? t('modals.dayEvents.eventCount', { count: events.length })}
           </span>
         </div>
         <div className={styles.eventList}>

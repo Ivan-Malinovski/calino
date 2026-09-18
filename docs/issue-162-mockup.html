@@ -1,0 +1,407 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Issue 162 — Parent context for subtasks</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --canvas: #f7f4ed;
+        --panel: #fffdf9;
+        --ink: #2c2823;
+        --ink-2: #706960;
+        --ink-3: #a39b90;
+        --line: #ded8ce;
+        --line-2: #ebe6dd;
+        --accent: #ae7850;
+        --blue: #6c88aa;
+        --shadow: 0 14px 34px rgb(67 53 38 / 9%);
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background:
+          radial-gradient(circle at 10% 0%, rgb(174 120 80 / 9%), transparent 28rem),
+          var(--canvas);
+        color: var(--ink);
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      main {
+        width: min(1120px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 48px 0 64px;
+      }
+
+      .eyebrow {
+        margin: 0 0 8px;
+        color: var(--accent);
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: .12em;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        margin: 0;
+        font-family: Georgia, "Times New Roman", serif;
+        font-size: clamp(30px, 4vw, 46px);
+        font-weight: 500;
+        letter-spacing: -.025em;
+      }
+
+      .intro {
+        max-width: 720px;
+        margin: 12px 0 32px;
+        color: var(--ink-2);
+        font-size: 15px;
+        line-height: 1.65;
+      }
+
+      .views {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 24px;
+      }
+
+      .view {
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        background: rgb(255 253 249 / 72%);
+        box-shadow: var(--shadow);
+      }
+
+      .view-title {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        padding: 17px 20px;
+        border-bottom: 1px solid var(--line-2);
+        background: rgb(255 255 255 / 40%);
+      }
+
+      .view-title h2 { margin: 0; font-size: 14px; font-weight: 650; }
+      .view-title span { color: var(--ink-3); font-size: 11px; }
+
+      .surface { padding: 16px 18px 24px; }
+
+      .day-heading,
+      .group-heading {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+        margin: 0 2px 13px;
+      }
+
+      .day-heading strong,
+      .group-heading strong { font-size: 14px; font-weight: 600; }
+      .day-heading span,
+      .group-heading span { color: var(--ink-3); font-size: 12px; }
+      .group-heading::after { content: ""; height: 1px; flex: 1; background: var(--line-2); }
+
+      /* The proposed orphan treatment. The parent is context, not another task
+         on this day, so it has no card, checkbox, due time, or hover surface. */
+      .orphan-group {
+        --indent: 28px;
+        position: relative;
+        margin: 0 0 10px 12px;
+      }
+
+      .parent-context {
+        position: relative;
+        min-height: 27px;
+        padding: 1px 0 8px 3px;
+        color: var(--ink-2);
+        font-size: 12px;
+        font-weight: 550;
+        line-height: 18px;
+      }
+
+      .parent-context::before {
+        content: "";
+        position: absolute;
+        top: 21px;
+        bottom: -22px;
+        left: 9px;
+        width: 1px;
+        background: var(--line);
+      }
+
+      .parent-context::after {
+        content: "";
+        position: absolute;
+        bottom: -22px;
+        left: 9px;
+        width: 13px;
+        height: 1px;
+        background: var(--line);
+      }
+
+      .task-card,
+      .event-card {
+        display: grid;
+        align-items: center;
+        min-height: 45px;
+        border: 1px solid var(--line);
+        border-radius: 9px;
+        background: var(--panel);
+        box-shadow: 0 1px 3px rgb(67 53 38 / 5%);
+      }
+
+      .agenda-card {
+        grid-template-columns: 3px 57px 22px minmax(0, 1fr);
+        overflow: hidden;
+      }
+
+      .agenda-card .color { align-self: stretch; background: var(--blue); }
+      .time { color: var(--ink-3); font-size: 11px; font-weight: 550; text-align: center; }
+      .check { color: var(--blue); font-size: 18px; line-height: 1; }
+      .title { min-width: 0; padding-right: 12px; overflow: hidden; font-size: 13px; font-weight: 550; text-overflow: ellipsis; white-space: nowrap; }
+
+      .orphan-group .task-card { margin-left: var(--indent); }
+
+      /* One absent parent can provide context for several visible siblings. */
+      .orphan-group.siblings .parent-context::before {
+        bottom: -78px;
+      }
+
+      .orphan-group.siblings .parent-context::after {
+        display: none;
+      }
+
+      .connected-task {
+        position: relative;
+        margin-bottom: 8px;
+      }
+
+      .connected-task::before {
+        content: "";
+        position: absolute;
+        top: 50%;
+        left: 9px;
+        width: 13px;
+        height: 1px;
+        background: var(--line);
+      }
+
+      /* A deeper orphan keeps each missing ancestor as a plain-text step.
+         Only the task that belongs in the current day/group is a card. */
+      .orphan-group.nested .parent-context.root::before {
+        bottom: -4px;
+      }
+
+      .orphan-group.nested .parent-context.root::after {
+        bottom: -4px;
+      }
+
+      .nested-context {
+        position: relative;
+        min-height: 31px;
+        margin-left: var(--indent);
+        padding: 3px 0 10px;
+        color: var(--ink-2);
+        font-size: 12px;
+        font-weight: 550;
+      }
+
+      .nested-context::before {
+        content: "";
+        position: absolute;
+        top: 22px;
+        bottom: -22px;
+        left: 9px;
+        width: 1px;
+        background: var(--line);
+      }
+
+      .nested-context::after {
+        content: "";
+        position: absolute;
+        bottom: -22px;
+        left: 9px;
+        width: 13px;
+        height: 1px;
+        background: var(--line);
+      }
+
+      .orphan-group.nested .task-card { margin-left: calc(var(--indent) * 2); }
+
+      .regular { margin: 0 0 8px 12px; }
+      .event-card { grid-template-columns: 3px 57px minmax(0, 1fr); overflow: hidden; }
+      .event-card .color { align-self: stretch; background: #c99069; }
+
+      .tasks-row {
+        grid-template-columns: 22px minmax(0, 1fr) auto;
+        gap: 13px;
+        min-height: 48px;
+        padding: 11px 14px;
+      }
+
+      .tasks-row .circle {
+        width: 20px;
+        height: 20px;
+        border: 1.7px solid var(--blue);
+        border-radius: 50%;
+      }
+
+      .tasks-row .due { color: var(--ink-3); font-size: 11.5px; }
+      .tasks-view .orphan-group { margin-left: 4px; }
+      .tasks-view .parent-context { padding-left: 1px; }
+
+      .note {
+        display: grid;
+        grid-template-columns: 18px 1fr;
+        gap: 10px;
+        margin-top: 24px;
+        padding: 14px 16px;
+        border: 1px dashed #cabcae;
+        border-radius: 10px;
+        color: var(--ink-2);
+        font-size: 12px;
+        line-height: 1.5;
+      }
+
+      .note b { color: var(--accent); }
+
+      .example-divider {
+        height: 1px;
+        margin: 25px 2px 18px;
+        background: var(--line-2);
+      }
+
+      .example-label {
+        margin: 0 2px 12px;
+        color: var(--ink-3);
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: .1em;
+        text-transform: uppercase;
+      }
+
+      @media (max-width: 760px) {
+        main { padding-top: 28px; }
+        .views { grid-template-columns: 1fr; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="eyebrow">Issue 162 · proposed treatment</p>
+      <h1>Keep the relationship, lose the ghost card.</h1>
+      <p class="intro">
+        When a subtask appears on a day or in a group where its parent does not belong, the
+        parent becomes a quiet line of context. The connector makes the relationship explicit,
+        while the indented card remains the only actionable task in that location.
+      </p>
+
+      <div class="views">
+        <section class="view" aria-labelledby="agenda-title">
+          <header class="view-title">
+            <h2 id="agenda-title">Agenda</h2>
+            <span>parent due another day</span>
+          </header>
+          <div class="surface">
+            <div class="day-heading"><strong>Friday</strong><span>Sep 18, 2026</span></div>
+
+            <div class="regular event-card">
+              <i class="color"></i><span class="time">09:30</span><span class="title">Design review</span>
+            </div>
+
+            <div class="orphan-group">
+              <div class="parent-context">Launch autumn campaign</div>
+              <div class="task-card agenda-card">
+                <i class="color"></i><span class="time">Due</span><span class="check">○</span><span class="title">Send final artwork to printer</span>
+              </div>
+            </div>
+
+            <div class="regular event-card">
+              <i class="color"></i><span class="time">14:00</span><span class="title">Catch up with Lea</span>
+            </div>
+
+            <div class="note"><b>1</b><span>The plain parent label belongs visually to the subtask below, not to the event above it.</span></div>
+
+            <div class="example-divider"></div>
+            <p class="example-label">Two subtasks · one parent</p>
+            <div class="orphan-group siblings">
+              <div class="parent-context">Prepare conference talk</div>
+              <div class="connected-task">
+                <div class="task-card agenda-card">
+                  <i class="color"></i><span class="time">Due</span><span class="check">○</span><span class="title">Finish slide illustrations</span>
+                </div>
+              </div>
+              <div class="connected-task">
+                <div class="task-card agenda-card">
+                  <i class="color"></i><span class="time">16:00</span><span class="check">○</span><span class="title">Send deck to organiser</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="example-divider"></div>
+            <p class="example-label">Subtask of a subtask</p>
+            <div class="orphan-group nested">
+              <div class="parent-context root">Prepare conference talk</div>
+              <div class="nested-context">Finish slide illustrations</div>
+              <div class="task-card agenda-card">
+                <i class="color"></i><span class="time">Due</span><span class="check">○</span><span class="title">Export diagrams at 2×</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="view tasks-view" aria-labelledby="tasks-title">
+          <header class="view-title">
+            <h2 id="tasks-title">Tasks</h2>
+            <span>parent outside this group</span>
+          </header>
+          <div class="surface">
+            <div class="group-heading"><strong>Today</strong><span>2</span></div>
+
+            <div class="orphan-group">
+              <div class="parent-context">Launch autumn campaign</div>
+              <div class="task-card tasks-row">
+                <span class="circle"></span><span class="title">Send final artwork to printer</span><span class="due">Today</span>
+              </div>
+            </div>
+
+            <div class="task-card tasks-row regular">
+              <span class="circle" style="border-color:#b7825c"></span><span class="title">Book train tickets</span><span class="due">Today</span>
+            </div>
+
+            <div class="note"><b>2</b><span>The same visual grammar is used in Tasks: parent text, connecting line, indented actionable row.</span></div>
+
+            <div class="example-divider"></div>
+            <p class="example-label">Two subtasks · one parent</p>
+            <div class="orphan-group siblings">
+              <div class="parent-context">Prepare conference talk</div>
+              <div class="connected-task">
+                <div class="task-card tasks-row">
+                  <span class="circle"></span><span class="title">Finish slide illustrations</span><span class="due">Today</span>
+                </div>
+              </div>
+              <div class="connected-task">
+                <div class="task-card tasks-row">
+                  <span class="circle"></span><span class="title">Send deck to organiser</span><span class="due">Today</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="example-divider"></div>
+            <p class="example-label">Subtask of a subtask</p>
+            <div class="orphan-group nested">
+              <div class="parent-context root">Prepare conference talk</div>
+              <div class="nested-context">Finish slide illustrations</div>
+              <div class="task-card tasks-row">
+                <span class="circle"></span><span class="title">Export diagrams at 2×</span><span class="due">Today</span>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+  </body>
+</html>

@@ -82,6 +82,97 @@ test('renders imported subtasks beneath their parent', async ({ page }) => {
   ).toBeVisible()
 })
 
+test('keeps subtasks in their own due-date group with parent text context', async ({ page }) => {
+  await clearState(page)
+  await page.addInitScript(() => {
+    const today = new Date()
+    const date = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+    today.setDate(today.getDate() + 1)
+    const tomorrow = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+    const task = (
+      id: string,
+      title: string,
+      parentTaskId?: string,
+      dueDate = date
+    ) => ({
+      id,
+      title,
+      parentTaskId,
+      completed: false,
+      type: 'task',
+      start: `${dueDate}T00:00:00`,
+      end: `${dueDate}T00:00:00`,
+      dueDate,
+      isAllDay: true,
+      calendarId: 'default',
+    })
+    localStorage.setItem(
+      'calino-storage',
+      JSON.stringify({
+        state: {
+          calendars: [
+            {
+              id: 'default',
+              name: 'Offline calendar',
+              color: '#4285F4',
+              isVisible: true,
+              isDefault: true,
+              showTasksInViews: true,
+            },
+          ],
+          events: [
+            task('sibling-parent', 'Prepare conference talk', undefined, tomorrow),
+            task('sibling-a', 'Finish slide illustrations', 'sibling-parent'),
+            task('sibling-b', 'Send deck to organiser', 'sibling-parent'),
+            task('nested-root', 'Publish release', undefined, tomorrow),
+            task('nested-parent', 'Prepare screenshots', 'nested-root', tomorrow),
+            task('nested-leaf', 'Crop mobile screenshot', 'nested-parent'),
+          ],
+        },
+        version: 1,
+      })
+    )
+  })
+
+  await page.goto('/tasks')
+  const main = page.locator('main')
+  const siblingContext = main
+    .locator('[data-component="task-parent-context"]')
+    .filter({ hasText: 'Prepare conference talk' })
+  await expect(siblingContext).toHaveCount(1)
+  await expect(siblingContext).not.toContainText('↳')
+
+  for (const title of ['Finish slide illustrations', 'Send deck to organiser']) {
+    const row = main.locator('[data-component="task-row"]').filter({ hasText: title })
+    await expect(row).toBeVisible()
+    await expect(row).toContainText('Today')
+    await expect(row).toHaveAttribute('data-task-depth', '1')
+    expect((await row.boundingBox())?.x).toBeGreaterThan(
+      (await siblingContext.boundingBox())?.x ?? 0
+    )
+  }
+
+  const nestedContext = main
+    .locator('[data-component="task-parent-context"]')
+    .filter({ hasText: 'Publish release' })
+  await expect(nestedContext).toContainText('Prepare screenshots')
+  await expect(
+    main.locator('[data-component="task-row"]').filter({ hasText: 'Crop mobile screenshot' })
+  ).toHaveAttribute('data-task-depth', '2')
+
+  const remoteParent = main
+    .locator('[data-component="task-row"]')
+    .filter({ hasText: 'Prepare conference talk' })
+  await expect(remoteParent.locator('[data-component="task-collapse-toggle"]')).toHaveCount(0)
+  const popupTrigger = remoteParent.locator('[data-component="task-subtasks-popup-trigger"]')
+  await expect(popupTrigger).toHaveText('+2')
+  await popupTrigger.click()
+  const popup = page.locator('[data-component="day-events-popup"]')
+  await expect(popup).toHaveAccessibleName('Subtasks for Prepare conference talk')
+  await expect(popup).toContainText('Finish slide illustrations')
+  await expect(popup).toContainText('Send deck to organiser')
+})
+
 test('month task cards and task surfaces expose subtask completion controls', async ({ page }) => {
   await clearState(page)
   await page.addInitScript(() => {

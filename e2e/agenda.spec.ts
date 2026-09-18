@@ -287,6 +287,132 @@ test('agenda lists a subtask under its parent even when it sorts first', async (
   ).toHaveAttribute('data-task-depth', '1')
 })
 
+test('agenda shows absent parent chains above their indented subtasks', async ({ page }) => {
+  await clearState(page)
+  const today = localDate()
+  const tomorrow = localDate(1)
+  await page.addInitScript(
+    ({ today, tomorrow }) => {
+      localStorage.setItem(
+        'calino-storage',
+        JSON.stringify({
+          state: {
+            currentDate: today,
+            calendars: [
+              {
+                id: 'default',
+                name: 'Offline calendar',
+                color: '#4285F4',
+                isVisible: true,
+                isDefault: true,
+                showTasksInViews: true,
+              },
+            ],
+            events: [
+              {
+                id: 'sibling-parent',
+                title: 'Prepare conference talk',
+                type: 'task',
+                start: `${tomorrow}T00:00:00`,
+                end: `${tomorrow}T00:00:00`,
+                dueDate: tomorrow,
+                isAllDay: true,
+                calendarId: 'default',
+                completed: false,
+              },
+              ...['Finish slide illustrations', 'Send deck to organiser'].map((title, index) => ({
+                id: `sibling-${index}`,
+                title,
+                type: 'task',
+                start: `${today}T00:00:00`,
+                end: `${today}T00:00:00`,
+                dueDate: today,
+                isAllDay: true,
+                calendarId: 'default',
+                completed: false,
+                parentTaskId: 'sibling-parent',
+              })),
+              {
+                id: 'nested-root',
+                title: 'Publish release',
+                type: 'task',
+                start: `${tomorrow}T00:00:00`,
+                end: `${tomorrow}T00:00:00`,
+                dueDate: tomorrow,
+                isAllDay: true,
+                calendarId: 'default',
+                completed: false,
+              },
+              {
+                id: 'nested-parent',
+                title: 'Prepare screenshots',
+                type: 'task',
+                start: `${tomorrow}T00:00:00`,
+                end: `${tomorrow}T00:00:00`,
+                dueDate: tomorrow,
+                isAllDay: true,
+                calendarId: 'default',
+                completed: false,
+                parentTaskId: 'nested-root',
+              },
+              {
+                id: 'nested-leaf',
+                title: 'Crop mobile screenshot',
+                type: 'task',
+                start: `${today}T00:00:00`,
+                end: `${today}T00:00:00`,
+                dueDate: today,
+                isAllDay: true,
+                calendarId: 'default',
+                completed: false,
+                parentTaskId: 'nested-parent',
+              },
+            ],
+          },
+          version: 1,
+        })
+      )
+    },
+    { today, tomorrow }
+  )
+
+  await page.goto('/agenda')
+  const day = page.locator(`[data-date="${today}"]`)
+  const siblingContext = day
+    .locator('[data-component="task-parent-context"]')
+    .filter({ hasText: 'Prepare conference talk' })
+  await expect(siblingContext).toHaveCount(1)
+  await expect(siblingContext).not.toContainText('↳')
+
+  for (const title of ['Finish slide illustrations', 'Send deck to organiser']) {
+    const card = day.locator('[data-component="agenda-task"]').filter({ hasText: title })
+    await expect(card).toBeVisible()
+    expect((await card.boundingBox())?.x).toBeGreaterThan(
+      (await siblingContext.boundingBox())?.x ?? 0
+    )
+  }
+
+  const nestedContext = day
+    .locator('[data-component="task-parent-context"]')
+    .filter({ hasText: 'Publish release' })
+  await expect(nestedContext).toContainText('Prepare screenshots')
+  const leaf = day
+    .locator('[data-component="agenda-task"]')
+    .filter({ hasText: 'Crop mobile screenshot' })
+  await expect(leaf.locator('[data-task-depth]')).toHaveAttribute('data-task-depth', '2')
+
+  const remoteParent = page
+    .locator(`[data-date="${tomorrow}"]`)
+    .locator('[data-component="agenda-task"]')
+    .filter({ hasText: 'Prepare conference talk' })
+  await expect(remoteParent.locator('[data-component="task-collapse-toggle"]')).toHaveCount(0)
+  await remoteParent.locator('[data-component="task-subtasks-popup-trigger"]').click()
+  const popup = page.locator('[data-component="day-events-popup"]')
+  await expect(popup).toHaveAccessibleName('Subtasks for Prepare conference talk')
+  await expect(popup).toContainText('Finish slide illustrations')
+  await expect(popup).toContainText('Send deck to organiser')
+})
+
 test('agenda colours a task row by its category like an event row', async ({ page }) => {
   await clearState(page)
   await seedAgendaItems(page)

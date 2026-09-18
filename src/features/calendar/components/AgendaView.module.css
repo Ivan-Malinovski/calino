@@ -307,6 +307,60 @@
 }
 
 /* ---- Task Row ---- */
+.agendaOrphanGroup {
+  position: relative;
+}
+
+.taskParentContext {
+  position: relative;
+  margin: 0 12px;
+  color: var(--ink-2, #6f6a62);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 18px;
+}
+
+.taskParentContextLabel {
+  position: relative;
+  min-height: 27px;
+  padding: 1px 0 8px 3px;
+}
+
+.taskParentContextLabel::before {
+  position: absolute;
+  top: 21px;
+  bottom: -7px;
+  left: 9px;
+  width: 1px;
+  background: var(--line, rgba(var(--ink-raw), 0.09));
+  content: '';
+}
+
+.taskParentContextLabel::after {
+  position: absolute;
+  bottom: -7px;
+  left: 9px;
+  width: 13px;
+  height: 1px;
+  background: var(--line, rgba(var(--ink-raw), 0.09));
+  content: '';
+}
+
+.taskParentContextContinuation {
+  height: 0;
+  min-height: 0;
+}
+
+.taskParentContextContinuation::before {
+  position: absolute;
+  top: -5px;
+  left: 9px;
+  width: 13px;
+  height: 1px;
+  background: var(--line, rgba(var(--ink-raw), 0.09));
+  content: '';
+}
+
 .agendaTask {
   display: flex;
   align-items: stretch;
@@ -450,6 +504,31 @@
 .agendaTaskCollapseToggle {
   margin-left: auto;
   color: var(--ink-2, #6f6a62);
+}
+
+.agendaTaskSubtaskPopupButton {
+  flex: 0 0 auto;
+  margin-left: auto;
+  padding: 2px 6px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--surface-bg, rgba(var(--ink-raw), 0.04));
+  color: var(--ink-2, #6f6a62);
+  font: inherit;
+  font-size: 10.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.agendaTaskSubtaskPopupButton:hover,
+.agendaTaskSubtaskPopupButton:focus-visible {
+  background: var(--surface-bg-strong, rgba(var(--ink-raw), 0.06));
+  color: var(--ink, #2c2823);
+}
+
+.agendaTaskSubtaskPopupButton:focus-visible {
+  outline: 2px solid var(--accent, #b07d4f);
+  outline-offset: 2px;
 }
 
 /* On a phone the row is wide and mostly empty to the right of the title, so
