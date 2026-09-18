@@ -78,7 +78,8 @@ interface EventCardProps {
   taskHasSubtasks?: boolean
   taskSubtasksCollapsed?: boolean
   taskSubtaskCount?: number
-  onToggleTaskSubtasks?: () => void
+  onToggleTaskSubtasks?: (trigger: HTMLButtonElement) => void
+  taskSubtasksPopup?: boolean
 }
 
 export const EventCard = React.memo(function EventCard({
@@ -100,6 +101,7 @@ export const EventCard = React.memo(function EventCard({
   taskSubtasksCollapsed = false,
   taskSubtaskCount,
   onToggleTaskSubtasks,
+  taskSubtasksPopup = false,
 }: EventCardProps): JSX.Element {
   const { t } = useTranslation('calendar')
   const useCategoryColors = useSettingsStore((state) => state.useCategoryColors)
@@ -648,7 +650,11 @@ export const EventCard = React.memo(function EventCard({
               {...attributes}
             >
               {isSubtask && monthView && !dotMode && (
-                <span className={styles.subtaskMarker} aria-hidden="true" title={t('modals.eventCard.subtask')}>
+                <span
+                  className={styles.subtaskMarker}
+                  aria-hidden="true"
+                  title={t('modals.eventCard.subtask')}
+                >
                   ↳
                 </span>
               )}
@@ -673,6 +679,10 @@ export const EventCard = React.memo(function EventCard({
                 hiddenCount={taskSubtaskCount}
                 onToggle={onToggleTaskSubtasks}
                 className={dotMode ? styles.dotTaskCollapseToggle : styles.cardTaskCollapseToggle}
+                actionLabel={taskSubtasksPopup ? `Show subtasks for "${event.title}"` : undefined}
+                component={
+                  taskSubtasksPopup ? 'task-subtasks-popup-trigger' : 'task-collapse-toggle'
+                }
               />
             )}
           </>
@@ -793,7 +803,9 @@ export const EventCard = React.memo(function EventCard({
                 ? []
                 : [
                     {
-                      label: isTask ? t('modals.eventCard.convertToEvent') : t('modals.eventCard.convertToTask'),
+                      label: isTask
+                        ? t('modals.eventCard.convertToEvent')
+                        : t('modals.eventCard.convertToTask'),
                       onClick: async () => {
                         const newType = isTask ? 'event' : 'task'
                         // The event modal's calendar picker only offers
@@ -812,8 +824,12 @@ export const EventCard = React.memo(function EventCard({
                         ) {
                           showToast(
                             newType === 'task'
-                              ? t('modals.eventCard.calendarDoesNotSupportTasks', { name: calendar.name })
-                              : t('modals.eventCard.calendarDoesNotSupportEvents', { name: calendar.name })
+                              ? t('modals.eventCard.calendarDoesNotSupportTasks', {
+                                  name: calendar.name,
+                                })
+                              : t('modals.eventCard.calendarDoesNotSupportEvents', {
+                                  name: calendar.name,
+                                })
                           )
                           return
                         }
@@ -960,7 +976,8 @@ function arePropsEqual(prev: EventCardProps, next: EventCardProps): boolean {
     prev.taskHasSubtasks !== next.taskHasSubtasks ||
     prev.taskSubtasksCollapsed !== next.taskSubtasksCollapsed ||
     prev.taskSubtaskCount !== next.taskSubtaskCount ||
-    prev.onToggleTaskSubtasks !== next.onToggleTaskSubtasks
+    prev.onToggleTaskSubtasks !== next.onToggleTaskSubtasks ||
+    prev.taskSubtasksPopup !== next.taskSubtasksPopup
   ) {
     return false
   }

@@ -4,6 +4,18 @@ All notable changes to Calino will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Subtasks now keep their hierarchy across task surfaces**
+  ([#162](https://github.com/Ivan-Malinovski/calino/issues/162)). Agenda keeps
+  cross-day subtasks connected to their parent, aligns the hierarchy guides,
+  and uses the same compact completion control as Tasks. Month view marks
+  child tasks consistently and lets a parent's subtask indicator open the
+  full descendant list, including subtasks due on other days.
+
+- Task-row hover shadows in Tasks are no longer clipped at the sides of the
+  scrolling list.
+
 ## [0.33.6] - 2026-09-17
 
 ### Fixed

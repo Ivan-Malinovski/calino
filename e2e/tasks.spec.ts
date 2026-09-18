@@ -89,12 +89,7 @@ test('keeps subtasks in their own due-date group with parent text context', asyn
     const date = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
     today.setDate(today.getDate() + 1)
     const tomorrow = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
-    const task = (
-      id: string,
-      title: string,
-      parentTaskId?: string,
-      dueDate = date
-    ) => ({
+    const task = (id: string, title: string, parentTaskId?: string, dueDate = date) => ({
       id,
       title,
       parentTaskId,
@@ -242,10 +237,25 @@ test('month task cards and task surfaces expose subtask completion controls', as
     .locator('[data-component="event-card"]')
     .filter({ hasText: 'Surface child' })
   await expect(childCard).toHaveAttribute('aria-label', /subtask/i)
+  const childMarker = childCard.locator('span[title="Subtask"]')
+  await expect(childMarker).toHaveCSS('font-size', '13px')
+  await expect(childMarker).toHaveCSS('opacity', '0.7')
 
   const parentCard = page
     .locator('[data-component="event-card"]')
     .filter({ hasText: 'Surface parent' })
+  const subtaskTrigger = parentCard.locator('[data-component="task-subtasks-popup-trigger"]')
+  await expect(subtaskTrigger).toHaveText('↲')
+  await expect(subtaskTrigger.locator('span')).toHaveCSS('font-size', '13px')
+  await expect(subtaskTrigger.locator('span')).toHaveCSS('opacity', '0.7')
+  await subtaskTrigger.click()
+  const subtaskPopup = page.locator('[data-component="day-events-popup"]')
+  await expect(subtaskPopup).toHaveAccessibleName('Subtasks for Surface parent')
+  await expect(subtaskPopup).toContainText('Surface child')
+  await expect(subtaskPopup).toContainText('Surface grandchild')
+  await page.keyboard.press('Escape')
+  await expect(subtaskPopup).toBeHidden()
+
   await parentCard.click()
 
   const preview = page.locator('[data-component="event-preview"]')
@@ -257,9 +267,7 @@ test('month task cards and task surfaces expose subtask completion controls', as
   await preview.getByRole('button', { name: 'Open task' }).click()
   const modal = page.locator('[data-component="modal-card"]')
   await expect(modal.getByRole('button', { name: 'Surface child', exact: true })).toBeVisible()
-  await expect(
-    modal.getByRole('button', { name: 'Surface grandchild', exact: true })
-  ).toBeVisible()
+  await expect(modal.getByRole('button', { name: 'Surface grandchild', exact: true })).toBeVisible()
   await expect(
     modal.getByRole('checkbox', { name: 'Mark "Surface grandchild" as incomplete' })
   ).toBeChecked()

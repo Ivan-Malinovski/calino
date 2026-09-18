@@ -71,7 +71,7 @@ import { consumesVerticalScroll } from '@/lib/scrollChaining'
 import styles from './CalendarGrid.module.css'
 import { duplicateEventWithSync } from '@/lib/duplicateWithSync'
 import { assignSpanLanes, compareDayEvents, makeDayFragments } from '../lib/multiDayFragments'
-import { filterTasksByCollapsedAncestors } from '@/lib/taskTree'
+import { filterTasksByCollapsedAncestors, getTaskDescendantIds } from '@/lib/taskTree'
 import { useTaskCollapse } from '../hooks/useTaskCollapse'
 
 // Module-level so `useRovingGrid`'s `handleKeyDown` stays referentially stable.
@@ -509,10 +509,7 @@ export function CalendarGrid(): JSX.Element {
     )
   }
 
-  const weekdays = useMemo(
-    () => getWeekdayLabels(firstDayOfWeek || 0),
-    [firstDayOfWeek, language]
-  )
+  const weekdays = useMemo(() => getWeekdayLabels(firstDayOfWeek || 0), [firstDayOfWeek, language])
 
   const date = useMemo(() => parseISO(currentDate), [currentDate])
 
@@ -1221,6 +1218,7 @@ export function CalendarGrid(): JSX.Element {
                                 dayEvents={dayEvents}
                                 dayTasks={dayTasks}
                                 popupTaskItems={tasksMap.get(dateKey) || []}
+                                allTaskItems={events}
                                 hasJournal={journalDates.has(dateKey)}
                                 journalEnabled={journalEnabled}
                                 isCurrentMonth={isCurrentMonth}
@@ -1417,6 +1415,7 @@ export function CalendarGrid(): JSX.Element {
                           dayEvents={dayEvents}
                           dayTasks={dayTasks}
                           popupTaskItems={tasksMap.get(dateKey) || []}
+                          allTaskItems={events}
                           hasJournal={journalDates.has(dateKey)}
                           journalEnabled={journalEnabled}
                           isCurrentMonth={isCurrentMonth}
@@ -1513,6 +1512,7 @@ interface DroppableDayProps {
   dayEvents: CalendarEvent[]
   dayTasks: CalendarEvent[]
   popupTaskItems: CalendarEvent[]
+  allTaskItems: CalendarEvent[]
   hasJournal: boolean
   journalEnabled: boolean
   isCurrentMonth: boolean
@@ -1554,6 +1554,7 @@ const DroppableDay = React.memo(function DroppableDay({
   dayEvents,
   dayTasks,
   popupTaskItems,
+  allTaskItems,
   hasJournal,
   journalEnabled,
   isCurrentMonth,
@@ -1652,6 +1653,11 @@ const DroppableDay = React.memo(function DroppableDay({
   // a multi-day bar row and a single-day dot row at the render site.
   const visibleDayEvents = useMemo(() => dayEvents.slice(0, eventLimit), [dayEvents, eventLimit])
   const [showPopup, setShowPopup] = useState(false)
+  const [subtaskPopup, setSubtaskPopup] = useState<{
+    parent: CalendarEvent
+    subtasks: CalendarEvent[]
+    position: { x: number; y: number }
+  } | null>(null)
   const [popupPosition, setPopupPosition] = useState({ x: 0, y: 0 })
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null)
   const moreEventsRef = useRef<HTMLButtonElement>(null)
@@ -1688,6 +1694,18 @@ const DroppableDay = React.memo(function DroppableDay({
   const handlePopupEventClick = (event: CalendarEvent): void => {
     setShowPopup(false)
     openModal(undefined, undefined, event.id, event.type === 'task' ? 'task' : 'event')
+  }
+
+  const openSubtaskPopup = (parent: CalendarEvent, trigger: HTMLButtonElement): void => {
+    const descendantIds = new Set(getTaskDescendantIds(allTaskItems, parent.id))
+    const rect = trigger.getBoundingClientRect()
+    setSubtaskPopup({
+      parent,
+      subtasks: allTaskItems.filter(
+        (candidate) => candidate.type === 'task' && descendantIds.has(candidate.id)
+      ),
+      position: { x: rect.left, y: rect.bottom + 4 },
+    })
   }
 
   const handleContextMenu = (e: React.MouseEvent): void => {
@@ -1736,7 +1754,9 @@ const DroppableDay = React.memo(function DroppableDay({
               e.stopPropagation()
               onDayNumberClick(day)
             }}
-            aria-label={t('views.grid.openDayView', { date: formatDisplayDate(day, 'EEEE, MMMM d') })}
+            aria-label={t('views.grid.openDayView', {
+              date: formatDisplayDate(day, 'EEEE, MMMM d'),
+            })}
           >
             {format(day, 'd')}
           </button>
@@ -1750,7 +1770,9 @@ const DroppableDay = React.memo(function DroppableDay({
               <span
                 className={styles.journalIndicator}
                 role="img"
-                aria-label={t('views.grid.hasJournalEntriesFor', { date: formatDisplayDate(day, 'MMMM d') })}
+                aria-label={t('views.grid.hasJournalEntriesFor', {
+                  date: formatDisplayDate(day, 'MMMM d'),
+                })}
               >
                 <span className={styles.journalIndicatorDot} />
                 {journalIndicatorIcon}
@@ -1759,7 +1781,9 @@ const DroppableDay = React.memo(function DroppableDay({
               <button
                 className={styles.journalIndicator}
                 title={t('views.grid.viewJournalEntries')}
-                aria-label={t('views.grid.viewJournalEntriesFor', { date: formatDisplayDate(day, 'MMMM d') })}
+                aria-label={t('views.grid.viewJournalEntriesFor', {
+                  date: formatDisplayDate(day, 'MMMM d'),
+                })}
                 onClick={(e) => {
                   e.stopPropagation()
                   onJournalIndicatorClick(day)
@@ -1869,7 +1893,8 @@ const DroppableDay = React.memo(function DroppableDay({
                       taskHasSubtasks={taskHasSubtasks(task.id)}
                       taskSubtasksCollapsed={collapsedTaskIds.has(task.id)}
                       taskSubtaskCount={taskDescendantCount(task.id)}
-                      onToggleTaskSubtasks={() => onToggleTaskSubtasks(task.id)}
+                      onToggleTaskSubtasks={(trigger) => openSubtaskPopup(task, trigger)}
+                      taskSubtasksPopup
                     />
                   </motion.div>
                 ))}
@@ -1970,7 +1995,8 @@ const DroppableDay = React.memo(function DroppableDay({
                       taskHasSubtasks={taskHasSubtasks(task.id)}
                       taskSubtasksCollapsed={collapsedTaskIds.has(task.id)}
                       taskSubtaskCount={taskDescendantCount(task.id)}
-                      onToggleTaskSubtasks={() => onToggleTaskSubtasks(task.id)}
+                      onToggleTaskSubtasks={(trigger) => openSubtaskPopup(task, trigger)}
+                      taskSubtasksPopup
                     />
                   </motion.div>
                 ))}
@@ -2006,6 +2032,21 @@ const DroppableDay = React.memo(function DroppableDay({
           taskIsCollapsed={taskIsCollapsed}
           taskDescendantCount={taskDescendantCount}
           onToggleTaskSubtasks={onToggleTaskSubtasks}
+        />
+      )}
+      {subtaskPopup && (
+        <DayEventsPopup
+          date={day}
+          events={subtaskPopup.subtasks}
+          position={subtaskPopup.position}
+          title={subtaskPopup.parent.title}
+          countLabel={`${subtaskPopup.subtasks.length} subtask${subtaskPopup.subtasks.length === 1 ? '' : 's'}`}
+          ariaLabel={`Subtasks for ${subtaskPopup.parent.title}`}
+          onClose={() => setSubtaskPopup(null)}
+          onEventClick={(event) => {
+            setSubtaskPopup(null)
+            openModal(undefined, undefined, event.id, 'task')
+          }}
         />
       )}
       {contextMenu && (
