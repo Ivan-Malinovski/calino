@@ -457,6 +457,27 @@ test('agenda colours a task row by its category like an event row', async ({ pag
   await expect(taskBar).toHaveCSS('background-color', 'rgb(59, 130, 246)')
 })
 
+test('agenda uses a compact Tasks-style completion checkbox', async ({ page }) => {
+  await clearState(page)
+  await seedAgendaItems(page)
+  await page.goto('/agenda')
+
+  const task = page.locator('[data-component="agenda-task"]').filter({ hasText: 'Agenda task' })
+  const checkbox = task.getByRole('checkbox')
+
+  await expect(checkbox).toHaveAccessibleName('Mark "Agenda task" as complete')
+  await expect(checkbox).toHaveCSS('width', '10px')
+  await expect(checkbox).toHaveCSS('height', '10px')
+  await expect(checkbox).toHaveCSS('border-radius', '50%')
+  await expect(checkbox.locator('svg')).toHaveCSS('opacity', '0')
+
+  await checkbox.click()
+  await expect(checkbox).toHaveAttribute('aria-checked', 'true')
+  await expect(checkbox).toHaveAccessibleName('Mark "Agenda task" as incomplete')
+  await expect(checkbox).toHaveCSS('background-color', 'rgb(59, 130, 246)')
+  await expect(checkbox.locator('svg')).toHaveCSS('opacity', '1')
+})
+
 test("agenda reads a task's due time from dueDate, not from start", async ({ page }) => {
   await clearState(page)
   await seedAgendaItems(page)

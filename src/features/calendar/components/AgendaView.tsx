@@ -214,6 +214,7 @@ function AgendaDraggableItem({
   className,
   disabled,
   dataComponent,
+  accentColor,
   indentDepth = 0,
   dropTargetId,
   children,
@@ -226,6 +227,7 @@ function AgendaDraggableItem({
   className: string
   disabled: boolean
   dataComponent?: string
+  accentColor?: string
   indentDepth?: number
   dropTargetId?: string
   children: React.ReactNode
@@ -245,6 +247,7 @@ function AgendaDraggableItem({
   })
 
   const style = {
+    ...(accentColor ? { '--event-color': accentColor } : {}),
     ...(transform
       ? {
           transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
@@ -908,6 +911,7 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
                                           event.completed ? styles.agendaTaskCompleted : ''
                                         }`}
                                         dataComponent="agenda-task"
+                                        accentColor={getEventBarColor(event)}
                                         indentDepth={taskDepthById.get(event.id) ?? 0}
                                         dropTargetId={`agenda-task:${event.id}`}
                                         disabled={
@@ -972,7 +976,17 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
                                                 void toggleComplete(event)
                                               }}
                                             >
-                                              {event.completed ? '✓' : '○'}
+                                              <svg
+                                                viewBox="0 0 14 14"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                strokeWidth="2"
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                aria-hidden="true"
+                                              >
+                                                <path d="M3 7.5l2.5 2.5L11 4" />
+                                              </svg>
                                             </button>
                                             <button
                                               type="button"
@@ -1062,6 +1076,7 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
                                       event={event}
                                       className={styles.agendaEvent}
                                       dataComponent="agenda-event"
+                                      accentColor={getEventBarColor(event)}
                                       disabled={
                                         !!event.recurrence ||
                                         !!event.rruleString ||
