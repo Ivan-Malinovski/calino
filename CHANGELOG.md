@@ -4,6 +4,8 @@ All notable changes to Calino will be documented in this file.
 
 ## [Unreleased]
 
+## [0.33.7] - 2026-09-18
+
 ### Fixed
 
 - **Subtasks now keep their hierarchy across task surfaces**
