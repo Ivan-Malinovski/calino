@@ -64,9 +64,7 @@ test.describe('/tasks — checkbox aligns with title visually', () => {
     await seedOneTask(page)
   })
 
-  test('title visible top sits 0–4px above the checkbox top', async ({
-    page,
-  }) => {
+  test('title visible top sits 0–4px above the checkbox top', async ({ page }) => {
     await page.goto('/tasks')
     const row = page.locator('[data-component="task-row"]').first()
     await expect(row).toBeVisible()
@@ -125,5 +123,30 @@ test.describe('/tasks — checkbox aligns with title visually', () => {
       delta,
       `title visible top (${titleVisibleTop}) vs checkbox top (${checkboxTop}) — title rose too far above the circle`
     ).toBeLessThanOrEqual(1)
+  })
+
+  test('hover shadow has room on both sides of the scrolling task list', async ({ page }) => {
+    await page.goto('/tasks')
+    const list = page.locator('[data-component="todo-task-list"]')
+    const row = page.locator('[data-component="task-row"]').first()
+    await expect(row).toBeVisible()
+
+    await row.hover()
+    await expect(row).toHaveCSS('transform', /matrix\(1, 0, 0, 1, 0, -1\)/)
+
+    const gutters = await Promise.all([list.boundingBox(), row.boundingBox()]).then(
+      ([listBox, rowBox]) => {
+        if (!listBox || !rowBox) throw new Error('Expected task list and row bounding boxes')
+        return {
+          left: rowBox.x - listBox.x,
+          right: listBox.x + listBox.width - (rowBox.x + rowBox.width),
+        }
+      }
+    )
+
+    // The hover shadow has an 8px blur. Matching gutters keep its soft sides
+    // inside the scroll container instead of clipping them at the row edges.
+    expect(gutters.left).toBeGreaterThanOrEqual(8)
+    expect(gutters.right).toBeGreaterThanOrEqual(8)
   })
 })

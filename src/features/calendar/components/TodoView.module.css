@@ -34,6 +34,10 @@
   flex: 1 1 auto;
   overflow-y: auto;
   min-height: 0;
+  /* `overflow-y: auto` also makes this a horizontal clipping boundary. Give
+     row hover shadows room to render without moving the task content inward. */
+  margin-inline: -8px;
+  padding-inline: 8px;
   transition:
     background 0.15s ease,
     box-shadow 0.15s ease;
