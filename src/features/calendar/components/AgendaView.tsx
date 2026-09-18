@@ -865,6 +865,13 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
                                       className={`${styles.agendaAnimatedItem} ${
                                         orphanContext ? styles.agendaOrphanGroup : ''
                                       }`}
+                                      style={
+                                        orphanContext
+                                          ? ({
+                                              '--orphan-context-height': `${orphanContext.ancestors.length * 27}px`,
+                                            } as React.CSSProperties)
+                                          : undefined
+                                      }
                                       data-orphan-position={orphanContext?.position}
                                       // Exit only: the row fades out when a task is completed or deleted.
                                       // Deliberately no `initial`/`animate`/`layout` — the month pane is
@@ -982,14 +989,16 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
                                             </button>
                                             {taskCollapse.hasSubtasks(event.id) &&
                                               hasLocalSubtasks && (
-                                              <TaskCollapseToggle
-                                                taskTitle={event.title}
-                                                collapsed={taskCollapse.isCollapsed(event.id)}
-                                                hiddenCount={taskCollapse.descendantCount(event.id)}
-                                                onToggle={() => taskCollapse.toggleTask(event.id)}
-                                                className={styles.agendaTaskCollapseToggle}
-                                              />
-                                            )}
+                                                <TaskCollapseToggle
+                                                  taskTitle={event.title}
+                                                  collapsed={taskCollapse.isCollapsed(event.id)}
+                                                  hiddenCount={taskCollapse.descendantCount(
+                                                    event.id
+                                                  )}
+                                                  onToggle={() => taskCollapse.toggleTask(event.id)}
+                                                  className={styles.agendaTaskCollapseToggle}
+                                                />
+                                              )}
                                             {taskCollapse.hasSubtasks(event.id) &&
                                               !hasLocalSubtasks && (
                                                 <button

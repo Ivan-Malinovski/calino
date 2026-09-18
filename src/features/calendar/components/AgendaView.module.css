@@ -311,6 +311,32 @@
   position: relative;
 }
 
+.agendaOrphanGroup[data-orphan-position='first']::after,
+.agendaOrphanGroup[data-orphan-position='middle']::after,
+.agendaOrphanGroup[data-orphan-position='last']::after {
+  position: absolute;
+  left: 21px;
+  width: 1px;
+  background: var(--line, rgba(var(--ink-raw), 0.09));
+  content: '';
+  pointer-events: none;
+}
+
+.agendaOrphanGroup[data-orphan-position='first']::after {
+  top: calc(var(--orphan-context-height) + 21px);
+  bottom: 0;
+}
+
+.agendaOrphanGroup[data-orphan-position='middle']::after {
+  top: 0;
+  bottom: 0;
+}
+
+.agendaOrphanGroup[data-orphan-position='last']::after {
+  top: 0;
+  height: 21px;
+}
+
 .taskParentContext {
   position: relative;
   margin: 0 12px;
@@ -329,7 +355,7 @@
 .taskParentContextLabel::before {
   position: absolute;
   top: 21px;
-  bottom: -7px;
+  bottom: -21px;
   left: 9px;
   width: 1px;
   background: var(--line, rgba(var(--ink-raw), 0.09));
@@ -338,7 +364,7 @@
 
 .taskParentContextLabel::after {
   position: absolute;
-  bottom: -7px;
+  bottom: -21px;
   left: 9px;
   width: 13px;
   height: 1px;
@@ -353,7 +379,7 @@
 
 .taskParentContextContinuation::before {
   position: absolute;
-  top: -5px;
+  top: 21px;
   left: 9px;
   width: 13px;
   height: 1px;

@@ -392,6 +392,27 @@ test('agenda shows absent parent chains above their indented subtasks', async ({
     )
   }
 
+  const siblingGroups = day.locator('[data-orphan-position]')
+  await expect(siblingGroups).toHaveCount(3)
+  for (const position of ['first', 'last']) {
+    const connector = day.locator(`[data-orphan-position="${position}"]`)
+    await expect(connector).toHaveCSS('--orphan-context-height', '27px')
+    expect(
+      await connector.evaluate((element) => getComputedStyle(element, '::after').height)
+    ).not.toBe('0px')
+  }
+  const lastSiblingGroup = day.locator('[data-orphan-position="last"]')
+  const lastSiblingCard = lastSiblingGroup.locator('[data-component="agenda-task"]')
+  const [branchTop, cardBox] = await Promise.all([
+    lastSiblingGroup.evaluate((element) => {
+      const groupTop = element.getBoundingClientRect().top
+      const branchOffset = Number.parseFloat(getComputedStyle(element, '::after').height)
+      return groupTop + branchOffset
+    }),
+    lastSiblingCard.boundingBox(),
+  ])
+  expect(branchTop).toBeCloseTo((cardBox?.y ?? 0) + (cardBox?.height ?? 0) / 2, 0)
+
   const nestedContext = day
     .locator('[data-component="task-parent-context"]')
     .filter({ hasText: 'Publish release' })
