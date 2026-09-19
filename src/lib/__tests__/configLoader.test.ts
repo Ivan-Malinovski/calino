@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { loadConfig, resetConfigCache, type CalinoConfig } from '../configLoader'
+import { loadConfig, loadLinkSchemes, resetConfigCache, type CalinoConfig } from '../configLoader'
 
 const validConfig: CalinoConfig = {
   version: 1,
@@ -203,5 +203,28 @@ describe('configLoader', () => {
       expect(config).not.toBeNull()
       expect(config!.webcalSubscriptions).toEqual([])
     })
+  })
+})
+
+describe('loadLinkSchemes', () => {
+  it('reads scheme → name, lower-casing the scheme', () => {
+    expect(loadLinkSchemes({ linkSchemes: { Obsidian: 'Obsidian', tg: ' Telegram ' } })).toEqual({
+      obsidian: 'Obsidian',
+      tg: 'Telegram',
+    })
+  })
+
+  it('skips schemes that run code, names that are not schemes and empty names', () => {
+    expect(
+      loadLinkSchemes({
+        linkSchemes: { javascript: 'x', data: 'x', '1abc': 'x', 'a b': 'x', ok: '', fine: 'Fine' },
+      })
+    ).toEqual({ fine: 'Fine' })
+  })
+
+  it('needs no accounts and tolerates a missing or malformed field', () => {
+    expect(loadLinkSchemes(null)).toEqual({})
+    expect(loadLinkSchemes({ version: 1 })).toEqual({})
+    expect(loadLinkSchemes({ linkSchemes: ['obsidian'] })).toEqual({})
   })
 })

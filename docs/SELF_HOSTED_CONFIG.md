@@ -93,6 +93,25 @@ Each command outputs a JSON blob. Keep the master password safe — you'll share
 Both `accounts` and `webcalSubscriptions` are optional — omit either array (or leave it empty) if you don't need it.
 The optional `headers` map can be omitted for accounts without a gateway. It works only for direct DAV connections. Configure the gateway to answer CORS preflight `OPTIONS` without requiring the secret headers; see the [gateway setup notes](../README.md#dav-behind-an-authentication-gateway).
 
+### Links into other apps
+
+A description or note can hold a link into another app, such as `obsidian://…`
+or `anytype://…`. Calino links web and mail addresses by itself; other apps are
+listed in `linkSchemes`, scheme → the name a bare link is shown by:
+
+```json
+{
+  "version": 1,
+  "accounts": [],
+  "linkSchemes": { "obsidian": "Obsidian", "tg": "Telegram" }
+}
+```
+
+A bare `obsidian://open?vault=Notes` then shows as **Obsidian ↗** and opens the
+app; a markdown link `[Plan](obsidian://…)` keeps its own text. `javascript`,
+`vbscript` and `data` are never linked. The field needs no accounts, and a
+config that only lists apps asks for no master password.
+
 **3. Build:**
 
 ```bash

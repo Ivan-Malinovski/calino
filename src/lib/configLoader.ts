@@ -115,6 +115,38 @@ export async function loadConfig(): Promise<CalinoConfig | null> {
   return config
 }
 
+// ─── Links into other apps ───────────────────────────────────────────────────
+
+/** Schemes that run code instead of opening something are never links. */
+const UNSAFE_SCHEMES = ['javascript', 'vbscript', 'data']
+
+const LinkSchemeNameSchema = z.string().trim().min(1).max(40)
+
+/**
+ * The apps whose links in descriptions and notes open that app, from the
+ * optional `linkSchemes` of calino.config.json: scheme → the name a bare link
+ * is shown by, e.g. `{ "obsidian": "Obsidian" }`. Read on its own, apart from
+ * the accounts, so a config that only lists apps asks for no master password.
+ * An entry that is not a URL scheme, or a scheme that runs code, is skipped.
+ */
+export function loadLinkSchemes(
+  raw: unknown = typeof __CALINO_CONFIG__ === 'undefined' ? null : __CALINO_CONFIG__
+): Record<string, string> {
+  const entries = (raw as { linkSchemes?: unknown } | null)?.linkSchemes
+  if (!entries || typeof entries !== 'object' || Array.isArray(entries)) return {}
+  const schemes: Record<string, string> = {}
+  for (const [key, value] of Object.entries(entries)) {
+    const scheme = key.trim().toLowerCase()
+    const name = LinkSchemeNameSchema.safeParse(value)
+    if (!/^[a-z][a-z0-9+.-]*$/.test(scheme) || UNSAFE_SCHEMES.includes(scheme) || !name.success) {
+      console.warn('[configLoader] Skipping invalid link scheme entry', key)
+      continue
+    }
+    schemes[scheme] = name.data
+  }
+  return schemes
+}
+
 /**
  * Reset cached config (for testing).
  */
