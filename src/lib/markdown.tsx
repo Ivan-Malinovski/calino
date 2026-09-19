@@ -1,5 +1,6 @@
 /**
- * Markdown renderer for journal entries.
+ * Markdown renderer for journal entries, contact notes and the descriptions of
+ * tasks and events.
  * Uses `react-markdown` (CommonMark + GFM) and avoids `dangerouslySetInnerHTML`.
  */
 
@@ -20,7 +21,16 @@ export function MarkdownView({ text, className }: MarkdownProps): JSX.Element {
         components={{
           a: ({ node, ...props }) => {
             void node
-            return <a {...props} target="_blank" rel="noopener noreferrer" />
+            // A click on a link opens it and goes no further, so a parent that
+            // starts editing or opens an item on click keeps its hands off it.
+            return (
+              <a
+                {...props}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(event) => event.stopPropagation()}
+              />
+            )
           },
         }}
       >

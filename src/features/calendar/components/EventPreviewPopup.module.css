@@ -650,3 +650,27 @@
 [data-theme='dark'] .tzBadge {
   background: rgba(0, 0, 0, 0.3);
 }
+
+/* The description is markdown, clamped to four lines above. Paragraphs sit
+   close, since the preview is small. */
+.descriptionText p {
+  margin: 0;
+}
+
+.descriptionText p + p {
+  margin-top: 4px;
+}
+
+/* Links look as they do in the journal and wrap anywhere, so a long address
+   does not widen the preview. Clicking one opens it; clicking the text around
+   it still starts editing. */
+.descriptionText a {
+  color: var(--accent-strong, var(--accent));
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  overflow-wrap: anywhere;
+}
+
+.descriptionText a:hover {
+  color: var(--color-accent-hover, var(--accent));
+}

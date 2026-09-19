@@ -1,4 +1,5 @@
 import type { JSX } from 'react'
+import { MarkdownView } from '@/lib/markdown'
 import { useMemo, useState, useRef, useEffect, useLayoutEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { motion } from 'framer-motion'
@@ -1178,7 +1179,11 @@ export function TodoView(): JSX.Element {
                         {taskIndicators}
                       </div>
                     )}
-                    {task.description && <div className={styles.taskNote}>{task.description}</div>}
+                    {task.description && (
+                      <div className={styles.taskNote}>
+                        <MarkdownView text={task.description} />
+                      </div>
+                    )}
                   </div>
                   <div className={styles.taskMeta}>
                     {!isMobile && taskIndicators}
