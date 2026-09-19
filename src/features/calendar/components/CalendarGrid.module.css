@@ -336,6 +336,14 @@
   color: var(--color-text-primary);
 }
 
+/* The rule above has the weight of `.today .dayNumber` and comes after it, so
+   without this one hovering today's number washes its circle out and leaves
+   dark digits on a pale disc. */
+.today .dayNumber:hover {
+  background: var(--color-accent-hover, var(--accent-strong, var(--accent)));
+  color: var(--accent-contrast, #fff);
+}
+
 .dayNumber:active {
   transform: scale(0.88);
   transition-duration: 0.05s;
