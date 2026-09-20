@@ -279,8 +279,11 @@ chrono-node, @dnd-kit, framer-motion, Fuse.js, ical.js, Vitest, and Playwright.
 
 ---
 
-Calino is actively developed and tested against real calendar workflows. Issues
-may still arise; bug reports are very welcome.
+## Vibecoding disclaimer
+
+Calino is largely vibecoded by Claude Opus 4.8, Opus 5 and ChatGPT 5.6 Sol and Luna.
+Developed and tested against real calendar workflows, and has been used in real life for months. Issues may still arise; bug reports are very welcome.
+But for good measure, keep backups of your calendars.
 
 ## License
 
