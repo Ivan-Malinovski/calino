@@ -4,7 +4,10 @@
    ========================================================================== */
 
 .page {
-  min-height: 100vh;
+  height: 100vh;
+  height: 100dvh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   background: var(--canvas);
   display: flex;
   align-items: center;
@@ -18,6 +21,9 @@
 }
 
 .card {
+  /* Keep short cards centered, but anchor tall cards at the top of the
+     scrollable page instead of letting flex centering clip both ends. */
+  margin-block: auto;
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
