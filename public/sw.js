@@ -1,4 +1,4 @@
-const CACHE_NAME = 'calino-v7'
+const CACHE_NAME = 'calino-v8'
 const STATIC_ASSETS = [
   '/manifest.json',
   '/apple-touch-icon.png',
