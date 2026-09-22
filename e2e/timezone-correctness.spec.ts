@@ -81,6 +81,20 @@ const singleEvent = {
   timezone: 'Europe/Copenhagen',
 }
 
+/** Issue #180: Outlook emits a Windows TZID, which date-fns-tz cannot consume directly. */
+const windowsTimezoneSeries = {
+  id: 'issue-180-series',
+  uid: 'issue-180-series',
+  type: 'event',
+  calendarId: 'tzc',
+  title: 'Outlook last Tuesday',
+  start: '2025-09-30T19:30:00',
+  end: '2025-09-30T21:30:00',
+  isAllDay: false,
+  timezone: 'W. Europe Standard Time',
+  rruleString: 'FREQ=MONTHLY;BYDAY=-1TU;UNTIL=20270831T173000Z',
+}
+
 const card = (page: Page, title: string) =>
   page.locator('[data-component="event-card"]', { hasText: title }).first()
 
@@ -135,6 +149,19 @@ test.describe('timezone correctness through the UI', () => {
     const zone = cph.locator('[data-component="event-card-zone"]')
     await expect(zone).toHaveText('Copenhagen')
     await expect(zone).toHaveAttribute('title', 'Europe/Copenhagen')
+  })
+
+  test('an Outlook Windows-TZID series renders after its original start date', async ({ page }) => {
+    await page.clock.setFixedTime(new Date('2025-10-28T12:00:00Z'))
+    await seedStore(page, [windowsTimezoneSeries])
+    await page.goto('/month')
+
+    const occurrence = card(page, 'Outlook last Tuesday')
+    await expect(occurrence).toBeVisible({ timeout: 10_000 })
+    // 19:30 in Berlin after the European DST transition is 18:30Z, which is
+    // 13:30 in New York before its DST transition. Month cards expose compact
+    // event times through their accessible name rather than visible text.
+    await expect(occurrence).toHaveAttribute('aria-label', 'Outlook last Tuesday, 13:30 to 15:30')
   })
 
   test('dragging a TZID event keeps the series zone and the NY wall clock moves with the drag', async ({

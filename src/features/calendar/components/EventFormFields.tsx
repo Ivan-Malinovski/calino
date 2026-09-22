@@ -17,6 +17,7 @@ import { useScrollInput } from '@/hooks/useScrollInput'
 import { daysBetween, addDays, deviceTimezone, getDateFnsLocale } from '@/lib/datetime'
 import { format } from 'date-fns'
 import { formatInTimeZone } from 'date-fns-tz'
+import { normalizeTzid } from '@/lib/timezoneRegistry'
 import { AttachmentSection } from './AttachmentSection'
 import { AttendeeSection } from './AttendeeSection'
 import { TimeField } from './TimeField'
@@ -39,7 +40,8 @@ function foreignZoneTimes(
   timeFormat: '12h' | '24h'
 ): { zoneLabel: string; times: string } | null {
   if (!eventTimezone || isAllDay) return null
-  if (eventTimezone === deviceTimezone()) return null
+  const calculationTimezone = normalizeTzid(eventTimezone)
+  if (calculationTimezone === normalizeTzid(deviceTimezone())) return null
 
   const startInstant = new Date(`${startDate}T${startTime}:00`)
   const endInstant = new Date(`${endDate}T${endTime}:00`)
@@ -49,13 +51,13 @@ function foreignZoneTimes(
   let start: string
   let end: string
   try {
-    start = formatInTimeZone(startInstant, eventTimezone, pattern)
-    end = formatInTimeZone(endInstant, eventTimezone, pattern)
+    start = formatInTimeZone(startInstant, calculationTimezone, pattern)
+    end = formatInTimeZone(endInstant, calculationTimezone, pattern)
     // A late or early event can sit on a different calendar day over there, so
     // name the day when it differs — otherwise the times alone would mislead.
-    const startDay = formatInTimeZone(startInstant, eventTimezone, 'yyyy-MM-dd')
+    const startDay = formatInTimeZone(startInstant, calculationTimezone, 'yyyy-MM-dd')
     if (startDay !== startDate) {
-      start = `${formatInTimeZone(startInstant, eventTimezone, 'MMM d', { locale: getDateFnsLocale() })}, ${start}`
+      start = `${formatInTimeZone(startInstant, calculationTimezone, 'MMM d', { locale: getDateFnsLocale() })}, ${start}`
     }
   } catch {
     // Unknown zone: better to show nothing than a wrong time.

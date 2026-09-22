@@ -33,6 +33,7 @@ import { deleteAttachments } from '@/lib/attachmentStore'
 import { deleteRawIcs, deleteRawIcsForCalendar } from '@/lib/rawIcsStore'
 import { useSettingsStore } from '@/store/settingsStore'
 import { toZoneWallClock } from '@/lib/datetime'
+import { normalizeTzid } from '@/lib/timezoneRegistry'
 import { createUuid } from '@/lib/uuid'
 
 // Memo cache for getEventsForDateRange. Keyed by the range; a cached result is
@@ -188,7 +189,11 @@ function taskDayKey(task: CalendarEvent): string {
   // `new Date(naive)` reads device-locally and files a 23:30 New York task on
   // the next day for any device west of the event's zone.
   if (task.timezone) {
-    return formatInTimeZone(parseOccurrenceInstant(due, task.timezone), task.timezone, 'yyyy-MM-dd')
+    return formatInTimeZone(
+      parseOccurrenceInstant(due, task.timezone),
+      normalizeTzid(task.timezone),
+      'yyyy-MM-dd'
+    )
   }
   return format(parseISO(due), 'yyyy-MM-dd')
 }

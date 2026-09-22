@@ -152,7 +152,7 @@ export function deviceTimezone(): string {
 export function toEventInstant(iso: string, timezone?: string): Date {
   if (timezone && !iso.endsWith('Z')) {
     try {
-      const zoned = fromZonedTime(iso, timezone)
+      const zoned = fromZonedTime(iso, normalizeTzid(timezone))
       // date-fns-tz v3 does not throw for an unknown zone - it returns NaN.
       if (!Number.isNaN(zoned.getTime())) return zoned
     } catch {

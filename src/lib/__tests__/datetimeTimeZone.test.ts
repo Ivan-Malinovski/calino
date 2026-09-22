@@ -8,6 +8,10 @@ describe('toEventInstant (Phase 2 C2)', () => {
     const d = toEventInstant('2024-02-10T02:30:00', 'America/New_York')
     expect(d.toISOString()).toBe('2024-02-10T07:30:00.000Z')
   })
+  it('normalizes a Windows TZID before resolving a naive wall clock', () => {
+    const d = toEventInstant('2025-10-28T19:30:00', 'W. Europe Standard Time')
+    expect(d.toISOString()).toBe('2025-10-28T18:30:00.000Z')
+  })
   it('treats a Z string as an instant regardless of timezone', () => {
     const d = toEventInstant('2024-03-10T07:30:00.000Z', 'America/New_York')
     expect(d.toISOString()).toBe('2024-03-10T07:30:00.000Z')
@@ -26,11 +30,15 @@ describe('toEventInstant (Phase 2 C2)', () => {
 describe('toZoneWallClock (Phase 2 C3)', () => {
   it('converts a Z instant to the zone naive wall clock', () => {
     // 07:30Z = 02:30 EST (before US spring-forward Mar 10 2024 07:00 local).
-    expect(toZoneWallClock('2024-02-10T07:30:00.000Z', 'America/New_York')).toBe('2024-02-10T02:30:00')
+    expect(toZoneWallClock('2024-02-10T07:30:00.000Z', 'America/New_York')).toBe(
+      '2024-02-10T02:30:00'
+    )
   })
   it('handles a date after spring-forward (EDT)', () => {
     // 2024-07-01T16:00:00Z = 12:00 EDT.
-    expect(toZoneWallClock('2024-07-01T16:00:00.000Z', 'America/New_York')).toBe('2024-07-01T12:00:00')
+    expect(toZoneWallClock('2024-07-01T16:00:00.000Z', 'America/New_York')).toBe(
+      '2024-07-01T12:00:00'
+    )
   })
   it('passes a naive string through unchanged', () => {
     expect(toZoneWallClock('2024-03-10T02:30:00', 'America/New_York')).toBe('2024-03-10T02:30:00')

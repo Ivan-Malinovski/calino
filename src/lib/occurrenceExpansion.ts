@@ -4,7 +4,7 @@ import { RRule } from 'rrule'
 import ICAL from 'ical.js'
 import { buildRRuleString, normaliseAllDayUntil } from './recurrence'
 import { deviceTimezone } from './datetime'
-import { resolveZone } from './timezoneRegistry'
+import { normalizeTzid, resolveZone } from './timezoneRegistry'
 import type { CalendarEvent } from '@/types'
 
 /**
@@ -80,7 +80,9 @@ export function shapeOccurrence(
   }
 
   const occEnd = new Date(occ.getTime() + (eventEnd.getTime() - eventStart.getTime()))
-  const occDateStr = timezone ? formatInTimeZone(occ, timezone, 'yyyy-MM-dd') : localDateString(occ)
+  const occDateStr = timezone
+    ? formatInTimeZone(occ, normalizeTzid(timezone), 'yyyy-MM-dd')
+    : localDateString(occ)
   return {
     occStartStr: occ.toISOString(),
     occEndStr: occEnd.toISOString(),
@@ -157,7 +159,7 @@ export function occurrenceRecurrenceValue(
 export function parseOccurrenceInstant(iso: string, timezone?: string): Date {
   if (timezone && !iso.endsWith('Z')) {
     try {
-      const zoned = fromZonedTime(iso, timezone)
+      const zoned = fromZonedTime(iso, normalizeTzid(timezone))
       // date-fns-tz v3 does not throw for an unknown zone - it returns NaN.
       if (!Number.isNaN(zoned.getTime())) return zoned
     } catch {
@@ -234,7 +236,7 @@ function instantWallClockParts(iso: string, timezone: string): WallClockParts | 
   try {
     // date-fns-tz v3 returns 'Invalid Date' for an unknown zone rather than
     // throwing; parseWallClock rejects it, and the caller falls back to rrule.
-    return parseWallClock(formatInTimeZone(d, timezone, "yyyy-MM-dd'T'HH:mm:ss"))
+    return parseWallClock(formatInTimeZone(d, normalizeTzid(timezone), "yyyy-MM-dd'T'HH:mm:ss"))
   } catch {
     return null
   }
