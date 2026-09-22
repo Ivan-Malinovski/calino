@@ -4,6 +4,8 @@ All notable changes to Calino will be documented in this file.
 
 ## [Unreleased]
 
+## [0.33.8] - 2026-09-22
+
 ### Fixed
 
 - **Self-hosted Calino can connect directly to plain-HTTP DAV servers**
