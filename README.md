@@ -160,6 +160,13 @@ Calino is a static React app — host it anywhere that serves HTML/JS.
 
 Most user data, including CalDAV account metadata and credentials, lives in the browser's `localStorage`; large raw ICS documents, attachments, and contact photos use IndexedDB. There is no backend or central Calino application server.
 
+For a private-network deployment that must connect directly to a plain-HTTP
+CalDAV server, build with `CALINO_SELF_HOSTED=true pnpm build`. The DAV server
+must allow the Calino origin through CORS. HTTP transmits credentials and
+calendar data without encryption, and an HTTPS-hosted Calino may still be
+blocked by the browser's mixed-content policy; see
+[`docs/DOCKER.md`](./docs/DOCKER.md#content-security-policy).
+
 **Config (in-app):** Click the gear icon or use `Cmd/Ctrl+K` → "Settings" → add your CalDAV server URL, username, and password.
 
 **Site URL (for SEO / Open Graph cards):**

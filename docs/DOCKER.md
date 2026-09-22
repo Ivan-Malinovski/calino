@@ -47,6 +47,7 @@ docker compose up -d
 | `CALINO_GITHUB_REPO` | GitHub repo slug (shown in footer). | `ivan-malinovski/Calino` | ✅ |
 | `CALINO_CONTACT_EMAIL` | Contact email (shown in footer). | `calendar@malinov.ski` | ✅ |
 | `CALINO_ENABLE_SW` | Enable service worker for offline support. Requires `Service-Worker-Allowed: /` header from your reverse proxy. | `false` | ✅ |
+| `CALINO_SELF_HOSTED` | Marks the build as self-hosted and permits direct connections to plain-HTTP DAV servers. | `true` | ✅ |
 
 ## Architecture
 
@@ -147,9 +148,18 @@ The Docker setup follows least-privilege principles:
 Calino does **not** ship an HTTP `Content-Security-Policy` response header
 because the app connects to **user-configured CalDAV servers** at arbitrary
 origins — a static header would break the app for most deployments. The HTML
-does contain a permissive meta CSP with `connect-src 'self' https:` as a
-baseline. If your CalDAV server has a fixed origin, add a stricter response
-header in your reverse proxy. A reasonable starting point:
+contains a build-specific baseline meta CSP. Public builds use
+`connect-src 'self' https:`. Self-hosted builds additionally permit `http:` so
+Calino on a private network can connect directly to plain-HTTP CalDAV and
+CardDAV servers. Those servers must still allow Calino's origin through CORS.
+
+Plain HTTP sends account passwords, calendars, and contacts over the network
+without encryption. Use it only on a network or VPN you trust. If Calino itself
+is served over HTTPS, browsers may still block an HTTP DAV server as mixed
+content; use HTTPS for DAV or put an HTTPS proxy in front of it instead.
+
+If your DAV server has a fixed origin, add a stricter response header in your
+reverse proxy. A reasonable starting point:
 
 ```
 Content-Security-Policy: default-src 'self'; connect-src 'self' https://your-caldav.example.com; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self';

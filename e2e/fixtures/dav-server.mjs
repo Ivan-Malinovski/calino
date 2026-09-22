@@ -18,46 +18,7 @@
  *
  * Zero dependencies, so it runs anywhere `node` does.
  */
-import { createServer } from 'node:https'
-import { execFileSync } from 'node:child_process'
-import { mkdtempSync, readFileSync, existsSync } from 'node:fs'
-import { tmpdir } from 'node:os'
-import { join } from 'node:path'
-
-/**
- * TLS, because Calino's CSP is `connect-src 'self' https:` — a plain-http
- * origin is blocked by the browser before a request is ever made, which would
- * make every scenario here look like an unreachable server.
- */
-function selfSignedCert() {
-  const dir = process.env.DAV_CERT_DIR ?? mkdtempSync(join(tmpdir(), 'calino-dav-'))
-  const key = join(dir, 'key.pem')
-  const cert = join(dir, 'cert.pem')
-  if (!existsSync(key) || !existsSync(cert)) {
-    execFileSync(
-      'openssl',
-      [
-        'req',
-        '-x509',
-        '-newkey',
-        'rsa:2048',
-        '-nodes',
-        '-keyout',
-        key,
-        '-out',
-        cert,
-        '-days',
-        '3650',
-        '-subj',
-        '/CN=localhost',
-        '-addext',
-        'subjectAltName=DNS:localhost,IP:127.0.0.1',
-      ],
-      { stdio: 'ignore' }
-    )
-  }
-  return { key: readFileSync(key), cert: readFileSync(cert) }
-}
+import { createServer } from 'node:http'
 
 const PORT = Number(process.env.DAV_PORT ?? 8099)
 
@@ -100,8 +61,8 @@ function profileFor(pathname) {
   return healthy
 }
 
-const server = createServer(selfSignedCert(), (req, res) => {
-  const { pathname } = new URL(req.url, `https://localhost:${PORT}`)
+const server = createServer((req, res) => {
+  const { pathname } = new URL(req.url, `http://localhost:${PORT}`)
   const profile = profileFor(pathname)
   const origin = req.headers.origin
 
@@ -163,5 +124,5 @@ const server = createServer(selfSignedCert(), (req, res) => {
 })
 
 server.listen(PORT, () => {
-  console.log(`dav-server listening on https://localhost:${PORT}`)
+  console.log(`dav-server listening on http://localhost:${PORT}`)
 })

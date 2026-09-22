@@ -12,11 +12,7 @@
 import { test, expect, type Page } from '@playwright/test'
 import { clearState, seedAccount } from './fixtures/localstorage'
 
-const DAV = `https://localhost:${process.env.DAV_PORT ?? 8099}`
-
-// The stub serves a self-signed cert; Calino's CSP (`connect-src 'self' https:`)
-// rules out testing this over plain http.
-test.use({ ignoreHTTPSErrors: true })
+const DAV = `http://localhost:${process.env.DAV_PORT ?? 8099}`
 
 /** The stub is a separate process; don't fail the suite when it isn't running. */
 test.beforeAll(async ({ request }) => {
@@ -71,7 +67,7 @@ function check(page: Page, id: string) {
 }
 
 test.describe('diagnostics against a real server', () => {
-  test('a correctly configured server passes every check', async ({ page }) => {
+  test('a correctly configured plain-HTTP server passes every check', async ({ page }) => {
     await diagnoseSeededAccount(page, '/good/')
 
     await expect(check(page, 'reachable')).toHaveAttribute('data-status', 'pass')

@@ -5,6 +5,7 @@ import path from 'path'
 import { nodePolyfills } from 'vite-plugin-node-polyfills'
 import { configDefaults } from 'vitest/config'
 import { caldavMockPlugin } from './e2e/fixtures/vite-caldav-mock'
+import { contentSecurityPolicy } from './src/config/contentSecurityPolicy.ts'
 
 const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf-8'))
 
@@ -21,6 +22,11 @@ if (existsSync(configPath)) {
   }
 }
 
+const isSelfHosted = !!calinoConfig || process.env.CALINO_SELF_HOSTED === 'true'
+// The cross-origin diagnostics fixture is deliberately plain HTTP. Permit that
+// transport without changing hosted-only UI behavior across the rest of E2E.
+const allowHttpConnections = isSelfHosted || process.env.CALINO_E2E_MOCK === '1'
+
 // Unset (the default) keeps the dev server localhost-only; see the SECURITY
 // note on `server.host` below before setting it.
 const devHost = process.env.CALINO_DEV_HOST
@@ -34,9 +40,22 @@ export default defineConfig({
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
     __CALINO_CONFIG__: JSON.stringify(calinoConfig),
-    __CALINO_SELF_HOSTED__: JSON.stringify(!!calinoConfig || process.env.CALINO_SELF_HOSTED === 'true'),
+    __CALINO_SELF_HOSTED__: JSON.stringify(isSelfHosted),
   },
-  plugins: [react(), nodePolyfills(), caldavMockPlugin()],
+  plugins: [
+    {
+      name: 'calino-content-security-policy',
+      enforce: 'pre',
+      transformIndexHtml: (html) =>
+        html.replace(
+          '__CALINO_CONTENT_SECURITY_POLICY__',
+          contentSecurityPolicy(allowHttpConnections)
+        ),
+    },
+    react(),
+    nodePolyfills(),
+    caldavMockPlugin(),
+  ],
   server: {
     // SECURITY: default to localhost-only. The dev server has known
     // WebSocket arbitrary file read CVEs (CVE-2026-39363, see

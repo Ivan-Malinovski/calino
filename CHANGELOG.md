@@ -4,6 +4,15 @@ All notable changes to Calino will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Self-hosted Calino can connect directly to plain-HTTP DAV servers**
+  ([#179](https://github.com/Ivan-Malinovski/calino/issues/179)). Self-hosted
+  builds now permit HTTP CalDAV and CardDAV connections for private-network
+  deployments while public builds keep their HTTPS-only connection policy.
+  Cross-origin DAV servers must still allow Calino through CORS, and HTTP
+  should only be used on a trusted network or VPN.
+
 ## [0.33.7] - 2026-09-18
 
 ### Fixed

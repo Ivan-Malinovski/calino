@@ -81,12 +81,10 @@ export default defineConfig({
       // A DAV server on its own origin, for e2e/diagnostics.spec.ts. The vite
       // mock can't serve those specs: it's middleware on the app's origin, so
       // its responses are same-origin and never exercise CORS — which is the
-      // only thing diagnostics has to reason about. HTTPS because the app's
-      // CSP is `connect-src 'self' https:`; the cert is self-signed, hence
-      // `ignoreHTTPSErrors` in the spec.
+      // only thing diagnostics has to reason about. It deliberately uses HTTP
+      // to cover private-network DAV from a self-hosted build.
       command: `node e2e/fixtures/dav-server.mjs`,
-      url: `https://localhost:${DAV_PORT}/good/`,
-      ignoreHTTPSErrors: true,
+      url: `http://localhost:${DAV_PORT}/good/`,
       reuseExistingServer: !IS_CI && !IS_PARALLEL_RUNNER,
       timeout: 30_000,
       stdout: 'ignore',
