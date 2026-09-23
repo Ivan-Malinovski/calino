@@ -44,6 +44,8 @@ the native Android app from
 early, but it should be usable if you want an app that feels more fluid and
 native on Android.
 
+The other APK, `calino-v0.34.0.apk`, is the regular Calino app.
+
 ## [0.33.8] - 2026-09-22
 
 ### Fixed
