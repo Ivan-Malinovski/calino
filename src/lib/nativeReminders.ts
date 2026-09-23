@@ -2,7 +2,7 @@ import { LocalNotifications } from '@capacitor/local-notifications'
 import { addMinutes, parseISO } from 'date-fns'
 import { toEventInstant, formatTime } from '@/lib/datetime'
 import type { CalendarEvent } from '@/types'
-import { getEffectiveReminders } from './notifications'
+import { getEffectiveReminders, reminderBody } from './notifications'
 import { openEventDeepLink } from './deepLink'
 import { useSettingsStore } from '@/store/settingsStore'
 import i18n from './i18n'
@@ -77,11 +77,6 @@ export function reminderBodyTime(event: CalendarEvent): string {
   return formatTime(toEventInstant(event.start, event.timezone), useSettingsStore.getState().timeFormat)
 }
 
-export function reminderBody(event: CalendarEvent): string {
-  if (event.isAllDay) return i18n.t('errors:reminder.startingToday')
-  return i18n.t('errors:reminder.startingAt', { time: reminderBodyTime(event) })
-}
-
 export async function reconcileNativeReminders(events: CalendarEvent[]): Promise<void> {
   const now = Date.now()
   const toSchedule: Parameters<typeof LocalNotifications.schedule>[0]['notifications'] = []
@@ -94,7 +89,7 @@ export async function reconcileNativeReminders(events: CalendarEvent[]): Promise
       toSchedule.push({
         id: hashToInt32(`${event.id}:${reminder.id}`),
         title: event.title,
-        body: reminderBody(event),
+        body: reminderBody(event, at),
         schedule: { at },
         actionTypeId: REMINDER_ACTION_TYPE,
         extra: { eventId: event.id, eventDate: event.start },

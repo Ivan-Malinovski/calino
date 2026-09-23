@@ -1,4 +1,7 @@
-import { format, addMinutes } from 'date-fns'
+import { format, addMinutes, addDays, isSameDay, parseISO } from 'date-fns'
+import { toEventInstant, formatTime } from '@/lib/datetime'
+import { useSettingsStore } from '@/store/settingsStore'
+import i18n, { currentLanguage } from '@/lib/i18n'
 import type { Calendar, CalendarEvent, Reminder } from '@/types'
 import { calendarMutesReminders, useCalendarStore } from '@/store/calendarStore'
 
@@ -41,6 +44,20 @@ export function getEffectiveReminders(event: CalendarEvent, calendar?: Calendar)
     calendar ?? useCalendarStore.getState().calendars.find((c) => c.id === event.calendarId)
   if (calendarMutesReminders(resolved)) return []
   return event.reminders ?? []
+}
+
+/** Include the event's day even when the reminder fires on an earlier day. */
+export function reminderBody(event: CalendarEvent, referenceTime = new Date()): string {
+  const start = event.isAllDay ? parseISO(event.start) : toEventInstant(event.start, event.timezone)
+  const tomorrow = isSameDay(start, addDays(referenceTime, 1))
+  const date = new Intl.DateTimeFormat(currentLanguage(), { dateStyle: 'medium' }).format(start)
+  if (event.isAllDay) {
+    return tomorrow ? i18n.t('errors:reminder.startingTomorrow') : i18n.t('errors:reminder.startingOn', { date })
+  }
+  const time = formatTime(start, useSettingsStore.getState().timeFormat)
+  return tomorrow
+    ? i18n.t('errors:reminder.startingTomorrowAt', { time })
+    : i18n.t('errors:reminder.startingOnAt', { date, time })
 }
 
 export async function requestNotificationPermission(): Promise<NotificationPermissionStatus> {

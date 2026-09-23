@@ -56,7 +56,7 @@
   "reminder": {
     "allDay": "All day",
     "startingToday": "Starting today",
-    "startingAt": "Starting at {{time}}",
+    "startingAt": "Starting at {{time}}", "startingTomorrow": "Starts tomorrow", "startingTomorrowAt": "Starts tomorrow at {{time}}", "startingOn": "Starting on {{date}}", "startingOnAt": "Starting on {{date}} at {{time}}",
     "snooze5m": "Snooze 5m",
     "testNotificationTitle": "Test Notification",
     "testNotificationBody": "Notifications are working! It is currently {{time}}"

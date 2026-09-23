@@ -9,6 +9,7 @@ import {
   getDueSnoozedReminders,
   snoozeReminder,
   getEffectiveReminders,
+  reminderBody,
 } from '@/lib/notifications'
 import {
   registerReminderActions,
@@ -18,7 +19,7 @@ import {
   cancelAllNativeReminders,
 } from '@/lib/nativeReminders'
 import { useCalendarMirrorStore, mirrorOwnsReminders } from '@/store/calendarMirrorStore'
-import { toEventInstant, formatTime } from '@/lib/datetime'
+import { toEventInstant } from '@/lib/datetime'
 import { parseISO, isWithinInterval, addMinutes, addHours, addDays, isAfter } from 'date-fns'
 import { toast } from 'sonner'
 import i18n from '@/lib/i18n'
@@ -207,13 +208,7 @@ export function useNotifications(): void {
           if (shouldFire) {
             shownReminders.current.set(reminderId, triggerTimestamp)
 
-            const timeStr = event.isAllDay
-              ? 'All day'
-              : formatTime(startInstant, useSettingsStore.getState().timeFormat)
-
-            const body = event.isAllDay
-              ? i18n.t('errors:reminder.startingToday')
-              : i18n.t('errors:reminder.startingAt', { time: timeStr })
+            const body = reminderBody(event)
 
             showNotification(event.title, body, event.id, event.start)
 

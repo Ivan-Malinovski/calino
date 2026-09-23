@@ -2,7 +2,8 @@ import { describe, it, expect, vi } from 'vitest'
 import { parseISO } from 'date-fns'
 import type { CalendarEvent } from '@/types'
 import { toEventInstant, formatTime } from '@/lib/datetime'
-import { reminderInstant, reminderBodyTime, reminderBody } from '../nativeReminders'
+import { reminderInstant, reminderBodyTime } from '../nativeReminders'
+import { reminderBody } from '../notifications'
 
 // The helpers under test are pure; mock the Capacitor plugin and the deep-link
 // module so importing nativeReminders never touches platform code.
@@ -52,7 +53,8 @@ describe('nativeReminders - TZID reminder timing', () => {
     const event = makeEvent({ timezone: 'Europe/Copenhagen' })
     const display = formatTime(toEventInstant(event.start, event.timezone), '24h')
     expect(reminderBodyTime(event)).toBe(display)
-    expect(reminderBody(event)).toBe(`Starting at ${display}`)
+    expect(reminderBody(event, new Date('2026-02-09T12:00:00'))).toBe(`Starts tomorrow at ${display}`)
+    expect(reminderBody(event, new Date('2026-02-08T12:00:00'))).toContain('Feb 10, 2026')
   })
 
   it('keeps calendar-date behavior for all-day events (no conversion)', () => {
@@ -65,7 +67,7 @@ describe('nativeReminders - TZID reminder timing', () => {
       parseISO(event.start).getTime() - minutesBefore * 60_000
     )
     expect(reminderBodyTime(event)).toBe('All day')
-    expect(reminderBody(event)).toBe('Starting today')
+    expect(reminderBody(event, new Date('2026-02-09T12:00:00'))).toBe('Starts tomorrow')
   })
 
   it('passes Z-suffixed (already-instant) starts through unchanged', () => {
