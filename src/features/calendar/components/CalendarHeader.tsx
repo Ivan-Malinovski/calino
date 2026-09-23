@@ -42,6 +42,7 @@ export function CalendarHeader({
   const setCurrentDate = useCalendarStore((state) => state.setCurrentDate)
   const setCurrentView = useCalendarStore((state) => state.setCurrentView)
   const firstDayOfWeek = useSettingsStore((state) => state.firstDayOfWeek)
+  const defaultView = useSettingsStore((state) => state.defaultView)
   const weekWindowStart = useWeekWindowStart()
   const journalEnabled = useSettingsStore((state) => state.journalEnabled)
   const contactsEnabled = useSettingsStore((state) => state.contactsEnabled)
@@ -460,17 +461,22 @@ export function CalendarHeader({
     )
   }
 
-  // The wordmark and the header title both act as "home": back to month view
-  // from anywhere else, and the "jump to today" shortcut once already there.
+  // The wordmark and the header title both act as "home": back to the
+  // configured default view from anywhere else, and the "jump to today"
+  // shortcut once already there. `3day` is the Week tab in an alternate
+  // state, so it counts as home when the default is Week.
+  const isHomeTab =
+    currentView === defaultView || (defaultView === 'week' && currentView === '3day')
   const handleTitleClick = (): void => {
-    if (currentView === 'month') {
+    if (isHomeTab) {
       handleToday()
     } else {
-      handleViewChange('month')
+      handleViewChange(defaultView)
     }
   }
-  const homeLabel =
-    currentView === 'month' ? t('views.header.goToToday') : t('views.header.goToMonthView')
+  const homeLabel = isHomeTab
+    ? t('views.header.goToToday')
+    : t('views.header.goToDefaultView')
 
   const handleViewChange = useCallback(
     (view: ViewType) => {

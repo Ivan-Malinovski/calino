@@ -42,6 +42,19 @@ test.describe('Default View — desktop', () => {
     await expect(page).toHaveURL(/\/week$/)
     await expect(page.locator('main[data-view]')).toHaveAttribute('data-view', 'week')
   })
+
+  test('the Calino wordmark goes home to the configured view', async ({ page }) => {
+    await clearState(page)
+    await seedDefaultView(page, 'week')
+
+    await page.goto('/month')
+    await expect(page.locator('main[data-view]')).toHaveAttribute('data-view', 'month')
+
+    await page.locator('[data-component="brand-home"]').click()
+
+    await expect(page).toHaveURL(/\/week$/)
+    await expect(page.locator('main[data-view]')).toHaveAttribute('data-view', 'week')
+  })
 })
 
 test.describe('Default View — mobile', () => {
