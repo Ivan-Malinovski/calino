@@ -483,7 +483,8 @@
   padding: var(--space-1);
   border-radius: var(--view-switcher-radius, 12px);
   position: relative;
-  max-width: 600px;
+  /* Grows with the Font Size setting so larger labels are not clipped. */
+  max-width: calc(600px * var(--font-scale, 1));
   /* Flex items don't shrink below their content's min-content size by
      default — without this, .viewTabsCollapsed's max-width: 0 can't
      actually reach 0 in the rightCluster flex row. */

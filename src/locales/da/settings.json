@@ -276,11 +276,11 @@
     },
     "fontSize": {
       "label": "Skriftstørrelse",
-      "desc": "Påvirker teksttætheden i hele appen",
-      "notAvailable": "Ikke tilgængelig endnu",
+      "desc": "Justerer tekststørrelsen i hele appen",
       "small": "Lille",
       "default": "Standard",
-      "large": "Stor"
+      "large": "Stor",
+      "xlarge": "Ekstra stor"
     },
     "adjustable": {
       "headerLabel": "Justerbart tema · {{mode}}",

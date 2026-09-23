@@ -192,6 +192,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   // stronger options and why they move --event-ink-* with them.
   eventTint: 'subtle',
   mochaAccent: '#89b4fa',
+  fontSize: 'default',
   caldavDebugMode: false,
   adjustableTheme: DEFAULT_ADJUSTABLE_THEME,
   hideCompletedTasksInMonthView: true,

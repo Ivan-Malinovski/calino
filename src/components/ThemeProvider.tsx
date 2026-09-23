@@ -10,6 +10,7 @@ import {
 import { Capacitor } from '@capacitor/core'
 import { StatusBar, Style } from '@capacitor/status-bar'
 import { useSettingsStore } from '@/store/settingsStore'
+import { fontScaleFor } from '@/config/fontScale'
 import {
   loadThemes,
   getThemeCSS,
@@ -93,6 +94,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
   const mochaAccent = useSettingsStore((s) => s.mochaAccent)
   const eventTint = useSettingsStore((s) => s.eventTint)
   const adjustableTheme = useSettingsStore((s) => s.adjustableTheme)
+  const fontSize = useSettingsStore((s) => s.fontSize)
   const [loadedThemes, setLoadedThemes] = useState<ThemeInfo[]>([])
   const [systemPrefersDark, setSystemPrefersDark] = useState(
     () => window.matchMedia('(prefers-color-scheme: dark)').matches
@@ -119,6 +121,14 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
   const adjustableProfile =
     (effectiveMode === 'dark' ? adjustableTheme?.dark : adjustableTheme?.light) ??
     FALLBACK_ADJUSTABLE_PROFILE
+
+  // Every CSS font size is multiplied by this at build time; see
+  // src/config/fontScale.ts.
+  useLayoutEffect(() => {
+    const root = document.documentElement
+    root.style.setProperty('--font-scale', String(fontScaleFor(fontSize)))
+    root.setAttribute('data-font-size', fontSize ?? 'default')
+  }, [fontSize])
 
   const builtInCSS = useMemo(() => getThemeCSS('built-in'), [])
   const isBuiltIn = currentThemeId === 'built-in' || currentThemeId === 'built-in-dark'

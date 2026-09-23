@@ -6,6 +6,7 @@ import { nodePolyfills } from 'vite-plugin-node-polyfills'
 import { configDefaults } from 'vitest/config'
 import { caldavMockPlugin } from './e2e/fixtures/vite-caldav-mock'
 import { contentSecurityPolicy } from './src/config/contentSecurityPolicy.ts'
+import { fontScalePostcss } from './src/config/fontScale.ts'
 
 const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf-8'))
 
@@ -82,6 +83,10 @@ export default defineConfig({
     // infer the origin from window.location — that also keeps the socket
     // same-origin, so strict extension CSPs allow it under 'self'.
     hmr: devHost ? true : { host: 'localhost', port: 8080 },
+  },
+  css: {
+    // Makes every font size follow the Font Size setting; see fontScale.ts.
+    postcss: { plugins: [fontScalePostcss()] },
   },
   resolve: {
     alias: {

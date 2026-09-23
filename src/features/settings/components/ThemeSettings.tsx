@@ -6,6 +6,7 @@ import {
   THEME_MODE_OPTIONS,
   DEFAULT_ADJUSTABLE_THEME,
 } from '@/store/settingsStore'
+import { FONT_SIZE_OPTIONS } from '@/config/fontScale'
 import { useTheme } from '@/components/ThemeContext'
 import {
   getThemePreviewCSS,
@@ -197,6 +198,7 @@ export function ThemeSettings(): JSX.Element {
   const darkTheme = useSettingsStore((s) => s.darkTheme)
   const mochaAccent = useSettingsStore((s) => s.mochaAccent)
   const eventTint = useSettingsStore((s) => s.eventTint)
+  const fontSize = useSettingsStore((s) => s.fontSize)
   const adjustableTheme = useSettingsStore((s) => s.adjustableTheme) ?? DEFAULT_ADJUSTABLE_THEME
   const updateSettings = useSettingsStore((s) => s.updateSettings)
   const showEventIcons = useSettingsStore((s) => s.showEventIcons)
@@ -465,24 +467,30 @@ export function ThemeSettings(): JSX.Element {
           </div>
         </div>
         <div
-          className={`${styles.row} ${styles.rowDisabled}`}
-          title={t('theme.fontSize.notAvailable')}
+          className={styles.row}
+          data-component="setting-row"
+          data-setting="font-size"
+          data-value={fontSize}
         >
           <div className={styles.rowInfo}>
             <div className={styles.rowLabel}>{t('theme.fontSize.label')}</div>
             <div className={styles.rowDesc}>{t('theme.fontSize.desc')}</div>
           </div>
           <div className={styles.rowControl}>
-            <div className={styles.seg}>
-              <button className={`${styles.segTab} ${styles.segTabActive}`} type="button">
-                {t('theme.fontSize.small')}
-              </button>
-              <button className={styles.segTab} type="button">
-                {t('theme.fontSize.default')}
-              </button>
-              <button className={styles.segTab} type="button">
-                {t('theme.fontSize.large')}
-              </button>
+            <div className={styles.seg} role="radiogroup" aria-label={t('theme.fontSize.label')}>
+              {FONT_SIZE_OPTIONS.map((option) => (
+                <button
+                  key={option.value}
+                  className={`${styles.segTab} ${fontSize === option.value ? styles.segTabActive : ''}`}
+                  type="button"
+                  role="radio"
+                  aria-checked={fontSize === option.value}
+                  data-value={option.value}
+                  onClick={() => updateSettings({ fontSize: option.value })}
+                >
+                  {t(option.labelKey)}
+                </button>
+              ))}
             </div>
           </div>
         </div>
