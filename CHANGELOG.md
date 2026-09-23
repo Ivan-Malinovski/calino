@@ -4,6 +4,48 @@ All notable changes to Calino will be documented in this file.
 
 ## [Unreleased]
 
+## [0.34.0] - 2026-09-23
+
+This release makes adding an account friendlier, adds support for DAV servers
+behind authentication gateways, turns on the Font Size setting, and ships
+the first native Android app build alongside Calino.
+
+### Native Android app (early preview)
+
+A native Android version of Calino now lives in its own repository:
+**[Ivan-Malinovski/calino-android](https://github.com/Ivan-Malinovski/calino-android)**.
+This release attaches its current build, `calino-android-0.5.0.apk`, which you
+can sideload. It's still at an early stage, but it should be usable day to day.
+Try it if you want a smoother app that feels native on Android. Please report
+bugs and feedback in that repository.
+
+### Added
+
+- **Font Size setting**
+  ([#184](https://github.com/Ivan-Malinovski/calino/issues/184)). Settings →
+  Appearance → Font Size now works, with Small, Default, Large and Extra
+  large. Text scales across the app while the layout stays put, and your
+  choice is remembered.
+- **DAV servers behind an authentication gateway.** Each account can now
+  send custom HTTP headers, such as the access tokens that Pangolin or
+  Cloudflare Access require. The self-hosted `/setup` generator has the same
+  fields and encrypts each header value. See the README for how to set up the
+  gateway.
+
+### Changed
+
+- **Redesigned onboarding and account setup**
+  ([#182](https://github.com/Ivan-Malinovski/calino/issues/182)). "Connect
+  CalDAV account" is now the main action on the welcome screen, and the data
+  privacy explanation is a short intro with a "How?" toggle. The Add CalDAV
+  account dialog and `/setup` ask for display name, server URL, then username
+  and password side by side. Proxy and custom headers are grouped under one
+  collapsible **Connection settings** section.
+- **A failed connection suggests a fix.** When connecting fails, the error
+  links to diagnostics and suggests a next step: setting up (or checking) a
+  proxy for CORS or network errors, adding a header for a 403 from a
+  gateway, or rechecking the password after a 401.
+
 ## [0.33.8] - 2026-09-22
 
 ### Fixed
