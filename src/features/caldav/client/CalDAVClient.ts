@@ -9,6 +9,7 @@ import { basicAuthHeader } from './basicAuth'
 import { createUuid } from '@/lib/uuid'
 import { decodeBase64 } from '@/lib/settingsSync'
 import { webFetch } from '@/lib/webFetch'
+import { createDirectDavFetch, validateCustomHeaders } from './customHeaders'
 
 import { DEFAULT_CALENDAR_COLOR } from '@/config'
 import { useSettingsStore } from '@/store/settingsStore'
@@ -299,12 +300,15 @@ export class CalDAVClient {
   private proxyFetch: (url: string | URL, init?: RequestInit) => Promise<Response>
 
   constructor(serverUrl: string, credentials: CalDAVCredentials, proxyUrl: string | null = null) {
+    validateCustomHeaders(credentials.customHeaders ?? {}, proxyUrl)
     this.serverUrl = serverUrl
     this.proxyUrl = proxyUrl
     this.credentials = credentials
     // UTF-8-safe Basic auth (btoa alone mangles non-ASCII credentials).
     this.authHeader = basicAuthHeader(credentials.username, credentials.password)
-    this.proxyFetch = proxyUrl ? createProxyFetch(proxyUrl) : fetchWithTimeout
+    this.proxyFetch = proxyUrl
+      ? createProxyFetch(proxyUrl)
+      : createDirectDavFetch(serverUrl, credentials.customHeaders, fetchWithTimeout)
   }
 
   async connect(): Promise<void> {
@@ -320,7 +324,9 @@ export class CalDAVClient {
       authMethod: 'Custom',
       authFunction: async () => ({ Authorization: this.authHeader }),
       defaultAccountType: 'caldav',
-      fetch: this.proxyUrl ? createProxyFetch(this.proxyUrl) : fetchWithTimeout,
+      fetch: this.proxyUrl
+        ? createProxyFetch(this.proxyUrl)
+        : createDirectDavFetch(this.serverUrl, this.credentials.customHeaders, fetchWithTimeout),
     })
   }
 
@@ -370,10 +376,7 @@ export class CalDAVClient {
         const resourceTypes: string[] = cal.resourcetype ?? []
         return !resourceTypes.some(
           (rt) =>
-            rt === 'inbox' ||
-            rt === 'schedule-inbox' ||
-            rt === 'outbox' ||
-            rt === 'schedule-outbox'
+            rt === 'inbox' || rt === 'schedule-inbox' || rt === 'outbox' || rt === 'schedule-outbox'
         )
       })
       .map((cal, index) => {
@@ -901,11 +904,7 @@ export class CalDAVClient {
   private async findCalendarHomeFromPrincipal(): Promise<string | null> {
     const baseUrl = this.serverUrl.replace(/\/$/, '')
     try {
-      const principalHref = await this.propfindFirstHref(
-        baseUrl,
-        'DAV:',
-        'current-user-principal'
-      )
+      const principalHref = await this.propfindFirstHref(baseUrl, 'DAV:', 'current-user-principal')
       if (!principalHref) return null
       const principalUrl = resolveDavHref(baseUrl, principalHref)
 

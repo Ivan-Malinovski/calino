@@ -1,5 +1,6 @@
 import { createDAVClient } from 'tsdav'
 import { webFetch } from '@/lib/webFetch'
+import { createDirectDavFetch, validateCustomHeaders, type CustomHeaders } from './customHeaders'
 import { basicAuthHeader } from './basicAuth'
 import i18n from '@/lib/i18n'
 
@@ -382,12 +383,26 @@ export async function probeConnection(
   username: string,
   password: string,
   proxyUrl?: string | null,
-  originalUrl?: string
+  originalUrl?: string,
+  customHeaders: CustomHeaders = {}
 ): Promise<ProbeResult> {
   const hintUrl = originalUrl || serverUrl
 
   try {
+    validateCustomHeaders(customHeaders, proxyUrl)
     let baseUrl = await discoverServerUrl(serverUrl, proxyUrl ?? undefined)
+    // When a gateway protects /.well-known, discovery falls back to the
+    // entered URL. Keep its trailing slash: some DAV servers require it.
+    if (Object.keys(customHeaders).length && baseUrl === serverUrl.replace(/\/$/, '')) {
+      baseUrl = serverUrl
+    }
+    if (
+      Object.keys(customHeaders).length &&
+      new URL(baseUrl).origin !== new URL(serverUrl).origin
+    ) {
+      throw new Error('DAV discovery changed origin. Enter the final DAV URL directly.')
+    }
+    const directFetch = createDirectDavFetch(serverUrl, customHeaders)
 
     const attempt = async (url: string): Promise<{ ok: boolean; status: number }> => {
       const init: RequestInit = {
@@ -405,7 +420,9 @@ export async function probeConnection(
             </d:propfind>`,
       }
 
-      const response = proxyUrl ? await proxyFetch(proxyUrl, url, init) : await webFetch(url, init)
+      const response = proxyUrl
+        ? await proxyFetch(proxyUrl, url, init)
+        : await directFetch(url, init)
 
       // 207 Multi-Status is the success case for PROPFIND.
       return { ok: response.ok || response.status === 207, status: response.status }
@@ -447,7 +464,8 @@ export async function probeConnection(
       hint: hint ?? undefined,
     }
   } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : i18n.t('errors:connection.unknownError')
+    const errorMsg =
+      error instanceof Error ? error.message : i18n.t('errors:connection.unknownError')
     return {
       ok: false,
       error: i18n.t('errors:connection.failedGeneric', { message: errorMsg }),

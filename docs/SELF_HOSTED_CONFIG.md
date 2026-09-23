@@ -21,7 +21,7 @@ The setup wizard runs entirely in your browser — credentials never leave your 
 
 **2. Add your CalDAV accounts and/or webcal subscriptions:**
 
-Enter the server URL, username, and password for each CalDAV account (test the connection before adding), and/or a name + `.ics`/`webcal://` URL for each calendar subscription. Either collection may be empty, but the generated config keeps both `accounts` and `webcalSubscriptions` arrays so it passes the build-time schema.
+Enter the server URL, username, and password for each CalDAV account (test the connection before adding), and/or a name + `.ics`/`webcal://` URL for each calendar subscription. For a DAV server behind an authentication gateway, add its custom HTTP headers here; each value is encrypted in the generated config. Use the `/setup` generator for headers because the CLI encryption script does not generate them. Either collection may be empty, but the generated config keeps both `accounts` and `webcalSubscriptions` arrays so it passes the build-time schema.
 
 **3. Set a master password:**
 
@@ -73,7 +73,11 @@ Each command outputs a JSON blob. Keep the master password safe — you'll share
       "name": "Personal",
       "url": { "ciphertext": "...", "iv": "...", "salt": "..." },
       "username": { "ciphertext": "...", "iv": "...", "salt": "..." },
-      "password": { "ciphertext": "...", "iv": "...", "salt": "..." }
+      "password": { "ciphertext": "...", "iv": "...", "salt": "..." },
+      "headers": {
+        "P-Access-Token-Id": { "ciphertext": "...", "iv": "...", "salt": "..." },
+        "P-Access-Token": { "ciphertext": "...", "iv": "...", "salt": "..." }
+      }
     }
   ],
   "webcalSubscriptions": [
@@ -87,6 +91,7 @@ Each command outputs a JSON blob. Keep the master password safe — you'll share
 ```
 
 Both `accounts` and `webcalSubscriptions` are optional — omit either array (or leave it empty) if you don't need it.
+The optional `headers` map can be omitted for accounts without a gateway. It works only for direct DAV connections. Configure the gateway to answer CORS preflight `OPTIONS` without requiring the secret headers; see the [gateway setup notes](../README.md#dav-behind-an-authentication-gateway).
 
 **3. Build:**
 

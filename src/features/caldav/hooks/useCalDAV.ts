@@ -342,8 +342,7 @@ function tracked<A extends unknown[], R>(
   label: string,
   fn: (...args: A) => Promise<R>
 ): (...args: A) => Promise<R> {
-  return (...args: A) =>
-    isProgressOwned() ? fn(...args) : withProgress(label, () => fn(...args))
+  return (...args: A) => (isProgressOwned() ? fn(...args) : withProgress(label, () => fn(...args)))
 }
 
 export interface UseCalDAVReturn {
@@ -355,7 +354,8 @@ export interface UseCalDAVReturn {
     username: string,
     password: string,
     name: string,
-    proxyUrl?: string | null
+    proxyUrl?: string | null,
+    customHeaders?: Record<string, string>
   ) => Promise<void>
   removeAccount: (accountId: string) => Promise<void>
   updateAccount: (
@@ -367,6 +367,7 @@ export interface UseCalDAVReturn {
       /** Blank/undefined keeps the currently stored password. */
       password?: string
       proxyUrl?: string | null
+      customHeaders?: Record<string, string>
     }
   ) => Promise<void>
   testAccount: (accountId: string) => Promise<ProbeResult>
@@ -964,7 +965,8 @@ export function useCalDAVInstance(): UseCalDAVReturn {
       username: string,
       password: string,
       name: string,
-      proxyUrl?: string | null
+      proxyUrl?: string | null,
+      customHeaders: Record<string, string> = {}
     ): Promise<void> => {
       setSyncState((prev) => ({ ...prev, status: 'syncing', error: null }))
       useCalDAVSyncStore.getState().setStatus('syncing')
@@ -973,17 +975,21 @@ export function useCalDAVInstance(): UseCalDAVReturn {
       // itself: which stage, and how far through the calendars it is.
       const progress = useProgressStore.getState()
       const progressId = progress.begin('Connecting to server…')
-      const reportProgress = (patch: {
-        label?: string
-        done?: number
-        total?: number
-      }): void => useProgressStore.getState().update(progressId, patch)
+      const reportProgress = (patch: { label?: string; done?: number; total?: number }): void =>
+        useProgressStore.getState().update(progressId, patch)
 
       try {
         console.log('[CalDAV] addAccount: probing server...', serverUrl)
         // probeConnection handles discovery, the PROPFIND, and the base-URL
         // fallback in one pass, and reports *why* a failure happened.
-        const probe = await probeConnection(serverUrl, username, password, proxyUrl)
+        const probe = await probeConnection(
+          serverUrl,
+          username,
+          password,
+          proxyUrl,
+          undefined,
+          customHeaders
+        )
         console.log('[CalDAV] addAccount: probe result:', probe.ok, probe.status ?? '')
 
         if (!probe.ok) {
@@ -999,6 +1005,7 @@ export function useCalDAVInstance(): UseCalDAVReturn {
           serverUrl: discoveredUrl,
           username,
           password,
+          customHeaders,
         })
 
         console.log('[CalDAV] addAccount: creating client...')
@@ -1142,7 +1149,9 @@ export function useCalDAVInstance(): UseCalDAVReturn {
         // on the next sync.
         const calendarsWithParseFailures = new Set<string>()
         for (const { cal, fetchedEvents } of fetchedPerCalendar) {
-          reportProgress({ label: i18n.t('caldav:progress.importingCalendar', { name: calendarLabel(cal) }) })
+          reportProgress({
+            label: i18n.t('caldav:progress.importingCalendar', { name: calendarLabel(cal) }),
+          })
           const { items: parsedWithHref, hadParseFailures } = await collectParsedWithHref(
             fetchedEvents,
             cal.id
@@ -1231,10 +1240,18 @@ export function useCalDAVInstance(): UseCalDAVReturn {
         }
 
         // After calendar sync, check for CardDAV support
-        reportProgress({ label: i18n.t('caldav:progress.checkingForContacts'), done: undefined, total: undefined })
+        reportProgress({
+          label: i18n.t('caldav:progress.checkingForContacts'),
+          done: undefined,
+          total: undefined,
+        })
         try {
           const { createCardDAVClient } = await import('@/features/carddav/client/CardDAVClient')
-          const carddavClient = await createCardDAVClient(serverUrl, credential, proxyUrl ?? null)
+          const carddavClient = await createCardDAVClient(
+            discoveredUrl,
+            credential,
+            proxyUrl ?? null
+          )
           const addressBooks = await carddavClient.fetchAddressBooks()
           if (addressBooks.length > 0) {
             // Only enable contacts if we actually find at least one contact
@@ -1387,7 +1404,14 @@ export function useCalDAVInstance(): UseCalDAVReturn {
 
         console.log(`[CalDAV] Auto-connecting to preconfigured account: ${accountName}`)
         try {
-          await addAccount(credential.url, credential.username, credential.password, accountName)
+          await addAccount(
+            credential.url,
+            credential.username,
+            credential.password,
+            accountName,
+            undefined,
+            credential.customHeaders
+          )
           connected++
         } catch (err) {
           console.error(`[CalDAV] Failed to auto-connect ${accountName}:`, err)
@@ -2038,7 +2062,9 @@ export function useCalDAVInstance(): UseCalDAVReturn {
       account.serverUrl,
       account.username,
       credential.password,
-      account.proxyUrl
+      account.proxyUrl,
+      undefined,
+      credential.customHeaders
     )
   }, [])
 
@@ -2051,6 +2077,7 @@ export function useCalDAVInstance(): UseCalDAVReturn {
         username: string
         password?: string
         proxyUrl?: string | null
+        customHeaders?: Record<string, string>
       }
     ): Promise<void> => {
       // Editing an account can be the longest wait in the app: a server probe
@@ -2068,6 +2095,7 @@ export function useCalDAVInstance(): UseCalDAVReturn {
 
         // A blank password means "keep the current one".
         const effectivePassword = updates.password || credential.password
+        const effectiveHeaders = updates.customHeaders ?? credential.customHeaders ?? {}
         const proxyUrl = updates.proxyUrl ?? null
 
         const expanded = expandProviderUrl(updates.serverUrl, updates.username)
@@ -2080,7 +2108,8 @@ export function useCalDAVInstance(): UseCalDAVReturn {
           updates.username,
           effectivePassword,
           proxyUrl,
-          updates.serverUrl
+          updates.serverUrl,
+          effectiveHeaders
         )
         if (!probe.ok) {
           throw new Error(probe.error ?? i18n.t('errors:account.couldNotConnect'))
@@ -2099,6 +2128,7 @@ export function useCalDAVInstance(): UseCalDAVReturn {
           // updateCredential re-encrypts only when this is truthy, so a blank
           // password leaves the stored one untouched.
           password: updates.password || undefined,
+          customHeaders: effectiveHeaders,
         })
         storage.updateAccount(accountId, {
           name: updates.name,
@@ -2116,6 +2146,7 @@ export function useCalDAVInstance(): UseCalDAVReturn {
             serverUrl: resolvedUrl,
             username: updates.username,
             password: effectivePassword,
+            customHeaders: effectiveHeaders,
           }
           reportProgress({ label: i18n.t('caldav:progress.lookingForCalendars') })
           const client = await createCalDAVClient(resolvedUrl, freshCredential, proxyUrl)
@@ -3054,12 +3085,18 @@ export function useCalDAVInstance(): UseCalDAVReturn {
 
   // Background syncs are deliberately absent: they run on a timer with no one
   // waiting on them, and the sidebar already animates while they do.
-  const trackedCreateEvent = useMemo(() => tracked(i18n.t('caldav:progress.savingEvent'), createEvent), [createEvent])
+  const trackedCreateEvent = useMemo(
+    () => tracked(i18n.t('caldav:progress.savingEvent'), createEvent),
+    [createEvent]
+  )
   const trackedCreateEventGroup = useMemo(
     () => tracked(i18n.t('caldav:progress.savingEvents'), createEventGroup),
     [createEventGroup]
   )
-  const trackedUpdateEvent = useMemo(() => tracked(i18n.t('caldav:progress.savingEvent'), updateEventFn), [updateEventFn])
+  const trackedUpdateEvent = useMemo(
+    () => tracked(i18n.t('caldav:progress.savingEvent'), updateEventFn),
+    [updateEventFn]
+  )
   const trackedSaveRecurrenceOverride = useMemo(
     () => tracked(i18n.t('caldav:progress.savingEvent'), saveRecurrenceOverrideFn),
     [saveRecurrenceOverrideFn]

@@ -130,7 +130,8 @@ describe('AddCalendarModal', () => {
         'testuser',
         'password123',
         'testuser',
-        undefined
+        undefined,
+        {}
       )
     })
 
@@ -170,7 +171,8 @@ describe('AddCalendarModal', () => {
         'testuser',
         'password123',
         'My Server',
-        undefined
+        undefined,
+        {}
       )
     })
 

@@ -3,6 +3,8 @@ import { useState, useCallback } from 'react'
 import { useNavigate } from 'react-router'
 import { encryptWithMasterPassword } from '@/lib/crypto'
 import { probeConnection } from '@/features/caldav/client/discovery'
+import { CustomHeadersEditor } from '@/features/caldav/components/CustomHeadersEditor'
+import { rowsToHeaders } from '@/features/caldav/components/headerRows'
 import { connectionErrorMessage } from '@/features/caldav/client/errorMessages'
 import { isCleartextUrl, CLEARTEXT_WARNING } from '@/features/caldav/client/insecureUrl'
 import type { DiagnosticsOptions } from '@/features/caldav/client/diagnostics'
@@ -18,6 +20,7 @@ interface AccountEntry {
   username: string
   password: string
   proxyUrl?: string
+  customHeaders: Record<string, string>
 }
 
 interface WebcalEntry {
@@ -62,6 +65,8 @@ export function SetupPage(): JSX.Element {
   const [formUsername, setFormUsername] = useState('')
   const [formPassword, setFormPassword] = useState('')
   const [formProxy, setFormProxy] = useState('')
+  const [formHeaders, setFormHeaders] = useState<Array<{ name: string; value: string }>>([])
+  const [headerError, setHeaderError] = useState('')
   const [showProxy, setShowProxy] = useState(false)
   const [testStatus, setTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle')
   const [testError, setTestError] = useState('')
@@ -82,6 +87,14 @@ export function SetupPage(): JSX.Element {
 
   const handleTest = useCallback(async () => {
     if (!formUrl || !formUsername || !formPassword) return
+    let customHeaders: Record<string, string>
+    try {
+      customHeaders = rowsToHeaders(formHeaders, formProxy)
+      setHeaderError('')
+    } catch (error) {
+      setHeaderError(error instanceof Error ? error.message : 'Invalid custom headers.')
+      return
+    }
     setTestStatus('testing')
     setTestError('')
     setTestHint('')
@@ -90,7 +103,14 @@ export function SetupPage(): JSX.Element {
     // Shared with the Add Calendar dialog rather than probed separately here:
     // this page had its own copy that missed the redirect fallbacks and the
     // provider-specific hints, so setup was the least helpful surface.
-    const result = await probeConnection(formUrl, formUsername, formPassword, proxyUrl)
+    const result = await probeConnection(
+      formUrl,
+      formUsername,
+      formPassword,
+      proxyUrl,
+      undefined,
+      customHeaders
+    )
     setTestStatus(result.ok ? 'success' : 'error')
     if (result.ok) {
       setDiagnoseTarget(null)
@@ -104,10 +124,18 @@ export function SetupPage(): JSX.Element {
         proxyUrl,
       })
     }
-  }, [formUrl, formUsername, formPassword, formProxy])
+  }, [formUrl, formUsername, formPassword, formProxy, formHeaders])
 
   const handleAddAccount = useCallback(() => {
     if (!formUrl || !formUsername || !formPassword) return
+    let customHeaders: Record<string, string>
+    try {
+      customHeaders = rowsToHeaders(formHeaders, formProxy)
+      setHeaderError('')
+    } catch (error) {
+      setHeaderError(error instanceof Error ? error.message : 'Invalid custom headers.')
+      return
+    }
     setAccounts((prev) => [
       ...prev,
       {
@@ -116,6 +144,7 @@ export function SetupPage(): JSX.Element {
         username: formUsername.trim(),
         password: formPassword,
         proxyUrl: formProxy.trim() || undefined,
+        customHeaders,
       },
     ])
     // Reset form
@@ -124,10 +153,11 @@ export function SetupPage(): JSX.Element {
     setFormUsername('')
     setFormPassword('')
     setFormProxy('')
+    setFormHeaders([])
     setShowProxy(false)
     setTestStatus('idle')
     setTestError('')
-  }, [formName, formUrl, formUsername, formPassword, formProxy])
+  }, [formName, formUrl, formUsername, formPassword, formProxy, formHeaders])
 
   const handleRemoveAccount = useCallback((index: number) => {
     setAccounts((prev) => prev.filter((_, i) => i !== index))
@@ -199,11 +229,22 @@ export function SetupPage(): JSX.Element {
           encryptWithMasterPassword(account.username, masterPassword),
           encryptWithMasterPassword(account.password, masterPassword),
         ])
+        const headers = Object.keys(account.customHeaders).length
+          ? Object.fromEntries(
+              await Promise.all(
+                Object.entries(account.customHeaders).map(
+                  async ([name, value]) =>
+                    [name, await encryptWithMasterPassword(value, masterPassword)] as const
+                )
+              )
+            )
+          : undefined
         configAccounts.push({
           name: account.name,
           url: encryptedUrl,
           username: encryptedUsername,
           password: encryptedPassword,
+          headers,
         })
       }
 
@@ -403,6 +444,9 @@ export function SetupPage(): JSX.Element {
                 </div>
               </div>
             )}
+
+            <CustomHeadersEditor rows={formHeaders} onChange={setFormHeaders} />
+            {headerError && <div className={styles.error}>{headerError}</div>}
 
             {testStatus === 'success' && (
               <div className={styles.success}>✓ Connection successful</div>

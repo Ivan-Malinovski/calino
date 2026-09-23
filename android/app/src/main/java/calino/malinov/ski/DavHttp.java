@@ -84,7 +84,10 @@ final class DavHttp {
 
         builder.method(method.toUpperCase(), requestBody);
 
-        try (Response response = CLIENT.newCall(builder.build()).execute()) {
+        OkHttpClient client = options.optBoolean("followRedirects", true)
+            ? CLIENT
+            : CLIENT.newBuilder().followRedirects(false).followSslRedirects(false).build();
+        try (Response response = client.newCall(builder.build()).execute()) {
             JSONObject responseHeaders = new JSONObject();
             Headers rawHeaders = response.headers();
             for (int i = 0; i < rawHeaders.size(); i++) {

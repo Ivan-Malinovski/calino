@@ -1547,7 +1547,8 @@ describe('useCalDAV', () => {
         'user',
         'stored-pw',
         null,
-        'https://caldav.example.com'
+        'https://caldav.example.com',
+        {}
       )
       // ...but nothing is re-encrypted.
       expect(mockCredentials.updateCredential).toHaveBeenCalledWith(
@@ -1647,7 +1648,9 @@ describe('useCalDAV', () => {
         'https://caldav.example.com',
         'user',
         'stored-pw',
-        null
+        null,
+        undefined,
+        undefined
       )
       expect(mockAccountStorage.updateAccount).not.toHaveBeenCalled()
     })

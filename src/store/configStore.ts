@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { validateCustomHeaders } from '../features/caldav/client/customHeaders'
 import { loadConfig, type CalinoConfig } from '../lib/configLoader'
 import {
   decryptWithMasterPassword,
@@ -13,6 +14,7 @@ interface DecryptedCredential {
   url: string
   username: string
   password: string
+  customHeaders?: Record<string, string>
 }
 
 interface DecryptedWebcalSubscription {
@@ -148,7 +150,16 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
           decryptWithMasterPassword(account.password, masterPassword),
         ])
 
-        decrypted.push({ url, username, password })
+        const customHeaders: Record<string, string> = {}
+        for (const [name, value] of Object.entries(account.headers ?? {})) {
+          customHeaders[name] = await decryptWithMasterPassword(value, masterPassword)
+        }
+        decrypted.push({
+          url,
+          username,
+          password,
+          customHeaders: validateCustomHeaders(customHeaders),
+        })
       }
 
       const decryptedWebcal: DecryptedWebcalSubscription[] = []

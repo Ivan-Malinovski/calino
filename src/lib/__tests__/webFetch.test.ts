@@ -98,6 +98,22 @@ describe('webFetch', () => {
       expect(response.url).toBe('https://dav.example.com/dav.php/principals/ivan/')
     })
 
+    it('blocks redirects when the caller forbids them', async () => {
+      nativeRequest.mockResolvedValue(
+        davResponse({
+          status: 302,
+          statusText: 'Found',
+          headers: { location: 'https://other.example/' },
+        })
+      )
+      await expect(webFetch('https://dav.example.com/', { redirect: 'error' })).rejects.toThrow(
+        'redirected'
+      )
+      expect(nativeRequest).toHaveBeenCalledWith(
+        expect.objectContaining({ followRedirects: false })
+      )
+    })
+
     it('omits the body on statuses that must not carry one', async () => {
       nativeRequest.mockResolvedValue(
         davResponse({ status: 204, statusText: 'No Content', body: '' })

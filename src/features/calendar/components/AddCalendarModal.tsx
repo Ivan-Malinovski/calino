@@ -1,5 +1,5 @@
 import type { JSX } from 'react'
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { createPortal } from 'react-dom'
 import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
@@ -15,6 +15,8 @@ import { connectionErrorMessage } from '@/features/caldav/client/errorMessages'
 import { isCleartextUrl, CLEARTEXT_WARNING } from '@/features/caldav/client/insecureUrl'
 import { DiagnosticsPanel } from '@/features/settings/components/DiagnosticsPanel'
 import type { CalDAVAccount } from '@/features/caldav/types'
+import { CustomHeadersEditor } from '@/features/caldav/components/CustomHeadersEditor'
+import { rowsToHeaders, type HeaderRow } from '@/features/caldav/components/headerRows'
 import { useProgressStore, selectActiveTask } from '@/store/progressStore'
 import { useAnimatedClose } from '@/hooks/useAnimatedClose'
 import { useModalDismiss } from '@/hooks/useModalDismiss'
@@ -44,6 +46,7 @@ export function AddCalendarModal({
   const [isTesting, setIsTesting] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [showProxyField, setShowProxyField] = useState(Boolean(account?.proxyUrl))
+  const [headerRows, setHeaderRows] = useState<HeaderRow[]>([])
   /** Mirrors the (uncontrolled) URL field, only so the cleartext warning can react to it. */
   const [urlDraft, setUrlDraft] = useState(account?.serverUrl ?? '')
   // Captured on failure so "Run diagnostics" probes exactly what was attempted,
@@ -58,6 +61,20 @@ export function AddCalendarModal({
   const isEdit = mode === 'edit' && account !== undefined
   const formRef = useRef<HTMLFormElement>(null)
   const isSavingRef = useRef(false)
+
+  useEffect(() => {
+    if (!account) return
+    let active = true
+    void getCredentialById(account.credentialId).then((credential) => {
+      if (active)
+        setHeaderRows(
+          Object.entries(credential?.customHeaders ?? {}).map(([name, value]) => ({ name, value }))
+        )
+    })
+    return () => {
+      active = false
+    }
+  }, [account])
 
   const doClose = useCallback((): void => {
     setConnectionStatus('idle')
@@ -77,7 +94,8 @@ export function AddCalendarModal({
     username: string,
     password: string,
     proxyUrl?: string,
-    originalUrl?: string
+    originalUrl?: string,
+    customHeaders: Record<string, string> = {}
   ): Promise<boolean> => {
     setIsTesting(true)
     setConnectionStatus('idle')
@@ -86,7 +104,14 @@ export function AddCalendarModal({
     setShowDiagnostics(false)
 
     try {
-      const result = await probeConnection(serverUrl, username, password, proxyUrl, originalUrl)
+      const result = await probeConnection(
+        serverUrl,
+        username,
+        password,
+        proxyUrl,
+        originalUrl,
+        customHeaders
+      )
 
       setConnectionStatus(result.ok ? 'success' : 'error')
       if (!result.ok) {
@@ -96,7 +121,7 @@ export function AddCalendarModal({
         if (result.hint) {
           setConnectionHint(result.hint)
         }
-        setDiagnoseTarget({ serverUrl, username, password, proxyUrl, originalUrl })
+        setDiagnoseTarget({ serverUrl, username, password, proxyUrl, originalUrl, customHeaders })
       } else {
         setDiagnoseTarget(null)
       }
@@ -134,6 +159,14 @@ export function AddCalendarModal({
   const handleTestClick = async (): Promise<void> => {
     if (!formRef.current) return
     const { serverUrl, username, password, proxyUrl } = readForm(formRef.current)
+    let customHeaders: Record<string, string>
+    try {
+      customHeaders = rowsToHeaders(headerRows, proxyUrl)
+    } catch (error) {
+      setConnectionStatus('error')
+      setConnectionError((error as Error).message)
+      return
+    }
 
     // A blank password means "keep the current one", so test with the stored one.
     let effectivePassword = password
@@ -153,7 +186,8 @@ export function AddCalendarModal({
       username,
       effectivePassword,
       proxyUrl,
-      serverUrl
+      serverUrl,
+      customHeaders
     )
   }
 
@@ -185,6 +219,14 @@ export function AddCalendarModal({
     if (isSavingRef.current) return
 
     const { serverUrl, username, password, accountName, proxyUrl } = readForm(e.currentTarget)
+    let customHeaders: Record<string, string>
+    try {
+      customHeaders = rowsToHeaders(headerRows, proxyUrl)
+    } catch (error) {
+      setConnectionStatus('error')
+      setConnectionError((error as Error).message)
+      return
+    }
 
     if (isEdit) {
       // Re-pointing the account at a different principal invalidates the
@@ -214,13 +256,21 @@ export function AddCalendarModal({
           username,
           password: password || undefined,
           proxyUrl: proxyUrl ?? null,
+          customHeaders,
         })
       } else {
         // No pre-flight test: addAccount probes as its first step, so testing
         // here would just double the round-trips before anything is saved.
         // Expand known provider URLs (e.g. Fastmail base → principal URL).
         const expanded = expandProviderUrl(serverUrl, username)
-        await addAccount(expanded || serverUrl, username, password, accountName, proxyUrl)
+        await addAccount(
+          expanded || serverUrl,
+          username,
+          password,
+          accountName,
+          proxyUrl,
+          customHeaders
+        )
       }
       requestClose()
     } catch (error) {
@@ -243,6 +293,7 @@ export function AddCalendarModal({
         password: effectivePassword,
         proxyUrl: proxyUrl ?? null,
         originalUrl: serverUrl,
+        customHeaders,
       })
     } finally {
       isSavingRef.current = false
@@ -276,7 +327,11 @@ export function AddCalendarModal({
           <h3 className={styles.modalTitle} id="modal-title">
             {isEdit ? t('surface.editCaldavAccountTitle') : t('surface.addCaldavCalendarTitle')}
           </h3>
-          <button className={styles.modalClose} onClick={requestClose} aria-label={t('surface.close')}>
+          <button
+            className={styles.modalClose}
+            onClick={requestClose}
+            aria-label={t('surface.close')}
+          >
             ✕
           </button>
         </div>
@@ -306,7 +361,7 @@ export function AddCalendarModal({
               onChange={(e) => setUrlDraft(e.target.value)}
               required
             />
-              <span className={styles.formHint}>{t('surface.caldavUrlHint')}</span>
+            <span className={styles.formHint}>{t('surface.caldavUrlHint')}</span>
             {isCleartextUrl(urlDraft) && <div className={styles.formWarn}>{CLEARTEXT_WARNING}</div>}
           </div>
           <div className={styles.formGroup}>
@@ -333,7 +388,7 @@ export function AddCalendarModal({
                   strokeLinejoin="round"
                 />
               </svg>
-                <span>{t('surface.proxyUrlOptional')}</span>
+              <span>{t('surface.proxyUrlOptional')}</span>
             </button>
             {showProxyField && (
               <>
@@ -378,12 +433,11 @@ export function AddCalendarModal({
               className={styles.input}
               required={!isEdit}
             />
-            {isEdit && (
-              <span className={styles.formHint}>{t('surface.passwordHint')}</span>
-            )}
+            {isEdit && <span className={styles.formHint}>{t('surface.passwordHint')}</span>}
           </div>
+          <CustomHeadersEditor rows={headerRows} onChange={setHeaderRows} />
           {connectionStatus === 'success' && (
-                <p className={styles.successMessage}>{t('surface.connectionSuccessful')}</p>
+            <p className={styles.successMessage}>{t('surface.connectionSuccessful')}</p>
           )}
           {connectionStatus === 'error' && <p className={styles.errorMessage}>{connectionError}</p>}
           {connectionHint && <div className={styles.hintMessage}>{connectionHint}</div>}

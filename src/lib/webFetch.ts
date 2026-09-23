@@ -36,6 +36,7 @@ interface DavHttpPlugin {
     method: string
     headers: Record<string, string>
     body?: string
+    followRedirects?: boolean
   }): Promise<DavHttpResponse>
 }
 
@@ -66,6 +67,7 @@ type DavTransport = (options: {
   method: string
   headers: Record<string, string>
   body?: string
+  followRedirects?: boolean
 }) => Promise<DavHttpResponse>
 
 /**
@@ -101,6 +103,7 @@ async function nativeFetch(
     url: request.url,
     method: request.method,
     headers,
+    followRedirects: request.redirect !== 'error',
     ...(body ? { body } : {}),
   })
 
@@ -117,6 +120,9 @@ async function nativeFetch(
   // resumed. Nothing is waiting on this page, and OkHttp has its own timeout.
   const abortable = init?.signal && !isHeadless()
   const result = await (abortable ? raceAbort(pending, init.signal!) : pending)
+  if (request.redirect === 'error' && result.status >= 300 && result.status < 400) {
+    throw new Error('DAV request redirected. Enter the final DAV URL directly.')
+  }
 
   // 204/304 must not carry a body or the Response constructor throws.
   const hasBody = result.status !== 204 && result.status !== 304

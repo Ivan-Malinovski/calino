@@ -21,7 +21,7 @@
   padding: var(--space-6);
   width: 100%;
   max-width: 400px;
-  max-height: 90vh;
+  max-height: calc(100vh - 32px);
   overflow-y: auto;
   animation: modalSlideUp 0.2s ease;
 }

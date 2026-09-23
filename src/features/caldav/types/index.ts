@@ -77,6 +77,7 @@ export interface CalDAVCredentials {
   serverUrl: string
   username: string
   password: string
+  customHeaders?: Record<string, string>
 }
 
 export interface ServerInfo {

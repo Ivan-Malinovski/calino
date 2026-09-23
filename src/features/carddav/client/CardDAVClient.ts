@@ -4,6 +4,7 @@ import type { AddressBook, Contact } from '../types'
 import { parseVCard, contactToVCard } from '../adapter/vCardAdapter'
 import { buildProxyUrl } from '@/features/caldav/client/CalDAVClient'
 import { webFetch } from '@/lib/webFetch'
+import { createDirectDavFetch, validateCustomHeaders } from '@/features/caldav/client/customHeaders'
 import { createUuid } from '@/lib/uuid'
 import {
   CardDAVConflictError,
@@ -218,10 +219,13 @@ export class CardDAVClient {
   > = new Map()
 
   constructor(serverUrl: string, credentials: CalDAVCredentials, proxyUrl: string | null = null) {
+    validateCustomHeaders(credentials.customHeaders ?? {}, proxyUrl)
     this.serverUrl = serverUrl
     this.proxyUrl = proxyUrl
     this.credentials = credentials
-    this.proxyFetch = proxyUrl ? createProxyFetch(proxyUrl) : fetchWithTimeout
+    this.proxyFetch = proxyUrl
+      ? createProxyFetch(proxyUrl)
+      : createDirectDavFetch(serverUrl, credentials.customHeaders, fetchWithTimeout)
   }
 
   async connect(): Promise<void> {
@@ -233,7 +237,9 @@ export class CardDAVClient {
       },
       authMethod: 'Basic',
       defaultAccountType: 'carddav',
-      fetch: this.proxyUrl ? createProxyFetch(this.proxyUrl) : fetchWithTimeout,
+      fetch: this.proxyUrl
+        ? createProxyFetch(this.proxyUrl)
+        : createDirectDavFetch(this.serverUrl, this.credentials.customHeaders, fetchWithTimeout),
     })
   }
 

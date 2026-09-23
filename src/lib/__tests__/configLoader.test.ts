@@ -46,6 +46,37 @@ describe('configLoader', () => {
     expect(config).toEqual(validConfig)
   })
 
+  it('preserves encrypted account headers and accepts legacy accounts', async () => {
+    const encrypted = { ciphertext: 'header-encrypted', iv: 'header-iv', salt: 'header-salt' }
+    originalGlobal.__CALINO_CONFIG__ = {
+      version: 1,
+      accounts: [
+        validConfig.accounts[0],
+        {
+          ...validConfig.accounts[0],
+          name: 'Gateway',
+          headers: { 'CF-Access-Client-Id': encrypted },
+        },
+      ],
+    }
+
+    const config = await loadConfig()
+    expect(config?.accounts[0].headers).toBeUndefined()
+    expect(config?.accounts[1].headers).toEqual({ 'CF-Access-Client-Id': encrypted })
+  })
+
+  it('skips an account with a plaintext header value', async () => {
+    originalGlobal.__CALINO_CONFIG__ = {
+      version: 1,
+      accounts: [
+        validConfig.accounts[0],
+        { ...validConfig.accounts[0], name: 'Unsafe', headers: { 'X-Token': 'plaintext' } },
+      ],
+    }
+    const config = await loadConfig()
+    expect(config?.accounts).toHaveLength(1)
+  })
+
   it('returns null when no config injected', async () => {
     delete originalGlobal.__CALINO_CONFIG__
 

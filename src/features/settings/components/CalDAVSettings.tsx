@@ -98,6 +98,7 @@ export function CalDAVSettings(): JSX.Element {
         serverUrl: account.serverUrl,
         username: account.username,
         password: credential.password,
+        customHeaders: credential.customHeaders,
         proxyUrl: account.proxyUrl,
       },
     })

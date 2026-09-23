@@ -1,5 +1,6 @@
 import type { CalDAVCredentials } from '../types'
 import { createUuid } from '@/lib/uuid'
+import { validateCustomHeaders } from './customHeaders'
 import {
   encryptPassword,
   decryptPassword,
@@ -14,6 +15,7 @@ interface StoredCredential {
   serverUrl: string
   username: string
   password: string | EncryptedData
+  customHeaders?: Record<string, EncryptedData>
 }
 
 export async function saveCredentials(
@@ -22,12 +24,22 @@ export async function saveCredentials(
   const stored = getAllStoredCredentials()
 
   const encryptedPassword = await encryptPassword(credentials.password)
+  const customHeaders = validateCustomHeaders(credentials.customHeaders ?? {})
+  const encryptedHeaders = Object.fromEntries(
+    await Promise.all(
+      Object.entries(customHeaders).map(async ([name, value]) => [
+        name,
+        await encryptPassword(value),
+      ])
+    )
+  )
 
   const newCredential: StoredCredential = {
     id: createUuid(),
     serverUrl: credentials.serverUrl,
     username: credentials.username,
     password: encryptedPassword,
+    customHeaders: encryptedHeaders,
   }
 
   stored.push(newCredential)
@@ -39,6 +51,7 @@ export async function saveCredentials(
     serverUrl: newCredential.serverUrl,
     username: newCredential.username,
     password: credentials.password,
+    customHeaders,
   }
 }
 
@@ -84,6 +97,14 @@ export async function getAllCredentials(): Promise<CalDAVCredentials[]> {
       serverUrl: cred.serverUrl,
       username: cred.username,
       password,
+      customHeaders: Object.fromEntries(
+        await Promise.all(
+          Object.entries(cred.customHeaders ?? {}).map(async ([name, encrypted]) => [
+            name,
+            await decryptPassword(encrypted),
+          ])
+        )
+      ),
     })
   }
 
@@ -122,6 +143,16 @@ export async function updateCredential(
       serverUrl: updates.serverUrl ?? existing.serverUrl,
       username: updates.username ?? existing.username,
       password: updates.password ? await encryptPassword(updates.password) : existing.password,
+      customHeaders:
+        updates.customHeaders === undefined
+          ? existing.customHeaders
+          : Object.fromEntries(
+              await Promise.all(
+                Object.entries(validateCustomHeaders(updates.customHeaders)).map(
+                  async ([name, value]) => [name, await encryptPassword(value)]
+                )
+              )
+            ),
     }
     localStorage.setItem(CREDENTIALS_KEY, JSON.stringify(stored))
   }

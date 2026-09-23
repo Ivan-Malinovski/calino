@@ -26,6 +26,7 @@
 
 import { Capacitor } from '@capacitor/core'
 import { webFetch } from '@/lib/webFetch'
+import { createDirectDavFetch } from './customHeaders'
 import { isHeadless } from '@/lib/headlessBridge'
 import { createUuid } from '@/lib/uuid'
 import {
@@ -85,6 +86,7 @@ export interface DiagnosticsOptions {
   serverUrl: string
   username: string
   password: string
+  customHeaders?: Record<string, string>
   proxyUrl?: string | null
   /** The URL the user typed, before `expandProviderUrl` rewrote it. */
   originalUrl?: string
@@ -187,7 +189,7 @@ export async function runDiagnostics(options: DiagnosticsOptions): Promise<Diagn
       const withSignal = { ...init, signal: controller.signal }
       return proxyUrl
         ? await proxyFetch(proxyUrl, url, withSignal)
-        : await webFetch(url, withSignal)
+        : await createDirectDavFetch(serverUrl, options.customHeaders)(url, withSignal)
     } finally {
       clearTimeout(timer)
     }

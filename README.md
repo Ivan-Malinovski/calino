@@ -29,6 +29,19 @@ If you've been looking for a beautiful, modern browser-based CalDAV calendar tha
 
 Due to the browser-based nature of Calino, a web CalDAV/CardDAV server must allow requests from your Calino origin with CORS headers. If that's not an option, you can use a proxy URL during setup; Calino provides `https://proxy.calino.io` as a convenience.
 
+### DAV behind an authentication gateway
+
+In the account form, add the headers required by your gateway. The self-hosted `/setup` generator has the same fields and encrypts each value in the generated `calino.config.json`.
+
+| Gateway | Header names to configure |
+| --- | --- |
+| Pangolin | `P-Access-Token-Id`, `P-Access-Token` |
+| Cloudflare Access | `CF-Access-Client-Id`, `CF-Access-Client-Secret` |
+
+Configure the gateway to answer cross-origin `OPTIONS` preflight requests from your Calino origin **without requiring the access-token headers**. The browser's preflight contains the header *names*, not their secret values. Its response must include those names in `Access-Control-Allow-Headers`, allow DAV methods such as `PROPFIND` and `REPORT`, and provide the usual CORS origin response. Calino then sends the configured values on the actual DAV requests. If preflight is blocked, browser JavaScript cannot work around it.
+
+Use the final HTTPS DAV URL, including a trailing slash if the server requires one. Custom headers work with direct DAV connections only; remove the optional CORS proxy URL. Requests carrying custom headers stop on redirects, and Calino refuses to send them to a different origin. Values are masked in the UI and stored with account credentials using the app's existing local obfuscation, which is not strong protection against someone with access to the browser storage and app bundle.
+
 With a proxy, requests pass through the proxy operator, so use your own proxy or configure CORS directly when that matters. The hosted proxy sees connection metadata and request URLs, but is designed not to log credentials or calendar bodies. See [`docs/CORS_PROXY.md`](./docs/CORS_PROXY.md) for the hosted proxy's limits and self-hosting options.
 
 ## Android app

@@ -8,6 +8,7 @@ export interface PreconfiguredAccount {
   url: MasterEncryptedData
   username: MasterEncryptedData
   password: MasterEncryptedData
+  headers?: Record<string, MasterEncryptedData>
 }
 
 export interface PreconfiguredWebcal {
@@ -42,6 +43,7 @@ const PreconfiguredAccountSchema = z.object({
   url: MasterEncryptedDataSchema,
   username: MasterEncryptedDataSchema,
   password: MasterEncryptedDataSchema,
+  headers: z.record(z.string(), MasterEncryptedDataSchema).optional(),
 })
 
 const PreconfiguredWebcalSchema = z.object({
