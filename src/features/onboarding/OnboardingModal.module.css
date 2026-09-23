@@ -79,55 +79,39 @@
   font-size: 22px;
   font-weight: 600;
   color: var(--color-text-primary, #202124);
-  margin: 0 0 16px 0;
+  margin: 0 0 12px 0;
 }
 
+/* Two deliberate lines at the 440px width; keep it from spilling into a third. */
 .description {
   font-size: 14px;
   line-height: 1.6;
   color: var(--color-text-secondary, #5f6368);
-  margin: 0 0 12px 0;
-  text-align: left;
+  margin: 0 0 24px 0;
 }
 
-.description:last-of-type {
-  margin-bottom: 24px;
-}
-
-.details {
-  margin: 0 0 18px;
-  padding: 10px 12px;
-  border: 1px solid var(--color-border-subtle, #e5e0d8);
-  border-radius: var(--radius-sm);
-  text-align: left;
-  color: var(--color-text-secondary, #5f6368);
-  font-size: 14px;
-}
-
-.details summary {
-  cursor: pointer;
-  color: var(--color-text-primary, #202124);
-  font-weight: 600;
-}
-
-.details p {
-  margin: 10px 0 0;
-  line-height: 1.5;
-}
-
-.secondaryDescription {
-  font-size: 13px;
-  margin-bottom: 16px;
-}
-
-.description a {
+.howButton {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
   color: var(--accent-strong, var(--accent, #1a73e8));
+  text-decoration: underline;
+  cursor: pointer;
 }
 
-.footer {
+.howText {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--color-text-secondary, #5f6368);
+  margin: -12px 0 24px;
+  text-wrap: pretty;
+}
+
+.actions {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: var(--space-3, 12px);
 }
 
 .addButton {
@@ -138,30 +122,39 @@
   cursor: pointer;
   transition: all 0.15s ease;
   border: none;
-  background: var(--color-surface, #ffffff);
-  color: var(--color-text-primary, #202124);
-  border: 1px solid var(--color-border-visible, #dadce0);
+  background: var(--accent-strong, var(--color-accent, #1a73e8));
+  color: var(--accent-contrast, #ffffff);
 }
 
 .addButton:hover {
-  background: var(--color-bg-hover, #f1f3f4);
+  background: var(--color-accent-hover, #1557b0);
 }
 
 .skipButton {
-  padding: 12px 24px;
-  border-radius: 6px;
+  padding: 8px;
+  border: 0;
+  background: transparent;
   font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  border: 1px solid var(--color-border-visible, #dadce0);
-  background: var(--color-surface, #ffffff);
   color: var(--color-text-secondary, #5f6368);
+  cursor: pointer;
+  transition: color 0.15s ease;
 }
 
 .skipButton:hover {
-  background: var(--color-bg-hover, #f1f3f4);
   color: var(--color-text-primary, #202124);
+}
+
+.footnote {
+  margin: 20px 0 0;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-border-visible, #dadce0);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--color-text-muted, #80868b);
+}
+
+.footnote a {
+  color: var(--accent-strong, var(--accent, #1a73e8));
 }
 
 .demoButton {
@@ -171,9 +164,9 @@
   font-weight: 500;
   cursor: pointer;
   transition: all 0.15s ease;
-  border: none;
-  background: var(--accent-strong, var(--color-accent, #1a73e8));
-  color: var(--accent-contrast, #ffffff);
+  background: var(--color-surface, #ffffff);
+  color: var(--color-text-primary, #202124);
+  border: 1px solid var(--color-border-visible, #dadce0);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -181,7 +174,7 @@
 }
 
 .demoButton:hover:not(:disabled) {
-  background: var(--color-accent-hover, #1557b0);
+  background: var(--color-bg-hover, #f1f3f4);
 }
 
 .demoButton:disabled {

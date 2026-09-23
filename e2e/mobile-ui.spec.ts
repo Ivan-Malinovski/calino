@@ -56,14 +56,25 @@ test.describe('mobile UI surfaces', () => {
     expect(Math.min(...heights)).toBeGreaterThanOrEqual(44)
   })
 
-  test('leads onboarding with sample-data activation', async ({ page }) => {
+  test('leads onboarding with connecting a calendar', async ({ page }) => {
     await page.goto('/month')
 
     const dialog = page.getByRole('dialog', { name: 'Start with your calendar' })
     await expect(dialog).toBeVisible()
-    await expect(dialog.locator('details summary')).toHaveText('How your data stays safe')
-    await expect(dialog.getByRole('button').nth(0)).toHaveText('Try with sample data')
-    await expect(dialog.getByRole('button').nth(1)).toHaveText('Add CalDAV Account')
+    await expect(dialog.locator('details')).toHaveCount(0)
+
+    const how = dialog.getByRole('button', { name: 'How?' })
+    await expect(how).toHaveAttribute('aria-expanded', 'false')
+    await expect(dialog.getByText(/no backend of its own/)).toBeHidden()
+    await how.click()
+    await expect(how).toHaveAttribute('aria-expanded', 'true')
+    await expect(dialog.getByText(/no backend of its own/)).toBeVisible()
+
+    const actions = dialog.getByRole('button').filter({ hasNotText: 'How?' })
+    await expect(actions.nth(0)).toHaveText('Connect CalDAV account')
+    await expect(actions.nth(1)).toHaveText('Explore Calino with sample data')
+    await expect(actions.nth(2)).toHaveText('Skip for now')
+    await expect(dialog.getByRole('link', { name: 'Android' })).toBeVisible()
   })
 })
 

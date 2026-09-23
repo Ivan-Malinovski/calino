@@ -434,3 +434,74 @@
   text-decoration: underline;
   cursor: pointer;
 }
+
+/* ── Account form: matches the Add CalDAV account dialog ────────────────── */
+.labelOptional {
+  color: var(--ink-2);
+  font-weight: 400;
+}
+
+.credentialsRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+}
+
+.credentialsRow input[aria-invalid='true'] {
+  border-color: var(--color-error, #ea4335);
+}
+
+.errorBox {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md, 8px);
+  background: var(--error-bg, rgba(234, 67, 53, 0.1));
+  border: 1px solid var(--error-border, rgba(234, 67, 53, 0.3));
+}
+
+.errorBoxMessage {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--ink);
+  text-wrap: pretty;
+}
+
+.errorBoxHint {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+
+.errorBoxActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+}
+
+.errorBoxNudge,
+.errorBoxLink {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+  color: var(--accent-strong, var(--accent));
+  cursor: pointer;
+  text-align: left;
+}
+
+.errorBoxNudge {
+  font-weight: 600;
+}
+
+.errorBoxNudge:hover {
+  text-decoration: underline;
+}
+
+.errorBoxLink {
+  text-decoration: underline;
+}

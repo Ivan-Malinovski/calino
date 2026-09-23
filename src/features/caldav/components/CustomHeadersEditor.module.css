@@ -101,3 +101,40 @@
   .fields { grid-template-columns: 1fr; }
   .fieldLabel + .fieldLabel { margin-top: 8px; }
 }
+
+/* Nudged by a failed connect: accent border and ring, accent subtitle. */
+.nudged {
+  border-color: var(--color-accent, #b07d4f);
+  box-shadow: 0 0 0 3px var(--color-accent-light, rgba(176, 125, 79, 0.14));
+}
+.subtitleNudge { color: var(--color-accent, #a16f42); }
+
+/* Connection settings: proxy URL + custom headers in one panel. */
+.settingsPanel {
+  padding: 14px;
+  border-top: 1px solid var(--color-border-visible, #e4dfd8);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.settingsPanel[hidden] { display: none; }
+.group { display: flex; flex-direction: column; gap: 6px; }
+.groupLabel {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-primary, #202124);
+}
+.groupHint {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--color-text-secondary, #6b6762);
+}
+.groupHint a { color: var(--accent-strong, var(--color-accent, #a16f42)); }
+.groupInput { margin-top: 0; font: inherit; font-size: 13px; }
+.groupInput::placeholder { color: var(--color-text-muted, #8a847b); }
+.inputNudge {
+  border-color: var(--color-accent, #b07d4f);
+  box-shadow: 0 0 0 2px var(--color-accent-light, rgba(176, 125, 79, 0.12));
+}
+.group .card { margin: 0; }
+.group .add { align-self: flex-start; padding: 4px 0; }

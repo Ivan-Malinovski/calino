@@ -215,17 +215,6 @@
   margin-bottom: 16px;
 }
 
-.hintMessage {
-  color: var(--color-text-secondary, #666);
-  font-size: 13px;
-  background: var(--color-bg-hover, #f5f5f5);
-  border-left: 3px solid var(--color-info, #4a90d9);
-  padding: 8px 12px;
-  margin-top: 8px;
-  margin-bottom: 16px;
-  border-radius: 0 var(--radius-sm, 4px) var(--radius-sm, 4px) 0;
-}
-
 .modalFooter {
   display: flex;
   justify-content: flex-end;
@@ -363,6 +352,79 @@
   color: var(--accent);
   text-decoration: underline;
   cursor: pointer;
+}
+
+.formLabelOptional {
+  color: var(--color-text-secondary, #5f6368);
+  font-weight: 400;
+}
+
+.credentialsRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+}
+
+.inputInvalid,
+.inputInvalid:focus {
+  border-color: var(--color-error, #ea4335);
+}
+
+.inputInvalid:focus {
+  box-shadow: 0 0 0 2px var(--error-bg-strong, rgba(234, 67, 53, 0.16));
+}
+
+/* A failed connect: message, optional hint, then the next steps as links. */
+.errorBox {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md, 8px);
+  background: var(--error-bg, rgba(234, 67, 53, 0.1));
+  border: 1px solid var(--error-border, rgba(234, 67, 53, 0.3));
+}
+
+.errorBoxMessage {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--color-text-primary, #202124);
+  text-wrap: pretty;
+}
+
+.errorBoxHint {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--color-text-secondary, #5f6368);
+}
+
+.errorBoxActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+}
+
+.errorBoxActions .diagnoseLink {
+  margin: 0;
+  color: var(--accent-strong, var(--accent));
+}
+
+.errorBoxNudge {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent-strong, var(--accent));
+  cursor: pointer;
+  text-align: left;
+}
+
+.errorBoxNudge:hover {
+  text-decoration: underline;
 }
 
 /* Live stage read-out while an account connects — see progressStore. */

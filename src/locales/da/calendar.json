@@ -404,7 +404,7 @@
   },
   "surface": {
     "close": "Luk",
-    "addCaldavCalendarTitle": "Tilføj CalDAV-kalender",
+    "addCaldavCalendarTitle": "Tilføj CalDAV-konto",
     "editCaldavAccountTitle": "Rediger CalDAV-konto",
     "subscribeCalendarTitle": "Abonnér på kalender",
     "editSubscriptionTitle": "Rediger abonnement",

@@ -23,6 +23,7 @@ interface OnboardingModalProps {
 export function OnboardingModal({ onAddCalendar }: OnboardingModalProps): JSX.Element | null {
   const [isLoadingDemo, setIsLoadingDemo] = useState(false)
   const [demoError, setDemoError] = useState('')
+  const [showHow, setShowHow] = useState(false)
 
   const hasCompletedOnboarding = useSettingsStore((state) => state.hasCompletedOnboarding)
   const updateSettings = useSettingsStore((state) => state.updateSettings)
@@ -203,42 +204,34 @@ export function OnboardingModal({ onAddCalendar }: OnboardingModalProps): JSX.El
         </h2>
 
         <p className={styles.description}>
-          Try Calino with sample events, or connect your own CalDAV account. Your data stays in your
-          browser and Calino does not send it to external servers.
+          Connect iCloud, Nextcloud, Fastmail or any CalDAV server.
+          <br />
+          Your data stays in your browser.{' '}
+          <button
+            type="button"
+            className={styles.howButton}
+            onClick={() => setShowHow(!showHow)}
+            aria-expanded={showHow}
+            aria-controls="onboarding-how"
+            data-action="onboarding-how"
+          >
+            How?
+          </button>
         </p>
 
-        <details className={styles.details}>
-          <summary>How your data stays safe</summary>
-          <p>
-            Connect a CalDAV account (iCloud, Nextcloud, FastMail) to sync your calendar to your own
-            server. You can also back up and transfer your data using export/import in Settings.
-          </p>
-        </details>
-
-        {isNative && (
-          <p className={`${styles.description} ${styles.secondaryDescription}`}>
-            Calino can remind you before events start. Continuing will ask for notification
-            permission.
-          </p>
-        )}
-
-        {!isNative && (
-          <p className={`${styles.description} ${styles.secondaryDescription}`}>
-            There's also an{' '}
-            <a
-              href={`https://github.com/${config.githubRepo}/releases`}
-              target="_blank"
-              rel="noreferrer"
-            >
-              Android app
-            </a>
-            , with camera-based event import and reminder notifications.
+        {showHow && (
+          <p className={styles.howText} id="onboarding-how">
+            Calino has no backend of its own. It talks directly to your CalDAV server and stores a
+            copy locally. You can back up or move your data with export/import in Settings.
           </p>
         )}
 
         {demoError && <p className={styles.errorMessage}>{demoError}</p>}
 
-        <div className={styles.footer}>
+        <div className={styles.actions}>
+          <button className={styles.addButton} onClick={handleAddCalendar}>
+            Connect CalDAV account
+          </button>
           {!__CALINO_SELF_HOSTED__ && (
             <button
               className={styles.demoButton}
@@ -267,16 +260,31 @@ export function OnboardingModal({ onAddCalendar }: OnboardingModalProps): JSX.El
                   />
                 </svg>
               )}
-              {isLoadingDemo ? 'Loading…' : 'Try with sample data'}
+              {isLoadingDemo ? 'Loading…' : 'Explore Calino with sample data'}
             </button>
           )}
-          <button className={styles.addButton} onClick={handleAddCalendar}>
-            Add CalDAV Account
-          </button>
           <button className={styles.skipButton} onClick={handleDismiss}>
-            I'll do it later
+            Skip for now
           </button>
         </div>
+
+        <p className={styles.footnote}>
+          {isNative ? (
+            'Calino can remind you before events start. Continuing will ask for notification permission.'
+          ) : (
+            <>
+              Also on{' '}
+              <a
+                href={`https://github.com/${config.githubRepo}/releases`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Android
+              </a>
+              , with camera import and reminders.
+            </>
+          )}
+        </p>
       </div>
     </div>
   )

@@ -93,20 +93,20 @@ test.describe('smoke', () => {
     await page.getByText('Add calendar account').click()
 
     // Fill the modal.
-    const dialog = page.getByRole('dialog', { name: /add caldav calendar/i })
+    const dialog = page.getByRole('dialog', { name: /add caldav account/i })
     await expect(dialog).toBeVisible()
 
     await dialog.getByLabel('Server URL').fill(TEST_CALDAV_ENV.url!)
     await dialog.getByLabel('Username').fill(TEST_CALDAV_ENV.username!)
     await dialog.getByLabel('Password').fill(TEST_CALDAV_ENV.password!)
-    await dialog.getByLabel(/account name/i).fill(TEST_CALDAV_NAME)
+    await dialog.getByLabel(/display name/i).fill(TEST_CALDAV_NAME)
 
     // Submit. The add flow runs the probe (PROPFIND) inside `addAccount` and
     // closes the dialog on success — the in-dialog "Connection successful!"
     // text only renders after the separate "Test connection" button
     // (handleTestConnection), so waiting for it here would time out even on
     // a healthy server. Asserting the dialog closes is the success signal.
-    await dialog.getByRole('button', { name: 'Add Calendar' }).click()
+    await dialog.getByRole('button', { name: 'Connect', exact: true }).click()
 
     await expect(dialog).toBeHidden({ timeout: 30_000 })
 
@@ -132,12 +132,12 @@ test.describe('smoke', () => {
     await gotoSettingsSync(page)
     await page.getByText('Add calendar account').click()
 
-    const dialog = page.getByRole('dialog', { name: /add caldav calendar/i })
+    const dialog = page.getByRole('dialog', { name: /add caldav account/i })
     await dialog.getByLabel('Server URL').fill(`${baseURL}/mock-caldav/`)
     await dialog.getByLabel('Username').fill('user')
     await dialog.getByLabel('Password').fill('pass')
-    await dialog.getByLabel(/account name/i).fill('UUID fallback')
-    await dialog.getByRole('button', { name: 'Add Calendar' }).click()
+    await dialog.getByLabel(/display name/i).fill('UUID fallback')
+    await dialog.getByRole('button', { name: 'Connect', exact: true }).click()
 
     await expect(dialog).toBeHidden({ timeout: 30_000 })
   })
@@ -155,12 +155,12 @@ test.describe('smoke', () => {
     await gotoSettingsSync(page)
     await page.getByText('Add calendar account').click()
 
-    const dialog = page.getByRole('dialog', { name: /add caldav calendar/i })
+    const dialog = page.getByRole('dialog', { name: /add caldav account/i })
     await dialog.getByLabel('Server URL').fill(`${baseURL}/mock-caldav/`)
     await dialog.getByLabel('Username').fill('user')
     await dialog.getByLabel('Password').fill('pass')
-    await dialog.getByLabel(/account name/i).fill('SubtleCrypto fallback')
-    await dialog.getByRole('button', { name: 'Add Calendar' }).click()
+    await dialog.getByLabel(/display name/i).fill('SubtleCrypto fallback')
+    await dialog.getByRole('button', { name: 'Connect', exact: true }).click()
 
     await expect(dialog).toBeHidden({ timeout: 30_000 })
   })
