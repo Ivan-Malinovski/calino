@@ -55,6 +55,19 @@ test.describe('Default View — desktop', () => {
     await expect(page).toHaveURL(/\/week$/)
     await expect(page.locator('main[data-view]')).toHaveAttribute('data-view', 'week')
   })
+
+  test('the wordmark returns from 3-day to the configured Week view', async ({ page }) => {
+    await clearState(page)
+    await seedDefaultView(page, 'week')
+
+    await page.goto('/3day')
+    await expect(page.locator('main[data-view]')).toHaveAttribute('data-view', '3day')
+
+    await page.locator('[data-component="brand-home"]').click()
+
+    await expect(page).toHaveURL(/\/week$/)
+    await expect(page.locator('main[data-view]')).toHaveAttribute('data-view', 'week')
+  })
 })
 
 test.describe('Default View — mobile', () => {

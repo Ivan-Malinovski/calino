@@ -463,10 +463,9 @@ export function CalendarHeader({
 
   // The wordmark and the header title both act as "home": back to the
   // configured default view from anywhere else, and the "jump to today"
-  // shortcut once already there. `3day` is the Week tab in an alternate
-  // state, so it counts as home when the default is Week.
-  const isHomeTab =
-    currentView === defaultView || (defaultView === 'week' && currentView === '3day')
+  // shortcut once already there. `3day` is its own route, not the default
+  // view, so from there home navigates to Week rather than jumping to today.
+  const isHomeTab = currentView === defaultView
   const handleTitleClick = (): void => {
     if (isHomeTab) {
       handleToday()
