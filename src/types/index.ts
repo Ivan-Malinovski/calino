@@ -322,6 +322,9 @@ export type DefaultDuration = number
 export type ThemeMode = 'light' | 'dark' | 'auto'
 /** Strength of a calendar's colour on its event cards — default theme only. */
 export type EventTint = 'subtle' | 'balanced' | 'vivid'
+
+export type { FontSize } from '@/config/fontScale'
+import type { FontSize } from '@/config/fontScale'
 export type MapProvider = 'google' | 'apple' | 'osm' | 'mapy' | 'geo'
 export type AdjustableFontFamily = 'system' | 'serif' | 'mono'
 
@@ -379,6 +382,7 @@ export interface UserSettings {
   darkTheme: string
   mochaAccent: string
   eventTint: EventTint
+  fontSize: FontSize
   adjustableTheme: AdjustableThemeSettings
   caldavDebugMode: boolean
   hideCompletedTasksInMonthView: boolean

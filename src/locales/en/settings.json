@@ -286,11 +286,11 @@
     },
     "fontSize": {
       "label": "Font Size",
-      "desc": "Affects text density throughout the app",
-      "notAvailable": "Not available yet",
+      "desc": "Adjusts the size of text throughout the app",
       "small": "Small",
       "default": "Default",
-      "large": "Large"
+      "large": "Large",
+      "xlarge": "Extra large"
     },
     "adjustable": {
       "headerLabel": "Adjustable theme · {{mode}}",

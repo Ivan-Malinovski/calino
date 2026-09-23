@@ -224,7 +224,7 @@
   font-weight: 700;
   letter-spacing: 0.02em;
   text-transform: uppercase;
-  font-size: 11px;
+  font-size: calc(11px * var(--font-scale, 1));
 }
 
 /* Day tasks — compact row in month cell */
@@ -267,7 +267,7 @@
   font-weight: 700 !important;
   letter-spacing: 0.02em !important;
   text-transform: uppercase !important;
-  font-size: 11px !important;
+  font-size: calc(11px * var(--font-scale, 1)) !important;
   background: rgba(183, 65, 14, 0.1) !important;
   color: #000000 !important;
 }
@@ -310,7 +310,7 @@
   box-shadow: 2px 2px 0 #000000 !important;
   background: #b7410e !important;
   color: #ffffff !important;
-  font-size: 13px !important;
+  font-size: calc(13px * var(--font-scale, 1)) !important;
   font-weight: 500 !important;
 }
 
@@ -653,7 +653,7 @@
   font-weight: 700;
   letter-spacing: 0.02em;
   text-transform: uppercase;
-  font-size: 11px;
+  font-size: calc(11px * var(--font-scale, 1));
 }
 
 [data-theme='dark'] [data-component="day-tasks"] {
@@ -694,7 +694,7 @@
   font-weight: 700 !important;
   letter-spacing: 0.02em !important;
   text-transform: uppercase !important;
-  font-size: 11px !important;
+  font-size: calc(11px * var(--font-scale, 1)) !important;
   background: rgba(212, 101, 42, 0.15) !important;
   color: #f0f0f0 !important;
 }
@@ -732,7 +732,7 @@
   box-shadow: 2px 2px 0 #000000 !important;
   background: #b7410e !important;
   color: #ffffff !important;
-  font-size: 13px !important;
+  font-size: calc(13px * var(--font-scale, 1)) !important;
   font-weight: 500 !important;
 }
 

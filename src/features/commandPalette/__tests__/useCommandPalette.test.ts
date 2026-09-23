@@ -151,6 +151,7 @@ vi.mock('@/store/settingsStore', () => ({
       darkTheme: 'default',
       mochaAccent: '#89b4fa',
       eventTint: 'subtle',
+      fontSize: 'default',
       adjustableTheme: {
         light: {
           canvas: '#f7f4ee',
