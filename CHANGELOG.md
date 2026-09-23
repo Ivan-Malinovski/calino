@@ -7,17 +7,7 @@ All notable changes to Calino will be documented in this file.
 ## [0.34.0] - 2026-09-23
 
 This release makes adding an account friendlier, adds support for DAV servers
-behind authentication gateways, turns on the Font Size setting, and ships
-the first native Android app build alongside Calino.
-
-### Native Android app (early preview)
-
-A native Android version of Calino now lives in its own repository:
-**[Ivan-Malinovski/calino-android](https://github.com/Ivan-Malinovski/calino-android)**.
-This release attaches its current build, `calino-android-0.5.0.apk`, which you
-can sideload. It's still at an early stage, but it should be usable day to day.
-Try it if you want a smoother app that feels native on Android. Please report
-bugs and feedback in that repository.
+behind authentication gateways, and turns on the Font Size setting.
 
 ### Added
 
@@ -45,6 +35,14 @@ bugs and feedback in that repository.
   links to diagnostics and suggests a next step: setting up (or checking) a
   proxy for CORS or network errors, adding a header for a 403 from a
   gateway, or rechecking the password after a 401.
+
+### Native Android app
+
+This release also attaches `calino-android-0.5.0.apk`, the current build of
+the native Android app from
+[calino-android](https://github.com/Ivan-Malinovski/calino-android). It's still
+early, but it should be usable if you want an app that feels more fluid and
+native on Android.
 
 ## [0.33.8] - 2026-09-22
 
