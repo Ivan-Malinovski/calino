@@ -11,11 +11,16 @@ import {
 } from '@/features/caldav/client/discovery'
 import { getCredentialById } from '@/features/caldav/client/credentials'
 import type { DiagnosticsOptions } from '@/features/caldav/client/diagnostics'
-import { connectionErrorMessage } from '@/features/caldav/client/errorMessages'
+import {
+  classifySyncError,
+  connectionErrorMessage,
+  type SyncErrorCode,
+} from '@/features/caldav/client/errorMessages'
 import { isCleartextUrl, CLEARTEXT_WARNING } from '@/features/caldav/client/insecureUrl'
 import { DiagnosticsPanel } from '@/features/settings/components/DiagnosticsPanel'
 import type { CalDAVAccount } from '@/features/caldav/types'
 import { CustomHeadersEditor } from '@/features/caldav/components/CustomHeadersEditor'
+import { connectionNudgeFor } from '@/features/caldav/components/connectionNudge'
 import { rowsToHeaders, type HeaderRow } from '@/features/caldav/components/headerRows'
 import { useProgressStore, selectActiveTask } from '@/store/progressStore'
 import { useAnimatedClose } from '@/hooks/useAnimatedClose'
@@ -45,8 +50,13 @@ export function AddCalendarModal({
   const [connectionHint, setConnectionHint] = useState<string>('')
   const [isTesting, setIsTesting] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
-  const [showProxyField, setShowProxyField] = useState(Boolean(account?.proxyUrl))
+  const [errorCode, setErrorCode] = useState<SyncErrorCode | null>(null)
+  const [proxyDraft, setProxyDraft] = useState(account?.proxyUrl ?? '')
   const [headerRows, setHeaderRows] = useState<HeaderRow[]>([])
+  const [settingsOpen, setSettingsOpen] = useState<boolean | undefined>(undefined)
+  const [hasFailed, setHasFailed] = useState(false)
+  // Captured at failure time, so filling in the proxy doesn't rewrite the advice mid-edit.
+  const [nudge, setNudge] = useState<ReturnType<typeof connectionNudgeFor>>(null)
   /** Mirrors the (uncontrolled) URL field, only so the cleartext warning can react to it. */
   const [urlDraft, setUrlDraft] = useState(account?.serverUrl ?? '')
   // Captured on failure so "Run diagnostics" probes exactly what was attempted,
@@ -82,8 +92,45 @@ export function AddCalendarModal({
     setConnectionHint('')
     setDiagnoseTarget(null)
     setShowDiagnostics(false)
+    setErrorCode(null)
+    setNudge(null)
+    setHasFailed(false)
+    setSettingsOpen(undefined)
+    setProxyDraft(account?.proxyUrl ?? '')
+    if (!account) setHeaderRows([])
     onClose()
-  }, [onClose])
+  }, [onClose, account])
+
+  /** Record a failure's category and decide whether to point at Connection settings. */
+  const recordFailure = (code: SyncErrorCode, proxyUrl: string | null | undefined): void => {
+    setHasFailed(true)
+    setErrorCode(code)
+    setNudge(
+      connectionNudgeFor(
+        code,
+        Boolean(proxyUrl),
+        headerRows.some((row) => row.name.trim())
+      )
+    )
+  }
+
+  const clearFailure = (): void => {
+    setConnectionStatus('idle')
+    setConnectionError('')
+    setConnectionHint('')
+    setErrorCode(null)
+    setNudge(null)
+  }
+
+  /** "Set up a proxy ↓" / "Add a header ↓": open the card at the relevant field. */
+  const followNudge = (): void => {
+    if (!nudge) return
+    if (nudge.target === 'headers' && !headerRows.length) {
+      setHeaderRows([{ name: '', value: '' }])
+    }
+    setSettingsOpen(true)
+  }
+
   const { rendered, closing, requestClose } = useAnimatedClose(isOpen, doClose, 200)
   const dialogRef = useRef<HTMLDivElement>(null)
   useModalDismiss(dialogRef, rendered && !closing, requestClose)
@@ -98,9 +145,7 @@ export function AddCalendarModal({
     customHeaders: Record<string, string> = {}
   ): Promise<boolean> => {
     setIsTesting(true)
-    setConnectionStatus('idle')
-    setConnectionError('')
-    setConnectionHint('')
+    clearFailure()
     setShowDiagnostics(false)
 
     try {
@@ -118,6 +163,7 @@ export function AddCalendarModal({
         setConnectionError(
           result.error ? connectionErrorMessage(result.error) : 'Connection failed.'
         )
+        recordFailure(result.error ? classifySyncError(result.error) : 'unknown', proxyUrl)
         if (result.hint) {
           setConnectionHint(result.hint)
         }
@@ -192,8 +238,20 @@ export function AddCalendarModal({
   }
 
   /** Surface a failed add/edit, preferring the probe's hint over a guess. */
-  const showFailure = (error: unknown, serverUrl: string, fallback: string): void => {
+  const showFailure = (
+    error: unknown,
+    serverUrl: string,
+    proxyUrl: string | undefined,
+    fallback: string
+  ): void => {
     setConnectionStatus('error')
+    recordFailure(
+      error instanceof Error
+        ? ((error instanceof CalDAVConnectionError ? error.code : undefined) ??
+            classifySyncError(error.message))
+        : 'unknown',
+      proxyUrl
+    )
     setConnectionError(
       error instanceof Error
         ? connectionErrorMessage(
@@ -244,9 +302,7 @@ export function AddCalendarModal({
 
     isSavingRef.current = true
     setIsSaving(true)
-    setConnectionStatus('idle')
-    setConnectionError('')
-    setConnectionHint('')
+    clearFailure()
 
     try {
       if (isEdit) {
@@ -277,6 +333,7 @@ export function AddCalendarModal({
       showFailure(
         error,
         serverUrl,
+        proxyUrl,
         isEdit
           ? 'Failed to update account. Please try again.'
           : 'Failed to add account. Please try again.'
@@ -338,7 +395,7 @@ export function AddCalendarModal({
         <form ref={formRef} key={account?.id ?? 'add'} onSubmit={handleSubmit}>
           <div className={styles.formGroup}>
             <label htmlFor="accountName" className={styles.formLabel}>
-              Account Name (optional)
+              Display name <span className={styles.formLabelOptional}>(optional)</span>
             </label>
             <input
               id="accountName"
@@ -361,99 +418,90 @@ export function AddCalendarModal({
               onChange={(e) => setUrlDraft(e.target.value)}
               required
             />
-            <span className={styles.formHint}>{t('surface.caldavUrlHint')}</span>
             {isCleartextUrl(urlDraft) && <div className={styles.formWarn}>{CLEARTEXT_WARNING}</div>}
           </div>
-          <div className={styles.formGroup}>
-            <button
-              type="button"
-              className={styles.chevronLabel}
-              onClick={() => setShowProxyField(!showProxyField)}
-            >
-              <svg
-                aria-hidden="true"
-                className={styles.chevronIcon}
-                style={{ transform: showProxyField ? 'rotate(0deg)' : 'rotate(-90deg)' }}
-                width="16"
-                height="16"
-                viewBox="0 0 16 16"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M4 6L8 10L12 6"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-              <span>{t('surface.proxyUrlOptional')}</span>
-            </button>
-            {showProxyField && (
-              <>
-                <input
-                  id="proxyUrl"
-                  name="proxyUrl"
-                  className={styles.input}
-                  placeholder={t('surface.proxyUrlPlaceholder')}
-                  defaultValue={account?.proxyUrl ?? undefined}
-                />
-                <span className={styles.proxyInfoText}>
-                  Using a proxy means your requests go through another server. Your CalDAV server,
-                  requests, authorization credentials, and calendar data might be visible to the
-                  proxy provider, since the connection is decrypted there. It's recommended to
-                  either enable CORS headers on your CalDAV server or run your own proxy.
-                </span>
-              </>
-            )}
+          <div className={styles.credentialsRow}>
+            <div className={styles.formGroup}>
+              <label htmlFor="username" className={styles.formLabel}>
+                Username
+              </label>
+              <input
+                id="username"
+                name="username"
+                autoComplete="username"
+                className={styles.input}
+                defaultValue={account?.username}
+                required
+              />
+            </div>
+            <div className={styles.formGroup}>
+              <label htmlFor="password" className={styles.formLabel}>
+                Password
+              </label>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                autoComplete="current-password"
+                className={`${styles.input} ${errorCode === 'auth' ? styles.inputInvalid : ''}`}
+                aria-invalid={errorCode === 'auth' || undefined}
+                aria-describedby={errorCode === 'auth' ? 'connection-error' : undefined}
+                required={!isEdit}
+              />
+              {isEdit && <span className={styles.formHint}>{t('surface.passwordHint')}</span>}
+            </div>
           </div>
-          <div className={styles.formGroup}>
-            <label htmlFor="username" className={styles.formLabel}>
-              Username
-            </label>
-            <input
-              id="username"
-              name="username"
-              autoComplete="username"
-              className={styles.input}
-              defaultValue={account?.username}
-              required
-            />
-          </div>
-          <div className={styles.formGroup}>
-            <label htmlFor="password" className={styles.formLabel}>
-              Password
-            </label>
-            <input
-              id="password"
-              name="password"
-              type="password"
-              autoComplete="current-password"
-              className={styles.input}
-              required={!isEdit}
-            />
-            {isEdit && <span className={styles.formHint}>{t('surface.passwordHint')}</span>}
-          </div>
-          <CustomHeadersEditor rows={headerRows} onChange={setHeaderRows} />
           {connectionStatus === 'success' && (
             <p className={styles.successMessage}>{t('surface.connectionSuccessful')}</p>
           )}
-          {connectionStatus === 'error' && <p className={styles.errorMessage}>{connectionError}</p>}
-          {connectionHint && <div className={styles.hintMessage}>{connectionHint}</div>}
-          {connectionStatus === 'error' && diagnoseTarget && !showDiagnostics && (
-            <button
-              type="button"
-              className={styles.diagnoseLink}
-              onClick={() => setShowDiagnostics(true)}
-              data-action="show-diagnostics"
-            >
-              Run diagnostics to find out why
-            </button>
+          {connectionStatus === 'error' && (
+            <div className={styles.errorBox} role="alert" data-component="connection-error">
+              <p className={styles.errorBoxMessage} id="connection-error">
+                {connectionError}
+              </p>
+              {connectionHint && <p className={styles.errorBoxHint}>{connectionHint}</p>}
+              {(nudge || (diagnoseTarget && !showDiagnostics)) && (
+                <div className={styles.errorBoxActions}>
+                  {nudge && (
+                    <button
+                      type="button"
+                      className={styles.errorBoxNudge}
+                      onClick={followNudge}
+                      data-action="connection-nudge"
+                    >
+                      {nudge.action}
+                    </button>
+                  )}
+                  {diagnoseTarget && !showDiagnostics && (
+                    <button
+                      type="button"
+                      className={styles.diagnoseLink}
+                      onClick={() => setShowDiagnostics(true)}
+                      data-action="show-diagnostics"
+                    >
+                      Diagnose the connection
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
           )}
           {showDiagnostics && diagnoseTarget && (
             <DiagnosticsPanel options={diagnoseTarget} autoRun />
           )}
+          <CustomHeadersEditor
+            rows={headerRows}
+            onChange={setHeaderRows}
+            proxy={{
+              value: proxyDraft,
+              onChange: setProxyDraft,
+              placeholder: t('surface.proxyUrlPlaceholder'),
+            }}
+            open={settingsOpen}
+            onOpenChange={setSettingsOpen}
+            nudge={nudge?.target ?? null}
+            nudgeLabel={nudge?.label}
+          />
           {isSaving && progressTask && (
             <div className={styles.progress} role="status" aria-live="polite">
               <div
@@ -513,7 +561,17 @@ export function AddCalendarModal({
               data-component="modal-save"
             >
               {isSaving && <span className={styles.buttonSpinner} aria-hidden="true" />}
-              <span>{isSaving ? 'Saving…' : isEdit ? 'Save Changes' : 'Add Calendar'}</span>
+              <span>
+                {isSaving
+                  ? isEdit
+                    ? 'Saving…'
+                    : 'Connecting…'
+                  : isEdit
+                    ? 'Save Changes'
+                    : hasFailed
+                      ? 'Try again'
+                      : 'Connect'}
+              </span>
             </button>
           </div>
         </form>

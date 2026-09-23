@@ -404,7 +404,7 @@
   },
   "surface": {
     "close": "Schließen",
-    "addCaldavCalendarTitle": "CalDAV-Kalender hinzufügen",
+    "addCaldavCalendarTitle": "CalDAV-Konto hinzufügen",
     "editCaldavAccountTitle": "CalDAV-Konto bearbeiten",
     "subscribeCalendarTitle": "Kalender abonnieren",
     "editSubscriptionTitle": "Abonnement bearbeiten",

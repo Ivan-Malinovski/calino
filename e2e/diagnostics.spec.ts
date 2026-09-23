@@ -135,7 +135,7 @@ test.describe('connection errors', () => {
   test('explains a failure instead of showing the raw exception', async ({ page }) => {
     await fillAccountForm(page, '/no-cors/')
     await page
-      .getByRole('button', { name: /test connection|add calendar/i })
+      .getByRole('button', { name: /test connection|^connect$/i })
       .last()
       .click()
 
@@ -143,6 +143,21 @@ test.describe('connection errors', () => {
     await expect(dialog).toContainText(/couldn't reach the server/i)
     await expect(dialog).not.toContainText('Failed to fetch')
     await expect(dialog).not.toContainText('TypeError')
+  })
+
+  test('a CORS failure nudges towards a proxy in Connection settings', async ({ page }) => {
+    await fillAccountForm(page, '/no-cors/')
+    const dialog = page.getByRole('dialog')
+    await dialog.getByRole('button', { name: 'Connect', exact: true }).click()
+
+    const settings = dialog.locator('[data-component="connection-settings"]')
+    await expect(settings).toHaveAttribute('data-nudge', 'proxy')
+    await expect(settings).toContainText('A proxy may fix this')
+    await expect(dialog.getByRole('button', { name: 'Diagnose the connection' })).toBeVisible()
+    await expect(dialog.getByRole('button', { name: 'Try again' })).toBeVisible()
+
+    await dialog.getByRole('button', { name: /Set up a proxy/ }).click()
+    await expect(dialog.getByLabel('Proxy URL')).toBeFocused()
   })
 })
 
@@ -157,6 +172,12 @@ test.describe('first-run setup page', () => {
 
     await expect(page.getByText(/couldn't reach the server/i)).toBeVisible({ timeout: 30_000 })
     await expect(page.locator('body')).not.toContainText('Failed to fetch')
+
+    // Same nudge as the Add CalDAV dialog: the proxy lives in Connection settings.
+    const settings = page.locator('[data-component="connection-settings"]')
+    await expect(settings).toHaveAttribute('data-nudge', 'proxy')
+    await page.getByRole('button', { name: /Set up a proxy/ }).click()
+    await expect(page.getByLabel('Proxy URL')).toBeFocused()
 
     // The page had no diagnostics at all before; this is the new affordance.
     await page.locator('[data-action="show-diagnostics"]').click()

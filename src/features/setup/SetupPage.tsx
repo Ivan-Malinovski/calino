@@ -4,8 +4,13 @@ import { useNavigate } from 'react-router'
 import { encryptWithMasterPassword } from '@/lib/crypto'
 import { probeConnection } from '@/features/caldav/client/discovery'
 import { CustomHeadersEditor } from '@/features/caldav/components/CustomHeadersEditor'
+import { connectionNudgeFor } from '@/features/caldav/components/connectionNudge'
 import { rowsToHeaders } from '@/features/caldav/components/headerRows'
-import { connectionErrorMessage } from '@/features/caldav/client/errorMessages'
+import {
+  classifySyncError,
+  connectionErrorMessage,
+  type SyncErrorCode,
+} from '@/features/caldav/client/errorMessages'
 import { isCleartextUrl, CLEARTEXT_WARNING } from '@/features/caldav/client/insecureUrl'
 import type { DiagnosticsOptions } from '@/features/caldav/client/diagnostics'
 import { DiagnosticsPanel } from '@/features/settings/components/DiagnosticsPanel'
@@ -67,7 +72,9 @@ export function SetupPage(): JSX.Element {
   const [formProxy, setFormProxy] = useState('')
   const [formHeaders, setFormHeaders] = useState<Array<{ name: string; value: string }>>([])
   const [headerError, setHeaderError] = useState('')
-  const [showProxy, setShowProxy] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState<boolean | undefined>(undefined)
+  const [errorCode, setErrorCode] = useState<SyncErrorCode | null>(null)
+  const [nudge, setNudge] = useState<ReturnType<typeof connectionNudgeFor>>(null)
   const [testStatus, setTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle')
   const [testError, setTestError] = useState('')
   const [testHint, setTestHint] = useState('')
@@ -98,6 +105,8 @@ export function SetupPage(): JSX.Element {
     setTestStatus('testing')
     setTestError('')
     setTestHint('')
+    setErrorCode(null)
+    setNudge(null)
     setShowDiagnostics(false)
     const proxyUrl = formProxy || undefined
     // Shared with the Add Calendar dialog rather than probed separately here:
@@ -116,6 +125,15 @@ export function SetupPage(): JSX.Element {
       setDiagnoseTarget(null)
     } else {
       setTestError(connectionErrorMessage(result.error ?? 'Connection failed.'))
+      const code = result.error ? classifySyncError(result.error) : 'unknown'
+      setErrorCode(code)
+      setNudge(
+        connectionNudgeFor(
+          code,
+          Boolean(proxyUrl),
+          formHeaders.some((row) => row.name.trim())
+        )
+      )
       if (result.hint) setTestHint(result.hint)
       setDiagnoseTarget({
         serverUrl: formUrl,
@@ -154,9 +172,11 @@ export function SetupPage(): JSX.Element {
     setFormPassword('')
     setFormProxy('')
     setFormHeaders([])
-    setShowProxy(false)
+    setSettingsOpen(undefined)
     setTestStatus('idle')
     setTestError('')
+    setErrorCode(null)
+    setNudge(null)
   }, [formName, formUrl, formUsername, formPassword, formProxy, formHeaders])
 
   const handleRemoveAccount = useCallback((index: number) => {
@@ -345,7 +365,7 @@ export function SetupPage(): JSX.Element {
 
             <div className={styles.field}>
               <label className={styles.label} htmlFor="setup-name">
-                Account Name
+                Display name <span className={styles.labelOptional}>(optional)</span>
               </label>
               <input
                 id="setup-name"
@@ -354,7 +374,6 @@ export function SetupPage(): JSX.Element {
                 onChange={(e) => setFormName(e.target.value)}
                 placeholder="e.g. Personal, Work"
               />
-              <div className={styles.hint}>Optional — defaults to username</div>
             </div>
 
             <div className={styles.field}>
@@ -374,102 +393,98 @@ export function SetupPage(): JSX.Element {
               {isCleartextUrl(formUrl) && <div className={styles.warn}>{CLEARTEXT_WARNING}</div>}
             </div>
 
-            <div className={styles.field}>
-              <label className={styles.label} htmlFor="setup-username">
-                Username
-              </label>
-              <input
-                id="setup-username"
-                className={styles.input}
-                value={formUsername}
-                onChange={(e) => {
-                  setFormUsername(e.target.value)
-                  setTestStatus('idle')
-                }}
-                autoComplete="username"
-              />
-            </div>
-
-            <div className={styles.field}>
-              <label className={styles.label} htmlFor="setup-password">
-                Password
-              </label>
-              <input
-                id="setup-password"
-                type="password"
-                className={styles.input}
-                value={formPassword}
-                onChange={(e) => {
-                  setFormPassword(e.target.value)
-                  setTestStatus('idle')
-                }}
-                autoComplete="current-password"
-              />
-            </div>
-
-            <button
-              type="button"
-              className={styles.proxyToggle}
-              onClick={() => setShowProxy(!showProxy)}
-            >
-              <svg
-                style={{ transform: showProxy ? 'rotate(0deg)' : 'rotate(-90deg)' }}
-                width="16"
-                height="16"
-                viewBox="0 0 16 16"
-                fill="none"
-              >
-                <path
-                  d="M4 6L8 10L12 6"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-              Proxy URL (optional)
-            </button>
-
-            {showProxy && (
+            <div className={styles.credentialsRow}>
               <div className={styles.field}>
+                <label className={styles.label} htmlFor="setup-username">
+                  Username
+                </label>
                 <input
+                  id="setup-username"
                   className={styles.input}
-                  value={formProxy}
-                  onChange={(e) => setFormProxy(e.target.value)}
-                  placeholder="https://proxy.example.com"
+                  value={formUsername}
+                  onChange={(e) => {
+                    setFormUsername(e.target.value)
+                    setTestStatus('idle')
+                  }}
+                  autoComplete="username"
                 />
-                <div className={styles.hint}>
-                  Requests go through this proxy. Your CalDAV credentials will be visible to the
-                  proxy provider.
-                </div>
               </div>
-            )}
 
-            <CustomHeadersEditor rows={formHeaders} onChange={setFormHeaders} />
-            {headerError && <div className={styles.error}>{headerError}</div>}
+              <div className={styles.field}>
+                <label className={styles.label} htmlFor="setup-password">
+                  Password
+                </label>
+                <input
+                  id="setup-password"
+                  type="password"
+                  className={styles.input}
+                  value={formPassword}
+                  onChange={(e) => {
+                    setFormPassword(e.target.value)
+                    setTestStatus('idle')
+                  }}
+                  autoComplete="current-password"
+                  aria-invalid={errorCode === 'auth' || undefined}
+                />
+              </div>
+            </div>
 
             {testStatus === 'success' && (
               <div className={styles.success}>✓ Connection successful</div>
             )}
             {testStatus === 'error' && (
-              <>
-                <div className={styles.error}>✕ {testError}</div>
-                {testHint && <div className={styles.hint}>{testHint}</div>}
-                {diagnoseTarget && !showDiagnostics && (
-                  <button
-                    type="button"
-                    className={styles.linkBtn}
-                    data-action="show-diagnostics"
-                    onClick={() => setShowDiagnostics(true)}
-                  >
-                    Run diagnostics to find out why
-                  </button>
+              <div className={styles.errorBox} role="alert" data-component="connection-error">
+                <p className={styles.errorBoxMessage}>{testError}</p>
+                {testHint && <p className={styles.errorBoxHint}>{testHint}</p>}
+                {(nudge || (diagnoseTarget && !showDiagnostics)) && (
+                  <div className={styles.errorBoxActions}>
+                    {nudge && (
+                      <button
+                        type="button"
+                        className={styles.errorBoxNudge}
+                        data-action="connection-nudge"
+                        onClick={() => {
+                          if (nudge.target === 'headers' && !formHeaders.length) {
+                            setFormHeaders([{ name: '', value: '' }])
+                          }
+                          setSettingsOpen(true)
+                        }}
+                      >
+                        {nudge.action}
+                      </button>
+                    )}
+                    {diagnoseTarget && !showDiagnostics && (
+                      <button
+                        type="button"
+                        className={styles.errorBoxLink}
+                        data-action="show-diagnostics"
+                        onClick={() => setShowDiagnostics(true)}
+                      >
+                        Diagnose the connection
+                      </button>
+                    )}
+                  </div>
                 )}
-              </>
+              </div>
             )}
             {showDiagnostics && diagnoseTarget && (
               <DiagnosticsPanel options={diagnoseTarget} autoRun />
             )}
+
+            <CustomHeadersEditor
+              rows={formHeaders}
+              onChange={setFormHeaders}
+              proxy={{
+                value: formProxy,
+                onChange: setFormProxy,
+                placeholder: 'https://proxy.calino.io',
+              }}
+              open={settingsOpen}
+              onOpenChange={setSettingsOpen}
+              nudge={nudge?.target ?? null}
+              nudgeLabel={nudge?.label}
+            />
+            {headerError && <div className={styles.error}>{headerError}</div>}
 
             <div className={styles.actions}>
               <button

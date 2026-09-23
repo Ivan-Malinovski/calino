@@ -97,7 +97,7 @@
   },
   "surface": {
     "close": "Close",
-    "addCaldavCalendarTitle": "Add CalDAV Calendar",
+    "addCaldavCalendarTitle": "Add CalDAV account",
     "editCaldavAccountTitle": "Edit CalDAV Account",
     "subscribeCalendarTitle": "Subscribe to Calendar",
     "editSubscriptionTitle": "Edit subscription",
