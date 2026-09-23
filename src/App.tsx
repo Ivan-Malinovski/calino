@@ -190,6 +190,7 @@ function useViewManager(): void {
   const location = useLocation()
   const currentView = useCalendarStore((state) => state.currentView)
   const setCurrentView = useCalendarStore((state) => state.setCurrentView)
+  const defaultView = useSettingsStore((state) => state.defaultView)
   const isMobile = useIsMobile()
 
   const isMounted = useRef(false)
@@ -228,9 +229,11 @@ function useViewManager(): void {
     if (!isMounted.current) return
     if (isRedirecting) return // Wait for GitHub Pages redirect to complete
 
-    // Handle root route - redirect to default view
+    // Handle root route - redirect to the user's default view. Mobile keeps
+    // opening the agenda: the view is chosen for a phone's screen, not for
+    // desktop, and predates the setting.
     if (isRootRoute) {
-      navigate(isMobile ? '/agenda' : '/month', { replace: true })
+      navigate(isMobile ? VIEW_ROUTES.agenda : VIEW_ROUTES[defaultView], { replace: true })
       return
     }
 
@@ -251,6 +254,7 @@ function useViewManager(): void {
     isRedirecting,
     navigate,
     isMobile,
+    defaultView,
   ])
 
   // Handle keyboard shortcuts - navigate and update state
