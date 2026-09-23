@@ -1,6 +1,8 @@
 /**
- * The "Calino" wordmark in the header is the home control: it returns to
- * month view from any other view, and jumps to today once there (issue #149).
+ * The "Calino" wordmark in the header is the home control: it returns to the
+ * configured default view (Month unless the setting says otherwise — the
+ * default-view spec covers the configured case) from any other view, and
+ * jumps to today once there (issue #149).
  */
 import { test, expect } from '@playwright/test'
 import { clearState } from './fixtures/localstorage'
