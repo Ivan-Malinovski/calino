@@ -47,6 +47,7 @@ import { useTaskCollapse } from '../hooks/useTaskCollapse'
 import { TaskCollapseToggle } from './TaskCollapseToggle'
 import { DayEventsPopup } from './DayEventsPopup'
 import styles from './AgendaView.module.css'
+import { eventLastDay } from '../lib/multiDayFragments'
 
 interface EventWithDate {
   event: CalendarEvent
@@ -567,7 +568,7 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
       arr.push({ event, date: toEventInstant(event.start, event.timezone) })
 
       if (!event.isAllDay) {
-        const eventEndDate = format(toEventInstant(event.end, event.timezone), 'yyyy-MM-dd')
+        const eventEndDate = format(eventLastDay(event), 'yyyy-MM-dd')
         if (eventEndDate !== eventDate) {
           let endArr = eventMap.get(eventEndDate)
           if (!endArr) {

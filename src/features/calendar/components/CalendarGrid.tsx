@@ -70,7 +70,12 @@ import { hasDueTime } from '@/lib/events'
 import { consumesVerticalScroll } from '@/lib/scrollChaining'
 import styles from './CalendarGrid.module.css'
 import { duplicateEventWithSync } from '@/lib/duplicateWithSync'
-import { assignSpanLanes, compareDayEvents, makeDayFragments } from '../lib/multiDayFragments'
+import {
+  assignSpanLanes,
+  compareDayEvents,
+  eventLastDay,
+  makeDayFragments,
+} from '../lib/multiDayFragments'
 import { filterTasksByCollapsedAncestors, getTaskDescendantIds } from '@/lib/taskTree'
 import { useTaskCollapse } from '../hooks/useTaskCollapse'
 
@@ -1494,7 +1499,7 @@ function monthRowKind(
   if (item.type === 'task') return hasDueTime(item) ? 'taskWithTime' : 'task'
   const isMultiDay = !isSameDay(
     toEventInstant(item.start, item.timezone),
-    toEventInstant(item.end, item.timezone)
+    eventLastDay(item)
   )
   const compact =
     isPastWeek ||
@@ -1846,7 +1851,7 @@ const DroppableDay = React.memo(function DroppableDay({
                   .map((event) => {
                     const isMultiDay = !isSameDay(
                       toEventInstant(event.start, event.timezone),
-                      toEventInstant(event.end, event.timezone)
+                      eventLastDay(event)
                     )
                     const shouldCompact =
                       isPastWeek ||
@@ -1934,7 +1939,7 @@ const DroppableDay = React.memo(function DroppableDay({
                   const { event } = slot
                   const isMultiDay = !isSameDay(
                     toEventInstant(event.start, event.timezone),
-                    toEventInstant(event.end, event.timezone)
+                    eventLastDay(event)
                   )
                   const shouldCompact =
                     slot.forceCompact ||

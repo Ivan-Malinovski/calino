@@ -45,6 +45,7 @@ import {
   TASK_PILL_LAYOUT_MINUTES,
 } from '../lib/eventLayout'
 import { eventCardVariants } from '../lib/eventAnimations'
+import { eventLastDay } from '../lib/multiDayFragments'
 import { formatTime, pad2, toLocalDateString, toEventInstant } from '@/lib/datetime'
 import { HOURS } from '@/lib/hours'
 import { getTimezoneAbbr, getSecondaryHourLabel } from '@/lib/timezoneHelper'
@@ -365,9 +366,11 @@ export function DayView({
 
     for (const event of eventsForDay) {
       const eventStart = toEventInstant(event.start, event.timezone)
-      const eventEnd = toEventInstant(event.end, event.timezone)
+      const eventEnd = eventLastDay(event)
       const eventStartKey = format(eventStart, 'yyyy-MM-dd')
       const eventEndKey = format(eventEnd, 'yyyy-MM-dd')
+      // Ends exactly at midnight: nothing of it falls on this day.
+      if (eventEndKey < dateKey) continue
 
       if (eventStartKey === eventEndKey) {
         fragmentedEvents.push(event)

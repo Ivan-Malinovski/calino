@@ -36,6 +36,7 @@ import { LocationLink } from './LocationLink'
 import { EventBackground } from '@/components/common/EventBackground'
 import { matchEventBackground } from '@/lib/eventBackground'
 import { MINUTE_SNAP_INTERVAL, timedDragStartMinutes } from '../lib/dragSnap'
+import { eventLastDay } from '../lib/multiDayFragments'
 import { TaskCollapseToggle } from './TaskCollapseToggle'
 import styles from './EventCard.module.css'
 
@@ -315,7 +316,7 @@ export const EventCard = React.memo(function EventCard({
   // on parseISO — floating dates, whose device date is the day itself.
   const isMultiDay = !isSameDay(
     event.isAllDay ? parseISO(event.start) : toEventInstant(event.start, event.timezone),
-    event.isAllDay ? parseISO(event.end) : toEventInstant(event.end, event.timezone)
+    event.isAllDay ? parseISO(event.end) : eventLastDay(event)
   )
   // Timed grid cards take their height from the event's duration, so the card
   // can work out up front how much vertical room it has. A half-hour slot only

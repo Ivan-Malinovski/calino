@@ -8,9 +8,20 @@ interface Span {
   days: string[]
 }
 
-function eventDayKeys(event: CalendarEvent): { startKey: string; endKey: string; days: string[] } {
+/**
+ * The last calendar day a timed event occupies. The end is exclusive (RFC 5545),
+ * so an event ending exactly at midnight does not reach into the following day.
+ */
+export function eventLastDay(event: CalendarEvent): Date {
   const start = toEventInstant(event.start, event.timezone)
   const end = toEventInstant(event.end, event.timezone)
+  if (!event.isAllDay && end > start && end.getTime() === startOfDay(end).getTime()) return addDays(end, -1)
+  return end
+}
+
+function eventDayKeys(event: CalendarEvent): { startKey: string; endKey: string; days: string[] } {
+  const start = toEventInstant(event.start, event.timezone)
+  const end = eventLastDay(event)
   const startKey = format(start, 'yyyy-MM-dd')
   const endKey = format(end, 'yyyy-MM-dd')
   const days = eachDayOfInterval({
@@ -55,11 +66,11 @@ export function makeDayFragments(event: CalendarEvent, laneIndex?: number): Cale
   if (startKey === endKey) return [event]
 
   const eventStart = toEventInstant(event.start, event.timezone)
-  const eventEnd = toEventInstant(event.end, event.timezone)
+  const lastDay = startOfDay(eventLastDay(event))
   const fragments: CalendarEvent[] = []
   let currentDay = startOfDay(eventStart)
 
-  while (currentDay <= eventEnd) {
+  while (currentDay <= lastDay) {
     const dayKey = format(currentDay, 'yyyy-MM-dd')
     const isFirst = dayKey === startKey
     const isLast = dayKey === endKey

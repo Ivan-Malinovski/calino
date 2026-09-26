@@ -75,3 +75,18 @@ describe('multi-day fragments', () => {
     expect(makeDayFragments(original)).toHaveLength(3)
   })
 })
+
+describe('midnight end', () => {
+  it('does not spill a timed event ending at midnight into the next day', () => {
+    const original = event('evening', '2024-10-01T15:00:00', '2024-10-02T00:00:00')
+
+    expect(makeDayFragments(original)).toEqual([original])
+    expect(assignSpanLanes([original]).has('evening')).toBe(false)
+  })
+
+  it('still splits an event ending after midnight', () => {
+    const original = event('late', '2024-10-01T15:00:00', '2024-10-02T00:30:00')
+
+    expect(makeDayFragments(original)).toHaveLength(2)
+  })
+})
