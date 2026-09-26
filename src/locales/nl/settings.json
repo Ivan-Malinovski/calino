@@ -10,7 +10,12 @@
     "data": "Gegevens",
     "aiVision": "AI-foto-import",
     "backToCalendar": "Terug naar agenda",
-    "settingsCategories": "Instellingencategorieën"
+    "settingsCategories": "Instellingencategorieën",
+    "searchPlaceholder": "Instellingen zoeken…",
+    "searchAriaLabel": "Instellingen zoeken",
+    "searchResults": "Zoekresultaten voor instellingen",
+    "noSearchResults": "Geen overeenkomende instellingen gevonden",
+    "clearSearch": "Zoekopdracht wissen"
   },
   "saved": "Opgeslagen",
   "general": {

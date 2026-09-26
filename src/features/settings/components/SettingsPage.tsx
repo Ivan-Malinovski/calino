@@ -1,5 +1,5 @@
 import type { JSX } from 'react'
-import { useState, useRef, useEffect } from 'react'
+import { useMemo, useState, useRef, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
 import { useTranslation } from 'react-i18next'
 import { Capacitor } from '@capacitor/core'
@@ -24,6 +24,123 @@ interface NavItem {
   id: SettingsTab
   labelKey: string
   icon: JSX.Element
+}
+
+interface SettingsSearchEntry {
+  tab: SettingsTab
+  title: string
+  sectionTitle: string
+  searchableText: string
+  isSectionFallback?: boolean
+}
+
+interface SettingsSearchResult {
+  tab: SettingsTab
+  title: string
+  sectionTitle: string
+}
+
+const SETTINGS_SEARCH_SECTIONS: Array<{
+  tab: SettingsTab
+  resourceKey: string
+  labelKey: string
+}> = [
+  { tab: 'general', resourceKey: 'general', labelKey: 'nav.general' },
+  { tab: 'theme', resourceKey: 'theme', labelKey: 'nav.appearance' },
+  { tab: 'calendar', resourceKey: 'calendar', labelKey: 'nav.calendar' },
+  { tab: 'categories', resourceKey: 'categories', labelKey: 'nav.categories' },
+  { tab: 'notifications', resourceKey: 'notifications', labelKey: 'nav.notifications' },
+  { tab: 'caldav', resourceKey: 'caldav', labelKey: 'nav.sync' },
+  { tab: 'data', resourceKey: 'data', labelKey: 'nav.data' },
+  { tab: 'aiVision', resourceKey: 'aiVision', labelKey: 'nav.aiVision' },
+]
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function collectSearchText(value: unknown): string[] {
+  if (typeof value === 'string') return [value]
+  if (Array.isArray(value)) return value.flatMap(collectSearchText)
+  if (!isRecord(value)) return []
+  return Object.values(value).flatMap(collectSearchText)
+}
+
+function buildSettingsSearchIndex(
+  resource: unknown,
+  sections: typeof SETTINGS_SEARCH_SECTIONS,
+  isNative: boolean,
+  getSectionTitle: (key: string) => string
+): SettingsSearchEntry[] {
+  if (!isRecord(resource)) return []
+
+  return sections.flatMap(({ tab, resourceKey, labelKey }) => {
+    if (tab === 'aiVision' && !isNative) return []
+    const section = resource[resourceKey]
+    if (!isRecord(section)) return []
+
+    const sectionTitle = getSectionTitle(labelKey)
+    const entries: SettingsSearchEntry[] = []
+    const visit = (value: unknown): void => {
+      if (!isRecord(value)) return
+      if (typeof value.label === 'string') {
+        entries.push({
+          tab,
+          title: value.label,
+          sectionTitle,
+          searchableText: collectSearchText(value).join(' '),
+        })
+      }
+      Object.values(value).forEach(visit)
+    }
+    visit(section)
+
+    // Some sections (such as Sync) describe actions rather than individual
+    // setting rows, so keep their translated copy searchable as one result.
+    entries.push({
+      tab,
+      title: sectionTitle,
+      sectionTitle,
+      searchableText: [sectionTitle, ...collectSearchText(section)].join(' '),
+      isSectionFallback: true,
+    })
+    return entries
+  })
+}
+
+function normalizeSearchText(value: string): string {
+  return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase()
+}
+
+function findSettingsSearchResults(
+  entries: SettingsSearchEntry[],
+  query: string
+): SettingsSearchResult[] {
+  const normalizedQuery = normalizeSearchText(query.trim())
+  if (!normalizedQuery) return []
+  const terms = normalizedQuery.split(/\s+/)
+  const matches = entries.filter((entry) => {
+    const searchableText = normalizeSearchText(
+      `${entry.title} ${entry.sectionTitle} ${entry.searchableText}`
+    )
+    return terms.every((term) => searchableText.includes(term))
+  })
+  const tabsWithSettingMatches = new Set(
+    matches.filter((entry) => !entry.isSectionFallback).map((entry) => entry.tab)
+  )
+  const titleRank = (title: string): number => {
+    const normalizedTitle = normalizeSearchText(title)
+    if (normalizedTitle.startsWith(normalizedQuery)) return 0
+    return normalizedTitle.includes(normalizedQuery) ? 1 : 2
+  }
+
+  return matches
+    .filter((entry) => !entry.isSectionFallback || !tabsWithSettingMatches.has(entry.tab))
+    .sort((a, b) => {
+      return titleRank(a.title) - titleRank(b.title) || a.title.localeCompare(b.title)
+    })
+    .slice(0, 8)
+    .map(({ tab, title, sectionTitle }) => ({ tab, title, sectionTitle }))
 }
 
 const BASE_NAV_ITEMS: NavItem[] = [
@@ -191,11 +308,12 @@ const VALID_TABS: SettingsTab[] = [
 ]
 
 export function SettingsPage(): JSX.Element {
-  const { t } = useTranslation('settings')
+  const { t, i18n } = useTranslation('settings')
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const isMobile = useIsMobile()
-  const navItems: NavItem[] = Capacitor.isNativePlatform()
+  const isNative = Capacitor.isNativePlatform()
+  const navItems: NavItem[] = isNative
     ? [...BASE_NAV_ITEMS, AI_VISION_NAV_ITEM]
     : BASE_NAV_ITEMS
   const brokenEventsCount = useCalendarStore((state) => state.brokenEvents.length)
@@ -213,6 +331,21 @@ export function SettingsPage(): JSX.Element {
   })()
 
   const [activeTab, setActiveTab] = useState<SettingsTab | null>(initialTab)
+  const [searchQuery, setSearchQuery] = useState('')
+  const searchIndex = useMemo(
+    () =>
+      buildSettingsSearchIndex(
+        i18n.getResourceBundle(i18n.resolvedLanguage ?? i18n.language, 'settings'),
+        SETTINGS_SEARCH_SECTIONS,
+        isNative,
+        (key) => t(key)
+      ),
+    [i18n, i18n.language, i18n.resolvedLanguage, isNative, t]
+  )
+  const searchResults = useMemo(
+    () => findSettingsSearchResults(searchIndex, searchQuery),
+    [searchIndex, searchQuery]
+  )
 
   // Settings persist immediately on change (no explicit save), so flash a
   // transient "Saved" pill whenever any setting is updated to confirm it stuck.
@@ -253,11 +386,39 @@ export function SettingsPage(): JSX.Element {
     }
   }
 
+  const selectSearchResult = (result: SettingsSearchResult): void => {
+    setActiveTab(result.tab)
+    setSearchQuery('')
+    if (isMobile) {
+      window.requestAnimationFrame(() => {
+        document
+          .querySelector<HTMLElement>(
+            `[data-component="settings-category-item"][data-tab="${result.tab}"]`
+          )
+          ?.scrollIntoView({ block: 'start', behavior: 'smooth' })
+      })
+    }
+  }
+
   return (
     <div className={styles.container} data-component="settings-page">
       <div className={styles.body}>
         <aside className={styles.nav} data-component="settings-sidebar">
-            <h2 className={styles.navTitle}>{t('nav.title')}</h2>
+          <button className={styles.back} onClick={() => navigate('/')}>
+            <svg
+              viewBox="0 0 14 14"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M9 2L4 7l5 5" />
+            </svg>
+            {t('nav.backToCalendar')}
+          </button>
+          <h2 className={styles.navTitle}>{t('nav.title')}</h2>
           <nav className={styles.navList} aria-label={t('nav.title')}>
             {navItems.map((item) => (
               <button
@@ -266,7 +427,10 @@ export function SettingsPage(): JSX.Element {
                 data-component="settings-nav-item"
                 data-tab={item.id}
                 aria-current={activeTab === item.id ? 'page' : undefined}
-                onClick={() => setActiveTab(item.id)}
+                onClick={() => {
+                  setActiveTab(item.id)
+                  setSearchQuery('')
+                }}
               >
                 {item.icon}
                 {t(item.labelKey)}
@@ -305,19 +469,85 @@ export function SettingsPage(): JSX.Element {
             </span>
           </div>
           <div className={styles.header}>
-            <button className={styles.back} onClick={() => navigate('/')}>
+            <div className={styles.search} role="search" data-component="settings-search">
               <svg
-                viewBox="0 0 14 14"
+                className={styles.searchIcon}
+                viewBox="0 0 20 20"
                 fill="none"
                 stroke="currentColor"
-                strokeWidth="1.6"
+                strokeWidth="1.7"
                 strokeLinecap="round"
-                strokeLinejoin="round"
+                aria-hidden="true"
               >
-                <path d="M9 2L4 7l5 5" />
+                <circle cx="8.8" cy="8.8" r="5.8" />
+                <path d="m13.2 13.2 4 4" />
               </svg>
-              {t('nav.backToCalendar')}
-            </button>
+              <input
+                className={styles.searchInput}
+                type="search"
+                value={searchQuery}
+                placeholder={t('nav.searchPlaceholder')}
+                aria-label={t('nav.searchAriaLabel')}
+                aria-expanded={searchQuery.trim().length > 0}
+                aria-controls={searchQuery.trim() ? 'settings-search-results' : undefined}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Escape' && searchQuery) {
+                    event.preventDefault()
+                    event.stopPropagation()
+                    setSearchQuery('')
+                  }
+                }}
+              />
+              {searchQuery && (
+                <button
+                  className={styles.searchClear}
+                  type="button"
+                  aria-label={t('nav.clearSearch')}
+                  onClick={() => setSearchQuery('')}
+                >
+                  <svg
+                    viewBox="0 0 16 16"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.6"
+                    strokeLinecap="round"
+                    aria-hidden="true"
+                  >
+                    <path d="m4 4 8 8m0-8-8 8" />
+                  </svg>
+                </button>
+              )}
+              {searchQuery.trim() && (
+                <div
+                  className={styles.searchResults}
+                  id="settings-search-results"
+                  role="region"
+                  aria-label={t('nav.searchResults')}
+                >
+                  {searchResults.length > 0 ? (
+                    <ul>
+                      {searchResults.map((result, index) => (
+                        <li key={`${result.tab}-${result.title}-${index}`}>
+                          <button
+                            className={styles.searchResult}
+                            type="button"
+                            onClick={() => selectSearchResult(result)}
+                          >
+                            <span className={styles.searchResultTitle}>{result.title}</span>
+                            <span className={styles.searchResultSection}>
+                              {result.sectionTitle}
+                            </span>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className={styles.searchEmpty}>{t('nav.noSearchResults')}</p>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
           {isMobile ? (
             <div data-component="settings-category-list">
@@ -339,7 +569,10 @@ export function SettingsPage(): JSX.Element {
                         data-component="settings-category-item"
                         data-tab={item.id}
                         aria-expanded={isOpen}
-                        onClick={() => setActiveTab(isOpen ? null : item.id)}
+                        onClick={() => {
+                          setActiveTab(isOpen ? null : item.id)
+                          setSearchQuery('')
+                        }}
                       >
                         {item.icon}
                         <span className={styles.categoryLabel}>{t(item.labelKey)}</span>

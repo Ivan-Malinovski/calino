@@ -10,7 +10,12 @@
     "data": "Data",
     "aiVision": "AI-fotoimport",
     "backToCalendar": "Tilbage til kalenderen",
-    "settingsCategories": "Indstillingskategorier"
+    "settingsCategories": "Indstillingskategorier",
+    "searchPlaceholder": "Søg i indstillinger…",
+    "searchAriaLabel": "Søg i indstillinger",
+    "searchResults": "Søgeresultater for indstillinger",
+    "noSearchResults": "Ingen matchende indstillinger fundet",
+    "clearSearch": "Ryd søgning"
   },
   "saved": "Gemt",
   "general": {

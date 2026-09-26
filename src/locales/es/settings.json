@@ -10,7 +10,12 @@
     "data": "Datos",
     "aiVision": "Importación de fotos con IA",
     "backToCalendar": "Volver al calendario",
-    "settingsCategories": "Categorías de ajustes"
+    "settingsCategories": "Categorías de ajustes",
+    "searchPlaceholder": "Buscar ajustes…",
+    "searchAriaLabel": "Buscar ajustes",
+    "searchResults": "Resultados de búsqueda de ajustes",
+    "noSearchResults": "No se encontraron ajustes coincidentes",
+    "clearSearch": "Borrar búsqueda"
   },
   "saved": "Guardado",
   "general": {

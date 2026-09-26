@@ -10,7 +10,12 @@
     "data": "Données",
     "aiVision": "Importation de photos par IA",
     "backToCalendar": "Retour au calendrier",
-    "settingsCategories": "Catégories des paramètres"
+    "settingsCategories": "Catégories des paramètres",
+    "searchPlaceholder": "Rechercher dans les paramètres…",
+    "searchAriaLabel": "Rechercher dans les paramètres",
+    "searchResults": "Résultats de recherche des paramètres",
+    "noSearchResults": "Aucun paramètre correspondant trouvé",
+    "clearSearch": "Effacer la recherche"
   },
   "saved": "Enregistré",
   "general": {
