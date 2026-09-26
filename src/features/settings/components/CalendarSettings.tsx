@@ -3,9 +3,10 @@ import { useTranslation } from 'react-i18next'
 import { useSettingsStore, DURATION_OPTIONS, DEFAULT_REMINDER_OPTIONS } from '@/store/settingsStore'
 import { useCalendarStore } from '@/store/calendarStore'
 import { getSupportedTimezones, TIMEZONE_PRESETS } from '@/lib/timezoneHelper'
+import { SettingsPageHeading } from './SettingsPageHeading'
 import styles from './Settings.module.css'
 
-export function CalendarSettings(): JSX.Element {
+export function CalendarSettings({ searchControl }: { searchControl?: JSX.Element }): JSX.Element {
   const { t } = useTranslation('settings')
   const defaultView = useSettingsStore((s) => s.defaultView)
   const showWeekNumbers = useSettingsStore((s) => s.showWeekNumbers)
@@ -36,7 +37,7 @@ export function CalendarSettings(): JSX.Element {
       className={`${styles.section} ${styles.sectionActive}`}
       data-component="calendar-settings"
     >
-      <h1 className={styles.pageTitle}>{t('calendar.title')}</h1>
+      <SettingsPageHeading title={t('calendar.title')} searchControl={searchControl} />
 
       <div className={styles.group}>
         <div className={styles.groupLabel}>{t('calendar.display')}</div>

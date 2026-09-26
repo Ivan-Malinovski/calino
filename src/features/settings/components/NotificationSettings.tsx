@@ -1,6 +1,7 @@
 import type { JSX } from 'react'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { SettingsPageHeading } from './SettingsPageHeading'
 import { toast } from 'sonner'
 import { Capacitor } from '@capacitor/core'
 import { useSettingsStore } from '@/store/settingsStore'
@@ -35,7 +36,7 @@ const supportsCalendarMirror = isCalendarMirrorSupported()
 const CALENDAR_PERMISSION_DENIED_TOAST =
   'Calendar access is blocked. Grant it in Android app settings to sync events to your device calendar.'
 
-export function NotificationSettings(): JSX.Element {
+export function NotificationSettings({ searchControl }: { searchControl?: JSX.Element }): JSX.Element {
   const { t } = useTranslation('settings')
   const enableDesktopNotifications = useSettingsStore((s) => s.enableDesktopNotifications)
   const enableCalendarMirror = useSettingsStore((s) => s.enableCalendarMirror)
@@ -128,7 +129,7 @@ export function NotificationSettings(): JSX.Element {
       className={`${styles.section} ${styles.sectionActive}`}
       data-component="notification-settings"
     >
-      <h1 className={styles.pageTitle}>{t('notifications.title')}</h1>
+      <SettingsPageHeading title={t('notifications.title')} searchControl={searchControl} />
 
       <div className={styles.group}>
         <div className={styles.groupLabel}>{t('notifications.events')}</div>

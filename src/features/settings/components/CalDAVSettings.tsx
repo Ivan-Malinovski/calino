@@ -1,6 +1,7 @@
 import type { JSX } from 'react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { SettingsPageHeading } from './SettingsPageHeading'
 import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
 import { getCredentialById } from '@/features/caldav/client/credentials'
 import type { DiagnosticsOptions } from '@/features/caldav/client/diagnostics'
@@ -18,7 +19,7 @@ interface TestState {
   hint?: string
 }
 
-export function CalDAVSettings(): JSX.Element {
+export function CalDAVSettings({ searchControl }: { searchControl?: JSX.Element }): JSX.Element {
   const { t } = useTranslation('settings')
   const [isAddingAccount, setIsAddingAccount] = useState(false)
   const [editingAccount, setEditingAccount] = useState<CalDAVAccount | null>(null)
@@ -163,7 +164,7 @@ export function CalDAVSettings(): JSX.Element {
       className={`${styles.section} ${styles.sectionActive}`}
       data-component="caldav-settings"
     >
-      <h1 className={styles.pageTitle}>{t('caldav.title')}</h1>
+      <SettingsPageHeading title={t('caldav.title')} searchControl={searchControl} />
 
       <div className={styles.group} data-component="connected-accounts">
         <div className={styles.groupLabel}>{t('caldav.connectedAccounts')}</div>

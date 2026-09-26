@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { formatDistanceToNow } from 'date-fns'
 import { Capacitor } from '@capacitor/core'
 import { useTranslation } from 'react-i18next'
+import { SettingsPageHeading } from './SettingsPageHeading'
 import { listModels, testConnection } from '@/features/aiVision/client'
 import {
   DEFAULT_BASE_URLS,
@@ -82,7 +83,7 @@ function RefreshIcon(): JSX.Element {
   )
 }
 
-export function AIVisionSettings(): JSX.Element {
+export function AIVisionSettings({ searchControl }: { searchControl?: JSX.Element }): JSX.Element {
   const { t } = useTranslation('settings')
   const isNative = Capacitor.isNativePlatform()
 
@@ -208,7 +209,7 @@ export function AIVisionSettings(): JSX.Element {
       className={`${styles.section} ${styles.sectionActive}`}
       data-component="ai-vision-settings"
     >
-      <h1 className={styles.pageTitle}>{t('aiVision.title')}</h1>
+      <SettingsPageHeading title={t('aiVision.title')} searchControl={searchControl} />
       <p className={styles.rowDesc} style={{ padding: '0 20px', marginBottom: 16 }}>
         {t('aiVision.intro')}
       </p>

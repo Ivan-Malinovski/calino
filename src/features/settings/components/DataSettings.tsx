@@ -1,5 +1,6 @@
 import type { JSX } from 'react'
 import { useTranslation } from 'react-i18next'
+import { SettingsPageHeading } from './SettingsPageHeading'
 import { useState, useRef } from 'react'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
@@ -22,7 +23,7 @@ import { useBrokenEventsActions } from '../hooks/useBrokenEventsActions'
 import type { Contact } from '@/features/carddav/types'
 import styles from './Settings.module.css'
 
-export function DataSettings(): JSX.Element {
+export function DataSettings({ searchControl }: { searchControl?: JSX.Element }): JSX.Element {
   const { t } = useTranslation('settings')
   const [isExporting, setIsExporting] = useState(false)
   const [isImporting, setIsImporting] = useState(false)
@@ -180,7 +181,7 @@ export function DataSettings(): JSX.Element {
 
   return (
     <section className={`${styles.section} ${styles.sectionActive}`} data-component="data-settings">
-      <h1 className={styles.pageTitle}>{t('data.title')}</h1>
+      <SettingsPageHeading title={t('data.title')} searchControl={searchControl} />
 
       <div className={styles.group}>
         <div className={styles.groupLabel}>{t('data.importExport')}</div>

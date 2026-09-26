@@ -1,6 +1,7 @@
 import type { JSX } from 'react'
 import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
+import { SettingsPageHeading } from './SettingsPageHeading'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
 import { EVENT_COLORS } from '@/store/settingsStore'
@@ -63,7 +64,7 @@ function KeywordInput({
   )
 }
 
-export function CategoriesSettings(): JSX.Element {
+export function CategoriesSettings({ searchControl }: { searchControl?: JSX.Element }): JSX.Element {
   const { t } = useTranslation('settings')
   const categories = useCalendarStore((s) => s.categories)
   const calendars = useCalendarStore((s) => s.calendars)
@@ -283,7 +284,7 @@ export function CategoriesSettings(): JSX.Element {
       className={`${styles.section} ${styles.sectionActive}`}
       data-component="categories-settings"
     >
-      <h1 className={styles.pageTitle}>{t('categories.title')}</h1>
+      <SettingsPageHeading title={t('categories.title')} searchControl={searchControl} />
 
       <div className={styles.group}>
         <div

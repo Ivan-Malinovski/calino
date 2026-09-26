@@ -35,32 +35,42 @@
   align-items: center;
   gap: var(--space-2);
   width: 100%;
-  height: 38px;
+  height: 42px;
   padding: 0 12px;
   margin: 0 0 24px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--line);
-  background: var(--panel);
-  box-shadow: 0 1px 2px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.05 * var(--shadow-opacity, 1)));
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--accent) 16%, var(--line));
+  background: color-mix(in srgb, var(--accent) 8%, var(--panel));
   font-size: 13.5px;
-  font-weight: 500;
-  color: var(--ink-2);
+  font-weight: 600;
+  color: var(--accent-strong-on-soft, var(--accent-strong, var(--accent)));
   cursor: pointer;
   transition:
     color 0.12s,
     background 0.12s,
-    border-color 0.12s;
+    border-color 0.12s,
+    box-shadow 0.12s;
 }
 
 .back:hover {
-  color: var(--ink);
-  background: rgba(var(--ink-raw), 0.02);
-  border-color: var(--line-2);
+  background: var(--accent-soft);
+  border-color: color-mix(in srgb, var(--accent) 28%, var(--line));
+  box-shadow: 0 2px 8px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.08 * var(--shadow-opacity, 1)));
+}
+
+.back:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 2px;
 }
 
 .back svg {
-  width: 14px;
-  height: 14px;
+  box-sizing: content-box;
+  width: 13px;
+  height: 13px;
+  padding: 4px;
+  border: 1px solid color-mix(in srgb, var(--accent) 24%, var(--line));
+  border-radius: 50%;
+  background: var(--panel);
 }
 
 /* ── Settings Nav ───────────────────────────────────────────────────────── */
@@ -275,9 +285,22 @@
   margin-bottom: 28px;
 }
 
+.pageTitleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 28px;
+}
+
+.pageTitleSearch {
+  flex: 0 1 420px;
+  min-width: min(220px, 40%);
+}
+
 .search {
   position: relative;
-  width: min(100%, 420px);
+  width: 100%;
   z-index: 8;
 }
 
@@ -463,6 +486,10 @@
     display: none;
   }
 
+  .pageTitleRow {
+    display: none;
+  }
+
   .sectionHeader {
     display: flex;
     flex-direction: column;
@@ -601,13 +628,45 @@
 }
 
 .pageTitle {
+  flex: 1 1 auto;
+  min-width: 0;
   font-family: var(--font-serif, 'Newsreader', Georgia, serif);
   font-size: 40px;
   font-weight: 400;
   letter-spacing: -0.018em;
   color: var(--ink);
-  margin: 0 0 28px;
+  margin: 0;
   line-height: 1;
+}
+
+.searchResultHighlight {
+  position: relative;
+  z-index: 1;
+  border-radius: var(--radius-sm);
+  animation: settingsSearchHighlight 2.3s ease-out both;
+}
+
+@keyframes settingsSearchHighlight {
+  0%,
+  18% {
+    background: var(--accent-soft);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 40%, transparent);
+  }
+
+  100% {
+    background: transparent;
+    box-shadow: 0 0 0 0 transparent;
+  }
+}
+
+@media (max-width: 1100px) and (min-width: 769px) {
+  .pageTitleRow {
+    gap: 16px;
+  }
+
+  .pageTitle {
+    font-size: 32px;
+  }
 }
 
 /* ── Settings Group (card) ──────────────────────────────────────────────── */

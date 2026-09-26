@@ -17,6 +17,7 @@ import {
 import type { AdjustableThemeProfile, AdjustableThemeSettings, ThemeMode, EventTint } from '@/types'
 import styles from './Settings.module.css'
 import { AdjustableThemeControls } from './AdjustableThemeControls'
+import { SettingsPageHeading } from './SettingsPageHeading'
 
 function MiniCalendarPreview({
   themeId,
@@ -191,7 +192,7 @@ function ThemePreviewCard({
   )
 }
 
-export function ThemeSettings(): JSX.Element {
+export function ThemeSettings({ searchControl }: { searchControl?: JSX.Element }): JSX.Element {
   const { t } = useTranslation('settings')
   const themeMode = useSettingsStore((s) => s.themeMode)
   const lightTheme = useSettingsStore((s) => s.lightTheme)
@@ -244,7 +245,7 @@ export function ThemeSettings(): JSX.Element {
       className={`${styles.section} ${styles.sectionActive}`}
       data-component="theme-settings"
     >
-      <h1 className={styles.pageTitle}>{t('theme.title')}</h1>
+      <SettingsPageHeading title={t('theme.title')} searchControl={searchControl} />
       <div className={styles.group}>
         <div
           className={`${styles.row} ${styles.rowSubhead}`}

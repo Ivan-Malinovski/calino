@@ -332,6 +332,9 @@ export function SettingsPage(): JSX.Element {
 
   const [activeTab, setActiveTab] = useState<SettingsTab | null>(initialTab)
   const [searchQuery, setSearchQuery] = useState('')
+  const [highlightedSetting, setHighlightedSetting] = useState<SettingsSearchResult | null>(null)
+  const highlightTimerRef = useRef<number | null>(null)
+  const highlightedElementRef = useRef<HTMLElement | null>(null)
   const searchIndex = useMemo(
     () =>
       buildSettingsSearchIndex(
@@ -363,42 +366,170 @@ export function SettingsPage(): JSX.Element {
     }
   }, [])
 
-  const renderContent = (tab: SettingsTab): JSX.Element => {
+  const renderContent = (tab: SettingsTab, searchControl?: JSX.Element): JSX.Element => {
     switch (tab) {
       case 'general':
-        return <GeneralSettings />
+        return <GeneralSettings searchControl={searchControl} />
       case 'theme':
-        return <ThemeSettings />
+        return <ThemeSettings searchControl={searchControl} />
       case 'calendar':
-        return <CalendarSettings />
+        return <CalendarSettings searchControl={searchControl} />
       case 'categories':
-        return <CategoriesSettings />
+        return <CategoriesSettings searchControl={searchControl} />
       case 'notifications':
-        return <NotificationSettings />
+        return <NotificationSettings searchControl={searchControl} />
       case 'caldav':
-        return <CalDAVSettings />
+        return <CalDAVSettings searchControl={searchControl} />
       case 'data':
-        return <DataSettings />
+        return <DataSettings searchControl={searchControl} />
       case 'aiVision':
-        return <AIVisionSettings />
+        return <AIVisionSettings searchControl={searchControl} />
       default:
-        return <GeneralSettings />
+        return <GeneralSettings searchControl={searchControl} />
     }
   }
 
   const selectSearchResult = (result: SettingsSearchResult): void => {
     setActiveTab(result.tab)
     setSearchQuery('')
-    if (isMobile) {
-      window.requestAnimationFrame(() => {
+    setHighlightedSetting(result)
+  }
+
+  useEffect(() => {
+    if (highlightTimerRef.current !== null) {
+      window.clearTimeout(highlightTimerRef.current)
+      highlightTimerRef.current = null
+    }
+    highlightedElementRef.current?.classList.remove(styles.searchResultHighlight)
+    highlightedElementRef.current = null
+    if (!highlightedSetting || highlightedSetting.tab !== activeTab) return
+
+    const frame = window.requestAnimationFrame(() => {
+      const panel = document.querySelector<HTMLElement>('[data-component="settings-panel"]')
+      const labels = panel?.querySelectorAll<HTMLElement>(
+        `.${styles.rowLabel}, .${styles.groupLabel}`
+      )
+      const matchingLabel = Array.from(labels ?? []).find(
+        (element) =>
+          normalizeSearchText(element.textContent ?? '') ===
+          normalizeSearchText(highlightedSetting.title)
+      )
+      const target = matchingLabel?.closest<HTMLElement>(`.${styles.row}`) ?? matchingLabel
+
+      if (target) {
+        target.classList.add(styles.searchResultHighlight)
+        highlightedElementRef.current = target
+        target.scrollIntoView({ block: 'center', behavior: 'smooth' })
+        highlightTimerRef.current = window.setTimeout(() => {
+          target.classList.remove(styles.searchResultHighlight)
+          highlightedElementRef.current = null
+          highlightTimerRef.current = null
+          setHighlightedSetting(null)
+        }, 2300)
+      } else if (isMobile) {
         document
           .querySelector<HTMLElement>(
-            `[data-component="settings-category-item"][data-tab="${result.tab}"]`
+            `[data-component="settings-category-item"][data-tab="${highlightedSetting.tab}"]`
           )
           ?.scrollIntoView({ block: 'start', behavior: 'smooth' })
-      })
+        setHighlightedSetting(null)
+      } else {
+        panel?.scrollTo({ top: 0, behavior: 'smooth' })
+        setHighlightedSetting(null)
+      }
+    })
+
+    return () => {
+      window.cancelAnimationFrame(frame)
+      if (highlightTimerRef.current !== null) {
+        window.clearTimeout(highlightTimerRef.current)
+        highlightTimerRef.current = null
+      }
     }
-  }
+  }, [activeTab, highlightedSetting, isMobile])
+
+  const searchBox = (
+    <div className={styles.search} role="search" data-component="settings-search">
+      <svg
+        className={styles.searchIcon}
+        viewBox="0 0 20 20"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+        aria-hidden="true"
+      >
+        <circle cx="8.8" cy="8.8" r="5.8" />
+        <path d="m13.2 13.2 4 4" />
+      </svg>
+      <input
+        className={styles.searchInput}
+        type="search"
+        value={searchQuery}
+        placeholder={t('nav.searchPlaceholder')}
+        aria-label={t('nav.searchAriaLabel')}
+        aria-expanded={searchQuery.trim().length > 0}
+        aria-controls={searchQuery.trim() ? 'settings-search-results' : undefined}
+        onChange={(event) => setSearchQuery(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' && searchResults[0]) {
+            event.preventDefault()
+            selectSearchResult(searchResults[0])
+          } else if (event.key === 'Escape' && searchQuery) {
+            event.preventDefault()
+            event.stopPropagation()
+            setSearchQuery('')
+          }
+        }}
+      />
+      {searchQuery && (
+        <button
+          className={styles.searchClear}
+          type="button"
+          aria-label={t('nav.clearSearch')}
+          onClick={() => setSearchQuery('')}
+        >
+          <svg
+            viewBox="0 0 16 16"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.6"
+            strokeLinecap="round"
+            aria-hidden="true"
+          >
+            <path d="m4 4 8 8m0-8-8 8" />
+          </svg>
+        </button>
+      )}
+      {searchQuery.trim() && (
+        <div
+          className={styles.searchResults}
+          id="settings-search-results"
+          role="region"
+          aria-label={t('nav.searchResults')}
+        >
+          {searchResults.length > 0 ? (
+            <ul>
+              {searchResults.map((result, index) => (
+                <li key={`${result.tab}-${result.title}-${index}`}>
+                  <button
+                    className={styles.searchResult}
+                    type="button"
+                    onClick={() => selectSearchResult(result)}
+                  >
+                    <span className={styles.searchResultTitle}>{result.title}</span>
+                    <span className={styles.searchResultSection}>{result.sectionTitle}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className={styles.searchEmpty}>{t('nav.noSearchResults')}</p>
+          )}
+        </div>
+      )}
+    </div>
+  )
 
   return (
     <div className={styles.container} data-component="settings-page">
@@ -468,87 +599,7 @@ export function SettingsPage(): JSX.Element {
               {t('saved')}
             </span>
           </div>
-          <div className={styles.header}>
-            <div className={styles.search} role="search" data-component="settings-search">
-              <svg
-                className={styles.searchIcon}
-                viewBox="0 0 20 20"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.7"
-                strokeLinecap="round"
-                aria-hidden="true"
-              >
-                <circle cx="8.8" cy="8.8" r="5.8" />
-                <path d="m13.2 13.2 4 4" />
-              </svg>
-              <input
-                className={styles.searchInput}
-                type="search"
-                value={searchQuery}
-                placeholder={t('nav.searchPlaceholder')}
-                aria-label={t('nav.searchAriaLabel')}
-                aria-expanded={searchQuery.trim().length > 0}
-                aria-controls={searchQuery.trim() ? 'settings-search-results' : undefined}
-                onChange={(event) => setSearchQuery(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === 'Escape' && searchQuery) {
-                    event.preventDefault()
-                    event.stopPropagation()
-                    setSearchQuery('')
-                  }
-                }}
-              />
-              {searchQuery && (
-                <button
-                  className={styles.searchClear}
-                  type="button"
-                  aria-label={t('nav.clearSearch')}
-                  onClick={() => setSearchQuery('')}
-                >
-                  <svg
-                    viewBox="0 0 16 16"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.6"
-                    strokeLinecap="round"
-                    aria-hidden="true"
-                  >
-                    <path d="m4 4 8 8m0-8-8 8" />
-                  </svg>
-                </button>
-              )}
-              {searchQuery.trim() && (
-                <div
-                  className={styles.searchResults}
-                  id="settings-search-results"
-                  role="region"
-                  aria-label={t('nav.searchResults')}
-                >
-                  {searchResults.length > 0 ? (
-                    <ul>
-                      {searchResults.map((result, index) => (
-                        <li key={`${result.tab}-${result.title}-${index}`}>
-                          <button
-                            className={styles.searchResult}
-                            type="button"
-                            onClick={() => selectSearchResult(result)}
-                          >
-                            <span className={styles.searchResultTitle}>{result.title}</span>
-                            <span className={styles.searchResultSection}>
-                              {result.sectionTitle}
-                            </span>
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className={styles.searchEmpty}>{t('nav.noSearchResults')}</p>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
+          {isMobile && <div className={styles.header}>{searchBox}</div>}
           {isMobile ? (
             <div data-component="settings-category-list">
               {/* Exactly one h1 per page: when a category is expanded its own
@@ -597,7 +648,7 @@ export function SettingsPage(): JSX.Element {
               </nav>
             </div>
           ) : (
-            renderContent(activeTab ?? 'general')
+            renderContent(activeTab ?? 'general', searchBox)
           )}
         </main>
       </div>

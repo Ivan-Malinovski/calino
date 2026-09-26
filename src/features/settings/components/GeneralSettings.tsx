@@ -13,6 +13,7 @@ import type { Language } from '@/types'
 import { useSettingsSync } from '@/hooks/useSettingsSync'
 import { classifySyncError, CORS_HEADER_SNIPPET } from '@/features/caldav/client/errorMessages'
 import { getFullWeekdayNames } from '@/features/calendar/components/weekdayLabels'
+import { SettingsPageHeading } from './SettingsPageHeading'
 import styles from './Settings.module.css'
 
 // Haptics are a native-only capability, and `enableHaptics` is deliberately
@@ -99,7 +100,7 @@ function formatSyncError(error: string, t: (key: string) => string): JSX.Element
   }
 }
 
-export function GeneralSettings(): JSX.Element {
+export function GeneralSettings({ searchControl }: { searchControl?: JSX.Element }): JSX.Element {
   const { t } = useTranslation('settings')
   const language = useSettingsStore((s) => s.language)
   const dateFormat = useSettingsStore((s) => s.dateFormat)
@@ -144,7 +145,7 @@ export function GeneralSettings(): JSX.Element {
       className={`${styles.section} ${styles.sectionActive}`}
       data-component="general-settings"
     >
-      <h1 className={styles.pageTitle}>{t('general.title')}</h1>
+      <SettingsPageHeading title={t('general.title')} searchControl={searchControl} />
       <div className={styles.group}>
         {/* No timezone picker: Calino renders every date and time in the
             device's own zone, and always has. The control that used to sit
