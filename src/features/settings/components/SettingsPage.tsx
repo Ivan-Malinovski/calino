@@ -465,11 +465,14 @@ export function SettingsPage(): JSX.Element {
       <input
         className={styles.searchInput}
         type="search"
+        role="combobox"
         value={searchQuery}
         placeholder={t('nav.searchPlaceholder')}
         aria-label={t('nav.searchAriaLabel')}
-        aria-expanded={searchQuery.trim().length > 0}
-        aria-controls={searchQuery.trim() ? 'settings-search-results' : undefined}
+        aria-autocomplete="list"
+        aria-expanded={searchResults.length > 0}
+        aria-controls={searchResults.length > 0 ? 'settings-search-results' : undefined}
+        aria-activedescendant={searchResults.length > 0 ? 'settings-search-result-0' : undefined}
         onChange={(event) => setSearchQuery(event.target.value)}
         onKeyDown={(event) => {
           if (event.key === 'Enter' && searchResults[0]) {
@@ -505,24 +508,24 @@ export function SettingsPage(): JSX.Element {
         <div
           className={styles.searchResults}
           id="settings-search-results"
-          role="region"
+          role={searchResults.length > 0 ? 'listbox' : 'status'}
           aria-label={t('nav.searchResults')}
         >
           {searchResults.length > 0 ? (
-            <ul>
-              {searchResults.map((result, index) => (
-                <li key={`${result.tab}-${result.title}-${index}`}>
-                  <button
-                    className={styles.searchResult}
-                    type="button"
-                    onClick={() => selectSearchResult(result)}
-                  >
-                    <span className={styles.searchResultTitle}>{result.title}</span>
-                    <span className={styles.searchResultSection}>{result.sectionTitle}</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
+            searchResults.map((result, index) => (
+              <button
+                className={styles.searchResult}
+                id={`settings-search-result-${index}`}
+                key={`${result.tab}-${result.title}-${index}`}
+                type="button"
+                role="option"
+                aria-selected={index === 0}
+                onClick={() => selectSearchResult(result)}
+              >
+                <span className={styles.searchResultTitle}>{result.title}</span>
+                <span className={styles.searchResultSection}>{result.sectionTitle}</span>
+              </button>
+            ))
           ) : (
             <p className={styles.searchEmpty}>{t('nav.noSearchResults')}</p>
           )}

@@ -14,13 +14,17 @@ vi.mock('sonner', () => ({
   toast: (...args: unknown[]) => mockToast(...args),
 }))
 
-vi.mock('@/lib/notifications', () => ({
-  showNotification: (...args: unknown[]) => mockShowNotification(...args),
-  createNotificationId: (eventId: string, reminderId: string) => `calino-${eventId}-${reminderId}`,
-  getDueSnoozedReminders: () => [],
-  snoozeReminder: vi.fn(),
-  getEffectiveReminders: (event: CalendarEvent) => event.reminders ?? [],
-}))
+vi.mock('@/lib/notifications', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/notifications')>()
+  return {
+    ...actual,
+    showNotification: (...args: unknown[]) => mockShowNotification(...args),
+    createNotificationId: (eventId: string, reminderId: string) => `calino-${eventId}-${reminderId}`,
+    getDueSnoozedReminders: () => [],
+    snoozeReminder: vi.fn(),
+    getEffectiveReminders: (event: CalendarEvent) => event.reminders ?? [],
+  }
+})
 
 // Minimal zustand store mock: we directly mutate the returned state references
 // and trigger re-renders via act().
@@ -469,9 +473,13 @@ describe('useNotifications - TZID events resolve wall clocks through the event z
     // Fires exactly at the resolved instant (the device-local parse would be
     // hours away in a west-zone device and never fire now).
     expect(mockShowNotification).toHaveBeenCalledTimes(1)
-    // The body shows the device-local rendering of the true instant.
+    // The body includes the event day and the device-local rendering of the
+    // true instant.
     const body = mockShowNotification.mock.calls[0][1] as string
-    expect(body).toBe(`Starting at ${formatTime(instant, '24h')}`)
+    expect(body).toContain(formatTime(instant, '24h'))
+    expect(body).toContain(
+      new Intl.DateTimeFormat('en', { dateStyle: 'medium' }).format(instant)
+    )
   })
 
   it('keeps calendar-date behavior for all-day events (no conversion)', () => {
@@ -496,7 +504,7 @@ describe('useNotifications - TZID events resolve wall clocks through the event z
     expect(mockShowNotification).toHaveBeenCalledTimes(1)
     expect(mockShowNotification).toHaveBeenCalledWith(
       'Event allday1',
-      'Starting today',
+      'Starts tomorrow',
       'allday1',
       start
     )
