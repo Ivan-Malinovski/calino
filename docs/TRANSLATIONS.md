@@ -1,8 +1,9 @@
 # Translations
 
 Calino's English catalog is the source of truth. The shipped interface
-languages are English (`en`), Danish (`da`), and German (`de`); language names
-remain written in their own language so they can be found from any locale.
+languages are English (`en`), Danish (`da`), German (`de`), Spanish (`es`),
+French (`fr`), Italian (`it`), and Dutch (`nl`); language names remain written
+in their own language so they can be found from any locale.
 
 Translation catalogs live under `src/locales/<language>/`, with one JSON file
 per namespace. Keep every namespace and key aligned with English. Missing keys
@@ -49,14 +50,16 @@ catalogs. For a language code such as `fr`:
 5. Import the `common` and `errors` catalogs and register them in
    `src/lib/i18nHeadless.ts`. The Android background-sync entry only loads
    those two namespaces.
-6. Add the locale's Android resources under
+6. Register the matching date-fns locale in `src/lib/datetime.ts`; add month
+   and weekday formatting coverage in `src/lib/__tests__/datetimeLocale.test.ts`.
+7. Add the locale's Android resources under
    `android/app/src/main/res/values-<locale>/strings.xml`, translating the
    shortcut labels while leaving package, URL-scheme, and product identifiers
    unchanged.
-7. Add or extend the language-switch Playwright coverage in
+8. Add or extend the language-switch Playwright coverage in
    `e2e/language-switch.spec.ts` when the new language has visible behavior
    that is not already covered.
-8. Update this document and the changelog if the language is shipped to users.
+9. Update this document and the changelog if the language is shipped to users.
 
 Keep the directory and namespace names identical to English. Catalogs are
 statically bundled so the app continues to work offline and in the Android

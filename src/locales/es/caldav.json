@@ -1,0 +1,18 @@
+{
+  "progress": {
+    "checkingConnection": "Comprobando la conexión…",
+    "lookingForCalendars": "Buscando calendarios…",
+    "savingAccount": "Guardando cuenta…",
+    "syncingEvents": "Sincronizando eventos…",
+    "checkingForContacts": "Comprobando si hay contactos…",
+    "importingCalendar": "Importando {{name}}…",
+    "downloadingCalendars_one": "Descargando eventos del calendario {{count}}…",
+    "downloadingCalendars_other": "Descargando eventos de calendarios {{count}}…",
+    "savingEvent": "Guardando evento…",
+    "savingEvents": "Guardando eventos…",
+    "deletingEvent": "Eliminando evento…",
+    "creatingCalendar": "Creando calendario…",
+    "savingCalendar": "Guardando calendario…",
+    "deletingCalendar": "Eliminando calendario…"
+  }
+}

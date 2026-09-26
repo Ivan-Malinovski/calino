@@ -1,0 +1,101 @@
+{
+  "undo": {
+    "eventDeleted": "Evento eliminato",
+    "contactDeleted": "Contatto eliminato"
+  },
+  "sync": {
+    "eventSyncRetry": "Impossibile sincronizzare l'evento con il server CalDAV. Verrà ritentato.",
+    "deletionSyncRetry": "Impossibile sincronizzare l'eliminazione. Verrà ritentato.",
+    "eventRestoreFailed": "Impossibile ripristinare l'evento.",
+    "duplicateSyncRetry": "Impossibile sincronizzare l'evento duplicato. Verrà ritentato.",
+    "genericSyncRetry": "Impossibile sincronizzare con il server CalDAV. Verrà ritentato.",
+    "deletionSyncRetryGeneric": "Impossibile sincronizzare l'eliminazione con il server CalDAV. Verrà ritentato.",
+    "occurrenceDeleteFailed": "Impossibile eliminare questa occorrenza. L'evento è stato mantenuto.",
+    "seriesDeleteFailed": "Impossibile eliminare questo e gli eventi successivi. La serie è stata mantenuta.",
+    "settingsSaved": "Impostazioni salvate sul server.",
+    "settingsSyncEnabled": "Sincronizzazione delle impostazioni abilitata.",
+    "settingsFoundEnabled": "Trovato il calendario Calino Settings: sincronizzazione attivata.",
+    "settingsCalendarFoundEnabled": "Trovato il calendario Calino Settings: sincronizzazione attivata.",
+    "settingsFoundEnabledAuto": "Trovato il calendario Calino Settings: sincronizzazione attivata automaticamente.",
+    "shortFailure": "{{subject}} non riuscito: {{reason}}",
+    "subjectDefault": "Sincronizzazione"
+  },
+  "syncReason": {
+    "cors": "il tuo server sta bloccando la connessione (CORS).",
+    "network": "non è riuscito a raggiungere il tuo server. Potrebbe essere offline o bloccare CORS.",
+    "timeout": "il server ha impiegato troppo tempo per rispondere.",
+    "auth": "errore di autenticazione. Controlla il tuo nome utente e la tua password.",
+    "forbidden": "il server ha rifiutato la modifica. Potresti non avere accesso in scrittura a questo calendario oppure il server ha rifiutato i dati.",
+    "quota": "Lo spazio di archiviazione del server è esaurito. Libera spazio sul server e riprova.",
+    "rateLimited": "il server limita la velocità delle richieste. Riprova tra un attimo.",
+    "notFound": "la risorsa non è stata trovata sul server.",
+    "conflict": "questo elemento è cambiato sul server. Sincronizza di nuovo per prendere la copia più recente.",
+    "server": "Il server ha restituito un errore. Controlla i log del server."
+  },
+  "connection": {
+    "corsOrNetwork": "Impossibile raggiungere il server. Controlla l'indirizzo, oppure potrebbe essere offline o bloccare le richieste multiorigine.",
+    "timeout": "Il server ha impiegato troppo tempo per rispondere.",
+    "auth": "Il server ha rifiutato queste credenziali.",
+    "forbidden": "Il server ha rifiutato la richiesta. Verifica di avere accesso in scrittura a questo calendario.",
+    "quota": "Lo spazio di archiviazione del server è esaurito. Libera spazio sul server e riprova.",
+    "rateLimited": "Il server limita la velocità delle richieste. Riprova tra un attimo.",
+    "notFound": "Il server ha risposto, ma non c'è niente a quell'indirizzo. Controlla il percorso dell'URL.",
+    "server": "Il server ha restituito un errore. Controlla i log del server.",
+    "badStatus": "Il server ha restituito lo stato {{status}}",
+    "failedGeneric": "Connessione non riuscita: {{message}}. Potrebbe trattarsi di un problema CORS: il server deve consentire richieste multiorigine.",
+    "urlHint": "Per {{domain}}, prova a inserire: {{url}}",
+    "unknownError": "Errore sconosciuto",
+    "fastmailAuthHint": "Fastmail ha rifiutato queste credenziali. Per CalDAV, Fastmail richiede una password specifica per l’app; la normale password di accesso non funziona. Creane una da Impostazioni → Privacy e sicurezza → Integrazioni → Nuova password per l’app (concedi l’accesso a “Calendari (CalDAV)”), quindi usa il tuo indirizzo email come nome utente e quella password."
+  },
+  "broken": {
+    "foundEvents_one": "Trovato 1 evento con date non valide.",
+    "foundEvents_other": "Trovati {{count}} eventi con date non valide.",
+    "foundDuplicateUids_one": "Trovato 1 gruppo di eventi con ID duplicato sul server.",
+    "foundDuplicateUids_other": "Trovati {{count}} gruppi di eventi con ID duplicato sul server."
+  },
+  "reminder": {
+    "allDay": "Tutto il giorno",
+    "startingToday": "A partire da oggi",
+    "startingAt": "Inizia alle {{time}}",
+    "startingTomorrow": "Inizia domani",
+    "startingTomorrowAt": "Inizia domani alle {{time}}",
+    "startingOn": "Inizia il {{date}}",
+    "startingOnAt": "Inizia il {{date}} alle {{time}}",
+    "snooze5m": "Posticipa 5 minuti",
+    "testNotificationTitle": "Notifica di prova",
+    "testNotificationBody": "Le notifiche funzionano! Attualmente è {{time}}"
+  },
+  "settingsSync": {
+    "notConfigured": "Sincronizzazione non configurata correttamente",
+    "calendarNotFound": "Calendario delle impostazioni non trovato",
+    "accountNotFound": "Account non trovato",
+    "credentialsNotFound": "Credenziali non trovate",
+    "pullFailed": "Download non riuscito",
+    "pushFailed": "Invio non riuscito",
+    "noCalendarsFound": "Nessun calendario trovato",
+    "enableFailed": "Impossibile attivare la sincronizzazione",
+    "autoDiscoveryFailed": "Rilevamento automatico non riuscito",
+    "subject": "Sincronizzazione delle impostazioni"
+  },
+  "pending": {
+    "event": "evento",
+    "thisEvent": "questo evento",
+    "staleEtagUpdateConflict": "Impossibile salvare \"{{title}}\": è cambiato sul server mentre questa modifica era in coda. La tua versione viene salvata localmente.",
+    "staleEtagDeleteConflict": "Impossibile eliminare \"{{title}}\": è cambiato sul server mentre l'eliminazione era in coda. L'evento rimane sul server.",
+    "moveFailedWithCalendar": "Impossibile spostare \"{{title}}\" in {{calendar}}. Potrebbe essere ancora nel suo vecchio calendario.",
+    "moveFailedNoCalendar": "Impossibile spostare \"{{title}}\". Potrebbe essere ancora nel suo vecchio calendario.",
+    "moveCleanupPending": "Spostato \"{{title}}\", ma non è stato ancora possibile rimuovere la vecchia copia in {{calendar}}. Nuovo tentativo.",
+    "staleCopyWithCalendar": "Impossibile rimuovere la vecchia copia di un evento spostato da {{calendar}}. Potrebbe apparire due volte: elimina il duplicato manualmente.",
+    "staleCopyNoCalendar": "Impossibile rimuovere la vecchia copia di un evento spostato. Potrebbe apparire due volte: elimina il duplicato manualmente."
+  },
+  "account": {
+    "couldNotConnect": "Impossibile connettersi con queste impostazioni"
+  },
+  "headless": {
+    "accountCredentialsMissing": "Account {{account}} ignorato: credenziali non trovate",
+    "calendarFailed": "Calendario {{calendar}} non riuscito: {{error}}",
+    "accountFailed": "Account {{account}} non riuscito: {{error}}",
+    "noCalendarsFetched": "Nessun calendario scaricato; i calendari speculari non sono stati modificati.",
+    "syncDone": "Sincronizzazione in background completata: {{events}} eventi in {{calendars}} calendari da {{accounts}} account"
+  }
+}

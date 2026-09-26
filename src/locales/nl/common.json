@@ -1,0 +1,17 @@
+{
+  "actions": {
+    "today": "Vandaag",
+    "previous": "Vorige",
+    "next": "Volgende",
+    "close": "Sluiten",
+    "cancel": "Annuleren",
+    "remove": "Verwijderen",
+    "add": "Toevoegen",
+    "edit": "Bewerken",
+    "delete": "Verwijderen",
+    "undo": "Ongedaan maken",
+    "view": "Weergeven",
+    "done": "Gereed",
+    "save": "Opslaan"
+  }
+}

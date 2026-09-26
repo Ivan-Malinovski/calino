@@ -1,5 +1,12 @@
 import { format, parseISO } from 'date-fns'
-import { da as daLocale, de as deLocale } from 'date-fns/locale'
+import {
+  da as daLocale,
+  de as deLocale,
+  es as esLocale,
+  fr as frLocale,
+  it as itLocale,
+  nl as nlLocale,
+} from 'date-fns/locale'
 import type { Locale } from 'date-fns'
 import { fromZonedTime, formatInTimeZone } from 'date-fns-tz'
 import { normalizeTzid } from '@/lib/timezoneRegistry'
@@ -19,6 +26,10 @@ const DATE_FNS_LOCALES: Record<string, Locale | undefined> = {
   en: undefined,
   da: daLocale,
   de: deLocale,
+  es: esLocale,
+  fr: frLocale,
+  it: itLocale,
+  nl: nlLocale,
 }
 
 /** The date-fns locale matching the active UI language. */

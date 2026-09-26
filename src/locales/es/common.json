@@ -1,0 +1,17 @@
+{
+  "actions": {
+    "today": "Hoy",
+    "previous": "Anterior",
+    "next": "Siguiente",
+    "close": "Cerrar",
+    "cancel": "Cancelar",
+    "remove": "Quitar",
+    "add": "Añadir",
+    "edit": "Editar",
+    "delete": "Eliminar",
+    "undo": "Deshacer",
+    "view": "Ver",
+    "done": "Listo",
+    "save": "Guardar"
+  }
+}

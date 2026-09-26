@@ -1,0 +1,733 @@
+{
+  "nav": {
+    "title": "Ajustes",
+    "general": "General",
+    "appearance": "Apariencia",
+    "calendar": "Calendario",
+    "categories": "Categorías",
+    "notifications": "Notificaciones",
+    "sync": "Sincronizar",
+    "data": "Datos",
+    "aiVision": "Importación de fotos con IA",
+    "backToCalendar": "Volver al calendario",
+    "settingsCategories": "Categorías de ajustes"
+  },
+  "saved": "Guardado",
+  "general": {
+    "title": "General",
+    "dateFormat": {
+      "label": "Formato de fecha",
+      "desc": "Cómo aparecen las fechas en la aplicación",
+      "ariaLabel": "Formato de fecha",
+      "mmddyyyy": "MM/DD/YYYY (12/31/2024)",
+      "ddmmyyyy": "DD/MM/YYYY (31/12/2024)",
+      "yyyymmdd": "YYYY-MM-DD (2024-12-31)"
+    },
+    "mapProvider": {
+      "label": "Proveedor de mapas",
+      "desc": "Servicio utilizado para abrir ubicaciones de eventos.",
+      "ariaLabel": "Proveedor de mapas",
+      "google": "Google Maps",
+      "apple": "Apple Maps",
+      "osm": "OpenStreetMap",
+      "mapy": "mapy.com",
+      "geo": "Predeterminado del dispositivo (geo:)"
+    },
+    "timeFormat": {
+      "label": "Formato de hora",
+      "desc": "Visualización de la hora de 12 o 24 horas",
+      "ariaLabel": "Formato de hora",
+      "12h": "12 horas (2:30 p. m.)",
+      "24h": "24 horas (14:30)"
+    },
+    "firstDayOfWeek": {
+      "label": "Primer día de la semana",
+      "desc": "Inicio de semana en vistas de semana y día",
+      "ariaLabel": "primer día de la semana"
+    },
+    "language": {
+      "label": "Idioma",
+      "desc": "Idioma de la interfaz",
+      "ariaLabel": "Idioma"
+    },
+    "journal": {
+      "label": "Diario",
+      "desc": "Añade notas libres a los días de tu calendario",
+      "ariaLabel": "Diario"
+    },
+    "contacts": {
+      "label": "Contactos",
+      "desc": "Administra tu libreta de direcciones con sincronización CardDAV",
+      "ariaLabel": "Contactos"
+    },
+    "haptics": {
+      "label": "Respuesta háptica",
+      "desc": "Vibrar al tocar, deslizar o mantener pulsado. Desactiva esta opción si la respuesta se nota lenta.",
+      "ariaLabel": "Retroalimentación háptica"
+    },
+    "settingsSync": {
+      "groupLabel": "Sincronización",
+      "label": "Sincronización de ajustes de CalDAV",
+      "descEnabled": "Los ajustes se reciben automáticamente. Guarda los cambios manualmente con el botón de abajo.",
+      "descDisabled": "Activa esta opción para sincronizar tus ajustes entre dispositivos mediante CalDAV.",
+      "syncing": "Sincronizando…",
+      "syncedAt": "Sincronizado {{time}}",
+      "disableAriaLabel": "Desactivar la sincronización de ajustes",
+      "enable": "Activar",
+      "somethingWrong": "Algo salió mal"
+    },
+    "syncNow": {
+      "label": "Sincronizar ahora",
+      "desc": "Guardar los ajustes locales en el servidor",
+      "saving": "Guardando…",
+      "save": "Guardar"
+    },
+    "accountPicker": {
+      "title": "Activar la sincronización de ajustes",
+      "description": "Se creará un calendario <strong>Calino Settings</strong> en tu servidor CalDAV. Contiene un único evento con tus preferencias (tema, primer día de la semana, etc.) guardadas como datos JSON.",
+      "descriptionSmall": "El calendario está oculto en la barra lateral de Calino, pero puede aparecer en otros clientes CalDAV. No afecta a tus otros calendarios y puedes eliminarlo cuando quieras desde Ajustes.",
+      "chooseAccount": "Elige la cuenta que quieres sincronizar:",
+      "settingUp": "Configurando…",
+      "cancel": "Cancelar"
+    },
+    "disableSync": {
+      "title": "¿Desactivar la sincronización de ajustes?",
+      "description": "Tus ajustes dejarán de sincronizarse entre dispositivos. ¿Quieres eliminar también el archivo de ajustes del servidor?",
+      "keepFile": "Conservar archivo",
+      "deleteAndDisable": "Eliminar y desactivar"
+    },
+    "syncError": {
+      "cors": "Tu servidor está bloqueando la conexión. Esto suele indicar que faltan encabezados CORS. Comprueba que tu servidor CalDAV los envíe y responda a OPTIONS:",
+      "corsHelp": "Sincronización → tu cuenta → <strong>Diagnosticar</strong> te indicará qué falta. Consulta la documentación <link>Baikal CORS</link> para obtener ayuda.",
+      "network": "No se pudo conectar con tu servidor CalDAV. Comprueba tu conexión a Internet y que el servidor esté en línea. Desde aquí, la falta de un encabezado CORS se ve igual; si el servidor está activo, prueba <strong>Diagnosticar</strong> en Sincronización.",
+      "timeout": "Tu servidor CalDAV tardó demasiado en responder. Puede estar sobrecargado; inténtalo de nuevo dentro de un momento.",
+      "auth": "Falló la autenticación. Comprueba tu nombre de usuario y contraseña de CalDAV. Muchos proveedores requieren una contraseña específica de la aplicación.",
+      "forbidden": "El servidor rechazó el cambio. Puede que no tengas permiso para modificar este calendario o que el servidor haya rechazado los datos.",
+      "quota": "El almacenamiento del servidor está lleno. Libera espacio e inténtalo de nuevo.",
+      "rateLimited": "El servidor está limitando las solicitudes. Inténtalo de nuevo dentro de un momento.",
+      "notFound": "No se encontró el calendario de ajustes en el servidor. Puede que se haya eliminado. Prueba a desactivar y volver a activar la sincronización.",
+      "conflict": "Tus ajustes cambiaron en otro dispositivo desde la última sincronización. Vuelve a sincronizar para obtener la versión más reciente.",
+      "server": "Tu servidor CalDAV devolvió un error. El problema está en el servidor; consulta sus registros."
+    }
+  },
+  "weekday": {
+    "sunday": "Domingo",
+    "monday": "Lunes",
+    "tuesday": "Martes",
+    "wednesday": "Miércoles",
+    "thursday": "Jueves",
+    "friday": "Viernes",
+    "saturday": "Sábado"
+  },
+  "calendar": {
+    "title": "Calendario",
+    "display": "Mostrar",
+    "defaultView": {
+      "label": "Vista predeterminada",
+      "desc": "La vista que se muestra al abrir la aplicación.",
+      "ariaLabel": "Vista predeterminada",
+      "month": "Mes",
+      "week": "Semana",
+      "day": "Día",
+      "agenda": "Agenda",
+      "todo": "Tareas"
+    },
+    "showWeekNumbers": {
+      "label": "Mostrar números de semana",
+      "desc": "Muestra los números de semana ISO a la izquierda de cada fila.",
+      "ariaLabel": "Mostrar números de semana"
+    },
+    "showWeekNumbersInSidebar": {
+      "label": "Mostrar números de semana en la barra lateral",
+      "desc": "Muestra los números de semana ISO junto a cada fila del minicalendario",
+      "ariaLabel": "Mostrar números de semana en la barra lateral"
+    },
+    "eventDensity": {
+      "label": "Densidad de visualización de eventos",
+      "desc": "Cómo aparecen los chips de eventos compactos en la cuadrícula",
+      "ariaLabel": "Densidad de eventos",
+      "notAvailable": "Aún no disponible",
+      "compact": "Compacto",
+      "comfortable": "Cómodo"
+    },
+    "agendaBelowMonth": {
+      "label": "Mostrar la agenda debajo de la vista mensual",
+      "desc": "En pantallas altas con orientación vertical, mostrar un panel de agenda debajo del calendario mensual.",
+      "ariaLabel": "Agenda dividida debajo de la vista mensual"
+    },
+    "secondaryTimezoneGroup": "Zona horaria secundaria",
+    "secondaryTimezoneEnabled": {
+      "label": "Mostrar zona horaria secundaria",
+      "desc": "Mostrar una zona horaria adicional en las cuadrículas horarias de las vistas de día y semana",
+      "ariaLabel": "Mostrar zona horaria secundaria"
+    },
+    "secondaryTimezone": {
+      "label": "Zona horaria secundaria",
+      "desc": "Selecciona la zona horaria que se mostrará junto a la hora local",
+      "ariaLabel": "Zona horaria secundaria",
+      "presets": "Preajustes",
+      "allTimezones": "Todas las zonas horarias"
+    },
+    "secondaryTimezoneLabel": {
+      "label": "Etiqueta personalizada",
+      "desc": "Etiqueta breve opcional (p. ej., NYC, HQ; máximo 8 caracteres)",
+      "placeholder": "p. ej., Nueva York",
+      "ariaLabel": "Etiqueta de zona horaria secundaria"
+    },
+    "gridBehaviour": "Comportamiento de la cuadrícula",
+    "compactRecurringEvents": {
+      "label": "Eventos recurrentes compactos",
+      "desc": "Mostrar eventos recurrentes como fichas mínimas en la vista mensual",
+      "ariaLabel": "Eventos recurrentes compactos"
+    },
+    "compressPastWeeks": {
+      "label": "Semanas pasadas compactas",
+      "desc": "Reducir la altura de las filas que ya han pasado.",
+      "ariaLabel": "Semanas pasadas compactas"
+    },
+    "fadePastDays": {
+      "label": "Atenuar los días pasados en la agenda",
+      "desc": "Mostrar los días pasados con un tono ligeramente atenuado",
+      "ariaLabel": "Atenuar los días pasados",
+      "never": "Nunca",
+      "current": "Mes actual",
+      "all": "Todos"
+    },
+    "hideCompletedTasks": {
+      "label": "Ocultar tareas completadas",
+      "desc": "No mostrar las tareas realizadas en la cuadrícula del calendario",
+      "ariaLabel": "Ocultar tareas completadas"
+    },
+    "monthViewEventLimit": {
+      "label": "Eventos antes del resumen",
+      "desc": "Cuántos eventos mostrar por día antes de mostrar «+N más». El ajuste automático muestra tantos eventos como quepan en la celda y se adapta al tamaño de la ventana.",
+      "ariaLabel": "Eventos antes del resumen",
+      "auto": "Automático"
+    },
+    "newEventDefaults": "Valores predeterminados de eventos nuevos",
+    "defaultDuration": {
+      "label": "Duración predeterminada",
+      "desc": "Duración de los eventos nuevos que se crean al hacer clic en un día",
+      "ariaLabel": "Duración predeterminada",
+      "customAriaLabel": "Duración personalizada en minutos",
+      "custom": "Personalizada…",
+      "unit": "min",
+      "15min": "15 minutos",
+      "30min": "30 minutos",
+      "1hour": "1 hora",
+      "1.5hours": "1,5 horas",
+      "2hours": "2 horas"
+    },
+    "defaultCalendar": {
+      "label": "Calendario predeterminado",
+      "desc": "Calendario al que se añaden los eventos nuevos",
+      "ariaLabel": "Calendario predeterminado"
+    },
+    "defaultReminder": {
+      "label": "Recordatorio predeterminado",
+      "desc": "Recordatorio que se aplica inicialmente a los eventos nuevos",
+      "ariaLabel": "Recordatorio predeterminado",
+      "none": "Ninguno",
+      "atTimeOfEvent": "En el momento del evento",
+      "5minBefore": "5 minutos antes",
+      "15minBefore": "15 minutos antes",
+      "30minBefore": "30 minutos antes",
+      "1hourBefore": "1 hora antes",
+      "1dayBefore": "1 día antes"
+    }
+  },
+  "conflict": {
+    "serverWins": "Prevalece el servidor (predeterminado)",
+    "localWins": "Prevalece lo local",
+    "askMe": "Preguntarme"
+  },
+  "theme": {
+    "title": "Apariencia",
+    "appearance": {
+      "label": "Apariencia",
+      "desc": "Elige cómo se ve Calino",
+      "light": "Claro",
+      "dark": "Oscuro",
+      "system": "Sistema"
+    },
+    "lightTheme": {
+      "label": "Tema claro",
+      "desc": "Paleta de colores utilizada en modo claro."
+    },
+    "darkTheme": {
+      "label": "Tema oscuro",
+      "desc": "Paleta de colores utilizada en modo oscuro"
+    },
+    "mochaAccent": {
+      "label": "Acento de Catppuccin",
+      "desc": "Se utiliza para selección, enfoque y acciones primarias.",
+      "ariaLabel": "Color de acento de Catppuccin",
+      "useAccent": "Usar el acento {{name}}",
+      "blue": "Azul",
+      "lavender": "Lavanda",
+      "mauve": "Malva",
+      "pink": "Rosa",
+      "teal": "Verde azulado",
+      "green": "Verde",
+      "peach": "Melocotón"
+    },
+    "eventTint": {
+      "label": "Intensidad del color del evento",
+      "desc": "Cuánto del color del calendario se muestra en los eventos. Una intensidad mayor facilita distinguir los calendarios de un vistazo.",
+      "ariaLabel": "Intensidad del color del evento",
+      "subtle": "Sutil",
+      "balanced": "Equilibrado",
+      "vivid": "Vívido"
+    },
+    "showEventIcons": {
+      "label": "Iconos de eventos",
+      "desc": "Mostrar un ícono coincidente en eventos según el título (por ejemplo, una taza de café para \"Café\")",
+      "ariaLabel": "Mostrar iconos de eventos"
+    },
+    "fontSize": {
+      "label": "Tamaño de fuente",
+      "desc": "Ajusta el tamaño del texto en toda la aplicación.",
+      "small": "Pequeño",
+      "default": "Por defecto",
+      "large": "Grande",
+      "xlarge": "Extra grande"
+    },
+    "adjustable": {
+      "headerLabel": "Tema ajustable · {{mode}}",
+      "desc": "Ajusta la paleta activa en tiempo real. Los cambios se guardan automáticamente en este dispositivo.",
+      "reset": "Restablecer",
+      "previewLabel": "Vista previa de la tarjeta de evento",
+      "previewDesc": "Así se verá esta paleta en el calendario.",
+      "live": "En vivo",
+      "previewToday": "Hoy",
+      "previewDate": "Martes, 23 de agosto",
+      "previewEvent1Title": "Revisión de diseño",
+      "previewEvent1Meta": "10:00 – 11:00 · Sala de reuniones",
+      "previewEvent2Title": "Almuerzo con Alex",
+      "previewEvent2Meta": "12:30 – 13:15 · Café Flora",
+      "previewEvent3Title": "Tiempo de concentración",
+      "previewEvent3Meta": "14:00 – 15:30",
+      "font": {
+        "label": "Fuente",
+        "desc": "Tipo de letra utilizado en la interfaz",
+        "ariaLabel": "Fuente del tema",
+        "system": "Sans serif del sistema",
+        "serif": "Serif",
+        "mono": "Monoespaciada"
+      },
+      "colors": {
+        "canvas": {
+          "label": "Lienzo",
+          "desc": "Fondo de la página principal"
+        },
+        "panel": {
+          "label": "Superficie",
+          "desc": "Tarjetas, diálogos y paneles"
+        },
+        "accent": {
+          "label": "Acento",
+          "desc": "Acciones, selección y enfoque."
+        },
+        "accentContrast": {
+          "label": "Texto acentuado",
+          "desc": "Texto sobre rellenos de acento"
+        },
+        "text": {
+          "label": "Texto principal",
+          "desc": "Texto legible principal"
+        },
+        "mutedText": {
+          "label": "Texto atenuado",
+          "desc": "Texto secundario y tranquilo."
+        },
+        "border": {
+          "label": "Bordes",
+          "desc": "Separadores y contornos de campos"
+        },
+        "colorAriaLabel": "Color {{label}}"
+      },
+      "cornerRadius": "Radio de esquina",
+      "cornerRadiusAriaLabel": "Radio de esquina",
+      "density": "Densidad",
+      "densityAriaLabel": "Densidad temática",
+      "shadowStrength": "Intensidad de la sombra",
+      "shadowStrengthAriaLabel": "Intensidad de la sombra",
+      "eventTint": "Tinte del evento",
+      "eventTintAriaLabel": "Intensidad del tinte del evento",
+      "contrast": {
+        "ariaLabel": "Comprobación de contraste: {{details}}",
+        "textCanvas": "El texto principal no alcanza el nivel WCAG AA sobre el fondo.",
+        "textPanel": "El texto principal no alcanza el nivel WCAG AA sobre las superficies.",
+        "mutedTextCanvas": "El texto atenuado no alcanza el nivel WCAG AA sobre el fondo.",
+        "accentContrast": "El texto de acento no alcanza el nivel WCAG AA sobre los fondos de acento.",
+        "meetsAA": "Los colores cumplen el nivel WCAG AA.",
+        "needsAttention": "El contraste necesita atención",
+        "looksGood": "El contraste es adecuado"
+      }
+    }
+  },
+  "categories": {
+    "title": "Categorías",
+    "useCategoryColors": {
+      "label": "Usar colores de categoría en los eventos",
+      "desc": "Si se desactiva, los eventos usan el color de tu calendario.",
+      "ariaLabel": "Usa colores de categoría para eventos"
+    },
+    "keywords": {
+      "ariaLabel": "Palabras clave",
+      "removeKeyword": "Eliminar la palabra clave {{keyword}}",
+      "placeholder": "Escribe palabras clave separadas por comas",
+      "addAriaLabel": "Añadir palabra clave"
+    },
+    "color": {
+      "swatchAriaLabel": "Color {{color}}",
+      "customAriaLabel": "Color personalizado para la categoría {{name}}",
+      "customNewAriaLabel": "Color personalizado para nueva categoría"
+    },
+    "editName": "Nombre de la categoría",
+    "eventCount_one": "{{count}} evento",
+    "eventCount_other": "{{count}} eventos",
+    "editAriaLabel": "Editar categoría {{name}}",
+    "delete": "Borrar",
+    "deleteAriaLabel": "Eliminar categoría {{name}}",
+    "addForm": {
+      "namePlaceholder": "Nombre de categoría",
+      "nameAriaLabel": "Nuevo nombre de categoría",
+      "add": "Añadir",
+      "cancel": "Cancelar"
+    },
+    "addCategory": "Añadir categoría",
+    "autoCategorize": {
+      "title": "Categorizar automáticamente",
+      "desc": "Asignar categorías automáticamente según las palabras clave del título del evento",
+      "selectCategory": "Seleccionar categoría",
+      "selectCategoryAriaLabel": "Seleccionar categoría",
+      "selectCategoryForNewRuleAriaLabel": "Selecciona una categoría para la nueva regla",
+      "save": "Guardar",
+      "cancel": "Cancelar",
+      "edit": "Editar",
+      "delete": "Borrar",
+      "add": "Añadir",
+      "matchCount_one": "{{count}} coincidencia",
+      "matchCount_other": "{{count}} coincidencias",
+      "uncategorizedCount": "({{count}} sin categoría)",
+      "countInCalendar": "{{count}} en {{name}}",
+      "unknownCalendar": "Calendario desconocido",
+      "willMatch_one": "Coincidirá con {{count}} evento",
+      "willMatch_other": "Coincidirá con {{count}} eventos",
+      "currentlyUncategorized": "({{count}} sin categoría actualmente)",
+      "addRule": "Añadir regla de categorización automática",
+      "applyToExisting": "Aplicar reglas a eventos existentes",
+      "applyToExistingDesc": "Asignar categorías a los eventos existentes que coincidan con tus reglas"
+    }
+  },
+  "notifications": {
+    "title": "Notificaciones",
+    "events": "Eventos",
+    "eventReminders": {
+      "label": "Recordatorios de eventos",
+      "desc": "Recibe notificaciones antes de que comiencen los eventos",
+      "ariaLabel": "Recordatorios de eventos"
+    },
+    "soundAlerts": {
+      "label": "Alertas de sonido",
+      "desc": "Reproduce un sonido cuando los eventos están a punto de comenzar.",
+      "ariaLabel": "Alertas sonoras"
+    },
+    "deviceCalendar": "Calendario del dispositivo",
+    "calendarMirror": {
+      "label": "Sincronizar con el calendario de Android (beta)",
+      "ariaLabel": "Sincronizar con el calendario de Android (beta)",
+      "descOff": "Copia tus eventos en el calendario del dispositivo para que Android envíe recordatorios aunque Calino esté cerrado y los widgets, Wear OS y Android Auto puedan mostrarlos. Es de solo lectura: no se escriben cambios en tu servidor CalDAV.",
+      "descActive": "Android envía tus recordatorios. Los eventos están disponibles para los widgets, Wear OS y Android Auto.",
+      "descNoCalendarApp": "Los eventos se sincronizan, pero no hay ninguna aplicación de calendario instalada que pueda enviar recordatorios. Calino seguirá gestionándolos.",
+      "descDenied": "No se puede acceder al calendario. Vuelve a conceder el permiso en los ajustes de la aplicación Android.",
+      "descFailed": "No se pudo escribir en el calendario del dispositivo: {{error}}",
+      "descFailedNoDetail": "No se pudo escribir en el calendario del dispositivo.",
+      "descSyncing": "Sincronizando…"
+    },
+    "calendarMirrorInfo": {
+      "label": "¿Cómo funciona esto?",
+      "desc": "Qué se copia, quién envía los recordatorios y qué esperar de la versión beta",
+      "learnMore": "Más información"
+    },
+    "calendarMirrorModal": {
+      "title": "Sincronizar con el calendario de Android",
+      "intro": "Calino copia tus eventos en la base de datos del calendario de Android. De ahí los leen el widget de calendario, el reloj Wear OS y Android Auto. Esas aplicaciones no pueden acceder al almacenamiento de Calino; la copia permite que muestren tus eventos.",
+      "reliabilityTitle": "Por qué los recordatorios son más fiables",
+      "reliabilityP1": "Por sí solo, Calino solo puede programar recordatorios mientras se está ejecutando. Android programa recordatorios para los eventos de tu calendario, aunque no hayas abierto Calino. Mientras esta opción esté activada, Android enviará esos recordatorios y Calino no enviará una segunda notificación para el mismo evento.",
+      "reliabilityP2": "Para enviar notificaciones, hace falta tener instalada una aplicación de calendario. Si no tienes ninguna, Calino te lo indicará arriba y seguirá gestionando los recordatorios.",
+      "oneWayTitle": "Solo en una dirección",
+      "oneWayItem1": "Los calendarios sincronizados aquí son de solo lectura. Calino es la única aplicación que escribe en tu servidor CalDAV; los cambios que hagas en otras aplicaciones de calendario no se sincronizan con Calino.",
+      "oneWayItem2": "Solo se copian los calendarios que hayas configurado como visibles.",
+      "oneWayItem3": "Al desactivar esta opción, se eliminan las copias de los calendarios y se conservan los demás calendarios.",
+      "stayingUpToDateTitle": "Mantener los datos actualizados",
+      "stayingUpToDateP1": "Aproximadamente una vez por hora, Calino consulta tu servidor en segundo plano. Así, los eventos que añadas desde otro dispositivo llegan al teléfono y pueden generar recordatorios aunque no hayas abierto Calino. No se envían datos nuevos a otros servicios: la aplicación usa la misma conexión con tu servidor.",
+      "betaTitle": "¿Por qué está en fase beta?",
+      "betaP1": "La actividad en segundo plano depende de los ajustes de batería del teléfono. Algunos dispositivos Xiaomi, Samsung, OPPO, OnePlus y Huawei restringen las aplicaciones en segundo plano. Si los eventos no están actualizados, configura Calino como <strong>Sin restricciones</strong> en los ajustes de batería de Android.",
+      "betaP2": "Si un calendario sincronizado no aparece en tu aplicación de calendario, puede estar oculto. Las aplicaciones suelen ocultar los calendarios nuevos hasta que los marcas en su lista de calendarios."
+    },
+    "tasks": "Tareas",
+    "taskDueDateReminders": {
+      "label": "Recordatorios de vencimiento de tareas",
+      "desc": "Avisar cuando llegue la fecha de vencimiento de una tarea",
+      "ariaLabel": "Recordatorios de fecha de vencimiento de tareas"
+    },
+    "overdueTaskBadge": {
+      "label": "Insignia de tareas vencidas",
+      "desc": "Mostrar una insignia en el icono de la aplicación cuando haya tareas vencidas",
+      "ariaLabel": "Insignia de tarea vencida"
+    },
+    "test": {
+      "label": "Notificación de prueba",
+      "descDefault": "Haz clic para activar y probar las notificaciones",
+      "descDenied": "Las notificaciones están bloqueadas en los ajustes del navegador.",
+      "descReady": "Enviar una notificación de prueba",
+      "enableAndTest": "Activar y probar",
+      "sendTest": "Enviar prueba"
+    },
+    "permissionDeniedToast": "Las notificaciones están bloqueadas. Actualiza los permisos del sitio en la configuración de tu navegador para habilitar los recordatorios.",
+    "calendarPermissionDeniedToast": "El acceso al calendario está bloqueado. Concédelo en la configuración de la aplicación de Android para sincronizar eventos con el calendario de tu dispositivo."
+  },
+  "caldav": {
+    "title": "Sincronizar",
+    "connectedAccounts": "Cuentas conectadas",
+    "test": "Probar",
+    "testAriaLabel": "Conexión de prueba para {{name}}",
+    "diagnose": "Diagnosticar",
+    "diagnoseAriaLabel": "Ejecuta diagnósticos para {{name}}",
+    "edit": "Editar",
+    "editAriaLabel": "Editar {{name}}",
+    "disconnect": "Desconectar",
+    "disconnectAriaLabel": "Desconectar {{name}}",
+    "testing": "Probando…",
+    "connectionOk": "Conexión correcta",
+    "connectionFailed": "No se pudo conectar",
+    "failedWithMessage": "Error: {{message}}",
+    "syncedOn": "Sincronizado · {{date}}",
+    "connected": "Conectado",
+    "addAccount": "Añadir cuenta de calendario",
+    "calendarSubscriptions": "Suscripciones al calendario",
+    "syncNow": "Sincronizar ahora",
+    "syncing": "Sincronizando…",
+    "syncAriaLabel": "Sincronizar {{name}} ahora",
+    "remove": "Eliminar",
+    "removeAriaLabel": "Quitar {{name}}",
+    "notYetSynced": "Aún no sincronizado",
+    "subscribe": "Suscribirse a un calendario (.ics)",
+    "confirmRemoveSubscription": "¿Quieres eliminar esta suscripción al calendario? También se eliminarán del dispositivo los eventos suscritos.",
+    "confirmRemoveAccount": "¿Seguro que quieres eliminar esta cuenta? Los datos del calendario se conservarán en el dispositivo.",
+    "credentialsNotFound": "Credenciales no encontradas"
+  },
+  "data": {
+    "title": "Datos",
+    "importExport": "Importar y exportar",
+    "exportCalendar": {
+      "label": "Exportar calendario",
+      "desc": "Descarga todos los eventos como un archivo .ics estándar",
+      "exporting": "Exportando…",
+      "export": "Exportar .ics"
+    },
+    "importCalendar": {
+      "label": "Importar calendario",
+      "desc": "Añadir eventos desde un archivo .ics o .json",
+      "importing": "Importando…",
+      "chooseFile": "Elige un archivo…"
+    },
+    "importedEvents_one": "Se importó {{count}} evento",
+    "importedEvents_other": "Se importaron {{count}} eventos",
+    "noEventsInJson": "No se encontraron eventos en el archivo JSON",
+    "importFailed": "No se pudo importar el archivo. Comprueba el formato.",
+    "contacts": "Contactos",
+    "exportContacts": {
+      "label": "Exportar contactos",
+      "desc": "Descarga todos los contactos como un archivo .vcf estándar",
+      "export": "Exportar .vcf"
+    },
+    "importContacts": {
+      "label": "Importar contactos",
+      "desc": "Añade contactos desde un archivo .vcf",
+      "chooseFile": "Elige un archivo…"
+    },
+    "mergeDuplicates": {
+      "label": "Fusionar duplicados",
+      "desc": "Buscar y combinar contactos que compartan correo electrónico, teléfono o nombre",
+      "merge": "Combinar…"
+    },
+    "noContactsInFile": "No se encontraron contactos en el archivo",
+    "failedToParseVCard": "No se pudo leer el archivo vCard",
+    "noContactsToExport": "No hay contactos para exportar",
+    "exportedContacts_one": "Se exportó {{count}} contacto",
+    "exportedContacts_other": "Se exportaron {{count}} contactos",
+    "dataIssues": "Problemas de datos",
+    "noIssues": "Aquí aparecerán los eventos no válidos o dañados (por ejemplo, si la fecha de inicio es posterior a la de finalización) para que puedas corregirlos o eliminarlos.",
+    "brokenEventsIntro": "Estos eventos tienen una fecha de inicio posterior a la fecha de finalización, por lo que no se pueden mostrar. Puedes intercambiar las fechas para corregirlos o eliminarlos.",
+    "untitledEvent": "Evento sin título",
+    "start": "Inicio: {{date}}",
+    "end": "Fin: {{date}}",
+    "fix": "Corregir",
+    "delete": "Eliminar",
+    "fixAll": "Reparar todo ({{count}})",
+    "deleteAll": "Eliminar todo",
+    "duplicateUidIntro": "Estos eventos comparten el mismo ID único (UID) en tu servidor, pero están guardados como elementos separados. Calino solo puede mostrar uno de cada grupo; los demás se ocultan para mantener estable el calendario. Esto suele deberse a una copia masiva hecha en otra aplicación. Para corregirlo, asigna un UID único a cada evento en el servidor y vuelve a sincronizar.",
+    "duplicateUid": "UID duplicado: {{uid}}",
+    "kept": "Conservado",
+    "hidden": "Oculto",
+    "deleting": "Eliminando…",
+    "dismiss": "Descartar",
+    "dangerZone": "Zona de peligro",
+    "deleteAllEvents": {
+      "label": "Eliminar todos los eventos",
+      "desc": "Eliminar permanentemente todos los eventos de este calendario. Esto no se puede deshacer.",
+      "confirm": "¿Eliminar todos los eventos? Esta acción no se puede deshacer.",
+      "action": "Eliminar todos los eventos"
+    },
+    "resetApp": {
+      "label": "Restablecer Calino",
+      "desc": "Borra todos los datos, ajustes y cuentas conectadas para empezar de nuevo.",
+      "confirm": "¿Seguro que quieres eliminar todos los datos locales? Esta acción no se puede deshacer.",
+      "action": "Restablecer la aplicación"
+    },
+    "duplicateDeleted": "Evento duplicado eliminado",
+    "duplicateDeleteFailed": "No se pudo eliminar el evento. Inténtalo de nuevo."
+  },
+  "aiVision": {
+    "title": "Importación de fotos con IA",
+    "intro": "Usa tu propia clave de API para completar automáticamente los detalles de un evento a partir de una foto. Disponible al crear un evento en la aplicación Android.",
+    "androidOnly": "Esta función sólo está disponible en la aplicación de Android.",
+    "provider": {
+      "groupLabel": "Proveedor",
+      "label": "Proveedor",
+      "desc": "Servicio al que se envían las fotos para reconocer su contenido",
+      "ariaLabel": "Proveedor de IA",
+      "anthropic": "Anthropic",
+      "openai": "OpenAI",
+      "custom": "Personalizado (compatible con OpenAI)"
+    },
+    "baseUrl": {
+      "label": "URL base",
+      "descCustom": "URL base completa compatible con OpenAI o Anthropic, incluida la ruta /v1. Se usa tal como se introduce. Añade /anthropic a la ruta si la API que usas es Anthropic.",
+      "descPreset": "Las solicitudes se envían a esta dirección",
+      "placeholder": "https://api.example.com/v1",
+      "ariaLabel": "URL base"
+    },
+    "apiKey": {
+      "label": "Clave de API",
+      "desc": "Se guarda cifrada solo en este dispositivo",
+      "placeholderSaved": "••••••••••••",
+      "placeholderEmpty": "Introduce la clave de API",
+      "ariaLabel": "Clave de API",
+      "showAriaLabel": "Mostrar clave de API",
+      "hideAriaLabel": "Ocultar clave de API",
+      "saved": "Clave guardada",
+      "clear": "Borrar",
+      "noKeySaved": "Todavía no se ha guardado ninguna clave de API."
+    },
+    "model": {
+      "label": "Modelo",
+      "descError": "No se pudo obtener la lista de modelos. Introduce manualmente el ID de un modelo.",
+      "descReady": "Modelo con capacidad de visión que se usa para analizar fotos.",
+      "placeholder": "ID del modelo",
+      "idAriaLabel": "ID del modelo",
+      "ariaLabel": "Modelo",
+      "refreshAriaLabel": "Actualizar lista de modelos"
+    },
+    "test": {
+      "label": "Probar conexión",
+      "desc": "Comprueba que la clave funciona y que el modelo puede leer imágenes.",
+      "testing": "Probando…",
+      "ok": "Conexión correcta: el modelo admite imágenes",
+      "warnDefault": "La clave funciona, pero parece que este modelo no admite imágenes.",
+      "failed": "Error: {{message}}",
+      "failedGeneric": "No se pudo conectar",
+      "button": "Probar conexión",
+      "buttonTesting": "Probando…"
+    },
+    "lastVerified": {
+      "capable": "Última verificación {{when}}: compatible con visión",
+      "maybeNotCapable": "Última verificación {{when}}: es posible que el modelo no admita imágenes"
+    }
+  },
+  "privacy": {
+    "back": "← Volver",
+    "title": "Política de privacidad",
+    "lastUpdated": "Última actualización: julio de 2026",
+    "section1": {
+      "heading": "1. Tus datos permanecen en tu dispositivo",
+      "body": "Calino es una aplicación de calendario local. Todos los eventos, ajustes y preferencias se guardan localmente en el navegador mediante IndexedDB y localStorage. No tenemos acceso a tus datos personales."
+    },
+    "section2": {
+      "heading": "2. Sincronización CalDAV (opcional)",
+      "intro": "Calino puede sincronizarse con servidores CalDAV (como Nextcloud, ownCloud y otros servicios compatibles) que configures. Al añadir una cuenta CalDAV:",
+      "item1": "Tus credenciales (nombre de usuario y contraseña) se guardan únicamente en el almacenamiento local del navegador.",
+      "item2": "Los datos se transfieren directamente entre el navegador y tu servidor CalDAV.",
+      "item3": "Nunca vemos ni guardamos tus credenciales en un servidor externo."
+    },
+    "section3": {
+      "heading": "3. Proxy CORS (opcional)",
+      "intro": "Si tu servidor CalDAV no admite CORS, puedes usar un proxy CORS para permitir el acceso desde el navegador.",
+      "hostedProxyIntro": "Ofrecemos un proxy CORS público en {{proxy}}. Si lo usas:",
+      "hostedProxyLabel": "Proxy alojado por Calino (proxy.calino.io):",
+      "item1": "Podemos ver tu dirección IP, tu país y la URL completa de cada solicitud. A veces, la URL puede incluir partes de la ruta de tu cuenta, según el servidor CalDAV.",
+      "item2": "<strong>No podemos</strong> ver tu contraseña ni los datos de tus eventos.",
+      "item3": "Las credenciales se envían en el encabezado de autorización y no se registran.",
+      "item4": "Los cuerpos de las solicitudes y respuestas con datos del calendario no se registran.",
+      "thirdPartyLabel": "Proxies de terceros o autoalojados:",
+      "thirdPartyBody": "Se aplican los mismos principios: quien opera el proxy ve los metadatos de conexión, pero no tus credenciales ni el contenido del calendario.",
+      "maxPrivacy": "Para proteger mejor tu privacidad, añade los encabezados CORS directamente a tu servidor CalDAV en lugar de usar un proxy."
+    },
+    "section4": {
+      "heading": "4. Cookies y almacenamiento local",
+      "intro": "Calino usa localStorage para guardar:",
+      "item1": "Tus preferencias y ajustes",
+      "item2": "Credenciales de cuenta CalDAV, ofuscadas con una clave almacenada en la propia aplicación. Esto protege contra la inspección casual del almacenamiento local (por ejemplo, otro sitio o extensión que accede a él por error), pero no es un cifrado seguro contra alguien con acceso tanto a la fuente de la aplicación como al almacenamiento de tu navegador.",
+      "outro": "No usamos cookies de seguimiento, analítica ni servicios de terceros que recopilen información personal."
+    },
+    "section5": {
+      "heading": "5. No se requiere cuenta",
+      "body": "Calino no requiere registro ni una cuenta. Puedes usar la aplicación sin proporcionar información personal."
+    },
+    "section6": {
+      "heading": "6. Contacto",
+      "body": "Si tienes preguntas sobre esta política de privacidad, ponte en contacto con:"
+    }
+  },
+  "masterPassword": {
+    "overlayAriaLabel": "Desbloquear cuentas CalDAV",
+    "title": "Desbloquear cuentas CalDAV",
+    "subtitle": "Introduce tu contraseña maestra para conectarte a las cuentas preconfiguradas.",
+    "label": "Contraseña maestra",
+    "placeholder": "Introduce la contraseña maestra",
+    "unlock": "Desbloquear",
+    "wait": "Espera {{seconds}} s",
+    "tooManyAttempts": "Demasiados intentos. Inténtalo de nuevo en 1 minuto.",
+    "wrongPassword_one": "Contraseña incorrecta. Te queda {{count}} intento.",
+    "wrongPassword_other": "Contraseña incorrecta. Te quedan {{count}} intentos."
+  },
+  "diagnostics": {
+    "runDiagnostics": "Ejecutar diagnóstico",
+    "runAgain": "Ejecutar de nuevo",
+    "running": "Ejecutando…",
+    "runWithWriteTest": "Ejecutar con prueba de escritura",
+    "runWithWriteTestTitle": "Crea un evento temporal en el servidor y lo elimina enseguida.",
+    "copyReport": "Copiar informe",
+    "copied": "Copiado",
+    "note": "La prueba de escritura crea un evento temporal en el servidor y lo elimina enseguida. Todo lo demás es de solo lectura.",
+    "inferred": "Inferido",
+    "inferredTitle": "Tu navegador oculta el encabezado correspondiente, así que esto se dedujo del comportamiento del servidor.",
+    "howToFix": "Cómo solucionarlo",
+    "status": {
+      "pass": "Correcto",
+      "fail": "Error",
+      "warn": "Advertencia",
+      "skipped": "Omitido",
+      "unknown": "Desconocido"
+    },
+    "summary": {
+      "ok": "Todo está bien.",
+      "degraded": "La sincronización funcionará, pero el servidor podría configurarse mejor.",
+      "broken": "Hay un problema con este servidor."
+    },
+    "corsNote": "Los resultados marcados como «Inferido» no se pueden leer directamente: los navegadores ocultan a JavaScript los encabezados CORS del servidor."
+  }
+}

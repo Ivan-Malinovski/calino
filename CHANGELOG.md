@@ -4,6 +4,12 @@ All notable changes to Calino will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- **Spanish, French, Italian, and Dutch interface translations.** These
+  languages are available in the language setting and use localized date
+  names; Android shortcuts are localized as well.
+
 ## [0.34.0] - 2026-09-23
 
 This release makes adding an account friendlier, adds support for DAV servers

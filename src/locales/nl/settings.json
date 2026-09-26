@@ -1,0 +1,733 @@
+{
+  "nav": {
+    "title": "Instellingen",
+    "general": "Algemeen",
+    "appearance": "Uiterlijk",
+    "calendar": "Agenda",
+    "categories": "Categorieën",
+    "notifications": "Meldingen",
+    "sync": "Synchronisatie",
+    "data": "Gegevens",
+    "aiVision": "AI-foto-import",
+    "backToCalendar": "Terug naar agenda",
+    "settingsCategories": "Instellingencategorieën"
+  },
+  "saved": "Opgeslagen",
+  "general": {
+    "title": "Algemeen",
+    "dateFormat": {
+      "label": "Datumnotatie",
+      "desc": "Hoe datums in de app worden weergegeven",
+      "ariaLabel": "Datumnotatie",
+      "mmddyyyy": "MM/DD/YYYY (12/31/2024)",
+      "ddmmyyyy": "DD/MM/YYYY (31/12/2024)",
+      "yyyymmdd": "YYYY-MM-DD (2024-12-31)"
+    },
+    "mapProvider": {
+      "label": "Kaartaanbieder",
+      "desc": "Dienst waarmee gebeurtenislocaties worden geopend",
+      "ariaLabel": "Kaartaanbieder",
+      "google": "Google Maps",
+      "apple": "Apple Maps",
+      "osm": "OpenStreetMap",
+      "mapy": "mapy.com",
+      "geo": "Standaard op apparaat (geo:)"
+    },
+    "timeFormat": {
+      "label": "Tijdnotatie",
+      "desc": "Tijdweergave in 12- of 24-uursnotatie",
+      "ariaLabel": "Tijdnotatie",
+      "12h": "12-uursnotatie (2:30 PM)",
+      "24h": "24-uursnotatie (14:30)"
+    },
+    "firstDayOfWeek": {
+      "label": "Eerste dag van de week",
+      "desc": "Begin van de week in week- en dagweergaven",
+      "ariaLabel": "Eerste dag van de week"
+    },
+    "language": {
+      "label": "Taal",
+      "desc": "Taal van de interface",
+      "ariaLabel": "Taal"
+    },
+    "journal": {
+      "label": "Dagboek",
+      "desc": "Vrije notities aan dagen in je agenda toevoegen",
+      "ariaLabel": "Dagboek"
+    },
+    "contacts": {
+      "label": "Contacten",
+      "desc": "Je adresboek beheren met CardDAV-synchronisatie",
+      "ariaLabel": "Contacten"
+    },
+    "haptics": {
+      "label": "Haptische feedback",
+      "desc": "Trillen bij tikken, vegen en lang indrukken. Schakel dit uit als de app traag aanvoelt.",
+      "ariaLabel": "Haptische feedback"
+    },
+    "settingsSync": {
+      "groupLabel": "Synchronisatie",
+      "label": "CalDAV-instellingensynchronisatie",
+      "descEnabled": "Haalt instellingen automatisch op. Sla wijzigingen handmatig op met de knop hieronder.",
+      "descDisabled": "Schakel in om je instellingen via CalDAV tussen apparaten te synchroniseren",
+      "syncing": "Synchroniseren…",
+      "syncedAt": "Gesynchroniseerd {{time}}",
+      "disableAriaLabel": "Instellingensynchronisatie uitschakelen",
+      "enable": "Inschakelen",
+      "somethingWrong": "Er is iets misgegaan"
+    },
+    "syncNow": {
+      "label": "Nu synchroniseren",
+      "desc": "Je lokale instellingen op de server opslaan",
+      "saving": "Opslaan…",
+      "save": "Opslaan"
+    },
+    "accountPicker": {
+      "title": "Instellingensynchronisatie inschakelen",
+      "description": "Hiermee wordt op je CalDAV-server een agenda met de naam <strong>Calino Settings</strong> aangemaakt. Deze bevat één gebeurtenis met je voorkeuren (thema, eerste dag van de week enz.) als JSON-gegevens.",
+      "descriptionSmall": "De agenda is verborgen in de zijbalk van Calino, maar kan zichtbaar zijn in andere CalDAV-clients. Dit heeft geen invloed op je andere agenda’s en je kunt deze op elk moment verwijderen via de instellingen.",
+      "chooseAccount": "Kies een account om mee te synchroniseren:",
+      "settingUp": "Instellen…",
+      "cancel": "Annuleren"
+    },
+    "disableSync": {
+      "title": "Instellingensynchronisatie uitschakelen?",
+      "description": "Je instellingen worden niet meer tussen apparaten gesynchroniseerd. Wil je ook het instellingenbestand van de server verwijderen?",
+      "keepFile": "Bestand behouden",
+      "deleteAndDisable": "Verwijderen en uitschakelen"
+    },
+    "syncError": {
+      "cors": "Je server blokkeert de verbinding. Dit betekent meestal dat de CORS-headers niet zijn ingesteld. Controleer of je CalDAV-server deze verstuurt en reageert op OPTIONS:",
+      "corsHelp": "Ga naar Synchronisatie → je account → <strong>Diagnostiek</strong> om te zien wat ontbreekt. Raadpleeg de <link>Baikal CORS-documentatie</link> voor hulp.",
+      "network": "Je CalDAV-server is niet bereikbaar. Controleer je internetverbinding en of de server online is. Een ontbrekende CORS-header ziet er vanaf hier hetzelfde uit; probeer <strong>Diagnostiek</strong> onder Synchronisatie als de server online is.",
+      "timeout": "Je CalDAV-server heeft te lang nodig gehad om te reageren. Mogelijk is deze overbelast — probeer het straks opnieuw.",
+      "auth": "Aanmelden mislukt. Controleer je CalDAV-gebruikersnaam en wachtwoord. Veel aanbieders vereisen een app-specifiek wachtwoord in plaats van je accountwachtwoord.",
+      "forbidden": "De server heeft de wijziging geweigerd. Je hebt mogelijk geen schrijfrechten voor deze agenda, of de server heeft de gegevens afgewezen.",
+      "quota": "De opslagruimte op je server is vol. Maak ruimte vrij op de server en probeer het opnieuw.",
+      "rateLimited": "De server remt verzoeken af. Probeer het straks opnieuw.",
+      "notFound": "De instellingenagenda is niet gevonden op je server. Mogelijk is deze verwijderd. Schakel synchronisatie uit en weer in.",
+      "conflict": "Je instellingen zijn gewijzigd op een ander apparaat sinds de laatste synchronisatie. Synchroniseer opnieuw om de nieuwste versie op te halen.",
+      "server": "Je CalDAV-server heeft een fout gemeld. Dit is een probleem aan de serverkant — controleer de logboeken."
+    }
+  },
+  "weekday": {
+    "sunday": "zondag",
+    "monday": "maandag",
+    "tuesday": "dinsdag",
+    "wednesday": "woensdag",
+    "thursday": "donderdag",
+    "friday": "vrijdag",
+    "saturday": "zaterdag"
+  },
+  "calendar": {
+    "title": "Agenda",
+    "display": "Weergave",
+    "defaultView": {
+      "label": "Standaardweergave",
+      "desc": "De weergave die wordt getoond wanneer je de app opent",
+      "ariaLabel": "Standaardweergave",
+      "month": "Maand",
+      "week": "Week",
+      "day": "Dag",
+      "agenda": "Agenda",
+      "todo": "Taken"
+    },
+    "showWeekNumbers": {
+      "label": "Weeknummers tonen",
+      "desc": "ISO-weeknummers links van elke rij tonen",
+      "ariaLabel": "Weeknummers tonen"
+    },
+    "showWeekNumbersInSidebar": {
+      "label": "Weeknummers tonen in zijbalk",
+      "desc": "ISO-weeknummers naast elke rij in de miniagenda tonen",
+      "ariaLabel": "Weeknummers tonen in zijbalk"
+    },
+    "eventDensity": {
+      "label": "Dichtheid van gebeurtenissen",
+      "desc": "Hoe compact gebeurtenislabels in het raster worden weergegeven",
+      "ariaLabel": "Gebeurtenisdichtheid",
+      "notAvailable": "Nog niet beschikbaar",
+      "compact": "Compact",
+      "comfortable": "Ruim"
+    },
+    "agendaBelowMonth": {
+      "label": "Agenda onder maandweergave tonen",
+      "desc": "Op hoge schermen in staande stand een agendapaneel onder de maandweergave tonen",
+      "ariaLabel": "Agenda onder maandweergave tonen"
+    },
+    "secondaryTimezoneGroup": "Tweede tijdzone",
+    "secondaryTimezoneEnabled": {
+      "label": "Tweede tijdzone tonen",
+      "desc": "Een extra tijdzone tonen in de tijdrasters van dag- en weekweergaven",
+      "ariaLabel": "Tweede tijdzone tonen"
+    },
+    "secondaryTimezone": {
+      "label": "Tweede tijdzone",
+      "desc": "Selecteer de tijdzone die naast de lokale tijd wordt weergegeven",
+      "ariaLabel": "Tweede tijdzone",
+      "presets": "Voorinstellingen",
+      "allTimezones": "Alle tijdzones"
+    },
+    "secondaryTimezoneLabel": {
+      "label": "Aangepast label",
+      "desc": "Optioneel kort label (bijv. NYC, HQ, max. 8 tekens)",
+      "placeholder": "bijv. NYC",
+      "ariaLabel": "Label voor tweede tijdzone"
+    },
+    "gridBehaviour": "Rastergedrag",
+    "compactRecurringEvents": {
+      "label": "Terugkerende gebeurtenissen compact weergeven",
+      "desc": "Terugkerende gebeurtenissen als compacte labels tonen in maandweergave",
+      "ariaLabel": "Terugkerende gebeurtenissen compact weergeven"
+    },
+    "compressPastWeeks": {
+      "label": "Verlopen weken compacter weergeven",
+      "desc": "Rijen van verlopen weken minder hoog maken",
+      "ariaLabel": "Verlopen weken compacter weergeven"
+    },
+    "fadePastDays": {
+      "label": "Verlopen dagen in agenda vervagen",
+      "desc": "Verlopen dagen iets lichter weergeven",
+      "ariaLabel": "Verlopen dagen vervagen",
+      "never": "Nooit",
+      "current": "Huidige maand",
+      "all": "Alle"
+    },
+    "hideCompletedTasks": {
+      "label": "Voltooide taken verbergen",
+      "desc": "Voltooide taken niet tonen in het agendaraster",
+      "ariaLabel": "Voltooide taken verbergen"
+    },
+    "monthViewEventLimit": {
+      "label": "Gebeurtenissen vóór samenvatting",
+      "desc": "Hoeveel gebeurtenissen per dag worden getoond voordat \"+N meer\" verschijnt. Automatisch past er zoveel als de dagcel toelaat; dit wordt aangepast wanneer het venster van grootte verandert.",
+      "ariaLabel": "Gebeurtenissen vóór samenvatting",
+      "auto": "Automatisch"
+    },
+    "newEventDefaults": "Standaardwaarden voor nieuwe gebeurtenissen",
+    "defaultDuration": {
+      "label": "Standaardduur",
+      "desc": "Duur van een nieuwe gebeurtenis die wordt gemaakt door op een dag te klikken",
+      "ariaLabel": "Standaardduur",
+      "customAriaLabel": "Aangepaste duur in minuten",
+      "custom": "Aangepast…",
+      "unit": "min",
+      "15min": "15 minuten",
+      "30min": "30 minuten",
+      "1hour": "1 uur",
+      "1.5hours": "1,5 uur",
+      "2hours": "2 uur"
+    },
+    "defaultCalendar": {
+      "label": "Standaardagenda",
+      "desc": "Aan welke agenda nieuwe gebeurtenissen worden toegevoegd",
+      "ariaLabel": "Standaardagenda"
+    },
+    "defaultReminder": {
+      "label": "Standaardherinnering",
+      "desc": "De herinnering die standaard aan nieuwe gebeurtenissen wordt toegevoegd",
+      "ariaLabel": "Standaardherinnering",
+      "none": "Geen",
+      "atTimeOfEvent": "Op het tijdstip van de gebeurtenis",
+      "5minBefore": "5 minuten van tevoren",
+      "15minBefore": "15 minuten van tevoren",
+      "30minBefore": "30 minuten van tevoren",
+      "1hourBefore": "1 uur van tevoren",
+      "1dayBefore": "1 dag van tevoren"
+    }
+  },
+  "conflict": {
+    "serverWins": "Server heeft voorrang (standaard)",
+    "localWins": "Lokale versie heeft voorrang",
+    "askMe": "Mij vragen"
+  },
+  "theme": {
+    "title": "Uiterlijk",
+    "appearance": {
+      "label": "Uiterlijk",
+      "desc": "Kies hoe Calino eruitziet",
+      "light": "Licht",
+      "dark": "Donker",
+      "system": "Systeem"
+    },
+    "lightTheme": {
+      "label": "Licht thema",
+      "desc": "Kleurenpalet voor de lichte modus"
+    },
+    "darkTheme": {
+      "label": "Donker thema",
+      "desc": "Kleurenpalet voor de donkere modus"
+    },
+    "mochaAccent": {
+      "label": "Catppuccin-accentkleur",
+      "desc": "Gebruikt voor selectie, focus en primaire acties",
+      "ariaLabel": "Catppuccin-accentkleur",
+      "useAccent": "Accentkleur {{name}} gebruiken",
+      "blue": "Blauw",
+      "lavender": "Lavendel",
+      "mauve": "Mauve",
+      "pink": "Roze",
+      "teal": "Groenblauw",
+      "green": "Groen",
+      "peach": "Perzik"
+    },
+    "eventTint": {
+      "label": "Kleursterkte van gebeurtenissen",
+      "desc": "Hoe sterk de agendakleur zichtbaar is op gebeurtenissen. Met een hogere instelling zijn agenda’s in één oogopslag beter te onderscheiden.",
+      "ariaLabel": "Kleursterkte van gebeurtenissen",
+      "subtle": "Zacht",
+      "balanced": "Gebalanceerd",
+      "vivid": "Levendig"
+    },
+    "showEventIcons": {
+      "label": "Gebeurtenispictogrammen",
+      "desc": "Een passend pictogram bij gebeurtenissen tonen op basis van de titel (bijv. een koffiekopje bij \"Koffie\")",
+      "ariaLabel": "Gebeurtenispictogrammen tonen"
+    },
+    "fontSize": {
+      "label": "Tekengrootte",
+      "desc": "Past de tekstgrootte in de hele app aan",
+      "small": "Klein",
+      "default": "Standaard",
+      "large": "Groot",
+      "xlarge": "Extra groot"
+    },
+    "adjustable": {
+      "headerLabel": "Aanpasbaar thema · {{mode}}",
+      "desc": "Pas het actieve kleurenpalet direct aan. Wijzigingen worden automatisch op dit apparaat opgeslagen.",
+      "reset": "Herstellen",
+      "previewLabel": "Voorbeeld van gebeurteniskaart",
+      "previewDesc": "Bekijk hoe dit kleurenpalet eruitziet in de agenda.",
+      "live": "Live",
+      "previewToday": "Vandaag",
+      "previewDate": "dinsdag 23 augustus",
+      "previewEvent1Title": "Ontwerpbespreking",
+      "previewEvent1Meta": "10:00 – 11:00 · Vergaderruimte",
+      "previewEvent2Title": "Lunchen met Alex",
+      "previewEvent2Meta": "12:30 – 13:15 · Café Flora",
+      "previewEvent3Title": "Focusmoment",
+      "previewEvent3Meta": "14:00 – 15:30",
+      "font": {
+        "label": "Lettertype",
+        "desc": "Lettertype dat in de hele interface wordt gebruikt",
+        "ariaLabel": "Themalettertype",
+        "system": "Systeemlettertype zonder schreef",
+        "serif": "Newsreader met schreef",
+        "mono": "Monospace"
+      },
+      "colors": {
+        "canvas": {
+          "label": "Achtergrond",
+          "desc": "Hoofdpagina-achtergrond"
+        },
+        "panel": {
+          "label": "Oppervlak",
+          "desc": "Kaarten, dialoogvensters en panelen"
+        },
+        "accent": {
+          "label": "Accent",
+          "desc": "Acties, selectie en focus"
+        },
+        "accentContrast": {
+          "label": "Accenttekst",
+          "desc": "Tekst op accentvlakken"
+        },
+        "text": {
+          "label": "Primaire tekst",
+          "desc": "Belangrijkste leestekst"
+        },
+        "mutedText": {
+          "label": "Gedempte tekst",
+          "desc": "Secundaire en subtiele tekst"
+        },
+        "border": {
+          "label": "Randen",
+          "desc": "Scheidslijnen en veldranden"
+        },
+        "colorAriaLabel": "Kleur {{label}}"
+      },
+      "cornerRadius": "Hoekradius",
+      "cornerRadiusAriaLabel": "Hoekradius",
+      "density": "Dichtheid",
+      "densityAriaLabel": "Themadichtheid",
+      "shadowStrength": "Schaduwsterkte",
+      "shadowStrengthAriaLabel": "Schaduwsterkte",
+      "eventTint": "Gebeurtenistint",
+      "eventTintAriaLabel": "Sterkte van gebeurtenistint",
+      "contrast": {
+        "ariaLabel": "Contrastcontrole: {{details}}",
+        "textCanvas": "De primaire tekst voldoet op de achtergrond niet aan WCAG AA.",
+        "textPanel": "De primaire tekst voldoet op oppervlakken niet aan WCAG AA.",
+        "mutedTextCanvas": "De gedempte tekst voldoet op de achtergrond niet aan WCAG AA.",
+        "accentContrast": "De accenttekst voldoet op accentvlakken niet aan WCAG AA.",
+        "meetsAA": "De kleuren voldoen aan WCAG AA.",
+        "needsAttention": "Contrast vereist aandacht",
+        "looksGood": "Het contrast ziet er goed uit"
+      }
+    }
+  },
+  "categories": {
+    "title": "Categorieën",
+    "useCategoryColors": {
+      "label": "Categoriekleuren voor gebeurtenissen gebruiken",
+      "desc": "Als dit is uitgeschakeld, gebruiken gebeurtenissen de kleur van hun agenda",
+      "ariaLabel": "Categoriekleuren voor gebeurtenissen gebruiken"
+    },
+    "keywords": {
+      "ariaLabel": "Trefwoorden",
+      "removeKeyword": "Trefwoord {{keyword}} verwijderen",
+      "placeholder": "Typ trefwoorden, gescheiden door komma’s",
+      "addAriaLabel": "Trefwoord toevoegen"
+    },
+    "color": {
+      "swatchAriaLabel": "Kleur {{color}}",
+      "customAriaLabel": "Aangepaste kleur voor categorie {{name}}",
+      "customNewAriaLabel": "Aangepaste kleur voor nieuwe categorie"
+    },
+    "editName": "Categorienaam",
+    "eventCount_one": "{{count}} gebeurtenis",
+    "eventCount_other": "{{count}} gebeurtenissen",
+    "editAriaLabel": "Categorie {{name}} bewerken",
+    "delete": "Verwijderen",
+    "deleteAriaLabel": "Categorie {{name}} verwijderen",
+    "addForm": {
+      "namePlaceholder": "Categorienaam",
+      "nameAriaLabel": "Naam van nieuwe categorie",
+      "add": "Toevoegen",
+      "cancel": "Annuleren"
+    },
+    "addCategory": "Categorie toevoegen",
+    "autoCategorize": {
+      "title": "Automatisch categoriseren",
+      "desc": "Gebeurtenissen automatisch categoriseren op basis van trefwoorden in de titel",
+      "selectCategory": "Categorie selecteren",
+      "selectCategoryAriaLabel": "Categorie selecteren",
+      "selectCategoryForNewRuleAriaLabel": "Categorie voor nieuwe regel selecteren",
+      "save": "Opslaan",
+      "cancel": "Annuleren",
+      "edit": "Bewerken",
+      "delete": "Verwijderen",
+      "add": "Toevoegen",
+      "matchCount_one": "{{count}} overeenkomst",
+      "matchCount_other": "{{count}} overeenkomsten",
+      "uncategorizedCount": "({{count}} niet gecategoriseerd)",
+      "countInCalendar": "{{count}} in {{name}}",
+      "unknownCalendar": "Onbekend",
+      "willMatch_one": "Komt overeen met {{count}} gebeurtenis",
+      "willMatch_other": "Komt overeen met {{count}} gebeurtenissen",
+      "currentlyUncategorized": " ({{count}} momenteel niet gecategoriseerd)",
+      "addRule": "Regel voor automatische categorisering toevoegen",
+      "applyToExisting": "Regels toepassen op bestaande gebeurtenissen",
+      "applyToExistingDesc": "Gebeurtenissen die overeenkomen met je regels alsnog categoriseren"
+    }
+  },
+  "notifications": {
+    "title": "Meldingen",
+    "events": "Gebeurtenissen",
+    "eventReminders": {
+      "label": "Gebeurtenisherinneringen",
+      "desc": "Een melding ontvangen voordat gebeurtenissen beginnen",
+      "ariaLabel": "Gebeurtenisherinneringen"
+    },
+    "soundAlerts": {
+      "label": "Geluidsmeldingen",
+      "desc": "Een geluid afspelen voordat gebeurtenissen beginnen",
+      "ariaLabel": "Geluidsmeldingen"
+    },
+    "deviceCalendar": "Apparaatagenda",
+    "calendarMirror": {
+      "label": "Synchroniseren met Android-agenda (bèta)",
+      "ariaLabel": "Synchroniseren met Android-agenda (bèta)",
+      "descOff": "Kopieer je gebeurtenissen naar de apparaatagenda zodat Android herinneringen kan geven wanneer Calino is gesloten en ze zichtbaar zijn in widgets, Wear OS en Android Auto. Alleen-lezen — er wordt niets teruggeschreven naar je CalDAV-server.",
+      "descActive": "Android geeft je herinneringen. Gebeurtenissen zijn zichtbaar in widgets, Wear OS en Android Auto.",
+      "descNoCalendarApp": "Gebeurtenissen zijn gesynchroniseerd, maar er is geen agenda-app geïnstalleerd om herinneringen te geven — Calino blijft dit zelf doen.",
+      "descDenied": "Geen toegang tot de agenda. Geef toegang opnieuw via de instellingen van de Android-app.",
+      "descFailed": "Schrijven naar de apparaatagenda mislukt: {{error}}",
+      "descFailedNoDetail": "Schrijven naar de apparaatagenda mislukt.",
+      "descSyncing": "Synchroniseren…"
+    },
+    "calendarMirrorInfo": {
+      "label": "Zo werkt het",
+      "desc": "Wat wordt gekopieerd, wie je herinneringen geeft en wat je kunt verwachten van de bèta",
+      "learnMore": "Meer informatie"
+    },
+    "calendarMirrorModal": {
+      "title": "Synchroniseren met Android-agenda",
+      "intro": "Calino kopieert je gebeurtenissen naar de eigen agendadatabase van Android — dezelfde database die je agenda-widget, Wear OS-horloge en Android Auto gebruiken. Deze apps hebben geen toegang tot Calino’s opslag; door de kopie worden je gebeurtenissen daar zichtbaar.",
+      "reliabilityTitle": "Waarom herinneringen hiermee betrouwbaarder zijn",
+      "reliabilityP1": "Calino kan zelf alleen herinneringen plannen wanneer de app actief is. Android plant herinneringen voor gebeurtenissen in zijn agenda, ook als Calino niet is geopend. Als dit is ingeschakeld, geeft Android de meldingen en doet Calino dat niet — zo krijg je niet twee meldingen voor dezelfde gebeurtenis.",
+      "reliabilityP2": "Hiervoor moet een agenda-app zijn geïnstalleerd om de melding te tonen. Als je die niet hebt, geeft Calino dat hierboven aan en blijft de app zelf herinneringen geven.",
+      "oneWayTitle": "Synchronisatie werkt één kant op",
+      "oneWayItem1": "De gespiegelde agenda’s zijn alleen-lezen. Alleen Calino schrijft naar je CalDAV-server; wijzigingen in andere agenda-apps worden niet teruggesynchroniseerd.",
+      "oneWayItem2": "Alleen agenda’s die je zichtbaar hebt gemaakt, worden gekopieerd.",
+      "oneWayItem3": "Als je dit uitschakelt, worden de gespiegelde agenda’s verwijderd. Je andere agenda’s blijven ongewijzigd.",
+      "stayingUpToDateTitle": "Actueel blijven",
+      "stayingUpToDateP1": "Ongeveer één keer per uur controleert Calino je server op de achtergrond. Zo komen gebeurtenissen die je op een ander apparaat toevoegt op je telefoon terecht en krijg je er een herinnering voor, ook als je Calino sindsdien niet hebt geopend. Er worden geen gegevens naar een nieuwe bestemming gestuurd — de app gebruikt dezelfde verbinding met je eigen server als altijd.",
+      "betaTitle": "Waarom dit een bèta is",
+      "betaP1": "De controle op de achtergrond is afhankelijk van de batterij-instellingen van je telefoon. Vooral Xiaomi-, Samsung-, OPPO-, OnePlus- en Huawei-apparaten beperken apps op de achtergrond sterk en slaan de controle soms stilzwijgend over. Als je gebeurtenissen verouderd lijken, stel dan <strong>Geen beperkingen</strong> in bij de batterij-instellingen van Android voor Calino.",
+      "betaP2": "Als een gespiegelde agenda niet in je agenda-app verschijnt, is deze meestal verborgen en niet verdwenen — nieuwe agenda’s staan in de lijst met weer te geven agenda’s van die app vaak standaard uitgevinkt."
+    },
+    "tasks": "Taken",
+    "taskDueDateReminders": {
+      "label": "Herinneringen voor taakvervaldatums",
+      "desc": "Een melding geven wanneer de vervaldatum van een taak aanbreekt",
+      "ariaLabel": "Herinneringen voor taakvervaldatums"
+    },
+    "overdueTaskBadge": {
+      "label": "Badge voor achterstallige taken",
+      "desc": "Een badge op het app-pictogram tonen voor achterstallige taken",
+      "ariaLabel": "Badge voor achterstallige taken"
+    },
+    "test": {
+      "label": "Testmelding",
+      "descDefault": "Klik om meldingen in te schakelen en te testen",
+      "descDenied": "Meldingen zijn geblokkeerd in de browserinstellingen",
+      "descReady": "Een testmelding versturen",
+      "enableAndTest": "Inschakelen en testen",
+      "sendTest": "Testmelding versturen"
+    },
+    "permissionDeniedToast": "Meldingen zijn geblokkeerd. Pas de sitemachtigingen aan in je browserinstellingen om herinneringen in te schakelen.",
+    "calendarPermissionDeniedToast": "Toegang tot de agenda is geblokkeerd. Geef toestemming via de instellingen van de Android-app om gebeurtenissen met je apparaatagenda te synchroniseren."
+  },
+  "caldav": {
+    "title": "Synchronisatie",
+    "connectedAccounts": "Verbonden accounts",
+    "test": "Testen",
+    "testAriaLabel": "Verbinding met {{name}} testen",
+    "diagnose": "Diagnostiek",
+    "diagnoseAriaLabel": "Diagnostiek uitvoeren voor {{name}}",
+    "edit": "Bewerken",
+    "editAriaLabel": "{{name}} bewerken",
+    "disconnect": "Verbinding verbreken",
+    "disconnectAriaLabel": "Verbinding met {{name}} verbreken",
+    "testing": "Testen…",
+    "connectionOk": "Verbinding in orde",
+    "connectionFailed": "Verbinding mislukt",
+    "failedWithMessage": "Mislukt — {{message}}",
+    "syncedOn": "Gesynchroniseerd · {{date}}",
+    "connected": "Verbonden",
+    "addAccount": "Agenda-account toevoegen",
+    "calendarSubscriptions": "Agenda-abonnementen",
+    "syncNow": "Nu synchroniseren",
+    "syncing": "Synchroniseren…",
+    "syncAriaLabel": "{{name}} nu synchroniseren",
+    "remove": "Verwijderen",
+    "removeAriaLabel": "{{name}} verwijderen",
+    "notYetSynced": "Nog niet gesynchroniseerd",
+    "subscribe": "Abonneren op agenda (.ics)",
+    "confirmRemoveSubscription": "Dit agenda-abonnement verwijderen? De gebeurtenissen worden lokaal verwijderd.",
+    "confirmRemoveAccount": "Weet je zeker dat je dit account wilt verwijderen? De agendagegevens blijven lokaal bewaard.",
+    "credentialsNotFound": "Aanmeldgegevens niet gevonden"
+  },
+  "data": {
+    "title": "Gegevens",
+    "importExport": "Importeren en exporteren",
+    "exportCalendar": {
+      "label": "Agenda exporteren",
+      "desc": "Alle gebeurtenissen downloaden als standaard .ics-bestand",
+      "exporting": "Exporteren…",
+      "export": ".ics exporteren"
+    },
+    "importCalendar": {
+      "label": "Agenda importeren",
+      "desc": "Gebeurtenissen toevoegen uit een .ics- of .json-bestand",
+      "importing": "Importeren…",
+      "chooseFile": "Bestand kiezen…"
+    },
+    "importedEvents_one": "{{count}} gebeurtenis geïmporteerd",
+    "importedEvents_other": "{{count}} gebeurtenissen geïmporteerd",
+    "noEventsInJson": "Geen gebeurtenissen gevonden in JSON-bestand",
+    "importFailed": "Bestand importeren mislukt. Controleer de indeling.",
+    "contacts": "Contacten",
+    "exportContacts": {
+      "label": "Contacten exporteren",
+      "desc": "Alle contacten downloaden als standaard .vcf-bestand",
+      "export": ".vcf exporteren"
+    },
+    "importContacts": {
+      "label": "Contacten importeren",
+      "desc": "Contacten toevoegen uit een .vcf-bestand",
+      "chooseFile": "Bestand kiezen…"
+    },
+    "mergeDuplicates": {
+      "label": "Duplicaten samenvoegen",
+      "desc": "Contacten met hetzelfde e-mailadres, telefoonnummer of dezelfde naam zoeken en samenvoegen",
+      "merge": "Samenvoegen…"
+    },
+    "noContactsInFile": "Geen contacten gevonden in bestand",
+    "failedToParseVCard": "vCard-bestand verwerken mislukt",
+    "noContactsToExport": "Geen contacten om te exporteren",
+    "exportedContacts_one": "{{count}} contact geëxporteerd",
+    "exportedContacts_other": "{{count}} contacten geëxporteerd",
+    "dataIssues": "Gegevensproblemen",
+    "noIssues": "Ongeldige of beschadigde gebeurtenissen (bijv. met een begindatum na de einddatum) verschijnen hier. Je kunt ze herstellen of verwijderen.",
+    "brokenEventsIntro": "Deze gebeurtenissen hebben een begindatum na hun einddatum en kunnen niet worden weergegeven. Je kunt de datums omwisselen om ze te herstellen of ze helemaal verwijderen.",
+    "untitledEvent": "Naamloze gebeurtenis",
+    "start": "Begin: {{date}}",
+    "end": "Einde: {{date}}",
+    "fix": "Herstellen",
+    "delete": "Verwijderen",
+    "fixAll": "Alles herstellen ({{count}})",
+    "deleteAll": "Alles verwijderen",
+    "duplicateUidIntro": "Deze gebeurtenissen hebben dezelfde unieke ID (UID) op je server, maar zijn als afzonderlijke items opgeslagen. Calino kan er maar één van elke set tonen; de overige worden verborgen om je agenda stabiel te houden. Dit komt meestal door een bulkkopie in een andere app. Geef elke gebeurtenis een unieke UID op je server en synchroniseer opnieuw om dit op te lossen.",
+    "duplicateUid": "Dubbele UID: {{uid}}",
+    "kept": "Behouden",
+    "hidden": "Verborgen",
+    "deleting": "Verwijderen…",
+    "dismiss": "Sluiten",
+    "dangerZone": "Gevarenzone",
+    "deleteAllEvents": {
+      "label": "Alle gebeurtenissen verwijderen",
+      "desc": "Alle gebeurtenissen definitief uit deze agenda verwijderen. Dit kan niet ongedaan worden gemaakt.",
+      "confirm": "Alle gebeurtenissen verwijderen? Dit kan niet ongedaan worden gemaakt.",
+      "action": "Alle gebeurtenissen verwijderen"
+    },
+    "resetApp": {
+      "label": "Calino resetten",
+      "desc": "Alle gegevens, instellingen en verbonden accounts wissen en opnieuw beginnen.",
+      "confirm": "Weet je zeker dat je alle lokale gegevens wilt verwijderen? Dit kan niet ongedaan worden gemaakt.",
+      "action": "App resetten"
+    },
+    "duplicateDeleted": "Dubbele gebeurtenis verwijderd",
+    "duplicateDeleteFailed": "Gebeurtenis verwijderen mislukt. Probeer het opnieuw."
+  },
+  "aiVision": {
+    "title": "AI-foto-import",
+    "intro": "Gebruik je eigen API-sleutel om gebeurtenisgegevens automatisch uit een foto in te vullen. Beschikbaar bij het maken van een nieuwe gebeurtenis op Android.",
+    "androidOnly": "Deze functie is alleen beschikbaar in de Android-app.",
+    "provider": {
+      "groupLabel": "Aanbieder",
+      "label": "Aanbieder",
+      "desc": "Naar welke visuele AI-dienst foto’s worden verstuurd",
+      "ariaLabel": "AI-aanbieder",
+      "anthropic": "Anthropic",
+      "openai": "OpenAI",
+      "custom": "Aangepast (compatibel met OpenAI)"
+    },
+    "baseUrl": {
+      "label": "Basis-URL",
+      "descCustom": "Volledige API-basis-URL die compatibel is met OpenAI of Anthropic, inclusief /v1 — deze wordt precies zo gebruikt als je hem invoert. Voeg /anthropic toe aan het pad als de API compatibel is met Anthropic.",
+      "descPreset": "Verzoeken worden hierheen gestuurd",
+      "placeholder": "https://api.example.com/v1",
+      "ariaLabel": "Basis-URL"
+    },
+    "apiKey": {
+      "label": "API-sleutel",
+      "desc": "Alleen op dit apparaat versleuteld opgeslagen",
+      "placeholderSaved": "••••••••••••",
+      "placeholderEmpty": "Voer API-sleutel in",
+      "ariaLabel": "API-sleutel",
+      "showAriaLabel": "API-sleutel tonen",
+      "hideAriaLabel": "API-sleutel verbergen",
+      "saved": "Sleutel opgeslagen",
+      "clear": "Wissen",
+      "noKeySaved": "Er is nog geen API-sleutel opgeslagen."
+    },
+    "model": {
+      "label": "Model",
+      "descError": "Modellijst ophalen mislukt — voer handmatig een model-ID in.",
+      "descReady": "Model met beeldherkenning om foto’s te lezen",
+      "placeholder": "model-ID",
+      "idAriaLabel": "Model-ID",
+      "ariaLabel": "Model",
+      "refreshAriaLabel": "Modellijst vernieuwen"
+    },
+    "test": {
+      "label": "Verbinding testen",
+      "desc": "Controleer of de sleutel werkt en het model afbeeldingen kan lezen",
+      "testing": "Testen…",
+      "ok": "Verbinding in orde — model ondersteunt beeldherkenning",
+      "warnDefault": "De sleutel werkt, maar dit model lijkt geen afbeeldingen te ondersteunen",
+      "failed": "Mislukt — {{message}}",
+      "failedGeneric": "Verbinding mislukt",
+      "button": "Verbinding testen",
+      "buttonTesting": "Testen…"
+    },
+    "lastVerified": {
+      "capable": "Laatst gecontroleerd {{when}} — model ondersteunt beeldherkenning",
+      "maybeNotCapable": "Laatst gecontroleerd {{when}} — model ondersteunt mogelijk geen afbeeldingen"
+    }
+  },
+  "privacy": {
+    "back": "← Terug",
+    "title": "Privacybeleid",
+    "lastUpdated": "Laatst bijgewerkt: juli 2026",
+    "section1": {
+      "heading": "1. Je gegevens blijven op je apparaat",
+      "body": "Calino is een agenda-app die je gegevens lokaal bewaart. Al je agenda-items, instellingen en voorkeuren worden lokaal in je browser opgeslagen met IndexedDB en localStorage. Wij hebben geen toegang tot je persoonlijke gegevens."
+    },
+    "section2": {
+      "heading": "2. CalDAV-synchronisatie (optioneel)",
+      "intro": "Calino kan synchroniseren met CalDAV-servers (zoals Nextcloud, ownCloud of andere diensten die CalDAV ondersteunen) die je zelf instelt. Wanneer je een CalDAV-account toevoegt:",
+      "item1": "Je aanmeldgegevens (gebruikersnaam/wachtwoord) worden alleen opgeslagen in localStorage van je browser",
+      "item2": "Gegevens worden rechtstreeks uitgewisseld tussen je browser en je CalDAV-server",
+      "item3": "Wij zien je aanmeldgegevens nooit en slaan deze niet op een externe server op"
+    },
+    "section3": {
+      "heading": "3. CORS-proxy (optioneel)",
+      "intro": "Als je CalDAV-server geen CORS ondersteunt, kun je optioneel een CORS-proxy gebruiken om toegang via de browser mogelijk te maken.",
+      "hostedProxyIntro": "We bieden een openbare CORS-proxy aan op {{proxy}}. Als je deze optie gebruikt:",
+      "hostedProxyLabel": "Door Calino gehoste proxy (proxy.calino.io):",
+      "item1": "We kunnen je IP-adres, land en de volledige URL van elk verzoek zien (afhankelijk van je CalDAV-server kan die soms delen van je accountpad bevatten)",
+      "item2": "We kunnen je wachtwoord of agendagegevens <strong>niet</strong> zien",
+      "item3": "Aanmeldgegevens worden verzonden in de Authorization-header (niet vastgelegd in logboeken)",
+      "item4": "De inhoud van verzoeken en antwoorden met agendagegevens wordt niet vastgelegd in logboeken",
+      "thirdPartyLabel": "Proxies van derden of zelfgehoste proxies:",
+      "thirdPartyBody": "Dezelfde principes gelden — de proxybeheerder ziet verbindingsgegevens, maar niet je aanmeldgegevens of agenda-inhoud.",
+      "maxPrivacy": "Voor maximale privacy voeg je CORS-headers rechtstreeks toe aan je CalDAV-server in plaats van een proxy te gebruiken."
+    },
+    "section4": {
+      "heading": "4. Cookies en lokale opslag",
+      "intro": "Calino gebruikt localStorage om het volgende op te slaan:",
+      "item1": "Je voorkeuren en instellingen",
+      "item2": "CalDAV-aanmeldgegevens, versluierd met een sleutel die in de app zelf is opgeslagen. Dit beschermt tegen toevallige inzage in localStorage (bijv. wanneer een andere site of extensie er per ongeluk toegang toe krijgt), maar is geen sterke versleuteling tegen iemand die zowel de app-broncode als je browseropslag kan inzien.",
+      "outro": "We gebruiken geen trackingcookies, analysetools of diensten van derden die persoonlijke gegevens verzamelen."
+    },
+    "section5": {
+      "heading": "5. Geen account vereist",
+      "body": "Voor Calino heb je geen registratie of account nodig. Je kunt de app direct gebruiken zonder persoonlijke gegevens te verstrekken."
+    },
+    "section6": {
+      "heading": "6. Contact",
+      "body": "Neem bij vragen over dit privacybeleid contact op met:"
+    }
+  },
+  "masterPassword": {
+    "overlayAriaLabel": "CalDAV-accounts ontgrendelen",
+    "title": "CalDAV-accounts ontgrendelen",
+    "subtitle": "Voer je hoofdwachtwoord in om verbinding te maken met vooraf ingestelde accounts.",
+    "label": "Hoofdwachtwoord",
+    "placeholder": "Voer hoofdwachtwoord in",
+    "unlock": "Ontgrendelen",
+    "wait": "Wacht {{seconds}} s",
+    "tooManyAttempts": "Te veel pogingen. Probeer het over 1 minuut opnieuw.",
+    "wrongPassword_one": "Onjuist wachtwoord. Je hebt nog {{count}} poging.",
+    "wrongPassword_other": "Onjuist wachtwoord. Je hebt nog {{count}} pogingen."
+  },
+  "diagnostics": {
+    "runDiagnostics": "Diagnostiek uitvoeren",
+    "runAgain": "Opnieuw uitvoeren",
+    "running": "Bezig…",
+    "runWithWriteTest": "Uitvoeren met schrijftest",
+    "runWithWriteTestTitle": "Maakt tijdelijk een gebeurtenis aan op je server en verwijdert deze weer",
+    "copyReport": "Rapport kopiëren",
+    "copied": "Gekopieerd",
+    "note": "De schrijftest maakt één tijdelijke gebeurtenis aan op je server en verwijdert deze meteen. Alle andere tests lezen alleen gegevens.",
+    "inferred": "afgeleid",
+    "inferredTitle": "Je browser verbergt de relevante header. Dit is daarom afgeleid uit het gedrag van de server.",
+    "howToFix": "Oplossen",
+    "status": {
+      "pass": "Geslaagd",
+      "fail": "Mislukt",
+      "warn": "Waarschuwing",
+      "skipped": "Overgeslagen",
+      "unknown": "Onbekend"
+    },
+    "summary": {
+      "ok": "Alles is in orde.",
+      "degraded": "Synchronisatie werkt, maar je server kan beter worden ingesteld.",
+      "broken": "Er is iets mis met deze server."
+    },
+    "corsNote": " Controles met de aanduiding “afgeleid” konden niet rechtstreeks worden uitgelezen — browsers verbergen de CORS-headers van een server voor JavaScript."
+  }
+}

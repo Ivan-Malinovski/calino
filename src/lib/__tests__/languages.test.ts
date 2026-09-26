@@ -21,6 +21,10 @@ afterEach(() => {
 describe('normalizeLanguage', () => {
   it('accepts a language we ship', () => {
     expect(normalizeLanguage('de')).toBe('de')
+    expect(normalizeLanguage('es')).toBe('es')
+    expect(normalizeLanguage('fr')).toBe('fr')
+    expect(normalizeLanguage('it')).toBe('it')
+    expect(normalizeLanguage('nl')).toBe('nl')
   })
 
   it('reduces a regional tag to its primary subtag', () => {
@@ -33,7 +37,7 @@ describe('normalizeLanguage', () => {
   })
 
   it('returns null for a language we do not ship', () => {
-    expect(normalizeLanguage('fr')).toBeNull()
+    expect(normalizeLanguage('ja')).toBeNull()
     expect(normalizeLanguage('')).toBeNull()
     expect(normalizeLanguage(null)).toBeNull()
   })
@@ -42,19 +46,19 @@ describe('normalizeLanguage', () => {
 describe('isSupportedLanguage', () => {
   it('rejects non-strings and unknown codes', () => {
     expect(isSupportedLanguage('en')).toBe(true)
-    expect(isSupportedLanguage('fr')).toBe(false)
+    expect(isSupportedLanguage('ja')).toBe(false)
     expect(isSupportedLanguage(42)).toBe(false)
   })
 })
 
 describe('getBrowserLanguage', () => {
   it('picks the first preferred language we ship', () => {
-    stubNavigatorLanguages(['fr-FR', 'de-DE', 'en-US'])
-    expect(getBrowserLanguage()).toBe('de')
+    stubNavigatorLanguages(['es-ES', 'fr-FR', 'nl-NL', 'de-DE', 'en-US'])
+    expect(getBrowserLanguage()).toBe('es')
   })
 
   it('falls back to English when we ship none of them', () => {
-    stubNavigatorLanguages(['fr-FR', 'ja-JP'])
+    stubNavigatorLanguages(['ja-JP', 'pt-BR'])
     expect(getBrowserLanguage()).toBe('en')
   })
 
@@ -74,6 +78,10 @@ describe('LANGUAGE_OPTIONS', () => {
       { value: 'en', label: 'English' },
       { value: 'da', label: 'Dansk' },
       { value: 'de', label: 'Deutsch' },
+      { value: 'es', label: 'Español' },
+      { value: 'fr', label: 'Français' },
+      { value: 'it', label: 'Italiano' },
+      { value: 'nl', label: 'Nederlands' },
     ])
   })
 })

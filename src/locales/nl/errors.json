@@ -1,0 +1,101 @@
+{
+  "undo": {
+    "eventDeleted": "Gebeurtenis verwijderd",
+    "contactDeleted": "Contact verwijderd"
+  },
+  "sync": {
+    "eventSyncRetry": "Gebeurtenis synchroniseren met CalDAV-server mislukt. Er wordt opnieuw geprobeerd.",
+    "deletionSyncRetry": "Verwijdering synchroniseren mislukt. Er wordt opnieuw geprobeerd.",
+    "eventRestoreFailed": "Gebeurtenis herstellen mislukt.",
+    "duplicateSyncRetry": "Gekopieerde gebeurtenis synchroniseren mislukt. Er wordt opnieuw geprobeerd.",
+    "genericSyncRetry": "Synchroniseren met CalDAV-server mislukt. Er wordt opnieuw geprobeerd.",
+    "deletionSyncRetryGeneric": "Verwijdering synchroniseren met CalDAV-server mislukt. Er wordt opnieuw geprobeerd.",
+    "occurrenceDeleteFailed": "Deze herhaling verwijderen mislukt. De gebeurtenis is behouden.",
+    "seriesDeleteFailed": "Deze en volgende gebeurtenissen verwijderen mislukt. De reeks is behouden.",
+    "settingsSaved": "Instellingen opgeslagen op de server.",
+    "settingsSyncEnabled": "Synchronisatie van instellingen ingeschakeld.",
+    "settingsFoundEnabled": "Calino Settings gevonden — synchronisatie ingeschakeld.",
+    "settingsCalendarFoundEnabled": "Calino Settings-agenda gevonden — synchronisatie ingeschakeld.",
+    "settingsFoundEnabledAuto": "Calino Settings gevonden — synchronisatie automatisch ingeschakeld.",
+    "shortFailure": "{{subject}} mislukt: {{reason}}",
+    "subjectDefault": "Synchronisatie"
+  },
+  "syncReason": {
+    "cors": "je server blokkeert de verbinding (CORS).",
+    "network": "je server niet bereikbaar is. Deze is mogelijk offline of blokkeert CORS.",
+    "timeout": "de server te lang nodig had om te reageren.",
+    "auth": "er een aanmeldingsfout is. Controleer je gebruikersnaam en wachtwoord.",
+    "forbidden": "de server de wijziging heeft geweigerd. Je hebt mogelijk geen schrijfrechten voor deze agenda, of de server heeft de gegevens afgewezen.",
+    "quota": "de opslagruimte op de server vol is. Maak ruimte vrij op de server en probeer het opnieuw.",
+    "rateLimited": "de server verzoeken afremt. Probeer het straks opnieuw.",
+    "notFound": "de bron niet op de server is gevonden.",
+    "conflict": "dit item op de server is gewijzigd. Synchroniseer opnieuw om de nieuwere versie op te halen.",
+    "server": "de server een fout heeft gemeld. Controleer de logboeken."
+  },
+  "connection": {
+    "corsOrNetwork": "De server is niet bereikbaar. Controleer het adres; de server is mogelijk offline of blokkeert cross-origin-verzoeken.",
+    "timeout": "De server heeft te lang nodig gehad om te reageren.",
+    "auth": "De server heeft deze aanmeldgegevens afgewezen.",
+    "forbidden": "De server heeft het verzoek geweigerd. Controleer of je schrijfrechten hebt voor deze agenda.",
+    "quota": "De opslagruimte op de server is vol. Maak ruimte vrij op de server en probeer het opnieuw.",
+    "rateLimited": "De server remt verzoeken af. Probeer het straks opnieuw.",
+    "notFound": "De server heeft geantwoord, maar er staat niets op dat adres. Controleer het URL-pad.",
+    "server": "De server heeft een fout gemeld. Controleer de logboeken.",
+    "badStatus": "De server gaf status {{status}} terug",
+    "failedGeneric": "Verbinding mislukt: {{message}}. Dit kan een CORS-probleem zijn: de server moet cross-origin-verzoeken toestaan.",
+    "urlHint": "Probeer voor {{domain}} het volgende in te voeren: {{url}}",
+    "unknownError": "Onbekende fout",
+    "fastmailAuthHint": "Fastmail heeft deze aanmeldgegevens afgewezen. Fastmail vereist voor CalDAV een app-specifiek wachtwoord — je gewone aanmeldwachtwoord werkt niet. Maak er een aan via Settings → Privacy & Security → Integrations → New App Password (geef toegang tot \"Calendars (CalDAV)\"), en gebruik daarna je e-mailadres als gebruikersnaam en dat wachtwoord."
+  },
+  "broken": {
+    "foundEvents_one": "Eén ongeldige gebeurtenis met onjuiste datums gevonden.",
+    "foundEvents_other": "{{count}} ongeldige gebeurtenissen met onjuiste datums gevonden.",
+    "foundDuplicateUids_one": "Eén set gebeurtenissen met hetzelfde dubbele ID op je server gevonden.",
+    "foundDuplicateUids_other": "{{count}} sets gebeurtenissen met hetzelfde dubbele ID op je server gevonden."
+  },
+  "reminder": {
+    "allDay": "Hele dag",
+    "startingToday": "Begint vandaag",
+    "startingAt": "Begint om {{time}}",
+    "startingTomorrow": "Begint morgen",
+    "startingTomorrowAt": "Begint morgen om {{time}}",
+    "startingOn": "Begint op {{date}}",
+    "startingOnAt": "Begint op {{date}} om {{time}}",
+    "snooze5m": "5 min uitstellen",
+    "testNotificationTitle": "Testmelding",
+    "testNotificationBody": "Meldingen werken! Het is nu {{time}}"
+  },
+  "settingsSync": {
+    "notConfigured": "Synchronisatie is niet goed ingesteld",
+    "calendarNotFound": "Instellingenagenda niet gevonden",
+    "accountNotFound": "Account niet gevonden",
+    "credentialsNotFound": "Aanmeldgegevens niet gevonden",
+    "pullFailed": "Ophalen mislukt",
+    "pushFailed": "Verzenden mislukt",
+    "noCalendarsFound": "Geen agenda’s gevonden",
+    "enableFailed": "Synchronisatie inschakelen mislukt",
+    "autoDiscoveryFailed": "Automatisch zoeken mislukt",
+    "subject": "Instellingensynchronisatie"
+  },
+  "pending": {
+    "event": "gebeurtenis",
+    "thisEvent": "deze gebeurtenis",
+    "staleEtagUpdateConflict": "\"{{title}}\" kon niet worden opgeslagen — de gebeurtenis is op de server gewijzigd terwijl deze bewerking in de wachtrij stond. Jouw versie is lokaal opgeslagen.",
+    "staleEtagDeleteConflict": "\"{{title}}\" kon niet worden verwijderd — de gebeurtenis is op de server gewijzigd terwijl deze verwijdering in de wachtrij stond. De gebeurtenis blijft op de server staan.",
+    "moveFailedWithCalendar": "\"{{title}}\" kon niet naar {{calendar}} worden verplaatst. Mogelijk staat de gebeurtenis nog in de oude agenda.",
+    "moveFailedNoCalendar": "\"{{title}}\" kon niet worden verplaatst. Mogelijk staat de gebeurtenis nog in de oude agenda.",
+    "moveCleanupPending": "\"{{title}}\" is verplaatst, maar de oude kopie in {{calendar}} kon nog niet worden verwijderd. Er wordt opnieuw geprobeerd.",
+    "staleCopyWithCalendar": "De oude kopie van een verplaatste gebeurtenis kon niet uit {{calendar}} worden verwijderd. Mogelijk wordt deze dubbel weergegeven — verwijder de dubbele gebeurtenis handmatig.",
+    "staleCopyNoCalendar": "De oude kopie van een verplaatste gebeurtenis kon niet worden verwijderd. Mogelijk wordt deze dubbel weergegeven — verwijder de dubbele gebeurtenis handmatig."
+  },
+  "account": {
+    "couldNotConnect": "Kan met deze instellingen geen verbinding maken"
+  },
+  "headless": {
+    "accountCredentialsMissing": "Account {{account}} wordt overgeslagen: aanmeldgegevens ontbreken",
+    "calendarFailed": "Agenda {{calendar}} mislukt: {{error}}",
+    "accountFailed": "Account {{account}} mislukt: {{error}}",
+    "noCalendarsFetched": "Geen agenda’s opgehaald; de spiegel wordt niet gewijzigd",
+    "syncDone": "Achtergrondsynchronisatie voltooid: {{events}} gebeurtenissen in {{calendars}} agenda’s van {{accounts}} account(s)"
+  }
+}

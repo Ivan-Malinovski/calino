@@ -79,6 +79,86 @@ const loaders: Record<Exclude<Language, 'en'>, () => Promise<LocaleResources>> =
       commands: commands.default,
     }
   },
+  es: async () => {
+    const [common, calendar, settings, contacts, caldav, errors, commands] = await Promise.all([
+      import('./es/common.json'),
+      import('./es/calendar.json'),
+      import('./es/settings.json'),
+      import('./es/contacts.json'),
+      import('./es/caldav.json'),
+      import('./es/errors.json'),
+      import('./es/commands.json'),
+    ])
+    return {
+      common: common.default,
+      calendar: calendar.default,
+      settings: settings.default,
+      contacts: contacts.default,
+      caldav: caldav.default,
+      errors: errors.default,
+      commands: commands.default,
+    }
+  },
+  fr: async () => {
+    const [common, calendar, settings, contacts, caldav, errors, commands] = await Promise.all([
+      import('./fr/common.json'),
+      import('./fr/calendar.json'),
+      import('./fr/settings.json'),
+      import('./fr/contacts.json'),
+      import('./fr/caldav.json'),
+      import('./fr/errors.json'),
+      import('./fr/commands.json'),
+    ])
+    return {
+      common: common.default,
+      calendar: calendar.default,
+      settings: settings.default,
+      contacts: contacts.default,
+      caldav: caldav.default,
+      errors: errors.default,
+      commands: commands.default,
+    }
+  },
+  it: async () => {
+    const [common, calendar, settings, contacts, caldav, errors, commands] = await Promise.all([
+      import('./it/common.json'),
+      import('./it/calendar.json'),
+      import('./it/settings.json'),
+      import('./it/contacts.json'),
+      import('./it/caldav.json'),
+      import('./it/errors.json'),
+      import('./it/commands.json'),
+    ])
+    return {
+      common: common.default,
+      calendar: calendar.default,
+      settings: settings.default,
+      contacts: contacts.default,
+      caldav: caldav.default,
+      errors: errors.default,
+      commands: commands.default,
+    }
+  },
+  nl: async () => {
+    const [common, calendar, settings, contacts, caldav, errors, commands] = await Promise.all([
+      import('./nl/common.json'),
+      import('./nl/calendar.json'),
+      import('./nl/settings.json'),
+      import('./nl/contacts.json'),
+      import('./nl/caldav.json'),
+      import('./nl/errors.json'),
+      import('./nl/commands.json'),
+    ])
+    return {
+      common: common.default,
+      calendar: calendar.default,
+      settings: settings.default,
+      contacts: contacts.default,
+      caldav: caldav.default,
+      errors: errors.default,
+      commands: commands.default,
+    }
+  },
 }
 
 const pendingLoads = new Map<Language, Promise<LocaleResources>>()

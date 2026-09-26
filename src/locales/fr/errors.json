@@ -1,0 +1,101 @@
+{
+  "undo": {
+    "eventDeleted": "Événement supprimé",
+    "contactDeleted": "Contact supprimé"
+  },
+  "sync": {
+    "eventSyncRetry": "Échec de la synchronisation de l’événement avec le serveur CalDAV. Une nouvelle tentative sera effectuée.",
+    "deletionSyncRetry": "Échec de la synchronisation de la suppression. Une nouvelle tentative sera effectuée.",
+    "eventRestoreFailed": "Échec de la restauration de l’événement.",
+    "duplicateSyncRetry": "Échec de la synchronisation de l’événement dupliqué. Une nouvelle tentative sera effectuée.",
+    "genericSyncRetry": "Échec de la synchronisation avec le serveur CalDAV. Une nouvelle tentative sera effectuée.",
+    "deletionSyncRetryGeneric": "Échec de la synchronisation de la suppression avec le serveur CalDAV. Une nouvelle tentative sera effectuée.",
+    "occurrenceDeleteFailed": "Échec de la suppression de cette occurrence. L’événement a été conservé.",
+    "seriesDeleteFailed": "Échec de la suppression de cet événement et des suivants. La série a été conservée.",
+    "settingsSaved": "Paramètres enregistrés sur le serveur.",
+    "settingsSyncEnabled": "Synchronisation des paramètres activée.",
+    "settingsFoundEnabled": "Paramètres Calino détectés — synchronisation activée.",
+    "settingsCalendarFoundEnabled": "Calendrier des paramètres Calino détecté — synchronisation activée.",
+    "settingsFoundEnabledAuto": "Paramètres Calino détectés — synchronisation activée automatiquement.",
+    "shortFailure": "Échec de {{subject}} : {{reason}}",
+    "subjectDefault": "Synchronisation"
+  },
+  "syncReason": {
+    "cors": "votre serveur bloque la connexion (CORS).",
+    "network": "impossible de joindre votre serveur. Il est peut-être hors ligne ou bloque les requêtes CORS.",
+    "timeout": "le serveur a mis trop de temps à répondre.",
+    "auth": "erreur d’authentification. Vérifiez votre nom d’utilisateur et votre mot de passe.",
+    "forbidden": "le serveur a refusé la modification. Vous n’avez peut-être pas l’autorisation d’écrire dans ce calendrier, ou le serveur a rejeté les données.",
+    "quota": "l’espace de stockage du serveur est saturé. Libérez de l’espace sur le serveur et réessayez.",
+    "rateLimited": "le serveur limite le nombre de requêtes. Réessayez dans un instant.",
+    "notFound": "la ressource est introuvable sur le serveur.",
+    "conflict": "cet élément a été modifié sur le serveur. Relancez la synchronisation pour récupérer sa version la plus récente.",
+    "server": "le serveur a renvoyé une erreur. Consultez ses journaux."
+  },
+  "connection": {
+    "corsOrNetwork": "Impossible de joindre le serveur. Vérifiez son adresse ; il est peut-être hors ligne ou bloque les requêtes inter-origines.",
+    "timeout": "Le serveur a mis trop de temps à répondre.",
+    "auth": "Le serveur a refusé ces identifiants.",
+    "forbidden": "Le serveur a refusé la requête. Vérifiez que vous avez l’autorisation d’écrire dans ce calendrier.",
+    "quota": "L’espace de stockage du serveur est saturé. Libérez de l’espace sur le serveur et réessayez.",
+    "rateLimited": "Le serveur limite le nombre de requêtes. Réessayez dans un instant.",
+    "notFound": "Le serveur a répondu, mais aucune ressource ne se trouve à cette adresse. Vérifiez le chemin de l’URL.",
+    "server": "Le serveur a renvoyé une erreur. Consultez ses journaux.",
+    "badStatus": "Le serveur a renvoyé le statut {{status}}",
+    "failedGeneric": "Échec de la connexion : {{message}}. Il peut s’agir d’un problème CORS : le serveur doit autoriser les requêtes inter-origines.",
+    "urlHint": "Pour {{domain}}, essayez de saisir : {{url}}",
+    "unknownError": "Erreur inconnue",
+    "fastmailAuthHint": "Fastmail a refusé ces identifiants. Pour CalDAV, Fastmail exige un mot de passe spécifique à l’application ; votre mot de passe habituel ne fonctionnera pas. Créez-en un dans Settings → Privacy & Security → Integrations → New App Password (accordez-lui l’accès « Calendars (CalDAV) »), puis utilisez votre adresse e-mail comme nom d’utilisateur et ce mot de passe."
+  },
+  "broken": {
+    "foundEvents_one": "1 événement comporte des dates non valides.",
+    "foundEvents_other": "{{count}} événements comportent des dates non valides.",
+    "foundDuplicateUids_one": "Un groupe d’événements partage un identifiant en double sur votre serveur.",
+    "foundDuplicateUids_other": "{{count}} groupes d’événements partagent un identifiant en double sur votre serveur."
+  },
+  "reminder": {
+    "allDay": "Toute la journée",
+    "startingToday": "Commence aujourd’hui",
+    "startingAt": "Commence à {{time}}",
+    "startingTomorrow": "Commence demain",
+    "startingTomorrowAt": "Commence demain à {{time}}",
+    "startingOn": "Commence le {{date}}",
+    "startingOnAt": "Commence le {{date}} à {{time}}",
+    "snooze5m": "Répéter dans 5 min",
+    "testNotificationTitle": "Notification de test",
+    "testNotificationBody": "Les notifications fonctionnent ! Il est actuellement {{time}}"
+  },
+  "settingsSync": {
+    "notConfigured": "Synchronisation mal configurée",
+    "calendarNotFound": "Calendrier des paramètres introuvable",
+    "accountNotFound": "Compte introuvable",
+    "credentialsNotFound": "Identifiants introuvables",
+    "pullFailed": "Échec de la récupération",
+    "pushFailed": "Échec de l’envoi",
+    "noCalendarsFound": "Aucun calendrier trouvé",
+    "enableFailed": "Échec de l’activation de la synchronisation",
+    "autoDiscoveryFailed": "Échec de la détection automatique",
+    "subject": "Synchronisation des paramètres"
+  },
+  "pending": {
+    "event": "événement",
+    "thisEvent": "cet événement",
+    "staleEtagUpdateConflict": "Impossible d’enregistrer « {{title}} » : il a été modifié sur le serveur alors que cette modification était en attente. Votre version est enregistrée localement.",
+    "staleEtagDeleteConflict": "Impossible de supprimer « {{title}} » : il a été modifié sur le serveur alors que cette suppression était en attente. L’événement reste sur le serveur.",
+    "moveFailedWithCalendar": "Impossible de déplacer « {{title}} » vers {{calendar}}. Il se trouve peut-être encore dans son ancien calendrier.",
+    "moveFailedNoCalendar": "Impossible de déplacer « {{title}} ». Il se trouve peut-être encore dans son ancien calendrier.",
+    "moveCleanupPending": "« {{title}} » a été déplacé, mais l’ancienne copie dans {{calendar}} n’a pas encore pu être supprimée. Nouvelle tentative en cours.",
+    "staleCopyWithCalendar": "Impossible de supprimer l’ancienne copie de l’événement déplacé dans {{calendar}}. Elle peut apparaître en double ; supprimez le doublon manuellement.",
+    "staleCopyNoCalendar": "Impossible de supprimer l’ancienne copie de l’événement déplacé. Elle peut apparaître en double ; supprimez le doublon manuellement."
+  },
+  "account": {
+    "couldNotConnect": "Impossible de se connecter avec ces paramètres"
+  },
+  "headless": {
+    "accountCredentialsMissing": "Compte {{account}} ignoré : identifiants manquants",
+    "calendarFailed": "Échec du calendrier {{calendar}} : {{error}}",
+    "accountFailed": "Échec du compte {{account}} : {{error}}",
+    "noCalendarsFetched": "Aucun calendrier récupéré ; le miroir est conservé tel quel",
+    "syncDone": "Synchronisation en arrière-plan terminée : {{events}} événements dans {{calendars}} calendriers de {{accounts}} compte(s)"
+  }
+}

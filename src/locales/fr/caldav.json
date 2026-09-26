@@ -1,0 +1,18 @@
+{
+  "progress": {
+    "checkingConnection": "Vérification de la connexion…",
+    "lookingForCalendars": "Recherche des calendriers…",
+    "savingAccount": "Enregistrement du compte…",
+    "syncingEvents": "Synchronisation des événements…",
+    "checkingForContacts": "Recherche des contacts…",
+    "importingCalendar": "Importation de {{name}}…",
+    "downloadingCalendars_one": "Téléchargement des événements de {{count}} calendrier…",
+    "downloadingCalendars_other": "Téléchargement des événements de {{count}} calendriers…",
+    "savingEvent": "Enregistrement de l’événement…",
+    "savingEvents": "Enregistrement des événements…",
+    "deletingEvent": "Suppression de l’événement…",
+    "creatingCalendar": "Création du calendrier…",
+    "savingCalendar": "Enregistrement du calendrier…",
+    "deletingCalendar": "Suppression du calendrier…"
+  }
+}

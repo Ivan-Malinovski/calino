@@ -23,7 +23,7 @@ test.describe('language settings', () => {
     await page.getByRole('button', { name: 'Tilføj kalender', exact: true }).first().click()
     await page.getByRole('button', { name: 'Tilføj CalDAV-konto', exact: true }).click()
     await expect(
-      page.getByRole('dialog').getByRole('heading', { name: 'Tilføj CalDAV-kalender', exact: true })
+      page.getByRole('dialog').getByRole('heading', { name: 'Tilføj CalDAV-konto', exact: true })
     ).toBeVisible()
     await page.keyboard.press('Escape')
 
@@ -47,5 +47,25 @@ test.describe('language settings', () => {
     const mobileSwitcher = page.locator('[data-component="nav-pill-switcher"]')
     await expect(mobileSwitcher.getByRole('button', { name: 'Måned', exact: true })).toBeVisible()
     await expect(mobileSwitcher.getByRole('button', { name: 'Uge', exact: true })).toBeVisible()
+  })
+
+  test('loads and persists each added interface language', async ({ page }) => {
+    await page.goto('/settings')
+
+    const language = page.locator('[data-setting="language"]')
+    const selector = language.getByRole('combobox')
+    const englishAriaLabel = await selector.getAttribute('aria-label')
+    expect(englishAriaLabel).toBeTruthy()
+
+    for (const code of ['es', 'fr', 'it', 'nl']) {
+      await selector.selectOption(code)
+      await expect(language).toHaveAttribute('data-value', code)
+      await expect(page.locator('html')).toHaveAttribute('lang', code)
+      await expect.poll(() => selector.getAttribute('aria-label')).not.toBe(englishAriaLabel)
+    }
+
+    await page.reload()
+    await expect(page.locator('[data-setting="language"]')).toHaveAttribute('data-value', 'nl')
+    await expect(page.locator('html')).toHaveAttribute('lang', 'nl')
   })
 })

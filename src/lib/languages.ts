@@ -4,7 +4,7 @@ import type { Language } from '@/types'
  * UI languages Calino ships catalogs for. `en` is the source of truth and the
  * fallback for any key a translation is missing.
  */
-export const SUPPORTED_LANGUAGES = ['en', 'da', 'de'] as const
+export const SUPPORTED_LANGUAGES = ['en', 'da', 'de', 'es', 'fr', 'it', 'nl'] as const
 
 export const FALLBACK_LANGUAGE: Language = 'en'
 
@@ -17,12 +17,14 @@ export const LANGUAGE_OPTIONS: { value: Language; label: string }[] = [
   { value: 'en', label: 'English' },
   { value: 'da', label: 'Dansk' },
   { value: 'de', label: 'Deutsch' },
+  { value: 'es', label: 'Español' },
+  { value: 'fr', label: 'Français' },
+  { value: 'it', label: 'Italiano' },
+  { value: 'nl', label: 'Nederlands' },
 ]
 
 export function isSupportedLanguage(value: unknown): value is Language {
-  return (
-    typeof value === 'string' && (SUPPORTED_LANGUAGES as readonly string[]).includes(value)
-  )
+  return typeof value === 'string' && (SUPPORTED_LANGUAGES as readonly string[]).includes(value)
 }
 
 /**
@@ -44,9 +46,7 @@ export function normalizeLanguage(tag: string | undefined | null): Language | nu
 export function getBrowserLanguage(): Language {
   try {
     const candidates =
-      typeof navigator !== 'undefined'
-        ? [...(navigator.languages ?? []), navigator.language]
-        : []
+      typeof navigator !== 'undefined' ? [...(navigator.languages ?? []), navigator.language] : []
     for (const candidate of candidates) {
       const match = normalizeLanguage(candidate)
       if (match) return match

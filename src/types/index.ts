@@ -313,7 +313,7 @@ export interface CalendarActions {
 export type CalendarStore = CalendarState & CalendarActions
 
 /** UI language. See `src/lib/languages.ts` for the shipped catalogs. */
-export type Language = 'en' | 'da' | 'de'
+export type Language = 'en' | 'da' | 'de' | 'es' | 'fr' | 'it' | 'nl'
 export type DateFormat = 'MM/dd/yyyy' | 'dd/MM/yyyy' | 'yyyy-MM-dd'
 export type TimeFormat = '12h' | '24h'
 export type FirstDayOfWeek = 0 | 1 | 2 | 3 | 4 | 5 | 6

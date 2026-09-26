@@ -33,6 +33,34 @@ const resourceLoaders: Record<Language, () => Promise<HeadlessResources>> = {
     ])
     return { common: common.default, errors: errors.default }
   },
+  es: async () => {
+    const [common, errors] = await Promise.all([
+      import('@/locales/es/common.json'),
+      import('@/locales/es/errors.json'),
+    ])
+    return { common: common.default, errors: errors.default }
+  },
+  fr: async () => {
+    const [common, errors] = await Promise.all([
+      import('@/locales/fr/common.json'),
+      import('@/locales/fr/errors.json'),
+    ])
+    return { common: common.default, errors: errors.default }
+  },
+  it: async () => {
+    const [common, errors] = await Promise.all([
+      import('@/locales/it/common.json'),
+      import('@/locales/it/errors.json'),
+    ])
+    return { common: common.default, errors: errors.default }
+  },
+  nl: async () => {
+    const [common, errors] = await Promise.all([
+      import('@/locales/nl/common.json'),
+      import('@/locales/nl/errors.json'),
+    ])
+    return { common: common.default, errors: errors.default }
+  },
 }
 
 function readPersistedLanguage(): Language {

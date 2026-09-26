@@ -1,0 +1,18 @@
+{
+  "progress": {
+    "checkingConnection": "Verbinding controleren…",
+    "lookingForCalendars": "Agenda’s zoeken…",
+    "savingAccount": "Account opslaan…",
+    "syncingEvents": "Gebeurtenissen synchroniseren…",
+    "checkingForContacts": "Contacten controleren…",
+    "importingCalendar": "{{name}} importeren…",
+    "downloadingCalendars_one": "Gebeurtenissen downloaden van {{count}} agenda…",
+    "downloadingCalendars_other": "Gebeurtenissen downloaden van {{count}} agenda’s…",
+    "savingEvent": "Gebeurtenis opslaan…",
+    "savingEvents": "Gebeurtenissen opslaan…",
+    "deletingEvent": "Gebeurtenis verwijderen…",
+    "creatingCalendar": "Agenda maken…",
+    "savingCalendar": "Agenda opslaan…",
+    "deletingCalendar": "Agenda verwijderen…"
+  }
+}
