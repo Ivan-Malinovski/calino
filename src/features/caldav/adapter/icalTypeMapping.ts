@@ -1052,6 +1052,9 @@ export function calendarEventToIcalComponent(
       endDateObj.getDate()
     )
     vevent.updatePropertyWithValue('dtend', endDate)
+    // RFC 5545 forbids DTEND and DURATION on the same VEVENT. In patch mode,
+    // an existing component may still carry DURATION from another client.
+    vevent.removeAllProperties('duration')
     // An event converted from timed to all-day must not keep the old TZID:
     // RFC 5545 §3.3.4 forbids it on a DATE value.
     vevent.getFirstProperty('dtstart')?.removeParameter('tzid')
@@ -1064,6 +1067,7 @@ export function calendarEventToIcalComponent(
     vevent.updatePropertyWithValue('dtstart', startTime)
     const endTime = createIcalDateTime(event.end, event.timezone)
     vevent.updatePropertyWithValue('dtend', endTime)
+    vevent.removeAllProperties('duration')
 
     for (const name of ['dtstart', 'dtend']) {
       const prop = vevent.getFirstProperty(name)

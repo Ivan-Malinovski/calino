@@ -348,8 +348,9 @@ END:VCALENDAR`,
     occurrence.setUTCHours(15, 20, 0, 0)
     const formatIcal = (date: Date) => date.toISOString().replace(/[-:]/g, '').replace('.000', '')
     const calendarUrl = `${baseURL}/mock-caldav/dav/calendars/user/personal/`
+    const nextWeek = new Date(occurrence.getTime() + 7 * 24 * 60 * 60 * 1000)
     await page.request.put(`${calendarUrl}atomic-series.ics`, {
-      data: `BEGIN:VCALENDAR\r\nVERSION:2.0\r\nBEGIN:VEVENT\r\nUID:atomic-series\r\nDTSTART:${formatIcal(occurrence)}\r\nDTEND:${formatIcal(new Date(occurrence.getTime() + 3000000))}\r\nRRULE:FREQ=WEEKLY\r\nSUMMARY:Atomic recurring master\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n`,
+      data: `BEGIN:VCALENDAR\r\nVERSION:2.0\r\nBEGIN:VEVENT\r\nUID:atomic-series\r\nDTSTART:${formatIcal(occurrence)}\r\nDURATION:PT50M\r\nRRULE:FREQ=WEEKLY\r\nSUMMARY:Atomic recurring master\r\nEND:VEVENT\r\nBEGIN:VEVENT\r\nUID:atomic-series\r\nRECURRENCE-ID:${formatIcal(nextWeek)}\r\nDTSTART:${formatIcal(nextWeek)}\r\nDTEND:${formatIcal(new Date(nextWeek.getTime() + 3000000))}\r\nSUMMARY:Existing override\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n`,
     })
 
     await page.goto('/month')
@@ -386,9 +387,13 @@ END:VCALENDAR`,
         async () => (await reportCalendar(page, calendarUrl)).match(/UID:atomic-series/g)?.length ?? 0,
         { timeout: 15_000 }
       )
-      .toBe(2)
+      .toBe(3)
 
     const body = await reportCalendar(page, calendarUrl)
+    for (const vevent of body.split('BEGIN:VEVENT').slice(1)) {
+      const component = vevent.split('END:VEVENT')[0]
+      expect(component.includes('DTEND') && component.includes('DURATION')).toBe(false)
+    }
     // Since #126 an override carries its zone, so the property is written as
     // `RECURRENCE-ID;TZID=<zone>:` rather than the bare `RECURRENCE-ID:` this
     // used to match. Accept either form — what matters is that the override
@@ -422,8 +427,12 @@ END:VCALENDAR`,
     // one occurrence. The dialog only appears for a master/series.
     await expect(importedOverride).toBeHidden()
 
+    await expect
+      .poll(async () => (await reportCalendar(page, calendarUrl)).match(/UID:atomic-series/g)?.length ?? 0, {
+        timeout: 15_000,
+      })
+      .toBe(2)
     const bodyAfterDelete = await reportCalendar(page, calendarUrl)
-    expect(bodyAfterDelete.match(/UID:atomic-series/g)).toHaveLength(1)
     expect(bodyAfterDelete).not.toContain('SUMMARY:Atomic recurring override')
     expect(bodyAfterDelete).toContain('EXDATE:')
   })

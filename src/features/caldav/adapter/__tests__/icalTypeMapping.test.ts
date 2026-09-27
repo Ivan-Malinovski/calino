@@ -953,6 +953,31 @@ describe('calendarEventToIcalComponent patch mode', () => {
     expect(patched.getFirstProperty('dtstart')?.getParameter('tzid')).toBeFalsy()
     expect(patched.getFirstProperty('dtend')?.getParameter('tzid')).toBeFalsy()
   })
+
+  it.each([
+    ['timed', 'DTSTART:20260310T100000Z', 'DURATION:PT1H'],
+    ['all-day', 'DTSTART;VALUE=DATE:20260310', 'DURATION:P1D'],
+  ])('replaces DURATION with DTEND when patching a %s event', (_kind, start, duration) => {
+    const { patched } = patch(
+      [
+        'BEGIN:VCALENDAR',
+        'VERSION:2.0',
+        'BEGIN:VEVENT',
+        'UID:duration-series',
+        start,
+        duration,
+        'RRULE:FREQ=WEEKLY;COUNT=3',
+        'SUMMARY:Duration series',
+        'END:VEVENT',
+        'END:VCALENDAR',
+      ].join('\r\n'),
+      (event) => ({ ...event, title: 'Edited duration series' })
+    )
+
+    expect(patched.getFirstProperty('dtend')).toBeTruthy()
+    expect(patched.getAllProperties('duration')).toHaveLength(0)
+    expect(patched.getFirstPropertyValue('rrule')).toBeTruthy()
+  })
 })
 
 // ---------------------------------------------------------------------------
