@@ -1,4 +1,4 @@
-import type { JSX } from 'react'
+import type { CSSProperties, JSX } from 'react'
 import React, { useMemo, useState, useRef, useCallback, useEffect, useLayoutEffect } from 'react'
 import { useNavigate } from 'react-router'
 import { AnimatePresence, motion } from 'framer-motion'
@@ -93,6 +93,17 @@ const gridDelta = (key: string): number | null =>
           : null
 
 const DEFAULT_MONTH_AGENDA_GRID_RATIO = 0.4
+
+// A fragment that owns its week's title lets the text overflow into the next
+// day cells. The card wrapper's transform makes it a stacking context, so the
+// card's own z-index can't lift it; raise the wrapper above later day cells.
+const fragmentTitleWrapperStyle = (
+  event: CalendarEvent,
+  isWeekStart: boolean
+): CSSProperties | undefined =>
+  event.isFragment && (event.isFirstFragment || isWeekStart)
+    ? { position: 'relative', zIndex: 2 }
+    : undefined
 
 // Shared by the button and span forms of the journal indicator (see the
 // compact-mobile branch in DroppableDay).
@@ -1822,6 +1833,7 @@ const DroppableDay = React.memo(function DroppableDay({
                   .map((event) => (
                     <motion.div
                       key={event.id}
+                      style={fragmentTitleWrapperStyle(event, isWeekStart)}
                       variants={eventCardVariants}
                       initial={monthChangeMotion.initial ? false : cardInitial}
                       animate="animate"
@@ -1953,6 +1965,7 @@ const DroppableDay = React.memo(function DroppableDay({
                   return (
                     <motion.div
                       key={event.id}
+                      style={fragmentTitleWrapperStyle(event, isWeekStart)}
                       // What the capacity hook measures a row of this shape
                       // by. Tagged with what actually rendered, not with the
                       // prediction, so a promoted single (forced compact to
