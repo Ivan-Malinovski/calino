@@ -33,7 +33,11 @@
       "createEvent": "Opret begivenhed",
       "createTask": "Opret opgave",
       "sometimeThisWeek": "Engang i denne uge",
-      "weekTaskRange": "{{start}} – {{due}}"
+      "weekTaskRange": "{{start}} – {{due}}",
+      "addWeekTask": "Tilføj en opgave til denne uge",
+      "addWeekTaskDetails": "Flere valgmuligheder",
+      "quickAddPlaceholder": "Tilføj til denne uge…",
+      "noTaskCalendar": "Ingen kalender tilgængelig til opgaver"
     },
     "day": {
       "backToAgenda": "Tilbage til dagsorden"
@@ -400,6 +404,14 @@
       "save": "Gem",
       "create": "Opret",
       "needsDueDate": "skal have en forfaldsdato",
+      "taskStartDate": "Startdato",
+      "sometimeThisWeek": "Denne uge",
+      "addStartDate": "Tilføj start",
+      "clearStartDate": "Fjern start",
+      "startMustBeBeforeDue": "Start skal være før forfaldsdatoen.",
+      "startSpansWeek": "Spænder over 3+ dage, så den vises under “En gang i denne uge” i ugevisningen.",
+      "startSpansShort": "Under {{days}} dage, så den vises på forfaldsdagen.",
+      "startDateCannotRepeat": "opgaver med en startdato kan ikke gentages",
       "subtasksCannotRepeat": "underopgaver kan ikke gentages",
       "tasksWithSubtasksCannotRepeat": "opgaver med underopgaver kan ikke gentages"
     }

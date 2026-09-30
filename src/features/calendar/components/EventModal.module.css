@@ -1025,6 +1025,39 @@
   align-items: center;
 }
 
+/* Parent task takes what is left; Priority is a short list, so it stays narrow. */
+.row .priorityField {
+  flex: 0 0 130px;
+}
+
+/* One line: dates, then the start-date buttons. Wraps only when a start date
+   plus a due time leave no room, rather than squeezing the inputs. */
+.row.taskDateRow {
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+
+.row .taskDateField {
+  flex: 0 1 132px;
+  min-width: 118px;
+}
+
+.row .taskDateField .input {
+  min-width: 0;
+}
+
+.row .taskDateButtons {
+  flex: 0 0 auto;
+  flex-direction: row;
+  gap: 8px;
+}
+
+.row .taskDateButtons .secondaryButton {
+  height: 32px;
+  padding: 0 10px;
+  white-space: nowrap;
+}
+
 .field {
   display: flex;
   flex-direction: column;
@@ -1123,8 +1156,17 @@
     grid-template-columns: 1fr;
   }
 
-  .addSubtaskField .secondaryButton {
+  .addSubtaskField .secondaryButton,
+  .taskDateButtons .secondaryButton {
     height: 44px;
+  }
+
+  .row .priorityField {
+    flex: 0 0 110px;
+  }
+
+  .row .taskDateField {
+    flex: 1 1 140px;
   }
 
   /* On mobile "Due time" is a native <input type="time">, whose intrinsic

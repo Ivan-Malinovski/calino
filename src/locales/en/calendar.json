@@ -33,7 +33,11 @@
       "createEvent": "Create event",
       "createTask": "Create task",
       "sometimeThisWeek": "Sometime this week",
-      "weekTaskRange": "{{start}} – {{due}}"
+      "weekTaskRange": "{{start}} – {{due}}",
+      "addWeekTask": "Add a task for this week",
+      "addWeekTaskDetails": "More options",
+      "quickAddPlaceholder": "Add for this week…",
+      "noTaskCalendar": "No calendar available for tasks"
     },
     "day": {
       "backToAgenda": "Back to agenda"
@@ -501,6 +505,14 @@
       "save": "Save",
       "create": "Create",
       "needsDueDate": "needs a due date",
+      "taskStartDate": "Start date",
+      "sometimeThisWeek": "This week",
+      "addStartDate": "Add start",
+      "clearStartDate": "Clear start",
+      "startMustBeBeforeDue": "Start must be before the due date.",
+      "startSpansWeek": "Spans 3+ days, so it shows under “Sometime this week” in the week view.",
+      "startSpansShort": "Under {{days}} days, so it shows on its due day.",
+      "startDateCannotRepeat": "tasks with a start date can't repeat",
       "subtasksCannotRepeat": "subtasks cannot repeat",
       "tasksWithSubtasksCannotRepeat": "tasks with subtasks cannot repeat"
     }

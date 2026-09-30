@@ -33,7 +33,11 @@
       "createEvent": "Crear evento",
       "createTask": "Crear tarea",
       "sometimeThisWeek": "En algún momento de esta semana",
-      "weekTaskRange": "{{start}} – {{due}}"
+      "weekTaskRange": "{{start}} – {{due}}",
+      "addWeekTask": "Añadir una tarea para esta semana",
+      "addWeekTaskDetails": "Más opciones",
+      "quickAddPlaceholder": "Añadir a esta semana…",
+      "noTaskCalendar": "No hay calendario disponible para tareas"
     },
     "day": {
       "backToAgenda": "Volver a la agenda"
@@ -505,6 +509,14 @@
       "save": "Guardar",
       "create": "Crear",
       "needsDueDate": "necesita una fecha de vencimiento",
+      "taskStartDate": "Fecha de inicio",
+      "sometimeThisWeek": "Esta semana",
+      "addStartDate": "Añadir inicio",
+      "clearStartDate": "Quitar inicio",
+      "startMustBeBeforeDue": "El inicio debe ser anterior al vencimiento.",
+      "startSpansWeek": "Abarca 3+ días, así que aparece en «En algún momento de esta semana» en la vista semanal.",
+      "startSpansShort": "Menos de {{days}} días, así que aparece en su día de vencimiento.",
+      "startDateCannotRepeat": "las tareas con fecha de inicio no pueden repetirse",
       "subtasksCannotRepeat": "las subtareas no pueden ser recurrentes",
       "tasksWithSubtasksCannotRepeat": "las tareas con subtareas no pueden ser recurrentes"
     }

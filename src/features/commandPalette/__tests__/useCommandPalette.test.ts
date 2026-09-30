@@ -43,6 +43,7 @@ vi.mock('@/store/calendarStore', () => ({
       selectedEndDate: null,
       initialTitle: null,
       initialCalendarId: null,
+      initialTaskStartDate: null,
       subtaskParentId: null,
       pendingEventPrefill: null,
       importQueue: [],

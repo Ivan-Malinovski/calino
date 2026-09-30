@@ -33,7 +33,11 @@
       "createEvent": "Termin erstellen",
       "createTask": "Aufgabe erstellen",
       "sometimeThisWeek": "Irgendwann diese Woche",
-      "weekTaskRange": "{{start}} – {{due}}"
+      "weekTaskRange": "{{start}} – {{due}}",
+      "addWeekTask": "Aufgabe für diese Woche hinzufügen",
+      "addWeekTaskDetails": "Weitere Optionen",
+      "quickAddPlaceholder": "Zu dieser Woche hinzufügen…",
+      "noTaskCalendar": "Kein Kalender für Aufgaben verfügbar"
     },
     "day": {
       "backToAgenda": "Zur Agenda"
@@ -400,6 +404,14 @@
       "save": "Speichern",
       "create": "Erstellen",
       "needsDueDate": "needs a due date",
+      "taskStartDate": "Startdatum",
+      "sometimeThisWeek": "Diese Woche",
+      "addStartDate": "Start hinzufügen",
+      "clearStartDate": "Start entfernen",
+      "startMustBeBeforeDue": "Der Start muss vor dem Fälligkeitsdatum liegen.",
+      "startSpansWeek": "Umfasst 3+ Tage und erscheint daher in der Wochenansicht unter „Irgendwann diese Woche“.",
+      "startSpansShort": "Weniger als {{days}} Tage, daher erscheint sie am Fälligkeitstag.",
+      "startDateCannotRepeat": "Aufgaben mit Startdatum können sich nicht wiederholen",
       "subtasksCannotRepeat": "subtasks cannot repeat",
       "tasksWithSubtasksCannotRepeat": "tasks with subtasks cannot repeat"
     }

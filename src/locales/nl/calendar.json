@@ -33,7 +33,11 @@
       "createEvent": "Gebeurtenis maken",
       "createTask": "Taak maken",
       "sometimeThisWeek": "Ergens deze week",
-      "weekTaskRange": "{{start}} – {{due}}"
+      "weekTaskRange": "{{start}} – {{due}}",
+      "addWeekTask": "Taak voor deze week toevoegen",
+      "addWeekTaskDetails": "Meer opties",
+      "quickAddPlaceholder": "Toevoegen voor deze week…",
+      "noTaskCalendar": "Geen agenda beschikbaar voor taken"
     },
     "day": {
       "backToAgenda": "Terug naar agenda"
@@ -505,6 +509,14 @@
       "save": "Opslaan",
       "create": "Maken",
       "needsDueDate": "heeft een vervaldatum nodig",
+      "taskStartDate": "Startdatum",
+      "sometimeThisWeek": "Deze week",
+      "addStartDate": "Start toevoegen",
+      "clearStartDate": "Start wissen",
+      "startMustBeBeforeDue": "De start moet voor de deadline liggen.",
+      "startSpansWeek": "Beslaat 3+ dagen, dus staat onder “Ergens deze week” in de weekweergave.",
+      "startSpansShort": "Minder dan {{days}} dagen, dus staat op de deadline.",
+      "startDateCannotRepeat": "taken met een startdatum kunnen niet herhaald worden",
       "subtasksCannotRepeat": "subtaken kunnen niet worden herhaald",
       "tasksWithSubtasksCannotRepeat": "taken met subtaken kunnen niet worden herhaald"
     }

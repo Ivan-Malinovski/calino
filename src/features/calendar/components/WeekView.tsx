@@ -33,7 +33,7 @@ import type { CalendarEvent } from '@/types'
 import { useCalendarStore, getTasksForDay } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
 import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
-import { isWeekScopedTask, weekScopedTasksInRange } from '@/lib/weekTasks'
+import { isWeekScopedTask, weekRangeKeys, weekScopedTasksInRange } from '@/lib/weekTasks'
 import { WeekTasksBar } from './WeekTasksBar'
 import { safeCalDAVUpdate } from '@/lib/caldavHelpers'
 import { EventCard } from './EventCard'
@@ -743,6 +743,11 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
         new Set(calendars.filter((c) => c.isVisible).map((c) => c.id))
       ),
     [events, calendars, rangeStart, rangeEnd, rangeExpansionVersion]
+  )
+
+  const weekKeys = useMemo(
+    () => weekRangeKeys(format(weekDays[0] ?? displayDate, 'yyyy-MM-dd'), firstDayOfWeek),
+    [weekDays, displayDate, firstDayOfWeek]
   )
 
   const bodyRef = useRef<HTMLDivElement>(null)
@@ -1457,7 +1462,7 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
         {...bind}
       >
         {isMobile ? renderMobileContent() : renderDesktopContent()}
-        <WeekTasksBar tasks={weekScopedTasks} />
+        <WeekTasksBar tasks={weekScopedTasks} weekStartKey={weekKeys.startKey} weekEndKey={weekKeys.dueKey} />
       </div>
       <DragOverlay dropAnimation={null}>
         {activeEvent ? <EventCard event={activeEvent} isDragging /> : null}

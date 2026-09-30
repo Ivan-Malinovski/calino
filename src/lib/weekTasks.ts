@@ -1,4 +1,4 @@
-import { differenceInCalendarDays, format } from 'date-fns'
+import { differenceInCalendarDays, endOfWeek, format, parseISO, startOfWeek } from 'date-fns'
 import type { CalendarEvent } from '@/types'
 import { toEventInstant } from '@/lib/datetime'
 
@@ -63,4 +63,25 @@ export function weekScopedTasksInRange(
       a.task.title.localeCompare(b.task.title)
   )
   return scoped.map((entry) => entry.task)
+}
+
+/**
+ * The first and last day (`yyyy-MM-dd`) of the week containing `dateKey`,
+ * the range a "sometime this week" task is stored with.
+ */
+export function weekRangeKeys(
+  dateKey: string,
+  firstDayOfWeek: number
+): { startKey: string; dueKey: string } {
+  const weekStartsOn = (firstDayOfWeek || 0) as 0 | 1 | 2 | 3 | 4 | 5 | 6
+  const day = parseISO(dateKey.split('T')[0])
+  return {
+    startKey: format(startOfWeek(day, { weekStartsOn }), 'yyyy-MM-dd'),
+    dueKey: format(endOfWeek(day, { weekStartsOn }), 'yyyy-MM-dd'),
+  }
+}
+
+/** Inclusive number of calendar days from `startKey` to `dueKey`. */
+export function taskSpanDays(startKey: string, dueKey: string): number {
+  return differenceInCalendarDays(parseISO(dueKey), parseISO(startKey)) + 1
 }

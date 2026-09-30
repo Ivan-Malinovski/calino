@@ -10,6 +10,7 @@ import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
 import { showToast } from '@/lib/toast'
 import { safeCalDAVUpdate } from '@/lib/caldavHelpers'
 import { buildRRuleString } from '@/lib/recurrence'
+import { taskDayRange } from '@/lib/weekTasks'
 import { hasRecurrenceChanged } from '@/lib/recurrenceComparison'
 import { findEventById } from '@/lib/events'
 import { buildMasterTruncation } from '@/lib/recurrenceSplit'
@@ -74,6 +75,7 @@ export function EventModal(): JSX.Element | null {
   const selectedEndDate = useCalendarStore((state) => state.selectedEndDate)
   const initialTitle = useCalendarStore((state) => state.initialTitle)
   const initialCalendarId = useCalendarStore((state) => state.initialCalendarId)
+  const initialTaskStartDate = useCalendarStore((state) => state.initialTaskStartDate)
   const subtaskParentId = useCalendarStore((state) => state.subtaskParentId)
   const pendingEventPrefill = useCalendarStore((state) => state.pendingEventPrefill)
   const selectedEventType = useCalendarStore((state) => state.selectedEventType)
@@ -292,6 +294,8 @@ export function EventModal(): JSX.Element | null {
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [isModalOpen])
   const [dueDate, setDueDate] = useState<string>('')
+  // Optional first day of a multi-day task; '' means the task has no start.
+  const [taskStartDate, setTaskStartDate] = useState<string>('')
   const [dueTime, setDueTime] = useState<string>('09:00')
   const [dueAllDay, setDueAllDay] = useState(true)
   const [completed, setCompleted] = useState(false)
@@ -589,6 +593,11 @@ export function EventModal(): JSX.Element | null {
         )
         setDueTime(taskTime !== '00:00' ? taskTime : '09:00')
         setDueAllDay(existingEvent.isAllDay ?? true)
+        // Only a plain task keeps a start; a recurring series' DTSTART is its
+        // anchor, not a range start.
+        const range =
+          existingEvent.rruleString || existingEvent.recurrence ? null : taskDayRange(existingEvent)
+        setTaskStartDate(range?.startKey ?? '')
         setCompleted(existingEvent.completed || false)
         setPriority(existingEvent.priority)
       } else if (currentSelectedEventType === 'task') {
@@ -609,10 +618,12 @@ export function EventModal(): JSX.Element | null {
             : undefined
         setDueTime(prefillTime || '09:00')
         setDueAllDay(!prefillTime)
+        setTaskStartDate(initialTaskStartDate ?? '')
         setCompleted(false)
         setPriority(undefined)
       } else {
         setDueDate('')
+        setTaskStartDate('')
         seededDueDateRef.current = ''
         setDueTime('09:00')
         setDueAllDay(true)
@@ -628,6 +639,7 @@ export function EventModal(): JSX.Element | null {
     selectedEndDate,
     subtaskParentId,
     initialCalendarId,
+    initialTaskStartDate,
   ])
 
   // Auto-focus title input when creating a new event. On mobile this waits
@@ -798,7 +810,15 @@ export function EventModal(): JSX.Element | null {
         ? t('modals.eventModal.subtasksCannotRepeat')
         : directSubtasks.length > 0
           ? t('modals.eventModal.tasksWithSubtasksCannotRepeat')
-          : undefined
+          : taskStartDate
+            ? t('modals.eventModal.startDateCannotRepeat')
+            : undefined
+  // The start that is actually saved: only a day strictly before the due day
+  // makes a range, and only for a task that does not repeat.
+  const effectiveTaskStart =
+    isTaskMode && dueDate && taskStartDate && taskStartDate < dueDate.split('T')[0]
+      ? taskStartDate
+      : ''
   const recurrenceAllowed = !isTaskMode || !taskRecurrenceDisabledReason
 
   const hasChanges = useMemo(() => {
@@ -834,7 +854,9 @@ export function EventModal(): JSX.Element | null {
     if (isTaskMode) {
       const taskTime = dueAllDay ? '00:00:00' : `${dueTime}:00`
       const taskDueDate = dueDate ? (dueAllDay ? dueDate : `${dueDate}T${taskTime}`) : undefined
-      const currentStart = dueDate ? `${dueDate}T${taskTime}` : existingEventForMode.start
+      const currentStart = dueDate
+        ? `${effectiveTaskStart || dueDate}T${taskTime}`
+        : existingEventForMode.start
       return (
         title !== existingEventForMode.title ||
         description !== (existingEventForMode.description || '') ||
@@ -897,6 +919,7 @@ export function EventModal(): JSX.Element | null {
     endTime,
     isAllDay,
     dueDate,
+    effectiveTaskStart,
     dueTime,
     dueAllDay,
     completed,
@@ -1343,7 +1366,9 @@ export function EventModal(): JSX.Element | null {
                 format(parseISO(masterForSeries.start), 'yyyy-MM-dd')
               : dueDate
           const eventStart =
-            isTaskMode && seriesDueDate ? `${seriesDueDate}T${taskTime}` : startDateTime
+            isTaskMode && seriesDueDate
+              ? `${effectiveTaskStart || seriesDueDate}T${taskTime}`
+              : startDateTime
           const eventEnd =
             isTaskMode && seriesDueDate ? `${seriesDueDate}T${taskEndTime}` : endDateTime
           // Include time in dueDate for non-all-day tasks so we can display it
@@ -1473,7 +1498,8 @@ export function EventModal(): JSX.Element | null {
           }
         }
       } else {
-        const eventStart = isTaskMode && dueDate ? `${dueDate}T${taskTime}` : startDateTime
+        const eventStart =
+          isTaskMode && dueDate ? `${effectiveTaskStart || dueDate}T${taskTime}` : startDateTime
         const eventEnd = isTaskMode && dueDate ? `${dueDate}T${taskEndTime}` : endDateTime
         // Include time in dueDate for non-all-day tasks so we can display it
         const taskDueDate =
@@ -1731,8 +1757,13 @@ export function EventModal(): JSX.Element | null {
                     dueDate={dueDate}
                     onDueDateChange={(date) => {
                       setDueDate(date)
-                      if (!date) setDueAllDay(true)
+                      if (!date) {
+                        setDueAllDay(true)
+                        setTaskStartDate('')
+                      }
                     }}
+                    startDate={taskStartDate}
+                    onStartDateChange={setTaskStartDate}
                     dueTime={dueTime}
                     onDueTimeChange={setDueTime}
                     dueAllDay={dueAllDay}

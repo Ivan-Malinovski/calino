@@ -33,7 +33,11 @@
       "createEvent": "Crea evento",
       "createTask": "Crea attività",
       "sometimeThisWeek": "In un momento di questa settimana",
-      "weekTaskRange": "{{start}} – {{due}}"
+      "weekTaskRange": "{{start}} – {{due}}",
+      "addWeekTask": "Aggiungi un'attività per questa settimana",
+      "addWeekTaskDetails": "Altre opzioni",
+      "quickAddPlaceholder": "Aggiungi a questa settimana…",
+      "noTaskCalendar": "Nessun calendario disponibile per le attività"
     },
     "day": {
       "backToAgenda": "Torna all’agenda"
@@ -505,6 +509,14 @@
       "save": "Salva",
       "create": "Crea",
       "needsDueDate": "richiede una data di scadenza",
+      "taskStartDate": "Data di inizio",
+      "sometimeThisWeek": "Questa settimana",
+      "addStartDate": "Aggiungi inizio",
+      "clearStartDate": "Rimuovi inizio",
+      "startMustBeBeforeDue": "L'inizio deve precedere la scadenza.",
+      "startSpansWeek": "Copre 3+ giorni, quindi compare sotto «Quando vuoi questa settimana» nella vista settimanale.",
+      "startSpansShort": "Meno di {{days}} giorni, quindi compare nel giorno di scadenza.",
+      "startDateCannotRepeat": "le attività con una data di inizio non possono ripetersi",
       "subtasksCannotRepeat": "le sottoattività non possono essere ricorrenti",
       "tasksWithSubtasksCannotRepeat": "le attività con sottoattività non possono essere ricorrenti"
     }

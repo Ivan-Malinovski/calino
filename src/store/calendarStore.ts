@@ -528,6 +528,7 @@ export const useCalendarStore = create<CalendarStore>()(
       selectedEndDate: null,
       initialTitle: null,
       initialCalendarId: null,
+      initialTaskStartDate: null,
       subtaskParentId: null,
       pendingEventPrefill: null,
       importQueue: [],
@@ -1268,7 +1269,8 @@ export const useCalendarStore = create<CalendarStore>()(
         mode?: EventType,
         initialTitle?: string,
         parentTaskId?: string,
-        initialCalendarId?: string
+        initialCalendarId?: string,
+        initialTaskStartDate?: string
       ): void => {
         set({
           isModalOpen: true,
@@ -1278,6 +1280,7 @@ export const useCalendarStore = create<CalendarStore>()(
           selectedEventType: mode ?? 'event',
           initialTitle: initialTitle ?? null,
           initialCalendarId: initialCalendarId ?? null,
+          initialTaskStartDate: initialTaskStartDate ?? null,
           subtaskParentId: parentTaskId ?? null,
         })
       },
@@ -1303,6 +1306,7 @@ export const useCalendarStore = create<CalendarStore>()(
             selectedEventType: next.kind ?? 'event',
             initialTitle: null,
             initialCalendarId: null,
+            initialTaskStartDate: null,
             subtaskParentId: null,
           })
           return
@@ -1314,6 +1318,7 @@ export const useCalendarStore = create<CalendarStore>()(
           selectedEndDate: null,
           initialTitle: null,
           initialCalendarId: null,
+          initialTaskStartDate: null,
           subtaskParentId: null,
           selectedEventType: 'event',
         })
@@ -1343,6 +1348,7 @@ export const useCalendarStore = create<CalendarStore>()(
           selectedEventType: first.kind ?? 'event',
           initialTitle: null,
           initialCalendarId: null,
+          initialTaskStartDate: null,
           subtaskParentId: null,
         })
       },

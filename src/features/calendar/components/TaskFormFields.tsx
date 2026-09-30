@@ -1,7 +1,8 @@
 import type { JSX } from 'react'
 import { useLayoutEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { format } from 'date-fns'
+import { format, parseISO, subDays } from 'date-fns'
+import { WEEK_TASK_MIN_DAYS, taskSpanDays, weekRangeKeys } from '@/lib/weekTasks'
 import type { CalendarEvent, TaskPriority } from '@/types'
 import type { TaskTreeItem } from '@/lib/taskTree'
 import { TaskCollapseToggle } from './TaskCollapseToggle'
@@ -20,6 +21,9 @@ interface TaskFormFieldsProps {
   onDueTimeChange: (time: string) => void
   dueAllDay: boolean
   onDueAllDayChange: (checked: boolean) => void
+  /** First day of a multi-day task, or '' for none. */
+  startDate: string
+  onStartDateChange: (date: string) => void
   priority: TaskPriority | undefined
   onPriorityChange: (priority: TaskPriority | undefined) => void
   parentTaskId?: string
@@ -85,6 +89,8 @@ export function TaskFormFields({
   onDueTimeChange,
   dueAllDay,
   onDueAllDayChange,
+  startDate,
+  onStartDateChange,
   priority,
   onPriorityChange,
   parentTaskId,
@@ -142,6 +148,31 @@ export function TaskFormFields({
     }
     if (!hasDueDate) onDueDateChange(format(new Date(), 'yyyy-MM-dd'))
     onDueAllDayChange(mode === 'dateOnly')
+  }
+
+  const dueDay = dueDate.split('T')[0]
+  // A repeating task's DTSTART is its recurrence anchor, not a range start.
+  const canHaveStart = !recurrenceProps?.recurring
+  const hasStart = canHaveStart && startDate.length > 0
+  const startInvalid = hasStart && hasDueDate && startDate >= dueDay
+  const startSpan = hasStart && hasDueDate && !startInvalid ? taskSpanDays(startDate, dueDay) : 0
+
+  const handleAddStartDate = (): void => {
+    // Default to the day before the due date so the new field is a valid range.
+    const due = hasDueDate ? dueDay : format(new Date(), 'yyyy-MM-dd')
+    if (!hasDueDate) {
+      onDueDateChange(due)
+      onDueAllDayChange(true)
+    }
+    onStartDateChange(format(subDays(parseISO(due), 1), 'yyyy-MM-dd'))
+  }
+
+  const handleSometimeThisWeek = (): void => {
+    const base = hasDueDate ? dueDay : format(new Date(), 'yyyy-MM-dd')
+    const { startKey, dueKey } = weekRangeKeys(base, firstDayOfWeek)
+    onStartDateChange(startKey)
+    onDueDateChange(dueKey)
+    onDueAllDayChange(true)
   }
 
   return (
@@ -204,6 +235,28 @@ export function TaskFormFields({
             {parentTasks.map((task) => (
               <option key={task.id} value={task.id}>
                 {task.title}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className={`${styles.field} ${styles.priorityField}`}>
+          <label className={styles.label} htmlFor="priority-select">
+            Priority
+          </label>
+          <select
+            id="priority-select"
+            value={priority ?? ''}
+            onChange={(e) =>
+              onPriorityChange(
+                e.target.value ? (Number(e.target.value) as TaskPriority) : undefined
+              )
+            }
+            className={styles.select}
+          >
+            {PRIORITY_OPTIONS.map((option) => (
+              <option key={option.label} value={option.value ?? ''}>
+                {option.label}
               </option>
             ))}
           </select>
@@ -276,10 +329,25 @@ export function TaskFormFields({
         </div>
       )}
 
-      <div className={styles.row}>
+      <div className={`${styles.row} ${styles.taskDateRow}`} data-component="task-dates">
+        {hasStart && (
+          <div className={`${styles.field} ${styles.taskDateField}`}>
+            <label className={styles.label} htmlFor="task-start-date">
+              {t('modals.eventModal.taskStartDate')}
+            </label>
+            <input
+              type="date"
+              id="task-start-date"
+              value={startDate}
+              max={hasDueDate ? dueDay : undefined}
+              onChange={(e) => onStartDateChange(e.target.value)}
+              className={styles.input}
+            />
+          </div>
+        )}
         {hasDueDate && (
           <>
-            <div className={`${styles.field} ${styles.dueDateField}`}>
+            <div className={`${styles.field} ${styles.taskDateField}`}>
               <label className={styles.label} htmlFor="due-date">
                 Due date
               </label>
@@ -312,28 +380,48 @@ export function TaskFormFields({
           </>
         )}
 
-        <div className={styles.field}>
-          <label className={styles.label} htmlFor="priority-select">
-            Priority
-          </label>
-          <select
-            id="priority-select"
-            value={priority ?? ''}
-            onChange={(e) =>
-              onPriorityChange(
-                e.target.value ? (Number(e.target.value) as TaskPriority) : undefined
-              )
-            }
-            className={styles.select}
-          >
-            {PRIORITY_OPTIONS.map((option) => (
-              <option key={option.label} value={option.value ?? ''}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </div>
+        {canHaveStart && (
+          <div className={`${styles.field} ${styles.taskDateButtons}`}>
+            <button
+              type="button"
+              className={styles.secondaryButton}
+              onClick={handleSometimeThisWeek}
+              data-component="task-sometime-this-week"
+            >
+              {t('modals.eventModal.sometimeThisWeek')}
+            </button>
+            {hasStart ? (
+              <button
+                type="button"
+                className={styles.secondaryButton}
+                onClick={() => onStartDateChange('')}
+                data-component="task-clear-start"
+              >
+                {t('modals.eventModal.clearStartDate')}
+              </button>
+            ) : (
+              <button
+                type="button"
+                className={styles.secondaryButton}
+                onClick={handleAddStartDate}
+                data-component="task-add-start"
+              >
+                {t('modals.eventModal.addStartDate')}
+              </button>
+            )}
+          </div>
+        )}
       </div>
+
+      {hasStart && (
+        <div className={styles.helperText} data-component="task-start-hint">
+          {startInvalid
+            ? t('modals.eventModal.startMustBeBeforeDue')
+            : startSpan >= WEEK_TASK_MIN_DAYS
+              ? t('modals.eventModal.startSpansWeek')
+              : t('modals.eventModal.startSpansShort', { days: WEEK_TASK_MIN_DAYS })}
+        </div>
+      )}
 
       {recurrenceProps && (
         <div data-component="task-recurrence">

@@ -193,6 +193,8 @@ export interface CalendarState {
   selectedEndDate: string | null
   initialTitle: string | null
   initialCalendarId: string | null
+  /** Start day (`yyyy-MM-dd`) a new task opens with, for a multi-day task. */
+  initialTaskStartDate: string | null
   subtaskParentId: string | null
   pendingEventPrefill: ExtractedEventFields | null
   /**
@@ -295,7 +297,8 @@ export interface CalendarActions {
     mode?: EventType,
     initialTitle?: string,
     parentTaskId?: string,
-    initialCalendarId?: string
+    initialCalendarId?: string,
+    initialTaskStartDate?: string
   ) => void
   closeModal: () => void
   setPendingEventPrefill: (fields: ExtractedEventFields | null) => void

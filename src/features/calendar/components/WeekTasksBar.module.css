@@ -99,6 +99,57 @@
   opacity: 0.6;
 }
 
+/* The always-there entry: a round "+" that opens the task form, and a ghost
+   pill to type straight into. Same 21px pill geometry as the task pills. */
+.add {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.addButton {
+  flex: none;
+  width: 21px;
+  height: 21px;
+  padding: 0;
+  border: 1px dashed var(--line-strong, rgba(var(--ink-raw), 0.25));
+  border-radius: 50%;
+  background: none;
+  color: var(--muted, rgba(var(--ink-raw), 0.55));
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.addButton:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.addButton:focus-visible,
+.addInput:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.addInput {
+  box-sizing: border-box;
+  width: 180px;
+  height: 21px;
+  padding: 0 10px;
+  border: 1px dashed var(--line-strong, rgba(var(--ink-raw), 0.25));
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  line-height: 15px;
+}
+
+.addInput::placeholder {
+  color: var(--muted, rgba(var(--ink-raw), 0.55));
+}
+
 @media (max-width: 768px) {
   .bar {
     flex-direction: column;
