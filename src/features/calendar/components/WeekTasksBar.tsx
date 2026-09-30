@@ -64,6 +64,11 @@ export function WeekTasksBar({ tasks }: WeekTasksBarProps): JSX.Element | null {
               className={`${styles.pill} ${task.completed ? styles.done : ''}`}
               title={tooltip}
               data-component="week-task-pill"
+              style={
+                calendar?.color
+                  ? ({ '--event-color': calendar.color } as React.CSSProperties)
+                  : undefined
+              }
               data-testid={`week-task-${task.id}`}
               data-week-start={format(toEventInstant(task.start, task.timezone), 'yyyy-MM-dd')}
             >

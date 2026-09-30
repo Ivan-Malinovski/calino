@@ -31,6 +31,8 @@
 }
 
 .pill {
+  /* Geometry shared with task pills in the grid and headers
+     (EventCard.module.css, .task.monthView). Keep the two in step. */
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -38,12 +40,43 @@
   padding: 3px 10px 3px 6px;
   border: 1px solid var(--line, rgba(var(--ink-raw), 0.09));
   border-radius: 999px;
+  background: var(--panel, transparent);
   font-size: 13px;
 }
 
 .check {
   flex: none;
+  appearance: none;
+  width: 15px;
+  height: 15px;
   margin: 0;
+  border: 1.6px solid color-mix(in srgb, var(--event-color, var(--accent)) 60%, var(--ink-3));
+  border-radius: 50%;
+  background: transparent center / 11px no-repeat;
+  cursor: pointer;
+  transition:
+    background-color var(--dur-fast),
+    border-color var(--dur-fast);
+}
+
+.check:hover:not(:disabled) {
+  border-color: var(--event-color, var(--accent));
+}
+
+.check:checked {
+  border-color: var(--event-color, var(--accent));
+  background-color: var(--event-color, var(--accent));
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E");
+}
+
+.check:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.check:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
 }
 
 .title {

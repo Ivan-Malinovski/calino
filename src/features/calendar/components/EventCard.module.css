@@ -705,6 +705,43 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Pill look for tasks in the month grid and the week/day header, matching the
+   "Sometime this week" bar: an outlined capsule with a round checkbox. Dot mode
+   (dense/mobile month) keeps its own compact rendering. */
+.task.monthView:not(.dot) {
+  border: 1px solid var(--line, rgba(var(--ink-raw), 0.09));
+  border-radius: 999px;
+  background: var(--panel, transparent);
+}
+
+.task.monthView:not(.dot) .taskCheckbox {
+  left: 6px;
+  border-radius: 50%;
+}
+
+/* Geometry shared with the "Sometime this week" pills (WeekTasksBar.module.css):
+   3px/10px padding, 15px checkbox inset 6px, 6px gap, 13px/1.5 regular title.
+   Keep the two in step. The trailing 22px is only reserved when the pill
+   carries a subtask disclosure. */
+.task.monthView:not(.dot) {
+  min-height: 0;
+  padding: 3px 10px 3px 8px;
+}
+
+.task.monthView:not(.dot):has(.cardTaskCollapseToggle) {
+  padding-right: 22px;
+}
+
+.task.monthView:not(.dot) .dragContent {
+  padding-left: 19px;
+}
+
+.task.monthView:not(.dot) .title {
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.5;
+}
+
 /* Task pills in the month-view day cell are always .compact for layout
    (hides location/travel time, drops the resize handle), which also shrinks
    the title and leaves the due-date font smaller than a non-compact event's
