@@ -37,22 +37,23 @@
   align-items: center;
   gap: 6px;
   max-width: 260px;
-  padding: 3px 10px 3px 6px;
+  padding: 2px 10px 2px 6px;
   border: 1px solid var(--line, rgba(var(--ink-raw), 0.09));
   border-radius: 999px;
   background: var(--panel, transparent);
   font-size: 13px;
+  line-height: 15px;
 }
 
 .check {
   flex: none;
   appearance: none;
-  width: 15px;
-  height: 15px;
+  width: 13px;
+  height: 13px;
   margin: 0;
   border: 1.6px solid color-mix(in srgb, var(--event-color, var(--accent)) 60%, var(--ink-3));
   border-radius: 50%;
-  background: transparent center / 11px no-repeat;
+  background: transparent center / 9px no-repeat;
   cursor: pointer;
   transition:
     background-color var(--dur-fast),

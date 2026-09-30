@@ -716,16 +716,23 @@
 
 .task.monthView:not(.dot) .taskCheckbox {
   left: 6px;
+  width: 13px;
+  height: 13px;
   border-radius: 50%;
 }
 
+.task.monthView:not(.dot) .taskCheckbox svg {
+  width: 9px;
+  height: 9px;
+}
+
 /* Geometry shared with the "Sometime this week" pills (WeekTasksBar.module.css):
-   3px/10px padding, 15px checkbox inset 6px, 6px gap, 13px/1.5 regular title.
+   2px/10px padding, 13px checkbox inset 6px, 6px gap, 13px/15px regular title.
    Keep the two in step. The trailing 22px is only reserved when the pill
    carries a subtask disclosure. */
 .task.monthView:not(.dot) {
   min-height: 0;
-  padding: 3px 10px 3px 8px;
+  padding: 2px 10px 2px 8px;
 }
 
 .task.monthView:not(.dot):has(.cardTaskCollapseToggle) {
@@ -733,13 +740,16 @@
 }
 
 .task.monthView:not(.dot) .dragContent {
-  padding-left: 19px;
+  padding-left: 17px;
 }
 
 .task.monthView:not(.dot) .title {
   font-size: 13px;
   font-weight: 400;
-  line-height: 1.5;
+  /* Whole pixels: with 2px padding this makes the pill 21px tall (no taller
+     than an event pill), so the text and the 13px checkbox centre on whole
+     pixels at any zoom. */
+  line-height: 15px;
 }
 
 /* Task pills in the month-view day cell are always .compact for layout
