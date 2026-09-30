@@ -210,6 +210,9 @@ export function EventPreviewPopup({
   const [editLocation, setEditLocation] = useState(event.location || '')
   const [editDescription, setEditDescription] = useState(event.description || '')
   const [hasChanges, setHasChanges] = useState(false)
+  // Opening the time editor seeds the fields from the event, so their values
+  // alone can't tell a deliberate time edit from one that was only opened.
+  const [timeTouched, setTimeTouched] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [showRecurrenceDialog, setShowRecurrenceDialog] = useState(false)
   const [pendingUpdates, setPendingUpdates] = useState<Partial<CalendarEvent> | null>(null)
@@ -329,17 +332,25 @@ export function EventPreviewPopup({
       // toZoneWallClock (calendarStore.updateEvent), exactly like EventModal.
       // Timezone-less events store UTC instants, so toISOString is correct
       // there too. All-day writes stay floating date strings (no conversion).
+      //
+      // Giving an all-day event a time makes it a timed event (issue #190);
+      // the all-day flag used to survive, so the event kept rendering as
+      // all-day until it was unticked in the full modal. The instants are
+      // written like any timed event's, not as floating dates.
+      const becomesTimed = event.isAllDay && timeTouched
+      const keepsFloating = event.isAllDay && !becomesTimed
+      if (becomesTimed) updates.isAllDay = false
       const originalDate = format(instantFor(effectiveStart), 'yyyy-MM-dd')
       const dateToUse = editDate || originalDate
       const startTime = editTime || format(instantFor(effectiveStart), 'HH:mm')
       const endTime = editEndTime || format(instantFor(effectiveEnd), 'HH:mm')
-      updates.start = event.isAllDay
+      updates.start = keepsFloating
         ? `${dateToUse}T${startTime}:00`
         : new Date(`${dateToUse}T${startTime}:00`).toISOString()
 
       const originalEndDate = format(instantFor(effectiveEnd), 'yyyy-MM-dd')
       const endDateToUse = editEndDate || originalEndDate
-      updates.end = event.isAllDay
+      updates.end = keepsFloating
         ? `${endDateToUse}T${endTime}:00`
         : new Date(`${endDateToUse}T${endTime}:00`).toISOString()
 
@@ -442,7 +453,7 @@ export function EventPreviewPopup({
           location: pendingUpdates.location ?? event.location,
           start: pendingUpdates.start ?? effectiveStart,
           end: pendingUpdates.end ?? effectiveEnd,
-          isAllDay: event.isAllDay,
+          isAllDay: pendingUpdates.isAllDay ?? event.isAllDay,
           calendarId: event.calendarId,
           // A detached override carries no rule of its own, and none of the
           // master's EXDATEs.
@@ -507,7 +518,7 @@ export function EventPreviewPopup({
         location: pendingUpdates.location ?? masterEvent.location,
         start: pendingUpdates.start ?? effectiveStart,
         end: pendingUpdates.end ?? effectiveEnd,
-        isAllDay: masterEvent.isAllDay,
+        isAllDay: pendingUpdates.isAllDay ?? masterEvent.isAllDay,
         recurrence: newSeriesRecurrence,
         rruleString: newSeriesRrule,
         // The truncation EXDATEs belong to the old master only.
@@ -578,6 +589,7 @@ export function EventPreviewPopup({
     setEditEndDate('')
     setEditTime('')
     setEditEndTime('')
+    setTimeTouched(false)
     setEditLocation(event.location || '')
     setEditDescription(event.description || '')
     setEditingField(null)
@@ -588,6 +600,11 @@ export function EventPreviewPopup({
   useEffect(() => {
     cancelEditingRef.current = cancelEditing
   }, [cancelEditing])
+
+  const saveChangesRef = useRef(saveChanges)
+  useEffect(() => {
+    saveChangesRef.current = saveChanges
+  })
 
   // Escape cancels an in-progress field edit, otherwise dismisses the popup.
   useEffect(() => {
@@ -621,6 +638,7 @@ export function EventPreviewPopup({
     } else if (field === 'endDate') {
       setEditEndDate(value)
     } else if (field === 'time') {
+      setTimeTouched(true)
       // Issue #60: preserve the existing event duration. Compute the
       // (endTime - startTime) delta in minutes and apply it to the new start.
       // Falls back to defaultDuration from settings when the existing duration
@@ -633,7 +651,9 @@ export function EventPreviewPopup({
         const oldStart = new Date(`${startDate}T${editTime || '00:00'}:00`)
         const oldEnd = new Date(`${endDate}T${editEndTime || editTime || '00:00'}:00`)
         const oldDuration = (oldEnd.getTime() - oldStart.getTime()) / 60000
-        const minutes = oldDuration > 0 ? oldDuration : defaultDuration
+        // An all-day span (00:00 to the next midnight) says nothing about how
+        // long the event lasts once it has a time.
+        const minutes = oldDuration > 0 && !event.isAllDay ? oldDuration : defaultDuration
         const newEndInstant = new Date(`${startDate}T${value}:00`)
         newEndInstant.setTime(newEndInstant.getTime() + minutes * 60000)
         setEditEndDate(format(newEndInstant, 'yyyy-MM-dd'))
@@ -641,6 +661,7 @@ export function EventPreviewPopup({
       }
       setEditTime(value)
     } else if (field === 'endTime') {
+      setTimeTouched(true)
       setEditEndTime(value)
     } else if (field === 'location') {
       setEditLocation(value)
@@ -865,9 +886,11 @@ export function EventPreviewPopup({
             // TimeInput blurs itself on Enter (committing the draft), which
             // doesn't reach the backdrop's save-on-outside-click path — save
             // explicitly here so Enter behaves the same as it does for every
-            // other field in this popup.
+            // other field in this popup. The commit lands in state only after
+            // this handler returns, so save from the next render's closure
+            // rather than this one, or the typed time is lost (issue #190).
             if (e.key === 'Enter') {
-              saveChanges()
+              setTimeout(() => void saveChangesRef.current(), 0)
             }
           }}
         >

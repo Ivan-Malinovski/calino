@@ -236,8 +236,10 @@ test.describe('timezone correctness through the UI', () => {
       'aria-selected',
       'true'
     )
+    // Enter commits the highlighted value and saves it (issue #190).
     await startTime.press('Enter')
-    await expect(startTime).toHaveValue('04:45')
+    await expect(startTime).toBeHidden()
+    await expect(preview).toContainText('04:45')
   })
 
   test('a cross-midnight TZID event stays on a single device day', async ({ page }) => {
