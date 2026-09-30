@@ -347,6 +347,14 @@ test('large subtask trees collapse with a chevron across task views', async ({ p
       .filter({ hasText: 'Collapse parent' })
       .last()
     await expect(parent).toBeVisible()
+    if (route === '/month') {
+      // Month cards are too small for inline subtasks; they open a popup instead
+      // and never reflect the shared expansion setting.
+      await expect(parent.locator('[data-component="task-subtasks-popup-trigger"]')).toBeVisible()
+      await expect(parent.locator('[data-component="task-collapse-toggle"]')).toHaveCount(0)
+      await expect(page.getByText('Collapse child one')).not.toBeVisible()
+      return
+    }
     const toggle = parent.locator('[data-component="task-collapse-toggle"]')
     await expect(toggle).toBeVisible()
     await expect(toggle.locator('svg')).toBeVisible()
@@ -363,20 +371,23 @@ test('large subtask trees collapse with a chevron across task views', async ({ p
 
   await page.goto('/month')
   await assertTaskState('/month', false)
+
+  // The setting is shared by the inline task surfaces, so the expansion made in
+  // the day view is immediately visible in the agenda. (The week view's all-day
+  // header pills carry no disclosure toggle, so it is not covered here.)
+  await page.goto('/day')
+  await assertTaskState('/day', false)
   await page
     .locator('[data-component="event-card"]')
     .filter({ hasText: 'Collapse parent' })
     .last()
     .locator('[data-component="task-collapse-toggle"]')
     .click()
-  await assertTaskState('/month', true)
-
-  // The setting is shared by all task surfaces, so the expansion made in the
-  // month view is immediately visible in the week view.
-  await page.goto('/week')
-  await assertTaskState('/week', true)
+  await assertTaskState('/day', true)
+  await page.goto('/agenda')
+  await assertTaskState('/agenda', true)
   await page
-    .locator('[data-component="event-card"]')
+    .locator('[data-component="agenda-task"]')
     .filter({ hasText: 'Collapse parent' })
     .last()
     .locator('[data-component="task-collapse-toggle"]')
@@ -491,7 +502,7 @@ test.describe('mobile task surfaces', () => {
     const childCard = page.locator('[data-component="event-card"][aria-label^="Mobile child"]')
     await expect(parentCard).toBeVisible()
     await expect(childCard).toHaveAttribute('aria-label', /subtask/i)
-    await expect(parentCard.locator('[data-component="task-collapse-toggle"]')).toBeVisible()
+    await expect(parentCard.locator('[data-component="task-subtasks-popup-trigger"]')).toBeVisible()
 
     // Compact mobile month cards are intentionally density indicators and pass
     // taps through to the day cell. Use the week surface for the preview check,

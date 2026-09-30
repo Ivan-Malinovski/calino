@@ -8,6 +8,19 @@ function localDate(offset = 0): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 }
 
+/**
+ * A day to move items to. The agenda only renders the month being viewed, so
+ * on the last day of a month "tomorrow" is not on the page at all; use the
+ * day before instead. That day already holds the seeded UTC-instant task
+ * ("Agenda dragged task") in most time zones, which is why `dragToDate` drops
+ * on the top edge of a day's zone: the middle of it can be a task row, and a
+ * drop there would make a subtask instead of moving the day.
+ */
+function otherDate(): string {
+  const tomorrow = localDate(1)
+  return tomorrow.slice(0, 7) === localDate().slice(0, 7) ? tomorrow : localDate(-1)
+}
+
 async function seedAgendaItems(page: Page): Promise<void> {
   const today = localDate()
   await page.addInitScript(
@@ -144,7 +157,7 @@ async function dragToDate(page: Page, title: string, date: string): Promise<void
   const sourceX = sourceBox.x + sourceBox.width / 2
   const sourceY = sourceBox.y + sourceBox.height / 2
   const targetX = targetBox.x + targetBox.width / 2
-  const targetY = targetBox.y + targetBox.height / 2
+  const targetY = targetBox.y + Math.min(targetBox.height / 2, 12)
   await page.mouse.move(sourceX, sourceY)
   await page.mouse.down()
   await page.mouse.move(sourceX + 12, sourceY, { steps: 3 })
@@ -192,7 +205,7 @@ test('agenda indents subtasks and moves tasks and events between days', async ({
   await page.goto('/agenda')
 
   const today = localDate()
-  const tomorrow = localDate(1)
+  const otherDay = otherDate()
   const parentBody = page
     .locator('[data-component="agenda-task"]')
     .filter({ hasText: 'Agenda parent' })
@@ -225,8 +238,8 @@ test('agenda indents subtasks and moves tasks and events between days', async ({
     )
     .toBe('agenda-parent')
 
-  await dragToDate(page, 'Agenda event', tomorrow)
-  await dragToDate(page, 'Agenda task', tomorrow)
+  await dragToDate(page, 'Agenda event', otherDay)
+  await dragToDate(page, 'Agenda task', otherDay)
 
   await expect
     .poll(async () =>
@@ -246,8 +259,8 @@ test('agenda indents subtasks and moves tasks and events between days', async ({
       })
     )
     .toEqual([
-      { id: 'agenda-event', start: tomorrow },
-      { id: 'agenda-task', dueDate: tomorrow, parentTaskId: undefined },
+      { id: 'agenda-event', start: otherDay },
+      { id: 'agenda-task', dueDate: otherDay, parentTaskId: undefined },
     ])
 
   await expect(page.locator(`[data-date="${today}"]`)).toBeVisible()
@@ -290,9 +303,9 @@ test('agenda lists a subtask under its parent even when it sorts first', async (
 test('agenda shows absent parent chains above their indented subtasks', async ({ page }) => {
   await clearState(page)
   const today = localDate()
-  const tomorrow = localDate(1)
+  const otherDay = otherDate()
   await page.addInitScript(
-    ({ today, tomorrow }) => {
+    ({ today, otherDay }) => {
       localStorage.setItem(
         'calino-storage',
         JSON.stringify({
@@ -313,9 +326,9 @@ test('agenda shows absent parent chains above their indented subtasks', async ({
                 id: 'sibling-parent',
                 title: 'Prepare conference talk',
                 type: 'task',
-                start: `${tomorrow}T00:00:00`,
-                end: `${tomorrow}T00:00:00`,
-                dueDate: tomorrow,
+                start: `${otherDay}T00:00:00`,
+                end: `${otherDay}T00:00:00`,
+                dueDate: otherDay,
                 isAllDay: true,
                 calendarId: 'default',
                 completed: false,
@@ -336,9 +349,9 @@ test('agenda shows absent parent chains above their indented subtasks', async ({
                 id: 'nested-root',
                 title: 'Publish release',
                 type: 'task',
-                start: `${tomorrow}T00:00:00`,
-                end: `${tomorrow}T00:00:00`,
-                dueDate: tomorrow,
+                start: `${otherDay}T00:00:00`,
+                end: `${otherDay}T00:00:00`,
+                dueDate: otherDay,
                 isAllDay: true,
                 calendarId: 'default',
                 completed: false,
@@ -347,9 +360,9 @@ test('agenda shows absent parent chains above their indented subtasks', async ({
                 id: 'nested-parent',
                 title: 'Prepare screenshots',
                 type: 'task',
-                start: `${tomorrow}T00:00:00`,
-                end: `${tomorrow}T00:00:00`,
-                dueDate: tomorrow,
+                start: `${otherDay}T00:00:00`,
+                end: `${otherDay}T00:00:00`,
+                dueDate: otherDay,
                 isAllDay: true,
                 calendarId: 'default',
                 completed: false,
@@ -373,7 +386,7 @@ test('agenda shows absent parent chains above their indented subtasks', async ({
         })
       )
     },
-    { today, tomorrow }
+    { today, otherDay }
   )
 
   await page.goto('/agenda')
@@ -423,7 +436,7 @@ test('agenda shows absent parent chains above their indented subtasks', async ({
   await expect(leaf.locator('[data-task-depth]')).toHaveAttribute('data-task-depth', '2')
 
   const remoteParent = page
-    .locator(`[data-date="${tomorrow}"]`)
+    .locator(`[data-date="${otherDay}"]`)
     .locator('[data-component="agenda-task"]')
     .filter({ hasText: 'Prepare conference talk' })
   await expect(remoteParent.locator('[data-component="task-collapse-toggle"]')).toHaveCount(0)

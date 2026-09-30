@@ -2,21 +2,24 @@ import { test, expect, type Page } from '@playwright/test'
 import { clearState } from './fixtures/localstorage'
 
 async function seedWeekView(page: Page, firstDayOfWeek: 0 | 1 = 1): Promise<void> {
-  await page.addInitScript(({ firstDay }) => {
-    const calendarRaw = localStorage.getItem('calino-storage')
-    const calendar = calendarRaw ? JSON.parse(calendarRaw) : { state: {}, version: 2 }
-    calendar.state = {
-      ...(calendar.state ?? {}),
-      currentDate: '2024-08-17',
-      currentView: 'week',
-    }
-    localStorage.setItem('calino-storage', JSON.stringify(calendar))
+  await page.addInitScript(
+    ({ firstDay }) => {
+      const calendarRaw = localStorage.getItem('calino-storage')
+      const calendar = calendarRaw ? JSON.parse(calendarRaw) : { state: {}, version: 2 }
+      calendar.state = {
+        ...(calendar.state ?? {}),
+        currentDate: '2024-08-17',
+        currentView: 'week',
+      }
+      localStorage.setItem('calino-storage', JSON.stringify(calendar))
 
-    const settingsRaw = localStorage.getItem('calino-settings')
-    const settings = settingsRaw ? JSON.parse(settingsRaw) : { state: {}, version: 1 }
-    settings.state = { ...(settings.state ?? {}), firstDayOfWeek: firstDay }
-    localStorage.setItem('calino-settings', JSON.stringify(settings))
-  }, { firstDay: firstDayOfWeek })
+      const settingsRaw = localStorage.getItem('calino-settings')
+      const settings = settingsRaw ? JSON.parse(settingsRaw) : { state: {}, version: 1 }
+      settings.state = { ...(settings.state ?? {}), firstDayOfWeek: firstDay }
+      localStorage.setItem('calino-settings', JSON.stringify(settings))
+    },
+    { firstDay: firstDayOfWeek }
+  )
 }
 
 function weekTitle(page: Page) {
@@ -67,7 +70,12 @@ test.describe('Week view — sliding window navigation', () => {
     end.setDate(start.getDate() + 6)
     const month = new Intl.DateTimeFormat('en-US', { month: 'short' })
     const dayNumber = new Intl.DateTimeFormat('en-US', { day: 'numeric' })
-    const expected = `${month.format(start)} ${dayNumber.format(start)} – ${dayNumber.format(end)}`
+    // A week that straddles two months names the second month too.
+    const endLabel =
+      start.getMonth() === end.getMonth()
+        ? dayNumber.format(end)
+        : `${month.format(end)} ${dayNumber.format(end)}`
+    const expected = `${month.format(start)} ${dayNumber.format(start)} – ${endLabel}`
     await expect(weekTitle(page)).toHaveText(expected)
   })
 
