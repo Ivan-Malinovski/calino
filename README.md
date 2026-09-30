@@ -37,7 +37,9 @@ Using Pangolin, Cloudflare Access, or a similar gateway in front of your server?
 
 ## Android app
 
-Like Calino in your browser? A native Android app is available with OS-level reminders, background calendar mirroring, and optional BYOK AI photo extraction. The AI provider receives the image and prompt when you choose to use that feature. Find the latest APK in the [GitHub Releases page](https://github.com/Ivan-Malinovski/calino/releases).
+Like Calino in your browser? There's a native, standalone Android app too: [Ivan-Malinovski/calino-android](https://github.com/Ivan-Malinovski/calino-android). It's built from scratch in Kotlin and Jetpack Compose, with no WebView.
+
+This repository also builds a Capacitor-wrapped Android app with OS-level reminders, background calendar mirroring, and optional BYOK AI photo extraction. The AI provider receives the image and prompt when you choose to use that feature. Find the latest APK in the [GitHub Releases page](https://github.com/Ivan-Malinovski/calino/releases).
 
 ---
 
