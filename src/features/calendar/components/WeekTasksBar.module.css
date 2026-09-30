@@ -159,3 +159,8 @@
     gap: 4px;
   }
 }
+
+.dropActive {
+  background: rgba(var(--ink-raw), 0.06);
+  box-shadow: inset 0 0 0 2px var(--accent, #3b82f6);
+}

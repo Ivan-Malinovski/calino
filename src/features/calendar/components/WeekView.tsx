@@ -34,7 +34,7 @@ import { useCalendarStore, getTasksForDay } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
 import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
 import { isWeekScopedTask, weekRangeKeys, weekScopedTasksInRange } from '@/lib/weekTasks'
-import { WeekTasksBar } from './WeekTasksBar'
+import { WeekTasksBar, WEEK_TASKS_DROP_ID } from './WeekTasksBar'
 import { safeCalDAVUpdate } from '@/lib/caldavHelpers'
 import { EventCard } from './EventCard'
 import WeekDayColumn from './WeekDayColumn'
@@ -57,6 +57,8 @@ import {
   snapMinuteOfDay,
   computeDropPreview,
   isSameDropPreview,
+  parseTimeSlotId,
+  pointerMinuteOfDay,
   type DropPreview,
 } from '../lib/dragSnap'
 import { SWIPE_SCROLLER_ATTR } from '../swipePaging'
@@ -202,6 +204,8 @@ const DayHeader = React.memo(function DayHeader({
   return (
     <div
       ref={setNodeRef}
+      data-component="week-day-header"
+      data-date={dayKey}
       className={`${styles.dayHeader} ${isTodayDay ? styles.today : ''} ${allDayEvents.length > 0 ? styles.hasAllDayEvents : ''} ${isOver && activeIsTimed ? styles.dayHeaderDropActive : ''}`}
     >
       <div className={styles.dayName}>{formatDisplayDate(day, 'EEE')}</div>
@@ -287,8 +291,11 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
   // header's reset effect has run.
   const visibleWindowStart =
     dayCount === 7
-      ? weekWindowStart ??
-        format(startOfWeek(parseISO(currentDate), { weekStartsOn: firstDayOfWeek || 0 }), 'yyyy-MM-dd')
+      ? (weekWindowStart ??
+        format(
+          startOfWeek(parseISO(currentDate), { weekStartsOn: firstDayOfWeek || 0 }),
+          'yyyy-MM-dd'
+        ))
       : currentDate
   const visibleWindowDate = useMemo(() => parseISO(visibleWindowStart), [visibleWindowStart])
   const visibleWindowEnd = format(addDays(visibleWindowDate, dayCount - 1), 'yyyy-MM-dd')
@@ -517,6 +524,22 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
     pinchScaleRange: { min: 1, max: 1.5 },
   })
 
+  // Latest pointer height, for drops that snap to the slot under the pointer
+  // (dnd-kit's delta drifts from it when the grid autoscrolls mid-drag).
+  const lastPointerY = useRef(0)
+  useEffect(() => {
+    const track = (e: MouseEvent | TouchEvent): void => {
+      const point = 'touches' in e ? e.touches[0] : e
+      if (point) lastPointerY.current = point.clientY
+    }
+    window.addEventListener('pointermove', track)
+    window.addEventListener('touchmove', track)
+    return () => {
+      window.removeEventListener('pointermove', track)
+      window.removeEventListener('touchmove', track)
+    }
+  }, [])
+
   const sensors = useSensors(
     useSensor(MouseSensor, {
       activationConstraint: { distance: 8 },
@@ -534,6 +557,12 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
   // day-header strip registers), falling back to rect overlap for the hour grid.
   const collisionDetection: CollisionDetection = useCallback((args) => {
     const pointerCollisions = pointerWithin(args)
+    // The day header is sticky, so it sits on top of grid cells scrolled
+    // beneath it: when the pointer is over a header, that is the target.
+    const header = pointerCollisions.find(
+      (c) => String(c.id).startsWith('allday::') || c.id === WEEK_TASKS_DROP_ID
+    )
+    if (header) return [header]
     return pointerCollisions.length > 0 ? pointerCollisions : rectIntersection(args)
   }, [])
 
@@ -544,6 +573,24 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
       activeEvent && !activeEvent.isAllDay
         ? (parseISO(activeEvent.end).getTime() - parseISO(activeEvent.start).getTime()) / 60_000
         : 60
+    if (String(event.active.id).endsWith('::weektask')) {
+      const slot = event.over ? parseTimeSlotId(String(event.over.id)) : null
+      const next =
+        event.over && slot
+          ? {
+              dateKey: slot.dateKey,
+              minuteOfDay: pointerMinuteOfDay(
+                slot.minuteOfDay,
+                lastPointerY.current,
+                event.over.rect.top,
+                event.over.rect.height
+              ),
+              durationMinutes: 60,
+            }
+          : null
+      setDropPreview((prev) => (isSameDropPreview(prev, next) ? prev : next))
+      return
+    }
     const next = computeDropPreview(
       event.active,
       event.over,
@@ -607,12 +654,14 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
   const displayDate = dayCount === 7 ? visibleWindowDate : date
 
   const localTzAbbr = useMemo(
-    () => getTimezoneAbbr(displayDate, timezone || Intl.DateTimeFormat().resolvedOptions().timeZone),
+    () =>
+      getTimezoneAbbr(displayDate, timezone || Intl.DateTimeFormat().resolvedOptions().timeZone),
     [displayDate, timezone]
   )
   const secondaryTzAbbr = useMemo(
     () =>
-      secondaryTimezoneLabel || (secondaryTimezone ? getTimezoneAbbr(displayDate, secondaryTimezone) : ''),
+      secondaryTimezoneLabel ||
+      (secondaryTimezone ? getTimezoneAbbr(displayDate, secondaryTimezone) : ''),
     [displayDate, secondaryTimezone, secondaryTimezoneLabel]
   )
 
@@ -978,6 +1027,66 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
 
     const droppableId = String(over.id)
 
+    // A task card dropped on the footer bar becomes a "sometime this week" task.
+    if (droppableId === WEEK_TASKS_DROP_ID) {
+      const task = events.find((e) => e.id === activeId)
+      if (!task || task.type !== 'task') return
+      if (task.rruleString || task.recurrence || task.recurrenceId || task.occurrenceMasterId) {
+        return
+      }
+      const weekUpdates = {
+        start: `${weekKeys.startKey}T00:00:00`,
+        end: `${weekKeys.dueKey}T23:59:59`,
+        dueDate: weekKeys.dueKey,
+        isAllDay: true,
+      }
+      storeUpdateEvent(activeId, weekUpdates)
+      await safeCalDAVUpdate(
+        caldavUpdateEvent,
+        task.calendarId,
+        { ...task, ...weekUpdates },
+        weekUpdates,
+        'Failed to sync dragged task'
+      )
+      return
+    }
+
+    // A footer pill: the drop day becomes the task's whole range, so it stops
+    // being a "sometime this week" task and lands on that day (at the slot's
+    // hour when dropped on the grid, all-day when dropped on a day header).
+    if (String(active.id).endsWith('::weektask')) {
+      const weekTask = events.find((e) => e.id === activeId)
+      if (!weekTask || weekTask.type !== 'task') return
+      const isHeader = droppableId.startsWith('allday::')
+      const cut = droppableId.lastIndexOf('-')
+      const dayStr = isHeader ? droppableId.slice('allday::'.length) : droppableId.slice(0, cut)
+      const hourStr = isHeader ? '' : droppableId.slice(cut + 1)
+      if (!dayStr || (!isHeader && !hourStr)) return
+      const pointerY = lastPointerY.current
+      const minute = isHeader
+        ? 0
+        : pointerMinuteOfDay(
+            Number(hourStr.split(':')[0]) * 60,
+            pointerY,
+            over.rect.top,
+            over.rect.height
+          )
+      const timeStr = `${String(Math.floor(minute / 60)).padStart(2, '0')}:${String(minute % 60).padStart(2, '0')}`
+      const stamp = isHeader ? `${dayStr}T00:00:00` : `${dayStr}T${timeStr}:00`
+      const taskUpdates = isHeader
+        ? { start: stamp, end: `${dayStr}T23:59:59`, dueDate: dayStr, isAllDay: true }
+        : { start: stamp, end: stamp, dueDate: stamp, isAllDay: false }
+      storeUpdateEvent(activeId, taskUpdates)
+      await safeCalDAVUpdate(
+        caldavUpdateEvent,
+        weekTask.calendarId,
+        { ...weekTask, ...taskUpdates },
+        taskUpdates,
+        'Failed to sync dragged task'
+      )
+      return
+    }
+
     // Dropped on a day header → convert a timed event into an all-day event.
     if (droppableId.startsWith('allday::')) {
       const dayStr = droppableId.slice('allday::'.length)
@@ -1176,7 +1285,9 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
                           }
                           onClick={() => toggleHeaderDay(dayKey)}
                         >
-                          {isExpanded ? t('views.week.less') : t('views.week.moreCount', { count: hiddenCount })}
+                          {isExpanded
+                            ? t('views.week.less')
+                            : t('views.week.moreCount', { count: hiddenCount })}
                         </button>
                       )}
                     </div>
@@ -1462,7 +1573,11 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
         {...bind}
       >
         {isMobile ? renderMobileContent() : renderDesktopContent()}
-        <WeekTasksBar tasks={weekScopedTasks} weekStartKey={weekKeys.startKey} weekEndKey={weekKeys.dueKey} />
+        <WeekTasksBar
+          tasks={weekScopedTasks}
+          weekStartKey={weekKeys.startKey}
+          weekEndKey={weekKeys.dueKey}
+        />
       </div>
       <DragOverlay dropAnimation={null}>
         {activeEvent ? <EventCard event={activeEvent} isDragging /> : null}

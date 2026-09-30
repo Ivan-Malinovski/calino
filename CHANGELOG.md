@@ -4,6 +4,14 @@ All notable changes to Calino will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- **Drag tasks between the week grid and the "Sometime this week" bar.**
+  Drag a pill from the bar onto a day header to make it an all-day task on
+  that day, or onto a time slot to give it that day and time, snapped to the
+  quarter hour. Drag a task from the grid onto the bar to turn it into a
+  task for the whole week.
+
 ## [0.35.0] - 2026-09-30
 
 This release adds Spanish, French, Italian and Dutch, a search bar in

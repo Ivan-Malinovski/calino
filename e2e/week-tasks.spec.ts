@@ -17,6 +17,12 @@ const task = (id: string, title: string, start: string, due: string, extra = {})
   ...extra,
 })
 
+const storedTask = (page: import('@playwright/test').Page, id: string) =>
+  page.evaluate((taskId) => {
+    const raw = JSON.parse(localStorage.getItem('calino-storage') ?? '{}')
+    return raw.state.events.find((e: { id: string }) => e.id === taskId)
+  }, id)
+
 test.describe('Week view: sometime-this-week tasks', () => {
   test.beforeEach(async ({ page }) => {
     await clearState(page)
@@ -157,5 +163,82 @@ test.describe('Week view: sometime-this-week tasks', () => {
     const pill = await bar.locator('[data-component="week-task-pill"]').first().boundingBox()
     const mid = (b: { y: number; height: number }) => b.y + b.height / 2
     expect(Math.abs(mid(label!) - mid(pill!))).toBeLessThan(1)
+  })
+
+  test('dragging a pill onto a day header makes it an all-day task on that day', async ({
+    page,
+  }) => {
+    const pill = page.locator('[data-testid="week-task-week-a"]')
+    const header = page.locator('[data-component="week-day-header"][data-date="2026-10-02"]')
+    const from = (await pill.boundingBox())!
+    const to = (await header.boundingBox())!
+    await page.mouse.move(from.x + 40, from.y + from.height / 2)
+    await page.mouse.down()
+    await page.mouse.move(from.x + 60, from.y - 20, { steps: 5 })
+    await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 15 })
+    await page.mouse.up()
+
+    const bar = page.locator('[data-component="week-tasks-bar"]')
+    await expect(bar.getByText('Call the plumber')).toHaveCount(0)
+    await expect(page.locator('main').getByText('Call the plumber')).toHaveCount(1)
+    await expect.poll(async () => (await storedTask(page, 'week-a')).dueDate).toBe('2026-10-02')
+    expect((await storedTask(page, 'week-a')).start).toBe('2026-10-02T00:00:00')
+  })
+
+  test('dragging a pill onto a time slot gives it that day and hour', async ({ page }) => {
+    const pill = page.locator('[data-testid="week-task-week-a"]')
+    const cell = page.locator('[data-date="2026-10-01"][data-hour="10:00"]')
+    await cell.scrollIntoViewIfNeeded()
+    const from = (await pill.boundingBox())!
+    const to = (await cell.boundingBox())!
+    await page.mouse.move(from.x + 40, from.y + from.height / 2)
+    await page.mouse.down()
+    await page.mouse.move(from.x + 60, from.y - 20, { steps: 5 })
+    await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 15 })
+    await page.mouse.up()
+
+    const bar = page.locator('[data-component="week-tasks-bar"]')
+    await expect(bar.getByText('Call the plumber')).toHaveCount(0)
+    await expect(page.locator('main').getByText('Call the plumber')).toHaveCount(1)
+    await expect
+      .poll(async () => (await storedTask(page, 'week-a')).dueDate)
+      .toBe('2026-10-01T10:30:00')
+    expect((await storedTask(page, 'week-a')).isAllDay).toBe(false)
+  })
+
+  test('dropping on a time slot snaps to the quarter hour under the pointer', async ({ page }) => {
+    const pill = page.locator('[data-testid="week-task-week-a"]')
+    const cell = page.locator('[data-date="2026-10-01"][data-hour="10:00"]')
+    await cell.scrollIntoViewIfNeeded()
+    const from = (await pill.boundingBox())!
+    const to = (await cell.boundingBox())!
+    await page.mouse.move(from.x + 40, from.y + from.height / 2)
+    await page.mouse.down()
+    await page.mouse.move(from.x + 60, from.y - 20, { steps: 5 })
+    await page.mouse.move(to.x + to.width / 2, to.y + to.height * 0.6, { steps: 15 })
+    await page.mouse.up()
+
+    await expect
+      .poll(async () => (await storedTask(page, 'week-a')).dueDate)
+      .toBe('2026-10-01T10:30:00')
+  })
+
+  test('dragging a task from the grid onto the footer makes it a week task', async ({ page }) => {
+    const card = page
+      .locator('[data-component="week-day-header"][data-date="2026-10-01"]')
+      .getByText('Water plants')
+    const bar = page.locator('[data-component="week-tasks-bar"]')
+    const from = (await card.boundingBox())!
+    const to = (await bar.boundingBox())!
+    await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2)
+    await page.mouse.down()
+    await page.mouse.move(from.x + 20, from.y + 30, { steps: 5 })
+    await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 15 })
+    await page.mouse.up()
+
+    await expect(bar.getByText('Water plants')).toHaveCount(1)
+    const stored = await storedTask(page, 'one-day')
+    expect(stored.start).toBe('2026-09-28T00:00:00')
+    expect(stored.dueDate).toBe('2026-10-04')
   })
 })

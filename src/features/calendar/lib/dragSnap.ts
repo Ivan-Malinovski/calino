@@ -63,6 +63,22 @@ export function timedDragStartMinutes(start: string, timezone?: string): number 
 }
 
 /**
+ * Minute-of-day under the pointer, snapped down to a quarter hour within the
+ * hour cell it is over. For drags that start outside the grid (footer pills),
+ * where there is no card start time to offset from.
+ */
+export function pointerMinuteOfDay(
+  slotMinuteOfDay: number,
+  pointerY: number,
+  cellTop: number,
+  cellHeight: number
+): number {
+  const fraction = cellHeight > 0 ? (pointerY - cellTop) / cellHeight : 0
+  const within = Math.max(0, Math.min(59, Math.floor(fraction * 60)))
+  return slotMinuteOfDay + Math.floor(within / MINUTE_SNAP_INTERVAL) * MINUTE_SNAP_INTERVAL
+}
+
+/**
  * Where the dragged card will land, given the cell under the pointer and how
  * far the card has travelled vertically. The cell supplies only the day; the
  * time comes from the drag delta so drops resolve to a quarter hour rather

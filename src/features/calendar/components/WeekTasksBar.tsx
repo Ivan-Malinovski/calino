@@ -1,5 +1,6 @@
 import type { JSX, KeyboardEvent, MouseEvent } from 'react'
 import { useState } from 'react'
+import { useDraggable, useDroppable } from '@dnd-kit/core'
 import { useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
 import { format } from 'date-fns'
@@ -14,6 +15,42 @@ import { useContextMenuStore } from '@/store/contextMenuStore'
 import type { CalendarEvent } from '@/types'
 import { TaskContextMenu } from './TaskContextMenu'
 import styles from './WeekTasksBar.module.css'
+
+/** Droppable id of the bar; WeekView turns a task dropped here into a week task. */
+export const WEEK_TASKS_DROP_ID = 'weektasks-bar'
+
+/**
+ * A pill that can be picked up and dropped on the week grid. The id carries a
+ * `::weektask` suffix (WeekView's drag handlers split on `::`) so it cannot
+ * collide with the same task's card elsewhere.
+ */
+function DraggablePill({
+  task,
+  disabled,
+  children,
+  ...liProps
+}: {
+  task: CalendarEvent
+  disabled: boolean
+  children: React.ReactNode
+} & React.LiHTMLAttributes<HTMLLIElement> &
+  Record<`data-${string}`, string | undefined>): JSX.Element {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: `${task.id}::weektask`,
+    disabled,
+  })
+  return (
+    <li
+      {...liProps}
+      {...attributes}
+      {...listeners}
+      ref={setNodeRef}
+      style={{ ...liProps.style, ...(isDragging ? { opacity: 0.4 } : null) }}
+    >
+      {children}
+    </li>
+  )
+}
 
 interface WeekTasksBarProps {
   tasks: CalendarEvent[]
@@ -132,8 +169,14 @@ export function WeekTasksBar({ tasks, weekStartKey, weekEndKey }: WeekTasksBarPr
     }
   }
 
+  const { setNodeRef: setDropRef, isOver } = useDroppable({ id: WEEK_TASKS_DROP_ID })
+
   return (
-    <div className={styles.bar} data-component="week-tasks-bar">
+    <div
+      ref={setDropRef}
+      className={`${styles.bar} ${isOver ? styles.dropActive : ''}`}
+      data-component="week-tasks-bar"
+    >
       <span className={styles.label}>{t('views.week.sometimeThisWeek')}</span>
       <ul className={styles.list}>
         {tasks.map((task) => {
@@ -142,8 +185,10 @@ export function WeekTasksBar({ tasks, weekStartKey, weekEndKey }: WeekTasksBarPr
           const range = rangeLabel(task, t)
           const tooltip = [task.title, range, task.description].filter(Boolean).join('\n')
           return (
-            <li
+            <DraggablePill
               key={task.id}
+              task={task}
+              disabled={readOnly}
               className={`${styles.pill} ${task.completed ? styles.done : ''}`}
               title={tooltip}
               data-component="week-task-pill"
@@ -171,7 +216,7 @@ export function WeekTasksBar({ tasks, weekStartKey, weekEndKey }: WeekTasksBarPr
               >
                 {task.title}
               </button>
-            </li>
+            </DraggablePill>
           )
         })}
         <li className={styles.add}>
