@@ -4,11 +4,62 @@ All notable changes to Calino will be documented in this file.
 
 ## [Unreleased]
 
+This release adds Spanish, French, Italian and Dutch, a search bar in
+Settings, and a round of month view, reminder and CalDAV fixes. It also
+attaches the native Android app, which I'd like you to try.
+
 ### Added
 
 - **Spanish, French, Italian, and Dutch interface translations.** These
   languages are available in the language setting and use localized date
   names; Android shortcuts are localized as well.
+- **Settings search.** A search field at the top of Settings finds any
+  setting by name, and each section heading now matches the page you land on.
+
+### Changed
+
+- Reminder notifications now show which day the event is on.
+
+### Fixed
+
+- **The configured default view is respected**
+  ([#183](https://github.com/Ivan-Malinovski/calino/pull/183)). Opening the
+  app root or tapping the header's home button now goes to the view you chose
+  as your default.
+- Events that end at midnight stay on their start day instead of spilling
+  onto the next one.
+- In month view, the title of an event spanning several days is no longer
+  hidden under the next day's cell, and a very long title is cut off with an
+  ellipsis at the end of its week's run instead of running over other events.
+- Patching a CalDAV event no longer sends a conflicting duration alongside its
+  end time.
+
+### Native Android app
+
+This release also attaches `calino-android-0.9.0.apk`, the current build of the
+native Android app from
+[calino-android](https://github.com/Ivan-Malinovski/calino-android). I feel
+the native app is now in a pretty good state, and it is definitely worth
+trying over the old Android app. If you run into any issues, please let me
+know over at the [calino-android](https://github.com/Ivan-Malinovski/calino-android/issues)
+repo, and if you like it, a star on the repo would be much appreciated.
+
+Since `calino-android-0.5.0.apk` in the last release, the native app has gained:
+
+- **Year view**, background sync, and a menu pill for moving between views,
+  with a setting to choose which views it offers.
+- **Invitations and RSVP** (Accept, Maybe, Decline) on CalDAV servers that
+  support scheduling, and sync problems that surface on their own with a
+  redesigned queued-changes card.
+- **Event attachments and time zones**, a redesigned search sheet,
+  Agenda as the opening view, Settings search, device-only reminders for
+  read-only events, and Calino's own date and time pickers with slide-to-edit
+  times.
+- A New task launcher shortcut, task details that match event details, and
+  many CalDAV, task and month view fixes.
+
+It needs Android 12 or newer. The other APK, `calino-v0.35.0.apk`, is the
+regular Calino app.
 
 ## [0.34.0] - 2026-09-23
 
