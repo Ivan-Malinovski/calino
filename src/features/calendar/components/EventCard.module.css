@@ -512,11 +512,14 @@
   z-index: 2;
 }
 
+/* Cap at the cells this week's run covers (~27px = day-cell gutter plus the
+   card's side padding) so a very long title ellipsizes at the end of the span
+   instead of running over the next event. */
 .compact.fragmentTitle .title {
   width: max-content;
-  max-width: none;
-  overflow: visible;
-  text-overflow: clip;
+  max-width: calc(var(--fragment-span, 1) * 100% + (var(--fragment-span, 1) - 1) * 27px - 4px);
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .fragmentLast {

@@ -97,6 +97,11 @@ const DEFAULT_MONTH_AGENDA_GRID_RATIO = 0.4
 // A fragment that owns its week's title lets the text overflow into the next
 // day cells. The card wrapper's transform makes it a stacking context, so the
 // card's own z-index can't lift it; raise the wrapper above later day cells.
+// Cells a fragment's title may cover: from this day to the event's last day,
+// capped at the end of the week row (the next row draws its own title).
+const fragmentSpanDays = (event: CalendarEvent, day: Date, weekDaysLeft: number): number =>
+  Math.max(1, Math.min(weekDaysLeft, differenceInCalendarDays(eventLastDay(event), day) + 1))
+
 const fragmentTitleWrapperStyle = (
   event: CalendarEvent,
   isWeekStart: boolean
@@ -1230,6 +1235,7 @@ export function CalendarGrid(): JSX.Element {
                                 dateKey={dateKey}
                                 day={day}
                                 isWeekStart={idx === 0}
+                                weekDaysLeft={7 - idx}
                                 monthChangeMotion={monthChangeMotion}
                                 dayEvents={dayEvents}
                                 dayTasks={dayTasks}
@@ -1427,6 +1433,7 @@ export function CalendarGrid(): JSX.Element {
                           dateKey={dateKey}
                           day={day}
                           isWeekStart={idx === 0}
+                          weekDaysLeft={7 - idx}
                           monthChangeMotion={monthChangeMotion}
                           dayEvents={dayEvents}
                           dayTasks={dayTasks}
@@ -1508,10 +1515,7 @@ function monthRowKind(
 ): MonthRowKind {
   if (isCompactMobile) return 'dot'
   if (item.type === 'task') return hasDueTime(item) ? 'taskWithTime' : 'task'
-  const isMultiDay = !isSameDay(
-    toEventInstant(item.start, item.timezone),
-    eventLastDay(item)
-  )
+  const isMultiDay = !isSameDay(toEventInstant(item.start, item.timezone), eventLastDay(item))
   const compact =
     isPastWeek ||
     !!item.isFragment ||
@@ -1525,6 +1529,8 @@ interface DroppableDayProps {
   dateKey: string
   day: Date
   isWeekStart: boolean
+  /** Columns from this day to the end of its week row, inclusive. */
+  weekDaysLeft: number
   dayEvents: CalendarEvent[]
   dayTasks: CalendarEvent[]
   popupTaskItems: CalendarEvent[]
@@ -1566,6 +1572,7 @@ const DroppableDay = React.memo(function DroppableDay({
   dateKey,
   day,
   isWeekStart,
+  weekDaysLeft,
   monthChangeMotion,
   dayEvents,
   dayTasks,
@@ -1851,6 +1858,7 @@ const DroppableDay = React.memo(function DroppableDay({
                         hideFragmentTitle={
                           event.isFragment && !event.isFirstFragment && !isWeekStart
                         }
+                        fragmentSpanDays={fragmentSpanDays(event, day, weekDaysLeft)}
                       />
                     </motion.div>
                   ))}
@@ -1986,6 +1994,7 @@ const DroppableDay = React.memo(function DroppableDay({
                         hideFragmentTitle={
                           event.isFragment && !event.isFirstFragment && !isWeekStart
                         }
+                        fragmentSpanDays={fragmentSpanDays(event, day, weekDaysLeft)}
                       />
                     </motion.div>
                   )
