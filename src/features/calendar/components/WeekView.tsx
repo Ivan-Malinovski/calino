@@ -33,6 +33,8 @@ import type { CalendarEvent } from '@/types'
 import { useCalendarStore, getTasksForDay } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
 import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
+import { isWeekScopedTask, weekScopedTasksInRange } from '@/lib/weekTasks'
+import { WeekTasksBar } from './WeekTasksBar'
 import { safeCalDAVUpdate } from '@/lib/caldavHelpers'
 import { EventCard } from './EventCard'
 import WeekDayColumn from './WeekDayColumn'
@@ -696,8 +698,10 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
     const visibleCalendarIds = calendars.filter((c) => c.isVisible).map((c) => c.id)
     for (const day of weekDays) {
       const dayKey = format(day, 'yyyy-MM-dd')
-      const dayTasks = getTasksForDay(events, dayKey).filter((event) =>
-        visibleCalendarIds.includes(event.calendarId)
+      // Multi-day ("sometime this week") tasks live in the bar below the grid,
+      // not under whichever day happens to be their due date.
+      const dayTasks = getTasksForDay(events, dayKey).filter(
+        (event) => visibleCalendarIds.includes(event.calendarId) && !isWeekScopedTask(event)
       )
       const visibleTasks = filterTasksByCollapsedAncestors(
         dayTasks,
@@ -716,8 +720,7 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
   // Everything that belongs above the timeline rather than in it: all-day
   // events plus untimed tasks (see hasDueTime — a task with no due time, or
   // one due at exactly midnight, has no row to sit on). Mobile renders these
-  // in the day header; desktop keeps all-day events in the header and untimed
-  // tasks in the aligned footer below (#120).
+  // in the day header, and so does desktop.
   const mobileHeaderItemsMap = useMemo(() => {
     const map = new Map<string, CalendarEvent[]>()
     for (const day of weekDays) {
@@ -730,6 +733,17 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
     }
     return map
   }, [weekDays, allDayEventsMap, tasksMap])
+
+  const weekScopedTasks = useMemo(
+    () =>
+      weekScopedTasksInRange(
+        events,
+        format(rangeStart, 'yyyy-MM-dd'),
+        format(rangeEnd, 'yyyy-MM-dd'),
+        new Set(calendars.filter((c) => c.isVisible).map((c) => c.id))
+      ),
+    [events, calendars, rangeStart, rangeEnd, rangeExpansionVersion]
+  )
 
   const bodyRef = useRef<HTMLDivElement>(null)
   const lastDateRef = useRef(displayDate.toISOString())
@@ -1274,7 +1288,9 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
   const renderDesktopContent = () => {
     const allDayEventsByDay = weekDays.map((day) => {
       const dateKey = format(day, 'yyyy-MM-dd')
-      return allDayEventsMap.get(dateKey) || []
+      const untimedTasks = (tasksMap.get(dateKey) ?? EMPTY_EVENTS).filter((t) => !hasDueTime(t))
+      const allDay = allDayEventsMap.get(dateKey) ?? EMPTY_EVENTS
+      return untimedTasks.length > 0 ? [...allDay, ...untimedTasks] : allDay
     })
 
     return (
@@ -1441,47 +1457,7 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
         {...bind}
       >
         {isMobile ? renderMobileContent() : renderDesktopContent()}
-        {/* Desktop only. Its grid template assumes the day columns are `1fr`
-            of the container, which holds for the desktop body but not for the
-            mobile strip's fixed-width, horizontally scrolled columns — on
-            mobile these items render in the day header instead (#120). */}
-        {!isMobile &&
-          (() => {
-            const tasksByDay: CalendarEvent[][] = Array(weekDays.length)
-              .fill(null)
-              .map(() => [])
-            weekDays.forEach((day, idx) => {
-              const dayKey = format(day, 'yyyy-MM-dd')
-              const dayTasks = tasksMap.get(dayKey) || []
-              // Timed tasks live on the timeline (rendered as pills in the day
-              // column); only all-day / untimed tasks belong in the footer.
-              dayTasks.filter((t) => !hasDueTime(t)).forEach((t) => tasksByDay[idx].push(t))
-            })
-            const hasTasks = tasksByDay.some((arr) => arr.length > 0)
-            if (!hasTasks) return null
-            return (
-              <div className={styles.tasksFixedFooter}>
-                <div></div>
-                {tasksByDay.map((tasks, idx) => (
-                  <div key={idx} className={styles.tasksFixedFooterCol}>
-                    {tasks.map((task) => (
-                      <EventCard
-                        key={task.id}
-                        event={task}
-                        compact
-                        monthView
-                        enableResize={false}
-                        taskHasSubtasks={taskCollapse.hasSubtasks(task.id)}
-                        taskSubtasksCollapsed={taskCollapse.isCollapsed(task.id)}
-                        taskSubtaskCount={taskCollapse.descendantCount(task.id)}
-                        onToggleTaskSubtasks={() => taskCollapse.toggleTask(task.id)}
-                      />
-                    ))}
-                  </div>
-                ))}
-              </div>
-            )
-          })()}
+        <WeekTasksBar tasks={weekScopedTasks} />
       </div>
       <DragOverlay dropAnimation={null}>
         {activeEvent ? <EventCard event={activeEvent} isDragging /> : null}

@@ -1,0 +1,73 @@
+.bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 100;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 8px 12px;
+  background: var(--panel, #ffffff);
+  border-top: 1px solid var(--line, rgba(var(--ink-raw), 0.09));
+  max-height: 96px;
+  overflow-y: auto;
+}
+
+.label {
+  flex: none;
+  padding: 4px 0;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted, rgba(var(--ink-raw), 0.55));
+}
+
+.list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 260px;
+  padding: 3px 10px 3px 6px;
+  border: 1px solid var(--line, rgba(var(--ink-raw), 0.09));
+  border-radius: 999px;
+  font-size: 13px;
+}
+
+.check {
+  flex: none;
+  margin: 0;
+}
+
+.title {
+  min-width: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.done .title {
+  text-decoration: line-through;
+  opacity: 0.6;
+}
+
+@media (max-width: 768px) {
+  .bar {
+    flex-direction: column;
+    gap: 4px;
+  }
+}

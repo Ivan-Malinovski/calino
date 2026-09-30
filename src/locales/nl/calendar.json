@@ -31,7 +31,9 @@
       "showPreviousDay": "Vorige dag tonen",
       "showNextDay": "Volgende dag tonen",
       "createEvent": "Gebeurtenis maken",
-      "createTask": "Taak maken"
+      "createTask": "Taak maken",
+      "sometimeThisWeek": "Ergens deze week",
+      "weekTaskRange": "{{start}} – {{due}}"
     },
     "day": {
       "backToAgenda": "Terug naar agenda"

@@ -31,7 +31,9 @@
       "showPreviousDay": "Mostrar el día anterior",
       "showNextDay": "Mostrar al día siguiente",
       "createEvent": "Crear evento",
-      "createTask": "Crear tarea"
+      "createTask": "Crear tarea",
+      "sometimeThisWeek": "En algún momento de esta semana",
+      "weekTaskRange": "{{start}} – {{due}}"
     },
     "day": {
       "backToAgenda": "Volver a la agenda"

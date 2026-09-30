@@ -31,7 +31,9 @@
       "showPreviousDay": "Vis forrige dag",
       "showNextDay": "Vis næste dag",
       "createEvent": "Opret begivenhed",
-      "createTask": "Opret opgave"
+      "createTask": "Opret opgave",
+      "sometimeThisWeek": "Engang i denne uge",
+      "weekTaskRange": "{{start}} – {{due}}"
     },
     "day": {
       "backToAgenda": "Tilbage til dagsorden"
