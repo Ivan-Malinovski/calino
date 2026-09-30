@@ -150,4 +150,12 @@ test.describe('Week view: sometime-this-week tasks', () => {
     expect(Math.abs(dueBox!.y - buttonBox!.y)).toBeLessThan(12)
     expect(buttonBox!.x).toBeGreaterThan(dueBox!.x + dueBox!.width - 1)
   })
+
+  test('the label is vertically centred on the pills', async ({ page }) => {
+    const bar = page.locator('[data-component="week-tasks-bar"]')
+    const label = await bar.getByText('Sometime this week').boundingBox()
+    const pill = await bar.locator('[data-component="week-task-pill"]').first().boundingBox()
+    const mid = (b: { y: number; height: number }) => b.y + b.height / 2
+    expect(Math.abs(mid(label!) - mid(pill!))).toBeLessThan(1)
+  })
 })
