@@ -4,6 +4,8 @@ All notable changes to Calino will be documented in this file.
 
 ## [Unreleased]
 
+## [0.35.0] - 2026-09-30
+
 This release adds Spanish, French, Italian and Dutch, a search bar in
 Settings, and a round of month view, reminder and CalDAV fixes. It also
 attaches the native Android app, which I'd like you to try.
