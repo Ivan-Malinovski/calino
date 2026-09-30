@@ -4,13 +4,45 @@ All notable changes to Calino will be documented in this file.
 
 ## [Unreleased]
 
+This release adds a "Sometime this week" bar to the week view for tasks that
+aren't tied to a particular day. It's a new idea and I'd really like your
+feedback on it: does it fit how you plan your week, and what feels off?
+
 ### Added
 
+- **A "Sometime this week" bar in week view.** Tasks whose start-to-due range
+  spans three or more days now show as checkbox pills in a bar below the week
+  grid, instead of sitting under their due day. Untimed single-day tasks move
+  from the bottom footer into the day headers alongside all-day events.
+- **Start date and quick-add for week tasks.** The task form has an optional
+  start date and a "This week" preset, with a hint showing the resulting
+  range. The "+" in the bar reveals an inline field: Enter adds a task for the
+  whole week, and "…" opens the full form already set to the week. Right-click
+  a pill for the task menu.
 - **Drag tasks between the week grid and the "Sometime this week" bar.**
   Drag a pill from the bar onto a day header to make it an all-day task on
   that day, or onto a time slot to give it that day and time, snapped to the
   quarter hour. Drag a task from the grid onto the bar to turn it into a
   task for the whole week.
+
+### Changed
+
+- Task pills in month view, day headers and the week bar share one compact
+  geometry, the height of an event, with round tickboxes.
+- The README now points to the standalone native Android app, and the auth
+  gateway setup guide has moved out of the README.
+
+### Fixed
+
+- **Giving an all-day event a time in the quick preview makes it a timed
+  event** ([#190](https://github.com/Ivan-Malinovski/calino/issues/190)).
+  Setting a start or end time from the preview popup used to leave the event
+  flagged all-day, so it kept showing as "All day" until you unticked the box
+  in the full editor. It now becomes a timed event with the default duration,
+  and "this occurrence" or "this and future" edits of a recurring all-day
+  event respect the change.
+- Pressing Enter in a time field of the quick preview now saves the time you
+  typed instead of the previous one.
 
 ## [0.35.0] - 2026-09-30
 
