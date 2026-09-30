@@ -4,6 +4,8 @@ All notable changes to Calino will be documented in this file.
 
 ## [Unreleased]
 
+## [0.36.0] - 2026-09-30
+
 This release adds a "Sometime this week" bar to the week view for tasks that
 aren't tied to a particular day. It's a new idea and I'd really like your
 feedback on it: does it fit how you plan your week, and what feels off?
