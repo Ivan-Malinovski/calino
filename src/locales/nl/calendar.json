@@ -356,6 +356,7 @@
       "onLastWeekday": "Op de laatste weekdag",
       "day": "Dag",
       "lastDay": "(laatste dag)",
+      "lastDayOfMonth": "Laatste dag",
       "nthWeekdayOfMonth": "Zoveelste weekdag van de maand",
       "weekday": "Weekdag",
       "ofTheMonth": "van de maand",

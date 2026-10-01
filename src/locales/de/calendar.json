@@ -251,6 +251,7 @@
       "onLastWeekday": "On the last weekday",
       "day": "Tag",
       "lastDay": "(last day)",
+      "lastDayOfMonth": "Letzter Tag",
       "nthWeekdayOfMonth": "Nth weekday des Monats",
       "weekday": "Wochentag",
       "ofTheMonth": "des Monats",

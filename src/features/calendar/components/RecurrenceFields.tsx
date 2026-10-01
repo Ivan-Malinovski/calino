@@ -73,7 +73,6 @@ function MonthlyPatternPicker({
   const startMonth = parseInt(startDate.split('-')[1] || '1', 10)
   const startYear = parseInt(startDate.split('-')[0] || '2025', 10)
   const startWeekday = new Date(Date.UTC(startYear, startMonth - 1, startDay)).getUTCDay()
-  const daysInMonth = new Date(Date.UTC(startYear, startMonth, 0)).getUTCDate()
 
   const nthFromByWeekday = byWeekday[0] !== undefined ? byWeekday[0] : startWeekday
   const posFromByDayOrdinals =
@@ -119,15 +118,16 @@ function MonthlyPatternPicker({
           <select
             value={dayFromByMonthDay}
             onChange={(e) => onByMonthDayChange([parseInt(e.target.value, 10)])}
+            aria-label={t('modals.recurrence.day')}
             className={styles.select}
-            style={{ width: '90px' }}
+            style={{ minWidth: '90px' }}
           >
             {days31.map((d) => (
               <option key={d} value={d}>
                 {d}
-                {d === daysInMonth ? ` ${t('modals.recurrence.lastDay')}` : ''}
               </option>
             ))}
+            <option value={-1}>{t('modals.recurrence.lastDayOfMonth')}</option>
           </select>
         </div>
       )}
