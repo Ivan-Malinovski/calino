@@ -33,6 +33,57 @@
 import { test, expect } from '@playwright/test'
 import { clearState } from './fixtures/localstorage'
 
+test.describe('Monthly day selection', () => {
+  for (const { year, day, startDay, dates } of [
+    { year: 2027, day: '-1', startDay: '31', dates: ['2027-01-31', '2027-02-28', '2027-03-31', '2027-04-30'] },
+    { year: 2028, day: '-1', startDay: '31', dates: ['2028-01-31', '2028-02-29', '2028-03-31', '2028-04-30'] },
+    { year: 2028, day: '30', startDay: '30', dates: ['2028-01-30', null, '2028-03-30', '2028-04-30'] },
+    { year: 2028, day: '31', startDay: '31', dates: ['2028-01-31', null, '2028-03-31', null] },
+  ]) {
+    test(`monthly day ${day} in ${year} preserves its meaning across months and reload`, async ({ page }) => {
+      await clearState(page)
+      await page.clock.setFixedTime(new Date(year, 0, 1, 12))
+      await page.goto('/month')
+      await page.locator(`[data-date="${year}-01-${startDay}"]`).click()
+      const modal = page.locator('[data-component="modal-card"]')
+      const title = `Monthly day ${day}`
+      await modal.locator('[data-component="event-title-input"]').fill(title)
+      await modal.getByText('Recurring', { exact: true }).click()
+      await modal.locator('#recurrence-select').selectOption('monthly')
+      const dayPicker = modal.getByRole('combobox', { name: 'Day', exact: true })
+      await expect(dayPicker.locator('option[value="31"]')).toHaveText('31')
+      await expect(dayPicker.locator('option[value="-1"]')).toHaveText('Last day')
+      await dayPicker.selectOption(day)
+      await modal.locator('[data-component="modal-save"]').click()
+      await expect(modal).toBeHidden()
+      await page.reload()
+
+      const cards = page.locator('[data-component="event-card"]').filter({ hasText: title })
+      await cards.first().click()
+      await page.locator('[data-component="event-preview"]')
+        .getByRole('button', { name: /Open event/ }).click()
+      await expect(dayPicker).toHaveValue(day)
+      await modal.getByRole('button', { name: 'Cancel', exact: true }).click()
+
+      for (const [index, date] of dates.entries()) {
+        const month = `${year}-${String(index + 1).padStart(2, '0')}`
+        const monthCards = page.locator(`[data-date^="${month}"] [data-component="event-card"]`)
+          .filter({ hasText: title })
+        if (date) {
+          await expect(monthCards).toHaveCount(1)
+          await expect(page.locator(`[data-date="${date}"] [data-component="event-card"]`)
+            .filter({ hasText: title })).toBeVisible()
+        } else {
+          await expect(monthCards).toHaveCount(0)
+        }
+        if (index < dates.length - 1) {
+          await page.locator('[data-component="header"]').getByRole('button', { name: 'Next', exact: true }).click()
+        }
+      }
+    })
+  }
+})
+
 test.describe('Monthly recurrence — second Tuesday (R2.4 byDayOrdinals)', () => {
   test.beforeEach(async ({ page }) => {
     await clearState(page)

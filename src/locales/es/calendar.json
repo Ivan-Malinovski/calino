@@ -356,6 +356,7 @@
       "onLastWeekday": "El último día de la semana del mes",
       "day": "Día",
       "lastDay": "(último día)",
+      "lastDayOfMonth": "Último día",
       "nthWeekdayOfMonth": "Enésimo día laborable del mes",
       "weekday": "Día laborable",
       "ofTheMonth": "del mes",

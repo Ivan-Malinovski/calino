@@ -251,6 +251,7 @@
       "onLastWeekday": "On the last ugedag",
       "day": "Dag",
       "lastDay": "(sidste dag)",
+      "lastDayOfMonth": "Sidste dag",
       "nthWeekdayOfMonth": "Nth ugedag of the måned",
       "weekday": "Hverdag",
       "ofTheMonth": "of the måned",

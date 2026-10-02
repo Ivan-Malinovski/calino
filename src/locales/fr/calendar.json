@@ -352,6 +352,7 @@
       "onLastWeekday": "Le dernier jour de la semaine",
       "day": "Jour",
       "lastDay": "(dernier jour)",
+      "lastDayOfMonth": "Dernier jour",
       "nthWeekdayOfMonth": "Nième jour de la semaine du mois",
       "weekday": "Jour de la semaine",
       "ofTheMonth": "du mois",
