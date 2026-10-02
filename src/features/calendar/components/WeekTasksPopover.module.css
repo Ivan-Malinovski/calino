@@ -5,6 +5,13 @@
   transform-origin: top left;
 }
 
+/* A row is being dragged out: fade the whole dialog (a filter, so it composes
+   with the open/close animation's own opacity). */
+.dragAside {
+  filter: opacity(0.12);
+  transition: filter var(--dur-fast);
+}
+
 .header {
   display: flex;
   align-items: baseline;

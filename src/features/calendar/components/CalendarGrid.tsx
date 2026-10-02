@@ -8,10 +8,13 @@ import {
   DragOverlay,
   useDroppable,
   useDndContext,
+  pointerWithin,
+  rectIntersection,
   useSensor,
   useSensors,
   MouseSensor,
   TouchSensor,
+  type CollisionDetection,
   type DragEndEvent,
   type DragStartEvent,
 } from '@dnd-kit/core'
@@ -46,6 +49,7 @@ import { useDateChangeMotion, type DateChangeMotion } from '@/hooks/useDateChang
 import { safeCalDAVUpdate } from '@/lib/caldavHelpers'
 import { EventCard } from './EventCard'
 import { DayEventsPopup } from './DayEventsPopup'
+import { WeekGutterCell, WEEK_ROW_DROP_PREFIX } from './WeekGutterCell'
 import { WeekTasksBadge } from './WeekTasksBadge'
 import { WeekTasksPopover } from './WeekTasksPopover'
 import { ContextMenu } from '@/components/common/ContextMenu'
@@ -211,6 +215,8 @@ export function CalendarGrid(): JSX.Element {
   // week (handled by useRovingGrid, which also owns the roving tab stop). The
   // cell itself keeps its own Enter/Space handler that opens the focused day.
   const [activeEvent, setActiveEvent] = useState<CalendarEvent | null>(null)
+  // True while the dragged task was lifted from a week popover rather than a cell.
+  const [draggingWeekPill, setDraggingWeekPill] = useState(false)
   const [activeLayout, setActiveLayout] = useState<{
     compact: boolean
     monthView: boolean
@@ -427,6 +433,7 @@ export function CalendarGrid(): JSX.Element {
     const draggedEvent = events.find((e) => e.id === eventId)
     draggedEventRef.current = draggedEvent || null
     setActiveEvent(draggedEvent || null)
+    setDraggingWeekPill(String(event.active.id).endsWith('::weektask'))
     markDragStart(event.activatorEvent)
     const data = event.active.data.current as
       | { compact?: boolean; monthView?: boolean; dotMode?: boolean; isMobileMonth?: boolean }
@@ -444,10 +451,66 @@ export function CalendarGrid(): JSX.Element {
     const shouldDuplicate = useDragModifierStore.getState().isDuplicateModifierHeld
     markDragEnd()
     setActiveEvent(null)
+    setDraggingWeekPill(false)
 
     if (!over) return
 
     const droppableId = String(over.id)
+    const isWeekPill = String(active.id).endsWith('::weektask')
+
+    // A task dropped on a week row's gutter becomes that week's "sometime this
+    // week" task; a week task dropped on another row moves there.
+    if (droppableId.startsWith(WEEK_ROW_DROP_PREFIX)) {
+      const weekStartKey = droppableId.slice(WEEK_ROW_DROP_PREFIX.length)
+      const weekEndKey = format(addDays(parseISO(weekStartKey), 6), 'yyyy-MM-dd')
+      const task = draggedEventRef.current
+      draggedEventRef.current = null
+      if (!task || task.type !== 'task') return
+      if (task.rruleString || task.recurrence || task.recurrenceId || task.occurrenceMasterId) {
+        return
+      }
+      const weekUpdates = {
+        start: `${weekStartKey}T00:00:00`,
+        end: `${weekEndKey}T23:59:59`,
+        dueDate: weekEndKey,
+        isAllDay: true,
+      }
+      storeUpdateEvent(task.id, weekUpdates)
+      await safeCalDAVUpdate(
+        caldavUpdateEvent,
+        task.calendarId,
+        { ...task, ...weekUpdates },
+        weekUpdates,
+        'Failed to sync dragged task'
+      )
+      return
+    }
+
+    // A task lifted out of a week popover and dropped on a day: the day becomes
+    // its whole range, so it stops being a "sometime this week" task.
+    if (isWeekPill) {
+      const weekTask = draggedEventRef.current
+      draggedEventRef.current = null
+      if (!weekTask || weekTask.type !== 'task' || !/^\d{4}-\d{2}-\d{2}$/.test(droppableId)) {
+        return
+      }
+      const dayUpdates = {
+        start: `${droppableId}T00:00:00`,
+        end: `${droppableId}T23:59:59`,
+        dueDate: droppableId,
+        isAllDay: true,
+      }
+      storeUpdateEvent(weekTask.id, dayUpdates)
+      await safeCalDAVUpdate(
+        caldavUpdateEvent,
+        weekTask.calendarId,
+        { ...weekTask, ...dayUpdates },
+        dayUpdates,
+        'Failed to sync dragged task'
+      )
+      return
+    }
+
     const dayStr = droppableId
 
     if (!dayStr) return
@@ -659,6 +722,40 @@ export function CalendarGrid(): JSX.Element {
     y: number
   } | null>(null)
   const closeWeekPopover = useCallback(() => setWeekPopover(null), [])
+
+  // Tasks (but not events, and not recurring series) can be dropped on a row's
+  // gutter to become that week's "sometime this week" task.
+  const canDropOnWeek =
+    activeEvent !== null &&
+    activeEvent.type === 'task' &&
+    !(
+      activeEvent.rruleString ||
+      activeEvent.recurrence ||
+      activeEvent.recurrenceId ||
+      activeEvent.occurrenceMasterId
+    )
+
+  const dragOverlayContent = activeEvent ? (
+    draggingWeekPill ? (
+      <div className={styles.weekTaskGhost}>{activeEvent.title}</div>
+    ) : (
+      <EventCard
+        event={activeEvent}
+        compact={activeLayout.compact}
+        monthView={activeLayout.monthView}
+        dotMode={activeLayout.dotMode}
+        isMobileMonth={activeLayout.isMobileMonth}
+        enableResize={false}
+      />
+    )
+  ) : null
+
+  // A gutter wins only while the pointer is actually inside it: it is a narrow
+  // column, so by rectangle overlap alone the day cells would always beat it.
+  const collisionDetection: CollisionDetection = (args) => {
+    const gutter = pointerWithin(args).filter((c) => String(c.id).startsWith(WEEK_ROW_DROP_PREFIX))
+    return gutter.length > 0 ? gutter : rectIntersection(args)
+  }
 
   // Badge for one week row. Kept while its popover is open even if the list
   // empties (last task ticked off), so the popover's anchor doesn't unmount.
@@ -1218,7 +1315,12 @@ export function CalendarGrid(): JSX.Element {
               maxHeight: (800 * gridRatio) / 0.6,
             }}
           >
-            <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+            <DndContext
+              sensors={sensors}
+              collisionDetection={collisionDetection}
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
+            >
               <div className={styles.gridPanel} ref={containerRef} {...bind}>
                 <div
                   ref={gridScrollRef}
@@ -1269,7 +1371,9 @@ export function CalendarGrid(): JSX.Element {
                           className={`${styles.weekRow} ${!showGutter ? styles.weekRowNoWeekNum : !showWeekNumbers ? styles.weekRowSlim : ''} ${compressWeekRows && isPastWeek ? styles.compressedWeek : ''}`}
                         >
                           {showGutter && (
-                            <div
+                            <WeekGutterCell
+                              weekStartKey={format(days[weekIdx * 7], 'yyyy-MM-dd')}
+                              acceptsTask={canDropOnWeek}
                               className={`${styles.weekNumber} ${!showWeekNumbers ? styles.weekNumberSlim : ''}`}
                               onClick={() => handleWeekClick(days[weekIdx * 7])}
                             >
@@ -1300,7 +1404,7 @@ export function CalendarGrid(): JSX.Element {
                                 </div>
                               )}
                               {renderWeekBadge(weekIdx, weekNum)}
-                            </div>
+                            </WeekGutterCell>
                           )}
                           {days.slice(weekIdx * 7, weekIdx * 7 + 7).map((day, idx) => {
                             const dateKey = format(day, 'yyyy-MM-dd')
@@ -1366,18 +1470,8 @@ export function CalendarGrid(): JSX.Element {
                   </div>
                 </div>
               </div>
-              <DragOverlay dropAnimation={null}>
-                {activeEvent ? (
-                  <EventCard
-                    event={activeEvent}
-                    compact={activeLayout.compact}
-                    monthView={activeLayout.monthView}
-                    dotMode={activeLayout.dotMode}
-                    isMobileMonth={activeLayout.isMobileMonth}
-                    enableResize={false}
-                  />
-                ) : null}
-              </DragOverlay>
+              {weekPopoverElement}
+              <DragOverlay dropAnimation={null}>{dragOverlayContent}</DragOverlay>
             </DndContext>
           </div>
           <div
@@ -1420,14 +1514,18 @@ export function CalendarGrid(): JSX.Element {
             )}
           </div>
         </div>
-        {weekPopoverElement}
       </>
     )
   }
 
   return (
     <>
-      <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={collisionDetection}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+      >
         <div
           className={`${styles.gridPanel} ${styles.gridPanelStandalone}`}
           ref={containerRef}
@@ -1482,7 +1580,9 @@ export function CalendarGrid(): JSX.Element {
                     className={`${styles.weekRow} ${!showGutter ? styles.weekRowNoWeekNum : !showWeekNumbers ? styles.weekRowSlim : ''} ${compressWeekRows && isPastWeek ? styles.compressedWeek : ''}`}
                   >
                     {showGutter && (
-                      <div
+                      <WeekGutterCell
+                        weekStartKey={format(days[weekIdx * 7], 'yyyy-MM-dd')}
+                        acceptsTask={canDropOnWeek}
                         className={`${styles.weekNumber} ${!showWeekNumbers ? styles.weekNumberSlim : ''}`}
                         onClick={() => handleWeekClick(days[weekIdx * 7])}
                       >
@@ -1504,7 +1604,7 @@ export function CalendarGrid(): JSX.Element {
                           </AnimatePresence>
                         )}
                         {renderWeekBadge(weekIdx, weekNum)}
-                      </div>
+                      </WeekGutterCell>
                     )}
                     {days.slice(weekIdx * 7, weekIdx * 7 + 7).map((day, idx) => {
                       const dateKey = format(day, 'yyyy-MM-dd')
@@ -1572,20 +1672,9 @@ export function CalendarGrid(): JSX.Element {
             </div>
           </div>
         </div>
-        <DragOverlay dropAnimation={null}>
-          {activeEvent ? (
-            <EventCard
-              event={activeEvent}
-              compact={activeLayout.compact}
-              monthView={activeLayout.monthView}
-              dotMode={activeLayout.dotMode}
-              isMobileMonth={activeLayout.isMobileMonth}
-              enableResize={false}
-            />
-          ) : null}
-        </DragOverlay>
+        {weekPopoverElement}
+        <DragOverlay dropAnimation={null}>{dragOverlayContent}</DragOverlay>
       </DndContext>
-      {weekPopoverElement}
     </>
   )
 }

@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test'
+import { test, expect, type Locator, type Page } from '@playwright/test'
 import { clearState } from './fixtures/localstorage'
 
 // Wednesday 30 Sep 2026; the Monday-start week is 28 Sep – 4 Oct.
@@ -146,6 +146,59 @@ test.describe('Month view: sometime-this-week tasks', () => {
     expect(stored.start).toBe('2026-09-28T00:00:00')
     expect(stored.dueDate).toBe('2026-10-04')
     expect(stored.isAllDay).toBe(true)
+  })
+
+  // dnd-kit's mouse sensor needs a real press, an 8px move, then the target.
+  const drag = async (page: Page, from: Locator, to: Locator) => {
+    const a = (await from.boundingBox())!
+    const b = (await to.boundingBox())!
+    await page.mouse.move(a.x + 40, a.y + a.height / 2)
+    await page.mouse.down()
+    await page.mouse.move(a.x + 60, a.y + a.height / 2 + 12, { steps: 4 })
+    await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2, { steps: 12 })
+    await page.mouse.up()
+  }
+
+  test('dragging a task out of the list onto a day makes it an all-day task there', async ({
+    page,
+  }) => {
+    await badge(page).click()
+    const popover = page.locator('[data-component="week-tasks-popover"]')
+    await drag(
+      page,
+      popover.locator('[data-testid="week-task-week-a"]'),
+      page.locator('[data-date="2026-10-01"]')
+    )
+
+    await expect
+      .poll(() => storedTask(page, 'week-a'))
+      .toMatchObject({
+        start: '2026-10-01T00:00:00',
+        dueDate: '2026-10-01',
+        isAllDay: true,
+      })
+    await expect(badge(page)).toHaveText(/^1/)
+    await expect(page.locator('[data-date="2026-10-01"]')).toContainText('Call the plumber')
+    // The list stays open for the rest of the week's tasks.
+    await expect(popover).toBeVisible()
+    await expect(popover.locator('[data-component="week-task-pill"]')).toHaveCount(1)
+  })
+
+  test('dragging a day task onto the week gutter makes it a week task', async ({ page }) => {
+    const card = page.locator('[data-date="2026-10-01"]').getByText('Water plants')
+    const gutter = page.locator('[class*="weekNumber"]').filter({ hasText: '40' })
+    await drag(page, card, gutter)
+
+    await expect
+      .poll(() => storedTask(page, 'one-day'))
+      .toMatchObject({
+        start: '2026-09-28T00:00:00',
+        end: '2026-10-04T23:59:59',
+        dueDate: '2026-10-04',
+        isAllDay: true,
+      })
+    await expect(badge(page)).toHaveText(/^3/)
+    await expect(page.locator('[data-date="2026-10-01"]')).not.toContainText('Water plants')
   })
 })
 

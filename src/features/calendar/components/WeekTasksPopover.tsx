@@ -2,6 +2,7 @@ import { type JSX, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useDndContext } from '@dnd-kit/core'
 import { parseISO } from 'date-fns'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
@@ -14,6 +15,7 @@ import { usePlacement } from '../hooks/usePlacement'
 import { useWeekTaskActions } from '../hooks/useWeekTaskActions'
 import { TaskContextMenu } from './TaskContextMenu'
 import { WeekTaskQuickAdd } from './WeekTaskQuickAdd'
+import { DraggablePill } from './WeekTasksBar'
 import popupStyles from './DayEventsPopup.module.css'
 import controls from './weekTaskControls.module.css'
 import styles from './WeekTasksPopover.module.css'
@@ -53,6 +55,12 @@ export function WeekTasksPopover({
   // Focus trap + Escape + focus restore, shared with every other dialog.
   useModalDismiss(popupRef, true, onClose)
 
+  // A task lifted out of the list is on its way to a day or another week, so
+  // the popover steps aside (but stays mounted: unmounting the dragged row
+  // would cancel the drag) to uncover the grid underneath.
+  const { active } = useDndContext()
+  const dragging = active !== null && String(active.id).endsWith('::weektask')
+
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent): void => {
       // The right-click menu is portaled out of the popover; pressing one of
@@ -73,8 +81,8 @@ export function WeekTasksPopover({
     <AnimatePresence>
       <motion.div
         ref={popupRef}
-        className={`${popupStyles.popup} ${styles.popover}`}
-        style={placement}
+        className={`${popupStyles.popup} ${styles.popover} ${dragging ? styles.dragAside : ''}`}
+        style={dragging ? { ...placement, pointerEvents: 'none' } : placement}
         data-component="week-tasks-popover"
         /* Portaled into <body>, but React events still bubble along the tree
            the popover was declared in: the gutter cell, whose click jumps to
@@ -109,8 +117,10 @@ export function WeekTasksPopover({
               taskRange !== null &&
               (taskRange.startKey > weekStartKey || taskRange.dueKey < weekEndKey)
             return (
-              <li
+              <DraggablePill
                 key={task.id}
+                task={task}
+                disabled={readOnly}
                 className={`${styles.row} ${task.completed ? controls.done : ''}`}
                 style={
                   calendar?.color
@@ -140,7 +150,7 @@ export function WeekTasksPopover({
                     })}
                   </span>
                 )}
-              </li>
+              </DraggablePill>
             )
           })}
         </ul>

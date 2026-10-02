@@ -160,6 +160,36 @@
   transform: scale(0.9);
 }
 
+/* While a task is dragged the gutters offer themselves as "this week" drop
+   targets; the one under the pointer takes the accent. */
+.weekDropReady {
+  background: color-mix(in srgb, var(--accent) 7%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+.weekDropOver {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+
+/* The drag preview for a task lifted out of the week popover. */
+.weekTaskGhost {
+  display: inline-block;
+  max-width: 220px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink);
+  background: var(--popover-bg, var(--panel, #fff));
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
+  cursor: grabbing;
+}
+
 /* Week numbers off: the column only carries the week-task badge, so it drops
    the number's 28px line and sits flush at the top. */
 .weekNumberSlim {

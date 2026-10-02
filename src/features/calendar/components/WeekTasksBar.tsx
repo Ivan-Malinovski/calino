@@ -20,7 +20,7 @@ export const WEEK_TASKS_DROP_ID = 'weektasks-bar'
  * `::weektask` suffix (WeekView's drag handlers split on `::`) so it cannot
  * collide with the same task's card elsewhere.
  */
-function DraggablePill({
+export function DraggablePill({
   task,
   disabled,
   children,
