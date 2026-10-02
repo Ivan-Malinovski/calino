@@ -37,7 +37,11 @@
       "addWeekTask": "Aufgabe für diese Woche hinzufügen",
       "addWeekTaskDetails": "Weitere Optionen",
       "quickAddPlaceholder": "Zu dieser Woche hinzufügen…",
-      "noTaskCalendar": "Kein Kalender für Aufgaben verfügbar"
+      "noTaskCalendar": "Kein Kalender für Aufgaben verfügbar",
+      "weekTasksBadge_one": "{{count}} Aufgabe diese Woche",
+      "weekTasksBadge_other": "{{count}} Aufgaben diese Woche",
+      "weekTasksAriaLabel": "Aufgaben für Woche {{number}}",
+      "weekTasksEmpty": "Für diese Woche ist noch nichts geplant"
     },
     "day": {
       "backToAgenda": "Zur Agenda"

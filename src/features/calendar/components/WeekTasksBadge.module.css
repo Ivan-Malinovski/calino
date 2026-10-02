@@ -1,0 +1,83 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  margin-top: 4px;
+  padding: 1px 6px;
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent-strong, var(--accent));
+  font: inherit;
+  font-size: 10.5px;
+  font-weight: 700;
+  line-height: 14px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background var(--dur-fast),
+    opacity var(--dur-fast);
+}
+
+.badge:hover,
+.badge[aria-expanded='true'] {
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+.badge:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.glyph {
+  flex: none;
+}
+
+/* Empty rows: the add affordance only exists for pointers that can hover, so a
+   tap on a touch screen still reaches the gutter's jump to the week view. */
+.badge[data-week-badge='empty'] {
+  display: none;
+  min-width: 18px;
+  padding: 0 5px;
+  border-style: dashed;
+  background: transparent;
+  opacity: 0;
+}
+
+@media (hover: hover) {
+  .badge[data-week-badge='empty'] {
+    display: inline-flex;
+  }
+
+  .badge[data-week-badge='empty']:focus-visible,
+  .badge[data-week-badge='empty'][aria-expanded='true'] {
+    opacity: 1;
+  }
+}
+
+@media (max-width: 500px) {
+  /* The 22px gutter has room for the count only. Sized up from the desktop
+     pill so a fingertip can find it; the ::after pads the target a little
+     further without reaching the week number above or the split handle below. */
+  .badge {
+    position: relative;
+    gap: 0;
+    min-width: 18px;
+    height: 18px;
+    margin-top: 2px;
+    padding: 0 3px;
+    font-size: 10px;
+    line-height: 16px;
+  }
+
+  .badge::after {
+    content: '';
+    position: absolute;
+    inset: -4px;
+  }
+
+  .glyph {
+    display: none;
+  }
+}

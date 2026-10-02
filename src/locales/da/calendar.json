@@ -37,7 +37,11 @@
       "addWeekTask": "Tilføj en opgave til denne uge",
       "addWeekTaskDetails": "Flere valgmuligheder",
       "quickAddPlaceholder": "Tilføj til denne uge…",
-      "noTaskCalendar": "Ingen kalender tilgængelig til opgaver"
+      "noTaskCalendar": "Ingen kalender tilgængelig til opgaver",
+      "weekTasksBadge_one": "{{count}} opgave i denne uge",
+      "weekTasksBadge_other": "{{count}} opgaver i denne uge",
+      "weekTasksAriaLabel": "Opgaver for uge {{number}}",
+      "weekTasksEmpty": "Intet planlagt for denne uge endnu"
     },
     "day": {
       "backToAgenda": "Tilbage til dagsorden"

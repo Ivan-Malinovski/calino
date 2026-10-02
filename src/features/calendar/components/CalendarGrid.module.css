@@ -64,6 +64,10 @@
   flex-shrink: 0;
 }
 
+.headerSlim {
+  grid-template-columns: 34px repeat(7, 1fr);
+}
+
 .headerNoWeekNum {
   grid-template-columns: repeat(7, 1fr);
 }
@@ -104,6 +108,10 @@
   flex: 1;
 }
 
+.weekRowSlim {
+  grid-template-columns: 34px repeat(7, 1fr);
+}
+
 .weekRowNoWeekNum {
   grid-template-columns: repeat(7, 1fr);
 }
@@ -127,7 +135,8 @@
 /* ---- Week Number ---- */
 .weekNumber {
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
   padding-top: 5px;
   font-size: 10.5px;
   font-weight: 600;
@@ -149,6 +158,17 @@
 
 .weekNumber:active {
   transform: scale(0.9);
+}
+
+/* Week numbers off: the column only carries the week-task badge, so it drops
+   the number's 28px line and sits flush at the top. */
+.weekNumberSlim {
+  padding-top: 4px;
+}
+
+/* An empty row's add affordance shows while the pointer is over the row. */
+.weekRow:hover [data-week-badge='empty'] {
+  opacity: 1;
 }
 
 /* ---- Day Cell ---- */
@@ -536,7 +556,9 @@
   opacity: 0.65;
   transform: translate(-50%, -50%);
   pointer-events: none;
-  transition: opacity 0.2s, width 0.2s;
+  transition:
+    opacity 0.2s,
+    width 0.2s;
 }
 
 .splitHandleH:hover,

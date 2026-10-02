@@ -1,0 +1,93 @@
+.popover {
+  min-width: 320px;
+  max-width: 360px;
+  border-radius: 14px;
+  transform-origin: top left;
+}
+
+.header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 18px 6px;
+}
+
+.heading {
+  font-size: 14px;
+  font-weight: 650;
+  letter-spacing: -0.005em;
+  color: var(--color-text-primary, var(--ink));
+}
+
+.dates {
+  font-size: 11.5px;
+  color: var(--color-text-secondary, var(--muted));
+}
+
+.list {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: 300px;
+  margin: 0;
+  padding: 4px 8px;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 13.5px;
+  line-height: 18px;
+  transition: background var(--dur-fast);
+}
+
+.row:hover {
+  background: rgba(var(--ink-raw), 0.05);
+}
+
+/* A touch larger than the week bar's pill checkbox: the rows are roomier. */
+.row input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  background-size: 11px;
+}
+
+.range {
+  flex: none;
+  margin-left: auto;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: rgba(var(--ink-raw), 0.06);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 16px;
+  white-space: nowrap;
+  color: var(--color-text-secondary, var(--muted));
+}
+
+.empty {
+  padding: 8px 10px 12px;
+  font-size: 13px;
+  color: var(--color-text-secondary, var(--muted));
+}
+
+/* The add row reads as a continuation of the list, not a separate bar. */
+.footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 2px 8px 8px;
+  padding: 6px 10px 0;
+  border-top: 1px solid rgba(var(--ink-raw), 0.07);
+}
+
+.footer input {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: auto;
+}

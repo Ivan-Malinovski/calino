@@ -48,109 +48,12 @@
   line-height: 15px;
 }
 
-.check {
-  flex: none;
-  appearance: none;
-  width: 13px;
-  height: 13px;
-  margin: 0;
-  border: 1.6px solid color-mix(in srgb, var(--event-color, var(--accent)) 60%, var(--ink-3));
-  border-radius: 50%;
-  background: transparent center / 9px no-repeat;
-  cursor: pointer;
-  transition:
-    background-color var(--dur-fast),
-    border-color var(--dur-fast);
-}
-
-.check:hover:not(:disabled) {
-  border-color: var(--event-color, var(--accent));
-}
-
-.check:checked {
-  border-color: var(--event-color, var(--accent));
-  background-color: var(--event-color, var(--accent));
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E");
-}
-
-.check:disabled {
-  cursor: not-allowed;
-  opacity: 0.55;
-}
-
-.check:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
-}
-
-.title {
-  min-width: 0;
-  padding: 0;
-  overflow: hidden;
-  border: 0;
-  background: none;
-  color: inherit;
-  font: inherit;
-  text-align: left;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  cursor: pointer;
-}
-
-.done .title {
-  text-decoration: line-through;
-  opacity: 0.6;
-}
-
 /* The always-there entry: a round "+" that opens the task form, and a ghost
    pill to type straight into. Same 21px pill geometry as the task pills. */
 .add {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-}
-
-.addButton {
-  flex: none;
-  width: 21px;
-  height: 21px;
-  padding: 0;
-  border: 1px dashed var(--line-strong, rgba(var(--ink-raw), 0.25));
-  border-radius: 50%;
-  background: none;
-  color: var(--muted, rgba(var(--ink-raw), 0.55));
-  font-size: 15px;
-  line-height: 1;
-  cursor: pointer;
-}
-
-.addButton:hover {
-  border-color: var(--accent);
-  color: var(--accent);
-}
-
-.addButton:focus-visible,
-.addInput:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
-}
-
-.addInput {
-  box-sizing: border-box;
-  width: 180px;
-  height: 21px;
-  padding: 0 10px;
-  border: 1px dashed var(--line-strong, rgba(var(--ink-raw), 0.25));
-  border-radius: 999px;
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  font-size: 13px;
-  line-height: 15px;
-}
-
-.addInput::placeholder {
-  color: var(--muted, rgba(var(--ink-raw), 0.55));
 }
 
 @media (max-width: 768px) {

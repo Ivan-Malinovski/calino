@@ -37,7 +37,11 @@
       "addWeekTask": "Taak voor deze week toevoegen",
       "addWeekTaskDetails": "Meer opties",
       "quickAddPlaceholder": "Toevoegen voor deze week…",
-      "noTaskCalendar": "Geen agenda beschikbaar voor taken"
+      "noTaskCalendar": "Geen agenda beschikbaar voor taken",
+      "weekTasksBadge_one": "{{count}} taak deze week",
+      "weekTasksBadge_other": "{{count}} taken deze week",
+      "weekTasksAriaLabel": "Taken voor week {{number}}",
+      "weekTasksEmpty": "Nog niets gepland voor deze week"
     },
     "day": {
       "backToAgenda": "Terug naar agenda"

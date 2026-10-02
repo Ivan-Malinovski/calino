@@ -3,6 +3,7 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { BrowserRouter } from 'react-router'
 import { CalendarGrid } from '../CalendarGrid'
 import { useCalendarStore } from '@/store/calendarStore'
+import { useSettingsStore } from '@/store/settingsStore'
 import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
 import { useGestures } from '@/hooks/useGestures'
 import { useIsMobile } from '@/hooks/useIsMobile'
@@ -309,5 +310,106 @@ describe('CalendarGrid', () => {
     // render below the span instead.
     expect(rows[0].textContent).toContain('Filler')
     expect(rows[1].textContent).toContain('LowSpan')
+  })
+
+  describe('week-scoped tasks', () => {
+    // Monday-start week of 11–17 March 2024; "sometime this week" tasks are
+    // stored Monday → Sunday, so the due-date index files them under the 17th.
+    const addWeekTask = (extra: Record<string, unknown> = {}): void => {
+      useCalendarStore.getState().addEvent({
+        id: 'week-task',
+        calendarId: 'default',
+        title: 'Call the plumber',
+        type: 'task',
+        start: '2024-03-11T00:00:00',
+        end: '2024-03-17T23:59:59',
+        dueDate: '2024-03-17',
+        isAllDay: true,
+        completed: false,
+        ...extra,
+      })
+    }
+    const countBadges = (container: HTMLElement): HTMLElement[] =>
+      Array.from(container.querySelectorAll<HTMLElement>('[data-week-badge="count"]'))
+
+    beforeEach(() => {
+      useSettingsStore.setState({ firstDayOfWeek: 1, showWeekNumbers: true })
+    })
+
+    it('moves the task out of its due-day cell and into the row badge', () => {
+      addWeekTask()
+      const { container } = renderWithRouter(<CalendarGrid />)
+
+      expect(container.querySelector('[data-date="2024-03-17"]')).not.toHaveTextContent(
+        'Call the plumber'
+      )
+      const badges = countBadges(container)
+      expect(badges).toHaveLength(1)
+      expect(badges[0]).toHaveTextContent('1')
+      expect(badges[0]).toHaveAccessibleName('1 task this week')
+    })
+
+    it('leaves a short task in its day cell', () => {
+      addWeekTask({
+        id: 'short',
+        title: 'Water plants',
+        start: '2024-03-14T00:00:00',
+        end: '2024-03-15T00:00:00',
+        dueDate: '2024-03-15',
+      })
+      const { container } = renderWithRouter(<CalendarGrid />)
+
+      expect(container.querySelector('[data-date="2024-03-15"]')).toHaveTextContent('Water plants')
+      expect(countBadges(container)).toHaveLength(0)
+    })
+
+    it('honours the hide-completed setting', () => {
+      useSettingsStore.setState({ hideCompletedTasksInMonthView: true })
+      addWeekTask({ completed: true })
+      const { container } = renderWithRouter(<CalendarGrid />)
+
+      expect(countBadges(container)).toHaveLength(0)
+    })
+
+    it('skips hidden calendars and calendars that hide their tasks', () => {
+      addWeekTask()
+      const store = useCalendarStore.getState()
+      store.updateCalendar('default', { showTasksInViews: false })
+      const { container, unmount } = renderWithRouter(<CalendarGrid />)
+      expect(countBadges(container)).toHaveLength(0)
+      unmount()
+
+      store.updateCalendar('default', { showTasksInViews: true, isVisible: false })
+      const second = renderWithRouter(<CalendarGrid />)
+      expect(countBadges(second.container)).toHaveLength(0)
+    })
+
+    it('lists a task that spans two rows in both', () => {
+      addWeekTask({ end: '2024-03-20T23:59:59', dueDate: '2024-03-20' })
+      const { container } = renderWithRouter(<CalendarGrid />)
+
+      expect(countBadges(container)).toHaveLength(2)
+    })
+
+    it('opens the popover from the badge without jumping to the week view', () => {
+      addWeekTask()
+      const { container } = renderWithRouter(<CalendarGrid />)
+      const view = useCalendarStore.getState().currentView
+
+      fireEvent.click(countBadges(container)[0])
+
+      const dialog = screen.getByRole('dialog', { name: 'Tasks for week 11' })
+      expect(dialog).toHaveTextContent('Call the plumber')
+      expect(useCalendarStore.getState().currentView).toBe(view)
+    })
+
+    it('keeps a slim badge-only gutter when week numbers are off', () => {
+      useSettingsStore.setState({ showWeekNumbers: false })
+      addWeekTask()
+      const { container } = renderWithRouter(<CalendarGrid />)
+
+      expect(countBadges(container)).toHaveLength(1)
+      expect(container.querySelector('[class*="weekRowSlim"]')).toBeInTheDocument()
+    })
   })
 })

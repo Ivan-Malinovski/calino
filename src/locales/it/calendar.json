@@ -37,7 +37,11 @@
       "addWeekTask": "Aggiungi un'attività per questa settimana",
       "addWeekTaskDetails": "Altre opzioni",
       "quickAddPlaceholder": "Aggiungi a questa settimana…",
-      "noTaskCalendar": "Nessun calendario disponibile per le attività"
+      "noTaskCalendar": "Nessun calendario disponibile per le attività",
+      "weekTasksBadge_one": "{{count}} attività questa settimana",
+      "weekTasksBadge_other": "{{count}} attività questa settimana",
+      "weekTasksAriaLabel": "Attività della settimana {{number}}",
+      "weekTasksEmpty": "Ancora nulla in programma per questa settimana"
     },
     "day": {
       "backToAgenda": "Torna all’agenda"

@@ -46,6 +46,8 @@ import { useDateChangeMotion, type DateChangeMotion } from '@/hooks/useDateChang
 import { safeCalDAVUpdate } from '@/lib/caldavHelpers'
 import { EventCard } from './EventCard'
 import { DayEventsPopup } from './DayEventsPopup'
+import { WeekTasksBadge } from './WeekTasksBadge'
+import { WeekTasksPopover } from './WeekTasksPopover'
 import { ContextMenu } from '@/components/common/ContextMenu'
 import { useGestures } from '@/hooks/useGestures'
 import { eventCardVariants } from '../lib/eventAnimations'
@@ -67,6 +69,7 @@ import { DayView } from './DayView'
 import type { CalendarEvent, ViewType } from '@/types'
 import { getJournalDates, getTasksForDay } from '@/store/calendarStore'
 import { hasDueTime } from '@/lib/events'
+import { isWeekScopedTask, weekScopedTasksInRange } from '@/lib/weekTasks'
 import { consumesVerticalScroll } from '@/lib/scrollChaining'
 import styles from './CalendarGrid.module.css'
 import { duplicateEventWithSync } from '@/lib/duplicateWithSync'
@@ -608,6 +611,10 @@ export function CalendarGrid(): JSX.Element {
           calendars.some(
             (calendar) => calendar.showTasksInViews !== false && calendar.id === event.calendarId
           ) &&
+          // "Sometime this week" tasks are due on the week's last day, so
+          // filed by due date they'd read as due that Sunday. They live in the
+          // row's gutter badge instead.
+          !isWeekScopedTask(event) &&
           !(hideCompletedTasksInMonthView && event.completed) &&
           (selectedCategoryNames.length === 0 ||
             event.categories?.some((c) => selectedCategoryNames.includes(c)))
@@ -616,6 +623,76 @@ export function CalendarGrid(): JSX.Element {
     }
     return map
   }, [days, events, calendars, hideCompletedTasksInMonthView, selectedCategoryNames])
+
+  // Each week row's "sometime this week" tasks, filtered the way the month's
+  // day cells filter tasks so the badge count agrees with the rest of the grid.
+  const weekTasksByRow = useMemo(() => {
+    const allowedCalendarIds = new Set(
+      calendars
+        .filter((calendar) => calendar.isVisible && calendar.showTasksInViews !== false)
+        .map((calendar) => calendar.id)
+    )
+    return Array.from({ length: numWeeks }, (_, weekIdx) =>
+      weekScopedTasksInRange(
+        events,
+        format(days[weekIdx * 7], 'yyyy-MM-dd'),
+        format(days[weekIdx * 7 + 6], 'yyyy-MM-dd'),
+        allowedCalendarIds
+      ).filter(
+        (task) =>
+          !(hideCompletedTasksInMonthView && task.completed) &&
+          (selectedCategoryNames.length === 0 ||
+            task.categories?.some((c) => selectedCategoryNames.includes(c)))
+      )
+    )
+  }, [numWeeks, days, events, calendars, hideCompletedTasksInMonthView, selectedCategoryNames])
+
+  // The gutter is the week numbers' column, but it also carries the week-task
+  // badges. With numbers off it stays (slimmer) whenever any week task exists,
+  // checked across the whole store so it doesn't appear and vanish as months
+  // are paged through.
+  const hasAnyWeekTask = useMemo(() => events.some(isWeekScopedTask), [events])
+  const showGutter = showWeekNumbers || hasAnyWeekTask
+  const [weekPopover, setWeekPopover] = useState<{
+    weekIdx: number
+    x: number
+    y: number
+  } | null>(null)
+  const closeWeekPopover = useCallback(() => setWeekPopover(null), [])
+
+  // Badge for one week row. Kept while its popover is open even if the list
+  // empties (last task ticked off), so the popover's anchor doesn't unmount.
+  const renderWeekBadge = (weekIdx: number, weekNum: number): JSX.Element | null => {
+    const count = weekTasksByRow[weekIdx]?.length ?? 0
+    const open = weekPopover?.weekIdx === weekIdx
+    return (
+      <WeekTasksBadge
+        count={count}
+        weekNumber={weekNum}
+        expanded={open}
+        onOpen={(anchor) => {
+          if (open) {
+            setWeekPopover(null)
+            return
+          }
+          const rect = anchor.getBoundingClientRect()
+          setWeekPopover({ weekIdx, x: rect.left, y: rect.bottom + 4 })
+        }}
+      />
+    )
+  }
+
+  const weekPopoverElement =
+    weekPopover && days[weekPopover.weekIdx * 7] ? (
+      <WeekTasksPopover
+        tasks={weekTasksByRow[weekPopover.weekIdx] ?? []}
+        weekStartKey={format(days[weekPopover.weekIdx * 7], 'yyyy-MM-dd')}
+        weekEndKey={format(days[weekPopover.weekIdx * 7 + 6], 'yyyy-MM-dd')}
+        weekNumber={weekNumbers[weekPopover.weekIdx]}
+        position={{ x: weekPopover.x, y: weekPopover.y }}
+        onClose={closeWeekPopover}
+      />
+    ) : null
 
   const visibleTasksMap = useMemo(() => {
     const map = new Map<string, CalendarEvent[]>()
@@ -1009,7 +1086,7 @@ export function CalendarGrid(): JSX.Element {
     // Keep automatic event capacity aligned with the adaptive row floor. The
     // floor is lowered on short windows, so Auto can reduce the number of
     // cards before the grid needs to fall back to scrolling.
-    rowHeightFloor: showWeekNumbers ? adaptiveRowFloor : 0,
+    rowHeightFloor: showGutter ? adaptiveRowFloor : 0,
   })
   // Auto is on but nothing has been measured yet (first paint, or a hidden
   // grid): fall back to the old default rather than rendering every event.
@@ -1151,7 +1228,7 @@ export function CalendarGrid(): JSX.Element {
                   style={
                     {
                       '--day-cell-height': `${rowHeight}px`,
-                      '--month-row-min-height': `${showWeekNumbers ? adaptiveRowFloor : 0}px`,
+                      '--month-row-min-height': `${showGutter ? adaptiveRowFloor : 0}px`,
                       '--slide-x': monthChangeMotion.initial
                         ? `${monthChangeMotion.initial.x || 0}px`
                         : '0px',
@@ -1164,10 +1241,12 @@ export function CalendarGrid(): JSX.Element {
                   }
                 >
                   <div
-                    className={`${styles.header} ${!showWeekNumbers ? styles.headerNoWeekNum : ''}`}
+                    className={`${styles.header} ${!showGutter ? styles.headerNoWeekNum : !showWeekNumbers ? styles.headerSlim : ''}`}
                     data-component="calendar-grid-header"
                   >
-                    {showWeekNumbers && <div className={styles.weekNumHeader}>W#</div>}
+                    {showGutter && (
+                      <div className={styles.weekNumHeader}>{showWeekNumbers ? 'W#' : ''}</div>
+                    )}
                     {weekdays.map((day) => (
                       <div key={day} className={styles.weekday}>
                         {day}
@@ -1187,37 +1266,40 @@ export function CalendarGrid(): JSX.Element {
                       return (
                         <div
                           key={weekIdx}
-                          className={`${styles.weekRow} ${!showWeekNumbers ? styles.weekRowNoWeekNum : ''} ${compressWeekRows && isPastWeek ? styles.compressedWeek : ''}`}
+                          className={`${styles.weekRow} ${!showGutter ? styles.weekRowNoWeekNum : !showWeekNumbers ? styles.weekRowSlim : ''} ${compressWeekRows && isPastWeek ? styles.compressedWeek : ''}`}
                         >
-                          {showWeekNumbers && (
+                          {showGutter && (
                             <div
-                              className={styles.weekNumber}
+                              className={`${styles.weekNumber} ${!showWeekNumbers ? styles.weekNumberSlim : ''}`}
                               onClick={() => handleWeekClick(days[weekIdx * 7])}
                             >
-                              <div
-                                key={weekNum}
-                                className={
-                                  monthChangeMotion.initial ? styles.dayContentSlide : undefined
-                                }
-                                style={
-                                  {
-                                    width: '100%',
-                                    height: '28px',
-                                    display: 'flex',
-                                    justifyContent: 'center',
-                                    alignItems: 'center',
-                                    '--slide-x': monthChangeMotion.initial
-                                      ? `${monthChangeMotion.initial.x || 0}px`
-                                      : '0px',
-                                    '--slide-y': monthChangeMotion.initial
-                                      ? `${monthChangeMotion.initial.y || 0}px`
-                                      : '0px',
-                                    '--slide-duration': `${monthChangeMotion.transition.duration}s`,
-                                  } as React.CSSProperties
-                                }
-                              >
-                                {weekNum}
-                              </div>
+                              {showWeekNumbers && (
+                                <div
+                                  key={weekNum}
+                                  className={
+                                    monthChangeMotion.initial ? styles.dayContentSlide : undefined
+                                  }
+                                  style={
+                                    {
+                                      width: '100%',
+                                      height: '28px',
+                                      display: 'flex',
+                                      justifyContent: 'center',
+                                      alignItems: 'center',
+                                      '--slide-x': monthChangeMotion.initial
+                                        ? `${monthChangeMotion.initial.x || 0}px`
+                                        : '0px',
+                                      '--slide-y': monthChangeMotion.initial
+                                        ? `${monthChangeMotion.initial.y || 0}px`
+                                        : '0px',
+                                      '--slide-duration': `${monthChangeMotion.transition.duration}s`,
+                                    } as React.CSSProperties
+                                  }
+                                >
+                                  {weekNum}
+                                </div>
+                              )}
+                              {renderWeekBadge(weekIdx, weekNum)}
                             </div>
                           )}
                           {days.slice(weekIdx * 7, weekIdx * 7 + 7).map((day, idx) => {
@@ -1338,6 +1420,7 @@ export function CalendarGrid(): JSX.Element {
             )}
           </div>
         </div>
+        {weekPopoverElement}
       </>
     )
   }
@@ -1358,7 +1441,7 @@ export function CalendarGrid(): JSX.Element {
             style={
               {
                 '--day-cell-height': `${rowHeight}px`,
-                '--month-row-min-height': `${showWeekNumbers ? adaptiveRowFloor : 0}px`,
+                '--month-row-min-height': `${showGutter ? adaptiveRowFloor : 0}px`,
                 '--slide-x': monthChangeMotion.initial
                   ? `${monthChangeMotion.initial.x || 0}px`
                   : '0px',
@@ -1371,10 +1454,12 @@ export function CalendarGrid(): JSX.Element {
             }
           >
             <div
-              className={`${styles.header} ${!showWeekNumbers ? styles.headerNoWeekNum : ''}`}
+              className={`${styles.header} ${!showGutter ? styles.headerNoWeekNum : !showWeekNumbers ? styles.headerSlim : ''}`}
               data-component="calendar-grid-header"
             >
-              {showWeekNumbers && <div className={styles.weekNumHeader}>W#</div>}
+              {showGutter && (
+                <div className={styles.weekNumHeader}>{showWeekNumbers ? 'W#' : ''}</div>
+              )}
               {weekdays.map((day) => (
                 <div key={day} className={styles.weekday}>
                   {day}
@@ -1394,28 +1479,31 @@ export function CalendarGrid(): JSX.Element {
                 return (
                   <div
                     key={weekIdx}
-                    className={`${styles.weekRow} ${!showWeekNumbers ? styles.weekRowNoWeekNum : ''} ${compressWeekRows && isPastWeek ? styles.compressedWeek : ''}`}
+                    className={`${styles.weekRow} ${!showGutter ? styles.weekRowNoWeekNum : !showWeekNumbers ? styles.weekRowSlim : ''} ${compressWeekRows && isPastWeek ? styles.compressedWeek : ''}`}
                   >
-                    {showWeekNumbers && (
+                    {showGutter && (
                       <div
-                        className={styles.weekNumber}
+                        className={`${styles.weekNumber} ${!showWeekNumbers ? styles.weekNumberSlim : ''}`}
                         onClick={() => handleWeekClick(days[weekIdx * 7])}
                       >
-                        <AnimatePresence>
-                          <motion.div
-                            key={weekNum}
-                            {...monthChangeMotion}
-                            style={{
-                              width: '100%',
-                              height: '28px',
-                              display: 'flex',
-                              justifyContent: 'center',
-                              alignItems: 'center',
-                            }}
-                          >
-                            {weekNum}
-                          </motion.div>
-                        </AnimatePresence>
+                        {showWeekNumbers && (
+                          <AnimatePresence>
+                            <motion.div
+                              key={weekNum}
+                              {...monthChangeMotion}
+                              style={{
+                                width: '100%',
+                                height: '28px',
+                                display: 'flex',
+                                justifyContent: 'center',
+                                alignItems: 'center',
+                              }}
+                            >
+                              {weekNum}
+                            </motion.div>
+                          </AnimatePresence>
+                        )}
+                        {renderWeekBadge(weekIdx, weekNum)}
                       </div>
                     )}
                     {days.slice(weekIdx * 7, weekIdx * 7 + 7).map((day, idx) => {
@@ -1497,6 +1585,7 @@ export function CalendarGrid(): JSX.Element {
           ) : null}
         </DragOverlay>
       </DndContext>
+      {weekPopoverElement}
     </>
   )
 }

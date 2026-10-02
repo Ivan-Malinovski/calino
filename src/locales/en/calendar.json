@@ -37,7 +37,11 @@
       "addWeekTask": "Add a task for this week",
       "addWeekTaskDetails": "More options",
       "quickAddPlaceholder": "Add for this week…",
-      "noTaskCalendar": "No calendar available for tasks"
+      "noTaskCalendar": "No calendar available for tasks",
+      "weekTasksBadge_one": "{{count}} task this week",
+      "weekTasksBadge_other": "{{count}} tasks this week",
+      "weekTasksAriaLabel": "Tasks for week {{number}}",
+      "weekTasksEmpty": "Nothing planned for this week yet"
     },
     "day": {
       "backToAgenda": "Back to agenda"
