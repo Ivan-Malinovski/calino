@@ -62,6 +62,8 @@ test.describe('Monthly day selection', () => {
       await cards.first().click()
       await page.locator('[data-component="event-preview"]')
         .getByRole('button', { name: /Open event/ }).click()
+      // The recurrence fields live in the collapsed "More" section on reopen.
+      await modal.getByRole('button', { name: 'Show more options' }).click()
       await expect(dayPicker).toHaveValue(day)
       await modal.getByRole('button', { name: 'Cancel', exact: true }).click()
 
