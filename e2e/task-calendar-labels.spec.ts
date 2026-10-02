@@ -40,7 +40,7 @@ async function seed(page: Page, calendarSeeds = calendars, taskSeeds = tasks): P
       }))
       localStorage.setItem(keys.calendar, JSON.stringify(saved))
       const settings = JSON.parse(localStorage.getItem(keys.settings)!)
-      settings.state = { ...settings.state, language: 'en', sidebarWidth: 240 }
+      settings.state = { ...settings.state, language: 'en', sidebarWidth: 300 }
       localStorage.setItem(keys.settings, JSON.stringify(settings))
     },
     { keys: STORAGE_KEYS, taskSeeds }
@@ -101,7 +101,7 @@ test.describe('Task calendar labels', () => {
     await page.goto('/tasks')
     const widget = await expandWidget(page)
     await expect(row(page, 'work-task').locator(labelSelector)).toHaveCount(0)
-    await widget.locator('[data-task-id="work-task"]').hover()
+    await widget.locator('[data-mini-task-id="work-task"]').hover()
     await expect(widget.locator(labelSelector)).toHaveText('Work')
     await page.goto('/settings?tab=tasks')
     await tasksToggle.click()
@@ -112,7 +112,7 @@ test.describe('Task calendar labels', () => {
     await page.goto('/tasks')
     await expandWidget(page)
     await expect(row(page, 'work-task').locator(labelSelector)).toHaveText('Work')
-    await widget.locator('[data-task-id="work-task"]').hover()
+    await widget.locator('[data-mini-task-id="work-task"]').hover()
     await expect(widget.locator(labelSelector)).toHaveCount(0)
   })
 
@@ -120,8 +120,8 @@ test.describe('Task calendar labels', () => {
     await seed(page)
     await page.goto('/tasks')
     const widget = await expandWidget(page)
-    const work = widget.locator('[data-task-id="work-task"]')
-    const other = widget.locator('[data-task-id="home-task"]')
+    const work = widget.locator('[data-mini-task-id="work-task"]')
+    const other = widget.locator('[data-mini-task-id="home-task"]')
     await expect(widget.locator(labelSelector)).toHaveCount(0)
     await work.hover()
     await expect(work.locator(labelSelector)).toHaveText('Work')

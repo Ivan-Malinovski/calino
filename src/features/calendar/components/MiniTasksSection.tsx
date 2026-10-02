@@ -320,7 +320,7 @@ export function MiniTasksSection({ isExpanded, onToggle }: MiniTasksSectionProps
                       } as React.CSSProperties
                     }
                     data-component="mini-task-row"
-                    data-task-id={task.id}
+                    data-mini-task-id={task.id}
                     onFocus={() => setFocusedTask(task.id)}
                     onBlur={(event) => {
                       if (!event.currentTarget.contains(event.relatedTarget)) setFocusedTask(null)

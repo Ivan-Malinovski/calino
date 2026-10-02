@@ -17,7 +17,7 @@ function renderTasks() {
       <MiniTasksSection isExpanded onToggle={vi.fn()} />
     </BrowserRouter>
   )
-  const row = (id: string) => view.container.querySelector(`[data-task-id="${id}"]`)!
+  const row = (id: string) => view.container.querySelector(`[data-mini-task-id="${id}"]`)!
   const label = (id: string) => row(id).querySelector('[data-component="task-calendar-label"]')
   return { ...view, row, label }
 }
