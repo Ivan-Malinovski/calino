@@ -6,6 +6,7 @@ import { Capacitor } from '@capacitor/core'
 import { GeneralSettings } from './GeneralSettings'
 import { ThemeSettings } from './ThemeSettings'
 import { CalendarSettings } from './CalendarSettings'
+import { TasksSettings } from './TasksSettings'
 import { NotificationSettings } from './NotificationSettings'
 import { DataSettings } from './DataSettings'
 import { CalDAVSettings } from './CalDAVSettings'
@@ -18,7 +19,15 @@ import { FloatingNavPill } from '@/features/calendar/components/nav/FloatingNavP
 import styles from './Settings.module.css'
 
 type SettingsTab =
-  'general' | 'theme' | 'calendar' | 'categories' | 'notifications' | 'caldav' | 'data' | 'aiVision'
+  | 'general'
+  | 'theme'
+  | 'calendar'
+  | 'tasks'
+  | 'categories'
+  | 'notifications'
+  | 'caldav'
+  | 'data'
+  | 'aiVision'
 
 interface NavItem {
   id: SettingsTab
@@ -48,6 +57,7 @@ const SETTINGS_SEARCH_SECTIONS: Array<{
   { tab: 'general', resourceKey: 'general', labelKey: 'nav.general' },
   { tab: 'theme', resourceKey: 'theme', labelKey: 'nav.appearance' },
   { tab: 'calendar', resourceKey: 'calendar', labelKey: 'nav.calendar' },
+  { tab: 'tasks', resourceKey: 'tasks', labelKey: 'nav.tasks' },
   { tab: 'categories', resourceKey: 'categories', labelKey: 'nav.categories' },
   { tab: 'notifications', resourceKey: 'notifications', labelKey: 'nav.notifications' },
   { tab: 'caldav', resourceKey: 'caldav', labelKey: 'nav.sync' },
@@ -109,7 +119,10 @@ function buildSettingsSearchIndex(
 }
 
 function normalizeSearchText(value: string): string {
-  return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase()
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLocaleLowerCase()
 }
 
 function findSettingsSearchResults(
@@ -197,6 +210,23 @@ const BASE_NAV_ITEMS: NavItem[] = [
       >
         <rect x="2" y="3" width="14" height="13" rx="3" />
         <path d="M2 7h14M6 2v2M12 2v2" />
+      </svg>
+    ),
+  },
+  {
+    id: 'tasks',
+    labelKey: 'nav.tasks',
+    icon: (
+      <svg
+        className={styles.navIcon}
+        viewBox="0 0 18 18"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="M2 4l1.5 1.5L6 3M2 10l1.5 1.5L6 9M9 4h7M9 10h7M9 15h7" />
       </svg>
     ),
   },
@@ -300,6 +330,7 @@ const VALID_TABS: SettingsTab[] = [
   'general',
   'theme',
   'calendar',
+  'tasks',
   'categories',
   'notifications',
   'caldav',
@@ -313,9 +344,7 @@ export function SettingsPage(): JSX.Element {
   const [searchParams] = useSearchParams()
   const isMobile = useIsMobile()
   const isNative = Capacitor.isNativePlatform()
-  const navItems: NavItem[] = isNative
-    ? [...BASE_NAV_ITEMS, AI_VISION_NAV_ITEM]
-    : BASE_NAV_ITEMS
+  const navItems: NavItem[] = isNative ? [...BASE_NAV_ITEMS, AI_VISION_NAV_ITEM] : BASE_NAV_ITEMS
   const brokenEventsCount = useCalendarStore((state) => state.brokenEvents.length)
   const duplicateUidCount = useCalendarStore((state) => state.duplicateUidIssues.length)
   const dataIssuesCount = brokenEventsCount + duplicateUidCount
@@ -374,6 +403,8 @@ export function SettingsPage(): JSX.Element {
         return <ThemeSettings searchControl={searchControl} />
       case 'calendar':
         return <CalendarSettings searchControl={searchControl} />
+      case 'tasks':
+        return <TasksSettings searchControl={searchControl} />
       case 'categories':
         return <CategoriesSettings searchControl={searchControl} />
       case 'notifications':

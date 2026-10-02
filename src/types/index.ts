@@ -389,6 +389,8 @@ export interface UserSettings {
   adjustableTheme: AdjustableThemeSettings
   caldavDebugMode: boolean
   hideCompletedTasksInMonthView: boolean
+  showTaskCalendarLabels: boolean
+  showSidebarTaskCalendarLabels: boolean
   useCategoryColors: boolean
   showEventIcons: boolean
   sidebarWidth: number

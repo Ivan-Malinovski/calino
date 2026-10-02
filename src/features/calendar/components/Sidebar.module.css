@@ -975,16 +975,17 @@
 
 /* ---- Tasks Section ---- */
 .tasksHeader {
+  min-width: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
   width: 100%;
+  margin-bottom: 14px;
   padding: 0;
   background: transparent;
   border: none;
   cursor: pointer;
   color: var(--ink);
-  margin-bottom: 14px;
 }
 
 .tasksHeader:hover .tasksTitle {
@@ -1040,7 +1041,7 @@
 /* ---- Task Row ---- */
 .taskRow {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 11px;
   padding: 6px 8px;
   margin: 0 -8px;
@@ -1060,25 +1061,59 @@
 
 .taskCheckbox {
   flex: 0 0 auto;
+  margin-top: 2px;
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  border: 1.6px solid var(--ink-3);
+  border: 1.6px solid
+    color-mix(in srgb, var(--event-color, var(--accent)) var(--event-marker-mix, 55%), var(--ink-3));
   background: transparent;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 0;
-  transition: border-color var(--dur-fast);
+  transition:
+    border-color var(--dur-fast),
+    background var(--dur-fast);
 }
 
 .taskRow:hover .taskCheckbox {
-  border-color: var(--accent);
+  border-color: var(--event-color, var(--accent));
+  background: color-mix(
+    in srgb,
+    var(--event-color, var(--accent)) var(--event-bg-mix, 9%),
+    transparent
+  );
 }
 
-.taskCheckbox:hover {
-  border-color: var(--accent);
+.taskCheckbox svg {
+  width: 11px;
+  height: 11px;
+  color: var(--event-color, var(--accent));
+  opacity: 0;
+  transition: opacity var(--dur-fast);
+}
+
+.taskRow:hover .taskCheckbox svg {
+  opacity: 0.4;
+}
+
+.taskCheckbox[aria-checked='true'],
+.taskCompleting .taskCheckbox {
+  border-color: var(--event-color, var(--accent));
+  background: var(--event-color, var(--accent));
+}
+
+.taskCheckbox[aria-checked='true'] svg,
+.taskCompleting .taskCheckbox svg {
+  color: #fff;
+  opacity: 1;
+}
+
+.taskCheckbox:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .taskCheckbox:disabled {
@@ -1089,7 +1124,7 @@
 .taskContent {
   flex: 1;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: var(--space-2);
   min-width: 0;
@@ -1111,7 +1146,18 @@
   border-radius: 4px;
 }
 
+.taskText {
+  flex: 1;
+  min-width: 0;
+}
+
+.taskCalendarReveal {
+  display: block;
+  overflow: hidden;
+}
+
 .taskTitle {
+  display: block;
   font-size: 14px;
   color: var(--ink);
   white-space: nowrap;
@@ -1139,6 +1185,7 @@
 
 .taskDue {
   flex-shrink: 0;
+  margin-top: 1px;
   font-size: 12.5px;
   color: var(--ink-3);
   font-variant-numeric: tabular-nums;

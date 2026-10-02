@@ -1,10 +1,18 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { createLocalStorageMock } from '@/test/storageMock'
 import { useSettingsStore } from '../settingsStore'
 
 describe('settingsStore', () => {
+  const storage = createLocalStorageMock()
   beforeEach(() => {
+    storage.install()
     localStorage.clear()
     useSettingsStore.getState().resetSettings()
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+    storage.reset()
   })
 
   it('has default settings', () => {
@@ -24,6 +32,8 @@ describe('settingsStore', () => {
     expect(settings.enableSoundAlerts).toBe(false)
     expect(settings.conflictResolution).toBe('server-wins')
     expect(settings.taskCollapseOverrides).toEqual({})
+    expect(settings.showTaskCalendarLabels).toBe(true)
+    expect(settings.showSidebarTaskCalendarLabels).toBe(true)
   })
 
   it('updates settings with updateSettings', () => {
@@ -80,6 +90,75 @@ describe('settingsStore', () => {
       parent: true,
       expandedParent: false,
     })
+  })
+
+  it('persists independent task calendar label preferences', async () => {
+    useSettingsStore.getState().updateSettings({
+      showTaskCalendarLabels: false,
+      showSidebarTaskCalendarLabels: true,
+    })
+    expect(useSettingsStore.getState().showTaskCalendarLabels).toBe(false)
+    const saved = localStorage.getItem('calino-settings')!
+    expect(JSON.parse(saved).state.showTaskCalendarLabels).toBe(false)
+    expect(JSON.parse(saved).state.showSidebarTaskCalendarLabels).toBe(true)
+
+    useSettingsStore.getState().resetSettings()
+    localStorage.setItem('calino-settings', saved)
+    await useSettingsStore.persist.rehydrate()
+    expect(useSettingsStore.getState().showTaskCalendarLabels).toBe(false)
+    expect(useSettingsStore.getState().showSidebarTaskCalendarLabels).toBe(true)
+    useSettingsStore.getState().updateSettings({ showSidebarTaskCalendarLabels: false })
+    useSettingsStore.getState().updateSettings({ showTaskCalendarLabels: true })
+    const independent = localStorage.getItem('calino-settings')!
+    useSettingsStore.getState().resetSettings()
+    localStorage.setItem('calino-settings', independent)
+    await useSettingsStore.persist.rehydrate()
+    expect(useSettingsStore.getState().showTaskCalendarLabels).toBe(true)
+    expect(useSettingsStore.getState().showSidebarTaskCalendarLabels).toBe(false)
+  })
+
+  it.each([1, 4])(
+    'defaults missing calendar labels in saved settings version %i',
+    async (version) => {
+      localStorage.setItem(
+        'calino-settings',
+        JSON.stringify({ state: { themeMode: 'dark', defaultView: 'agenda' }, version })
+      )
+      await useSettingsStore.persist.rehydrate()
+      expect(useSettingsStore.getState().showTaskCalendarLabels).toBe(true)
+      expect(useSettingsStore.getState().showSidebarTaskCalendarLabels).toBe(true)
+      expect(useSettingsStore.getState().themeMode).toBe('dark')
+      expect(useSettingsStore.getState().defaultView).toBe('agenda')
+    }
+  )
+
+  it.each([
+    [1, true],
+    [1, false],
+    [4, true],
+    [4, false],
+  ] as const)(
+    'seeds both labels from the shared setting at version %i with value %s',
+    async (version, value) => {
+      localStorage.setItem(
+        'calino-settings',
+        JSON.stringify({ state: { showTaskCalendarLabels: value, themeMode: 'dark' }, version })
+      )
+      await useSettingsStore.persist.rehydrate()
+      expect(useSettingsStore.getState().showTaskCalendarLabels).toBe(value)
+      expect(useSettingsStore.getState().showSidebarTaskCalendarLabels).toBe(value)
+      expect(useSettingsStore.getState().themeMode).toBe('dark')
+    }
+  )
+
+  it('resetSettings restores both enabled task calendar label defaults', () => {
+    useSettingsStore.getState().updateSettings({
+      showTaskCalendarLabels: false,
+      showSidebarTaskCalendarLabels: false,
+    })
+    useSettingsStore.getState().resetSettings()
+    expect(useSettingsStore.getState().showTaskCalendarLabels).toBe(true)
+    expect(useSettingsStore.getState().showSidebarTaskCalendarLabels).toBe(true)
   })
 
   it('resetSettings restores default values', () => {

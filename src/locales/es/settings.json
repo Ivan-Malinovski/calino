@@ -4,6 +4,7 @@
     "general": "General",
     "appearance": "Apariencia",
     "calendar": "Calendario",
+    "tasks": "Tareas",
     "categories": "Categorías",
     "notifications": "Notificaciones",
     "sync": "Sincronizar",
@@ -123,6 +124,18 @@
     "thursday": "Jueves",
     "friday": "Viernes",
     "saturday": "Sábado"
+  },
+  "tasks": {
+    "title": "Tareas",
+    "display": "Visualización",
+    "showTaskCalendarLabels": {
+      "label": "Mostrar nombres de calendario en Tareas",
+      "desc": "Muestra el calendario de cada tarea junto a su fecha de vencimiento cuando hay varios calendarios de tareas activados."
+    },
+    "showSidebarTaskCalendarLabels": {
+      "label": "Mostrar nombres de calendario en la barra lateral",
+      "desc": "Muestra el calendario de una tarea al pasar el cursor o darle el foco con el teclado cuando hay varios calendarios de tareas activados."
+    }
   },
   "calendar": {
     "title": "Calendario",

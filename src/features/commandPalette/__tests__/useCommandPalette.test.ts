@@ -185,6 +185,8 @@ vi.mock('@/store/settingsStore', () => ({
       },
       caldavDebugMode: false,
       hideCompletedTasksInMonthView: true,
+      showTaskCalendarLabels: true,
+      showSidebarTaskCalendarLabels: true,
       monthViewEventLimit: 3,
       sidebarWidth: 300,
       sidebarCollapsed: false,
