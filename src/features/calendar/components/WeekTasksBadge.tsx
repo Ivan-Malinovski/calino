@@ -67,6 +67,9 @@ export function WeekTasksBadge({
           <span>{count}</span>
         </>
       )}
+      <span className={styles.tip} aria-hidden="true">
+        {t('views.week.sometimeThisWeek')}
+      </span>
     </button>
   )
 }

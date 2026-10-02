@@ -79,11 +79,23 @@ test.describe('Month view: sometime-this-week tasks', () => {
 
   test('shows a count badge in the week row and no card on the due day', async ({ page }) => {
     await expect(badge(page)).toHaveCount(1)
-    await expect(badge(page)).toHaveText('2')
+    await expect(badge(page)).toHaveText(/^2/)
     await expect(badge(page)).toHaveAccessibleName('2 tasks this week')
     await expect(page.locator('[data-date="2026-10-04"]')).not.toContainText('Call the plumber')
     await expect(page.locator('[data-date="2026-10-02"]')).not.toContainText('Book flights')
     await expect(page.locator('[data-date="2026-10-01"]')).toContainText('Water plants')
+  })
+
+  test('hovering the badge names what it is, and the label goes once it is open', async ({
+    page,
+  }) => {
+    const tip = badge(page).getByText('Sometime this week')
+    await expect(tip).toBeHidden()
+    await badge(page).hover()
+    await expect(tip).toBeVisible()
+    await badge(page).click()
+    await expect(page.locator('[data-component="week-tasks-popover"]')).toBeVisible()
+    await expect(tip).toBeHidden()
   })
 
   test('clicking the badge opens the list without jumping to the week view', async ({ page }) => {
@@ -111,7 +123,7 @@ test.describe('Month view: sometime-this-week tasks', () => {
     await expect.poll(async () => (await storedTask(page, 'week-a')).completed).toBe(true)
     // Completed tasks leave the month's lists, but the popover stays open.
     await expect(row).toHaveCount(0)
-    await expect(badge(page)).toHaveText('1')
+    await expect(badge(page)).toHaveText(/^1/)
     await expect(page.locator('[data-component="week-tasks-popover"]')).toBeVisible()
   })
 
@@ -126,7 +138,7 @@ test.describe('Month view: sometime-this-week tasks', () => {
     await expect(
       popover.locator('[data-component="week-task-pill"]', { hasText: 'Sort the garage' })
     ).toBeVisible()
-    await expect(badge(page)).toHaveText('3')
+    await expect(badge(page)).toHaveText(/^3/)
     const stored = await page.evaluate(() => {
       const raw = JSON.parse(localStorage.getItem('calino-storage') ?? '{}')
       return raw.state.events.find((e: { title: string }) => e.title === 'Sort the garage')
@@ -140,7 +152,7 @@ test.describe('Month view: sometime-this-week tasks', () => {
 test.describe('Month view: week tasks without week numbers', () => {
   test('keeps a slim gutter holding the badge', async ({ page }) => {
     await seed(page, { showWeekNumbers: false })
-    await expect(badge(page)).toHaveText('2')
+    await expect(badge(page)).toHaveText(/^2/)
     const row = page.locator('[class*="weekRowSlim"]').first()
     const box = (await row.locator('[class*="weekNumber"]').first().boundingBox())!
     expect(box.width).toBeLessThan(40)

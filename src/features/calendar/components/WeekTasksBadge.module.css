@@ -1,4 +1,5 @@
 .badge {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -53,6 +54,51 @@
   .badge[data-week-badge='empty']:focus-visible,
   .badge[data-week-badge='empty'][aria-expanded='true'] {
     opacity: 1;
+  }
+}
+
+/* A small label so the badge says what it is. Only for pointers that hover;
+   the accessible name already carries the full text. */
+.tip {
+  display: none;
+}
+
+@media (hover: hover) {
+  .tip {
+    display: block;
+    position: absolute;
+    top: 50%;
+    left: 100%;
+    z-index: 5;
+    margin-left: 6px;
+    padding: 2px 8px;
+    border: 1px solid var(--popover-border, rgba(var(--ink-raw), 0.1));
+    border-radius: 6px;
+    background: var(--popover-bg, var(--panel, #fff));
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+    color: var(--ink-2, var(--ink));
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 16px;
+    letter-spacing: 0;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transform: translate(-3px, -50%);
+    transition:
+      opacity var(--dur-fast) 120ms,
+      transform var(--dur-fast) 120ms;
+  }
+
+  .badge:hover .tip,
+  .badge:focus-visible .tip {
+    opacity: 1;
+    transform: translate(0, -50%);
+  }
+
+  /* The popover is its own label once open. */
+  .badge[aria-expanded='true'] .tip {
+    display: none;
   }
 }
 
