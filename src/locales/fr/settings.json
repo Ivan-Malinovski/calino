@@ -4,6 +4,7 @@
     "general": "Général",
     "appearance": "Apparence",
     "calendar": "Calendrier",
+    "tasks": "Tâches",
     "categories": "Catégories",
     "notifications": "Notifications",
     "sync": "Synchronisation",
@@ -123,6 +124,18 @@
     "thursday": "Jeudi",
     "friday": "Vendredi",
     "saturday": "Samedi"
+  },
+  "tasks": {
+    "title": "Tâches",
+    "display": "Affichage",
+    "showTaskCalendarLabels": {
+      "label": "Afficher les noms des calendriers dans Tâches",
+      "desc": "Affiche le calendrier de chaque tâche à côté de son échéance lorsque plusieurs calendriers de tâches sont activés."
+    },
+    "showSidebarTaskCalendarLabels": {
+      "label": "Afficher les noms des calendriers dans la barre latérale",
+      "desc": "Affiche le calendrier d'une tâche au survol ou au focus clavier lorsque plusieurs calendriers de tâches sont activés."
+    }
   },
   "calendar": {
     "title": "Calendrier",

@@ -4,6 +4,7 @@
     "general": "Generale",
     "appearance": "Aspetto",
     "calendar": "Calendario",
+    "tasks": "Attività",
     "categories": "Categorie",
     "notifications": "Notifiche",
     "sync": "Sincronizzazione",
@@ -123,6 +124,18 @@
     "thursday": "Giovedì",
     "friday": "Venerdì",
     "saturday": "Sabato"
+  },
+  "tasks": {
+    "title": "Attività",
+    "display": "Visualizzazione",
+    "showTaskCalendarLabels": {
+      "label": "Mostra i nomi dei calendari in Attività",
+      "desc": "Mostra il calendario di ogni attività accanto alla scadenza quando sono attivati più calendari di attività."
+    },
+    "showSidebarTaskCalendarLabels": {
+      "label": "Mostra i nomi dei calendari nella barra laterale",
+      "desc": "Mostra il calendario di un'attività al passaggio del mouse o con il focus della tastiera quando sono attivati più calendari di attività."
+    }
   },
   "calendar": {
     "title": "Calendario",

@@ -135,6 +135,16 @@ describe('settingsSync', () => {
       expect(parsed.settings.taskCollapseOverrides).toEqual({ parent: true })
     })
 
+    it('includes task calendar label preferences in synced settings', () => {
+      useSettingsStore.getState().updateSettings({
+        showTaskCalendarLabels: false,
+        showSidebarTaskCalendarLabels: false,
+      })
+      const parsed = JSON.parse(serializeSettings()) as SettingsSyncPayload
+      expect(parsed.settings.showTaskCalendarLabels).toBe(false)
+      expect(parsed.settings.showSidebarTaskCalendarLabels).toBe(false)
+    })
+
     it('should include category colours and auto-category rules', () => {
       useCalendarStore.setState({
         categories: [{ id: 'c1', name: 'Work', color: '#ff0000' }],
@@ -249,6 +259,14 @@ describe('settingsSync', () => {
   })
 
   describe('applyRemotePayload', () => {
+    it('applies remote task calendar label preferences independently', () => {
+      useSettingsStore.getState().updateSettings({ showTaskCalendarLabels: false })
+      applyRemotePayload({
+        settings: { showTaskCalendarLabels: true, showSidebarTaskCalendarLabels: false },
+      })
+      expect(useSettingsStore.getState().showTaskCalendarLabels).toBe(true)
+      expect(useSettingsStore.getState().showSidebarTaskCalendarLabels).toBe(false)
+    })
     it('should write settings and categories to their stores', () => {
       useCalendarStore.setState({
         categories: [{ id: 'local-work', name: 'Work', color: '#111111' }],

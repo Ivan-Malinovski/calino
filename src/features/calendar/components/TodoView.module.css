@@ -452,7 +452,7 @@
 
 .taskRow {
   display: grid;
-  grid-template-columns: 22px 1fr auto;
+  grid-template-columns: 22px minmax(0, 1fr) auto;
   gap: 14px;
   align-items: start;
   padding: 12px 14px;
@@ -605,6 +605,7 @@
   top: -3px;
   display: inline;
   min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .taskNote {
@@ -659,6 +660,30 @@
   gap: var(--space-3);
   padding-top: 2px;
   white-space: nowrap;
+}
+
+.taskCalendarDue {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.taskIndicators {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+@media (max-width: 768px) {
+  .taskRow {
+    gap: 8px;
+    padding-inline: 8px;
+  }
+
+  .taskMeta {
+    gap: 6px;
+  }
 }
 
 /* R2.7 — Marks a row that stands in for a recurring series. Deliberately quiet:
@@ -747,6 +772,12 @@
 .dueToday {
   color: var(--accent-strong, var(--accent, #b07d4f));
   font-weight: 600;
+}
+
+@media (max-width: 768px) {
+  .dueLabel {
+    min-width: 40px;
+  }
 }
 
 /* ---- Inline Composer ---- */

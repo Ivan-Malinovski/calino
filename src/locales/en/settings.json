@@ -4,6 +4,7 @@
     "general": "General",
     "appearance": "Appearance",
     "calendar": "Calendar",
+    "tasks": "Tasks",
     "categories": "Categories",
     "notifications": "Notifications",
     "sync": "Sync",
@@ -123,6 +124,18 @@
     "thursday": "Thursday",
     "friday": "Friday",
     "saturday": "Saturday"
+  },
+  "tasks": {
+    "title": "Tasks",
+    "display": "Display",
+    "showTaskCalendarLabels": {
+      "label": "Show calendar names in Tasks",
+      "desc": "Show each task's calendar beside its due date when multiple task calendars are enabled."
+    },
+    "showSidebarTaskCalendarLabels": {
+      "label": "Reveal calendar names in the sidebar",
+      "desc": "Show a task's calendar on hover or keyboard focus when multiple task calendars are enabled."
+    }
   },
   "calendar": {
     "title": "Calendar",

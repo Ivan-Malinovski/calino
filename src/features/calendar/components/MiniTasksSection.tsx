@@ -2,6 +2,7 @@ import type { JSX } from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
+import { DUR_FAST, EASE_OUT } from '@/lib/motion'
 import { createPortal } from 'react-dom'
 import { Link } from 'react-router'
 import { parseISO, isToday, isBefore, startOfDay } from 'date-fns'
@@ -14,6 +15,8 @@ import { useContextMenuStore } from '@/store/contextMenuStore'
 import { hapticIfEnabled } from '@/lib/haptics'
 import { completeTaskAndSync } from '@/lib/taskCompletion'
 import { TaskContextMenu } from './TaskContextMenu'
+import { useTaskCalendarLabels } from '../hooks/useTaskCalendarLabels'
+import { TaskCalendarLabel } from './TaskCalendarLabel'
 import type { CalendarEvent } from '@/types'
 import styles from './Sidebar.module.css'
 
@@ -27,11 +30,13 @@ export function MiniTasksSection({ isExpanded, onToggle }: MiniTasksSectionProps
   const prefersReducedMotion = useReducedMotion()
   const events = useCalendarStore((state) => state.events)
   const calendars = useCalendarStore((state) => state.calendars)
+  const { calendarById, labelsVisible } = useTaskCalendarLabels('sidebar')
   const completeTask = useCalendarStore((state) => state.completeTask)
   const completeTaskOccurrence = useCalendarStore((state) => state.completeTaskOccurrence)
   const openModal = useCalendarStore((state) => state.openModal)
   const { updateEvent: updateCalDAVEvent, saveRecurrenceOverride } = useCalDAV()
   const [hoveredTask, setHoveredTask] = useState<string | null>(null)
+  const [focusedTask, setFocusedTask] = useState<string | null>(null)
   const [tooltipPosition, setTooltipPosition] = useState<{ x: number; y: number } | null>(null)
   const [completingTaskId, setCompletingTaskId] = useState<string | null>(null)
   const [taskMenu, setTaskMenu] = useState<{ task: CalendarEvent; x: number; y: number } | null>(
@@ -309,6 +314,17 @@ export function MiniTasksSection({ isExpanded, onToggle }: MiniTasksSectionProps
                           }
                     }
                     className={`${styles.taskRow} ${task.id === completingTaskId ? styles.taskCompleting : ''}`}
+                    style={
+                      {
+                        '--event-color': calendarById.get(task.calendarId)?.color || '#888',
+                      } as React.CSSProperties
+                    }
+                    data-component="mini-task-row"
+                    data-task-id={task.id}
+                    onFocus={() => setFocusedTask(task.id)}
+                    onBlur={(event) => {
+                      if (!event.currentTarget.contains(event.relatedTarget)) setFocusedTask(null)
+                    }}
                     onContextMenu={(e) => handleContextMenu(e, task)}
                     onPointerDown={(e) => handlePointerDown(e, task)}
                     onPointerUp={cancelLongPress}
@@ -320,7 +336,14 @@ export function MiniTasksSection({ isExpanded, onToggle }: MiniTasksSectionProps
                       // appear the moment it closes.
                       if (taskMenu) return
                       setHoveredTask(task.id)
-                      setTooltipPosition({ x: e.clientX, y: e.clientY })
+                      setTooltipPosition({
+                        x: e.clientX,
+                        // Keep descriptions below the expanded row, rather
+                        // than letting their tooltip cover the calendar name.
+                        y: labelsVisible
+                          ? e.currentTarget.getBoundingClientRect().bottom + 18
+                          : e.clientY,
+                      })
                     }}
                     onMouseLeave={() => {
                       setHoveredTask(null)
@@ -329,6 +352,7 @@ export function MiniTasksSection({ isExpanded, onToggle }: MiniTasksSectionProps
                   >
                     <button
                       className={styles.taskCheckbox}
+                      data-component="mini-task-checkbox"
                       disabled={
                         calendars.find((calendar) => calendar.id === task.calendarId)?.readOnly ===
                         true
@@ -354,7 +378,7 @@ export function MiniTasksSection({ isExpanded, onToggle }: MiniTasksSectionProps
                         stroke="currentColor"
                         strokeWidth="2"
                       >
-                        <circle cx="12" cy="12" r="9" />
+                        <path d="M5 12l4 4L19 6" />
                       </svg>
                     </button>
                     <button
@@ -368,7 +392,36 @@ export function MiniTasksSection({ isExpanded, onToggle }: MiniTasksSectionProps
                         handleTaskClick(task)
                       }}
                     >
-                      <span className={styles.taskTitle}>{task.title}</span>
+                      <span className={styles.taskText}>
+                        <span className={styles.taskTitle} data-component="task-title">
+                          {task.title}
+                        </span>
+                        <AnimatePresence initial={false}>
+                          {labelsVisible &&
+                            !taskMenu &&
+                            (hoveredTask === task.id || focusedTask === task.id) && (
+                              <motion.span
+                                key="calendar-reveal"
+                                className={styles.taskCalendarReveal}
+                                initial={
+                                  prefersReducedMotion ? false : { height: 0, opacity: 0, y: 2 }
+                                }
+                                animate={{ height: 'auto', opacity: 1, y: 0 }}
+                                exit={{ height: 0, opacity: 0, y: prefersReducedMotion ? 0 : 2 }}
+                                transition={{
+                                  duration: prefersReducedMotion ? 0 : DUR_FAST,
+                                  ease: EASE_OUT,
+                                }}
+                              >
+                                <TaskCalendarLabel
+                                  calendar={calendarById.get(task.calendarId)}
+                                  placement="reveal"
+                                  visible
+                                />
+                              </motion.span>
+                            )}
+                        </AnimatePresence>
+                      </span>
                       {(() => {
                         const subtaskCount = subtaskCountsByParent.get(task.id) ?? 0
                         if (subtaskCount === 0) return null
@@ -388,6 +441,7 @@ export function MiniTasksSection({ isExpanded, onToggle }: MiniTasksSectionProps
                       })()}
                       {task.dueDate ? (
                         <span
+                          data-component="task-due-date"
                           className={`${styles.taskDue} ${
                             isBefore(startOfDay(parseISO(task.dueDate)), startOfDay(new Date()))
                               ? styles.taskOverdue
@@ -399,7 +453,9 @@ export function MiniTasksSection({ isExpanded, onToggle }: MiniTasksSectionProps
                             : formatDayMonth(task.dueDate)}
                         </span>
                       ) : (
-                        <span className={styles.taskDue}>{t('modals.miniTasks.noDate')}</span>
+                        <span className={styles.taskDue} data-component="task-due-date">
+                          {t('modals.miniTasks.noDate')}
+                        </span>
                       )}
                     </button>
                   </motion.div>

@@ -4,6 +4,7 @@
     "general": "Algemeen",
     "appearance": "Uiterlijk",
     "calendar": "Agenda",
+    "tasks": "Taken",
     "categories": "Categorieën",
     "notifications": "Meldingen",
     "sync": "Synchronisatie",
@@ -123,6 +124,18 @@
     "thursday": "donderdag",
     "friday": "vrijdag",
     "saturday": "zaterdag"
+  },
+  "tasks": {
+    "title": "Taken",
+    "display": "Weergave",
+    "showTaskCalendarLabels": {
+      "label": "Kalendernamen tonen in Taken",
+      "desc": "Toon de kalender van elke taak naast de vervaldatum wanneer meerdere taakkalenders zijn ingeschakeld."
+    },
+    "showSidebarTaskCalendarLabels": {
+      "label": "Kalendernamen tonen in de zijbalk",
+      "desc": "Toon de kalender van een taak bij aanwijzen of toetsenbordfocus wanneer meerdere taakkalenders zijn ingeschakeld."
+    }
   },
   "calendar": {
     "title": "Agenda",

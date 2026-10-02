@@ -4,6 +4,7 @@
     "general": "Generelt",
     "appearance": "Udseende",
     "calendar": "Kalender",
+    "tasks": "Opgaver",
     "categories": "Kategorier",
     "notifications": "Notifikationer",
     "sync": "Synkronisering",
@@ -119,6 +120,18 @@
     "thursday": "Torsdag",
     "friday": "Fredag",
     "saturday": "Lørdag"
+  },
+  "tasks": {
+    "title": "Opgaver",
+    "display": "Visning",
+    "showTaskCalendarLabels": {
+      "label": "Vis kalendernavne i Opgaver",
+      "desc": "Vis hver opgaves kalender ved siden af forfaldsdatoen, når flere opgavekalendere er aktiveret."
+    },
+    "showSidebarTaskCalendarLabels": {
+      "label": "Vis kalendernavne i sidepanelet",
+      "desc": "Vis opgavens kalender ved markør eller tastaturfokus, når flere opgavekalendere er aktiveret."
+    }
   },
   "calendar": {
     "title": "Kalender",
