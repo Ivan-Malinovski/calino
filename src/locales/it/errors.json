@@ -1,6 +1,8 @@
 {
   "undo": {
     "eventDeleted": "Evento eliminato",
+    "taskDeleted": "Attività eliminata",
+    "journalDeleted": "Voce del diario eliminata",
     "contactDeleted": "Contatto eliminato"
   },
   "sync": {

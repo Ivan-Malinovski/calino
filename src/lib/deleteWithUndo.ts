@@ -31,7 +31,13 @@ export function deleteEventWithUndo({
   onAfterDelete?.()
 
   // Show undo toast
-  showToast(i18n.t('errors:undo.eventDeleted'), {
+  const deletedKey =
+    event.type === 'task'
+      ? 'errors:undo.taskDeleted'
+      : event.type === 'journal'
+        ? 'errors:undo.journalDeleted'
+        : 'errors:undo.eventDeleted'
+  showToast(i18n.t(deletedKey), {
     duration: 8000,
     onUndo: () => {
       addEvent(event)

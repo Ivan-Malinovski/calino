@@ -1,6 +1,8 @@
 {
   "undo": {
     "eventDeleted": "Gebeurtenis verwijderd",
+    "taskDeleted": "Taak verwijderd",
+    "journalDeleted": "Dagboekitem verwijderd",
     "contactDeleted": "Contact verwijderd"
   },
   "sync": {

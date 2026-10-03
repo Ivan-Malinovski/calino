@@ -1,6 +1,8 @@
 {
   "undo": {
     "eventDeleted": "Événement supprimé",
+    "taskDeleted": "Tâche supprimée",
+    "journalDeleted": "Entrée de journal supprimée",
     "contactDeleted": "Contact supprimé"
   },
   "sync": {
