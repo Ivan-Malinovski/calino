@@ -9,6 +9,8 @@
     "eventSyncRetry": "Impossibile sincronizzare l'evento con il server CalDAV. Verrà ritentato.",
     "deletionSyncRetry": "Impossibile sincronizzare l'eliminazione. Verrà ritentato.",
     "eventRestoreFailed": "Impossibile ripristinare l'evento.",
+    "taskRestoreFailed": "Impossibile ripristinare l'attività.",
+    "journalRestoreFailed": "Impossibile ripristinare la voce del diario.",
     "duplicateSyncRetry": "Impossibile sincronizzare l'evento duplicato. Verrà ritentato.",
     "genericSyncRetry": "Impossibile sincronizzare con il server CalDAV. Verrà ritentato.",
     "deletionSyncRetryGeneric": "Impossibile sincronizzare l'eliminazione con il server CalDAV. Verrà ritentato.",

@@ -9,6 +9,8 @@
     "eventSyncRetry": "Gebeurtenis synchroniseren met CalDAV-server mislukt. Er wordt opnieuw geprobeerd.",
     "deletionSyncRetry": "Verwijdering synchroniseren mislukt. Er wordt opnieuw geprobeerd.",
     "eventRestoreFailed": "Gebeurtenis herstellen mislukt.",
+    "taskRestoreFailed": "Taak herstellen mislukt.",
+    "journalRestoreFailed": "Dagboekitem herstellen mislukt.",
     "duplicateSyncRetry": "Gekopieerde gebeurtenis synchroniseren mislukt. Er wordt opnieuw geprobeerd.",
     "genericSyncRetry": "Synchroniseren met CalDAV-server mislukt. Er wordt opnieuw geprobeerd.",
     "deletionSyncRetryGeneric": "Verwijdering synchroniseren met CalDAV-server mislukt. Er wordt opnieuw geprobeerd.",

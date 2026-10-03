@@ -31,19 +31,14 @@ export function deleteEventWithUndo({
   onAfterDelete?.()
 
   // Show undo toast
-  const deletedKey =
-    event.type === 'task'
-      ? 'errors:undo.taskDeleted'
-      : event.type === 'journal'
-        ? 'errors:undo.journalDeleted'
-        : 'errors:undo.eventDeleted'
-  showToast(i18n.t(deletedKey), {
+  const kind = event.type === 'task' || event.type === 'journal' ? event.type : 'event'
+  showToast(i18n.t(`errors:undo.${kind}Deleted`), {
     duration: 8000,
     onUndo: () => {
       addEvent(event)
       if (event.calendarId !== 'default') {
         createCalDAVEvent?.(event.calendarId, event).catch(() => {
-          showToast(i18n.t('errors:sync.eventRestoreFailed'))
+          showToast(i18n.t(`errors:sync.${kind}RestoreFailed`))
         })
       }
     },

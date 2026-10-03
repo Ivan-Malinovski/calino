@@ -9,6 +9,8 @@
     "eventSyncRetry": "Échec de la synchronisation de l’événement avec le serveur CalDAV. Une nouvelle tentative sera effectuée.",
     "deletionSyncRetry": "Échec de la synchronisation de la suppression. Une nouvelle tentative sera effectuée.",
     "eventRestoreFailed": "Échec de la restauration de l’événement.",
+    "taskRestoreFailed": "Échec de la restauration de la tâche.",
+    "journalRestoreFailed": "Échec de la restauration de l’entrée de journal.",
     "duplicateSyncRetry": "Échec de la synchronisation de l’événement dupliqué. Une nouvelle tentative sera effectuée.",
     "genericSyncRetry": "Échec de la synchronisation avec le serveur CalDAV. Une nouvelle tentative sera effectuée.",
     "deletionSyncRetryGeneric": "Échec de la synchronisation de la suppression avec le serveur CalDAV. Une nouvelle tentative sera effectuée.",

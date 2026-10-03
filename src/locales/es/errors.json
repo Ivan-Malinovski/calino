@@ -9,6 +9,8 @@
     "eventSyncRetry": "No se pudo sincronizar el evento con el servidor CalDAV. Se volverá a intentar.",
     "deletionSyncRetry": "No se pudo sincronizar la eliminación. Se volverá a intentar.",
     "eventRestoreFailed": "No se pudo restaurar el evento.",
+    "taskRestoreFailed": "No se pudo restaurar la tarea.",
+    "journalRestoreFailed": "No se pudo restaurar la entrada de diario.",
     "duplicateSyncRetry": "No se pudo sincronizar el evento duplicado. Se volverá a intentar.",
     "genericSyncRetry": "No se pudo sincronizar con el servidor CalDAV. Se volverá a intentar.",
     "deletionSyncRetryGeneric": "No se pudo sincronizar la eliminación con el servidor CalDAV. Se volverá a intentar.",

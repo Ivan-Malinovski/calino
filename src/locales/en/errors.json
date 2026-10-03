@@ -9,6 +9,8 @@
     "eventSyncRetry": "Failed to sync event with CalDAV server. It will be retried.",
     "deletionSyncRetry": "Failed to sync deletion. It will be retried.",
     "eventRestoreFailed": "Failed to restore event.",
+    "taskRestoreFailed": "Failed to restore task.",
+    "journalRestoreFailed": "Failed to restore journal entry.",
     "duplicateSyncRetry": "Failed to sync the duplicated event. It will be retried.",
     "genericSyncRetry": "Failed to sync with CalDAV server. It will be retried.",
     "deletionSyncRetryGeneric": "Failed to sync deletion with CalDAV server. It will be retried.",
