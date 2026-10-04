@@ -1139,7 +1139,9 @@ export class CardDAVClient {
         const contact = parseVCard(response.addressData, addressBookId, accountId)
         if (contact) {
           contact.etag = normalizeEtag(response.etag) || undefined
-          contact.url = this.absoluteHref(response.href)
+          // parseMultistatus decodes hrefs; re-encode so a literal "%" or space in a
+          // filename round-trips into a URL the server will actually match.
+          contact.url = this.absoluteHref(encodeHrefPath(response.href))
           contacts.push(contact)
         }
       }

@@ -313,6 +313,15 @@ export function useCardDAV(): UseCardDAVReturn {
                 // Fetch changed contacts via multiget
                 if (changedUrls.length > 0) {
                   const changedContacts = await client.fetchContactsByUrls(addressBook, changedUrls)
+                  // The token is a promise that we now hold everything up to it. If a
+                  // contact went missing from the multiget (deleted in between, or a card
+                  // we cannot parse), advancing it would lose that contact until some
+                  // later full fetch. Bail out to the full fetch below, token untouched.
+                  if (changedContacts.length < changedUrls.length) {
+                    throw new Error(
+                      `multiget returned ${changedContacts.length} of ${changedUrls.length} contacts`
+                    )
+                  }
                   allContacts.push(...changedContacts)
                 }
 
@@ -352,6 +361,8 @@ export function useCardDAV(): UseCardDAVReturn {
             }
           } catch (err) {
             console.warn(`[CardDAV] Failed to sync ${addressBook.name}:`, err)
+            // A full fetch is a complete listing again, so it may prune by absence.
+            deltaSyncedBookIds.delete(addressBook.id)
             // Fall back to full fetch on error
             try {
               const contacts = await client.fetchContacts(addressBook)

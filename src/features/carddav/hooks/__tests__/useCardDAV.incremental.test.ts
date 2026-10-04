@@ -204,3 +204,27 @@ describe('useCardDAV — full fetch still prunes', () => {
     expect(urls()).toEqual([`${BOOK_URL}a.vcf`])
   })
 })
+
+describe('useCardDAV — an incomplete multiget must not advance the token', () => {
+  it('falls back to a full fetch and keeps the old token', async () => {
+    seedStore([makeContact('a'), makeContact('b'), makeContact('gone')])
+    syncCollection.mockResolvedValue({
+      tokenInvalidated: false,
+      newSyncToken: 'token-2',
+      changes: [
+        { url: '/book-a/b.vcf', etag: 'etag-b2', status: 'added' },
+        { url: '/book-a/new.vcf', etag: 'etag-n', status: 'added' },
+      ],
+    })
+    // One of the two changed cards could not be fetched or parsed
+    fetchContactsByUrls.mockResolvedValue([makeContact('b', { etag: 'etag-b2' })])
+    fetchContacts.mockResolvedValue([makeContact('a'), makeContact('b'), makeContact('new')])
+
+    await runSync()
+
+    expect(fetchContacts).toHaveBeenCalledTimes(1)
+    expect(useContactStore.getState().addressBooks[0].syncToken).toBe('token-1')
+    // The full fetch is a complete listing, so it prunes what the server no longer has
+    expect(urls()).toEqual([`${BOOK_URL}a.vcf`, `${BOOK_URL}b.vcf`, `${BOOK_URL}new.vcf`])
+  })
+})

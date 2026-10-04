@@ -244,3 +244,29 @@ describe('syncCollection removals', () => {
     ])
   })
 })
+
+describe('multiget contact urls', () => {
+  it('keeps a literal percent sign in a filename encoded', async () => {
+    const client = new CardDAVClient('https://dav.example.com', credentials)
+    const internals = client as unknown as { proxyFetch: typeof fetch; findDavAddressBook: () => object }
+    internals.findDavAddressBook = () => ({})
+    internals.proxyFetch = (async () =>
+      new Response(
+        `<multistatus xmlns="DAV:" xmlns:C="urn:ietf:params:xml:ns:carddav"><response><href>/test/contacts/100%25 sure.vcf</href><propstat><prop><getetag>"e"</getetag><C:address-data>BEGIN:VCARD
+VERSION:3.0
+UID:p
+FN:Pct
+N:X;Pct;;;
+END:VCARD
+</C:address-data></prop><status>HTTP/1.1 200 OK</status></propstat></response></multistatus>`,
+        { status: 207 }
+      )) as typeof fetch
+
+    const [contact] = await client.fetchContactsByUrls(
+      { id: 'ab', accountId: 'acc', url: 'https://dav.example.com/test/contacts/' } as Parameters<CardDAVClient['fetchContactsByUrls']>[0],
+      ['/test/contacts/100%25%20sure.vcf']
+    )
+
+    expect(contact.url).toBe('https://dav.example.com/test/contacts/100%25%20sure.vcf')
+  })
+})
