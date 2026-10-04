@@ -212,7 +212,22 @@
 }
 
 .meta .time {
-  flex-shrink: 0;
+  /* The time matters more than the location or zone, so it only gives up
+     width once those have collapsed, and then it ellipsizes like the title. */
+  flex-shrink: 0.01;
+  min-width: 0;
+}
+
+/* Stacked cards: scale the time down to fit the card width before it
+   ellipsizes. ~0.58em per character is the tabular-nums average; the font
+   floors at 9px, below which the text truncates. Tight cards share a row with
+   the title, so they skip this and just truncate. */
+.card:not(.tight) .meta {
+  container-type: inline-size;
+}
+
+.card:not(.tight) .meta .time {
+  font-size: clamp(9px, calc(100cqw / (var(--time-chars, 13) * 0.58)), 11.5px);
 }
 
 .metaDot {

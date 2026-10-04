@@ -744,7 +744,14 @@ export const EventCard = React.memo(function EventCard({
                 if (!timeText && !tzText && !locText) return null
                 return (
                   <div className={styles.meta}>
-                    {timeText && <span className={styles.time}>{timeText}</span>}
+                    {timeText && (
+                      <span
+                        className={styles.time}
+                        style={{ '--time-chars': timeText.length } as React.CSSProperties}
+                      >
+                        {timeText}
+                      </span>
+                    )}
                     {tzText && (
                       <span
                         className={styles.tzInline}
