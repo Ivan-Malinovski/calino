@@ -102,15 +102,17 @@ listed in `linkSchemes`, scheme → the name a bare link is shown by:
 ```json
 {
   "version": 1,
-  "accounts": [],
   "linkSchemes": { "obsidian": "Obsidian", "tg": "Telegram" }
 }
 ```
 
 A bare `obsidian://open?vault=Notes` then shows as **Obsidian ↗** and opens the
 app; a markdown link `[Plan](obsidian://…)` keeps its own text. `javascript`,
-`vbscript` and `data` are never linked. The field needs no accounts, and a
-config that only lists apps asks for no master password.
+`vbscript` and `data` are never linked. Links inside code are left as text.
+
+The field needs no accounts. A config that only lists apps asks for no master
+password and does not make the build self-hosted: the onboarding and the
+Content Security Policy stay those of a regular build.
 
 **3. Build:**
 
