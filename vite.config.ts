@@ -24,7 +24,26 @@ if (existsSync(configPath)) {
   }
 }
 
-const isSelfHosted = !!calinoConfig || process.env.CALINO_SELF_HOSTED === 'true'
+// A config counts as self-hosted when it preconfigures accounts or webcal
+// subscriptions, as in loadConfig; one that only lists linkSchemes does not.
+const entryCount = (key: string): number => {
+  const entries = calinoConfig?.[key]
+  return Array.isArray(entries) ? entries.length : 0
+}
+const isSelfHosted =
+  entryCount('accounts') + entryCount('webcalSubscriptions') > 0 ||
+  process.env.CALINO_SELF_HOSTED === 'true'
+
+// The E2E specs need an app-link scheme; it is added to whatever config the
+// checkout has.
+if (process.env.CALINO_E2E_MOCK === '1') {
+  calinoConfig = {
+    version: 1,
+    ...calinoConfig,
+    linkSchemes: { ...(calinoConfig?.linkSchemes as object | undefined), obsidian: 'Obsidian' },
+  }
+}
+
 // The cross-origin diagnostics fixture is deliberately plain HTTP. Permit that
 // transport without changing hosted-only UI behavior across the rest of E2E.
 const allowHttpConnections = isSelfHosted || process.env.CALINO_E2E_MOCK === '1'

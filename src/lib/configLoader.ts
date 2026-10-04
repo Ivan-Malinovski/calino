@@ -55,7 +55,7 @@ const PreconfiguredWebcalSchema = z.object({
 
 const CalinoConfigEnvelopeSchema = z.object({
   version: z.literal(1),
-  accounts: z.array(z.unknown()),
+  accounts: z.array(z.unknown()).default([]),
   webcalSubscriptions: z.array(z.unknown()).optional(),
 })
 

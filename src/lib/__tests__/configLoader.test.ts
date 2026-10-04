@@ -105,6 +105,14 @@ describe('configLoader', () => {
     expect(config).toBeNull()
   })
 
+  it('reads webcal subscriptions from a config without an accounts key', async () => {
+    originalGlobal.__CALINO_CONFIG__ = { version: 1, webcalSubscriptions: [validWebcal] }
+
+    const config = await loadConfig()
+    expect(config!.accounts).toHaveLength(0)
+    expect(config!.webcalSubscriptions).toHaveLength(1)
+  })
+
   it('returns null for empty accounts array', async () => {
     originalGlobal.__CALINO_CONFIG__ = { version: 1, accounts: [] }
 
