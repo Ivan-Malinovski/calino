@@ -922,6 +922,9 @@ export function useCalDAVInstance(): UseCalDAVReturn {
       for (const account of loadedAccounts) {
         if (cardDavCheckedAccounts.has(account.id)) continue
         cardDavCheckedAccounts.add(account.id)
+        // The probe below exists only to switch contacts on, and it downloads a whole
+        // address book to do it. Once they are on there is nothing left to learn.
+        if (useSettingsStore.getState().contactsEnabled) continue
         try {
           const credential = await getCredentialById(account.credentialId)
           if (!credential) continue

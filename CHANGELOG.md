@@ -17,6 +17,8 @@ All notable changes to Calino will be documented in this file.
   nonexistent `DAV:sync-token` response header threw and was reported as an
   invalidated token. It now works, so a sync downloads only the contacts that
   changed, applies deletions, and fetches large address books in batches.
+  Calino also no longer downloads a whole address book on every page load just
+  to check whether contacts exist.
   Thanks to [@SNNU-Lisiyu](https://github.com/SNNU-Lisiyu), whose fix this is
   based on.
 - **Recurring all-day events whose source year is before 1000 no longer break
