@@ -174,3 +174,73 @@ describe('syncCollection', () => {
     expect(result.newSyncToken).toBe('http://sabredav.org/ns/sync/5001')
   })
 })
+
+describe('fetchContactsByUrls', () => {
+  const addressBook = {
+    id: 'ab-1',
+    accountId: 'acc-1',
+    url: 'https://dav.example.com/test/contacts/',
+  } as Parameters<CardDAVClient['fetchContactsByUrls']>[0]
+
+  function clientRecording(bodies: string[]) {
+    const client = new CardDAVClient('https://dav.example.com', credentials)
+    const internals = client as unknown as {
+      proxyFetch: typeof fetch
+      findDavAddressBook: () => object
+    }
+    internals.findDavAddressBook = () => ({})
+    internals.proxyFetch = (async (_url: string, init?: RequestInit) => {
+      bodies.push(String(init?.body))
+      return new Response('<multistatus xmlns="DAV:"/>', { status: 207 })
+    }) as typeof fetch
+    return client
+  }
+
+  it('splits a large fetch into several requests', async () => {
+    const bodies: string[] = []
+    const urls = Array.from({ length: 250 }, (_, i) => `/test/contacts/c${i}.vcf`)
+
+    await clientRecording(bodies).fetchContactsByUrls(addressBook, urls)
+
+    expect(bodies).toHaveLength(3)
+    expect(bodies.map((b) => b.match(/<D:href>/g)?.length)).toEqual([100, 100, 50])
+  })
+
+  it('percent-encodes hrefs that sync-collection handed back decoded', async () => {
+    const bodies: string[] = []
+
+    await clientRecording(bodies).fetchContactsByUrls(addressBook, [
+      '/test/contacts/Jos\u00e9 D\u00edaz.vcf',
+    ])
+
+    expect(bodies[0]).toContain('<D:href>/test/contacts/Jos%C3%A9%20D%C3%ADaz.vcf</D:href>')
+  })
+})
+
+describe('syncCollection removals', () => {
+  const addressBook = {
+    id: 'ab-1',
+    accountId: 'acc-1',
+    url: 'https://dav.example.com/test/contacts/',
+  } as Parameters<CardDAVClient['syncCollection']>[0]
+
+  it('does not mistake a contact whose href contains "/404" for a removal', async () => {
+    const client = new CardDAVClient('https://dav.example.com', credentials)
+    ;(client as unknown as { proxyFetch: typeof fetch }).proxyFetch = async () =>
+      new Response(
+        `<multistatus xmlns="DAV:">
+          <response><href>/test/contacts/404.vcf</href><propstat><prop><getetag>"e1"</getetag></prop><status>HTTP/1.1 200 OK</status></propstat></response>
+          <response><href>/test/contacts/gone.vcf</href><status>HTTP/1.1 404 Not Found</status></response>
+          <sync-token>tok</sync-token>
+        </multistatus>`,
+        { status: 207 }
+      )
+
+    const result = await client.syncCollection(addressBook, 'old')
+
+    expect(result.changes).toEqual([
+      { url: '/test/contacts/404.vcf', etag: 'e1', status: 'added' },
+      { url: '/test/contacts/gone.vcf', etag: null, status: 'removed' },
+    ])
+  })
+})

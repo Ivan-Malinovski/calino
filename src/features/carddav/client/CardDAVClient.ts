@@ -182,6 +182,20 @@ export function parseMultistatus(xml: string): ParsedDAVResponse[] {
   return responses
 }
 
+/** hrefs per addressbook-multiget request. */
+const MULTIGET_BATCH_SIZE = 100
+
+/**
+ * Re-encode a server-relative href for a request body. parseMultistatus hands hrefs back
+ * decoded, and a multiget naming "/book/José Díaz.vcf" literally does not match the
+ * resource the server knows as "/book/Jos%C3%A9%20D%C3%ADaz.vcf" — the contact would
+ * come back as a 404 and be silently skipped. Absolute URLs are left alone.
+ */
+function encodeHrefPath(href: string): string {
+  if (!href.startsWith('/')) return href
+  return href.split('/').map(encodeURIComponent).join('/')
+}
+
 /**
  * Escape special XML characters.
  */
@@ -1036,11 +1050,9 @@ export class CardDAVClient {
     const changes: SyncCollectionChange[] = []
 
     for (const response of responses) {
-      if (
-        response.status === 404 ||
-        response.href.includes('/404') ||
-        response.href.includes('%2F404')
-      ) {
+      // Only the status says a resource is gone. Matching "/404" in the href as well
+      // would treat a contact called 404.vcf, or a book under /404/, as deleted.
+      if (response.status === 404) {
         // Contact was removed
         changes.push({
           url: response.href,
@@ -1075,9 +1087,21 @@ export class CardDAVClient {
     const davAb = this.findDavAddressBook(addressBook.url)
     if (!davAb) throw new Error(`Address book not found: ${addressBook.url}`)
 
-    const hrefs = urls.map((u) => `<D:href>${escapeXml(u)}</D:href>`).join('\n    ')
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/xml; charset=utf-8',
+      Authorization: `Basic ${btoa(`${this.credentials.username}:${this.credentials.password}`)}`,
+    }
 
-    const body = `<?xml version="1.0" encoding="UTF-8" ?>
+    // Batched so a first sync of a large address book is not one request whose body
+    // lists thousands of hrefs, which servers and proxies cap.
+    const contacts: Contact[] = []
+    for (let i = 0; i < urls.length; i += MULTIGET_BATCH_SIZE) {
+      const hrefs = urls
+        .slice(i, i + MULTIGET_BATCH_SIZE)
+        .map((u) => `<D:href>${escapeXml(encodeHrefPath(u))}</D:href>`)
+        .join('\n    ')
+
+      const body = `<?xml version="1.0" encoding="UTF-8" ?>
 <C:addressbook-multiget xmlns:D="DAV:" xmlns:C="urn:ietf:params:xml:ns:carddav">
   <D:prop>
     <D:getetag/>
@@ -1086,23 +1110,21 @@ export class CardDAVClient {
   ${hrefs}
 </C:addressbook-multiget>`
 
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/xml; charset=utf-8',
-      Authorization: `Basic ${btoa(`${this.credentials.username}:${this.credentials.password}`)}`,
+      const response = await this.proxyFetch(addressBook.url, {
+        method: 'REPORT',
+        headers,
+        body,
+      })
+
+      if (!response.ok && response.status !== 207) {
+        throw new Error(`addressbook-multiget failed: ${response.status}`)
+      }
+
+      const text = await response.text()
+      contacts.push(...this.parseMultigetResponse(text, addressBook.id, addressBook.accountId))
     }
 
-    const response = await this.proxyFetch(addressBook.url, {
-      method: 'REPORT',
-      headers,
-      body,
-    })
-
-    if (!response.ok && response.status !== 207) {
-      throw new Error(`addressbook-multiget failed: ${response.status}`)
-    }
-
-    const text = await response.text()
-    return this.parseMultigetResponse(text, addressBook.id, addressBook.accountId)
+    return contacts
   }
 
   /**

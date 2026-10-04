@@ -15,7 +15,8 @@ All notable changes to Calino will be documented in this file.
   address books report as writable and read their vCard versions correctly.
   Incremental sync also never worked on any server, because reading a
   nonexistent `DAV:sync-token` response header threw and was reported as an
-  invalidated token; that is fixed too.
+  invalidated token. It now works, so a sync downloads only the contacts that
+  changed, applies deletions, and fetches large address books in batches.
   Thanks to [@SNNU-Lisiyu](https://github.com/SNNU-Lisiyu), whose fix this is
   based on.
 - **Recurring all-day events whose source year is before 1000 no longer break
