@@ -1,16 +1,20 @@
 import { test, expect } from '@playwright/test'
 import { clearState } from './fixtures/localstorage'
 
-// The E2E server is built with `linkSchemes: { obsidian: 'Obsidian' }` (see
-// vite.config.ts), so obsidian:// is the one app scheme that is allowed here.
+// The E2E server adds `linkSchemes: { obsidian: 'Obsidian' }` to its config
+// (see vite.config.ts), so obsidian:// is an app scheme that is allowed here.
 const BARE_APP_LINK = 'obsidian://open?vault=Work&file=Plan'
 const NAMED_APP_LINK = 'obsidian://open?vault=Work&file=Project'
+const ENCODED_APP_LINK = 'obsidian://open?vault=Заметки'
+const CODE_APP_LINK = 'obsidian://open?vault=Code'
 const UNLISTED_APP_LINK = 'anytype://object?objectId=abc'
 
 const DESCRIPTION = [
   `Notes: ${BARE_APP_LINK}`,
   '',
   `[Project page](${NAMED_APP_LINK})`,
+  '',
+  `**${ENCODED_APP_LINK}** and \`${CODE_APP_LINK}\``,
   '',
   `Other: ${UNLISTED_APP_LINK}`,
   '',
@@ -70,7 +74,7 @@ test.describe('links into other apps in descriptions', () => {
   test('a configured scheme is linked, by the app name when the link is bare', async ({ page }) => {
     const preview = page.locator('[data-component="event-preview"]')
 
-    const bare = preview.getByRole('link', { name: 'Obsidian ↗' })
+    const bare = preview.getByRole('link', { name: 'Obsidian ↗' }).first()
     await expect(bare).toHaveAttribute('href', BARE_APP_LINK)
     // A link into an app opens the app; a new tab would stay behind, empty.
     await expect(bare).not.toHaveAttribute('target')
@@ -78,6 +82,17 @@ test.describe('links into other apps in descriptions', () => {
       'href',
       NAMED_APP_LINK
     )
+  })
+
+  test('a bare link is named after the app inside emphasis and left alone in code', async ({
+    page,
+  }) => {
+    const preview = page.locator('[data-component="event-preview"]')
+
+    await expect(preview.locator('strong a')).toHaveText('Obsidian ↗')
+    await expect(preview.locator('strong a')).toHaveAttribute('href', encodeURI(ENCODED_APP_LINK))
+    await expect(preview.locator('code')).toHaveText(CODE_APP_LINK)
+    await expect(preview.locator('code a')).toHaveCount(0)
   })
 
   test('schemes that are not configured, or that run code, are not linked', async ({ page }) => {
