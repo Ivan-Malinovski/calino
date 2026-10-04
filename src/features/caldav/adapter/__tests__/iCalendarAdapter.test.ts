@@ -537,6 +537,34 @@ END:VCALENDAR`
       expect(parsedEvents[0].end).toBe('2024-03-16')
     })
 
+    it('zero-pads pre-1000 all-day years so date-fns can parse them', () => {
+      const ics = (dtstart: string, dtend: string) =>
+        [
+          'BEGIN:VCALENDAR',
+          'VERSION:2.0',
+          'BEGIN:VEVENT',
+          'UID:invented-early-year',
+          `DTSTART;VALUE=DATE:${dtstart}`,
+          `DTEND;VALUE=DATE:${dtend}`,
+          'RRULE:FREQ=YEARLY',
+          'SUMMARY:Invented birthday',
+          'END:VEVENT',
+          'END:VCALENDAR',
+        ].join('\r\n')
+
+      const [single] = parseICALEvent(ics('00010827', '00010828'), 'cal-1')
+      expect(single.start).toBe('0001-08-27')
+      expect(single.end).toBe('0001-08-27')
+
+      // A multi-day event whose end rolls back across a year boundary.
+      const [rollover] = parseICALEvent(ics('00010101', '00010103'), 'cal-1')
+      expect(rollover.start).toBe('0001-01-01')
+      expect(rollover.end).toBe('0001-01-02')
+      const [prevYear] = parseICALEvent(ics('09991231', '10000101'), 'cal-1')
+      expect(prevYear.start).toBe('0999-12-31')
+      expect(prevYear.end).toBe('0999-12-31')
+    })
+
     it('round-trip preserves SEQUENCE', () => {
       const originalEvent: CalendarEvent = {
         id: 'sequence-test',

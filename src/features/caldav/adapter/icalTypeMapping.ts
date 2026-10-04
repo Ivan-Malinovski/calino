@@ -606,13 +606,20 @@ interface IcalTimeToISOResult {
   tzid?: string
 }
 
+// ical.js's Time#toString() does not zero-pad years below 1000, but RFC 5545
+// DATE values always carry a four-digit year. An unpadded `1-08-27` is not a
+// valid date-fns input once a recurring occurrence is laid out in the calendar.
+function formatDateOnly(year: number, month: number, day: number): string {
+  return `${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+}
+
 function icalTimeToISO(icalTime: ICAL.Time, prop?: ICAL.Property): IcalTimeToISOResult {
   if (!icalTime || !icalTime.year) {
     throw new Error('Invalid ICAL.Time')
   }
 
   if (icalTime.isDate) {
-    return { iso: icalTime.toString() }
+    return { iso: formatDateOnly(icalTime.year, icalTime.month, icalTime.day) }
   }
 
   // R2.2 — Read TZID from the source property FIRST, before checking
@@ -738,13 +745,15 @@ export function icalEventToCalendarEvent(
 
   if (dtend) {
     if (isAllDay) {
-      const endDateStr = dtend.toString()
-      const endDate = new Date(endDateStr + 'T00:00:00Z')
-      endDate.setUTCDate(endDate.getUTCDate() - 1)
-      const year = endDate.getUTCFullYear()
-      const month = String(endDate.getUTCMonth() + 1).padStart(2, '0')
-      const day = String(endDate.getUTCDate()).padStart(2, '0')
-      end = `${year}-${month}-${day}`
+      // DTEND is exclusive for all-day events; step back one day. Date.UTC()
+      // maps years 0-99 to 1900-1999, so set the year explicitly.
+      const endDate = new Date(0)
+      endDate.setUTCFullYear(dtend.year, dtend.month - 1, dtend.day - 1)
+      end = formatDateOnly(
+        endDate.getUTCFullYear(),
+        endDate.getUTCMonth() + 1,
+        endDate.getUTCDate()
+      )
     } else {
       const dtendProp = vevent.getFirstProperty('dtend')
       const endResult = icalTimeToISO(dtend, dtendProp ?? undefined)
