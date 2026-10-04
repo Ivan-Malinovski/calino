@@ -4,6 +4,15 @@ All notable changes to Calino will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Recurring all-day events whose source year is before 1000 no longer break
+  the calendar** ([#175](https://github.com/Ivan-Malinovski/calino/issues/175)).
+  An all-day date such as `00010827` (a historic birthday, say) was read back
+  as `1-08-27`, which the calendar layout couldn't parse. Years are now
+  zero-padded to four digits. Thanks to
+  [@tionis](https://github.com/tionis), whose fix this is based on.
+
 ## [0.36.0] - 2026-09-30
 
 This release adds a "Sometime this week" bar to the week view for tasks that

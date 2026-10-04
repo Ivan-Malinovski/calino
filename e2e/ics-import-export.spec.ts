@@ -129,6 +129,32 @@ END:VEVENT
 END:VCALENDAR`
 
 /**
+ * A yearly all-day event whose source year is 0001, anchored on today's month
+ * and day so an occurrence always lands in the visible week.
+ */
+function pre1000RecurringIcs(): string {
+  const now = new Date()
+  const start = new Date(Date.UTC(2001, now.getMonth(), now.getDate()))
+  start.setUTCFullYear(1)
+  const end = new Date(start)
+  end.setUTCDate(end.getUTCDate() + 1)
+  const stamp = (date: Date) =>
+    `${String(date.getUTCFullYear()).padStart(4, '0')}${String(date.getUTCMonth() + 1).padStart(2, '0')}${String(date.getUTCDate()).padStart(2, '0')}`
+  return [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'BEGIN:VEVENT',
+    'UID:invented-pre-1000-birthday',
+    `DTSTART;VALUE=DATE:${stamp(start)}`,
+    `DTEND;VALUE=DATE:${stamp(end)}`,
+    'RRULE:FREQ=YEARLY',
+    'SUMMARY:Invented historic birthday',
+    'END:VEVENT',
+    'END:VCALENDAR',
+  ].join('\r\n')
+}
+
+/**
  * Playwright can't drop an OS file onto the page, so the File and DataTransfer
  * are built inside the page and handed to a synthetic `drop`.
  */
@@ -168,6 +194,21 @@ test.describe('ICS drag-and-drop import', () => {
 
     await expect(
       page.locator('[data-component="event-card"]', { hasText: 'Dropped Event' }).first()
+    ).toBeVisible()
+  })
+
+  test('renders a recurring all-day event whose source year is below 1000', async ({ page }) => {
+    await page.goto('/week')
+    await dropIcsFile(page, pre1000RecurringIcs(), 'historic-birthday.ics')
+
+    const modal = page.locator('[data-component="ics-import-modal"]')
+    await expect(modal.getByText('Invented historic birthday')).toBeVisible()
+    await modal.locator('[data-testid="ics-import-confirm"]').click()
+
+    await expect(
+      page
+        .locator('[data-component="event-card"]', { hasText: 'Invented historic birthday' })
+        .first()
     ).toBeVisible()
   })
 
