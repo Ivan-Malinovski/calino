@@ -58,7 +58,12 @@ interface ParsedDAVResponse {
  */
 function normalizeEtag(raw: string | null | undefined): string {
   if (!raw) return ''
-  return decodeXmlEntities(raw).trim().replace(/^W\//i, '').replace(/^"|"$/g, '')
+  return stripEtagSyntax(decodeXmlEntities(raw))
+}
+
+/** Quote/weak-validator stripping for text whose entities are already decoded (DOM text). */
+function stripEtagSyntax(decoded: string): string {
+  return decoded.trim().replace(/^W\//i, '').replace(/^"|"$/g, '')
 }
 
 /** The five predefined XML entities. Numeric character references are not used for etags. */
@@ -71,64 +76,107 @@ function decodeXmlEntities(value: string): string {
     .replace(/&amp;/g, '&')
 }
 
+const DAV_NS = 'DAV:'
+const CARDDAV_NS = 'urn:ietf:params:xml:ns:carddav'
+
 /**
- * Parse a DAV:multistatus XML response into individual D:response blocks.
- * Each D:response contains a D:href and either a D:propstat with properties
- * or a D:status.
+ * Parse a WebDAV response body into a Document.
+ * Uses DOMParser instead of regex so element lookups are namespace-aware —
+ * servers are free to use any namespace prefix (or none), and a regex
+ * hardcoded to one prefix silently fails to match on servers that differ.
+ * Radicale, for one, binds DAV: to the default namespace and carddav to "CR".
+ * Returns null instead of throwing because every caller here degrades to
+ * "nothing parsed" rather than erroring.
  */
-function parseMultistatus(xml: string): ParsedDAVResponse[] {
+function parseXmlDocument(text: string): Document | null {
+  const doc = new DOMParser().parseFromString(text, 'application/xml')
+  return doc.getElementsByTagName('parsererror')[0] ? null : doc
+}
+
+/** Direct child elements matching a namespace + local name. */
+function childElements(parent: Element, ns: string, localName: string): Element[] {
+  return Array.from(parent.children).filter(
+    (child) => child.namespaceURI === ns && child.localName === localName
+  )
+}
+
+/** Text of the first direct child matching a namespace + local name. */
+function childText(parent: Element, ns: string, localName: string): string | null {
+  return childElements(parent, ns, localName)[0]?.textContent ?? null
+}
+
+/** Pull the numeric code out of a DAV:status line ("HTTP/1.1 200 OK" -> 200). */
+function parseStatusCode(statusLine: string | null): number | null {
+  const match = statusLine ? /HTTP\/\d\.\d\s+(\d+)/i.exec(statusLine) : null
+  return match ? parseInt(match[1], 10) : null
+}
+
+/** hrefs arrive percent-encoded; a malformed one must not kill the whole batch. */
+function decodeHref(href: string): string {
+  try {
+    return decodeURIComponent(href)
+  } catch {
+    return href
+  }
+}
+
+/**
+ * Parse a DAV:multistatus XML response into individual response entries.
+ * Each response carries an href and either propstat blocks with properties,
+ * or a bare status (an href that is gone, say).
+ */
+export function parseMultistatus(xml: string): ParsedDAVResponse[] {
+  const root = parseXmlDocument(xml)?.documentElement
+  if (!root || root.namespaceURI !== DAV_NS || root.localName !== 'multistatus') {
+    return []
+  }
+
   const responses: ParsedDAVResponse[] = []
 
-  // Match each <D:response>...</D:response> block
-  const responseRegex = /<D:response\b[^>]*>([\s\S]*?)<\/D:response>/gi
-  let match
+  for (const responseEl of childElements(root, DAV_NS, 'response')) {
+    const rawHref = childText(responseEl, DAV_NS, 'href')
+    if (rawHref === null) continue
+    const href = decodeHref(rawHref.trim())
 
-  while ((match = responseRegex.exec(xml)) !== null) {
-    const responseXml = match[0]
+    const propstats = childElements(responseEl, DAV_NS, 'propstat')
 
-    // Extract D:href
-    const hrefMatch = /<D:href\b[^>]*>([^<]*)<\/D:href>/i.exec(responseXml)
-    if (!hrefMatch) continue
-    const href = decodeURIComponent(hrefMatch[1])
-
-    // Extract status or propstat
-    const statusMatch = /<D:status\b[^>]*>HTTP\/\d\.\d\s+(\d+)/i.exec(responseXml)
-    const propstatMatch = /<D:propstat>([\s\S]*?)<\/D:propstat>/i.exec(responseXml)
-
-    if (statusMatch) {
-      // Removed (404) or other status
-      const status = parseInt(statusMatch[1], 10)
-      responses.push({ href, status })
-    } else if (propstatMatch) {
-      const propstatXml = propstatMatch[1]
-
-      // Check for error in propstat (e.g., 404 Not Found)
-      const propStatusMatch = /<D:prop\b[^>]*>([\s\S]*?)<\/D:prop>/i.exec(propstatXml)
-      if (propStatusMatch) {
-        const propXml = propStatusMatch[1]
-
-        // Check for 404 status inside propstat
-        const innerStatusMatch = /<D:status\b[^>]*>HTTP\/\d\.\d\s+(\d+)/i.exec(propstatXml)
-
-        if (innerStatusMatch) {
-          const innerStatus = parseInt(innerStatusMatch[1], 10)
-          responses.push({ href, status: innerStatus })
-        } else {
-          // Success case - extract etag and address-data
-          const etagMatch = /<D:getetag\b[^>]*>([^<]*)<\/D:getetag>/i.exec(propXml)
-          const addressDataMatch = /<C:address-data\b[^>]*>([\s\S]*?)<\/C:address-data>/i.exec(
-            propXml
-          )
-
-          responses.push({
-            href,
-            status: 200,
-            etag: etagMatch ? normalizeEtag(etagMatch[1]) : undefined,
-            addressData: addressDataMatch ? addressDataMatch[1].trim() : undefined,
-          })
-        }
-      }
+    // No propstat: the status sits directly on the response, which is how a
+    // multiget reports an href that no longer exists.
+    if (propstats.length === 0) {
+      const status = parseStatusCode(childText(responseEl, DAV_NS, 'status'))
+      if (status !== null) responses.push({ href, status })
+      continue
     }
+
+    // RFC 4918 gives every propstat its own status, including the successful one,
+    // and lets a server split found and not-found properties across several
+    // propstat blocks in the same response — Radicale does exactly that. So take
+    // the properties from whichever block succeeded, rather than treating the
+    // presence of any status as failure.
+    const okPropstat = propstats.find((propstat) => {
+      const status = parseStatusCode(childText(propstat, DAV_NS, 'status'))
+      return status !== null && status >= 200 && status < 300
+    })
+
+    if (!okPropstat) {
+      const status = parseStatusCode(childText(propstats[0], DAV_NS, 'status'))
+      if (status !== null) responses.push({ href, status })
+      continue
+    }
+
+    const propEl = childElements(okPropstat, DAV_NS, 'prop')[0]
+    const etag = propEl ? childText(propEl, DAV_NS, 'getetag') : null
+    // carddav, not DAV: — Radicale binds it to "CR", other servers to "C" or
+    // "card". The namespace URI is the only stable thing to match on.
+    const addressData = propEl ? childText(propEl, CARDDAV_NS, 'address-data') : null
+
+    responses.push({
+      href,
+      status: parseStatusCode(childText(okPropstat, DAV_NS, 'status')) ?? 200,
+      // textContent is already entity-decoded, so only strip the quote syntax.
+      etag: etag ? stripEtagSyntax(etag) : undefined,
+      addressData: addressData ? addressData.trim() : undefined,
+    })
   }
 
   return responses
@@ -147,11 +195,12 @@ function escapeXml(str: string): string {
 }
 
 /**
- * Extract D:sync-token from response body (some servers put it there).
+ * Extract the DAV:sync-token from a response body (some servers put it there).
+ * Without this the token is never captured, so every round is a full re-fetch.
  */
-function extractSyncTokenFromBody(xml: string): string | null {
-  const match = /<D:sync-token\b[^>]*>([^<]*)<\/D:sync-token>/i.exec(xml)
-  return match ? match[1] : null
+export function extractSyncTokenFromBody(xml: string): string | null {
+  const token = parseXmlDocument(xml)?.getElementsByTagNameNS(DAV_NS, 'sync-token')[0]?.textContent
+  return token?.trim() || null
 }
 
 // Takes the full `fetch` input type, not just `string | URL`: tsdav types its
@@ -764,49 +813,46 @@ export class CardDAVClient {
   }
 
   private parseSupportedAddressData(text: string): ('3.0' | '4.0')[] | undefined {
+    const doc = parseXmlDocument(text)
+    if (!doc) return undefined
+
+    // Reading attributes off the parsed element makes their order irrelevant,
+    // which is what the old regex needed a second variant-ordering pass for.
     const versions: ('3.0' | '4.0')[] = []
-    // Match <C:address-data-type content-type="text/vcard" version="3.0"/>
-    const matches = text.matchAll(
-      /<C:address-data-type[^>]*content-type="text\/vcard"[^>]*version="([\d.]+)"[^>]*\/>/gi
-    )
-    for (const match of matches) {
-      const version = match[1]
-      if (version === '3.0' || version === '4.0') {
-        versions.push(version as '3.0' | '4.0')
-      }
-    }
-    // Also try variant ordering
-    if (versions.length === 0) {
-      const altMatches = text.matchAll(
-        /<C:supported-address-data[\s\S]*?<\/C:supported-address-data>/gi
-      )
-      for (const block of altMatches) {
-        const inner = block[0]
-        const ver3 = inner.match(/version="3\.0"/i)
-        const ver4 = inner.match(/version="4\.0"/i)
-        if (ver3) versions.push('3.0')
-        if (ver4) versions.push('4.0')
-      }
+    for (const el of Array.from(doc.getElementsByTagNameNS(CARDDAV_NS, 'address-data-type'))) {
+      if (el.getAttribute('content-type') !== 'text/vcard') continue
+      const version = el.getAttribute('version')
+      if (version === '3.0' || version === '4.0') versions.push(version)
     }
     return versions.length > 0 ? versions : undefined
   }
 
   private parseMaxResourceSize(text: string): number | null | undefined {
-    const match = text.match(/<C:max-resource-size>(\d+)<\/C:max-resource-size>/i)
-    return match ? parseInt(match[1], 10) : undefined
+    const doc = parseXmlDocument(text)
+    if (!doc) return undefined
+
+    // Servers that do not implement the property still echo it back, empty, in a
+    // 404 propstat (Radicale does). Empty means unknown, not unlimited.
+    const raw = doc.getElementsByTagNameNS(CARDDAV_NS, 'max-resource-size')[0]?.textContent?.trim()
+    if (!raw) return undefined
+    const size = parseInt(raw, 10)
+    return Number.isFinite(size) ? size : undefined
   }
 
   private parseCanWrite(text: string): boolean | undefined {
-    // Check for D:write privilege in current-user-privilege-set
-    const writePrivMatches = text.matchAll(
-      /<D:privilege>[\s\S]*?<D:write\/>[\s\S]*?<\/D:privilege>/gi
-    )
-    for (const _match of writePrivMatches) {
-      return true
+    const doc = parseXmlDocument(text)
+    if (!doc) return undefined
+
+    // Look for a DAV:write inside any DAV:privilege of the privilege set. The old
+    // regex wanted the literal "<D:write/>", so it missed Radicale twice over:
+    // no prefix, and a space before the self-closing slash.
+    for (const privilegeSet of Array.from(
+      doc.getElementsByTagNameNS(DAV_NS, 'current-user-privilege-set')
+    )) {
+      for (const privilege of childElements(privilegeSet, DAV_NS, 'privilege')) {
+        if (childElements(privilege, DAV_NS, 'write').length > 0) return true
+      }
     }
-    // Also try alternative pattern
-    const altMatch = text.match(/<D:privilege>[\s\S]*?<D:write\/><\/D:privilege>/i)
-    if (altMatch) return true
     return undefined
   }
 
@@ -909,8 +955,9 @@ export class CardDAVClient {
   }
 
   private extractHrefFromMultistatus(text: string): string | null {
-    const match = text.match(/<D:href>([^<]+)<\/D:href>/)
-    return match ? match[1] : null
+    // First DAV:href in document order, matching what the previous regex took.
+    const href = parseXmlDocument(text)?.getElementsByTagNameNS(DAV_NS, 'href')[0]?.textContent
+    return href?.trim() || null
   }
 
   /** Clear cached DAV address books (e.g. after a server-side change). */
