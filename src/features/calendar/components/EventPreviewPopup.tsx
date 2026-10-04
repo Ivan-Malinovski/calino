@@ -26,6 +26,7 @@ import { safeCalDAVUpdate } from '@/lib/caldavHelpers'
 import { DeleteDialog } from './DeleteDialog'
 import { RecurrenceDialog } from './RecurrenceDialog'
 import { LocationLink } from './LocationLink'
+import { MarkdownView } from '@/lib/markdown'
 import { RecurringIcon } from '@/components/common/icons'
 import { EventBackground } from '@/components/common/EventBackground'
 import { matchEventBackground } from '@/lib/eventBackground'
@@ -966,7 +967,7 @@ export function EventPreviewPopup({
     if (editDescription) {
       return (
         <div className={styles.descriptionText} onClick={() => startEditing('description')}>
-          {editDescription}
+          <MarkdownView text={editDescription} />
         </div>
       )
     }

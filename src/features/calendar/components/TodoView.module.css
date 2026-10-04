@@ -898,3 +898,31 @@
     font-size: 16px;
   }
 }
+
+/* A note is one line that ends in an ellipsis. Markdown gives it blocks, so
+   they run inline and the line stays one. */
+.taskNote > div,
+.taskNote p,
+.taskNote ul,
+.taskNote ol,
+.taskNote li {
+  display: inline;
+  margin: 0;
+  padding: 0;
+}
+
+.taskNote p + p::before,
+.taskNote li + li::before {
+  content: ' ';
+}
+
+/* Links look as they do in the journal. */
+.taskNote a {
+  color: var(--accent-strong, var(--accent));
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.taskNote a:hover {
+  color: var(--color-accent-hover, var(--accent));
+}

@@ -1678,7 +1678,25 @@
   max-width: 250px;
   box-shadow: 0 4px 12px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.1 * var(--shadow-opacity, 1)));
   white-space: normal;
+  overflow-wrap: anywhere;
   pointer-events: none;
+}
+
+/* The description is markdown, as in the task list and the event preview.
+   Paragraphs sit close in so small a box. */
+.taskTooltip p {
+  margin: 0;
+}
+
+.taskTooltip p + p {
+  margin-top: 4px;
+}
+
+/* The tooltip takes no pointer, so a link in it cannot be clicked; it reads
+   as text rather than promise a click. */
+.taskTooltip a {
+  color: inherit;
+  text-decoration: none;
 }
 
 /* ---- Sidebar Resizer ---- */
