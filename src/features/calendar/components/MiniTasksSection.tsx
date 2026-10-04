@@ -466,6 +466,7 @@ export function MiniTasksSection({ isExpanded, onToggle }: MiniTasksSectionProps
                 hoveredTaskData && hoveredTaskData.description && tooltipPosition ? (
                   <div
                     className={styles.taskTooltip}
+                    data-component="task-tooltip"
                     style={{
                       position: 'fixed',
                       left: tooltipPosition.x + 12,

@@ -1180,7 +1180,7 @@ export function TodoView(): JSX.Element {
                       </div>
                     )}
                     {task.description && (
-                      <div className={styles.taskNote}>
+                      <div className={styles.taskNote} data-component="task-note">
                         <MarkdownView text={task.description} />
                       </div>
                     )}
