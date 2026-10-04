@@ -1013,12 +1013,10 @@ export class CardDAVClient {
 
       const text = await response.text()
 
-      // Try to get token from headers first, then body
-      const newSyncToken =
-        response.headers.get('X-SYNC-TOKEN') ||
-        response.headers.get('DAV:sync-token') ||
-        extractSyncTokenFromBody(text) ||
-        null
+      // RFC 6578 puts the token in the response body. `DAV:sync-token` is not a valid
+      // header name, so Headers.get() on it throws a TypeError — which the catch below
+      // turned into "token invalidated", forcing a full re-fetch on every sync.
+      const newSyncToken = response.headers.get('X-SYNC-TOKEN') || extractSyncTokenFromBody(text)
 
       const changes = this.parseSyncCollectionResponse(text)
       return { changes, newSyncToken, tokenInvalidated: false }

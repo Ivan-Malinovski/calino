@@ -138,3 +138,39 @@ describe('collection property parsing', () => {
     expect(client['parseMaxResourceSize'](radicalePropfind)).toBeUndefined()
   })
 })
+
+describe('syncCollection', () => {
+  const addressBook = {
+    id: 'ab-1',
+    accountId: 'acc-1',
+    url: 'https://dav.example.com/test/contacts/',
+  } as Parameters<CardDAVClient['syncCollection']>[0]
+
+  function clientReplying(body: string, headers: Record<string, string> = {}) {
+    const client = new CardDAVClient('https://dav.example.com', credentials)
+    ;(client as unknown as { proxyFetch: typeof fetch }).proxyFetch = async () =>
+      new Response(body, { status: 207, headers })
+    return client
+  }
+
+  // Regression: reading the nonexistent `DAV:sync-token` header threw a TypeError
+  // (a colon is not a valid header name), which syncCollection's catch reported as
+  // an invalidated token — so no server ever got incremental sync.
+  it('returns the token and changes from an unprefixed Radicale response', async () => {
+    const result = await clientReplying(radicaleSyncCollection).syncCollection(addressBook, null)
+
+    expect(result.tokenInvalidated).toBe(false)
+    expect(result.newSyncToken).toMatch(/^http:\/\/radicale\.org\/ns\/sync\/[0-9a-f]{64}$/)
+    expect(result.changes.map((c) => c.url)).toEqual([
+      '/test/contacts/contact-1.vcf',
+      '/test/contacts/contact-2.vcf',
+    ])
+  })
+
+  it('returns the token from a d:-prefixed response', async () => {
+    const result = await clientReplying(dprefixedSyncCollection).syncCollection(addressBook, null)
+
+    expect(result.tokenInvalidated).toBe(false)
+    expect(result.newSyncToken).toBe('http://sabredav.org/ns/sync/5001')
+  })
+})

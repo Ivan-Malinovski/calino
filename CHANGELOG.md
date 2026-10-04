@@ -13,6 +13,9 @@ All notable changes to Calino will be documented in this file.
   contacts and no sync token, and every sync re-fetched the whole address
   book. Responses are now parsed by namespace. The same fix makes Radicale
   address books report as writable and read their vCard versions correctly.
+  Incremental sync also never worked on any server, because reading a
+  nonexistent `DAV:sync-token` response header threw and was reported as an
+  invalidated token; that is fixed too.
   Thanks to [@SNNU-Lisiyu](https://github.com/SNNU-Lisiyu), whose fix this is
   based on.
 - **Recurring all-day events whose source year is before 1000 no longer break
