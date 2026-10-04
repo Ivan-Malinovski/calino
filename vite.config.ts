@@ -23,6 +23,13 @@ if (existsSync(configPath)) {
   }
 }
 
+// The E2E server has no calino.config.json, so it gets the app-link schemes
+// its specs need. loadConfig treats a config without accounts as absent.
+const e2eConfig =
+  process.env.CALINO_E2E_MOCK === '1'
+    ? { version: 1, accounts: [], linkSchemes: { obsidian: 'Obsidian' } }
+    : null
+
 const isSelfHosted = !!calinoConfig || process.env.CALINO_SELF_HOSTED === 'true'
 // The cross-origin diagnostics fixture is deliberately plain HTTP. Permit that
 // transport without changing hosted-only UI behavior across the rest of E2E.
@@ -40,7 +47,7 @@ export default defineConfig({
   envPrefix: ['VITE_', 'CALINO_GITHUB_REPO', 'CALINO_CONTACT_EMAIL', 'CALINO_ENABLE_SW'],
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
-    __CALINO_CONFIG__: JSON.stringify(calinoConfig),
+    __CALINO_CONFIG__: JSON.stringify(calinoConfig ?? e2eConfig),
     __CALINO_SELF_HOSTED__: JSON.stringify(isSelfHosted),
   },
   plugins: [
