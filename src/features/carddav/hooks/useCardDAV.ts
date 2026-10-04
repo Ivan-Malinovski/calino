@@ -63,6 +63,19 @@ async function getClientForAccount(accountId: string): Promise<CardDAVClient> {
   return client
 }
 
+/**
+ * Comparable form of a resource URL or href: the decoded path only. A sync-collection
+ * response reports hrefs as server-relative paths, while stored contacts carry absolute
+ * URLs that may be encoded differently, so neither can be compared as-is.
+ */
+function resourcePath(url: string): string {
+  try {
+    return decodeURIComponent(new URL(url, 'http://placeholder.invalid').pathname)
+  } catch {
+    return url
+  }
+}
+
 interface UseCardDAVReturn {
   addressBooks: AddressBook[]
   contacts: Contact[]
@@ -261,6 +274,11 @@ export function useCardDAV(): UseCardDAVReturn {
         const allContacts: Contact[] = []
         let skippedBooks = 0
         const updatedSyncTokens: { url: string; syncToken: string | null }[] = []
+        // A sync-collection result is a delta, not a listing: the contacts we fetched are
+        // only the ones that changed. Books synced that way must not be pruned by absence,
+        // and the server tells us explicitly which resources to drop instead.
+        const deltaSyncedBookIds = new Set<string>()
+        const removedPaths = new Set<string>()
 
         for (const addressBook of newAddressBooks) {
           const existingAb = existingAddressBooks.find((ab) => ab.url === addressBook.url)
@@ -277,6 +295,15 @@ export function useCardDAV(): UseCardDAVReturn {
             if (storedSyncToken || !existingAb?.ctag || existingAb.ctag !== addressBook.ctag) {
               const syncResult = await client.syncCollection(addressBook, storedSyncToken)
 
+              if (!syncResult.tokenInvalidated) {
+                deltaSyncedBookIds.add(addressBook.id)
+                for (const change of syncResult.changes) {
+                  if (change.status === 'removed') {
+                    removedPaths.add(`${addressBook.id}\n${resourcePath(change.url)}`)
+                  }
+                }
+              }
+
               if (!syncResult.tokenInvalidated && syncResult.changes.length > 0) {
                 // sync-collection succeeded with changes
                 const changedUrls = syncResult.changes
@@ -286,6 +313,15 @@ export function useCardDAV(): UseCardDAVReturn {
                 // Fetch changed contacts via multiget
                 if (changedUrls.length > 0) {
                   const changedContacts = await client.fetchContactsByUrls(addressBook, changedUrls)
+                  // The token is a promise that we now hold everything up to it. If a
+                  // contact went missing from the multiget (deleted in between, or a card
+                  // we cannot parse), advancing it would lose that contact until some
+                  // later full fetch. Bail out to the full fetch below, token untouched.
+                  if (changedContacts.length < changedUrls.length) {
+                    throw new Error(
+                      `multiget returned ${changedContacts.length} of ${changedUrls.length} contacts`
+                    )
+                  }
                   allContacts.push(...changedContacts)
                 }
 
@@ -325,6 +361,8 @@ export function useCardDAV(): UseCardDAVReturn {
             }
           } catch (err) {
             console.warn(`[CardDAV] Failed to sync ${addressBook.name}:`, err)
+            // A full fetch is a complete listing again, so it may prune by absence.
+            deltaSyncedBookIds.delete(addressBook.id)
             // Fall back to full fetch on error
             try {
               const contacts = await client.fetchContacts(addressBook)
@@ -355,12 +393,15 @@ export function useCardDAV(): UseCardDAVReturn {
         // Remove contacts that no longer exist on the server
         // For books with sync tokens, we can remove contacts that were reported as removed
         // For books without sync tokens, use ctag-based pruning
-        const fullySyncedBookIds = newAddressBooks
-          .filter((ab) => {
-            const existingAb = existingAddressBooks.find((e) => e.url === ab.url)
-            return existingAb?.ctag && existingAb.ctag === ab.ctag
-          })
-          .map((ab) => ab.id)
+        const fullySyncedBookIds = [
+          ...newAddressBooks
+            .filter((ab) => {
+              const existingAb = existingAddressBooks.find((e) => e.url === ab.url)
+              return existingAb?.ctag && existingAb.ctag === ab.ctag
+            })
+            .map((ab) => ab.id),
+          ...deltaSyncedBookIds,
+        ]
 
         const serverContactIds = new Set(allContacts.map((c) => c.id))
         const conflicts: string[] = []
@@ -421,6 +462,13 @@ export function useCardDAV(): UseCardDAVReturn {
 
           return {
             contacts: mergedContacts.filter((c) => {
+              // The server said this resource is gone — unless we have local edits to it
+              if (
+                !hasPending(c.id) &&
+                removedPaths.has(`${c.addressBookId}\n${resourcePath(c.url)}`)
+              ) {
+                return false
+              }
               // Don't prune contacts from books we didn't sync
               if (fullySyncedBookIds.includes(c.addressBookId)) return true
               // Don't prune contacts with pending changes

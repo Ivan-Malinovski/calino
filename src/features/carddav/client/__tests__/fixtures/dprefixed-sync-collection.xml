@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Hand-written, NOT captured from a live server. Shaped after the sync-collection
+  examples in RFC 6578 section 6.4 and the prefixed style SabreDAV/Nextcloud emit.
+  See dprefixed-addressbook-multiget.xml for why this pair exists.
+-->
+<d:multistatus xmlns:d="DAV:">
+  <d:response>
+    <d:href>/remote.php/dav/addressbooks/users/alice/contacts/contact-1.vcf</d:href>
+    <d:propstat>
+      <d:prop>
+        <d:getetag>&quot;d41d8cd98f00b204e9800998ecf8427e&quot;</d:getetag>
+      </d:prop>
+      <d:status>HTTP/1.1 200 OK</d:status>
+    </d:propstat>
+  </d:response>
+  <d:sync-token>http://sabredav.org/ns/sync/5001</d:sync-token>
+</d:multistatus>

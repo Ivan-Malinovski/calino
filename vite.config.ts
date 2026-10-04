@@ -5,6 +5,7 @@ import path from 'path'
 import { nodePolyfills } from 'vite-plugin-node-polyfills'
 import { configDefaults } from 'vitest/config'
 import { caldavMockPlugin } from './e2e/fixtures/vite-caldav-mock'
+import { carddavMockPlugin } from './e2e/fixtures/vite-carddav-mock'
 import { contentSecurityPolicy } from './src/config/contentSecurityPolicy.ts'
 import { fontScalePostcss } from './src/config/fontScale.ts'
 
@@ -56,6 +57,7 @@ export default defineConfig({
     react(),
     nodePolyfills(),
     caldavMockPlugin(),
+    carddavMockPlugin(),
   ],
   server: {
     // SECURITY: default to localhost-only. The dev server has known

@@ -1,0 +1,10 @@
+<?xml version='1.0' encoding='utf-8'?>
+<multistatus xmlns="DAV:" xmlns:CR="urn:ietf:params:xml:ns:carddav"><response><href>/test/contacts/does-not-exist.vcf</href><status>HTTP/1.1 404 Not Found</status></response><response><href>/test/contacts/contact-1.vcf</href><propstat><prop><getetag>"7b6a39d533ebd1c42b0c69a4604e7b97d57370671b4e4e0111d111212f7d1f12"</getetag><CR:address-data>BEGIN:VCARD
+VERSION:3.0
+UID:contact-1
+EMAIL;TYPE=INTERNET:person1@example.invalid
+FN:Test Person 1
+N:Person;Test 1;;;
+TEL;TYPE=CELL:+1-555-0101
+END:VCARD
+</CR:address-data></prop><status>HTTP/1.1 200 OK</status></propstat></response></multistatus>

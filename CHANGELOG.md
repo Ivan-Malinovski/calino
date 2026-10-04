@@ -6,6 +6,21 @@ All notable changes to Calino will be documented in this file.
 
 ### Fixed
 
+- **Contacts now sync from CardDAV servers that use different XML
+  prefixes, such as Radicale** ([#173](https://github.com/Ivan-Malinovski/calino/issues/173)).
+  Responses were matched on hardcoded `D:`/`C:` prefixes, so a server that
+  binds `DAV:` to the default namespace (or carddav to `CR:`) produced no
+  contacts and no sync token, and every sync re-fetched the whole address
+  book. Responses are now parsed by namespace. The same fix makes Radicale
+  address books report as writable and read their vCard versions correctly.
+  Incremental sync also never worked on any server, because reading a
+  nonexistent `DAV:sync-token` response header threw and was reported as an
+  invalidated token. It now works, so a sync downloads only the contacts that
+  changed, applies deletions, and fetches large address books in batches.
+  Calino also no longer downloads a whole address book on every page load just
+  to check whether contacts exist.
+  Thanks to [@SNNU-Lisiyu](https://github.com/SNNU-Lisiyu), whose fix this is
+  based on.
 - **Recurring all-day events whose source year is before 1000 no longer break
   the calendar** ([#175](https://github.com/Ivan-Malinovski/calino/issues/175)).
   An all-day date such as `00010827` (a historic birthday, say) was read back

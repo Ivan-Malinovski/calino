@@ -1,0 +1,4 @@
+# The CardDAV test fixtures are verbatim response bodies captured from a real
+# Radicale. Newline conversion would stop them being byte-exact, and would make
+# the vCard payloads parse differently on Windows than in the Linux build.
+src/features/carddav/client/__tests__/fixtures/*.xml -text

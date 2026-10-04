@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Hand-written, NOT captured from a live server: no Nextcloud/SabreDAV instance was
+  available when these tests were written. Shaped after the addressbook-multiget
+  examples in RFC 6352 section 8.7 and the prefixed style SabreDAV/Nextcloud emit.
+
+  Its job is to prove the parser fix is ADDITIVE: a server that binds DAV: to a "d:"
+  prefix and carddav to "card:" must keep parsing exactly as before. Radicale's own
+  output (the other fixtures here) is the captured-from-real-server side of that pair.
+-->
+<d:multistatus xmlns:d="DAV:" xmlns:card="urn:ietf:params:xml:ns:carddav">
+  <d:response>
+    <d:href>/remote.php/dav/addressbooks/users/alice/contacts/contact-1.vcf</d:href>
+    <d:propstat>
+      <d:prop>
+        <d:getetag>&quot;d41d8cd98f00b204e9800998ecf8427e&quot;</d:getetag>
+        <card:address-data>BEGIN:VCARD
+VERSION:3.0
+UID:contact-1
+FN:Test Person 1
+N:Person;Test 1;;;
+EMAIL;TYPE=INTERNET:person1@example.invalid
+END:VCARD
+</card:address-data>
+      </d:prop>
+      <d:status>HTTP/1.1 200 OK</d:status>
+    </d:propstat>
+  </d:response>
+  <d:response>
+    <d:href>/remote.php/dav/addressbooks/users/alice/contacts/gone.vcf</d:href>
+    <d:status>HTTP/1.1 404 Not Found</d:status>
+  </d:response>
+</d:multistatus>
