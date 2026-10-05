@@ -96,13 +96,19 @@ test.describe('event location picker', () => {
     const modal = page.getByRole('dialog')
     const location = modal.locator('[data-component="event-location-input"]')
     await expect(location).toBeVisible()
-    const inputHeightBeforeOpen = (await location.boundingBox())?.height
+    // Measure layout height so the modal's opening scale animation cannot
+    // look like the picker resized its input.
+    const inputHeightBeforeOpen = await location.evaluate(
+      (input: HTMLInputElement) => input.offsetHeight
+    )
     await location.focus()
 
     const options = page.locator('[data-component="location-picker-option"]')
     await expect(options).toHaveCount(1)
     await expect(options.first()).toHaveText('recent ROOM')
-    expect((await location.boundingBox())?.height).toBe(inputHeightBeforeOpen)
+    expect(await location.evaluate((input: HTMLInputElement) => input.offsetHeight)).toBe(
+      inputHeightBeforeOpen
+    )
     const optionsBox = await page
       .locator('[data-component="location-picker-options"]')
       .boundingBox()

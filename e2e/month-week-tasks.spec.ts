@@ -90,9 +90,11 @@ test.describe('Month view: sometime-this-week tasks', () => {
     page,
   }) => {
     const tip = badge(page).getByText('Sometime this week')
-    await expect(tip).toBeHidden()
+    // The label fades via opacity; Playwright considers transparent elements
+    // visible, so check the fade itself before and after hovering.
+    await expect(tip).toHaveCSS('opacity', '0')
     await badge(page).hover()
-    await expect(tip).toBeVisible()
+    await expect(tip).toHaveCSS('opacity', '1')
     await badge(page).click()
     await expect(page.locator('[data-component="week-tasks-popover"]')).toBeVisible()
     await expect(tip).toBeHidden()

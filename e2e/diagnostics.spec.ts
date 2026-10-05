@@ -118,9 +118,27 @@ test.describe('diagnostics against a real server', () => {
     await expect(check(page, 'write-roundtrip')).toHaveAttribute('data-status', 'pass')
   })
 
-  test('copying the report leaves out the credentials', async ({ page, context }) => {
-    await context.grantPermissions(['clipboard-read', 'clipboard-write'])
+  test('copying the report leaves out the credentials', async ({ page, context, browserName }) => {
+    if (browserName === 'chromium') {
+      await context.grantPermissions(['clipboard-read', 'clipboard-write'])
+    }
     await diagnoseSeededAccount(page, '/good/')
+    if (browserName !== 'chromium') {
+      // Firefox and WebKit cannot grant Chromium's clipboard permissions.
+      // Capture the app's write while still checking the copied report itself.
+      await page.evaluate(() => {
+        let clipboardText = ''
+        Object.defineProperty(navigator, 'clipboard', {
+          configurable: true,
+          value: {
+            writeText: async (text: string) => {
+              clipboardText = text
+            },
+            readText: async () => clipboardText,
+          },
+        })
+      })
+    }
 
     await page.locator('[data-action="copy-report"]').click()
     const text = await page.evaluate(() => navigator.clipboard.readText())
