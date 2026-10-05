@@ -51,9 +51,7 @@ test.describe('Week view — mobile day header', () => {
     await page.locator(SCROLL).evaluate((el) => {
       el.scrollLeft = el.scrollWidth
     })
-    await expect
-      .poll(() => page.locator(SCROLL).evaluate((el) => el.scrollLeft))
-      .toBeGreaterThan(0)
+    await expect.poll(() => page.locator(SCROLL).evaluate((el) => el.scrollLeft)).toBeGreaterThan(0)
 
     // The header's own border box is what carries the background — a day
     // label rendering there is not enough, since the labels overflow the box
@@ -86,9 +84,7 @@ test.describe('Week view — mobile day header', () => {
     await page.locator(SCROLL).evaluate((el) => {
       el.scrollLeft = el.scrollWidth
     })
-    await expect
-      .poll(() => page.locator(SCROLL).evaluate((el) => el.scrollLeft))
-      .toBeGreaterThan(0)
+    await expect.poll(() => page.locator(SCROLL).evaluate((el) => el.scrollLeft)).toBeGreaterThan(0)
 
     const scrolledLeft = await page
       .locator(TIME_COLUMN)
@@ -164,6 +160,13 @@ test.describe('Week view — pinch to fit more days', () => {
 })
 
 test.describe('Week view — swipe paging vs. the day strip', () => {
+  // Firefox's touch emulation suppresses pointer events from page.mouse.
+  test.use({
+    hasTouch: async ({ browserName }, setTouchOption) => {
+      await setTouchOption(browserName !== 'firefox')
+    },
+  })
+
   test.beforeEach(async ({ page }) => {
     await clearState(page)
     await page.goto('/week')
@@ -179,10 +182,7 @@ test.describe('Week view — swipe paging vs. the day strip', () => {
    *  `motion.main`, so this has to be a real pointer drag rather than a
    *  synthetic event — driving the wrong layer is exactly how the first
    *  attempt at this fix ended up in dead code. */
-  async function panHorizontally(
-    page: import('@playwright/test').Page,
-    dx: number
-  ): Promise<void> {
+  async function panHorizontally(page: import('@playwright/test').Page, dx: number): Promise<void> {
     const box = await page.locator(SCROLL).boundingBox()
     if (!box) throw new Error('no scroll box')
     const y = box.y + box.height / 2

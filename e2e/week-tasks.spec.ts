@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, type Page } from '@playwright/test'
 import { clearState } from './fixtures/localstorage'
 
 // Wednesday 30 Sep 2026; the Monday-start week is 28 Sep – 4 Oct.
@@ -22,6 +22,25 @@ const storedTask = (page: import('@playwright/test').Page, id: string) =>
     const raw = JSON.parse(localStorage.getItem('calino-storage') ?? '{}')
     return raw.state.events.find((e: { id: string }) => e.id === taskId)
   }, id)
+
+/** Keep aiming at the live slot as scrolling settles during a footer drag. */
+async function dragPillToTimeSlot(page: Page, fraction: number): Promise<void> {
+  const pill = page.locator('[data-testid="week-task-week-a"]')
+  const cell = page.locator('[data-date="2026-10-01"][data-hour="10:00"]')
+  await cell.scrollIntoViewIfNeeded()
+  const from = (await pill.boundingBox())!
+  await page.mouse.move(from.x + 40, from.y + from.height / 2)
+  await page.mouse.down()
+  await page.mouse.move(from.x + 60, from.y - 20, { steps: 5 })
+  await expect
+    .poll(async () => {
+      const to = (await cell.boundingBox())!
+      await page.mouse.move(to.x + to.width / 2, to.y + to.height * fraction, { steps: 15 })
+      return page.locator('[data-component="drop-preview"]').getAttribute('data-minute-of-day')
+    })
+    .toBe('630')
+  await page.mouse.up()
+}
 
 test.describe('Week view: sometime-this-week tasks', () => {
   test.beforeEach(async ({ page }) => {
@@ -71,7 +90,7 @@ test.describe('Week view: sometime-this-week tasks', () => {
     const bar = page.locator('[data-component="week-tasks-bar"]')
     await expect(bar.getByText('Water plants')).toHaveCount(0)
     await expect(bar.getByText('Two day thing')).toHaveCount(0)
-    await expect(page.getByText('Water plants')).toBeVisible()
+    await expect(page.locator('main').getByText('Water plants')).toBeVisible()
   })
 
   test('ticking a pill completes the task', async ({ page }) => {
@@ -81,7 +100,7 @@ test.describe('Week view: sometime-this-week tasks', () => {
   })
 
   test('multi-day tasks do not appear a second time under their due day', async ({ page }) => {
-    await expect(page.getByText('Call the plumber')).toHaveCount(1)
+    await expect(page.locator('main').getByText('Call the plumber')).toHaveCount(1)
   })
   test('typing in the bar adds a task for the whole week', async ({ page }) => {
     const bar = page.locator('[data-component="week-tasks-bar"]')
@@ -121,7 +140,11 @@ test.describe('Week view: sometime-this-week tasks', () => {
   })
 
   test('the task form can turn a one-day task into a week task', async ({ page }) => {
-    await page.getByText('Water plants').click()
+    await page.locator('main').getByText('Water plants').click()
+    await page
+      .locator('[data-component="event-preview"]')
+      .getByRole('button', { name: 'Open task' })
+      .click()
     const modal = page.getByRole('dialog')
     await modal.locator('[data-component="task-sometime-this-week"]').click()
     await expect(modal.locator('#task-start-date')).toHaveValue('2026-09-28')
@@ -186,16 +209,7 @@ test.describe('Week view: sometime-this-week tasks', () => {
   })
 
   test('dragging a pill onto a time slot gives it that day and hour', async ({ page }) => {
-    const pill = page.locator('[data-testid="week-task-week-a"]')
-    const cell = page.locator('[data-date="2026-10-01"][data-hour="10:00"]')
-    await cell.scrollIntoViewIfNeeded()
-    const from = (await pill.boundingBox())!
-    const to = (await cell.boundingBox())!
-    await page.mouse.move(from.x + 40, from.y + from.height / 2)
-    await page.mouse.down()
-    await page.mouse.move(from.x + 60, from.y - 20, { steps: 5 })
-    await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 15 })
-    await page.mouse.up()
+    await dragPillToTimeSlot(page, 0.55)
 
     const bar = page.locator('[data-component="week-tasks-bar"]')
     await expect(bar.getByText('Call the plumber')).toHaveCount(0)
@@ -207,16 +221,7 @@ test.describe('Week view: sometime-this-week tasks', () => {
   })
 
   test('dropping on a time slot snaps to the quarter hour under the pointer', async ({ page }) => {
-    const pill = page.locator('[data-testid="week-task-week-a"]')
-    const cell = page.locator('[data-date="2026-10-01"][data-hour="10:00"]')
-    await cell.scrollIntoViewIfNeeded()
-    const from = (await pill.boundingBox())!
-    const to = (await cell.boundingBox())!
-    await page.mouse.move(from.x + 40, from.y + from.height / 2)
-    await page.mouse.down()
-    await page.mouse.move(from.x + 60, from.y - 20, { steps: 5 })
-    await page.mouse.move(to.x + to.width / 2, to.y + to.height * 0.6, { steps: 15 })
-    await page.mouse.up()
+    await dragPillToTimeSlot(page, 0.6)
 
     await expect
       .poll(async () => (await storedTask(page, 'week-a')).dueDate)
