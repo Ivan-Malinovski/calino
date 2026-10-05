@@ -1,8 +1,14 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { parseISO } from 'date-fns'
 import type { CalendarEvent } from '@/types'
 import { toEventInstant, formatTime } from '@/lib/datetime'
-import { reminderInstant, reminderBodyTime } from '../nativeReminders'
+import { LocalNotifications } from '@capacitor/local-notifications'
+import {
+  reminderInstant,
+  reminderBodyTime,
+  setNativeOverdueBadge,
+  clearNativeOverdueBadge,
+} from '../nativeReminders'
 import { reminderBody } from '../notifications'
 
 // The helpers under test are pure; mock the Capacitor plugin and the deep-link
@@ -16,6 +22,8 @@ vi.mock('@capacitor/local-notifications', () => ({
     cancel: vi.fn(),
     addListener: vi.fn(),
     registerActionTypes: vi.fn(),
+    createChannel: vi.fn(),
+    removeDeliveredNotifications: vi.fn(),
   },
 }))
 
@@ -78,5 +86,59 @@ describe('nativeReminders - TZID reminder timing', () => {
     expect(reminderInstant(event, minutesBefore).getTime()).toBe(
       parseISO(event.start).getTime() - minutesBefore * 60_000
     )
+  })
+})
+
+describe('nativeReminders - overdue task badge', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('posts one silent standing notification carrying the count', async () => {
+    await setNativeOverdueBadge(3)
+    expect(LocalNotifications.createChannel).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'overdue-tasks', importance: 2 })
+    )
+    const { notifications } = vi.mocked(LocalNotifications.schedule).mock.calls[0][0]
+    expect(notifications).toHaveLength(1)
+    expect(notifications[0]).toMatchObject({
+      title: '3 overdue tasks',
+      badge: 3,
+      channelId: 'overdue-tasks',
+      autoCancel: false,
+    })
+    // No `schedule`: the plugin posts it immediately.
+    expect(notifications[0].schedule).toBeUndefined()
+  })
+
+  it('uses the singular for one task', async () => {
+    await setNativeOverdueBadge(1)
+    const { notifications } = vi.mocked(LocalNotifications.schedule).mock.calls[0][0]
+    expect(notifications[0].title).toBe('1 overdue task')
+  })
+
+  it('reuses one notification id, so a new count replaces the old one', async () => {
+    await setNativeOverdueBadge(2)
+    await setNativeOverdueBadge(5)
+    const ids = vi
+      .mocked(LocalNotifications.schedule)
+      .mock.calls.map((call) => call[0].notifications[0].id)
+    expect(ids[0]).toBe(ids[1])
+  })
+
+  it('takes the notification down for a zero count', async () => {
+    await setNativeOverdueBadge(0)
+    expect(LocalNotifications.schedule).not.toHaveBeenCalled()
+    expect(LocalNotifications.removeDeliveredNotifications).toHaveBeenCalledTimes(1)
+  })
+
+  it('removes the delivered notification, not a pending one', async () => {
+    await setNativeOverdueBadge(2)
+    const postedId = vi.mocked(LocalNotifications.schedule).mock.calls[0][0].notifications[0].id
+    await clearNativeOverdueBadge()
+    expect(LocalNotifications.removeDeliveredNotifications).toHaveBeenCalledWith({
+      notifications: [expect.objectContaining({ id: postedId })],
+    })
+    expect(LocalNotifications.cancel).not.toHaveBeenCalled()
   })
 })

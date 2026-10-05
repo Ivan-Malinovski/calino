@@ -20,6 +20,7 @@ import {
 } from '@/lib/nativeReminders'
 import { useCalendarMirrorStore, mirrorOwnsReminders } from '@/store/calendarMirrorStore'
 import { toEventInstant } from '@/lib/datetime'
+import { buildTaskDueReminderEvents } from '@/lib/taskReminders'
 import { parseISO, isWithinInterval, addMinutes, addHours, addDays, isAfter } from 'date-fns'
 import { toast } from 'sonner'
 import i18n from '@/lib/i18n'
@@ -61,9 +62,34 @@ function useReminderOccurrences(events: CalendarEvent[]): CalendarEvent[] {
   }, [events])
 }
 
+/**
+ * One due-date reminder per open task, when the "Task Due Date Reminders"
+ * setting is on. Over the same window as the event reminders above, so a task
+ * overdue by less than the catch-up window still fires after a reopen.
+ */
+function useTaskDueReminders(events: CalendarEvent[]): CalendarEvent[] {
+  const calendars = useCalendarStore((state) => state.calendars)
+  const enabled = useSettingsStore((state) => state.taskDueDateReminders)
+  return useMemo(() => {
+    if (!enabled) return []
+    const now = new Date()
+    return buildTaskDueReminderEvents(
+      events,
+      calendars ?? [],
+      addHours(now, -CATCH_UP_WINDOW_HOURS),
+      addDays(now, REMINDER_HORIZON_DAYS)
+    )
+  }, [events, calendars, enabled])
+}
+
 export function useNotifications(): void {
   const events = useCalendarStore((state) => state.events)
-  const reminderEvents = useReminderOccurrences(events)
+  const eventReminders = useReminderOccurrences(events)
+  const taskDueReminders = useTaskDueReminders(events)
+  const reminderEvents = useMemo(
+    () => (taskDueReminders.length > 0 ? [...eventReminders, ...taskDueReminders] : eventReminders),
+    [eventReminders, taskDueReminders]
+  )
   const enableNotifications = useSettingsStore((state) => state.enableDesktopNotifications)
   // When the Android calendar mirror is active the OS alarms our events off
   // CalendarContract, which works with the app closed — strictly better than
@@ -93,13 +119,16 @@ export function useNotifications(): void {
       // With the mirror active the calendar provider alarms these events, so
       // scheduling our own would double-notify. Drop what we already queued
       // (this also covers the moment the mirror first becomes active) and
-      // leave the queue empty until it stops being active.
-      if (providerOwnsReminders) {
+      // leave the queue empty until it stops being active. The provider has no
+      // task table, though, so task due reminders are still ours to schedule.
+      if (providerOwnsReminders && taskDueReminders.length === 0) {
         await cancelAllNativeReminders()
         return
       }
       const granted = await checkNativeReminderPermission()
-      if (granted && !cancelled) await reconcileNativeReminders(reminderEvents)
+      if (granted && !cancelled) {
+        await reconcileNativeReminders(providerOwnsReminders ? taskDueReminders : reminderEvents)
+      }
     }
     // Debounced because this effect re-runs on every event mutation, and a sync
     // writes events one at a time.
@@ -126,7 +155,7 @@ export function useNotifications(): void {
       removeListener()
       void appStateListenerPromise.then((handle) => handle.remove())
     }
-  }, [reminderEvents, enableNotifications, providerOwnsReminders])
+  }, [reminderEvents, taskDueReminders, enableNotifications, providerOwnsReminders])
 
   useEffect(() => {
     prevEnabledRef.current = enableNotifications

@@ -135,6 +135,19 @@
     "showSidebarTaskCalendarLabels": {
       "label": "Mostra i nomi dei calendari nella barra laterale",
       "desc": "Mostra il calendario di un'attività al passaggio del mouse o con il focus della tastiera quando sono attivati più calendari di attività."
+    },
+    "hideCompletedTasks": {
+      "label": "Nascondi attività completate",
+      "desc": "Non mostrare le attività svolte nella griglia del calendario"
+    },
+    "reminders": "Promemoria",
+    "taskDueDateReminders": {
+      "label": "Promemoria della data di scadenza dell'attività",
+      "desc": "Avvisa quando scade un'attività: all'ora di scadenza, o alle 9:00 se ha solo la data"
+    },
+    "overdueTaskBadge": {
+      "label": "Badge attività scadute",
+      "desc": "Mostra un badge sull'icona dell'app per le attività scadute"
     }
   },
   "calendar": {
@@ -210,11 +223,6 @@
       "never": "Mai",
       "current": "Mese corrente",
       "all": "Tutti"
-    },
-    "hideCompletedTasks": {
-      "label": "Nascondi attività completate",
-      "desc": "Non mostrare le attività svolte nella griglia del calendario",
-      "ariaLabel": "Nascondi le attività completate"
     },
     "monthViewEventLimit": {
       "label": "Eventi visibili prima del riepilogo",
@@ -484,17 +492,6 @@
       "betaTitle": "Perché è in versione beta",
       "betaP1": "Il controllo in background dipende dalle impostazioni della batteria del telefono. In particolare, i dispositivi Xiaomi, Samsung, OPPO, OnePlus e Huawei bloccano in modo aggressivo le app in background e possono saltare il controllo senza avvisare. Se gli eventi non sono aggiornati, imposta Calino su <strong>Nessuna restrizione</strong> nelle impostazioni della batteria di Android.",
       "betaP2": "Se un calendario con mirroring non viene visualizzato nell'app di calendario, in genere è nascosto anziché mancante: i nuovi calendari spesso arrivano deselezionati nell'elenco dei calendari da visualizzare dell'app."
-    },
-    "tasks": "Attività",
-    "taskDueDateReminders": {
-      "label": "Promemoria della data di scadenza dell'attività",
-      "desc": "Avvisa quando arriva la data di scadenza di un'attività",
-      "ariaLabel": "Promemoria della data di scadenza dell'attività"
-    },
-    "overdueTaskBadge": {
-      "label": "Badge attività scadute",
-      "desc": "Mostra un badge sull'icona dell'app per le attività scadute",
-      "ariaLabel": "Badge delle attività scadute"
     },
     "test": {
       "label": "Notifica di prova",

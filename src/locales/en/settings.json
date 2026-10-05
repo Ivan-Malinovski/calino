@@ -135,6 +135,19 @@
     "showSidebarTaskCalendarLabels": {
       "label": "Reveal calendar names in the sidebar",
       "desc": "Show a task's calendar on hover or keyboard focus when multiple task calendars are enabled."
+    },
+    "hideCompletedTasks": {
+      "label": "Hide Completed Tasks",
+      "desc": "Don't show done tasks in the calendar grid"
+    },
+    "reminders": "Reminders",
+    "taskDueDateReminders": {
+      "label": "Task Due Date Reminders",
+      "desc": "Notify when a task is due: at its due time, or at 9:00 for tasks with only a due date"
+    },
+    "overdueTaskBadge": {
+      "label": "Overdue Task Badge",
+      "desc": "Show a badge on the app icon for overdue tasks"
     }
   },
   "calendar": {
@@ -210,11 +223,6 @@
       "never": "Never",
       "current": "Current month",
       "all": "All"
-    },
-    "hideCompletedTasks": {
-      "label": "Hide Completed Tasks",
-      "desc": "Don't show done tasks in the calendar grid",
-      "ariaLabel": "Hide completed tasks"
     },
     "monthViewEventLimit": {
       "label": "Events Before Rollup",
@@ -334,13 +342,34 @@
         "mono": "Monospace"
       },
       "colors": {
-        "canvas": { "label": "Canvas", "desc": "Main page background" },
-        "panel": { "label": "Surface", "desc": "Cards, dialogs, and panels" },
-        "accent": { "label": "Accent", "desc": "Actions, selection, and focus" },
-        "accentContrast": { "label": "Accent text", "desc": "Text on accent fills" },
-        "text": { "label": "Primary text", "desc": "Main readable text" },
-        "mutedText": { "label": "Muted text", "desc": "Secondary and quiet text" },
-        "border": { "label": "Borders", "desc": "Dividers and field outlines" },
+        "canvas": {
+          "label": "Canvas",
+          "desc": "Main page background"
+        },
+        "panel": {
+          "label": "Surface",
+          "desc": "Cards, dialogs, and panels"
+        },
+        "accent": {
+          "label": "Accent",
+          "desc": "Actions, selection, and focus"
+        },
+        "accentContrast": {
+          "label": "Accent text",
+          "desc": "Text on accent fills"
+        },
+        "text": {
+          "label": "Primary text",
+          "desc": "Main readable text"
+        },
+        "mutedText": {
+          "label": "Muted text",
+          "desc": "Secondary and quiet text"
+        },
+        "border": {
+          "label": "Borders",
+          "desc": "Dividers and field outlines"
+        },
         "colorAriaLabel": "{{label}} color"
       },
       "cornerRadius": "Corner radius",
@@ -463,17 +492,6 @@
       "betaTitle": "Why it's in beta",
       "betaP1": "The background check is at the mercy of your phone's battery settings. Xiaomi, Samsung, OPPO, OnePlus and Huawei devices in particular freeze background apps aggressively, and will silently skip it. If your events seem stale, set Calino to <strong>No restrictions</strong> in Android's battery settings for the app.",
       "betaP2": "If a mirrored calendar doesn't appear in your calendar app, it's usually hidden rather than missing — new calendars often arrive unticked in that app's own list of calendars to display."
-    },
-    "tasks": "Tasks",
-    "taskDueDateReminders": {
-      "label": "Task Due Date Reminders",
-      "desc": "Notify when a task's due date arrives",
-      "ariaLabel": "Task due date reminders"
-    },
-    "overdueTaskBadge": {
-      "label": "Overdue Task Badge",
-      "desc": "Show a badge on the app icon for overdue tasks",
-      "ariaLabel": "Overdue task badge"
     },
     "test": {
       "label": "Test Notification",

@@ -67,7 +67,17 @@
     "startingOnAt": "Commence le {{date}} à {{time}}",
     "snooze5m": "Répéter dans 5 min",
     "testNotificationTitle": "Notification de test",
-    "testNotificationBody": "Les notifications fonctionnent ! Il est actuellement {{time}}"
+    "testNotificationBody": "Les notifications fonctionnent ! Il est actuellement {{time}}",
+    "dueToday": "À faire aujourd’hui",
+    "dueTomorrow": "À faire demain",
+    "dueOn": "À faire le {{date}}",
+    "dueAt": "À faire à {{time}}",
+    "dueTomorrowAt": "À faire demain à {{time}}",
+    "dueOnAt": "À faire le {{date}} à {{time}}",
+    "overdueTasks_one": "{{count}} tâche en retard",
+    "overdueTasks_other": "{{count}} tâches en retard",
+    "overdueTasksBody": "Ouvrez Calino pour les consulter",
+    "overdueChannelName": "Tâches en retard"
   },
   "settingsSync": {
     "notConfigured": "Synchronisation mal configurée",

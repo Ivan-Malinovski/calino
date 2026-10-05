@@ -51,7 +51,11 @@
       "desc": "Ugens start i uge- og dagsvisning",
       "ariaLabel": "Ugens første dag"
     },
-    "language": { "label": "Sprog", "desc": "Brugerfladens sprog", "ariaLabel": "Sprog" },
+    "language": {
+      "label": "Sprog",
+      "desc": "Brugerfladens sprog",
+      "ariaLabel": "Sprog"
+    },
     "journal": {
       "label": "Journal",
       "desc": "Knyt fritekstnoter til dage i din kalender",
@@ -131,6 +135,19 @@
     "showSidebarTaskCalendarLabels": {
       "label": "Vis kalendernavne i sidepanelet",
       "desc": "Vis opgavens kalender ved markør eller tastaturfokus, når flere opgavekalendere er aktiveret."
+    },
+    "hideCompletedTasks": {
+      "label": "Skjul fuldførte opgaver",
+      "desc": "Vis ikke afsluttede opgaver i kalendergitteret"
+    },
+    "reminders": "Påmindelser",
+    "taskDueDateReminders": {
+      "label": "Påmindelser om opgavers forfaldsdato",
+      "desc": "Giv besked, når en opgave forfalder: på forfaldstidspunktet eller kl. 9.00 for opgaver med kun en forfaldsdato"
+    },
+    "overdueTaskBadge": {
+      "label": "Mærke for forfaldne opgaver",
+      "desc": "Vis et mærke på appikonet for forfaldne opgaver"
     }
   },
   "calendar": {
@@ -207,11 +224,6 @@
       "current": "Denne måned",
       "all": "Alle"
     },
-    "hideCompletedTasks": {
-      "label": "Skjul fuldførte opgaver",
-      "desc": "Vis ikke afsluttede opgaver i kalendergitteret",
-      "ariaLabel": "Skjul fuldførte opgaver"
-    },
     "monthViewEventLimit": {
       "label": "Begivenheder før sammenfoldning",
       "desc": "Antal begivenheder, der vises pr. dag, før \"+N flere\" vises. Automatisk tilpasser antallet til pladsen i dagcellen og følger vinduets størrelse, når den ændres.",
@@ -264,8 +276,14 @@
       "dark": "Mørk",
       "system": "System"
     },
-    "lightTheme": { "label": "Lyst tema", "desc": "Farvepalet, der bruges i lys tilstand" },
-    "darkTheme": { "label": "Mørkt tema", "desc": "Farvepalet, der bruges i mørk tilstand" },
+    "lightTheme": {
+      "label": "Lyst tema",
+      "desc": "Farvepalet, der bruges i lys tilstand"
+    },
+    "darkTheme": {
+      "label": "Mørkt tema",
+      "desc": "Farvepalet, der bruges i mørk tilstand"
+    },
     "mochaAccent": {
       "label": "Catppuccin-accent",
       "desc": "Bruges til markering, fokus og primære handlinger",
@@ -324,13 +342,34 @@
         "mono": "Fast bredde"
       },
       "colors": {
-        "canvas": { "label": "Lærred", "desc": "Sidens primære baggrund" },
-        "panel": { "label": "Flade", "desc": "Kort, dialogbokse og paneler" },
-        "accent": { "label": "Accent", "desc": "Handlinger, markering og fokus" },
-        "accentContrast": { "label": "Accenttekst", "desc": "Tekst på accentfarvede flader" },
-        "text": { "label": "Primær tekst", "desc": "Den primære læsbare tekst" },
-        "mutedText": { "label": "Nedtonet tekst", "desc": "Sekundær og afdæmpet tekst" },
-        "border": { "label": "Kanter", "desc": "Skillelinjer og konturers omrids" },
+        "canvas": {
+          "label": "Lærred",
+          "desc": "Sidens primære baggrund"
+        },
+        "panel": {
+          "label": "Flade",
+          "desc": "Kort, dialogbokse og paneler"
+        },
+        "accent": {
+          "label": "Accent",
+          "desc": "Handlinger, markering og fokus"
+        },
+        "accentContrast": {
+          "label": "Accenttekst",
+          "desc": "Tekst på accentfarvede flader"
+        },
+        "text": {
+          "label": "Primær tekst",
+          "desc": "Den primære læsbare tekst"
+        },
+        "mutedText": {
+          "label": "Nedtonet tekst",
+          "desc": "Sekundær og afdæmpet tekst"
+        },
+        "border": {
+          "label": "Kanter",
+          "desc": "Skillelinjer og konturers omrids"
+        },
         "colorAriaLabel": "Farve for {{label}}"
       },
       "cornerRadius": "Hjørneafrunding",
@@ -453,17 +492,6 @@
       "betaTitle": "Derfor er funktionen i beta",
       "betaP1": "Baggrundskontrollen afhænger af telefonens batteriindstillinger. Især enheder fra Xiaomi, Samsung, OPPO, OnePlus og Huawei fryser baggrundsapps aggressivt og kan springe den over uden varsel. Hvis dine begivenheder virker forældede, skal du vælge <strong>Ingen begrænsninger</strong> for Calino i Androids batteriindstillinger.",
       "betaP2": "Hvis en spejlet kalender ikke vises i din kalenderapp, er den som regel skjult frem for manglende — nye kalendere ankommer ofte uden markering i den pågældende apps egen liste over kalendere, der skal vises."
-    },
-    "tasks": "Opgaver",
-    "taskDueDateReminders": {
-      "label": "Påmindelser om opgavers forfaldsdato",
-      "desc": "Giv besked, når en opgaves forfaldsdato indtræffer",
-      "ariaLabel": "Påmindelser om opgavers forfaldsdato"
-    },
-    "overdueTaskBadge": {
-      "label": "Mærke for forfaldne opgaver",
-      "desc": "Vis et mærke på appikonet for forfaldne opgaver",
-      "ariaLabel": "Mærke for forfaldne opgaver"
     },
     "test": {
       "label": "Testnotifikation",

@@ -10,7 +10,7 @@ import { useTranslation } from 'react-i18next'
 import { formatDayMonth } from '@/lib/datetime'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
-import { nextOpenOccurrence, materializeOccurrence } from '@/lib/occurrenceExpansion'
+import { resolveRecurringTasks } from '@/lib/openTasks'
 import { useContextMenuStore } from '@/store/contextMenuStore'
 import { hapticIfEnabled } from '@/lib/haptics'
 import { completeTaskAndSync } from '@/lib/taskCompletion'
@@ -71,31 +71,9 @@ export function MiniTasksSection({ isExpanded, onToggle }: MiniTasksSectionProps
       calendars.filter((calendar) => calendar.isVisible).map((calendar) => calendar.id)
     )
 
-    // R2.7 — This list reads raw store events, where a recurring task is a
-    // single master sitting on its anchor date. Shown as-is it would be stuck
-    // at the series' first date forever, and ticking it would run
-    // `completeTask` on the master — completing the WHOLE series rather than
-    // one occurrence. Substitute the next open occurrence, as the Tasks list
-    // does; `occurrenceMasterId` then routes the toggle to the override path.
-    const overridesByMaster = new Map<string, Map<string, CalendarEvent>>()
-    for (const e of events) {
-      if (e.type !== 'task' || !e.recurrenceId) continue
-      const key = e.recurrenceMasterId || e.uid || ''
-      const group = overridesByMaster.get(key) ?? new Map<string, CalendarEvent>()
-      group.set(e.recurrenceId, e)
-      overridesByMaster.set(key, group)
-    }
-    const resolved = events.flatMap((e): CalendarEvent[] => {
-      if (e.type !== 'task') return [e]
-      // A cancelled override exists only to suppress one occurrence.
-      if (e.taskStatus === 'CANCELLED') return []
-      if (e.recurrenceId || !(e.rruleString || e.recurrence)) return [e]
-      const next = nextOpenOccurrence(
-        e,
-        overridesByMaster.get(e.id) ?? overridesByMaster.get(e.uid || '') ?? new Map()
-      )
-      return next ? [materializeOccurrence(e, next)] : []
-    })
+    // Raw store events hold a recurring task as one master on its anchor date;
+    // swap in the next open occurrence (see `resolveRecurringTasks`).
+    const resolved = resolveRecurringTasks(events)
 
     const tasks = resolved
       .filter(

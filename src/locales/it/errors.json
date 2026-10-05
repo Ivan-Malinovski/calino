@@ -67,7 +67,17 @@
     "startingOnAt": "Inizia il {{date}} alle {{time}}",
     "snooze5m": "Posticipa 5 minuti",
     "testNotificationTitle": "Notifica di prova",
-    "testNotificationBody": "Le notifiche funzionano! Attualmente è {{time}}"
+    "testNotificationBody": "Le notifiche funzionano! Attualmente è {{time}}",
+    "dueToday": "Scade oggi",
+    "dueTomorrow": "Scade domani",
+    "dueOn": "Scade il {{date}}",
+    "dueAt": "Scade alle {{time}}",
+    "dueTomorrowAt": "Scade domani alle {{time}}",
+    "dueOnAt": "Scade il {{date}} alle {{time}}",
+    "overdueTasks_one": "{{count}} attività scaduta",
+    "overdueTasks_other": "{{count}} attività scadute",
+    "overdueTasksBody": "Apri Calino per vederle",
+    "overdueChannelName": "Attività scadute"
   },
   "settingsSync": {
     "notConfigured": "Sincronizzazione non configurata correttamente",

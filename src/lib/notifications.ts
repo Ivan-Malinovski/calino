@@ -4,6 +4,8 @@ import { useSettingsStore } from '@/store/settingsStore'
 import i18n, { currentLanguage } from '@/lib/i18n'
 import type { Calendar, CalendarEvent, Reminder } from '@/types'
 import { calendarMutesReminders, useCalendarStore } from '@/store/calendarStore'
+import { hasDueTime } from '@/lib/events'
+import { taskDueInstant } from '@/lib/taskReminders'
 
 export type NotificationPermissionStatus = 'granted' | 'denied' | 'default'
 
@@ -46,8 +48,29 @@ export function getEffectiveReminders(event: CalendarEvent, calendar?: Calendar)
   return event.reminders ?? []
 }
 
+/**
+ * What a task reminder says. A task is announced against its due date, not its
+ * start, so this is phrased as "Due ..." and reads `dueDate` rather than `start`.
+ */
+function taskReminderBody(due: Date, timed: boolean, referenceTime: Date): string {
+  const tomorrow = isSameDay(due, addDays(referenceTime, 1))
+  const today = isSameDay(due, referenceTime)
+  const date = new Intl.DateTimeFormat(currentLanguage(), { dateStyle: 'medium' }).format(due)
+  if (!timed) {
+    if (today) return i18n.t('errors:reminder.dueToday')
+    return tomorrow ? i18n.t('errors:reminder.dueTomorrow') : i18n.t('errors:reminder.dueOn', { date })
+  }
+  const time = formatTime(due, useSettingsStore.getState().timeFormat)
+  if (today) return i18n.t('errors:reminder.dueAt', { time })
+  return tomorrow
+    ? i18n.t('errors:reminder.dueTomorrowAt', { time })
+    : i18n.t('errors:reminder.dueOnAt', { date, time })
+}
+
 /** Include the event's day even when the reminder fires on an earlier day. */
 export function reminderBody(event: CalendarEvent, referenceTime = new Date()): string {
+  const taskDue = event.type === 'task' ? taskDueInstant(event) : null
+  if (taskDue) return taskReminderBody(taskDue, hasDueTime({ dueDate: event.dueDate }), referenceTime)
   const start = event.isAllDay ? parseISO(event.start) : toEventInstant(event.start, event.timezone)
   const tomorrow = isSameDay(start, addDays(referenceTime, 1))
   const date = new Intl.DateTimeFormat(currentLanguage(), { dateStyle: 'medium' }).format(start)

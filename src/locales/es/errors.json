@@ -67,7 +67,17 @@
     "startingOnAt": "Empieza el {{date}} a las {{time}}",
     "snooze5m": "Posponer 5 min",
     "testNotificationTitle": "Notificación de prueba",
-    "testNotificationBody": "¡Las notificaciones funcionan! Ahora son las {{time}}."
+    "testNotificationBody": "¡Las notificaciones funcionan! Ahora son las {{time}}.",
+    "dueToday": "Vence hoy",
+    "dueTomorrow": "Vence mañana",
+    "dueOn": "Vence el {{date}}",
+    "dueAt": "Vence a las {{time}}",
+    "dueTomorrowAt": "Vence mañana a las {{time}}",
+    "dueOnAt": "Vence el {{date}} a las {{time}}",
+    "overdueTasks_one": "{{count}} tarea vencida",
+    "overdueTasks_other": "{{count}} tareas vencidas",
+    "overdueTasksBody": "Abre Calino para revisarlas",
+    "overdueChannelName": "Tareas vencidas"
   },
   "settingsSync": {
     "notConfigured": "Sincronización no configurada correctamente",

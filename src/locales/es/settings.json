@@ -135,6 +135,19 @@
     "showSidebarTaskCalendarLabels": {
       "label": "Mostrar nombres de calendario en la barra lateral",
       "desc": "Muestra el calendario de una tarea al pasar el cursor o darle el foco con el teclado cuando hay varios calendarios de tareas activados."
+    },
+    "hideCompletedTasks": {
+      "label": "Ocultar tareas completadas",
+      "desc": "No mostrar las tareas realizadas en la cuadrícula del calendario"
+    },
+    "reminders": "Recordatorios",
+    "taskDueDateReminders": {
+      "label": "Recordatorios de vencimiento de tareas",
+      "desc": "Avisar cuando venza una tarea: a su hora de vencimiento, o a las 9:00 si solo tiene fecha"
+    },
+    "overdueTaskBadge": {
+      "label": "Insignia de tareas vencidas",
+      "desc": "Mostrar una insignia en el icono de la aplicación cuando haya tareas vencidas"
     }
   },
   "calendar": {
@@ -210,11 +223,6 @@
       "never": "Nunca",
       "current": "Mes actual",
       "all": "Todos"
-    },
-    "hideCompletedTasks": {
-      "label": "Ocultar tareas completadas",
-      "desc": "No mostrar las tareas realizadas en la cuadrícula del calendario",
-      "ariaLabel": "Ocultar tareas completadas"
     },
     "monthViewEventLimit": {
       "label": "Eventos antes del resumen",
@@ -484,17 +492,6 @@
       "betaTitle": "¿Por qué está en fase beta?",
       "betaP1": "La actividad en segundo plano depende de los ajustes de batería del teléfono. Algunos dispositivos Xiaomi, Samsung, OPPO, OnePlus y Huawei restringen las aplicaciones en segundo plano. Si los eventos no están actualizados, configura Calino como <strong>Sin restricciones</strong> en los ajustes de batería de Android.",
       "betaP2": "Si un calendario sincronizado no aparece en tu aplicación de calendario, puede estar oculto. Las aplicaciones suelen ocultar los calendarios nuevos hasta que los marcas en su lista de calendarios."
-    },
-    "tasks": "Tareas",
-    "taskDueDateReminders": {
-      "label": "Recordatorios de vencimiento de tareas",
-      "desc": "Avisar cuando llegue la fecha de vencimiento de una tarea",
-      "ariaLabel": "Recordatorios de fecha de vencimiento de tareas"
-    },
-    "overdueTaskBadge": {
-      "label": "Insignia de tareas vencidas",
-      "desc": "Mostrar una insignia en el icono de la aplicación cuando haya tareas vencidas",
-      "ariaLabel": "Insignia de tarea vencida"
     },
     "test": {
       "label": "Notificación de prueba",

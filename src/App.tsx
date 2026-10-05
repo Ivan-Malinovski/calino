@@ -96,6 +96,7 @@ const CommandPalette = lazy(() =>
   }))
 )
 const DeferredCalendarIntegrations = lazy(() => import('./components/DeferredCalendarIntegrations'))
+const OverdueTaskBadge = lazy(() => import('./components/OverdueTaskBadge'))
 
 // Map each view to the lazy component that renders it, so the preloader can
 // warm the very object React will render. (`3day` renders WeekView too, with
@@ -949,6 +950,7 @@ function GitHubPagesRedirect(): null {
 
 function App(): JSX.Element {
   const loadConfigFile = useConfigStore((state) => state.loadConfigFile)
+  const overdueTaskBadge = useSettingsStore((state) => state.overdueTaskBadge)
 
   // Load self-hosted config on mount. Explicitly caught: a missing or malformed
   // config file is a non-fatal condition (the app falls back to defaults), and
@@ -1016,6 +1018,13 @@ function App(): JSX.Element {
           <GitHubPagesRedirect />
           <ThemedToaster />
           <GlobalProgress />
+          {overdueTaskBadge && (
+            <ErrorBoundary fallback={null}>
+              <Suspense fallback={null}>
+                <OverdueTaskBadge />
+              </Suspense>
+            </ErrorBoundary>
+          )}
           {!Capacitor.isNativePlatform() && <CookieConsent />}
           <MasterPasswordPrompt />
           <Routes>

@@ -43,8 +43,6 @@ export function NotificationSettings({ searchControl }: { searchControl?: JSX.El
   const mirrorStatus = useCalendarMirrorStore((s) => s.status)
   const mirrorError = useCalendarMirrorStore((s) => s.lastError)
   const enableSoundAlerts = useSettingsStore((s) => s.enableSoundAlerts)
-  const taskDueDateReminders = useSettingsStore((s) => s.taskDueDateReminders)
-  const overdueTaskBadge = useSettingsStore((s) => s.overdueTaskBadge)
   const updateSettings = useSettingsStore((s) => s.updateSettings)
   const [permissionStatus, setPermissionStatus] = useState(
     isNative ? 'default' : getNotificationPermission()
@@ -291,64 +289,6 @@ export function NotificationSettings({ searchControl }: { searchControl?: JSX.El
           </div>
         </div>
       </Modal>
-
-      <div className={styles.group}>
-        <div className={styles.groupLabel}>{t('notifications.tasks')}</div>
-        <div
-          className={styles.row}
-          data-component="setting-row"
-          data-setting="task-due-date-reminders"
-          data-value={String(taskDueDateReminders)}
-        >
-          <div className={styles.rowInfo}>
-            <div className={styles.rowLabel}>{t('notifications.taskDueDateReminders.label')}</div>
-            <div className={styles.rowDesc}>{t('notifications.taskDueDateReminders.desc')}</div>
-          </div>
-          <div className={styles.rowControl}>
-            <label
-              className={styles.toggle}
-              data-component="toggle"
-              data-setting="task-due-date-reminders"
-            >
-              <input
-                type="checkbox"
-                checked={taskDueDateReminders}
-                aria-label={t('notifications.taskDueDateReminders.ariaLabel')}
-                onChange={() => updateSettings({ taskDueDateReminders: !taskDueDateReminders })}
-              />
-              <span className={styles.pill} />
-              <span className={styles.knob} />
-            </label>
-          </div>
-        </div>
-        <div
-          className={styles.row}
-          data-component="setting-row"
-          data-setting="overdue-task-badge"
-          data-value={String(overdueTaskBadge)}
-        >
-          <div className={styles.rowInfo}>
-            <div className={styles.rowLabel}>{t('notifications.overdueTaskBadge.label')}</div>
-            <div className={styles.rowDesc}>{t('notifications.overdueTaskBadge.desc')}</div>
-          </div>
-          <div className={styles.rowControl}>
-            <label
-              className={styles.toggle}
-              data-component="toggle"
-              data-setting="overdue-task-badge"
-            >
-              <input
-                type="checkbox"
-                checked={overdueTaskBadge}
-                aria-label={t('notifications.overdueTaskBadge.ariaLabel')}
-                onChange={() => updateSettings({ overdueTaskBadge: !overdueTaskBadge })}
-              />
-              <span className={styles.pill} />
-              <span className={styles.knob} />
-            </label>
-          </div>
-        </div>
-      </div>
 
       <div className={styles.group}>
         <div className={styles.row} data-component="setting-row" data-setting="test-notification">

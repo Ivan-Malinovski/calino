@@ -16,7 +16,6 @@ export function CalendarSettings({ searchControl }: { searchControl?: JSX.Elemen
   const compactRecurringEvents = useSettingsStore((s) => s.compactRecurringEvents)
   const compressPastWeeks = useSettingsStore((s) => s.compressPastWeeks)
   const monthViewEventLimit = useSettingsStore((s) => s.monthViewEventLimit)
-  const hideCompletedTasksInMonthView = useSettingsStore((s) => s.hideCompletedTasksInMonthView)
   const fadePastDaysInAgenda = useSettingsStore((s) => s.fadePastDaysInAgenda)
   const defaultDuration = useSettingsStore((s) => s.defaultDuration)
   const defaultReminderMinutes = useSettingsStore((s) => s.defaultReminderMinutes)
@@ -391,35 +390,6 @@ export function CalendarSettings({ searchControl }: { searchControl?: JSX.Elemen
                 </button>
               ))}
             </div>
-          </div>
-        </div>
-        <div
-          className={styles.row}
-          data-component="setting-row"
-          data-setting="hide-completed-tasks"
-          data-value={String(hideCompletedTasksInMonthView)}
-        >
-          <div className={styles.rowInfo}>
-            <div className={styles.rowLabel}>{t('calendar.hideCompletedTasks.label')}</div>
-            <div className={styles.rowDesc}>{t('calendar.hideCompletedTasks.desc')}</div>
-          </div>
-          <div className={styles.rowControl}>
-            <label
-              className={styles.toggle}
-              data-component="toggle"
-              data-setting="hide-completed-tasks"
-            >
-              <input
-                type="checkbox"
-                checked={hideCompletedTasksInMonthView}
-                aria-label={t('calendar.hideCompletedTasks.ariaLabel')}
-                onChange={() =>
-                  updateSettings({ hideCompletedTasksInMonthView: !hideCompletedTasksInMonthView })
-                }
-              />
-              <span className={styles.pill} />
-              <span className={styles.knob} />
-            </label>
           </div>
         </div>
         <div

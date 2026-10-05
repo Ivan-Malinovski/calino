@@ -60,10 +60,24 @@
   "reminder": {
     "allDay": "All day",
     "startingToday": "Starting today",
-    "startingAt": "Starting at {{time}}", "startingTomorrow": "Starts tomorrow", "startingTomorrowAt": "Starts tomorrow at {{time}}", "startingOn": "Starting on {{date}}", "startingOnAt": "Starting on {{date}} at {{time}}",
+    "startingAt": "Starting at {{time}}",
+    "startingTomorrow": "Starts tomorrow",
+    "startingTomorrowAt": "Starts tomorrow at {{time}}",
+    "startingOn": "Starting on {{date}}",
+    "startingOnAt": "Starting on {{date}} at {{time}}",
     "snooze5m": "Snooze 5m",
     "testNotificationTitle": "Test Notification",
-    "testNotificationBody": "Notifications are working! It is currently {{time}}"
+    "testNotificationBody": "Notifications are working! It is currently {{time}}",
+    "dueToday": "Due today",
+    "dueTomorrow": "Due tomorrow",
+    "dueOn": "Due on {{date}}",
+    "dueAt": "Due at {{time}}",
+    "dueTomorrowAt": "Due tomorrow at {{time}}",
+    "dueOnAt": "Due on {{date}} at {{time}}",
+    "overdueTasks_one": "{{count}} overdue task",
+    "overdueTasks_other": "{{count}} overdue tasks",
+    "overdueTasksBody": "Open Calino to review them",
+    "overdueChannelName": "Overdue tasks"
   },
   "settingsSync": {
     "notConfigured": "Sync not properly configured",

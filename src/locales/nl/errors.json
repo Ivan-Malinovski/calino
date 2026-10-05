@@ -67,7 +67,17 @@
     "startingOnAt": "Begint op {{date}} om {{time}}",
     "snooze5m": "5 min uitstellen",
     "testNotificationTitle": "Testmelding",
-    "testNotificationBody": "Meldingen werken! Het is nu {{time}}"
+    "testNotificationBody": "Meldingen werken! Het is nu {{time}}",
+    "dueToday": "Vandaag te doen",
+    "dueTomorrow": "Morgen te doen",
+    "dueOn": "Te doen op {{date}}",
+    "dueAt": "Te doen om {{time}}",
+    "dueTomorrowAt": "Morgen te doen om {{time}}",
+    "dueOnAt": "Te doen op {{date}} om {{time}}",
+    "overdueTasks_one": "{{count}} verlopen taak",
+    "overdueTasks_other": "{{count}} verlopen taken",
+    "overdueTasksBody": "Open Calino om ze te bekijken",
+    "overdueChannelName": "Verlopen taken"
   },
   "settingsSync": {
     "notConfigured": "Synchronisatie is niet goed ingesteld",

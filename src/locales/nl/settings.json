@@ -135,6 +135,19 @@
     "showSidebarTaskCalendarLabels": {
       "label": "Kalendernamen tonen in de zijbalk",
       "desc": "Toon de kalender van een taak bij aanwijzen of toetsenbordfocus wanneer meerdere taakkalenders zijn ingeschakeld."
+    },
+    "hideCompletedTasks": {
+      "label": "Voltooide taken verbergen",
+      "desc": "Voltooide taken niet tonen in het agendaraster"
+    },
+    "reminders": "Herinneringen",
+    "taskDueDateReminders": {
+      "label": "Herinneringen voor taakvervaldatums",
+      "desc": "Melding wanneer een taak verloopt: op de vervaltijd, of om 9:00 voor taken met alleen een datum"
+    },
+    "overdueTaskBadge": {
+      "label": "Badge voor achterstallige taken",
+      "desc": "Een badge op het app-pictogram tonen voor achterstallige taken"
     }
   },
   "calendar": {
@@ -210,11 +223,6 @@
       "never": "Nooit",
       "current": "Huidige maand",
       "all": "Alle"
-    },
-    "hideCompletedTasks": {
-      "label": "Voltooide taken verbergen",
-      "desc": "Voltooide taken niet tonen in het agendaraster",
-      "ariaLabel": "Voltooide taken verbergen"
     },
     "monthViewEventLimit": {
       "label": "Gebeurtenissen vóór samenvatting",
@@ -484,17 +492,6 @@
       "betaTitle": "Waarom dit een bèta is",
       "betaP1": "De controle op de achtergrond is afhankelijk van de batterij-instellingen van je telefoon. Vooral Xiaomi-, Samsung-, OPPO-, OnePlus- en Huawei-apparaten beperken apps op de achtergrond sterk en slaan de controle soms stilzwijgend over. Als je gebeurtenissen verouderd lijken, stel dan <strong>Geen beperkingen</strong> in bij de batterij-instellingen van Android voor Calino.",
       "betaP2": "Als een gespiegelde agenda niet in je agenda-app verschijnt, is deze meestal verborgen en niet verdwenen — nieuwe agenda’s staan in de lijst met weer te geven agenda’s van die app vaak standaard uitgevinkt."
-    },
-    "tasks": "Taken",
-    "taskDueDateReminders": {
-      "label": "Herinneringen voor taakvervaldatums",
-      "desc": "Een melding geven wanneer de vervaldatum van een taak aanbreekt",
-      "ariaLabel": "Herinneringen voor taakvervaldatums"
-    },
-    "overdueTaskBadge": {
-      "label": "Badge voor achterstallige taken",
-      "desc": "Een badge op het app-pictogram tonen voor achterstallige taken",
-      "ariaLabel": "Badge voor achterstallige taken"
     },
     "test": {
       "label": "Testmelding",

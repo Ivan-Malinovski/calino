@@ -135,6 +135,19 @@
     "showSidebarTaskCalendarLabels": {
       "label": "Afficher les noms des calendriers dans la barre latérale",
       "desc": "Affiche le calendrier d'une tâche au survol ou au focus clavier lorsque plusieurs calendriers de tâches sont activés."
+    },
+    "hideCompletedTasks": {
+      "label": "Masquer les tâches terminées",
+      "desc": "Ne pas afficher les tâches terminées dans la grille du calendrier"
+    },
+    "reminders": "Rappels",
+    "taskDueDateReminders": {
+      "label": "Rappels d’échéance des tâches",
+      "desc": "Notifier à l’échéance d’une tâche : à l’heure prévue, ou à 9 h pour les tâches avec une simple date"
+    },
+    "overdueTaskBadge": {
+      "label": "Badge des tâches en retard",
+      "desc": "Afficher un badge sur l’icône de l’application lorsqu’une tâche est en retard"
     }
   },
   "calendar": {
@@ -210,11 +223,6 @@
       "never": "Jamais",
       "current": "Mois en cours",
       "all": "Tous"
-    },
-    "hideCompletedTasks": {
-      "label": "Masquer les tâches terminées",
-      "desc": "Ne pas afficher les tâches terminées dans la grille du calendrier",
-      "ariaLabel": "Masquer les tâches terminées"
     },
     "monthViewEventLimit": {
       "label": "Événements avant regroupement",
@@ -334,13 +342,34 @@
         "mono": "À chasse fixe"
       },
       "colors": {
-        "canvas": { "label": "Fond de page", "desc": "Arrière-plan principal de la page" },
-        "panel": { "label": "Surface", "desc": "Cartes, boîtes de dialogue et panneaux" },
-        "accent": { "label": "Accentuation", "desc": "Actions, sélections et focus" },
-        "accentContrast": { "label": "Texte d’accentuation", "desc": "Texte sur les fonds d’accentuation" },
-        "text": { "label": "Texte principal", "desc": "Texte principal à lire" },
-        "mutedText": { "label": "Texte atténué", "desc": "Texte secondaire et discret" },
-        "border": { "label": "Bordures", "desc": "Séparateurs et contours des champs" },
+        "canvas": {
+          "label": "Fond de page",
+          "desc": "Arrière-plan principal de la page"
+        },
+        "panel": {
+          "label": "Surface",
+          "desc": "Cartes, boîtes de dialogue et panneaux"
+        },
+        "accent": {
+          "label": "Accentuation",
+          "desc": "Actions, sélections et focus"
+        },
+        "accentContrast": {
+          "label": "Texte d’accentuation",
+          "desc": "Texte sur les fonds d’accentuation"
+        },
+        "text": {
+          "label": "Texte principal",
+          "desc": "Texte principal à lire"
+        },
+        "mutedText": {
+          "label": "Texte atténué",
+          "desc": "Texte secondaire et discret"
+        },
+        "border": {
+          "label": "Bordures",
+          "desc": "Séparateurs et contours des champs"
+        },
         "colorAriaLabel": "Couleur {{label}}"
       },
       "cornerRadius": "Arrondi des angles",
@@ -463,17 +492,6 @@
       "betaTitle": "Pourquoi cette fonction est en bêta",
       "betaP1": "La vérification en arrière-plan dépend des paramètres de batterie de votre téléphone. Les appareils Xiaomi, Samsung, OPPO, OnePlus et Huawei, notamment, suspendent souvent les applications en arrière-plan et peuvent ignorer cette vérification. Si vos événements ne sont pas à jour, choisissez <strong>Aucune restriction</strong> pour Calino dans les paramètres de batterie Android.",
       "betaP2": "Si un calendrier copié n’apparaît pas dans votre application de calendrier, il est probablement masqué plutôt que manquant. Les nouveaux calendriers sont souvent décochés dans la liste des calendriers affichés par cette application."
-    },
-    "tasks": "Tâches",
-    "taskDueDateReminders": {
-      "label": "Rappels d’échéance des tâches",
-      "desc": "Recevoir une notification à la date d’échéance d’une tâche",
-      "ariaLabel": "Rappels d’échéance des tâches"
-    },
-    "overdueTaskBadge": {
-      "label": "Badge des tâches en retard",
-      "desc": "Afficher un badge sur l’icône de l’application lorsqu’une tâche est en retard",
-      "ariaLabel": "Badge des tâches en retard"
     },
     "test": {
       "label": "Notification de test",
