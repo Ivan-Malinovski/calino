@@ -3,11 +3,14 @@ import { clearState } from './fixtures/localstorage'
 
 const GRID = '[data-component="nav-expanded-grid"]'
 
-// The nav pill is the mobile switcher, so these run on a touch-capable
-// phone-sized context rather than the suite's default desktop one.
+// The nav pill is the mobile switcher, so use a phone-sized context.
+// These gestures use page.mouse: Firefox suppresses its pointer events when
+// hasTouch is on, while the app's long-press listener needs pointerdown.
 test.use({
   viewport: { width: 390, height: 844 },
-  hasTouch: true,
+  hasTouch: async ({ browserName }, setTouchOption) => {
+    await setTouchOption(browserName !== 'firefox')
+  },
   isMobile: true,
 })
 
