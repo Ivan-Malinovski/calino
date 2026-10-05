@@ -4,8 +4,50 @@ All notable changes to Calino will be documented in this file.
 
 ## [Unreleased]
 
+## [0.38.0] - 2026-10-05
+
+This release brings "Sometime this week" tasks to month view, adds Markdown
+in descriptions and notes, and connects task reminders and the overdue badge.
+It also includes the native Android app at 0.11.0, with week tasks, Danish and
+German, and smoother navigation between views.
+
+### Added
+
+- **"Sometime this week" tasks in month view.** Each week has a count badge
+  in the gutter. Click it to see the week's tasks, tick one off, or add a new
+  one without choosing a day. Drag a task from the list onto a day to schedule
+  it, or drag a day task back into the gutter to give it the whole week.
+  The badge is available even when week numbers are hidden.
+- **Markdown in event descriptions and task notes**
+  ([#197](https://github.com/Ivan-Malinovski/calino/pull/197)). Formatting,
+  lists and links now render in previews and task tooltips. Self-hosted
+  installations can also configure links into other apps, such as Obsidian,
+  to open from descriptions and notes
+  ([#198](https://github.com/Ivan-Malinovski/calino/pull/198)). Thanks to
+  [@nrydanov](https://github.com/nrydanov) for both changes.
+- **Calendar names in task lists**
+  ([#195](https://github.com/Ivan-Malinovski/calino/pull/195)). The Tasks view
+  and sidebar can show which calendar each task belongs to, with options on
+  the Tasks page in Settings. Thanks to
+  [@karamanliev](https://github.com/karamanliev).
+- **Experimental browser AI access.** Settings → Data has an opt-in WebMCP
+  integration for compatible browser agents. An agent can search events, open
+  an event, or prepare a draft for you to review and save. Access is off by
+  default and can be turned off again in Settings.
+
+### Changed
+
+- **Task settings live in one place.** "Hide Completed Tasks", "Task Due Date
+  Reminders" and "Overdue Task Badge" moved to the Tasks page in Settings.
+
 ### Fixed
 
+- **"Task Due Date Reminders" and "Overdue Task Badge" now do something.** Both
+  switches have been in Settings for a while without being connected to
+  anything. With reminders on, a task notifies when it falls due: at its due
+  time, or at 9:00 for a task that only has a date. With the badge on, the app
+  icon shows how many open tasks are overdue, using the browser's app badge on
+  the web and a quiet standing notification on Android.
 - **Contacts now sync from CardDAV servers that use different XML
   prefixes, such as Radicale** ([#173](https://github.com/Ivan-Malinovski/calino/issues/173)).
   Responses were matched on hardcoded `D:`/`C:` prefixes, so a server that
@@ -27,6 +69,45 @@ All notable changes to Calino will be documented in this file.
   as `1-08-27`, which the calendar layout couldn't parse. Years are now
   zero-padded to four digits. Thanks to
   [@tionis](https://github.com/tionis), whose fix this is based on.
+- **Monthly recurrence can use the actual last day of the month**
+  ([#193](https://github.com/Ivan-Malinovski/calino/pull/193)). Choosing the
+  last day now follows February and 30-day months too, instead of always
+  repeating on the original date. Thanks to
+  [@karamanliev](https://github.com/karamanliev).
+- Today's date stays highlighted when you hover it in month view
+  ([#196](https://github.com/Ivan-Malinovski/calino/pull/196)). Thanks to
+  [@nrydanov](https://github.com/nrydanov).
+- Event card times shrink to fit before being cut off on narrow cards.
+- Delete and undo notifications now name the kind of item, so deleting a
+  task or journal no longer calls it an event.
+
+### Native Android app
+
+This release also attaches `calino-android-0.11.0.apk`, the latest phone build
+of the native Android app from
+[calino-android](https://github.com/Ivan-Malinovski/calino-android/releases/tag/v0.11.0).
+I'd like you to try it if you haven't yet. If something doesn't work as you
+expect, please let me know over at the
+[calino-android issues](https://github.com/Ivan-Malinovski/calino-android/issues)
+page, and if you like it, a star on the repo would be much appreciated.
+
+Since `calino-android-0.9.0.apk` attached to 0.35.0, the native app has gained:
+
+- **"Sometime this week" tasks** in the 1-, 3- and 7-day Range views, with a
+  badge and popover, quick-add, and dragging between the week and a day. You
+  can also reopen a completed task from the Tasks page.
+- **Danish and German** in the phone and watch apps, including editors,
+  reminders and widgets. Choose the app's language in Android settings.
+- **Multi-day timed events in the Range header**, spanning the days they
+  cover while keeping their original times.
+- **Year and Agenda transitions that follow your finger**, a shared day
+  sidebar for Month and Year in wide landscape layouts, and a setting for
+  edge swipes.
+- A calendar picker for new tasks, a simpler Range header, and fixes for
+  quick day and week swipes, week-task popup dimming and multi-day layout.
+
+It needs Android 12 or newer. The other APK, `calino-v0.38.0.apk`, is the
+regular Calino app.
 
 ## [0.36.0] - 2026-09-30
 
