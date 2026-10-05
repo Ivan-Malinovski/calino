@@ -517,6 +517,11 @@
     "credentialsNotFound": "Identifiants introuvables"
   },
   "data": {
+    "webmcp": {
+      "label": "Accès IA du navigateur (expérimental)",
+      "desc": "Autorisez les agents IA du navigateur à lire les noms des calendriers et les résumés des événements visibles, à ouvrir des événements et à préparer des brouillons à vérifier et enregistrer. Les résultats peuvent être envoyés au fournisseur IA de l’agent. S’applique uniquement à ce navigateur.",
+      "unavailable": "L’API WebMCP n’est pas disponible sur cette page. Activez-la dans votre navigateur et relancez-le, ou utilisez un navigateur compatible avec WebMCP."
+    },
     "title": "Données",
     "importExport": "Importation et exportation",
     "exportCalendar": {

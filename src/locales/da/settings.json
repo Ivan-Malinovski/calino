@@ -507,6 +507,11 @@
     "credentialsNotFound": "Loginoplysninger blev ikke fundet"
   },
   "data": {
+    "webmcp": {
+      "label": "Adgang for browser-AI (eksperimentel)",
+      "desc": "Tillad AI-agenter i browseren at læse kalendernavne og oversigter over synlige begivenheder, åbne begivenheder og forberede kladder, som du kan gennemse og gemme. Resultater kan blive sendt til agentens AI-udbyder. Gælder kun denne browser.",
+      "unavailable": "WebMCP-API’en er ikke tilgængelig på denne side. Aktivér den i browseren og genstart, eller brug en browser med WebMCP-understøttelse."
+    },
     "title": "Data",
     "importExport": "Import og eksport",
     "exportCalendar": {

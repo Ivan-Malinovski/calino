@@ -538,6 +538,11 @@
     "credentialsNotFound": "Aanmeldgegevens niet gevonden"
   },
   "data": {
+    "webmcp": {
+      "label": "Toegang voor browser-AI (experimenteel)",
+      "desc": "Sta AI-agenten in de browser toe om kalendernamen en samenvattingen van zichtbare afspraken te lezen, afspraken te openen en concepten klaar te zetten die je kunt controleren en opslaan. Resultaten kunnen naar de AI-aanbieder van de agent worden verzonden. Geldt alleen voor deze browser.",
+      "unavailable": "De WebMCP-API is niet beschikbaar op deze pagina. Schakel deze in je browser in en herstart de browser, of gebruik een browser met WebMCP-ondersteuning."
+    },
     "title": "Gegevens",
     "importExport": "Importeren en exporteren",
     "exportCalendar": {

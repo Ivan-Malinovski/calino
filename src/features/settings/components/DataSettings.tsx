@@ -1,6 +1,8 @@
 import type { JSX } from 'react'
+import { Capacitor } from '@capacitor/core'
 import { useTranslation } from 'react-i18next'
 import { SettingsPageHeading } from './SettingsPageHeading'
+import { WebMCPSettings } from './WebMCPSettings'
 import { useState, useRef } from 'react'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
@@ -428,6 +430,8 @@ export function DataSettings({ searchControl }: { searchControl?: JSX.Element })
           </div>
         )}
       </div>
+
+      {!Capacitor.isNativePlatform() && <WebMCPSettings />}
 
       <div className={`${styles.group} ${styles.dangerZone}`}>
         <div className={`${styles.groupLabel} ${styles.dangerZoneLabel}`}>{t('data.dangerZone')}</div>

@@ -58,6 +58,7 @@ I have made it as close as possible, as to what I envision the perfect CalDAV no
 - Type naturally: *"coffee with friends on wednesday, at 12-18"* → creates a 4-hour event on that Wednesday
 - Press `Cmd/Ctrl+K` for the command palette — navigate, create events, sync, search, settings from the same textbox
 - Smart detection: start typing and NLP parses dates, times, and durations
+- **Experimental WebMCP** — opt-in browser AI tools for event search and preparing drafts for review. See [browser AI access](./docs/WEBMCP.md).
 
 ### Tasks (VTODO) + Journals (VJOURNAL)
 - Full VTODO support with due dates, priorities, and completion status

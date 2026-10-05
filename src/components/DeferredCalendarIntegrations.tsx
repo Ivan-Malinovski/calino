@@ -7,10 +7,12 @@ import { useNotifications } from '@/hooks/useNotifications'
 import { useCalendarMirror } from '@/hooks/useCalendarMirror'
 import { initContactPhotos } from '@/lib/contactPhotoSync'
 import { pruneRawIcs } from '@/lib/rawIcsStore'
+import { useWebMCP } from '@/features/webmcp/useWebMCP'
 
 /** Calendar integrations that can safely initialize after the first paint. */
 export default function DeferredCalendarIntegrations(): JSX.Element {
   useCardDAV()
+  useWebMCP()
 
   useEffect(() => {
     void initContactPhotos()

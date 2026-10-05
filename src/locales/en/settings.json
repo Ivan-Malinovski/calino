@@ -517,6 +517,11 @@
     "credentialsNotFound": "Credentials not found"
   },
   "data": {
+    "webmcp": {
+      "label": "Browser AI Access (Experimental)",
+      "desc": "Allow browser AI agents to read calendar names and visible event summaries, open events, and prepare drafts for you to review and save. Results may be sent to the agent’s AI provider. Applies only to this browser.",
+      "unavailable": "The WebMCP API is not available on this page. Enable it in your browser and relaunch, or use a browser with WebMCP support."
+    },
     "title": "Data",
     "importExport": "Import & Export",
     "exportCalendar": {
