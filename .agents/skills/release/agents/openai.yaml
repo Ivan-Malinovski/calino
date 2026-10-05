@@ -1,0 +1,4 @@
+interface:
+  display_name: "Release Calino"
+  short_description: "Publish Calino with optional native Android APK"
+  default_prompt: "Use $release to release Calino version <version> with calino-android=<yes|no|native-version>."
