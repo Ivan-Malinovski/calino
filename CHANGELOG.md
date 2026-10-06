@@ -4,6 +4,8 @@ All notable changes to Calino will be documented in this file.
 
 ## [Unreleased]
 
+## [0.39.0] - 2026-10-06
+
 **A heads-up: I'm going on vacation for two weeks, so don't expect any updates or replies to issues until I'm back.**
 
 This release adds JMAP support for calendars and contacts. **JMAP testing has been very limited**, so expect rough edges. If you use a JMAP server, I'd love to hear how it goes, good or bad, in the [issues](https://github.com/Ivan-Malinovski/calino/issues).
