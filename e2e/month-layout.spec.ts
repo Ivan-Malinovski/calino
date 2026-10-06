@@ -43,7 +43,9 @@ test.describe('Android-style top safe area', () => {
     const title = page.locator('[data-component="header"] h1').first()
     await expect(title).toBeVisible()
 
-    const titleTop = await title.evaluate((element) => element.getBoundingClientRect().top)
-    expect(titleTop).toBeGreaterThanOrEqual(40)
+    // The header animates its padding (0.25s) when the inset changes, so poll until it settles.
+    await expect
+      .poll(() => title.evaluate((element) => element.getBoundingClientRect().top))
+      .toBeGreaterThanOrEqual(40)
   })
 })
