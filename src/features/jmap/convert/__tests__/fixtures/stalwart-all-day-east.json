@@ -1,0 +1,15 @@
+{
+  "uid": "jscal-to-ics-all-day@calino.test.east.2760775",
+  "@type": "Event",
+  "showWithoutTime": true,
+  "duration": "P3D",
+  "start": "2026-10-10T00:00:00",
+  "updated": "2026-10-06T12:00:00Z",
+  "title": "Three days",
+  "id": "gb",
+  "calendarIds": {
+    "b": true
+  },
+  "isDraft": false,
+  "isOrigin": true
+}

@@ -532,7 +532,8 @@
     "subscribe": "Subscribe to calendar (.ics)",
     "confirmRemoveSubscription": "Remove this calendar subscription? Its events will be deleted locally.",
     "confirmRemoveAccount": "Are you sure you want to remove this account? Calendar data will be preserved locally.",
-    "credentialsNotFound": "Credentials not found"
+    "credentialsNotFound": "Credentials not found",
+    "accountProtocol": "Account protocol"
   },
   "data": {
     "webmcp": {
@@ -746,7 +747,9 @@
     "summary": {
       "ok": "Everything checks out.",
       "degraded": "Sync will work, but your server could be configured better.",
-      "broken": "Something is wrong with this server."
+      "broken": "The checks below found a problem. Open a failed check to see what to change.",
+      "broken_page": "The connection was blocked by this page, not by your server. Open the failed check to see your options.",
+      "broken_credentials": "The server answered but rejected the username or password."
     },
     "corsNote": " Checks marked “inferred” could not be read directly — browsers hide a server's CORS headers from JavaScript."
   },

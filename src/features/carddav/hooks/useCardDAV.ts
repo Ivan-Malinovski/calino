@@ -1,7 +1,8 @@
 import { useState, useCallback, useEffect } from 'react'
 import type { AddressBook, Contact, CardDAVSyncState, PendingContactChange } from '../types'
 import type { PendingDeleteSnapshot } from '@/lib/deleteContactWithUndo'
-import { createCardDAVClient, CardDAVClient } from '../client/CardDAVClient'
+import type { ContactsBackend } from '../client/ContactsBackend'
+import { createContactsBackend } from '../client/createBackend'
 import { useContactStore } from '@/store/contactStore'
 import { getCredentialById } from '@/features/caldav/client/credentials'
 import * as storage from '@/features/caldav/sync/accountStorage'
@@ -47,9 +48,9 @@ const inFlightSyncs = new Map<string, Promise<void>>()
 const queuedSyncs = new Map<string, Promise<void>>()
 
 /** Module-level client cache: accountId → connected client */
-const clientCache = new Map<string, CardDAVClient>()
+const clientCache = new Map<string, ContactsBackend>()
 
-async function getClientForAccount(accountId: string): Promise<CardDAVClient> {
+async function getClientForAccount(accountId: string): Promise<ContactsBackend> {
   const cached = clientCache.get(accountId)
   if (cached) return cached
 
@@ -59,7 +60,12 @@ async function getClientForAccount(accountId: string): Promise<CardDAVClient> {
   const credential = await getCredentialById(account.credentialId)
   if (!credential) throw new Error('Credentials not found')
 
-  const client = await createCardDAVClient(account.serverUrl, credential, account.proxyUrl)
+  const client = await createContactsBackend(
+    account.serverUrl,
+    credential,
+    account.proxyUrl,
+    account.protocol
+  )
   clientCache.set(accountId, client)
   return client
 }
@@ -117,7 +123,7 @@ export function useCardDAV(): UseCardDAVReturn {
 
   // Replay pending offline changes against the server
   const replayPendingChanges = useCallback(
-    async (client: CardDAVClient, accountId: string): Promise<string[]> => {
+    async (client: ContactsBackend, accountId: string): Promise<string[]> => {
       // Use LIVE store so we get the latest contacts (with user edits) and pending changes
       const getLiveState = () => useContactStore.getState()
 

@@ -13,6 +13,16 @@ export interface ProxyField {
   placeholder?: string
 }
 
+export interface ForceCalDAVField {
+  checked: boolean
+  onChange: (checked: boolean) => void
+  disabled?: boolean
+  label: string
+  hint: string
+  /** Subtitle fragment shown while the option is on, e.g. "CalDAV only". */
+  summary: string
+}
+
 /**
  * The collapsible card for how the connection reaches the server. With `proxy`
  * it is the "Connection settings" card used by the Add/Edit dialog and /setup
@@ -26,6 +36,7 @@ export function CustomHeadersEditor({
   rows,
   onChange,
   proxy,
+  forceCalDAV,
   open: controlledOpen,
   onOpenChange,
   nudge,
@@ -34,6 +45,8 @@ export function CustomHeadersEditor({
   rows: HeaderRow[]
   onChange: (rows: HeaderRow[]) => void
   proxy?: ProxyField
+  /** Offer to skip JMAP detection (new accounts only). */
+  forceCalDAV?: ForceCalDAVField
   open?: boolean
   onOpenChange?: (open: boolean) => void
   nudge?: ConnectionNudge | null
@@ -44,7 +57,8 @@ export function CustomHeadersEditor({
   const [manualOpen, setManualOpen] = useState<boolean | null>(null)
   const [visible, setVisible] = useState<Record<number, boolean>>({})
   const proxySet = Boolean(proxy?.value.trim())
-  const open = controlledOpen ?? manualOpen ?? (rows.length > 0 || proxySet)
+  const open =
+    controlledOpen ?? manualOpen ?? (rows.length > 0 || proxySet || Boolean(forceCalDAV?.checked))
   const setOpen = (next: boolean): void => {
     setManualOpen(next)
     onOpenChange?.(next)
@@ -68,7 +82,11 @@ export function CustomHeadersEditor({
   if (nudge && nudgeLabel) {
     subtitle = nudgeLabel
   } else if (proxy) {
-    const parts = [proxySet ? t('ui.headers.proxyOn') : '', headerSummary].filter(Boolean)
+    const parts = [
+      forceCalDAV?.checked ? forceCalDAV.summary : '',
+      proxySet ? t('ui.headers.proxyOn') : '',
+      headerSummary,
+    ].filter(Boolean)
     subtitle = parts.length ? parts.join(' · ') : t('ui.headers.optional')
   } else {
     subtitle = headerSummary || t('ui.headers.protectedServers')
@@ -211,6 +229,22 @@ export function CustomHeadersEditor({
             {headerCards}
             {addButton}
           </div>
+          {forceCalDAV && (
+            <div className={styles.group}>
+              <span className={styles.groupLabel}>Protocol</span>
+              <label className={styles.checkRow}>
+                <input
+                  type="checkbox"
+                  checked={forceCalDAV.checked}
+                  onChange={(event) => forceCalDAV.onChange(event.target.checked)}
+                  disabled={forceCalDAV.disabled}
+                  data-action="force-caldav"
+                />
+                <span>{forceCalDAV.label}</span>
+              </label>
+              <div className={styles.groupHint}>{forceCalDAV.hint}</div>
+            </div>
+          )}
         </div>
       ) : (
         open && (

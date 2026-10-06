@@ -435,7 +435,11 @@
     "icsDropHint": "Den Kalender wählst du als Nächstes aus",
     "theme": "Design",
     "themeMode": "Designmodus",
-    "themeModes": { "auto": "Automatisch", "light": "Hell", "dark": "Dunkel" },
+    "themeModes": {
+      "auto": "Automatisch",
+      "light": "Hell",
+      "dark": "Dunkel"
+    },
     "weekNumbers": "Wochennummern",
     "hideCompletedTasks": "Erledigte Aufgaben ausblenden",
     "allSettings": "Alle Einstellungen →",
@@ -520,7 +524,11 @@
     "tomorrow": "Morgen",
     "expandSubtasks": "Unteraufgaben für \"{{title}}\" ausklappen",
     "collapseSubtasks": "Unteraufgaben für \"{{title}}\" einklappen",
-    "hiddenCount": "{{count}} ausgeblendet"
+    "hiddenCount": "{{count}} ausgeblendet",
+    "forceCalDAV": "CalDAV verwenden",
+    "forceCalDAVHint": "Automatische JMAP-Erkennung für diesen Server überspringen.",
+    "forceCalDAVSummary": "Nur CalDAV",
+    "accountProtocol": "Kontoprotokoll"
   },
   "ui": {
     "noTitle": "(Kein Titel)",

@@ -10,6 +10,10 @@ import type { CalDAVCalendar } from '../../types'
 // Mock every module that useCalDAV imports from
 // ---------------------------------------------------------------------------
 vi.mock('../../client/discovery')
+vi.mock('@/features/jmap/backend/JmapCalendarBackend', () => ({
+  createJmapCalendarBackend: vi.fn(),
+}))
+
 vi.mock('../../client/credentials')
 vi.mock('../../sync/accountStorage')
 vi.mock('../../adapter/iCalendarAdapter')
@@ -38,6 +42,7 @@ vi.mock('@/lib/toast', async (importOriginal) => {
 // Helper: typed access to mocked modules
 // ---------------------------------------------------------------------------
 import * as discovery from '../../client/discovery'
+import { createJmapCalendarBackend } from '@/features/jmap/backend/JmapCalendarBackend'
 import * as credentials from '../../client/credentials'
 import * as accountStorage from '../../sync/accountStorage'
 import * as iCalendarAdapter from '../../adapter/iCalendarAdapter'
@@ -1343,6 +1348,48 @@ describe('useCalDAV', () => {
   // addAccount — probes once, and carries the probe's hint on failure
   // -----------------------------------------------------------------------
   describe('addAccount', () => {
+    it('persists the detected protocol and connects the JMAP backend', async () => {
+      mockDiscovery.probeConnection.mockResolvedValue({
+        ok: true,
+        protocol: 'jmap',
+        resolvedUrl: 'https://calendar.test/jmap/session',
+      })
+      const client = await mockCalDAVClient.createCalDAVClient('fixture', {
+        id: 'fixture-credential',
+        serverUrl: 'https://calendar.test',
+        username: 'fixture-user',
+        password: 'fixture-password',
+      })
+      mockCalDAVClient.createCalDAVClient.mockClear()
+      vi.mocked(createJmapCalendarBackend).mockResolvedValue(
+        client as unknown as Awaited<ReturnType<typeof createJmapCalendarBackend>>
+      )
+      mockAccountStorage.saveAccount.mockReturnValue({ ...mockAccount, protocol: 'jmap' })
+      const onProtocolDetected = vi.fn()
+      const { result } = renderHook(() => useCalDAV())
+      await act(async () => {
+        await result.current.addAccount(
+          'https://calendar.test',
+          'fixture-user',
+          'fixture-password',
+          'Fixture',
+          null,
+          {},
+          { onProtocolDetected }
+        )
+      })
+      expect(createJmapCalendarBackend).toHaveBeenCalledWith(
+        'https://calendar.test/jmap/session',
+        expect.any(Object),
+        null
+      )
+      expect(mockAccountStorage.saveAccount).toHaveBeenCalledWith(
+        expect.objectContaining({ protocol: 'jmap' })
+      )
+      expect(onProtocolDetected).toHaveBeenCalledWith('jmap')
+      expect(mockCalDAVClient.createCalDAVClient).not.toHaveBeenCalled()
+    })
+
     it('saves the credential against the probe-resolved URL', async () => {
       mockDiscovery.probeConnection.mockResolvedValue({
         ok: true,
@@ -1548,7 +1595,8 @@ describe('useCalDAV', () => {
         'stored-pw',
         null,
         'https://caldav.example.com',
-        {}
+        {},
+        { protocol: 'caldav' }
       )
       // ...but nothing is re-encrypted.
       expect(mockCredentials.updateCredential).toHaveBeenCalledWith(
@@ -1650,7 +1698,8 @@ describe('useCalDAV', () => {
         'stored-pw',
         null,
         undefined,
-        undefined
+        undefined,
+        { protocol: 'caldav' }
       )
       expect(mockAccountStorage.updateAccount).not.toHaveBeenCalled()
     })
@@ -1665,7 +1714,7 @@ describe('useCalDAV', () => {
         probe = await result.current.testAccount('nope')
       })
 
-      expect(probe).toEqual({ ok: false, error: 'Account not found' })
+      expect(probe).toEqual({ ok: false, protocol: 'caldav', error: 'Account not found' })
     })
   })
 

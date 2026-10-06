@@ -129,7 +129,13 @@ export function SetupPage(): JSX.Element {
     if (result.ok) {
       setDiagnoseTarget(null)
     } else {
-      setTestError(connectionErrorMessage(result.error ?? 'Connection failed.'))
+      setTestError(
+        connectionErrorMessage(
+          result.error ?? 'Connection failed.',
+          undefined,
+          proxyUrl ? undefined : formUrl
+        )
+      )
       const code = result.error ? classifySyncError(result.error) : 'unknown'
       setErrorCode(code)
       setNudge(

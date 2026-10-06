@@ -104,6 +104,18 @@ export async function moveEventGroup(
 ): Promise<MoveResult> {
   const memberIds = events.map((e) => e.id)
 
+  // Same-account move on a backend that can relocate a resource in place (JMAP):
+  // one atomic update, no duplicate UID, no window where the event is lost.
+  if (
+    ctx.sourceEngine &&
+    ctx.sourceHref &&
+    ctx.targetEngine.supportsAtomicMove &&
+    ctx.targetEngine.sharesBackendWith(ctx.sourceEngine)
+  ) {
+    const moved = await ctx.targetEngine.moveGroupFrom(events, ctx.sourceHref, ctx.sourceEtag ?? '')
+    return { ...moved, sourceDeleted: true, memberIds }
+  }
+
   let written: { url: string; etag: string }
   try {
     written = await ctx.targetEngine.putEventGroup(events)

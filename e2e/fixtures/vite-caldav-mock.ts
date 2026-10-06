@@ -1,4 +1,5 @@
 import type { Plugin } from 'vite'
+import { registerJmapMock } from './vite-jmap-mock'
 import http from 'node:http'
 import type { AddressInfo } from 'node:net'
 
@@ -893,6 +894,7 @@ export function caldavMockPlugin(): Plugin {
     name: 'calino-caldav-mock',
 
     configureServer(server) {
+      registerJmapMock(server)
       for (const account of ACCOUNTS) {
         server.middlewares.use(account.mount, makeHandler(account))
       }

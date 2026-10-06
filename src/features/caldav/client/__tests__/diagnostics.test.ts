@@ -281,27 +281,252 @@ describe('formatReportForClipboard', () => {
   })
 })
 
-describe('mixed content', () => {
-  it('names the page policy when an http server is unreachable from https', async () => {
+describe('page policy', () => {
+  afterEach(() => {
+    document.head.querySelectorAll('meta[http-equiv]').forEach((meta) => meta.remove())
+  })
+
+  it('names mixed content, without contacting the server, for an http server from https', async () => {
     // The browser blocks this before a request is made, so it is indistinguishable
     // from a dead server unless we say so.
     vi.stubGlobal('location', { protocol: 'https:', href: 'https://app.example.com/' })
-    stubFetch({ GET: { throws: new TypeError('Failed to fetch') } })
+    const fetchMock = stubFetch({ GET: { throws: new TypeError('Failed to fetch') } })
 
     const report = await runDiagnostics({ ...OPTS, serverUrl: 'http://dav.local:5232' })
 
-    const reachable = report.checks.find((c) => c.id === 'reachable')!
-    expect(reachable.status).toBe('fail')
-    expect(reachable.fix).toMatch(/https/i)
-    expect(reachable.fix).toMatch(/mixed content|connect-src/i)
+    const policy = report.checks.find((c) => c.id === 'page-policy')!
+    expect(policy.status).toBe('fail')
+    expect(policy.detail).toMatch(/mixed content/i)
+    expect(policy.fix).toMatch(/https/i)
+    expect(fetchMock).not.toHaveBeenCalled()
+    expect(statusOf(report.checks, 'reachable')).toBe('skipped')
+    expect(report.summary).toBe('broken')
+    expect(report.blame).toBe('page')
   })
 
-  it('says nothing about mixed content when the page is itself http', async () => {
+  it('names the Content Security Policy when this build only allows https', async () => {
     vi.stubGlobal('location', { protocol: 'http:', href: 'http://localhost:5173/' })
+    const meta = document.createElement('meta')
+    meta.httpEquiv = 'Content-Security-Policy'
+    meta.content = "default-src 'self'; connect-src 'self' https:"
+    document.head.append(meta)
+    stubFetch({})
+
+    const report = await runDiagnostics({ ...OPTS, serverUrl: 'http://192.168.1.50:8080' })
+
+    const policy = report.checks.find((c) => c.id === 'page-policy')!
+    expect(policy.status).toBe('fail')
+    expect(policy.detail).toMatch(/Content Security Policy/)
+    expect(policy.fix).toMatch(/CALINO_SELF_HOSTED/)
+    expect(report.blame).toBe('page')
+  })
+
+  it('does not block http when the policy allows it', async () => {
+    vi.stubGlobal('location', { protocol: 'http:', href: 'http://localhost:5173/' })
+    const meta = document.createElement('meta')
+    meta.httpEquiv = 'Content-Security-Policy'
+    meta.content = "default-src 'self'; connect-src 'self' http: https:"
+    document.head.append(meta)
     stubFetch({ GET: { throws: new TypeError('Failed to fetch') } })
 
     const report = await runDiagnostics({ ...OPTS, serverUrl: 'http://dav.local:5232' })
 
+    expect(report.checks.find((c) => c.id === 'page-policy')).toBeUndefined()
     expect(report.checks.find((c) => c.id === 'reachable')!.fix).not.toMatch(/mixed content/i)
+  })
+
+  it('does not blame the server when only the credentials failed', async () => {
+    stubFetch({ PROPFIND: { status: 401, body: '' } })
+
+    const report = await runDiagnostics(OPTS)
+
+    expect(report.blame).toBe('credentials')
+  })
+})
+
+describe('JMAP diagnostics', () => {
+  const JMAP_BASE = 'https://mail.example.com'
+  const session = {
+    capabilities: {
+      'urn:ietf:params:jmap:core': {},
+      'urn:ietf:params:jmap:calendars': {},
+      'urn:ietf:params:jmap:contacts': {},
+    },
+    accounts: {
+      a: {
+        name: 'Alice',
+        isPersonal: true,
+        isReadOnly: false,
+        accountCapabilities: { 'urn:ietf:params:jmap:calendars': {} },
+      },
+    },
+    primaryAccounts: { 'urn:ietf:params:jmap:calendars': 'a' },
+    username: 'alice',
+    apiUrl: `${JMAP_BASE}/jmap/`,
+    uploadUrl: `${JMAP_BASE}/upload/{accountId}`,
+    downloadUrl: `${JMAP_BASE}/download/{accountId}/{blobId}/{name}`,
+    eventSourceUrl: `${JMAP_BASE}/events`,
+    state: 's',
+  }
+  const json = (value: unknown, status = 200): Response =>
+    new Response(JSON.stringify(value), {
+      status,
+      headers: { 'Content-Type': 'application/json' },
+    })
+
+  interface Stub {
+    session?: () => Response
+    api?: (body: { methodCalls: [string, Record<string, unknown>, string][] }) => Response
+  }
+
+  function stubJmap(stub: Stub = {}): ReturnType<typeof vi.fn> {
+    const fetchMock = vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => {
+      const target = String(url)
+      if (target.endsWith('/.well-known/jmap')) return stub.session ? stub.session() : json(session)
+      if (target === `${JMAP_BASE}/jmap/`) {
+        const body = JSON.parse(String(init?.body))
+        if (stub.api) return stub.api(body)
+        const [name, args, id] = body.methodCalls[0]
+        if (name === 'Calendar/get') {
+          return json({
+            methodResponses: [
+              [name, { list: [{ id: 'c1', name: 'Home', myRights: { mayWrite: true } }] }, id],
+            ],
+          })
+        }
+        if (name === 'CalendarEvent/set' && args.create) {
+          return json({ methodResponses: [[name, { created: { t: { id: 'e1' } } }, id]] })
+        }
+        return json({ methodResponses: [[name, { destroyed: ['e1'] }, id]] })
+      }
+      return new Response('', { status: 404 })
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    return fetchMock
+  }
+
+  const JMAP_OPTS = {
+    serverUrl: JMAP_BASE,
+    username: 'alice',
+    password: 'pw',
+    protocol: 'jmap',
+  } as const
+
+  it('reports a healthy JMAP server as ok, without any DAV requests', async () => {
+    const fetchMock = stubJmap()
+
+    const report = await runDiagnostics(JMAP_OPTS)
+
+    expect(report.kind).toBe('jmap')
+    expect(report.summary).toBe('ok')
+    for (const id of [
+      'jmap-session',
+      'jmap-api',
+      'jmap-calendars',
+      'jmap-contacts',
+      'jmap-push',
+    ] as const) {
+      expect(statusOf(report.checks, id)).toBe('pass')
+    }
+    expect(report.checks.find((c) => c.id === 'jmap-calendars')!.detail).toBe(
+      '1 calendar, 1 writable.'
+    )
+    expect(report.checks.some((c) => c.id === 'dav-class')).toBe(false)
+    const methods = fetchMock.mock.calls.map((call) => (call[1] as RequestInit | undefined)?.method)
+    expect(methods).not.toContain('PROPFIND')
+    expect(methods).not.toContain('OPTIONS')
+  })
+
+  it('blames the API endpoint when only the session answers cross-origin', async () => {
+    // Stalwart answers CORS on /.well-known/jmap only, by default.
+    const fetchMock = stubJmap()
+    fetchMock.mockImplementation(async (url: RequestInfo | URL) => {
+      if (String(url).endsWith('/.well-known/jmap')) return json(session)
+      if (String(url) === `${JMAP_BASE}/jmap/`) throw new TypeError('Failed to fetch')
+      return new Response('', { status: 200 })
+    })
+
+    const report = await runDiagnostics(JMAP_OPTS)
+
+    expect(statusOf(report.checks, 'jmap-session')).toBe('pass')
+    const api = report.checks.find((c) => c.id === 'jmap-api')!
+    expect(api.status).toBe('fail')
+    expect(api.detail).toMatch(/session loaded/)
+    expect(api.fix).toMatch(/API URL/)
+    expect(statusOf(report.checks, 'jmap-calendars')).toBe('skipped')
+    expect(report.blame).toBe('server')
+  })
+
+  it('reports rejected credentials on the session request', async () => {
+    stubJmap({ session: () => json({ type: 'unauthorized' }, 401) })
+
+    const report = await runDiagnostics(JMAP_OPTS)
+
+    expect(statusOf(report.checks, 'auth')).toBe('fail')
+    expect(statusOf(report.checks, 'jmap-session')).toBe('skipped')
+    expect(report.blame).toBe('credentials')
+  })
+
+  it('says so when the address is not a JMAP server', async () => {
+    stubJmap({ session: () => new Response('<html></html>', { status: 200 }) })
+
+    const report = await runDiagnostics(JMAP_OPTS)
+
+    const found = report.checks.find((c) => c.id === 'jmap-session')!
+    expect(found.status).toBe('fail')
+    expect(found.fix).toMatch(/Use CalDAV/)
+  })
+
+  it('fails when the server is JMAP but offers no calendars', async () => {
+    stubJmap({
+      session: () =>
+        json({
+          ...session,
+          capabilities: { 'urn:ietf:params:jmap:core': {} },
+          primaryAccounts: {},
+        }),
+    })
+
+    const report = await runDiagnostics(JMAP_OPTS)
+
+    expect(report.checks.find((c) => c.id === 'jmap-session')!.detail).toMatch(
+      /does not offer calendars/
+    )
+  })
+
+  it('warns, rather than fails, when the server does not advertise push', async () => {
+    stubJmap({ session: () => json({ ...session, eventSourceUrl: '' }) })
+
+    const report = await runDiagnostics(JMAP_OPTS)
+
+    expect(statusOf(report.checks, 'jmap-push')).toBe('warn')
+    expect(report.summary).toBe('degraded')
+  })
+
+  it('creates and destroys a test event in a writable calendar', async () => {
+    const fetchMock = stubJmap()
+
+    const report = await runDiagnostics({ ...JMAP_OPTS, includeWriteTest: true })
+
+    expect(statusOf(report.checks, 'write-roundtrip')).toBe('pass')
+    const bodies = fetchMock.mock.calls
+      .filter((call) => String(call[0]) === `${JMAP_BASE}/jmap/`)
+      .map((call) => JSON.parse(String((call[1] as RequestInit).body)).methodCalls[0])
+    const create = bodies.find((call) => call[1].create)
+    expect(create[1].create.t.calendarIds).toEqual({ c1: true })
+    expect(bodies.some((call) => call[1].destroy?.[0] === 'e1')).toBe(true)
+  })
+
+  it('auto-detects JMAP before falling back to DAV', async () => {
+    stubJmap()
+    const jmap = await runDiagnostics({ ...JMAP_OPTS, protocol: 'auto' })
+    expect(jmap.kind).toBe('jmap')
+
+    stubFetch({
+      OPTIONS: { status: 200, headers: { DAV: '1, calendar-access' } },
+    })
+    const dav = await runDiagnostics({ ...OPTS, protocol: 'auto' })
+    expect(dav.kind).toBe('caldav')
+    expect(dav.checks.some((c) => c.id === 'dav-class')).toBe(true)
   })
 })

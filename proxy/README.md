@@ -50,9 +50,15 @@ don't block it as mixed content.
   terminates TLS, so whoever runs it *can* see the credentials and calendar
   data in plaintext — run your own, or enable CORS on your CalDAV server, if
   that matters to you.
-- Does **not** follow redirects — preventing SSRF via 30x-redirect to
-  internal IPs like cloud metadata services. Calino reads `X-Target-URL`
-  for `.well-known` CalDAV discovery.
+- Does **not** follow redirects by default (preventing SSRF via 30x-redirect to
+  internal IPs like cloud metadata services). It follows them only when the
+  request carries `X-Follow-Redirects: 1`, which Calino sends for discovery and
+  the JMAP session request. Calino reads `X-Target-URL` (the final URL) for
+  `.well-known` discovery.
+- Exposes `ETag`, `Location`, `X-Target-URL`, `WWW-Authenticate` and
+  `Retry-After`, and allows `POST` with JSON, so JMAP servers work through it as
+  well as CalDAV/CardDAV. Live-update (EventSource) streams stay open: the
+  timeout only covers the wait for response headers.
 - Advertises `MKCOL, MKCALENDAR, COPY, MOVE` so calendar creation and Calino
   settings sync work.
 - If you expose this proxy to the internet, set `ALLOWED_ORIGINS` (to your

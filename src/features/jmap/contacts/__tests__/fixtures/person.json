@@ -1,0 +1,109 @@
+{
+  "@type": "Card",
+  "version": "1.0",
+  "uid": "urn:uuid:calino-person",
+  "name": {
+    "@type": "Name",
+    "full": "Ada Lovelace",
+    "components": [
+      { "@type": "NameComponent", "kind": "surname", "value": "Lovelace" },
+      { "@type": "NameComponent", "kind": "given", "value": "Ada" },
+      { "@type": "NameComponent", "kind": "given2", "value": "Augusta" },
+      { "@type": "NameComponent", "kind": "title", "value": "Countess" }
+    ]
+  },
+  "nicknames": { "nicknames1": { "@type": "Nickname", "name": "Enchantress" } },
+  "organizations": {
+    "organizations1": {
+      "@type": "Organization",
+      "name": "Analytical Engines",
+      "units": [{ "@type": "OrgUnit", "name": "Research" }]
+    }
+  },
+  "titles": {
+    "titles1": {
+      "@type": "Title",
+      "kind": "title",
+      "name": "Programmer",
+      "organizationId": "organizations1"
+    },
+    "titles2": {
+      "@type": "Title",
+      "kind": "role",
+      "name": "Mathematician",
+      "organizationId": "organizations1"
+    }
+  },
+  "emails": {
+    "emails1": {
+      "@type": "EmailAddress",
+      "address": "ada@example.test",
+      "contexts": { "work": true },
+      "pref": 1
+    },
+    "emails2": {
+      "@type": "EmailAddress",
+      "address": "ada@home.example.test",
+      "contexts": { "private": true }
+    }
+  },
+  "phones": {
+    "phones1": {
+      "@type": "Phone",
+      "number": "tel:+441234567",
+      "features": { "mobile": true },
+      "contexts": { "private": true },
+      "pref": 1
+    },
+    "phones2": {
+      "@type": "Phone",
+      "number": "tel:+449876543",
+      "features": { "fax": true },
+      "contexts": { "work": true }
+    }
+  },
+  "addresses": {
+    "addresses1": {
+      "@type": "Address",
+      "contexts": { "work": true },
+      "components": [
+        { "@type": "AddressComponent", "kind": "postOfficeBox", "value": "PO 1" },
+        { "@type": "AddressComponent", "kind": "extension", "value": "Room 2" },
+        { "@type": "AddressComponent", "kind": "street", "value": "12 Engine Road" },
+        { "@type": "AddressComponent", "kind": "locality", "value": "London" },
+        { "@type": "AddressComponent", "kind": "region", "value": "London" },
+        { "@type": "AddressComponent", "kind": "postcode", "value": "NW1" },
+        { "@type": "AddressComponent", "kind": "country", "value": "UK" }
+      ]
+    }
+  },
+  "links": {
+    "links1": { "@type": "Link", "uri": "https://example.test/ada", "contexts": { "work": true } }
+  },
+  "onlineServices": {
+    "onlineServices1": {
+      "@type": "OnlineService",
+      "uri": "xmpp:ada@example.test",
+      "contexts": { "private": true }
+    }
+  },
+  "notes": { "notes1": { "@type": "Note", "note": "First algorithm\nPublished notes" } },
+  "anniversaries": {
+    "anniversaries1": {
+      "@type": "Anniversary",
+      "kind": "birth",
+      "date": { "@type": "PartialDate", "year": 1815, "month": 12, "day": 10 }
+    },
+    "anniversaries2": {
+      "@type": "Anniversary",
+      "kind": "wedding",
+      "date": { "@type": "PartialDate", "year": 1835, "month": 7, "day": 8 }
+    }
+  },
+  "keywords": { "mathematics": true, "history": true },
+  "relatedTo": { "urn:uuid:charles": { "@type": "Relation", "relation": { "friend": true } } },
+  "preferredLanguages": { "en": [{ "@type": "LanguagePref", "pref": 1 }] },
+  "media": {
+    "media1": { "@type": "Media", "kind": "photo", "uri": "https://example.test/ada.png" }
+  }
+}

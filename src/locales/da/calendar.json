@@ -435,7 +435,11 @@
     "icsDropHint": "Du vælger kalenderen bagefter",
     "theme": "Tema",
     "themeMode": "Tematilstand",
-    "themeModes": { "auto": "Automatisk", "light": "Lys", "dark": "Mørk" },
+    "themeModes": {
+      "auto": "Automatisk",
+      "light": "Lys",
+      "dark": "Mørk"
+    },
     "weekNumbers": "Ugenumre",
     "hideCompletedTasks": "Skjul afsluttede opgaver",
     "allSettings": "Alle indstillinger →",
@@ -520,7 +524,11 @@
     "tomorrow": "I morgen",
     "expandSubtasks": "Fold underopgaver ud for \"{{title}}\"",
     "collapseSubtasks": "Fold underopgaver sammen for \"{{title}}\"",
-    "hiddenCount": "{{count}} skjulte"
+    "hiddenCount": "{{count}} skjulte",
+    "forceCalDAV": "Brug CalDAV",
+    "forceCalDAVHint": "Spring automatisk JMAP-registrering over for denne server.",
+    "forceCalDAVSummary": "Kun CalDAV",
+    "accountProtocol": "Kontoprotokol"
   },
   "ui": {
     "noTitle": "(Ingen titel)",

@@ -532,7 +532,8 @@
     "subscribe": "Abonnér på kalender (.ics)",
     "confirmRemoveSubscription": "Vil du fjerne dette kalenderabonnement? Dets begivenheder slettes lokalt.",
     "confirmRemoveAccount": "Er du sikker på, at du vil fjerne denne konto? Kalenderdata bevares lokalt.",
-    "credentialsNotFound": "Loginoplysninger blev ikke fundet"
+    "credentialsNotFound": "Loginoplysninger blev ikke fundet",
+    "accountProtocol": "Kontoprotokol"
   },
   "data": {
     "webmcp": {
@@ -746,7 +747,9 @@
     "summary": {
       "ok": "Alt ser korrekt ud.",
       "degraded": "Synkroniseringen vil fungere, men serveren kan konfigureres bedre.",
-      "broken": "Der er noget galt med denne server."
+      "broken": "Kontrollerne nedenfor fandt et problem. Åbn en mislykket kontrol for at se, hvad der skal ændres.",
+      "broken_page": "Forbindelsen blev blokeret af denne side, ikke af din server. Åbn den mislykkede kontrol for at se dine muligheder.",
+      "broken_credentials": "Serveren svarede, men afviste brugernavnet eller adgangskoden."
     },
     "corsNote": " Kontroller markeret som “udledt” kunne ikke læses direkte — browsere skjuler en servers CORS-headere for JavaScript."
   },

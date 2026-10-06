@@ -89,7 +89,11 @@ export function DiagnosticsPanel({ options, autoRun = false }: DiagnosticsPanelP
           disabled={running}
           data-action="run-diagnostics"
         >
-          {running ? t('diagnostics.running') : checks.length > 0 ? t('diagnostics.runAgain') : t('diagnostics.runDiagnostics')}
+          {running
+            ? t('diagnostics.running')
+            : checks.length > 0
+              ? t('diagnostics.runAgain')
+              : t('diagnostics.runDiagnostics')}
         </button>
         <button
           type="button"
@@ -113,9 +117,7 @@ export function DiagnosticsPanel({ options, autoRun = false }: DiagnosticsPanelP
         )}
       </div>
 
-      <p className={styles.note}>
-        {t('diagnostics.note')}
-      </p>
+      <p className={styles.note}>{t('diagnostics.note')}</p>
 
       {checks.length > 0 && (
         <ul className={styles.checks}>
@@ -143,11 +145,8 @@ export function DiagnosticsPanel({ options, autoRun = false }: DiagnosticsPanelP
                     {t(`diagnostics.status.${check.status}`)}
                   </span>
                   <span className={styles.checkLabel}>{check.label}</span>
-                  {check.evidence === 'inferred' && (
-                    <span
-                      className={styles.inferred}
-                      title={t('diagnostics.inferredTitle')}
-                    >
+                  {check.evidence === 'inferred' && check.status !== 'skipped' && (
+                    <span className={styles.inferred} title={t('diagnostics.inferredTitle')}>
                       {t('diagnostics.inferred')}
                     </span>
                   )}
@@ -172,13 +171,16 @@ export function DiagnosticsPanel({ options, autoRun = false }: DiagnosticsPanelP
 
       {report && (
         <div className={styles.summary} data-summary={report.summary}>
-          {t(`diagnostics.summary.${report.summary}`)}
-          {report.platform === 'web' && !report.viaProxy && (
-            <span className={styles.summaryNote}>
-              {' '}
-              {t('diagnostics.corsNote')}
-            </span>
+          {t(
+            report.summary === 'broken' && report.blame && report.blame !== 'server'
+              ? `diagnostics.summary.broken_${report.blame}`
+              : `diagnostics.summary.${report.summary}`
           )}
+          {report.platform === 'web' &&
+            !report.viaProxy &&
+            checks.some((c) => c.evidence === 'inferred' && c.status !== 'skipped') && (
+              <span className={styles.summaryNote}> {t('diagnostics.corsNote')}</span>
+            )}
         </div>
       )}
     </div>

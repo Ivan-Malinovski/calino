@@ -1,3 +1,4 @@
+import type { ContactsBackend } from './ContactsBackend'
 import { createDAVClient } from 'tsdav'
 import type { CalDAVCredentials } from '@/features/caldav/types'
 import type { AddressBook, Contact } from '../types'
@@ -268,7 +269,7 @@ function prefixUrlWithProxy(url: string, proxyBase: string): string {
   return buildProxyUrl(proxyBase, url)
 }
 
-export class CardDAVClient {
+export class CardDAVClient implements ContactsBackend {
   private client: Awaited<ReturnType<typeof createDAVClient>> | null = null
   private serverUrl: string
   private proxyUrl: string | null

@@ -1,0 +1,26 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Calino converter fixture//EN
+BEGIN:VEVENT
+UID:jscal-to-ics-content@calino.test
+DTSTAMP:20261006T120000Z
+DTSTART:20261010T100000Z
+DTEND:20261010T110000Z
+SUMMARY:Møde\, plan\; næste
+DESCRIPTION:First line\nSecond\; line\, with \\ backslash
+CATEGORIES:work,team\,one
+CONCEPT:tag:example.com:2026:meeting
+LOCATION:Room 1
+GEO:55.6761;12.5683
+URL:https://example.org/event
+ATTACH;FMTTYPE=application/pdf:https://example.org/file.pdf
+PRIORITY:3
+CLASS:CONFIDENTIAL
+TRANSP:TRANSPARENT
+STATUS:TENTATIVE
+SEQUENCE:2
+CREATED:20261001T100000Z
+COLOR:blue
+RELATED-TO;RELTYPE=PARENT:parent-event
+END:VEVENT
+END:VCALENDAR

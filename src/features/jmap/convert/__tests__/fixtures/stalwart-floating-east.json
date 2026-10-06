@@ -1,0 +1,14 @@
+{
+  "start": "2026-10-10T10:00:00",
+  "updated": "2026-10-06T12:00:00Z",
+  "uid": "jscal-to-ics-floating@calino.test.east.2760775",
+  "duration": "PT1H",
+  "title": "Floating appointment",
+  "@type": "Event",
+  "id": "f9",
+  "calendarIds": {
+    "b": true
+  },
+  "isDraft": false,
+  "isOrigin": true
+}

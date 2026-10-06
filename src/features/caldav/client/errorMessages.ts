@@ -10,6 +10,7 @@
  */
 
 import i18n from '@/lib/i18n'
+import { pagePolicyBlock } from './pagePolicy'
 
 export type SyncErrorCode =
   | 'cors'
@@ -166,10 +167,25 @@ export function syncErrorReason(code: SyncErrorCode, raw: string): string {
  * running. Both are indistinguishable to a browser, so name both instead of
  * guessing, and leave the specifics to the diagnostics panel.
  */
-export function connectionErrorMessage(raw: string, code?: SyncErrorCode): string {
-  switch (code ?? classifySyncError(raw)) {
+export function connectionErrorMessage(
+  raw: string,
+  code?: SyncErrorCode,
+  serverUrl?: string
+): string {
+  const resolved = code ?? classifySyncError(raw)
+  // The page's own policy refused the request; the server never saw it.
+  if (
+    serverUrl &&
+    (resolved === 'cors' || resolved === 'network') &&
+    pagePolicyBlock(serverUrl) !== null
+  )
+    return i18n.t('errors:connection.blockedHttp')
+  switch (resolved) {
     case 'cors':
+      if (/\bJMAP\b/i.test(raw)) return i18n.t('errors:connection.jmapCors')
+      return i18n.t('errors:connection.corsOrNetwork')
     case 'network':
+      if (/\bJMAP\b/i.test(raw)) return i18n.t('errors:connection.jmapNetwork')
       return i18n.t('errors:connection.corsOrNetwork')
     case 'timeout':
       return i18n.t('errors:connection.timeout')

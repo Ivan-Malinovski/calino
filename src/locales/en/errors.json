@@ -49,7 +49,11 @@
     "failedGeneric": "Connection failed: {{message}}. This may be a CORS issue - the server must allow cross-origin requests.",
     "urlHint": "For {{domain}}, try entering: {{url}}",
     "unknownError": "Unknown error",
-    "fastmailAuthHint": "Fastmail rejected these credentials. Fastmail requires an app-specific password for CalDAV — your normal login password will not work. Create one at Settings → Privacy & Security → Integrations → New App Password (grant it \"Calendars (CalDAV)\" access), then use your email as the username and that password."
+    "fastmailAuthHint": "Fastmail rejected these credentials. Fastmail requires an app-specific password for CalDAV — your normal login password will not work. Create one at Settings → Privacy & Security → Integrations → New App Password (grant it \"Calendars (CalDAV)\" access), then use your email as the username and that password.",
+    "jmapNoCalendars": "This JMAP account does not support calendars.",
+    "jmapCors": "The JMAP server is blocking cross-origin requests (CORS). Check its CORS settings or use a proxy.",
+    "jmapNetwork": "Could not reach the JMAP server. Check the address and connection; missing CORS headers can also cause this.",
+    "blockedHttp": "Calino can't connect to a plain http:// server from here. This page only allows https:// connections, so the request was blocked before it left your browser. Use an https:// address, set up a proxy, or run a self-hosted Calino (CALINO_SELF_HOSTED=true) that allows http."
   },
   "broken": {
     "foundEvents_one": "Found 1 broken event with invalid dates.",

@@ -130,6 +130,14 @@
   color: var(--color-text-secondary, #6b6762);
 }
 .groupHint a { color: var(--accent-strong, var(--color-accent, #a16f42)); }
+.checkRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--color-text-primary, #202124);
+  cursor: pointer;
+}
 .groupInput { margin-top: 0; font: inherit; font-size: 13px; }
 .groupInput::placeholder { color: var(--color-text-muted, #8a847b); }
 .inputNudge {

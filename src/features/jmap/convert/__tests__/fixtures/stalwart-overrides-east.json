@@ -1,0 +1,67 @@
+{
+  "@type": "Event",
+  "title": "Recurring appointment",
+  "alerts": {
+    "k1": {
+      "action": "display",
+      "@type": "Alert",
+      "trigger": {
+        "@type": "OffsetTrigger",
+        "offset": "-PT15M"
+      }
+    }
+  },
+  "timeZone": "Etc/UTC",
+  "start": "2026-10-10T10:00:00",
+  "recurrenceOverrides": {
+    "2026-10-17T10:00:00": {
+      "excluded": true
+    },
+    "2026-10-12T10:00:00": {},
+    "2026-10-14T10:00:00": {
+      "updated": "2026-10-06T12:00:00Z",
+      "duration": "PT1H",
+      "alerts": {
+        "k1": {
+          "action": "display",
+          "@type": "Alert",
+          "trigger": {
+            "@type": "OffsetTrigger",
+            "offset": "-PT15M"
+          }
+        }
+      },
+      "start": "2026-10-14T10:00:00",
+      "title": "Extra occurrence"
+    },
+    "2026-10-24T10:00:00": {
+      "duration": "PT1H",
+      "start": "2026-10-24T12:00:00",
+      "alerts": {
+        "k1": {
+          "trigger": {
+            "@type": "OffsetTrigger",
+            "offset": "-PT30M"
+          },
+          "action": "display",
+          "@type": "Alert"
+        }
+      },
+      "updated": "2026-10-06T12:00:00Z",
+      "title": "Moved occurrence"
+    }
+  },
+  "recurrenceRule": {
+    "frequency": "weekly",
+    "count": 4
+  },
+  "uid": "jscal-to-ics-overrides@calino.test.east.2760775",
+  "updated": "2026-10-06T12:00:00Z",
+  "duration": "PT1H",
+  "id": "gq",
+  "calendarIds": {
+    "b": true
+  },
+  "isDraft": false,
+  "isOrigin": true
+}

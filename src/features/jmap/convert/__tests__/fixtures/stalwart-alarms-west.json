@@ -1,0 +1,56 @@
+{
+  "start": "2026-10-10T10:00:00",
+  "duration": "PT1H",
+  "updated": "2026-10-06T12:00:00Z",
+  "@type": "Event",
+  "timeZone": "Etc/UTC",
+  "alerts": {
+    "k1": {
+      "trigger": {
+        "@type": "OffsetTrigger",
+        "offset": "-PT10M"
+      },
+      "action": "display",
+      "@type": "Alert"
+    },
+    "k2": {
+      "@type": "Alert",
+      "action": "display",
+      "trigger": {
+        "@type": "OffsetTrigger",
+        "offset": "PT5M",
+        "relativeTo": "end"
+      }
+    },
+    "k3": {
+      "action": "email",
+      "@type": "Alert",
+      "acknowledged": "2026-10-08T10:00:00Z",
+      "trigger": {
+        "@type": "AbsoluteTrigger",
+        "when": "2026-10-09T10:00:00Z"
+      }
+    }
+  },
+  "title": "UTC appointment",
+  "uid": "jscal-to-ics-alarms@calino.test.west.2760776",
+  "participants": {
+    "d1bd9688-d91e-5a64-ab07-f5bc944f3812": {
+      "calendarAddress": "mailto:alice@example.org",
+      "@type": "Participant",
+      "name": "Alice",
+      "roles": {
+        "required": true
+      },
+      "kind": "individual",
+      "participationStatus": "accepted",
+      "expectReply": true
+    }
+  },
+  "id": "gr",
+  "calendarIds": {
+    "b": true
+  },
+  "isDraft": false,
+  "isOrigin": true
+}

@@ -1,0 +1,8 @@
+{
+  "@type": "Card",
+  "version": "1.0",
+  "uid": "urn:uuid:calino-group",
+  "kind": "group",
+  "name": { "@type": "Name", "full": "Engine friends", "components": [] },
+  "members": { "urn:uuid:calino-person": true, "mailto:charles@example.test": true }
+}

@@ -49,7 +49,11 @@
     "failedGeneric": "Échec de la connexion : {{message}}. Il peut s’agir d’un problème CORS : le serveur doit autoriser les requêtes inter-origines.",
     "urlHint": "Pour {{domain}}, essayez de saisir : {{url}}",
     "unknownError": "Erreur inconnue",
-    "fastmailAuthHint": "Fastmail a refusé ces identifiants. Pour CalDAV, Fastmail exige un mot de passe spécifique à l’application ; votre mot de passe habituel ne fonctionnera pas. Créez-en un dans Settings → Privacy & Security → Integrations → New App Password (accordez-lui l’accès « Calendars (CalDAV) »), puis utilisez votre adresse e-mail comme nom d’utilisateur et ce mot de passe."
+    "fastmailAuthHint": "Fastmail a refusé ces identifiants. Pour CalDAV, Fastmail exige un mot de passe spécifique à l’application ; votre mot de passe habituel ne fonctionnera pas. Créez-en un dans Settings → Privacy & Security → Integrations → New App Password (accordez-lui l’accès « Calendars (CalDAV) »), puis utilisez votre adresse e-mail comme nom d’utilisateur et ce mot de passe.",
+    "jmapNoCalendars": "Ce compte JMAP ne prend pas en charge les calendriers.",
+    "jmapCors": "Le serveur JMAP bloque les requêtes entre origines (CORS). Vérifiez ses paramètres CORS ou utilisez un proxy.",
+    "jmapNetwork": "Impossible de joindre le serveur JMAP. Vérifiez l’adresse et la connexion ; des en-têtes CORS manquants peuvent aussi en être la cause.",
+    "blockedHttp": "Calino ne peut pas se connecter d’ici à un serveur http:// non chiffré. Cette page n’autorise que les connexions https://, la requête a donc été bloquée avant de quitter le navigateur. Utilisez une adresse https://, configurez un proxy ou exécutez un Calino auto-hébergé (CALINO_SELF_HOSTED=true) qui autorise http."
   },
   "broken": {
     "foundEvents_one": "1 événement comporte des dates non valides.",

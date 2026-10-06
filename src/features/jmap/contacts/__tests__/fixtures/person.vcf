@@ -1,0 +1,24 @@
+BEGIN:VCARD
+VERSION:4.0
+UID:urn:uuid:calino-person
+FN:Ada Lovelace
+N:Lovelace;Ada;Augusta;Countess;
+NICKNAME:Enchantress
+ORG:Analytical Engines;Research
+TITLE:Programmer
+ROLE:Mathematician
+EMAIL;TYPE=work;PREF=1:ada@example.test
+EMAIL;TYPE=home:ada@home.example.test
+TEL;TYPE=cell,home;PREF=1:tel:+441234567
+TEL;TYPE=work,fax:tel:+449876543
+ADR;TYPE=work:PO 1;Room 2;12 Engine Road;London;London;NW1;UK
+URL;TYPE=work:https://example.test/ada
+IMPP;TYPE=home:xmpp:ada@example.test
+NOTE:First algorithm\nPublished notes
+BDAY:18151210
+ANNIVERSARY:18350708
+CATEGORIES:mathematics,history
+RELATED;TYPE=friend:urn:uuid:charles
+LANG;PREF=1:en
+PHOTO;VALUE=URI:https://example.test/ada.png
+END:VCARD

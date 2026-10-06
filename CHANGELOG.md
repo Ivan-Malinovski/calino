@@ -4,6 +4,31 @@ All notable changes to Calino will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- **JMAP support** ([#15](https://github.com/Ivan-Malinovski/calino/issues/15)).
+  Calino now syncs calendars and contacts over JMAP (JSCalendar and JSContact)
+  as well as CalDAV and CardDAV. There is nothing to choose: when you connect,
+  Calino detects which protocol the server speaks, and servers that offer both
+  use JMAP. Everything else works as it does for CalDAV, including recurring
+  events, attendees, reminders, free/busy and live updates. Tick **Use CalDAV**
+  under Connection settings if you prefer CalDAV on a server that offers both.
+  See `docs/JMAP.md`.
+- **Diagnose understands JMAP.** For a JMAP account it checks the session, the
+  API endpoint, calendars, contacts and live updates, and can run a write test.
+  Checks now have plainer names, a page that blocks the connection (an `http://`
+  server from an https page, or the Content Security Policy) is reported first,
+  and the summary says whether the problem is the page, the credentials or the
+  server. A rejected password skips the remaining checks instead of listing
+  them all as failures.
+
+### Changed
+
+- **CORS proxy.** The proxy now exposes `WWW-Authenticate` and `Retry-After`, allows
+  `X-Follow-Redirects`, and no longer cuts live-update streams short, so JMAP
+  works through it. If you run your own Cloudflare Worker from `docs/CORS_PROXY.md`,
+  update it to the current version.
+
 ## [0.38.0] - 2026-10-05
 
 This release brings "Sometime this week" tasks to month view, adds Markdown

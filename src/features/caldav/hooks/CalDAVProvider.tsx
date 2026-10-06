@@ -1,6 +1,7 @@
 import type { ReactNode, JSX } from 'react'
 import { CalDAVContext } from './calDAVContext'
 import { useCalDAVInstance } from './useCalDAV'
+import { useJmapPush } from './useJmapPush'
 
 /**
  * Creates the one CalDAV instance the whole app shares.
@@ -15,5 +16,6 @@ import { useCalDAVInstance } from './useCalDAV'
  */
 export function CalDAVProvider({ children }: { children: ReactNode }): JSX.Element {
   const caldav = useCalDAVInstance()
+  useJmapPush(caldav.accounts, caldav.syncAccount)
   return <CalDAVContext.Provider value={caldav}>{children}</CalDAVContext.Provider>
 }

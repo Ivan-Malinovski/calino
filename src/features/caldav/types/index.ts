@@ -1,7 +1,12 @@
+/** Wire protocol an account talks. Absent on stored accounts means `caldav`. */
+export type CalendarProtocol = 'caldav' | 'jmap'
+
 export interface CalDAVAccount {
   id: string
   name: string
   serverUrl: string
+  /** Detected when the account is added; accounts created before JMAP support omit it. */
+  protocol?: CalendarProtocol
   proxyUrl: string | null
   username: string
   credentialId: string

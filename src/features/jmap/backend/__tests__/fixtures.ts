@@ -1,0 +1,26 @@
+export function eventIcs(uid = 'original-uid', title = 'Team meeting'): string {
+  return [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//Calino tests//EN',
+    'BEGIN:VEVENT',
+    `UID:${uid}`,
+    'DTSTAMP:20261006T090000Z',
+    'DTSTART;TZID=Europe/Copenhagen:20261006T120000',
+    'DTEND;TZID=Europe/Copenhagen:20261006T130000',
+    `SUMMARY:${title}`,
+    'DESCRIPTION:Original description',
+    'RRULE:FREQ=WEEKLY;COUNT=3',
+    'EXDATE;TZID=Europe/Copenhagen:20261013T120000',
+    'ORGANIZER:mailto:owner@example.test',
+    'ATTENDEE;CN=Guest;PARTSTAT=ACCEPTED:mailto:guest@example.test',
+    'BEGIN:VALARM',
+    'ACTION:DISPLAY',
+    'TRIGGER:-PT15M',
+    'DESCRIPTION:Reminder',
+    'END:VALARM',
+    'END:VEVENT',
+    'END:VCALENDAR',
+    '',
+  ].join('\r\n')
+}

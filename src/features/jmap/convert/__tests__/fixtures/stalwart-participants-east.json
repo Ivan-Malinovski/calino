@@ -1,0 +1,59 @@
+{
+  "@type": "Event",
+  "title": "UTC appointment",
+  "participants": {
+    "12989033-4f8b-5362-b195-75503f3d9157": {
+      "calendarAddress": "mailto:chair@example.org",
+      "@type": "Participant",
+      "kind": "individual",
+      "name": "Chair",
+      "delegatedTo": "mailto:room@example.org",
+      "roles": {
+        "chair": true
+      },
+      "expectReply": true,
+      "participationStatus": "accepted"
+    },
+    "044fb906-ff0e-571c-a319-ceb8fdacfb20": {
+      "calendarAddress": "mailto:room@example.org",
+      "@type": "Participant",
+      "participationStatus": "tentative",
+      "kind": "location",
+      "roles": {
+        "optional": true
+      },
+      "name": "Optional room",
+      "expectReply": false,
+      "delegatedFrom": "mailto:chair@example.org"
+    },
+    "f6fb11e3-a140-5464-82e2-dd2ecfe713fd": {
+      "calendarAddress": "mailto:info@example.org",
+      "@type": "Participant",
+      "kind": "group",
+      "roles": {
+        "informational": true
+      },
+      "participationStatus": "declined"
+    },
+    "1508e0b5-80f4-5894-99f6-726805e64297": {
+      "calendarAddress": "mailto:owner@example.org",
+      "@type": "Participant",
+      "roles": {
+        "owner": true
+      },
+      "name": "Owner"
+    }
+  },
+  "start": "2026-10-10T10:00:00",
+  "duration": "PT1H",
+  "organizerCalendarAddress": "mailto:owner@example.org",
+  "updated": "2026-10-06T12:00:00Z",
+  "timeZone": "Etc/UTC",
+  "uid": "jscal-to-ics-participants@calino.test.east.2760775",
+  "id": "gx",
+  "calendarIds": {
+    "b": true
+  },
+  "isDraft": false,
+  "isOrigin": false
+}

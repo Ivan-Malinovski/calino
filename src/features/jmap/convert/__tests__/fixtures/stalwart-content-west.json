@@ -1,0 +1,57 @@
+{
+  "freeBusyStatus": "free",
+  "priority": 3,
+  "start": "2026-10-10T10:00:00",
+  "timeZone": "Etc/UTC",
+  "duration": "PT1H",
+  "updated": "2026-10-06T12:00:00Z",
+  "links": {
+    "1d71b7ac-45c0-5516-93bc-5a0155c578ea": {
+      "href": "https://example.org/event",
+      "@type": "Link",
+      "rel": "describedby"
+    },
+    "5d4756ee-cae1-5d02-b12e-334eb4012258": {
+      "href": "https://example.org/file.pdf",
+      "@type": "Link",
+      "rel": "enclosure",
+      "contentType": "application/pdf"
+    }
+  },
+  "sequence": 2,
+  "locations": {
+    "5960afaa-638a-54bd-80e3-9c243bcd023a": {
+      "name": "Room 1",
+      "@type": "Location",
+      "coordinates": "geo:55.6761,12.5683"
+    }
+  },
+  "privacy": "secret",
+  "created": "2026-10-01T10:00:00Z",
+  "description": "First line\nSecond; line, with \\ backslash",
+  "categories": {
+    "tag:example.com:2026:meeting": true
+  },
+  "keywords": {
+    "work": true,
+    "team,one": true
+  },
+  "title": "Møde, plan; næste",
+  "color": "blue",
+  "uid": "jscal-to-ics-content@calino.test.west.2760776",
+  "relatedTo": {
+    "parent-event": {
+      "relation": {
+        "parent": true
+      }
+    }
+  },
+  "@type": "Event",
+  "status": "tentative",
+  "id": "gs",
+  "calendarIds": {
+    "b": true
+  },
+  "isDraft": false,
+  "isOrigin": true
+}

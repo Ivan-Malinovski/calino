@@ -532,7 +532,8 @@
     "subscribe": "Abbonati al calendario (.ics)",
     "confirmRemoveSubscription": "Rimuovere questo abbonamento al calendario? I suoi eventi verranno eliminati dal dispositivo.",
     "confirmRemoveAccount": "Sei sicuro di voler rimuovere questo account? I dati del calendario verranno conservati localmente.",
-    "credentialsNotFound": "Credenziali non trovate"
+    "credentialsNotFound": "Credenziali non trovate",
+    "accountProtocol": "Protocollo dell’account"
   },
   "data": {
     "webmcp": {
@@ -746,7 +747,9 @@
     "summary": {
       "ok": "Tutto è a posto.",
       "degraded": "La sincronizzazione funzionerà, ma il tuo server potrebbe essere configurato meglio.",
-      "broken": "C'è qualcosa che non va in questo server."
+      "broken": "I controlli qui sotto hanno trovato un problema. Apri un controllo non riuscito per vedere cosa modificare.",
+      "broken_page": "La connessione è stata bloccata da questa pagina, non dal tuo server. Apri il controllo non riuscito per vedere le opzioni.",
+      "broken_credentials": "Il server ha risposto, ma ha rifiutato nome utente o password."
     },
     "corsNote": " I controlli contrassegnati come “dedotto” non possono essere letti direttamente: i browser nascondono a JavaScript le intestazioni CORS del server."
   },

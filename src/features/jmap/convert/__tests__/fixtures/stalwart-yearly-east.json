@@ -1,0 +1,21 @@
+{
+  "recurrenceRule": {
+    "frequency": "yearly",
+    "count": 3,
+    "byMonthDay": [10],
+    "byMonth": ["10"]
+  },
+  "timeZone": "Etc/UTC",
+  "start": "2026-10-10T10:00:00",
+  "duration": "PT1H",
+  "title": "UTC appointment",
+  "updated": "2026-10-06T12:00:00Z",
+  "@type": "Event",
+  "uid": "jscal-to-ics-yearly@calino.test.east.2760775",
+  "id": "gh",
+  "calendarIds": {
+    "b": true
+  },
+  "isDraft": false,
+  "isOrigin": true
+}

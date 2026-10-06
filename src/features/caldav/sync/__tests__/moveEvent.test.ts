@@ -40,6 +40,36 @@ const SOURCE_HREF = 'https://dav.example/personal/event-1.ics'
 describe('moveEventGroup', () => {
   beforeEach(() => vi.clearAllMocks())
 
+  it('relocates in place on a same-account atomic-move backend (JMAP)', async () => {
+    const moveGroupFrom = vi.fn(async () => ({
+      url: 'https://jmap.example/.jmap/a/work/ev1',
+      etag: 'h2',
+    }))
+    const targetEngine = {
+      supportsAtomicMove: true,
+      sharesBackendWith: () => true,
+      moveGroupFrom,
+      putEventGroup: vi.fn(),
+    } as unknown as SyncEngine
+    const sourceEngine = { deleteEvent: vi.fn() } as unknown as SyncEngine
+
+    const result = await moveEventGroup([makeEvent()], {
+      targetEngine,
+      sourceEngine,
+      sourceHref: 'https://jmap.example/.jmap/a/personal/ev1',
+      sourceEtag: 'h1',
+    })
+
+    expect(moveGroupFrom).toHaveBeenCalledWith(
+      expect.any(Array),
+      'https://jmap.example/.jmap/a/personal/ev1',
+      'h1'
+    )
+    expect(targetEngine.putEventGroup).not.toHaveBeenCalled()
+    expect(sourceEngine.deleteEvent).not.toHaveBeenCalled()
+    expect(result).toMatchObject({ etag: 'h2', sourceDeleted: true, memberIds: ['event-1'] })
+  })
+
   it('writes the destination BEFORE deleting the source', async () => {
     // Order is the whole safety argument: if the PUT fails first, the source is
     // untouched and no duplicate can exist.

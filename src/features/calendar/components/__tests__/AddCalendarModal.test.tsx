@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { AddCalendarModal } from '../AddCalendarModal'
+import type { AddAccountOptions } from '@/features/caldav/hooks/useCalDAV'
 import { CalDAVConnectionError } from '@/features/caldav/client/errors'
 
 const mockAddAccount = vi.fn().mockResolvedValue(undefined)
@@ -32,6 +33,49 @@ describe('AddCalendarModal', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockAddAccount.mockReset()
+  })
+
+  it('shows the detected JMAP protocol while the initial import is still running', async () => {
+    let finish: () => void = () => {}
+    mockAddAccount.mockImplementation(
+      async (_url, _username, _password, _name, _proxy, _headers, options: AddAccountOptions) => {
+        options.onProtocolDetected?.('jmap')
+        await new Promise<void>((resolve) => {
+          finish = resolve
+        })
+      }
+    )
+    const user = userEvent.setup()
+    const onClose = vi.fn()
+    render(<AddCalendarModal isOpen onClose={onClose} />)
+    await user.type(screen.getByLabelText(/server url/i), 'https://calendar.test')
+    await user.type(screen.getByLabelText(/username/i), 'fixture-user')
+    await user.type(screen.getByLabelText(/password/i), 'fixture-password')
+    await user.click(screen.getByRole('button', { name: /^Connect$/ }))
+    expect(await screen.findByLabelText('Account protocol')).toHaveTextContent('JMAP')
+    expect(screen.getByRole('button', { name: 'Connecting…' })).toBeDisabled()
+    finish()
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1))
+  })
+
+  it('passes the Use CalDAV override from Connection settings to account connection', async () => {
+    const user = userEvent.setup()
+    render(<AddCalendarModal isOpen onClose={() => {}} />)
+    await user.type(screen.getByLabelText(/server url/i), 'https://calendar.test')
+    await user.type(screen.getByLabelText(/username/i), 'fixture-user')
+    await user.type(screen.getByLabelText(/password/i), 'fixture-password')
+    await user.click(screen.getByRole('button', { name: /Connection settings/ }))
+    await user.click(screen.getByLabelText('Use CalDAV'))
+    await user.click(screen.getByRole('button', { name: /^Connect$/ }))
+    expect(mockAddAccount).toHaveBeenCalledWith(
+      'https://calendar.test',
+      'fixture-user',
+      'fixture-password',
+      'fixture-user',
+      undefined,
+      {},
+      expect.objectContaining({ forceCalDAV: true })
+    )
   })
 
   it('renders modal when open', () => {
@@ -131,7 +175,8 @@ describe('AddCalendarModal', () => {
         'password123',
         'testuser',
         undefined,
-        {}
+        {},
+        expect.objectContaining({ forceCalDAV: false, onProtocolDetected: expect.any(Function) })
       )
     })
 
@@ -172,7 +217,8 @@ describe('AddCalendarModal', () => {
         'password123',
         'My Server',
         undefined,
-        {}
+        {},
+        expect.objectContaining({ forceCalDAV: false, onProtocolDetected: expect.any(Function) })
       )
     })
 

@@ -1,0 +1,7 @@
+BEGIN:VCARD
+VERSION:3.0
+UID:urn:uuid:calino-photo
+FN:Photo example
+N:;;;;
+PHOTO;ENCODING=b;TYPE=PNG:aGVsbG8=
+END:VCARD
