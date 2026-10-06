@@ -145,7 +145,13 @@ starts it; see [JMAP_TESTING.md](JMAP_TESTING.md).
   `sendSchedulingMessages` and delivered between local Stalwart users (verified).
   Delivery to external addresses (iMIP by mail) depends on the server's outbound
   mail setup and was not tested.
-- Stalwart answers CORS only on `/.well-known/jmap`; browser deployments need a
-  proxy that adds the headers (see JMAP_TESTING.md).
+- Stalwart answers CORS only on `/.well-known/jmap`; browser deployments need
+  "Use permissive CORS" enabled, a reverse proxy that adds the headers (see
+  JMAP_TESTING.md), or Calino's account proxy. The proxy must allow
+  `X-Follow-Redirects` and expose `X-Target-URL`, `WWW-Authenticate` and
+  `Retry-After`; `proxy.calino.io` and `proxy/server.mjs` do (see
+  [CORS_PROXY.md](CORS_PROXY.md)). A proxy cannot reach loopback or private
+  addresses, so a LAN-only server needs CORS on the server itself.
+- Calino has no screen for incoming invitations or for replying to them yet.
 - No offline-safe conditional writes; a concurrent edit between the etag check
   and the write window can overwrite.

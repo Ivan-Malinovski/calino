@@ -81,6 +81,8 @@ const ALLOW_METHODS =
 const ALLOW_HEADERS =
   'Authorization, Content-Type, Depth, Prefer, If-None-Match, If-Match, X-Follow-Redirects'
 
+const EXPOSE_HEADERS = 'ETag, Location, X-Target-URL, WWW-Authenticate, Retry-After'
+
 const ALLOWED_ORIGINS_NORMALIZED = ALLOWED_ORIGINS
 const ALLOWED_TARGETS_ASCII = ALLOWED_TARGETS.map((s) => {
   try {
@@ -339,7 +341,10 @@ const server = createServer(async (req, res) => {
     // ETag: without it the browser hides the header on the PUT response, and
     // Calino has to spend a follow-up PROPFIND per write to recover the etag
     // it needs for the next If-Match.
-    outHeaders['access-control-expose-headers'] = 'ETag, Location, X-Target-URL'
+    // WWW-Authenticate and Retry-After are for JMAP: Calino tells a rejected
+    // password from "not a JMAP server" by the challenge on a 401, and honours
+    // the server's rate-limit delay.
+    outHeaders['access-control-expose-headers'] = EXPOSE_HEADERS
 
     // Strip any credentials from the URL we echo back. Even though the proxy
     // never itself embeds credentials in the request line, a 30x Location

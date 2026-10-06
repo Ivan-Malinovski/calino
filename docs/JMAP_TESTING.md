@@ -80,7 +80,17 @@ CALINO_SELF_HOSTED=true pnpm dev
 ```
 
 The hosted `proxy.calino.io` never reaches loopback or private addresses
-(SSRF guard), so it cannot be used with a local server. The live
+(SSRF guard), so it cannot be used with a local server directly. To test the
+proxy path anyway, expose the local server on a public HTTPS name for the
+duration of the test, for example with Tailscale Funnel
+(`tailscale funnel --bg --https=8443 http://127.0.0.1:18080`, and
+`tailscale funnel --https=8443 off` afterwards), then connect Calino (or run
+`runDiagnostics`) with that URL as the server and `https://proxy.calino.io` as
+the proxy. This was done for the proxy header changes: session with redirect,
+wrong password (401 with a readable `WWW-Authenticate`), `Calendar/get`, a
+create/read/delete round trip, and an event stream held open for 60 seconds all
+worked. Funnel makes the server reachable from the internet, so use a throwaway
+account and turn it off when done. The live
 Playwright spec `e2e/jmap-live.spec.ts` adds the headers at the network layer
 and aborts the EventSource stream; run it with:
 
