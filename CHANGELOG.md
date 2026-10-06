@@ -4,6 +4,16 @@ All notable changes to Calino will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- **JMAP support** ([#15](https://github.com/Ivan-Malinovski/calino/issues/15)).
+  Calino now syncs calendars and contacts over JMAP (JSCalendar and JSContact)
+  as well as CalDAV and CardDAV. There is nothing to choose: when you connect,
+  Calino detects which protocol the server speaks, and servers that offer both
+  use JMAP. Everything else works as it does for CalDAV, including recurring
+  events, attendees, reminders, free/busy and live updates. An Advanced option
+  forces CalDAV if you prefer it. See `docs/JMAP.md`.
+
 ## [0.38.0] - 2026-10-05
 
 This release brings "Sometime this week" tasks to month view, adds Markdown

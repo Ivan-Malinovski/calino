@@ -116,4 +116,52 @@ describe.skipIf(!serverUrl || !username || !password)('live JMAP calendar backen
     }
     expect(cleanupFailures, 'All temporary resources should be removed').toBe(0)
   }, 90000)
+
+  it('reports a created event as a busy period through Principal/getAvailability', async () => {
+    const backend = await createJmapCalendarBackend(
+      serverUrl!,
+      { id: 'live', serverUrl: serverUrl!, username: username!, password: password! },
+      null
+    )
+    const suffix = crypto.randomUUID()
+    const calendar = await backend.createCalendar({
+      name: `Calino free/busy test ${suffix}`,
+      color: '#123456',
+    })
+    try {
+      expect(await backend.supportsScheduling()).toBe(true)
+      const start = new Date(Date.now() + 2 * 86_400_000)
+      start.setUTCHours(10, 0, 0, 0)
+      const end = new Date(start.getTime() + 3_600_000)
+      const stamp = (date: Date) => date.toISOString().replace(/[-:]|\.\d+/g, '')
+      const ics = [
+        'BEGIN:VCALENDAR',
+        'VERSION:2.0',
+        'PRODID:-//Calino//live test//EN',
+        'BEGIN:VEVENT',
+        `UID:freebusy-${suffix}@calino.test`,
+        `DTSTAMP:${stamp(new Date())}`,
+        `DTSTART:${stamp(start)}`,
+        `DTEND:${stamp(end)}`,
+        'SUMMARY:Busy block',
+        'END:VEVENT',
+        'END:VCALENDAR',
+      ].join('\r\n')
+      await backend.createEvent(calendar.url, ics, 'ignored.ics')
+      const window = [new Date(start.getTime() - 3_600_000), new Date(end.getTime() + 3_600_000)]
+      const periods = await backend.queryFreeBusy(calendar.url, window[0], window[1])
+      expect(periods).not.toBeNull()
+      expect(periods!.some((p) => p.start <= start && p.end >= end && p.type === 'BUSY')).toBe(true)
+      const byEmail = await backend.queryAttendeeFreeBusy(
+        '',
+        username!,
+        [username!],
+        window[0],
+        window[1]
+      )
+      expect(byEmail?.get(username!.toLowerCase())?.length ?? 0).toBeGreaterThan(0)
+    } finally {
+      await backend.deleteCalendar(calendar.url)
+    }
+  }, 60000)
 })

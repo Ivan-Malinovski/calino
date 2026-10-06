@@ -101,8 +101,12 @@ Calendar ownerPrincipalId is preferred; Principal/query resolves email addresses
 otherwise. Principal/getAvailability receives id, utcStart, utcEnd and
 showDetails false, with principals and availability in `using`. UTC periods map
 to existing busy/tentative/unavailable/free types; unavailable recipients or
-errors return null. Availability wire behavior is tested against the fake only;
-a server advertising this extension still needs live verification.
+errors return null. Verified live against Stalwart 0.16: a created event comes
+back as a `BUSY` period (Stalwart reports `busyStatus: "confirmed"`), and the
+calendar has no `ownerPrincipalId`, so the principal is resolved by email via
+`Principal/query` (the principal id equals the account id there). Invitation
+delivery (iMIP) is performed by the server and was not verified end to end,
+because it needs working mail delivery.
 
 `watch(onChange)` wraps authenticated JmapClient SSE for Calendar and
 CalendarEvent, filters notifications to this account and returns unsubscribe.

@@ -1,6 +1,6 @@
 # JMAP support
 
-Calino can sync calendars (and, in phase 2, contacts) over
+Calino can sync calendars and contacts over
 [JMAP](https://jmap.io/) as well as CalDAV/CardDAV. This document is the design
 record: what is implemented, why it is shaped this way, how to test it, and the
 known limits. Keep it current as the work lands.
@@ -88,13 +88,24 @@ stored and shown read-only; "Advanced" offers a force-CalDAV override.
 
 ## Implementation status
 
-Converters and transport are implemented and verified against Stalwart 0.16.
-The UI connects through automatic detection, persists the account protocol,
-shows read-only protocol labels and provides an Advanced force-CalDAV option.
-Offline probe, storage, hook and translation tests cover this wiring; the
-Playwright fixture/spec and opt-in live probe await execution by the lead.
-The calendar backend has landed in the parallel implementation task; contacts
-remain a future integration.
+Everything below is implemented and was verified against Stalwart 0.16 (see
+[JMAP_TESTING.md](JMAP_TESTING.md)).
+
+- Calendars: converters, transport, session and push, create/rename/recolor/
+  delete, events with recurrence, overrides, reminders and attendees,
+  incremental sync via `CalendarEvent/changes`, atomic cross-calendar moves,
+  settings sync, free/busy through `Principal/getAvailability`.
+- Contacts: a `ContactsBackend` interface (CardDAV and JMAP implementations)
+  with JSContact to vCard conversion, address books, groups, photos and
+  incremental sync. The contacts hooks pick the backend from the account's
+  protocol.
+- UI: protocol auto-detection when connecting, a read-only protocol label, and
+  an Advanced force-CalDAV option. The calendar and contacts screens are the
+  same as for CalDAV.
+- Tests: offline unit tests (fake servers) in both timezone projects, offline
+  Playwright specs for detection, and env-gated live specs
+  (`e2e/jmap-live.spec.ts`, `backend/__tests__/live.test.ts`,
+  `contacts/__tests__/live.test.ts`).
 
 ## Component docs
 
@@ -103,6 +114,7 @@ remain a future integration.
 - [iCalendar → JSCalendar write converter](jmap/ical-to-jscalendar.md)
 - [Calendar backend](jmap/backend.md)
 - [Account connection, UI and persistence](jmap/ui.md)
+- [Contacts backend and JSContact conversion](jmap/contacts.md)
 
 ## Testing
 
@@ -126,5 +138,12 @@ starts it; see [JMAP_TESTING.md](JMAP_TESTING.md).
 - Tasks and journals: only available if the server advertises a JMAP tasks
   capability. Stalwart 0.16 does not, so JMAP calendars are VEVENT-only there.
 - Unknown iCalendar/X- properties do not round-trip (see above).
+- Stalwart rejects `blobId` in contact photo Media and the pre-RFC `jsCard`
+  envelope. The contacts backend sends the flat Card form and falls back to
+  inline `data:` photo URIs when blob references are refused.
+- Invitation delivery (iMIP) is left to the server and was not verified end to
+  end.
+- Stalwart answers CORS only on `/.well-known/jmap`; browser deployments need a
+  proxy that adds the headers (see JMAP_TESTING.md).
 - No offline-safe conditional writes; a concurrent edit between the etag check
   and the write window can overwrite.
