@@ -1826,10 +1826,6 @@
   line-height: 1.3;
 }
 
-/* Contact form modal — wider than event modal */
-.contactFormModal {
-  width: 560px;
-}
 .secondaryButton {
   align-self: end;
   border: 1px solid var(--line);

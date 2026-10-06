@@ -12,9 +12,18 @@ export interface ModalProps {
   title?: string
   children: ReactNode
   className?: string
+  /** Class for the inner content wrapper, e.g. to drop its default padding. */
+  contentClassName?: string
 }
 
-export function Modal({ isOpen, onClose, title, children, className }: ModalProps) {
+export function Modal({
+  isOpen,
+  onClose,
+  title,
+  children,
+  className,
+  contentClassName,
+}: ModalProps) {
   const { t } = useTranslation('common')
   const titleId = useId()
   const dialogRef = useRef<HTMLDivElement>(null)
@@ -75,7 +84,7 @@ export function Modal({ isOpen, onClose, title, children, className }: ModalProp
             </button>
           </div>
         )}
-        <div className={styles.content}>{children}</div>
+        <div className={clsx(styles.content, contentClassName)}>{children}</div>
       </div>
     </div>,
     document.body

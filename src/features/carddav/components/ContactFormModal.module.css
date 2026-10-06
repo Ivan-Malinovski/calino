@@ -1,0 +1,523 @@
+/* Contact create/edit modal.
+   Visual language mirrors EventModal (serif title, uppercase micro-labels,
+   tinted inputs, accent save button) but owns its own layout so the form
+   scrolls between a pinned header and footer. */
+
+/* `div.card` out-ranks the generic Modal's `.modal` regardless of CSS order. */
+div.card {
+  width: 560px;
+  max-width: calc(100vw - 32px);
+  max-height: min(90vh, 860px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--modal-bg, var(--color-bg-secondary));
+  border: var(--modal-card-border, 1px solid var(--color-border-subtle));
+  border-radius: var(--radius-lg);
+  box-shadow: var(--modal-shadow, var(--shadow-card));
+  font-family: var(--font-sans, 'Inter', sans-serif);
+}
+
+/* Modal wraps children in a padded `.content`; the form manages its own gutters. */
+div.content {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 0;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 22px 24px 12px;
+  flex-shrink: 0;
+}
+
+.titleWrap {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 8px 24px 24px;
+  scrollbar-gutter: stable;
+}
+
+.footer {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2, 8px);
+  padding: 14px 24px;
+  border-top: 1px solid var(--color-border-subtle);
+  background: var(--modal-bg, var(--color-bg-secondary));
+}
+
+.footerActions {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+/* ---- Form layout ---------------------------------------------------- */
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.label {
+  display: block;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-muted, #a0a0a0);
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.rowWide {
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+}
+
+.divider {
+  height: 1px;
+  background: var(--color-border-subtle);
+  margin: 2px 0;
+}
+
+/* ---- Hero: avatar + name -------------------------------------------- */
+
+.hero {
+  display: flex;
+  align-items: flex-start;
+  gap: 18px;
+}
+
+.heroName {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.avatarColumn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  width: 76px;
+}
+
+.avatar {
+  position: relative;
+  width: 76px;
+  height: 76px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: var(--radius-full, 50%);
+  border: 1.5px dashed var(--color-border-visible);
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition:
+    border-color var(--dur-fast),
+    color var(--dur-fast),
+    background var(--dur-fast);
+}
+
+.avatar:hover,
+.avatar:focus-visible {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+  outline: none;
+}
+
+.avatarFilled {
+  border-style: solid;
+}
+
+.avatarImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avatarHint {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  text-align: center;
+  line-height: 1.3;
+}
+
+.linkButton {
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 11px;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: color var(--dur-fast);
+}
+
+.linkButton:hover {
+  color: var(--color-text-primary);
+}
+
+.moreToggle {
+  align-self: flex-start;
+  padding: 2px 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 12px;
+  color: var(--accent-strong, var(--color-accent));
+  cursor: pointer;
+  transition: color var(--dur-fast);
+}
+
+.moreToggle:hover {
+  color: var(--color-text-primary);
+}
+
+.morePanel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  background: var(--color-bg-tertiary);
+  border-radius: var(--radius-sm);
+}
+
+/* ---- Controls ------------------------------------------------------- */
+
+.input,
+.select,
+.textarea {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 0 11px;
+  border: 1px solid var(--color-border-visible);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-primary);
+  font-family: inherit;
+  font-size: 13px;
+  outline: none;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.04);
+  transition:
+    border-color var(--dur-fast),
+    box-shadow var(--dur-fast);
+}
+
+.input,
+.select {
+  height: 32px;
+}
+
+.input::placeholder,
+.textarea::placeholder {
+  color: var(--color-text-muted);
+}
+
+.input:focus,
+.select:focus,
+.textarea:focus {
+  border-color: var(--color-accent);
+  box-shadow: none;
+}
+
+.select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 30px;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' stroke='%23a39d93' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 11px center;
+}
+
+/* Element selector so these beat the shared `.input` height. */
+textarea.textarea {
+  display: block;
+  padding: 9px 11px;
+  line-height: 1.5;
+  resize: vertical;
+  min-height: 84px;
+}
+
+.mono {
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  font-size: 12.5px;
+}
+
+/* ---- Repeating entries (email, phone, ...) --------------------------- */
+
+.entry {
+  display: grid;
+  grid-template-columns: 108px minmax(0, 1fr) 28px;
+  align-items: center;
+  gap: 8px;
+}
+
+.entryRelated {
+  grid-template-columns: 124px minmax(0, 1fr) 28px;
+}
+
+.remove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    background var(--dur-fast),
+    color var(--dur-fast);
+}
+
+.remove:hover,
+.remove:focus-visible {
+  background: var(--color-bg-hover);
+  color: var(--color-text-primary);
+  outline: none;
+}
+
+.addButton {
+  align-self: flex-start;
+  margin-left: -6px;
+  padding: 5px 8px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  font: inherit;
+  font-size: 13px;
+  color: var(--accent-strong, var(--color-accent));
+  cursor: pointer;
+  transition: background var(--dur-fast);
+}
+
+.addButton:hover,
+.addButton:focus-visible {
+  background: var(--color-accent-light);
+  outline: none;
+}
+
+.addressCard {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md, var(--radius-sm));
+  background: var(--color-bg-tertiary);
+}
+
+/* Fields nested in a tinted card sit on the modal surface for contrast. */
+.addressCard .input,
+.addressCard .select,
+.morePanel .input {
+  background: var(--modal-bg, var(--color-bg-secondary));
+}
+
+.addressHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.addressHeader .select {
+  width: 108px;
+}
+
+/* ---- Tags ----------------------------------------------------------- */
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 6px 3px 10px;
+  border-radius: var(--radius-xl, 999px);
+  background: var(--color-accent-light);
+  color: var(--accent-strong, var(--color-accent));
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.tagRemove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: inherit;
+  font-size: 14px;
+  line-height: 1;
+  opacity: 0.7;
+  cursor: pointer;
+  transition:
+    opacity var(--dur-fast),
+    background var(--dur-fast);
+}
+
+.tagRemove:hover,
+.tagRemove:focus-visible {
+  opacity: 1;
+  background: var(--color-bg-hover);
+  outline: none;
+}
+
+/* ---- Group toggle & members ----------------------------------------- */
+
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md, var(--radius-sm));
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-primary);
+  font-size: 13px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.toggle input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--color-accent);
+  cursor: pointer;
+}
+
+.members {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md, var(--radius-sm));
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.membersHint {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.member {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+/* ---- Small screens -------------------------------------------------- */
+
+@media (max-width: 768px) {
+  div.card {
+    max-width: calc(100vw - 16px);
+    max-height: calc(100dvh - 16px);
+  }
+
+  .header {
+    padding: 18px 18px 10px;
+  }
+
+  .body {
+    padding: 6px 18px 20px;
+  }
+
+  .footer {
+    padding: 12px 18px;
+  }
+
+  /* 44px touch targets and 16px text, which stops iOS zooming on focus. */
+  .input,
+  .select {
+    height: 44px;
+    font-size: 16px;
+  }
+
+  textarea.textarea {
+    font-size: 16px;
+  }
+
+  .remove {
+    width: 36px;
+    height: 36px;
+  }
+
+  .entry {
+    grid-template-columns: 96px minmax(0, 1fr) 36px;
+  }
+
+  .entryRelated {
+    grid-template-columns: 110px minmax(0, 1fr) 36px;
+  }
+}
+
+@media (max-width: 480px) {
+  .hero {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .heroName {
+    width: 100%;
+  }
+
+  .row,
+  .rowWide {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

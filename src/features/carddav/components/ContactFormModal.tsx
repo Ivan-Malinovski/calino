@@ -7,6 +7,7 @@ import { Modal } from '@/components/common/Modal'
 import { ContactFormFields } from './ContactFormFields'
 import { deriveDisplayName } from '../adapter/vCardAdapter'
 import eventModalStyles from '@/features/calendar/components/EventModal.module.css'
+import styles from './ContactFormModal.module.css'
 
 interface ContactFormModalProps {
   isOpen: boolean
@@ -216,13 +217,20 @@ export function ContactFormModal({
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} className={eventModalStyles.contactFormModal}>
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      className={styles.card}
+      contentClassName={styles.content}
+    >
       {/* Header */}
-      <div className={eventModalStyles.modalHeader} style={{ padding: '20px 22px 14px' }}>
-        <div className={eventModalStyles.titleInputWrapper} style={{ flex: 1 }}>
+      <div className={styles.header}>
+        <div className={styles.titleWrap}>
           <input
             type="text"
-            placeholder={contact ? contact.displayName || t('form.newContact') : t('form.newContact')}
+            placeholder={
+              contact ? contact.displayName || t('form.newContact') : t('form.newContact')
+            }
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             onBlur={handleTitleBlur}
@@ -241,20 +249,18 @@ export function ContactFormModal({
       </div>
 
       {/* Body */}
-      <div style={{ maxHeight: '60vh', overflowY: 'auto' }}>
+      <div className={styles.body}>
         <ContactFormFields value={formState} onChange={setFormState} />
       </div>
 
       {/* Footer */}
-      <div className={eventModalStyles.modalFooter} style={{ padding: '12px 22px' }}>
-        <div style={{ flex: 1 }}>
-          {isEditMode && onDelete && (
-            <button type="button" className={eventModalStyles.modalDelete} onClick={handleDelete}>
-              {t('common:actions.delete')}
-            </button>
-          )}
-        </div>
-        <div style={{ display: 'flex', gap: 8 }}>
+      <div className={styles.footer}>
+        {isEditMode && onDelete && (
+          <button type="button" className={eventModalStyles.modalDelete} onClick={handleDelete}>
+            {t('common:actions.delete')}
+          </button>
+        )}
+        <div className={styles.footerActions}>
           <button type="button" className={eventModalStyles.modalCancel} onClick={handleCancel}>
             {t('common:actions.cancel')}
           </button>
