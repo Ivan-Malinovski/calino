@@ -56,10 +56,20 @@ CalDAV paths use the URL-encoded address: `/dav/cal/alice%40example.org/default/
 
 ## Browser access and CORS
 
-Stalwart answers CORS preflights only on `/.well-known/jmap`. Its `/jmap/*`
-endpoints return a bare `204` without `Access-Control-*` headers, so a browser
-on another origin cannot call the API with an `Authorization` header unless a
-reverse proxy adds them (or Calino's account proxy is used). The live
+By default Stalwart answers CORS preflights only on `/.well-known/jmap`. Its
+`/jmap/*` endpoints return a bare `204` without `Access-Control-*` headers, so a
+browser on another origin cannot call the API with an `Authorization` header
+unless a reverse proxy adds them (or Calino's account proxy is used).
+
+For local development, turn on Stalwart's own switch: set `usePermissiveCors`
+to `true` on the `x:Http` singleton (admin UI, or `x:Http/set` with
+`{"update":{"singleton":{"usePermissiveCors":true}}}` over JMAP as the admin)
+and restart the container. `/jmap/*` then answers with
+`Access-Control-Allow-Origin: *`. Do not use this on an internet-facing server
+unless that is what you want; there, restrict origins at a reverse proxy.
+
+The hosted `proxy.calino.io` never reaches loopback or private addresses
+(SSRF guard), so it cannot be used with a local server. The live
 Playwright spec `e2e/jmap-live.spec.ts` adds the headers at the network layer
 and aborts the EventSource stream; run it with:
 
