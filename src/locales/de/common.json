@@ -63,7 +63,7 @@
       "skip": "Vorerst überspringen",
       "demoFailed": "Beispieldaten konnten nicht geladen werden",
       "nativeFootnote": "Calino kann dich erinnern, bevor Ereignisse beginnen. Wenn du fortfährst, wirst du um die Benachrichtigungsberechtigung gebeten.",
-      "alsoOnAndroid": "Auch für <link>Android</link>, mit Kameraimport und Erinnerungen."
+      "alsoOnAndroid": "Auch für <apk>Android</apk>, mit Kameraimport und Erinnerungen."
     },
     "privacy": "Datenschutz"
   }

@@ -104,7 +104,7 @@
     },
     "syncError": {
       "cors": "Il tuo server sta bloccando la connessione. Questo in genere significa che le intestazioni CORS non sono configurate. Controlla che il tuo server CalDAV le invii e risponda alle richieste OPTIONS:",
-      "corsHelp": "Sincronizzazione → il tuo account → <strong>Diagnostica</strong> indica quale parte manca. Consulta la <link>documentazione CORS di Baikal</link> per assistenza.",
+      "corsHelp": "Sincronizzazione → il tuo account → <strong>Diagnostica</strong> indica quale parte manca. Consulta la <docs>documentazione CORS di Baikal</docs> per assistenza.",
       "network": "Impossibile raggiungere il server CalDAV. Controlla la tua connessione Internet e assicurati che il server sia online: un'intestazione CORS mancante sembra identica da qui, quindi prova <strong>Diagnostica</strong> in Sincronizzazione se il server è attivo.",
       "timeout": "Il tuo server CalDAV ha impiegato troppo tempo per rispondere. Potrebbe essere sovraccarico: riprova tra un attimo.",
       "auth": "Autenticazione non riuscita. Controlla il tuo nome utente e password CalDAV. Molti provider richiedono una password specifica per l'app anziché la password dell'account.",

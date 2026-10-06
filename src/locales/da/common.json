@@ -63,7 +63,7 @@
       "skip": "Spring over for nu",
       "demoFailed": "Eksempeldata kunne ikke indlæses",
       "nativeFootnote": "Calino kan minde dig, før begivenheder starter. Når du fortsætter, bliver du bedt om tilladelse til notifikationer.",
-      "alsoOnAndroid": "Også på <link>Android</link>, med kameraimport og påmindelser."
+      "alsoOnAndroid": "Også på <apk>Android</apk>, med kameraimport og påmindelser."
     },
     "privacy": "Privatliv"
   }

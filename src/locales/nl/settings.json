@@ -104,7 +104,7 @@
     },
     "syncError": {
       "cors": "Je server blokkeert de verbinding. Dit betekent meestal dat de CORS-headers niet zijn ingesteld. Controleer of je CalDAV-server deze verstuurt en reageert op OPTIONS:",
-      "corsHelp": "Ga naar Synchronisatie → je account → <strong>Diagnostiek</strong> om te zien wat ontbreekt. Raadpleeg de <link>Baikal CORS-documentatie</link> voor hulp.",
+      "corsHelp": "Ga naar Synchronisatie → je account → <strong>Diagnostiek</strong> om te zien wat ontbreekt. Raadpleeg de <docs>Baikal CORS-documentatie</docs> voor hulp.",
       "network": "Je CalDAV-server is niet bereikbaar. Controleer je internetverbinding en of de server online is. Een ontbrekende CORS-header ziet er vanaf hier hetzelfde uit; probeer <strong>Diagnostiek</strong> onder Synchronisatie als de server online is.",
       "timeout": "Je CalDAV-server heeft te lang nodig gehad om te reageren. Mogelijk is deze overbelast — probeer het straks opnieuw.",
       "auth": "Aanmelden mislukt. Controleer je CalDAV-gebruikersnaam en wachtwoord. Veel aanbieders vereisen een app-specifiek wachtwoord in plaats van je accountwachtwoord.",

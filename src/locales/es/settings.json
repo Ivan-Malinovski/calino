@@ -104,7 +104,7 @@
     },
     "syncError": {
       "cors": "Tu servidor está bloqueando la conexión. Esto suele indicar que faltan encabezados CORS. Comprueba que tu servidor CalDAV los envíe y responda a OPTIONS:",
-      "corsHelp": "Sincronización → tu cuenta → <strong>Diagnosticar</strong> te indicará qué falta. Consulta la documentación <link>Baikal CORS</link> para obtener ayuda.",
+      "corsHelp": "Sincronización → tu cuenta → <strong>Diagnosticar</strong> te indicará qué falta. Consulta la documentación <docs>Baikal CORS</docs> para obtener ayuda.",
       "network": "No se pudo conectar con tu servidor CalDAV. Comprueba tu conexión a Internet y que el servidor esté en línea. Desde aquí, la falta de un encabezado CORS se ve igual; si el servidor está activo, prueba <strong>Diagnosticar</strong> en Sincronización.",
       "timeout": "Tu servidor CalDAV tardó demasiado en responder. Puede estar sobrecargado; inténtalo de nuevo dentro de un momento.",
       "auth": "Falló la autenticación. Comprueba tu nombre de usuario y contraseña de CalDAV. Muchos proveedores requieren una contraseña específica de la aplicación.",

@@ -104,7 +104,7 @@
     },
     "syncError": {
       "cors": "Votre serveur bloque la connexion. Cela signifie généralement que les en-têtes CORS ne sont pas configurés. Vérifiez que votre serveur CalDAV les envoie et qu’il répond à OPTIONS :",
-      "corsHelp": "Synchronisation → votre compte → <strong>Diagnostiquer</strong> indiquera ce qui manque. Consultez la <link>documentation CORS de Baikal</link> pour obtenir de l’aide.",
+      "corsHelp": "Synchronisation → votre compte → <strong>Diagnostiquer</strong> indiquera ce qui manque. Consultez la <docs>documentation CORS de Baikal</docs> pour obtenir de l’aide.",
       "network": "Impossible de joindre votre serveur CalDAV. Vérifiez votre connexion Internet et assurez-vous que le serveur est en ligne. Un en-tête CORS manquant produit le même résultat ; si le serveur est accessible, essayez <strong>Diagnostiquer</strong> dans Synchronisation.",
       "timeout": "Votre serveur CalDAV a mis trop de temps à répondre. Il est peut-être surchargé ; réessayez dans un instant.",
       "auth": "Échec de l’authentification. Vérifiez votre nom d’utilisateur et votre mot de passe CalDAV. De nombreux fournisseurs exigent un mot de passe spécifique à l’application plutôt que le mot de passe de votre compte.",

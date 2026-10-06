@@ -280,7 +280,7 @@ export function OnboardingModal({ onAddCalendar }: OnboardingModalProps): JSX.El
               t={t}
               i18nKey="ui.onboarding.alsoOnAndroid"
               components={{
-                link: (
+                apk: (
                   <a
                     href={`https://github.com/${config.githubRepo}/releases`}
                     target="_blank"

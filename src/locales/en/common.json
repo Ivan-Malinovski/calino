@@ -63,7 +63,7 @@
       "skip": "Skip for now",
       "demoFailed": "Failed to load demo data",
       "nativeFootnote": "Calino can remind you before events start. Continuing will ask for notification permission.",
-      "alsoOnAndroid": "Also on <link>Android</link>, with camera import and reminders."
+      "alsoOnAndroid": "Also on <apk>Android</apk>, with camera import and reminders."
     },
     "privacy": "Privacy"
   }

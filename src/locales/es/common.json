@@ -63,7 +63,7 @@
       "skip": "Omitir por ahora",
       "demoFailed": "No se pudieron cargar los datos de ejemplo",
       "nativeFootnote": "Calino puede recordarte antes de que empiecen los eventos. Al continuar se te pedirá permiso para las notificaciones.",
-      "alsoOnAndroid": "También en <link>Android</link>, con importación desde la cámara y recordatorios."
+      "alsoOnAndroid": "También en <apk>Android</apk>, con importación desde la cámara y recordatorios."
     },
     "privacy": "Privacidad"
   }

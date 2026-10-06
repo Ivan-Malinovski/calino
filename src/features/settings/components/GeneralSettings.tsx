@@ -52,7 +52,7 @@ function formatSyncError(error: string, t: (key: string) => string): JSX.Element
               i18nKey="settings:general.syncError.corsHelp"
               components={{
                 strong: <strong />,
-                link: (
+                docs: (
                   <a
                     href="https://github.com/nickvdyck/baikal#cors"
                     target="_blank"

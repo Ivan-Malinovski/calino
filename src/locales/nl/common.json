@@ -63,7 +63,7 @@
       "skip": "Nu overslaan",
       "demoFailed": "Voorbeeldgegevens laden mislukt",
       "nativeFootnote": "Calino kan je herinneren voordat gebeurtenissen beginnen. Als je doorgaat, wordt om toestemming voor meldingen gevraagd.",
-      "alsoOnAndroid": "Ook op <link>Android</link>, met camera-import en herinneringen."
+      "alsoOnAndroid": "Ook op <apk>Android</apk>, met camera-import en herinneringen."
     },
     "privacy": "Privacy"
   }
