@@ -943,8 +943,6 @@ export function useCalDAVInstance(): UseCalDAVReturn {
     // Check for CardDAV support on existing accounts
     const checkCardDAV = async (): Promise<void> => {
       for (const account of loadedAccounts) {
-        // ContactsBackend integration belongs here once JMAP contacts are available.
-        if (account.protocol === 'jmap') continue
         if (cardDavCheckedAccounts.has(account.id)) continue
         cardDavCheckedAccounts.add(account.id)
         // The probe below exists only to switch contacts on, and it downloads a whole
@@ -953,11 +951,12 @@ export function useCalDAVInstance(): UseCalDAVReturn {
         try {
           const credential = await getCredentialById(account.credentialId)
           if (!credential) continue
-          const { createCardDAVClient } = await import('@/features/carddav/client/CardDAVClient')
-          const carddavClient = await createCardDAVClient(
+          const { createContactsBackend } = await import('@/features/carddav/client/createBackend')
+          const carddavClient = await createContactsBackend(
             account.serverUrl,
             credential,
-            account.proxyUrl
+            account.proxyUrl,
+            account.protocol
           )
           const addressBooks = await carddavClient.fetchAddressBooks()
           if (addressBooks.length > 0) {
@@ -1278,9 +1277,7 @@ export function useCalDAVInstance(): UseCalDAVReturn {
           }
         }
 
-        // JMAP contacts will use a ContactsBackend at this seam. Do not send a
-        // synthetic JMAP session/calendar URL to the CardDAV discovery client.
-        if (detectedProtocol === 'caldav') {
+        {
           // After calendar sync, check for CardDAV support
           reportProgress({
             label: i18n.t('caldav:progress.checkingForContacts'),
@@ -1288,11 +1285,13 @@ export function useCalDAVInstance(): UseCalDAVReturn {
             total: undefined,
           })
           try {
-            const { createCardDAVClient } = await import('@/features/carddav/client/CardDAVClient')
-            const carddavClient = await createCardDAVClient(
+            const { createContactsBackend } =
+              await import('@/features/carddav/client/createBackend')
+            const carddavClient = await createContactsBackend(
               discoveredUrl,
               credential,
-              proxyUrl ?? null
+              proxyUrl ?? null,
+              detectedProtocol
             )
             const addressBooks = await carddavClient.fetchAddressBooks()
             if (addressBooks.length > 0) {

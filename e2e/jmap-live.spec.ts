@@ -1,4 +1,4 @@
-import { test, expect, type APIRequestContext } from '@playwright/test'
+import { test, expect, type APIRequestContext, type Page } from '@playwright/test'
 import { clearState } from './fixtures/localstorage'
 
 /**
@@ -10,9 +10,13 @@ const USER = process.env.CALINO_TEST_JMAP_USER
 const PASS = process.env.CALINO_TEST_JMAP_PASS
 const LIVE = Boolean(URL && USER && PASS)
 
-type JmapResponse = [string, { ids?: string[] }, string]
+type JmapResponse = [string, { ids?: string[]; created?: Record<string, { id: string }> }, string]
 
-const USING = ['urn:ietf:params:jmap:core', 'urn:ietf:params:jmap:calendars']
+const USING = [
+  'urn:ietf:params:jmap:core',
+  'urn:ietf:params:jmap:calendars',
+  'urn:ietf:params:jmap:contacts',
+]
 
 async function jmap(request: APIRequestContext, calls: unknown[]): Promise<JmapResponse[]> {
   const auth = { Authorization: `Basic ${Buffer.from(`${USER}:${PASS}`).toString('base64')}` }
@@ -30,6 +34,24 @@ async function jmap(request: APIRequestContext, calls: unknown[]): Promise<JmapR
     },
   })
   return (await response.json()).methodResponses
+}
+
+async function connectAccount(page: Page): Promise<void> {
+  await page.goto('/settings')
+  await page.getByRole('button', { name: /^\s*Sync\s*$/ }).click()
+  await page.locator('[data-action="add-account"]').click()
+  const dialog = page.getByRole('dialog')
+  await dialog.getByLabel('Display name').fill('Live JMAP')
+  await dialog.getByLabel('Server URL').fill(URL!)
+  await dialog.getByLabel('Username').fill(USER!)
+  await dialog.getByLabel('Password').fill(PASS!)
+  await dialog.getByRole('button', { name: 'Connect', exact: true }).click()
+  await expect(dialog).toBeHidden({ timeout: 30_000 })
+  await expect(
+    page
+      .locator('[data-component="account-row"][data-account-name="Live JMAP"]')
+      .locator('[data-component="account-protocol"]')
+  ).toHaveText('JMAP')
 }
 
 test.describe('JMAP live', () => {
@@ -63,22 +85,7 @@ test.describe('JMAP live', () => {
     test.setTimeout(90_000)
     const title = `Live JMAP ${Date.now()}`
     await clearState(page)
-    await page.goto('/settings')
-    await page.getByRole('button', { name: /^\s*Sync\s*$/ }).click()
-    await page.locator('[data-action="add-account"]').click()
-    const dialog = page.getByRole('dialog')
-    await dialog.getByLabel('Display name').fill('Live JMAP')
-    await dialog.getByLabel('Server URL').fill(URL!)
-    await dialog.getByLabel('Username').fill(USER!)
-    await dialog.getByLabel('Password').fill(PASS!)
-    await dialog.getByRole('button', { name: 'Connect', exact: true }).click()
-    await expect(dialog).toBeHidden({ timeout: 30_000 })
-    await expect(
-      page
-        .locator('[data-component="account-row"][data-account-name="Live JMAP"]')
-        .locator('[data-component="account-protocol"]')
-    ).toHaveText('JMAP')
-
+    await connectAccount(page)
     await page.goto('/month')
     // Wait until the sidebar counts the JMAP calendar next to the offline one.
     await expect(page.getByText('2/2')).toBeVisible()
@@ -113,5 +120,57 @@ test.describe('JMAP live', () => {
     // Clean up so reruns start clean.
     const [query] = await jmap(request, [['CalendarEvent/query', { filter: { text: title } }]])
     await jmap(request, [['CalendarEvent/set', { destroy: query[1].ids }]])
+  })
+
+  test('syncs a server contact, edits it in the UI, and the server has the change', async ({
+    page,
+    request,
+  }) => {
+    test.setTimeout(90_000)
+    const family = `Hopper${Date.now()}`
+    const [bookResponse] = await jmap(request, [['AddressBook/get', { ids: null }]])
+    const bookId = (bookResponse[1] as unknown as { list: { id: string }[] }).list[0].id
+    const [created] = await jmap(request, [
+      [
+        'ContactCard/set',
+        {
+          create: {
+            c: {
+              '@type': 'Card',
+              version: '1.0',
+              uid: `urn:uuid:${crypto.randomUUID()}`,
+              name: { full: `Grace ${family}` },
+              emails: { e1: { '@type': 'EmailAddress', address: 'grace@example.test' } },
+              addressBookIds: { [bookId]: true },
+            },
+          },
+        },
+      ],
+    ])
+    const cardId = created[1].created!.c.id
+    try {
+      await clearState(page)
+      await connectAccount(page)
+      await page.goto('/contacts')
+      await page.getByText(`Grace ${family}`, { exact: true }).first().click()
+      await expect(page.getByRole('link', { name: 'grace@example.test' })).toBeVisible()
+
+      await page.getByRole('button', { name: 'Edit contact' }).click()
+      const email = page.locator('input[type="email"]').first()
+      await email.fill('grace.hopper@example.test')
+      await page.getByRole('button', { name: /^Save$/ }).click()
+
+      await expect
+        .poll(
+          async () => {
+            const [get] = await jmap(request, [['ContactCard/get', { ids: [cardId] }]])
+            return JSON.stringify(get[1])
+          },
+          { timeout: 30_000 }
+        )
+        .toContain('grace.hopper@example.test')
+    } finally {
+      await jmap(request, [['ContactCard/set', { destroy: [cardId] }]])
+    }
   })
 })
