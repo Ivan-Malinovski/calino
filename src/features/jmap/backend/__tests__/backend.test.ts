@@ -82,6 +82,15 @@ describe('JmapCalendarBackend wire boundary', () => {
       calendarOrder: 9,
       supportedComponents: ['VEVENT'],
     })
+    server.calendars.set('writable', {
+      id: 'writable',
+      name: 'Writable',
+      isVisible: true,
+      isSubscribed: false,
+      myRights: { mayReadItems: true, mayWriteAll: true, mayWriteOwn: true },
+    })
+    expect((await backend.fetchCalendars())[2].readOnly).toBe(false)
+    server.calendars.delete('writable')
     server.session.accounts[server.accountId].accountCapabilities['urn:ietf:params:jmap:tasks'] = {}
     await backend.connect()
     expect((await backend.fetchCalendars())[0].supportedComponents).toEqual(['VEVENT', 'VTODO'])

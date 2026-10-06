@@ -53,6 +53,16 @@ function utc(value: string): string {
   return new Date(expanded).toISOString().replace('.000Z', 'Z')
 }
 
+// Current JMAP Calendars drafts (and Stalwart) express write access as
+// mayWriteAll/mayWriteOwn; older drafts used per-item add/modify/remove rights.
+const WRITE_RIGHTS = [
+  'mayWriteAll',
+  'mayWriteOwn',
+  'mayAddItems',
+  'mayModifyItems',
+  'mayRemoveItems',
+]
+
 export class JmapCalendarBackend implements CalendarBackend {
   readonly protocol = 'jmap' as const
   readonly atomicMove = true
@@ -176,8 +186,7 @@ export class JmapCalendarBackend implements CalendarBackend {
       isSubscribed: value.isSubscribed === true,
       readOnly:
         this.client.session.accounts[this.client.accountId].isReadOnly ||
-        (rights !== null &&
-          !['mayAddItems', 'mayModifyItems', 'mayRemoveItems'].some((key) => rights[key] === true)),
+        (rights !== null && !WRITE_RIGHTS.some((key) => rights[key] === true)),
       calendarOrder: typeof value.sortOrder === 'number' ? value.sortOrder : undefined,
       supportedComponents: taskCapability ? ['VEVENT', 'VTODO'] : ['VEVENT'],
     }

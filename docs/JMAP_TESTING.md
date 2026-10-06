@@ -23,7 +23,7 @@ loopback only. State lives in `.jmap-dev-data/` (git-ignored).
 
 ## What the script does, and why
 
-- Stalwart starts in *bootstrap mode* with a temporary admin. The script pins
+- Stalwart starts in _bootstrap mode_ with a temporary admin. The script pins
   that admin's password through `STALWART_RECOVERY_ADMIN`, then completes
   bootstrap through the management API (`x:Bootstrap/set`; the `x:` prefix and
   the `urn:stalwart:jmap` capability are required).
@@ -53,3 +53,18 @@ CalDAV paths use the URL-encoded address: `/dav/cal/alice%40example.org/default/
 - Stalwart has no JMAP tasks capability: JMAP calendars are VEVENT-only.
 - The browser can talk to Stalwart directly (CORS `*`), so e2e specs need no
   proxy.
+
+## Browser access and CORS
+
+Stalwart answers CORS preflights only on `/.well-known/jmap`. Its `/jmap/*`
+endpoints return a bare `204` without `Access-Control-*` headers, so a browser
+on another origin cannot call the API with an `Authorization` header unless a
+reverse proxy adds them (or Calino's account proxy is used). The live
+Playwright spec `e2e/jmap-live.spec.ts` adds the headers at the network layer
+and aborts the EventSource stream; run it with:
+
+```bash
+CALINO_TEST_JMAP_URL=http://127.0.0.1:18080 \
+CALINO_TEST_JMAP_USER=... CALINO_TEST_JMAP_PASS=... \
+pnpm exec playwright test e2e/jmap-live.spec.ts --project=chromium
+```
