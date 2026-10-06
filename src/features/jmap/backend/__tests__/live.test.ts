@@ -6,6 +6,9 @@ import { eventIcs } from './fixtures'
 const serverUrl = globalThis.process.env.CALINO_TEST_JMAP_URL
 const username = globalThis.process.env.CALINO_TEST_JMAP_USER
 const password = globalThis.process.env.CALINO_TEST_JMAP_PASS
+// A second local user, to receive invitations from the first.
+const guest = globalThis.process.env.CALINO_TEST_JMAP_USER2
+const guestPassword = globalThis.process.env.CALINO_TEST_JMAP_PASS2
 
 describe.skipIf(!serverUrl || !username || !password)('live JMAP calendar backend', () => {
   it('creates, reads, patches, syncs, moves and deletes a recurring meeting', async () => {
@@ -164,4 +167,101 @@ describe.skipIf(!serverUrl || !username || !password)('live JMAP calendar backen
       await backend.deleteCalendar(calendar.url)
     }
   }, 60000)
+
+  it.skipIf(!guest || !guestPassword)(
+    'delivers invitations, updates and cancellations to a second local user',
+    async () => {
+      const backend = await createJmapCalendarBackend(
+        serverUrl!,
+        { id: 'live', serverUrl: serverUrl!, username: username!, password: password! },
+        null
+      )
+      const suffix = crypto.randomUUID()
+      const calendar = await backend.createCalendar({ name: `Calino invite test ${suffix}` })
+      const auth = `Basic ${btoa(`${guest}:${guestPassword}`)}`
+      const using = [
+        'urn:ietf:params:jmap:core',
+        'urn:ietf:params:jmap:calendars',
+        'urn:stalwart:jmap',
+      ]
+      const guestCall = async (method: string, args: Record<string, unknown>) => {
+        const reply = await fetch(`${serverUrl}/jmap/`, {
+          method: 'POST',
+          headers: { Authorization: auth, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            using,
+            methodCalls: [[method, { accountId: 'c', ...args }, 'g']],
+          }),
+        })
+        const [, result] = (await reply.json()).methodResponses[0]
+        return result as Record<string, any> // eslint-disable-line @typescript-eslint/no-explicit-any
+      }
+      // The guest's account id is not part of the owner's session; read it from theirs.
+      const session = await (
+        await fetch(`${serverUrl}/jmap/session`, { headers: { Authorization: auth } })
+      ).json()
+      const guestAccount = Object.keys(session.accounts)[0]
+      const call = (method: string, args: Record<string, unknown> = {}) =>
+        guestCall(method, { ...args, accountId: guestAccount })
+      const uid = `invite-${suffix}@calino.test`
+      const found = async (title: string) => {
+        for (let attempt = 0; attempt < 20; attempt++) {
+          const { ids } = await call('CalendarEvent/query', {})
+          const { list } = await call('CalendarEvent/get', { ids })
+          const match = list.find((event: { uid?: string; title?: string }) => event.uid === uid)
+          if (match?.title === title) return match
+          await new Promise((resolve) => setTimeout(resolve, 500))
+        }
+        return null
+      }
+      try {
+        const ics = (title: string) =>
+          [
+            'BEGIN:VCALENDAR',
+            'VERSION:2.0',
+            'PRODID:-//Calino//live test//EN',
+            'BEGIN:VEVENT',
+            `UID:${uid}`,
+            'DTSTAMP:20261006T090000Z',
+            'DTSTART:20261110T100000Z',
+            'DTEND:20261110T110000Z',
+            `SUMMARY:${title}`,
+            `ORGANIZER:mailto:${username}`,
+            `ATTENDEE;CN=Owner;PARTSTAT=ACCEPTED:mailto:${username}`,
+            `ATTENDEE;RSVP=TRUE;PARTSTAT=NEEDS-ACTION:mailto:${guest}`,
+            'END:VEVENT',
+            'END:VCALENDAR',
+            '',
+          ].join('\r\n')
+        const created = await backend.createEvent(calendar.url, ics('Invitation'), 'ignored.ics')
+        expect(await found('Invitation')).not.toBeNull()
+        const updated = await backend.updateEvent(
+          calendar.url,
+          created.url,
+          ics('Invitation (moved)'),
+          created.etag
+        )
+        expect(await found('Invitation (moved)')).not.toBeNull()
+        await backend.deleteEvent(created.url, updated.etag)
+        for (let attempt = 0; attempt < 20; attempt++) {
+          const { ids } = await call('CalendarEvent/query', {})
+          const { list } = await call('CalendarEvent/get', { ids })
+          const match = list.find((event: { uid?: string }) => event.uid === uid)
+          if (!match || match.status === 'cancelled') return
+          await new Promise((resolve) => setTimeout(resolve, 500))
+        }
+        throw new Error('the cancellation never reached the guest')
+      } finally {
+        const { ids } = await call('CalendarEvent/query', {})
+        const { list } = await call('CalendarEvent/get', { ids })
+        const mine = list.filter((event: { uid?: string }) => event.uid === uid)
+        if (mine.length)
+          await call('CalendarEvent/set', {
+            destroy: mine.map((event: { id: string }) => event.id),
+          })
+        await backend.deleteCalendar(calendar.url)
+      }
+    },
+    60000
+  )
 })

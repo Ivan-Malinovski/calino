@@ -94,6 +94,15 @@ updated/DTSTAMP is not a reliable modification timestamp. Without a valid
 payload timestamp, dtstamp is empty and the settings consumer handles fallback.
 Settings put supports caller-supplied href/etag or discovery; conflicts propagate.
 
+Invitations: a JMAP server does not send scheduling messages unless the write
+asks for them (verified on Stalwart: without the argument an attendee receives
+nothing). `create`, `update` and `destroy` on `CalendarEvent/set` therefore carry
+`sendSchedulingMessages: true` when the event has participants, which is what a
+CalDAV server does implicitly. A pure move between calendars sends nothing. A
+server that rejects the argument with `invalidArguments` is remembered and the
+write retried without it. Verified live: invitation, update and cancellation
+reach a second local user (`live.test.ts`).
+
 Scheduling is detected from capability flags or ParticipantIdentity/get.
 Availability requires `urn:ietf:params:jmap:principals:availability`; otherwise
 both free/busy APIs return null (an empty attendee list returns an empty map).

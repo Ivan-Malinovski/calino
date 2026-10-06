@@ -89,3 +89,8 @@ CALINO_TEST_JMAP_URL=http://127.0.0.1:18080 \
 CALINO_TEST_JMAP_USER=... CALINO_TEST_JMAP_PASS=... \
 pnpm exec playwright test e2e/jmap-live.spec.ts --project=chromium
 ```
+
+The invitation test in `src/features/jmap/backend/__tests__/live.test.ts` also
+needs a second local user, given as `CALINO_TEST_JMAP_USER2` and
+`CALINO_TEST_JMAP_PASS2` (the test skips without them). Create one in the
+Stalwart admin UI, or with `x:Account/set`.

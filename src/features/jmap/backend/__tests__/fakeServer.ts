@@ -8,6 +8,8 @@ export class FakeJmapServer {
   calendars = new Map<string, JsonObject>()
   events = new Map<string, JsonObject>()
   calls: JmapInvocation[] = []
+  /** Behave like a server that does not know `sendSchedulingMessages`. */
+  rejectSchedulingArg = false
   requests: { using: string[]; methodCalls: JmapInvocation[] }[] = []
   history: { id: string; kind: 'created' | 'updated' | 'destroyed' }[] = []
   calendarState = 0
@@ -111,6 +113,8 @@ export class FakeJmapServer {
       )
         return ['error', { type: 'unsupportedFilter', description: 'inCalendar' }, callId]
       if (this.failMethod?.method === method) return ['error', this.failMethod.error, callId]
+      if (this.rejectSchedulingArg && 'sendSchedulingMessages' in args)
+        return ['error', { type: 'invalidArguments' }, callId]
       try {
         return [method, this.invoke(method, args), callId]
       } catch {

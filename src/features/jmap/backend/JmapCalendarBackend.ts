@@ -63,12 +63,18 @@ const WRITE_RIGHTS = [
   'mayRemoveItems',
 ]
 
+function hasParticipants(event: JsonObject): boolean {
+  return isJsonObject(event.participants) && Object.keys(event.participants).length > 0
+}
+
 export class JmapCalendarBackend implements CalendarBackend {
   readonly protocol = 'jmap' as const
   readonly atomicMove = true
   private client: JmapClient
   private serverUrl: string
   private proxyUrl: string | null
+  /** Set once a server rejects `sendSchedulingMessages`; later writes omit it. */
+  private schedulingArgRejected = false
   constructor(serverUrl: string, credentials: CalDAVCredentials, proxyUrl: string | null = null) {
     this.serverUrl = serverUrl
     this.proxyUrl = proxyUrl
@@ -120,16 +126,37 @@ export class JmapCalendarBackend implements CalendarBackend {
       throw new JmapError('JMAP response omitted method result', { type: 'invalidResponse' })
     return result[1]
   }
+  /**
+   * Servers do not send invitations, replies or cancellations on their own over
+   * JMAP: `sendSchedulingMessages` has to be requested (Stalwart ignores
+   * attendees otherwise). A server that rejects the argument is remembered and
+   * the write retried without it, so scheduling is best effort, never a blocker.
+   */
+  private async callSet(
+    method: string,
+    args: JsonObject,
+    scheduling: boolean
+  ): Promise<JsonObject> {
+    if (!scheduling || this.schedulingArgRejected) return this.call(method, args)
+    try {
+      return await this.call(method, { ...args, sendSchedulingMessages: true })
+    } catch (error) {
+      if (!(error instanceof JmapError) || !error.type?.endsWith('invalidArguments')) throw error
+      this.schedulingArgRejected = true
+      return this.call(method, args)
+    }
+  }
   private async set(
     type: 'Calendar' | 'CalendarEvent',
     operation: 'create' | 'update' | 'destroy',
     id: string,
-    value?: JsonObject
+    value?: JsonObject,
+    scheduling = false
   ): Promise<JsonObject> {
     const args: JsonObject =
       operation === 'destroy' ? { destroy: [id] } : { [operation]: { [id]: value! } }
     if (type === 'Calendar' && operation === 'destroy') args.onDestroyRemoveEvents = true
-    const result = await this.call(`${type}/set`, args)
+    const result = await this.callSet(`${type}/set`, args, scheduling)
     const failureMap =
       result[{ create: 'notCreated', update: 'notUpdated', destroy: 'notDestroyed' }[operation]]
     const failure = isJsonObject(failureMap) ? failureMap[id] : undefined
@@ -294,10 +321,14 @@ export class JmapCalendarBackend implements CalendarBackend {
   async createEvent(calendarUrl: string, iCalString: string, filename: string) {
     void filename // JMAP assigns the id; the DAV filename has no wire equivalent.
     const { calendarId } = this.parseUrl(calendarUrl)
-    const result = await this.set('CalendarEvent', 'create', 'event', {
-      ...this.convert(iCalString),
-      calendarIds: { [calendarId]: true },
-    })
+    const event = this.convert(iCalString)
+    const result = await this.set(
+      'CalendarEvent',
+      'create',
+      'event',
+      { ...event, calendarIds: { [calendarId]: true } },
+      hasParticipants(event)
+    )
     const created = isJsonObject(result.created) ? result.created.event : undefined
     const id = isJsonObject(created) ? string(created.id) : string(undefined)
     const url = this.calendarUrl(calendarId) + encodeURIComponent(id)
@@ -325,8 +356,14 @@ export class JmapCalendarBackend implements CalendarBackend {
       writable: true,
       configurable: true,
     })
-    const patch = eventPatch(previous, { ...this.convert(iCalString), calendarIds })
-    if (Object.keys(patch).length) await this.set('CalendarEvent', 'update', source.eventId, patch)
+    const next = this.convert(iCalString)
+    const patch = eventPatch(previous, { ...next, calendarIds })
+    // A pure move between calendars is not a change attendees should hear about.
+    const scheduling =
+      Object.keys(patch).some((key) => key !== 'calendarIds' && !key.startsWith('calendarIds/')) &&
+      (hasParticipants(previous) || hasParticipants(next))
+    if (Object.keys(patch).length)
+      await this.set('CalendarEvent', 'update', source.eventId, patch, scheduling)
     const url = this.calendarUrl(target.calendarId) + encodeURIComponent(source.eventId)
     return { url, etag: await this.fetchEtag(url) }
   }
@@ -341,7 +378,7 @@ export class JmapCalendarBackend implements CalendarBackend {
       await this.set('CalendarEvent', 'update', eventId, {
         [`calendarIds/${calendarId.replace(/~/g, '~0').replace(/\//g, '~1')}`]: null,
       })
-    } else await this.set('CalendarEvent', 'destroy', eventId)
+    } else await this.set('CalendarEvent', 'destroy', eventId, undefined, hasParticipants(previous))
   }
   async createCalendar(options: CreateCalendarOptions): Promise<CalDAVCalendar> {
     if (options.components?.some((component) => component !== 'VEVENT'))

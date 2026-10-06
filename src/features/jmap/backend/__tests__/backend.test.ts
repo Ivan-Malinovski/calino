@@ -355,6 +355,39 @@ describe('JmapCalendarBackend wire boundary', () => {
       status: 'changed',
     })
   })
+  describe('scheduling messages', () => {
+    const solo = () => eventIcs().replace(/^(ORGANIZER|ATTENDEE).*\r\n/gm, '')
+    const sent = (method = 'CalendarEvent/set') =>
+      server.calls
+        .filter(([name]) => name === method)
+        .map(([, args]) => args.sendSchedulingMessages)
+    it('asks the server to send invitations, updates and cancellations for events with attendees', async () => {
+      const created = await backend.createEvent(calUrl, eventIcs(), '')
+      const updated = await backend.updateEvent(
+        calUrl,
+        created.url,
+        eventIcs().replace('SUMMARY:Team meeting', 'SUMMARY:Renamed'),
+        created.etag
+      )
+      await backend.deleteEvent(created.url, updated.etag)
+      expect(sent()).toEqual([true, true, true])
+    })
+    it('does not send for events without attendees or for a pure calendar move', async () => {
+      const plain = await backend.createEvent(calUrl, solo(), '')
+      await backend.deleteEvent(plain.url, plain.etag)
+      const target = await backend.createCalendar({ name: 'Target' })
+      const guests = await backend.createEvent(calUrl, eventIcs('moved'), '')
+      await backend.updateEvent(target.url, guests.url, eventIcs('moved'), guests.etag)
+      expect(sent().filter((value) => value !== undefined)).toEqual([true])
+    })
+    it('retries without the argument when the server rejects it, and remembers that', async () => {
+      server.rejectSchedulingArg = true
+      const created = await backend.createEvent(calUrl, eventIcs(), '')
+      expect(server.events.size).toBe(1)
+      await backend.deleteEvent(created.url, created.etag)
+      expect(sent()).toEqual([true, undefined, undefined])
+    })
+  })
   it('deletes only the addressed membership when an event is in multiple calendars', async () => {
     const id = server.seed({ calendarIds: { default: true, other: true } })
     await backend.deleteEvent(calUrl + id, '')

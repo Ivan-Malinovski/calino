@@ -141,8 +141,10 @@ starts it; see [JMAP_TESTING.md](JMAP_TESTING.md).
 - Stalwart rejects `blobId` in contact photo Media and the pre-RFC `jsCard`
   envelope. The contacts backend sends the flat Card form and falls back to
   inline `data:` photo URIs when blob references are refused.
-- Invitation delivery (iMIP) is left to the server and was not verified end to
-  end.
+- Invitations, updates, replies and cancellations are requested with
+  `sendSchedulingMessages` and delivered between local Stalwart users (verified).
+  Delivery to external addresses (iMIP by mail) depends on the server's outbound
+  mail setup and was not tested.
 - Stalwart answers CORS only on `/.well-known/jmap`; browser deployments need a
   proxy that adds the headers (see JMAP_TESTING.md).
 - No offline-safe conditional writes; a concurrent edit between the etag check
