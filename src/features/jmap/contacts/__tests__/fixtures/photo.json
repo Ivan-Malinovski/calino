@@ -1,0 +1,14 @@
+{
+  "@type": "Card",
+  "version": "1.0",
+  "uid": "urn:uuid:calino-photo",
+  "name": { "@type": "Name", "full": "Photo example", "components": [] },
+  "media": {
+    "media1": {
+      "@type": "Media",
+      "kind": "photo",
+      "uri": "data:image/png;base64,aGVsbG8=",
+      "mediaType": "image/png"
+    }
+  }
+}

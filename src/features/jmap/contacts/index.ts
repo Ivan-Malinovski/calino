@@ -1,0 +1,5 @@
+export { createJmapContactsBackend, JmapContactsBackend, contactEtag } from './JmapContactsBackend'
+export { jscontactToVCard, type VCardOptions } from './convert/jscontactToVCard'
+export { vCardToJscontact } from './convert/vCardToJscontact'
+export { diffJscontact, contactPatch } from './convert/jscontactDiff'
+export type { JSContactCard } from './convert/values'

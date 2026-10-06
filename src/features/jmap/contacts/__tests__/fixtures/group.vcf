@@ -1,0 +1,9 @@
+BEGIN:VCARD
+VERSION:4.0
+UID:urn:uuid:calino-group
+FN:Engine friends
+N:;;;;
+KIND:group
+MEMBER:urn:uuid:calino-person
+MEMBER:mailto:charles@example.test
+END:VCARD
