@@ -14,5 +14,58 @@
     "creatingCalendar": "Creating calendar…",
     "savingCalendar": "Saving calendar…",
     "deletingCalendar": "Deleting calendar…"
+  },
+  "ui": {
+    "cleartextWarning": "This connects over plain HTTP, so your password and calendar data travel unencrypted. Fine on a private network or VPN — avoid it on Wi-Fi you don’t control.",
+    "headers": {
+      "count_one": "{{count}} custom header",
+      "count_other": "{{count}} custom headers",
+      "proxyOn": "Proxy on",
+      "optional": "Optional",
+      "protectedServers": "For protected CalDAV servers",
+      "connectionSettings": "Connection settings",
+      "gatewayAccess": "Gateway access",
+      "headerN": "Header {{n}}",
+      "removeHeader": "Remove header",
+      "removeHeaderN": "Remove header {{n}}",
+      "name": "Name",
+      "nameAria": "Header {{n}} name",
+      "namePlaceholder": "e.g. P-Access-Token-Id",
+      "value": "Value",
+      "valueAria": "Header {{n}} value",
+      "valuePlaceholder": "Enter secret value",
+      "revealAria": "Reveal secret for header {{n}}",
+      "hideAria": "Hide secret for header {{n}}",
+      "hideValue": "Hide value",
+      "showValue": "Show value",
+      "addHeader": "Add header",
+      "proxyUrl": "Proxy URL",
+      "proxyWarning": "Credentials and calendar data pass through this server. Only use a proxy you trust.",
+      "learnMore": "Learn more",
+      "customHeaders": "Custom headers",
+      "gatewayHint": "For servers behind an auth gateway"
+    },
+    "nudge": {
+      "checkProxyAction": "Check the proxy URL ↓",
+      "checkProxyLabel": "Check the proxy URL",
+      "setUpProxyAction": "Set up a proxy ↓",
+      "proxyMayFix": "A proxy may fix this",
+      "headersAction": "Is this server behind a gateway? Add a header ↓",
+      "headerMayFix": "A custom header may fix this"
+    },
+    "connecting": "Connecting to server…",
+    "addAccountFailed": "Failed to add account",
+    "syncFailed": "Sync failed",
+    "accountNotFound": "Account not found",
+    "credentialsNotFound": "Credentials not found",
+    "headerErrors": {
+      "invalid": "Invalid custom headers.",
+      "proxyConflict": "Custom headers require a direct DAV connection; remove the proxy URL.",
+      "invalidName": "Invalid or reserved custom header name: {{name}}",
+      "duplicateName": "Duplicate custom header name: {{name}}",
+      "invalidValue": "Invalid value for custom header: {{name}}",
+      "originChanged": "DAV request changed origin. Enter the final DAV URL directly.",
+      "requestFailed": "DAV request failed or redirected. Enter the final DAV URL directly and check CORS for custom headers."
+    }
   }
 }

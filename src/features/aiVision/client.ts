@@ -1,3 +1,4 @@
+import i18n from '@/lib/i18n'
 import { getProvider } from './providers'
 import {
   buildExtractionSystemPrompt,
@@ -37,7 +38,7 @@ export async function testConnection(config: ProviderRequestConfig): Promise<Tes
       return {
         ok: false,
         error: message,
-        hint: looksLikeAuthError(message) ? 'Double-check your API key and base URL.' : undefined,
+        hint: looksLikeAuthError(message) ? i18n.t('settings:ui.aiVision.hintCheckKey') : undefined,
       }
     }
 
@@ -60,8 +61,8 @@ export async function testConnection(config: ProviderRequestConfig): Promise<Tes
     if (!reply.trim()) {
       return {
         ok: false,
-        error: 'The model returned an empty response to the test prompt.',
-        hint: 'If this is a reasoning model, it may need a higher token limit than this app allows — try a non-reasoning model if the issue persists.',
+        error: i18n.t('settings:ui.aiVision.emptyReply'),
+        hint: i18n.t('settings:ui.aiVision.hintReasoning'),
       }
     }
 
@@ -72,7 +73,7 @@ export async function testConnection(config: ProviderRequestConfig): Promise<Tes
     return {
       ok: true,
       visionCapable: false,
-      hint: 'This model responded but does not appear to support image understanding. Choose a vision-capable model.',
+      hint: i18n.t('settings:ui.aiVision.hintNoVision'),
     }
   } catch (err) {
     return { ok: false, error: messageOf(err) }

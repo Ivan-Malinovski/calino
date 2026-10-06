@@ -115,5 +115,109 @@
     "accountFailed": "Account {{account}} failed: {{error}}",
     "noCalendarsFetched": "No calendars fetched; leaving the mirror untouched",
     "syncDone": "Background sync done: {{events}} events across {{calendars}} calendars from {{accounts}} account(s)"
+  },
+  "toast": {
+    "history": {
+      "undo": "Undo",
+      "redo": "Redo"
+    },
+    "aiImport": {
+      "setupNeeded": "Set up AI photo import in Settings first",
+      "openSettings": "Open Settings",
+      "noDetails": "Couldn't find any event details in that photo. Try a clearer shot, or add it manually.",
+      "addManually": "Add manually",
+      "keyInvalid": "Your AI API key looks invalid or expired.",
+      "unreachable": "Could not reach the AI provider — check your connection.",
+      "unreadable": "Could not read event details from that photo.",
+      "blankFallback": "{{message}} Opening a blank event instead.",
+      "cameraDenied": "Camera permission denied. Enable it in Android settings to use this feature.",
+      "cameraUnavailable": "Could not access camera or photo library.",
+      "reviewEach_task": "Review and save each task — {{total}} found in this photo.",
+      "reviewEach_event": "Review and save each event — {{total}} found in this photo.",
+      "reviewEach_item": "Review and save each item — {{total}} found in this photo.",
+      "sharedFirstOnly": "Only the first shared photo was used — share one at a time for now.",
+      "sharedUnreadable": "Could not read the shared photo."
+    },
+    "ics": {
+      "notIcs": "That file isn’t a .ics calendar",
+      "unreadable": "Could not read that file"
+    },
+    "attachments": {
+      "tooLarge": "File \"{{name}}\" exceeds the {{limit}}MB limit",
+      "mayNotSync": "File \"{{name}}\" is larger than {{limit}}MB and may not sync properly",
+      "saveLocal": "Failed to save attachments locally",
+      "readFailed": "Failed to read {{name}}",
+      "readFailedGeneric": "Failed to read files",
+      "unavailable": "Attachment data not available. Try reopening the event."
+    },
+    "journal": {
+      "syncUpdateRetry": "Failed to sync update. It will be retried.",
+      "syncEntryRetry": "Failed to sync entry. It will be retried."
+    },
+    "sync": {
+      "failed": "Sync failed",
+      "deleteSubject": "Delete",
+      "retrying": "Retrying changes…",
+      "retrySent_one": "{{count}} change sent",
+      "retrySent_other": "{{count}} changes sent",
+      "retryPartial": "{{succeeded}} sent, {{failed}} still waiting",
+      "offlineWaiting": "Offline — changes will send when you reconnect",
+      "waiting_one": "{{count}} change waiting",
+      "waiting_other": "{{count}} changes waiting",
+      "waitingOffline_one": "{{count}} change waiting — offline",
+      "waitingOffline_other": "{{count}} changes waiting — offline"
+    },
+    "notifications": {
+      "blocked": "Notifications are blocked. Update site permissions in your browser settings to enable reminders.",
+      "calendarBlocked": "Calendar access is blocked. Grant it in Android app settings to sync events to your device calendar."
+    },
+    "tasks": {
+      "movedToday": "Moved to today",
+      "movedTomorrow": "Moved to tomorrow",
+      "movedTo": "Moved to {{date}}"
+    },
+    "contacts": {
+      "fallbackLabel": "Contact",
+      "rejected_create": "Couldn't create \"{{label}}\" on the server: {{reason}}",
+      "rejected_update": "Couldn't update \"{{label}}\" on the server: {{reason}}",
+      "rejected_delete": "Couldn't delete \"{{label}}\" on the server: {{reason}}",
+      "conflict": "Conflict on \"{{name}}\" — server version kept",
+      "syncFailed": "Contacts sync failed: {{message}}"
+    },
+    "storage": {
+      "full": "Storage is full. Your data may not be saved.",
+      "error": "Storage error. Your data may not be saved."
+    },
+    "pendingDrop_create": "Couldn't create \"{{title}}\" — {{reason}}",
+    "pendingDrop_update": "Couldn't save \"{{title}}\" — {{reason}}",
+    "pendingDrop_delete": "Couldn't delete \"{{title}}\" — {{reason}}",
+    "pendingDrop_move": "Couldn't move \"{{title}}\" — {{reason}}",
+    "pendingDrop_deleteHref": "Couldn't remove the old copy of \"{{title}}\" — {{reason}}",
+    "pendingReason": {
+      "savedLocally": "your change is saved locally.",
+      "staysOnServer": "the event stays on the server.",
+      "maybeOldCalendar": "the event may still be in its old calendar.",
+      "alreadyExists": "already exists on the server — check for a duplicate.",
+      "duplicateUid": "a duplicate of this event already exists on the server.",
+      "invalidData": "the server rejected the event data as invalid for this calendar.",
+      "forbidden": "the server refused the change (403). You may not have write access to this calendar.",
+      "storageFull": "the server storage is full (507).",
+      "gone": "the calendar or event no longer exists on the server."
+    }
+  },
+  "ui": {
+    "carddav": {
+      "conflict": "Contact was modified server-side. Please refresh and try again.",
+      "permission": "You do not have permission to modify this contact.",
+      "sizeLimit": "Contact exceeds the server's size limit ({{max}} bytes).",
+      "version": "Server does not accept any vCard version this client can produce."
+    },
+    "moveLostSource": "Move lost its source resource: {{message}}",
+    "dragSync": {
+      "event": "Failed to sync dragged event",
+      "task": "Failed to sync dragged task",
+      "item": "Failed to sync dragged item",
+      "hierarchy": "Failed to sync task hierarchy change"
+    }
   }
 }

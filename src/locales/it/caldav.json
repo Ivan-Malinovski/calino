@@ -14,5 +14,58 @@
     "creatingCalendar": "Creazione del calendario…",
     "savingCalendar": "Salvataggio del calendario…",
     "deletingCalendar": "Eliminazione del calendario…"
+  },
+  "ui": {
+    "cleartextWarning": "Questa connessione usa HTTP in chiaro, quindi password e dati del calendario viaggiano non cifrati. Va bene su una rete privata o VPN; evitala su reti Wi-Fi che non controlli.",
+    "headers": {
+      "count_one": "{{count}} intestazione personalizzata",
+      "count_other": "{{count}} intestazioni personalizzate",
+      "proxyOn": "Proxy attivo",
+      "optional": "Facoltativo",
+      "protectedServers": "Per server CalDAV protetti",
+      "connectionSettings": "Impostazioni di connessione",
+      "gatewayAccess": "Accesso tramite gateway",
+      "headerN": "Intestazione {{n}}",
+      "removeHeader": "Rimuovi intestazione",
+      "removeHeaderN": "Rimuovi intestazione {{n}}",
+      "name": "Nome",
+      "nameAria": "Nome dell’intestazione {{n}}",
+      "namePlaceholder": "ad es. P-Access-Token-Id",
+      "value": "Valore",
+      "valueAria": "Valore dell’intestazione {{n}}",
+      "valuePlaceholder": "Inserisci il valore segreto",
+      "revealAria": "Mostra il segreto dell’intestazione {{n}}",
+      "hideAria": "Nascondi il segreto dell’intestazione {{n}}",
+      "hideValue": "Nascondi valore",
+      "showValue": "Mostra valore",
+      "addHeader": "Aggiungi intestazione",
+      "proxyUrl": "URL proxy",
+      "proxyWarning": "Credenziali e dati del calendario passano attraverso questo server. Usa solo un proxy di cui ti fidi.",
+      "learnMore": "Scopri di più",
+      "customHeaders": "Intestazioni personalizzate",
+      "gatewayHint": "Per server dietro un gateway di autenticazione"
+    },
+    "nudge": {
+      "checkProxyAction": "Controlla l’URL del proxy ↓",
+      "checkProxyLabel": "Controlla l’URL del proxy",
+      "setUpProxyAction": "Configura un proxy ↓",
+      "proxyMayFix": "Un proxy potrebbe risolvere il problema",
+      "headersAction": "Il server è dietro un gateway? Aggiungi un’intestazione ↓",
+      "headerMayFix": "Un’intestazione personalizzata potrebbe risolvere il problema"
+    },
+    "connecting": "Connessione al server…",
+    "addAccountFailed": "Impossibile aggiungere l’account",
+    "syncFailed": "Sincronizzazione non riuscita",
+    "accountNotFound": "Account non trovato",
+    "credentialsNotFound": "Credenziali non trovate",
+    "headerErrors": {
+      "invalid": "Intestazioni personalizzate non valide.",
+      "proxyConflict": "Le intestazioni personalizzate richiedono una connessione DAV diretta; rimuovi l’URL del proxy.",
+      "invalidName": "Nome dell’intestazione personalizzata non valido o riservato: {{name}}",
+      "duplicateName": "Nome dell’intestazione personalizzata duplicato: {{name}}",
+      "invalidValue": "Valore non valido per l’intestazione personalizzata: {{name}}",
+      "originChanged": "La richiesta DAV ha cambiato origine. Inserisci direttamente l’URL DAV finale.",
+      "requestFailed": "La richiesta DAV non è riuscita o è stata reindirizzata. Inserisci direttamente l’URL DAV finale e controlla CORS per le intestazioni personalizzate."
+    }
   }
 }

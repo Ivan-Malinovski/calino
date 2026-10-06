@@ -65,19 +65,19 @@ export interface TaskRecurrenceProps extends Omit<
   disabledReason?: string
 }
 
-const PRIORITY_OPTIONS: { value: TaskPriority | undefined; label: string }[] = [
-  { value: undefined, label: 'None' },
-  { value: 1, label: 'High' },
-  { value: 2, label: 'Medium' },
-  { value: 3, label: 'Low' },
+const PRIORITY_OPTIONS: { value: TaskPriority | undefined; labelKey: string }[] = [
+  { value: undefined, labelKey: 'ui.task.priority.none' },
+  { value: 1, labelKey: 'ui.task.priority.high' },
+  { value: 2, labelKey: 'ui.task.priority.medium' },
+  { value: 3, labelKey: 'ui.task.priority.low' },
 ]
 
 type DueMode = 'datetime' | 'dateOnly' | 'none'
 
-const DUE_MODE_OPTIONS: { value: DueMode; label: string; testId: string }[] = [
-  { value: 'datetime', label: 'Due date and time', testId: 'due-mode-datetime' },
-  { value: 'dateOnly', label: 'Date only', testId: 'due-mode-date-only' },
-  { value: 'none', label: 'No due date', testId: 'due-mode-none' },
+const DUE_MODE_OPTIONS: { value: DueMode; labelKey: string; testId: string }[] = [
+  { value: 'datetime', labelKey: 'ui.task.due.datetime', testId: 'due-mode-datetime' },
+  { value: 'dateOnly', labelKey: 'ui.task.due.dateOnly', testId: 'due-mode-date-only' },
+  { value: 'none', labelKey: 'ui.task.due.none', testId: 'due-mode-none' },
 ]
 
 export function TaskFormFields({
@@ -209,7 +209,7 @@ export function TaskFormFields({
               onClick={() => handleDueModeChange(option.value)}
               data-component={option.testId}
             >
-              {option.label}
+              {t(option.labelKey)}
             </button>
           ))}
         </div>
@@ -223,7 +223,7 @@ export function TaskFormFields({
             </div>
           )}
           <label className={styles.label} htmlFor="parent-task-select">
-            Parent task
+            {t('ui.task.parentTask')}
           </label>
           <select
             id="parent-task-select"
@@ -242,7 +242,7 @@ export function TaskFormFields({
 
         <div className={`${styles.field} ${styles.priorityField}`}>
           <label className={styles.label} htmlFor="priority-select">
-            Priority
+            {t('ui.task.priorityLabel')}
           </label>
           <select
             id="priority-select"
@@ -255,8 +255,8 @@ export function TaskFormFields({
             className={styles.select}
           >
             {PRIORITY_OPTIONS.map((option) => (
-              <option key={option.label} value={option.value ?? ''}>
-                {option.label}
+              <option key={option.labelKey} value={option.value ?? ''}>
+                {t(option.labelKey)}
               </option>
             ))}
           </select>
@@ -269,7 +269,7 @@ export function TaskFormFields({
               onClick={onAddSubtask}
               data-component="add-subtask"
             >
-              Add subtask
+              {t('ui.task.addSubtask')}
             </button>
           </div>
         )}
@@ -302,11 +302,12 @@ export function TaskFormFields({
                 checked={Boolean(task.completed)}
                 disabled={readOnly || readOnlyTaskIds?.has(task.id)}
                 onChange={() => onToggleSubtask(task)}
-                aria-label={
+                aria-label={t(
                   task.completed
-                    ? `Mark "${task.title}" as incomplete`
-                    : `Mark "${task.title}" as complete`
-                }
+                    ? 'modals.miniTasks.markIncomplete'
+                    : 'modals.miniTasks.markComplete',
+                  { title: task.title }
+                )}
               />
               <button
                 type="button"
@@ -349,7 +350,7 @@ export function TaskFormFields({
           <>
             <div className={`${styles.field} ${styles.taskDateField}`}>
               <label className={styles.label} htmlFor="due-date">
-                Due date
+                {t('ui.task.dueDate')}
               </label>
               <input
                 type="date"
@@ -364,7 +365,7 @@ export function TaskFormFields({
             {!dueAllDay && (
               <div className={`${styles.field} ${styles.dueTimeField}`}>
                 <label className={styles.label} htmlFor="due-time">
-                  Due time
+                  {t('ui.task.dueTime')}
                 </label>
                 <TimeField
                   value={dueTime}
@@ -373,7 +374,7 @@ export function TaskFormFields({
                   className={styles.input}
                   id="due-time"
                   dataComponent="task-due-time"
-                  ariaLabel="Due time"
+                  ariaLabel={t('ui.task.dueTime')}
                 />
               </div>
             )}

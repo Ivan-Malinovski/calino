@@ -115,5 +115,109 @@
     "accountFailed": "Account {{account}} mislukt: {{error}}",
     "noCalendarsFetched": "Geen agenda’s opgehaald; de spiegel wordt niet gewijzigd",
     "syncDone": "Achtergrondsynchronisatie voltooid: {{events}} gebeurtenissen in {{calendars}} agenda’s van {{accounts}} account(s)"
+  },
+  "toast": {
+    "history": {
+      "undo": "Ongedaan maken",
+      "redo": "Opnieuw"
+    },
+    "aiImport": {
+      "setupNeeded": "Stel eerst de AI-foto-import in via Instellingen",
+      "openSettings": "Instellingen openen",
+      "noDetails": "Geen gebeurtenisgegevens gevonden in die foto. Probeer een scherpere foto of voeg de gebeurtenis handmatig toe.",
+      "addManually": "Handmatig toevoegen",
+      "keyInvalid": "Je AI API-sleutel lijkt ongeldig of verlopen.",
+      "unreachable": "Kan de AI-provider niet bereiken — controleer je verbinding.",
+      "unreadable": "Kan de gebeurtenisgegevens niet uit die foto lezen.",
+      "blankFallback": "{{message}} In plaats daarvan wordt een lege gebeurtenis geopend.",
+      "cameraDenied": "Cameratoestemming geweigerd. Schakel deze in via de Android-instellingen om deze functie te gebruiken.",
+      "cameraUnavailable": "Geen toegang tot de camera of fotobibliotheek.",
+      "reviewEach_task": "Controleer en bewaar elke taak — {{total}} gevonden in deze foto.",
+      "reviewEach_event": "Controleer en bewaar elke gebeurtenis — {{total}} gevonden in deze foto.",
+      "reviewEach_item": "Controleer en bewaar elk item — {{total}} gevonden in deze foto.",
+      "sharedFirstOnly": "Alleen de eerste gedeelde foto is gebruikt — deel er voorlopig één tegelijk.",
+      "sharedUnreadable": "Kan de gedeelde foto niet lezen."
+    },
+    "ics": {
+      "notIcs": "Dat bestand is geen .ics-agenda",
+      "unreadable": "Kan dat bestand niet lezen"
+    },
+    "attachments": {
+      "tooLarge": "Bestand \"{{name}}\" overschrijdt de limiet van {{limit}} MB",
+      "mayNotSync": "Bestand \"{{name}}\" is groter dan {{limit}} MB en wordt mogelijk niet goed gesynchroniseerd",
+      "saveLocal": "Bijlagen konden niet lokaal worden opgeslagen",
+      "readFailed": "Kan {{name}} niet lezen",
+      "readFailedGeneric": "Kan bestanden niet lezen",
+      "unavailable": "Bijlagegegevens niet beschikbaar. Probeer de gebeurtenis opnieuw te openen."
+    },
+    "journal": {
+      "syncUpdateRetry": "Update synchroniseren mislukt. Er wordt opnieuw geprobeerd.",
+      "syncEntryRetry": "Item synchroniseren mislukt. Er wordt opnieuw geprobeerd."
+    },
+    "sync": {
+      "failed": "Synchroniseren mislukt",
+      "deleteSubject": "Verwijderen",
+      "retrying": "Wijzigingen opnieuw proberen…",
+      "retrySent_one": "{{count}} wijziging verzonden",
+      "retrySent_other": "{{count}} wijzigingen verzonden",
+      "retryPartial": "{{succeeded}} verzonden, {{failed}} wachten nog",
+      "offlineWaiting": "Offline — wijzigingen worden verzonden zodra je weer verbinding hebt",
+      "waiting_one": "{{count}} wijziging wacht",
+      "waiting_other": "{{count}} wijzigingen wachten",
+      "waitingOffline_one": "{{count}} wijziging wacht — offline",
+      "waitingOffline_other": "{{count}} wijzigingen wachten — offline"
+    },
+    "notifications": {
+      "blocked": "Meldingen zijn geblokkeerd. Pas de sitemachtigingen aan in de browserinstellingen om herinneringen in te schakelen.",
+      "calendarBlocked": "Agendatoegang is geblokkeerd. Geef toegang in de Android-app-instellingen om gebeurtenissen met de agenda van het apparaat te synchroniseren."
+    },
+    "tasks": {
+      "movedToday": "Verplaatst naar vandaag",
+      "movedTomorrow": "Verplaatst naar morgen",
+      "movedTo": "Verplaatst naar {{date}}"
+    },
+    "contacts": {
+      "fallbackLabel": "Contact",
+      "rejected_create": "\"{{label}}\" kon niet op de server worden aangemaakt: {{reason}}",
+      "rejected_update": "\"{{label}}\" kon niet op de server worden bijgewerkt: {{reason}}",
+      "rejected_delete": "\"{{label}}\" kon niet op de server worden verwijderd: {{reason}}",
+      "conflict": "Conflict bij \"{{name}}\" — serverversie behouden",
+      "syncFailed": "Contacten synchroniseren mislukt: {{message}}"
+    },
+    "storage": {
+      "full": "De opslag is vol. Je gegevens worden mogelijk niet opgeslagen.",
+      "error": "Opslagfout. Je gegevens worden mogelijk niet opgeslagen."
+    },
+    "pendingDrop_create": "\"{{title}}\" kon niet worden aangemaakt — {{reason}}",
+    "pendingDrop_update": "\"{{title}}\" kon niet worden opgeslagen — {{reason}}",
+    "pendingDrop_delete": "\"{{title}}\" kon niet worden verwijderd — {{reason}}",
+    "pendingDrop_move": "\"{{title}}\" kon niet worden verplaatst — {{reason}}",
+    "pendingDrop_deleteHref": "De oude kopie van \"{{title}}\" kon niet worden verwijderd — {{reason}}",
+    "pendingReason": {
+      "savedLocally": "je wijziging is lokaal opgeslagen.",
+      "staysOnServer": "de gebeurtenis blijft op de server staan.",
+      "maybeOldCalendar": "de gebeurtenis staat mogelijk nog in de oude agenda.",
+      "alreadyExists": "bestaat al op de server — controleer op een duplicaat.",
+      "duplicateUid": "er staat al een duplicaat van deze gebeurtenis op de server.",
+      "invalidData": "de server heeft de gebeurtenisgegevens als ongeldig voor deze agenda geweigerd.",
+      "forbidden": "de server heeft de wijziging geweigerd (403). Je hebt mogelijk geen schrijftoegang tot deze agenda.",
+      "storageFull": "de opslag van de server is vol (507).",
+      "gone": "de agenda of gebeurtenis bestaat niet meer op de server."
+    }
+  },
+  "ui": {
+    "carddav": {
+      "conflict": "Het contact is op de server gewijzigd. Vernieuw en probeer het opnieuw.",
+      "permission": "Je hebt geen toestemming om dit contact te wijzigen.",
+      "sizeLimit": "Het contact overschrijdt de groottelimiet van de server ({{max}} bytes).",
+      "version": "De server accepteert geen vCard-versie die deze client kan maken."
+    },
+    "moveLostSource": "Verplaatsen verloor de bronresource: {{message}}",
+    "dragSync": {
+      "event": "Verplaatste gebeurtenis kon niet worden gesynchroniseerd",
+      "task": "Verplaatste taak kon niet worden gesynchroniseerd",
+      "item": "Verplaatst item kon niet worden gesynchroniseerd",
+      "hierarchy": "Wijziging van de taakhiërarchie kon niet worden gesynchroniseerd"
+    }
   }
 }

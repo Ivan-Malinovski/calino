@@ -114,6 +114,10 @@
     "goTo": "Vai a {{dateRef}}",
     "navigatedTo": "Passato a {{date}}",
     "opened": "Aperto {{title}}",
+    "openedCalendar": "Calendario {{name}} aperto",
+    "createdTask": "Attività creata: {{title}}",
+    "createdEvent": "Evento creato: {{title}}",
+    "open": "Apri",
     "placeholder": {
       "hangOut": "Esempio in inglese: Hang out with Batman tomorrow at 9",
       "toggleDarkMode": "Attiva o disattiva la modalità scura",

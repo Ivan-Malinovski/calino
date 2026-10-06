@@ -115,5 +115,109 @@
     "accountFailed": "Account {{account}} non riuscito: {{error}}",
     "noCalendarsFetched": "Nessun calendario scaricato; i calendari speculari non sono stati modificati.",
     "syncDone": "Sincronizzazione in background completata: {{events}} eventi in {{calendars}} calendari da {{accounts}} account"
+  },
+  "toast": {
+    "history": {
+      "undo": "Annulla",
+      "redo": "Ripeti"
+    },
+    "aiImport": {
+      "setupNeeded": "Configura prima l’importazione di foto con IA nelle Impostazioni",
+      "openSettings": "Apri Impostazioni",
+      "noDetails": "Non è stato trovato nessun dettaglio di evento in quella foto. Prova con uno scatto più nitido o aggiungilo manualmente.",
+      "addManually": "Aggiungi manualmente",
+      "keyInvalid": "La tua chiave API IA sembra non valida o scaduta.",
+      "unreachable": "Impossibile raggiungere il provider IA: controlla la connessione.",
+      "unreadable": "Impossibile leggere i dettagli dell’evento da quella foto.",
+      "blankFallback": "{{message}} Verrà aperto un evento vuoto.",
+      "cameraDenied": "Autorizzazione della fotocamera negata. Abilitala nelle impostazioni di Android per usare questa funzione.",
+      "cameraUnavailable": "Impossibile accedere alla fotocamera o alla libreria foto.",
+      "reviewEach_task": "Controlla e salva ogni attività: ne sono state trovate {{total}} in questa foto.",
+      "reviewEach_event": "Controlla e salva ogni evento: ne sono stati trovati {{total}} in questa foto.",
+      "reviewEach_item": "Controlla e salva ogni elemento: ne sono stati trovati {{total}} in questa foto.",
+      "sharedFirstOnly": "È stata usata solo la prima foto condivisa: per ora condividine una alla volta.",
+      "sharedUnreadable": "Impossibile leggere la foto condivisa."
+    },
+    "ics": {
+      "notIcs": "Quel file non è un calendario .ics",
+      "unreadable": "Impossibile leggere quel file"
+    },
+    "attachments": {
+      "tooLarge": "Il file \"{{name}}\" supera il limite di {{limit}} MB",
+      "mayNotSync": "Il file \"{{name}}\" supera i {{limit}} MB e potrebbe non sincronizzarsi correttamente",
+      "saveLocal": "Impossibile salvare localmente gli allegati",
+      "readFailed": "Impossibile leggere {{name}}",
+      "readFailedGeneric": "Impossibile leggere i file",
+      "unavailable": "Dati dell’allegato non disponibili. Prova a riaprire l’evento."
+    },
+    "journal": {
+      "syncUpdateRetry": "Impossibile sincronizzare l’aggiornamento. Verrà ritentato.",
+      "syncEntryRetry": "Impossibile sincronizzare la voce. Verrà ritentato."
+    },
+    "sync": {
+      "failed": "Sincronizzazione non riuscita",
+      "deleteSubject": "Eliminazione",
+      "retrying": "Nuovo tentativo per le modifiche…",
+      "retrySent_one": "{{count}} modifica inviata",
+      "retrySent_other": "{{count}} modifiche inviate",
+      "retryPartial": "{{succeeded}} inviate, {{failed}} ancora in attesa",
+      "offlineWaiting": "Offline: le modifiche verranno inviate alla riconnessione",
+      "waiting_one": "{{count}} modifica in attesa",
+      "waiting_other": "{{count}} modifiche in attesa",
+      "waitingOffline_one": "{{count}} modifica in attesa — offline",
+      "waitingOffline_other": "{{count}} modifiche in attesa — offline"
+    },
+    "notifications": {
+      "blocked": "Le notifiche sono bloccate. Aggiorna le autorizzazioni del sito nelle impostazioni del browser per attivare i promemoria.",
+      "calendarBlocked": "L’accesso al calendario è bloccato. Concedilo nelle impostazioni Android dell’app per sincronizzare gli eventi con il calendario del dispositivo."
+    },
+    "tasks": {
+      "movedToday": "Spostata a oggi",
+      "movedTomorrow": "Spostata a domani",
+      "movedTo": "Spostata a {{date}}"
+    },
+    "contacts": {
+      "fallbackLabel": "Contatto",
+      "rejected_create": "Impossibile creare \"{{label}}\" sul server: {{reason}}",
+      "rejected_update": "Impossibile aggiornare \"{{label}}\" sul server: {{reason}}",
+      "rejected_delete": "Impossibile eliminare \"{{label}}\" sul server: {{reason}}",
+      "conflict": "Conflitto su \"{{name}}\": mantenuta la versione del server",
+      "syncFailed": "Sincronizzazione dei contatti non riuscita: {{message}}"
+    },
+    "storage": {
+      "full": "Lo spazio di archiviazione è pieno. I tuoi dati potrebbero non essere salvati.",
+      "error": "Errore di archiviazione. I tuoi dati potrebbero non essere salvati."
+    },
+    "pendingDrop_create": "Impossibile creare \"{{title}}\": {{reason}}",
+    "pendingDrop_update": "Impossibile salvare \"{{title}}\": {{reason}}",
+    "pendingDrop_delete": "Impossibile eliminare \"{{title}}\": {{reason}}",
+    "pendingDrop_move": "Impossibile spostare \"{{title}}\": {{reason}}",
+    "pendingDrop_deleteHref": "Impossibile rimuovere la vecchia copia di \"{{title}}\": {{reason}}",
+    "pendingReason": {
+      "savedLocally": "la tua modifica è salvata localmente.",
+      "staysOnServer": "l’evento rimane sul server.",
+      "maybeOldCalendar": "l’evento potrebbe essere ancora nel vecchio calendario.",
+      "alreadyExists": "esiste già sul server: controlla se c’è un duplicato.",
+      "duplicateUid": "esiste già un duplicato di questo evento sul server.",
+      "invalidData": "il server ha rifiutato i dati dell’evento perché non validi per questo calendario.",
+      "forbidden": "il server ha rifiutato la modifica (403). Potresti non avere accesso in scrittura a questo calendario.",
+      "storageFull": "lo spazio di archiviazione del server è pieno (507).",
+      "gone": "il calendario o l’evento non esiste più sul server."
+    }
+  },
+  "ui": {
+    "carddav": {
+      "conflict": "Il contatto è stato modificato sul server. Aggiorna e riprova.",
+      "permission": "Non hai l’autorizzazione per modificare questo contatto.",
+      "sizeLimit": "Il contatto supera il limite di dimensione del server ({{max}} byte).",
+      "version": "Il server non accetta nessuna versione di vCard che questo client può generare."
+    },
+    "moveLostSource": "Lo spostamento ha perso la risorsa di origine: {{message}}",
+    "dragSync": {
+      "event": "Impossibile sincronizzare l’evento spostato",
+      "task": "Impossibile sincronizzare l’attività spostata",
+      "item": "Impossibile sincronizzare l’elemento spostato",
+      "hierarchy": "Impossibile sincronizzare la modifica della gerarchia delle attività"
+    }
   }
 }

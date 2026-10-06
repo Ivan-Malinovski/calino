@@ -25,11 +25,11 @@ interface SubscribeCalendarModalProps {
 }
 
 const REFRESH_OPTIONS = [
-  { label: 'Every 15 minutes', minutes: 15 },
-  { label: 'Every 30 minutes', minutes: 30 },
-  { label: 'Every hour', minutes: 60 },
-  { label: 'Every 6 hours', minutes: 360 },
-  { label: 'Every 24 hours', minutes: 1440 },
+  { labelKey: 'ui.calModal.refresh15', minutes: 15 },
+  { labelKey: 'ui.calModal.refresh30', minutes: 30 },
+  { labelKey: 'ui.calModal.refresh60', minutes: 60 },
+  { labelKey: 'ui.calModal.refresh360', minutes: 360 },
+  { labelKey: 'ui.calModal.refresh1440', minutes: 1440 },
 ]
 
 export function SubscribeCalendarModal({
@@ -95,7 +95,7 @@ export function SubscribeCalendarModal({
     e.preventDefault()
     if (isSavingRef.current) return
     if (!url.trim()) {
-      setError('Enter a calendar URL.')
+      setError(t('ui.calModal.enterUrl'))
       return
     }
 
@@ -140,12 +140,10 @@ export function SubscribeCalendarModal({
     } catch (err) {
       setError(
         err instanceof Error
-          ? isEdit
-            ? `Couldn't update: ${syncErrorReason(classifySyncError(err.message), err.message)}`
-            : `Couldn't subscribe: ${syncErrorReason(classifySyncError(err.message), err.message)}`
-          : isEdit
-            ? 'Failed to update calendar subscription.'
-            : 'Failed to subscribe to calendar.'
+          ? t(isEdit ? 'ui.calModal.updateFailedReason' : 'ui.calModal.subscribeFailedReason', {
+              reason: syncErrorReason(classifySyncError(err.message), err.message),
+            })
+          : t(isEdit ? 'ui.calModal.updateFailed' : 'ui.calModal.subscribeFailed')
       )
     } finally {
       isSavingRef.current = false
@@ -190,7 +188,7 @@ export function SubscribeCalendarModal({
         <form ref={formRef} onSubmit={handleSubmit}>
           <div className={styles.formGroup}>
             <label htmlFor="subscribeName" className={styles.formLabel}>
-              Name (optional)
+              {t('ui.calModal.nameOptional')}
             </label>
             <input
               id="subscribeName"
@@ -202,7 +200,7 @@ export function SubscribeCalendarModal({
           </div>
           <div className={styles.formGroup}>
             <label htmlFor="subscribeUrl" className={styles.formLabel}>
-              Calendar URL
+              {t('ui.calModal.calendarUrl')}
             </label>
             <input
               id="subscribeUrl"
@@ -213,14 +211,11 @@ export function SubscribeCalendarModal({
               required
               disabled={urlLocked}
             />
-            <span className={styles.formHint}>
-              This calendar is read-only — events are refreshed periodically and can&apos;t be
-              edited in Calino.
-            </span>
+            <span className={styles.formHint}>{t('ui.calModal.readOnlyHint')}</span>
           </div>
           <div className={styles.formGroup}>
             <label htmlFor="subscribeRefresh" className={styles.formLabel}>
-              Refresh
+              {t('ui.calModal.refresh')}
             </label>
             <select
               id="subscribeRefresh"
@@ -230,7 +225,7 @@ export function SubscribeCalendarModal({
             >
               {REFRESH_OPTIONS.map((opt) => (
                 <option key={opt.minutes} value={opt.minutes}>
-                  {opt.label}
+                  {t(opt.labelKey)}
                 </option>
               ))}
             </select>
@@ -245,7 +240,7 @@ export function SubscribeCalendarModal({
                   className={`${styles.colorOption} ${color === c ? styles.colorSelected : ''}`}
                   style={{ backgroundColor: c }}
                   onClick={() => setColor(c)}
-                  aria-label={`Select color ${c}`}
+                  aria-label={t('ui.calModal.selectColor', { color: c })}
                 />
               ))}
             </div>
@@ -299,10 +294,7 @@ export function SubscribeCalendarModal({
                   value={proxyUrl}
                   onChange={(e) => setProxyUrl(e.target.value)}
                 />
-                <span className={styles.proxyInfoText}>
-                  Only needed if the calendar host doesn&apos;t allow cross-origin requests. Your
-                  request goes through the proxy server instead of directly to the host.
-                </span>
+                <span className={styles.proxyInfoText}>{t('ui.calModal.proxyHint')}</span>
               </>
             )}
           </div>
@@ -314,7 +306,7 @@ export function SubscribeCalendarModal({
               onClick={requestClose}
               disabled={isSaving}
             >
-              Cancel
+              {t('actions.cancel', { ns: 'common' })}
             </button>
             <button
               type="submit"
@@ -327,11 +319,11 @@ export function SubscribeCalendarModal({
               <span>
                 {isSaving
                   ? isEdit
-                    ? 'Saving…'
-                    : 'Subscribing…'
+                    ? t('ui.calModal.saving')
+                    : t('ui.calModal.subscribing')
                   : isEdit
-                    ? 'Save Changes'
-                    : 'Subscribe'}
+                    ? t('ui.calModal.saveChanges')
+                    : t('ui.calModal.subscribe')}
               </span>
             </button>
           </div>

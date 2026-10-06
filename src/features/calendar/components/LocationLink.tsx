@@ -1,4 +1,5 @@
 import type { JSX, ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useSettingsStore } from '@/store/settingsStore'
 import { buildMapUrl } from '@/lib/mapProvider'
 
@@ -50,6 +51,7 @@ export function LocationLink({
   iconOnly = false,
   ariaLabel,
 }: LocationLinkProps): JSX.Element {
+  const { t } = useTranslation('calendar')
   const mapProvider = useSettingsStore((s) => s.mapProvider)
   const mapsUrl = buildMapUrl(mapProvider, location)
   return (
@@ -59,8 +61,8 @@ export function LocationLink({
       rel="noopener noreferrer"
       className={className}
       onClick={(e) => e.stopPropagation()}
-      aria-label={ariaLabel ?? `Open ${location} in Maps`}
-      title={`Open in Maps: ${location}`}
+      aria-label={ariaLabel ?? t('ui.location.openInMaps', { location })}
+      title={t('ui.location.openInMapsTitle', { location })}
     >
       {iconOnly ? externalLinkIcon : (children ?? <span>{location}</span>)}
     </a>

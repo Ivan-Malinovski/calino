@@ -1002,7 +1002,7 @@ export function useCalDAVInstance(): UseCalDAVReturn {
       // A first connect can run for minutes on a large account, so it narrates
       // itself: which stage, and how far through the calendars it is.
       const progress = useProgressStore.getState()
-      const progressId = progress.begin('Connecting to server…')
+      const progressId = progress.begin(i18n.t('caldav:ui.connecting'))
       const reportProgress = (patch: { label?: string; done?: number; total?: number }): void =>
         useProgressStore.getState().update(progressId, patch)
 
@@ -1404,7 +1404,7 @@ export function useCalDAVInstance(): UseCalDAVReturn {
         setSyncState((prev) => ({
           ...prev,
           status: 'error',
-          error: error instanceof Error ? error.message : 'Failed to add account',
+          error: error instanceof Error ? error.message : i18n.t('caldav:ui.addAccountFailed'),
         }))
         useCalDAVSyncStore.getState().setStatus('idle')
         throw error
@@ -2067,7 +2067,7 @@ export function useCalDAVInstance(): UseCalDAVReturn {
         setSyncState((prev) => ({
           ...prev,
           status: 'error',
-          error: error instanceof Error ? error.message : 'Sync failed',
+          error: error instanceof Error ? error.message : i18n.t('caldav:ui.syncFailed'),
         }))
         useCalDAVSyncStore.getState().setStatus('idle')
         throw error
@@ -2101,11 +2101,15 @@ export function useCalDAVInstance(): UseCalDAVReturn {
   const testAccount = useCallback(async (accountId: string): Promise<ProbeResult> => {
     const account = storage.getAccountById(accountId)
     if (!account) {
-      return { ok: false, protocol: 'caldav', error: 'Account not found' }
+      return { ok: false, protocol: 'caldav', error: i18n.t('caldav:ui.accountNotFound') }
     }
     const credential = await getCredentialById(account.credentialId)
     if (!credential) {
-      return { ok: false, protocol: account.protocol ?? 'caldav', error: 'Credentials not found' }
+      return {
+        ok: false,
+        protocol: account.protocol ?? 'caldav',
+        error: i18n.t('caldav:ui.credentialsNotFound'),
+      }
     }
     return probeConnection(
       account.serverUrl,

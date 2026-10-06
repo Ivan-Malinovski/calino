@@ -2,6 +2,7 @@ import { memo, useMemo } from 'react'
 import type { JSX } from 'react'
 import { addMinutes, format } from 'date-fns'
 import { AnimatePresence, motion } from 'framer-motion'
+import { useTranslation } from 'react-i18next'
 import { useDndContext } from '@dnd-kit/core'
 import type { CalendarEvent, Calendar } from '@/types'
 import { EventCard } from './EventCard'
@@ -57,6 +58,7 @@ const WeekDayColumn = memo(function WeekDayColumn({
   // Multi-day fragment draggables use `${event.id}::${date}` so strip
   // the date suffix to compare against `event.id`.
   const { active } = useDndContext()
+  const { t } = useTranslation('calendar')
   const activeMasterId = active ? active.id.toString().split('::')[0] : null
   const skipExit = (id: string): boolean => activeMasterId === id
 
@@ -164,7 +166,7 @@ const WeekDayColumn = memo(function WeekDayColumn({
           onClick={() => openModal(undefined, undefined, event.id)}
         >
           <span className={styles.travelBarInner}>
-            {formatTravelDuration(event.travelDuration)} travel
+            {t('ui.travel.bar', { duration: formatTravelDuration(event.travelDuration) })}
           </span>
         </motion.div>
       )

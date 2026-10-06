@@ -4,6 +4,7 @@ import { Capacitor } from '@capacitor/core'
 import { Filesystem } from '@capacitor/filesystem'
 import { CapacitorShareTarget, type ShareReceivedEvent } from '@capgo/capacitor-share-target'
 import { showToast } from '@/lib/toast'
+import i18n from '@/lib/i18n'
 import { useAIPhotoImport } from '../useAIPhotoImport'
 import { downscaleImageBase64 } from '../imageUtils'
 import { AIImportReviewModal } from './AIImportReviewModal'
@@ -39,7 +40,7 @@ export function AIPhotoImportRoot(): JSX.Element | null {
       if (!imageFile) return
 
       if (event.files.length > 1) {
-        showToast('Only the first shared photo was used — share one at a time for now.')
+        showToast(i18n.t('errors:toast.aiImport.sharedFirstOnly'))
       }
 
       try {
@@ -48,7 +49,7 @@ export function AIPhotoImportRoot(): JSX.Element | null {
         const { base64, mimeType } = await downscaleImageBase64(data, imageFile.mimeType)
         await processImage(base64, mimeType)
       } catch {
-        showToast('Could not read the shared photo.')
+        showToast(i18n.t('errors:toast.aiImport.sharedUnreadable'))
       }
     }
 

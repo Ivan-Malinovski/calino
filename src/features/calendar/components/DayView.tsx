@@ -19,6 +19,7 @@ import {
 import { format, startOfDay, endOfDay, parseISO, isToday, addDays, addMinutes } from 'date-fns'
 import { useCalendarStore, getTasksForDay } from '@/store/calendarStore'
 import { useTranslation } from 'react-i18next'
+import i18n from '@/lib/i18n'
 import { formatDisplayDate } from '@/lib/datetime'
 import { filterTasksByCollapsedAncestors } from '@/lib/taskTree'
 import { useTaskCollapse } from '../hooks/useTaskCollapse'
@@ -400,7 +401,9 @@ export function DayView({
   const dayTasks = useMemo(() => {
     const dateKey = format(date, 'yyyy-MM-dd')
     const visibleCalendarIds = calendars.filter((c) => c.isVisible).map((c) => c.id)
-    const tasks = getTasksForDay(events, dateKey).filter((e) => visibleCalendarIds.includes(e.calendarId))
+    const tasks = getTasksForDay(events, dateKey).filter((e) =>
+      visibleCalendarIds.includes(e.calendarId)
+    )
     return filterTasksByCollapsedAncestors(tasks, events, taskCollapse.collapsedTaskIds)
   }, [date, events, calendars, taskCollapse.collapsedTaskIds])
 
@@ -628,7 +631,7 @@ export function DayView({
         originalEvent.calendarId,
         { ...originalEvent, ...allDayUpdates },
         allDayUpdates,
-        'Failed to sync dragged event'
+        i18n.t('errors:ui.dragSync.event')
       )
       return
     }
@@ -694,7 +697,7 @@ export function DayView({
       originalEvent.calendarId,
       { ...originalEvent, ...updates },
       updates,
-      'Failed to sync dragged event'
+      i18n.t('errors:ui.dragSync.event')
     )
   }
 
@@ -799,7 +802,7 @@ export function DayView({
             onClick={() => openModal(undefined, undefined, event.id)}
           >
             <span className={styles.travelBarInner}>
-              {formatTravelDuration(event.travelDuration)} travel
+              {t('ui.travel.bar', { duration: formatTravelDuration(event.travelDuration) })}
             </span>
           </motion.div>
         )

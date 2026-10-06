@@ -1,3 +1,5 @@
+import i18n from '@/lib/i18n'
+
 /**
  * Whether a server URL will send credentials and calendar data in the clear.
  *
@@ -21,5 +23,6 @@ export function isCleartextUrl(serverUrl: string): boolean {
   }
 }
 
-export const CLEARTEXT_WARNING =
-  'This connects over plain HTTP, so your password and calendar data travel unencrypted. Fine on a private network or VPN — avoid it on Wi-Fi you don’t control.'
+export function cleartextWarning(): string {
+  return i18n.t('caldav:ui.cleartextWarning')
+}

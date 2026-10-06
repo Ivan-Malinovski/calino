@@ -1,5 +1,6 @@
 import type { JSX } from 'react'
 import { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { ChevronDown, Eye, EyeOff, KeyRound, Plus, Trash2 } from 'lucide-react'
 import { config } from '@/config'
 import type { ConnectionNudge } from './connectionNudge'
@@ -52,6 +53,7 @@ export function CustomHeadersEditor({
   /** Subtitle shown while nudged, e.g. "A proxy may fix this". */
   nudgeLabel?: string
 }): JSX.Element {
+  const { t } = useTranslation('caldav')
   const [manualOpen, setManualOpen] = useState<boolean | null>(null)
   const [visible, setVisible] = useState<Record<number, boolean>>({})
   const proxySet = Boolean(proxy?.value.trim())
@@ -74,9 +76,7 @@ export function CustomHeadersEditor({
   }, [open, nudge])
 
   const headerCount = rows.filter((row) => row.name.trim() || row.value).length
-  const headerSummary = headerCount
-    ? `${headerCount} custom ${headerCount === 1 ? 'header' : 'headers'}`
-    : ''
+  const headerSummary = headerCount ? t('ui.headers.count', { count: headerCount }) : ''
 
   let subtitle: string
   if (nudge && nudgeLabel) {
@@ -84,26 +84,26 @@ export function CustomHeadersEditor({
   } else if (proxy) {
     const parts = [
       forceCalDAV?.checked ? forceCalDAV.summary : '',
-      proxySet ? 'Proxy on' : '',
+      proxySet ? t('ui.headers.proxyOn') : '',
       headerSummary,
     ].filter(Boolean)
-    subtitle = parts.length ? parts.join(' · ') : 'Optional'
+    subtitle = parts.length ? parts.join(' · ') : t('ui.headers.optional')
   } else {
-    subtitle = headerSummary || 'For protected CalDAV servers'
+    subtitle = headerSummary || t('ui.headers.protectedServers')
   }
 
-  const title = proxy ? 'Connection settings' : 'Gateway access'
+  const title = proxy ? t('ui.headers.connectionSettings') : t('ui.headers.gatewayAccess')
   const panelId = proxy ? 'connection-settings-panel' : 'gateway-headers-panel'
 
   const headerCards = rows.map((row, index) => (
     <div key={index} className={styles.card}>
       <div className={styles.cardHeader}>
-        <span>Header {index + 1}</span>
+        <span>{t('ui.headers.headerN', { n: index + 1 })}</span>
         <button
           className={styles.remove}
           type="button"
-          aria-label={`Remove header ${index + 1}`}
-          title="Remove header"
+          aria-label={t('ui.headers.removeHeaderN', { n: index + 1 })}
+          title={t('ui.headers.removeHeader')}
           onClick={() => onChange(rows.filter((_, i) => i !== index))}
         >
           <Trash2 size={16} strokeWidth={1.8} />
@@ -111,11 +111,11 @@ export function CustomHeadersEditor({
       </div>
       <div className={styles.fields}>
         <label className={styles.fieldLabel}>
-          Name
+          {t('ui.headers.name')}
           <input
             className={styles.input}
-            aria-label={`Header ${index + 1} name`}
-            placeholder="e.g. P-Access-Token-Id"
+            aria-label={t('ui.headers.nameAria', { n: index + 1 })}
+            placeholder={t('ui.headers.namePlaceholder')}
             value={row.name}
             onChange={(event) =>
               onChange(
@@ -125,12 +125,12 @@ export function CustomHeadersEditor({
           />
         </label>
         <label className={styles.fieldLabel}>
-          Value
+          {t('ui.headers.value')}
           <span className={styles.secretField}>
             <input
               className={styles.secretInput}
-              aria-label={`Header ${index + 1} value`}
-              placeholder="Enter secret value"
+              aria-label={t('ui.headers.valueAria', { n: index + 1 })}
+              placeholder={t('ui.headers.valuePlaceholder')}
               type={visible[index] ? 'text' : 'password'}
               autoComplete="off"
               value={row.value}
@@ -145,8 +145,10 @@ export function CustomHeadersEditor({
             <button
               className={styles.reveal}
               type="button"
-              aria-label={`${visible[index] ? 'Hide' : 'Reveal'} secret for header ${index + 1}`}
-              title={visible[index] ? 'Hide value' : 'Show value'}
+              aria-label={t(visible[index] ? 'ui.headers.hideAria' : 'ui.headers.revealAria', {
+                n: index + 1,
+              })}
+              title={visible[index] ? t('ui.headers.hideValue') : t('ui.headers.showValue')}
               onClick={() => setVisible({ ...visible, [index]: !visible[index] })}
             >
               {visible[index] ? <EyeOff size={17} /> : <Eye size={17} />}
@@ -163,7 +165,7 @@ export function CustomHeadersEditor({
       type="button"
       onClick={() => onChange([...rows, { name: '', value: '' }])}
     >
-      <Plus size={16} /> Add header
+      <Plus size={16} /> {t('ui.headers.addHeader')}
     </button>
   )
 
@@ -197,7 +199,7 @@ export function CustomHeadersEditor({
         <div className={styles.settingsPanel} id={panelId} hidden={!open}>
           <div className={styles.group}>
             <label className={styles.groupLabel} htmlFor="proxyUrl">
-              Proxy URL
+              {t('ui.headers.proxyUrl')}
             </label>
             <input
               ref={proxyInputRef}
@@ -211,19 +213,19 @@ export function CustomHeadersEditor({
               onChange={(event) => proxy.onChange(event.target.value)}
             />
             <div className={styles.groupHint}>
-              Credentials and calendar data pass through this server. Only use a proxy you trust.{' '}
+              {t('ui.headers.proxyWarning')}{' '}
               <a
                 href={`https://github.com/${config.githubRepo}/blob/main/docs/CORS_PROXY.md`}
                 target="_blank"
                 rel="noreferrer"
               >
-                Learn more
+                {t('ui.headers.learnMore')}
               </a>
             </div>
           </div>
           <div className={styles.group} ref={headersRef}>
-            <span className={styles.groupLabel}>Custom headers</span>
-            <div className={styles.groupHint}>For servers behind an auth gateway</div>
+            <span className={styles.groupLabel}>{t('ui.headers.customHeaders')}</span>
+            <div className={styles.groupHint}>{t('ui.headers.gatewayHint')}</div>
             {headerCards}
             {addButton}
           </div>

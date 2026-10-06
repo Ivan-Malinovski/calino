@@ -13,5 +13,58 @@
     "view": "Ansehen",
     "done": "Fertig",
     "save": "Speichern"
+  },
+  "ui": {
+    "errorBoundary": {
+      "title": "Etwas ist schiefgelaufen",
+      "unexpected": "Ein unerwarteter Fehler ist aufgetreten",
+      "retry": "Erneut versuchen"
+    },
+    "cookie": {
+      "notice": "Wir nutzen den lokalen Speicher, um deine Daten zu sichern. Keine Tracking-Cookies.",
+      "privacy": "Datenschutz",
+      "dismiss": "Verstanden"
+    },
+    "skipToCalendar": "Zum Kalender springen",
+    "agendaPanel": {
+      "resize": "Größe des Agenda-Bereichs ändern",
+      "close": "Agenda-Bereich schließen",
+      "title": "Agenda"
+    },
+    "update": {
+      "apiError": "GitHub-API-Fehler: {{status}}",
+      "failedWith": "Die Suche nach Updates ist fehlgeschlagen: {{message}}",
+      "failed": "Die Suche nach Updates ist fehlgeschlagen"
+    },
+    "shortcuts": {
+      "title": "Tastenkürzel",
+      "navigation": "Navigation",
+      "create": "Erstellen",
+      "general": "Allgemein",
+      "today": "Zu heute springen",
+      "prevView": "Vorherige Ansicht",
+      "nextView": "Nächste Ansicht",
+      "newEvent": "Neues Ereignis",
+      "newTask": "Neue Aufgabe",
+      "palette": "Befehlspalette öffnen",
+      "showHelp": "Diese Hilfe anzeigen",
+      "closePanel": "Dialog / Panel schließen",
+      "disabledHint": "Tastenkürzel sind deaktiviert, während du in ein Eingabefeld tippst oder ein Dialog geöffnet ist."
+    },
+    "onboarding": {
+      "title": "Starte mit deinem Kalender",
+      "connectLine": "Verbinde iCloud, Nextcloud, Fastmail oder einen beliebigen CalDAV-Server.",
+      "dataStays": "Deine Daten bleiben in deinem Browser.",
+      "how": "Wie?",
+      "howText": "Calino hat kein eigenes Backend. Es kommuniziert direkt mit deinem CalDAV-Server und speichert eine Kopie lokal. Über Export/Import in den Einstellungen kannst du deine Daten sichern oder verschieben.",
+      "connectAccount": "CalDAV-Konto verbinden",
+      "loading": "Lade…",
+      "explore": "Calino mit Beispieldaten erkunden",
+      "skip": "Vorerst überspringen",
+      "demoFailed": "Beispieldaten konnten nicht geladen werden",
+      "nativeFootnote": "Calino kann dich erinnern, bevor Ereignisse beginnen. Wenn du fortfährst, wirst du um die Benachrichtigungsberechtigung gebeten.",
+      "alsoOnAndroid": "Auch für <link>Android</link>, mit Kameraimport und Erinnerungen."
+    },
+    "privacy": "Datenschutz"
   }
 }

@@ -14,5 +14,58 @@
     "creatingCalendar": "Agenda maken…",
     "savingCalendar": "Agenda opslaan…",
     "deletingCalendar": "Agenda verwijderen…"
+  },
+  "ui": {
+    "cleartextWarning": "Deze verbinding gebruikt gewoon HTTP, dus je wachtwoord en agendagegevens worden onversleuteld verzonden. Prima op een privénetwerk of vpn — vermijd het op wifi die je niet beheert.",
+    "headers": {
+      "count_one": "{{count}} aangepaste header",
+      "count_other": "{{count}} aangepaste headers",
+      "proxyOn": "Proxy aan",
+      "optional": "Optioneel",
+      "protectedServers": "Voor beveiligde CalDAV-servers",
+      "connectionSettings": "Verbindingsinstellingen",
+      "gatewayAccess": "Gateway-toegang",
+      "headerN": "Header {{n}}",
+      "removeHeader": "Header verwijderen",
+      "removeHeaderN": "Header {{n}} verwijderen",
+      "name": "Naam",
+      "nameAria": "Naam van header {{n}}",
+      "namePlaceholder": "bijv. P-Access-Token-Id",
+      "value": "Waarde",
+      "valueAria": "Waarde van header {{n}}",
+      "valuePlaceholder": "Voer geheime waarde in",
+      "revealAria": "Geheim van header {{n}} tonen",
+      "hideAria": "Geheim van header {{n}} verbergen",
+      "hideValue": "Waarde verbergen",
+      "showValue": "Waarde tonen",
+      "addHeader": "Header toevoegen",
+      "proxyUrl": "Proxy-URL",
+      "proxyWarning": "Inloggegevens en agendagegevens lopen via deze server. Gebruik alleen een proxy die je vertrouwt.",
+      "learnMore": "Meer informatie",
+      "customHeaders": "Aangepaste headers",
+      "gatewayHint": "Voor servers achter een authenticatiegateway"
+    },
+    "nudge": {
+      "checkProxyAction": "Controleer de proxy-URL ↓",
+      "checkProxyLabel": "Controleer de proxy-URL",
+      "setUpProxyAction": "Stel een proxy in ↓",
+      "proxyMayFix": "Een proxy kan dit oplossen",
+      "headersAction": "Staat deze server achter een gateway? Voeg een header toe ↓",
+      "headerMayFix": "Een aangepaste header kan dit oplossen"
+    },
+    "connecting": "Verbinden met server…",
+    "addAccountFailed": "Account toevoegen mislukt",
+    "syncFailed": "Synchronisatie mislukt",
+    "accountNotFound": "Account niet gevonden",
+    "credentialsNotFound": "Inloggegevens niet gevonden",
+    "headerErrors": {
+      "invalid": "Ongeldige aangepaste headers.",
+      "proxyConflict": "Aangepaste headers vereisen een directe DAV-verbinding; verwijder de proxy-URL.",
+      "invalidName": "Ongeldige of gereserveerde naam voor aangepaste header: {{name}}",
+      "duplicateName": "Dubbele naam voor aangepaste header: {{name}}",
+      "invalidValue": "Ongeldige waarde voor aangepaste header: {{name}}",
+      "originChanged": "Het DAV-verzoek is van oorsprong veranderd. Voer direct de definitieve DAV-URL in.",
+      "requestFailed": "Het DAV-verzoek is mislukt of omgeleid. Voer direct de definitieve DAV-URL in en controleer CORS voor aangepaste headers."
+    }
   }
 }

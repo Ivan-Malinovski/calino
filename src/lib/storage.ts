@@ -1,4 +1,5 @@
 import { toast as sonnerToast } from 'sonner'
+import i18n from '@/lib/i18n'
 
 // Calino state lives under two prefixes depending on age of the key:
 // modern zustand-persisted slices use `calino-` (hyphen), but the CalDAV
@@ -18,8 +19,8 @@ function handleStorageError(key: string, e: unknown): void {
   if (e instanceof DOMException || e instanceof Error) {
     const message =
       e instanceof DOMException && e.name === 'QuotaExceededError'
-        ? 'Storage is full. Your data may not be saved.'
-        : 'Storage error. Your data may not be saved.'
+        ? i18n.t('errors:toast.storage.full')
+        : i18n.t('errors:toast.storage.error')
     console.error(`Storage error for key "${key}":`, e)
     sonnerToast.error(message)
   } else {

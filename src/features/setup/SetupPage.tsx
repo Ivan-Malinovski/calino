@@ -1,6 +1,8 @@
 import type { JSX } from 'react'
 import { useState, useCallback } from 'react'
 import { useNavigate } from 'react-router'
+import { Trans, useTranslation } from 'react-i18next'
+import i18n from '@/lib/i18n'
 import { encryptWithMasterPassword } from '@/lib/crypto'
 import { probeConnection } from '@/features/caldav/client/discovery'
 import { CustomHeadersEditor } from '@/features/caldav/components/CustomHeadersEditor'
@@ -11,7 +13,7 @@ import {
   connectionErrorMessage,
   type SyncErrorCode,
 } from '@/features/caldav/client/errorMessages'
-import { isCleartextUrl, CLEARTEXT_WARNING } from '@/features/caldav/client/insecureUrl'
+import { isCleartextUrl, cleartextWarning } from '@/features/caldav/client/insecureUrl'
 import type { DiagnosticsOptions } from '@/features/caldav/client/diagnostics'
 import { DiagnosticsPanel } from '@/features/settings/components/DiagnosticsPanel'
 import type { CalinoConfig, PreconfiguredAccount, PreconfiguredWebcal } from '@/lib/configLoader'
@@ -59,6 +61,7 @@ function getPasswordStrength(password: string): 'weak' | 'medium' | 'strong' {
 
 export function SetupPage(): JSX.Element {
   const navigate = useNavigate()
+  const { t } = useTranslation('settings')
 
   // Wizard state
   const [step, setStep] = useState<Step>('accounts')
@@ -99,7 +102,9 @@ export function SetupPage(): JSX.Element {
       customHeaders = rowsToHeaders(formHeaders, formProxy)
       setHeaderError('')
     } catch (error) {
-      setHeaderError(error instanceof Error ? error.message : 'Invalid custom headers.')
+      setHeaderError(
+        error instanceof Error ? error.message : i18n.t('caldav:ui.headerErrors.invalid')
+      )
       return
     }
     setTestStatus('testing')
@@ -157,7 +162,9 @@ export function SetupPage(): JSX.Element {
       customHeaders = rowsToHeaders(formHeaders, formProxy)
       setHeaderError('')
     } catch (error) {
-      setHeaderError(error instanceof Error ? error.message : 'Invalid custom headers.')
+      setHeaderError(
+        error instanceof Error ? error.message : i18n.t('caldav:ui.headerErrors.invalid')
+      )
       return
     }
     setAccounts((prev) => [
@@ -236,11 +243,11 @@ export function SetupPage(): JSX.Element {
 
   const handleGenerate = useCallback(async () => {
     if (masterPassword !== masterConfirm) {
-      setPasswordError('Passwords do not match.')
+      setPasswordError(t('ui.setup.passwordsMismatch'))
       return
     }
     if (masterPassword.length < 6) {
-      setPasswordError('Password must be at least 6 characters.')
+      setPasswordError(t('ui.setup.passwordTooShort'))
       return
     }
     setPasswordError('')
@@ -296,11 +303,11 @@ export function SetupPage(): JSX.Element {
       setStep('done')
       downloadConfig(json)
     } catch (err) {
-      setPasswordError(err instanceof Error ? err.message : 'Encryption failed.')
+      setPasswordError(err instanceof Error ? err.message : t('ui.setup.encryptionFailed'))
     } finally {
       setGenerating(false)
     }
-  }, [accounts, webcalSubscriptions, masterPassword, masterConfirm, downloadConfig])
+  }, [accounts, webcalSubscriptions, masterPassword, masterConfirm, downloadConfig, t])
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -309,10 +316,8 @@ export function SetupPage(): JSX.Element {
       <div className={styles.card}>
         <div className={styles.header}>
           <div className={styles.logo}>📅</div>
-          <h1 className={styles.title}>Calino Setup</h1>
-          <p className={styles.subtitle}>
-            Generate a configuration file for your self-hosted Calino instance.
-          </p>
+          <h1 className={styles.title}>{t('ui.setup.title')}</h1>
+          <p className={styles.subtitle}>{t('ui.setup.subtitle')}</p>
         </div>
 
         {/* Step indicator */}
@@ -321,19 +326,19 @@ export function SetupPage(): JSX.Element {
             className={`${styles.step} ${step === 'accounts' ? styles.stepActive : styles.stepDone}`}
           >
             <span className={styles.stepDot}>{step === 'accounts' ? '1' : '✓'}</span>
-            <span>Accounts</span>
+            <span>{t('ui.setup.stepAccounts')}</span>
           </div>
           <div className={`${styles.stepSep} ${step !== 'accounts' ? styles.stepDone : ''}`} />
           <div
             className={`${styles.step} ${step === 'password' ? styles.stepActive : step === 'done' ? styles.stepDone : ''}`}
           >
             <span className={styles.stepDot}>{step === 'done' ? '✓' : '2'}</span>
-            <span>Password</span>
+            <span>{t('ui.setup.stepPassword')}</span>
           </div>
           <div className={`${styles.stepSep} ${step === 'done' ? styles.stepDone : ''}`} />
           <div className={`${styles.step} ${step === 'done' ? styles.stepActive : ''}`}>
             <span className={styles.stepDot}>3</span>
-            <span>Download</span>
+            <span>{t('ui.setup.stepDownload')}</span>
           </div>
         </div>
 
@@ -353,7 +358,7 @@ export function SetupPage(): JSX.Element {
                       className={styles.removeBtn}
                       onClick={() => handleRemoveAccount(i)}
                       type="button"
-                      aria-label={`Remove ${acc.name}`}
+                      aria-label={t('ui.setup.remove', { name: acc.name })}
                     >
                       <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                         <path
@@ -371,20 +376,21 @@ export function SetupPage(): JSX.Element {
 
             <div className={styles.field}>
               <label className={styles.label} htmlFor="setup-name">
-                Display name <span className={styles.labelOptional}>(optional)</span>
+                {t('ui.setup.displayName')}{' '}
+                <span className={styles.labelOptional}>{t('ui.setup.optional')}</span>
               </label>
               <input
                 id="setup-name"
                 className={styles.input}
                 value={formName}
                 onChange={(e) => setFormName(e.target.value)}
-                placeholder="e.g. Personal, Work"
+                placeholder={t('ui.setup.displayNamePlaceholder')}
               />
             </div>
 
             <div className={styles.field}>
               <label className={styles.label} htmlFor="setup-url">
-                Server URL
+                {t('ui.setup.serverUrl')}
               </label>
               <input
                 id="setup-url"
@@ -396,13 +402,13 @@ export function SetupPage(): JSX.Element {
                 }}
                 placeholder="https://caldav.example.com/dav.php"
               />
-              {isCleartextUrl(formUrl) && <div className={styles.warn}>{CLEARTEXT_WARNING}</div>}
+              {isCleartextUrl(formUrl) && <div className={styles.warn}>{cleartextWarning()}</div>}
             </div>
 
             <div className={styles.credentialsRow}>
               <div className={styles.field}>
                 <label className={styles.label} htmlFor="setup-username">
-                  Username
+                  {t('ui.setup.username')}
                 </label>
                 <input
                   id="setup-username"
@@ -418,7 +424,7 @@ export function SetupPage(): JSX.Element {
 
               <div className={styles.field}>
                 <label className={styles.label} htmlFor="setup-password">
-                  Password
+                  {t('ui.setup.password')}
                 </label>
                 <input
                   id="setup-password"
@@ -436,7 +442,7 @@ export function SetupPage(): JSX.Element {
             </div>
 
             {testStatus === 'success' && (
-              <div className={styles.success}>✓ Connection successful</div>
+              <div className={styles.success}>✓ {t('ui.setup.connectionSuccessful')}</div>
             )}
             {testStatus === 'error' && (
               <div className={styles.errorBox} role="alert" data-component="connection-error">
@@ -466,7 +472,7 @@ export function SetupPage(): JSX.Element {
                         data-action="show-diagnostics"
                         onClick={() => setShowDiagnostics(true)}
                       >
-                        Diagnose the connection
+                        {t('ui.setup.diagnose')}
                       </button>
                     )}
                   </div>
@@ -499,7 +505,7 @@ export function SetupPage(): JSX.Element {
                 onClick={handleTest}
                 disabled={!formUrl || !formUsername || !formPassword || testStatus === 'testing'}
               >
-                {testStatus === 'testing' ? 'Testing…' : 'Test Connection'}
+                {testStatus === 'testing' ? t('ui.setup.testing') : t('ui.setup.testConnection')}
               </button>
               <button
                 type="button"
@@ -507,7 +513,7 @@ export function SetupPage(): JSX.Element {
                 onClick={handleAddAccount}
                 disabled={!formUrl || !formUsername || !formPassword}
               >
-                Add Account
+                {t('ui.setup.addAccount')}
               </button>
             </div>
 
@@ -526,7 +532,7 @@ export function SetupPage(): JSX.Element {
                 marginTop: 0,
               }}
             >
-              Calendar Subscriptions (.ics)
+              {t('ui.setup.subscriptionsHeading')}
             </h2>
 
             {webcalSubscriptions.length > 0 && (
@@ -542,7 +548,7 @@ export function SetupPage(): JSX.Element {
                       className={styles.removeBtn}
                       onClick={() => handleRemoveWebcal(i)}
                       type="button"
-                      aria-label={`Remove ${sub.name}`}
+                      aria-label={t('ui.setup.remove', { name: sub.name })}
                     >
                       <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                         <path
@@ -560,20 +566,20 @@ export function SetupPage(): JSX.Element {
 
             <div className={styles.field}>
               <label className={styles.label} htmlFor="setup-webcal-name">
-                Name
+                {t('ui.setup.name')}
               </label>
               <input
                 id="setup-webcal-name"
                 className={styles.input}
                 value={webcalFormName}
                 onChange={(e) => setWebcalFormName(e.target.value)}
-                placeholder="e.g. Holidays"
+                placeholder={t('ui.setup.namePlaceholder')}
               />
             </div>
 
             <div className={styles.field}>
               <label className={styles.label} htmlFor="setup-webcal-url">
-                Calendar URL
+                {t('ui.setup.calendarUrl')}
               </label>
               <input
                 id="setup-webcal-url"
@@ -586,7 +592,7 @@ export function SetupPage(): JSX.Element {
 
             <div className={styles.field}>
               <label className={styles.label} htmlFor="setup-webcal-refresh">
-                Refresh interval (minutes)
+                {t('ui.setup.refreshInterval')}
               </label>
               <input
                 id="setup-webcal-refresh"
@@ -618,7 +624,7 @@ export function SetupPage(): JSX.Element {
                   strokeLinejoin="round"
                 />
               </svg>
-              Proxy URL (optional)
+              {t('ui.setup.proxyOptional')}
             </button>
 
             {showWebcalProxy && (
@@ -629,9 +635,7 @@ export function SetupPage(): JSX.Element {
                   onChange={(e) => setWebcalFormProxy(e.target.value)}
                   placeholder="https://proxy.example.com"
                 />
-                <div className={styles.hint}>
-                  Only needed if the calendar host doesn&apos;t allow cross-origin requests.
-                </div>
+                <div className={styles.hint}>{t('ui.setup.proxyHint')}</div>
               </div>
             )}
 
@@ -642,7 +646,7 @@ export function SetupPage(): JSX.Element {
                 onClick={handleAddWebcal}
                 disabled={!webcalFormUrl || !webcalFormName}
               >
-                Add Subscription
+                {t('ui.setup.addSubscription')}
               </button>
             </div>
 
@@ -653,7 +657,7 @@ export function SetupPage(): JSX.Element {
                   className={`${styles.btn} ${styles.btnPrimary}`}
                   onClick={() => setStep('password')}
                 >
-                  Next →
+                  {t('ui.setup.next')}
                 </button>
               </div>
             )}
@@ -665,7 +669,7 @@ export function SetupPage(): JSX.Element {
           <>
             <div className={styles.field}>
               <label className={styles.label} htmlFor="setup-master">
-                Master Password
+                {t('ui.setup.masterPassword')}
               </label>
               <input
                 id="setup-master"
@@ -676,7 +680,7 @@ export function SetupPage(): JSX.Element {
                   setMasterPassword(e.target.value)
                   setPasswordError('')
                 }}
-                placeholder="Choose a strong password"
+                placeholder={t('ui.setup.masterPlaceholder')}
                 autoFocus
               />
               {masterPassword.length > 0 && (
@@ -692,14 +696,12 @@ export function SetupPage(): JSX.Element {
                   />
                 </div>
               )}
-              <div className={styles.hint}>
-                This password will be used to unlock your calendars in Calino.
-              </div>
+              <div className={styles.hint}>{t('ui.setup.masterHint')}</div>
             </div>
 
             <div className={styles.field}>
               <label className={styles.label} htmlFor="setup-confirm">
-                Confirm Password
+                {t('ui.setup.confirmPassword')}
               </label>
               <input
                 id="setup-confirm"
@@ -710,7 +712,7 @@ export function SetupPage(): JSX.Element {
                   setMasterConfirm(e.target.value)
                   setPasswordError('')
                 }}
-                placeholder="Type it again"
+                placeholder={t('ui.setup.confirmPlaceholder')}
               />
             </div>
 
@@ -718,7 +720,7 @@ export function SetupPage(): JSX.Element {
 
             <div className={styles.actions}>
               <button type="button" className={styles.btn} onClick={() => setStep('accounts')}>
-                ← Back
+                {t('ui.setup.back')}
               </button>
               <button
                 type="button"
@@ -726,7 +728,7 @@ export function SetupPage(): JSX.Element {
                 onClick={handleGenerate}
                 disabled={generating}
               >
-                {generating ? 'Encrypting…' : 'Generate Config'}
+                {generating ? t('ui.setup.encrypting') : t('ui.setup.generate')}
               </button>
             </div>
           </>
@@ -736,20 +738,17 @@ export function SetupPage(): JSX.Element {
         {step === 'done' && (
           <>
             <div className={styles.instructions}>
-              <h2>Next steps</h2>
+              <h2>{t('ui.setup.nextSteps')}</h2>
               <ol>
                 <li>
-                  Place <code>calino.config.json</code> in the project root
+                  <Trans t={t} i18nKey="ui.setup.step1" components={{ code: <code /> }} />
                 </li>
                 <li>
-                  Rebuild: <code>docker compose up -d --build</code>
+                  <Trans t={t} i18nKey="ui.setup.step2" components={{ code: <code /> }} />
                 </li>
-                <li>Open Calino and enter your master password</li>
+                <li>{t('ui.setup.step3')}</li>
               </ol>
-              <div className={styles.warn}>
-                ⚠️ The config is baked into the JS bundle at build time. You must rebuild for
-                changes to take effect.
-              </div>
+              <div className={styles.warn}>{t('ui.setup.rebuildWarning')}</div>
             </div>
 
             <div className={styles.actions}>
@@ -761,21 +760,21 @@ export function SetupPage(): JSX.Element {
                   setConfigJson(null)
                 }}
               >
-                ← Start Over
+                {t('ui.setup.startOver')}
               </button>
               <button
                 type="button"
                 className={styles.btn}
                 onClick={() => configJson && downloadConfig(configJson)}
               >
-                Download Again
+                {t('ui.setup.downloadAgain')}
               </button>
               <button
                 type="button"
                 className={`${styles.btn} ${styles.btnPrimary}`}
                 onClick={() => navigate('/')}
               >
-                Done →
+                {t('ui.setup.done')}
               </button>
             </div>
           </>

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import type { CalendarAttachment } from '@/types'
 import { putAttachments, deleteAttachments } from '@/lib/attachmentStore'
 import { showToast } from '@/lib/toast'
+import i18n from '@/lib/i18n'
 import styles from './EventModal.module.css'
 
 const MAX_ATTACHMENT_SIZE_MB = 5
@@ -32,7 +33,9 @@ export function AttachmentSection({
     const att = attachments[index]
     if (
       window.confirm(
-        `Remove "${att.filename || 'attachment'}" from this event? It will be deleted from the server when you save.`
+        t('ui.attachments.confirmRemove', {
+          name: att.filename || t('ui.attachments.fallbackName'),
+        })
       )
     ) {
       const remaining = attachments.filter((_, i) => i !== index)
@@ -49,12 +52,20 @@ export function AttachmentSection({
     const files = Array.from(e.target.files || [])
     const filtered = files.filter((file) => {
       if (file.size > MAX_ATTACHMENT_HARD_LIMIT_BYTES) {
-        showToast(`File "${file.name}" exceeds the ${MAX_ATTACHMENT_HARD_LIMIT_MB}MB limit`)
+        showToast(
+          i18n.t('errors:toast.attachments.tooLarge', {
+            name: file.name,
+            limit: MAX_ATTACHMENT_HARD_LIMIT_MB,
+          })
+        )
         return false
       }
       if (file.size > MAX_ATTACHMENT_SIZE_BYTES) {
         showToast(
-          `File "${file.name}" is larger than ${MAX_ATTACHMENT_SIZE_MB}MB and may not sync properly`
+          i18n.t('errors:toast.attachments.mayNotSync', {
+            name: file.name,
+            limit: MAX_ATTACHMENT_SIZE_MB,
+          })
         )
       }
       return true
@@ -72,7 +83,8 @@ export function AttachmentSection({
               filename: file.name,
             })
           }
-          reader.onerror = () => reject(new Error(`Failed to read ${file.name}`))
+          reader.onerror = () =>
+            reject(new Error(i18n.t('errors:toast.attachments.readFailed', { name: file.name })))
           reader.readAsDataURL(file)
         })
     )
@@ -82,11 +94,13 @@ export function AttachmentSection({
         const all = [...attachments, ...newAttachments]
         onAttachmentsChange(all)
         putAttachments(storageKey, all).catch(() => {
-          showToast('Failed to save attachments locally')
+          showToast(i18n.t('errors:toast.attachments.saveLocal'))
         })
       })
       .catch((err) => {
-        showToast(err instanceof Error ? err.message : 'Failed to read files')
+        showToast(
+          err instanceof Error ? err.message : i18n.t('errors:toast.attachments.readFailedGeneric')
+        )
       })
 
     e.target.value = ''
@@ -103,9 +117,7 @@ export function AttachmentSection({
         </div>
       )}
       {!compact && attachments.length > 0 && (
-        <p className={styles.attachmentSyncNote}>
-          Attachments will be synced to the CalDAV server when you save.
-        </p>
+        <p className={styles.attachmentSyncNote}>{t('ui.attachments.syncNote')}</p>
       )}
 
       {attachments.length > 0 && (
@@ -129,7 +141,7 @@ export function AttachmentSection({
                     a.click()
                     document.body.removeChild(a)
                   } else {
-                    showToast('Attachment data not available. Try reopening the event.')
+                    showToast(i18n.t('errors:toast.attachments.unavailable'))
                   }
                 }}
               >
@@ -146,7 +158,9 @@ export function AttachmentSection({
                 type="button"
                 className={styles.removeAttachment}
                 title={t('surface.removeAttachment')}
-                aria-label={t('surface.removeNamedAttachment', { name: att.filename || t('surface.attachment') })}
+                aria-label={t('surface.removeNamedAttachment', {
+                  name: att.filename || t('surface.attachment'),
+                })}
                 onClick={() => handleRemove(index)}
               >
                 ×
@@ -157,7 +171,7 @@ export function AttachmentSection({
       )}
 
       <label className={compact ? styles.addAttachmentButtonCompact : styles.addAttachmentButton}>
-        <span>{compact ? '+ Attach' : '+ Add attachment'}</span>
+        <span>{compact ? t('ui.attachments.attach') : t('ui.attachments.add')}</span>
         <input type="file" className={styles.hiddenFileInput} multiple onChange={handleAdd} />
       </label>
     </div>

@@ -1,11 +1,13 @@
 import type { JSX } from 'react'
 import { useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { useTranslation } from 'react-i18next'
 import { format, parseISO } from 'date-fns'
 import { useAnimatedClose } from '@/hooks/useAnimatedClose'
 import { useModalDismiss } from '@/hooks/useModalDismiss'
 import { useSettingsStore } from '@/store/settingsStore'
-import { formatTime } from '@/lib/datetime'
+import { formatTime, getDateFnsLocale } from '@/lib/datetime'
+import i18n from '@/lib/i18n'
 import type { TimeFormat } from '@/types'
 import type { ExtractedEventFields } from '../types'
 import styles from './AIImportReviewModal.module.css'
@@ -34,19 +36,21 @@ function formatDateRange(fields: ExtractedEventFields, timeFormat: TimeFormat): 
   if (!start) return fields.start
 
   const dateFmt = 'EEE MMM d'
+  const locale = getDateFnsLocale()
+  const fmt = (d: Date, pattern: string): string => format(d, pattern, { locale })
 
   if (fields.allDay) {
-    return format(start, dateFmt)
+    return fmt(start, dateFmt)
   }
 
-  const startLabel = `${format(start, dateFmt)} · ${formatTime(start, timeFormat)}`
+  const startLabel = `${fmt(start, dateFmt)} · ${formatTime(start, timeFormat)}`
   const end = fields.end ? parse(fields.end) : null
   if (!end) return startLabel
 
-  const sameDay = format(start, 'yyyy-MM-dd') === format(end, 'yyyy-MM-dd')
+  const sameDay = fmt(start, 'yyyy-MM-dd') === fmt(end, 'yyyy-MM-dd')
   const endLabel = sameDay
     ? formatTime(end, timeFormat)
-    : `${format(end, dateFmt)} · ${formatTime(end, timeFormat)}`
+    : `${fmt(end, dateFmt)} · ${formatTime(end, timeFormat)}`
 
   return `${startLabel} – ${endLabel}`
 }
@@ -62,7 +66,7 @@ function describeDate(
 ): string | null {
   if (kind !== 'task') return formatDateRange(fields, timeFormat)
   const start = formatDateRange({ ...fields, end: undefined }, timeFormat)
-  return start ? `Due ${start}` : null
+  return start ? i18n.t('calendar:ui.aiImport.due', { date: start }) : null
 }
 
 function CheckIcon(): JSX.Element {
@@ -96,6 +100,7 @@ function KindToggle({
   kind: CandidateKind
   onChange: (kind: CandidateKind) => void
 }): JSX.Element {
+  const { t } = useTranslation('calendar')
   const options: CandidateKind[] = ['event', 'task']
 
   return (
@@ -112,7 +117,7 @@ function KindToggle({
           }}
           data-action={`set-kind-${option}`}
         >
-          {option === 'event' ? 'Event' : 'Task'}
+          {t(`ui.aiImport.kind_${option}`)}
         </button>
       ))}
     </div>
@@ -126,6 +131,7 @@ function CandidateDetails({
   fields: ExtractedEventFields
   dateLabel: string | null
 }): JSX.Element {
+  const { t } = useTranslation('calendar')
   return (
     <>
       {dateLabel && (
@@ -173,11 +179,11 @@ function CandidateDetails({
         <span
           className={`${styles.confidenceBadge} ${fields.confidence === 'low' ? styles.confidenceLow : styles.confidenceMedium}`}
         >
-          {fields.confidence} confidence
+          {t(`ui.aiImport.confidence_${fields.confidence}`)}
         </span>
       )}
       {!fields.title && !dateLabel && !fields.location && !fields.description && (
-        <div className={styles.emptyNote}>No details could be read from this photo.</div>
+        <div className={styles.emptyNote}>{t('ui.aiImport.noDetails')}</div>
       )}
     </>
   )
@@ -197,12 +203,13 @@ function CandidateCard({
   onKindChange: (kind: CandidateKind) => void
   onUse: () => void
 }): JSX.Element {
+  const { t } = useTranslation('calendar')
   const dateLabel = describeDate(fields, timeFormat, kind)
 
   return (
     <div className={styles.candidateCard} data-component="ai-import-candidate" data-kind={kind}>
       <div className={styles.candidateTitle}>
-        {fields.title || (kind === 'task' ? 'Untitled task' : 'Untitled event')}
+        {fields.title || t(`ui.aiImport.untitled_${kind}`)}
       </div>
       <CandidateDetails fields={fields} dateLabel={dateLabel} />
       <div className={styles.kindRow}>
@@ -215,7 +222,7 @@ function CandidateCard({
           onClick={onUse}
           data-action="use-candidate"
         >
-          Use this
+          {t('ui.aiImport.useThis')}
         </button>
       </div>
     </div>
@@ -238,6 +245,7 @@ function SelectableCandidateCard({
   onKindChange: (kind: CandidateKind) => void
   onToggle: () => void
 }): JSX.Element {
+  const { t } = useTranslation('calendar')
   const dateLabel = describeDate(fields, timeFormat, kind)
 
   // A div rather than a <button>: the card now nests the Event/Task toggle's
@@ -268,7 +276,7 @@ function SelectableCandidateCard({
           {selected && <CheckIcon />}
         </span>
         <div className={styles.candidateTitle}>
-          {fields.title || (kind === 'task' ? 'Untitled task' : 'Untitled event')}
+          {fields.title || t(`ui.aiImport.untitled_${kind}`)}
         </div>
       </div>
       <CandidateDetails fields={fields} dateLabel={dateLabel} />
@@ -292,6 +300,7 @@ export function AIImportReviewModal({
   onConfirmAll,
   onCancel,
 }: AIImportReviewModalProps): JSX.Element | null {
+  const { t } = useTranslation('calendar')
   const timeFormat = useSettingsStore((state) => state.timeFormat)
   const { rendered, closing, requestClose } = useAnimatedClose(isOpen, onCancel, 200)
   const dialogRef = useRef<HTMLDivElement>(null)
@@ -306,7 +315,9 @@ export function AIImportReviewModal({
   // https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
   const [selected, setSelected] = useState<Set<number>>(() => new Set(candidates.map((_, i) => i)))
   // Each candidate's Event/Task position, seeded from the model's suggestion.
-  const [kinds, setKinds] = useState<CandidateKind[]>(() => candidates.map((c) => c.kind ?? 'event'))
+  const [kinds, setKinds] = useState<CandidateKind[]>(() =>
+    candidates.map((c) => c.kind ?? 'event')
+  )
   const [lastCandidates, setLastCandidates] = useState(candidates)
   if (isOpen && lastCandidates !== candidates) {
     setLastCandidates(candidates)
@@ -353,10 +364,10 @@ export function AIImportReviewModal({
 
   const confirmLabel =
     selectedCount === 0
-      ? 'Select items to add'
+      ? t('ui.aiImport.selectItems')
       : selectedCount === candidates.length
-        ? `Add all ${selectedCount}`
-        : `Add ${selectedCount} selected`
+        ? t('ui.aiImport.addAll', { count: selectedCount })
+        : t('ui.aiImport.addSelected', { count: selectedCount })
 
   return createPortal(
     <div
@@ -373,16 +384,18 @@ export function AIImportReviewModal({
       >
         <div className={styles.header}>
           <h3 className={styles.title} id="ai-import-review-title">
-            {isMultiple ? 'What did we find?' : 'Confirm details'}
+            {isMultiple ? t('ui.aiImport.titleMultiple') : t('ui.aiImport.titleSingle')}
           </h3>
-          <button className={styles.close} onClick={requestClose} aria-label="Cancel">
+          <button
+            className={styles.close}
+            onClick={requestClose}
+            aria-label={t('actions.cancel', { ns: 'common' })}
+          >
             ✕
           </button>
         </div>
         <p className={styles.subtitle}>
-          {isMultiple
-            ? 'Everything read from the photo is selected below. Tap any to leave it out, and switch anything that should be a task instead.'
-            : "Here's what was read from the photo. You can still edit everything in the next step."}
+          {isMultiple ? t('ui.aiImport.subtitleMultiple') : t('ui.aiImport.subtitleSingle')}
         </p>
         <div className={styles.candidateList}>
           {candidates.map((candidate, index) =>
@@ -415,7 +428,7 @@ export function AIImportReviewModal({
             onClick={requestClose}
             data-action="cancel-import"
           >
-            Cancel
+            {t('actions.cancel', { ns: 'common' })}
           </button>
           {isMultiple && (
             <button

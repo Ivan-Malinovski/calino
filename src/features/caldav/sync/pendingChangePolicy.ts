@@ -1,4 +1,5 @@
 import type { PendingChange } from '../types'
+import i18n from '@/lib/i18n'
 
 /**
  * How the pending-change queue should treat a failed write.
@@ -65,11 +66,7 @@ export function classifyPendingChangeError(
     if (changeType === 'create') {
       return {
         kind: 'drop',
-        message: pendingChangeDropMessage(
-          'create',
-          undefined,
-          'already exists on the server — check for a duplicate.'
-        ),
+        message: i18n.t('errors:toast.pendingReason.alreadyExists'),
       }
     }
     // move / delete-href: the precondition is on a resource we don't hold an
@@ -85,30 +82,18 @@ export function classifyPendingChangeError(
     if (body.includes('no-uid-conflict')) {
       return {
         kind: 'drop',
-        message: pendingChangeDropMessage(
-          changeType,
-          undefined,
-          'a duplicate of this event already exists on the server.'
-        ),
+        message: i18n.t('errors:toast.pendingReason.duplicateUid'),
       }
     }
     if (body.includes('valid-calendar')) {
       return {
         kind: 'drop',
-        message: pendingChangeDropMessage(
-          changeType,
-          undefined,
-          'the server rejected the event data as invalid for this calendar.'
-        ),
+        message: i18n.t('errors:toast.pendingReason.invalidData'),
       }
     }
     return {
       kind: 'drop',
-      message: pendingChangeDropMessage(
-        changeType,
-        undefined,
-        'the server refused the change (403). You may not have write access to this calendar.'
-      ),
+      message: i18n.t('errors:toast.pendingReason.forbidden'),
     }
   }
 
@@ -116,7 +101,7 @@ export function classifyPendingChangeError(
   if (status === 507) {
     return {
       kind: 'drop',
-      message: pendingChangeDropMessage(changeType, undefined, 'the server storage is full (507).'),
+      message: i18n.t('errors:toast.pendingReason.storageFull'),
     }
   }
 
@@ -126,11 +111,7 @@ export function classifyPendingChangeError(
   if ((status === 404 || status === 410) && (changeType === 'create' || changeType === 'update')) {
     return {
       kind: 'drop',
-      message: pendingChangeDropMessage(
-        changeType,
-        undefined,
-        'the calendar or event no longer exists on the server.'
-      ),
+      message: i18n.t('errors:toast.pendingReason.gone'),
     }
   }
 
@@ -182,20 +163,20 @@ export function backoffDelayMs(retryCount: number, retryAfterSeconds?: number): 
 
 /** Default trailing reason per change type when no specific reason is given. */
 const DEFAULT_DROP_REASONS: Record<PendingChange['type'], string> = {
-  create: 'your change is saved locally.',
-  update: 'your change is saved locally.',
-  delete: 'the event stays on the server.',
-  move: 'the event may still be in its old calendar.',
-  'delete-href': 'the event may still be in its old calendar.',
+  create: 'savedLocally',
+  update: 'savedLocally',
+  delete: 'staysOnServer',
+  move: 'maybeOldCalendar',
+  'delete-href': 'maybeOldCalendar',
 }
 
-/** Per-type verb fragment that follows "Couldn't ". */
-const DROP_VERBS: Record<PendingChange['type'], string> = {
+/** i18n context per change type ('delete-href' is not a valid key suffix). */
+const DROP_CONTEXTS: Record<PendingChange['type'], string> = {
   create: 'create',
-  update: 'save',
+  update: 'update',
   delete: 'delete',
   move: 'move',
-  'delete-href': 'remove the old copy of',
+  'delete-href': 'deleteHref',
 }
 
 /**
@@ -205,17 +186,18 @@ const DROP_VERBS: Record<PendingChange['type'], string> = {
  * Couldn't create "this event" — your change is saved locally.
  *
  * When 'reason' is omitted a per-type fallback is used; when provided it is
- * appended verbatim after " — ".
+ * substituted for the trailing reason. Both come from the locale catalog.
  */
 export function pendingChangeDropMessage(
   changeType: PendingChange['type'],
   title?: string,
   reason?: string
 ): string {
-  const label = title || 'this event'
-  const base = "Couldn't " + DROP_VERBS[changeType] + ' "' + label + '"'
-  const tail = reason ?? DEFAULT_DROP_REASONS[changeType]
-  return base + ' — ' + tail
+  return i18n.t('errors:toast.pendingDrop', {
+    context: DROP_CONTEXTS[changeType],
+    title: title || i18n.t('errors:pending.thisEvent'),
+    reason: reason ?? i18n.t(`errors:toast.pendingReason.${DEFAULT_DROP_REASONS[changeType]}`),
+  })
 }
 
 /** Read a numeric HTTP status from an unknown error, if one is attached. */

@@ -115,5 +115,109 @@
     "accountFailed": "Konto {{account}} mislykkedes: {{error}}",
     "noCalendarsFetched": "Ingen kalendere hentet; spejlet forbliver uændret",
     "syncDone": "Baggrundssynkronisering fuldført: {{events}} begivenheder i {{calendars}} kalendere fra {{accounts}} konto(er)"
+  },
+  "toast": {
+    "history": {
+      "undo": "Fortryd",
+      "redo": "Annuller fortryd"
+    },
+    "aiImport": {
+      "setupNeeded": "Konfigurer AI-fotoimport i Indstillinger først",
+      "openSettings": "Åbn Indstillinger",
+      "noDetails": "Kunne ikke finde begivenhedsoplysninger på billedet. Prøv et tydeligere billede, eller tilføj det manuelt.",
+      "addManually": "Tilføj manuelt",
+      "keyInvalid": "Din AI API-nøgle ser ugyldig eller udløbet ud.",
+      "unreachable": "Kunne ikke nå AI-udbyderen — tjek din forbindelse.",
+      "unreadable": "Kunne ikke læse begivenhedsoplysninger fra billedet.",
+      "blankFallback": "{{message}} Åbner en tom begivenhed i stedet.",
+      "cameraDenied": "Kameratilladelse nægtet. Aktivér den i Android-indstillingerne for at bruge denne funktion.",
+      "cameraUnavailable": "Kunne ikke få adgang til kamera eller fotobibliotek.",
+      "reviewEach_task": "Gennemgå og gem hver opgave — {{total}} fundet på dette billede.",
+      "reviewEach_event": "Gennemgå og gem hver begivenhed — {{total}} fundet på dette billede.",
+      "reviewEach_item": "Gennemgå og gem hvert element — {{total}} fundet på dette billede.",
+      "sharedFirstOnly": "Kun det første delte billede blev brugt — del ét ad gangen indtil videre.",
+      "sharedUnreadable": "Kunne ikke læse det delte billede."
+    },
+    "ics": {
+      "notIcs": "Den fil er ikke en .ics-kalender",
+      "unreadable": "Kunne ikke læse den fil"
+    },
+    "attachments": {
+      "tooLarge": "Filen \"{{name}}\" overskrider grænsen på {{limit}} MB",
+      "mayNotSync": "Filen \"{{name}}\" er større end {{limit}} MB og synkroniseres muligvis ikke korrekt",
+      "saveLocal": "Kunne ikke gemme vedhæftede filer lokalt",
+      "readFailed": "Kunne ikke læse {{name}}",
+      "readFailedGeneric": "Kunne ikke læse filer",
+      "unavailable": "Vedhæftede data er ikke tilgængelige. Prøv at åbne begivenheden igen."
+    },
+    "journal": {
+      "syncUpdateRetry": "Kunne ikke synkronisere opdateringen. Det bliver forsøgt igen.",
+      "syncEntryRetry": "Kunne ikke synkronisere indlægget. Det bliver forsøgt igen."
+    },
+    "sync": {
+      "failed": "Synkronisering mislykkedes",
+      "deleteSubject": "Sletning",
+      "retrying": "Forsøger ændringer igen…",
+      "retrySent_one": "{{count}} ændring sendt",
+      "retrySent_other": "{{count}} ændringer sendt",
+      "retryPartial": "{{succeeded}} sendt, {{failed}} venter stadig",
+      "offlineWaiting": "Offline — ændringer sendes, når du får forbindelse igen",
+      "waiting_one": "{{count}} ændring venter",
+      "waiting_other": "{{count}} ændringer venter",
+      "waitingOffline_one": "{{count}} ændring venter — offline",
+      "waitingOffline_other": "{{count}} ændringer venter — offline"
+    },
+    "notifications": {
+      "blocked": "Notifikationer er blokeret. Opdater webstedets tilladelser i browserens indstillinger for at aktivere påmindelser.",
+      "calendarBlocked": "Kalenderadgang er blokeret. Giv adgang i Android-appindstillingerne for at synkronisere begivenheder til enhedens kalender."
+    },
+    "tasks": {
+      "movedToday": "Flyttet til i dag",
+      "movedTomorrow": "Flyttet til i morgen",
+      "movedTo": "Flyttet til {{date}}"
+    },
+    "contacts": {
+      "fallbackLabel": "Kontakt",
+      "rejected_create": "Kunne ikke oprette \"{{label}}\" på serveren: {{reason}}",
+      "rejected_update": "Kunne ikke opdatere \"{{label}}\" på serveren: {{reason}}",
+      "rejected_delete": "Kunne ikke slette \"{{label}}\" på serveren: {{reason}}",
+      "conflict": "Konflikt på \"{{name}}\" — serverversionen blev beholdt",
+      "syncFailed": "Synkronisering af kontakter mislykkedes: {{message}}"
+    },
+    "storage": {
+      "full": "Lageret er fuldt. Dine data bliver muligvis ikke gemt.",
+      "error": "Lagerfejl. Dine data bliver muligvis ikke gemt."
+    },
+    "pendingDrop_create": "Kunne ikke oprette \"{{title}}\" — {{reason}}",
+    "pendingDrop_update": "Kunne ikke gemme \"{{title}}\" — {{reason}}",
+    "pendingDrop_delete": "Kunne ikke slette \"{{title}}\" — {{reason}}",
+    "pendingDrop_move": "Kunne ikke flytte \"{{title}}\" — {{reason}}",
+    "pendingDrop_deleteHref": "Kunne ikke fjerne den gamle kopi af \"{{title}}\" — {{reason}}",
+    "pendingReason": {
+      "savedLocally": "din ændring er gemt lokalt.",
+      "staysOnServer": "begivenheden forbliver på serveren.",
+      "maybeOldCalendar": "begivenheden er muligvis stadig i den gamle kalender.",
+      "alreadyExists": "findes allerede på serveren — tjek for en dublet.",
+      "duplicateUid": "en dublet af denne begivenhed findes allerede på serveren.",
+      "invalidData": "serveren afviste begivenhedsdataene som ugyldige for denne kalender.",
+      "forbidden": "serveren afviste ændringen (403). Du har muligvis ikke skriveadgang til denne kalender.",
+      "storageFull": "serverens lager er fuldt (507).",
+      "gone": "kalenderen eller begivenheden findes ikke længere på serveren."
+    }
+  },
+  "ui": {
+    "carddav": {
+      "conflict": "Kontakten blev ændret på serveren. Opdater, og prøv igen.",
+      "permission": "Du har ikke tilladelse til at ændre denne kontakt.",
+      "sizeLimit": "Kontakten overskrider serverens størrelsesgrænse ({{max}} bytes).",
+      "version": "Serveren accepterer ingen vCard-version, som denne klient kan oprette."
+    },
+    "moveLostSource": "Flytningen mistede sin kilderessource: {{message}}",
+    "dragSync": {
+      "event": "Den flyttede begivenhed kunne ikke synkroniseres",
+      "task": "Den flyttede opgave kunne ikke synkroniseres",
+      "item": "Det flyttede element kunne ikke synkroniseres",
+      "hierarchy": "Ændringen af opgavehierarkiet kunne ikke synkroniseres"
+    }
   }
 }

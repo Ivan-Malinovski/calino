@@ -1,6 +1,7 @@
 import { format } from 'date-fns'
 import type { CalendarAttendee, CalendarEvent, CalendarOrganizer } from '@/types'
-import { toEventInstant } from '@/lib/datetime'
+import { toEventInstant, getDateFnsLocale } from '@/lib/datetime'
+import i18n from '@/lib/i18n'
 
 /**
  * Windows' shell and several mail clients silently truncate long `mailto:`
@@ -18,21 +19,28 @@ function formatWhen(event: CalendarEvent, use24Hour: boolean): string {
     const end = toEventInstant(event.end, event.timezone)
     if (Number.isNaN(start.getTime())) return ''
 
+    const locale = getDateFnsLocale()
+    const dayText = (d: Date): string => format(d, 'EEEE, d MMMM yyyy', { locale })
+    const timePattern = use24Hour ? 'HH:mm' : 'h:mm a'
+    const timeText = (d: Date): string => format(d, timePattern, { locale })
+    const dayAndTime = (d: Date): string =>
+      i18n.t('calendar:ui.mailto.dateAtTime', { date: dayText(d), time: timeText(d) })
+
     if (event.isAllDay) {
-      const startDay = format(start, 'EEEE, d MMMM yyyy')
+      const allDay = (text: string): string => i18n.t('calendar:ui.mailto.allDay', { date: text })
+      const startDay = dayText(start)
       if (Number.isNaN(end.getTime())) return startDay
-      const endDay = format(end, 'EEEE, d MMMM yyyy')
-      return startDay === endDay ? `${startDay} (all day)` : `${startDay} – ${endDay} (all day)`
+      const endDay = dayText(end)
+      return startDay === endDay ? allDay(startDay) : allDay(`${startDay} – ${endDay}`)
     }
 
-    const timePattern = use24Hour ? 'HH:mm' : 'h:mm a'
-    const startText = format(start, `EEEE, d MMMM yyyy 'at' ${timePattern}`)
+    const startText = dayAndTime(start)
     if (Number.isNaN(end.getTime())) return startText
 
     // Same-day events only need the clock time on the far side.
     return format(start, 'yyyy-MM-dd') === format(end, 'yyyy-MM-dd')
-      ? `${startText} – ${format(end, timePattern)}`
-      : `${startText} – ${format(end, `EEEE, d MMMM yyyy 'at' ${timePattern}`)}`
+      ? `${startText} – ${timeText(end)}`
+      : `${startText} – ${dayAndTime(end)}`
   } catch {
     return ''
   }
@@ -46,28 +54,34 @@ export interface InviteOptions {
 }
 
 /** Plain-text invitation body. Deliberately readable in any mail client. */
-export function formatInviteBody(
-  event: CalendarEvent,
-  options: InviteOptions = {}
-): string {
+export function formatInviteBody(event: CalendarEvent, options: InviteOptions = {}): string {
   const { use24Hour = true } = options
   const lines: string[] = []
 
-  lines.push(`You're invited to: ${event.title || 'Untitled event'}`)
+  lines.push(
+    i18n.t('calendar:ui.mailto.invitedTo', {
+      title: event.title || i18n.t('calendar:ui.mailto.untitled'),
+    })
+  )
   lines.push('')
 
   const when = formatWhen(event, use24Hour)
-  if (when) lines.push(`When: ${when}`)
-  if (event.location) lines.push(`Where: ${event.location}`)
-  if (event.url) lines.push(`Link: ${event.url}`)
+  if (when) lines.push(i18n.t('calendar:ui.mailto.when', { value: when }))
+  if (event.location) lines.push(i18n.t('calendar:ui.mailto.where', { value: event.location }))
+  if (event.url) lines.push(i18n.t('calendar:ui.mailto.link', { value: event.url }))
   if (event.organizer?.email) {
     lines.push(
-      `Organizer: ${event.organizer.name ? `${event.organizer.name} <${event.organizer.email}>` : event.organizer.email}`
+      i18n.t('calendar:ui.mailto.organizer', {
+        value: event.organizer.name
+          ? `${event.organizer.name} <${event.organizer.email}>`
+          : event.organizer.email,
+      })
     )
   }
 
   const others = (event.attendees ?? []).map((a) => a.name || a.email)
-  if (others.length > 0) lines.push(`Attendees: ${others.join(', ')}`)
+  if (others.length > 0)
+    lines.push(i18n.t('calendar:ui.mailto.attendees', { value: others.join(', ') }))
 
   if (event.description) {
     lines.push('')
@@ -75,7 +89,7 @@ export function formatInviteBody(
   }
 
   lines.push('')
-  lines.push('Please reply to let me know if this works for you.')
+  lines.push(i18n.t('calendar:ui.mailto.reply'))
 
   return lines.join('\n')
 }
@@ -110,9 +124,10 @@ export function buildMailtoUri(
 
   const eventForBody: CalendarEvent = { ...event, organizer, attendees }
   const when = formatWhen(event, options.use24Hour ?? true)
+  const title = event.title || i18n.t('calendar:ui.mailto.untitled')
   const subject = when
-    ? `Invitation: ${event.title || 'Untitled event'} — ${when}`
-    : `Invitation: ${event.title || 'Untitled event'}`
+    ? i18n.t('calendar:ui.mailto.subject', { title, when })
+    : i18n.t('calendar:ui.mailto.subjectNoWhen', { title })
 
   const build = (body: string): string =>
     `mailto:${recipients.map(encodeURIComponent).join(',')}` +

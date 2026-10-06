@@ -14,5 +14,58 @@
     "creatingCalendar": "Opretter kalender…",
     "savingCalendar": "Gemmer kalender…",
     "deletingCalendar": "Sletter kalender…"
+  },
+  "ui": {
+    "cleartextWarning": "Dette forbinder via almindelig HTTP, så din adgangskode og dine kalenderdata sendes ukrypteret. Fint på et privat netværk eller VPN – undgå det på Wi-Fi, du ikke kontrollerer.",
+    "headers": {
+      "count_one": "{{count}} brugerdefineret header",
+      "count_other": "{{count}} brugerdefinerede headers",
+      "proxyOn": "Proxy til",
+      "optional": "Valgfri",
+      "protectedServers": "Til beskyttede CalDAV-servere",
+      "connectionSettings": "Forbindelsesindstillinger",
+      "gatewayAccess": "Gateway-adgang",
+      "headerN": "Header {{n}}",
+      "removeHeader": "Fjern header",
+      "removeHeaderN": "Fjern header {{n}}",
+      "name": "Navn",
+      "nameAria": "Navn på header {{n}}",
+      "namePlaceholder": "f.eks. P-Access-Token-Id",
+      "value": "Værdi",
+      "valueAria": "Værdi for header {{n}}",
+      "valuePlaceholder": "Indtast hemmelig værdi",
+      "revealAria": "Vis hemmelighed for header {{n}}",
+      "hideAria": "Skjul hemmelighed for header {{n}}",
+      "hideValue": "Skjul værdi",
+      "showValue": "Vis værdi",
+      "addHeader": "Tilføj header",
+      "proxyUrl": "Proxy-URL",
+      "proxyWarning": "Loginoplysninger og kalenderdata passerer gennem denne server. Brug kun en proxy, du stoler på.",
+      "learnMore": "Læs mere",
+      "customHeaders": "Brugerdefinerede headers",
+      "gatewayHint": "Til servere bag en godkendelsesgateway"
+    },
+    "nudge": {
+      "checkProxyAction": "Tjek proxy-URL’en ↓",
+      "checkProxyLabel": "Tjek proxy-URL’en",
+      "setUpProxyAction": "Opsæt en proxy ↓",
+      "proxyMayFix": "En proxy kan løse dette",
+      "headersAction": "Ligger serveren bag en gateway? Tilføj en header ↓",
+      "headerMayFix": "En brugerdefineret header kan løse dette"
+    },
+    "connecting": "Forbinder til server …",
+    "addAccountFailed": "Kontoen kunne ikke tilføjes",
+    "syncFailed": "Synkronisering mislykkedes",
+    "accountNotFound": "Kontoen blev ikke fundet",
+    "credentialsNotFound": "Legitimationsoplysningerne blev ikke fundet",
+    "headerErrors": {
+      "invalid": "Ugyldige brugerdefinerede headere.",
+      "proxyConflict": "Brugerdefinerede headere kræver en direkte DAV-forbindelse; fjern proxy-URL’en.",
+      "invalidName": "Ugyldigt eller reserveret navn på brugerdefineret header: {{name}}",
+      "duplicateName": "Dobbelt navn på brugerdefineret header: {{name}}",
+      "invalidValue": "Ugyldig værdi for brugerdefineret header: {{name}}",
+      "originChanged": "DAV-forespørgslen skiftede oprindelse. Angiv den endelige DAV-URL direkte.",
+      "requestFailed": "DAV-forespørgslen mislykkedes eller blev omdirigeret. Angiv den endelige DAV-URL direkte, og kontrollér CORS for brugerdefinerede headere."
+    }
   }
 }

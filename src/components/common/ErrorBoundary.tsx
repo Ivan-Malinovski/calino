@@ -1,5 +1,6 @@
 import { type ReactNode } from 'react'
 import { Component, type ErrorInfo } from 'react'
+import i18n from '@/lib/i18n'
 import styles from './ErrorBoundary.module.css'
 
 export interface ErrorBoundaryProps {
@@ -38,16 +39,16 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
       // hardcoded light-mode colors.
       return (
         <div className={styles.errorFallback} role="alert">
-          <h2 className={styles.title}>Something went wrong</h2>
+          <h2 className={styles.title}>{i18n.t('common:ui.errorBoundary.title')}</h2>
           <p className={styles.message}>
-            {this.state.error?.message || 'An unexpected error occurred'}
+            {this.state.error?.message || i18n.t('common:ui.errorBoundary.unexpected')}
           </p>
           <button
             type="button"
             className={styles.retry}
             onClick={() => this.setState({ hasError: false, error: null })}
           >
-            Try again
+            {i18n.t('common:ui.errorBoundary.retry')}
           </button>
         </div>
       )

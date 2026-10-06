@@ -1,39 +1,40 @@
 import type { JSX } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Modal } from '@/components/common/Modal'
 import styles from './ShortcutsHelp.module.css'
 
 interface Shortcut {
   keys: string[]
-  description: string
+  descriptionKey: string
 }
 
 interface ShortcutGroup {
-  title: string
+  titleKey: string
   shortcuts: Shortcut[]
 }
 
 const GROUPS: ShortcutGroup[] = [
   {
-    title: 'Navigation',
+    titleKey: 'ui.shortcuts.navigation',
     shortcuts: [
-      { keys: ['T'], description: 'Jump to today' },
-      { keys: ['<', ','], description: 'Previous view' },
-      { keys: ['>', '.'], description: 'Next view' },
+      { keys: ['T'], descriptionKey: 'ui.shortcuts.today' },
+      { keys: ['<', ','], descriptionKey: 'ui.shortcuts.prevView' },
+      { keys: ['>', '.'], descriptionKey: 'ui.shortcuts.nextView' },
     ],
   },
   {
-    title: 'Create',
+    titleKey: 'ui.shortcuts.create',
     shortcuts: [
-      { keys: ['C'], description: 'New event' },
-      { keys: ['K'], description: 'New task' },
-      { keys: ['\u2318', 'K'], description: 'Open command palette' },
+      { keys: ['C'], descriptionKey: 'ui.shortcuts.newEvent' },
+      { keys: ['K'], descriptionKey: 'ui.shortcuts.newTask' },
+      { keys: ['\u2318', 'K'], descriptionKey: 'ui.shortcuts.palette' },
     ],
   },
   {
-    title: 'General',
+    titleKey: 'ui.shortcuts.general',
     shortcuts: [
-      { keys: ['?'], description: 'Show this help' },
-      { keys: ['Esc'], description: 'Close modal / panel' },
+      { keys: ['?'], descriptionKey: 'ui.shortcuts.showHelp' },
+      { keys: ['Esc'], descriptionKey: 'ui.shortcuts.closePanel' },
     ],
   },
 ]
@@ -44,16 +45,22 @@ interface ShortcutsHelpProps {
 }
 
 export function ShortcutsHelp({ isOpen, onClose }: ShortcutsHelpProps): JSX.Element {
+  const { t } = useTranslation('common')
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Keyboard shortcuts" className={styles.modal}>
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={t('ui.shortcuts.title')}
+      className={styles.modal}
+    >
       <div className={styles.body}>
         {GROUPS.map((group) => (
-          <section key={group.title} className={styles.group}>
-            <h3 className={styles.groupTitle}>{group.title}</h3>
+          <section key={group.titleKey} className={styles.group}>
+            <h3 className={styles.groupTitle}>{t(group.titleKey)}</h3>
             <ul className={styles.list}>
               {group.shortcuts.map((s) => (
-                <li key={s.description} className={styles.row}>
-                  <span className={styles.description}>{s.description}</span>
+                <li key={s.descriptionKey} className={styles.row}>
+                  <span className={styles.description}>{t(s.descriptionKey)}</span>
                   <span className={styles.keys}>
                     {s.keys.map((k, i) => (
                       <kbd key={i} className={styles.kbd}>
@@ -66,9 +73,7 @@ export function ShortcutsHelp({ isOpen, onClose }: ShortcutsHelpProps): JSX.Elem
             </ul>
           </section>
         ))}
-        <p className={styles.hint}>
-          Shortcuts are disabled while typing in an input or when a modal is open.
-        </p>
+        <p className={styles.hint}>{t('ui.shortcuts.disabledHint')}</p>
       </div>
     </Modal>
   )

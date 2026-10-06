@@ -276,8 +276,14 @@
       "dark": "Dunkel",
       "system": "System"
     },
-    "lightTheme": { "label": "Helles Design", "desc": "Im hellen Modus verwendete Farbpalette" },
-    "darkTheme": { "label": "Dunkles Design", "desc": "Im dunklen Modus verwendete Farbpalette" },
+    "lightTheme": {
+      "label": "Helles Design",
+      "desc": "Im hellen Modus verwendete Farbpalette"
+    },
+    "darkTheme": {
+      "label": "Dunkles Design",
+      "desc": "Im dunklen Modus verwendete Farbpalette"
+    },
     "mochaAccent": {
       "label": "Catppuccin-Akzent",
       "desc": "Wird für Auswahl, Fokus und primäre Aktionen verwendet",
@@ -336,13 +342,34 @@
         "mono": "Monospace"
       },
       "colors": {
-        "canvas": { "label": "Leinwand", "desc": "Hintergrund der Hauptseite" },
-        "panel": { "label": "Oberfläche", "desc": "Karten, Dialoge und Bereiche" },
-        "accent": { "label": "Akzent", "desc": "Aktionen, Auswahl und Fokus" },
-        "accentContrast": { "label": "Akzenttext", "desc": "Text auf Akzentflächen" },
-        "text": { "label": "Primärtext", "desc": "Gut lesbarer Haupttext" },
-        "mutedText": { "label": "Gedämpfter Text", "desc": "Sekundärer und zurückhaltender Text" },
-        "border": { "label": "Ränder", "desc": "Trennlinien und Feldumrandungen" },
+        "canvas": {
+          "label": "Leinwand",
+          "desc": "Hintergrund der Hauptseite"
+        },
+        "panel": {
+          "label": "Oberfläche",
+          "desc": "Karten, Dialoge und Bereiche"
+        },
+        "accent": {
+          "label": "Akzent",
+          "desc": "Aktionen, Auswahl und Fokus"
+        },
+        "accentContrast": {
+          "label": "Akzenttext",
+          "desc": "Text auf Akzentflächen"
+        },
+        "text": {
+          "label": "Primärtext",
+          "desc": "Gut lesbarer Haupttext"
+        },
+        "mutedText": {
+          "label": "Gedämpfter Text",
+          "desc": "Sekundärer und zurückhaltender Text"
+        },
+        "border": {
+          "label": "Ränder",
+          "desc": "Trennlinien und Feldumrandungen"
+        },
         "colorAriaLabel": "Farbe {{label}}"
       },
       "cornerRadius": "Eckenradius",
@@ -725,5 +752,97 @@
       "broken_credentials": "Der Server hat geantwortet, aber Benutzername oder Passwort abgelehnt."
     },
     "corsNote": " Mit „abgeleitet“ markierte Prüfungen konnten nicht direkt gelesen werden – Browser verbergen die CORS-Header eines Servers vor JavaScript."
+  },
+  "ui": {
+    "aiVision": {
+      "hintCheckKey": "Prüfe deinen API-Schlüssel und die Basis-URL noch einmal.",
+      "emptyReply": "Das Modell hat auf die Testanfrage eine leere Antwort geliefert.",
+      "hintReasoning": "Wenn dies ein Reasoning-Modell ist, braucht es möglicherweise ein höheres Token-Limit, als diese App erlaubt — versuche ein Modell ohne Reasoning, falls das Problem bestehen bleibt.",
+      "hintNoVision": "Das Modell hat geantwortet, scheint aber keine Bildverarbeitung zu unterstützen. Wähle ein Modell mit Bildfunktion.",
+      "err": {
+        "auth": "Authentifizierung fehlgeschlagen ({{status}}) — prüfe, ob dein API-Schlüssel korrekt ist.",
+        "authAnthropic": "Authentifizierung fehlgeschlagen ({{status}}) — prüfe, ob dein Anthropic-API-Schlüssel korrekt ist.",
+        "failed": "Anfrage fehlgeschlagen ({{status}}): {{message}}",
+        "failedAnthropic": "Anthropic-Anfrage fehlgeschlagen ({{status}}): {{message}}",
+        "failedNoMessage": "Anfrage fehlgeschlagen mit Status {{status}}",
+        "failedNoMessageAnthropic": "Anthropic-Anfrage fehlgeschlagen mit Status {{status}}",
+        "noText": "Die Antwort enthielt keinen Text",
+        "noTextAnthropic": "Die Anthropic-Antwort enthielt keinen Text"
+      }
+    },
+    "setup": {
+      "title": "Calino-Einrichtung",
+      "subtitle": "Erstelle eine Konfigurationsdatei für deine selbst gehostete Calino-Instanz.",
+      "stepAccounts": "Konten",
+      "stepPassword": "Passwort",
+      "stepDownload": "Download",
+      "remove": "{{name}} entfernen",
+      "displayName": "Anzeigename",
+      "optional": "(optional)",
+      "displayNamePlaceholder": "z. B. Privat, Arbeit",
+      "serverUrl": "Server-URL",
+      "username": "Benutzername",
+      "password": "Passwort",
+      "connectionSuccessful": "Verbindung erfolgreich",
+      "diagnose": "Verbindung diagnostizieren",
+      "testing": "Wird getestet …",
+      "testConnection": "Verbindung testen",
+      "addAccount": "Konto hinzufügen",
+      "subscriptionsHeading": "Kalenderabonnements (.ics)",
+      "name": "Name",
+      "namePlaceholder": "z. B. Feiertage",
+      "calendarUrl": "Kalender-URL",
+      "refreshInterval": "Aktualisierungsintervall (Minuten)",
+      "proxyOptional": "Proxy-URL (optional)",
+      "proxyHint": "Nur nötig, wenn der Kalender-Host Cross-Origin-Anfragen nicht erlaubt.",
+      "addSubscription": "Abonnement hinzufügen",
+      "next": "Weiter →",
+      "masterPassword": "Master-Passwort",
+      "masterPlaceholder": "Wähle ein starkes Passwort",
+      "masterHint": "Mit diesem Passwort entsperrst du deine Kalender in Calino.",
+      "confirmPassword": "Passwort bestätigen",
+      "confirmPlaceholder": "Gib es erneut ein",
+      "back": "← Zurück",
+      "encrypting": "Wird verschlüsselt …",
+      "generate": "Konfiguration erstellen",
+      "nextSteps": "Nächste Schritte",
+      "step1": "Lege <code>calino.config.json</code> im Projektstamm ab",
+      "step2": "Neu bauen: <code>docker compose up -d --build</code>",
+      "step3": "Öffne Calino und gib dein Master-Passwort ein",
+      "rebuildWarning": "⚠️ Die Konfiguration wird beim Build in das JS-Bundle eingebettet. Änderungen werden erst nach einem Neubau wirksam.",
+      "startOver": "← Von vorn beginnen",
+      "downloadAgain": "Erneut herunterladen",
+      "done": "Fertig →",
+      "passwordsMismatch": "Die Passwörter stimmen nicht überein.",
+      "passwordTooShort": "Das Passwort muss mindestens 6 Zeichen lang sein.",
+      "encryptionFailed": "Verschlüsselung fehlgeschlagen."
+    },
+    "categories": {
+      "unknown": "Unbekannt",
+      "eventCount_one": "{{count}} Ereignis",
+      "eventCount_other": "{{count}} Ereignisse",
+      "matches_one": "{{count}} Treffer",
+      "matches_other": "{{count}} Treffer",
+      "uncategorized": "({{count}} ohne Kategorie)",
+      "inCalendar": "{{count}} in {{name}}",
+      "willMatch_one": "Trifft auf {{count}} Ereignis zu",
+      "willMatch_other": "Trifft auf {{count}} Ereignisse zu",
+      "currentlyUncategorized": "({{count}} derzeit ohne Kategorie)"
+    },
+    "data": {
+      "untitledEvent": "Unbenanntes Ereignis",
+      "start": "Beginn: {{date}}",
+      "end": "Ende: {{date}}",
+      "fix": "Beheben",
+      "delete": "Löschen",
+      "fixAll": "Alle beheben ({{count}})",
+      "deleteAll": "Alle löschen",
+      "duplicateIntro": "Diese Ereignisse haben auf Ihrem Server dieselbe eindeutige ID (UID), sind aber als getrennte Einträge gespeichert. Calino kann pro Gruppe nur eines anzeigen – die übrigen werden ausgeblendet, damit Ihr Kalender stabil bleibt. Meist stammt das von einem Massenkopieren in einer anderen App. Weisen Sie zur Behebung jedem Ereignis auf Ihrem Server eine eindeutige UID zu und synchronisieren Sie danach erneut.",
+      "duplicateUid": "Doppelte UID: {{uid}}",
+      "kept": "Beibehalten",
+      "hidden": "Ausgeblendet",
+      "deleting": "Wird gelöscht …",
+      "dismiss": "Verwerfen"
+    }
   }
 }

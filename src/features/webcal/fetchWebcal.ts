@@ -1,4 +1,5 @@
 import { buildProxyUrl } from '@/features/caldav/client/CalDAVClient'
+import i18n from '@/lib/i18n'
 
 const NETWORK_TIMEOUT_MS = 15_000
 
@@ -39,10 +40,10 @@ export async function fetchWebcalIcs(url: string, proxyUrl?: string | null): Pro
   try {
     parsed = new URL(normalized)
   } catch {
-    throw new Error('Enter a valid calendar URL (https:// or webcal://).')
+    throw new Error(i18n.t('calendar:ui.webcal.invalidUrl'))
   }
   if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
-    throw new Error('Only http(s):// and webcal:// URLs are supported.')
+    throw new Error(i18n.t('calendar:ui.webcal.unsupportedScheme'))
   }
 
   const fetchUrl = proxyUrl ? buildProxyUrl(proxyUrl, normalized) : normalized
@@ -51,20 +52,21 @@ export async function fetchWebcalIcs(url: string, proxyUrl?: string | null): Pro
   try {
     response = await fetchWithTimeout(fetchUrl)
   } catch (error) {
-    const msg = error instanceof Error ? error.message : 'Unknown error'
-    throw new Error(`Could not reach the calendar URL: ${msg}`, { cause: error })
+    const message =
+      error instanceof Error ? error.message : i18n.t('calendar:ui.webcal.unknownError')
+    throw new Error(i18n.t('calendar:ui.webcal.unreachable', { message }), { cause: error })
   }
 
   if (!response.ok) {
-    throw new Error(`Calendar URL returned status ${response.status}`)
+    throw new Error(i18n.t('calendar:ui.webcal.badStatus', { status: response.status }))
   }
 
   const text = await response.text()
   if (!text.trim()) {
-    throw new Error('Calendar URL returned an empty response.')
+    throw new Error(i18n.t('calendar:ui.webcal.emptyResponse'))
   }
   if (!/BEGIN:VCALENDAR/i.test(text)) {
-    throw new Error('That URL did not return a valid iCalendar (.ics) file.')
+    throw new Error(i18n.t('calendar:ui.webcal.notIcs'))
   }
 
   return text

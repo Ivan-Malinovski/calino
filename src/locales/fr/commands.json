@@ -114,6 +114,10 @@
     "goTo": "Aller à {{dateRef}}",
     "navigatedTo": "Affichage du {{date}}",
     "opened": "Ouverture de {{title}}",
+    "openedCalendar": "Ouverture du calendrier {{name}}",
+    "createdTask": "Tâche créée : {{title}}",
+    "createdEvent": "Événement créé : {{title}}",
+    "open": "Ouvrir",
     "placeholder": {
       "hangOut": "Hang out with Batman tomorrow at 9",
       "toggleDarkMode": "Activer ou désactiver le thème sombre",

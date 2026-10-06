@@ -1,3 +1,4 @@
+import i18n from '@/lib/i18n'
 import type { SyncErrorCode } from '@/features/caldav/client/errorMessages'
 
 /** Which part of the card a failed connect points the user at. */
@@ -16,14 +17,22 @@ export function connectionNudgeFor(
 ): { target: ConnectionNudge; action: string; label: string } | null {
   if (code === 'cors' || code === 'network') {
     return hasProxy
-      ? { target: 'proxy', action: 'Check the proxy URL ↓', label: 'Check the proxy URL' }
-      : { target: 'proxy', action: 'Set up a proxy ↓', label: 'A proxy may fix this' }
+      ? {
+          target: 'proxy',
+          action: i18n.t('caldav:ui.nudge.checkProxyAction'),
+          label: i18n.t('caldav:ui.nudge.checkProxyLabel'),
+        }
+      : {
+          target: 'proxy',
+          action: i18n.t('caldav:ui.nudge.setUpProxyAction'),
+          label: i18n.t('caldav:ui.nudge.proxyMayFix'),
+        }
   }
   if (code === 'forbidden' && !hasHeaders) {
     return {
       target: 'headers',
-      action: 'Is this server behind a gateway? Add a header ↓',
-      label: 'A custom header may fix this',
+      action: i18n.t('caldav:ui.nudge.headersAction'),
+      label: i18n.t('caldav:ui.nudge.headerMayFix'),
     }
   }
   return null

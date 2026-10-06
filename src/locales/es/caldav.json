@@ -14,5 +14,58 @@
     "creatingCalendar": "Creando calendario…",
     "savingCalendar": "Guardando calendario…",
     "deletingCalendar": "Eliminando calendario…"
+  },
+  "ui": {
+    "cleartextWarning": "Esta conexión usa HTTP sin cifrar, así que tu contraseña y los datos del calendario viajan sin cifrar. Válido en una red privada o VPN; evítalo en redes Wi-Fi que no controles.",
+    "headers": {
+      "count_one": "{{count}} encabezado personalizado",
+      "count_other": "{{count}} encabezados personalizados",
+      "proxyOn": "Proxy activado",
+      "optional": "Opcional",
+      "protectedServers": "Para servidores CalDAV protegidos",
+      "connectionSettings": "Ajustes de conexión",
+      "gatewayAccess": "Acceso por puerta de enlace",
+      "headerN": "Encabezado {{n}}",
+      "removeHeader": "Quitar encabezado",
+      "removeHeaderN": "Quitar encabezado {{n}}",
+      "name": "Nombre",
+      "nameAria": "Nombre del encabezado {{n}}",
+      "namePlaceholder": "p. ej., P-Access-Token-Id",
+      "value": "Valor",
+      "valueAria": "Valor del encabezado {{n}}",
+      "valuePlaceholder": "Introduce el valor secreto",
+      "revealAria": "Mostrar el secreto del encabezado {{n}}",
+      "hideAria": "Ocultar el secreto del encabezado {{n}}",
+      "hideValue": "Ocultar valor",
+      "showValue": "Mostrar valor",
+      "addHeader": "Añadir encabezado",
+      "proxyUrl": "URL del proxy",
+      "proxyWarning": "Las credenciales y los datos del calendario pasan por este servidor. Usa solo un proxy de confianza.",
+      "learnMore": "Más información",
+      "customHeaders": "Encabezados personalizados",
+      "gatewayHint": "Para servidores detrás de una puerta de enlace de autenticación"
+    },
+    "nudge": {
+      "checkProxyAction": "Revisa la URL del proxy ↓",
+      "checkProxyLabel": "Revisa la URL del proxy",
+      "setUpProxyAction": "Configura un proxy ↓",
+      "proxyMayFix": "Un proxy podría solucionarlo",
+      "headersAction": "¿El servidor está detrás de una puerta de enlace? Añade un encabezado ↓",
+      "headerMayFix": "Un encabezado personalizado podría solucionarlo"
+    },
+    "connecting": "Conectando con el servidor…",
+    "addAccountFailed": "No se pudo añadir la cuenta",
+    "syncFailed": "Error de sincronización",
+    "accountNotFound": "Cuenta no encontrada",
+    "credentialsNotFound": "Credenciales no encontradas",
+    "headerErrors": {
+      "invalid": "Encabezados personalizados no válidos.",
+      "proxyConflict": "Los encabezados personalizados requieren una conexión DAV directa; quita la URL del proxy.",
+      "invalidName": "Nombre de encabezado personalizado no válido o reservado: {{name}}",
+      "duplicateName": "Nombre de encabezado personalizado duplicado: {{name}}",
+      "invalidValue": "Valor no válido para el encabezado personalizado: {{name}}",
+      "originChanged": "La solicitud DAV cambió de origen. Introduce directamente la URL DAV final.",
+      "requestFailed": "La solicitud DAV falló o fue redirigida. Introduce directamente la URL DAV final y revisa CORS para los encabezados personalizados."
+    }
   }
 }

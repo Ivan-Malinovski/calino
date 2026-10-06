@@ -37,7 +37,11 @@ function KeywordInput({
   }
 
   return (
-    <div className={styles.keywordInput} role="list" aria-label={t('categories.keywords.ariaLabel')}>
+    <div
+      className={styles.keywordInput}
+      role="list"
+      aria-label={t('categories.keywords.ariaLabel')}
+    >
       {keywords.map((keyword) => (
         <span key={keyword} className={styles.keywordTag} role="listitem">
           {keyword}
@@ -64,7 +68,11 @@ function KeywordInput({
   )
 }
 
-export function CategoriesSettings({ searchControl }: { searchControl?: JSX.Element }): JSX.Element {
+export function CategoriesSettings({
+  searchControl,
+}: {
+  searchControl?: JSX.Element
+}): JSX.Element {
   const { t } = useTranslation('settings')
   const categories = useCalendarStore((s) => s.categories)
   const calendars = useCalendarStore((s) => s.calendars)
@@ -229,7 +237,7 @@ export function CategoriesSettings({ searchControl }: { searchControl?: JSX.Elem
 
       const byCalendarArray = Array.from(byCalendar.entries()).map(([calId, count]) => {
         const cal = calendars.find((c) => c.id === calId)
-        return { name: cal?.name || 'Unknown', count }
+        return { name: cal?.name || t('ui.categories.unknown'), count }
       })
 
       return {
@@ -268,7 +276,7 @@ export function CategoriesSettings({ searchControl }: { searchControl?: JSX.Elem
 
     const byCalendarArray = Array.from(byCalendar.entries()).map(([calId, count]) => {
       const cal = calendars.find((c) => c.id === calId)
-      return { name: cal?.name || 'Unknown', count }
+      return { name: cal?.name || t('ui.categories.unknown'), count }
     })
 
     return {
@@ -386,7 +394,9 @@ export function CategoriesSettings({ searchControl }: { searchControl?: JSX.Elem
                     aria-label={t('categories.editName')}
                   />
                   <span className={styles.catCount}>
-                    {getEventCountForCategory(category.name)} events
+                    {t('ui.categories.eventCount', {
+                      count: getEventCountForCategory(category.name),
+                    })}
                   </span>
                 </>
               ) : (
@@ -434,7 +444,9 @@ export function CategoriesSettings({ searchControl }: { searchControl?: JSX.Elem
                     {category.name}
                   </span>
                   <span className={styles.catCount}>
-                    {getEventCountForCategory(category.name)} events
+                    {t('ui.categories.eventCount', {
+                      count: getEventCountForCategory(category.name),
+                    })}
                   </span>
                   <div className={styles.catActions}>
                     <button
@@ -528,9 +540,7 @@ export function CategoriesSettings({ searchControl }: { searchControl?: JSX.Elem
       <div className={styles.group} data-component="auto-categorize-rules">
         <div className={styles.autoCatHeader}>
           <div className={styles.autoCatTitle}>{t('categories.autoCategorize.title')}</div>
-          <div className={styles.autoCatDesc}>
-            {t('categories.autoCategorize.desc')}
-          </div>
+          <div className={styles.autoCatDesc}>{t('categories.autoCategorize.desc')}</div>
         </div>
 
         <div className={styles.catList}>
@@ -567,7 +577,7 @@ export function CategoriesSettings({ searchControl }: { searchControl?: JSX.Elem
                         onClick={() => handleUpdateRule(rule.id)}
                         type="button"
                       >
-                          {t('categories.autoCategorize.save')}
+                        {t('categories.autoCategorize.save')}
                       </button>
                       <button className={styles.actionBtn} onClick={cancelEditRule} type="button">
                         {t('categories.autoCategorize.cancel')}
@@ -587,10 +597,10 @@ export function CategoriesSettings({ searchControl }: { searchControl?: JSX.Elem
                       <span className={styles.ruleArrow}>→</span>
                       <span className={styles.ruleCategoryBadge}>{categoryName}</span>
                       <span className={styles.catCount}>
-                        {matchingCount} match{matchingCount !== 1 ? 'es' : ''}
+                        {t('ui.categories.matches', { count: matchingCount })}
                         {uncategorizedCount > 0 && (
                           <span style={{ color: 'var(--accent)', marginLeft: '4px' }}>
-                            ({uncategorizedCount} uncategorized)
+                            {t('ui.categories.uncategorized', { count: uncategorizedCount })}
                           </span>
                         )}
                       </span>
@@ -598,7 +608,7 @@ export function CategoriesSettings({ searchControl }: { searchControl?: JSX.Elem
                         <div className={styles.rulePreviewCalendar}>
                           {byCalendar.map((cal) => (
                             <span key={cal.name}>
-                              {cal.count} in {cal.name}
+                              {t('ui.categories.inCalendar', { count: cal.count, name: cal.name })}
                             </span>
                           ))}
                         </div>
@@ -645,24 +655,28 @@ export function CategoriesSettings({ searchControl }: { searchControl?: JSX.Elem
                   ))}
                 </select>
                 <button className={styles.actionBtn} onClick={handleAddRule} type="button">
-                  Add
+                  {t('actions.add', { ns: 'common' })}
                 </button>
                 <button className={styles.actionBtn} onClick={cancelAddRule} type="button">
-                  Cancel
+                  {t('actions.cancel', { ns: 'common' })}
                 </button>
               </div>
               {newRulePreview && (
                 <div className={styles.rulePreview}>
-                  Will match {newRulePreview.matchingCount} event
-                  {newRulePreview.matchingCount !== 1 ? 's' : ''}
+                  {t('ui.categories.willMatch', { count: newRulePreview.matchingCount })}
                   {newRulePreview.uncategorizedCount > 0 && (
-                    <span> ({newRulePreview.uncategorizedCount} currently uncategorized)</span>
+                    <span>
+                      {' '}
+                      {t('ui.categories.currentlyUncategorized', {
+                        count: newRulePreview.uncategorizedCount,
+                      })}
+                    </span>
                   )}
                   {newRulePreview.byCalendar.length > 0 && (
                     <div className={styles.rulePreviewCalendar}>
                       {newRulePreview.byCalendar.map((cal) => (
                         <span key={cal.name}>
-                          {cal.count} in {cal.name}
+                          {t('ui.categories.inCalendar', { count: cal.count, name: cal.name })}
                         </span>
                       ))}
                     </div>

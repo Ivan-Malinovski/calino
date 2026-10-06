@@ -5,6 +5,7 @@ import { usePendingChangeCount } from '@/features/caldav/hooks/usePendingChangeC
 import { useOnlineStatus } from '@/hooks/useOnlineStatus'
 import { withProgress } from '@/store/progressStore'
 import { showToast } from '@/lib/toast'
+import i18n from '@/lib/i18n'
 import styles from './SyncStatusIndicator.module.css'
 
 /**
@@ -28,13 +29,13 @@ export function SyncStatusIndicator(): JSX.Element | null {
   const handleRetry = async (): Promise<void> => {
     setIsRetrying(true)
     try {
-      const { succeeded, failed } = await withProgress('Retrying changes…', () =>
+      const { succeeded, failed } = await withProgress(i18n.t('errors:toast.sync.retrying'), () =>
         retryAllFailedSyncs()
       )
       showToast(
         failed > 0
-          ? `${succeeded} sent, ${failed} still waiting`
-          : `${succeeded} ${succeeded === 1 ? 'change' : 'changes'} sent`
+          ? i18n.t('errors:toast.sync.retryPartial', { succeeded, failed })
+          : i18n.t('errors:toast.sync.retrySent', { count: succeeded })
       )
     } finally {
       setIsRetrying(false)
@@ -43,8 +44,10 @@ export function SyncStatusIndicator(): JSX.Element | null {
 
   const message =
     pending === 0
-      ? 'Offline — changes will send when you reconnect'
-      : `${pending} ${pending === 1 ? 'change' : 'changes'} waiting${isOnline ? '' : ' — offline'}`
+      ? i18n.t('errors:toast.sync.offlineWaiting')
+      : i18n.t(isOnline ? 'errors:toast.sync.waiting' : 'errors:toast.sync.waitingOffline', {
+          count: pending,
+        })
 
   return (
     <div className={styles.indicator} role="status" aria-live="polite">
@@ -58,7 +61,7 @@ export function SyncStatusIndicator(): JSX.Element | null {
           disabled={isRetrying}
           data-component="sync-retry"
         >
-          {isRetrying ? 'Retrying…' : 'Retry'}
+          {isRetrying ? i18n.t('calendar:ui.sync.retrying') : i18n.t('calendar:ui.sync.retry')}
         </button>
       )}
     </div>

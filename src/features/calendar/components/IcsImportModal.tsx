@@ -39,7 +39,10 @@ function describeWhen(event: CalendarEvent, timeFormat: string): string {
     const date = parseISO(iso)
     if (Number.isNaN(date.getTime())) return ''
     if (event.isAllDay) return formatDisplayDate(date, 'd MMM yyyy')
-    return formatDisplayDate(date, timeFormat === '12h' ? 'd MMM yyyy, h:mm a' : 'd MMM yyyy, HH:mm')
+    return formatDisplayDate(
+      date,
+      timeFormat === '12h' ? 'd MMM yyyy, h:mm a' : 'd MMM yyyy, HH:mm'
+    )
   } catch {
     return ''
   }
@@ -157,7 +160,8 @@ export function IcsImportModal({
         source: 'local',
       })
     } else {
-      calendarName = calendars.find((c) => c.id === calendarId)?.name ?? t('modals.icsImport.calendarFallback')
+      calendarName =
+        calendars.find((c) => c.id === calendarId)?.name ?? t('modals.icsImport.calendarFallback')
     }
 
     isImportingRef.current = true
@@ -245,11 +249,7 @@ export function IcsImportModal({
   if (!isOpen) return null
 
   return createPortal(
-    <div
-      className={shell.modal}
-      onClick={handleBackdropClick}
-      data-component="ics-import-modal"
-    >
+    <div className={shell.modal} onClick={handleBackdropClick} data-component="ics-import-modal">
       <div
         ref={dialogRef}
         className={shell.modalContent}
@@ -339,7 +339,8 @@ export function IcsImportModal({
                 id="icsImportNewName"
                 className={shell.input}
                 placeholder={
-                  fileName?.replace(/\.ics$/i, '') || t('modals.icsImport.importedCalendarPlaceholder')
+                  fileName?.replace(/\.ics$/i, '') ||
+                  t('modals.icsImport.importedCalendarPlaceholder')
                 }
                 value={newCalendarName}
                 onChange={(e) => setNewCalendarName(e.target.value)}

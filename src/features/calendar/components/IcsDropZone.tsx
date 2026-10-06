@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { createPortal } from 'react-dom'
 import { showToast } from '@/lib/toast'
+import i18n from '@/lib/i18n'
 import { IcsImportModal } from './IcsImportModal'
 import styles from './IcsDropZone.module.css'
 
@@ -64,14 +65,14 @@ export function IcsDropZone(): JSX.Element | null {
       if (!ics) {
         // Non-calendar files aren't an error — the user just dropped the wrong
         // thing on the window. Stay quiet unless they dropped *something*.
-        if (files.length > 0) showToast('That file isn’t a .ics calendar')
+        if (files.length > 0) showToast(i18n.t('errors:toast.ics.notIcs'))
         return
       }
 
       void ics
         .text()
         .then((text) => setPendingIcs({ text, fileName: ics.name }))
-        .catch(() => showToast('Could not read that file'))
+        .catch(() => showToast(i18n.t('errors:toast.ics.unreadable')))
     }
 
     // Cancels a stuck overlay if the drag ends outside the window.

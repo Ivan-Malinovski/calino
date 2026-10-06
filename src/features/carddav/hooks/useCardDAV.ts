@@ -7,6 +7,7 @@ import { useContactStore } from '@/store/contactStore'
 import { getCredentialById } from '@/features/caldav/client/credentials'
 import * as storage from '@/features/caldav/sync/accountStorage'
 import { showToast } from '@/lib/toast'
+import i18n from '@/lib/i18n'
 
 /**
  * Deletes carry a snapshot of the contact's url/etag/account in `data`, because the
@@ -211,11 +212,14 @@ export function useCardDAV(): UseCardDAVReturn {
               .getState()
               .contacts.find((c) => c.id === change.contactId)
             const snapshot = parseDeleteSnapshot(change)
-            const label = contact?.displayName ?? snapshot?.displayName ?? 'Contact'
+            const label =
+              contact?.displayName ??
+              snapshot?.displayName ??
+              i18n.t('errors:toast.contacts.fallbackLabel')
             const reason = err instanceof Error ? err.message : String(err)
-            const verb =
-              change.type === 'create' ? 'create' : change.type === 'update' ? 'update' : 'delete'
-            showToast(`Couldn't ${verb} "${label}" on the server: ${reason}`)
+            showToast(
+              i18n.t('errors:toast.contacts.rejected', { context: change.type, label, reason })
+            )
           }
         }
       }
@@ -486,7 +490,7 @@ export function useCardDAV(): UseCardDAVReturn {
         })
 
         for (const displayName of conflicts) {
-          showToast(`Conflict on "${displayName}" — server version kept`)
+          showToast(i18n.t('errors:toast.contacts.conflict', { name: displayName }))
         }
 
         setSyncState((prev) => ({
@@ -501,7 +505,7 @@ export function useCardDAV(): UseCardDAVReturn {
         )
       } catch (error) {
         console.error('[CardDAV] syncAccount failed:', error)
-        const msg = error instanceof Error ? error.message : 'Sync failed'
+        const msg = error instanceof Error ? error.message : i18n.t('errors:toast.sync.failed')
         setSyncState((prev) => ({
           ...prev,
           status: 'error',
@@ -509,7 +513,7 @@ export function useCardDAV(): UseCardDAVReturn {
         }))
         // Only show toast for real errors, not during initial mount
         if (syncState.lastSyncAt) {
-          showToast(`Contacts sync failed: ${msg}`)
+          showToast(i18n.t('errors:toast.contacts.syncFailed', { message: msg }))
         }
       } finally {
         // Now safe to remove successfully replayed pending changes

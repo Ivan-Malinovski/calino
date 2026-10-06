@@ -147,14 +147,6 @@ function getTaskGroup(task: TaskWithColor): string {
 
 const GROUP_ORDER = ['overdue', 'today', 'week', 'later', 'nodate']
 
-const GROUP_LABELS: Record<string, string> = {
-  overdue: 'Overdue',
-  today: 'Today',
-  week: 'This week',
-  later: 'Later',
-  nodate: 'No due date',
-}
-
 type VirtualItem =
   | { type: 'header'; key: string; label: string; count: number; isOverdue?: boolean }
   | {
@@ -348,8 +340,10 @@ export function TodoView(): JSX.Element {
         return {
           ...withColor(task),
           recurrenceLabel: [
-            master ? describeRecurrence(master) : 'Repeating task',
-            `This occurrence: ${formatOccurrenceDate(task.recurrenceId, task.isAllDay)}`,
+            master ? describeRecurrence(master) : t('surface.repeatingTask'),
+            t('ui.todo.thisOccurrence', {
+              date: formatOccurrenceDate(task.recurrenceId, task.isAllDay),
+            }),
           ].join('\n'),
         }
       }
@@ -365,7 +359,7 @@ export function TodoView(): JSX.Element {
         // as completed rather than stranding an undated master in the list.
         return {
           ...withColor({ ...task, completed: true, taskStatus: 'COMPLETED' }),
-          recurrenceLabel: [describeRecurrence(task), 'No occurrences left'].join('\n'),
+          recurrenceLabel: [describeRecurrence(task), t('ui.todo.noOccurrencesLeft')].join('\n'),
         }
       }
       // Keep the master's own id so the subtask tree and drag/re-parent logic,
@@ -381,14 +375,16 @@ export function TodoView(): JSX.Element {
         occurrenceStart: next.occStartStr,
         recurrenceLabel: [
           describeRecurrence(task),
-          `Next: ${formatOccurrenceDate(next.occStartStr, task.isAllDay)}`,
+          t('ui.todo.nextOccurrence', {
+            date: formatOccurrenceDate(next.occStartStr, task.isAllDay),
+          }),
           completedCount > 0
-            ? `${completedCount} completed so far`
-            : 'None completed yet — tick to advance',
+            ? t('ui.todo.completedSoFar', { count: completedCount })
+            : t('ui.todo.noneCompleted'),
         ].join('\n'),
       }
     })
-  }, [events, calendars])
+  }, [events, calendars, t])
 
   const taskCollapse = useTaskCollapse(events)
   const collapsedDescendantIds = useMemo(() => {
@@ -447,7 +443,7 @@ export function TodoView(): JSX.Element {
             style={{ backgroundColor: selectedProject.color }}
           />
         )}
-        {selectedProject?.name ?? 'All projects'}
+        {selectedProject?.name ?? t('ui.todo.allProjects')}
         <svg aria-hidden="true" viewBox="0 0 16 16" fill="none">
           <path
             d="M4 6l4 4 4-4"
@@ -473,7 +469,7 @@ export function TodoView(): JSX.Element {
               setIsProjectMenuOpen(false)
             }}
           >
-            All projects
+            {t('ui.todo.allProjects')}
           </button>
           {taskCalendars.map((calendar) => (
             <button
@@ -539,7 +535,7 @@ export function TodoView(): JSX.Element {
         if (groupTasks && groupTasks.length > 0) {
           result.push({
             key,
-            label: GROUP_LABELS[key],
+            label: t(`ui.todo.group.${key}`),
             isOverdue: key === 'overdue',
             tasks: groupTasks,
           })
@@ -558,7 +554,7 @@ export function TodoView(): JSX.Element {
 
       result.push({
         key: 'done',
-        label: 'Done',
+        label: t('actions.done', { ns: 'common' }),
         tasks: sortedDone,
       })
     }
@@ -569,7 +565,7 @@ export function TodoView(): JSX.Element {
         tasks: group.tasks.filter((task) => !collapsedDescendantIds.has(task.id)),
       }))
       .filter((group) => group.tasks.length > 0)
-  }, [collapsedDescendantIds, filteredTasks, filter, recentlyCompleted])
+  }, [collapsedDescendantIds, filteredTasks, filter, recentlyCompleted, t])
 
   const handleToggleComplete = useCallback(
     async (task: TaskWithColor): Promise<void> => {
@@ -976,7 +972,7 @@ export function TodoView(): JSX.Element {
           {(task.occurrenceStart || task.recurrenceId) && (
             <span
               className={styles.recurringBadge}
-              aria-label={task.recurrenceLabel || 'Repeating task'}
+              aria-label={task.recurrenceLabel || t('surface.repeatingTask')}
               data-component="task-recurring-badge"
               data-recurrence={task.recurrenceLabel}
               onMouseEnter={(e) =>
@@ -1048,7 +1044,10 @@ export function TodoView(): JSX.Element {
                   : ''
               }`}
               data-component="task-parent-context"
-              aria-label={`Parent task${item.orphanAncestors.length > 1 ? 's' : ''}: ${item.orphanAncestors.map((ancestor) => ancestor.title).join(', ')}`}
+              aria-label={t('ui.subtasks.parentContext', {
+                count: item.orphanAncestors.length,
+                titles: item.orphanAncestors.map((ancestor) => ancestor.title).join(', '),
+              })}
             >
               {(item.orphanPosition === 'only' || item.orphanPosition === 'first') &&
                 item.orphanAncestors.map((ancestor, depth) => (
@@ -1114,7 +1113,9 @@ export function TodoView(): JSX.Element {
                     // this click — without `stopPropagation` the click would
                     // double-fire as a drag start.
                     onPointerDown={(e) => e.stopPropagation()}
-                    aria-label={task.completed ? 'Mark as incomplete' : 'Mark as complete'}
+                    aria-label={
+                      task.completed ? t('surface.markIncomplete') : t('surface.markComplete')
+                    }
                   >
                     <svg
                       viewBox="0 0 14 14"
@@ -1155,7 +1156,7 @@ export function TodoView(): JSX.Element {
                           type="button"
                           className={styles.taskSubtaskPopupButton}
                           data-component="task-subtasks-popup-trigger"
-                          aria-label={`Show subtasks for "${task.title}"`}
+                          aria-label={t('ui.subtasks.show', { title: task.title })}
                           onPointerDown={(event) => event.stopPropagation()}
                           onClick={(event) => {
                             event.stopPropagation()
@@ -1245,12 +1246,12 @@ export function TodoView(): JSX.Element {
             {!isMobile && (
               <div className={styles.tpCount}>
                 <span>
-                  <b>{activeCount}</b> active
+                  <b>{activeCount}</b> {t('ui.todo.activeLabel')}
                 </span>
                 <span className={styles.dim} aria-hidden="true">
                   ·
                 </span>
-                <span>{completedCount} done</span>
+                <span>{t('ui.todo.doneCount', { count: completedCount })}</span>
               </div>
             )}
           </div>
@@ -1272,7 +1273,7 @@ export function TodoView(): JSX.Element {
                 className={`${styles.tab} ${filter === 'all' ? styles.tabActive : ''}`}
                 onClick={() => setFilter('all')}
               >
-                All
+                {t('ui.todo.filterAll')}
               </button>
               <button
                 ref={(el) => {
@@ -1281,7 +1282,7 @@ export function TodoView(): JSX.Element {
                 className={`${styles.tab} ${filter === 'active' ? styles.tabActive : ''}`}
                 onClick={() => setFilter('active')}
               >
-                Active
+                {t('ui.todo.filterActive')}
                 {isMobile && activeCount > 0 && (
                   <span className={styles.tabCount}>{activeCount}</span>
                 )}
@@ -1293,7 +1294,7 @@ export function TodoView(): JSX.Element {
                 className={`${styles.tab} ${filter === 'completed' ? styles.tabActive : ''}`}
                 onClick={() => setFilter('completed')}
               >
-                Done
+                {t('ui.todo.filterDone')}
                 {isMobile && completedCount > 0 && (
                   <span className={styles.tabCount}>{completedCount}</span>
                 )}
@@ -1313,7 +1314,7 @@ export function TodoView(): JSX.Element {
               >
                 <path d="M7 2v10M2 7h10" />
               </svg>
-              {isMobile ? 'Add' : 'Add task'}
+              {isMobile ? t('ui.todo.addShort') : t('surface.addTask')}
             </button>
           </div>
         </div>
@@ -1388,7 +1389,7 @@ export function TodoView(): JSX.Element {
                   }}
                   data-component="todo-empty-create"
                 >
-                  + Create task
+                  {t('ui.todo.createTask')}
                 </button>
               </div>
             )}
@@ -1506,8 +1507,8 @@ export function TodoView(): JSX.Element {
           events={subtaskPopup.subtasks}
           position={subtaskPopup.position}
           title={subtaskPopup.parent.title}
-          countLabel={`${subtaskPopup.subtasks.length} subtask${subtaskPopup.subtasks.length === 1 ? '' : 's'}`}
-          ariaLabel={`Subtasks for ${subtaskPopup.parent.title}`}
+          countLabel={t('ui.subtasks.count', { count: subtaskPopup.subtasks.length })}
+          ariaLabel={t('ui.subtasks.for', { title: subtaskPopup.parent.title })}
           onClose={() => setSubtaskPopup(null)}
           onEventClick={(event) => {
             setSubtaskPopup(null)

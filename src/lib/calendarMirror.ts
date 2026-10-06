@@ -1,6 +1,7 @@
 import { registerPlugin, Capacitor } from '@capacitor/core'
 import type { Calendar, CalendarEvent } from '@/types'
 import { buildRRuleString } from './recurrence'
+import i18n from './i18n'
 import { getEffectiveReminders } from './notifications'
 
 /**
@@ -255,7 +256,7 @@ export function buildMirrorPayload(
     const base: Omit<MirrorEventPayload, 'hash'> = {
       id: event.id,
       calendarId: event.calendarId,
-      title: event.title || '(No title)',
+      title: event.title || i18n.t('calendar:ui.noTitle'),
       description: event.description,
       location: event.location,
       start,

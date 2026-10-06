@@ -33,6 +33,7 @@ import {
   formatDisplayDate,
 } from '@/lib/datetime'
 import { useTranslation } from 'react-i18next'
+import i18n from '@/lib/i18n'
 import { safeCalDAVUpdate } from '@/lib/caldavHelpers'
 import { extractOriginalEventId, hasDueTime } from '@/lib/events'
 import { LocationLink } from './LocationLink'
@@ -474,7 +475,7 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
         originalEvent.calendarId,
         { ...originalEvent, ...updates },
         updates,
-        'Failed to sync task hierarchy change'
+        i18n.t('errors:ui.dragSync.hierarchy')
       )
       return
     }
@@ -534,7 +535,7 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
       originalEvent.calendarId,
       { ...originalEvent, ...updates },
       updates,
-      'Failed to sync dragged item'
+      i18n.t('errors:ui.dragSync.item')
     )
   }
 
@@ -892,7 +893,12 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
                                               : styles.taskParentContextContinuation
                                           }`}
                                           data-component="task-parent-context"
-                                          aria-label={`Parent task${orphanContext.ancestors.length > 1 ? 's' : ''}: ${orphanContext.ancestors.map((ancestor) => ancestor.title).join(', ')}`}
+                                          aria-label={t('ui.subtasks.parentContext', {
+                                            count: orphanContext.ancestors.length,
+                                            titles: orphanContext.ancestors
+                                              .map((ancestor) => ancestor.title)
+                                              .join(', '),
+                                          })}
                                         >
                                           {showAncestorLabels &&
                                             orphanContext.ancestors.map((ancestor, depth) => (
@@ -1020,7 +1026,9 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
                                                   type="button"
                                                   className={styles.agendaTaskSubtaskPopupButton}
                                                   data-component="task-subtasks-popup-trigger"
-                                                  aria-label={`Show subtasks for "${event.title}"`}
+                                                  aria-label={t('ui.subtasks.show', {
+                                                    title: event.title,
+                                                  })}
                                                   onPointerDown={(clickEvent) =>
                                                     clickEvent.stopPropagation()
                                                   }
@@ -1246,8 +1254,8 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
           events={subtaskPopup.subtasks}
           position={subtaskPopup.position}
           title={subtaskPopup.parent.title}
-          countLabel={`${subtaskPopup.subtasks.length} subtask${subtaskPopup.subtasks.length === 1 ? '' : 's'}`}
-          ariaLabel={`Subtasks for ${subtaskPopup.parent.title}`}
+          countLabel={t('ui.subtasks.count', { count: subtaskPopup.subtasks.length })}
+          ariaLabel={t('ui.subtasks.for', { title: subtaskPopup.parent.title })}
           onClose={() => setSubtaskPopup(null)}
           onEventClick={(event) => {
             setSubtaskPopup(null)

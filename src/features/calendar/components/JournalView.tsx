@@ -16,6 +16,7 @@ import { createUuid } from '@/lib/uuid'
 import { MarkdownView } from '@/lib/markdown'
 import { wrapMarkdownSelection } from '@/lib/markdownHelpers'
 import { showToast } from '@/lib/toast'
+import i18n from '@/lib/i18n'
 import { deleteEventWithUndo } from '@/lib/deleteWithUndo'
 import { formatDisplayDate, formatMonthYear, toLocalDateString } from '@/lib/datetime'
 import { putAttachments, getAttachments } from '@/lib/attachmentStore'
@@ -210,18 +211,20 @@ function JournalEditor({
   const handleAttachmentsChange = (next: CalendarAttachment[]): void => {
     setAttachments(next)
     onChange({ attachments: next.length ? next : undefined })
-    putAttachments(entry.id, next).catch(() => showToast('Failed to save attachments locally'))
+    putAttachments(entry.id, next).catch(() =>
+      showToast(i18n.t('errors:toast.attachments.saveLocal'))
+    )
   }
   const statusLabel =
     status === 'unsaved'
-      ? 'Unsaved changes'
+      ? t('ui.journal.unsaved')
       : status === 'saving'
-        ? 'Saving…'
+        ? t('ui.journal.saving')
         : status === 'error'
-          ? 'Sync failed'
+          ? t('ui.journal.syncFailed')
           : (entry.calendarId !== 'default' || entry.resourceHref) && status === 'saved'
-            ? 'Saved'
-            : 'Draft saved locally'
+            ? t('ui.journal.saved')
+            : t('ui.journal.draftLocal')
 
   return (
     <section
@@ -230,7 +233,7 @@ function JournalEditor({
     >
       <div className={styles.editorTopbar}>
         <button className={styles.backButton} type="button" onClick={onCloseNarrow}>
-          ← All entries
+          ← {t('surface.journalAllEntries')}
         </button>
       </div>
 
@@ -286,7 +289,11 @@ function JournalEditor({
             className={styles.headerTags}
           />
           {writableCalendars.length > 1 && (
-            <div className={styles.calendarRow} role="radiogroup" aria-label={t('surface.journalCalendar')}>
+            <div
+              className={styles.calendarRow}
+              role="radiogroup"
+              aria-label={t('surface.journalCalendar')}
+            >
               {writableCalendars.map((calendar) => {
                 const selected = calendar.id === entry.calendarId
                 return (
@@ -353,7 +360,7 @@ function JournalEditor({
             className={styles.moreToggle}
             onClick={() => setShowMore((value) => !value)}
           >
-            {showMore ? '− Less' : '+ More'}
+            {showMore ? t('ui.journal.less') : t('ui.journal.more')}
           </button>
           {showMore && (
             <div className={styles.moreContent}>
@@ -389,7 +396,7 @@ function JournalEditor({
                           })
                         }}
                       >
-                        {event.title || '(untitled)'}
+                        {event.title || t('ui.journal.untitledParen')}
                       </button>
                     )
                   })}
@@ -402,26 +409,34 @@ function JournalEditor({
 
       <div className={styles.editorBottom} data-component="journal-editor-footer">
         <div className={styles.editorBottomInfo}>
-          <div className={styles.modeSwitch} role="group" aria-label={t('surface.journalEditorMode')}>
+          <div
+            className={styles.modeSwitch}
+            role="group"
+            aria-label={t('surface.journalEditorMode')}
+          >
             <button
               type="button"
               className={mode === 'write' ? styles.modeActive : ''}
               onClick={() => onModeChange('write')}
             >
-              Write
+              {t('ui.journal.write')}
             </button>
             <button
               type="button"
               className={mode === 'read' ? styles.modeActive : ''}
               onClick={() => onModeChange('read')}
             >
-              Read
+              {t('ui.journal.read')}
             </button>
           </div>
           {mode === 'write' && (
             <>
-              <span>{wordCount(entry.description || '')} words</span>
-              <span>{navigator.userAgent.includes('Mac') ? '⌘' : 'Ctrl'} + B / I to format</span>
+              <span>{t('ui.journal.words', { count: wordCount(entry.description || '') })}</span>
+              <span>
+                {t('ui.journal.formatHint', {
+                  key: navigator.userAgent.includes('Mac') ? '⌘' : 'Ctrl',
+                })}
+              </span>
             </>
           )}
           {mode === 'read' && <span>{t('surface.journalMarkdownSupported')}</span>}
@@ -454,6 +469,7 @@ const JournalEntryRow = memo(function JournalEntryRow({
   onSelect,
   onDelete,
 }: JournalEntryRowProps): JSX.Element {
+  const { t } = useTranslation('calendar')
   const date = formatEntryDate(entry.start)
   return (
     <article
@@ -462,7 +478,10 @@ const JournalEntryRow = memo(function JournalEntryRow({
       data-date={entry.start}
       data-entry-id={entry.id}
       aria-current={selected ? 'true' : undefined}
-      aria-label={`${entry.title || 'Untitled entry'}, ${date.monthYear}`}
+      aria-label={t('ui.journal.entryRowLabel', {
+        title: entry.title || t('surface.journalUntitled'),
+        date: date.monthYear,
+      })}
       role="button"
       tabIndex={0}
       onClick={onSelect}
@@ -480,8 +499,8 @@ const JournalEntryRow = memo(function JournalEntryRow({
         <small>{date.monthYear}</small>
       </div>
       <div className={styles.rowContent}>
-        <div className={styles.rowTitle}>{entry.title || 'Untitled entry'}</div>
-        <div className={styles.rowSnippet}>{entry.description || 'No text yet'}</div>
+        <div className={styles.rowTitle}>{entry.title || t('surface.journalUntitled')}</div>
+        <div className={styles.rowSnippet}>{entry.description || t('ui.journal.noText')}</div>
         {entry.categories && entry.categories.length > 0 && (
           <div className={styles.rowTags}>
             {entry.categories.map((tag) => (
@@ -493,8 +512,12 @@ const JournalEntryRow = memo(function JournalEntryRow({
       <button
         type="button"
         className={`${styles.rowDelete} ${confirmDelete ? styles.rowDeleteConfirm : ''}`}
-        aria-label={confirmDelete ? 'Confirm delete entry' : 'Delete entry'}
-        title={confirmDelete ? 'Click to confirm delete' : 'Delete entry'}
+        aria-label={
+          confirmDelete ? t('surface.journalConfirmDelete') : t('surface.journalDeleteEntry')
+        }
+        title={
+          confirmDelete ? t('surface.journalConfirmDeleteHint') : t('surface.journalDeleteEntry')
+        }
         onClick={(event) => {
           event.stopPropagation()
           onDelete()
@@ -888,7 +911,7 @@ export function JournalView(): JSX.Element {
                   type="button"
                   onClick={() => setViewMode(mode)}
                 >
-                  {mode === 'month' ? 'Month' : 'All'}
+                  {mode === 'month' ? t('surface.journalMonth') : t('surface.journalAll')}
                 </button>
               ))}
             </div>
@@ -898,8 +921,8 @@ export function JournalView(): JSX.Element {
               type="button"
               onClick={handleCreate}
             >
-              <span aria-hidden="true">+</span> New
-              <span className={styles.addEntryFull}> entry</span>
+              <span aria-hidden="true">+</span> {t('ui.journal.newShort')}
+              <span className={styles.addEntryFull}>{t('ui.journal.newSuffix')}</span>
             </button>
           </div>
         </div>
@@ -922,7 +945,8 @@ export function JournalView(): JSX.Element {
             >
               {entries.length === 0 ? (
                 <div className={styles.empty}>
-                  <h2>{t('surface.journalEmptyTitle')}</h2>{t('surface.journalEmptyDescription')}
+                  <h2>{t('surface.journalEmptyTitle')}</h2>
+                  {t('surface.journalEmptyDescription')}
                 </div>
               ) : (
                 entries.map((entry) => (

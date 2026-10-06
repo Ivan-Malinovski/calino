@@ -13,5 +13,58 @@
     "view": "View",
     "done": "Done",
     "save": "Save"
+  },
+  "ui": {
+    "errorBoundary": {
+      "title": "Something went wrong",
+      "unexpected": "An unexpected error occurred",
+      "retry": "Try again"
+    },
+    "cookie": {
+      "notice": "We use local storage to save your data. No tracking cookies.",
+      "privacy": "Privacy",
+      "dismiss": "Got it"
+    },
+    "skipToCalendar": "Skip to calendar",
+    "agendaPanel": {
+      "resize": "Resize agenda panel",
+      "close": "Close agenda panel",
+      "title": "Agenda"
+    },
+    "update": {
+      "apiError": "GitHub API error: {{status}}",
+      "failedWith": "Failed to check for updates: {{message}}",
+      "failed": "Failed to check for updates"
+    },
+    "shortcuts": {
+      "title": "Keyboard shortcuts",
+      "navigation": "Navigation",
+      "create": "Create",
+      "general": "General",
+      "today": "Jump to today",
+      "prevView": "Previous view",
+      "nextView": "Next view",
+      "newEvent": "New event",
+      "newTask": "New task",
+      "palette": "Open command palette",
+      "showHelp": "Show this help",
+      "closePanel": "Close modal / panel",
+      "disabledHint": "Shortcuts are disabled while typing in an input or when a modal is open."
+    },
+    "onboarding": {
+      "title": "Start with your calendar",
+      "connectLine": "Connect iCloud, Nextcloud, Fastmail or any CalDAV server.",
+      "dataStays": "Your data stays in your browser.",
+      "how": "How?",
+      "howText": "Calino has no backend of its own. It talks directly to your CalDAV server and stores a copy locally. You can back up or move your data with export/import in Settings.",
+      "connectAccount": "Connect CalDAV account",
+      "loading": "Loading…",
+      "explore": "Explore Calino with sample data",
+      "skip": "Skip for now",
+      "demoFailed": "Failed to load demo data",
+      "nativeFootnote": "Calino can remind you before events start. Continuing will ask for notification permission.",
+      "alsoOnAndroid": "Also on <link>Android</link>, with camera import and reminders."
+    },
+    "privacy": "Privacy"
   }
 }

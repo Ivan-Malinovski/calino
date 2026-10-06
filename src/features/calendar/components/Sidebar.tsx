@@ -45,6 +45,7 @@ import { DeleteCalendarDialog } from './DeleteCalendarDialog'
 import { EmptyState } from '@/components/common/EmptyState'
 import { MiniTasksSection } from './MiniTasksSection'
 import { useTranslation } from 'react-i18next'
+import i18n from '@/lib/i18n'
 import { formatDisplayDate } from '@/lib/datetime'
 import styles from './Sidebar.module.css'
 
@@ -1006,7 +1007,7 @@ export function Sidebar({
 
             <div className={styles.footer}>
               <Link to="/privacy" className={styles.footerLink}>
-                Privacy
+                {t('ui.privacy', { ns: 'common' })}
               </Link>
               <UpdateIndicator />
             </div>
@@ -1066,7 +1067,7 @@ export function Sidebar({
                       ? shortSyncErrorMessage(
                           classifySyncError(error.message),
                           error.message,
-                          'Delete'
+                          i18n.t('errors:toast.sync.deleteSubject')
                         )
                       : t('views.sidebar.failedToDeleteCalendar')
                   )

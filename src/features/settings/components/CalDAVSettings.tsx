@@ -286,7 +286,7 @@ export function CalDAVSettings({ searchControl }: { searchControl?: JSX.Element 
           >
             <path d="M8 2v12M2 8h12" />
           </svg>
-          Add calendar account
+          {t('caldav.addAccount')}
         </button>
       </div>
 

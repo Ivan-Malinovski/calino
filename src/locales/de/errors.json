@@ -115,5 +115,109 @@
     "accountFailed": "Konto {{account}} fehlgeschlagen: {{error}}",
     "noCalendarsFetched": "Keine Kalender abgerufen; Spiegel bleibt unverändert",
     "syncDone": "Hintergrundsynchronisierung abgeschlossen: {{events}} Ereignisse aus {{calendars}} Kalendern von {{accounts}} Konto(n)"
+  },
+  "toast": {
+    "history": {
+      "undo": "Rückgängig",
+      "redo": "Wiederholen"
+    },
+    "aiImport": {
+      "setupNeeded": "Richte zuerst den KI-Fotoimport in den Einstellungen ein",
+      "openSettings": "Einstellungen öffnen",
+      "noDetails": "In diesem Foto wurden keine Ereignisdetails gefunden. Versuche es mit einer schärferen Aufnahme oder füge es manuell hinzu.",
+      "addManually": "Manuell hinzufügen",
+      "keyInvalid": "Dein KI-API-Schlüssel scheint ungültig oder abgelaufen zu sein.",
+      "unreachable": "Der KI-Anbieter ist nicht erreichbar — prüfe deine Verbindung.",
+      "unreadable": "Die Ereignisdetails konnten nicht aus diesem Foto gelesen werden.",
+      "blankFallback": "{{message}} Stattdessen wird ein leeres Ereignis geöffnet.",
+      "cameraDenied": "Kamerazugriff verweigert. Aktiviere ihn in den Android-Einstellungen, um diese Funktion zu nutzen.",
+      "cameraUnavailable": "Kein Zugriff auf Kamera oder Fotomediathek möglich.",
+      "reviewEach_task": "Prüfe und speichere jede Aufgabe — {{total}} in diesem Foto gefunden.",
+      "reviewEach_event": "Prüfe und speichere jedes Ereignis — {{total}} in diesem Foto gefunden.",
+      "reviewEach_item": "Prüfe und speichere jeden Eintrag — {{total}} in diesem Foto gefunden.",
+      "sharedFirstOnly": "Es wurde nur das erste geteilte Foto verwendet — teile vorerst nur eines auf einmal.",
+      "sharedUnreadable": "Das geteilte Foto konnte nicht gelesen werden."
+    },
+    "ics": {
+      "notIcs": "Diese Datei ist kein .ics-Kalender",
+      "unreadable": "Diese Datei konnte nicht gelesen werden"
+    },
+    "attachments": {
+      "tooLarge": "Die Datei „{{name}}“ überschreitet das Limit von {{limit}} MB",
+      "mayNotSync": "Die Datei „{{name}}“ ist größer als {{limit}} MB und wird möglicherweise nicht korrekt synchronisiert",
+      "saveLocal": "Anhänge konnten nicht lokal gespeichert werden",
+      "readFailed": "{{name}} konnte nicht gelesen werden",
+      "readFailedGeneric": "Dateien konnten nicht gelesen werden",
+      "unavailable": "Anhangsdaten sind nicht verfügbar. Öffne das Ereignis erneut."
+    },
+    "journal": {
+      "syncUpdateRetry": "Aktualisierung konnte nicht synchronisiert werden. Erneuter Versuch folgt.",
+      "syncEntryRetry": "Eintrag konnte nicht synchronisiert werden. Erneuter Versuch folgt."
+    },
+    "sync": {
+      "failed": "Synchronisierung fehlgeschlagen",
+      "deleteSubject": "Löschen",
+      "retrying": "Änderungen werden erneut gesendet …",
+      "retrySent_one": "{{count}} Änderung gesendet",
+      "retrySent_other": "{{count}} Änderungen gesendet",
+      "retryPartial": "{{succeeded}} gesendet, {{failed}} warten noch",
+      "offlineWaiting": "Offline — Änderungen werden gesendet, sobald du wieder verbunden bist",
+      "waiting_one": "{{count}} Änderung wartet",
+      "waiting_other": "{{count}} Änderungen warten",
+      "waitingOffline_one": "{{count}} Änderung wartet — offline",
+      "waitingOffline_other": "{{count}} Änderungen warten — offline"
+    },
+    "notifications": {
+      "blocked": "Benachrichtigungen sind blockiert. Passe die Website-Berechtigungen in den Browsereinstellungen an, um Erinnerungen zu aktivieren.",
+      "calendarBlocked": "Der Kalenderzugriff ist blockiert. Erteile ihn in den Android-App-Einstellungen, um Ereignisse mit dem Gerätekalender zu synchronisieren."
+    },
+    "tasks": {
+      "movedToday": "Auf heute verschoben",
+      "movedTomorrow": "Auf morgen verschoben",
+      "movedTo": "Auf {{date}} verschoben"
+    },
+    "contacts": {
+      "fallbackLabel": "Kontakt",
+      "rejected_create": "„{{label}}“ konnte auf dem Server nicht erstellt werden: {{reason}}",
+      "rejected_update": "„{{label}}“ konnte auf dem Server nicht aktualisiert werden: {{reason}}",
+      "rejected_delete": "„{{label}}“ konnte auf dem Server nicht gelöscht werden: {{reason}}",
+      "conflict": "Konflikt bei „{{name}}“ — Serverversion beibehalten",
+      "syncFailed": "Synchronisierung der Kontakte fehlgeschlagen: {{message}}"
+    },
+    "storage": {
+      "full": "Der Speicher ist voll. Deine Daten werden möglicherweise nicht gespeichert.",
+      "error": "Speicherfehler. Deine Daten werden möglicherweise nicht gespeichert."
+    },
+    "pendingDrop_create": "„{{title}}“ konnte nicht erstellt werden — {{reason}}",
+    "pendingDrop_update": "„{{title}}“ konnte nicht gespeichert werden — {{reason}}",
+    "pendingDrop_delete": "„{{title}}“ konnte nicht gelöscht werden — {{reason}}",
+    "pendingDrop_move": "„{{title}}“ konnte nicht verschoben werden — {{reason}}",
+    "pendingDrop_deleteHref": "Die alte Kopie von „{{title}}“ konnte nicht entfernt werden — {{reason}}",
+    "pendingReason": {
+      "savedLocally": "deine Änderung wurde lokal gespeichert.",
+      "staysOnServer": "das Ereignis bleibt auf dem Server.",
+      "maybeOldCalendar": "das Ereignis befindet sich möglicherweise noch im alten Kalender.",
+      "alreadyExists": "ist bereits auf dem Server vorhanden — prüfe, ob es ein Duplikat gibt.",
+      "duplicateUid": "ein Duplikat dieses Ereignisses ist bereits auf dem Server vorhanden.",
+      "invalidData": "der Server hat die Ereignisdaten für diesen Kalender als ungültig abgelehnt.",
+      "forbidden": "der Server hat die Änderung abgelehnt (403). Möglicherweise fehlt dir die Schreibberechtigung für diesen Kalender.",
+      "storageFull": "der Speicher des Servers ist voll (507).",
+      "gone": "der Kalender oder das Ereignis existiert auf dem Server nicht mehr."
+    }
+  },
+  "ui": {
+    "carddav": {
+      "conflict": "Der Kontakt wurde auf dem Server geändert. Bitte aktualisieren und erneut versuchen.",
+      "permission": "Du hast keine Berechtigung, diesen Kontakt zu ändern.",
+      "sizeLimit": "Der Kontakt überschreitet das Größenlimit des Servers ({{max}} Byte).",
+      "version": "Der Server akzeptiert keine vCard-Version, die dieser Client erzeugen kann."
+    },
+    "moveLostSource": "Beim Verschieben ging die Quellressource verloren: {{message}}",
+    "dragSync": {
+      "event": "Das verschobene Ereignis konnte nicht synchronisiert werden",
+      "task": "Die verschobene Aufgabe konnte nicht synchronisiert werden",
+      "item": "Das verschobene Element konnte nicht synchronisiert werden",
+      "hierarchy": "Die Änderung der Aufgabenhierarchie konnte nicht synchronisiert werden"
+    }
   }
 }

@@ -13,5 +13,58 @@
     "view": "Afficher",
     "done": "Terminé",
     "save": "Enregistrer"
+  },
+  "ui": {
+    "errorBoundary": {
+      "title": "Une erreur s’est produite",
+      "unexpected": "Une erreur inattendue s’est produite",
+      "retry": "Réessayer"
+    },
+    "cookie": {
+      "notice": "Nous utilisons le stockage local pour enregistrer vos données. Aucun cookie de suivi.",
+      "privacy": "Confidentialité",
+      "dismiss": "Compris"
+    },
+    "skipToCalendar": "Aller au calendrier",
+    "agendaPanel": {
+      "resize": "Redimensionner le panneau de l’agenda",
+      "close": "Fermer le panneau de l’agenda",
+      "title": "Agenda"
+    },
+    "update": {
+      "apiError": "Erreur de l’API GitHub : {{status}}",
+      "failedWith": "Impossible de rechercher des mises à jour : {{message}}",
+      "failed": "Impossible de rechercher des mises à jour"
+    },
+    "shortcuts": {
+      "title": "Raccourcis clavier",
+      "navigation": "Navigation",
+      "create": "Créer",
+      "general": "Général",
+      "today": "Aller à aujourd’hui",
+      "prevView": "Vue précédente",
+      "nextView": "Vue suivante",
+      "newEvent": "Nouvel événement",
+      "newTask": "Nouvelle tâche",
+      "palette": "Ouvrir la palette de commandes",
+      "showHelp": "Afficher cette aide",
+      "closePanel": "Fermer la fenêtre / le panneau",
+      "disabledHint": "Les raccourcis sont désactivés pendant la saisie dans un champ ou lorsqu’une fenêtre est ouverte."
+    },
+    "onboarding": {
+      "title": "Commencez avec votre agenda",
+      "connectLine": "Connectez iCloud, Nextcloud, Fastmail ou n’importe quel serveur CalDAV.",
+      "dataStays": "Vos données restent dans votre navigateur.",
+      "how": "Comment ?",
+      "howText": "Calino n’a pas de serveur propre. Il communique directement avec votre serveur CalDAV et conserve une copie locale. Vous pouvez sauvegarder ou déplacer vos données avec l’export/import dans les Paramètres.",
+      "connectAccount": "Connecter un compte CalDAV",
+      "loading": "Chargement…",
+      "explore": "Découvrir Calino avec des données d’exemple",
+      "skip": "Passer pour l’instant",
+      "demoFailed": "Impossible de charger les données d’exemple",
+      "nativeFootnote": "Calino peut vous rappeler les événements avant leur début. Continuer demandera l’autorisation d’envoyer des notifications.",
+      "alsoOnAndroid": "Aussi sur <link>Android</link>, avec import par appareil photo et rappels."
+    },
+    "privacy": "Confidentialité"
   }
 }
