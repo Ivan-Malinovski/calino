@@ -166,3 +166,13 @@ Run `pnpm vitest --run src/features/jmap/client`, `pnpm typecheck`, and
 for that run. It performs detection, session loading, echo and Calendar/get;
 it never writes calendar data or embeds credentials. UI wiring and its required
 Playwright coverage belong to the subsequent integration work.
+
+## Advertised loopback URLs
+
+Stalwart advertises `https://localhost/...` for `apiUrl`, `uploadUrl`,
+`downloadUrl` and `eventSourceUrl` whenever its hostname is `localhost`, even on
+a plain-HTTP dev server reached at another address. `resolveTemplate` rebases an
+endpoint whose host is loopback (`localhost`, `127.x`, `::1`) onto the origin the
+session was actually fetched from. Non-loopback advertisements are never
+rewritten, so a server cannot steer credentials to a third-party host.
+The live test (`CALINO_TEST_JMAP_*`) covers this against the dev Stalwart.
