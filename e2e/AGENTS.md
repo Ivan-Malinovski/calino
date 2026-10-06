@@ -35,7 +35,9 @@ layouts. Vitest excludes E2E files and runs its unit tests in both
   `8099`. Override them with `E2E_PORT` and `DAV_PORT` respectively.
 - Release checks use `scripts/run-e2e-projects.mjs`, which assigns each browser
   its own app and DAV ports (`5200`/`8100` upward); HMR stays on each app's own
-  port. Shift those ranges with `E2E_PARALLEL_PORT_OFFSET` and
+  port. Each browser is also split into `E2E_SHARDS` shards (default 2, max 8; 3 or 4 saturate a 16-thread box and make load-sensitive specs flake),
+  each a one-worker Playwright run with its own app/DAV ports (stepping by 10
+  per shard) and output directory (`e2e/test-results/<browser>-<n>`). Shift those ranges with `E2E_PARALLEL_PORT_OFFSET` and
   `DAV_PARALLEL_PORT_OFFSET` if a local service occupies one of them.
 - The self-hosted CSP permits `http:` connections. The diagnostics fixture
   relies on this to cover local plain-HTTP DAV deployments.

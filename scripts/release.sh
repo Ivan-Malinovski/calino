@@ -128,6 +128,12 @@ cleanup_docker_test_image() {
 }
 
 cleanup_docker_artifacts() {
+  if [ -n "$DOCKER_BUILD_PID" ] && kill -0 "$DOCKER_BUILD_PID" 2>/dev/null; then
+    pkill -P "$DOCKER_BUILD_PID" 2>/dev/null || true
+    kill "$DOCKER_BUILD_PID" 2>/dev/null || true
+    wait "$DOCKER_BUILD_PID" 2>/dev/null || true
+  fi
+  [ -n "$DOCKER_BUILD_LOG" ] && rm -f "$DOCKER_BUILD_LOG"
   if [ "$DOCKER_TEST_CONTAINER_STARTED" = true ]; then
     $ENGINE rm -f calino-release-test > /dev/null 2>&1 || true
   fi
@@ -253,47 +259,6 @@ if [ -n "$RELEASE_VERSION" ]; then
   fi
 fi
 
-# ─── Typecheck ─────────────────────────────────────────────────────────────────
-step "Typecheck"
-pnpm typecheck
-ok "Typecheck passed"
-
-# ─── Lint ──────────────────────────────────────────────────────────────────────
-step "Lint"
-# Trust eslint's exit code, not a parse of its output. The counts below are
-# only for the summary line: `grep -oP` needs a UTF-8 locale and dies under
-# others, and with a `|| echo 0` fallback that turned every lint failure into
-# a silent pass. -E is portable.
-LINT_STATUS=0
-LINT_OUTPUT=$(pnpm lint 2>&1) || LINT_STATUS=$?
-LINT_ERRORS=$(echo "$LINT_OUTPUT" | grep -oE '[0-9]+ errors' | grep -oE '[0-9]+' | head -1)
-LINT_WARNINGS=$(echo "$LINT_OUTPUT" | grep -oE '[0-9]+ warnings' | grep -oE '[0-9]+' | head -1)
-LINT_ERRORS=${LINT_ERRORS:-0}
-LINT_WARNINGS=${LINT_WARNINGS:-0}
-
-if [ "$LINT_STATUS" -ne 0 ]; then
-  echo "$LINT_OUTPUT"
-  fail "Lint failed (exit $LINT_STATUS, $LINT_ERRORS errors)"
-fi
-ok "Lint passed ($LINT_ERRORS errors, $LINT_WARNINGS warnings)"
-
-# ─── Tests ─────────────────────────────────────────────────────────────────────
-step "Tests"
-pnpm test:run
-ok "All tests passed"
-
-# ─── End-to-end tests ──────────────────────────────────────────────────────────
-# The unit suite cannot see wiring: a gesture bound to handlers nothing spreads,
-# a CSS variable that never reaches the rule using it, a drop committed twice.
-# Those only fail in a browser, so a release check without e2e is not a check.
-if [ "$SKIP_E2E" = false ]; then
-  step "End-to-end tests"
-  node scripts/run-e2e-projects.mjs
-  ok "End-to-end tests passed"
-else
-  warn "Skipping end-to-end tests (--no-e2e)"
-fi
-
 # ─── Version bump ──────────────────────────────────────────────────────────────
 if [ -n "$BUMP" ]; then
   step "Bumping version: $CURRENT_VERSION → $NEW_VERSION"
@@ -348,6 +313,113 @@ if [ -n "$RELEASE_VERSION" ] && [ -z "$(extract_changelog "$RELEASE_VERSION")" ]
   fi
 fi
 
+# ─── Docker build (started early, collected later) ─────────────────────────────
+# The image build is the slowest step that does not depend on the check results,
+# so it starts now, in the background, and runs while typecheck, lint, unit and
+# e2e tests do. It is built from the bumped tree; if any check fails the
+# EXIT trap stops it and removes the image, and nothing is tagged or pushed.
+DOCKER_BUILD_PID=""
+DOCKER_BUILD_LOG=""
+
+start_docker_build() {
+  # Check if the engine is running
+  if ! $ENGINE info > /dev/null 2>&1; then
+    fail "$ENGINE is not running. Start it, or use --no-docker"
+  fi
+
+  # Preserve a caller-owned test tag while using the same name for the
+  # release check. The original image is restored by the EXIT cleanup after
+  # the tested image has been discarded.
+  if DOCKER_TEST_IMAGE_ORIGINAL_ID=$($ENGINE image inspect --format '{{.Id}}' calino:test 2>/dev/null); then
+    DOCKER_TEST_IMAGE_EXISTED=true
+  fi
+
+  # Output goes to a log rather than being discarded: a build failure that
+  # printed nothing is the least useful way to learn the Dockerfile broke.
+  # Claim the temporary tag before starting the build so an interruption at
+  # any point still restores a pre-existing calino:test tag in the EXIT trap.
+  DOCKER_TEST_IMAGE_BUILT=true
+  DOCKER_BUILD_LOG=$(mktemp)
+  $ENGINE build -t calino:test . > "$DOCKER_BUILD_LOG" 2>&1 &
+  DOCKER_BUILD_PID=$!
+  echo "  $ENGINE build started in the background (pid $DOCKER_BUILD_PID)"
+}
+
+if [ "$SKIP_DOCKER" = false ]; then
+  step "Docker build ($ENGINE) — starting in the background"
+  start_docker_build
+fi
+
+# ─── Typecheck, lint and unit tests ────────────────────────────────────────────
+# The three checks read the same tree and write nothing the others use, so they
+# run side by side instead of back to back. Each job's output is captured and
+# only shown when it fails (a passing run prints the one-line summaries below).
+step "Typecheck, lint and unit tests (in parallel)"
+CHECK_DIR=$(mktemp -d)
+CHECK_STARTED=$SECONDS
+
+pnpm typecheck > "$CHECK_DIR/typecheck.log" 2>&1 &
+TYPECHECK_PID=$!
+pnpm lint > "$CHECK_DIR/lint.log" 2>&1 &
+LINT_PID=$!
+pnpm test:run > "$CHECK_DIR/tests.log" 2>&1 &
+TESTS_PID=$!
+
+# `wait` reports each job's own exit code; `|| status=$?` keeps `set -e` from
+# ending the script before the other jobs have been collected and reported.
+TYPECHECK_STATUS=0; wait "$TYPECHECK_PID" || TYPECHECK_STATUS=$?
+LINT_STATUS=0; wait "$LINT_PID" || LINT_STATUS=$?
+TESTS_STATUS=0; wait "$TESTS_PID" || TESTS_STATUS=$?
+
+# Trust each tool's exit code, not a parse of its output. The lint counts are
+# only for the summary line: `grep -oP` needs a UTF-8 locale and dies under
+# others, and with a `|| echo 0` fallback that turned every lint failure into
+# a silent pass. -E is portable.
+LINT_ERRORS=$(grep -oE '[0-9]+ errors' "$CHECK_DIR/lint.log" | grep -oE '[0-9]+' | head -1)
+LINT_WARNINGS=$(grep -oE '[0-9]+ warnings' "$CHECK_DIR/lint.log" | grep -oE '[0-9]+' | head -1)
+LINT_ERRORS=${LINT_ERRORS:-0}
+LINT_WARNINGS=${LINT_WARNINGS:-0}
+
+CHECKS_FAILED=false
+if [ "$TYPECHECK_STATUS" -ne 0 ]; then
+  cat "$CHECK_DIR/typecheck.log"
+  echo -e "${RED}✗ Typecheck failed (exit $TYPECHECK_STATUS)${NC}"
+  CHECKS_FAILED=true
+fi
+if [ "$LINT_STATUS" -ne 0 ]; then
+  cat "$CHECK_DIR/lint.log"
+  echo -e "${RED}✗ Lint failed (exit $LINT_STATUS, $LINT_ERRORS errors)${NC}"
+  CHECKS_FAILED=true
+fi
+if [ "$TESTS_STATUS" -ne 0 ]; then
+  cat "$CHECK_DIR/tests.log"
+  echo -e "${RED}✗ Unit tests failed (exit $TESTS_STATUS)${NC}"
+  CHECKS_FAILED=true
+fi
+if [ "$CHECKS_FAILED" = true ]; then
+  rm -rf "$CHECK_DIR"
+  fail "Typecheck, lint or unit tests failed (output above)"
+fi
+
+ok "Typecheck passed"
+ok "Lint passed ($LINT_ERRORS errors, $LINT_WARNINGS warnings)"
+grep -E "Test Files|Tests " "$CHECK_DIR/tests.log" | sed 's/^/  /' || true
+ok "All tests passed ($((SECONDS - CHECK_STARTED))s for all three)"
+rm -rf "$CHECK_DIR"
+
+# ─── End-to-end tests ──────────────────────────────────────────────────────────
+# The unit suite cannot see wiring: a gesture bound to handlers nothing spreads,
+# a CSS variable that never reaches the rule using it, a drop committed twice.
+# Those only fail in a browser, so a release check without e2e is not a check.
+if [ "$SKIP_E2E" = false ]; then
+  step "End-to-end tests"
+  E2E_STARTED=$SECONDS
+  node scripts/run-e2e-projects.mjs
+  ok "End-to-end tests passed ($((SECONDS - E2E_STARTED))s)"
+else
+  warn "Skipping end-to-end tests (--no-e2e)"
+fi
+
 # ─── Build ─────────────────────────────────────────────────────────────────────
 # With Docker enabled, the Dockerfile's build stage is the production build.
 # Running it here first would compile the same bundle twice. Keep a standalone
@@ -366,33 +438,17 @@ fi
 
 # ─── Docker ────────────────────────────────────────────────────────────────────
 if [ "$SKIP_DOCKER" = false ]; then
-  step "Docker build ($ENGINE)"
+  step "Docker build ($ENGINE) — collecting"
 
-  # Check if the engine is running
-  if ! $ENGINE info > /dev/null 2>&1; then
-    fail "$ENGINE is not running. Start it, or use --no-docker"
-  fi
-
-  # Preserve a caller-owned test tag while using the same name for the
-  # release check. The original image is restored by the EXIT cleanup after
-  # the tested image has been discarded.
-  if DOCKER_TEST_IMAGE_ORIGINAL_ID=$($ENGINE image inspect --format '{{.Id}}' calino:test 2>/dev/null); then
-    DOCKER_TEST_IMAGE_EXISTED=true
-  fi
-
-  # Output is captured rather than discarded: `set -e` would otherwise abort
-  # the whole release on a build failure having printed nothing at all, which
-  # is the least useful way to learn the Dockerfile broke.
-  # Claim the temporary tag before starting the build so an interruption at
-  # any point still restores a pre-existing calino:test tag in the EXIT trap.
-  DOCKER_TEST_IMAGE_BUILT=true
+  DOCKER_BUILD_STARTED_WAIT=$SECONDS
   BUILD_STATUS=0
-  BUILD_OUTPUT=$($ENGINE build -t calino:test . 2>&1) || BUILD_STATUS=$?
+  wait "$DOCKER_BUILD_PID" || BUILD_STATUS=$?
+  DOCKER_BUILD_PID=""
   if [ "$BUILD_STATUS" -ne 0 ]; then
-    echo "$BUILD_OUTPUT"
+    cat "$DOCKER_BUILD_LOG"
     fail "$ENGINE build failed (exit $BUILD_STATUS)"
   fi
-  ok "Image built"
+  ok "Image built (waited $((SECONDS - DOCKER_BUILD_STARTED_WAIT))s after the checks finished)"
 
   step "Container healthcheck"
   if [ -n "$AUTO_PORT_NOTE" ]; then

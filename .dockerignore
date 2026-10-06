@@ -15,3 +15,7 @@ eslintcache
 *.swp
 *.swo
 docker-compose.yml
+test-results
+e2e/test-results
+playwright-report
+.eslintcache

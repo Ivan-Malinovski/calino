@@ -52,23 +52,30 @@ async function dragCardToCell(page: Page, targetDate: string): Promise<void> {
     .first()
   await card.scrollIntoViewIfNeeded()
   const source = await card.boundingBox()
-  const target = await page
-    .locator(`[data-date="${targetDate}"][data-hour="10:00"]`)
-    .first()
-    .boundingBox()
-  if (!source || !target) throw new Error('could not locate all-day card or target cell')
+  if (!source) throw new Error('could not locate all-day card')
 
   const sourceX = source.x + source.width / 2
   const sourceY = source.y + source.height / 2
-  const targetX = target.x + target.width / 2
-  const targetY = target.y + target.height / 2
   await page.mouse.move(sourceX, sourceY)
   await page.mouse.down()
   for (let step = 1; step <= 5; step++) {
     await page.mouse.move(sourceX + step * 3, sourceY, { steps: 1 })
     await page.waitForTimeout(15)
   }
-  await page.mouse.move(targetX, targetY, { steps: 20 })
+
+  // The hour grid can still be scrolling (it jumps towards the current time on load, and
+  // dragging near its top edge auto-scrolls it), so a target measured before the drag may
+  // have moved. Re-measure on every attempt and only release once the drop preview confirms
+  // that dnd-kit resolved the target under the pointer.
+  const target = page.locator(`[data-date="${targetDate}"][data-hour="10:00"]`).first()
+  const preview = page.locator('[data-component="drop-preview"]').first()
+  await expect(async () => {
+    await target.scrollIntoViewIfNeeded()
+    const box = await target.boundingBox()
+    if (!box) throw new Error('could not locate drop target cell')
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2, { steps: 10 })
+    await expect(preview).toBeVisible({ timeout: 1000 })
+  }).toPass({ timeout: 15_000 })
   await page.mouse.up()
 }
 

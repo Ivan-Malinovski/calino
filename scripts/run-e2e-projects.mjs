@@ -51,7 +51,7 @@ async function launchable(name) {
         `   ${reason}\n` +
         `   Install its dependencies (\`pnpm exec playwright install-deps ${name}\`, or the\n` +
         `   equivalent packages for this distribution) to include it in the release check.\n` +
-        `   Set E2E_REQUIRE_ALL_BROWSERS=1 to treat this as a failure instead.`,
+        `   Set E2E_REQUIRE_ALL_BROWSERS=1 to treat this as a failure instead.`
     )
     return false
   }
@@ -59,14 +59,31 @@ async function launchable(name) {
 
 const requireAllBrowsers = process.env.E2E_REQUIRE_ALL_BROWSERS === '1'
 const launchChecks = await Promise.all(
-  allProjects.map(async (project) => (requireAllBrowsers ? true : await launchable(project.name))),
+  allProjects.map(async (project) => (requireAllBrowsers ? true : await launchable(project.name)))
 )
-const projects = allProjects.filter((_, index) => launchChecks[index])
+const browsers = allProjects.filter((_, index) => launchChecks[index])
 
-if (projects.length === 0) {
+if (browsers.length === 0) {
   console.error('No Playwright browser could launch on this host')
   process.exit(1)
 }
+
+// Each browser's tests are split into this many shards. A shard is its own
+// Playwright run with its own Vite and DAV server on its own ports, so every
+// server carries exactly the load it did when a browser was a single run
+// (one worker per server is the combination that stays free of sync
+// timeouts) while the machine's idle cores do the rest of the work.
+const shardCount = Math.max(1, Math.min(8, Number(process.env.E2E_SHARDS ?? 2) || 1))
+const projects = browsers.flatMap((browser) =>
+  Array.from({ length: shardCount }, (_, shard) => ({
+    ...browser,
+    shard,
+    label: shardCount === 1 ? browser.name : `${browser.name}:${shard + 1}/${shardCount}`,
+    outputName: shardCount === 1 ? browser.name : `${browser.name}-${shard + 1}`,
+    appPort: browser.appPort + shard * 10,
+    davPort: browser.davPort + shard * 10,
+  }))
+)
 
 const pnpm = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm'
 const extraArgs = process.argv.slice(2)
@@ -111,10 +128,14 @@ function portIsFree(port) {
 function portListenerPids(port) {
   if (process.platform === 'win32') {
     const script = `$ErrorActionPreference = 'SilentlyContinue'; Get-NetTCPConnection -State Listen -LocalPort ${port} | Select-Object -ExpandProperty OwningProcess`
-    const result = spawnSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', script], {
-      encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'ignore'],
-    })
+    const result = spawnSync(
+      'powershell.exe',
+      ['-NoProfile', '-NonInteractive', '-Command', script],
+      {
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'ignore'],
+      }
+    )
     return (result.stdout ?? '').trim().split(/\s+/).filter(Boolean)
   }
 
@@ -130,9 +151,13 @@ function isDescendant(pid, rootPid) {
 
   if (process.platform === 'win32') {
     const script = `$root = ${rootPid}; $current = ${pid}; while ($current -and $current -ne 0) { $process = Get-CimInstance Win32_Process -Filter \"ProcessId = $current\"; if (-not $process) { break }; if ($process.ParentProcessId -eq $root) { exit 0 }; $current = $process.ParentProcessId }; exit 1`
-    const result = spawnSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', script], {
-      stdio: 'ignore',
-    })
+    const result = spawnSync(
+      'powershell.exe',
+      ['-NoProfile', '-NonInteractive', '-Command', script],
+      {
+        stdio: 'ignore',
+      }
+    )
     return result.status === 0
   }
 
@@ -237,14 +262,14 @@ function flush(project) {
 async function runProject(project) {
   const appPort = project.appPort + appPortOffset
   const davPort = project.davPort + davPortOffset
-  const outputDir = `${outputRoot}/${project.name}`
+  const outputDir = `${outputRoot}/${project.outputName}`
   const portsAvailable = await Promise.all([portIsFree(appPort), portIsFree(davPort)])
   if (!portsAvailable.every(Boolean)) {
-    console.error(`[${project.name}] configured app/DAV ports are already in use`)
+    console.error(`[${project.label}] configured app/DAV ports are already in use`)
     stopAllChildren('SIGTERM')
-    return { project: project.name, code: 1 }
+    return { project: project.label, code: 1 }
   }
-  if (interrupted || failureDetected) return { project: project.name, code: interrupted ? 130 : 1 }
+  if (interrupted || failureDetected) return { project: project.label, code: interrupted ? 130 : 1 }
 
   project.appPort = appPort
   project.davPort = davPort
@@ -258,6 +283,7 @@ async function runProject(project) {
       'test',
       `--project=${project.name}`,
       '--workers=1',
+      ...(shardCount > 1 ? [`--shard=${project.shard + 1}/${shardCount}`] : []),
       ...extraArgs,
     ],
     {
@@ -280,8 +306,8 @@ async function runProject(project) {
   childProjects.set(child, project)
   project.rootPid = child.pid
   startProjectPortTracking(project)
-  child.stdout.on('data', (chunk) => prefix(project.name, 'stdout', process.stdout, chunk))
-  child.stderr.on('data', (chunk) => prefix(project.name, 'stderr', process.stderr, chunk))
+  child.stdout.on('data', (chunk) => prefix(project.label, 'stdout', process.stdout, chunk))
+  child.stderr.on('data', (chunk) => prefix(project.label, 'stderr', process.stderr, chunk))
 
   return new Promise((resolve) => {
     let settled = false
@@ -296,7 +322,7 @@ async function runProject(project) {
         stopAllChildren('SIGTERM')
       }
 
-      flush(project.name)
+      flush(project.label)
       stopProjectPortTracking(project)
       children.delete(child)
       childProjects.delete(child)
@@ -304,13 +330,13 @@ async function runProject(project) {
     }
 
     child.once('error', (error) => {
-      prefix(project.name, 'stderr', process.stderr, `failed to start: ${error.message}\n`)
-      finish({ project: project.name, code: 1 })
+      prefix(project.label, 'stderr', process.stderr, `failed to start: ${error.message}\n`)
+      finish({ project: project.label, code: 1 })
     })
     child.once('close', (code, signal) => {
       finish({
-        project: project.name,
-        code: interrupted ? 130 : code ?? 1,
+        project: project.label,
+        code: interrupted ? 130 : (code ?? 1),
         signal,
       })
     })
@@ -324,22 +350,24 @@ for (const signal of ['SIGINT', 'SIGTERM']) {
   })
 }
 
-const skipped = allProjects.filter((project) => !projects.includes(project))
+const skipped = allProjects.filter((project) => !browsers.includes(project))
 console.log(
-  `Running ${projects.length} Playwright projects concurrently (one worker each): ` +
-    projects.map(({ name }) => name).join(', ')
+  `Running ${projects.length} Playwright runs concurrently ` +
+    `(${browsers.map(({ name }) => name).join(', ')}; ${shardCount} shard(s) each, one worker per shard)`
 )
 const results = await Promise.all(projects.map(runProject))
 const failures = results.filter(({ code }) => code !== 0)
 
 if (failures.length > 0) {
-  console.error(`\n${failures.length} Playwright project(s) failed: ${failures.map(({ project }) => project).join(', ')}`)
+  console.error(
+    `\n${failures.length} Playwright project(s) failed: ${failures.map(({ project }) => project).join(', ')}`
+  )
   process.exitCode = 1
 } else if (skipped.length > 0) {
   // Never report a clean sweep when a browser never ran — the release check
   // is only as wide as the browsers that actually launched.
   console.log(
-    `\nPlaywright passed on ${projects.map(({ name }) => name).join(', ')} ` +
+    `\nPlaywright passed on ${browsers.map(({ name }) => name).join(', ')} ` +
       `(skipped: ${skipped.map(({ name }) => name).join(', ')})`
   )
 } else {

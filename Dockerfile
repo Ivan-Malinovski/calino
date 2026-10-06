@@ -17,13 +17,16 @@ ENV VITE_SITE_URL=$VITE_SITE_URL \
 
 WORKDIR /app
 
-# Install deps first (layer caching)
+# Install deps first (layer caching). The cache mount keeps pnpm's content
+# store between builds, so a changed lockfile only downloads what is new.
 COPY package.json pnpm-lock.yaml ./
-RUN pnpm install --frozen-lockfile
+RUN --mount=type=cache,id=calino-pnpm-store,target=/pnpm-store \
+    pnpm install --frozen-lockfile --store-dir /pnpm-store
 
-# Copy source and build
+# Copy source and build. `pnpm build` also runs `tsc -b`; typechecking is the
+# release gate's job (and CI's), so the image build only bundles.
 COPY . .
-RUN pnpm build
+RUN node scripts/update-sample-events.mjs && pnpm exec vite build
 
 # ── Stage 2: Runtime ─────────────────────────────────────────────
 FROM docker.io/library/caddy:2-alpine
