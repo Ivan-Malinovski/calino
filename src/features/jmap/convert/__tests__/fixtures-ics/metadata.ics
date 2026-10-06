@@ -1,0 +1,32 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Calino converter fixtures//EN
+BEGIN:VEVENT
+UID:write-metadata@example.org
+DTSTAMP:20261006T120000Z
+DTSTART;TZID=Europe/Copenhagen:20261010T100000
+DTEND;TZID=Europe/Copenhagen:20261010T110000
+SUMMARY:Møde\, café\; plan\\ning
+DESCRIPTION:Første linje\nAnden linje med en meget lang tekst der
+ fortsætter på en foldet linje.
+LOCATION:Kontor\, 2. sal
+GEO:55.6761;12.5683
+URL:https://example.org/meeting
+CATEGORIES:work,team\,nordic
+CONCEPT:https://example.org/concepts/meeting
+CONCEPT:tag:example.org:2026:planning
+ATTACH;FMTTYPE=application/pdf:https://example.org/agenda.pdf
+ATTACH;ENCODING=BASE64;VALUE=BINARY;FMTTYPE=text/plain:SGVsbG8=
+RELATED-TO;RELTYPE=SIBLING:sibling@example.org
+PRIORITY:3
+CLASS:CONFIDENTIAL
+TRANSP:TRANSPARENT
+STATUS:TENTATIVE
+SEQUENCE:7
+CREATED:20260901T100000Z
+LAST-MODIFIED:20261005T110000Z
+COLOR:blue
+X-UNKNOWN:do not send
+EXRULE:FREQ=WEEKLY;BYDAY=SU
+END:VEVENT
+END:VCALENDAR

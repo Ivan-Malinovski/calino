@@ -90,6 +90,7 @@ stored and shown read-only; "Advanced" offers a force-CalDAV override.
 
 - [JSCalendar → iCalendar converter](jmap/jscalendar-to-ical.md)
 - [Transport and protocol detection](jmap/transport.md)
+- [iCalendar → JSCalendar write converter](jmap/ical-to-jscalendar.md)
 
 ## Testing
 

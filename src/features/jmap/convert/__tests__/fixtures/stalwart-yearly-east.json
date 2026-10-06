@@ -2,12 +2,8 @@
   "recurrenceRule": {
     "frequency": "yearly",
     "count": 3,
-    "byMonthDay": [
-      10
-    ],
-    "byMonth": [
-      "10"
-    ]
+    "byMonthDay": [10],
+    "byMonth": ["10"]
   },
   "timeZone": "Etc/UTC",
   "start": "2026-10-10T10:00:00",

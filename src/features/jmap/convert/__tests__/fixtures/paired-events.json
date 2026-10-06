@@ -135,12 +135,8 @@
       "updated": "2026-10-06T12:00:00Z",
       "recurrenceRule": {
         "frequency": "yearly",
-        "byMonth": [
-          "10"
-        ],
-        "byMonthDay": [
-          10
-        ],
+        "byMonth": ["10"],
+        "byMonthDay": [10],
         "count": 3
       }
     }
