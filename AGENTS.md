@@ -22,6 +22,7 @@ share the implementation in `src/`; Android-specific code lives under
 - Do not commit credentials, `calino.config.json`, keystores, or local
   environment files. The repository's `.gitignore` lists the local files that
   contain secrets or generated state.
+- The Android release signing key is backed up in the Bitwarden vault item `Calino (Capacitor) release signing key`. If `android/keystore*` is missing, restore it as described in `android/CLAUDE.md` ("Release key backup") before building a release, and never generate a replacement key.
 
 ## Commands
 

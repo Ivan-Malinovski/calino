@@ -113,6 +113,37 @@ through GitHub Releases, not Google Play. Back up the release keystore outside
 the repository; losing it prevents future APKs from upgrading existing
 release installs.
 
+### Release key backup
+
+The signing key is backed up in the Bitwarden vault (personal,
+`bitwarden@malinov.ski`) as the Secure Note **`Calino (Capacitor) release
+signing key`**: the `calino-release.jks` attachment plus the custom fields
+`storeFile`, `storePassword`, `keyAlias` and `keyPassword`. The GitHub
+Actions secrets `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`,
+`ANDROID_KEY_ALIAS` and `ANDROID_KEY_PASSWORD` are the same key. GitHub secrets
+cannot be read back, so Bitwarden is the recovery copy.
+
+The certificate is `CN=Ivan Malinovski, OU=Calino`, SHA-256
+`4A:4C:DB:A0:EF:9A:9F:1E:E0:71:05:9B:6D:6D:AB:79:D4:00:21:B1:F5:6C:C2:AF:F6:CC:37:7B:83:0A:63:40`.
+Check any release APK with `apksigner verify --print-certs`. A different
+certificate cannot upgrade existing installs, so never generate a replacement.
+
+To restore a missing local copy, with `BW_SESSION` set (ask the person to run
+`bw unlock --raw` into a scratch file, never paste it, and delete the file
+afterwards; use `bw`, not `bws`):
+
+```bash
+cd android && mkdir -p keystore
+bw get attachment calino-release.jks --itemid "$(bw get item 'Calino (Capacitor) release signing key' | jq -r .id)" --output keystore/calino-release.jks
+# write android/keystore.properties from the item's four fields:
+#   storeFile=keystore/calino-release.jks, storePassword=..., keyAlias=..., keyPassword=...
+chmod 600 keystore.properties keystore/calino-release.jks
+```
+
+Both paths are gitignored. Never print the field values or commit them. The
+standalone native app in `~/dev/calino_android` has a different key and its own
+vault item; the two are not interchangeable.
+
 Because debug and release now use different application ids, they can coexist.
 An old pre-split debug APK may still use the plain
 `calino.malinov.ski` id; uninstall that legacy package before installing a
