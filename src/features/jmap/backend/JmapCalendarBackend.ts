@@ -55,6 +55,7 @@ function utc(value: string): string {
 
 export class JmapCalendarBackend implements CalendarBackend {
   readonly protocol = 'jmap' as const
+  readonly atomicMove = true
   private client: JmapClient
   private serverUrl: string
   private proxyUrl: string | null
@@ -153,7 +154,7 @@ export class JmapCalendarBackend implements CalendarBackend {
       })
     return result
   }
-  private calendar(value: JsonObject, state: string): CalDAVCalendar {
+  private calendar(value: JsonObject, eventState: string): CalDAVCalendar {
     const url = this.calendarUrl(string(value.id))
     const rights = isJsonObject(value.myRights) ? value.myRights : null
     const taskCapability = Object.keys({
@@ -165,8 +166,11 @@ export class JmapCalendarBackend implements CalendarBackend {
       url,
       name: typeof value.name === 'string' ? value.name : 'Unnamed Calendar',
       color: normalizeColor(typeof value.color === 'string' ? value.color : null),
-      ctag: state,
-      syncToken: state,
+      // Calendar state only moves with calendar metadata, so it must not act as a
+      // ctag (the sync layer would skip event changes). The event cursor is
+      // CalendarEvent state, captured before any listing so races replay safely.
+      ctag: null,
+      syncToken: eventState,
       isVisible: value.isVisible !== false && value.isSubscribed !== false,
       isDefault: value.isDefault === true,
       isSubscribed: value.isSubscribed === true,
@@ -178,9 +182,13 @@ export class JmapCalendarBackend implements CalendarBackend {
       supportedComponents: taskCapability ? ['VEVENT', 'VTODO'] : ['VEVENT'],
     }
   }
+  private async eventState(): Promise<string> {
+    return string((await this.call('CalendarEvent/get', { ids: [] })).state)
+  }
   async fetchCalendars(): Promise<CalDAVCalendar[]> {
+    const eventState = await this.eventState()
     const result = await this.call('Calendar/get', { ids: null })
-    return list(result.list).map((value) => this.calendar(value, string(result.state)))
+    return list(result.list).map((value) => this.calendar(value, eventState))
   }
   private inCalendarList = false
   private async query(calendarId: string, filter: JsonObject = {}): Promise<string[]> {
@@ -342,7 +350,7 @@ export class JmapCalendarBackend implements CalendarBackend {
     const fetched = await this.call('Calendar/get', { ids: [id] })
     const [calendar] = list(fetched.list)
     if (!calendar) throw methodError({ type: 'notFound' }, 'Calendar/get', 'backend')
-    return this.calendar(calendar, string(fetched.state))
+    return this.calendar(calendar, await this.eventState())
   }
   async updateCalendar(calendarUrl: string, options: UpdateCalendarOptions): Promise<void> {
     const { calendarId } = this.parseUrl(calendarUrl)

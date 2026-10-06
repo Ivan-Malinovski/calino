@@ -27,6 +27,12 @@ export type { CalendarProtocol }
  */
 export interface CalendarBackend {
   readonly protocol: CalendarProtocol
+  /**
+   * True when `updateEvent` accepts an event URL from one calendar together with
+   * a different target calendar URL and moves the resource atomically (JMAP).
+   * Callers use it for same-account moves instead of write-then-delete.
+   */
+  readonly atomicMove?: boolean
   connect(): Promise<void>
   getServerUrl(): string
   getProxyUrl(): string | null

@@ -277,6 +277,39 @@ export class SyncEngine {
     return written
   }
 
+  /** True when both engines talk to the same backend instance (same account). */
+  sharesBackendWith(other: SyncEngine): boolean {
+    return this.client === other.client
+  }
+
+  get supportsAtomicMove(): boolean {
+    return this.client.atomicMove === true
+  }
+
+  /**
+   * Move an existing resource into this engine's calendar in one server-side
+   * operation (JMAP `calendarIds` patch). Unlike `putEventGroup` it addresses the
+   * resource by its current href, so the server keeps its identity and nothing
+   * is ever duplicated or lost.
+   */
+  async moveGroupFrom(
+    events: CalendarEvent[],
+    sourceHref: string,
+    sourceEtag: string
+  ): Promise<{ url: string; etag: string }> {
+    const calendar = storage.getAllCalendars().find((c) => c.id === this.calendarId)
+    const master = events.find((event) => !event.recurrenceId) ?? events[0]
+    if (!calendar || !master) {
+      throw new Error(`Calendar or recurrence master not found: ${this.calendarId}`)
+    }
+    const enriched = await Promise.all(events.map((event) => withInlineAttachments(event)))
+    const iCalString = await this.serializeForResource(enriched, sourceHref, sourceEtag)
+    const written = await this.client.updateEvent(calendar.url, sourceHref, iCalString, sourceEtag)
+    await deleteRawIcs(sourceHref).catch(() => {})
+    await this.rememberRawIcs(written, iCalString)
+    return written
+  }
+
   /**
    * Serialize a resource, preferring a patch of the bytes the server last gave
    * us over a from-scratch rebuild.

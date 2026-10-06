@@ -50,8 +50,10 @@ JMAP moves; create-then-delete orchestration is not an atomic JMAP move.
 ## Listing and sync
 
 Calendar/get supplies name, color (shared DAV normalization), visibility,
-subscription, default flag, sort order and item-write rights. Calendar state is
-returned as ctag and syncToken as specified by the backend design. Components
+subscription, default flag, sort order and item-write rights. `ctag` is always null (Calendar state does not move when events change, so a
+ctag would make the sync layer skip event changes). `syncToken` is the current
+CalendarEvent state, fetched before the calendar list, so the first full sync
+starts from a valid `CalendarEvent/changes` cursor. Components
 are VEVENT-only unless a tasks capability is advertised; task CRUD itself is
 not implemented here.
 
