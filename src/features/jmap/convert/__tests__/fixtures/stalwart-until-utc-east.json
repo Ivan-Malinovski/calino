@@ -1,0 +1,19 @@
+{
+  "timeZone": "Etc/UTC",
+  "updated": "2026-10-06T12:00:00Z",
+  "uid": "jscal-to-ics-until-utc@calino.test.east.2760775",
+  "duration": "PT1H",
+  "title": "UTC appointment",
+  "recurrenceRule": {
+    "frequency": "daily",
+    "until": "2026-11-10T10:00:00"
+  },
+  "@type": "Event",
+  "start": "2026-10-10T10:00:00",
+  "id": "gj",
+  "calendarIds": {
+    "b": true
+  },
+  "isDraft": false,
+  "isOrigin": true
+}

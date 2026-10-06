@@ -1,0 +1,25 @@
+{
+  "uid": "jscal-to-ics-yearly@calino.test.west.2760776",
+  "start": "2026-10-10T10:00:00",
+  "timeZone": "Etc/UTC",
+  "recurrenceRule": {
+    "frequency": "yearly",
+    "count": 3,
+    "byMonthDay": [
+      10
+    ],
+    "byMonth": [
+      "10"
+    ]
+  },
+  "updated": "2026-10-06T12:00:00Z",
+  "title": "UTC appointment",
+  "@type": "Event",
+  "duration": "PT1H",
+  "id": "ge",
+  "calendarIds": {
+    "b": true
+  },
+  "isDraft": false,
+  "isOrigin": true
+}

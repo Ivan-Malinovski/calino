@@ -1,0 +1,15 @@
+{
+  "@type": "Event",
+  "updated": "2026-10-06T12:00:00Z",
+  "start": "2026-10-10T10:00:00",
+  "duration": "PT1H",
+  "title": "UTC appointment",
+  "timeZone": "Etc/UTC",
+  "uid": "jscal-to-ics-utc@calino.test.east.2760775",
+  "id": "fy",
+  "calendarIds": {
+    "b": true
+  },
+  "isDraft": false,
+  "isOrigin": true
+}

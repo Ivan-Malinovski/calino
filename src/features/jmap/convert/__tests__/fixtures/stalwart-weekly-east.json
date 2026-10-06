@@ -1,0 +1,34 @@
+{
+  "recurrenceRule": {
+    "frequency": "weekly",
+    "count": 4,
+    "byDay": [
+      {
+        "day": "sa"
+      }
+    ]
+  },
+  "updated": "2026-10-06T12:00:00Z",
+  "uid": "jscal-to-ics-weekly@calino.test.east.2760775",
+  "start": "2026-10-10T10:00:00",
+  "@type": "Event",
+  "timeZone": "Etc/UTC",
+  "duration": "PT1H",
+  "alerts": {
+    "k1": {
+      "trigger": {
+        "@type": "OffsetTrigger",
+        "offset": "-PT15M"
+      },
+      "@type": "Alert",
+      "action": "display"
+    }
+  },
+  "title": "Weekly sync",
+  "id": "gd",
+  "calendarIds": {
+    "b": true
+  },
+  "isDraft": false,
+  "isOrigin": true
+}

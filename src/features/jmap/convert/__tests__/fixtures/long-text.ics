@@ -1,0 +1,23 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Calino converter fixture//EN
+BEGIN:VEVENT
+UID:jscal-to-ics-long-text@calino.test
+DTSTAMP:20261006T120000Z
+DTSTART:20261010T100000Z
+DTEND:20261010T110000Z
+SUMMARY:Møde 😀\, næste\; dagsorden \\ punkt\nMøde 😀\, næste\; dag
+ sorden \\ punkt\nMøde 😀\, næste\; dagsorden \\ punkt\nMøde 😀\, n
+ æste\; dagsorden \\ punkt\nMøde 😀\, næste\; dagsorden \\ punkt\nMød
+ e 😀\, næste\; dagsorden \\ punkt\nMøde 😀\, næste\; dagsorden \\ p
+ unkt\nMøde 😀\, næste\; dagsorden \\ punkt
+DESCRIPTION:Description\, with\; punctuation \\ and a newline\nDescription\
+ , with\; punctuation \\ and a newline\nDescription\, with\; punctuation \\
+  and a newline\nDescription\, with\; punctuation \\ and a newline\nDescrip
+ tion\, with\; punctuation \\ and a newline\nDescription\, with\; punctuati
+ on \\ and a newline\nDescription\, with\; punctuation \\ and a newline\nDe
+ scription\, with\; punctuation \\ and a newline\nDescription\, with\; punc
+ tuation \\ and a newline\nDescription\, with\; punctuation \\ and a newlin
+ e
+END:VEVENT
+END:VCALENDAR

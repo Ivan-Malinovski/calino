@@ -86,6 +86,11 @@ stored and shown read-only; "Advanced" offers a force-CalDAV override.
   turns them into detached VEVENTs and EXDATEs.
 - `updated` mirrors DTSTAMP, not a modification time, so it is not an etag.
 
+## Component docs
+
+- [JSCalendar → iCalendar converter](jmap/jscalendar-to-ical.md)
+- Transport and detection: `jmap/transport.md` (when it lands)
+
 ## Testing
 
 A local Stalwart is the reference server. `scripts/jmap-dev-server.sh up`

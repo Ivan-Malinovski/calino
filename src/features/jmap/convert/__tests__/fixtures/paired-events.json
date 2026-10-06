@@ -1,0 +1,442 @@
+[
+  {
+    "name": "utc",
+    "provenance": "Hand-authored paired fixture; not a captured Stalwart response.",
+    "event": {
+      "@type": "Event",
+      "uid": "jscal-to-ics-utc@calino.test",
+      "title": "UTC appointment",
+      "start": "2026-10-10T10:00:00",
+      "timeZone": "UTC",
+      "duration": "PT1H",
+      "updated": "2026-10-06T12:00:00Z"
+    }
+  },
+  {
+    "name": "floating",
+    "provenance": "Hand-authored paired fixture; not a captured Stalwart response.",
+    "event": {
+      "@type": "Event",
+      "uid": "jscal-to-ics-floating@calino.test",
+      "title": "Floating appointment",
+      "start": "2026-10-10T10:00:00",
+      "timeZone": null,
+      "duration": "PT1H",
+      "updated": "2026-10-06T12:00:00Z"
+    }
+  },
+  {
+    "name": "copenhagen",
+    "provenance": "Hand-authored paired fixture; not a captured Stalwart response.",
+    "event": {
+      "@type": "Event",
+      "uid": "jscal-to-ics-copenhagen@calino.test",
+      "title": "Copenhagen appointment",
+      "start": "2026-10-10T10:00:00",
+      "timeZone": "Europe/Copenhagen",
+      "duration": "PT1H",
+      "updated": "2026-10-06T12:00:00Z"
+    }
+  },
+  {
+    "name": "new-york",
+    "provenance": "Hand-authored paired fixture; not a captured Stalwart response.",
+    "event": {
+      "@type": "Event",
+      "uid": "jscal-to-ics-new-york@calino.test",
+      "title": "New York appointment",
+      "start": "2026-10-10T10:00:00",
+      "timeZone": "America/New_York",
+      "duration": "PT1H",
+      "updated": "2026-10-06T12:00:00Z"
+    }
+  },
+  {
+    "name": "all-day",
+    "provenance": "Hand-authored paired fixture; not a captured Stalwart response.",
+    "event": {
+      "@type": "Event",
+      "uid": "jscal-to-ics-all-day@calino.test",
+      "title": "Three days",
+      "start": "2026-10-10T00:00:00",
+      "timeZone": null,
+      "duration": "P3D",
+      "updated": "2026-10-06T12:00:00Z",
+      "showWithoutTime": true
+    }
+  },
+  {
+    "name": "weekly",
+    "provenance": "Hand-authored paired fixture; not a captured Stalwart response.",
+    "event": {
+      "@type": "Event",
+      "uid": "jscal-to-ics-weekly@calino.test",
+      "title": "Weekly sync",
+      "start": "2026-10-10T10:00:00",
+      "timeZone": "UTC",
+      "duration": "PT1H",
+      "updated": "2026-10-06T12:00:00Z",
+      "recurrenceRule": {
+        "frequency": "weekly",
+        "count": 4,
+        "byDay": [
+          {
+            "day": "sa"
+          }
+        ]
+      },
+      "alerts": {
+        "a": {
+          "trigger": {
+            "@type": "OffsetTrigger",
+            "offset": "-PT15M"
+          },
+          "action": "display",
+          "description": "Reminder"
+        }
+      }
+    }
+  },
+  {
+    "name": "monthly",
+    "provenance": "Hand-authored paired fixture; not a captured Stalwart response.",
+    "event": {
+      "@type": "Event",
+      "uid": "jscal-to-ics-monthly@calino.test",
+      "title": "Second Tuesday",
+      "start": "2026-10-13T10:00:00",
+      "timeZone": "UTC",
+      "duration": "PT1H",
+      "updated": "2026-10-06T12:00:00Z",
+      "recurrenceRules": [
+        {
+          "frequency": "monthly",
+          "byDay": [
+            {
+              "day": "tu",
+              "nthOfPeriod": 2
+            }
+          ],
+          "count": 3
+        }
+      ]
+    }
+  },
+  {
+    "name": "yearly",
+    "provenance": "Hand-authored paired fixture; not a captured Stalwart response.",
+    "event": {
+      "@type": "Event",
+      "uid": "jscal-to-ics-yearly@calino.test",
+      "title": "UTC appointment",
+      "start": "2026-10-10T10:00:00",
+      "timeZone": "UTC",
+      "duration": "PT1H",
+      "updated": "2026-10-06T12:00:00Z",
+      "recurrenceRule": {
+        "frequency": "yearly",
+        "byMonth": [
+          "10"
+        ],
+        "byMonthDay": [
+          10
+        ],
+        "count": 3
+      }
+    }
+  },
+  {
+    "name": "until-utc",
+    "provenance": "Hand-authored paired fixture; not a captured Stalwart response.",
+    "event": {
+      "@type": "Event",
+      "uid": "jscal-to-ics-until-utc@calino.test",
+      "title": "UTC appointment",
+      "start": "2026-10-10T10:00:00",
+      "timeZone": "UTC",
+      "duration": "PT1H",
+      "updated": "2026-10-06T12:00:00Z",
+      "recurrenceRule": {
+        "frequency": "daily",
+        "until": "2026-11-10T10:00:00"
+      },
+      "showWithoutTime": false
+    }
+  },
+  {
+    "name": "until-zoned",
+    "provenance": "Hand-authored paired fixture; not a captured Stalwart response.",
+    "event": {
+      "@type": "Event",
+      "uid": "jscal-to-ics-until-zoned@calino.test",
+      "title": "UTC appointment",
+      "start": "2026-10-10T10:00:00",
+      "timeZone": "Europe/Copenhagen",
+      "duration": "PT1H",
+      "updated": "2026-10-06T12:00:00Z",
+      "recurrenceRule": {
+        "frequency": "daily",
+        "until": "2026-11-10T10:00:00"
+      },
+      "showWithoutTime": false
+    }
+  },
+  {
+    "name": "until-floating",
+    "provenance": "Hand-authored paired fixture; not a captured Stalwart response.",
+    "event": {
+      "@type": "Event",
+      "uid": "jscal-to-ics-until-floating@calino.test",
+      "title": "UTC appointment",
+      "start": "2026-10-10T10:00:00",
+      "timeZone": null,
+      "duration": "PT1H",
+      "updated": "2026-10-06T12:00:00Z",
+      "recurrenceRule": {
+        "frequency": "daily",
+        "until": "2026-11-10T10:00:00"
+      },
+      "showWithoutTime": false
+    }
+  },
+  {
+    "name": "until-date",
+    "provenance": "Hand-authored paired fixture; not a captured Stalwart response.",
+    "event": {
+      "@type": "Event",
+      "uid": "jscal-to-ics-until-date@calino.test",
+      "title": "UTC appointment",
+      "start": "2026-10-10T00:00:00",
+      "timeZone": null,
+      "duration": "P1D",
+      "updated": "2026-10-06T12:00:00Z",
+      "recurrenceRule": {
+        "frequency": "daily",
+        "until": "2026-11-10T00:00:00"
+      },
+      "showWithoutTime": true
+    }
+  },
+  {
+    "name": "overrides",
+    "provenance": "Hand-authored paired fixture; not a captured Stalwart response.",
+    "event": {
+      "@type": "Event",
+      "uid": "jscal-to-ics-overrides@calino.test",
+      "title": "Recurring appointment",
+      "start": "2026-10-10T10:00:00",
+      "timeZone": "UTC",
+      "duration": "PT1H",
+      "updated": "2026-10-06T12:00:00Z",
+      "recurrenceRule": {
+        "frequency": "weekly",
+        "count": 4
+      },
+      "recurrenceOverrides": {
+        "2026-10-17T10:00:00": {
+          "excluded": true
+        },
+        "2026-10-24T10:00:00": {
+          "title": "Moved occurrence",
+          "start": "2026-10-24T12:00:00",
+          "alerts/a/trigger/offset": "-PT30M"
+        },
+        "2026-10-12T10:00:00": {},
+        "2026-10-14T10:00:00": {
+          "title": "Extra occurrence"
+        }
+      },
+      "alerts": {
+        "a": {
+          "action": "display",
+          "description": "Reminder",
+          "trigger": {
+            "@type": "OffsetTrigger",
+            "offset": "-PT15M"
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "alarms",
+    "provenance": "Hand-authored paired fixture; not a captured Stalwart response.",
+    "event": {
+      "@type": "Event",
+      "uid": "jscal-to-ics-alarms@calino.test",
+      "title": "UTC appointment",
+      "start": "2026-10-10T10:00:00",
+      "timeZone": "UTC",
+      "duration": "PT1H",
+      "updated": "2026-10-06T12:00:00Z",
+      "alerts": {
+        "a": {
+          "trigger": {
+            "@type": "OffsetTrigger",
+            "offset": "-PT10M",
+            "relativeTo": "start"
+          },
+          "action": "display",
+          "description": "Start alarm"
+        },
+        "b": {
+          "trigger": {
+            "@type": "OffsetTrigger",
+            "offset": "PT5M",
+            "relativeTo": "end"
+          },
+          "action": "display",
+          "description": "End alarm"
+        },
+        "c": {
+          "trigger": {
+            "@type": "AbsoluteTrigger",
+            "when": "2026-10-09T10:00:00Z"
+          },
+          "action": "email",
+          "title": "Email subject",
+          "description": "Email body",
+          "acknowledged": "2026-10-08T10:00:00Z"
+        }
+      },
+      "participants": {
+        "p": {
+          "calendarAddress": "mailto:alice@example.org",
+          "name": "Alice",
+          "roles": {
+            "attendee": true
+          },
+          "expectReply": true,
+          "participationStatus": "accepted",
+          "kind": "individual"
+        }
+      }
+    }
+  },
+  {
+    "name": "content",
+    "provenance": "Hand-authored paired fixture; not a captured Stalwart response.",
+    "event": {
+      "@type": "Event",
+      "uid": "jscal-to-ics-content@calino.test",
+      "title": "Møde, plan; næste",
+      "start": "2026-10-10T10:00:00",
+      "timeZone": "UTC",
+      "duration": "PT1H",
+      "updated": "2026-10-06T12:00:00Z",
+      "description": "First line\nSecond; line, with \\ backslash",
+      "keywords": {
+        "work": true,
+        "team,one": true
+      },
+      "categories": {
+        "tag:example.com:2026:meeting": true
+      },
+      "locations": {
+        "a": {
+          "name": "Room 1",
+          "coordinates": "geo:55.6761,12.5683"
+        }
+      },
+      "links": {
+        "a": {
+          "href": "https://example.org/event",
+          "rel": "describedby"
+        },
+        "b": {
+          "href": "https://example.org/file.pdf",
+          "rel": "enclosure",
+          "contentType": "application/pdf"
+        }
+      },
+      "priority": 3,
+      "privacy": "secret",
+      "freeBusyStatus": "free",
+      "status": "tentative",
+      "sequence": 2,
+      "created": "2026-10-01T10:00:00Z",
+      "color": "blue",
+      "relatedTo": {
+        "parent-event": {
+          "relation": {
+            "parent": true
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "participants",
+    "provenance": "Hand-authored paired fixture; not a captured Stalwart response.",
+    "event": {
+      "@type": "Event",
+      "uid": "jscal-to-ics-participants@calino.test",
+      "title": "UTC appointment",
+      "start": "2026-10-10T10:00:00",
+      "timeZone": "UTC",
+      "duration": "PT1H",
+      "updated": "2026-10-06T12:00:00Z",
+      "organizerCalendarAddress": "mailto:owner@example.org",
+      "participants": {
+        "owner": {
+          "name": "Owner",
+          "calendarAddress": "mailto:owner@example.org",
+          "roles": {
+            "owner": true
+          }
+        },
+        "a": {
+          "name": "Chair",
+          "calendarAddress": "mailto:chair@example.org",
+          "roles": {
+            "chair": true
+          },
+          "participationStatus": "accepted",
+          "expectReply": true,
+          "kind": "individual",
+          "scheduleSequence": 2,
+          "delegatedTo": {
+            "b": true
+          }
+        },
+        "b": {
+          "name": "Optional room",
+          "sendTo": {
+            "imip": "mailto:room@example.org"
+          },
+          "roles": {
+            "optional": true
+          },
+          "participationStatus": "tentative",
+          "expectReply": false,
+          "kind": "location",
+          "delegatedFrom": {
+            "a": true
+          }
+        },
+        "c": {
+          "email": "info@example.org",
+          "roles": {
+            "informational": true
+          },
+          "participationStatus": "declined",
+          "kind": "group"
+        }
+      }
+    }
+  },
+  {
+    "name": "long-text",
+    "provenance": "Hand-authored paired fixture; not a captured Stalwart response.",
+    "event": {
+      "@type": "Event",
+      "uid": "jscal-to-ics-long-text@calino.test",
+      "title": "Møde 😀, næste; dagsorden \\ punkt\nMøde 😀, næste; dagsorden \\ punkt\nMøde 😀, næste; dagsorden \\ punkt\nMøde 😀, næste; dagsorden \\ punkt\nMøde 😀, næste; dagsorden \\ punkt\nMøde 😀, næste; dagsorden \\ punkt\nMøde 😀, næste; dagsorden \\ punkt\nMøde 😀, næste; dagsorden \\ punkt",
+      "start": "2026-10-10T10:00:00",
+      "timeZone": "UTC",
+      "duration": "PT1H",
+      "updated": "2026-10-06T12:00:00Z",
+      "description": "Description, with; punctuation \\ and a newline\nDescription, with; punctuation \\ and a newline\nDescription, with; punctuation \\ and a newline\nDescription, with; punctuation \\ and a newline\nDescription, with; punctuation \\ and a newline\nDescription, with; punctuation \\ and a newline\nDescription, with; punctuation \\ and a newline\nDescription, with; punctuation \\ and a newline\nDescription, with; punctuation \\ and a newline\nDescription, with; punctuation \\ and a newline"
+    }
+  }
+]

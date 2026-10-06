@@ -1,0 +1,19 @@
+{
+  "title": "UTC appointment",
+  "duration": "P1D",
+  "uid": "jscal-to-ics-until-date@calino.test.west.2760776",
+  "showWithoutTime": true,
+  "start": "2026-10-10T00:00:00",
+  "@type": "Event",
+  "recurrenceRule": {
+    "frequency": "daily",
+    "until": "2026-11-10T00:00:00"
+  },
+  "updated": "2026-10-06T12:00:00Z",
+  "id": "gm",
+  "calendarIds": {
+    "b": true
+  },
+  "isDraft": false,
+  "isOrigin": true
+}

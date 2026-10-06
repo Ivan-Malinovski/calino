@@ -1,0 +1,25 @@
+{
+  "updated": "2026-10-06T12:00:00Z",
+  "uid": "jscal-to-ics-monthly@calino.test.west.2760776",
+  "title": "Second Tuesday",
+  "start": "2026-10-13T10:00:00",
+  "recurrenceRule": {
+    "frequency": "monthly",
+    "count": 3,
+    "byDay": [
+      {
+        "day": "tu",
+        "nthOfPeriod": 2
+      }
+    ]
+  },
+  "timeZone": "Etc/UTC",
+  "@type": "Event",
+  "duration": "PT1H",
+  "id": "gc",
+  "calendarIds": {
+    "b": true
+  },
+  "isDraft": false,
+  "isOrigin": true
+}
