@@ -13,7 +13,7 @@ import { useGestures } from '@/hooks/useGestures'
 import { useAnimatedClose } from '@/hooks/useAnimatedClose'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { DUR_FAST, EASE_POP } from '@/lib/motion'
-import { VIEW_LABEL_KEYS, VIEW_ROUTES, ALL_VIEWS } from '../viewRoutes'
+import { VIEW_LABEL_KEYS, VIEW_ROUTES } from '../viewRoutes'
 import { useVisibleViews, useSwitcherItems, useReorderSwitcher } from '../useOrderedViews'
 import { useTabReorder } from './useTabReorder'
 import { getNavigatedDate } from '../dateNavigation'
@@ -311,10 +311,9 @@ export function CalendarHeader({
   // one-day window step from changing the selected date used by other views
   // and by the sidebar, while still letting the regular pager move a week at
   // a time.
-  const visibleWeekStart =
-    weekWindowStart
-      ? parseISO(weekWindowStart)
-      : startOfWeek(date, { weekStartsOn: firstDayOfWeek || 0 })
+  const visibleWeekStart = weekWindowStart
+    ? parseISO(weekWindowStart)
+    : startOfWeek(date, { weekStartsOn: firstDayOfWeek || 0 })
   const previousCurrentDateRef = useRef(currentDate)
 
   useEffect(() => {
@@ -451,7 +450,9 @@ export function CalendarHeader({
     const today = new Date()
     const todayString = format(today, 'yyyy-MM-dd')
     setCurrentDate(todayString)
-    setWeekWindowStart(format(startOfWeek(today, { weekStartsOn: firstDayOfWeek || 0 }), 'yyyy-MM-dd'))
+    setWeekWindowStart(
+      format(startOfWeek(today, { weekStartsOn: firstDayOfWeek || 0 }), 'yyyy-MM-dd')
+    )
     window.dispatchEvent(new CustomEvent('calino:jumpToToday'))
   }
 
@@ -473,9 +474,7 @@ export function CalendarHeader({
       handleViewChange(defaultView)
     }
   }
-  const homeLabel = isHomeTab
-    ? t('views.header.goToToday')
-    : t('views.header.goToDefaultView')
+  const homeLabel = isHomeTab ? t('views.header.goToToday') : t('views.header.goToDefaultView')
 
   const handleViewChange = useCallback(
     (view: ViewType) => {
@@ -490,9 +489,7 @@ export function CalendarHeader({
     week: [{ label: t('views.header.threeDayTab'), onClick: () => handleViewChange('3day') }],
     agenda: [
       {
-        label: agendaSidebarOpen
-          ? t('views.header.hideSidebar')
-          : t('views.header.sidebarTab'),
+        label: agendaSidebarOpen ? t('views.header.hideSidebar') : t('views.header.sidebarTab'),
         onClick: () => updateSettings({ agendaSidebarOpen: !agendaSidebarOpen }),
       },
     ],
@@ -559,26 +556,26 @@ export function CalendarHeader({
       {/* Navigator - prev/today/next, plus the one-day week-window stepper */}
       <div className={styles.navigationGroup}>
         <div
-        className={`${styles.navigator} ${currentView === 'todo' || currentView === 'contacts' ? styles.navigatorHidden : ''}`}
-        aria-hidden={currentView === 'todo' || currentView === 'contacts'}
+          className={`${styles.navigator} ${currentView === 'todo' || currentView === 'contacts' ? styles.navigatorHidden : ''}`}
+          aria-hidden={currentView === 'todo' || currentView === 'contacts'}
         >
-        <button
-          className={styles.navArrow}
-          onClick={() => handleNavigate('prev')}
-          aria-label={t('common:actions.previous')}
-        >
-          <ChevronLeft />
-        </button>
-        <button className={styles.navToday} onClick={handleToday} data-component="today-button">
-          {t('common:actions.today')}
-        </button>
-        <button
-          className={styles.navArrow}
-          onClick={() => handleNavigate('next')}
-          aria-label={t('common:actions.next')}
-        >
-          <ChevronRight />
-        </button>
+          <button
+            className={styles.navArrow}
+            onClick={() => handleNavigate('prev')}
+            aria-label={t('common:actions.previous')}
+          >
+            <ChevronLeft />
+          </button>
+          <button className={styles.navToday} onClick={handleToday} data-component="today-button">
+            {t('common:actions.today')}
+          </button>
+          <button
+            className={styles.navArrow}
+            onClick={() => handleNavigate('next')}
+            aria-label={t('common:actions.next')}
+          >
+            <ChevronRight />
+          </button>
         </div>
       </div>
 
@@ -858,7 +855,7 @@ export function CalendarHeader({
               aria-controls="view-dropdown-menu"
               data-component="view-dropdown-trigger"
             >
-              {ALL_VIEWS.find((v) => v.value === currentView)?.label}
+              {t(VIEW_LABEL_KEYS[currentView], { ns: 'calendar' })}
               <svg
                 aria-hidden="true"
                 width="12"

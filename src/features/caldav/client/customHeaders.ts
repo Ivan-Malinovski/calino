@@ -1,4 +1,5 @@
 import { webFetch } from '@/lib/webFetch'
+import i18n from '@/lib/i18n'
 
 export type CustomHeaders = Record<string, string>
 
@@ -27,7 +28,7 @@ export function validateCustomHeaders(
   proxyUrl?: string | null
 ): CustomHeaders {
   if (proxyUrl && Object.keys(headers).length) {
-    throw new Error('Custom headers require a direct DAV connection; remove the proxy URL.')
+    throw new Error(i18n.t('caldav:ui.headerErrors.proxyConflict'))
   }
   const result: CustomHeaders = {}
   const seen = new Set<string>()
@@ -40,10 +41,14 @@ export function validateCustomHeaders(
       lower.startsWith('sec-') ||
       lower.startsWith('proxy-')
     ) {
-      throw new Error(`Invalid or reserved custom header name: ${key}`)
+      throw new Error(i18n.t('caldav:ui.headerErrors.invalidName', { name: key }))
     }
-    if (seen.has(lower)) throw new Error(`Duplicate custom header name: ${key}`)
-    if (!value || /[\r\n\0]/.test(value)) throw new Error(`Invalid value for custom header: ${key}`)
+    if (seen.has(lower)) {
+      throw new Error(i18n.t('caldav:ui.headerErrors.duplicateName', { name: key }))
+    }
+    if (!value || /[\r\n\0]/.test(value)) {
+      throw new Error(i18n.t('caldav:ui.headerErrors.invalidValue', { name: key }))
+    }
     seen.add(lower)
     result[key] = value
   }
@@ -60,7 +65,7 @@ export function createDirectDavFetch(
   return async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
     const url = input instanceof Request ? input.url : String(input)
     if (Object.keys(headers).length && new URL(url).origin !== origin) {
-      throw new Error('DAV request changed origin. Enter the final DAV URL directly.')
+      throw new Error(i18n.t('caldav:ui.headerErrors.originChanged'))
     }
     if (!Object.keys(headers).length) return transport(input, init)
     const merged = new Headers(input instanceof Request ? input.headers : undefined)
@@ -70,10 +75,7 @@ export function createDirectDavFetch(
       return await transport(input, { ...init, headers: merged, redirect: 'error' })
     } catch (error) {
       if (error instanceof TypeError) {
-        throw new Error(
-          'DAV request failed or redirected. Enter the final DAV URL directly and check CORS for custom headers.',
-          { cause: error }
-        )
+        throw new Error(i18n.t('caldav:ui.headerErrors.requestFailed'), { cause: error })
       }
       throw error
     }

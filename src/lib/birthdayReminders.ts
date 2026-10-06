@@ -1,4 +1,5 @@
 import { createUuid } from '@/lib/uuid'
+import i18n from '@/lib/i18n'
 import type { CalendarEvent } from '@/types'
 import { toLocalDateString } from './datetime'
 import { makeDefaultReminders } from './notifications'
@@ -44,8 +45,8 @@ export function createBirthdayEvent(options: CreateBirthdayEventOptions): Calend
   return {
     id: createUuid(),
     calendarId,
-    title: `🎂 ${contactName}'s birthday`,
-    description: `Birthday of ${contactName}`,
+    title: i18n.t('calendar:ui.contactEvent.birthdayTitle', { name: contactName }),
+    description: i18n.t('calendar:ui.contactEvent.birthdayDescription', { name: contactName }),
     start: `${dateStr}T00:00:00`,
     end: `${dateStr}T00:00:00`,
     isAllDay: true,
@@ -78,8 +79,8 @@ export function createAnniversaryEvent(options: CreateAnniversaryEventOptions): 
   return {
     id: createUuid(),
     calendarId,
-    title: `💍 ${contactName}'s anniversary`,
-    description: `Anniversary of ${contactName}`,
+    title: i18n.t('calendar:ui.contactEvent.anniversaryTitle', { name: contactName }),
+    description: i18n.t('calendar:ui.contactEvent.anniversaryDescription', { name: contactName }),
     start: `${dateStr}T00:00:00`,
     end: `${dateStr}T00:00:00`,
     isAllDay: true,

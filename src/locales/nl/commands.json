@@ -114,6 +114,10 @@
     "goTo": "Ga naar {{dateRef}}",
     "navigatedTo": "Naar {{date}} gegaan",
     "opened": "{{title}} geopend",
+    "openedCalendar": "Agenda {{name}} geopend",
+    "createdTask": "Taak aangemaakt: {{title}}",
+    "createdEvent": "Gebeurtenis aangemaakt: {{title}}",
+    "open": "Openen",
     "placeholder": {
       "hangOut": "Hang out with Batman tomorrow at 9",
       "toggleDarkMode": "Donkere modus omschakelen",

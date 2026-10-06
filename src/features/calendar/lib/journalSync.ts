@@ -1,4 +1,5 @@
 import type { CalendarEvent } from '@/types'
+import i18n from '@/lib/i18n'
 
 /**
  * Push a saved journal entry to the server, routing by where it came from and
@@ -40,7 +41,7 @@ export async function syncJournalEntryToServer(opts: {
     return updateCalDAVEvent(targetCalendarId, syncedEntry).then(
       () => true,
       () => {
-        showToast('Failed to sync update. It will be retried.')
+        showToast(i18n.t('errors:toast.journal.syncUpdateRetry'))
         return false
       }
     )
@@ -48,7 +49,7 @@ export async function syncJournalEntryToServer(opts: {
     return createCalDAVEvent(targetCalendarId, syncedEntry).then(
       () => true,
       () => {
-        showToast('Failed to sync update. It will be retried.')
+        showToast(i18n.t('errors:toast.journal.syncUpdateRetry'))
         return false
       }
     )
@@ -57,7 +58,7 @@ export async function syncJournalEntryToServer(opts: {
       return deleteCalDAVEventByHref(existing.calendarId, existing.resourceHref).then(
         () => true,
         () => {
-          showToast('Failed to sync update. It will be retried.')
+          showToast(i18n.t('errors:toast.journal.syncUpdateRetry'))
           return false
         }
       )

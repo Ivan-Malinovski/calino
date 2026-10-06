@@ -114,6 +114,10 @@
     "goTo": "Gå til {{dateRef}}",
     "navigatedTo": "Gik til {{date}}",
     "opened": "Åbnede {{title}}",
+    "openedCalendar": "Åbnede kalenderen {{name}}",
+    "createdTask": "Oprettede opgave: {{title}}",
+    "createdEvent": "Oprettede begivenhed: {{title}}",
+    "open": "Åbn",
     "placeholder": {
       "hangOut": "Hæng ud med Batman i morgen kl. 9",
       "toggleDarkMode": "Skift mørkt tema",

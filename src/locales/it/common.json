@@ -13,5 +13,58 @@
     "view": "Visualizza",
     "done": "Fatto",
     "save": "Salva"
+  },
+  "ui": {
+    "errorBoundary": {
+      "title": "Qualcosa è andato storto",
+      "unexpected": "Si è verificato un errore imprevisto",
+      "retry": "Riprova"
+    },
+    "cookie": {
+      "notice": "Usiamo l’archiviazione locale per salvare i tuoi dati. Nessun cookie di tracciamento.",
+      "privacy": "Privacy",
+      "dismiss": "Ho capito"
+    },
+    "skipToCalendar": "Vai al calendario",
+    "agendaPanel": {
+      "resize": "Ridimensiona il pannello agenda",
+      "close": "Chiudi il pannello agenda",
+      "title": "Agenda"
+    },
+    "update": {
+      "apiError": "Errore dell’API di GitHub: {{status}}",
+      "failedWith": "Impossibile cercare aggiornamenti: {{message}}",
+      "failed": "Impossibile cercare aggiornamenti"
+    },
+    "shortcuts": {
+      "title": "Scorciatoie da tastiera",
+      "navigation": "Navigazione",
+      "create": "Crea",
+      "general": "Generale",
+      "today": "Vai a oggi",
+      "prevView": "Vista precedente",
+      "nextView": "Vista successiva",
+      "newEvent": "Nuovo evento",
+      "newTask": "Nuova attività",
+      "palette": "Apri la palette comandi",
+      "showHelp": "Mostra questa guida",
+      "closePanel": "Chiudi finestra / pannello",
+      "disabledHint": "Le scorciatoie sono disattivate mentre scrivi in un campo o quando è aperta una finestra."
+    },
+    "onboarding": {
+      "title": "Inizia con il tuo calendario",
+      "connectLine": "Collega iCloud, Nextcloud, Fastmail o qualsiasi server CalDAV.",
+      "dataStays": "I tuoi dati restano nel tuo browser.",
+      "how": "Come?",
+      "howText": "Calino non ha un backend proprio. Comunica direttamente con il tuo server CalDAV e conserva una copia locale. Puoi eseguire il backup o spostare i dati con esporta/importa nelle Impostazioni.",
+      "connectAccount": "Collega account CalDAV",
+      "loading": "Caricamento…",
+      "explore": "Esplora Calino con dati di esempio",
+      "skip": "Salta per ora",
+      "demoFailed": "Impossibile caricare i dati di esempio",
+      "nativeFootnote": "Calino può ricordarti gli eventi prima che inizino. Continuando ti verrà chiesta l’autorizzazione per le notifiche.",
+      "alsoOnAndroid": "Disponibile anche su <link>Android</link>, con importazione dalla fotocamera e promemoria."
+    },
+    "privacy": "Privacy"
   }
 }

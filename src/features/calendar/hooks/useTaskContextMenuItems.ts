@@ -6,8 +6,9 @@ import { safeCalDAVUpdate } from '@/lib/caldavHelpers'
 import { deleteEventWithUndo } from '@/lib/deleteWithUndo'
 import { hapticIfEnabled } from '@/lib/haptics'
 import { showToast } from '@/lib/toast'
+import i18n from '@/lib/i18n'
 import {
-  TASK_MOVE_LABELS,
+  taskMoveLabel,
   buildTaskMovePatch,
   describeTaskMove,
   taskMoveTargets,
@@ -117,7 +118,7 @@ export function useTaskContextMenuItems(
 
   if (onEdit) {
     items.push({
-      label: 'Edit',
+      label: i18n.t('common:actions.edit'),
       onClick: () => {
         onEdit()
         onAfterAction?.()
@@ -132,7 +133,7 @@ export function useTaskContextMenuItems(
 
   for (const target of taskMoveTargets(task)) {
     items.push({
-      label: TASK_MOVE_LABELS[target],
+      label: taskMoveLabel(target),
       onClick: () => {
         const patch = buildTaskMovePatch(task, target)
         updateEvent(task.id, patch)
@@ -145,7 +146,9 @@ export function useTaskContextMenuItems(
   }
 
   items.push({
-    label: task.completed ? 'Mark as not done' : 'Mark as done',
+    label: task.completed
+      ? i18n.t('calendar:ui.task.markNotDone')
+      : i18n.t('calendar:ui.task.markDone'),
     onClick: () => {
       hapticIfEnabled('light')
       void toggleComplete()
@@ -155,7 +158,7 @@ export function useTaskContextMenuItems(
 
   if (includeDelete) {
     items.push({
-      label: 'Delete',
+      label: i18n.t('common:actions.delete'),
       danger: true,
       onClick: () => {
         deleteEventWithUndo({

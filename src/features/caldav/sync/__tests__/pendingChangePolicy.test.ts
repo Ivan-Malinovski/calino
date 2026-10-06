@@ -80,9 +80,7 @@ describe('classifyPendingChangeError — 412 stale etag', () => {
       'create'
     )
     expect(d.kind).toBe('drop')
-    expect(d.message).toBe(
-      `Couldn't create "this event" — already exists on the server — check for a duplicate.`
-    )
+    expect(d.message).toBe('already exists on the server — check for a duplicate.')
   })
 
   it('412 move and delete-href → retry-counted', () => {

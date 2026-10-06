@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type RefObject } from 'react'
 import { toast } from 'sonner'
 import { hapticIfEnabled } from '@/lib/haptics'
+import i18n from '@/lib/i18n'
 
 interface UsePullToRefreshOptions {
   onRefresh: () => Promise<void>
@@ -134,7 +135,7 @@ export function usePullToRefresh(
         void onRefreshRef
           .current()
           .catch(() => {
-            toast.error('Sync failed')
+            toast.error(i18n.t('errors:toast.sync.failed'))
           })
           .finally(() => {
             isRefreshingRef.current = false

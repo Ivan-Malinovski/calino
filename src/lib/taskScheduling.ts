@@ -1,12 +1,12 @@
 import { addDays, differenceInCalendarDays, format, parseISO, startOfDay } from 'date-fns'
 import type { CalendarEvent } from '@/types'
+import i18n from '@/lib/i18n'
+import { formatDisplayDate } from '@/lib/datetime'
 
 export type TaskMoveTarget = 'today' | 'tomorrow' | 'nextWeek'
 
-export const TASK_MOVE_LABELS: Record<TaskMoveTarget, string> = {
-  today: 'Move to today',
-  tomorrow: 'Move to tomorrow',
-  nextWeek: 'Move to next week',
+export function taskMoveLabel(target: TaskMoveTarget): string {
+  return i18n.t(`calendar:ui.taskMove.${target}`)
 }
 
 type TaskLike = Pick<
@@ -109,7 +109,9 @@ export function buildTaskMovePatch(
 
 /** Short human confirmation for the toast, e.g. "Moved to Tue, 18 Aug". */
 export function describeTaskMove(target: TaskMoveTarget, dateISO: string): string {
-  if (target === 'today') return 'Moved to today'
-  if (target === 'tomorrow') return 'Moved to tomorrow'
-  return `Moved to ${format(parseISO(datePart(dateISO)), 'EEE, d MMM')}`
+  if (target === 'today') return i18n.t('errors:toast.tasks.movedToday')
+  if (target === 'tomorrow') return i18n.t('errors:toast.tasks.movedTomorrow')
+  return i18n.t('errors:toast.tasks.movedTo', {
+    date: formatDisplayDate(parseISO(datePart(dateISO)), 'EEE, d MMM'),
+  })
 }

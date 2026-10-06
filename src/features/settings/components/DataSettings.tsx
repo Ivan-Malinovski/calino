@@ -81,7 +81,10 @@ export function DataSettings({ searchControl }: { searchControl?: JSX.Element })
           for (const event of data.events) {
             useCalendarStore.getState().addEvent(event)
           }
-          setImportStatus({ type: 'success', message: t('data.importedEvents', { count: data.events.length }) })
+          setImportStatus({
+            type: 'success',
+            message: t('data.importedEvents', { count: data.events.length }),
+          })
         } else {
           setImportStatus({ type: 'error', message: t('data.noEventsInJson') })
         }
@@ -311,12 +314,16 @@ export function DataSettings({ searchControl }: { searchControl?: JSX.Element })
                 >
                   <div className={styles.brokenInfo}>
                     <div className={styles.brokenTitle}>
-                      {broken.event.title || 'Untitled Event'}
+                      {broken.event.title || t('ui.data.untitledEvent')}
                     </div>
                     <div className={styles.brokenDates}>
-                      <span>Start: {formatDate(broken.event.start, timeFormat)}</span>
+                      <span>
+                        {t('ui.data.start', { date: formatDate(broken.event.start, timeFormat) })}
+                      </span>
                       <span className={styles.brokenArrow}>→</span>
-                      <span>End: {formatDate(broken.event.end, timeFormat)}</span>
+                      <span>
+                        {t('ui.data.end', { date: formatDate(broken.event.end, timeFormat) })}
+                      </span>
                     </div>
                     <div className={styles.brokenReason}>{broken.reason}</div>
                   </div>
@@ -328,7 +335,7 @@ export function DataSettings({ searchControl }: { searchControl?: JSX.Element })
                       data-action="fix-broken-event"
                       type="button"
                     >
-                      Fix
+                      {t('ui.data.fix')}
                     </button>
                     <button
                       className={`${styles.actionBtn} ${styles.actionBtnDanger}`}
@@ -337,7 +344,7 @@ export function DataSettings({ searchControl }: { searchControl?: JSX.Element })
                       data-action="delete-broken-event"
                       type="button"
                     >
-                      Delete
+                      {t('ui.data.delete')}
                     </button>
                   </div>
                 </div>
@@ -353,7 +360,7 @@ export function DataSettings({ searchControl }: { searchControl?: JSX.Element })
                   data-action="fix-all-broken"
                   type="button"
                 >
-                  Fix All ({brokenEvents.length})
+                  {t('ui.data.fixAll', { count: brokenEvents.length })}
                 </button>
                 <button
                   className={`${styles.actionBtn} ${styles.actionBtnDanger}`}
@@ -362,7 +369,7 @@ export function DataSettings({ searchControl }: { searchControl?: JSX.Element })
                   data-action="delete-all-broken"
                   type="button"
                 >
-                  Delete All
+                  {t('ui.data.deleteAll')}
                 </button>
               </div>
             )}
@@ -372,10 +379,7 @@ export function DataSettings({ searchControl }: { searchControl?: JSX.Element })
         {duplicateUidIssues.length > 0 && (
           <div data-component="duplicate-uid-issues">
             <p className={styles.rowDesc} style={{ padding: '16px 20px 0' }}>
-              These events share the same unique ID (UID) on your server but are stored as separate
-              items. Calino can only show one of each set — the others are hidden to keep your
-              calendar stable. This usually comes from a bulk copy made in another app. To fix it,
-              give each event a unique UID on your server, then sync again.
+              {t('ui.data.duplicateIntro')}
             </p>
 
             <div className={styles.brokenList}>
@@ -387,7 +391,9 @@ export function DataSettings({ searchControl }: { searchControl?: JSX.Element })
                   data-uid={issue.uid}
                 >
                   <div className={styles.brokenInfo}>
-                    <div className={styles.brokenTitle}>Duplicate UID: {issue.uid}</div>
+                    <div className={styles.brokenTitle}>
+                      {t('ui.data.duplicateUid', { uid: issue.uid })}
+                    </div>
                     {issue.resources.map((res) => (
                       <div
                         key={res.href}
@@ -395,11 +401,11 @@ export function DataSettings({ searchControl }: { searchControl?: JSX.Element })
                         data-component="duplicate-uid-resource"
                         data-href={res.href}
                       >
-                        <span>{res.title || 'Untitled Event'}</span>
+                        <span>{res.title || t('ui.data.untitledEvent')}</span>
                         <span className={styles.brokenArrow}>·</span>
                         <span>{formatDate(res.start, timeFormat)}</span>
                         <span className={styles.brokenArrow}>·</span>
-                        <span>{res.kept ? 'Kept' : 'Hidden'}</span>
+                        <span>{res.kept ? t('ui.data.kept') : t('ui.data.hidden')}</span>
                         <button
                           className={styles.duplicateResourceDeleteBtn}
                           onClick={() => void handleDeleteDuplicateResource(issue, res.href)}
@@ -408,7 +414,7 @@ export function DataSettings({ searchControl }: { searchControl?: JSX.Element })
                           data-action="delete-duplicate-uid-resource"
                           type="button"
                         >
-                          {deletingHref === res.href ? 'Deleting…' : 'Delete'}
+                          {deletingHref === res.href ? t('ui.data.deleting') : t('ui.data.delete')}
                         </button>
                       </div>
                     ))}
@@ -421,7 +427,7 @@ export function DataSettings({ searchControl }: { searchControl?: JSX.Element })
                       data-action="dismiss-duplicate-uid"
                       type="button"
                     >
-                      Dismiss
+                      {t('ui.data.dismiss')}
                     </button>
                   </div>
                 </div>
@@ -434,7 +440,9 @@ export function DataSettings({ searchControl }: { searchControl?: JSX.Element })
       {!Capacitor.isNativePlatform() && <WebMCPSettings />}
 
       <div className={`${styles.group} ${styles.dangerZone}`}>
-        <div className={`${styles.groupLabel} ${styles.dangerZoneLabel}`}>{t('data.dangerZone')}</div>
+        <div className={`${styles.groupLabel} ${styles.dangerZoneLabel}`}>
+          {t('data.dangerZone')}
+        </div>
         <div className={styles.actionRow}>
           <div className={styles.rowInfo}>
             <div className={styles.rowLabel}>{t('data.deleteAllEvents.label')}</div>

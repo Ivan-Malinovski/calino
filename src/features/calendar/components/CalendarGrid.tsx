@@ -40,6 +40,7 @@ import {
 } from 'date-fns'
 import { pad2, toEventInstant, toZoneWallClock, formatDisplayDate } from '@/lib/datetime'
 import { useTranslation } from 'react-i18next'
+import i18n from '@/lib/i18n'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
 import { getWeekdayLabels } from './weekdayLabels'
@@ -481,7 +482,7 @@ export function CalendarGrid(): JSX.Element {
         task.calendarId,
         { ...task, ...weekUpdates },
         weekUpdates,
-        'Failed to sync dragged task'
+        i18n.t('errors:ui.dragSync.task')
       )
       return
     }
@@ -506,7 +507,7 @@ export function CalendarGrid(): JSX.Element {
         weekTask.calendarId,
         { ...weekTask, ...dayUpdates },
         dayUpdates,
-        'Failed to sync dragged task'
+        i18n.t('errors:ui.dragSync.task')
       )
       return
     }
@@ -592,7 +593,7 @@ export function CalendarGrid(): JSX.Element {
       originalEvent.calendarId,
       { ...originalEvent, ...updates },
       updates,
-      'Failed to sync dragged event'
+      i18n.t('errors:ui.dragSync.event')
     )
   }
 
@@ -2217,7 +2218,7 @@ const DroppableDay = React.memo(function DroppableDay({
                   className={styles.moreEvents}
                   onClick={handleMoreEventsClick}
                 >
-                  +{hiddenCount} more
+                  {t('views.week.moreCount', { count: hiddenCount })}
                 </button>
               )}
             </div>
@@ -2245,8 +2246,8 @@ const DroppableDay = React.memo(function DroppableDay({
           events={subtaskPopup.subtasks}
           position={subtaskPopup.position}
           title={subtaskPopup.parent.title}
-          countLabel={`${subtaskPopup.subtasks.length} subtask${subtaskPopup.subtasks.length === 1 ? '' : 's'}`}
-          ariaLabel={`Subtasks for ${subtaskPopup.parent.title}`}
+          countLabel={t('ui.subtasks.count', { count: subtaskPopup.subtasks.length })}
+          ariaLabel={t('ui.subtasks.for', { title: subtaskPopup.parent.title })}
           onClose={() => setSubtaskPopup(null)}
           onEventClick={(event) => {
             setSubtaskPopup(null)

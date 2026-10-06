@@ -13,5 +13,58 @@
     "view": "Vis",
     "done": "Færdig",
     "save": "Gem"
+  },
+  "ui": {
+    "errorBoundary": {
+      "title": "Noget gik galt",
+      "unexpected": "Der opstod en uventet fejl",
+      "retry": "Prøv igen"
+    },
+    "cookie": {
+      "notice": "Vi bruger lokal lagring til at gemme dine data. Ingen sporings-cookies.",
+      "privacy": "Privatliv",
+      "dismiss": "Forstået"
+    },
+    "skipToCalendar": "Gå til kalenderen",
+    "agendaPanel": {
+      "resize": "Tilpas størrelsen på dagsordenpanelet",
+      "close": "Luk dagsordenpanelet",
+      "title": "Dagsorden"
+    },
+    "update": {
+      "apiError": "GitHub API-fejl: {{status}}",
+      "failedWith": "Kunne ikke søge efter opdateringer: {{message}}",
+      "failed": "Kunne ikke søge efter opdateringer"
+    },
+    "shortcuts": {
+      "title": "Tastaturgenveje",
+      "navigation": "Navigation",
+      "create": "Opret",
+      "general": "Generelt",
+      "today": "Gå til i dag",
+      "prevView": "Forrige visning",
+      "nextView": "Næste visning",
+      "newEvent": "Ny begivenhed",
+      "newTask": "Ny opgave",
+      "palette": "Åbn kommandopaletten",
+      "showHelp": "Vis denne hjælp",
+      "closePanel": "Luk dialog / panel",
+      "disabledHint": "Genveje er deaktiveret, mens du skriver i et felt, eller når en dialog er åben."
+    },
+    "onboarding": {
+      "title": "Kom i gang med din kalender",
+      "connectLine": "Forbind iCloud, Nextcloud, Fastmail eller en hvilken som helst CalDAV-server.",
+      "dataStays": "Dine data forbliver i din browser.",
+      "how": "Hvordan?",
+      "howText": "Calino har ingen egen backend. Den taler direkte med din CalDAV-server og gemmer en kopi lokalt. Du kan sikkerhedskopiere eller flytte dine data med eksport/import i Indstillinger.",
+      "connectAccount": "Forbind CalDAV-konto",
+      "loading": "Indlæser…",
+      "explore": "Udforsk Calino med eksempeldata",
+      "skip": "Spring over for nu",
+      "demoFailed": "Eksempeldata kunne ikke indlæses",
+      "nativeFootnote": "Calino kan minde dig, før begivenheder starter. Når du fortsætter, bliver du bedt om tilladelse til notifikationer.",
+      "alsoOnAndroid": "Også på <link>Android</link>, med kameraimport og påmindelser."
+    },
+    "privacy": "Privatliv"
   }
 }

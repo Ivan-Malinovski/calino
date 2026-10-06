@@ -114,6 +114,10 @@
     "goTo": "Zu {{dateRef}} wechseln",
     "navigatedTo": "Zu {{date}} gewechselt",
     "opened": "{{title}} geöffnet",
+    "openedCalendar": "Kalender {{name}} geöffnet",
+    "createdTask": "Aufgabe erstellt: {{title}}",
+    "createdEvent": "Ereignis erstellt: {{title}}",
+    "open": "Öffnen",
     "placeholder": {
       "hangOut": "Morgen um 9 mit Batman treffen",
       "toggleDarkMode": "Dunklen Modus umschalten",

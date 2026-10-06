@@ -1,6 +1,7 @@
 import { httpRequest } from '../http'
 import type { ModelInfo, ProviderRequestConfig, VisionMessageInput } from '../types'
 import { endpointUrl } from './url'
+import i18n from '@/lib/i18n'
 
 const ANTHROPIC_VERSION = '2023-06-01'
 
@@ -13,12 +14,12 @@ function authHeaders(cfg: ProviderRequestConfig): Record<string, string> {
 
 async function describeError(status: number, body: unknown): Promise<string> {
   if (status === 401 || status === 403) {
-    return 'Authentication failed — check that your Anthropic API key is correct.'
+    return i18n.t('settings:ui.aiVision.err.authAnthropic', { status })
   }
   const message = extractErrorMessage(body)
   return message
-    ? `Anthropic request failed (${status}): ${message}`
-    : `Anthropic request failed with status ${status}`
+    ? i18n.t('settings:ui.aiVision.err.failedAnthropic', { status, message })
+    : i18n.t('settings:ui.aiVision.err.failedNoMessageAnthropic', { status })
 }
 
 function extractErrorMessage(body: unknown): string | undefined {
@@ -94,7 +95,7 @@ export async function sendVisionMessage(
   const body = (await response.json()) as { content?: Array<{ text?: unknown }> }
   const text = body?.content?.[0]?.text
   if (typeof text !== 'string') {
-    throw new Error('Anthropic response did not contain any text content')
+    throw new Error(i18n.t('settings:ui.aiVision.err.noTextAnthropic'))
   }
   return text
 }

@@ -1,5 +1,6 @@
 import type { CalendarEvent } from '@/types'
 import type { SyncEngine } from './syncEngine'
+import i18n from '@/lib/i18n'
 
 /**
  * Moving an event between CalDAV collections.
@@ -38,7 +39,11 @@ export interface MoveResult {
 export class MoveLostSourceError extends Error {
   readonly events: CalendarEvent[]
   constructor(events: CalendarEvent[], cause: unknown) {
-    super(`Move lost its source resource: ${cause instanceof Error ? cause.message : cause}`)
+    super(
+      i18n.t('errors:ui.moveLostSource', {
+        message: cause instanceof Error ? cause.message : String(cause),
+      })
+    )
     this.name = 'MoveLostSourceError'
     this.events = events
   }

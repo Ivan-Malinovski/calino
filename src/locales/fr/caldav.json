@@ -14,5 +14,58 @@
     "creatingCalendar": "Création du calendrier…",
     "savingCalendar": "Enregistrement du calendrier…",
     "deletingCalendar": "Suppression du calendrier…"
+  },
+  "ui": {
+    "cleartextWarning": "Cette connexion utilise HTTP en clair : votre mot de passe et les données de l’agenda circulent sans chiffrement. Acceptable sur un réseau privé ou un VPN — à éviter sur un Wi-Fi que vous ne contrôlez pas.",
+    "headers": {
+      "count_one": "{{count}} en-tête personnalisé",
+      "count_other": "{{count}} en-têtes personnalisés",
+      "proxyOn": "Proxy activé",
+      "optional": "Facultatif",
+      "protectedServers": "Pour les serveurs CalDAV protégés",
+      "connectionSettings": "Paramètres de connexion",
+      "gatewayAccess": "Accès via passerelle",
+      "headerN": "En-tête {{n}}",
+      "removeHeader": "Supprimer l’en-tête",
+      "removeHeaderN": "Supprimer l’en-tête {{n}}",
+      "name": "Nom",
+      "nameAria": "Nom de l’en-tête {{n}}",
+      "namePlaceholder": "p. ex. P-Access-Token-Id",
+      "value": "Valeur",
+      "valueAria": "Valeur de l’en-tête {{n}}",
+      "valuePlaceholder": "Saisissez la valeur secrète",
+      "revealAria": "Afficher le secret de l’en-tête {{n}}",
+      "hideAria": "Masquer le secret de l’en-tête {{n}}",
+      "hideValue": "Masquer la valeur",
+      "showValue": "Afficher la valeur",
+      "addHeader": "Ajouter un en-tête",
+      "proxyUrl": "URL du proxy",
+      "proxyWarning": "Les identifiants et les données du calendrier transitent par ce serveur. N’utilisez qu’un proxy de confiance.",
+      "learnMore": "En savoir plus",
+      "customHeaders": "En-têtes personnalisés",
+      "gatewayHint": "Pour les serveurs derrière une passerelle d’authentification"
+    },
+    "nudge": {
+      "checkProxyAction": "Vérifiez l’URL du proxy ↓",
+      "checkProxyLabel": "Vérifiez l’URL du proxy",
+      "setUpProxyAction": "Configurez un proxy ↓",
+      "proxyMayFix": "Un proxy peut résoudre ce problème",
+      "headersAction": "Ce serveur est-il derrière une passerelle ? Ajoutez un en-tête ↓",
+      "headerMayFix": "Un en-tête personnalisé peut résoudre ce problème"
+    },
+    "connecting": "Connexion au serveur…",
+    "addAccountFailed": "Impossible d’ajouter le compte",
+    "syncFailed": "Échec de la synchronisation",
+    "accountNotFound": "Compte introuvable",
+    "credentialsNotFound": "Identifiants introuvables",
+    "headerErrors": {
+      "invalid": "En-têtes personnalisés non valides.",
+      "proxyConflict": "Les en-têtes personnalisés nécessitent une connexion DAV directe ; supprimez l’URL du proxy.",
+      "invalidName": "Nom d’en-tête personnalisé non valide ou réservé : {{name}}",
+      "duplicateName": "Nom d’en-tête personnalisé en double : {{name}}",
+      "invalidValue": "Valeur non valide pour l’en-tête personnalisé : {{name}}",
+      "originChanged": "La requête DAV a changé d’origine. Saisissez directement l’URL DAV finale.",
+      "requestFailed": "La requête DAV a échoué ou a été redirigée. Saisissez directement l’URL DAV finale et vérifiez CORS pour les en-têtes personnalisés."
+    }
   }
 }

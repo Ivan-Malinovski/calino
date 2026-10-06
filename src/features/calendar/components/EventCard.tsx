@@ -549,7 +549,7 @@ export const EventCard = React.memo(function EventCard({
                     : '',
                 })
             : event.isAllDay
-              ? t('modals.eventCard.allDayAriaLabel', { title: event.title })
+              ? t('modals.eventCard.allDayAriaLabel', { title: event.title, subtask: '' })
               : t('modals.eventCard.timedAriaLabel', {
                   title: event.title,
                   start: formatEventTime(event.start, event.timezone, timeFormat),

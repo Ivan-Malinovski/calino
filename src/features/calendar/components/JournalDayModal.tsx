@@ -7,6 +7,7 @@ import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
 import { createUuid } from '@/lib/uuid'
 import { MarkdownView } from '@/lib/markdown'
 import { showToast } from '@/lib/toast'
+import i18n from '@/lib/i18n'
 import { putAttachments, getAttachments, deleteAttachments } from '@/lib/attachmentStore'
 import type { CalendarEvent, CalendarAttachment } from '@/types'
 import { AttachmentSection } from './AttachmentSection'
@@ -205,7 +206,7 @@ export function JournalDayModal({
           putAttachments(editingId, attachments)
             .then(() => syncToServer())
             .catch(() => {
-              showToast('Failed to save attachments locally')
+              showToast(i18n.t('errors:toast.attachments.saveLocal'))
             })
         } else {
           deleteAttachments(editingId).catch(() => {})
@@ -245,18 +246,18 @@ export function JournalDayModal({
             deleteAttachments('new').catch(() => {})
             if (defaultCalendar?.id !== 'default') {
               createCalDAVEvent(newEntry.calendarId, newEntry).catch(() => {
-                showToast('Failed to sync entry. It will be retried.')
+                showToast(i18n.t('errors:toast.journal.syncEntryRetry'))
               })
             }
           })
           .catch(() => {
-            showToast('Failed to save attachments locally')
+            showToast(i18n.t('errors:toast.attachments.saveLocal'))
           })
       } else {
         deleteAttachments('new').catch(() => {})
         if (defaultCalendar?.id !== 'default') {
           createCalDAVEvent(newEntry.calendarId, newEntry).catch(() => {
-            showToast('Failed to sync entry. It will be retried.')
+            showToast(i18n.t('errors:toast.journal.syncEntryRetry'))
           })
         }
       }
@@ -337,7 +338,7 @@ export function JournalDayModal({
         // Sync CalDAV first so it can capture the etag before the local delete
         if (entry && entry.calendarId !== 'default') {
           deleteCalDAVEvent(entry.calendarId, entry.id).catch(() => {
-            showToast('Failed to sync deletion. It will be retried.')
+            showToast(i18n.t('errors:sync.deletionSyncRetry'))
           })
         }
         deleteEvent(entryId)
@@ -349,13 +350,13 @@ export function JournalDayModal({
 
         // Show undo toast (#17)
         if (entry) {
-          showToast('Entry deleted', {
+          showToast(i18n.t('errors:undo.journalDeleted'), {
             duration: 8000,
             onUndo: () => {
               addEvent(entry)
               if (entry.calendarId !== 'default') {
                 createCalDAVEvent(entry.calendarId, entry).catch(() => {
-                  showToast('Failed to restore entry.')
+                  showToast(i18n.t('errors:sync.journalRestoreFailed'))
                 })
               }
             },
@@ -461,7 +462,7 @@ export function JournalDayModal({
                   <div className={styles.emptyState}>
                     <p>{t('surface.journalNoEntries')}</p>
                     <button className={styles.btnAccent} onClick={handleStartCompose}>
-                      Write something
+                      {t('ui.journal.writeSomething')}
                     </button>
                   </div>
                 )}
@@ -555,7 +556,7 @@ export function JournalDayModal({
               {writableCalendars.length > 1 && (
                 <div className={styles.calendarRow}>
                   <label className={styles.calendarLabel} htmlFor="journal-day-calendar-select">
-                    Calendar
+                    {t('surface.journalCalendar')}
                   </label>
                   <select
                     id="journal-day-calendar-select"
@@ -580,7 +581,7 @@ export function JournalDayModal({
                     className={styles.addToggle}
                     onClick={() => setShowAddPanel(true)}
                   >
-                    + Add
+                    + {t('surface.journalAdd')}
                   </button>
                 ) : (
                   <div className={styles.addPanelContent}>
@@ -589,14 +590,16 @@ export function JournalDayModal({
                       className={styles.addToggle}
                       onClick={() => setShowAddPanel(false)}
                     >
-                      − Hide
+                      − {t('surface.journalHide')}
                     </button>
 
                     {/* Categories */}
                     {categories.length > 0 && (
                       <div className={styles.addSection}>
                         <div className={styles.addSectionHeader}>
-                    <span className={styles.addSectionLabel}>{t('surface.journalCategories')}</span>
+                          <span className={styles.addSectionLabel}>
+                            {t('surface.journalCategories')}
+                          </span>
                           {selectedCategories.length > 0 && (
                             <button
                               type="button"
@@ -681,7 +684,9 @@ export function JournalDayModal({
                       return (
                         <div className={styles.addSection}>
                           <div className={styles.addSectionHeader}>
-                            <span className={styles.addSectionLabel}>{t('surface.journalRelatedTo')}</span>
+                            <span className={styles.addSectionLabel}>
+                              {t('surface.journalRelatedTo')}
+                            </span>
                             {relatedTo.length > 0 && (
                               <button
                                 type="button"
@@ -709,7 +714,7 @@ export function JournalDayModal({
                                   }}
                                 >
                                   <span className={styles.relatedChipTitle}>
-                                    {ev.title || '(untitled)'}
+                                    {ev.title || t('ui.journal.untitledParen')}
                                   </span>
                                   <span className={styles.relatedChipDate}>
                                     {ev.start.split('T')[1]?.slice(0, 5) || ''}
@@ -735,7 +740,9 @@ export function JournalDayModal({
               className={`${styles.btnDelete} ${confirmDeleteId === editingId ? styles.btnDeleteConfirm : ''}`}
               onClick={() => handleDelete(editingId)}
             >
-              {confirmDeleteId === editingId ? 'Click again to confirm' : 'Delete'}
+              {confirmDeleteId === editingId
+                ? t('ui.journal.clickAgain')
+                : t('actions.delete', { ns: 'common' })}
             </button>
           )}
           {mode !== 'view' ? (
@@ -749,15 +756,15 @@ export function JournalDayModal({
                   setBody('')
                 }}
               >
-                Cancel
+                {t('actions.cancel', { ns: 'common' })}
               </button>
               <button className={styles.btnAccent} onClick={handleSave}>
-                {mode === 'edit' ? 'Save changes' : 'Save entry'}
+                {mode === 'edit' ? t('ui.journal.saveChanges') : t('ui.journal.saveEntry')}
               </button>
             </>
           ) : (
             <button className={styles.btnGhost} onClick={onClose}>
-              Close
+              {t('actions.close', { ns: 'common' })}
             </button>
           )}
           {mode === 'view' && (
@@ -771,7 +778,7 @@ export function JournalDayModal({
               >
                 <path d="M6 1v10M1 6h10" />
               </svg>
-              Add entry
+              {t('ui.journal.addEntry')}
             </button>
           )}
         </div>

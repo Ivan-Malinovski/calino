@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { config } from '@/config'
 import { compareVersions } from '@/lib/version'
 import { safeLocalStorage } from '@/lib/storage'
+import i18n from '@/lib/i18n'
 
 const CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000 // 24 hours
 const STORAGE_KEY_LAST_CHECK = 'calino-last-update-check'
@@ -84,7 +85,7 @@ export function useUpdateCheck(): UpdateInfo {
         }
 
         if (!response.ok) {
-          throw new Error(`GitHub API error: ${response.status}`)
+          throw new Error(i18n.t('common:ui.update.apiError', { status: response.status }))
         }
 
         const data: GitHubRelease = await response.json()
@@ -110,8 +111,8 @@ export function useUpdateCheck(): UpdateInfo {
         if (!cancelled) {
           setError(
             err instanceof Error
-              ? `Failed to check for updates: ${err.message}`
-              : 'Failed to check for updates'
+              ? i18n.t('common:ui.update.failedWith', { message: err.message })
+              : i18n.t('common:ui.update.failed')
           )
         }
       } finally {

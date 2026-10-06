@@ -5,6 +5,7 @@ import { useAIVisionSettingsStore } from '@/store/aiVisionSettingsStore'
 import { useAIImportStore } from '@/store/aiImportStore'
 import { hapticIfEnabled } from '@/lib/haptics'
 import { showToast } from '@/lib/toast'
+import i18n from '@/lib/i18n'
 import { extractEventFromImage } from './client'
 import type { ExtractedEventFields } from './types'
 
@@ -22,15 +23,15 @@ function hasUsableFields(fields: ExtractedEventFields): boolean {
 function describeExtractionError(err: unknown): { message: string; isAuthError: boolean } {
   const raw = err instanceof Error ? err.message : String(err)
   if (/\b(401|403)\b|authentication|unauthorized|forbidden|invalid.*api.?key/i.test(raw)) {
-    return { message: 'Your AI API key looks invalid or expired.', isAuthError: true }
+    return { message: i18n.t('errors:toast.aiImport.keyInvalid'), isAuthError: true }
   }
   if (/network|fetch|timeout|offline|failed to fetch|ECONNREFUSED/i.test(raw)) {
     return {
-      message: 'Could not reach the AI provider — check your connection.',
+      message: i18n.t('errors:toast.aiImport.unreachable'),
       isAuthError: false,
     }
   }
-  return { message: 'Could not read event details from that photo.', isAuthError: false }
+  return { message: i18n.t('errors:toast.aiImport.unreadable'), isAuthError: false }
 }
 
 /**
@@ -59,8 +60,8 @@ export function useAIPhotoImport(): {
   const setReviewCandidates = useAIImportStore((s) => s.setReviewCandidates)
 
   const promptForApiKey = (onDone?: () => void): void => {
-    showToast('Set up AI photo import in Settings first', {
-      linkText: 'Open Settings',
+    showToast(i18n.t('errors:toast.aiImport.setupNeeded'), {
+      linkText: i18n.t('errors:toast.aiImport.openSettings'),
       onLinkClick: () => {
         onDone?.()
         navigate('/settings?tab=aiVision')
@@ -103,14 +104,11 @@ export function useAIPhotoImport(): {
 
       if (!candidates.some(hasUsableFields)) {
         hapticIfEnabled('light')
-        showToast(
-          "Couldn't find any event details in that photo. Try a clearer shot, or add it manually.",
-          {
-            duration: 6000,
-            linkText: 'Add manually',
-            onLinkClick: () => useCalendarStore.getState().openModal(),
-          }
-        )
+        showToast(i18n.t('errors:toast.aiImport.noDetails'), {
+          duration: 6000,
+          linkText: i18n.t('errors:toast.aiImport.addManually'),
+          onLinkClick: () => useCalendarStore.getState().openModal(),
+        })
         onDone?.()
         return
       }
@@ -120,9 +118,9 @@ export function useAIPhotoImport(): {
       onDone?.()
     } catch (err) {
       const { message, isAuthError } = describeExtractionError(err)
-      showToast(`${message} Opening a blank event instead.`, {
+      showToast(i18n.t('errors:toast.aiImport.blankFallback', { message }), {
         duration: 6000,
-        linkText: isAuthError ? 'Open Settings' : undefined,
+        linkText: isAuthError ? i18n.t('errors:toast.aiImport.openSettings') : undefined,
         onLinkClick: isAuthError ? () => navigate('/settings?tab=aiVision') : undefined,
       })
       useCalendarStore.getState().openModal()
@@ -155,16 +153,16 @@ export function useAIPhotoImport(): {
       setAiState('idle')
       if (message.includes('cancel')) return
       if (message.includes('permission')) {
-        showToast('Camera permission denied. Enable it in Android settings to use this feature.')
+        showToast(i18n.t('errors:toast.aiImport.cameraDenied'))
         return
       }
-      showToast('Could not access camera or photo library.')
+      showToast(i18n.t('errors:toast.aiImport.cameraUnavailable'))
       return
     }
 
     if (!photo.base64String) {
       setAiState('idle')
-      showToast('Could not access camera or photo library.')
+      showToast(i18n.t('errors:toast.aiImport.cameraUnavailable'))
       return
     }
 
@@ -174,7 +172,9 @@ export function useAIPhotoImport(): {
   const confirmCandidate = (fields: ExtractedEventFields, onDone?: () => void): void => {
     setReviewCandidates(null)
     useCalendarStore.getState().setPendingEventPrefill(fields)
-    useCalendarStore.getState().openModal(fields.start, fields.end, undefined, fields.kind ?? 'event')
+    useCalendarStore
+      .getState()
+      .openModal(fields.start, fields.end, undefined, fields.kind ?? 'event')
     hapticIfEnabled('light')
     onDone?.()
   }
@@ -187,7 +187,7 @@ export function useAIPhotoImport(): {
       const allTasks = fields.every((f) => f.kind === 'task')
       const allEvents = fields.every((f) => (f.kind ?? 'event') === 'event')
       const noun = allTasks ? 'task' : allEvents ? 'event' : 'item'
-      showToast(`Review and save each ${noun} — ${fields.length} found in this photo.`)
+      showToast(i18n.t('errors:toast.aiImport.reviewEach', { context: noun, total: fields.length }))
     }
     onDone?.()
   }

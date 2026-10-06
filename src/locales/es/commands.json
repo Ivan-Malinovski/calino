@@ -114,6 +114,10 @@
     "goTo": "Ir a {{dateRef}}",
     "navigatedTo": "Se fue a {{date}}",
     "opened": "Se abrió {{title}}",
+    "openedCalendar": "Se abrió el calendario {{name}}",
+    "createdTask": "Tarea creada: {{title}}",
+    "createdEvent": "Evento creado: {{title}}",
+    "open": "Abrir",
     "placeholder": {
       "hangOut": "Hang out with Batman tomorrow at 9",
       "toggleDarkMode": "Alternar modo oscuro",

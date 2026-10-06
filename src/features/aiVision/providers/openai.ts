@@ -1,6 +1,7 @@
 import { httpRequest } from '../http'
 import type { ModelInfo, ProviderRequestConfig, VisionMessageInput } from '../types'
 import { endpointUrl } from './url'
+import i18n from '@/lib/i18n'
 
 const NON_CHAT_PREFIXES = [
   'text-embedding',
@@ -33,10 +34,12 @@ function extractErrorMessage(body: unknown): string | undefined {
 
 function describeError(status: number, body: unknown): string {
   if (status === 401 || status === 403) {
-    return 'Authentication failed — check that your API key is correct.'
+    return i18n.t('settings:ui.aiVision.err.auth', { status })
   }
   const message = extractErrorMessage(body)
-  return message ? `Request failed (${status}): ${message}` : `Request failed with status ${status}`
+  return message
+    ? i18n.t('settings:ui.aiVision.err.failed', { status, message })
+    : i18n.t('settings:ui.aiVision.err.failedNoMessage', { status })
 }
 
 async function safeJson(response: { json: () => Promise<unknown> }): Promise<unknown> {
@@ -104,7 +107,7 @@ export async function sendVisionMessage(
   const body = (await response.json()) as { choices?: Array<{ message?: { content?: unknown } }> }
   const text = body?.choices?.[0]?.message?.content
   if (typeof text !== 'string') {
-    throw new Error('Response did not contain any text content')
+    throw new Error(i18n.t('settings:ui.aiVision.err.noText'))
   }
   return text
 }

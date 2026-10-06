@@ -50,7 +50,10 @@ export async function scheduleTestReminder(): Promise<void> {
 export async function registerReminderActions(): Promise<void> {
   await LocalNotifications.registerActionTypes({
     types: [
-      { id: REMINDER_ACTION_TYPE, actions: [{ id: SNOOZE_ACTION_ID, title: i18n.t('errors:reminder.snooze5m') }] },
+      {
+        id: REMINDER_ACTION_TYPE,
+        actions: [{ id: SNOOZE_ACTION_ID, title: i18n.t('errors:reminder.snooze5m') }],
+      },
     ],
   })
 }
@@ -74,7 +77,10 @@ export function reminderInstant(event: CalendarEvent, minutesBefore: number): Da
  */
 export function reminderBodyTime(event: CalendarEvent): string {
   if (event.isAllDay) return i18n.t('errors:reminder.allDay')
-  return formatTime(toEventInstant(event.start, event.timezone), useSettingsStore.getState().timeFormat)
+  return formatTime(
+    toEventInstant(event.start, event.timezone),
+    useSettingsStore.getState().timeFormat
+  )
 }
 
 export async function reconcileNativeReminders(events: CalendarEvent[]): Promise<void> {
@@ -187,7 +193,7 @@ export function listenForReminderActions(): () => void {
         notifications: [
           {
             id: hashToInt32(`snooze:${extra.eventId}:${Date.now()}`),
-            title: action.notification.title ?? 'Reminder',
+            title: action.notification.title ?? i18n.t('calendar:ui.reminderTitle'),
             body: action.notification.body ?? '',
             schedule: { at: addMinutes(new Date(), 5) },
             actionTypeId: REMINDER_ACTION_TYPE,

@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react'
 import { createUuid } from '@/lib/uuid'
+import i18n from '@/lib/i18n'
 import type { Calendar, CalendarEvent } from '@/types'
 import { fetchWebcalIcs, normalizeWebcalUrl } from '../fetchWebcal'
 import { parseICALDataAsync } from '@/features/caldav/adapter/iCalendarAdapter'
@@ -77,9 +78,9 @@ export function useWebcalSubscriptions(): UseWebcalSubscriptionsReturn {
       const normalizedUrl = normalizeWebcalUrl(options.url)
       // The feed lives on someone else's server and a big ICS takes a while to
       // parse, so narrate both stages rather than leaving the dialog silent.
-      return withProgress('Adding subscription…', async (report) => {
+      return withProgress(i18n.t('calendar:ui.webcal.adding'), async (report) => {
         const icsText = await fetchWebcalIcs(normalizedUrl, options.proxyUrl)
-        report({ label: 'Importing events…' })
+        report({ label: i18n.t('calendar:ui.webcal.importing') })
         const calendarId = createUuid()
         const events = await parseICALDataAsync(icsText, calendarId)
 
@@ -195,9 +196,9 @@ export function useWebcalSubscriptions(): UseWebcalSubscriptionsReturn {
         return
       }
 
-      await withProgress('Updating subscription…', async (report) => {
+      await withProgress(i18n.t('calendar:ui.webcal.updating'), async (report) => {
         const icsText = await fetchWebcalIcs(normalizedUrl, nextProxy)
-        report({ label: 'Importing events…' })
+        report({ label: i18n.t('calendar:ui.webcal.importing') })
         const freshEvents = await parseICALDataAsync(icsText, subscription.calendarId)
         replaceSubscriptionEvents(subscription.calendarId, freshEvents)
         applyMeta({ lastFetchedAt: new Date().toISOString(), lastError: null })
@@ -226,7 +227,7 @@ export function useWebcalSubscriptions(): UseWebcalSubscriptionsReturn {
 
       try {
         const icsText = await fetchWebcalIcs(subscription.url, subscription.proxyUrl)
-        report?.({ label: 'Importing events…' })
+        report?.({ label: i18n.t('calendar:ui.webcal.importing') })
         const freshEvents = await parseICALDataAsync(icsText, subscription.calendarId)
         replaceSubscriptionEvents(subscription.calendarId, freshEvents)
 
@@ -236,7 +237,8 @@ export function useWebcalSubscriptions(): UseWebcalSubscriptionsReturn {
           prev.map((s) => (s.id === id ? { ...s, lastFetchedAt: now, lastError: null } : s))
         )
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Failed to refresh calendar.'
+        const message =
+          error instanceof Error ? error.message : i18n.t('calendar:ui.webcal.refreshFailed')
         storage.updateSubscription(id, { lastError: message })
         setSubscriptions((prev) =>
           prev.map((s) => (s.id === id ? { ...s, lastError: message } : s))
@@ -248,7 +250,7 @@ export function useWebcalSubscriptions(): UseWebcalSubscriptionsReturn {
 
   const syncSubscription = useCallback(
     (id: string): Promise<void> =>
-      withProgress('Refreshing subscription…', (report) => runSync(id, report)),
+      withProgress(i18n.t('calendar:ui.webcal.refreshing'), (report) => runSync(id, report)),
     [runSync]
   )
 
@@ -269,7 +271,7 @@ export function useWebcalSubscriptions(): UseWebcalSubscriptionsReturn {
         await run(() => {})
         return
       }
-      await withProgress('Refreshing subscriptions…', run)
+      await withProgress(i18n.t('calendar:ui.webcal.refreshingAll'), run)
     },
     [runSync]
   )

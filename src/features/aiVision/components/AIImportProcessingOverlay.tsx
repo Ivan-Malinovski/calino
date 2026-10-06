@@ -1,12 +1,16 @@
 import type { JSX } from 'react'
 import { createPortal } from 'react-dom'
+import { useTranslation } from 'react-i18next'
 import type { AIImportProcessingStage } from '@/store/aiImportStore'
 import styles from './AIImportProcessingOverlay.module.css'
 
-const COPY: Record<Exclude<AIImportProcessingStage, null>, { label: string; sublabel: string }> = {
-  sending: { label: 'Sending photo…', sublabel: 'Uploading to the AI model' },
-  thinking: { label: 'Reading your photo…', sublabel: 'Waiting for a response from the AI model' },
-  slow: { label: 'Still working…', sublabel: 'Larger or busier requests can take a little longer' },
+const COPY_KEYS: Record<
+  Exclude<AIImportProcessingStage, null>,
+  { label: string; sublabel: string }
+> = {
+  sending: { label: 'ui.aiImport.sending', sublabel: 'ui.aiImport.sendingSub' },
+  thinking: { label: 'ui.aiImport.thinking', sublabel: 'ui.aiImport.thinkingSub' },
+  slow: { label: 'ui.aiImport.slow', sublabel: 'ui.aiImport.slowSub' },
 }
 
 /**
@@ -24,9 +28,11 @@ export function AIImportProcessingOverlay({
   isOpen: boolean
   stage: AIImportProcessingStage
 }): JSX.Element | null {
+  const { t } = useTranslation('calendar')
+
   if (!isOpen) return null
 
-  const { label, sublabel } = COPY[stage ?? 'thinking']
+  const copy = COPY_KEYS[stage ?? 'thinking']
 
   return createPortal(
     <div
@@ -36,8 +42,8 @@ export function AIImportProcessingOverlay({
       data-component="ai-import-processing-overlay"
     >
       <div className={styles.spinner} aria-hidden="true" />
-      <div className={styles.label}>{label}</div>
-      <div className={styles.sublabel}>{sublabel}</div>
+      <div className={styles.label}>{t(copy.label)}</div>
+      <div className={styles.sublabel}>{t(copy.sublabel)}</div>
     </div>,
     document.body
   )

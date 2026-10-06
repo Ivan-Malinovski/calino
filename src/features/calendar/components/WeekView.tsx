@@ -68,6 +68,7 @@ import { assignSpanLanes, compareDayEvents, makeDayFragments } from '../lib/mult
 import { filterTasksByCollapsedAncestors } from '@/lib/taskTree'
 import { useTaskCollapse } from '../hooks/useTaskCollapse'
 import { useTranslation } from 'react-i18next'
+import i18n from '@/lib/i18n'
 import { setWeekWindowStart, useWeekWindowStart } from '../weekWindow'
 
 const BASE_HOUR_HEIGHT = 60
@@ -1046,7 +1047,7 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
         task.calendarId,
         { ...task, ...weekUpdates },
         weekUpdates,
-        'Failed to sync dragged task'
+        i18n.t('errors:ui.dragSync.task')
       )
       return
     }
@@ -1082,7 +1083,7 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
         weekTask.calendarId,
         { ...weekTask, ...taskUpdates },
         taskUpdates,
-        'Failed to sync dragged task'
+        i18n.t('errors:ui.dragSync.task')
       )
       return
     }
@@ -1117,7 +1118,7 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
         originalEvent.calendarId,
         { ...originalEvent, ...allDayUpdates },
         allDayUpdates,
-        'Failed to sync dragged event'
+        i18n.t('errors:ui.dragSync.event')
       )
       return
     }
@@ -1182,7 +1183,7 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
       originalEvent.calendarId,
       { ...originalEvent, ...updates },
       updates,
-      'Failed to sync dragged event'
+      i18n.t('errors:ui.dragSync.event')
     )
   }
 

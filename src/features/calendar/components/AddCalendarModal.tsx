@@ -16,7 +16,7 @@ import {
   connectionErrorMessage,
   type SyncErrorCode,
 } from '@/features/caldav/client/errorMessages'
-import { isCleartextUrl, CLEARTEXT_WARNING } from '@/features/caldav/client/insecureUrl'
+import { isCleartextUrl, cleartextWarning } from '@/features/caldav/client/insecureUrl'
 import { DiagnosticsPanel } from '@/features/settings/components/DiagnosticsPanel'
 import type { CalDAVAccount } from '@/features/caldav/types'
 import { CustomHeadersEditor } from '@/features/caldav/components/CustomHeadersEditor'
@@ -161,7 +161,7 @@ export function AddCalendarModal({
       setConnectionStatus(result.ok ? 'success' : 'error')
       if (!result.ok) {
         setConnectionError(
-          result.error ? connectionErrorMessage(result.error) : 'Connection failed.'
+          result.error ? connectionErrorMessage(result.error) : t('ui.calModal.connectionFailed')
         )
         recordFailure(result.error ? classifySyncError(result.error) : 'unknown', proxyUrl)
         if (result.hint) {
@@ -222,7 +222,7 @@ export function AddCalendarModal({
     }
     if (!effectivePassword) {
       setConnectionStatus('error')
-      setConnectionError('Enter a password to test the connection.')
+      setConnectionError(t('ui.calModal.enterPassword'))
       return
     }
 
@@ -290,12 +290,7 @@ export function AddCalendarModal({
       // Re-pointing the account at a different principal invalidates the
       // calendars stored under it, so they get re-fetched and reconciled.
       const principalChanged = serverUrl !== account.serverUrl || username !== account.username
-      if (
-        principalChanged &&
-        !confirm(
-          'Changing the server URL or username will re-sync the calendars for this account. Continue?'
-        )
-      ) {
+      if (principalChanged && !confirm(t('ui.calModal.confirmResync'))) {
         return
       }
     }
@@ -334,9 +329,7 @@ export function AddCalendarModal({
         error,
         serverUrl,
         proxyUrl,
-        isEdit
-          ? 'Failed to update account. Please try again.'
-          : 'Failed to add account. Please try again.'
+        isEdit ? t('ui.calModal.updateAccountFailed') : t('ui.calModal.addAccountFailed')
       )
       // A blank password in edit mode means "keep the current one", so
       // diagnostics has to test the stored credential, not the empty field.
@@ -395,7 +388,8 @@ export function AddCalendarModal({
         <form ref={formRef} key={account?.id ?? 'add'} onSubmit={handleSubmit}>
           <div className={styles.formGroup}>
             <label htmlFor="accountName" className={styles.formLabel}>
-              Display name <span className={styles.formLabelOptional}>(optional)</span>
+              {t('ui.calModal.displayName')}{' '}
+              <span className={styles.formLabelOptional}>{t('ui.calModal.optional')}</span>
             </label>
             <input
               id="accountName"
@@ -407,7 +401,7 @@ export function AddCalendarModal({
           </div>
           <div className={styles.formGroup}>
             <label htmlFor="serverUrl" className={styles.formLabel}>
-              Server URL
+              {t('ui.calModal.serverUrl')}
             </label>
             <input
               id="serverUrl"
@@ -418,12 +412,14 @@ export function AddCalendarModal({
               onChange={(e) => setUrlDraft(e.target.value)}
               required
             />
-            {isCleartextUrl(urlDraft) && <div className={styles.formWarn}>{CLEARTEXT_WARNING}</div>}
+            {isCleartextUrl(urlDraft) && (
+              <div className={styles.formWarn}>{cleartextWarning()}</div>
+            )}
           </div>
           <div className={styles.credentialsRow}>
             <div className={styles.formGroup}>
               <label htmlFor="username" className={styles.formLabel}>
-                Username
+                {t('ui.calModal.username')}
               </label>
               <input
                 id="username"
@@ -436,7 +432,7 @@ export function AddCalendarModal({
             </div>
             <div className={styles.formGroup}>
               <label htmlFor="password" className={styles.formLabel}>
-                Password
+                {t('ui.calModal.password')}
               </label>
               <input
                 id="password"
@@ -479,7 +475,7 @@ export function AddCalendarModal({
                       onClick={() => setShowDiagnostics(true)}
                       data-action="show-diagnostics"
                     >
-                      Diagnose the connection
+                      {t('ui.calModal.diagnose')}
                     </button>
                   )}
                 </div>
@@ -540,7 +536,7 @@ export function AddCalendarModal({
               onClick={requestClose}
               disabled={isSaving}
             >
-              Cancel
+              {t('actions.cancel', { ns: 'common' })}
             </button>
             {isEdit && (
               <button
@@ -550,7 +546,7 @@ export function AddCalendarModal({
                 disabled={isTesting || isSaving}
                 data-action="test-connection"
               >
-                {isTesting ? 'Testing…' : 'Test'}
+                {isTesting ? t('ui.calModal.testing') : t('ui.calModal.test')}
               </button>
             )}
             <button
@@ -564,13 +560,13 @@ export function AddCalendarModal({
               <span>
                 {isSaving
                   ? isEdit
-                    ? 'Saving…'
-                    : 'Connecting…'
+                    ? t('ui.calModal.saving')
+                    : t('ui.calModal.connecting')
                   : isEdit
-                    ? 'Save Changes'
+                    ? t('ui.calModal.saveChanges')
                     : hasFailed
-                      ? 'Try again'
-                      : 'Connect'}
+                      ? t('ui.calModal.tryAgain')
+                      : t('ui.calModal.connect')}
               </span>
             </button>
           </div>

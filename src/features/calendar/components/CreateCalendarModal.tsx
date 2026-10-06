@@ -42,12 +42,12 @@ export function CreateCalendarModal({
     e.preventDefault()
 
     if (!name.trim()) {
-      setError('Calendar name is required')
+      setError(t('ui.calModal.nameRequired'))
       return
     }
 
     if (!accountId) {
-      setError('No CalDAV account selected')
+      setError(t('ui.calModal.noAccount'))
       return
     }
 
@@ -64,8 +64,10 @@ export function CreateCalendarModal({
     } catch (err) {
       setError(
         err instanceof Error
-          ? `Couldn't create the calendar: ${syncErrorReason(classifySyncError(err.message), err.message)}`
-          : 'Failed to create calendar.'
+          ? t('ui.calModal.createFailedReason', {
+              reason: syncErrorReason(classifySyncError(err.message), err.message),
+            })
+          : t('ui.calModal.createFailed')
       )
     } finally {
       setIsCreating(false)
@@ -105,21 +107,27 @@ export function CreateCalendarModal({
       >
         <div className={styles.modalHeader}>
           <h3 className={styles.modalTitle} id="modal-title">
-            Create Calendar
+            {t('ui.calModal.createTitle')}
           </h3>
-          <button className={styles.modalClose} onClick={handleClose} aria-label={t('surface.close')}>
+          <button
+            className={styles.modalClose}
+            onClick={handleClose}
+            aria-label={t('surface.close')}
+          >
             ✕
           </button>
         </div>
         <form onSubmit={handleSubmit}>
           {selectedAccount && (
             <div className={styles.formGroup}>
-              <span className={styles.formHint}>Creating on: {selectedAccount.name}</span>
+              <span className={styles.formHint}>
+                {t('ui.calModal.creatingOn', { name: selectedAccount.name })}
+              </span>
             </div>
           )}
           <div className={styles.formGroup}>
             <label htmlFor="calendarName" className={styles.formLabel}>
-              Calendar Name
+              {t('ui.calModal.calendarName')}
             </label>
             <input
               id="calendarName"
@@ -133,7 +141,7 @@ export function CreateCalendarModal({
           </div>
           <div className={styles.formGroup}>
             <label htmlFor="calendarDescription" className={styles.formLabel}>
-              Description (optional)
+              {t('ui.calModal.descriptionOptional')}
             </label>
             <input
               id="calendarDescription"
@@ -154,7 +162,7 @@ export function CreateCalendarModal({
                   className={`${styles.colorOption} ${color === c ? styles.colorSelected : ''}`}
                   style={{ backgroundColor: c }}
                   onClick={() => setColor(c)}
-                  aria-label={`Select color ${c}`}
+                  aria-label={t('ui.calModal.selectColor', { color: c })}
                 />
               ))}
             </div>
@@ -166,14 +174,14 @@ export function CreateCalendarModal({
               className={`${styles.button} ${styles.buttonSecondary}`}
               onClick={handleClose}
             >
-              Cancel
+              {t('actions.cancel', { ns: 'common' })}
             </button>
             <button
               type="submit"
               className={`${styles.button} ${styles.buttonPrimary}`}
               disabled={isCreating || !name.trim()}
             >
-              {isCreating ? 'Creating...' : 'Create Calendar'}
+              {isCreating ? t('ui.calModal.creating') : t('ui.calModal.createTitle')}
             </button>
           </div>
         </form>

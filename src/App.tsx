@@ -15,6 +15,8 @@ import { useMatchMedia } from './hooks/useMatchMedia'
 import { useCalendarStore } from './store/calendarStore'
 import { useHistoryStore } from './store/historyStore'
 import { showToast } from './lib/toast'
+import { useTranslation } from 'react-i18next'
+import i18n from './lib/i18n'
 import { hapticIfEnabled } from './lib/haptics'
 import { toLocalDateString } from './lib/datetime'
 import { useSettingsStore } from './store/settingsStore'
@@ -309,6 +311,7 @@ function PreviewPopupWrapper(): JSX.Element | null {
 }
 
 function CalendarApp(): JSX.Element {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const location = useLocation()
   const currentView = useCalendarStore((state) => state.currentView)
@@ -538,15 +541,15 @@ function CalendarApp(): JSX.Element {
       if ((e.metaKey || e.ctrlKey) && (e.key === 'z' || e.key === 'Z')) {
         e.preventDefault()
         if (e.shiftKey) {
-          if (useHistoryStore.getState().redo()) showToast('Redo')
+          if (useHistoryStore.getState().redo()) showToast(i18n.t('errors:toast.history.redo'))
         } else {
-          if (useHistoryStore.getState().undo()) showToast('Undo')
+          if (useHistoryStore.getState().undo()) showToast(i18n.t('errors:toast.history.undo'))
         }
         return
       }
       if ((e.metaKey || e.ctrlKey) && (e.key === 'y' || e.key === 'Y')) {
         e.preventDefault()
-        if (useHistoryStore.getState().redo()) showToast('Redo')
+        if (useHistoryStore.getState().redo()) showToast(i18n.t('errors:toast.history.redo'))
         return
       }
 
@@ -858,14 +861,14 @@ function CalendarApp(): JSX.Element {
                   onMouseDown={handleAgendaResizeStart}
                   role="separator"
                   aria-orientation="vertical"
-                  aria-label="Resize agenda panel"
+                  aria-label={t('common:ui.agendaPanel.resize')}
                 />
                 <div className="agendaSidebarHeader">
-                  <span>Agenda</span>
+                  <span>{t('common:ui.agendaPanel.title')}</span>
                   <button
                     className="agendaSidebarClose"
                     onClick={() => updateSettings({ agendaSidebarOpen: false })}
-                    aria-label="Close agenda panel"
+                    aria-label={t('common:ui.agendaPanel.close')}
                   >
                     ×
                   </button>
@@ -949,6 +952,7 @@ function GitHubPagesRedirect(): null {
 }
 
 function App(): JSX.Element {
+  const { t } = useTranslation()
   const loadConfigFile = useConfigStore((state) => state.loadConfigFile)
   const overdueTaskBadge = useSettingsStore((state) => state.overdueTaskBadge)
 
@@ -1013,7 +1017,7 @@ function App(): JSX.Element {
               hidden until focused, then appears top-left so keyboard users can
               jump past the header/sidebar straight to the app content. */}
           <a className="skipLink" href="#main-content">
-            Skip to calendar
+            {t('common:ui.skipToCalendar')}
           </a>
           <GitHubPagesRedirect />
           <ThemedToaster />

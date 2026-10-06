@@ -13,5 +13,58 @@
     "view": "Weergeven",
     "done": "Gereed",
     "save": "Opslaan"
+  },
+  "ui": {
+    "errorBoundary": {
+      "title": "Er is iets misgegaan",
+      "unexpected": "Er is een onverwachte fout opgetreden",
+      "retry": "Opnieuw proberen"
+    },
+    "cookie": {
+      "notice": "We gebruiken lokale opslag om je gegevens te bewaren. Geen tracking-cookies.",
+      "privacy": "Privacy",
+      "dismiss": "Begrepen"
+    },
+    "skipToCalendar": "Naar agenda gaan",
+    "agendaPanel": {
+      "resize": "Formaat van het agendapaneel wijzigen",
+      "close": "Agendapaneel sluiten",
+      "title": "Agenda"
+    },
+    "update": {
+      "apiError": "GitHub API-fout: {{status}}",
+      "failedWith": "Controleren op updates mislukt: {{message}}",
+      "failed": "Controleren op updates mislukt"
+    },
+    "shortcuts": {
+      "title": "Sneltoetsen",
+      "navigation": "Navigatie",
+      "create": "Aanmaken",
+      "general": "Algemeen",
+      "today": "Naar vandaag springen",
+      "prevView": "Vorige weergave",
+      "nextView": "Volgende weergave",
+      "newEvent": "Nieuwe gebeurtenis",
+      "newTask": "Nieuwe taak",
+      "palette": "Opdrachtenpalet openen",
+      "showHelp": "Deze hulp tonen",
+      "closePanel": "Dialoogvenster / paneel sluiten",
+      "disabledHint": "Sneltoetsen zijn uitgeschakeld tijdens het typen in een invoerveld of wanneer een dialoogvenster open is."
+    },
+    "onboarding": {
+      "title": "Begin met je agenda",
+      "connectLine": "Verbind iCloud, Nextcloud, Fastmail of een andere CalDAV-server.",
+      "dataStays": "Je gegevens blijven in je browser.",
+      "how": "Hoe?",
+      "howText": "Calino heeft geen eigen backend. Het praat rechtstreeks met je CalDAV-server en bewaart lokaal een kopie. Je kunt je gegevens back-uppen of verplaatsen met exporteren/importeren in Instellingen.",
+      "connectAccount": "CalDAV-account verbinden",
+      "loading": "Laden…",
+      "explore": "Ontdek Calino met voorbeeldgegevens",
+      "skip": "Nu overslaan",
+      "demoFailed": "Voorbeeldgegevens laden mislukt",
+      "nativeFootnote": "Calino kan je herinneren voordat gebeurtenissen beginnen. Als je doorgaat, wordt om toestemming voor meldingen gevraagd.",
+      "alsoOnAndroid": "Ook op <link>Android</link>, met camera-import en herinneringen."
+    },
+    "privacy": "Privacy"
   }
 }

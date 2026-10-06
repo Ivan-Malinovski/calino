@@ -1,6 +1,8 @@
 import { RRule } from 'rrule'
 import type { CalendarEvent, RecurrenceRule } from '@/types'
 import { toICalUTC, toLocalDateString } from './datetime'
+import i18n from './i18n'
+import { describeRuleLocalised } from './recurrenceText'
 
 // byWeekday numbers stored in RecurrenceRule → BYDAY codes
 export const DAY_NUM_TO_CODE: Record<number, string> = {
@@ -119,9 +121,7 @@ function capitaliseFirst(s: string): string {
  * same wording style (every N seconds / every second).
  */
 function describeSecondly(interval: number): string {
-  if (interval === 1) return 'Every second'
-  if (interval === 2) return 'Every other second'
-  return `Every ${interval} seconds`
+  return capitaliseFirst(i18n.t('calendar:ui.rrule.every.second', { count: interval }))
 }
 
 /**
@@ -239,12 +239,12 @@ function describeFromRruleString(rruleString: string): string {
     return describeSecondly(interval)
   }
   try {
-    const rrule = RRule.fromString(
-      `RRULE:${localiseUntilForDisplay(rruleString.replace(/^RRULE:/i, ''))}`
-    )
-    return capitaliseFirst(rrule.toText())
+    const body = localiseUntilForDisplay(rruleString.replace(/^RRULE:/i, ''))
+    const localised = describeRuleLocalised(body)
+    if (localised) return localised
+    return capitaliseFirst(RRule.fromString(`RRULE:${body}`).toText())
   } catch {
-    return 'Recurring'
+    return i18n.t('calendar:ui.rrule.recurring')
   }
 }
 
@@ -259,15 +259,16 @@ export function describeRecurrenceRule(rule: RecurrenceRule): string {
   }
   try {
     const rruleString = localiseUntilForDisplay(buildRRuleString(rule))
-    const rrule = RRule.fromString(`RRULE:${rruleString}`)
-    return capitaliseFirst(rrule.toText())
+    const localised = describeRuleLocalised(rruleString)
+    if (localised) return localised
+    return capitaliseFirst(RRule.fromString(`RRULE:${rruleString}`).toText())
   } catch {
-    return 'Recurring'
+    return i18n.t('calendar:ui.rrule.recurring')
   }
 }
 
 export function describeRecurrence(event: CalendarEvent): string {
   if (event.rruleString) return describeFromRruleString(event.rruleString)
   if (event.recurrence) return describeRecurrenceRule(event.recurrence)
-  return 'Recurring'
+  return i18n.t('calendar:ui.rrule.recurring')
 }

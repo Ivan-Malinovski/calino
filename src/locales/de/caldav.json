@@ -14,5 +14,58 @@
     "savingEvent": "Ereignis wird gespeichert …",
     "savingEvents": "Ereignisse werden gespeichert …",
     "syncingEvents": "Ereignisse werden synchronisiert …"
+  },
+  "ui": {
+    "cleartextWarning": "Diese Verbindung nutzt unverschlüsseltes HTTP, daher werden dein Passwort und deine Kalenderdaten unverschlüsselt übertragen. In einem privaten Netzwerk oder VPN in Ordnung – in fremdem WLAN solltest du darauf verzichten.",
+    "headers": {
+      "count_one": "{{count}} benutzerdefinierter Header",
+      "count_other": "{{count}} benutzerdefinierte Header",
+      "proxyOn": "Proxy aktiv",
+      "optional": "Optional",
+      "protectedServers": "Für geschützte CalDAV-Server",
+      "connectionSettings": "Verbindungseinstellungen",
+      "gatewayAccess": "Gateway-Zugriff",
+      "headerN": "Header {{n}}",
+      "removeHeader": "Header entfernen",
+      "removeHeaderN": "Header {{n}} entfernen",
+      "name": "Name",
+      "nameAria": "Name von Header {{n}}",
+      "namePlaceholder": "z. B. P-Access-Token-Id",
+      "value": "Wert",
+      "valueAria": "Wert von Header {{n}}",
+      "valuePlaceholder": "Geheimen Wert eingeben",
+      "revealAria": "Geheimnis von Header {{n}} anzeigen",
+      "hideAria": "Geheimnis von Header {{n}} ausblenden",
+      "hideValue": "Wert ausblenden",
+      "showValue": "Wert anzeigen",
+      "addHeader": "Header hinzufügen",
+      "proxyUrl": "Proxy-URL",
+      "proxyWarning": "Zugangsdaten und Kalenderdaten laufen über diesen Server. Verwende nur einen Proxy, dem du vertraust.",
+      "learnMore": "Mehr erfahren",
+      "customHeaders": "Benutzerdefinierte Header",
+      "gatewayHint": "Für Server hinter einem Auth-Gateway"
+    },
+    "nudge": {
+      "checkProxyAction": "Proxy-URL prüfen ↓",
+      "checkProxyLabel": "Proxy-URL prüfen",
+      "setUpProxyAction": "Proxy einrichten ↓",
+      "proxyMayFix": "Ein Proxy kann das beheben",
+      "headersAction": "Steht der Server hinter einem Gateway? Header hinzufügen ↓",
+      "headerMayFix": "Ein benutzerdefinierter Header kann das beheben"
+    },
+    "connecting": "Verbindung zum Server wird hergestellt …",
+    "addAccountFailed": "Konto konnte nicht hinzugefügt werden",
+    "syncFailed": "Synchronisierung fehlgeschlagen",
+    "accountNotFound": "Konto nicht gefunden",
+    "credentialsNotFound": "Zugangsdaten nicht gefunden",
+    "headerErrors": {
+      "invalid": "Ungültige benutzerdefinierte Header.",
+      "proxyConflict": "Benutzerdefinierte Header erfordern eine direkte DAV-Verbindung; entferne die Proxy-URL.",
+      "invalidName": "Ungültiger oder reservierter Name für benutzerdefinierten Header: {{name}}",
+      "duplicateName": "Doppelter Name für benutzerdefinierten Header: {{name}}",
+      "invalidValue": "Ungültiger Wert für benutzerdefinierten Header: {{name}}",
+      "originChanged": "Die DAV-Anfrage hat den Origin gewechselt. Gib die endgültige DAV-URL direkt ein.",
+      "requestFailed": "Die DAV-Anfrage ist fehlgeschlagen oder wurde umgeleitet. Gib die endgültige DAV-URL direkt ein und prüfe CORS für benutzerdefinierte Header."
+    }
   }
 }

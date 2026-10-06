@@ -21,8 +21,7 @@ export function RecurrenceDialog({
   isTask = false,
 }: RecurrenceDialogProps): JSX.Element | null {
   const { t } = useTranslation('calendar')
-  const noun = isTask ? 'task' : 'event'
-  const nounPlural = isTask ? 'tasks' : 'events'
+  const context = isTask ? 'task' : 'event'
   const { rendered, closing, requestClose } = useAnimatedClose(isOpen, onClose, 150)
   const modalRef = useRef<HTMLDivElement>(null)
   const titleId = useId()
@@ -42,9 +41,13 @@ export function RecurrenceDialog({
       >
         <div className={styles.header}>
           <h2 id={titleId} className={styles.title}>
-            Edit recurring {noun}
+            {t('ui.recurrence.title', { context })}
           </h2>
-          <button className={styles.closeButton} onClick={requestClose} aria-label={t('surface.close')}>
+          <button
+            className={styles.closeButton}
+            onClick={requestClose}
+            aria-label={t('surface.close')}
+          >
             <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none">
               <path
                 d="M18 6L6 18M6 6L18 18"
@@ -59,20 +62,20 @@ export function RecurrenceDialog({
           <p className={styles.message}>{t('surface.recurrenceApplyChanges')}</p>
           <div className={styles.buttons}>
             <button type="button" className={styles.actionButton} onClick={() => onConfirm('all')}>
-              All {nounPlural}
+              {t('ui.recurrence.all', { context })}
             </button>
             <button
               type="button"
               className={styles.actionButton}
               onClick={() => onConfirm('future')}
             >
-              This and following {nounPlural}
+              {t('ui.recurrence.future', { context })}
             </button>
             <button type="button" className={styles.actionButton} onClick={() => onConfirm('this')}>
-              This {noun} only
+              {t('ui.recurrence.this', { context })}
             </button>
             <button type="button" className={styles.cancelButton} onClick={requestClose}>
-              Cancel
+              {t('actions.cancel', { ns: 'common' })}
             </button>
           </div>
         </div>

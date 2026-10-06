@@ -1,6 +1,7 @@
 import { type ReactNode, useEffect, useCallback, useId, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import clsx from 'clsx'
+import { useTranslation } from 'react-i18next'
 import { useAnimatedClose } from '@/hooks/useAnimatedClose'
 import { useFocusTrap } from '@/hooks/useFocusTrap'
 import styles from './Modal.module.css'
@@ -14,6 +15,7 @@ export interface ModalProps {
 }
 
 export function Modal({ isOpen, onClose, title, children, className }: ModalProps) {
+  const { t } = useTranslation('common')
   const titleId = useId()
   const dialogRef = useRef<HTMLDivElement>(null)
   const { rendered, closing, requestClose } = useAnimatedClose(isOpen, onClose, 200)
@@ -67,7 +69,7 @@ export function Modal({ isOpen, onClose, title, children, className }: ModalProp
               type="button"
               className={styles.closeButton}
               onClick={requestClose}
-              aria-label="Close"
+              aria-label={t('actions.close')}
             >
               ×
             </button>
