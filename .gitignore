@@ -92,3 +92,6 @@ tsetup-x64.6.9.3.exe
 
 # Local fork-review notes
 FORK_NOTES.md
+
+# local Stalwart dev server state (scripts/jmap-dev-server.sh)
+.jmap-dev-data/

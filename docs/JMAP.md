@@ -88,7 +88,8 @@ stored and shown read-only; "Advanced" offers a force-CalDAV override.
 
 ## Testing
 
-A local Stalwart is the reference server. See `docs/JMAP_TESTING.md`.
+A local Stalwart is the reference server. `scripts/jmap-dev-server.sh up`
+starts it; see [JMAP_TESTING.md](JMAP_TESTING.md).
 
 ## Phases
 
