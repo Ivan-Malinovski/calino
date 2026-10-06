@@ -6,6 +6,7 @@ import i18n from '@/lib/i18n'
 import type {
   CalDAVAccount,
   CalDAVCalendar,
+  CalendarProtocol,
   SyncState,
   ConflictInfo,
   CreateCalendarOptions,
@@ -14,7 +15,9 @@ import type {
   DeleteHrefPendingData,
   PendingChange,
 } from '../types'
-import { createCalDAVClient, unwrapFetchEvents } from '../client/CalDAVClient'
+import { unwrapFetchEvents } from '../client/CalDAVClient'
+import { createCalendarBackend } from '../client/createBackend'
+import type { CalendarBackend } from '../client/CalendarBackend'
 import type { SyncCollectionChange } from '../client/CalDAVClient'
 import { probeConnection, expandProviderUrl, type ProbeResult } from '../client/discovery'
 import { CalDAVConnectionError } from '../client/errors'
@@ -134,7 +137,7 @@ function eventWriteHref(event: CalendarEvent, calendar: { url: string }): string
  */
 async function applyUpdateWithStaleEtagRecovery(
   engine: SyncEngine,
-  client: Awaited<ReturnType<typeof createCalDAVClient>>,
+  client: CalendarBackend,
   event: CalendarEvent,
   groupedEvents: CalendarEvent[],
   useGroup: boolean,
@@ -164,7 +167,7 @@ async function applyUpdateWithStaleEtagRecovery(
  */
 async function engineForCalendar(
   calendar: { id: string; accountId?: string },
-  sameAccountClient: Awaited<ReturnType<typeof createCalDAVClient>>,
+  sameAccountClient: CalendarBackend,
   sameAccountId: string
 ): Promise<SyncEngine | null> {
   if (!calendar.accountId) return null
@@ -175,7 +178,12 @@ async function engineForCalendar(
   if (!account) return null
   const credential = await getCredentialById(account.credentialId)
   if (!credential) return null
-  const client = await createCalDAVClient(account.serverUrl, credential, account.proxyUrl)
+  const client = await createCalendarBackend(
+    account.serverUrl,
+    credential,
+    account.proxyUrl,
+    account.protocol
+  )
   return new SyncEngine(client, calendar.id)
 }
 
@@ -535,7 +543,12 @@ export function useCalDAVInstance(): UseCalDAVReturn {
             continue
           }
 
-          const client = await createCalDAVClient(account.serverUrl, credential, account.proxyUrl)
+          const client = await createCalendarBackend(
+            account.serverUrl,
+            credential,
+            account.proxyUrl,
+            account.protocol
+          )
           const engine = new SyncEngine(client, change.calendarId)
 
           // N1 — the update/delete second-412 handlers finish the change
@@ -1011,8 +1024,14 @@ export function useCalDAVInstance(): UseCalDAVReturn {
           customHeaders,
         })
 
+        const detectedProtocol: CalendarProtocol = 'caldav'
         console.log('[CalDAV] addAccount: creating client...')
-        const client = await createCalDAVClient(discoveredUrl, credential, proxyUrl)
+        const client = await createCalendarBackend(
+          discoveredUrl,
+          credential,
+          proxyUrl,
+          detectedProtocol
+        )
         reportProgress({ label: i18n.t('caldav:progress.lookingForCalendars') })
         console.log('[CalDAV] addAccount: fetching calendars...')
         const serverCalendars = await client.fetchCalendars()
@@ -1318,11 +1337,11 @@ export function useCalDAVInstance(): UseCalDAVReturn {
           } = await import('@/lib/settingsSync')
           const existingPrimary = getPrimaryAccountId()
           if (!existingPrimary) {
-            const { createCalDAVClient: createClient } = await import('../client/CalDAVClient')
-            const settingsClient = await createClient(
+            const settingsClient = await createCalendarBackend(
               newAccount.serverUrl,
               credential,
-              newAccount.proxyUrl
+              newAccount.proxyUrl,
+              newAccount.protocol
             )
             const calHomeUrl = deriveCalendarHomeUrl(newAccount.serverUrl, serverCalendars[0].url)
             const discovered = await settingsClient.discoverSettingsCalendar(calHomeUrl)
@@ -1470,7 +1489,12 @@ export function useCalDAVInstance(): UseCalDAVReturn {
           throw new Error('Credentials not found')
         }
 
-        const client = await createCalDAVClient(account.serverUrl, credential, account.proxyUrl)
+        const client = await createCalendarBackend(
+          account.serverUrl,
+          credential,
+          account.proxyUrl,
+          account.protocol
+        )
         const accountCalendars = storage.getCalendarsByAccountId(accountId)
         let calendarsToSync = accountCalendars
 
@@ -1982,14 +2006,14 @@ export function useCalDAVInstance(): UseCalDAVReturn {
             getLastSyncedAt,
           } = await import('@/lib/settingsSync')
           if (getPrimaryAccountId() === accountId) {
-            const { createCalDAVClient: createClient } = await import('../client/CalDAVClient')
             const cal = accountCalendars[0]
             if (cal) {
               const calHomeUrl = deriveCalendarHomeUrl(account.serverUrl, cal.url)
-              const settingsClient = await createClient(
+              const settingsClient = await createCalendarBackend(
                 account.serverUrl,
                 credential,
-                account.proxyUrl
+                account.proxyUrl,
+                account.protocol
               )
               const discovered = await settingsClient.discoverSettingsCalendar(calHomeUrl)
               if (discovered) {
@@ -2152,7 +2176,12 @@ export function useCalDAVInstance(): UseCalDAVReturn {
             customHeaders: effectiveHeaders,
           }
           reportProgress({ label: i18n.t('caldav:progress.lookingForCalendars') })
-          const client = await createCalDAVClient(resolvedUrl, freshCredential, proxyUrl)
+          const client = await createCalendarBackend(
+            resolvedUrl,
+            freshCredential,
+            proxyUrl,
+            account.protocol
+          )
           const serverCalendars = await client.fetchCalendars()
 
           const storedCalendars = storage.getCalendarsByAccountId(accountId)
@@ -2273,7 +2302,12 @@ export function useCalDAVInstance(): UseCalDAVReturn {
           throw new Error('Credentials not found')
         }
 
-        const client = await createCalDAVClient(account.serverUrl, credential, account.proxyUrl)
+        const client = await createCalendarBackend(
+          account.serverUrl,
+          credential,
+          account.proxyUrl,
+          account.protocol
+        )
         const engine = new SyncEngine(client, calendarId)
 
         const eventWithSequence: CalendarEvent = {
@@ -2359,7 +2393,12 @@ export function useCalDAVInstance(): UseCalDAVReturn {
         const credential = await getCredentialById(account.credentialId)
         if (!credential) throw new Error('Credentials not found')
 
-        const client = await createCalDAVClient(account.serverUrl, credential, account.proxyUrl)
+        const client = await createCalendarBackend(
+          account.serverUrl,
+          credential,
+          account.proxyUrl,
+          account.protocol
+        )
         const engine = new SyncEngine(client, calendarId)
         const { url, etag } =
           group.length > 1 ? await engine.putEventGroup(group) : await engine.pushEvent(master)
@@ -2434,7 +2473,12 @@ export function useCalDAVInstance(): UseCalDAVReturn {
           }
         : null
 
-      const client = await createCalDAVClient(account.serverUrl, credential, account.proxyUrl)
+      const client = await createCalendarBackend(
+        account.serverUrl,
+        credential,
+        account.proxyUrl,
+        account.protocol
+      )
       const engine = new SyncEngine(client, calendarId)
       const groupedEvents = withResourceSiblings(
         [
@@ -2557,7 +2601,12 @@ export function useCalDAVInstance(): UseCalDAVReturn {
           throw new Error('Credentials not found')
         }
 
-        const client = await createCalDAVClient(account.serverUrl, credential, account.proxyUrl)
+        const client = await createCalendarBackend(
+          account.serverUrl,
+          credential,
+          account.proxyUrl,
+          account.protocol
+        )
         const engine = new SyncEngine(client, calendarId)
 
         // Bug 29 fix: only increment sequence if event data actually changed.
@@ -2820,7 +2869,12 @@ export function useCalDAVInstance(): UseCalDAVReturn {
           throw new Error('Credentials not found')
         }
 
-        const client = await createCalDAVClient(account.serverUrl, credential, account.proxyUrl)
+        const client = await createCalendarBackend(
+          account.serverUrl,
+          credential,
+          account.proxyUrl,
+          account.protocol
+        )
         const engine = new SyncEngine(client, calendarId)
 
         if (caldavDebugMode) {
@@ -2894,7 +2948,12 @@ export function useCalDAVInstance(): UseCalDAVReturn {
       throw new Error('Credentials not found')
     }
 
-    const client = await createCalDAVClient(account.serverUrl, credential, account.proxyUrl)
+    const client = await createCalendarBackend(
+      account.serverUrl,
+      credential,
+      account.proxyUrl,
+      account.protocol
+    )
     const engine = new SyncEngine(client, calendarId)
     await engine.deleteEvent(href, '')
   }, [])
@@ -2949,7 +3008,12 @@ export function useCalDAVInstance(): UseCalDAVReturn {
           throw new Error('Credentials not found')
         }
 
-        const client = await createCalDAVClient(account.serverUrl, credential, account.proxyUrl)
+        const client = await createCalendarBackend(
+          account.serverUrl,
+          credential,
+          account.proxyUrl,
+          account.protocol
+        )
         const engine = new SyncEngine(client, event.calendarId)
 
         if (event.etag) {
@@ -3001,7 +3065,12 @@ export function useCalDAVInstance(): UseCalDAVReturn {
         throw new Error('Credentials not found')
       }
 
-      const client = await createCalDAVClient(account.serverUrl, credential, account.proxyUrl)
+      const client = await createCalendarBackend(
+        account.serverUrl,
+        credential,
+        account.proxyUrl,
+        account.protocol
+      )
       const newCalendar = await client.createCalendar(options)
 
       // Set the correct accountId before saving
@@ -3043,7 +3112,12 @@ export function useCalDAVInstance(): UseCalDAVReturn {
         throw new Error('Credentials not found')
       }
 
-      const client = await createCalDAVClient(account.serverUrl, credential, account.proxyUrl)
+      const client = await createCalendarBackend(
+        account.serverUrl,
+        credential,
+        account.proxyUrl,
+        account.protocol
+      )
       await client.updateCalendar(calendar.url, options)
 
       // Update local storage
@@ -3074,7 +3148,12 @@ export function useCalDAVInstance(): UseCalDAVReturn {
         throw new Error('Credentials not found')
       }
 
-      const client = await createCalDAVClient(account.serverUrl, credential, account.proxyUrl)
+      const client = await createCalendarBackend(
+        account.serverUrl,
+        credential,
+        account.proxyUrl,
+        account.protocol
+      )
       await client.deleteCalendar(calendar.url)
 
       // Remove from local storage

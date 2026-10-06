@@ -4,7 +4,8 @@
  * singular `recurrenceRule`, `calendarAddress`, `organizerCalendarAddress`).
  * Converters must accept both vocabularies, so these stay deliberately loose.
  */
-export type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue }
+export type JsonValue =
+  string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue }
 export type JsonObject = { [key: string]: JsonValue }
 
 /** A JSCalendar Event/Task object as returned by `CalendarEvent/get`. */

@@ -1,16 +1,13 @@
 import type {
   CalDAVCalendar,
+  CalendarProtocol,
   CreateCalendarOptions,
   UpdateCalendarOptions,
 } from '../types'
-import type {
-  FetchEventsResult,
-  SyncCollectionResult,
-} from './CalDAVClient'
-import type { FreeBusyPeriod } from './freeBusy'
+import type { FetchEventsResult, SyncCollectionResult } from './CalDAVClient'
+import type { FreeBusyPeriod } from '@/lib/freeBusyCalculator'
 
-/** Wire protocol an account talks. Stored on the account; absent means `caldav`. */
-export type CalendarProtocol = 'caldav' | 'jmap'
+export type { CalendarProtocol }
 
 /**
  * Protocol-neutral calendar backend.
@@ -41,9 +38,7 @@ export interface CalendarBackend {
     end: string,
     includeAllEvents?: boolean
   ): Promise<FetchEventsResult>
-  fetchResourceByHref(
-    href: string
-  ): Promise<{ url: string; data: string; etag?: string } | null>
+  fetchResourceByHref(href: string): Promise<{ url: string; data: string; etag?: string } | null>
   createEvent(
     calendarUrl: string,
     iCalString: string,
@@ -67,6 +62,7 @@ export interface CalendarBackend {
   fetchSettingsEvent(
     settingsCalendarUrl: string
   ): Promise<{ data: string; etag: string; href: string; dtstamp: string } | null>
+  extractSettingsFromVEVENT(icalData: string): string | null
   putSettingsEvent(
     settingsCalendarUrl: string,
     base64Payload: string,

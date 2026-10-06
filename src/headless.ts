@@ -27,7 +27,8 @@ import type { CalDAVCalendar } from '@/features/caldav/types'
 import { getHeadlessBridge } from '@/lib/headlessBridge'
 import { getAllAccounts, getAllCalendars } from '@/features/caldav/sync/accountStorage'
 import { getAllCredentials } from '@/features/caldav/client/credentials'
-import { createCalDAVClient, unwrapFetchEvents } from '@/features/caldav/client/CalDAVClient'
+import { unwrapFetchEvents } from '@/features/caldav/client/CalDAVClient'
+import { createCalendarBackend } from '@/features/caldav/client/createBackend'
 import { parseICALDataAsyncWithStatus } from '@/features/caldav/adapter/iCalendarAdapter'
 import { buildMirrorPayload, MIRROR_PAST_DAYS, MIRROR_FUTURE_DAYS } from '@/lib/calendarMirror'
 import { initHeadlessI18n } from '@/lib/i18nHeadless'
@@ -102,7 +103,12 @@ export async function runHeadlessSync(): Promise<HeadlessResult> {
         bridge.log(t('headless.accountCredentialsMissing', { account: account.name }))
         continue
       }
-      const client = await createCalDAVClient(account.serverUrl, credentials, account.proxyUrl)
+      const client = await createCalendarBackend(
+        account.serverUrl,
+        credentials,
+        account.proxyUrl,
+        account.protocol
+      )
 
       const calendarResults = await mapWithConcurrency(
         targets,

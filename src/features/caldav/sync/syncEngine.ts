@@ -1,6 +1,7 @@
 import type { CalendarEvent } from '@/types'
 import type { SyncResult, ConflictResolution } from '../types'
-import { CalDAVClient, unwrapFetchEvents } from '../client/CalDAVClient'
+import { unwrapFetchEvents } from '../client/CalDAVClient'
+import type { CalendarBackend } from '../client/CalendarBackend'
 import {
   eventToICAL,
   eventsToICAL,
@@ -76,10 +77,10 @@ async function withInlineAttachments(event: CalendarEvent): Promise<CalendarEven
 }
 
 export class SyncEngine {
-  private client: CalDAVClient
+  private client: CalendarBackend
   private calendarId: string
 
-  constructor(client: CalDAVClient, calendarId: string) {
+  constructor(client: CalendarBackend, calendarId: string) {
     this.client = client
     this.calendarId = calendarId
   }
@@ -294,8 +295,7 @@ export class SyncEngine {
     href: string | undefined,
     expectedEtag?: string
   ): Promise<string> {
-    const fromScratch = () =>
-      events.length > 1 ? eventsToICAL(events) : serializeEvent(events[0])
+    const fromScratch = () => (events.length > 1 ? eventsToICAL(events) : serializeEvent(events[0]))
 
     if (!href) return fromScratch()
 
@@ -406,6 +406,6 @@ export class SyncEngine {
   }
 }
 
-export function createSyncEngine(client: CalDAVClient, calendarId: string): SyncEngine {
+export function createSyncEngine(client: CalendarBackend, calendarId: string): SyncEngine {
   return new SyncEngine(client, calendarId)
 }

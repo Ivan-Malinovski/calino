@@ -31,7 +31,7 @@ import {
   getLastSyncedAt,
   clearSyncKeys,
 } from '@/lib/settingsSync'
-import { createCalDAVClient } from '@/features/caldav/client/CalDAVClient'
+import { createCalendarBackend } from '@/features/caldav/client/createBackend'
 import { getCredentialById } from '@/features/caldav/client/credentials'
 import * as accountStorage from '@/features/caldav/sync/accountStorage'
 import type { CalDAVAccount } from '@/features/caldav/types'
@@ -105,7 +105,12 @@ export function useSettingsSync(): UseSettingsSyncReturn {
     if (!account) return null
     const credential = await getCredentialById(account.credentialId)
     if (!credential) return null
-    const client = await createCalDAVClient(account.serverUrl, credential, account.proxyUrl)
+    const client = await createCalendarBackend(
+      account.serverUrl,
+      credential,
+      account.proxyUrl,
+      account.protocol
+    )
     const calendars = accountStorage.getCalendarsByAccountId(accountId)
     if (calendars.length === 0) return null
     const calendarHomeUrl = deriveCalendarHomeUrl(account.serverUrl, calendars[0].url)
@@ -149,7 +154,12 @@ export function useSettingsSync(): UseSettingsSyncReturn {
         return false
       }
 
-      const client = await createCalDAVClient(account.serverUrl, credential, account.proxyUrl)
+      const client = await createCalendarBackend(
+        account.serverUrl,
+        credential,
+        account.proxyUrl,
+        account.protocol
+      )
       const remote = await client.fetchSettingsEvent(calUrl)
 
       if (!remote) {
@@ -234,7 +244,12 @@ export function useSettingsSync(): UseSettingsSyncReturn {
           return
         }
 
-        const client = await createCalDAVClient(account.serverUrl, credential, account.proxyUrl)
+        const client = await createCalendarBackend(
+          account.serverUrl,
+          credential,
+          account.proxyUrl,
+          account.protocol
+        )
         const json = serializeSettings()
         const base64 = encodeBase64(json)
         const storedEtag = getEtag()
@@ -270,10 +285,11 @@ export function useSettingsSync(): UseSettingsSyncReturn {
             if (calUrl && account) {
               const credential = await getCredentialById(account.credentialId)
               if (credential) {
-                const client = await createCalDAVClient(
+                const client = await createCalendarBackend(
                   account.serverUrl,
                   credential,
-                  account.proxyUrl
+                  account.proxyUrl,
+                  account.protocol
                 )
                 const base64 = encodeBase64(serializeSettings())
                 const newEtag = await client.putSettingsEvent(
@@ -314,7 +330,12 @@ export function useSettingsSync(): UseSettingsSyncReturn {
         const credential = await getCredentialById(account.credentialId)
         if (!credential) throw new Error(i18n.t('errors:settingsSync.credentialsNotFound'))
 
-        const client = await createCalDAVClient(account.serverUrl, credential, account.proxyUrl)
+        const client = await createCalendarBackend(
+          account.serverUrl,
+          credential,
+          account.proxyUrl,
+          account.protocol
+        )
         const calendars = accountStorage.getCalendarsByAccountId(accountId)
         if (calendars.length === 0) throw new Error(i18n.t('errors:settingsSync.noCalendarsFound'))
         const calendarHomeUrl = deriveCalendarHomeUrl(account.serverUrl, calendars[0].url)
@@ -377,7 +398,12 @@ export function useSettingsSync(): UseSettingsSyncReturn {
         if (calUrl && account) {
           const credential = await getCredentialById(account.credentialId)
           if (credential) {
-            const client = await createCalDAVClient(account.serverUrl, credential, account.proxyUrl)
+            const client = await createCalendarBackend(
+              account.serverUrl,
+              credential,
+              account.proxyUrl,
+              account.protocol
+            )
             await client.deleteSettingsCalendar(calUrl)
           }
         }
@@ -402,7 +428,12 @@ export function useSettingsSync(): UseSettingsSyncReturn {
         const credential = await getCredentialById(account.credentialId)
         if (!credential) return
 
-        const client = await createCalDAVClient(account.serverUrl, credential, account.proxyUrl)
+        const client = await createCalendarBackend(
+          account.serverUrl,
+          credential,
+          account.proxyUrl,
+          account.protocol
+        )
         const calendars = accountStorage.getCalendarsByAccountId(accountId)
         if (calendars.length === 0) return
         const calendarHomeUrl = deriveCalendarHomeUrl(account.serverUrl, calendars[0].url)
@@ -428,7 +459,8 @@ export function useSettingsSync(): UseSettingsSyncReturn {
         // calendar exists yet — a normal, silent no-op above). Reaching here
         // means an actual request failed, which previously only logged to the
         // console — the user had zero signal that auto-discovery broke.
-        const msg = err instanceof Error ? err.message : i18n.t('errors:settingsSync.autoDiscoveryFailed')
+        const msg =
+          err instanceof Error ? err.message : i18n.t('errors:settingsSync.autoDiscoveryFailed')
         console.warn('[SettingsSync] Auto-discovery failed:', err)
         if (isMountedRef.current) showErrorToast(msg)
       }
