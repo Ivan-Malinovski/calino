@@ -68,6 +68,17 @@ and restart the container. `/jmap/*` then answers with
 `Access-Control-Allow-Origin: *`. Do not use this on an internet-facing server
 unless that is what you want; there, restrict origins at a reverse proxy.
 
+Calino's own Content Security Policy is a second gate. Public builds only allow
+`connect-src 'self' https:`, so the browser refuses a plain `http://` server
+(such as the local Stalwart) before any request is sent, and the connect dialog
+shows "Couldn't reach the server". Start the dev server in self-hosted mode,
+which adds `http:` to the policy (see `docs/DOCKER.md`, "Content Security
+Policy"):
+
+```bash
+CALINO_SELF_HOSTED=true pnpm dev
+```
+
 The hosted `proxy.calino.io` never reaches loopback or private addresses
 (SSRF guard), so it cannot be used with a local server. The live
 Playwright spec `e2e/jmap-live.spec.ts` adds the headers at the network layer
