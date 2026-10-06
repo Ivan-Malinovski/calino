@@ -720,7 +720,9 @@
     "summary": {
       "ok": "Alles ist in Ordnung.",
       "degraded": "Die Synchronisierung funktioniert, aber Ihr Server könnte besser konfiguriert sein.",
-      "broken": "Mit diesem Server stimmt etwas nicht."
+      "broken": "Die folgenden Prüfungen haben ein Problem gefunden. Öffnen Sie eine fehlgeschlagene Prüfung, um zu sehen, was zu ändern ist.",
+      "broken_page": "Die Verbindung wurde von dieser Seite blockiert, nicht von Ihrem Server. Öffnen Sie die fehlgeschlagene Prüfung für Ihre Möglichkeiten.",
+      "broken_credentials": "Der Server hat geantwortet, aber Benutzername oder Passwort abgelehnt."
     },
     "corsNote": " Mit „abgeleitet“ markierte Prüfungen konnten nicht direkt gelesen werden – Browser verbergen die CORS-Header eines Servers vor JavaScript."
   }

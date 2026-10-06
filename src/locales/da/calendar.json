@@ -525,9 +525,9 @@
     "expandSubtasks": "Fold underopgaver ud for \"{{title}}\"",
     "collapseSubtasks": "Fold underopgaver sammen for \"{{title}}\"",
     "hiddenCount": "{{count}} skjulte",
-    "advancedConnection": "Avanceret",
     "forceCalDAV": "Brug CalDAV",
     "forceCalDAVHint": "Spring automatisk JMAP-registrering over for denne server.",
+    "forceCalDAVSummary": "Kun CalDAV",
     "accountProtocol": "Kontoprotokol"
   }
 }

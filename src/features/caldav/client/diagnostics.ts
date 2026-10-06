@@ -37,10 +37,14 @@ import {
   suggestCalDAVUrl,
 } from './discovery'
 import { CORS_HEADER_SNIPPET } from './errorMessages'
+import { pagePolicyBlock, type PagePolicyBlock } from './pagePolicy'
+import { runJmapChecks } from '@/features/jmap/client/diagnostics'
+import { sessionCandidates } from '@/features/jmap/client/session'
 
 const CHECK_TIMEOUT_MS = 15_000
 
 export type CheckId =
+  | 'page-policy'
   | 'reachable'
   | 'preflight'
   | 'auth'
@@ -49,6 +53,11 @@ export type CheckId =
   | 'propfind-depth1'
   | 'report-query'
   | 'expose-etag'
+  | 'jmap-session'
+  | 'jmap-api'
+  | 'jmap-calendars'
+  | 'jmap-contacts'
+  | 'jmap-push'
   | 'write-roundtrip'
 
 export type CheckStatus = 'pass' | 'fail' | 'warn' | 'skipped' | 'unknown'
@@ -74,13 +83,27 @@ export interface DiagnosticsReport {
   target: string
   viaProxy: boolean
   platform: 'web' | 'native'
-  kind: DavKind
+  kind: DiagnosticsKind
   checks: DiagnosticCheck[]
   /** `broken` = something failed, `degraded` = only warnings, `ok` = clean. */
   summary: 'ok' | 'degraded' | 'broken'
+  /**
+   * Who a `broken` run points at, so the summary does not blame the server for
+   * a refusal that happened in the page or a typo in the password.
+   */
+  blame?: 'page' | 'credentials' | 'server'
 }
 
 export type DavKind = 'caldav' | 'carddav'
+export type DiagnosticsKind = DavKind | 'jmap'
+
+/**
+ * Which protocol to test. `caldav` (the default) is DAV only. `jmap` assumes
+ * the server speaks JMAP. `auto` looks for a JMAP session first, the same order
+ * connecting uses, and falls back to DAV — right for an account that has not
+ * been saved yet. Contacts (`kind: 'carddav'`) are always DAV here.
+ */
+export type DiagnosticsProtocol = 'caldav' | 'jmap' | 'auto'
 
 export interface DiagnosticsOptions {
   serverUrl: string
@@ -91,6 +114,7 @@ export interface DiagnosticsOptions {
   /** The URL the user typed, before `expandProviderUrl` rewrote it. */
   originalUrl?: string
   kind?: DavKind
+  protocol?: DiagnosticsProtocol
   /** Run the create/delete round-trip. Writes a temporary event to the server. */
   includeWriteTest?: boolean
   /** Called as each check resolves, so the UI can stream results. */
@@ -100,15 +124,21 @@ export interface DiagnosticsOptions {
 // ─── Small helpers ────────────────────────────────────────────────────────────
 
 const LABELS: Record<CheckId, string> = {
+  'page-policy': 'Allowed by this page',
   reachable: 'Server reachable',
-  preflight: 'Cross-origin requests allowed',
-  auth: 'Credentials accepted',
-  'dav-class': 'Speaks DAV',
-  'allow-methods': 'DAV methods allowed',
-  'propfind-depth1': 'Collection listing (PROPFIND Depth: 1)',
-  'report-query': 'Queries (REPORT)',
-  'expose-etag': 'ETag readable by the browser',
-  'write-roundtrip': 'Write round-trip',
+  preflight: 'Browser access (CORS)',
+  auth: 'Username and password',
+  'dav-class': 'Calendar / contacts support',
+  'allow-methods': 'Required request types',
+  'propfind-depth1': 'Calendars found',
+  'report-query': 'Event queries',
+  'expose-etag': 'Change tracking (ETag)',
+  'jmap-session': 'JMAP server found',
+  'jmap-api': 'JMAP requests answered',
+  'jmap-calendars': 'Calendars available',
+  'jmap-contacts': 'Address books available',
+  'jmap-push': 'Live updates',
+  'write-roundtrip': 'Write test',
 }
 
 const PROXY_NOT_APPLICABLE =
@@ -128,23 +158,17 @@ function isAbort(error: unknown): boolean {
   return error instanceof Error && error.name === 'AbortError'
 }
 
-/**
- * Why an `http://` server is unreachable from a page served over `https://`.
- *
- * Calino's CSP is `connect-src 'self' https:` (index.html), and browsers block
- * mixed content besides — so the request never leaves the page and surfaces as
- * a bare "Failed to fetch", identical to a server that is switched off. Worth
- * naming explicitly: plenty of self-hosted DAV servers run plain http on a LAN,
- * and no amount of server-side configuration will fix this one.
- */
-function blockedByPagePolicy(target: string): string | null {
-  if (typeof location === 'undefined' || location.protocol !== 'https:') return null
-  if (!target.startsWith('http://')) return null
-  return (
-    'This page is served over https, so the browser refuses to contact an http server ' +
-    "(mixed content, and Calino's connect-src policy). Serve the DAV server over https, " +
-    'or point Calino at an https proxy in front of it. The Android app is not affected.'
-  )
+const PAGE_POLICY_COPY: Record<PagePolicyBlock, { detail: string; fix: string }> = {
+  csp: {
+    detail:
+      'This page only allows connections to https:// servers (its Content Security Policy), so the browser blocked the request before it left. Your server was never contacted, and nothing needs changing on it.',
+    fix: 'Use an https:// address, enter a proxy under Connection settings, or run a self-hosted Calino (CALINO_SELF_HOSTED=true), which allows http://. The Android app is not affected.',
+  },
+  'mixed-content': {
+    detail:
+      'This page is served over https, so the browser refuses to contact an http:// server (mixed content). Your server was never contacted, and nothing needs changing on it.',
+    fix: 'Use an https:// address, enter an https proxy in front of the server under Connection settings, or open Calino over http. The Android app is not affected.',
+  },
 }
 
 /** `isDavStatus`, lifted to the response we may or may not have got. */
@@ -202,11 +226,71 @@ export async function runDiagnostics(options: DiagnosticsOptions): Promise<Diagn
     Depth: depth,
   })
 
-  let base: string
-  try {
-    base = await discoverServerUrl(serverUrl, proxyUrl ?? undefined)
-  } catch {
-    base = serverUrl.replace(/\/$/, '')
+  let base = serverUrl.replace(/\/$/, '')
+  const kindOf = (): DiagnosticsKind => (protocol === 'jmap' ? 'jmap' : kind)
+  const everythingAfterReach = (): CheckId[] =>
+    protocol === 'jmap'
+      ? [
+          'preflight',
+          'auth',
+          'jmap-session',
+          'jmap-api',
+          'jmap-calendars',
+          'jmap-contacts',
+          'jmap-push',
+        ]
+      : [
+          'preflight',
+          'auth',
+          'dav-class',
+          'allow-methods',
+          'propfind-depth1',
+          'report-query',
+          'expose-etag',
+        ]
+
+  // ── 0. Is the page even allowed to make this request? ─────────────────────
+  // A refusal by this page's own policy looks exactly like a dead server in the
+  // browser ("Failed to fetch"), but nothing about the server can fix it, so
+  // say so up front instead of failing every later check with the same shrug.
+  const blockedBy = pagePolicyBlock(proxyUrl || serverUrl)
+  let protocol: 'caldav' | 'jmap' = 'caldav'
+  if (blockedBy) {
+    const copy = PAGE_POLICY_COPY[blockedBy]
+    emit({
+      id: 'page-policy',
+      label: LABELS['page-policy'],
+      status: 'fail',
+      evidence: 'observed',
+      detail: copy.detail,
+      fix: copy.fix,
+      raw: proxyUrl || serverUrl,
+    })
+    for (const id of ['reachable', ...everythingAfterReach()] as CheckId[]) {
+      emit(skipped(id, 'Skipped — this page cannot make the request.'))
+    }
+    if (includeWriteTest)
+      emit(skipped('write-roundtrip', 'Skipped — this page cannot make the request.'))
+    return finish()
+  }
+
+  if (kind === 'caldav' && options.protocol === 'jmap') protocol = 'jmap'
+  else if (kind === 'caldav' && options.protocol === 'auto') {
+    protocol = (await looksLikeJmap()) ? 'jmap' : 'caldav'
+  }
+
+  if (protocol === 'jmap') {
+    try {
+      base = sessionCandidates(serverUrl)[0]!
+    } catch {
+      // Keep the URL as typed; the reachability check reports the problem.
+    }
+  } else {
+    try {
+      base = await discoverServerUrl(serverUrl, proxyUrl ?? undefined)
+    } catch {
+      // Keep the URL as typed.
+    }
   }
 
   // ── 1. Reachable ───────────────────────────────────────────────────────────
@@ -242,26 +326,32 @@ export async function runDiagnostics(options: DiagnosticsOptions): Promise<Diagn
         ? `${base} did not respond within ${CHECK_TIMEOUT_MS / 1000}s.`
         : `Could not connect to ${base}: ${errorMessage(error)}`,
       fix:
-        blockedByPagePolicy(base) ??
-        suggestCalDAVUrl(hintUrl) ??
+        (protocol === 'caldav' ? suggestCalDAVUrl(hintUrl) : null) ??
         'Check the server URL, that the server is running, and that its TLS certificate is valid.',
       raw: base,
     })
   }
 
   if (!reachable) {
-    for (const id of [
-      'preflight',
-      'auth',
-      'dav-class',
-      'allow-methods',
-      'propfind-depth1',
-      'report-query',
-      'expose-etag',
-    ] as const) {
+    for (const id of everythingAfterReach()) {
       emit(skipped(id, 'Skipped — the server never answered.'))
     }
     if (includeWriteTest) emit(skipped('write-roundtrip', 'Skipped — the server never answered.'))
+    return finish()
+  }
+
+  if (protocol === 'jmap') {
+    base = await runJmapChecks({
+      options,
+      authHeader,
+      viaProxy,
+      native,
+      timeoutMs: CHECK_TIMEOUT_MS,
+      request,
+      emit,
+      skipped,
+      labels: LABELS,
+    })
     return finish()
   }
 
@@ -394,6 +484,23 @@ export async function runDiagnostics(options: DiagnosticsOptions): Promise<Diagn
         'Check the username and password. Many providers require an app-specific password rather than your account password.'),
     raw: `HTTP ${propfind.status}`,
   })
+
+  // Every later request carries the same credentials, so each would repeat the
+  // same 401 under a different name. Stop at the cause.
+  if (!authOk) {
+    for (const id of [
+      'dav-class',
+      'allow-methods',
+      'propfind-depth1',
+      'report-query',
+      'expose-etag',
+    ] as const) {
+      emit(skipped(id, 'Skipped — the credentials were rejected.'))
+    }
+    if (includeWriteTest)
+      emit(skipped('write-roundtrip', 'Skipped — the credentials were rejected.'))
+    return finish()
+  }
 
   // ── 5. DAV compliance classes ──────────────────────────────────────────────
   const davHeader = optionsResponse?.headers.get('dav') ?? propfind.headers.get('dav')
@@ -667,14 +774,58 @@ export async function runDiagnostics(options: DiagnosticsOptions): Promise<Diagn
   function finish(): DiagnosticsReport {
     const broken = checks.some((c) => c.status === 'fail')
     const degraded = checks.some((c) => c.status === 'warn')
+    const failed = checks.filter((c) => c.status === 'fail')
+    const blame: DiagnosticsReport['blame'] = !broken
+      ? undefined
+      : failed.some((c) => c.id === 'page-policy')
+        ? 'page'
+        : failed.every((c) => c.id === 'auth')
+          ? 'credentials'
+          : 'server'
     return {
       target: base,
       viaProxy,
       platform,
-      kind,
+      kind: kindOf(),
       checks,
       summary: broken ? 'broken' : degraded ? 'degraded' : 'ok',
+      blame,
     }
+  }
+
+  /** Same test connecting uses: a JSON session document that advertises JMAP core. */
+  async function looksLikeJmap(): Promise<boolean> {
+    let candidates: string[]
+    try {
+      candidates = sessionCandidates(serverUrl)
+    } catch {
+      return false
+    }
+    for (const url of candidates) {
+      try {
+        const res = await request(url, {
+          method: 'GET',
+          redirect: 'follow',
+          headers: {
+            Authorization: authHeader,
+            Accept: 'application/json',
+            ...(viaProxy ? { 'X-Follow-Redirects': '1' } : {}),
+          },
+        })
+        // A JSON 401 is JMAP's way of refusing credentials. Connecting stops
+        // there too, so "wrong password" must not send us down the DAV path.
+        if (res.status === 401 && /json/i.test(res.headers.get('Content-Type') ?? '')) return true
+        const body: unknown = res.ok ? await res.json().catch(() => null) : null
+        const capabilities =
+          typeof body === 'object' && body !== null
+            ? (body as { capabilities?: Record<string, unknown> }).capabilities
+            : undefined
+        if (capabilities && 'urn:ietf:params:jmap:core' in capabilities) return true
+      } catch {
+        // Not reachable this way; DAV checks will report on the connection.
+      }
+    }
+    return false
   }
 }
 

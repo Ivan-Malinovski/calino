@@ -525,9 +525,9 @@
     "expandSubtasks": "Unteraufgaben für \"{{title}}\" ausklappen",
     "collapseSubtasks": "Unteraufgaben für \"{{title}}\" einklappen",
     "hiddenCount": "{{count}} ausgeblendet",
-    "advancedConnection": "Erweitert",
     "forceCalDAV": "CalDAV verwenden",
     "forceCalDAVHint": "Automatische JMAP-Erkennung für diesen Server überspringen.",
+    "forceCalDAVSummary": "Nur CalDAV",
     "accountProtocol": "Kontoprotokoll"
   }
 }

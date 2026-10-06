@@ -747,7 +747,9 @@
     "summary": {
       "ok": "Alles is in orde.",
       "degraded": "Synchronisatie werkt, maar je server kan beter worden ingesteld.",
-      "broken": "Er is iets mis met deze server."
+      "broken": "De onderstaande controles vonden een probleem. Open een mislukte controle om te zien wat je moet aanpassen.",
+      "broken_page": "De verbinding is geblokkeerd door deze pagina, niet door je server. Open de mislukte controle voor je opties.",
+      "broken_credentials": "De server antwoordde, maar weigerde de gebruikersnaam of het wachtwoord."
     },
     "corsNote": " Controles met de aanduiding “afgeleid” konden niet rechtstreeks worden uitgelezen — browsers verbergen de CORS-headers van een server voor JavaScript."
   }

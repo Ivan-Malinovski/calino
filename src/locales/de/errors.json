@@ -52,7 +52,8 @@
     "fastmailAuthHint": "Fastmail hat diese Zugangsdaten abgelehnt. Fastmail benötigt für CalDAV ein anwendungsspezifisches Passwort — Ihr normales Login-Passwort funktioniert nicht. Erstellen Sie eines unter Einstellungen → Datenschutz & Sicherheit → Integrationen → Neues App-Passwort (Zugriff auf „Kalender (CalDAV)“ gewähren). Verwenden Sie dann Ihre E-Mail-Adresse als Benutzernamen und dieses Passwort.",
     "jmapNoCalendars": "Dieses JMAP-Konto unterstützt keine Kalender.",
     "jmapCors": "Der JMAP-Server blockiert ursprungsübergreifende Anfragen (CORS). Prüfen Sie die CORS-Einstellungen oder verwenden Sie einen Proxy.",
-    "jmapNetwork": "Der JMAP-Server ist nicht erreichbar. Prüfen Sie Adresse und Verbindung; fehlende CORS-Header können ebenfalls die Ursache sein."
+    "jmapNetwork": "Der JMAP-Server ist nicht erreichbar. Prüfen Sie Adresse und Verbindung; fehlende CORS-Header können ebenfalls die Ursache sein.",
+    "blockedHttp": "Calino kann von hier aus keine Verbindung zu einem reinen http://-Server herstellen. Diese Seite erlaubt nur https://-Verbindungen, die Anfrage wurde daher schon im Browser blockiert. Verwenden Sie eine https://-Adresse, richten Sie einen Proxy ein oder betreiben Sie ein selbst gehostetes Calino (CALINO_SELF_HOSTED=true), das http erlaubt."
   },
   "broken": {
     "foundEvents_one": "1 fehlerhaftes Ereignis mit ungültigen Datumsangaben gefunden.",

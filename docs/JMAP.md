@@ -66,7 +66,7 @@ On connect, in order:
 
 When a server offers both (Stalwart, Cyrus) JMAP wins. Assumption: it is the
 richer protocol (push, `/changes`, no WebDAV quirks). An account's protocol is
-stored and shown read-only; "Advanced" offers a force-CalDAV override.
+stored and shown read-only; Connection settings has a "Use CalDAV" override.
 
 ## Wire format notes (observed against Stalwart 0.16)
 
@@ -100,7 +100,7 @@ Everything below is implemented and was verified against Stalwart 0.16 (see
   incremental sync. The contacts hooks pick the backend from the account's
   protocol.
 - UI: protocol auto-detection when connecting, a read-only protocol label, and
-  an Advanced force-CalDAV option. The calendar and contacts screens are the
+  a "Use CalDAV" option under Connection settings. The calendar and contacts screens are the
   same as for CalDAV.
 - Tests: offline unit tests (fake servers) in both timezone projects, offline
   Playwright specs for detection, and env-gated live specs

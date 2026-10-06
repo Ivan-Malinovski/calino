@@ -71,6 +71,13 @@ export function AddCalendarModal({
   // import); show them here so a slow first sync doesn't look like a hang.
   const progressTask = useProgressStore(selectActiveTask)
   const isEdit = mode === 'edit' && account !== undefined
+  // Diagnostics should test what connecting would use: an existing account's
+  // stored protocol, otherwise auto-detect unless the user forced CalDAV.
+  const diagnosticsProtocol: DiagnosticsOptions['protocol'] = isEdit
+    ? (account?.protocol ?? 'caldav')
+    : forceCalDAV
+      ? 'caldav'
+      : 'auto'
   const formRef = useRef<HTMLFormElement>(null)
   const isSavingRef = useRef(false)
 
@@ -167,7 +174,9 @@ export function AddCalendarModal({
       setConnectionProtocol(result.protocol)
       if (!result.ok) {
         setConnectionError(
-          result.error ? connectionErrorMessage(result.error, result.code) : 'Connection failed.'
+          result.error
+            ? connectionErrorMessage(result.error, result.code, proxyUrl ? undefined : serverUrl)
+            : 'Connection failed.'
         )
         recordFailure(
           result.code ?? (result.error ? classifySyncError(result.error) : 'unknown'),
@@ -176,7 +185,15 @@ export function AddCalendarModal({
         if (result.hint) {
           setConnectionHint(result.hint)
         }
-        setDiagnoseTarget({ serverUrl, username, password, proxyUrl, originalUrl, customHeaders })
+        setDiagnoseTarget({
+          serverUrl,
+          username,
+          password,
+          proxyUrl,
+          originalUrl,
+          customHeaders,
+          protocol: diagnosticsProtocol,
+        })
       } else {
         setDiagnoseTarget(null)
       }
@@ -265,7 +282,8 @@ export function AddCalendarModal({
       error instanceof Error
         ? connectionErrorMessage(
             error.message,
-            error instanceof CalDAVConnectionError ? error.code : undefined
+            error instanceof CalDAVConnectionError ? error.code : undefined,
+            proxyUrl ? undefined : serverUrl
           )
         : fallback
     )
@@ -367,6 +385,7 @@ export function AddCalendarModal({
         proxyUrl: proxyUrl ?? null,
         originalUrl: serverUrl,
         customHeaders,
+        protocol: diagnosticsProtocol,
       })
     } finally {
       isSavingRef.current = false
@@ -512,25 +531,6 @@ export function AddCalendarModal({
           {showDiagnostics && diagnoseTarget && (
             <DiagnosticsPanel options={diagnoseTarget} autoRun />
           )}
-          {!isEdit && (
-            <details className={styles.formGroup}>
-              <summary>{t('surface.advancedConnection')}</summary>
-              <label className={styles.formLabel}>
-                <input
-                  type="checkbox"
-                  checked={forceCalDAV}
-                  onChange={(event) => {
-                    setForceCalDAV(event.target.checked)
-                    clearFailure()
-                  }}
-                  disabled={isSaving || isTesting}
-                  data-action="force-caldav"
-                />{' '}
-                {t('surface.forceCalDAV')}
-              </label>
-              <p className={styles.formHint}>{t('surface.forceCalDAVHint')}</p>
-            </details>
-          )}
           <CustomHeadersEditor
             rows={headerRows}
             onChange={setHeaderRows}
@@ -539,6 +539,21 @@ export function AddCalendarModal({
               onChange: setProxyDraft,
               placeholder: t('surface.proxyUrlPlaceholder'),
             }}
+            forceCalDAV={
+              isEdit
+                ? undefined
+                : {
+                    checked: forceCalDAV,
+                    onChange: (checked) => {
+                      setForceCalDAV(checked)
+                      clearFailure()
+                    },
+                    disabled: isSaving || isTesting,
+                    label: t('surface.forceCalDAV'),
+                    hint: t('surface.forceCalDAVHint'),
+                    summary: t('surface.forceCalDAVSummary'),
+                  }
+            }
             open={settingsOpen}
             onOpenChange={setSettingsOpen}
             nudge={nudge?.target ?? null}

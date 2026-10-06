@@ -209,9 +209,9 @@
     "expandSubtasks": "Expand subtasks for \"{{title}}\"",
     "collapseSubtasks": "Collapse subtasks for \"{{title}}\"",
     "hiddenCount": "{{count}} hidden",
-    "advancedConnection": "Advanced",
     "forceCalDAV": "Use CalDAV",
     "forceCalDAVHint": "Skip automatic JMAP detection for this server.",
+    "forceCalDAVSummary": "CalDAV only",
     "accountProtocol": "Account protocol"
   },
   "modals": {

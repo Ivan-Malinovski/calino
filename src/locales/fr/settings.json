@@ -747,7 +747,9 @@
     "summary": {
       "ok": "Tout fonctionne.",
       "degraded": "La synchronisation fonctionnera, mais la configuration de votre serveur pourrait être améliorée.",
-      "broken": "Un problème a été détecté sur ce serveur."
+      "broken": "Les vérifications ci-dessous ont détecté un problème. Ouvrez une vérification échouée pour voir quoi modifier.",
+      "broken_page": "La connexion a été bloquée par cette page, pas par votre serveur. Ouvrez la vérification échouée pour voir vos options.",
+      "broken_credentials": "Le serveur a répondu, mais a refusé le nom d’utilisateur ou le mot de passe."
     },
     "corsNote": " Les vérifications marquées « déduit » n’ont pas pu être lues directement : les navigateurs masquent les en-têtes CORS du serveur au code JavaScript."
   }

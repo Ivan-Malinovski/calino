@@ -209,9 +209,9 @@
     "expandSubtasks": "Développer les sous-tâches de « {{title}} »",
     "collapseSubtasks": "Réduire les sous-tâches de « {{title}} »",
     "hiddenCount": "{{count}} éléments masqués",
-    "advancedConnection": "Avancé",
     "forceCalDAV": "Utiliser CalDAV",
     "forceCalDAVHint": "Ignorer la détection automatique de JMAP pour ce serveur.",
+    "forceCalDAVSummary": "CalDAV uniquement",
     "accountProtocol": "Protocole du compte"
   },
   "modals": {

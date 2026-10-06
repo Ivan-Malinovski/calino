@@ -209,9 +209,9 @@
     "expandSubtasks": "Subtaken voor \"{{title}}\" uitklappen",
     "collapseSubtasks": "Subtaken voor \"{{title}}\" inklappen",
     "hiddenCount": "{{count}} verborgen",
-    "advancedConnection": "Geavanceerd",
     "forceCalDAV": "CalDAV gebruiken",
     "forceCalDAVHint": "Sla automatische JMAP-detectie over voor deze server.",
+    "forceCalDAVSummary": "Alleen CalDAV",
     "accountProtocol": "Accountprotocol"
   },
   "modals": {

@@ -58,13 +58,13 @@ describe('AddCalendarModal', () => {
     await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1))
   })
 
-  it('passes the Advanced CalDAV override to account connection', async () => {
+  it('passes the Use CalDAV override from Connection settings to account connection', async () => {
     const user = userEvent.setup()
     render(<AddCalendarModal isOpen onClose={() => {}} />)
     await user.type(screen.getByLabelText(/server url/i), 'https://calendar.test')
     await user.type(screen.getByLabelText(/username/i), 'fixture-user')
     await user.type(screen.getByLabelText(/password/i), 'fixture-password')
-    await user.click(screen.getByText('Advanced', { exact: true }))
+    await user.click(screen.getByRole('button', { name: /Connection settings/ }))
     await user.click(screen.getByLabelText('Use CalDAV'))
     await user.click(screen.getByRole('button', { name: /^Connect$/ }))
     expect(mockAddAccount).toHaveBeenCalledWith(

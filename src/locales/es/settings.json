@@ -747,7 +747,9 @@
     "summary": {
       "ok": "Todo está bien.",
       "degraded": "La sincronización funcionará, pero el servidor podría configurarse mejor.",
-      "broken": "Hay un problema con este servidor."
+      "broken": "Las comprobaciones siguientes han encontrado un problema. Abra una comprobación fallida para ver qué cambiar.",
+      "broken_page": "Esta página bloqueó la conexión, no su servidor. Abra la comprobación fallida para ver sus opciones.",
+      "broken_credentials": "El servidor respondió, pero rechazó el nombre de usuario o la contraseña."
     },
     "corsNote": "Los resultados marcados como «Inferido» no se pueden leer directamente: los navegadores ocultan a JavaScript los encabezados CORS del servidor."
   }

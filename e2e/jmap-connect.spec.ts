@@ -75,9 +75,9 @@ test('JMAP authentication errors highlight the password without attempting CalDA
   expect(davRequests).toEqual([])
 })
 
-test('Advanced can force CalDAV and shows the stored protocol', async ({ page }) => {
+test('Connection settings can force CalDAV and shows the stored protocol', async ({ page }) => {
   const dialog = await openAccountForm(page, '/mock-caldav/')
-  await dialog.getByText('Advanced', { exact: true }).click()
+  await dialog.getByRole('button', { name: /Connection settings/ }).click()
   await dialog.locator('[data-action="force-caldav"]').check()
   const jmapRequests: string[] = []
   page.on('request', (request) => {
@@ -89,4 +89,56 @@ test('Advanced can force CalDAV and shows the stored protocol', async ({ page })
     page.locator('[data-component="account-row"] [data-component="account-protocol"]').first()
   ).toHaveText('CalDAV')
   expect(jmapRequests).toEqual([])
+})
+
+test('diagnostics for a JMAP account check JMAP, not DAV', async ({ page }) => {
+  await page.route('**/mock-jmap/api', (route) => {
+    const request = route.request()
+    return route.fulfill(
+      jmapMockResponse(request.url(), request.method(), request.postData() ?? '')
+    )
+  })
+  const dialog = await openAccountForm(page)
+  await dialog.getByRole('button', { name: 'Connect', exact: true }).click()
+  await expect(dialog).toBeHidden({ timeout: 30_000 })
+
+  const row = page.locator('[data-component="account-row"][data-account-name="JMAP fixture"]')
+  await row.locator('[data-action="diagnose-account"]').click()
+  const panel = page.locator('[data-component="diagnostics-panel"]')
+  await expect(panel.locator('[data-summary]')).toBeVisible({ timeout: 30_000 })
+  await expect(panel.locator('[data-check="jmap-session"]')).toHaveAttribute('data-status', 'pass')
+  await expect(panel.locator('[data-check="jmap-api"]')).toHaveAttribute('data-status', 'pass')
+  await expect(panel.locator('[data-check="jmap-calendars"]')).toHaveAttribute(
+    'data-status',
+    'pass'
+  )
+  await expect(panel.locator('[data-check="dav-class"]')).toHaveCount(0)
+})
+
+test('diagnosing a rejected password names the credentials and skips the rest quietly', async ({
+  page,
+}) => {
+  await page.route('**/mock-jmap/**', (route) =>
+    route.fulfill({
+      status: 401,
+      headers: {
+        'Content-Type': 'application/json',
+        'WWW-Authenticate': 'Basic realm="JMAP fixture"',
+      },
+      body: '{}',
+    })
+  )
+  const dialog = await openAccountForm(page, '/mock-jmap/jmap/session')
+  await dialog.getByRole('button', { name: 'Connect', exact: true }).click()
+  await dialog.locator('[data-action="show-diagnostics"]').click()
+
+  const panel = dialog.locator('[data-component="diagnostics-panel"]')
+  await expect(panel.locator('[data-summary="broken"]')).toContainText(
+    'rejected the username or password'
+  )
+  await expect(panel.locator('[data-check="auth"]')).toHaveAttribute('data-status', 'fail')
+  const skipped = panel.locator('[data-check="jmap-session"]')
+  await expect(skipped).toHaveAttribute('data-status', 'skipped')
+  // "inferred" describes how a verdict was reached; a skipped check has none.
+  await expect(skipped).not.toContainText('inferred')
 })

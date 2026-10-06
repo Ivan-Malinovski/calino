@@ -52,7 +52,8 @@
     "fastmailAuthHint": "Fastmail afviste disse loginoplysninger. Fastmail kræver en app-specifik adgangskode til CalDAV — din normale loginadgangskode virker ikke. Opret en under Indstillinger → Privatliv og sikkerhed → Integrationer → Ny app-adgangskode (giv den adgang til \"Kalendere (CalDAV)\"), og brug derefter din e-mail som brugernavn og den adgangskode.",
     "jmapNoCalendars": "Denne JMAP-konto understøtter ikke kalendere.",
     "jmapCors": "JMAP-serveren blokerer anmodninger fra andre domæner (CORS). Tjek CORS-indstillingerne, eller brug en proxy.",
-    "jmapNetwork": "Kunne ikke nå JMAP-serveren. Tjek adressen og forbindelsen; manglende CORS-headere kan også være årsagen."
+    "jmapNetwork": "Kunne ikke nå JMAP-serveren. Tjek adressen og forbindelsen; manglende CORS-headere kan også være årsagen.",
+    "blockedHttp": "Calino kan ikke oprette forbindelse til en almindelig http://-server herfra. Siden tillader kun https://-forbindelser, så anmodningen blev blokeret, før den forlod browseren. Brug en https://-adresse, opsæt en proxy, eller kør en selvhostet Calino (CALINO_SELF_HOSTED=true), der tillader http."
   },
   "broken": {
     "foundEvents_one": "Fandt 1 ødelagt begivenhed med ugyldige datoer.",

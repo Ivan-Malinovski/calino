@@ -6,8 +6,10 @@ If your CalDAV server doesn't support CORS headers, you can use a proxy to add t
 
 Before reaching for a proxy, run **Settings → Sync → Diagnose** on the account. It probes your
 server check by check — reachability, preflight, credentials, DAV compliance classes, allowed
-methods, collection listing, REPORT queries and ETag exposure — and names the specific header or
-method that's missing. "Copy report" gives you a credential-free summary to paste into an issue.
+methods, collection listing, REPORT queries and ETag exposure (for JMAP servers: the session, the
+API endpoint, calendars and live updates) — and names the specific header or method that's missing.
+If this page itself refuses the request (an `http://` server from an https page, or a build that
+only allows https), it says so first: no server setting can fix that. "Copy report" gives you a credential-free summary to paste into an issue.
 
 A caveat worth knowing: browsers deliberately hide a server's `Access-Control-Allow-*` headers
 from JavaScript, so on the web some verdicts are marked **inferred** — deduced from which requests

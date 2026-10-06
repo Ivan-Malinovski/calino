@@ -52,7 +52,8 @@
     "fastmailAuthHint": "Fastmail ha rifiutato queste credenziali. Per CalDAV, Fastmail richiede una password specifica per l’app; la normale password di accesso non funziona. Creane una da Impostazioni → Privacy e sicurezza → Integrazioni → Nuova password per l’app (concedi l’accesso a “Calendari (CalDAV)”), quindi usa il tuo indirizzo email come nome utente e quella password.",
     "jmapNoCalendars": "Questo account JMAP non supporta i calendari.",
     "jmapCors": "Il server JMAP blocca le richieste da altre origini (CORS). Controlla le impostazioni CORS o usa un proxy.",
-    "jmapNetwork": "Impossibile raggiungere il server JMAP. Controlla l’indirizzo e la connessione; anche la mancanza di intestazioni CORS può causare questo problema."
+    "jmapNetwork": "Impossibile raggiungere il server JMAP. Controlla l’indirizzo e la connessione; anche la mancanza di intestazioni CORS può causare questo problema.",
+    "blockedHttp": "Calino non può connettersi da qui a un server http:// non cifrato. Questa pagina consente solo connessioni https://, quindi la richiesta è stata bloccata prima di lasciare il browser. Usa un indirizzo https://, configura un proxy oppure esegui un Calino self-hosted (CALINO_SELF_HOSTED=true) che consenta http."
   },
   "broken": {
     "foundEvents_one": "Trovato 1 evento con date non valide.",
