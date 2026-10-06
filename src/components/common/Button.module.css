@@ -6,8 +6,11 @@
   border-radius: var(--radius-sm);
   font-weight: 500;
   cursor: pointer;
-  transition: background-color var(--transition-normal), color var(--transition-normal),
-    border-color var(--transition-normal), opacity var(--transition-normal);
+  transition:
+    background-color var(--transition-normal),
+    color var(--transition-normal),
+    border-color var(--transition-normal),
+    opacity var(--transition-normal);
 }
 
 .button:disabled {

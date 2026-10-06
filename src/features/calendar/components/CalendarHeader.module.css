@@ -14,7 +14,9 @@
    which is the part that's about to collapse anyway. */
 .header {
   display: grid;
-  grid-template-columns: var(--header-brand-col, 277px) minmax(max-content, max-content) minmax(max-content, max-content) 1fr auto;
+  grid-template-columns:
+    var(--header-brand-col, 277px) minmax(max-content, max-content) minmax(max-content, max-content)
+    1fr auto;
   align-items: center;
   padding: calc(18px + var(--safe-area-top, 0px)) 16px 18px 0;
   background: var(--canvas);
@@ -25,7 +27,9 @@
 
 /* When sidebar collapsed: brand col shrinks, hamburger + navigator need extra column */
 [data-sidebar-collapsed] .header {
-  grid-template-columns: var(--header-brand-col, 277px) auto minmax(max-content, max-content) minmax(max-content, max-content) 1fr auto;
+  grid-template-columns:
+    var(--header-brand-col, 277px) auto minmax(max-content, max-content)
+    minmax(max-content, max-content) 1fr auto;
 }
 
 /* ---- Brand Mark ---- */
@@ -43,7 +47,11 @@
   cursor: pointer;
   /* `visibility` rides along so a hidden wordmark drops out of the tab order,
      flipping at the end of the fade-out and at the start of the fade-in. */
-  transition: opacity 0.2s ease, width 0.2s ease, padding 0.2s ease, visibility 0s;
+  transition:
+    opacity 0.2s ease,
+    width 0.2s ease,
+    padding 0.2s ease,
+    visibility 0s;
   grid-column: 1;
   grid-row: 1;
 }
@@ -65,7 +73,11 @@
   padding: 0;
   pointer-events: none;
   visibility: hidden;
-  transition: opacity 0.2s ease, width 0.2s ease, padding 0.2s ease, visibility 0s linear 0.2s;
+  transition:
+    opacity 0.2s ease,
+    width 0.2s ease,
+    padding 0.2s ease,
+    visibility 0s linear 0.2s;
 }
 
 .brandDiamond {
@@ -120,7 +132,10 @@
      columns above. */
   flex-shrink: 0;
   border-width: 1px;
-  transition: opacity 0.2s ease, max-width 0.25s ease 0s, border-width 0s linear 0.2s;
+  transition:
+    opacity 0.2s ease,
+    max-width 0.25s ease 0s,
+    border-width 0s linear 0.2s;
 }
 
 .weekWindowControls {
@@ -169,7 +184,9 @@
   border: none;
   border-radius: calc(var(--radius-md) - 2px);
   cursor: pointer;
-  transition: background 0.14s, color 0.14s;
+  transition:
+    background 0.14s,
+    color 0.14s;
 }
 
 .weekWindowArrow:hover {
@@ -187,7 +204,10 @@
   pointer-events: none;
   max-width: 0;
   border-width: 0;
-  transition: opacity 0.15s ease, max-width 0.25s ease 0.05s, border-width 0s linear 0.25s;
+  transition:
+    opacity 0.15s ease,
+    max-width 0.25s ease 0.05s,
+    border-width 0s linear 0.25s;
 }
 
 .navArrow {
@@ -200,7 +220,9 @@
   background: transparent;
   border: none;
   cursor: pointer;
-  transition: background 0.14s, color 0.14s;
+  transition:
+    background 0.14s,
+    color 0.14s;
 }
 
 .navArrow:hover {
@@ -224,7 +246,9 @@
   border-left: 1px solid var(--line);
   border-right: 1px solid var(--line);
   cursor: pointer;
-  transition: background 0.14s, color 0.14s;
+  transition:
+    background 0.14s,
+    color 0.14s;
 }
 
 .navToday:hover {
@@ -314,7 +338,9 @@
   border: none;
   border-radius: 50%;
   cursor: pointer;
-  transition: color 0.14s, background 0.14s;
+  transition:
+    color 0.14s,
+    background 0.14s;
 }
 
 .weekTitleArrow:hover {
@@ -339,13 +365,25 @@
 }
 
 @keyframes titleEnterNext {
-  from { opacity: 0; transform: translateX(14px); }
-  to { opacity: 1; transform: translateX(0); }
+  from {
+    opacity: 0;
+    transform: translateX(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 @keyframes titleEnterPrev {
-  from { opacity: 0; transform: translateX(-14px); }
-  to { opacity: 1; transform: translateX(0); }
+  from {
+    opacity: 0;
+    transform: translateX(-14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -399,7 +437,9 @@
   background: transparent;
   border: none;
   cursor: pointer;
-  transition: background 0.14s, color 0.14s;
+  transition:
+    background 0.14s,
+    color 0.14s;
 }
 
 .iconButton:hover {
@@ -415,7 +455,8 @@
 /* Desktop already has the navigator's "Today" text button — this icon only
    earns its keep on mobile, where the navigator hides for /tasks and
    /contacts and the title's tap-to-go-today needs a visible counterpart. */
-@media (min-width: 769px) { /* sync with config.ts MOBILE_BREAKPOINT */
+@media (min-width: 769px) {
+  /* sync with config.ts MOBILE_BREAKPOINT */
   .todayButton {
     display: none;
   }
@@ -433,7 +474,10 @@
   background: var(--popover-bg, var(--panel));
   border: 1px solid var(--popover-border, var(--line));
   border-radius: var(--radius-md);
-  box-shadow: var(--modal-shadow, 0 4px 16px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.12 * var(--shadow-opacity, 1))));
+  box-shadow: var(
+    --modal-shadow,
+    0 4px 16px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.12 * var(--shadow-opacity, 1)))
+  );
   padding: 8px 0;
   min-width: 200px;
   z-index: 1000;
@@ -490,7 +534,10 @@
      actually reach 0 in the rightCluster flex row. */
   min-width: 0;
   overflow: hidden;
-  transition: opacity 0.25s ease, max-width 0.25s ease, padding 0.25s ease;
+  transition:
+    opacity 0.25s ease,
+    max-width 0.25s ease,
+    padding 0.25s ease;
 }
 
 .viewTabsCollapsed {
@@ -529,7 +576,9 @@
   -webkit-user-select: none;
   /* transform animates neighbours making room during a drag-reorder. The
      :active rule below shortens both, so a press stays snappy. */
-  transition: color 0.14s, transform 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+  transition:
+    color 0.14s,
+    transform 0.18s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   z-index: 1;
   white-space: nowrap;
@@ -576,9 +625,15 @@
   top: 4px;
   height: var(--view-switcher-indicator-height, 32px);
   background: var(--view-switcher-indicator-bg, var(--panel));
-  box-shadow: var(--view-switcher-indicator-shadow, 0 1px 2px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.08 * var(--shadow-opacity, 1))), 0 0 0 1px var(--line));
+  box-shadow: var(
+    --view-switcher-indicator-shadow,
+    0 1px 2px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.08 * var(--shadow-opacity, 1))),
+    0 0 0 1px var(--line)
+  );
   border-radius: var(--view-switcher-indicator-radius, 9px);
-  transition: left 0.25s cubic-bezier(0.4, 0, 0.2, 1), width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  transition:
+    left 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+    width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   z-index: 0;
 }
 
@@ -606,7 +661,9 @@
   width: 1px;
   height: 18px;
   background: rgba(var(--ink-raw, 44, 40, 33), 0.18);
-  transition: background 0.14s, height 0.14s;
+  transition:
+    background 0.14s,
+    height 0.14s;
 }
 
 .viewTabDivider:hover::before,
@@ -639,7 +696,10 @@
   background: var(--popover-bg, var(--panel));
   border: 1px solid var(--popover-border, var(--line));
   border-radius: var(--radius-md);
-  box-shadow: var(--modal-shadow, 0 4px 12px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.1 * var(--shadow-opacity, 1))));
+  box-shadow: var(
+    --modal-shadow,
+    0 4px 12px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.1 * var(--shadow-opacity, 1)))
+  );
   overflow: hidden;
   z-index: 200;
   min-width: max-content;
@@ -664,7 +724,9 @@
   font-family: inherit;
   color: var(--ink-2);
   cursor: pointer;
-  transition: background 0.12s, color 0.12s;
+  transition:
+    background 0.12s,
+    color 0.12s;
   white-space: nowrap;
 }
 
@@ -684,7 +746,9 @@
   width: auto;
   /* See .viewTabs — same flex min-content floor applies here. */
   min-width: 0;
-  transition: opacity 0.2s ease, width 0.2s ease;
+  transition:
+    opacity 0.2s ease,
+    width 0.2s ease;
 }
 
 .viewDropdownCollapsed {
@@ -739,7 +803,10 @@
   background: var(--popover-bg, var(--panel));
   border: 1px solid var(--popover-border, var(--line));
   border-radius: var(--radius-md);
-  box-shadow: var(--modal-shadow, 0 4px 12px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.1 * var(--shadow-opacity, 1))));
+  box-shadow: var(
+    --modal-shadow,
+    0 4px 12px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.1 * var(--shadow-opacity, 1)))
+  );
   overflow: hidden;
   z-index: 100;
   min-width: 120px;
@@ -816,7 +883,12 @@
   border: none;
   color: var(--ink-2);
   cursor: pointer;
-  transition: background 0.14s, color 0.14s, opacity 0.2s ease, width 0.2s ease, padding 0.2s ease;
+  transition:
+    background 0.14s,
+    color 0.14s,
+    opacity 0.2s ease,
+    width 0.2s ease,
+    padding 0.2s ease;
   margin-right: 8px;
   opacity: 0;
   width: 0;
@@ -869,7 +941,9 @@
 /* ≤950px (compact): sidebar goes overlay */
 @media (max-width: 950px) {
   .header {
-    grid-template-columns: auto minmax(max-content, max-content) minmax(max-content, max-content) 1fr auto;
+    grid-template-columns:
+      auto minmax(max-content, max-content) minmax(max-content, max-content)
+      1fr auto;
   }
 
   .brand {
@@ -1022,7 +1096,9 @@
     opacity: 0;
     width: 0;
     overflow: hidden;
-    transition: opacity 0.2s ease, width 0.2s ease;
+    transition:
+      opacity 0.2s ease,
+      width 0.2s ease;
   }
 
   .viewDropdownMenu {

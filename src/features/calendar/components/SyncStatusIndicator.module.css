@@ -47,7 +47,9 @@
   text-decoration: underline;
   text-decoration-color: transparent;
   text-underline-offset: 2px;
-  transition: color var(--dur-fast), text-decoration-color var(--dur-fast);
+  transition:
+    color var(--dur-fast),
+    text-decoration-color var(--dur-fast);
 }
 
 .retry:hover:not(:disabled) {

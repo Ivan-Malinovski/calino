@@ -785,7 +785,9 @@ describe('EventModal', () => {
     fireEvent.click(screen.getByRole('option', { name: /30 minutes before/i }))
     fireEvent.click(screen.getByRole('button', { name: /save/i }))
 
-    expect(useCalendarStore.getState().events.find((e) => e.id === 'reminder-event')?.reminders).toEqual(
+    expect(
+      useCalendarStore.getState().events.find((e) => e.id === 'reminder-event')?.reminders
+    ).toEqual(
       expect.arrayContaining([
         { id: 'existing-reminder', minutesBefore: 15, method: 'popup' },
         expect.objectContaining({ minutesBefore: 30, method: 'popup' }),

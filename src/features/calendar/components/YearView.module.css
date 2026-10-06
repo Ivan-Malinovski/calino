@@ -13,7 +13,8 @@
   container-type: size;
 }
 
-@media (max-width: 768px) { /* sync with config.ts MOBILE_BREAKPOINT */
+@media (max-width: 768px) {
+  /* sync with config.ts MOBILE_BREAKPOINT */
   /* Lets content run behind the floating nav pill until scrolled to the
      end, instead of always reserving a visible gap (see App.css .main). */
   .container {
@@ -103,14 +104,18 @@
   display: flex;
   flex-direction: column;
   cursor: pointer;
-  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+  transition:
+    box-shadow 0.15s ease,
+    border-color 0.15s ease;
   /* Type inside the card scales with the card (cqw below). */
   container-type: inline-size;
 }
 
 .month:hover {
   border-color: var(--accent, #b07d4f);
-  box-shadow: 0 0 0 1px var(--accent, #b07d4f), var(--shadow-card);
+  box-shadow:
+    0 0 0 1px var(--accent, #b07d4f),
+    var(--shadow-card);
 }
 
 .monthHeader {
@@ -176,7 +181,9 @@
   border: none;
   border-radius: var(--radius-sm, 4px);
   cursor: pointer;
-  transition: background 0.12s ease, color 0.12s ease;
+  transition:
+    background 0.12s ease,
+    color 0.12s ease;
 }
 
 .weekNum:hover {
@@ -203,7 +210,9 @@
   border: none;
   border-radius: 50%;
   cursor: pointer;
-  transition: background 0.12s ease, transform 0.12s ease;
+  transition:
+    background 0.12s ease,
+    transform 0.12s ease;
 }
 
 .day:hover {

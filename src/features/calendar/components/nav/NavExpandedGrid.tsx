@@ -181,7 +181,7 @@ export function NavExpandedGrid({
 
       {reorderMode && (
         <div className={styles.reorderBar}>
-            <span>{t('surface.navRearrange')}</span>
+          <span>{t('surface.navRearrange')}</span>
           <button type="button" className={styles.reorderDone} onClick={exitReorderMode}>
             {t('surface.navDone')}
           </button>

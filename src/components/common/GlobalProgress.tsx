@@ -53,7 +53,7 @@ export function GlobalProgress(): JSX.Element | null {
     const next = total > 0 ? Math.min(100, Math.round(((task.done ?? 0) / total) * 100)) : 0
     if (task.label !== label) setLabel(task.label)
     if (next !== percent) setPercent(next)
-    if ((total > 0) !== determinate) setDeterminate(total > 0)
+    if (total > 0 !== determinate) setDeterminate(total > 0)
   }
 
   if (!rendered || !label) return null

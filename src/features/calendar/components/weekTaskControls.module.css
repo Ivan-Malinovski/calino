@@ -2,7 +2,6 @@
    popover (WeekTasksPopover): the round checkbox, the title button and the
    quick-add field. */
 
-
 .check {
   flex: none;
   appearance: none;

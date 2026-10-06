@@ -16,7 +16,7 @@
 .modalContent {
   background: var(--modal-bg, #ffffff);
   border: 1px solid var(--modal-border, transparent);
-  box-shadow: var(--modal-shadow, 0 24px 80px rgba(0, 0, 0, 0.18), 0 6px 20px rgba(0, 0, 0, 0.10));
+  box-shadow: var(--modal-shadow, 0 24px 80px rgba(0, 0, 0, 0.18), 0 6px 20px rgba(0, 0, 0, 0.1));
   border-radius: var(--radius-lg);
   padding: var(--space-6);
   width: 100%;
@@ -463,10 +463,16 @@
 }
 
 @keyframes progressSweep {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(300%); }
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(300%);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .progressIndeterminate { animation-duration: 3s; }
+  .progressIndeterminate {
+    animation-duration: 3s;
+  }
 }

@@ -291,9 +291,7 @@ describe('AttendeeSection - availability', () => {
       endIso: END,
     })
 
-    expect(
-      screen.getByLabelText('Alice: Unknown at this time')
-    ).toBeInTheDocument()
+    expect(screen.getByLabelText('Alice: Unknown at this time')).toBeInTheDocument()
   })
 
   it('does not warn when the only overlapping event is the one being edited', () => {

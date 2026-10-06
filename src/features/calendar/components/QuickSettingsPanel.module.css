@@ -50,7 +50,9 @@
   color: var(--ink-2);
   border-radius: 4px;
   cursor: pointer;
-  transition: background 0.14s, color 0.14s;
+  transition:
+    background 0.14s,
+    color 0.14s;
   font-family: inherit;
 }
 
@@ -124,7 +126,9 @@
   border: none;
   cursor: pointer;
   color: var(--ink-2);
-  transition: color 0.12s, background 0.12s;
+  transition:
+    color 0.12s,
+    background 0.12s;
 }
 
 .quickSettingsLock:hover {

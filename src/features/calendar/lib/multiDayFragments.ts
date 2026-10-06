@@ -15,7 +15,8 @@ interface Span {
 export function eventLastDay(event: CalendarEvent): Date {
   const start = toEventInstant(event.start, event.timezone)
   const end = toEventInstant(event.end, event.timezone)
-  if (!event.isAllDay && end > start && end.getTime() === startOfDay(end).getTime()) return addDays(end, -1)
+  if (!event.isAllDay && end > start && end.getTime() === startOfDay(end).getTime())
+    return addDays(end, -1)
   return end
 }
 

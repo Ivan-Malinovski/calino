@@ -14,15 +14,19 @@
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .panel {
   background: var(--modal-bg, #faf9f7);
   border: 1px solid var(--modal-border, transparent);
   border-radius: var(--radius-lg);
-  box-shadow: var(--modal-shadow, 0 24px 80px rgba(0, 0, 0, 0.18), 0 6px 20px rgba(0, 0, 0, 0.10));
+  box-shadow: var(--modal-shadow, 0 24px 80px rgba(0, 0, 0, 0.18), 0 6px 20px rgba(0, 0, 0, 0.1));
   width: 520px;
   max-width: calc(100vw - 40px);
   max-height: calc(100vh - 80px);
@@ -36,8 +40,14 @@
 }
 
 @keyframes slideUp {
-  from { transform: translateY(10px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
+  from {
+    transform: translateY(10px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 
 /* Mobile sheet only — see the drag handle rule in the mobile block below. */
@@ -59,7 +69,9 @@
   border: none;
   background: none;
   cursor: pointer;
-  transition: background 0.14s, color 0.14s;
+  transition:
+    background 0.14s,
+    color 0.14s;
 }
 
 .close:hover {
@@ -180,7 +192,9 @@
   cursor: pointer;
   flex-shrink: 0;
   opacity: 0;
-  transition: opacity 0.15s, background 0.15s;
+  transition:
+    opacity 0.15s,
+    background 0.15s;
 }
 
 .entry:hover .entryEditBtn,
@@ -257,7 +271,8 @@
   margin: 8px 0;
 }
 
-.body ul, .body ol {
+.body ul,
+.body ol {
   padding-left: 20px;
   margin: 8px 0;
 }
@@ -274,16 +289,24 @@
   margin: 16px 0;
 }
 
-.body h1, .body h2, .body h3 {
+.body h1,
+.body h2,
+.body h3 {
   font-family: var(--font-serif, 'Newsreader', Georgia, serif);
   color: var(--ink);
   margin-top: 16px;
   margin-bottom: 4px;
 }
 
-.body h1 { font-size: 20px; }
-.body h2 { font-size: 17px; }
-.body h3 { font-size: 15px; }
+.body h1 {
+  font-size: 20px;
+}
+.body h2 {
+  font-size: 17px;
+}
+.body h3 {
+  font-size: 15px;
+}
 
 /* Entry categories and link */
 .entryCategories {
@@ -404,7 +427,9 @@
   font-size: 12px;
   font-family: inherit;
   cursor: pointer;
-  transition: background 0.12s, border-color 0.12s;
+  transition:
+    background 0.12s,
+    border-color 0.12s;
 }
 
 .categoryChip:hover {
@@ -575,7 +600,9 @@
   text-align: left;
   font-size: 13px;
   color: var(--ink);
-  transition: border-color 0.12s, background 0.12s;
+  transition:
+    border-color 0.12s,
+    background 0.12s;
 }
 
 .relatedChip:hover {
@@ -614,7 +641,9 @@
   cursor: pointer;
   letter-spacing: -0.01em;
   box-shadow: 0 2px 8px rgba(196, 168, 154, 0.4);
-  transition: background 0.12s, box-shadow 0.12s;
+  transition:
+    background 0.12s,
+    box-shadow 0.12s;
 }
 
 .btnAccent:hover {
@@ -632,9 +661,14 @@
   font-weight: 500;
   font-family: inherit;
   cursor: pointer;
-  box-shadow: var(--shadow-event, 0 1px 3px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.08 * var(--shadow-opacity, 1))));
+  box-shadow: var(
+    --shadow-event,
+    0 1px 3px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.08 * var(--shadow-opacity, 1)))
+  );
   margin-right: auto;
-  transition: background 0.14s, color 0.14s;
+  transition:
+    background 0.14s,
+    color 0.14s;
 }
 
 .btnGhost:hover {
@@ -668,8 +702,13 @@
   font-weight: 500;
   font-family: inherit;
   cursor: pointer;
-  box-shadow: var(--shadow-event, 0 1px 3px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.08 * var(--shadow-opacity, 1))));
-  transition: background 0.14s, color 0.14s;
+  box-shadow: var(
+    --shadow-event,
+    0 1px 3px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.08 * var(--shadow-opacity, 1)))
+  );
+  transition:
+    background 0.14s,
+    color 0.14s;
 }
 
 .addEntry svg {
@@ -693,8 +732,13 @@
   font-weight: 500;
   font-family: inherit;
   cursor: pointer;
-  box-shadow: var(--shadow-event, 0 1px 3px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.08 * var(--shadow-opacity, 1))));
-  transition: background-color 0.15s, color 0.15s;
+  box-shadow: var(
+    --shadow-event,
+    0 1px 3px rgba(var(--shadow-rgb, 0, 0, 0), calc(0.08 * var(--shadow-opacity, 1)))
+  );
+  transition:
+    background-color 0.15s,
+    color 0.15s;
 }
 
 .btnDelete:hover {
@@ -716,7 +760,6 @@
     padding: 24px 20px 28px;
     gap: 16px 0;
   }
-
 
   .dateCol {
     flex-direction: row;

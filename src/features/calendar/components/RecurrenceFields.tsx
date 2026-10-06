@@ -11,8 +11,6 @@ const RECURRENCE_OPTIONS: { value: RecurrenceRule['frequency']; labelKey: string
   { value: 'yearly', labelKey: 'modals.recurrence.frequency.yearly' },
 ]
 
-
-
 // --- Monthly pattern helpers ---
 
 type MonthlyPattern = 'dayOfMonth' | 'nthWeekday' | 'lastWeekday'
