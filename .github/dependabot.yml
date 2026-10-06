@@ -33,6 +33,10 @@ updates:
       - dependency-name: "react"
         # React 19 is the current major; ignore 20.x until we've validated it
         versions: ["20.x"]
+      - dependency-name: "typescript"
+        # typescript-eslint does not support TS 7.0 yet (lint fails); revisit
+        # once it does.
+        versions: ["7.x"]
     commit-message:
       prefix: "deps"
       include: "scope"
