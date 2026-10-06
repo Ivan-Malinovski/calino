@@ -4,30 +4,23 @@ All notable changes to Calino will be documented in this file.
 
 ## [Unreleased]
 
+**A heads-up: I'm going on vacation for two weeks, so don't expect any updates or replies to issues until I'm back.**
+
+This release adds JMAP support for calendars and contacts. **JMAP testing has been very limited**, so expect rough edges. If you use a JMAP server, I'd love to hear how it goes, good or bad, in the [issues](https://github.com/Ivan-Malinovski/calino/issues).
+
+It also brings support for the iCalendar CONCEPT property, translated notifications and interface text, and a redesigned contact editor.
+
 ### Added
 
-- **JMAP support** ([#15](https://github.com/Ivan-Malinovski/calino/issues/15)).
-  Calino now syncs calendars and contacts over JMAP (JSCalendar and JSContact)
-  as well as CalDAV and CardDAV. There is nothing to choose: when you connect,
-  Calino detects which protocol the server speaks, and servers that offer both
-  use JMAP. Everything else works as it does for CalDAV, including recurring
-  events, attendees, reminders, free/busy and live updates. Tick **Use CalDAV**
-  under Connection settings if you prefer CalDAV on a server that offers both.
-  See `docs/JMAP.md`.
-- **Diagnose understands JMAP.** For a JMAP account it checks the session, the
-  API endpoint, calendars, contacts and live updates, and can run a write test.
-  Checks now have plainer names, a page that blocks the connection (an `http://`
-  server from an https page, or the Content Security Policy) is reported first,
-  and the summary says whether the problem is the page, the credentials or the
-  server. A rejected password skips the remaining checks instead of listing
-  them all as failures.
+- **JMAP support** ([#15](https://github.com/Ivan-Malinovski/calino/issues/15)). Calino now syncs calendars and contacts over JMAP (JSCalendar and JSContact) as well as CalDAV and CardDAV. There is nothing to choose: when you connect, Calino detects which protocol the server speaks, and servers that offer both use JMAP. Everything else works as it does for CalDAV, including recurring events, attendees, reminders, free/busy and live updates. Tick **Use CalDAV** under Connection settings if you prefer CalDAV on a server that offers both. See `docs/JMAP.md`.
+- **Diagnose understands JMAP.** For a JMAP account it checks the session, the API endpoint, calendars, contacts and live updates, and can run a write test. Checks now have plainer names, a page that blocks the connection (an `http://` server from an https page, or the Content Security Policy) is reported first, and the summary says whether the problem is the page, the credentials or the server. A rejected password skips the remaining checks instead of listing them all as failures.
+- **CONCEPT property** ([#174](https://github.com/Ivan-Malinovski/calino/issues/174)). Events, tasks and journals now keep the iCalendar `CONCEPT` property (RFC 9253), so these URIs survive a save instead of being dropped or escaped. Thanks to [@al-franco-data](https://github.com/al-franco-data), whose work this is based on.
 
 ### Changed
 
-- **CORS proxy.** The proxy now exposes `WWW-Authenticate` and `Retry-After`, allows
-  `X-Follow-Redirects`, and no longer cuts live-update streams short, so JMAP
-  works through it. If you run your own Cloudflare Worker from `docs/CORS_PROXY.md`,
-  update it to the current version.
+- **Redesigned contact editor.** The new and edit contact form has a pinned header and footer, a scrolling body, and spaced sections, matching the other modals. Fields no longer run together, the note and XML boxes are no longer squashed, and it works on phone-sized screens.
+- **More of the interface is translated.** Notifications, labels, buttons, placeholders, dialogs and error messages now follow your language (Danish, German, Spanish, French, Italian and Dutch), and some notifications that showed raw keys now read properly.
+- **CORS proxy.** The proxy now exposes `WWW-Authenticate` and `Retry-After`, allows `X-Follow-Redirects`, and no longer cuts live-update streams short, so JMAP works through it. If you run your own Cloudflare Worker from `docs/CORS_PROXY.md`, update it to the current version.
 
 ## [0.38.0] - 2026-10-05
 
