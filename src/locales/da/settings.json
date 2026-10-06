@@ -532,7 +532,8 @@
     "subscribe": "Abonnér på kalender (.ics)",
     "confirmRemoveSubscription": "Vil du fjerne dette kalenderabonnement? Dets begivenheder slettes lokalt.",
     "confirmRemoveAccount": "Er du sikker på, at du vil fjerne denne konto? Kalenderdata bevares lokalt.",
-    "credentialsNotFound": "Loginoplysninger blev ikke fundet"
+    "credentialsNotFound": "Loginoplysninger blev ikke fundet",
+    "accountProtocol": "Kontoprotokol"
   },
   "data": {
     "webmcp": {

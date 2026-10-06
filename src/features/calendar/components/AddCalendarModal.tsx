@@ -45,6 +45,8 @@ export function AddCalendarModal({
   account,
 }: AddCalendarModalProps): JSX.Element | null {
   const { t } = useTranslation('calendar')
+  const [forceCalDAV, setForceCalDAV] = useState(false)
+  const [connectionProtocol, setConnectionProtocol] = useState<'caldav' | 'jmap' | null>(null)
   const [connectionStatus, setConnectionStatus] = useState<'idle' | 'success' | 'error'>('idle')
   const [connectionError, setConnectionError] = useState<string>('')
   const [connectionHint, setConnectionHint] = useState<string>('')
@@ -88,6 +90,8 @@ export function AddCalendarModal({
 
   const doClose = useCallback((): void => {
     setConnectionStatus('idle')
+    setConnectionProtocol(null)
+    setForceCalDAV(false)
     setConnectionError('')
     setConnectionHint('')
     setDiagnoseTarget(null)
@@ -155,15 +159,20 @@ export function AddCalendarModal({
         password,
         proxyUrl,
         originalUrl,
-        customHeaders
+        customHeaders,
+        isEdit ? { protocol: account.protocol ?? 'caldav' } : { forceCalDAV }
       )
 
       setConnectionStatus(result.ok ? 'success' : 'error')
+      setConnectionProtocol(result.protocol)
       if (!result.ok) {
         setConnectionError(
-          result.error ? connectionErrorMessage(result.error) : 'Connection failed.'
+          result.error ? connectionErrorMessage(result.error, result.code) : 'Connection failed.'
         )
-        recordFailure(result.error ? classifySyncError(result.error) : 'unknown', proxyUrl)
+        recordFailure(
+          result.code ?? (result.error ? classifySyncError(result.error) : 'unknown'),
+          proxyUrl
+        )
         if (result.hint) {
           setConnectionHint(result.hint)
         }
@@ -325,7 +334,14 @@ export function AddCalendarModal({
           password,
           accountName,
           proxyUrl,
-          customHeaders
+          customHeaders,
+          {
+            forceCalDAV,
+            onProtocolDetected: (protocol) => {
+              setConnectionProtocol(protocol)
+              setConnectionStatus('success')
+            },
+          }
         )
       }
       requestClose()
@@ -452,7 +468,14 @@ export function AddCalendarModal({
             </div>
           </div>
           {connectionStatus === 'success' && (
-            <p className={styles.successMessage}>{t('surface.connectionSuccessful')}</p>
+            <p className={styles.successMessage}>
+              {t('surface.connectionSuccessful')}{' '}
+              {connectionProtocol && (
+                <span data-component="account-protocol" aria-label={t('surface.accountProtocol')}>
+                  {connectionProtocol === 'jmap' ? 'JMAP' : 'CalDAV'}
+                </span>
+              )}
+            </p>
           )}
           {connectionStatus === 'error' && (
             <div className={styles.errorBox} role="alert" data-component="connection-error">
@@ -488,6 +511,25 @@ export function AddCalendarModal({
           )}
           {showDiagnostics && diagnoseTarget && (
             <DiagnosticsPanel options={diagnoseTarget} autoRun />
+          )}
+          {!isEdit && (
+            <details className={styles.formGroup}>
+              <summary>{t('surface.advancedConnection')}</summary>
+              <label className={styles.formLabel}>
+                <input
+                  type="checkbox"
+                  checked={forceCalDAV}
+                  onChange={(event) => {
+                    setForceCalDAV(event.target.checked)
+                    clearFailure()
+                  }}
+                  disabled={isSaving || isTesting}
+                  data-action="force-caldav"
+                />{' '}
+                {t('surface.forceCalDAV')}
+              </label>
+              <p className={styles.formHint}>{t('surface.forceCalDAVHint')}</p>
+            </details>
           )}
           <CustomHeadersEditor
             rows={headerRows}

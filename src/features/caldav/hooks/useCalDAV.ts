@@ -19,7 +19,12 @@ import { unwrapFetchEvents } from '../client/CalDAVClient'
 import { createCalendarBackend } from '../client/createBackend'
 import type { CalendarBackend } from '../client/CalendarBackend'
 import type { SyncCollectionChange } from '../client/CalDAVClient'
-import { probeConnection, expandProviderUrl, type ProbeResult } from '../client/discovery'
+import {
+  probeConnection,
+  expandProviderUrl,
+  type ProbeResult,
+  type ConnectionOptions,
+} from '../client/discovery'
 import { CalDAVConnectionError } from '../client/errors'
 import {
   saveCredentials,
@@ -353,6 +358,10 @@ function tracked<A extends unknown[], R>(
   return (...args: A) => (isProgressOwned() ? fn(...args) : withProgress(label, () => fn(...args)))
 }
 
+export interface AddAccountOptions extends ConnectionOptions {
+  onProtocolDetected?: (protocol: CalendarProtocol) => void
+}
+
 export interface UseCalDAVReturn {
   accounts: CalDAVAccount[]
   calendars: CalDAVCalendar[]
@@ -363,7 +372,8 @@ export interface UseCalDAVReturn {
     password: string,
     name: string,
     proxyUrl?: string | null,
-    customHeaders?: Record<string, string>
+    customHeaders?: Record<string, string>,
+    options?: AddAccountOptions
   ) => Promise<void>
   removeAccount: (accountId: string) => Promise<void>
   updateAccount: (
@@ -933,6 +943,8 @@ export function useCalDAVInstance(): UseCalDAVReturn {
     // Check for CardDAV support on existing accounts
     const checkCardDAV = async (): Promise<void> => {
       for (const account of loadedAccounts) {
+        // ContactsBackend integration belongs here once JMAP contacts are available.
+        if (account.protocol === 'jmap') continue
         if (cardDavCheckedAccounts.has(account.id)) continue
         cardDavCheckedAccounts.add(account.id)
         // The probe below exists only to switch contacts on, and it downloads a whole
@@ -982,7 +994,8 @@ export function useCalDAVInstance(): UseCalDAVReturn {
       password: string,
       name: string,
       proxyUrl?: string | null,
-      customHeaders: Record<string, string> = {}
+      customHeaders: Record<string, string> = {},
+      options: AddAccountOptions = {}
     ): Promise<void> => {
       setSyncState((prev) => ({ ...prev, status: 'syncing', error: null }))
       useCalDAVSyncStore.getState().setStatus('syncing')
@@ -1004,14 +1017,16 @@ export function useCalDAVInstance(): UseCalDAVReturn {
           password,
           proxyUrl,
           undefined,
-          customHeaders
+          customHeaders,
+          options
         )
         console.log('[CalDAV] addAccount: probe result:', probe.ok, probe.status ?? '')
 
         if (!probe.ok) {
           throw new CalDAVConnectionError(
             probe.error ?? 'Failed to connect to server. Please check your credentials.',
-            probe.hint
+            probe.hint,
+            probe.code
           )
         }
 
@@ -1024,7 +1039,8 @@ export function useCalDAVInstance(): UseCalDAVReturn {
           customHeaders,
         })
 
-        const detectedProtocol: CalendarProtocol = 'caldav'
+        const detectedProtocol: CalendarProtocol = probe.protocol ?? 'caldav'
+        options.onProtocolDetected?.(detectedProtocol)
         console.log('[CalDAV] addAccount: creating client...')
         const client = await createCalendarBackend(
           discoveredUrl,
@@ -1040,6 +1056,7 @@ export function useCalDAVInstance(): UseCalDAVReturn {
         const newAccount = storage.saveAccount({
           name,
           serverUrl: discoveredUrl,
+          protocol: detectedProtocol,
           proxyUrl: proxyUrl || null,
           username,
           credentialId: credential.id,
@@ -1261,43 +1278,49 @@ export function useCalDAVInstance(): UseCalDAVReturn {
           }
         }
 
-        // After calendar sync, check for CardDAV support
-        reportProgress({
-          label: i18n.t('caldav:progress.checkingForContacts'),
-          done: undefined,
-          total: undefined,
-        })
-        try {
-          const { createCardDAVClient } = await import('@/features/carddav/client/CardDAVClient')
-          const carddavClient = await createCardDAVClient(
-            discoveredUrl,
-            credential,
-            proxyUrl ?? null
-          )
-          const addressBooks = await carddavClient.fetchAddressBooks()
-          if (addressBooks.length > 0) {
-            // Only enable contacts if we actually find at least one contact
-            let hasContacts = false
-            for (const book of addressBooks) {
-              try {
-                const contacts = await carddavClient.fetchContacts(book)
-                console.log(`[CalDAV] Address book "${book.name}" has ${contacts.length} contacts`)
-                if (contacts.length > 0) {
-                  hasContacts = true
-                  break
+        // JMAP contacts will use a ContactsBackend at this seam. Do not send a
+        // synthetic JMAP session/calendar URL to the CardDAV discovery client.
+        if (detectedProtocol === 'caldav') {
+          // After calendar sync, check for CardDAV support
+          reportProgress({
+            label: i18n.t('caldav:progress.checkingForContacts'),
+            done: undefined,
+            total: undefined,
+          })
+          try {
+            const { createCardDAVClient } = await import('@/features/carddav/client/CardDAVClient')
+            const carddavClient = await createCardDAVClient(
+              discoveredUrl,
+              credential,
+              proxyUrl ?? null
+            )
+            const addressBooks = await carddavClient.fetchAddressBooks()
+            if (addressBooks.length > 0) {
+              // Only enable contacts if we actually find at least one contact
+              let hasContacts = false
+              for (const book of addressBooks) {
+                try {
+                  const contacts = await carddavClient.fetchContacts(book)
+                  console.log(
+                    `[CalDAV] Address book "${book.name}" has ${contacts.length} contacts`
+                  )
+                  if (contacts.length > 0) {
+                    hasContacts = true
+                    break
+                  }
+                } catch (err) {
+                  console.warn(`[CalDAV] Failed to fetch contacts from "${book.name}":`, err)
                 }
-              } catch (err) {
-                console.warn(`[CalDAV] Failed to fetch contacts from "${book.name}":`, err)
+              }
+              const { contactsEnabled, updateSettings } = useSettingsStore.getState()
+              if (!contactsEnabled && hasContacts) {
+                console.log('[CalDAV] Enabling contacts (found contacts in address books)')
+                updateSettings({ contactsEnabled: true })
               }
             }
-            const { contactsEnabled, updateSettings } = useSettingsStore.getState()
-            if (!contactsEnabled && hasContacts) {
-              console.log('[CalDAV] Enabling contacts (found contacts in address books)')
-              updateSettings({ contactsEnabled: true })
-            }
+          } catch (err) {
+            console.warn('[CalDAV] CardDAV check failed:', err)
           }
-        } catch (err) {
-          console.warn('[CalDAV] CardDAV check failed:', err)
         }
 
         storage.updateAccountLastSync(newAccount.id)
@@ -2079,11 +2102,11 @@ export function useCalDAVInstance(): UseCalDAVReturn {
   const testAccount = useCallback(async (accountId: string): Promise<ProbeResult> => {
     const account = storage.getAccountById(accountId)
     if (!account) {
-      return { ok: false, error: 'Account not found' }
+      return { ok: false, protocol: 'caldav', error: 'Account not found' }
     }
     const credential = await getCredentialById(account.credentialId)
     if (!credential) {
-      return { ok: false, error: 'Credentials not found' }
+      return { ok: false, protocol: account.protocol ?? 'caldav', error: 'Credentials not found' }
     }
     return probeConnection(
       account.serverUrl,
@@ -2091,7 +2114,8 @@ export function useCalDAVInstance(): UseCalDAVReturn {
       credential.password,
       account.proxyUrl,
       undefined,
-      credential.customHeaders
+      credential.customHeaders,
+      { protocol: account.protocol ?? 'caldav' }
     )
   }, [])
 
@@ -2136,10 +2160,15 @@ export function useCalDAVInstance(): UseCalDAVReturn {
           effectivePassword,
           proxyUrl,
           updates.serverUrl,
-          effectiveHeaders
+          effectiveHeaders,
+          { protocol: account.protocol ?? 'caldav' }
         )
         if (!probe.ok) {
-          throw new Error(probe.error ?? i18n.t('errors:account.couldNotConnect'))
+          throw new CalDAVConnectionError(
+            probe.error ?? i18n.t('errors:account.couldNotConnect'),
+            probe.hint,
+            probe.code
+          )
         }
         const resolvedUrl = probe.resolvedUrl ?? effectiveUrl
         reportProgress({ label: i18n.t('caldav:progress.savingAccount') })

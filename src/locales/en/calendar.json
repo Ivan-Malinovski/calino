@@ -119,7 +119,11 @@
     "icsDropHint": "You'll pick the calendar next",
     "theme": "Theme",
     "themeMode": "Theme mode",
-    "themeModes": { "auto": "Auto", "light": "Light", "dark": "Dark" },
+    "themeModes": {
+      "auto": "Auto",
+      "light": "Light",
+      "dark": "Dark"
+    },
     "weekNumbers": "Week numbers",
     "hideCompletedTasks": "Hide completed tasks",
     "allSettings": "All settings →",
@@ -129,8 +133,8 @@
     "newEvent": "New Event",
     "importEventFromPhoto": "Import event from photo",
     "newTask": "New Task",
-    "newJournalEntry": "New Journal Entry"
-    ,"calendarNamePlaceholder": "My Calendar",
+    "newJournalEntry": "New Journal Entry",
+    "calendarNamePlaceholder": "My Calendar",
     "calendarDescriptionPlaceholder": "Work meetings, personal events, etc.",
     "color": "Color",
     "calendarServerPlaceholder": "My Calendar Server",
@@ -204,7 +208,11 @@
     "tomorrow": "Tomorrow",
     "expandSubtasks": "Expand subtasks for \"{{title}}\"",
     "collapseSubtasks": "Collapse subtasks for \"{{title}}\"",
-    "hiddenCount": "{{count}} hidden"
+    "hiddenCount": "{{count}} hidden",
+    "advancedConnection": "Advanced",
+    "forceCalDAV": "Use CalDAV",
+    "forceCalDAVHint": "Skip automatic JMAP detection for this server.",
+    "accountProtocol": "Account protocol"
   },
   "modals": {
     "deleteCalendar": {

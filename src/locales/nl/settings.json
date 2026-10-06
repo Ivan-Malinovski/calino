@@ -532,7 +532,8 @@
     "subscribe": "Abonneren op agenda (.ics)",
     "confirmRemoveSubscription": "Dit agenda-abonnement verwijderen? De gebeurtenissen worden lokaal verwijderd.",
     "confirmRemoveAccount": "Weet je zeker dat je dit account wilt verwijderen? De agendagegevens blijven lokaal bewaard.",
-    "credentialsNotFound": "Aanmeldgegevens niet gevonden"
+    "credentialsNotFound": "Aanmeldgegevens niet gevonden",
+    "accountProtocol": "Accountprotocol"
   },
   "data": {
     "webmcp": {

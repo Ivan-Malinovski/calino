@@ -49,7 +49,10 @@
     "failedGeneric": "Connessione non riuscita: {{message}}. Potrebbe trattarsi di un problema CORS: il server deve consentire richieste multiorigine.",
     "urlHint": "Per {{domain}}, prova a inserire: {{url}}",
     "unknownError": "Errore sconosciuto",
-    "fastmailAuthHint": "Fastmail ha rifiutato queste credenziali. Per CalDAV, Fastmail richiede una password specifica per l’app; la normale password di accesso non funziona. Creane una da Impostazioni → Privacy e sicurezza → Integrazioni → Nuova password per l’app (concedi l’accesso a “Calendari (CalDAV)”), quindi usa il tuo indirizzo email come nome utente e quella password."
+    "fastmailAuthHint": "Fastmail ha rifiutato queste credenziali. Per CalDAV, Fastmail richiede una password specifica per l’app; la normale password di accesso non funziona. Creane una da Impostazioni → Privacy e sicurezza → Integrazioni → Nuova password per l’app (concedi l’accesso a “Calendari (CalDAV)”), quindi usa il tuo indirizzo email come nome utente e quella password.",
+    "jmapNoCalendars": "Questo account JMAP non supporta i calendari.",
+    "jmapCors": "Il server JMAP blocca le richieste da altre origini (CORS). Controlla le impostazioni CORS o usa un proxy.",
+    "jmapNetwork": "Impossibile raggiungere il server JMAP. Controlla l’indirizzo e la connessione; anche la mancanza di intestazioni CORS può causare questo problema."
   },
   "broken": {
     "foundEvents_one": "Trovato 1 evento con date non valide.",

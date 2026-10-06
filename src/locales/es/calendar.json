@@ -208,7 +208,11 @@
     "tomorrow": "Mañana",
     "expandSubtasks": "Expandir subtareas de «{{title}}»",
     "collapseSubtasks": "Contraer subtareas de «{{title}}»",
-    "hiddenCount": "{{count}} ocultos"
+    "hiddenCount": "{{count}} ocultos",
+    "advancedConnection": "Avanzado",
+    "forceCalDAV": "Usar CalDAV",
+    "forceCalDAVHint": "Omitir la detección automática de JMAP para este servidor.",
+    "accountProtocol": "Protocolo de la cuenta"
   },
   "modals": {
     "deleteCalendar": {

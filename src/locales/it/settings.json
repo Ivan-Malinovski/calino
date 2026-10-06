@@ -532,7 +532,8 @@
     "subscribe": "Abbonati al calendario (.ics)",
     "confirmRemoveSubscription": "Rimuovere questo abbonamento al calendario? I suoi eventi verranno eliminati dal dispositivo.",
     "confirmRemoveAccount": "Sei sicuro di voler rimuovere questo account? I dati del calendario verranno conservati localmente.",
-    "credentialsNotFound": "Credenziali non trovate"
+    "credentialsNotFound": "Credenziali non trovate",
+    "accountProtocol": "Protocollo dell’account"
   },
   "data": {
     "webmcp": {

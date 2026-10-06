@@ -119,7 +119,11 @@
     "icsDropHint": "Vous choisirez ensuite le calendrier",
     "theme": "Thème",
     "themeMode": "Mode du thème",
-    "themeModes": { "auto": "Automatique", "light": "Clair", "dark": "Sombre" },
+    "themeModes": {
+      "auto": "Automatique",
+      "light": "Clair",
+      "dark": "Sombre"
+    },
     "weekNumbers": "Numéros de semaine",
     "hideCompletedTasks": "Masquer les tâches terminées",
     "allSettings": "Tous les paramètres →",
@@ -204,7 +208,11 @@
     "tomorrow": "Demain",
     "expandSubtasks": "Développer les sous-tâches de « {{title}} »",
     "collapseSubtasks": "Réduire les sous-tâches de « {{title}} »",
-    "hiddenCount": "{{count}} éléments masqués"
+    "hiddenCount": "{{count}} éléments masqués",
+    "advancedConnection": "Avancé",
+    "forceCalDAV": "Utiliser CalDAV",
+    "forceCalDAVHint": "Ignorer la détection automatique de JMAP pour ce serveur.",
+    "accountProtocol": "Protocole du compte"
   },
   "modals": {
     "deleteCalendar": {

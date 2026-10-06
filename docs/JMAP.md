@@ -86,11 +86,23 @@ stored and shown read-only; "Advanced" offers a force-CalDAV override.
   turns them into detached VEVENTs and EXDATEs.
 - `updated` mirrors DTSTAMP, not a modification time, so it is not an etag.
 
+## Implementation status
+
+Converters and transport are implemented and verified against Stalwart 0.16.
+The UI connects through automatic detection, persists the account protocol,
+shows read-only protocol labels and provides an Advanced force-CalDAV option.
+Offline probe, storage, hook and translation tests cover this wiring; the
+Playwright fixture/spec and opt-in live probe await execution by the lead.
+The calendar backend has landed in the parallel implementation task; contacts
+remain a future integration.
+
 ## Component docs
 
 - [JSCalendar → iCalendar converter](jmap/jscalendar-to-ical.md)
 - [Transport and protocol detection](jmap/transport.md)
 - [iCalendar → JSCalendar write converter](jmap/ical-to-jscalendar.md)
+- [Calendar backend](jmap/backend.md)
+- [Account connection, UI and persistence](jmap/ui.md)
 
 ## Testing
 

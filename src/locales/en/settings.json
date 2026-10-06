@@ -532,7 +532,8 @@
     "subscribe": "Subscribe to calendar (.ics)",
     "confirmRemoveSubscription": "Remove this calendar subscription? Its events will be deleted locally.",
     "confirmRemoveAccount": "Are you sure you want to remove this account? Calendar data will be preserved locally.",
-    "credentialsNotFound": "Credentials not found"
+    "credentialsNotFound": "Credentials not found",
+    "accountProtocol": "Account protocol"
   },
   "data": {
     "webmcp": {

@@ -169,7 +169,10 @@ export function syncErrorReason(code: SyncErrorCode, raw: string): string {
 export function connectionErrorMessage(raw: string, code?: SyncErrorCode): string {
   switch (code ?? classifySyncError(raw)) {
     case 'cors':
+      if (/\bJMAP\b/i.test(raw)) return i18n.t('errors:connection.jmapCors')
+      return i18n.t('errors:connection.corsOrNetwork')
     case 'network':
+      if (/\bJMAP\b/i.test(raw)) return i18n.t('errors:connection.jmapNetwork')
       return i18n.t('errors:connection.corsOrNetwork')
     case 'timeout':
       return i18n.t('errors:connection.timeout')

@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { SettingsPageHeading } from './SettingsPageHeading'
 import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
+import { connectionErrorMessage } from '@/features/caldav/client/errorMessages'
 import { getCredentialById } from '@/features/caldav/client/credentials'
 import type { DiagnosticsOptions } from '@/features/caldav/client/diagnostics'
 import type { CalDAVAccount } from '@/features/caldav/types'
@@ -76,7 +77,14 @@ export function CalDAVSettings({ searchControl }: { searchControl?: JSX.Element 
       ...prev,
       [id]: result.ok
         ? { status: 'ok' }
-        : { status: 'error', message: result.error, hint: result.hint },
+        : {
+            status: 'error',
+            message:
+              result.protocol === 'jmap' && result.error
+                ? connectionErrorMessage(result.error, result.code)
+                : result.error,
+            hint: result.hint,
+          },
     }))
   }
 
@@ -198,6 +206,13 @@ export function CalDAVSettings({ searchControl }: { searchControl?: JSX.Element 
                 </div>
                 <div className={styles.accountInfo}>
                   <div className={styles.accountName}>{account.name}</div>
+                  <span
+                    className={styles.accountStatus}
+                    data-component="account-protocol"
+                    aria-label={t('caldav.accountProtocol')}
+                  >
+                    {account.protocol === 'jmap' ? 'JMAP' : 'CalDAV'}
+                  </span>
                   {renderStatus(account)}
                 </div>
                 <div className={styles.accountActions}>

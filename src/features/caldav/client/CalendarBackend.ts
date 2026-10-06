@@ -30,6 +30,8 @@ export interface CalendarBackend {
   connect(): Promise<void>
   getServerUrl(): string
   getProxyUrl(): string | null
+  /** Optional server push notification; callers trigger their usual sync. */
+  watch?(onChange: () => void): () => void
 
   fetchCalendars(): Promise<CalDAVCalendar[]>
   fetchEvents(
