@@ -1,6 +1,6 @@
 # Experimental browser AI access
 
-Enable **Settings → Data → Browser AI Access (Experimental)** to expose
+Enable **Settings → Data → Browser AI Access (WebMCP, experimental)** to expose
 Calino tools to a WebMCP-capable browser agent. Consent is off by default and
 stored only in this browser, separately from synced settings. Disabling it
 revokes access. Tools exist while a calendar page is open and unregister when

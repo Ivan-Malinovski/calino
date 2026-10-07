@@ -537,7 +537,7 @@
   },
   "data": {
     "webmcp": {
-      "label": "Browser AI Access (Experimental)",
+      "label": "Browser AI Access (WebMCP, experimental)",
       "desc": "Allow browser AI agents to read calendar names and visible event summaries, open events, and prepare drafts for you to review and save. Results may be sent to the agent’s AI provider. Applies only to this browser.",
       "unavailable": "The WebMCP API is not available on this page. Enable it in your browser and relaunch, or use a browser with WebMCP support."
     },
@@ -545,7 +545,7 @@
     "importExport": "Import & Export",
     "exportCalendar": {
       "label": "Export Calendar",
-      "desc": "Download all events as a standard .ics file",
+      "desc": "Download events from all calendars, or just one, as a standard .ics file",
       "exporting": "Exporting...",
       "export": "Export .ics"
     },
@@ -598,19 +598,42 @@
     "dismiss": "Dismiss",
     "dangerZone": "Danger Zone",
     "deleteAllEvents": {
-      "label": "Delete All Events",
-      "desc": "Permanently remove every event from this calendar. This cannot be undone.",
-      "confirm": "Delete all events? This cannot be undone.",
-      "action": "Delete all events"
+      "label": "Delete Local Events",
+      "desc": "Remove events from the selected calendar from this device only. Events on your CalDAV server are not deleted and may reappear the next time you sync.",
+      "confirm": "Delete all events stored on this device? Events on your server are not deleted and may reappear after the next sync. This cannot be undone.",
+      "action": "Delete local events",
+      "confirmCalendar": "Delete all events in “{{name}}” from this device? Events on your server are not deleted and may reappear after the next sync. This cannot be undone."
     },
     "resetApp": {
-      "label": "Reset Calino",
-      "desc": "Erase all data, settings, and connected accounts and start fresh.",
-      "confirm": "Are you sure you want to delete all local data? This cannot be undone.",
-      "action": "Reset app"
+      "label": "Reset Calino on This Device",
+      "desc": "Clear all settings, connected accounts and locally stored data from this device and start fresh. Calendars and events on your servers are not touched. Events that only exist in Calino (not synced anywhere) are lost.",
+      "confirm": "Reset Calino on this device? This clears all local data, settings and connected accounts. Calendars and events on your servers are not deleted, but events that only exist in Calino will be lost. This cannot be undone.",
+      "action": "Reset this device"
     },
     "duplicateDeleted": "Duplicate event deleted",
-    "duplicateDeleteFailed": "Failed to delete event. Please try again."
+    "duplicateDeleteFailed": "Failed to delete event. Please try again.",
+    "allCalendars": "All calendars",
+    "calendarPickerLabel": "Calendar",
+    "purgeCalendar": {
+      "label": "Delete All Events From a Calendar",
+      "desc": "Permanently delete every event in one calendar, including from your CalDAV server. This cannot be undone.",
+      "placeholder": "Select a calendar…",
+      "action": "Delete everything…",
+      "done_one": "Deleted {{count}} event from “{{name}}”",
+      "done_other": "Deleted {{count}} events from “{{name}}”",
+      "partial": "Deleted {{deleted}} events from “{{name}}”; {{failed}} could not be deleted from the server and will be retried",
+      "dialog": {
+        "title": "Delete All Events",
+        "message": "You are about to delete every event in <strong>“{{calendarName}}”</strong>. The calendar itself is kept.",
+        "warningRemote_one": "This will permanently delete <strong>{{count}} event</strong> from both Calino and the server. This action cannot be undone.",
+        "warningRemote_other": "This will permanently delete <strong>{{count}} events</strong> from both Calino and the server. This action cannot be undone.",
+        "warningLocal_one": "This will permanently delete <strong>{{count}} event</strong> from Calino. This action cannot be undone.",
+        "warningLocal_other": "This will permanently delete <strong>{{count}} events</strong> from Calino. This action cannot be undone.",
+        "typeToConfirm": "Type the calendar name to confirm:",
+        "confirm": "Delete all events",
+        "deleting": "Deleting…"
+      }
+    }
   },
   "aiVision": {
     "title": "AI Photo Import",

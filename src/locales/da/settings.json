@@ -537,7 +537,7 @@
   },
   "data": {
     "webmcp": {
-      "label": "Adgang for browser-AI (eksperimentel)",
+      "label": "Adgang for browser-AI (WebMCP, eksperimentel)",
       "desc": "Tillad AI-agenter i browseren at læse kalendernavne og oversigter over synlige begivenheder, åbne begivenheder og forberede kladder, som du kan gennemse og gemme. Resultater kan blive sendt til agentens AI-udbyder. Gælder kun denne browser.",
       "unavailable": "WebMCP-API’en er ikke tilgængelig på denne side. Aktivér den i browseren og genstart, eller brug en browser med WebMCP-understøttelse."
     },
@@ -545,7 +545,7 @@
     "importExport": "Import og eksport",
     "exportCalendar": {
       "label": "Eksportér kalender",
-      "desc": "Download alle begivenheder som en standard-.ics-fil",
+      "desc": "Download begivenheder fra alle kalendere eller kun én kalender som en standard .ics-fil",
       "exporting": "Eksporterer...",
       "export": "Eksportér .ics"
     },
@@ -598,19 +598,42 @@
     "dismiss": "Luk",
     "dangerZone": "Farezone",
     "deleteAllEvents": {
-      "label": "Slet alle begivenheder",
-      "desc": "Fjern alle begivenheder permanent fra denne kalender. Dette kan ikke fortrydes.",
-      "confirm": "Slette alle begivenheder? Dette kan ikke fortrydes.",
-      "action": "Slet alle begivenheder"
+      "label": "Slet lokale begivenheder",
+      "desc": "Fjern begivenheder fra den valgte kalender kun fra denne enhed. Begivenheder på din CalDAV-server slettes ikke og kan dukke op igen ved næste synkronisering.",
+      "confirm": "Slet alle begivenheder, der er gemt på denne enhed? Begivenheder på din server slettes ikke og kan dukke op igen efter næste synkronisering. Dette kan ikke fortrydes.",
+      "action": "Slet lokale begivenheder",
+      "confirmCalendar": "Slet alle begivenheder i “{{name}}” fra denne enhed? Begivenheder på din server slettes ikke og kan dukke op igen efter næste synkronisering. Dette kan ikke fortrydes."
     },
     "resetApp": {
-      "label": "Nulstil Calino",
-      "desc": "Slet alle data, indstillinger og tilknyttede konti, og begynd forfra.",
-      "confirm": "Er du sikker på, at du vil slette alle lokale data? Dette kan ikke fortrydes.",
-      "action": "Nulstil appen"
+      "label": "Nulstil Calino på denne enhed",
+      "desc": "Ryd alle indstillinger, tilsluttede konti og lokalt lagrede data fra denne enhed, og start forfra. Kalendere og begivenheder på dine servere berøres ikke. Begivenheder, der kun findes i Calino (ikke synkroniseret), går tabt.",
+      "confirm": "Nulstil Calino på denne enhed? Det rydder alle lokale data, indstillinger og tilsluttede konti. Kalendere og begivenheder på dine servere slettes ikke, men begivenheder, der kun findes i Calino, går tabt. Dette kan ikke fortrydes.",
+      "action": "Nulstil denne enhed"
     },
     "duplicateDeleted": "Dubleret begivenhed slettet",
-    "duplicateDeleteFailed": "Kunne ikke slette den dublerede begivenhed. Prøv igen."
+    "duplicateDeleteFailed": "Kunne ikke slette den dublerede begivenhed. Prøv igen.",
+    "allCalendars": "Alle kalendere",
+    "calendarPickerLabel": "Kalender",
+    "purgeCalendar": {
+      "label": "Slet alle begivenheder i en kalender",
+      "desc": "Slet permanent alle begivenheder i én kalender, også fra din CalDAV-server. Dette kan ikke fortrydes.",
+      "placeholder": "Vælg en kalender…",
+      "action": "Slet alt…",
+      "done_one": "{{count}} begivenhed slettet fra “{{name}}”",
+      "done_other": "{{count}} begivenheder slettet fra “{{name}}”",
+      "partial": "{{deleted}} begivenheder slettet fra “{{name}}”; {{failed}} kunne ikke slettes fra serveren og forsøges igen",
+      "dialog": {
+        "title": "Slet alle begivenheder",
+        "message": "Du er ved at slette alle begivenheder i <strong>“{{calendarName}}”</strong>. Selve kalenderen bevares.",
+        "warningRemote_one": "Dette sletter permanent <strong>{{count}} begivenhed</strong> fra både Calino og serveren. Dette kan ikke fortrydes.",
+        "warningRemote_other": "Dette sletter permanent <strong>{{count}} begivenheder</strong> fra både Calino og serveren. Dette kan ikke fortrydes.",
+        "warningLocal_one": "Dette sletter permanent <strong>{{count}} begivenhed</strong> fra Calino. Dette kan ikke fortrydes.",
+        "warningLocal_other": "Dette sletter permanent <strong>{{count}} begivenheder</strong> fra Calino. Dette kan ikke fortrydes.",
+        "typeToConfirm": "Skriv kalendernavnet for at bekræfte:",
+        "confirm": "Slet alle begivenheder",
+        "deleting": "Sletter…"
+      }
+    }
   },
   "aiVision": {
     "title": "AI-fotoimport",

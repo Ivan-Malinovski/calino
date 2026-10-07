@@ -537,7 +537,7 @@
   },
   "data": {
     "webmcp": {
-      "label": "Accès IA du navigateur (expérimental)",
+      "label": "Accès IA du navigateur (WebMCP, expérimental)",
       "desc": "Autorisez les agents IA du navigateur à lire les noms des calendriers et les résumés des événements visibles, à ouvrir des événements et à préparer des brouillons à vérifier et enregistrer. Les résultats peuvent être envoyés au fournisseur IA de l’agent. S’applique uniquement à ce navigateur.",
       "unavailable": "L’API WebMCP n’est pas disponible sur cette page. Activez-la dans votre navigateur et relancez-le, ou utilisez un navigateur compatible avec WebMCP."
     },
@@ -545,7 +545,7 @@
     "importExport": "Importation et exportation",
     "exportCalendar": {
       "label": "Exporter le calendrier",
-      "desc": "Télécharger tous les événements dans un fichier .ics standard",
+      "desc": "Télécharger les événements de tous les calendriers, ou d’un seul, au format .ics standard",
       "exporting": "Exportation…",
       "export": "Exporter le fichier .ics"
     },
@@ -598,19 +598,42 @@
     "dismiss": "Ignorer",
     "dangerZone": "Zone de danger",
     "deleteAllEvents": {
-      "label": "Supprimer tous les événements",
-      "desc": "Supprimer définitivement tous les événements de ce calendrier. Cette action est irréversible.",
-      "confirm": "Supprimer tous les événements ? Cette action est irréversible.",
-      "action": "Supprimer tous les événements"
+      "label": "Supprimer les événements locaux",
+      "desc": "Supprimer les événements du calendrier sélectionné de cet appareil uniquement. Les événements sur votre serveur CalDAV ne sont pas supprimés et peuvent réapparaître à la prochaine synchronisation.",
+      "confirm": "Supprimer tous les événements stockés sur cet appareil ? Les événements sur votre serveur ne sont pas supprimés et peuvent réapparaître après la prochaine synchronisation. Cette action est irréversible.",
+      "action": "Supprimer les événements locaux",
+      "confirmCalendar": "Supprimer tous les événements de « {{name}} » sur cet appareil ? Les événements sur votre serveur ne sont pas supprimés et peuvent réapparaître après la prochaine synchronisation. Cette action est irréversible."
     },
     "resetApp": {
-      "label": "Réinitialiser Calino",
-      "desc": "Effacer toutes les données, les paramètres et les comptes connectés, puis repartir de zéro.",
-      "confirm": "Voulez-vous vraiment supprimer toutes les données locales ? Cette action est irréversible.",
-      "action": "Réinitialiser l’application"
+      "label": "Réinitialiser Calino sur cet appareil",
+      "desc": "Effacer tous les paramètres, comptes connectés et données stockées localement sur cet appareil et repartir de zéro. Les calendriers et événements sur vos serveurs ne sont pas touchés. Les événements qui n’existent que dans Calino (non synchronisés) sont perdus.",
+      "confirm": "Réinitialiser Calino sur cet appareil ? Cela efface toutes les données locales, les paramètres et les comptes connectés. Les calendriers et événements sur vos serveurs ne sont pas supprimés, mais les événements qui n’existent que dans Calino seront perdus. Cette action est irréversible.",
+      "action": "Réinitialiser cet appareil"
     },
     "duplicateDeleted": "Événement en double supprimé",
-    "duplicateDeleteFailed": "Échec de la suppression de l’événement. Réessayez."
+    "duplicateDeleteFailed": "Échec de la suppression de l’événement. Réessayez.",
+    "allCalendars": "Tous les calendriers",
+    "calendarPickerLabel": "Calendrier",
+    "purgeCalendar": {
+      "label": "Supprimer tous les événements d’un calendrier",
+      "desc": "Supprimer définitivement tous les événements d’un calendrier, y compris sur votre serveur CalDAV. Cette action est irréversible.",
+      "placeholder": "Sélectionner un calendrier…",
+      "action": "Tout supprimer…",
+      "done_one": "{{count}} événement supprimé de « {{name}} »",
+      "done_other": "{{count}} événements supprimés de « {{name}} »",
+      "partial": "{{deleted}} événements supprimés de « {{name}} » ; {{failed}} n’ont pas pu être supprimés du serveur et seront retentés",
+      "dialog": {
+        "title": "Supprimer tous les événements",
+        "message": "Vous allez supprimer tous les événements de <strong>« {{calendarName}} »</strong>. Le calendrier lui-même est conservé.",
+        "warningRemote_one": "Cela supprimera définitivement <strong>{{count}} événement</strong> de Calino et du serveur. Cette action est irréversible.",
+        "warningRemote_other": "Cela supprimera définitivement <strong>{{count}} événements</strong> de Calino et du serveur. Cette action est irréversible.",
+        "warningLocal_one": "Cela supprimera définitivement <strong>{{count}} événement</strong> de Calino. Cette action est irréversible.",
+        "warningLocal_other": "Cela supprimera définitivement <strong>{{count}} événements</strong> de Calino. Cette action est irréversible.",
+        "typeToConfirm": "Saisissez le nom du calendrier pour confirmer :",
+        "confirm": "Supprimer tous les événements",
+        "deleting": "Suppression…"
+      }
+    }
   },
   "aiVision": {
     "title": "Importation de photos par IA",

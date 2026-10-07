@@ -732,6 +732,12 @@
   align-items: center;
 }
 
+/* A picker followed by the action it scopes (e.g. calendar select + Export). */
+.rowControlGroup {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 /* ── Custom Select ──────────────────────────────────────────────────────── */
 .select {
   appearance: none;
@@ -1501,11 +1507,27 @@
   gap: 48px;
 }
 
+/* Rows whose control is a picker plus a button are too wide to sit beside the
+   description without crushing it, so the controls drop underneath. */
+.actionRowStacked {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+}
+
+.actionRowStacked .rowControlGroup {
+  width: 100%;
+}
+
 .actionRow:last-child {
   border-bottom: none;
 }
 
 .actionBtn {
+  /* Labels like "Reset this device" must stay on one line; the description
+     beside the button is what gives way when the row is tight. */
+  flex-shrink: 0;
+  white-space: nowrap;
   height: 36px;
   padding: 0 18px;
   border-radius: var(--radius-sm);
@@ -1544,6 +1566,23 @@
 .actionBtnDanger:active {
   transform: translateY(1px);
   transition-duration: 0.05s;
+}
+
+/* Solid red for the irreversible action (as opposed to the tinted default). */
+.actionBtnDangerSolid {
+  background: var(--color-error, #c2697f);
+  border-color: var(--color-error, #c2697f);
+  color: #fff;
+  font-weight: 600;
+}
+
+.actionBtnDangerSolid:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--color-error, #c2697f) 85%, black);
+}
+
+.actionBtnDangerSolid:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .dangerZone {

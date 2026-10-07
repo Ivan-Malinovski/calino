@@ -91,7 +91,7 @@ async function invoke(page: Page, name: string, input: unknown = {}): Promise<un
 async function enable(page: Page): Promise<void> {
   await page.goto('/settings?tab=data')
   await page.locator('[data-component="toggle"][data-setting="webmcp"]').click()
-  await expect(page.getByLabel('Browser AI Access (Experimental)')).toBeChecked()
+  await expect(page.getByLabel('Browser AI Access (WebMCP, experimental)')).toBeChecked()
   await page.getByRole('button', { name: 'Back to Calendar', exact: true }).click()
   await expect.poll(() => names(page)).toEqual(toolNames)
 }
@@ -113,7 +113,7 @@ test.describe('WebMCP browser AI access', () => {
   }) => {
     await mockWebMCP(page)
     await page.goto('/settings?tab=general')
-    await expect(page.getByLabel('Browser AI Access (Experimental)')).toHaveCount(0)
+    await expect(page.getByLabel('Browser AI Access (WebMCP, experimental)')).toHaveCount(0)
     await page.getByRole('combobox', { name: 'Search settings' }).fill('Browser AI Access')
     const result = page.getByRole('option', { name: /Browser AI Access/ })
     await expect(result.getByText('Data', { exact: true })).toBeVisible()
@@ -121,7 +121,7 @@ test.describe('WebMCP browser AI access', () => {
     const setting = page.locator('[data-component="setting-row"][data-setting="webmcp"]')
     await expect(page.locator('[data-component="data-settings"]')).toBeVisible()
     await setting.scrollIntoViewIfNeeded()
-    await expect(page.getByLabel('Browser AI Access (Experimental)')).not.toBeChecked()
+    await expect(page.getByLabel('Browser AI Access (WebMCP, experimental)')).not.toBeChecked()
     const settingBounds = await setting.boundingBox()
     const dangerBounds = await page.getByText('Danger Zone', { exact: true }).boundingBox()
     expect(settingBounds).not.toBeNull()
@@ -144,7 +144,7 @@ test.describe('WebMCP browser AI access', () => {
     await expect.poll(() => names(page)).toEqual(toolNames)
     await page.getByRole('button', { name: 'Settings', exact: true }).click()
     await page.locator('[data-component="settings-nav-item"][data-tab="data"]').click()
-    await expect(page.getByLabel('Browser AI Access (Experimental)')).toBeChecked()
+    await expect(page.getByLabel('Browser AI Access (WebMCP, experimental)')).toBeChecked()
     await expect.poll(() => names(page)).toEqual([])
     // Even a consumer retaining the old callback cannot read after cleanup.
     expect(

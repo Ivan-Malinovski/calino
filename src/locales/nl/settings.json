@@ -537,7 +537,7 @@
   },
   "data": {
     "webmcp": {
-      "label": "Toegang voor browser-AI (experimenteel)",
+      "label": "Toegang voor browser-AI (WebMCP, experimenteel)",
       "desc": "Sta AI-agenten in de browser toe om kalendernamen en samenvattingen van zichtbare afspraken te lezen, afspraken te openen en concepten klaar te zetten die je kunt controleren en opslaan. Resultaten kunnen naar de AI-aanbieder van de agent worden verzonden. Geldt alleen voor deze browser.",
       "unavailable": "De WebMCP-API is niet beschikbaar op deze pagina. Schakel deze in je browser in en herstart de browser, of gebruik een browser met WebMCP-ondersteuning."
     },
@@ -545,7 +545,7 @@
     "importExport": "Importeren en exporteren",
     "exportCalendar": {
       "label": "Agenda exporteren",
-      "desc": "Alle gebeurtenissen downloaden als standaard .ics-bestand",
+      "desc": "Download afspraken van alle agenda’s, of van één agenda, als standaard .ics-bestand",
       "exporting": "Exporteren…",
       "export": ".ics exporteren"
     },
@@ -598,19 +598,42 @@
     "dismiss": "Sluiten",
     "dangerZone": "Gevarenzone",
     "deleteAllEvents": {
-      "label": "Alle gebeurtenissen verwijderen",
-      "desc": "Alle gebeurtenissen definitief uit deze agenda verwijderen. Dit kan niet ongedaan worden gemaakt.",
-      "confirm": "Alle gebeurtenissen verwijderen? Dit kan niet ongedaan worden gemaakt.",
-      "action": "Alle gebeurtenissen verwijderen"
+      "label": "Lokale afspraken verwijderen",
+      "desc": "Verwijder afspraken van de geselecteerde agenda alleen van dit apparaat. Afspraken op je CalDAV-server worden niet verwijderd en kunnen bij de volgende synchronisatie weer verschijnen.",
+      "confirm": "Alle afspraken op dit apparaat verwijderen? Afspraken op je server worden niet verwijderd en kunnen na de volgende synchronisatie weer verschijnen. Dit kan niet ongedaan worden gemaakt.",
+      "action": "Lokale afspraken verwijderen",
+      "confirmCalendar": "Alle afspraken in “{{name}}” van dit apparaat verwijderen? Afspraken op je server worden niet verwijderd en kunnen na de volgende synchronisatie weer verschijnen. Dit kan niet ongedaan worden gemaakt."
     },
     "resetApp": {
-      "label": "Calino resetten",
-      "desc": "Alle gegevens, instellingen en verbonden accounts wissen en opnieuw beginnen.",
-      "confirm": "Weet je zeker dat je alle lokale gegevens wilt verwijderen? Dit kan niet ongedaan worden gemaakt.",
-      "action": "App resetten"
+      "label": "Calino op dit apparaat resetten",
+      "desc": "Wis alle instellingen, gekoppelde accounts en lokaal opgeslagen gegevens van dit apparaat en begin opnieuw. Agenda’s en afspraken op je servers blijven ongemoeid. Afspraken die alleen in Calino bestaan (nergens gesynchroniseerd) gaan verloren.",
+      "confirm": "Calino op dit apparaat resetten? Hiermee worden alle lokale gegevens, instellingen en gekoppelde accounts gewist. Agenda’s en afspraken op je servers worden niet verwijderd, maar afspraken die alleen in Calino bestaan gaan verloren. Dit kan niet ongedaan worden gemaakt.",
+      "action": "Dit apparaat resetten"
     },
     "duplicateDeleted": "Dubbele gebeurtenis verwijderd",
-    "duplicateDeleteFailed": "Gebeurtenis verwijderen mislukt. Probeer het opnieuw."
+    "duplicateDeleteFailed": "Gebeurtenis verwijderen mislukt. Probeer het opnieuw.",
+    "allCalendars": "Alle agenda’s",
+    "calendarPickerLabel": "Agenda",
+    "purgeCalendar": {
+      "label": "Alle afspraken van een agenda verwijderen",
+      "desc": "Verwijder alle afspraken van één agenda permanent, ook van je CalDAV-server. Dit kan niet ongedaan worden gemaakt.",
+      "placeholder": "Kies een agenda…",
+      "action": "Alles verwijderen…",
+      "done_one": "{{count}} afspraak verwijderd uit “{{name}}”",
+      "done_other": "{{count}} afspraken verwijderd uit “{{name}}”",
+      "partial": "{{deleted}} afspraken verwijderd uit “{{name}}”; {{failed}} konden niet van de server worden verwijderd en worden opnieuw geprobeerd",
+      "dialog": {
+        "title": "Alle afspraken verwijderen",
+        "message": "Je staat op het punt alle afspraken in <strong>“{{calendarName}}”</strong> te verwijderen. De agenda zelf blijft bestaan.",
+        "warningRemote_one": "Hiermee wordt <strong>{{count}} afspraak</strong> permanent verwijderd uit Calino en van de server. Dit kan niet ongedaan worden gemaakt.",
+        "warningRemote_other": "Hiermee worden <strong>{{count}} afspraken</strong> permanent verwijderd uit Calino en van de server. Dit kan niet ongedaan worden gemaakt.",
+        "warningLocal_one": "Hiermee wordt <strong>{{count}} afspraak</strong> permanent verwijderd uit Calino. Dit kan niet ongedaan worden gemaakt.",
+        "warningLocal_other": "Hiermee worden <strong>{{count}} afspraken</strong> permanent verwijderd uit Calino. Dit kan niet ongedaan worden gemaakt.",
+        "typeToConfirm": "Typ de naam van de agenda ter bevestiging:",
+        "confirm": "Alle afspraken verwijderen",
+        "deleting": "Verwijderen…"
+      }
+    }
   },
   "aiVision": {
     "title": "AI-foto-import",

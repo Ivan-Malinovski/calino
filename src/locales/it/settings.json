@@ -537,7 +537,7 @@
   },
   "data": {
     "webmcp": {
-      "label": "Accesso IA del browser (sperimentale)",
+      "label": "Accesso IA del browser (WebMCP, sperimentale)",
       "desc": "Consenti agli agenti IA del browser di leggere i nomi dei calendari e i riepiloghi degli eventi visibili, aprire eventi e preparare bozze da rivedere e salvare. I risultati potrebbero essere inviati al fornitore IA dell’agente. Vale solo per questo browser.",
       "unavailable": "L’API WebMCP non è disponibile in questa pagina. Abilitala nel browser e riavvialo, oppure usa un browser che supporta WebMCP."
     },
@@ -545,7 +545,7 @@
     "importExport": "Importazione ed esportazione",
     "exportCalendar": {
       "label": "Esporta calendario",
-      "desc": "Scarica tutti gli eventi come file .ics standard",
+      "desc": "Scarica gli eventi di tutti i calendari, o di uno solo, come file .ics standard",
       "exporting": "Esportazione...",
       "export": "Esporta .ics"
     },
@@ -598,19 +598,42 @@
     "dismiss": "Ignora",
     "dangerZone": "Zona pericolosa",
     "deleteAllEvents": {
-      "label": "Elimina tutti gli eventi",
-      "desc": "Rimuovi definitivamente tutti gli eventi da questo calendario. Questa operazione non può essere annullata.",
-      "confirm": "Eliminare tutti gli eventi? Questa operazione non può essere annullata.",
-      "action": "Elimina tutti gli eventi"
+      "label": "Elimina eventi locali",
+      "desc": "Rimuovi gli eventi del calendario selezionato solo da questo dispositivo. Gli eventi sul tuo server CalDAV non vengono eliminati e potrebbero ricomparire alla prossima sincronizzazione.",
+      "confirm": "Eliminare tutti gli eventi salvati su questo dispositivo? Gli eventi sul tuo server non vengono eliminati e potrebbero ricomparire dopo la prossima sincronizzazione. Questa azione non può essere annullata.",
+      "action": "Elimina eventi locali",
+      "confirmCalendar": "Eliminare tutti gli eventi in “{{name}}” da questo dispositivo? Gli eventi sul tuo server non vengono eliminati e potrebbero ricomparire dopo la prossima sincronizzazione. Questa azione non può essere annullata."
     },
     "resetApp": {
-      "label": "Reimposta Calino",
-      "desc": "Cancella tutti i dati, le impostazioni e gli account collegati e ricomincia da capo.",
-      "confirm": "Sei sicuro di voler eliminare tutti i dati locali? Questa operazione non può essere annullata.",
-      "action": "Reimposta l'app"
+      "label": "Reimposta Calino su questo dispositivo",
+      "desc": "Cancella tutte le impostazioni, gli account collegati e i dati salvati localmente su questo dispositivo e ricomincia da capo. I calendari e gli eventi sui tuoi server non vengono toccati. Gli eventi che esistono solo in Calino (non sincronizzati) vanno persi.",
+      "confirm": "Reimpostare Calino su questo dispositivo? Verranno cancellati tutti i dati locali, le impostazioni e gli account collegati. I calendari e gli eventi sui tuoi server non vengono eliminati, ma gli eventi che esistono solo in Calino andranno persi. Questa azione non può essere annullata.",
+      "action": "Reimposta questo dispositivo"
     },
     "duplicateDeleted": "Evento duplicato eliminato",
-    "duplicateDeleteFailed": "Impossibile eliminare l'evento. Per favore riprova."
+    "duplicateDeleteFailed": "Impossibile eliminare l'evento. Per favore riprova.",
+    "allCalendars": "Tutti i calendari",
+    "calendarPickerLabel": "Calendario",
+    "purgeCalendar": {
+      "label": "Elimina tutti gli eventi di un calendario",
+      "desc": "Elimina definitivamente tutti gli eventi di un calendario, anche dal tuo server CalDAV. Questa azione non può essere annullata.",
+      "placeholder": "Seleziona un calendario…",
+      "action": "Elimina tutto…",
+      "done_one": "{{count}} evento eliminato da “{{name}}”",
+      "done_other": "{{count}} eventi eliminati da “{{name}}”",
+      "partial": "{{deleted}} eventi eliminati da “{{name}}”; {{failed}} non è stato possibile eliminarli dal server e verranno ritentati",
+      "dialog": {
+        "title": "Elimina tutti gli eventi",
+        "message": "Stai per eliminare tutti gli eventi di <strong>“{{calendarName}}”</strong>. Il calendario stesso viene mantenuto.",
+        "warningRemote_one": "Verrà eliminato definitivamente <strong>{{count}} evento</strong> da Calino e dal server. Questa azione non può essere annullata.",
+        "warningRemote_other": "Verranno eliminati definitivamente <strong>{{count}} eventi</strong> da Calino e dal server. Questa azione non può essere annullata.",
+        "warningLocal_one": "Verrà eliminato definitivamente <strong>{{count}} evento</strong> da Calino. Questa azione non può essere annullata.",
+        "warningLocal_other": "Verranno eliminati definitivamente <strong>{{count}} eventi</strong> da Calino. Questa azione non può essere annullata.",
+        "typeToConfirm": "Digita il nome del calendario per confermare:",
+        "confirm": "Elimina tutti gli eventi",
+        "deleting": "Eliminazione…"
+      }
+    }
   },
   "aiVision": {
     "title": "Importazione di foto AI",

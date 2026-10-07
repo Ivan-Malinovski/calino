@@ -537,7 +537,7 @@
   },
   "data": {
     "webmcp": {
-      "label": "Zugriff für Browser-KI (experimentell)",
+      "label": "Zugriff für Browser-KI (WebMCP, experimentell)",
       "desc": "Erlaube KI-Agenten im Browser, Kalendernamen und Zusammenfassungen sichtbarer Termine zu lesen, Termine zu öffnen und Entwürfe zur Prüfung und Speicherung vorzubereiten. Ergebnisse können an den KI-Anbieter des Agenten gesendet werden. Gilt nur für diesen Browser.",
       "unavailable": "Die WebMCP-API ist auf dieser Seite nicht verfügbar. Aktivieren Sie sie im Browser und starten Sie ihn neu, oder verwenden Sie einen Browser mit WebMCP-Unterstützung."
     },
@@ -545,7 +545,7 @@
     "importExport": "Import und Export",
     "exportCalendar": {
       "label": "Kalender exportieren",
-      "desc": "Alle Termine als standardmäßige .ics-Datei herunterladen",
+      "desc": "Termine aller Kalender oder nur eines Kalenders als standardmäßige .ics-Datei herunterladen",
       "exporting": "Wird exportiert...",
       "export": ".ics exportieren"
     },
@@ -598,19 +598,42 @@
     "dismiss": "Schließen",
     "dangerZone": "Gefahrenbereich",
     "deleteAllEvents": {
-      "label": "Alle Termine löschen",
-      "desc": "Alle Termine dieses Kalenders dauerhaft entfernen. Dies kann nicht rückgängig gemacht werden.",
-      "confirm": "Alle Termine löschen? Dies kann nicht rückgängig gemacht werden.",
-      "action": "Alle Termine löschen"
+      "label": "Lokale Termine löschen",
+      "desc": "Termine des ausgewählten Kalenders nur von diesem Gerät entfernen. Termine auf deinem CalDAV-Server werden nicht gelöscht und können bei der nächsten Synchronisierung wieder erscheinen.",
+      "confirm": "Alle auf diesem Gerät gespeicherten Termine löschen? Termine auf deinem Server werden nicht gelöscht und können nach der nächsten Synchronisierung wieder erscheinen. Dies kann nicht rückgängig gemacht werden.",
+      "action": "Lokale Termine löschen",
+      "confirmCalendar": "Alle Termine in „{{name}}“ von diesem Gerät löschen? Termine auf deinem Server werden nicht gelöscht und können nach der nächsten Synchronisierung wieder erscheinen. Dies kann nicht rückgängig gemacht werden."
     },
     "resetApp": {
-      "label": "Calino zurücksetzen",
-      "desc": "Alle Daten, Einstellungen und verbundenen Konten löschen und neu beginnen.",
-      "confirm": "Möchten Sie wirklich alle lokalen Daten löschen? Dies kann nicht rückgängig gemacht werden.",
-      "action": "App zurücksetzen"
+      "label": "Calino auf diesem Gerät zurücksetzen",
+      "desc": "Alle Einstellungen, verbundenen Konten und lokal gespeicherten Daten von diesem Gerät löschen und neu beginnen. Kalender und Termine auf deinen Servern bleiben unberührt. Termine, die nur in Calino existieren (nirgends synchronisiert), gehen verloren.",
+      "confirm": "Calino auf diesem Gerät zurücksetzen? Dadurch werden alle lokalen Daten, Einstellungen und verbundenen Konten gelöscht. Kalender und Termine auf deinen Servern werden nicht gelöscht, aber Termine, die nur in Calino existieren, gehen verloren. Dies kann nicht rückgängig gemacht werden.",
+      "action": "Dieses Gerät zurücksetzen"
     },
     "duplicateDeleted": "Doppelter Termin gelöscht",
-    "duplicateDeleteFailed": "Termin konnte nicht gelöscht werden. Bitte versuchen Sie es erneut."
+    "duplicateDeleteFailed": "Termin konnte nicht gelöscht werden. Bitte versuchen Sie es erneut.",
+    "allCalendars": "Alle Kalender",
+    "calendarPickerLabel": "Kalender",
+    "purgeCalendar": {
+      "label": "Alle Termine eines Kalenders löschen",
+      "desc": "Alle Termine eines Kalenders dauerhaft löschen, auch von deinem CalDAV-Server. Dies kann nicht rückgängig gemacht werden.",
+      "placeholder": "Kalender auswählen…",
+      "action": "Alles löschen…",
+      "done_one": "{{count}} Termin aus „{{name}}“ gelöscht",
+      "done_other": "{{count}} Termine aus „{{name}}“ gelöscht",
+      "partial": "{{deleted}} Termine aus „{{name}}“ gelöscht; {{failed}} konnten nicht vom Server gelöscht werden und werden erneut versucht",
+      "dialog": {
+        "title": "Alle Termine löschen",
+        "message": "Du bist dabei, alle Termine in <strong>„{{calendarName}}“</strong> zu löschen. Der Kalender selbst bleibt erhalten.",
+        "warningRemote_one": "Dadurch wird <strong>{{count}} Termin</strong> dauerhaft aus Calino und vom Server gelöscht. Dies kann nicht rückgängig gemacht werden.",
+        "warningRemote_other": "Dadurch werden <strong>{{count}} Termine</strong> dauerhaft aus Calino und vom Server gelöscht. Dies kann nicht rückgängig gemacht werden.",
+        "warningLocal_one": "Dadurch wird <strong>{{count}} Termin</strong> dauerhaft aus Calino gelöscht. Dies kann nicht rückgängig gemacht werden.",
+        "warningLocal_other": "Dadurch werden <strong>{{count}} Termine</strong> dauerhaft aus Calino gelöscht. Dies kann nicht rückgängig gemacht werden.",
+        "typeToConfirm": "Gib zur Bestätigung den Kalendernamen ein:",
+        "confirm": "Alle Termine löschen",
+        "deleting": "Wird gelöscht…"
+      }
+    }
   },
   "aiVision": {
     "title": "KI-Fotoimport",
