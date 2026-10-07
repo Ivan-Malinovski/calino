@@ -4,6 +4,8 @@ All notable changes to Calino will be documented in this file.
 
 ## [Unreleased]
 
+## [0.39.1] - 2026-10-07
+
 **A heads-up: I'm going on vacation for two weeks, so don't expect any updates or replies to issues until I'm back.**
 
 This is a small follow-up to 0.39.0. It lets you export or delete the events of a single calendar from Data settings, and brings the dependencies up to date.
