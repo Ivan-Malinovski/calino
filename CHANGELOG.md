@@ -4,6 +4,20 @@ All notable changes to Calino will be documented in this file.
 
 ## [Unreleased]
 
+**A heads-up: I'm going on vacation for two weeks, so don't expect any updates or replies to issues until I'm back.**
+
+This is a small follow-up to 0.39.0. It lets you export or delete the events of a single calendar from Data settings, and brings the dependencies up to date.
+
+### Added
+
+- **Per-calendar export and delete** ([#204](https://github.com/Ivan-Malinovski/calino/issues/204)). Under Data settings you can now export all calendars (the default) or just one as `.ics`, and scope **Delete Local Events** to a single calendar. A new **Delete All Events From a Calendar** row removes every item in a chosen calendar, on the CalDAV server too, behind a type-the-name confirmation. Local copies are only dropped once the server confirms, so a failure stays visible and can be retried.
+
+### Changed
+
+- **Clearer data actions.** **Delete Local Events** now says plainly that server events are untouched and may reappear on the next sync, and **Reset Calino** says it only clears this device and never touches servers (events that exist only locally are lost). Action button labels stay on one line, and picker rows stack so long descriptions are no longer squashed.
+- **WebMCP setting renamed** to "Browser AI Access (WebMCP, experimental)".
+- **Dependencies updated**, including React 19.3, Vite 8.3, framer-motion 14, and the Capacitor 8.5 core and plugins used by the Android app. No change in behavior is intended.
+
 ## [0.39.0] - 2026-10-06
 
 **A heads-up: I'm going on vacation for two weeks, so don't expect any updates or replies to issues until I'm back.**
