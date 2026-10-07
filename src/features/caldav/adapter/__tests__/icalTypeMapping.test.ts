@@ -1146,3 +1146,44 @@ describe('PR 146: VTODO completion serialization', () => {
     expect(back.taskStatus).toBe('CANCELLED')
   })
 })
+
+// ---------------------------------------------------------------------------
+// RFC 7986 COLOR (issue #205): Nextcloud writes a CSS3 color name per event.
+// ---------------------------------------------------------------------------
+describe('event COLOR property', () => {
+  const vevent = (extra: string[]) =>
+    createVevent(
+      [
+        'BEGIN:VCALENDAR',
+        'VERSION:2.0',
+        'BEGIN:VEVENT',
+        'UID:color-test',
+        'SUMMARY:Colored',
+        'DTSTART:20250615T140000Z',
+        'DTEND:20250615T150000Z',
+        ...extra,
+        'END:VEVENT',
+        'END:VCALENDAR',
+      ].join('\r\n')
+    )
+
+  it('maps a CSS3 color name to the event color', () => {
+    expect(icalEventToCalendarEvent(vevent(['COLOR:dodgerblue']), 'cal').color).toBe('#1e90ff')
+  })
+
+  it('maps a hex value', () => {
+    expect(icalEventToCalendarEvent(vevent(['COLOR:#FF6347']), 'cal').color).toBe('#ff6347')
+  })
+
+  it('leaves color unset when COLOR is absent or unrecognised', () => {
+    expect(icalEventToCalendarEvent(vevent([]), 'cal').color).toBeUndefined()
+    expect(icalEventToCalendarEvent(vevent(['COLOR:nonsense']), 'cal').color).toBeUndefined()
+  })
+
+  it('keeps the COLOR line when the event is edited', () => {
+    const comp = vevent(['COLOR:tomato'])
+    const event = icalEventToCalendarEvent(comp, 'cal')
+    const out = calendarEventToIcalComponent({ ...event, title: 'Renamed' }, comp)
+    expect(out.getFirstPropertyValue('color')).toBe('tomato')
+  })
+})

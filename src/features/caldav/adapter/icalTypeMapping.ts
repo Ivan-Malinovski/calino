@@ -15,6 +15,7 @@ import { formatInTimeZone } from 'date-fns-tz'
 import { buildRRuleString, normaliseAllDayUntil } from '@/lib/recurrence'
 import { toLocalDateString } from '@/lib/datetime'
 import { normalizeTzid } from '@/lib/timezoneRegistry'
+import { parseIcalColor } from '@/lib/cssColors'
 import { readScalarProperties, writeScalarProperties } from './icalPropertyRegistry'
 
 const VALID_PARTSTATS: AttendeePartstat[] = [
@@ -788,6 +789,11 @@ export function icalEventToCalendarEvent(
   const categories = readCategories(vevent)
   const concepts = readScalarProperties(vevent, 'concept')
 
+  // RFC 7986 §5.9 COLOR: Nextcloud writes a CSS3 color name here when the
+  // user picks a per-event color. Display-only: the serializer patches the
+  // existing component, so the property round-trips untouched.
+  const color = parseIcalColor(vevent.getFirstPropertyValue('color'))
+
   // URL round-trips like it already does for VJOURNAL. Birthday/anniversary
   // events created from a contact carry their `calino:contact:<id>` marker
   // here; dropping it on parse made them look un-added after every sync.
@@ -859,6 +865,7 @@ export function icalEventToCalendarEvent(
     start,
     end,
     isAllDay,
+    color,
     // R2.2 — Store the IANA TZID (e.g. 'America/New_York') so the
     // serializer can re-emit the TZID form on the wall-clock time.
     timezone,

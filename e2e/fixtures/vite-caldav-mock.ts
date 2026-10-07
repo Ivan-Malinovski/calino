@@ -199,6 +199,14 @@ const ACCOUNTS: MockAccount[] = [
         components: ['VEVENT', 'VTODO', 'VJOURNAL'],
       },
       {
+        // Owned by `event-color.spec.ts` (issue #205), which seeds events with
+        // an RFC 7986 COLOR property and asserts the exact bytes after an edit.
+        path: '/dav/calendars/user/ev-color/',
+        displayName: 'Event Color',
+        color: '#0F9D58',
+        components: ['VEVENT', 'VTODO', 'VJOURNAL'],
+      },
+      {
         // Owned by `timezone-correctness.spec.ts`, which asserts the exact
         // DTSTART bytes of the TZID resources it seeds and drags — same
         // reason as `r-until/`: a parallel spec writing to this collection
