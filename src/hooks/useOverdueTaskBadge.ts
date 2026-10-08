@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Capacitor } from '@capacitor/core'
 import { App as CapacitorApp } from '@capacitor/app'
-import { format } from 'date-fns'
 import { useCalendarStore } from '@/store/calendarStore'
+import { homeDayKey } from '@/lib/homeTimezone'
 import { useSettingsStore } from '@/store/settingsStore'
 import { countOverdueTasks } from '@/lib/taskReminders'
 import {
@@ -35,11 +35,11 @@ export function useOverdueTaskBadge(): void {
   const calendars = useCalendarStore((state) => state.calendars)
   const badgeEnabled = useSettingsStore((state) => state.overdueTaskBadge)
   const notificationsEnabled = useSettingsStore((state) => state.enableDesktopNotifications)
-  const [today, setToday] = useState(() => format(new Date(), 'yyyy-MM-dd'))
+  const [today, setToday] = useState(() => homeDayKey(new Date()))
 
   useEffect(() => {
     if (!badgeEnabled) return
-    const id = setInterval(() => setToday(format(new Date(), 'yyyy-MM-dd')), DAY_CHECK_INTERVAL_MS)
+    const id = setInterval(() => setToday(homeDayKey(new Date())), DAY_CHECK_INTERVAL_MS)
     return () => clearInterval(id)
   }, [badgeEnabled])
 

@@ -1,6 +1,7 @@
 import type { JSX } from 'react'
 import React, { useState, useCallback, useEffect, useRef, useLayoutEffect } from 'react'
-import { format, parseISO, startOfWeek, addDays, isToday } from 'date-fns'
+import { format, parseISO, startOfWeek, addDays } from 'date-fns'
+import { isHomeToday, useHomeTimezone } from '@/lib/homeTimezone'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useNavigate } from 'react-router'
 import { useTranslation } from 'react-i18next'
@@ -35,6 +36,7 @@ export function CalendarHeader({
   onOpenCommandPalette,
 }: CalendarHeaderProps): JSX.Element {
   const { t } = useTranslation(['calendar', 'common'])
+  useHomeTimezone()
   const navigate = useNavigate()
   const prefersReducedMotion = useReducedMotion()
   const currentDate = useCalendarStore((state) => state.currentDate)
@@ -656,7 +658,7 @@ export function CalendarHeader({
         {/* Go to today - only shown when not already on today, so the title's
             own jump-to-today click gets a discoverable, visible counterpart */}
         <AnimatePresence initial={false}>
-          {!isToday(date) && (
+          {!isHomeToday(date) && (
             <motion.button
               className={`${styles.iconButton} ${styles.todayButton}`}
               onClick={handleToday}

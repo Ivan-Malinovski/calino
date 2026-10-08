@@ -5,7 +5,8 @@ import { addDays, addWeeks, addMonths, subWeeks, subMonths, format } from 'date-
 import type { ThemeMode } from '@/types'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useHistoryStore } from '@/store/historyStore'
-import { toLocalDateString, formatDisplayDate } from '@/lib/datetime'
+import { formatDisplayDate } from '@/lib/datetime'
+import { homeDayKey } from '@/lib/homeTimezone'
 import i18n from '@/lib/i18n'
 
 const t = (key: string, opts?: Record<string, unknown>): string => i18n.t(`commands:${key}`, opts)
@@ -314,7 +315,8 @@ const createActionCommands = (deps: CommandFactoryDeps): Command[] => [
   },
   {
     id: 'toggle-dark-mode',
-    label: deps.themeMode === 'dark' ? t('actions.switchToLightMode') : t('actions.switchToDarkMode'),
+    label:
+      deps.themeMode === 'dark' ? t('actions.switchToLightMode') : t('actions.switchToDarkMode'),
     category: 'actions',
     keywords: ['dark mode', 'light mode', 'theme', 'toggle', 'appearance'],
     icon: deps.themeMode === 'dark' ? ICONS.sun : ICONS.moon,
@@ -355,8 +357,7 @@ const createActionCommands = (deps: CommandFactoryDeps): Command[] => [
   },
   {
     id: 'toggle-time-format',
-    label:
-      deps.timeFormat === '24h' ? t('actions.switchTo12Hour') : t('actions.switchTo24Hour'),
+    label: deps.timeFormat === '24h' ? t('actions.switchTo12Hour') : t('actions.switchTo24Hour'),
     category: 'actions',
     keywords: ['time format', '12h', '24h', 'clock', 'toggle'],
     icon: ICONS.clock,
@@ -486,7 +487,7 @@ const createSettingsCommands = (deps: CommandFactoryDeps): Command[] => [
     keywords: ['journal', 'notes', 'diary', 'new', 'create', 'add'],
     icon: ICONS.plus,
     action: () => {
-      const today = toLocalDateString(new Date())
+      const today = homeDayKey(new Date())
       deps.openJournalModal(today, true)
     },
   },

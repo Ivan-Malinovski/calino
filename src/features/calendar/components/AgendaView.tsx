@@ -37,6 +37,7 @@ import {
   toZoneWallClock,
   formatDisplayDate,
 } from '@/lib/datetime'
+import { homeDayKey, homeMinutes, parseHomeWall, useHomeTimezone } from '@/lib/homeTimezone'
 import { useTranslation } from 'react-i18next'
 import i18n from '@/lib/i18n'
 import { safeCalDAVUpdate } from '@/lib/caldavHelpers'
@@ -388,6 +389,7 @@ function MonthScrollRestorer({
 
 export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): JSX.Element {
   const { t } = useTranslation(['calendar', 'common'])
+  useHomeTimezone()
   const containerClass = `${styles.container} ${embedded ? styles.embedded : ''}`
   const currentDate = useCalendarStore((state) => state.currentDate)
   const calendars = useCalendarStore((state) => state.calendars)
@@ -643,15 +645,15 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
     if (extractOriginalEventId(originalEvent.id)) return
     if (calendars.find((calendar) => calendar.id === originalEvent.calendarId)?.readOnly) return
 
-    const sourceDate = format(
-      toEventInstant(
-        originalEvent.type === 'task'
-          ? originalEvent.dueDate || originalEvent.start
-          : originalEvent.start,
-        originalEvent.timezone
-      ),
-      'yyyy-MM-dd'
+    const sourceInstant = toEventInstant(
+      originalEvent.type === 'task'
+        ? originalEvent.dueDate || originalEvent.start
+        : originalEvent.start,
+      originalEvent.timezone
     )
+    const sourceDate = originalEvent.isAllDay
+      ? originalEvent.start.slice(0, 10)
+      : homeDayKey(sourceInstant)
     const isTask = originalEvent.type === 'task'
     const shouldPromoteTask = isTask && Boolean(originalEvent.parentTaskId)
     if (sourceDate === dayStr && !shouldPromoteTask) return
@@ -659,10 +661,11 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
     const originalStart = toEventInstant(originalEvent.start, originalEvent.timezone)
     const originalEnd = toEventInstant(originalEvent.end, originalEvent.timezone)
     const durationMs = originalEnd.getTime() - originalStart.getTime()
+    const movedMinutes = homeMinutes(originalStart)
     const newStart = originalEvent.isAllDay
       ? parseISO(`${dayStr}T00:00:00`)
-      : parseISO(
-          `${dayStr}T${pad2(originalStart.getHours())}:${pad2(originalStart.getMinutes())}:00`
+      : parseHomeWall(
+          `${dayStr}T${pad2(Math.floor(movedMinutes / 60))}:${pad2(movedMinutes % 60)}:00`
         )
     const newEnd = new Date(newStart.getTime() + durationMs)
     let newDueDate = dayStr
@@ -673,9 +676,13 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
         !originalEvent.dueDate.endsWith('T00:00:00') &&
         !originalEvent.dueDate.endsWith('T00:00')
       if (hasTime) {
-        const dueTime = `${pad2(originalDueDate.getHours())}:${pad2(originalDueDate.getMinutes())}:00`
+        const dueMinutes = homeMinutes(originalDueDate)
+        const dueTime = `${pad2(Math.floor(dueMinutes / 60))}:${pad2(dueMinutes % 60)}:00`
         newDueDate = originalEvent.timezone
-          ? toZoneWallClock(new Date(`${dayStr}T${dueTime}`).toISOString(), originalEvent.timezone)
+          ? toZoneWallClock(
+              parseHomeWall(`${dayStr}T${dueTime}`).toISOString(),
+              originalEvent.timezone
+            )
           : `${dayStr}T${dueTime}`
       }
     }
@@ -713,7 +720,9 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
       // Undated tasks have a technical start value from their VTODO import;
       // only tasks with an explicit due date belong on the agenda.
       if (event.type === 'task' && !event.dueDate) return
-      const eventDate = format(toEventInstant(event.start, event.timezone), 'yyyy-MM-dd')
+      const eventDate = event.isAllDay
+        ? event.start.slice(0, 10)
+        : homeDayKey(toEventInstant(event.start, event.timezone))
       // R4.6: push onto a stable array instead of spreading into a new
       // one. The previous `eventMap.set(k, [...existing, item])` was
       // O(k.length) per event, so for a day with N events it was O(N²)
@@ -771,7 +780,7 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
       )
     })
 
-    const todayKey = format(new Date(), 'yyyy-MM-dd')
+    const todayKey = homeDayKey(new Date())
 
     const groups: DayGroup[] = []
     let i = 0
@@ -981,7 +990,7 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
                     const dateKey = firstKey
                     const sortedEvents = eventsByDate.get(dateKey) || []
                     const isEmpty = !group.hasEvents
-                    const isToday = dateKey === format(new Date(), 'yyyy-MM-dd')
+                    const isToday = dateKey === homeDayKey(new Date())
 
                     return (
                       <div key={dateKey} onContextMenu={(e) => handleContextMenu(e, day)}>

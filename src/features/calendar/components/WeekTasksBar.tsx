@@ -2,9 +2,9 @@ import type { JSX } from 'react'
 import { useDraggable, useDroppable } from '@dnd-kit/core'
 import { useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
-import { format } from 'date-fns'
 import { useCalendarStore } from '@/store/calendarStore'
 import { formatDisplayDate, toEventInstant } from '@/lib/datetime'
+import { homeDayKey } from '@/lib/homeTimezone'
 import type { CalendarEvent } from '@/types'
 import { useWeekTaskActions } from '../hooks/useWeekTaskActions'
 import { TaskContextMenu } from './TaskContextMenu'
@@ -104,7 +104,11 @@ export function WeekTasksBar({ tasks, weekStartKey, weekEndKey }: WeekTasksBarPr
                   : undefined
               }
               data-testid={`week-task-${task.id}`}
-              data-week-start={format(toEventInstant(task.start, task.timezone), 'yyyy-MM-dd')}
+              data-week-start={
+                task.isAllDay
+                  ? task.start.slice(0, 10)
+                  : homeDayKey(toEventInstant(task.start, task.timezone))
+              }
             >
               <input
                 type="checkbox"

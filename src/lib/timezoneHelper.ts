@@ -1,4 +1,5 @@
-import { pad2, daysBetween } from '@/lib/datetime'
+import { pad2, daysBetween, parseWallClock } from '@/lib/datetime'
+import { homeTimezone } from '@/lib/homeTimezone'
 import type { TimeFormat } from '@/types'
 
 export interface SecondaryHourLabel {
@@ -83,7 +84,8 @@ export function getTimezoneAbbr(date: Date, tz: string): string {
 }
 
 /**
- * Compute secondary hour label and day delta (+1d / -1d) for a given local hour and base date.
+ * Compute secondary hour label and day delta (+1d / -1d) for a grid hour.
+ * The hour is a home-zone hour on `baseDate`'s calendar day.
  */
 export function getSecondaryHourLabel(
   hour: number,
@@ -91,15 +93,8 @@ export function getSecondaryHourLabel(
   targetTz: string,
   is24Hour: boolean | TimeFormat
 ): SecondaryHourLabel {
-  const localDate = new Date(
-    baseDate.getFullYear(),
-    baseDate.getMonth(),
-    baseDate.getDate(),
-    hour,
-    0,
-    0,
-    0
-  )
+  const day = `${baseDate.getFullYear()}-${pad2(baseDate.getMonth() + 1)}-${pad2(baseDate.getDate())}`
+  const localDate = parseWallClock(`${day}T${pad2(hour)}:00:00`, homeTimezone())
 
   const is24 = typeof is24Hour === 'boolean' ? is24Hour : is24Hour === '24h'
   const timeStr = formatTimeInZone(localDate, targetTz, is24)

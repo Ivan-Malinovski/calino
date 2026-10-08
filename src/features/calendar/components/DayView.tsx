@@ -17,7 +17,7 @@ import {
   type DragMoveEvent,
   type DragStartEvent,
 } from '@dnd-kit/core'
-import { format, startOfDay, endOfDay, parseISO, isToday, addDays, addMinutes } from 'date-fns'
+import { format, parseISO, addDays, addMinutes } from 'date-fns'
 import { useCalendarStore, getTasksForDay } from '@/store/calendarStore'
 import { useTranslation } from 'react-i18next'
 import i18n from '@/lib/i18n'
@@ -48,8 +48,17 @@ import {
   TASK_PILL_LAYOUT_MINUTES,
 } from '../lib/eventLayout'
 import { eventCardVariants } from '../lib/eventAnimations'
-import { eventLastDay } from '../lib/multiDayFragments'
+import { makeDayFragments } from '../lib/multiDayFragments'
 import { formatTime, pad2, toLocalDateString, toEventInstant } from '@/lib/datetime'
+import {
+  homeDayKey,
+  homeMinutes,
+  homeTimezone,
+  instantFromHomeMinutes,
+  isHomeToday,
+  parseHomeWall,
+  useHomeTimezone,
+} from '@/lib/homeTimezone'
 import { HOURS } from '@/lib/hours'
 import { getTimezoneAbbr, getSecondaryHourLabel } from '@/lib/timezoneHelper'
 import { AnimatePresence, motion } from 'framer-motion'
@@ -157,6 +166,7 @@ export function DayView({
   onBack,
 }: { selectedDate?: string; onBack?: () => void } = {}): JSX.Element {
   const { t } = useTranslation('calendar')
+  useHomeTimezone()
   const storeDate = useCalendarStore((state) => state.currentDate)
   const currentDate = propDate || storeDate
   const events = useCalendarStore((state) => state.events)
@@ -170,8 +180,6 @@ export function DayView({
   const secondaryTimezoneEnabled = useSettingsStore((state) => state.secondaryTimezoneEnabled)
   const secondaryTimezone = useSettingsStore((state) => state.secondaryTimezone)
   const secondaryTimezoneLabel = useSettingsStore((state) => state.secondaryTimezoneLabel)
-  const timezone = useSettingsStore((state) => state.timezone)
-
   const isDualTz = secondaryTimezoneEnabled && !!secondaryTimezone
 
   const [activeEvent, setActiveEvent] = useState<CalendarEvent | null>(null)
@@ -337,10 +345,7 @@ export function DayView({
   }, [])
 
   const date = useMemo(() => parseISO(currentDate), [currentDate])
-  const localTzAbbr = useMemo(
-    () => getTimezoneAbbr(date, timezone || Intl.DateTimeFormat().resolvedOptions().timeZone),
-    [date, timezone]
-  )
+  const localTzAbbr = useMemo(() => getTimezoneAbbr(date, homeTimezone()), [date])
   const secondaryTzAbbr = useMemo(
     () =>
       secondaryTimezoneLabel || (secondaryTimezone ? getTimezoneAbbr(date, secondaryTimezone) : ''),
@@ -368,31 +373,11 @@ export function DayView({
     const fragmentedEvents: CalendarEvent[] = []
 
     for (const event of eventsForDay) {
-      const eventStart = toEventInstant(event.start, event.timezone)
-      const eventEnd = eventLastDay(event)
-      const eventStartKey = format(eventStart, 'yyyy-MM-dd')
-      const eventEndKey = format(eventEnd, 'yyyy-MM-dd')
-      // Ends exactly at midnight: nothing of it falls on this day.
-      if (eventEndKey < dateKey) continue
-
-      if (eventStartKey === eventEndKey) {
-        fragmentedEvents.push(event)
-      } else {
-        const isFirst = eventStartKey === dateKey
-        const isLast = eventEndKey === dateKey
-
-        const fragment: CalendarEvent = {
-          ...event,
-          start: isFirst ? event.start : format(startOfDay(date), "yyyy-MM-dd'T'HH:mm:ss"),
-          end: isLast ? event.end : format(endOfDay(date), "yyyy-MM-dd'T'HH:mm:ss"),
-          isFragment: true,
-          isFirstFragment: isFirst,
-          isLastFragment: isLast,
-          originalStart: event.start,
-          originalEnd: event.end,
-        }
-        fragmentedEvents.push(fragment)
-      }
+      const fragment = makeDayFragments(event).find((part) => {
+        const startKey = homeDayKey(toEventInstant(part.start, part.timezone))
+        return startKey === dateKey
+      })
+      if (fragment) fragmentedEvents.push(fragment)
     }
 
     return fragmentedEvents
@@ -467,12 +452,12 @@ export function DayView({
     const rafId = requestAnimationFrame(() => {
       if (!bodyRef.current) return
 
-      const scrollToNow = isToday(date)
+      const scrollToNow = isHomeToday(date)
 
       if (scrollToNow) {
         // Scroll to current time with 2h padding above
         const now = new Date()
-        const minutesSinceMidnight = now.getHours() * 60 + now.getMinutes()
+        const minutesSinceMidnight = homeMinutes(now)
         const fraction = minutesSinceMidnight / (24 * 60)
         const scrollTop =
           fraction * bodyRef.current.scrollHeight - bodyRef.current.clientHeight * 0.3
@@ -481,9 +466,7 @@ export function DayView({
         // Reuse the sorted data used by the event layout below.
         const firstEvent = dayEventLayout.sortedEvents[0]
         const eventStart = toEventInstant(firstEvent.start, firstEvent.timezone)
-        const hours = eventStart.getHours()
-        const minutes = eventStart.getMinutes()
-        const fraction = (hours * 60 + minutes) / (24 * 60)
+        const fraction = homeMinutes(eventStart) / (24 * 60)
         const scrollTop = fraction * bodyRef.current.scrollHeight - 60
         bodyRef.current.scrollTo({ top: Math.max(0, scrollTop), behavior: 'smooth' })
       }
@@ -662,7 +645,7 @@ export function DayView({
     // Otherwise preserve the event's existing duration.
     let updates: { start: string; end: string; isAllDay?: boolean }
     if (originalEvent.isAllDay) {
-      const newStart = parseISO(`${dayStr}T${hourStr}`)
+      const newStart = parseHomeWall(`${dayStr}T${hourStr}`)
       const newEnd = new Date(newStart.getTime() + 60 * 60 * 1000)
       updates = {
         start: newStart.toISOString(),
@@ -670,17 +653,19 @@ export function DayView({
         isAllDay: false,
       }
     } else {
-      // Phase 2 (C3) — baseline in the device frame so the drop target is
-      // the instant the user sees; updateEvent re-frames it for TZID events.
+      // Baseline in the home zone so the drop target is the instant the user
+      // sees; updateEvent re-frames it for TZID events.
       const originalStart = toEventInstant(originalEvent.start, originalEvent.timezone)
       const originalEnd = toEventInstant(originalEvent.end, originalEvent.timezone)
       const durationMs = originalEnd.getTime() - originalStart.getTime()
       // The droppable cell only tells us which day was dropped on; the time of
       // day comes from how far the card was dragged vertically, snapped to a
       // quarter hour. Using the hour cell alone would round to whole hours.
-      const startMinutes = originalStart.getHours() * 60 + originalStart.getMinutes()
-      const newStart = parseISO(`${dayStr}T00:00:00`)
-      newStart.setMinutes(snapMinuteOfDay(startMinutes, delta.y, hourHeight))
+      const startMinutes = homeMinutes(originalStart)
+      const newStart = instantFromHomeMinutes(
+        dayStr,
+        snapMinuteOfDay(startMinutes, delta.y, hourHeight)
+      )
       const newEnd = new Date(newStart.getTime() + durationMs)
       updates = {
         start: newStart.toISOString(),
@@ -849,7 +834,7 @@ export function DayView({
     return <AnimatePresence initial={false}>{elements}</AnimatePresence>
   }
 
-  const isCurrentDay = isToday(date)
+  const isCurrentDay = isHomeToday(date)
   const dateStr = format(date, 'yyyy-MM-dd')
 
   return (

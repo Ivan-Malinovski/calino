@@ -19,6 +19,7 @@ describe('settingsStore', () => {
     const settings = useSettingsStore.getState()
 
     expect(settings.timezone).toBeDefined()
+    expect(settings.homeTimezone).toBeNull()
     expect(settings.dateFormat).toBe('dd/MM/yyyy')
     expect(settings.timeFormat).toBe('24h')
     expect(settings.firstDayOfWeek).toBe(1)

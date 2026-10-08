@@ -21,6 +21,12 @@
   "saved": "Gemt",
   "general": {
     "title": "Generelt",
+    "homeTimezone": {
+      "label": "Hjemmetidszone",
+      "desc": "Begivenheder vises og oprettes i denne tidszone. Automatisk følger browseren.",
+      "ariaLabel": "Hjemmetidszone",
+      "automatic": "Automatisk (browser)"
+    },
     "dateFormat": {
       "label": "Datoformat",
       "desc": "Sådan vises datoer i hele appen",

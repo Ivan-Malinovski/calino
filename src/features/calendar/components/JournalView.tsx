@@ -18,7 +18,8 @@ import { wrapMarkdownSelection } from '@/lib/markdownHelpers'
 import { showToast } from '@/lib/toast'
 import i18n from '@/lib/i18n'
 import { deleteEventWithUndo } from '@/lib/deleteWithUndo'
-import { formatDisplayDate, formatMonthYear, toLocalDateString } from '@/lib/datetime'
+import { formatDisplayDate, formatMonthYear } from '@/lib/datetime'
+import { homeDayKey, useHomeTimezone } from '@/lib/homeTimezone'
 import { putAttachments, getAttachments } from '@/lib/attachmentStore'
 import type { Calendar, CalendarAttachment, CalendarEvent } from '@/types'
 import { AttachmentSection } from './AttachmentSection'
@@ -530,6 +531,7 @@ const JournalEntryRow = memo(function JournalEntryRow({
 })
 
 export function JournalView(): JSX.Element {
+  useHomeTimezone()
   const { t } = useTranslation('calendar')
   const events = useCalendarStore((state) => state.events)
   const addEvent = useCalendarStore((state) => state.addEvent)
@@ -783,7 +785,7 @@ export function JournalView(): JSX.Element {
   )
   const handleCreate = useCallback((): void => {
     flushPendingRef.current()
-    const today = toLocalDateString(new Date())
+    const today = homeDayKey(new Date())
     const date =
       viewMode === 'month' && !today.startsWith(currentDate.slice(0, 7))
         ? `${currentDate.slice(0, 7)}-01`

@@ -5,7 +5,8 @@ import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { DUR_FAST, EASE_OUT } from '@/lib/motion'
 import { createPortal } from 'react-dom'
 import { Link } from 'react-router'
-import { parseISO, isToday, isBefore, startOfDay } from 'date-fns'
+import { parseISO, isBefore, startOfDay } from 'date-fns'
+import { isHomeToday } from '@/lib/homeTimezone'
 import { useTranslation } from 'react-i18next'
 import { formatDayMonth } from '@/lib/datetime'
 import { useCalendarStore } from '@/store/calendarStore'
@@ -434,7 +435,7 @@ export function MiniTasksSection({ isExpanded, onToggle }: MiniTasksSectionProps
                               : ''
                           }`}
                         >
-                          {isToday(parseISO(task.dueDate))
+                          {isHomeToday(parseISO(task.dueDate))
                             ? t('modals.miniTasks.today')
                             : formatDayMonth(task.dueDate)}
                         </span>

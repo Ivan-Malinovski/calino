@@ -21,6 +21,12 @@
   "saved": "Salvato",
   "general": {
     "title": "Generale",
+    "homeTimezone": {
+      "label": "Fuso orario di casa",
+      "desc": "Gli eventi vengono mostrati e creati in questo fuso. Automatico segue il browser.",
+      "ariaLabel": "Fuso orario di casa",
+      "automatic": "Automatico (browser)"
+    },
     "dateFormat": {
       "label": "Formato data",
       "desc": "Come vengono visualizzate le date nell'app",

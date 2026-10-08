@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 import { safeLocalStorage } from '@/lib/storage'
-import { format, parseISO, isWithinInterval, startOfDay, endOfDay } from 'date-fns'
+import { parseISO, isWithinInterval, startOfDay, endOfDay } from 'date-fns'
 import { formatInTimeZone } from 'date-fns-tz'
 import { RRule } from 'rrule'
 import type {
@@ -33,6 +33,7 @@ import { deleteAttachments } from '@/lib/attachmentStore'
 import { deleteRawIcs, deleteRawIcsForCalendar } from '@/lib/rawIcsStore'
 import { useSettingsStore } from '@/store/settingsStore'
 import { toZoneWallClock } from '@/lib/datetime'
+import { homeDayKey } from '@/lib/homeTimezone'
 import { normalizeTzid } from '@/lib/timezoneRegistry'
 import { createUuid } from '@/lib/uuid'
 
@@ -195,7 +196,7 @@ function taskDayKey(task: CalendarEvent): string {
       'yyyy-MM-dd'
     )
   }
-  return format(parseISO(due), 'yyyy-MM-dd')
+  return homeDayKey(parseISO(due))
 }
 
 /**
@@ -516,7 +517,7 @@ export const useCalendarStore = create<CalendarStore>()(
       categories: [],
       autoCategoryRules: [],
       selectedCategoryIds: [],
-      currentDate: format(new Date(), 'yyyy-MM-dd'),
+      currentDate: homeDayKey(new Date()),
       currentView: useSettingsStore.getState().defaultView,
       // Bumped by every mutation that affects getEventsForDateRange results.
       // Excluded from persistence (see partialize below) so it stays in sync
@@ -1683,7 +1684,7 @@ export const useCalendarStore = create<CalendarStore>()(
           // Deliberately today's date, not the persisted one: opening the app
           // should show the current month, not wherever the last session was
           // browsing. Same reasoning as currentView below.
-          currentDate: format(new Date(), 'yyyy-MM-dd'),
+          currentDate: homeDayKey(new Date()),
           currentView: useSettingsStore.getState().defaultView,
           selectedCategoryIds: state.selectedCategoryIds ?? [],
         }

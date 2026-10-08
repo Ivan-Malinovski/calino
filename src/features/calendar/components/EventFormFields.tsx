@@ -13,7 +13,8 @@ import type {
   CalendarOrganizer,
 } from '@/types'
 import { useSettingsStore } from '@/store/settingsStore'
-import { daysBetween, addDays, deviceTimezone, getDateFnsLocale } from '@/lib/datetime'
+import { daysBetween, addDays, getDateFnsLocale } from '@/lib/datetime'
+import { homeTimezone } from '@/lib/homeTimezone'
 import { format } from 'date-fns'
 import { formatInTimeZone } from 'date-fns-tz'
 import { normalizeTzid } from '@/lib/timezoneRegistry'
@@ -41,7 +42,7 @@ function foreignZoneTimes(
 ): { zoneLabel: string; times: string } | null {
   if (!eventTimezone || isAllDay) return null
   const calculationTimezone = normalizeTzid(eventTimezone)
-  if (calculationTimezone === normalizeTzid(deviceTimezone())) return null
+  if (calculationTimezone === normalizeTzid(homeTimezone())) return null
 
   const startInstant = new Date(`${startDate}T${startTime}:00`)
   const endInstant = new Date(`${endDate}T${endTime}:00`)

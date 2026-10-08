@@ -3,7 +3,7 @@ import { fromZonedTime, formatInTimeZone } from 'date-fns-tz'
 import { RRule } from 'rrule'
 import ICAL from 'ical.js'
 import { buildRRuleString, normaliseAllDayUntil } from './recurrence'
-import { deviceTimezone } from './datetime'
+import { homeTimezone } from './homeTimezone'
 import { normalizeTzid, resolveZone } from './timezoneRegistry'
 import type { CalendarEvent } from '@/types'
 
@@ -305,7 +305,7 @@ function zonedExpansion(master: CalendarEvent): ZonedExpansion | null {
   // TZID series use their own zone (start is a naive wall clock in it);
   // no-TZID timed series use the device zone, converting a stored UTC
   // instant back to the device wall clock (issue #126).
-  const deviceTz = deviceTimezone()
+  const deviceTz = homeTimezone()
   const zone = master.timezone ? resolveZone(master.timezone) : resolveZone(deviceTz)
   if (!zone) {
     if (!master.timezone) warnUnknownDeviceZone(deviceTz)

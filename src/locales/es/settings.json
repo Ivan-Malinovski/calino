@@ -21,6 +21,12 @@
   "saved": "Guardado",
   "general": {
     "title": "General",
+    "homeTimezone": {
+      "label": "Zona horaria local",
+      "desc": "Los eventos se muestran y crean en esta zona. Automático sigue al navegador.",
+      "ariaLabel": "Zona horaria local",
+      "automatic": "Automático (navegador)"
+    },
     "dateFormat": {
       "label": "Formato de fecha",
       "desc": "Cómo aparecen las fechas en la aplicación",

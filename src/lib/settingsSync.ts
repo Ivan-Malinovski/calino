@@ -51,6 +51,7 @@ export interface SyncedCategories {
 export const SYNCABLE_SETTINGS: (keyof UserSettings)[] = [
   'language',
   'timezone',
+  'homeTimezone',
   'secondaryTimezoneEnabled',
   'secondaryTimezone',
   'secondaryTimezoneLabel',

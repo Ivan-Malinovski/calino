@@ -21,13 +21,21 @@ import {
   eachDayOfInterval,
   startOfDay,
   endOfDay,
-  isToday,
   parseISO,
   getISOWeek,
   addWeeks,
   addDays,
 } from 'date-fns'
 import { pad2, toLocalDateString, toEventInstant, formatDisplayDate } from '@/lib/datetime'
+import {
+  homeDayKey,
+  homeMinutes,
+  homeTimezone,
+  instantFromHomeMinutes,
+  isHomeToday,
+  parseHomeWall,
+  useHomeTimezone,
+} from '@/lib/homeTimezone'
 import { hasDueTime } from '@/lib/events'
 import type { CalendarEvent } from '@/types'
 import { useCalendarStore, getTasksForDay } from '@/store/calendarStore'
@@ -237,6 +245,7 @@ const DayHeader = React.memo(function DayHeader({
 
 export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Element {
   const { t } = useTranslation('calendar')
+  useHomeTimezone()
   const currentDate = useCalendarStore((state) => state.currentDate)
   const events = useCalendarStore((state) => state.events)
   const calendars = useCalendarStore((state) => state.calendars)
@@ -254,7 +263,6 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
   const secondaryTimezoneEnabled = useSettingsStore((state) => state.secondaryTimezoneEnabled)
   const secondaryTimezone = useSettingsStore((state) => state.secondaryTimezone)
   const secondaryTimezoneLabel = useSettingsStore((state) => state.secondaryTimezoneLabel)
-  const timezone = useSettingsStore((state) => state.timezone)
   const openMenuId = useContextMenuStore((state) => state.openMenuId)
   const openMenu = useContextMenuStore((state) => state.openMenu)
   const closeMenu = useContextMenuStore((state) => state.closeMenu)
@@ -654,11 +662,7 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
   const date = useMemo(() => parseISO(currentDate), [currentDate])
   const displayDate = dayCount === 7 ? visibleWindowDate : date
 
-  const localTzAbbr = useMemo(
-    () =>
-      getTimezoneAbbr(displayDate, timezone || Intl.DateTimeFormat().resolvedOptions().timeZone),
-    [displayDate, timezone]
-  )
+  const localTzAbbr = useMemo(() => getTimezoneAbbr(displayDate, homeTimezone()), [displayDate])
   const secondaryTzAbbr = useMemo(
     () =>
       secondaryTimezoneLabel ||
@@ -710,11 +714,11 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
         // view. Only real timed events reach this branch.
         const fragments = makeDayFragments(event)
         if (fragments.length === 1) {
-          const dayKey = format(toEventInstant(event.start, event.timezone), 'yyyy-MM-dd')
+          const dayKey = homeDayKey(toEventInstant(event.start, event.timezone))
           timed.set(dayKey, [...(timed.get(dayKey) || []), event])
         } else {
           fragments.forEach((fragment) => {
-            const dayKey = format(toEventInstant(fragment.start, fragment.timezone), 'yyyy-MM-dd')
+            const dayKey = homeDayKey(toEventInstant(fragment.start, fragment.timezone))
             timedFragments.set(dayKey, [...(timedFragments.get(dayKey) || []), fragment])
           })
         }
@@ -803,7 +807,7 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
   const bodyRef = useRef<HTMLDivElement>(null)
   const lastDateRef = useRef(displayDate.toISOString())
   const hasScrolledForDate = useRef(false)
-  const isCurrentWeek = weekDays.some((d) => isToday(d))
+  const isCurrentWeek = weekDays.some((d) => isHomeToday(d))
 
   useLayoutEffect(() => {
     if (isMobile || !bodyRef.current) return
@@ -823,7 +827,7 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
       if (isCurrentWeek) {
         // Scroll to current time with padding above
         const now = new Date()
-        const minutesSinceMidnight = now.getHours() * 60 + now.getMinutes()
+        const minutesSinceMidnight = homeMinutes(now)
         const fraction = minutesSinceMidnight / (24 * 60)
         const scrollTop =
           fraction * bodyRef.current.scrollHeight - bodyRef.current.clientHeight * 0.3
@@ -843,9 +847,7 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
         )
         const firstEvent = sortedAllEvents[0]
         const eventStart = toEventInstant(firstEvent.start, firstEvent.timezone)
-        const hours = eventStart.getHours()
-        const minutes = eventStart.getMinutes()
-        const fraction = (hours * 60 + minutes) / (24 * 60)
+        const fraction = homeMinutes(eventStart) / (24 * 60)
         const scrollTop = fraction * bodyRef.current.scrollHeight - 60
         bodyRef.current.scrollTo({ top: Math.max(0, scrollTop), behavior: 'smooth' })
       }
@@ -1140,7 +1142,7 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
     // timed event: default it to a 1-hour block. Otherwise preserve duration.
     let updates: { start: string; end: string; isAllDay?: boolean }
     if (originalEvent.isAllDay) {
-      const newStart = parseISO(`${dayStr}T${hourStr}`)
+      const newStart = parseHomeWall(`${dayStr}T${hourStr}`)
       const newEnd = new Date(newStart.getTime() + 60 * 60 * 1000)
       updates = {
         start: newStart.toISOString(),
@@ -1148,17 +1150,19 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
         isAllDay: false,
       }
     } else {
-      // Phase 2 (C3) — baseline in the device frame so the drop target is
-      // the instant the user sees; updateEvent re-frames it for TZID events.
+      // Baseline in the home zone so the drop target is the instant the user
+      // sees; updateEvent re-frames it for TZID events.
       const originalStart = toEventInstant(originalEvent.start, originalEvent.timezone)
       const originalEnd = toEventInstant(originalEvent.end, originalEvent.timezone)
       const durationMs = originalEnd.getTime() - originalStart.getTime()
       // The droppable cell only tells us which day was dropped on; the time of
       // day comes from how far the card was dragged vertically, snapped to a
       // quarter hour. Using the hour cell alone would round to whole hours.
-      const startMinutes = originalStart.getHours() * 60 + originalStart.getMinutes()
-      const newStart = parseISO(`${dayStr}T00:00:00`)
-      newStart.setMinutes(snapMinuteOfDay(startMinutes, delta.y, hourHeight))
+      const startMinutes = homeMinutes(originalStart)
+      const newStart = instantFromHomeMinutes(
+        dayStr,
+        snapMinuteOfDay(startMinutes, delta.y, hourHeight)
+      )
       const newEnd = new Date(newStart.getTime() + durationMs)
       updates = {
         start: newStart.toISOString(),
@@ -1226,7 +1230,7 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
               return (
                 <div
                   key={day.toISOString()}
-                  className={`${styles.dayHeader} ${isToday(day) ? styles.today : ''} ${
+                  className={`${styles.dayHeader} ${isHomeToday(day) ? styles.today : ''} ${
                     headerItems.length > 0 ? styles.hasAllDayEvents : ''
                   }`}
                   data-component="week-mobile-day-header"
@@ -1342,7 +1346,7 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
               return (
                 <div
                   key={day.toISOString()}
-                  className={`${styles.dayColumn} ${isToday(day) ? styles.todayColumn : ''}`}
+                  className={`${styles.dayColumn} ${isHomeToday(day) ? styles.todayColumn : ''}`}
                   data-component="week-mobile-day-column"
                   onContextMenu={(e) => {
                     e.preventDefault()
@@ -1385,7 +1389,7 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
                       taskDescendantCount={taskCollapse.descendantCount}
                       onToggleTaskSubtasks={taskCollapse.toggleTask}
                     />
-                    {isToday(day) && (
+                    {isHomeToday(day) && (
                       <CurrentTimeIndicator
                         hourHeight={hourHeight}
                         timeFormat={timeFormat}
@@ -1430,7 +1434,7 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
               <DayHeader
                 key={day.toISOString()}
                 day={day}
-                isTodayDay={isToday(day)}
+                isTodayDay={isHomeToday(day)}
                 isWeekStart={idx === 0}
                 allDayEvents={allDayEventsByDay[idx]}
                 activeIsTimed={!!activeEvent && !activeEvent.isAllDay}
@@ -1531,7 +1535,7 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
                       taskDescendantCount={taskCollapse.descendantCount}
                       onToggleTaskSubtasks={taskCollapse.toggleTask}
                     />
-                    {isToday(day) && (
+                    {isHomeToday(day) && (
                       <CurrentTimeIndicator
                         hourHeight={hourHeight}
                         timeFormat={timeFormat}

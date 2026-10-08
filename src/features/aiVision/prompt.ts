@@ -1,4 +1,5 @@
 import { AIVisionExtractionError, type ExtractedEventFields } from './types'
+import { homeTimezone } from '@/lib/homeTimezone'
 
 /**
  * System prompt instructing the model to extract event details from a photo
@@ -6,7 +7,7 @@ import { AIVisionExtractionError, type ExtractedEventFields } from './types'
  */
 export function buildExtractionSystemPrompt(): string {
   const now = new Date()
-  const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone
+  const timeZone = homeTimezone()
   const nowIso = now.toISOString()
 
   return `You are an expert at reading event flyers, posters, invitations, to-do lists, and screenshots (from a photo) and extracting structured calendar details.

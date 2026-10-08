@@ -1,6 +1,13 @@
 import { describe, it, expect } from 'vitest'
-import { parseISO } from 'date-fns'
-import { toEventInstant, toZoneWallClock } from '../datetime'
+import { format, parseISO } from 'date-fns'
+import {
+  deviceTimezone,
+  parseWallClock,
+  toEventInstant,
+  toZoneWallClock,
+  zonedDayKey,
+  zonedMinutes,
+} from '../datetime'
 
 describe('toEventInstant (Phase 2 C2)', () => {
   it('resolves a naive wall clock in the event zone', () => {
@@ -45,5 +52,26 @@ describe('toZoneWallClock (Phase 2 C3)', () => {
   })
   it('does not throw on an unresolvable zone; strips the zone marker', () => {
     expect(() => toZoneWallClock('2024-03-10T07:30:00.000Z', 'Not/AZone')).not.toThrow()
+  })
+})
+
+describe('zoned wall clock', () => {
+  it('matches local day and minutes when the zone is the runtime zone', () => {
+    const instant = new Date('2026-07-08T09:00:00.000Z')
+    const zone = deviceTimezone()
+    expect(zonedDayKey(instant, zone)).toBe(format(instant, 'yyyy-MM-dd'))
+    expect(zonedMinutes(instant, zone)).toBe(instant.getHours() * 60 + instant.getMinutes())
+  })
+
+  it('reads a London summer wall clock from a UTC instant', () => {
+    const instant = new Date('2026-07-08T09:00:00.000Z')
+    expect(zonedDayKey(instant, 'Europe/London')).toBe('2026-07-08')
+    expect(zonedMinutes(instant, 'Europe/London')).toBe(10 * 60)
+  })
+
+  it('parses a London summer wall clock back to the UTC instant', () => {
+    expect(parseWallClock('2026-07-08T10:00:00', 'Europe/London').toISOString()).toBe(
+      '2026-07-08T09:00:00.000Z'
+    )
   })
 })

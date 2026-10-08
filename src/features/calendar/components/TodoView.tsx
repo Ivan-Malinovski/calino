@@ -20,7 +20,8 @@ import {
   type DragOverEvent,
   type DragStartEvent,
 } from '@dnd-kit/core'
-import { format, parseISO, startOfDay } from 'date-fns'
+import { parseISO, startOfDay } from 'date-fns'
+import { homeDayKey, useHomeTimezone } from '@/lib/homeTimezone'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { DUR_FAST, EASE_POP } from '@/lib/motion'
@@ -161,6 +162,7 @@ type VirtualItem =
     }
 
 export function TodoView(): JSX.Element {
+  useHomeTimezone()
   const { t } = useTranslation('calendar')
   const events = useCalendarStore((state) => state.events)
   const calendars = useCalendarStore((state) => state.calendars)
@@ -721,7 +723,7 @@ export function TodoView(): JSX.Element {
     const value = composerRef.current?.value.trim()
     if (!value) return
     openModal(
-      format(new Date(), 'yyyy-MM-dd'),
+      homeDayKey(new Date()),
       undefined,
       undefined,
       'task',

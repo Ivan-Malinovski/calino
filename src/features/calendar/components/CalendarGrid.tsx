@@ -26,7 +26,6 @@ import {
   endOfWeek,
   eachDayOfInterval,
   isSameMonth,
-  isToday,
   parseISO,
   getISOWeek,
   getDay,
@@ -38,7 +37,21 @@ import {
   addDays,
   differenceInCalendarDays,
 } from 'date-fns'
-import { pad2, toEventInstant, toZoneWallClock, formatDisplayDate } from '@/lib/datetime'
+import {
+  pad2,
+  toEventInstant,
+  toZoneWallClock,
+  formatDisplayDate,
+  daysBetween,
+  addDays as addDayKey,
+} from '@/lib/datetime'
+import {
+  homeDayKey,
+  homeMinutes,
+  isHomeToday,
+  parseHomeWall,
+  useHomeTimezone,
+} from '@/lib/homeTimezone'
 import { useTranslation } from 'react-i18next'
 import i18n from '@/lib/i18n'
 import { useCalendarStore } from '@/store/calendarStore'
@@ -155,6 +168,7 @@ const SCROLL_CHAIN_QUIET_MS = 500
 
 export function CalendarGrid(): JSX.Element {
   const { t } = useTranslation('calendar')
+  useHomeTimezone()
   const currentDate = useCalendarStore((state) => state.currentDate)
   const events = useCalendarStore((state) => state.events)
   const calendars = useCalendarStore((state) => state.calendars)
@@ -537,13 +551,17 @@ export function CalendarGrid(): JSX.Element {
 
     let targetDayStr = dayStr
     if (grabbedDay) {
-      const offset = differenceInCalendarDays(parseISO(grabbedDay), originalStart)
-      targetDayStr = format(addDays(parseISO(dayStr), -offset), 'yyyy-MM-dd')
+      const originKey = originalEvent.isAllDay
+        ? originalEvent.start.slice(0, 10)
+        : homeDayKey(originalStart)
+      const offset = daysBetween(originKey, grabbedDay)
+      targetDayStr = addDayKey(dayStr, -offset)
     }
 
-    const hours = pad2(originalStart.getHours())
-    const minutes = pad2(originalStart.getMinutes())
-    const newStart = parseISO(`${targetDayStr}T${hours}:${minutes}:00`)
+    const movedMinutes = homeMinutes(originalStart)
+    const hours = pad2(Math.floor(movedMinutes / 60))
+    const minutes = pad2(movedMinutes % 60)
+    const newStart = parseHomeWall(`${targetDayStr}T${hours}:${minutes}:00`)
     const newEnd = new Date(newStart.getTime() + durationMs)
 
     const isTask = originalEvent.type === 'task'
@@ -558,12 +576,13 @@ export function CalendarGrid(): JSX.Element {
         !originalEvent.dueDate.endsWith('T00:00')
 
       if (hasTime) {
-        const timeHours = pad2(originalDueDate.getHours())
-        const timeMinutes = pad2(originalDueDate.getMinutes())
+        const dueMinutes = homeMinutes(originalDueDate)
+        const timeHours = pad2(Math.floor(dueMinutes / 60))
+        const timeMinutes = pad2(dueMinutes % 60)
         // TZID tasks store their due time as the zone's wall clock.
         newDueDate = originalEvent.timezone
           ? toZoneWallClock(
-              new Date(`${dayStr}T${timeHours}:${timeMinutes}:00`).toISOString(),
+              parseHomeWall(`${dayStr}T${timeHours}:${timeMinutes}:00`).toISOString(),
               originalEvent.timezone
             )
           : `${dayStr}T${timeHours}:${timeMinutes}:00`
@@ -640,7 +659,9 @@ export function CalendarGrid(): JSX.Element {
     gridEvents.forEach((event) => {
       const fragments = makeDayFragments(event, laneOf.get(event.id))
       fragments.forEach((fragment) => {
-        const eventDate = format(toEventInstant(fragment.start, fragment.timezone), 'yyyy-MM-dd')
+        const eventDate = fragment.isAllDay
+          ? fragment.start.slice(0, 10)
+          : homeDayKey(toEventInstant(fragment.start, fragment.timezone))
         const existing = map.get(eventDate) || []
         map.set(eventDate, [...existing, fragment])
       })
@@ -1414,7 +1435,7 @@ export function CalendarGrid(): JSX.Element {
                             const dayEvents = eventsMap.get(dateKey) || []
                             const dayTasks = visibleTasksMap.get(dateKey) || []
                             const isCurrentMonth = isSameMonth(day, date)
-                            const isTodayDate = isToday(day)
+                            const isTodayDate = isHomeToday(day)
                             const dayOfWeek = getDay(day)
                             const isWeekend = dayOfWeek === 0 || dayOfWeek === 6
 
@@ -1614,7 +1635,7 @@ export function CalendarGrid(): JSX.Element {
                       const dayEvents = eventsMap.get(dateKey) || []
                       const dayTasks = visibleTasksMap.get(dateKey) || []
                       const isCurrentMonth = isSameMonth(day, date)
-                      const isTodayDate = isToday(day)
+                      const isTodayDate = isHomeToday(day)
                       const dayOfWeek = getDay(day)
                       const isWeekend = dayOfWeek === 0 || dayOfWeek === 6
 

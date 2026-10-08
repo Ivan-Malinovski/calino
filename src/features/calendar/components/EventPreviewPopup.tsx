@@ -10,8 +10,8 @@ import {
   toEventInstant,
   daysBetween,
   addDays,
-  deviceTimezone,
 } from '@/lib/datetime'
+import { homeTimezone, useHomeTimezone } from '@/lib/homeTimezone'
 import { buildMasterTruncation } from '@/lib/recurrenceSplit'
 import { materializeOccurrenceAt } from '@/lib/occurrenceExpansion'
 import { showToast } from '@/lib/toast'
@@ -53,6 +53,7 @@ export function EventPreviewPopup({
   clickedEventId,
 }: EventPreviewPopupProps): JSX.Element {
   const { t } = useTranslation(['calendar', 'common'])
+  useHomeTimezone()
   const popupRef = useRef<HTMLDivElement>(null)
   const timeFormat = useSettingsStore((state) => state.timeFormat)
   const dateFormat = useSettingsStore((state) => state.dateFormat)
@@ -1220,7 +1221,7 @@ export function EventPreviewPopup({
                     {/* Times above are shown in the device zone. An event
                         anchored elsewhere says so, matching the badge
                         EventCard already renders in the grid. */}
-                    {event.timezone && event.timezone !== deviceTimezone() && (
+                    {event.timezone && event.timezone !== homeTimezone() && (
                       <span className={styles.tzBadge}>{event.timezone}</span>
                     )}
                   </div>

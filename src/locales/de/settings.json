@@ -21,6 +21,12 @@
   "saved": "Gespeichert",
   "general": {
     "title": "Allgemein",
+    "homeTimezone": {
+      "label": "Heimatzeitzone",
+      "desc": "Termine werden in dieser Zeitzone angezeigt und erstellt. Automatisch folgt dem Browser.",
+      "ariaLabel": "Heimatzeitzone",
+      "automatic": "Automatisch (Browser)"
+    },
     "dateFormat": {
       "label": "Datumsformat",
       "desc": "So werden Datumsangaben in der App angezeigt",

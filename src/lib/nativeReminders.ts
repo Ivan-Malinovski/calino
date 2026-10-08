@@ -1,6 +1,7 @@
 import { LocalNotifications } from '@capacitor/local-notifications'
 import { addMinutes, parseISO } from 'date-fns'
-import { toEventInstant, formatTime } from '@/lib/datetime'
+import { toEventInstant } from '@/lib/datetime'
+import { formatHomeClock } from '@/lib/homeTimezone'
 import type { CalendarEvent } from '@/types'
 import { getEffectiveReminders, reminderBody } from './notifications'
 import { openEventDeepLink } from './deepLink'
@@ -34,7 +35,7 @@ export async function checkNativeReminderPermission(): Promise<boolean> {
 }
 
 export async function scheduleTestReminder(): Promise<void> {
-  const timeStr = formatTime(new Date(), useSettingsStore.getState().timeFormat)
+  const timeStr = formatHomeClock(new Date(), useSettingsStore.getState().timeFormat)
   await LocalNotifications.schedule({
     notifications: [
       {
@@ -72,12 +73,12 @@ export function reminderInstant(event: CalendarEvent, minutesBefore: number): Da
 }
 
 /**
- * Device-local display of the event's start time, resolved through
+ * Home-zone display of the event's start time, resolved through
  * toEventInstant for TZID events. Returns 'All day' for all-day events.
  */
 export function reminderBodyTime(event: CalendarEvent): string {
   if (event.isAllDay) return i18n.t('errors:reminder.allDay')
-  return formatTime(
+  return formatHomeClock(
     toEventInstant(event.start, event.timezone),
     useSettingsStore.getState().timeFormat
   )

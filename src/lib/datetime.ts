@@ -11,6 +11,7 @@ import type { Locale } from 'date-fns'
 import type { DateFormat } from '@/types'
 import { fromZonedTime, formatInTimeZone } from 'date-fns-tz'
 import { normalizeTzid } from '@/lib/timezoneRegistry'
+import { homeTimezone } from '@/lib/homeTimezone'
 import { currentLanguage } from '@/lib/i18n'
 import type { TimeFormat } from '@/types'
 
@@ -148,10 +149,10 @@ export function formatDateLong(date: Date | string, timeFormat: TimeFormat = '24
  * as before.
  */
 /**
- * The device's IANA zone, with a UTC fallback when Intl cannot resolve one.
- * This is the zone a locally-created timed event is stamped with (issue #126):
- * the wall clock the user typed is meaningless without one, and a bare UTC
- * instant makes an RRULE repeat on UTC weekdays rather than the user's.
+ * The browser's IANA zone, with a UTC fallback when Intl cannot resolve one.
+ * Display and newly created events use the home zone (`homeTimezone`), which
+ * falls back to this value. A wall clock is meaningless without a zone, and a
+ * bare UTC instant makes an RRULE repeat on UTC weekdays (issue #126).
  */
 export function deviceTimezone(): string {
   try {
@@ -159,6 +160,48 @@ export function deviceTimezone(): string {
   } catch {
     return 'UTC'
   }
+}
+
+function resolvedZone(zone: string): string {
+  return normalizeTzid(zone)
+}
+
+/** `yyyy-MM-dd` of an instant in `zone`. */
+export function zonedDayKey(instant: Date, zone: string): string {
+  return formatInTimeZone(instant, resolvedZone(zone), 'yyyy-MM-dd')
+}
+
+/** Minutes since midnight of an instant in `zone`. */
+export function zonedMinutes(instant: Date, zone: string): number {
+  const name = resolvedZone(zone)
+  const hours = Number(formatInTimeZone(instant, name, 'H'))
+  const minutes = Number(formatInTimeZone(instant, name, 'm'))
+  return hours * 60 + minutes
+}
+
+/** Format an instant in `zone`. Numeric patterns do not depend on locale. */
+export function formatInZone(instant: Date, zone: string, pattern: string): string {
+  return formatInTimeZone(instant, resolvedZone(zone), pattern, { locale: getDateFnsLocale() })
+}
+
+/**
+ * Instant denoted by a naive `yyyy-MM-ddTHH:mm[:ss]` wall clock in `zone`.
+ * Falls back to a device-local parse when the zone cannot be resolved.
+ */
+export function parseWallClock(naive: string, zone: string): Date {
+  const normalized = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(naive) ? `${naive}:00` : naive
+  try {
+    const zoned = fromZonedTime(normalized, resolvedZone(zone))
+    if (!Number.isNaN(zoned.getTime())) return zoned
+  } catch {
+    // Unknown zone — fall through.
+  }
+  return parseISO(normalized)
+}
+
+/** Midnight at the start of a `yyyy-MM-dd` day in `zone`, as a real instant. */
+export function zonedMidnight(dayKey: string, zone: string): Date {
+  return parseWallClock(`${dayKey}T00:00:00`, zone)
 }
 
 export function toEventInstant(iso: string, timezone?: string): Date {
@@ -184,7 +227,16 @@ export function formatEventTime(
   timeFormat: TimeFormat,
   variant: 'full' | 'hour' = 'full'
 ): string {
-  return formatTime(toEventInstant(date, timezone), timeFormat, variant)
+  return formatInZone(
+    toEventInstant(date, timezone),
+    homeTimezone(),
+    clockPattern(timeFormat, variant)
+  )
+}
+
+/** Same patterns as `formatTime`, so a home-zone label matches it when the zones agree. */
+export function clockPattern(timeFormat: TimeFormat, variant: 'full' | 'hour' = 'full'): string {
+  return timeFormat === '24h' ? 'HH:mm' : variant === 'hour' ? 'h a' : 'h:mm a'
 }
 
 /**

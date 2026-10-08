@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import type { JSX } from 'react'
 import { Capacitor } from '@capacitor/core'
 import { Trans, useTranslation } from 'react-i18next'
@@ -13,6 +13,7 @@ import type { Language } from '@/types'
 import { useSettingsSync } from '@/hooks/useSettingsSync'
 import { classifySyncError, CORS_HEADER_SNIPPET } from '@/features/caldav/client/errorMessages'
 import { getFullWeekdayNames } from '@/features/calendar/components/weekdayLabels'
+import { getSupportedTimezones, TIMEZONE_PRESETS } from '@/lib/timezoneHelper'
 import { SettingsPageHeading } from './SettingsPageHeading'
 import styles from './Settings.module.css'
 
@@ -104,6 +105,7 @@ export function GeneralSettings({ searchControl }: { searchControl?: JSX.Element
   const { t } = useTranslation('settings')
   const language = useSettingsStore((s) => s.language)
   const dateFormat = useSettingsStore((s) => s.dateFormat)
+  const homeTimezone = useSettingsStore((s) => s.homeTimezone)
   const timeFormat = useSettingsStore((s) => s.timeFormat)
   const firstDayOfWeek = useSettingsStore((s) => s.firstDayOfWeek)
   const mapProvider = useSettingsStore((s) => s.mapProvider)
@@ -111,6 +113,7 @@ export function GeneralSettings({ searchControl }: { searchControl?: JSX.Element
   const contactsEnabled = useSettingsStore((s) => s.contactsEnabled)
   const enableHaptics = useSettingsStore((s) => s.enableHaptics)
   const updateSettings = useSettingsStore((s) => s.updateSettings)
+  const allTimezones = useMemo(() => getSupportedTimezones(), [])
 
   // Settings sync
   const {
@@ -147,13 +150,41 @@ export function GeneralSettings({ searchControl }: { searchControl?: JSX.Element
     >
       <SettingsPageHeading title={t('general.title')} searchControl={searchControl} />
       <div className={styles.group}>
-        {/* No timezone picker: Calino renders every date and time in the
-            device's own zone, and always has. The control that used to sit
-            here promised "All events will be displayed in this timezone" but
-            was never read by anything — picking a zone changed nothing, which
-            made it worse than absent. The `timezone` setting itself survives
-            in the store and the sync payload so other clients' values still
-            round-trip untouched; see settingsStore.ts. */}
+        <div
+          className={styles.row}
+          data-component="setting-row"
+          data-setting="home-timezone"
+          data-value={homeTimezone ?? ''}
+        >
+          <div className={styles.rowInfo}>
+            <div className={styles.rowLabel}>{t('general.homeTimezone.label')}</div>
+            <div className={styles.rowDesc}>{t('general.homeTimezone.desc')}</div>
+          </div>
+          <div className={styles.rowControl}>
+            <select
+              className={styles.select}
+              value={homeTimezone ?? ''}
+              aria-label={t('general.homeTimezone.ariaLabel')}
+              onChange={(e) => updateSettings({ homeTimezone: e.target.value || null })}
+            >
+              <option value="">{t('general.homeTimezone.automatic')}</option>
+              <optgroup label={t('calendar.secondaryTimezone.presets')}>
+                {TIMEZONE_PRESETS.map((tz) => (
+                  <option key={`preset-${tz.value}`} value={tz.value}>
+                    {tz.label}
+                  </option>
+                ))}
+              </optgroup>
+              <optgroup label={t('calendar.secondaryTimezone.allTimezones')}>
+                {allTimezones.map((tz) => (
+                  <option key={`all-${tz}`} value={tz}>
+                    {tz}
+                  </option>
+                ))}
+              </optgroup>
+            </select>
+          </div>
+        </div>
         <div
           className={styles.row}
           data-component="setting-row"
@@ -223,7 +254,11 @@ export function GeneralSettings({ searchControl }: { searchControl?: JSX.Element
             <div className={styles.rowDesc}>{t('general.timeFormat.desc')}</div>
           </div>
           <div className={styles.rowControl}>
-            <div className={styles.seg} role="radiogroup" aria-label={t('general.timeFormat.ariaLabel')}>
+            <div
+              className={styles.seg}
+              role="radiogroup"
+              aria-label={t('general.timeFormat.ariaLabel')}
+            >
               {TIME_FORMAT_OPTIONS.map((opt) => (
                 <button
                   key={opt.value}
@@ -389,7 +424,9 @@ export function GeneralSettings({ searchControl }: { searchControl?: JSX.Element
             </div>
             {syncError && (
               <div className={styles.syncError} data-component="sync-error">
-                <div className={styles.syncErrorTitle}>{t('general.settingsSync.somethingWrong')}</div>
+                <div className={styles.syncErrorTitle}>
+                  {t('general.settingsSync.somethingWrong')}
+                </div>
                 <div className={styles.syncErrorBody}>{formatSyncError(syncError, t)}</div>
               </div>
             )}

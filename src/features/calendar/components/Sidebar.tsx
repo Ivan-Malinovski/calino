@@ -16,13 +16,13 @@ import {
   eachDayOfInterval,
   isSameMonth,
   isSameDay,
-  isToday,
   addMonths,
   subMonths,
   parseISO,
   getISOWeek,
 } from 'date-fns'
 import { CALENDAR_COLORS, config, TOAST_DURATION_MS } from '@/config'
+import { isHomeToday, useHomeTimezone } from '@/lib/homeTimezone'
 import {
   classifySyncError,
   shortSyncErrorMessage,
@@ -78,6 +78,7 @@ export function Sidebar({
   onCollapsedChange,
 }: SidebarProps): JSX.Element {
   const { t } = useTranslation(['calendar', 'common'])
+  useHomeTimezone()
   const prefersReducedMotion = useReducedMotion()
   const [internalCollapsed, setInternalCollapsed] = useState(false)
   const isCollapsed = controlledCollapsed ?? internalCollapsed
@@ -658,7 +659,7 @@ export function Sidebar({
                   {week.map((day) => {
                     const isCurrentMonth = isSameMonth(day, effectiveMiniDate)
                     const isSelected = isSameDay(day, parseISO(currentDate))
-                    const isTodayDate = isToday(day)
+                    const isTodayDate = isHomeToday(day)
                     return (
                       <button
                         key={day.toISOString()}

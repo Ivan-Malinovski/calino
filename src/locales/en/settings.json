@@ -21,6 +21,12 @@
   "saved": "Saved",
   "general": {
     "title": "General",
+    "homeTimezone": {
+      "label": "Home timezone",
+      "desc": "Events are shown and created in this zone. Automatic follows the browser.",
+      "ariaLabel": "Home timezone",
+      "automatic": "Automatic (browser)"
+    },
     "dateFormat": {
       "label": "Date Format",
       "desc": "How dates appear throughout the app",
