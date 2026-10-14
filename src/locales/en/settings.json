@@ -604,6 +604,16 @@
       "action": "Delete local events",
       "confirmCalendar": "Delete all events in “{{name}}” from this device? Events on your server are not deleted and may reappear after the next sync. This cannot be undone."
     },
+    "resync": {
+      "group": "Sync",
+      "label": "Resync From Server",
+      "desc": "Forget what Calino has already synced and download your calendars and contacts again from the server. Your accounts, passwords and settings are kept. Use this if something looks out of date.",
+      "confirm": "Resync everything from your servers? Accounts and settings are kept, and changes made on this device that have not synced yet are still sent. Events and contacts that exist only on this device are not removed.",
+      "action": "Resync",
+      "running": "Resyncing…",
+      "done": "Resync complete",
+      "failed": "Resync finished with errors. Check your connection and try again."
+    },
     "resetApp": {
       "label": "Reset Calino on This Device",
       "desc": "Clear all settings, connected accounts and locally stored data from this device and start fresh. Calendars and events on your servers are not touched. Events that only exist in Calino (not synced anywhere) are lost.",

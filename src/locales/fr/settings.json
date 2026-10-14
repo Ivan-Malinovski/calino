@@ -604,6 +604,16 @@
       "action": "Supprimer les événements locaux",
       "confirmCalendar": "Supprimer tous les événements de « {{name}} » sur cet appareil ? Les événements sur votre serveur ne sont pas supprimés et peuvent réapparaître après la prochaine synchronisation. Cette action est irréversible."
     },
+    "resync": {
+      "group": "Synchronisation",
+      "label": "Resynchroniser depuis le serveur",
+      "desc": "Oublie ce que Calino a déjà synchronisé et retélécharge vos calendriers et contacts depuis le serveur. Vos comptes, mots de passe et paramètres sont conservés. À utiliser si quelque chose semble obsolète.",
+      "confirm": "Tout resynchroniser depuis vos serveurs ? Les comptes et paramètres sont conservés, et les modifications de cet appareil pas encore synchronisées sont toujours envoyées. Les événements et contacts qui n’existent que sur cet appareil ne sont pas supprimés.",
+      "action": "Resynchroniser",
+      "running": "Resynchronisation…",
+      "done": "Resynchronisation terminée",
+      "failed": "La resynchronisation s’est terminée avec des erreurs. Vérifiez votre connexion et réessayez."
+    },
     "resetApp": {
       "label": "Réinitialiser Calino sur cet appareil",
       "desc": "Effacer tous les paramètres, comptes connectés et données stockées localement sur cet appareil et repartir de zéro. Les calendriers et événements sur vos serveurs ne sont pas touchés. Les événements qui n’existent que dans Calino (non synchronisés) sont perdus.",

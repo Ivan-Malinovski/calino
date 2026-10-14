@@ -159,6 +159,45 @@ test.describe('incremental sync (RFC 6578)', () => {
     expect(issued.filter((r) => r.method === 'REPORT' || r.method === 'GET')).toEqual([])
   })
 
+  test('Resync from Data settings re-lists unchanged collections and keeps the account', async ({
+    page,
+    baseURL,
+  }) => {
+    const mock = new Mock(page, baseURL!)
+    await mock.put(`${INC}resync.ics`, ics('inc-resync', 'Resync event', dayStamp(1)))
+
+    await page.goto('/month')
+    await syncAll(page)
+    await expect.poll(() => storedEventTitles(page), { timeout: 15_000 }).toContain('Resync event')
+
+    await page.goto('/settings')
+    await page.getByRole('button', { name: 'Data', exact: true }).click()
+
+    const before = (await mock.requests(INC)).length
+    page.once('dialog', (dialog) => void dialog.accept())
+    await page.locator('[data-action="resync-accounts"]').click()
+    await expect(page.getByText('Resync complete')).toBeVisible({ timeout: 20_000 })
+
+    // With a stored cursor and an unchanged ctag an ordinary sync issues no
+    // REPORT at all (see above), so this one proves the cursors were dropped.
+    const issued = (await mock.requests(INC)).slice(before)
+    expect(issued.some((r) => r.method === 'REPORT')).toBe(true)
+
+    // The local copy is rebuilt, cursors are re-established, and the
+    // connected account (and its credentials) survived.
+    expect(await storedEventTitles(page)).toContain('Resync event')
+    await expect
+      .poll(async () => (await storedCalendars(page)).find((c) => c.url.includes('inc-sync')), {
+        timeout: 15_000,
+      })
+      .toEqual(expect.objectContaining({ ctag: expect.any(String), syncToken: expect.any(String) }))
+    const kept = await page.evaluate(() => ({
+      accounts: JSON.parse(localStorage.getItem('calino_caldav_accounts') ?? '[]').length,
+      credentials: localStorage.getItem('calino_caldav_credentials') !== null,
+    }))
+    expect(kept).toEqual({ accounts: 1, credentials: true })
+  })
+
   test('a resource changed on the server is fetched by href and shown', async ({
     page,
     baseURL,

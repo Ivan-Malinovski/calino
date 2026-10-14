@@ -604,6 +604,16 @@
       "action": "Slet lokale begivenheder",
       "confirmCalendar": "Slet alle begivenheder i “{{name}}” fra denne enhed? Begivenheder på din server slettes ikke og kan dukke op igen efter næste synkronisering. Dette kan ikke fortrydes."
     },
+    "resync": {
+      "group": "Synkronisering",
+      "label": "Synkronisér igen fra serveren",
+      "desc": "Glem, hvad Calino allerede har synkroniseret, og hent dine kalendere og kontakter igen fra serveren. Dine konti, adgangskoder og indstillinger bevares. Brug dette, hvis noget ser forældet ud.",
+      "confirm": "Synkronisér alt igen fra dine servere? Konti og indstillinger bevares, og ændringer på denne enhed, der endnu ikke er synkroniseret, sendes stadig. Begivenheder og kontakter, der kun findes på denne enhed, fjernes ikke.",
+      "action": "Synkronisér igen",
+      "running": "Synkroniserer igen…",
+      "done": "Synkronisering fuldført",
+      "failed": "Synkroniseringen sluttede med fejl. Tjek din forbindelse, og prøv igen."
+    },
     "resetApp": {
       "label": "Nulstil Calino på denne enhed",
       "desc": "Ryd alle indstillinger, tilsluttede konti og lokalt lagrede data fra denne enhed, og start forfra. Kalendere og begivenheder på dine servere berøres ikke. Begivenheder, der kun findes i Calino (ikke synkroniseret), går tabt.",

@@ -604,6 +604,16 @@
       "action": "Lokale Termine löschen",
       "confirmCalendar": "Alle Termine in „{{name}}“ von diesem Gerät löschen? Termine auf deinem Server werden nicht gelöscht und können nach der nächsten Synchronisierung wieder erscheinen. Dies kann nicht rückgängig gemacht werden."
     },
+    "resync": {
+      "group": "Synchronisierung",
+      "label": "Erneut vom Server synchronisieren",
+      "desc": "Calino vergisst, was bereits synchronisiert wurde, und lädt deine Kalender und Kontakte erneut vom Server herunter. Konten, Passwörter und Einstellungen bleiben erhalten. Nutze das, wenn etwas veraltet aussieht.",
+      "confirm": "Alles erneut von deinen Servern synchronisieren? Konten und Einstellungen bleiben erhalten, und noch nicht synchronisierte Änderungen von diesem Gerät werden weiterhin gesendet. Termine und Kontakte, die nur auf diesem Gerät existieren, werden nicht entfernt.",
+      "action": "Neu synchronisieren",
+      "running": "Synchronisiere…",
+      "done": "Synchronisierung abgeschlossen",
+      "failed": "Die Synchronisierung wurde mit Fehlern beendet. Prüfe deine Verbindung und versuche es erneut."
+    },
     "resetApp": {
       "label": "Calino auf diesem Gerät zurücksetzen",
       "desc": "Alle Einstellungen, verbundenen Konten und lokal gespeicherten Daten von diesem Gerät löschen und neu beginnen. Kalender und Termine auf deinen Servern bleiben unberührt. Termine, die nur in Calino existieren (nirgends synchronisiert), gehen verloren.",
