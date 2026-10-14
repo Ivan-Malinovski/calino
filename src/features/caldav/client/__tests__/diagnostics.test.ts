@@ -130,6 +130,99 @@ describe('runDiagnostics', () => {
     expect(report.summary).toBe('degraded')
   })
 
+  describe('ETag probe target', () => {
+    const collection = (href: string) =>
+      `<d:response><d:href>${href}</d:href><d:propstat><d:prop><d:resourcetype><d:collection/></d:resourcetype></d:prop></d:propstat></d:response>`
+    const item = (href: string) =>
+      `<d:response><d:href>${href}</d:href><d:propstat><d:prop><d:resourcetype/><d:getetag>"x"</d:getetag></d:prop></d:propstat></d:response>`
+    const listing = (...responses: string[]) =>
+      `<?xml version="1.0"?><d:multistatus xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav">${responses.join('')}</d:multistatus>`
+
+    /** PROPFIND returns `body`; GETs are answered per path. */
+    function stubByPath(body: string, gets: Record<string, StubbedResponse>) {
+      const fetchMock = vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => {
+        const method = (init?.method ?? 'GET').toUpperCase()
+        if (method === 'GET') {
+          const route = gets[new URL(String(url)).pathname] ?? { status: 404 }
+          return new Response(route.body ?? '', {
+            status: route.status ?? 200,
+            headers: route.headers ?? {},
+          })
+        }
+        return new Response(body, { status: 207 })
+      })
+      vi.stubGlobal('fetch', fetchMock)
+      return fetchMock
+    }
+
+    it('skips a leading principal collection and probes a real resource (Radicale server root)', async () => {
+      // Radicale lists /teelur/ first and answers GET on it with 403.
+      const fetchMock = stubByPath(
+        listing(collection('/'), collection('/teelur/'), item('/teelur/cal/a1.ics')),
+        {
+          '/teelur/': { status: 403 },
+          '/teelur/cal/a1.ics': { status: 200, headers: { ETag: '"abc"' } },
+        },
+      )
+
+      const report = await runDiagnostics(OPTS)
+
+      expect(statusOf(report.checks, 'expose-etag')).toBe('pass')
+      const gets = fetchMock.mock.calls
+        .filter(([, init]) => (init?.method ?? 'GET') === 'GET')
+        .map(([url]) => new URL(String(url)).pathname)
+      expect(gets).not.toContain('/teelur/')
+    })
+
+    it('is inconclusive, not a warning, when the only listed entry refuses GET', async () => {
+      stubByPath(listing(collection('/'), collection('/teelur/')), {
+        '/teelur/': { status: 403 },
+      })
+
+      const report = await runDiagnostics(OPTS)
+
+      const etag = report.checks.find((c) => c.id === 'expose-etag')!
+      expect(etag.status).toBe('unknown')
+      expect(etag.fix).toBeUndefined()
+      expect(report.summary).not.toBe('degraded')
+    })
+
+    it('still warns when a listed collection answers 200 without an exposed ETag', async () => {
+      // Servers that serve a body for a collection GET keep the old behaviour.
+      stubByPath(listing(collection('/'), collection('/cal/')), {
+        '/cal/': { status: 200, body: 'x' },
+      })
+
+      const report = await runDiagnostics(OPTS)
+
+      expect(statusOf(report.checks, 'expose-etag')).toBe('warn')
+    })
+
+    it('still passes when a listed collection answers 200 with an ETag', async () => {
+      stubByPath(listing(collection('/'), collection('/cal/')), {
+        '/cal/': { status: 200, headers: { ETag: '"c"' } },
+      })
+
+      const report = await runDiagnostics(OPTS)
+
+      expect(statusOf(report.checks, 'expose-etag')).toBe('pass')
+    })
+
+    it('probes a child with no resourcetype (servers that omit it)', async () => {
+      stubByPath(
+        listing(
+          collection('/'),
+          '<d:response><d:href>/e.ics</d:href><d:propstat><d:prop><d:getetag>"x"</d:getetag></d:prop></d:propstat></d:response>',
+        ),
+        { '/e.ics': { status: 200, headers: { ETag: '"x"' } } },
+      )
+
+      const report = await runDiagnostics(OPTS)
+
+      expect(statusOf(report.checks, 'expose-etag')).toBe('pass')
+    })
+  })
+
   it('infers DAV support from a 207 when the DAV header is hidden', async () => {
     stubFetch({ OPTIONS: { status: 200 }, GET: { status: 200, headers: { ETag: '"a"' } } })
 
