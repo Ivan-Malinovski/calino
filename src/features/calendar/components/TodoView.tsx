@@ -40,6 +40,7 @@ import { DayEventsPopup } from './DayEventsPopup'
 import type { CalendarEvent } from '@/types'
 import styles from './TodoView.module.css'
 import { formatDisplayDate } from '@/lib/datetime'
+import { getTaskGroup } from '@/lib/taskGroups'
 
 type FilterType = 'all' | 'active' | 'completed'
 
@@ -131,21 +132,11 @@ function formatOccurrenceDate(iso: string, isAllDay: boolean | undefined): strin
   }
 }
 
-function getTaskGroup(task: TaskWithColor): string {
-  if (!task.dueDate) return 'nodate'
-
-  const today = startOfDay(new Date())
-  const dueDate = startOfDay(parseISO(task.dueDate))
-  const diffMs = dueDate.getTime() - today.getTime()
-  const diffDays = Math.round(diffMs / 86400000)
-
-  if (diffDays < 0) return 'overdue'
-  if (diffDays === 0) return 'today'
-  if (diffDays <= 6) return 'week'
-  return 'later'
-}
-
 const GROUP_ORDER = ['overdue', 'today', 'week', 'later', 'nodate']
+
+// A timed task turns overdue when its time passes, with no store change to
+// announce it, so the grouping re-reads the clock on a timer.
+const NOW_TICK_MS = 60 * 1000
 
 type VirtualItem =
   | { type: 'header'; key: string; label: string; count: number; isOverdue?: boolean }
@@ -191,6 +182,11 @@ export function TodoView(): JSX.Element {
   // underneath) during a drag. Drives the ambient "drop here to promote to
   // root" hint on the list container, since there's no dedicated drop zone.
   const [isOverBlankSpace, setIsOverBlankSpace] = useState(false)
+  const [now, setNow] = useState(() => new Date())
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(new Date()), NOW_TICK_MS)
+    return () => window.clearInterval(id)
+  }, [])
   // R2.7 — Hover detail for the repeat glyph. Rendered into a portal at fixed
   // coordinates rather than positioned next to the badge: task rows live in a
   // virtualizer with its own scroll clipping, which would crop an absolutely
@@ -524,7 +520,7 @@ export function TodoView(): JSX.Element {
       // context there instead of moving the child to the parent's day.
       const grouped = new Map<string, TaskWithColor[]>()
       for (const task of sorted) {
-        const group = getTaskGroup(task)
+        const group = getTaskGroup(task, now)
         if (!grouped.has(group)) grouped.set(group, [])
         grouped.get(group)!.push(task)
       }
@@ -565,7 +561,7 @@ export function TodoView(): JSX.Element {
         tasks: group.tasks.filter((task) => !collapsedDescendantIds.has(task.id)),
       }))
       .filter((group) => group.tasks.length > 0)
-  }, [collapsedDescendantIds, filteredTasks, filter, recentlyCompleted, t])
+  }, [collapsedDescendantIds, filteredTasks, filter, now, recentlyCompleted, t])
 
   const handleToggleComplete = useCallback(
     async (task: TaskWithColor): Promise<void> => {
