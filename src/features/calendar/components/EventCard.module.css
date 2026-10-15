@@ -569,8 +569,17 @@
 }
 
 /* ---- Task Variant ---- */
+/* Tasks carry a lighter wash of their calendar colour than events, so the
+   two stay distinguishable while a task still reads as belonging to its
+   calendar. Derived from the theme's event mix so dark themes scale too. */
 .task {
-  background: transparent;
+  --task-bg-mix: calc(var(--event-bg-mix, 9%) * 0.65);
+  --task-bg-mix-hover: calc(var(--event-bg-mix-hover, 12%) * 0.65);
+  background: color-mix(
+    in srgb,
+    var(--event-color, var(--accent)) var(--task-bg-mix),
+    var(--canvas)
+  );
   border-color: transparent;
   box-shadow: none;
   padding: 2px 22px 2px 8px;
@@ -581,6 +590,15 @@
 .task.hovered {
   box-shadow: none;
   transform: none;
+}
+
+.task:not(.dot):hover,
+.task:not(.dot).hovered {
+  background: color-mix(
+    in srgb,
+    var(--event-color, var(--accent)) var(--task-bg-mix-hover),
+    var(--canvas)
+  );
 }
 
 .task .dragContent {
@@ -726,7 +744,11 @@
 .task.monthView:not(.dot) {
   border: 1px solid var(--line, rgba(var(--ink-raw), 0.09));
   border-radius: 999px;
-  background: var(--panel, transparent);
+  background: color-mix(
+    in srgb,
+    var(--event-color, var(--accent)) var(--task-bg-mix),
+    var(--panel, var(--canvas))
+  );
 }
 
 .task.monthView:not(.dot) .taskCheckbox {
