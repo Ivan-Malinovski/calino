@@ -202,6 +202,9 @@
     "navCreate": "Crear",
     "navBackToCalendar": "Volver al calendario",
     "agendaMakeSubtask": "Hacer subtarea",
+    "agendaCannotSubtaskRepeatingParent": "Las tareas repetidas no pueden tener subtareas",
+    "agendaCannotSubtaskRepeatingTask": "Las tareas repetidas no pueden ser subtareas",
+    "agendaCannotSubtaskCycle": "Una tarea no puede ir dentro de su propia subtarea",
     "agendaDue": "Vence",
     "agendaAllDay": "Todo el día",
     "today": "Hoy",
@@ -655,6 +658,8 @@
     "task": {
       "markDone": "Marcar como hecha",
       "markNotDone": "Marcar como no hecha",
+      "moveUp": "Subir",
+      "moveDown": "Bajar",
       "priority": {
         "none": "Ninguna",
         "high": "Alta",

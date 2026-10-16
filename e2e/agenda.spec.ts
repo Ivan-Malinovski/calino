@@ -225,7 +225,10 @@ test('agenda indents subtasks and moves tasks and events between days', async ({
     .filter({ hasText: 'Agenda parent' })
     .first()
   await dragTaskToTask(page, 'Agenda task', 'Agenda parent', async () => {
-    await expect(parentTask).toContainText('Make subtask')
+    // The label rides on the dragged card; the row underneath is highlighted.
+    await expect(page.locator('[data-component="agenda-drag-overlay"]')).toContainText(
+      'Make subtask'
+    )
     await expect(parentTask).toHaveAttribute('data-drop-state', 'make-subtask')
   })
   await expect
