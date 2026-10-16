@@ -1,6 +1,7 @@
 import { differenceInCalendarDays, endOfWeek, format, parseISO, startOfWeek } from 'date-fns'
 import type { CalendarEvent } from '@/types'
 import { toEventInstant } from '@/lib/datetime'
+import { compareTaskSortOrder } from '@/lib/taskSortOrder'
 
 /** A task whose start→due range covers at least this many calendar days. */
 export const WEEK_TASK_MIN_DAYS = 3
@@ -60,6 +61,7 @@ export function weekScopedTasksInRange(
     (a, b) =>
       a.startKey.localeCompare(b.startKey) ||
       a.dueKey.localeCompare(b.dueKey) ||
+      compareTaskSortOrder(a.task, b.task) ||
       a.task.title.localeCompare(b.task.title)
   )
   return scoped.map((entry) => entry.task)

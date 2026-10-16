@@ -92,6 +92,26 @@ function prepareComponentsForAsyncParsing(comps: ICAL.Component[]): Set<string> 
 
 type ComponentKind = 'event' | 'task' | 'journal'
 
+/**
+ * A RECURRENCE-ID override with no `X-APPLE-SORT-ORDER` of its own sorts where
+ * its master does. Master and overrides share a UID and live in one CalDAV
+ * resource, so the master is always among the tasks parsed alongside it.
+ */
+function inheritMasterSortOrder(tasks: CalendarEvent[]): void {
+  const masterOrder = new Map<string, number>()
+  for (const task of tasks) {
+    if (!task.recurrenceId && task.uid && task.sortOrder !== undefined) {
+      masterOrder.set(task.uid, task.sortOrder)
+    }
+  }
+  if (masterOrder.size === 0) return
+  for (const task of tasks) {
+    if (task.recurrenceId && task.sortOrder === undefined && task.uid) {
+      task.sortOrder = masterOrder.get(task.uid)
+    }
+  }
+}
+
 function parseEventsFromComponents(
   comps: ICAL.Component[],
   calendarId: string,
@@ -120,15 +140,19 @@ function parseEventsFromComponents(
         }
       }
 
-    if (!only || only === 'task')
+    if (!only || only === 'task') {
+      const resourceTasks: CalendarEvent[] = []
       for (const vtodo of comp.getAllSubcomponents('vtodo')) {
         try {
-          tasks.push(icalVtodoToCalendarEvent(vtodo, calendarId))
+          resourceTasks.push(icalVtodoToCalendarEvent(vtodo, calendarId))
         } catch (e) {
           hadComponentParseFailures = true
           console.error('Failed to parse vtodo:', e)
         }
       }
+      inheritMasterSortOrder(resourceTasks)
+      tasks.push(...resourceTasks)
+    }
 
     if (!only || only === 'journal')
       for (const vjournal of comp.getAllSubcomponents('vjournal')) {

@@ -36,6 +36,7 @@ import { useTranslation } from 'react-i18next'
 import i18n from '@/lib/i18n'
 import { safeCalDAVUpdate } from '@/lib/caldavHelpers'
 import { extractOriginalEventId, hasDueTime } from '@/lib/events'
+import { compareTaskSortOrder } from '@/lib/taskSortOrder'
 import { LocationLink } from './LocationLink'
 import { useDateChangeMotion } from '@/hooks/useDateChangeMotion'
 import { useTaskContextMenuItems } from '../hooks/useTaskContextMenuItems'
@@ -584,14 +585,16 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
     // R4.7: sort each day's events once here rather than in the render body.
     // The render used to do `[...dayEvents].sort(...)` for every day-group on
     // every render; the order only depends on the data, so it belongs in the
-    // memo. Semantics are unchanged: all-day events first, then by start time.
+    // memo. Semantics are unchanged: all-day events first, then by start time,
+    // then tasks in their manual order.
     eventMap.forEach((arr) => {
       arr.sort((a, b) => {
         if (a.event.isAllDay && !b.event.isAllDay) return -1
         if (!a.event.isAllDay && b.event.isAllDay) return 1
         return (
           toEventInstant(a.event.start, a.event.timezone).getTime() -
-          toEventInstant(b.event.start, b.event.timezone).getTime()
+            toEventInstant(b.event.start, b.event.timezone).getTime() ||
+          compareTaskSortOrder(a.event, b.event)
         )
       })
     })

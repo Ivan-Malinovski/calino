@@ -1,4 +1,5 @@
 import type { CalendarEvent } from '@/types'
+import { compareTaskSortOrder } from '@/lib/taskSortOrder'
 
 export interface TaskTreeItem {
   task: CalendarEvent
@@ -35,6 +36,9 @@ function buildTaskTreeIndex(events: CalendarEvent[]): TaskTreeIndex {
     children.push(event)
     childrenByParent.set(event.parentTaskId, children)
   }
+  // Siblings follow their manual order; ones without a value keep store order
+  // after them (the sort is stable).
+  for (const children of childrenByParent.values()) children.sort(compareTaskSortOrder)
 
   // Detect cycles iteratively so long imported chains cannot overflow the
   // JavaScript call stack. Malformed graphs use the guarded traversal below.
@@ -170,7 +174,7 @@ export function getTaskChildrenMap(events: CalendarEvent[]): Map<string, Calenda
   )
 }
 
-/** Return the immediate task children in their stored order. */
+/** Return the immediate task children in their manual order, then stored order. */
 export function getDirectSubtasks(events: CalendarEvent[], parentId: string): CalendarEvent[] {
   return getTaskTreeIndex(events).getDirectSubtasks(parentId).slice()
 }

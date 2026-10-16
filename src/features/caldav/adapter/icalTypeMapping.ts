@@ -16,6 +16,7 @@ import { buildRRuleString, normaliseAllDayUntil } from '@/lib/recurrence'
 import { toLocalDateString } from '@/lib/datetime'
 import { normalizeTzid } from '@/lib/timezoneRegistry'
 import { parseIcalColor } from '@/lib/cssColors'
+import { parseSortOrder } from '@/lib/taskSortOrder'
 import { readScalarProperties, writeScalarProperties } from './icalPropertyRegistry'
 
 const VALID_PARTSTATS: AttendeePartstat[] = [
@@ -1491,6 +1492,8 @@ export function icalVtodoToCalendarEvent(vtodo: ICAL.Component, calendarId: stri
     })
     ?.getFirstValue()
 
+  const sortOrder = parseSortOrder(vtodo.getFirstPropertyValue('x-apple-sort-order'))
+
   const uid = uidProp ? (uidProp.getFirstValue() as string) : createUuid()
 
   // R2.7 — A master and its detached overrides legitimately share a UID
@@ -1525,6 +1528,7 @@ export function icalVtodoToCalendarEvent(vtodo: ICAL.Component, calendarId: stri
     taskStatus,
     completedAt,
     parentTaskId: typeof parentTaskId === 'string' ? parentTaskId : undefined,
+    sortOrder,
     priority,
     percentComplete,
     sequence,
@@ -1550,6 +1554,22 @@ function isParentRelatedTo(prop: ICAL.Property): boolean {
     reltype === undefined ||
     (typeof reltype === 'string' && (!reltype.trim() || reltype.toUpperCase() === 'PARENT'))
   )
+}
+
+/**
+ * Write `X-APPLE-SORT-ORDER`. Unlike the fields above, an unset value leaves
+ * the property alone instead of removing it: Calino never clears an order, and
+ * a value the parser rejected as malformed still belongs to the client that
+ * wrote it.
+ *
+ * An override only updates a value it already has. Without one it inherits
+ * its master's order at parse time, and copying that onto the override would
+ * pin the occurrence to the old position once the master is reordered.
+ */
+function writeSortOrder(vtodo: ICAL.Component, task: CalendarEvent): void {
+  if (task.sortOrder === undefined) return
+  if (task.recurrenceId && !vtodo.hasProperty('x-apple-sort-order')) return
+  vtodo.updatePropertyWithValue('x-apple-sort-order', String(task.sortOrder))
 }
 
 /**
@@ -1670,6 +1690,8 @@ export function calendarEventToIcalVtodo(
     const relatedTo = vtodo.addPropertyWithValue('related-to', task.parentTaskId)
     relatedTo.setParameter('reltype', 'PARENT')
   }
+
+  writeSortOrder(vtodo, task)
 
   if (task.priority) {
     const priorityValue = task.priority === 1 ? 1 : task.priority === 2 ? 5 : 9

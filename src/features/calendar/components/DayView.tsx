@@ -22,6 +22,7 @@ import { useTranslation } from 'react-i18next'
 import i18n from '@/lib/i18n'
 import { formatDisplayDate } from '@/lib/datetime'
 import { filterTasksByCollapsedAncestors } from '@/lib/taskTree'
+import { compareTaskSortOrder } from '@/lib/taskSortOrder'
 import { useTaskCollapse } from '../hooks/useTaskCollapse'
 import { useSettingsStore } from '@/store/settingsStore'
 import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
@@ -410,7 +411,10 @@ export function DayView({
   // Tasks with a due time are anchored on the timeline as pills (matching week
   // view); the rest stay in the header list.
   const timedTasks = useMemo(() => dayTasks.filter((t) => hasDueTime(t)), [dayTasks])
-  const untimedTasks = useMemo(() => dayTasks.filter((t) => !hasDueTime(t)), [dayTasks])
+  const untimedTasks = useMemo(
+    () => dayTasks.filter((t) => !hasDueTime(t)).sort(compareTaskSortOrder),
+    [dayTasks]
+  )
 
   // Geometry is independent of pointer-preview and create-drag state. Keep
   // all expensive event preparation behind the two data inputs that can

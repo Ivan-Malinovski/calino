@@ -34,6 +34,7 @@ import { useTaskCollapse } from '../hooks/useTaskCollapse'
 import { useTaskCalendarLabels } from '../hooks/useTaskCalendarLabels'
 import { TaskCalendarLabel } from './TaskCalendarLabel'
 import { getTaskDescendantIds } from '@/lib/taskTree'
+import { compareTaskSortOrder } from '@/lib/taskSortOrder'
 import { TaskContextMenu } from './TaskContextMenu'
 import { TaskCollapseToggle } from './TaskCollapseToggle'
 import { DayEventsPopup } from './DayEventsPopup'
@@ -511,12 +512,17 @@ export function TodoView(): JSX.Element {
     const result: TaskGroup[] = []
 
     if (filter !== 'completed') {
-      // Sort active tasks: due date ascending (earliest first), no-date last
+      // Sort active tasks: due date ascending (earliest first), no-date last.
+      // Tasks due at the same moment (untimed on the same day) keep their
+      // manual order.
       const sorted = [...active].sort((a, b) => {
-        if (!a.dueDate && !b.dueDate) return 0
+        if (!a.dueDate && !b.dueDate) return compareTaskSortOrder(a, b)
         if (!a.dueDate) return 1
         if (!b.dueDate) return -1
-        return parseISO(a.dueDate).getTime() - parseISO(b.dueDate).getTime()
+        return (
+          parseISO(a.dueDate).getTime() - parseISO(b.dueDate).getTime() ||
+          compareTaskSortOrder(a, b)
+        )
       })
 
       // A task belongs to the group for its own due date. If its parent lands
@@ -546,10 +552,13 @@ export function TodoView(): JSX.Element {
     if (filter !== 'active' && done.length > 0) {
       // Sort completed: most recently done first
       const sortedDone = [...done].sort((a, b) => {
-        if (!a.dueDate && !b.dueDate) return 0
+        if (!a.dueDate && !b.dueDate) return compareTaskSortOrder(a, b)
         if (!a.dueDate) return 1
         if (!b.dueDate) return -1
-        return parseISO(b.dueDate).getTime() - parseISO(a.dueDate).getTime()
+        return (
+          parseISO(b.dueDate).getTime() - parseISO(a.dueDate).getTime() ||
+          compareTaskSortOrder(a, b)
+        )
       })
 
       result.push({
