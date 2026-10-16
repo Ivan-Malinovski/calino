@@ -757,7 +757,7 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
         dayTasks,
         events,
         taskCollapse.collapsedTaskIds
-      )
+      ).sort(compareDayEvents)
       if (visibleTasks.length > 0) {
         map.set(dayKey, visibleTasks)
         const timed = visibleTasks.filter((t) => hasDueTime(t))

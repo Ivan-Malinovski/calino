@@ -683,7 +683,9 @@ export function CalendarGrid(): JSX.Element {
           (selectedCategoryNames.length === 0 ||
             event.categories?.some((c) => selectedCategoryNames.includes(c)))
       )
-      if (dayTasks.length > 0) map.set(dayKey, dayTasks)
+      // Timed tasks by time, untimed ones in their manual order. The cell, its
+      // "+N more" popup and the hidden count all read this one order.
+      if (dayTasks.length > 0) map.set(dayKey, dayTasks.sort(compareDayEvents))
     }
     return map
   }, [days, events, calendars, hideCompletedTasksInMonthView, selectedCategoryNames])
