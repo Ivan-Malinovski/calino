@@ -519,6 +519,9 @@
     "navCreate": "Opret",
     "navBackToCalendar": "Tilbage til kalenderen",
     "agendaMakeSubtask": "Gør til underopgave",
+    "agendaCannotSubtaskRepeatingParent": "Gentagne opgaver kan ikke have underopgaver",
+    "agendaCannotSubtaskRepeatingTask": "Gentagne opgaver kan ikke være underopgaver",
+    "agendaCannotSubtaskCycle": "En opgave kan ikke ligge i sin egen underopgave",
     "agendaDue": "Forfalder",
     "agendaAllDay": "Hele dagen",
     "today": "I dag",
@@ -656,6 +659,8 @@
     "task": {
       "markDone": "Markér som udført",
       "markNotDone": "Markér som ikke udført",
+      "moveUp": "Flyt op",
+      "moveDown": "Flyt ned",
       "priority": {
         "none": "Ingen",
         "high": "Høj",

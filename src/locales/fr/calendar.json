@@ -202,6 +202,9 @@
     "navCreate": "Créer",
     "navBackToCalendar": "Retour au calendrier",
     "agendaMakeSubtask": "Convertir en sous-tâche",
+    "agendaCannotSubtaskRepeatingParent": "Les tâches répétées ne peuvent pas avoir de sous-tâches",
+    "agendaCannotSubtaskRepeatingTask": "Les tâches répétées ne peuvent pas être des sous-tâches",
+    "agendaCannotSubtaskCycle": "Une tâche ne peut pas aller dans sa propre sous-tâche",
     "agendaDue": "Échéance",
     "agendaAllDay": "Toute la journée",
     "today": "Aujourd’hui",
@@ -656,6 +659,8 @@
     "task": {
       "markDone": "Marquer comme faite",
       "markNotDone": "Marquer comme non faite",
+      "moveUp": "Monter",
+      "moveDown": "Descendre",
       "priority": {
         "none": "Aucune",
         "high": "Haute",

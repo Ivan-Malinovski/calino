@@ -878,6 +878,33 @@
   background: color-mix(in srgb, var(--event-color, var(--accent)) 8%, var(--surface-bg));
 }
 
+/* Dropping on a row's top or bottom edge reorders: a line marks where the
+   task will land, instead of the outline that means "make it a subtask". */
+.taskRowInsertBefore,
+.taskRowInsertAfter {
+  position: relative;
+}
+
+.taskRowInsertBefore::before,
+.taskRowInsertAfter::after {
+  content: '';
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--event-color, var(--accent));
+  pointer-events: none;
+}
+
+.taskRowInsertBefore::before {
+  top: -1px;
+}
+
+.taskRowInsertAfter::after {
+  bottom: -1px;
+}
+
 /* The composer checkmark is now a button — reset native button chrome so
    it stays a circle the same size as before. */
 .composerCheck {

@@ -43,6 +43,7 @@ import { useSettingsStore } from '@/store/settingsStore'
 import { exportSingleEventIcs } from '@/lib/icsExport'
 import { buildMailtoUri } from '@/lib/mailtoInvite'
 import { getDirectSubtasks, getVisibleTaskDescendants } from '@/lib/taskTree'
+import { nextSubtaskSortOrder } from '@/lib/taskSortOrder'
 import { completeTaskAndSync } from '@/lib/taskCompletion'
 import { useTaskCollapse } from '../hooks/useTaskCollapse'
 
@@ -1329,6 +1330,8 @@ export function EventModal(): JSX.Element | null {
             completed: isTaskMode ? completed : undefined,
             priority: isTaskMode ? priority : undefined,
             parentTaskId: isTaskMode ? parentTaskId : undefined,
+            // The split-off series keeps the position the old one had.
+            sortOrder: isTaskMode ? masterEvent.sortOrder : undefined,
             travelDuration: isTaskMode ? undefined : travelDuration,
             reminders: isTaskMode ? undefined : reminders,
             transparency: isTaskMode ? undefined : transparency,
@@ -1523,6 +1526,11 @@ export function EventModal(): JSX.Element | null {
           completed: isTaskMode ? completed : undefined,
           priority: isTaskMode ? priority : undefined,
           parentTaskId: isTaskMode ? parentTaskId : undefined,
+          // A new subtask lands after its ordered siblings.
+          sortOrder:
+            isTaskMode && parentTaskId
+              ? nextSubtaskSortOrder(getDirectSubtasks(events, parentTaskId))
+              : undefined,
           reminders: isTaskMode ? undefined : reminders,
           transparency: isTaskMode ? undefined : transparency,
           categories: selectedCategories,

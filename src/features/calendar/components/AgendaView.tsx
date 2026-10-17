@@ -13,7 +13,9 @@ import {
   useDroppable,
   useSensor,
   useSensors,
+  rectIntersection,
   type DragEndEvent,
+  type DragMoveEvent,
   type DragStartEvent,
 } from '@dnd-kit/core'
 import { useCalendarStore } from '@/store/calendarStore'
@@ -36,9 +38,21 @@ import { useTranslation } from 'react-i18next'
 import i18n from '@/lib/i18n'
 import { safeCalDAVUpdate } from '@/lib/caldavHelpers'
 import { extractOriginalEventId, hasDueTime } from '@/lib/events'
+import { compareTaskSortOrder } from '@/lib/taskSortOrder'
 import { LocationLink } from './LocationLink'
 import { useDateChangeMotion } from '@/hooks/useDateChangeMotion'
 import { useTaskContextMenuItems } from '../hooks/useTaskContextMenuItems'
+import {
+  isReorderable,
+  liveRect,
+  liveRowCollision,
+  planDropReorder,
+  planStep,
+  reorderZone,
+  useDragPointer,
+  useTaskReorder,
+  type ReorderCommit,
+} from '../hooks/useTaskReorder'
 import {
   filterTasksByCollapsedAncestors,
   getTaskChildrenMap,
@@ -211,6 +225,34 @@ function AgendaInsertDropZone({
   )
 }
 
+/** Why a drop on the middle of a task row cannot make a subtask. */
+type NestBlock = 'repeatingParent' | 'repeatingTask' | 'cycle'
+
+/**
+ * What a drag over one task row would do. One state drives both the line and
+ * the "make subtask" highlight, so the row cannot show one for a frame while
+ * the other catches up.
+ */
+type AgendaDropState =
+  | { targetId: string; zone: 'before' | 'after' | 'nest' }
+  | { targetId: string; zone: 'blocked'; reason: NestBlock }
+
+const NEST_BLOCK_LABEL: Record<NestBlock, string> = {
+  repeatingParent: 'surface.agendaCannotSubtaskRepeatingParent',
+  repeatingTask: 'surface.agendaCannotSubtaskRepeatingTask',
+  cycle: 'surface.agendaCannotSubtaskCycle',
+}
+
+function isRepeating(event: CalendarEvent): boolean {
+  return Boolean(
+    event.recurrence ||
+      event.rruleString ||
+      event.recurrenceId ||
+      event.occurrenceMasterId ||
+      extractOriginalEventId(event.id)
+  )
+}
+
 function AgendaDraggableItem({
   event,
   className,
@@ -219,6 +261,7 @@ function AgendaDraggableItem({
   accentColor,
   indentDepth = 0,
   dropTargetId,
+  dropState = null,
   children,
   onClick,
   onKeyDown,
@@ -227,6 +270,8 @@ function AgendaDraggableItem({
 }: {
   event: CalendarEvent
   className: string
+  /** What a drag hovering this row would do; null when nothing is hovering it. */
+  dropState?: AgendaDropState | null
   disabled: boolean
   dataComponent?: string
   accentColor?: string
@@ -238,38 +283,47 @@ function AgendaDraggableItem({
   onContextMenu: (event: React.MouseEvent) => void
   disableKeyboardAttributes?: boolean
 }): JSX.Element {
-  const { t } = useTranslation('calendar')
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: event.id,
     disabled,
   })
-  const { setNodeRef: setDropNodeRef, isOver: isDropOver } = useDroppable({
+  const { setNodeRef: setDropNodeRef } = useDroppable({
     id: dropTargetId ?? `agenda-item-${event.id}`,
     disabled: !dropTargetId,
   })
 
   const style = {
     ...(accentColor ? { '--event-color': accentColor } : {}),
-    ...(transform
-      ? {
-          transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
-          zIndex: 2,
-        }
-      : {}),
+    // No drag transform: the DragOverlay carries the card. An offset left on
+    // the row at drop would slide it from there into its new slot, through the
+    // row's transform transition.
     ...(indentDepth > 0 ? { marginLeft: `${12 + indentDepth * 18}px` } : {}),
   } as React.CSSProperties
   const setNodeRefs = (node: HTMLDivElement | null): void => {
     setNodeRef(node)
     setDropNodeRef(node)
   }
+  const zone = dropTargetId ? dropState?.zone : undefined
+  const insert = zone === 'before' || zone === 'after' ? zone : null
+  const makeSubtask = zone === 'nest'
+  const blocked = dropState?.zone === 'blocked' ? dropState.reason : null
 
   return (
     <div
       ref={setNodeRefs}
       style={style}
-      className={`${className} ${isDragging ? styles.agendaDragging : ''} ${isDropOver && dropTargetId ? styles.agendaTaskDropOver : ''}`}
+      className={`${className} ${isDragging ? styles.agendaDragging : ''} ${makeSubtask ? styles.agendaTaskDropOver : ''} ${blocked ? styles.agendaTaskDropBlocked : ''} ${insert === 'before' ? styles.agendaTaskInsertBefore : ''} ${insert === 'after' ? styles.agendaTaskInsertAfter : ''}`}
       data-component={dataComponent}
-      data-drop-state={isDropOver && dropTargetId ? 'make-subtask' : undefined}
+      data-drop-id={dropTargetId}
+      data-drop-state={
+        makeSubtask
+          ? 'make-subtask'
+          : blocked
+            ? 'cannot-make-subtask'
+            : insert
+              ? `insert-${insert}`
+              : undefined
+      }
       {...(disableKeyboardAttributes ? {} : attributes)}
       {...listeners}
       onClick={onClick}
@@ -277,9 +331,6 @@ function AgendaDraggableItem({
       onContextMenu={onContextMenu}
     >
       {children}
-      {isDropOver && dropTargetId && (
-        <span className={styles.agendaTaskDropHint}>{t('surface.agendaMakeSubtask')}</span>
-      )}
     </div>
   )
 }
@@ -375,6 +426,22 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
   )
 
   const [activeDragEvent, setActiveDragEvent] = useState<CalendarEvent | null>(null)
+  // A drag over a task row's top or bottom edge reorders within the day (see
+  // TodoView); null whenever that edge drop would not be a valid reorder.
+  const [dropIntent, setDropIntent] = useState<AgendaDropState | null>(null)
+  const { commit: commitReorder, moveStep } = useTaskReorder()
+  const dragPointer = useDragPointer(activeDragEvent !== null)
+  // A task row under (or right next to) the pointer wins, measured live; the
+  // day and between-day zones keep dnd-kit's default overlap test.
+  const agendaCollision = useMemo(
+    () =>
+      liveRowCollision(
+        (id) => (String(id).startsWith('agenda-task:') ? String(id).slice('agenda-task:'.length) : null),
+        dragPointer,
+        rectIntersection
+      ),
+    [dragPointer]
+  )
 
   const taskDepthById = useMemo(() => {
     const eventById = new Map(events.map((event) => [event.id, event]))
@@ -434,15 +501,98 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
     setEventContextMenu({ x: e.clientX, y: e.clientY, event })
   }
 
+  /** A row as the agenda lists it, generated occurrences included. */
+  const findListed = (id: string): CalendarEvent | undefined => {
+    for (const items of eventsByDate.values()) {
+      const hit = items.find(({ event }) => event.id === id)
+      if (hit) return hit.event
+    }
+    return undefined
+  }
+
   const handleDragStart = (dragEvent: DragStartEvent): void => {
-    const dragged = events.find((event) => event.id === String(dragEvent.active.id))
+    const id = String(dragEvent.active.id)
+    // A repeating task's row is a generated occurrence, which is not in the
+    // store; it can still be dragged to reorder its day.
+    const dragged = events.find((event) => event.id === id) ?? findListed(id)
     setActiveDragEvent(dragged ?? null)
+    setDropIntent(null)
+  }
+
+  /**
+   * What a drop on the middle of `targetId` does: make a subtask, refuse with
+   * a reason the row can show, or nothing (dropping on itself or its parent).
+   */
+  const nestState = (dragged: CalendarEvent, targetId: string): AgendaDropState | null => {
+    const target = findListed(targetId)
+    if (!target || target.type !== 'task' || dragged.type !== 'task') return null
+    if (target.id === dragged.id || dragged.parentTaskId === target.id) return null
+    if (isRepeating(target)) return { targetId, zone: 'blocked', reason: 'repeatingParent' }
+    if (isRepeating(dragged)) return { targetId, zone: 'blocked', reason: 'repeatingTask' }
+    const childrenByParent = getTaskChildrenMap(events)
+    const pending = [dragged.id]
+    const descendants = new Set<string>()
+    while (pending.length > 0) {
+      for (const child of childrenByParent.get(pending.pop()!) ?? []) {
+        if (descendants.has(child.id)) continue
+        descendants.add(child.id)
+        pending.push(child.id)
+      }
+    }
+    if (descendants.has(target.id)) return { targetId, zone: 'blocked', reason: 'cycle' }
+    return { targetId, zone: 'nest' }
+  }
+
+  /** What an edge drop on `targetId` would write, judged against its day as listed. */
+  const planAgendaReorder = (
+    dragged: CalendarEvent,
+    targetId: string,
+    zone: 'before' | 'after'
+  ): ReorderCommit | null => {
+    for (const items of eventsByDate.values()) {
+      if (!items.some(({ event }) => event.id === targetId)) continue
+      const rows = items.flatMap(({ event }) => (event.type === 'task' ? [event] : []))
+      return planDropReorder(rows, dragged, targetId, zone, events)
+    }
+    return null
+  }
+
+  const handleDragMove = ({ over }: DragMoveEvent): void => {
+    const overId = over ? String(over.id) : ''
+    const dragged = activeDragEvent
+    let next: AgendaDropState | null = null
+    if (over && dragged && overId.startsWith('agenda-task:')) {
+      const targetId = overId.slice('agenda-task:'.length)
+      const zone = reorderZone(
+        dragPointer.current?.y ?? null,
+        liveRect(`[data-drop-id="${CSS.escape(overId)}"]`, over.rect)
+      )
+      next =
+        zone && planAgendaReorder(dragged, targetId, zone)
+          ? { targetId, zone }
+          : nestState(dragged, targetId)
+    }
+    setDropIntent((current) =>
+      current?.targetId === next?.targetId && current?.zone === next?.zone ? current : next
+    )
   }
 
   const handleDragEnd = async ({ over }: DragEndEvent): Promise<void> => {
     const originalEvent = activeDragEvent
+    const intent = dropIntent
     setActiveDragEvent(null)
+    setDropIntent(null)
     if (!originalEvent || !over) return
+
+    // The line the person saw is what they meant, whatever dnd-kit reports
+    // as the release target a pixel later.
+    if (intent && (intent.zone === 'before' || intent.zone === 'after')) {
+      const plan = planAgendaReorder(originalEvent, intent.targetId, intent.zone)
+      if (plan) await commitReorder(plan)
+      return
+    }
+    // A refused nest stays refused, even if the pointer left the row on release.
+    if (intent?.zone === 'blocked') return
 
     const overId = String(over.id)
     if (overId.startsWith('agenda-task:')) {
@@ -584,14 +734,16 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
     // R4.7: sort each day's events once here rather than in the render body.
     // The render used to do `[...dayEvents].sort(...)` for every day-group on
     // every render; the order only depends on the data, so it belongs in the
-    // memo. Semantics are unchanged: all-day events first, then by start time.
+    // memo. Semantics are unchanged: all-day events first, then by start time,
+    // then tasks in their manual order.
     eventMap.forEach((arr) => {
       arr.sort((a, b) => {
         if (a.event.isAllDay && !b.event.isAllDay) return -1
         if (!a.event.isAllDay && b.event.isAllDay) return 1
         return (
           toEventInstant(a.event.start, a.event.timezone).getTime() -
-          toEventInstant(b.event.start, b.event.timezone).getTime()
+            toEventInstant(b.event.start, b.event.timezone).getTime() ||
+          compareTaskSortOrder(a.event, b.event)
         )
       })
     })
@@ -760,9 +912,14 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
   return (
     <DndContext
       sensors={sensors}
+      collisionDetection={agendaCollision}
       onDragStart={handleDragStart}
+      onDragMove={handleDragMove}
       onDragEnd={handleDragEnd}
-      onDragCancel={() => setActiveDragEvent(null)}
+      onDragCancel={() => {
+        setActiveDragEvent(null)
+        setDropIntent(null)
+      }}
     >
       <div
         ref={containerRef}
@@ -921,10 +1078,13 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
                                         accentColor={getEventBarColor(event)}
                                         indentDepth={taskDepthById.get(event.id) ?? 0}
                                         dropTargetId={`agenda-task:${event.id}`}
+                                        dropState={
+                                          dropIntent?.targetId === event.id ? dropIntent : null
+                                        }
+                                        // Repeating tasks drag too, to reorder their day;
+                                        // the drop handler keeps them off other days and
+                                        // out of other tasks.
                                         disabled={
-                                          !!event.recurrence ||
-                                          !!event.rruleString ||
-                                          !!extractOriginalEventId(event.id) ||
                                           calendars.find(
                                             (calendar) => calendar.id === event.calendarId
                                           )?.readOnly === true
@@ -1229,6 +1389,29 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
                     setEventContextMenu(null)
                   },
                 },
+                // Move up / Move down within the day, as in every task menu.
+                ...(isReorderable(eventContextMenu.event)
+                  ? (
+                      [
+                        [-1, 'moveUp', 'task-menu-move-up'],
+                        [1, 'moveDown', 'task-menu-move-down'],
+                      ] as const
+                    ).flatMap(([direction, key, dataComponent]) =>
+                      planStep(eventContextMenu.event, direction)
+                        ? [
+                            {
+                              label: t(`ui.task.${key}`),
+                              dataComponent,
+                              onClick: () => {
+                                void moveStep(eventContextMenu.event, direction)
+                                closeMenu()
+                                setEventContextMenu(null)
+                              },
+                            },
+                          ]
+                        : []
+                    )
+                  : []),
                 {
                   label: t('common:actions.delete'),
                   onClick: () => {
@@ -1265,8 +1448,18 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
       )}
       <DragOverlay dropAnimation={null}>
         {activeDragEvent ? (
-          <div className={styles.agendaDragOverlay}>
+          <div className={styles.agendaDragOverlay} data-component="agenda-drag-overlay">
             <span>{activeDragEvent.title}</span>
+            {/* What letting go here does, carried with the card rather than
+                pinned to the row underneath. */}
+            {dropIntent?.zone === 'nest' && (
+              <span className={styles.agendaTaskDropHint}>{t('surface.agendaMakeSubtask')}</span>
+            )}
+            {dropIntent?.zone === 'blocked' && (
+              <span className={`${styles.agendaTaskDropHint} ${styles.agendaTaskDropHintBlocked}`}>
+                {t(NEST_BLOCK_LABEL[dropIntent.reason])}
+              </span>
+            )}
           </div>
         ) : null}
       </DragOverlay>

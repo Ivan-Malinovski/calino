@@ -412,10 +412,20 @@
     0 4px 12px color-mix(in srgb, var(--accent, #b07d4f) 18%, transparent);
 }
 
+/* Dropping on a task's top or bottom edge reorders it within the day: a line
+   marks where it will land, instead of the "make subtask" highlight. The row
+   clips its content (overflow: hidden), so the line is an outer shadow pushed
+   into the gap above or below rather than a pseudo-element. */
+.agendaTaskInsertBefore {
+  box-shadow: 0 -4px 0 -1px var(--accent, #b07d4f);
+}
+
+.agendaTaskInsertAfter {
+  box-shadow: 0 4px 0 -1px var(--accent, #b07d4f);
+}
+
 .agendaTaskDropHint {
-  position: absolute;
-  top: 50%;
-  right: 10px;
+  flex: 0 0 auto;
   padding: 3px 7px;
   border-radius: 999px;
   background: var(--accent, #b07d4f);
@@ -423,8 +433,15 @@
   font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.01em;
-  pointer-events: none;
-  transform: translateY(-50%);
+  white-space: nowrap;
+}
+
+.agendaTaskDropBlocked {
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--danger, #b65c5c) 55%, transparent);
+}
+
+.agendaTaskDropHintBlocked {
+  background: var(--danger, #b65c5c);
 }
 
 .agendaTask:hover {
@@ -624,6 +641,10 @@
 }
 
 .agendaDragOverlay {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
   min-width: 160px;
   padding: 10px 14px;
   border-radius: var(--radius-sm);

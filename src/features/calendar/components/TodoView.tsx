@@ -16,6 +16,7 @@ import {
   pointerWithin,
   type CollisionDetection,
   type DragEndEvent,
+  type DragMoveEvent,
   type DragOverEvent,
   type DragStartEvent,
 } from '@dnd-kit/core'
@@ -30,10 +31,19 @@ import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
 import { useContextMenuStore } from '@/store/contextMenuStore'
 import { hapticIfEnabled } from '@/lib/haptics'
 import { useTaskContextMenuItems } from '../hooks/useTaskContextMenuItems'
+import {
+  liveRect,
+  planDropReorder,
+  reorderZone,
+  useDragPointer,
+  useTaskReorder,
+  type ReorderCommit,
+} from '../hooks/useTaskReorder'
 import { useTaskCollapse } from '../hooks/useTaskCollapse'
 import { useTaskCalendarLabels } from '../hooks/useTaskCalendarLabels'
 import { TaskCalendarLabel } from './TaskCalendarLabel'
 import { getTaskDescendantIds } from '@/lib/taskTree'
+import { compareTaskSortOrder } from '@/lib/taskSortOrder'
 import { TaskContextMenu } from './TaskContextMenu'
 import { TaskCollapseToggle } from './TaskCollapseToggle'
 import { DayEventsPopup } from './DayEventsPopup'
@@ -187,6 +197,15 @@ export function TodoView(): JSX.Element {
     const id = window.setInterval(() => setNow(new Date()), NOW_TICK_MS)
     return () => window.clearInterval(id)
   }, [])
+  // A drag over the top or bottom edge of a row means "put it here", shown as
+  // an insertion line; the middle of the row still means "make it a subtask".
+  // Null whenever the edge drop would not be a valid reorder.
+  const [dropIntent, setDropIntent] = useState<{
+    targetId: string
+    zone: 'before' | 'after'
+  } | null>(null)
+  const { commit: commitReorder } = useTaskReorder()
+  const dragPointer = useDragPointer(activeTaskId !== null)
   // R2.7 — Hover detail for the repeat glyph. Rendered into a portal at fixed
   // coordinates rather than positioned next to the badge: task rows live in a
   // virtualizer with its own scroll clipping, which would crop an absolutely
@@ -507,12 +526,17 @@ export function TodoView(): JSX.Element {
     const result: TaskGroup[] = []
 
     if (filter !== 'completed') {
-      // Sort active tasks: due date ascending (earliest first), no-date last
+      // Sort active tasks: due date ascending (earliest first), no-date last.
+      // Tasks due at the same moment (untimed on the same day) keep their
+      // manual order.
       const sorted = [...active].sort((a, b) => {
-        if (!a.dueDate && !b.dueDate) return 0
+        if (!a.dueDate && !b.dueDate) return compareTaskSortOrder(a, b)
         if (!a.dueDate) return 1
         if (!b.dueDate) return -1
-        return parseISO(a.dueDate).getTime() - parseISO(b.dueDate).getTime()
+        return (
+          parseISO(a.dueDate).getTime() - parseISO(b.dueDate).getTime() ||
+          compareTaskSortOrder(a, b)
+        )
       })
 
       // A task belongs to the group for its own due date. If its parent lands
@@ -542,10 +566,13 @@ export function TodoView(): JSX.Element {
     if (filter !== 'active' && done.length > 0) {
       // Sort completed: most recently done first
       const sortedDone = [...done].sort((a, b) => {
-        if (!a.dueDate && !b.dueDate) return 0
+        if (!a.dueDate && !b.dueDate) return compareTaskSortOrder(a, b)
         if (!a.dueDate) return 1
         if (!b.dueDate) return -1
-        return parseISO(b.dueDate).getTime() - parseISO(a.dueDate).getTime()
+        return (
+          parseISO(b.dueDate).getTime() - parseISO(a.dueDate).getTime() ||
+          compareTaskSortOrder(a, b)
+        )
       })
 
       result.push({
@@ -752,18 +779,46 @@ export function TodoView(): JSX.Element {
   const handleTaskDragStart = (event: DragStartEvent): void => {
     setActiveTaskId(String(event.active.id))
     setIsOverBlankSpace(false)
+    setDropIntent(null)
   }
 
   const handleTaskDragOver = (event: DragOverEvent): void => {
     setIsOverBlankSpace(!event.over)
   }
 
+  const handleTaskDragMove = (event: DragMoveEvent): void => {
+    const { active, over } = event
+    if (!over) {
+      setDropIntent((current) => (current ? null : current))
+      return
+    }
+    const targetId = String(over.id)
+    const zone = reorderZone(
+      dragPointer.current?.y ?? null,
+      liveRect(`[data-task-id="${CSS.escape(targetId)}"]`, over.rect)
+    )
+    const next =
+      zone && planTodoReorder(String(active.id), targetId, zone) ? { targetId, zone } : null
+    setDropIntent((current) =>
+      current?.targetId === next?.targetId && current?.zone === next?.zone ? current : next
+    )
+  }
+
   const handleTaskDragEnd = async (event: DragEndEvent): Promise<void> => {
     const { active, over } = event
+    const intent = dropIntent
     setActiveTaskId(null)
     setIsOverBlankSpace(false)
+    setDropIntent(null)
 
     const draggedId = String(active.id)
+    // The line the person saw is what they meant, whatever dnd-kit reports
+    // as the release target a pixel later.
+    if (intent) {
+      const plan = planTodoReorder(draggedId, intent.targetId, intent.zone)
+      if (plan) await commitReorder(plan)
+      return
+    }
     // Any drop that isn't over another task row — blank space, with no
     // droppable underneath the release point — promotes the task to top
     // level, so there's no dedicated root drop zone to aim for.
@@ -917,10 +972,26 @@ export function TodoView(): JSX.Element {
     return items
   }, [groupedTasks, taskCollapse, tasks])
 
+  /** What an edge drop would write, judged against the rows as listed. */
+  const planTodoReorder = (
+    draggedId: string,
+    targetId: string,
+    zone: 'before' | 'after'
+  ): ReorderCommit | null => {
+    const dragged = tasks.find((task) => task.id === draggedId)
+    if (!dragged) return null
+    const rows = flatItems.flatMap((item) => (item.type === 'task' ? [item.task] : []))
+    return planDropReorder(rows, dragged, targetId, zone, tasks)
+  }
+
   const virtualizer = useVirtualizer({
     count: flatItems.length,
     getScrollElement: () => scrollContainerRef.current,
     estimateSize: (index) => (flatItems[index].type === 'header' ? 40 : 56),
+    // Keyed by row, not position: measured heights are cached per key, so a
+    // reorder that swaps rows of different heights doesn't leave each height
+    // behind at its old index and stretch the list.
+    getItemKey: (index) => flatItems[index].key,
     overscan: 5,
   })
 
@@ -1059,13 +1130,17 @@ export function TodoView(): JSX.Element {
           )}
           <DraggableTaskRow taskId={task.id} isActive={isActive}>
             {({ dragAttributes, dragListeners, dragStyle, setDropRef, isOver }) => {
+              const insertZone =
+                isOver && dropIntent?.targetId === task.id ? dropIntent.zone : null
               const rowClass = [
                 styles.taskRow,
                 item.depth > 0 ? styles.taskSubtask : '',
                 task.completed ? styles.taskDone : '',
                 unstriking.has(task.id) ? styles.unstriking : '',
                 fadingOut.has(task.id) ? styles.fadingOut : '',
-                isOver ? styles.taskRowDropTarget : '',
+                isOver && !insertZone ? styles.taskRowDropTarget : '',
+                insertZone === 'before' ? styles.taskRowInsertBefore : '',
+                insertZone === 'after' ? styles.taskRowInsertAfter : '',
               ]
                 .filter(Boolean)
                 .join(' ')
@@ -1083,6 +1158,7 @@ export function TodoView(): JSX.Element {
                   data-component="task-row"
                   data-task-depth={item.depth}
                   data-task-id={task.id}
+                  data-drop-insert={insertZone ?? undefined}
                   onContextMenu={(e) => handleTaskContextMenu(e, task)}
                   {...dragAttributes}
                   {...(dragListeners ?? {})}
@@ -1207,6 +1283,7 @@ export function TodoView(): JSX.Element {
     },
     [
       activeTaskId,
+      dropIntent,
       unstriking,
       fadingOut,
       handleToggleComplete,
@@ -1341,7 +1418,13 @@ export function TodoView(): JSX.Element {
           collisionDetection={collisionDetection}
           onDragStart={handleTaskDragStart}
           onDragOver={handleTaskDragOver}
+          onDragMove={handleTaskDragMove}
           onDragEnd={handleTaskDragEnd}
+          onDragCancel={() => {
+            setActiveTaskId(null)
+            setIsOverBlankSpace(false)
+            setDropIntent(null)
+          }}
         >
           <div
             className={`${styles.taskList} ${showRootDropHint ? styles.taskListRootHint : ''}`}
@@ -1541,7 +1624,6 @@ function DraggableTaskRow({ taskId, isActive, children }: DraggableTaskRowProps)
     attributes,
     listeners,
     setNodeRef: setDragRef,
-    transform,
     isDragging,
   } = useDraggable({ id: taskId })
   const { setNodeRef: setDropRef, isOver } = useDroppable({ id: taskId })
@@ -1555,7 +1637,10 @@ function DraggableTaskRow({ taskId, isActive, children }: DraggableTaskRowProps)
     [setDragRef, setDropRef]
   )
   const dragStyle: React.CSSProperties = {
-    transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
+    // No drag transform on the source row: it is hidden and the DragOverlay
+    // carries the card. Applying it would leave the row offset by the drag
+    // distance at drop, and `.taskRow`'s transform transition would slide it
+    // from there into its new slot.
     // While dragged, hide the source row so the DragOverlay is the only
     // visual. Without this we'd see two cards stacked.
     opacity: isDragging ? 0 : 1,

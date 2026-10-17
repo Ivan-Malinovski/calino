@@ -11,6 +11,7 @@ import { formatDayMonth } from '@/lib/datetime'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
 import { resolveRecurringTasks } from '@/lib/openTasks'
+import { compareTaskSortOrder } from '@/lib/taskSortOrder'
 import { useContextMenuStore } from '@/store/contextMenuStore'
 import { hapticIfEnabled } from '@/lib/haptics'
 import { completeTaskAndSync } from '@/lib/taskCompletion'
@@ -89,10 +90,13 @@ export function MiniTasksSection({ isExpanded, onToggle }: MiniTasksSectionProps
         return !isBefore(dueDate, today) // Show all future tasks
       })
       .sort((a, b) => {
-        if (!a.dueDate && !b.dueDate) return 0
+        if (!a.dueDate && !b.dueDate) return compareTaskSortOrder(a, b)
         if (!a.dueDate) return 1 // No due date goes to end
         if (!b.dueDate) return -1
-        return parseISO(a.dueDate).getTime() - parseISO(b.dueDate).getTime()
+        return (
+          parseISO(a.dueDate).getTime() - parseISO(b.dueDate).getTime() ||
+          compareTaskSortOrder(a, b)
+        )
       })
       .slice(0, 8)
 
@@ -111,7 +115,10 @@ export function MiniTasksSection({ isExpanded, onToggle }: MiniTasksSectionProps
       })
       .sort((a, b) => {
         if (!a.dueDate || !b.dueDate) return 0
-        return parseISO(a.dueDate).getTime() - parseISO(b.dueDate).getTime()
+        return (
+          parseISO(a.dueDate).getTime() - parseISO(b.dueDate).getTime() ||
+          compareTaskSortOrder(a, b)
+        )
       })
       .slice(0, 5)
 

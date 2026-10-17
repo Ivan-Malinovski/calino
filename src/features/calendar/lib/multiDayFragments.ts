@@ -1,6 +1,7 @@
 import { addDays, eachDayOfInterval, endOfDay, format, startOfDay } from 'date-fns'
 import type { CalendarEvent } from '@/types'
 import { toEventInstant } from '@/lib/datetime'
+import { compareTaskSortOrder } from '@/lib/taskSortOrder'
 
 interface Span {
   event: CalendarEvent
@@ -101,6 +102,7 @@ export function compareDayEvents(a: CalendarEvent, b: CalendarEvent): number {
     if (laneDifference !== 0) return laneDifference
   }
   return (
-    toEventInstant(a.start, a.timezone).getTime() - toEventInstant(b.start, b.timezone).getTime()
+    toEventInstant(a.start, a.timezone).getTime() - toEventInstant(b.start, b.timezone).getTime() ||
+    compareTaskSortOrder(a, b)
   )
 }

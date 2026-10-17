@@ -519,6 +519,9 @@
     "navCreate": "Erstellen",
     "navBackToCalendar": "Zurück zum Kalender",
     "agendaMakeSubtask": "In Unteraufgabe umwandeln",
+    "agendaCannotSubtaskRepeatingParent": "Wiederkehrende Aufgaben können keine Unteraufgaben haben",
+    "agendaCannotSubtaskRepeatingTask": "Wiederkehrende Aufgaben können keine Unteraufgaben sein",
+    "agendaCannotSubtaskCycle": "Eine Aufgabe kann nicht in ihrer eigenen Unteraufgabe liegen",
     "agendaDue": "Fällig",
     "agendaAllDay": "Ganztägig",
     "today": "Heute",
@@ -656,6 +659,8 @@
     "task": {
       "markDone": "Als erledigt markieren",
       "markNotDone": "Als nicht erledigt markieren",
+      "moveUp": "Nach oben",
+      "moveDown": "Nach unten",
       "priority": {
         "none": "Keine",
         "high": "Hoch",

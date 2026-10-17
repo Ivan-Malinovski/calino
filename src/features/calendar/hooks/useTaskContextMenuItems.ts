@@ -14,6 +14,7 @@ import {
   taskMoveTargets,
 } from '@/lib/taskScheduling'
 import type { CalendarEvent } from '@/types'
+import { isReorderable, planStep, useTaskReorder } from './useTaskReorder'
 
 /**
  * A task row as the three surfaces know it. `occurrenceStart` is TodoView's
@@ -59,6 +60,7 @@ export function useTaskContextMenuItems(
     deleteEvent: deleteCalDAVEvent,
     saveRecurrenceOverride,
   } = useCalDAV()
+  const { moveStep } = useTaskReorder()
 
   const readOnly = task ? isCalendarReadOnly(task.calendarId) : true
 
@@ -143,6 +145,26 @@ export function useTaskContextMenuItems(
         onAfterAction?.()
       },
     })
+  }
+
+  // Offered only where the step exists: an untimed open task with a neighbour
+  // above (or below) it in its day's list.
+  if (isReorderable(task)) {
+    const steps = [
+      [-1, 'moveUp'],
+      [1, 'moveDown'],
+    ] as const
+    for (const [direction, key] of steps) {
+      if (!planStep(task, direction)) continue
+      items.push({
+        label: i18n.t(`calendar:ui.task.${key}`),
+        dataComponent: `task-menu-${key === 'moveUp' ? 'move-up' : 'move-down'}`,
+        onClick: () => {
+          void moveStep(task, direction)
+          onAfterAction?.()
+        },
+      })
+    }
   }
 
   items.push({

@@ -269,6 +269,19 @@ describe('R2.7 recurring task occurrences', () => {
       expect(override.excludedDates).toBeUndefined()
     })
 
+    it("gives occurrences and a completed occurrence the master's sort order", () => {
+      addRecurring({ sortOrder: 5000 })
+
+      const [occurrence] = getTasksForDay(events(), '2026-03-17')
+      expect(occurrence.sortOrder).toBe(5000)
+
+      const plan = useCalendarStore
+        .getState()
+        .completeTaskOccurrence('gym', '2026-03-10T00:00:00', true)
+      expect(plan!.master.sortOrder).toBe(5000)
+      expect(plan!.override!.sortOrder).toBe(5000)
+    })
+
     it('places the override on the occurrence date, for a master shaped as EventModal writes one', () => {
       // Regression: the override was built by hand instead of through
       // materializeOccurrenceAt, which reintroduced two separate off-by-ones —

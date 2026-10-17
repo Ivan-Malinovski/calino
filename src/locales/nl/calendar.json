@@ -202,6 +202,9 @@
     "navCreate": "Maken",
     "navBackToCalendar": "Terug naar agenda",
     "agendaMakeSubtask": "Omzetten in subtaak",
+    "agendaCannotSubtaskRepeatingParent": "Herhalende taken kunnen geen subtaken hebben",
+    "agendaCannotSubtaskRepeatingTask": "Herhalende taken kunnen geen subtaak zijn",
+    "agendaCannotSubtaskCycle": "Een taak kan niet in zijn eigen subtaak",
     "agendaDue": "Vervaldatum",
     "agendaAllDay": "Hele dag",
     "today": "Vandaag",
@@ -656,6 +659,8 @@
     "task": {
       "markDone": "Markeren als gedaan",
       "markNotDone": "Markeren als niet gedaan",
+      "moveUp": "Omhoog",
+      "moveDown": "Omlaag",
       "priority": {
         "none": "Geen",
         "high": "Hoog",

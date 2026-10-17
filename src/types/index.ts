@@ -106,6 +106,12 @@ export interface CalendarEvent {
   dueDate?: string
   completed?: boolean
   parentTaskId?: string
+  /**
+   * Manual order from `X-APPLE-SORT-ORDER`; lower comes first. Only breaks ties
+   * inside a day, a group or a set of siblings — never moves a task across
+   * days. An override without its own value carries its master's.
+   */
+  sortOrder?: number
   priority?: TaskPriority
   percentComplete?: number
   transparency?: 'opaque' | 'transparent'
