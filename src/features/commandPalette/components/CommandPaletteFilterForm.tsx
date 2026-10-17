@@ -1,6 +1,7 @@
 import { useState, type JSX, type KeyboardEvent } from 'react'
 import type { CommandPaletteFilter } from '../lib/eventFilters'
 import { parseFilterTokens } from '../lib/eventFilters'
+import { DateField } from '@/features/calendar/components/DateField'
 import styles from './CommandPalette.module.css'
 
 const FILTER_ERROR_ID = 'command-palette-filter-error'
@@ -256,28 +257,26 @@ export function CommandPaletteFilterForm({
           <label className={styles.filterLabel} htmlFor="command-palette-from">
             {t('palette.filter.fromLabel')}
           </label>
-          <input
+          <DateField
             id="command-palette-from"
             className={`${styles.filterTextInput} ${invalidDateRange ? styles.invalidInput : ''}`}
-            type="date"
             value={filter.fromDate ?? ''}
-            onChange={(event) => setFromDate(event.target.value)}
-            aria-invalid={invalidDateRange}
-            aria-describedby={invalidDateRange ? FILTER_ERROR_ID : undefined}
+            onChange={setFromDate}
+            invalid={invalidDateRange}
+            describedBy={invalidDateRange ? FILTER_ERROR_ID : undefined}
           />
         </div>
         <div className={styles.filterField}>
           <label className={styles.filterLabel} htmlFor="command-palette-to">
             {t('palette.filter.toLabel')}
           </label>
-          <input
+          <DateField
             id="command-palette-to"
             className={`${styles.filterTextInput} ${invalidDateRange ? styles.invalidInput : ''}`}
-            type="date"
             value={filter.toDate ?? ''}
-            onChange={(event) => setToDate(event.target.value)}
-            aria-invalid={invalidDateRange}
-            aria-describedby={invalidDateRange ? FILTER_ERROR_ID : undefined}
+            onChange={setToDate}
+            invalid={invalidDateRange}
+            describedBy={invalidDateRange ? FILTER_ERROR_ID : undefined}
           />
         </div>
       </div>

@@ -127,8 +127,8 @@ test.describe('Week view: sometime-this-week tasks', () => {
     await expect(modal.locator('[data-component="event-title-input"]')).toHaveValue(
       'Renew passport'
     )
-    await expect(modal.locator('#task-start-date')).toHaveValue('2026-09-28')
-    await expect(modal.locator('#due-date')).toHaveValue('2026-10-04')
+    await expect(modal.locator('#task-start-date')).toHaveValue('28/09/2026')
+    await expect(modal.locator('#due-date')).toHaveValue('04/10/2026')
     await expect(modal.locator('[data-component="task-start-hint"]')).toContainText(
       'Sometime this week'
     )
@@ -147,8 +147,8 @@ test.describe('Week view: sometime-this-week tasks', () => {
       .click()
     const modal = page.getByRole('dialog')
     await modal.locator('[data-component="task-sometime-this-week"]').click()
-    await expect(modal.locator('#task-start-date')).toHaveValue('2026-09-28')
-    await expect(modal.locator('#due-date')).toHaveValue('2026-10-04')
+    await expect(modal.locator('#task-start-date')).toHaveValue('28/09/2026')
+    await expect(modal.locator('#due-date')).toHaveValue('04/10/2026')
     await modal.locator('[data-component="modal-save"]').click()
 
     const bar = page.locator('[data-component="week-tasks-bar"]')
@@ -160,7 +160,7 @@ test.describe('Week view: sometime-this-week tasks', () => {
     await page.locator('[data-testid="week-task-week-a"]').click({ button: 'right' })
     await expect(page.getByText('Move to next week')).toBeVisible()
     await page.getByText('Edit', { exact: true }).click()
-    await expect(page.getByRole('dialog').locator('#task-start-date')).toHaveValue('2026-09-28')
+    await expect(page.getByRole('dialog').locator('#task-start-date')).toHaveValue('28/09/2026')
   })
 
   test('the week-task form keeps priority beside the parent and the buttons beside the dates', async ({

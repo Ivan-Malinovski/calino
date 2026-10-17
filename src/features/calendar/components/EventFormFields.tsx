@@ -13,13 +13,13 @@ import type {
   CalendarOrganizer,
 } from '@/types'
 import { useSettingsStore } from '@/store/settingsStore'
-import { useScrollInput } from '@/hooks/useScrollInput'
 import { daysBetween, addDays, deviceTimezone, getDateFnsLocale } from '@/lib/datetime'
 import { format } from 'date-fns'
 import { formatInTimeZone } from 'date-fns-tz'
 import { normalizeTzid } from '@/lib/timezoneRegistry'
 import { AttachmentSection } from './AttachmentSection'
 import { AttendeeSection } from './AttendeeSection'
+import { DateField } from './DateField'
 import { TimeField } from './TimeField'
 import { RecurrenceFields, RecurrenceToggle } from './RecurrenceFields'
 import styles from './EventModal.module.css'
@@ -235,10 +235,6 @@ export function EventFormFields({
   const timeFormat = useSettingsStore((state) => state.timeFormat)
   const defaultDuration = useSettingsStore((state) => state.defaultDuration)
 
-  const startDateRef = useRef<HTMLInputElement>(null)
-  const endDateRef = useRef<HTMLInputElement>(null)
-  useScrollInput([startDateRef, endDateRef])
-
   const setAdvancedOpen = (open: boolean): void => {
     setMoreOpen(open)
   }
@@ -279,13 +275,10 @@ export function EventFormFields({
             {t('modals.eventForm.start')}
           </label>
           <div className={styles.dateTimeInputs}>
-            <input
-              type="date"
-              ref={startDateRef}
+            <DateField
               id={startDateId}
               value={startDate}
-              onChange={(e) => {
-                const newDate = e.target.value
+              onChange={(newDate) => {
                 if (!newDate) return
                 // Shift the end date by the same number of days the start date
                 // moved, so the event's span (and therefore start<=end) is
@@ -299,7 +292,7 @@ export function EventFormFields({
                 onEndDateChange(addDays(endDate, dayDelta))
               }}
               className={styles.input}
-              data-component="event-start-date"
+              dataComponent="event-start-date"
               required
             />
             {!isAllDay && (
@@ -340,14 +333,12 @@ export function EventFormFields({
             {t('modals.eventForm.end')}
           </label>
           <div className={styles.dateTimeInputs}>
-            <input
-              type="date"
-              ref={endDateRef}
+            <DateField
               id={endDateId}
               value={endDate}
-              onChange={(e) => onEndDateChange(e.target.value)}
+              onChange={onEndDateChange}
               className={styles.input}
-              data-component="event-end-date"
+              dataComponent="event-end-date"
               required
             />
             {!isAllDay && (

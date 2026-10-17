@@ -405,6 +405,7 @@
     "eventForm": {
       "start": "Start",
       "startTime": "Start time",
+      "pickDate": "Choose date",
       "end": "End",
       "endTime": "End time",
       "foreignZoneTimes": "{{times}} in {{zone}}",

@@ -818,12 +818,12 @@ describe('EventModal', () => {
       const startDateInput = document.querySelector(
         '[data-component="event-start-date"]'
       ) as HTMLInputElement
-      fireEvent.change(startDateInput, { target: { value: '2024-03-14' } })
+      fireEvent.change(startDateInput, { target: { value: '14/03/2024' } })
 
       const endDateInput = document.querySelector(
         '[data-component="event-end-date"]'
       ) as HTMLInputElement
-      expect(endDateInput.value).toBe('2024-03-15')
+      expect(endDateInput.value).toBe('15/03/2024')
 
       const saveButton = screen.getByRole('button', { name: /save/i })
       expect(saveButton).not.toBeDisabled()

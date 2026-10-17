@@ -141,7 +141,7 @@ test('opens a series row on the occurrence it is showing, not the anchor', async
   const modal = page.locator('[data-component="modal-card"]')
   await expect(modal).toBeVisible()
   // The due date field carries the occurrence the row was showing.
-  await expect(modal.locator('#due-date')).toHaveValue('2026-03-10')
+  await expect(modal.locator('#due-date')).toHaveValue('10/03/2026')
 })
 
 test('offers recurrence on a dated task and explains why it is unavailable on a subtask', async ({
