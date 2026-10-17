@@ -988,6 +988,10 @@ export function TodoView(): JSX.Element {
     count: flatItems.length,
     getScrollElement: () => scrollContainerRef.current,
     estimateSize: (index) => (flatItems[index].type === 'header' ? 40 : 56),
+    // Keyed by row, not position: measured heights are cached per key, so a
+    // reorder that swaps rows of different heights doesn't leave each height
+    // behind at its old index and stretch the list.
+    getItemKey: (index) => flatItems[index].key,
     overscan: 5,
   })
 
@@ -1620,7 +1624,6 @@ function DraggableTaskRow({ taskId, isActive, children }: DraggableTaskRowProps)
     attributes,
     listeners,
     setNodeRef: setDragRef,
-    transform,
     isDragging,
   } = useDraggable({ id: taskId })
   const { setNodeRef: setDropRef, isOver } = useDroppable({ id: taskId })
@@ -1634,7 +1637,10 @@ function DraggableTaskRow({ taskId, isActive, children }: DraggableTaskRowProps)
     [setDragRef, setDropRef]
   )
   const dragStyle: React.CSSProperties = {
-    transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
+    // No drag transform on the source row: it is hidden and the DragOverlay
+    // carries the card. Applying it would leave the row offset by the drag
+    // distance at drop, and `.taskRow`'s transform transition would slide it
+    // from there into its new slot.
     // While dragged, hide the source row so the DragOverlay is the only
     // visual. Without this we'd see two cards stacked.
     opacity: isDragging ? 0 : 1,

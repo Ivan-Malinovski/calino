@@ -283,7 +283,7 @@ function AgendaDraggableItem({
   onContextMenu: (event: React.MouseEvent) => void
   disableKeyboardAttributes?: boolean
 }): JSX.Element {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: event.id,
     disabled,
   })
@@ -294,12 +294,9 @@ function AgendaDraggableItem({
 
   const style = {
     ...(accentColor ? { '--event-color': accentColor } : {}),
-    ...(transform
-      ? {
-          transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
-          zIndex: 2,
-        }
-      : {}),
+    // No drag transform: the DragOverlay carries the card. An offset left on
+    // the row at drop would slide it from there into its new slot, through the
+    // row's transform transition.
     ...(indentDepth > 0 ? { marginLeft: `${12 + indentDepth * 18}px` } : {}),
   } as React.CSSProperties
   const setNodeRefs = (node: HTMLDivElement | null): void => {
