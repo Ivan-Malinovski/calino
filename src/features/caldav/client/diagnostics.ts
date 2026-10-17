@@ -606,13 +606,22 @@ export async function runDiagnostics(options: DiagnosticsOptions): Promise<Diagn
       }
       // Skip the first entry: PROPFIND Depth: 1 always reports the collection
       // itself before its children.
+      // Prefer a child that is an actual resource: when `base` is a server
+      // root or principal, the first child is a collection (Radicale lists the
+      // user's principal) that may refuse a plain GET.
+      let firstCollectionHref: string | null = null
       for (const responseEl of responses.slice(1)) {
         const href = davText(responseEl, 'href')
-        if (href) {
-          firstResourceHref = new URL(href, base).href
-          break
+        if (!href) continue
+        const resolved = new URL(href, base).href
+        if (responseEl.getElementsByTagNameNS('DAV:', 'collection').length > 0) {
+          firstCollectionHref ??= resolved
+          continue
         }
+        firstResourceHref = resolved
+        break
       }
+      firstResourceHref ??= firstCollectionHref
       emit({
         id: 'propfind-depth1',
         label: LABELS['propfind-depth1'],
@@ -715,17 +724,30 @@ export async function runDiagnostics(options: DiagnosticsOptions): Promise<Diagn
         headers: { Authorization: authHeader },
       })
       const etag = resource.headers.get('etag')
-      emit({
-        id: 'expose-etag',
-        label: LABELS['expose-etag'],
-        status: etag ? 'pass' : 'warn',
-        evidence: 'observed',
-        detail: etag
-          ? 'ETag is readable, so writes skip the extra round-trip.'
-          : 'ETag is not readable. Sync still works, but every create and update costs an extra PROPFIND to recover the etag.',
-        fix: etag ? undefined : 'Add `ETag` to Access-Control-Expose-Headers.',
-        raw: etag ? `ETag: ${etag}` : 'ETag: (not readable)',
-      })
+      if (!resource.ok && !etag) {
+        // A refused or missing GET says nothing about header exposure — e.g.
+        // 403 on a principal or collection that only answers PROPFIND.
+        emit({
+          id: 'expose-etag',
+          label: LABELS['expose-etag'],
+          status: 'unknown',
+          evidence: 'inferred',
+          detail: `The server answered HTTP ${resource.status} when reading a listed entry, so ETag exposure could not be checked. Run the write test for a definitive answer.`,
+          raw: `GET → HTTP ${resource.status}`,
+        })
+      } else {
+        emit({
+          id: 'expose-etag',
+          label: LABELS['expose-etag'],
+          status: etag ? 'pass' : 'warn',
+          evidence: 'observed',
+          detail: etag
+            ? 'ETag is readable, so writes skip the extra round-trip.'
+            : 'ETag is not readable. Sync still works, but every create and update costs an extra PROPFIND to recover the etag.',
+          fix: etag ? undefined : 'Add `ETag` to Access-Control-Expose-Headers.',
+          raw: etag ? `ETag: ${etag}` : 'ETag: (not readable)',
+        })
+      }
     } catch (error) {
       emit({
         id: 'expose-etag',

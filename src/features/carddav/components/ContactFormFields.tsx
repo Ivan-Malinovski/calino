@@ -5,6 +5,7 @@ import imageCompression from 'browser-image-compression'
 import type { Contact, ContactEmail, ContactPhone, ContactAddress, ContactUrl } from '../types'
 import { ContactPicker, MemberName } from './ContactPicker'
 import { normalizeContactRef } from '../lib/contactRefs'
+import { DateField } from '@/features/calendar/components/DateField'
 import styles from './ContactFormModal.module.css'
 
 interface ContactFormFieldsProps {
@@ -625,19 +626,17 @@ export function ContactFormFields({ value, onChange }: ContactFormFieldsProps): 
       <div className={styles.row}>
         <div className={styles.section}>
           <label className={styles.label}>{t('detail.field.birthday')}</label>
-          <input
-            type="date"
+          <DateField
             value={local.birthday || ''}
-            onChange={(e) => update({ birthday: e.target.value || null })}
+            onChange={(value) => update({ birthday: value || null })}
             className={styles.input}
           />
         </div>
         <div className={styles.section}>
           <label className={styles.label}>{t('detail.field.anniversary')}</label>
-          <input
-            type="date"
+          <DateField
             value={local.anniversary || ''}
-            onChange={(e) => update({ anniversary: e.target.value || null })}
+            onChange={(value) => update({ anniversary: value || null })}
             className={styles.input}
           />
         </div>

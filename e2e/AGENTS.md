@@ -18,7 +18,10 @@ Prefer selectors in this order:
 
 Assert on what the user can see or do, not incidental CSS classes or private
 implementation details. Scope modal assertions to their dialog. Run a focused
-test with `pnpm test:e2e -- --grep "test name"`.
+test with `pnpm test:e2e --grep "test name"` or by file, e.g.
+`pnpm test:e2e e2e/tasks.spec.ts --project=chromium`. Do not put `--` before
+the arguments: pnpm passes it on to Playwright, which then ignores the filter
+and runs the whole suite.
 
 The suite is broader than `e2e/smoke.spec.ts`: focused coverage also exists for
 calendar views, tasks, journals, recurrence, time zones, contacts,

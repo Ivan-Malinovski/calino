@@ -63,7 +63,7 @@ vi.mock('@/store/calendarStore', () => ({
 }))
 
 vi.mock('@/store/settingsStore', () => ({
-  useSettingsStore: vi.fn((selector) => selector({ timeFormat: '24h', language: 'en' })),
+  useSettingsStore: vi.fn((selector) => selector({ timeFormat: '24h', language: 'en', dateFormat: 'dd/MM/yyyy' })),
 }))
 
 vi.mock('../hooks/useCommandPalette', () => ({

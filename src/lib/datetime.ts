@@ -8,6 +8,7 @@ import {
   nl as nlLocale,
 } from 'date-fns/locale'
 import type { Locale } from 'date-fns'
+import type { DateFormat } from '@/types'
 import { fromZonedTime, formatInTimeZone } from 'date-fns-tz'
 import { normalizeTzid } from '@/lib/timezoneRegistry'
 import { currentLanguage } from '@/lib/i18n'
@@ -205,6 +206,56 @@ export function toZoneWallClock(iso: string, timezone: string): string {
     .replace(/Z$/i, '')
     .replace(/[+-]\d{2}:?\d{2}$/, '')
     .replace(/\.\d+$/, '')
+}
+
+/**
+ * Render a `yyyy-MM-dd` string the way the "Date format" setting says, for
+ * editable date fields. Pure string work: native `<input type="date">` follows
+ * the browser locale and ignores the setting, so those fields type in this
+ * format instead. Anything that isn't a plain date comes back unchanged.
+ */
+export function formatDateInput(iso: string, dateFormat: DateFormat): string {
+  const match = iso.match(/^(\d{4})-(\d{2})-(\d{2})/)
+  if (!match) return iso
+  const [, y, m, d] = match
+  if (dateFormat === 'MM/dd/yyyy') return `${m}/${d}/${y}`
+  if (dateFormat === 'dd/MM/yyyy') return `${d}/${m}/${y}`
+  return `${y}-${m}-${d}`
+}
+
+/**
+ * Inverse of `formatDateInput`: text typed in the configured order to a
+ * `yyyy-MM-dd` string, or `null` when it isn't a real calendar date. `/`, `-`
+ * and `.` are interchangeable separators, and day/month may omit the leading
+ * zero.
+ */
+export function parseDateInput(text: string, dateFormat: DateFormat): string | null {
+  const match = text.trim().match(/^(\d{1,4})[/.-](\d{1,2})[/.-](\d{1,4})$/)
+  if (!match) return null
+  const [a, b, c] = [match[1]!, match[2]!, match[3]!]
+  let y: string
+  let m: string
+  let d: string
+  if (dateFormat === 'yyyy-MM-dd') {
+    ;[y, m, d] = [a, b, c]
+  } else if (dateFormat === 'MM/dd/yyyy') {
+    ;[m, d, y] = [a, b, c]
+  } else {
+    ;[d, m, y] = [a, b, c]
+  }
+  if (y.length !== 4 || m.length > 2 || d.length > 2) return null
+  const year = Number(y)
+  const month = Number(m)
+  const day = Number(d)
+  const check = new Date(Date.UTC(year, month - 1, day))
+  if (
+    check.getUTCFullYear() !== year ||
+    check.getUTCMonth() !== month - 1 ||
+    check.getUTCDate() !== day
+  ) {
+    return null
+  }
+  return `${y}-${pad2(month)}-${pad2(day)}`
 }
 
 /** Number of whole days between two `yyyy-MM-dd` date strings (UTC-based, DST-safe). */

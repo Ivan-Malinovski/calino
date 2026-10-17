@@ -604,6 +604,16 @@
       "action": "Eliminar eventos locales",
       "confirmCalendar": "¿Eliminar todos los eventos de «{{name}}» de este dispositivo? Los eventos de tu servidor no se eliminan y pueden reaparecer tras la próxima sincronización. Esta acción no se puede deshacer."
     },
+    "resync": {
+      "group": "Sincronización",
+      "label": "Volver a sincronizar desde el servidor",
+      "desc": "Olvida lo que Calino ya ha sincronizado y vuelve a descargar tus calendarios y contactos desde el servidor. Se conservan tus cuentas, contraseñas y ajustes. Úsalo si algo parece desactualizado.",
+      "confirm": "¿Volver a sincronizar todo desde tus servidores? Se conservan las cuentas y los ajustes, y los cambios de este dispositivo que aún no se hayan sincronizado se siguen enviando. Los eventos y contactos que solo existen en este dispositivo no se eliminan.",
+      "action": "Volver a sincronizar",
+      "running": "Sincronizando…",
+      "done": "Sincronización completada",
+      "failed": "La sincronización terminó con errores. Comprueba tu conexión e inténtalo de nuevo."
+    },
     "resetApp": {
       "label": "Restablecer Calino en este dispositivo",
       "desc": "Borrar todos los ajustes, cuentas conectadas y datos almacenados localmente en este dispositivo y empezar de cero. Los calendarios y eventos de tus servidores no se tocan. Los eventos que solo existen en Calino (sin sincronizar) se pierden.",

@@ -296,6 +296,7 @@
     "eventForm": {
       "start": "Beginn",
       "startTime": "Beginn time",
+      "pickDate": "Datum wählen",
       "end": "Ende",
       "endTime": "Ende time",
       "foreignZoneTimes": "{{times}} in {{zone}}",

@@ -604,6 +604,16 @@
       "action": "Lokale afspraken verwijderen",
       "confirmCalendar": "Alle afspraken in “{{name}}” van dit apparaat verwijderen? Afspraken op je server worden niet verwijderd en kunnen na de volgende synchronisatie weer verschijnen. Dit kan niet ongedaan worden gemaakt."
     },
+    "resync": {
+      "group": "Synchronisatie",
+      "label": "Opnieuw synchroniseren vanaf de server",
+      "desc": "Vergeet wat Calino al heeft gesynchroniseerd en download je agenda’s en contacten opnieuw van de server. Je accounts, wachtwoorden en instellingen blijven behouden. Gebruik dit als iets verouderd lijkt.",
+      "confirm": "Alles opnieuw synchroniseren vanaf je servers? Accounts en instellingen blijven behouden en wijzigingen op dit apparaat die nog niet zijn gesynchroniseerd worden nog steeds verzonden. Afspraken en contacten die alleen op dit apparaat bestaan, worden niet verwijderd.",
+      "action": "Opnieuw synchroniseren",
+      "running": "Opnieuw synchroniseren…",
+      "done": "Synchronisatie voltooid",
+      "failed": "Synchronisatie met fouten beëindigd. Controleer je verbinding en probeer het opnieuw."
+    },
     "resetApp": {
       "label": "Calino op dit apparaat resetten",
       "desc": "Wis alle instellingen, gekoppelde accounts en lokaal opgeslagen gegevens van dit apparaat en begin opnieuw. Agenda’s en afspraken op je servers blijven ongemoeid. Afspraken die alleen in Calino bestaan (nergens gesynchroniseerd) gaan verloren.",

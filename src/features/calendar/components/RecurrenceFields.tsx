@@ -2,6 +2,7 @@ import type { JSX } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { RecurrenceRule } from '@/types'
 import { getWeekdayLabels, getShortMonthNames } from './weekdayLabels'
+import { DateField } from './DateField'
 import styles from './EventModal.module.css'
 
 const RECURRENCE_OPTIONS: { value: RecurrenceRule['frequency']; labelKey: string }[] = [
@@ -460,14 +461,14 @@ export function RecurrenceFields({
                 <option value="after">{t('modals.recurrence.afterOccurrences')}</option>
               </select>
               {endCondition === 'on' && (
-                <input
-                  type="date"
-                  value={endOnDate}
-                  onChange={(e) => onEndOnDateChange(e.target.value)}
-                  className={styles.input}
-                  style={{ width: '160px' }}
-                  aria-label={t('modals.recurrence.endDate')}
-                />
+                <div style={{ width: '160px' }}>
+                  <DateField
+                    value={endOnDate}
+                    onChange={onEndOnDateChange}
+                    className={styles.input}
+                    ariaLabel={t('modals.recurrence.endDate')}
+                  />
+                </div>
               )}
               {endCondition === 'after' && (
                 <>

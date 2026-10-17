@@ -9,6 +9,7 @@ import { useSettingsStore } from '@/store/settingsStore'
 import { useContactStore } from '@/store/contactStore'
 import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
 import { useCardDAV } from '@/features/carddav/hooks/useCardDAV'
+import * as accountStorage from '@/features/caldav/sync/accountStorage'
 import { exportAllEventsIcs, exportCalendarIcs } from '@/lib/icsExport'
 import { IcsImportModal } from '@/features/calendar/components/IcsImportModal'
 import {
@@ -56,6 +57,7 @@ export function DataSettings({ searchControl }: { searchControl?: JSX.Element })
   const [deletingHref, setDeletingHref] = useState<string | null>(null)
   const timeFormat = useSettingsStore((state) => state.timeFormat)
   const caldav = useCalDAV()
+  const { syncAccount } = useCardDAV()
   const { handleFix, handleDelete, handleFixAll, handleDeleteAll } = useBrokenEventsActions(
     'caldav',
     {
@@ -216,6 +218,42 @@ export function DataSettings({ searchControl }: { searchControl?: JSX.Element })
     }
   }
 
+  const [isResyncing, setIsResyncing] = useState(false)
+
+  /**
+   * Forget every change cursor (sync token and ctag) and sync again. Without a
+   * cursor the sync takes its full-listing path, which refetches and re-parses
+   * every resource, while accounts, credentials, settings and any unsynced
+   * local changes stay as they are.
+   */
+  const handleResync = async (): Promise<void> => {
+    if (!confirm(t('data.resync.confirm'))) return
+    setIsResyncing(true)
+    try {
+      for (const calendar of accountStorage.getAllCalendars()) {
+        accountStorage.updateCalendar(calendar.id, { syncToken: null, ctag: null })
+      }
+      const contactState = useContactStore.getState()
+      const addressBookAccountIds = new Set(contactState.addressBooks.map((ab) => ab.accountId))
+      contactState.setAddressBooks(
+        contactState.addressBooks.map((ab) => ({ ...ab, syncToken: null, ctag: null }))
+      )
+
+      // Both protocols get their turn even if one fails.
+      const results = await Promise.allSettled([
+        caldav.syncAll(),
+        ...[...addressBookAccountIds].map((accountId) => syncAccount(accountId)),
+      ])
+      if (results.some((r) => r.status === 'rejected')) {
+        showToast(t('data.resync.failed'))
+      } else {
+        showToast(t('data.resync.done'))
+      }
+    } finally {
+      setIsResyncing(false)
+    }
+  }
+
   const handleClearData = async (): Promise<void> => {
     if (!confirm(t('data.resetApp.confirm'))) return
     localStorage.clear()
@@ -231,7 +269,6 @@ export function DataSettings({ searchControl }: { searchControl?: JSX.Element })
   const [isMergeOpen, setIsMergeOpen] = useState(false)
   const contactFileInputRef = useRef<HTMLInputElement>(null)
   const contacts = useContactStore((s) => s.contacts)
-  const { syncAccount } = useCardDAV()
 
   const handleContactImportClick = (): void => {
     contactFileInputRef.current?.click()
@@ -553,6 +590,26 @@ export function DataSettings({ searchControl }: { searchControl?: JSX.Element })
             </div>
           </div>
         )}
+      </div>
+
+      <div className={styles.group}>
+        <div className={styles.groupLabel}>{t('data.resync.group')}</div>
+        <div className={styles.actionRow}>
+          <div className={styles.rowInfo}>
+            <div className={styles.rowLabel}>{t('data.resync.label')}</div>
+            <div className={styles.rowDesc}>{t('data.resync.desc')}</div>
+          </div>
+          <button
+            className={styles.actionBtn}
+            onClick={handleResync}
+            disabled={isResyncing}
+            data-component="action-button"
+            data-action="resync-accounts"
+            type="button"
+          >
+            {isResyncing ? t('data.resync.running') : t('data.resync.action')}
+          </button>
+        </div>
       </div>
 
       {!Capacitor.isNativePlatform() && <WebMCPSettings />}

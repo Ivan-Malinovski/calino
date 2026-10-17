@@ -68,8 +68,8 @@ test.describe('month drag-to-create', () => {
     // Seeded as an all-day event spanning the inclusive dragged range.
     await expect(page.getByRole('checkbox', { name: 'All day' })).toBeChecked()
 
-    await expect(page.locator('[data-component="event-start-date"]')).toHaveValue('2026-08-10')
-    await expect(page.locator('[data-component="event-end-date"]')).toHaveValue('2026-08-12')
+    await expect(page.locator('[data-component="event-start-date"]')).toHaveValue('10/08/2026')
+    await expect(page.locator('[data-component="event-end-date"]')).toHaveValue('12/08/2026')
   })
 
   test('single-day click still creates a timed event (not all-day)', async ({ page }) => {

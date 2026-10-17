@@ -6,9 +6,9 @@ import { WEEK_TASK_MIN_DAYS, taskSpanDays, weekRangeKeys } from '@/lib/weekTasks
 import type { CalendarEvent, TaskPriority } from '@/types'
 import type { TaskTreeItem } from '@/lib/taskTree'
 import { TaskCollapseToggle } from './TaskCollapseToggle'
-import { useScrollInput } from '@/hooks/useScrollInput'
 import { useSettingsStore } from '@/store/settingsStore'
 import styles from './EventModal.module.css'
+import { DateField } from './DateField'
 import { TimeField } from './TimeField'
 import { RecurrenceFields, RecurrenceToggle, type RecurrenceFieldsProps } from './RecurrenceFields'
 
@@ -111,12 +111,10 @@ export function TaskFormFields({
   recurrence: recurrenceProps,
 }: TaskFormFieldsProps): JSX.Element {
   const { t } = useTranslation('calendar')
-  const dueDateRef = useRef<HTMLInputElement>(null)
   const timeFormat = useSettingsStore((state) => state.timeFormat)
   const firstDayOfWeek = useSettingsStore((state) => state.firstDayOfWeek)
   const parentTask = parentTasks.find((task) => task.id === parentTaskId)
   const hasDueDate = dueDate.trim().length > 0
-  useScrollInput([dueDateRef])
 
   const dueMode: DueMode = !hasDueDate ? 'none' : dueAllDay ? 'dateOnly' : 'datetime'
   const dueModeControlRef = useRef<HTMLDivElement>(null)
@@ -336,12 +334,11 @@ export function TaskFormFields({
             <label className={styles.label} htmlFor="task-start-date">
               {t('modals.eventModal.taskStartDate')}
             </label>
-            <input
-              type="date"
+            <DateField
               id="task-start-date"
               value={startDate}
               max={hasDueDate ? dueDay : undefined}
-              onChange={(e) => onStartDateChange(e.target.value)}
+              onChange={onStartDateChange}
               className={styles.input}
             />
           </div>
@@ -352,12 +349,10 @@ export function TaskFormFields({
               <label className={styles.label} htmlFor="due-date">
                 {t('ui.task.dueDate')}
               </label>
-              <input
-                type="date"
+              <DateField
                 id="due-date"
-                ref={dueDateRef}
-                value={dueDate.split('T')[0]}
-                onChange={(e) => onDueDateChange(e.target.value)}
+                value={dueDate.split('T')[0]!}
+                onChange={onDueDateChange}
                 className={styles.input}
               />
             </div>
