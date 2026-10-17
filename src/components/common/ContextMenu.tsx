@@ -21,7 +21,15 @@ interface ContextMenuProps {
   menuId: string
 }
 
-export function ContextMenu({ x, y, items, onClose, menuId }: ContextMenuProps): JSX.Element {
+export function ContextMenu(props: ContextMenuProps): JSX.Element {
+  // A right-click while a menu is open starts that menu's close (on mousedown)
+  // and then asks the same mounted instance to open somewhere else. Keyed by
+  // where it was asked to open, each request gets a fresh instance, so the old
+  // close animation and its pending onClose can't run on the new menu.
+  return <ContextMenuInstance key={`${props.menuId}:${props.x}:${props.y}`} {...props} />
+}
+
+function ContextMenuInstance({ x, y, items, onClose, menuId }: ContextMenuProps): JSX.Element {
   const menuRef = useRef<HTMLDivElement>(null)
   const openMenuId = useContextMenuStore((state) => state.openMenuId)
   // The parent mounts/unmounts this component; animate out before unmounting by
