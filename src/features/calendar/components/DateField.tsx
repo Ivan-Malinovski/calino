@@ -45,6 +45,7 @@ export function DateField({
   const { t } = useTranslation('calendar')
   const dateFormat = useSettingsStore((state) => state.dateFormat)
   const pickerRef = useRef<HTMLInputElement>(null)
+  const textRef = useRef<HTMLInputElement>(null)
   const formatted = formatDateInput(value, dateFormat)
   // `null` while the field mirrors `value`; the typed text while it is being edited.
   const [draft, setDraft] = useState<string | null>(null)
@@ -60,6 +61,37 @@ export function DateField({
     return true
   }
 
+  const stepDay = (days: number): void => {
+    const base = parseDateInput(draft ?? formatted, dateFormat) ?? (value ? value : null)
+    if (base) onChange(addDays(base, days))
+  }
+  // The wheel listener is attached once, so it calls through a ref to see the
+  // current value rather than the one from the render it was attached in.
+  const stepDayRef = useRef(stepDay)
+  useEffect(() => {
+    stepDayRef.current = stepDay
+  })
+
+  // Wheel over the focused field steps the date a day, as the native date
+  // inputs here used to via useScrollInput. React's onWheel is passive, so
+  // preventDefault (needed to stop the page scrolling) takes a native listener.
+  useEffect(() => {
+    const input = textRef.current
+    if (!input) return
+    const onWheel = (event: WheelEvent): void => {
+      if (document.activeElement !== input) return
+      event.preventDefault()
+      // Trackpads report deltas of 100-200 per notch and mouse wheels 3-5;
+      // normalise the same way useScrollInput does so the two feel alike.
+      const delta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY
+      const notches = Math.round(delta / 100)
+      if (notches === 0) return
+      stepDayRef.current(notches > 0 ? -1 : 1)
+    }
+    input.addEventListener('wheel', onWheel, { passive: false })
+    return () => input.removeEventListener('wheel', onWheel)
+  }, [])
+
   const step = (event: KeyboardEvent<HTMLInputElement>): void => {
     if (event.key === 'Enter') {
       // Applying a typed date takes this keystroke; submitting the form now
@@ -70,10 +102,8 @@ export function DateField({
       return
     }
     if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return
-    const base = parseDateInput(draft ?? formatted, dateFormat) ?? (value ? value : null)
-    if (!base) return
     event.preventDefault()
-    onChange(addDays(base, event.key === 'ArrowUp' ? 1 : -1))
+    stepDay(event.key === 'ArrowUp' ? 1 : -1)
   }
 
   const openPicker = (): void => {
@@ -89,6 +119,7 @@ export function DateField({
   return (
     <div className={styles.dateFieldWrapper}>
       <input
+        ref={textRef}
         type="text"
         inputMode="numeric"
         autoComplete="off"

@@ -77,3 +77,16 @@ test('typing a due date in the configured format changes the task date', async (
   await due.press('ArrowUp')
   await expect(due).toHaveValue('06/11/2026')
 })
+
+test('the mouse wheel over the focused due date steps it a day', async ({ page }) => {
+  await openTask(page, 'dd/MM/yyyy')
+  const due = page.locator('#due-date')
+
+  await due.focus()
+  await due.hover()
+  await page.mouse.wheel(0, -100)
+  await expect(due).toHaveValue('18/10/2026')
+
+  await page.mouse.wheel(0, 100)
+  await expect(due).toHaveValue('17/10/2026')
+})
