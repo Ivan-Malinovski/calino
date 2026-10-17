@@ -21,9 +21,33 @@ describe('planReorder', () => {
     expect(planReorder(group, 'c', 1)).toEqual([{ id: 'c', sortOrder: 813528420 + SORT_ORDER_STEP }])
   })
 
-  it('goes before the first task when dropped at the top', () => {
-    const group = items(['a', 1000], ['b', 2000])
-    expect(planReorder(group, 'b', 0)).toEqual([{ id: 'b', sortOrder: 0 }])
+  it('goes a step before the first task when dropped at the top', () => {
+    const group = items(['a', 3000], ['b', 4000])
+    expect(planReorder(group, 'b', 0)).toEqual([{ id: 'b', sortOrder: 2000 }])
+  })
+
+  it('never writes 0 or a negative value when dropped at the top', () => {
+    // Halves the room above the first task instead of stepping past zero.
+    expect(planReorder(items(['a', 1000], ['b', 2000]), 'b', 0)).toEqual([
+      { id: 'b', sortOrder: 500 },
+    ])
+    expect(planReorder(items(['a', 500], ['b', 2000]), 'b', 0)).toEqual([
+      { id: 'b', sortOrder: 250 },
+    ])
+  })
+
+  it('renumbers from the step when nothing fits above a first value of 1', () => {
+    expect(planReorder(items(['a', 1], ['b', 2], ['c', 3]), 'c', 0)).toEqual([
+      { id: 'c', sortOrder: 1000 },
+      { id: 'a', sortOrder: 2000 },
+      { id: 'b', sortOrder: 3000 },
+    ])
+  })
+
+  it('leaves values another client already wrote at 0 or below alone', () => {
+    expect(planReorder(items(['a', 0], ['b', 2000]), 'b', 0)).toEqual([
+      { id: 'b', sortOrder: -1000 },
+    ])
   })
 
   it('seeds the unordered tasks above the drop point, in their current order', () => {
@@ -61,8 +85,11 @@ describe('stepIndex', () => {
   const group = items(['a', 1], ['b', 2], ['c', 3])
 
   it('moves one place up or down', () => {
+    // Nothing fits above a first value of 1, so the group is renumbered.
     expect(planReorder(group, 'b', stepIndex(group, 'b', -1)!)).toEqual([
-      { id: 'b', sortOrder: 1 - SORT_ORDER_STEP },
+      { id: 'b', sortOrder: SORT_ORDER_STEP },
+      { id: 'a', sortOrder: 2 * SORT_ORDER_STEP },
+      { id: 'c', sortOrder: 3 * SORT_ORDER_STEP },
     ])
     expect(planReorder(group, 'b', stepIndex(group, 'b', 1)!)).toEqual([
       { id: 'b', sortOrder: 3 + SORT_ORDER_STEP },
@@ -109,7 +136,7 @@ describe('planDropReorder', () => {
     const child = day('kid', { parentTaskId: 'p', sortOrder: 10 })
     const list = [parent, child, a]
     expect(planDropReorder(list, a, 'p', 'after', list)).toEqual({
-      writes: [{ id: 'a', sortOrder: 10 - SORT_ORDER_STEP }],
+      writes: [{ id: 'a', sortOrder: 5 }],
       reparent: { id: 'a', parentTaskId: 'p' },
     })
   })
@@ -153,7 +180,7 @@ describe('Move up / Move down', () => {
 
     const group = dayReorderGroup(useCalendarStore.getState().events, b, new Set([cal]))
     expect(group.map((task) => task.id)).toEqual(['a', 'b'])
-    expect(planStep(b, -1)).toEqual([{ id: 'b', sortOrder: 0 }])
+    expect(planStep(b, -1)).toEqual([{ id: 'b', sortOrder: 500 }])
     expect(planStep(b, 1)).toBeNull()
   })
 
@@ -171,6 +198,6 @@ describe('Move up / Move down', () => {
     ).filter((task) => task.occurrenceMasterId === 'gym')
 
     expect(occurrence).toBeDefined()
-    expect(planStep(occurrence, -1)).toEqual([{ id: 'gym', sortOrder: 0 }])
+    expect(planStep(occurrence, -1)).toEqual([{ id: 'gym', sortOrder: 500 }])
   })
 })
