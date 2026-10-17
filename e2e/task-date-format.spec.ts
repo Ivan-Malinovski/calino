@@ -90,3 +90,27 @@ test('the mouse wheel over the focused due date steps it a day', async ({ page }
   await page.mouse.wheel(0, 100)
   await expect(due).toHaveValue('17/10/2026')
 })
+
+test('the calendar picker is anchored to the date field', async ({ page }) => {
+  await openTask(page, 'dd/MM/yyyy')
+
+  // A zero-size anchor makes the browser open the picker at the top-left of the
+  // screen. Both rects are read in one call so the modal's open animation can't
+  // move one between the two reads.
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const field = document.querySelector('#due-date')!.getBoundingClientRect()
+        const anchor = document
+          .querySelector('#due-date')!
+          .parentElement!.querySelector('input[type="date"]')!
+          .getBoundingClientRect()
+        return {
+          sized: anchor.width > 0 && anchor.height > 0,
+          dx: Math.abs(anchor.x - field.x),
+          dy: Math.abs(anchor.y - field.y),
+        }
+      })
+    )
+    .toEqual({ sized: true, dx: 0, dy: 0 })
+})
