@@ -540,10 +540,10 @@ export async function runDiagnostics(options: DiagnosticsOptions): Promise<Diagn
 
   // ── 6. Allowed methods ─────────────────────────────────────────────────────
   const allowHeader = optionsResponse?.headers.get('allow')
-  const requiredMethods =
-    kind === 'caldav'
-      ? ['PROPFIND', 'REPORT', 'PROPPATCH', 'PUT', 'DELETE', 'MKCALENDAR']
-      : ['PROPFIND', 'REPORT', 'PROPPATCH', 'PUT', 'DELETE', 'MKCOL']
+  // Not MKCALENDAR or MKCOL: those create a collection, so servers offer them
+  // only on a URL that doesn't exist yet. SabreDAV (Davis, Baïkal, Nextcloud)
+  // never lists them on an existing URL such as the one probed here.
+  const requiredMethods = ['PROPFIND', 'REPORT', 'PROPPATCH', 'PUT', 'DELETE']
 
   if (viaProxy && !allowHeader) {
     emit(skipped('allow-methods', PROXY_NOT_APPLICABLE))
@@ -582,6 +582,9 @@ export async function runDiagnostics(options: DiagnosticsOptions): Promise<Diagn
   // request header through Access-Control-Allow-Headers, but only Depth: 1
   // actually enumerates a collection — the operation every sync starts with.
   let firstResourceHref: string | null = null
+  // True when the listing held only collections and the ETag probe falls back
+  // to one of them.
+  let probeIsCollection = false
   // Whether `base` is itself a calendar/addressbook, as opposed to a principal
   // or home set that merely contains them. Only the former accepts a PUT.
   let baseIsWritableCollection = false
@@ -621,7 +624,10 @@ export async function runDiagnostics(options: DiagnosticsOptions): Promise<Diagn
         firstResourceHref = resolved
         break
       }
-      firstResourceHref ??= firstCollectionHref
+      if (!firstResourceHref && firstCollectionHref) {
+        firstResourceHref = firstCollectionHref
+        probeIsCollection = true
+      }
       emit({
         id: 'propfind-depth1',
         label: LABELS['propfind-depth1'],
@@ -734,6 +740,18 @@ export async function runDiagnostics(options: DiagnosticsOptions): Promise<Diagn
           evidence: 'inferred',
           detail: `The server answered HTTP ${resource.status} when reading a listed entry, so ETag exposure could not be checked. Run the write test for a definitive answer.`,
           raw: `GET → HTTP ${resource.status}`,
+        })
+      } else if (!etag && probeIsCollection) {
+        // Many servers (SabreDAV among them) send no ETag for a collection at
+        // all, so its absence says nothing about Access-Control-Expose-Headers.
+        emit({
+          id: 'expose-etag',
+          label: LABELS['expose-etag'],
+          status: 'unknown',
+          evidence: 'inferred',
+          detail:
+            'This URL lists only folders, and folders often have no ETag at all, so ETag exposure could not be checked. Run diagnostics against a single calendar, with the write test, for a definitive answer.',
+          raw: `GET → HTTP ${resource.status}, ETag: (none)`,
         })
       } else {
         emit({

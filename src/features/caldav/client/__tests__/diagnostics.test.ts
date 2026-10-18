@@ -76,6 +76,40 @@ describe('runDiagnostics', () => {
     expect(statusOf(report.checks, 'expose-etag')).toBe('pass')
   })
 
+  it('does not require MKCALENDAR in Allow (SabreDAV omits it on existing URLs)', async () => {
+    // Allow header Davis sends for its /dav root.
+    stubFetch({
+      OPTIONS: {
+        status: 200,
+        headers: {
+          DAV: '1, 3, calendar-access',
+          Allow: 'OPTIONS, GET, HEAD, DELETE, PROPFIND, PUT, PROPPATCH, COPY, MOVE, REPORT',
+        },
+      },
+      GET: { status: 200, headers: { ETag: '"abc"' }, body: 'BEGIN:VCALENDAR' },
+    })
+
+    const report = await runDiagnostics(OPTS)
+
+    expect(statusOf(report.checks, 'allow-methods')).toBe('pass')
+  })
+
+  it('still warns when Allow lacks a method Calino uses', async () => {
+    stubFetch({
+      OPTIONS: {
+        status: 200,
+        headers: { DAV: '1, 3, calendar-access', Allow: 'OPTIONS, GET, PROPFIND, PUT, DELETE' },
+      },
+      GET: { status: 200, headers: { ETag: '"abc"' }, body: 'BEGIN:VCALENDAR' },
+    })
+
+    const report = await runDiagnostics(OPTS)
+
+    const methods = report.checks.find((c) => c.id === 'allow-methods')!
+    expect(methods.status).toBe('warn')
+    expect(methods.detail).toContain('REPORT, PROPPATCH')
+  })
+
   it('blames the preflight when the server is up but PROPFIND throws', async () => {
     // GET succeeds (mode:'no-cors' would too), PROPFIND does not — exactly what
     // a browser does when the preflight is rejected.
@@ -187,10 +221,24 @@ describe('runDiagnostics', () => {
       expect(report.summary).not.toBe('degraded')
     })
 
-    it('still warns when a listed collection answers 200 without an exposed ETag', async () => {
-      // Servers that serve a body for a collection GET keep the old behaviour.
-      stubByPath(listing(collection('/'), collection('/cal/')), {
-        '/cal/': { status: 200, body: 'x' },
+    it('is inconclusive when only a collection answers 200 without an ETag (SabreDAV root)', async () => {
+      // SabreDAV sends no ETag for a collection at all, so a missing header
+      // there says nothing about Access-Control-Expose-Headers.
+      stubByPath(listing(collection('/'), collection('/principals/'), collection('/calendars/')), {
+        '/principals/': { status: 200, body: '<html></html>' },
+      })
+
+      const report = await runDiagnostics(OPTS)
+
+      const etag = report.checks.find((c) => c.id === 'expose-etag')!
+      expect(etag.status).toBe('unknown')
+      expect(etag.fix).toBeUndefined()
+      expect(report.summary).not.toBe('degraded')
+    })
+
+    it('still warns when a real resource answers without a readable ETag', async () => {
+      stubByPath(listing(collection('/'), collection('/cal/'), item('/cal/a.ics')), {
+        '/cal/a.ics': { status: 200, body: 'BEGIN:VCALENDAR' },
       })
 
       const report = await runDiagnostics(OPTS)

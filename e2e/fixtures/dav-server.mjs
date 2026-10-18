@@ -15,6 +15,9 @@
  *   /no-etag/   correct CORS, but ETag missing from Expose-Headers
  *   /no-report/ rejects the REPORT method
  *   /401/       rejects the credentials
+ *   /sabre/     a SabreDAV server root (Davis, Baïkal, Nextcloud): correct
+ *               CORS, but Allow omits MKCALENDAR/MKCOL on existing URLs and
+ *               the listing holds only folders, whose GET has no ETag
  *
  * Zero dependencies, so it runs anywhere `node` does.
  */
@@ -25,6 +28,26 @@ const PORT = Number(process.env.DAV_PORT ?? 8099)
 const ALLOW_METHODS =
   'GET, PUT, DELETE, PROPFIND, PROPPATCH, REPORT, OPTIONS, MKCOL, MKCALENDAR, COPY, MOVE'
 const ALLOW_HEADERS = 'Authorization, Content-Type, Depth, Prefer, If-Match, If-None-Match'
+
+// What SabreDAV sends for an existing URL: creation methods (MKCALENDAR,
+// MKCOL) are only offered on URLs that don't exist yet.
+const SABRE_ALLOW = 'OPTIONS, GET, HEAD, DELETE, PROPFIND, PUT, PROPPATCH, COPY, MOVE, REPORT'
+
+/** A server root: the root itself plus principal and home-set folders. */
+const sabreRootListing = (href) => `<?xml version="1.0" encoding="utf-8"?>
+<d:multistatus xmlns:d="DAV:">
+${['', 'principals/', 'calendars/', 'addressbooks/']
+  .map(
+    (child) => `  <d:response>
+    <d:href>${href}${child}</d:href>
+    <d:propstat>
+      <d:prop><d:resourcetype><d:collection/></d:resourcetype></d:prop>
+      <d:status>HTTP/1.1 200 OK</d:status>
+    </d:propstat>
+  </d:response>`
+  )
+  .join('\n')}
+</d:multistatus>`
 
 const multistatus = (href, kind) => `<?xml version="1.0" encoding="utf-8"?>
 <d:multistatus xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav">
@@ -53,11 +76,18 @@ const multistatus = (href, kind) => `<?xml version="1.0" encoding="utf-8"?>
  * breaks a second check and the test reads as a product failure.
  */
 function profileFor(pathname) {
-  const healthy = { cors: true, exposeEtag: true, report: true, unauthorized: false }
+  const healthy = {
+    cors: true,
+    exposeEtag: true,
+    report: true,
+    unauthorized: false,
+    sabreRoot: false,
+  }
   if (pathname.startsWith('/no-cors')) return { ...healthy, cors: false }
   if (pathname.startsWith('/no-etag')) return { ...healthy, exposeEtag: false }
   if (pathname.startsWith('/no-report')) return { ...healthy, report: false }
   if (pathname.startsWith('/401')) return { ...healthy, unauthorized: true }
+  if (pathname.startsWith('/sabre')) return { ...healthy, sabreRoot: true }
   return healthy
 }
 
@@ -80,7 +110,7 @@ const server = createServer((req, res) => {
 
   if (req.method === 'OPTIONS') {
     res.setHeader('DAV', '1, 2, 3, calendar-access')
-    res.setHeader('Allow', ALLOW_METHODS)
+    res.setHeader('Allow', profile.sabreRoot ? SABRE_ALLOW : ALLOW_METHODS)
     res.writeHead(204).end()
     return
   }
@@ -103,6 +133,10 @@ const server = createServer((req, res) => {
 
     if (req.method === 'PROPFIND' || req.method === 'REPORT') {
       res.setHeader('Content-Type', 'text/xml; charset=utf-8')
+      if (profile.sabreRoot && req.method === 'PROPFIND') {
+        res.writeHead(207).end(sabreRootListing(pathname))
+        return
+      }
       res.writeHead(207).end(multistatus(pathname, 'calendar'))
       return
     }
@@ -115,6 +149,13 @@ const server = createServer((req, res) => {
 
     if (req.method === 'DELETE') {
       res.writeHead(204).end()
+      return
+    }
+
+    if (profile.sabreRoot) {
+      // A folder: SabreDAV answers GET with an HTML page and no ETag.
+      res.setHeader('Content-Type', 'text/html; charset=utf-8')
+      res.writeHead(200).end('<!doctype html><title>Index</title>')
       return
     }
 
