@@ -105,3 +105,28 @@ test.describe('Week view — desktop day alignment', () => {
     expect(todayBox.y).toBeCloseTo(tomorrowBox.y, 0)
   })
 })
+
+test.describe('Week view — desktop time column', () => {
+  test.beforeEach(async ({ page }) => {
+    await clearState(page)
+  })
+
+  test('the time column border runs the whole day, not just the first screenful', async ({
+    page,
+  }) => {
+    await page.goto('/week')
+    const column = page.locator('[class*="body"] [class*="timeColumn"]').first()
+    await expect(column).toBeVisible()
+    const { height, bodyHeight, scrollable } = await column.evaluate((el) => {
+      const body = el.parentElement!
+      return {
+        height: el.getBoundingClientRect().height,
+        bodyHeight: body.clientHeight,
+        scrollable: body.scrollHeight > body.clientHeight,
+      }
+    })
+    expect(scrollable).toBe(true)
+    expect(height).toBeGreaterThan(bodyHeight)
+    expect(height).toBeCloseTo(24 * 60, 0)
+  })
+})
