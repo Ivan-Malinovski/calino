@@ -6,7 +6,7 @@
     "contactCount_other": "{{count}} contacts",
     "newContact": "+ New",
     "allAddressBooks": "All address books",
-    "filterByTag": "Filter by tag", "allTags": "All",
+    "filterByTag": "Filter by tag", "allTags": "All", "allTagsLabel": "All tags", "tagsMore": "{{tag}} +{{count}}", "clearTagFilter": "Clear tag filter",
     "noMatches": "No matches",
     "noContactsMatch": "No contacts match “{{query}}”",
     "noContacts": "No contacts",

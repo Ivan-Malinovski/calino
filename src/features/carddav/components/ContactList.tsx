@@ -119,11 +119,23 @@ interface TagFilterProps {
   onClear: () => void
 }
 
+/** Above this many tags the chip row gives way to a checkbox dropdown. */
+const TAG_DROPDOWN_THRESHOLD = 6
+
+/** Picks the chip row for a handful of tags and the dropdown for many. */
+function TagFilter(props: TagFilterProps): JSX.Element {
+  return props.tags.length > TAG_DROPDOWN_THRESHOLD ? (
+    <TagDropdown {...props} />
+  ) : (
+    <TagChips {...props} />
+  )
+}
+
 /**
  * Chip row listing every tag in scope plus "All". It scrolls sideways when the
  * tags don't fit, fading each edge while more tags are hidden beyond it.
  */
-function TagFilter({ tags, selectedTags, onToggle, onClear }: TagFilterProps): JSX.Element {
+function TagChips({ tags, selectedTags, onToggle, onClear }: TagFilterProps): JSX.Element {
   const { t } = useTranslation('contacts')
   const rowRef = useRef<HTMLDivElement>(null)
   const [moreToTheLeft, setMoreToTheLeft] = useState(false)
@@ -234,6 +246,148 @@ function TagFilter({ tags, selectedTags, onToggle, onClear }: TagFilterProps): J
           </button>
         )
       })}
+    </div>
+  )
+}
+
+/**
+ * Dropdown with a checkbox per tag, for lists too long for the chip row. The
+ * trigger summarises the selection; the panel stays open so several tags can
+ * be ticked in one go.
+ */
+function TagDropdown({ tags, selectedTags, onToggle, onClear }: TagFilterProps): JSX.Element {
+  const { t } = useTranslation('contacts')
+  const [open, setOpen] = useState(false)
+  const rootRef = useRef<HTMLDivElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    const onPointerDown = (e: globalThis.PointerEvent): void => {
+      if (!rootRef.current?.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('pointerdown', onPointerDown)
+    return () => document.removeEventListener('pointerdown', onPointerDown)
+  }, [open])
+
+  const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>): void => {
+    if (e.key === 'Escape' && open) {
+      e.stopPropagation()
+      setOpen(false)
+      triggerRef.current?.focus()
+    }
+  }
+
+  const summary =
+    selectedTags.length === 0
+      ? t('list.allTagsLabel')
+      : selectedTags.length === 1
+        ? selectedTags[0]
+        : t('list.tagsMore', { tag: selectedTags[0], count: selectedTags.length - 1 })
+
+  return (
+    <div
+      ref={rootRef}
+      className={styles.tagDropdown}
+      role="group"
+      aria-label={t('list.filterByTag')}
+      data-component="contact-tag-filter"
+      onKeyDown={handleKeyDown}
+    >
+      <div
+        className={`${styles.tagTrigger} ${selectedTags.length > 0 ? styles.tagTriggerActive : ''}`}
+      >
+        <button
+          ref={triggerRef}
+          type="button"
+          className={styles.tagTriggerButton}
+          aria-haspopup="true"
+          aria-expanded={open}
+          onClick={() => setOpen((o) => !o)}
+        >
+          <svg
+            className={styles.tagTriggerIcon}
+            aria-hidden="true"
+            viewBox="0 0 24 24"
+            width="14"
+            height="14"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z" />
+            <circle cx="7.5" cy="7.5" r=".5" fill="currentColor" />
+          </svg>
+          <span className={styles.tagTriggerLabel}>{summary}</span>
+          <svg
+            className={`${styles.tagTriggerChevron} ${open ? styles.tagTriggerChevronOpen : ''}`}
+            aria-hidden="true"
+            viewBox="0 0 24 24"
+            width="14"
+            height="14"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="m6 9 6 6 6-6" />
+          </svg>
+        </button>
+        {selectedTags.length > 0 && (
+          <button
+            type="button"
+            className={styles.tagTriggerClear}
+            aria-label={t('list.clearTagFilter')}
+            onClick={onClear}
+          >
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 24 24"
+              width="12"
+              height="12"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M18 6 6 18" />
+              <path d="m6 6 12 12" />
+            </svg>
+          </button>
+        )}
+      </div>
+      {open && (
+        <div className={styles.tagPanel}>
+          <label className={styles.tagOption}>
+            <input
+              type="checkbox"
+              className={styles.tagCheckbox}
+              checked={selectedTags.length === 0}
+              onChange={onClear}
+            />
+            <span className={styles.tagOptionLabel}>{t('list.allTagsLabel')}</span>
+          </label>
+          <div className={styles.tagPanelDivider} aria-hidden="true" />
+          <div className={styles.tagPanelList}>
+            {tags.map(({ tag, count }) => (
+              <label key={tag} className={styles.tagOption}>
+                <input
+                  type="checkbox"
+                  className={styles.tagCheckbox}
+                  checked={selectedTags.includes(tag)}
+                  onChange={() => onToggle(tag)}
+                />
+                <span className={styles.tagOptionLabel}>{tag}</span>
+                <span className={styles.tagOptionCount}>{count}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

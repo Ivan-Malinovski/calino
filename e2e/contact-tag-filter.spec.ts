@@ -4,7 +4,7 @@
  * The tag filter used to exist only as a side effect of clicking a tag on a
  * contact's detail pane, so reaching a filtered view meant first finding a
  * contact that carried the tag. The list now shows a chip row with every tag
- * plus "All", driven by the same tag filter. Several tags can be active at once; a contact
+ * plus "All" (or, past six tags, a checkbox dropdown), driven by the same tag filter. Several tags can be active at once; a contact
  * matches when it carries any of them.
  */
 import { test, expect } from '@playwright/test'
@@ -139,7 +139,8 @@ test.describe('contacts — tag filter chips', () => {
 
 test.describe('contacts — tag filter chips, mouse drag', () => {
   test.beforeEach(async ({ page }) => {
-    const tags = Array.from({ length: 14 }, (_, i) => `Group ${String(i + 1).padStart(2, '0')}`)
+    // Six tags is the most the chip row handles; long names make it overflow.
+    const tags = Array.from({ length: 6 }, (_, i) => `Long tag name ${i + 1}`)
     await clearState(page)
     await seedContacts(
       page,
@@ -168,5 +169,90 @@ test.describe('contacts — tag filter chips, mouse drag', () => {
     expect(await scrollLeft()).toBeGreaterThan(50)
     await expect(row.locator('[aria-pressed="true"]')).toHaveText('All')
     await expect(page.getByText('1 contact', { exact: true })).toBeVisible()
+  })
+})
+
+test.describe('contacts — tag filter dropdown (more than six tags)', () => {
+  test.beforeEach(async ({ page }) => {
+    await clearState(page)
+    await seedContacts(
+      page,
+      [{ id: 'book-personal', name: 'Personal' }],
+      [
+        {
+          id: 'c1',
+          displayName: 'Ana Petrova',
+          addressBookId: 'book-personal',
+          categories: ['Alpha', 'Beta'],
+        },
+        {
+          id: 'c2',
+          displayName: 'Boris Petrov',
+          addressBookId: 'book-personal',
+          categories: ['Gamma'],
+        },
+        {
+          id: 'c3',
+          displayName: 'Clara Cole',
+          addressBookId: 'book-personal',
+          categories: ['Delta', 'Epsilon', 'Zeta', 'Eta'],
+        },
+        { id: 'c4', displayName: 'Dan Doe', addressBookId: 'book-personal' },
+      ]
+    )
+  })
+
+  test('shows a checkbox dropdown instead of chips and filters by several ticked tags', async ({
+    page,
+  }) => {
+    await page.goto('/contacts')
+    const filter = page.getByRole('group', { name: 'Filter by tag' })
+    const trigger = filter.getByRole('button', { name: /All tags/ })
+
+    await expect(trigger).toHaveAttribute('aria-expanded', 'false')
+    await expect(filter.getByRole('checkbox')).toHaveCount(0)
+    await expect(page.getByText('4 contacts')).toBeVisible()
+
+    await trigger.click()
+    await expect(trigger).toHaveAttribute('aria-expanded', 'true')
+    // "All tags" plus the seven real tags.
+    await expect(filter.getByRole('checkbox')).toHaveCount(8)
+    await expect(filter.getByRole('checkbox', { name: 'All tags' })).toBeChecked()
+
+    await filter.getByRole('checkbox', { name: /Alpha/ }).check()
+    await filter.getByRole('checkbox', { name: /Gamma/ }).check()
+
+    // The panel stays open while ticking, and the list follows.
+    await expect(filter.getByRole('checkbox', { name: 'All tags' })).not.toBeChecked()
+    await expect(page.getByText('2 contacts')).toBeVisible()
+    await expect(page.getByText('Clara Cole', { exact: true })).toHaveCount(0)
+    await expect(filter.getByRole('button', { name: /Alpha \+1/ })).toBeVisible()
+
+    await filter.getByRole('checkbox', { name: /Gamma/ }).uncheck()
+    await expect(page.getByText('1 contact', { exact: true })).toBeVisible()
+    await expect(filter.getByRole('button', { name: /^Alpha$/ })).toBeVisible()
+  })
+
+  test('closes on Escape and on an outside click, and can be cleared from the trigger', async ({
+    page,
+  }) => {
+    await page.goto('/contacts')
+    const filter = page.getByRole('group', { name: 'Filter by tag' })
+    const trigger = filter.getByRole('button', { name: /All tags/ })
+
+    await trigger.click()
+    await page.keyboard.press('Escape')
+    await expect(filter.getByRole('checkbox')).toHaveCount(0)
+    await expect(trigger).toBeFocused()
+
+    await trigger.click()
+    await filter.getByRole('checkbox', { name: /Delta/ }).check()
+    await page.getByRole('textbox', { name: 'Search contacts…' }).click()
+    await expect(filter.getByRole('checkbox')).toHaveCount(0)
+    await expect(page.getByText('1 contact', { exact: true })).toBeVisible()
+
+    await filter.getByRole('button', { name: 'Clear tag filter' }).click()
+    await expect(page.getByText('4 contacts')).toBeVisible()
+    await expect(filter.getByRole('button', { name: /All tags/ })).toBeVisible()
   })
 })

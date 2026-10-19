@@ -1,6 +1,6 @@
 {
   "list": {
-    "searchContacts": "Søg kontakter…", "clearSearch": "Ryd søgning", "contactCount_one": "{{count}} kontakt", "contactCount_other": "{{count}} kontakter", "newContact": "+ Ny", "allAddressBooks": "Alle adressebøger", "filterByTag": "Filtrér efter tag", "allTags": "Alle", "noMatches": "Ingen resultater", "noContactsMatch": "Ingen kontakter matcher “{{query}}”", "noContacts": "Ingen kontakter", "syncToSeeContacts": "Synkroniser din CardDAV-konto for at se kontakter her."
+    "searchContacts": "Søg kontakter…", "clearSearch": "Ryd søgning", "contactCount_one": "{{count}} kontakt", "contactCount_other": "{{count}} kontakter", "newContact": "+ Ny", "allAddressBooks": "Alle adressebøger", "filterByTag": "Filtrér efter tag", "allTags": "Alle", "allTagsLabel": "Alle tags", "tagsMore": "{{tag}} +{{count}}", "clearTagFilter": "Ryd tagfilter", "noMatches": "Ingen resultater", "noContactsMatch": "Ingen kontakter matcher “{{query}}”", "noContacts": "Ingen kontakter", "syncToSeeContacts": "Synkroniser din CardDAV-konto for at se kontakter her."
   },
   "detail": {
     "unknownContact": "Ukendt kontakt", "sendEmail": "Send e-mail", "editContact": "Rediger kontakt", "deleteContact": "Slet kontakt", "clickAgainToConfirm": "Klik igen for at bekræfte", "confirmQuestion": "Bekræft?", "today": "(i dag!)", "inDays_one": "(om {{count}} dag)", "inDays_other": "(om {{count}} dage)", "yearsOld_one": "{{count}} år", "yearsOld_other": "{{count}} år", "onCalendar": "I kalender", "addToCalendar": "Føj til kalender",

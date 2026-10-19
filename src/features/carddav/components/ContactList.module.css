@@ -66,7 +66,10 @@
   cursor: pointer;
   padding: 0;
   flex-shrink: 0;
-  transition: background 0.14s, color 0.14s, transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition:
+    background 0.14s,
+    color 0.14s,
+    transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .clearBtn:hover {
@@ -138,7 +141,10 @@
   border-radius: 9px;
   cursor: pointer;
   user-select: none;
-  transition: background 0.14s, border-color 0.14s, transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition:
+    background 0.14s,
+    border-color 0.14s,
+    transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .tagChip:hover {
@@ -165,6 +171,219 @@
   font-size: 11.5px;
   font-weight: 400;
   opacity: 0.8;
+}
+
+/* ---- Tag dropdown (many tags) ---- */
+.tagDropdown {
+  position: relative;
+  padding: 2px 14px 10px;
+  flex-shrink: 0;
+}
+
+.tagTrigger {
+  display: flex;
+  align-items: stretch;
+  height: 32px;
+  color: var(--ink, #2c2823);
+  border: 1px solid var(--line, rgba(0, 0, 0, 0.1));
+  border-radius: 10px;
+  transition:
+    background 0.14s,
+    border-color 0.14s;
+}
+
+.tagTrigger:hover {
+  background: var(--surface-bg);
+}
+
+.tagTriggerActive,
+.tagTriggerActive:hover {
+  background: var(--accent-soft, #efe7db);
+  border-color: color-mix(in srgb, var(--accent, #b07d4f) 55%, transparent);
+}
+
+.tagTriggerButton {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px 0 11px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  color: inherit;
+  text-align: left;
+  background: none;
+  border: none;
+  border-radius: 9px;
+  cursor: pointer;
+}
+
+.tagTriggerButton:focus-visible,
+.tagTriggerClear:focus-visible {
+  outline: 2px solid var(--accent, #b07d4f);
+  outline-offset: 1px;
+}
+
+.tagTriggerIcon,
+.tagTriggerChevron {
+  flex-shrink: 0;
+  color: var(--ink-3, #756d62);
+}
+
+.tagTriggerLabel {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tagTriggerChevron {
+  transition: transform 0.16s ease;
+}
+
+.tagTriggerChevronOpen {
+  transform: rotate(180deg);
+}
+
+.tagTriggerClear {
+  width: 30px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  color: var(--ink-3, #756d62);
+  background: none;
+  border: none;
+  border-left: 1px solid color-mix(in srgb, var(--accent, #b07d4f) 30%, transparent);
+  border-radius: 0 9px 9px 0;
+  cursor: pointer;
+}
+
+.tagTriggerClear:hover {
+  color: var(--ink, #2c2823);
+}
+
+.tagPanel {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% - 6px);
+  left: 14px;
+  right: 14px;
+  display: flex;
+  flex-direction: column;
+  padding: 5px;
+  background: var(--popover-bg, var(--panel, #fff));
+  border: 1px solid var(--popover-border, var(--line, rgba(0, 0, 0, 0.1)));
+  border-radius: 13px;
+  box-shadow:
+    0 12px 32px rgba(0, 0, 0, 0.14),
+    0 2px 6px rgba(0, 0, 0, 0.08);
+  animation: tagPanelIn 0.12s ease-out;
+}
+
+@keyframes tagPanelIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tagPanel {
+    animation: none;
+  }
+
+  .tagTriggerChevron {
+    transition: none;
+  }
+}
+
+.tagPanelList {
+  max-height: min(264px, 45vh);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.tagPanelDivider {
+  height: 1px;
+  margin: 4px 6px;
+  background: var(--line-2, rgba(0, 0, 0, 0.05));
+}
+
+.tagOption {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 34px;
+  padding: 0 10px;
+  font-size: 13.5px;
+  color: var(--ink, #2c2823);
+  border-radius: 8px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.tagOption:hover {
+  background: var(--surface-bg);
+}
+
+.tagOption:has(.tagCheckbox:focus-visible) {
+  outline: 2px solid var(--accent, #b07d4f);
+  outline-offset: -2px;
+}
+
+.tagCheckbox {
+  appearance: none;
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  display: grid;
+  place-content: center;
+  background: transparent;
+  border: 1.5px solid color-mix(in srgb, var(--ink, #2c2823) 35%, transparent);
+  border-radius: 5px;
+  transition:
+    background 0.12s,
+    border-color 0.12s;
+}
+
+.tagCheckbox::after {
+  content: '';
+  width: 8px;
+  height: 4px;
+  margin-top: -2px;
+  border-left: 2px solid var(--canvas, #faf8f3);
+  border-bottom: 2px solid var(--canvas, #faf8f3);
+  transform: rotate(-45deg) scale(0);
+  transition: transform 0.12s ease;
+}
+
+.tagCheckbox:checked {
+  background: var(--ink, #2c2823);
+  border-color: var(--ink, #2c2823);
+}
+
+.tagCheckbox:checked::after {
+  transform: rotate(-45deg) scale(1);
+}
+
+.tagOptionLabel {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tagOptionCount {
+  font-size: 12px;
+  color: var(--ink-3, #756d62);
+  font-variant-numeric: tabular-nums;
 }
 
 /* ---- Meta Bar (count + new button) ---- */
@@ -194,7 +413,9 @@
   padding: 4px 8px;
   cursor: pointer;
   line-height: 1;
-  transition: background 0.14s, transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition:
+    background 0.14s,
+    transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .newBtn:hover {
@@ -237,7 +458,9 @@
   cursor: pointer;
   border-radius: var(--radius-sm);
   margin: 0 6px;
-  transition: background 0.14s, transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition:
+    background 0.14s,
+    transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .contactItem:hover {
@@ -443,7 +666,7 @@
   background: linear-gradient(
     90deg,
     var(--color-bg-tertiary, #f3f2f0) 25%,
-    var(--color-bg-hover, rgba(0,0,0,0.03)) 50%,
+    var(--color-bg-hover, rgba(0, 0, 0, 0.03)) 50%,
     var(--color-bg-tertiary, #f3f2f0) 75%
   );
   background-size: 200% 100%;
@@ -464,7 +687,7 @@
   background: linear-gradient(
     90deg,
     var(--color-bg-tertiary, #f3f2f0) 25%,
-    var(--color-bg-hover, rgba(0,0,0,0.03)) 50%,
+    var(--color-bg-hover, rgba(0, 0, 0, 0.03)) 50%,
     var(--color-bg-tertiary, #f3f2f0) 75%
   );
   background-size: 200% 100%;
@@ -478,7 +701,7 @@
   background: linear-gradient(
     90deg,
     var(--color-bg-tertiary, #f3f2f0) 25%,
-    var(--color-bg-hover, rgba(0,0,0,0.03)) 50%,
+    var(--color-bg-hover, rgba(0, 0, 0, 0.03)) 50%,
     var(--color-bg-tertiary, #f3f2f0) 75%
   );
   background-size: 200% 100%;
@@ -493,7 +716,7 @@
   background: linear-gradient(
     90deg,
     var(--color-bg-tertiary, #f3f2f0) 25%,
-    var(--color-bg-hover, rgba(0,0,0,0.03)) 50%,
+    var(--color-bg-hover, rgba(0, 0, 0, 0.03)) 50%,
     var(--color-bg-tertiary, #f3f2f0) 75%
   );
   background-size: 200% 100%;
@@ -516,7 +739,7 @@
   background: linear-gradient(
     90deg,
     var(--color-bg-tertiary, #f3f2f0) 25%,
-    var(--color-bg-hover, rgba(0,0,0,0.03)) 50%,
+    var(--color-bg-hover, rgba(0, 0, 0, 0.03)) 50%,
     var(--color-bg-tertiary, #f3f2f0) 75%
   );
   background-size: 200% 100%;
@@ -536,7 +759,7 @@
   background: linear-gradient(
     90deg,
     var(--color-bg-tertiary, #f3f2f0) 25%,
-    var(--color-bg-hover, rgba(0,0,0,0.03)) 50%,
+    var(--color-bg-hover, rgba(0, 0, 0, 0.03)) 50%,
     var(--color-bg-tertiary, #f3f2f0) 75%
   );
   background-size: 200% 100%;
@@ -554,8 +777,12 @@
 }
 
 @keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
 }
 
 /* iOS Safari zooms the page when a focused field's text is under 16px, and

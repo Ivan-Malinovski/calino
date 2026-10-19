@@ -6,7 +6,7 @@
     "contactCount_other": "{{count}} contacts",
     "newContact": "+ Nouveau",
     "allAddressBooks": "Tous les carnets d’adresses",
-    "filterByTag": "Filtrer par étiquette", "allTags": "Tous",
+    "filterByTag": "Filtrer par étiquette", "allTags": "Tous", "allTagsLabel": "Toutes les étiquettes", "tagsMore": "{{tag}} +{{count}}", "clearTagFilter": "Effacer le filtre d’étiquettes",
     "noMatches": "Aucun résultat",
     "noContactsMatch": "Aucun contact ne correspond à « {{query}} »",
     "noContacts": "Aucun contact",
