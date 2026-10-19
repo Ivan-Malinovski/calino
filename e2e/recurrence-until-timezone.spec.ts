@@ -18,7 +18,8 @@ import { clearState, seedAccount } from './fixtures/localstorage'
  * UTC instant and the local day fall on different sides of midnight.
  */
 
-const END_ON = '2026-12-31'
+// Typed in the default "Date format" (dd/MM/yyyy); the field reports yyyy-MM-dd.
+const END_ON = '31/12/2026'
 
 // Owned outright by this spec (see vite-caldav-mock.ts): it asserts the exact
 // contents of a single stored resource, so it cannot share with a parallel spec.
