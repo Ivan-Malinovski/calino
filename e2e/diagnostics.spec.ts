@@ -105,11 +105,12 @@ test.describe('diagnostics against a real server', () => {
 
   test('a correctly configured SabreDAV server root raises no warnings', async ({ page }) => {
     // Davis, Baïkal and Nextcloud: Allow never lists MKCALENDAR on an existing
-    // URL, and a server root lists only folders, which carry no ETag.
+    // URL, and a server root lists only folders, which carry no ETag. The
+    // check follows discovery down to an event and reads its ETag instead.
     await diagnoseSeededAccount(page, '/sabre/')
 
     await expect(check(page, 'allow-methods')).toHaveAttribute('data-status', 'pass')
-    await expect(check(page, 'expose-etag')).toHaveAttribute('data-status', 'unknown')
+    await expect(check(page, 'expose-etag')).toHaveAttribute('data-status', 'pass')
     await expect(page.locator('[data-summary]')).toHaveAttribute('data-summary', 'ok')
   })
 
