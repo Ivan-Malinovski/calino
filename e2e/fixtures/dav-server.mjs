@@ -17,7 +17,9 @@
  *   /401/       rejects the credentials
  *   /sabre/     a SabreDAV server root (Davis, Baïkal, Nextcloud): correct
  *               CORS, but Allow omits MKCALENDAR/MKCOL on existing URLs and
- *               the listing holds only folders, whose GET has no ETag
+ *               the listing holds only folders, whose GET has no ETag. The
+ *               principal, calendar home and one calendar with an event sit
+ *               below it, as discovery finds them
  *
  * Zero dependencies, so it runs anywhere `node` does.
  */
@@ -48,6 +50,53 @@ ${['', 'principals/', 'calendars/', 'addressbooks/']
   )
   .join('\n')}
 </d:multistatus>`
+
+/** One <d:response> per entry: [href, inner <d:prop> XML]. */
+const responses = (entries) => `<?xml version="1.0" encoding="utf-8"?>
+<d:multistatus xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav">
+${entries
+  .map(
+    ([href, prop]) => `  <d:response>
+    <d:href>${href}</d:href>
+    <d:propstat><d:prop>${prop}</d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat>
+  </d:response>`
+  )
+  .join('\n')}
+</d:multistatus>`
+
+/** The SabreDAV tree under /sabre/, answered the way Davis answers it. */
+function sabrePropfind(pathname, body) {
+  const root = '/sabre/'
+  const home = `${root}calendars/alice/`
+  const calendar = `${home}default/`
+  const folder = '<d:resourcetype><d:collection/></d:resourcetype>'
+  if (body.includes('current-user-principal')) {
+    return responses([
+      [
+        pathname,
+        `<d:current-user-principal><d:href>${root}principals/alice/</d:href></d:current-user-principal>`,
+      ],
+    ])
+  }
+  if (body.includes('calendar-home-set')) {
+    return responses([
+      [pathname, `<c:calendar-home-set><d:href>${home}</d:href></c:calendar-home-set>`],
+    ])
+  }
+  if (pathname === home) {
+    return responses([
+      [home, folder],
+      [calendar, '<d:resourcetype><d:collection/><c:calendar/></d:resourcetype>'],
+    ])
+  }
+  if (pathname === calendar) {
+    return responses([
+      [calendar, '<d:resourcetype><d:collection/><c:calendar/></d:resourcetype>'],
+      [`${calendar}event-1.ics`, '<d:resourcetype/><d:getetag>"etag-1"</d:getetag>'],
+    ])
+  }
+  return sabreRootListing(pathname)
+}
 
 const multistatus = (href, kind) => `<?xml version="1.0" encoding="utf-8"?>
 <d:multistatus xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav">
@@ -126,15 +175,16 @@ const server = createServer((req, res) => {
     return
   }
 
-  // Drain the request body; PROPFIND and REPORT both send one.
-  req.resume()
+  // Collect the request body; PROPFIND and REPORT both send one.
+  let body = ''
+  req.on('data', (chunk) => (body += chunk))
   req.on('end', () => {
     res.setHeader('DAV', '1, 2, 3, calendar-access')
 
     if (req.method === 'PROPFIND' || req.method === 'REPORT') {
       res.setHeader('Content-Type', 'text/xml; charset=utf-8')
       if (profile.sabreRoot && req.method === 'PROPFIND') {
-        res.writeHead(207).end(sabreRootListing(pathname))
+        res.writeHead(207).end(sabrePropfind(pathname, body))
         return
       }
       res.writeHead(207).end(multistatus(pathname, 'calendar'))
@@ -152,7 +202,7 @@ const server = createServer((req, res) => {
       return
     }
 
-    if (profile.sabreRoot) {
+    if (profile.sabreRoot && !pathname.endsWith('.ics')) {
       // A folder: SabreDAV answers GET with an HTML page and no ETag.
       res.setHeader('Content-Type', 'text/html; charset=utf-8')
       res.writeHead(200).end('<!doctype html><title>Index</title>')

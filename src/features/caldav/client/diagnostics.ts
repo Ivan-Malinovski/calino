@@ -710,6 +710,67 @@ export async function runDiagnostics(options: DiagnosticsOptions): Promise<Diagn
     })
   }
 
+  /**
+   * When `base` lists only folders (a server root, or a principal), follow the
+   * discovery a sync does — current-user-principal, the home set, then each
+   * calendar or address book — down to one actual resource. Its ETag is the
+   * definitive test. Null when any step comes back empty.
+   */
+  async function findResourceThroughHome(): Promise<string | null> {
+    const ns =
+      kind === 'carddav' ? 'urn:ietf:params:xml:ns:carddav' : 'urn:ietf:params:xml:ns:caldav'
+    const homeProp = kind === 'carddav' ? 'addressbook-home-set' : 'calendar-home-set'
+    const collectionType = kind === 'carddav' ? 'addressbook' : 'calendar'
+
+    const propfind = async (url: string, depth: '0' | '1', props: string) => {
+      const response = await request(url, {
+        method: 'PROPFIND',
+        headers: davHeaders(depth),
+        body: `<?xml version="1.0" encoding="UTF-8"?>
+<d:propfind xmlns:d="DAV:" xmlns:x="${ns}"><d:prop>${props}</d:prop></d:propfind>`,
+      })
+      if (response.status !== 207) return null
+      return new DOMParser().parseFromString(await response.text(), 'application/xml')
+    }
+    const hrefInside = (doc: Document | null, namespace: string, localName: string) =>
+      doc
+        ?.getElementsByTagNameNS(namespace, localName)[0]
+        ?.getElementsByTagNameNS('DAV:', 'href')[0]
+        ?.textContent?.trim() || null
+
+    const principal = hrefInside(
+      await propfind(base, '0', '<d:current-user-principal/>'),
+      'DAV:',
+      'current-user-principal'
+    )
+    if (!principal) return null
+    const principalUrl = new URL(principal, `${base}/`).href
+
+    const home = hrefInside(await propfind(principalUrl, '0', `<x:${homeProp}/>`), ns, homeProp)
+    if (!home) return null
+    const homeUrl = new URL(home, principalUrl).href
+
+    const listing = await propfind(homeUrl, '1', '<d:resourcetype/>')
+    if (!listing) return null
+    const collections = Array.from(listing.getElementsByTagNameNS('DAV:', 'response'))
+      .filter((r) => r.getElementsByTagNameNS(ns, collectionType).length > 0)
+      .map((r) => davText(r, 'href'))
+      .filter((href): href is string => Boolean(href))
+      .map((href) => new URL(href, homeUrl).href)
+
+    // A few collections are enough; an empty calendar just moves on.
+    for (const collection of collections.slice(0, 5)) {
+      const items = await propfind(collection, '1', '<d:resourcetype/><d:getetag/>')
+      if (!items) continue
+      for (const item of Array.from(items.getElementsByTagNameNS('DAV:', 'response')).slice(1)) {
+        if (item.getElementsByTagNameNS('DAV:', 'collection').length > 0) continue
+        const href = davText(item, 'href')
+        if (href) return new URL(href, collection).href
+      }
+    }
+    return null
+  }
+
   // ── 9. ETag exposure ───────────────────────────────────────────────────────
   // Not cosmetic: when ETag isn't readable, every create and update pays a
   // follow-up PROPFIND to recover the etag (see CalDAVClient.fetchEtag). Sync
@@ -724,6 +785,13 @@ export async function runDiagnostics(options: DiagnosticsOptions): Promise<Diagn
         'Not applicable — your proxy exposes ETag on its own responses, so this tells you nothing about the server.',
     })
   } else if (firstResourceHref) {
+    if (probeIsCollection) {
+      const discovered = await findResourceThroughHome().catch(() => null)
+      if (discovered) {
+        firstResourceHref = discovered
+        probeIsCollection = false
+      }
+    }
     try {
       const resource = await request(firstResourceHref, {
         method: 'GET',
@@ -750,7 +818,7 @@ export async function runDiagnostics(options: DiagnosticsOptions): Promise<Diagn
           status: 'unknown',
           evidence: 'inferred',
           detail:
-            'This URL lists only folders, and folders often have no ETag at all, so ETag exposure could not be checked. Run diagnostics against a single calendar, with the write test, for a definitive answer.',
+            'This URL lists only folders, folders often have no ETag at all, and no event was found further down to read one from, so ETag exposure could not be checked. Run diagnostics against a single calendar, with the write test, for a definitive answer.',
           raw: `GET → HTTP ${resource.status}, ETag: (none)`,
         })
       } else {

@@ -196,7 +196,7 @@ describe('runDiagnostics', () => {
         {
           '/teelur/': { status: 403 },
           '/teelur/cal/a1.ics': { status: 200, headers: { ETag: '"abc"' } },
-        },
+        }
       )
 
       const report = await runDiagnostics(OPTS)
@@ -219,6 +219,68 @@ describe('runDiagnostics', () => {
       expect(etag.status).toBe('unknown')
       expect(etag.fix).toBeUndefined()
       expect(report.summary).not.toBe('degraded')
+    })
+
+    describe('following discovery from a folder-only root', () => {
+      /** A SabreDAV-shaped tree: PROPFINDs answered by URL and requested property. */
+      function stubSabreTree(eventHeaders: Record<string, string>) {
+        const calendarList = listing(
+          collection('/calendars/me/'),
+          '<d:response><d:href>/calendars/me/work/</d:href><d:propstat><d:prop><d:resourcetype><d:collection/><c:calendar/></d:resourcetype></d:prop></d:propstat></d:response>'
+        )
+        vi.stubGlobal(
+          'fetch',
+          vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => {
+            const path = new URL(String(url)).pathname
+            const body = String(init?.body ?? '')
+            if ((init?.method ?? 'GET') === 'GET') {
+              return path.endsWith('.ics')
+                ? new Response('BEGIN:VCALENDAR', { status: 200, headers: eventHeaders })
+                : new Response('<html></html>', { status: 200 })
+            }
+            if (body.includes('current-user-principal'))
+              return new Response(
+                listing(
+                  '<d:response><d:href>/</d:href><d:propstat><d:prop><d:current-user-principal><d:href>/principals/me/</d:href></d:current-user-principal></d:prop></d:propstat></d:response>'
+                ),
+                { status: 207 }
+              )
+            if (body.includes('calendar-home-set'))
+              return new Response(
+                listing(
+                  '<d:response><d:href>/principals/me/</d:href><d:propstat><d:prop><c:calendar-home-set><d:href>/calendars/me/</d:href></c:calendar-home-set></d:prop></d:propstat></d:response>'
+                ),
+                { status: 207 }
+              )
+            if (path === '/calendars/me/') return new Response(calendarList, { status: 207 })
+            if (path === '/calendars/me/work/')
+              return new Response(
+                listing(collection('/calendars/me/work/'), item('/calendars/me/work/a.ics')),
+                {
+                  status: 207,
+                }
+              )
+            return new Response(
+              listing(collection('/'), collection('/principals/'), collection('/calendars/')),
+              {
+                status: 207,
+              }
+            )
+          })
+        )
+      }
+
+      it('passes when an event found through the calendar home exposes its ETag', async () => {
+        stubSabreTree({ ETag: '"e1"' })
+        const report = await runDiagnostics(OPTS)
+        expect(statusOf(report.checks, 'expose-etag')).toBe('pass')
+      })
+
+      it('warns when that event does not expose its ETag', async () => {
+        stubSabreTree({})
+        const report = await runDiagnostics(OPTS)
+        expect(statusOf(report.checks, 'expose-etag')).toBe('warn')
+      })
     })
 
     it('is inconclusive when only a collection answers 200 without an ETag (SabreDAV root)', async () => {
@@ -260,9 +322,9 @@ describe('runDiagnostics', () => {
       stubByPath(
         listing(
           collection('/'),
-          '<d:response><d:href>/e.ics</d:href><d:propstat><d:prop><d:getetag>"x"</d:getetag></d:prop></d:propstat></d:response>',
+          '<d:response><d:href>/e.ics</d:href><d:propstat><d:prop><d:getetag>"x"</d:getetag></d:prop></d:propstat></d:response>'
         ),
-        { '/e.ics': { status: 200, headers: { ETag: '"x"' } } },
+        { '/e.ics': { status: 200, headers: { ETag: '"x"' } } }
       )
 
       const report = await runDiagnostics(OPTS)
