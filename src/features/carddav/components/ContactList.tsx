@@ -1,5 +1,5 @@
-import type { JSX, KeyboardEvent } from 'react'
-import { useMemo, useRef, useCallback, useEffect } from 'react'
+import type { JSX, KeyboardEvent, PointerEvent } from 'react'
+import { useMemo, useRef, useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useContactStore } from '@/store/contactStore'
 import type { Contact } from '../types'
@@ -105,6 +105,140 @@ function groupByAlpha(contacts: Contact[]): AlphaGroup[] {
 }
 
 /* -------------------------------------------------------------------------- */
+/*  Tag filter                                                                 */
+/* -------------------------------------------------------------------------- */
+
+/** Pointer travel before a press on the tag row counts as a drag, not a click. */
+const DRAG_THRESHOLD_PX = 4
+
+interface TagFilterProps {
+  /** Tags with the number of contacts carrying each, already sorted. */
+  tags: Array<{ tag: string; count: number }>
+  selectedTags: string[]
+  onToggle: (tag: string) => void
+  onClear: () => void
+}
+
+/**
+ * Chip row listing every tag in scope plus "All". It scrolls sideways when the
+ * tags don't fit, fading each edge while more tags are hidden beyond it.
+ */
+function TagFilter({ tags, selectedTags, onToggle, onClear }: TagFilterProps): JSX.Element {
+  const { t } = useTranslation('contacts')
+  const rowRef = useRef<HTMLDivElement>(null)
+  const [moreToTheLeft, setMoreToTheLeft] = useState(false)
+  const [moreToTheRight, setMoreToTheRight] = useState(false)
+
+  // Mouse drag-to-scroll. Touch already scrolls natively, so only mice are handled.
+  const drag = useRef({ startX: 0, startScroll: 0, active: false, moved: false })
+
+  const handlePointerDown = (e: PointerEvent<HTMLDivElement>): void => {
+    if (e.pointerType !== 'mouse' || e.button !== 0) return
+    drag.current = {
+      startX: e.clientX,
+      startScroll: e.currentTarget.scrollLeft,
+      active: true,
+      moved: false,
+    }
+  }
+
+  const handlePointerMove = (e: PointerEvent<HTMLDivElement>): void => {
+    const d = drag.current
+    if (!d.active) return
+    const dx = e.clientX - d.startX
+    if (!d.moved) {
+      if (Math.abs(dx) < DRAG_THRESHOLD_PX) return
+      d.moved = true
+      // Capture only once it is a drag, so a plain click still reaches its chip.
+      e.currentTarget.setPointerCapture(e.pointerId)
+    }
+    e.currentTarget.scrollLeft = d.startScroll - dx
+  }
+
+  const handlePointerEnd = (e: PointerEvent<HTMLDivElement>): void => {
+    if (!drag.current.active) return
+    drag.current.active = false
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+      e.currentTarget.releasePointerCapture(e.pointerId)
+    }
+  }
+
+  const updateFade = useCallback((): void => {
+    const row = rowRef.current
+    if (!row) return
+    setMoreToTheLeft(row.scrollLeft > 1)
+    setMoreToTheRight(row.scrollLeft + row.clientWidth < row.scrollWidth - 1)
+  }, [])
+
+  useEffect(() => {
+    updateFade()
+    const row = rowRef.current
+    if (!row || typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver(updateFade)
+    observer.observe(row)
+    return () => observer.disconnect()
+  }, [tags, updateFade])
+
+  // A tag picked elsewhere (the contact detail) may sit off-screen in the row.
+  useEffect(() => {
+    rowRef.current
+      ?.querySelector<HTMLElement>('[aria-pressed="true"]')
+      ?.scrollIntoView?.({ inline: 'nearest', block: 'nearest' })
+  }, [selectedTags])
+
+  return (
+    <div
+      ref={rowRef}
+      className={`${styles.tagRow} ${moreToTheLeft ? styles.tagRowFadeStart : ''} ${moreToTheRight ? styles.tagRowFadeEnd : ''}`}
+      role="group"
+      aria-label={t('list.filterByTag')}
+      data-component="contact-tag-filter"
+      onScroll={updateFade}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerEnd}
+      onPointerCancel={handlePointerEnd}
+      onClickCapture={(e) => {
+        // A drag that ends over a chip must not also toggle it.
+        if (drag.current.moved) {
+          e.preventDefault()
+          e.stopPropagation()
+          drag.current.moved = false
+        }
+      }}
+      onWheel={(e) => {
+        // Let a plain mouse wheel scroll the row sideways.
+        if (e.deltaX === 0) e.currentTarget.scrollLeft += e.deltaY
+      }}
+    >
+      <button
+        type="button"
+        className={`${styles.tagChip} ${selectedTags.length === 0 ? styles.tagChipActive : ''}`}
+        aria-pressed={selectedTags.length === 0}
+        onClick={onClear}
+      >
+        {t('list.allTags')}
+      </button>
+      {tags.map(({ tag, count }) => {
+        const active = selectedTags.includes(tag)
+        return (
+          <button
+            key={tag}
+            type="button"
+            className={`${styles.tagChip} ${active ? styles.tagChipActive : ''}`}
+            aria-pressed={active}
+            onClick={() => onToggle(tag)}
+          >
+            {tag}
+            {active && <span className={styles.tagChipCount}>{count}</span>}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+/* -------------------------------------------------------------------------- */
 /*  ContactList                                                                */
 /* -------------------------------------------------------------------------- */
 
@@ -145,7 +279,9 @@ export function ContactList({ onNewContact, loading }: ContactListProps = {}): J
   const setSearchQuery = useContactStore((s) => s.setSearchQuery)
   const selectedContactId = useContactStore((s) => s.selectedContactId)
   const setSelectedContactId = useContactStore((s) => s.setSelectedContactId)
-  const selectedTag = useContactStore((s) => s.selectedTag)
+  const selectedTags = useContactStore((s) => s.selectedTags)
+  const setSelectedTags = useContactStore((s) => s.setSelectedTags)
+  const toggleSelectedTag = useContactStore((s) => s.toggleSelectedTag)
   const filterAddressBookId = useContactStore((s) => s.filterAddressBookId)
   const setFilterAddressBookId = useContactStore((s) => s.setFilterAddressBookId)
   const contacts = useContactStore((s) => s.contacts)
@@ -182,21 +318,42 @@ export function ContactList({ onNewContact, loading }: ContactListProps = {}): J
       // Use Fuse.js search
       return searchContacts(searchQuery, {
         addressBookIds: filterAddressBookIds,
-        tag: selectedTag ?? undefined,
+        tags: selectedTags,
       })
     }
 
     // No search query — filter manually
     let filtered = contacts.filter((c) => filterAddressBookIds.includes(c.addressBookId))
 
-    if (selectedTag) {
-      filtered = filtered.filter((c) => c.categories.includes(selectedTag))
+    if (selectedTags.length > 0) {
+      filtered = filtered.filter((c) => selectedTags.some((tag) => c.categories.includes(tag)))
     }
 
     return filtered.sort((a, b) => a.displayName.localeCompare(b.displayName))
-  }, [contacts, addressBooks, searchQuery, selectedTag, filterAddressBookId])
+  }, [contacts, addressBooks, searchQuery, selectedTags, filterAddressBookId])
 
   const groups = useMemo(() => groupByAlpha(filteredContacts), [filteredContacts])
+
+  // Tags offered by the filter: every tag among the contacts of the address
+  // books in scope, regardless of search or the tag already chosen, so the
+  // chips don't change under the user's finger.
+  const tagOptions = useMemo(() => {
+    const scope = filterAddressBookId
+      ? [filterAddressBookId]
+      : addressBooks.filter((ab) => ab.isVisible).map((ab) => ab.id)
+    const counts = new Map<string, number>()
+    for (const c of contacts) {
+      if (!scope.includes(c.addressBookId)) continue
+      for (const tag of new Set(c.categories)) {
+        counts.set(tag, (counts.get(tag) ?? 0) + 1)
+      }
+    }
+    // Keep active tags listed even when the scope has none, so they can be cleared.
+    for (const tag of selectedTags) if (!counts.has(tag)) counts.set(tag, 0)
+    return [...counts.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([tag, count]) => ({ tag, count }))
+  }, [contacts, addressBooks, filterAddressBookId, selectedTags])
 
   const handleSelect = useCallback(
     (id: string) => {
@@ -265,7 +422,9 @@ export function ContactList({ onNewContact, loading }: ContactListProps = {}): J
 
       {/* Meta bar: count + new button */}
       <div className={styles.metaBar}>
-        <span className={styles.count}>{t('list.contactCount', { count: filteredContacts.length })}</span>
+        <span className={styles.count}>
+          {t('list.contactCount', { count: filteredContacts.length })}
+        </span>
         <button type="button" className={styles.newBtn} onClick={onNewContact}>
           {t('list.newContact')}
         </button>
@@ -300,19 +459,14 @@ export function ContactList({ onNewContact, loading }: ContactListProps = {}): J
         </div>
       )}
 
-      {/* Active tag filter */}
-      {selectedTag && (
-        <div className={styles.tagFilter}>
-          <span className={styles.tagFilterLabel}>{t('list.filteredBy')}</span>
-          <span className={styles.tagFilterTag}>{selectedTag}</span>
-          <button
-            type="button"
-            className={styles.tagFilterClear}
-            onClick={() => useContactStore.getState().setSelectedTag(null)}
-          >
-            ×
-          </button>
-        </div>
+      {/* Tag filter */}
+      {tagOptions.length > 0 && (
+        <TagFilter
+          tags={tagOptions}
+          selectedTags={selectedTags}
+          onToggle={toggleSelectedTag}
+          onClear={() => setSelectedTags([])}
+        />
       )}
 
       {/* Grouped contact list */}

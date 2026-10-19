@@ -24,6 +24,8 @@ interface ContactSeed {
   /** ISO date (YYYY-MM-DD) for the anniversary card's "Add to calendar" flow. */
   anniversary?: string
   related?: Array<{ value: string; type: string; isPrimary?: boolean }>
+  /** vCard CATEGORIES, i.e. the tags the contact list filters by. */
+  categories?: string[]
   isGroup?: boolean
   memberUids?: string[]
 }
@@ -283,7 +285,7 @@ export async function seedContacts(
             department: '',
             title: '',
             note: '',
-            categories: [],
+            categories: c.categories ?? [],
             photo: null,
             birthday: c.birthday ?? '',
             anniversary: c.anniversary ?? '',

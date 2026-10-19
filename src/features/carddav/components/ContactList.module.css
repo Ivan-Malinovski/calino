@@ -84,40 +84,87 @@
 }
 
 /* ---- Tag Filter ---- */
-.tagFilter {
+.tagRow {
   display: flex;
+  gap: 6px;
+  padding: 2px 14px 10px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  flex-shrink: 0;
+  cursor: grab;
+}
+
+.tagRow:active {
+  cursor: grabbing;
+}
+
+.tagRow::-webkit-scrollbar {
+  display: none;
+}
+
+/* Fade an edge while more tags are scrolled out of view beyond it. */
+.tagRow {
+  mask-image: linear-gradient(
+    90deg,
+    transparent,
+    #000 var(--fade-start, 0px),
+    #000 calc(100% - var(--fade-end, 0px)),
+    transparent
+  );
+}
+
+.tagRowFadeStart {
+  --fade-start: 40px;
+}
+
+.tagRowFadeEnd {
+  --fade-end: 48px;
+}
+
+.tagChip {
+  flex-shrink: 0;
+  display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 5px 20px;
-  font-size: 11.5px;
-}
-
-.tagFilterLabel {
-  color: var(--ink-3, #a39d93);
-}
-
-.tagFilterTag {
-  background: var(--accent-bg, color-mix(in srgb, var(--accent) 10%, transparent));
-  color: var(--accent-strong, var(--accent, #b07d4f));
-  padding: 2px 8px;
-  border-radius: 6px;
+  height: 30px;
+  padding: 0 12px;
+  font: inherit;
+  font-size: 13px;
   font-weight: 500;
-  font-size: 11px;
-}
-
-.tagFilterClear {
-  background: none;
-  border: none;
-  color: var(--ink-3, #a39d93);
-  font-size: 16px;
-  line-height: 1;
-  cursor: pointer;
-  padding: 0 2px;
-  transition: color 0.14s;
-}
-
-.tagFilterClear:hover {
+  white-space: nowrap;
   color: var(--ink, #2c2823);
+  background: transparent;
+  border: 1px solid var(--line, rgba(0, 0, 0, 0.1));
+  border-radius: 9px;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.14s, border-color 0.14s, transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.tagChip:hover {
+  background: var(--surface-bg);
+}
+
+.tagChip:active {
+  transform: scale(0.96);
+}
+
+.tagChip:focus-visible {
+  outline: 2px solid var(--accent, #b07d4f);
+  outline-offset: 1px;
+}
+
+.tagChipActive,
+.tagChipActive:hover {
+  color: var(--canvas, #faf8f3);
+  background: var(--ink, #2c2823);
+  border-color: var(--ink, #2c2823);
+}
+
+.tagChipCount {
+  font-size: 11.5px;
+  font-weight: 400;
+  opacity: 0.8;
 }
 
 /* ---- Meta Bar (count + new button) ---- */

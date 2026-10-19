@@ -6,7 +6,7 @@
     "contactCount_other": "{{count}} contacten",
     "newContact": "+ Nieuw",
     "allAddressBooks": "Alle adresboeken",
-    "filteredBy": "Gefilterd op:",
+    "filterByTag": "Filteren op label", "allTags": "Alle",
     "noMatches": "Geen overeenkomsten",
     "noContactsMatch": "Geen contacten komen overeen met “{{query}}”",
     "noContacts": "Geen contacten",

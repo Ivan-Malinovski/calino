@@ -7,7 +7,8 @@ export interface ContactStore {
   contacts: Contact[]
   addressBooks: AddressBook[]
   selectedContactId: string | null
-  selectedTag: string | null
+  /** Tags the list is filtered by; a contact matches when it carries any of them. */
+  selectedTags: string[]
   filterAddressBookId: string | null
   searchQuery: string
   pendingChanges: PendingContactChange[]
@@ -17,7 +18,8 @@ export interface ContactStore {
   updateContact: (id: string, updates: Partial<Contact>) => void
   deleteContact: (id: string) => void
   setSelectedContactId: (id: string | null) => void
-  setSelectedTag: (tag: string | null) => void
+  setSelectedTags: (tags: string[]) => void
+  toggleSelectedTag: (tag: string) => void
   setFilterAddressBookId: (id: string | null) => void
   setSearchQuery: (query: string) => void
 
@@ -48,7 +50,7 @@ export const useContactStore = create<ContactStore>()(
       contacts: [],
       addressBooks: [],
       selectedContactId: null,
-      selectedTag: null,
+      selectedTags: [],
       filterAddressBookId: null,
       searchQuery: '',
       pendingChanges: [],
@@ -76,8 +78,16 @@ export const useContactStore = create<ContactStore>()(
         set({ selectedContactId: id })
       },
 
-      setSelectedTag: (tag: string | null): void => {
-        set({ selectedTag: tag })
+      setSelectedTags: (tags: string[]): void => {
+        set({ selectedTags: tags })
+      },
+
+      toggleSelectedTag: (tag: string): void => {
+        set((state) => ({
+          selectedTags: state.selectedTags.includes(tag)
+            ? state.selectedTags.filter((t) => t !== tag)
+            : [...state.selectedTags, tag],
+        }))
       },
 
       setFilterAddressBookId: (id: string | null): void => {
@@ -174,7 +184,7 @@ export const useContactStore = create<ContactStore>()(
       },
 
       getFilteredContacts: (): Contact[] => {
-        const { contacts, searchQuery, selectedTag, filterAddressBookId, addressBooks } = get()
+        const { contacts, searchQuery, selectedTags, filterAddressBookId, addressBooks } = get()
 
         // Filter by visible address books
         const visibleAddressBookIds = addressBooks.filter((ab) => ab.isVisible).map((ab) => ab.id)
@@ -187,8 +197,8 @@ export const useContactStore = create<ContactStore>()(
         }
 
         // Filter by tag
-        if (selectedTag) {
-          filtered = filtered.filter((c) => c.categories.includes(selectedTag))
+        if (selectedTags.length > 0) {
+          filtered = filtered.filter((c) => selectedTags.some((tag) => c.categories.includes(tag)))
         }
 
         // Filter by search query

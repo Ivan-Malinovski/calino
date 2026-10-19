@@ -41,7 +41,7 @@ export function initializeContactSearchIndex(contacts: Contact[]): void {
  */
 export function searchContacts(
   query: string,
-  filters?: { addressBookIds?: string[]; tag?: string }
+  filters?: { addressBookIds?: string[]; tags?: string[] }
 ): Contact[] {
   if (!fuseInstance) {
     console.warn('[ContactSearch] Index not initialized.')
@@ -81,8 +81,9 @@ export function searchContacts(
     results = results.filter((c) => abIds.has(c.addressBookId))
   }
 
-  if (filters?.tag) {
-    results = results.filter((c) => c.categories.includes(filters.tag!))
+  const tags = filters?.tags
+  if (tags && tags.length > 0) {
+    results = results.filter((c) => tags.some((tag) => c.categories.includes(tag)))
   }
 
   return results

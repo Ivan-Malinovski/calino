@@ -676,7 +676,7 @@ export function ContactDetail({
                   <button
                     key={cat}
                     className={styles.tagPill}
-                    onClick={() => useContactStore.getState().setSelectedTag(cat)}
+                    onClick={() => useContactStore.getState().setSelectedTags([cat])}
                     type="button"
                   >
                     {cat}

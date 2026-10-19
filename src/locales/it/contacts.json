@@ -6,7 +6,7 @@
     "contactCount_other": "{{count}} contatti",
     "newContact": "+ Nuovo",
     "allAddressBooks": "Tutte le rubriche",
-    "filteredBy": "Filtrati per:",
+    "filterByTag": "Filtra per tag", "allTags": "Tutti",
     "noMatches": "Nessuna corrispondenza",
     "noContactsMatch": "Nessun contatto corrisponde a “{{query}}”",
     "noContacts": "Nessun contatto",

@@ -6,7 +6,7 @@
     "contactCount_other": "{{count}} contactos",
     "newContact": "+ Nuevo",
     "allAddressBooks": "Todas las libretas de direcciones",
-    "filteredBy": "Filtrado por:",
+    "filterByTag": "Filtrar por etiqueta", "allTags": "Todas",
     "noMatches": "No hay coincidencias",
     "noContactsMatch": "No hay contactos que coincidan con «{{query}}»",
     "noContacts": "Sin contactos",
