@@ -156,7 +156,10 @@
   color: var(--accent-strong, var(--accent));
 }
 
-.weekNumber:active {
+/* Not while the press is on the badge: the shrink pulls the badge away from
+   the pointer (more so the taller the row), so a press near its top edge ended
+   off the button and the click landed on the gutter instead. */
+.weekNumber:active:not(:has([data-component='week-tasks-badge']:active)) {
   transform: scale(0.9);
 }
 

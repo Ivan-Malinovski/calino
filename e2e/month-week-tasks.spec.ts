@@ -204,6 +204,22 @@ test.describe('Month view: sometime-this-week tasks', () => {
   })
 })
 
+test.describe('Month view: week tasks in tall rows', () => {
+  // Tall rows put the badge well above the gutter's centre, so a press-time
+  // shrink of the gutter slides it away from the pointer.
+  test.use({ viewport: { width: 1280, height: 1400 } })
+
+  test('pressing the top edge of the badge still opens the list', async ({ page }) => {
+    await seed(page)
+    const box = (await badge(page).boundingBox())!
+    await page.mouse.move(box.x + box.width / 2, box.y + 2)
+    await page.mouse.down()
+    await page.mouse.up()
+    await expect(page.locator('[data-component="week-tasks-popover"]')).toBeVisible()
+    await expect(page).toHaveURL(/\/month/)
+  })
+})
+
 test.describe('Month view: week tasks without week numbers', () => {
   test('keeps a slim gutter holding the badge', async ({ page }) => {
     await seed(page, { showWeekNumbers: false })
