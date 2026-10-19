@@ -5,7 +5,10 @@ import { SettingsPageHeading } from './SettingsPageHeading'
 import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
 import { connectionErrorMessage } from '@/features/caldav/client/errorMessages'
 import { getCredentialById } from '@/features/caldav/client/credentials'
-import type { DiagnosticsOptions } from '@/features/caldav/client/diagnostics'
+import {
+  pickWriteTestCollection,
+  type DiagnosticsOptions,
+} from '@/features/caldav/client/diagnostics'
 import type { CalDAVAccount } from '@/features/caldav/types'
 import { DiagnosticsPanel } from './DiagnosticsPanel'
 import { AddCalendarModal } from '@/features/calendar/components/AddCalendarModal'
@@ -36,7 +39,7 @@ export function CalDAVSettings({ searchControl }: { searchControl?: JSX.Element 
     options: Omit<DiagnosticsOptions, 'includeWriteTest' | 'onProgress'>
   } | null>(null)
 
-  const { accounts, removeAccount, testAccount } = useCalDAV()
+  const { accounts, calendars, removeAccount, testAccount } = useCalDAV()
   const {
     subscriptions,
     addSubscription,
@@ -110,6 +113,9 @@ export function CalDAVSettings({ searchControl }: { searchControl?: JSX.Element 
         customHeaders: credential.customHeaders,
         proxyUrl: account.proxyUrl,
         protocol: account.protocol ?? 'caldav',
+        writeTestCollection: pickWriteTestCollection(
+          calendars.filter((c) => c.accountId === account.id)
+        ),
       },
     })
   }

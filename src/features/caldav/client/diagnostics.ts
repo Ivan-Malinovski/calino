@@ -117,6 +117,11 @@ export interface DiagnosticsOptions {
   protocol?: DiagnosticsProtocol
   /** Run the create/delete round-trip. Writes a temporary event to the server. */
   includeWriteTest?: boolean
+  /**
+   * Where the write test writes when `serverUrl` is a server root or home set,
+   * which accept no PUT themselves. See `pickWriteTestCollection`.
+   */
+  writeTestCollection?: { url: string; name: string }
   /** Called as each check resolves, so the UI can stream results. */
   onProgress?: (check: DiagnosticCheck) => void
 }
@@ -187,6 +192,7 @@ export async function runDiagnostics(options: DiagnosticsOptions): Promise<Diagn
     originalUrl,
     kind = 'caldav',
     includeWriteTest = false,
+    writeTestCollection,
     onProgress,
   } = options
 
@@ -858,6 +864,16 @@ export async function runDiagnostics(options: DiagnosticsOptions): Promise<Diagn
   if (includeWriteTest) {
     if (baseIsWritableCollection) {
       await runWriteTest({ base, kind, authHeader, request, emit, native })
+    } else if (writeTestCollection) {
+      await runWriteTest({
+        base: writeTestCollection.url,
+        collectionName: writeTestCollection.name,
+        kind,
+        authHeader,
+        request,
+        emit,
+        native,
+      })
     } else {
       // PUTting into a principal or home set is a guaranteed 403 that says
       // nothing about the server's health — the same distinction report-query
@@ -940,6 +956,36 @@ export async function runDiagnostics(options: DiagnosticsOptions): Promise<Diagn
 // ─── Write round-trip ─────────────────────────────────────────────────────────
 
 /**
+ * The one calendar the write test should use when the account URL is a server
+ * root or home set: the account's default calendar if it qualifies, otherwise
+ * the first that does. Read-only, subscribed and non-event calendars are
+ * skipped, and so is Calino's hidden settings calendar, which settings sync
+ * owns. One is enough: PUT, DELETE and ETag exposure are the same for every
+ * calendar on a server.
+ */
+export function pickWriteTestCollection(
+  calendars: Array<{
+    url: string
+    name: string
+    isDefault?: boolean
+    readOnly?: boolean
+    isSubscribed?: boolean
+    supportedComponents?: string[]
+  }>
+): { url: string; name: string } | undefined {
+  const usable = calendars.filter(
+    (c) =>
+      !c.readOnly &&
+      !c.isSubscribed &&
+      (!c.supportedComponents || c.supportedComponents.includes('VEVENT')) &&
+      c.name !== 'Calino Settings' &&
+      !c.url.includes('calino-settings')
+  )
+  const chosen = usable.find((c) => c.isDefault) ?? usable[0]
+  return chosen ? { url: chosen.url, name: chosen.name } : undefined
+}
+
+/**
  * PUT a throwaway resource, read the ETag off the response, then DELETE it.
  *
  * This is the only way to be certain about ETag exposure on the write path,
@@ -952,13 +998,16 @@ export async function runDiagnostics(options: DiagnosticsOptions): Promise<Diagn
  */
 async function runWriteTest(ctx: {
   base: string
+  /** Named in the result when the test runs somewhere other than the account URL. */
+  collectionName?: string
   kind: DavKind
   authHeader: string
   request: (url: string, init: RequestInit) => Promise<Response>
   emit: (check: DiagnosticCheck) => DiagnosticCheck
   native: boolean
 }): Promise<void> {
-  const { base, kind, authHeader, request, emit, native } = ctx
+  const { base, collectionName, kind, authHeader, request, emit, native } = ctx
+  const where = collectionName ? ` in “${collectionName}”` : ''
   const uid = `calino-diagnostics-${createUuid()}`
   const extension = kind === 'caldav' ? '.ics' : '.vcf'
   const targetUrl = `${base.replace(/\/$/, '')}/${uid}${extension}`
@@ -1008,7 +1057,7 @@ async function runWriteTest(ctx: {
         label: LABELS['write-roundtrip'],
         status: 'fail',
         evidence: 'observed',
-        detail: `Creating a test resource returned HTTP ${put.status}. The account may be read-only, or this URL may not be a writable collection.`,
+        detail: `Creating a test resource${where} returned HTTP ${put.status}. The account may be read-only, or this URL may not be a writable collection.`,
         raw: `PUT → HTTP ${put.status}`,
       })
       return
@@ -1021,8 +1070,8 @@ async function runWriteTest(ctx: {
       status: etag ? 'pass' : 'warn',
       evidence: 'observed',
       detail: etag
-        ? 'Created and removed a test resource, and the ETag came back on the write itself.'
-        : 'Created and removed a test resource, but the server did not return a readable ETag on the write, so every save costs an extra request.',
+        ? `Created and removed a test resource${where}, and the ETag came back on the write itself.`
+        : `Created and removed a test resource${where}, but the server did not return a readable ETag on the write, so every save costs an extra request.`,
       fix: etag ? undefined : 'Add `ETag` to Access-Control-Expose-Headers.',
       raw: `PUT → HTTP ${put.status}${etag ? `, ETag: ${etag}` : ', ETag: (not readable)'}`,
     })
