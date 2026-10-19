@@ -4,6 +4,32 @@ All notable changes to Calino will be documented in this file.
 
 ## [Unreleased]
 
+## [0.40.0] - 2026-10-19
+
+This release adds manual task ordering, a tag filter for contacts, and a "Resync From Server" action. It also makes dates in the task and event editors follow your date format setting, and fixes a handful of smaller problems in month and week view, menus and diagnostics.
+
+### Added
+
+- **Manual task order** ([#215](https://github.com/Ivan-Malinovski/calino/issues/215)). Tasks synced from Apple Reminders, Nextcloud Tasks or tasks.org carry a manual order in `X-APPLE-SORT-ORDER`. Calino now reads it, keeps it when you edit or complete a task, and uses it to order tasks within a day, a task group and a set of subtasks. It never moves a task to another day, and tasks without a value keep their current order. You can reorder tasks in the Tasks view and the agenda by dropping one on the top or bottom edge of another (a drop on the middle still makes a subtask), and every task menu gains **Move up** and **Move down**. Week and month day lists sort timed tasks by time, then by manual order. Thanks to [@vilewired](https://github.com/vilewired) for [#216](https://github.com/Ivan-Malinovski/calino/pull/216) and [#218](https://github.com/Ivan-Malinovski/calino/pull/218).
+- **Tag filter for contacts** ([#206](https://github.com/Ivan-Malinovski/calino/issues/206)). The contact list has a row of tag chips above it, so you no longer have to open a contact to filter by one of its tags. You can turn on several tags at once, and a contact shows if it has any of them. The row fades at an edge with hidden chips and can be dragged with the mouse. With more than six tags it becomes a dropdown with a checkbox and a count per tag, an **All tags** row, and a clear button.
+- **Resync From Server** ([#208](https://github.com/Ivan-Malinovski/calino/issues/208)). Settings → Data has a new action that refetches every calendar and address book from the server, without resetting Calino. Accounts, credentials and settings are kept, so there is no need to re-create app passwords to pick up changes made on the server.
+- **Task cards take their calendar's colour.** Task cards in the week and day grid and task pills in the month grid and all-day header now carry a light wash of their calendar's colour, weaker than an event's, so tasks stay distinguishable. Dot mode is unchanged. Thanks to [@vilewired](https://github.com/vilewired) ([#214](https://github.com/Ivan-Malinovski/calino/pull/214)).
+
+### Changed
+
+- **Date fields follow your date format** ([#220](https://github.com/Ivan-Malinovski/calino/issues/220)). The task and event editors showed dates in the browser's locale, such as 10/17/2026, even with DD/MM/YYYY selected. The task start and due dates, the event start and end dates, the recurrence end date, contact birthdays and anniversaries, and the command palette date filter now type and display in the configured format. A calendar button next to each opens the date picker, which now opens under its field, and the mouse wheel steps the date a day at a time again.
+- **Overdue timed tasks** ([#213](https://github.com/Ivan-Malinovski/calino/pull/213)). A task due today at a time that has already passed now counts as overdue, instead of staying under Today until the day ends. A task with only a date stays under Today for the whole day. Thanks to [@vilewired](https://github.com/vilewired).
+
+### Fixed
+
+- **Per-event colours from Nextcloud now show** ([#205](https://github.com/Ivan-Malinovski/calino/issues/205)). Calino now reads the `COLOR` property (CSS colour names and hex values), so an event coloured on the server keeps that colour instead of falling back to its category or calendar colour. The property is display-only and is kept untouched when you edit.
+- **No false ETag warning in Diagnose** ([#212](https://github.com/Ivan-Malinovski/calino/issues/212)). When you connect at a server root, the ETag check read the user's principal collection, which Radicale answers with 403, and warned that ETags were not readable. It now probes a real resource and reports "unknown" rather than a warning when the probe is refused.
+- **The "sometime this week" button in month view is easier to press.** The week cell shrank slightly while pressed, which moved the button away from the pointer in tall rows, so a press near its top edge jumped to the week view instead of opening the list.
+- **The time column line in week view now runs the whole day.** Its right border ended at the first screenful, so the hours you scrolled to had no line.
+- **Context menus stay open when you right-click while one is open.** The new menu flashed open and shut because the old one's pending close still fired.
+- **Moving a task to the top of the list no longer writes a sort order of 0 or below.** Some other apps treat 0 as unset or accept only positive numbers. Values another client already wrote are left alone.
+- **Reordering tasks no longer replays the drop animation or leaves extra space in the Tasks list.**
+
 ## [0.39.1] - 2026-10-07
 
 **A heads-up: I'm going on vacation for two weeks, so don't expect any updates or replies to issues until I'm back.**
