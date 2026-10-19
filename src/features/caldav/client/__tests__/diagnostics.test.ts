@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { runDiagnostics, formatReportForClipboard, type CheckId } from '../diagnostics'
+import {
+  runDiagnostics,
+  formatReportForClipboard,
+  pickWriteTestCollection,
+  type CheckId,
+} from '../diagnostics'
 
 const BASE = 'https://dav.example.com'
 
@@ -430,6 +435,35 @@ describe('runDiagnostics', () => {
     expect(report.summary).not.toBe('broken')
   })
 
+  it('at a principal, writes to the given calendar instead and names it', async () => {
+    const principal = `<?xml version="1.0"?>
+<d:multistatus xmlns:d="DAV:">
+  <d:response><d:href>/ivan/</d:href><d:propstat><d:prop><d:resourcetype><d:principal/><d:collection/></d:resourcetype></d:prop></d:propstat></d:response>
+</d:multistatus>`
+    const fetchMock = stubFetch({
+      PROPFIND: { status: 207, body: principal },
+      GET: { status: 200, headers: { ETag: '"a"' } },
+      PUT: { status: 201, headers: { ETag: '"new"' }, body: '' },
+      DELETE: { status: 204, body: '' },
+    })
+
+    const report = await runDiagnostics({
+      ...OPTS,
+      includeWriteTest: true,
+      writeTestCollection: { url: 'https://dav.example.com/ivan/personal/', name: 'Personal' },
+    })
+
+    const write = report.checks.find((c) => c.id === 'write-roundtrip')!
+    expect(write.status).toBe('pass')
+    expect(write.detail).toContain('“Personal”')
+    const methodAt = (method: string) =>
+      fetchMock.mock.calls
+        .filter(([, init]) => (init as RequestInit | undefined)?.method === method)
+        .map(([url]) => new URL(String(url)).pathname)
+    expect(methodAt('PUT')[0]).toMatch(/^\/ivan\/personal\/calino-diagnostics-.*\.ics$/)
+    expect(methodAt('DELETE')).toEqual(methodAt('PUT'))
+  })
+
   it('retries the base URL when discovery lands past the DAV endpoint', async () => {
     // Radicale redirects /.well-known/caldav → / → /.web, and /.web refuses DAV
     // methods with 403. Judging the server on that URL blames the credentials.
@@ -731,5 +765,35 @@ describe('JMAP diagnostics', () => {
     const dav = await runDiagnostics({ ...OPTS, protocol: 'auto' })
     expect(dav.kind).toBe('caldav')
     expect(dav.checks.some((c) => c.id === 'dav-class')).toBe(true)
+  })
+})
+
+describe('pickWriteTestCollection', () => {
+  const cal = (name: string, extra: Record<string, unknown> = {}) => ({
+    url: `https://dav.example.com/cal/${name.toLowerCase()}/`,
+    name,
+    ...extra,
+  })
+
+  it("prefers the account's default calendar", () => {
+    expect(pickWriteTestCollection([cal('Work'), cal('Home', { isDefault: true })])?.name).toBe(
+      'Home'
+    )
+  })
+
+  it('skips calendars it must not or cannot write to', () => {
+    const picked = pickWriteTestCollection([
+      cal('Calino Settings', { isDefault: true }),
+      cal('Holidays', { readOnly: true }),
+      cal('Shared', { isSubscribed: true }),
+      cal('Tasks', { supportedComponents: ['VTODO'] }),
+      cal('Personal', { supportedComponents: ['VEVENT', 'VTODO'] }),
+    ])
+    expect(picked).toEqual({ url: 'https://dav.example.com/cal/personal/', name: 'Personal' })
+  })
+
+  it('returns nothing when no calendar qualifies', () => {
+    expect(pickWriteTestCollection([cal('Holidays', { readOnly: true })])).toBeUndefined()
+    expect(pickWriteTestCollection([])).toBeUndefined()
   })
 })

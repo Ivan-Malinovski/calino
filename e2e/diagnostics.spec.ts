@@ -129,6 +129,19 @@ test.describe('diagnostics against a real server', () => {
     await expect(check(page, 'write-roundtrip')).toHaveAttribute('data-status', 'pass')
   })
 
+  test('at a server root the write test uses one of the account’s calendars', async ({ page }) => {
+    // The account URL is a SabreDAV root, which accepts no PUT itself; the
+    // test runs against the account's (default) Personal calendar instead.
+    await diagnoseSeededAccount(page, '/sabre/')
+
+    await page.locator('[data-action="run-write-test"]').click()
+    await expect(check(page, 'write-roundtrip')).toBeVisible({ timeout: 30_000 })
+    await expect(check(page, 'write-roundtrip')).toHaveAttribute('data-status', 'pass')
+    // The result names the calendar it wrote to.
+    await check(page, 'write-roundtrip').getByRole('button').click()
+    await expect(check(page, 'write-roundtrip')).toContainText('“Personal”')
+  })
+
   test('copying the report leaves out the credentials', async ({ page, context, browserName }) => {
     if (browserName === 'chromium') {
       await context.grantPermissions(['clipboard-read', 'clipboard-write'])
