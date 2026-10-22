@@ -4,6 +4,28 @@ All notable changes to Calino will be documented in this file.
 
 ## [Unreleased]
 
+## [0.41.0] - 2026-10-22
+
+This release adds configurable event styles based on categories and gives overlapping events more room in week and day view. It also fixes birthdays and anniversaries that have no year, so they stay visible and survive contact edits.
+
+### Added
+
+- **Style by category.** Under Settings → Appearance, choose how events with matching categories look. The six styles are a grey pencil treatment, a hand-drawn outline, a dashed border, diagonal texture, a marker underline, and a strike through. Each rule has its own categories, accent colour, lettering and enabled state. Matching ignores case; rules combine, and the lower rule wins when two rules change the same property. Rules save automatically and sync with your settings.
+
+- **Category styles work out of the box.** Events tagged **important** get a red hand-drawn outline around the title. **not confirmed**, **unconfirmed**, **tentative** and **maybe** get a diagonal texture. An event with both kinds of category gets both styles. Handwritten lettering is optional, and the outline leaves the time clear, including in wide agenda rows.
+
+- **Demo categories.** The sample calendar now demonstrates the default styles, a combination of styles, and categories for the optional focus, deadline and draft presets.
+
+### Changed
+
+- **More room for overlapping events.** In week and day view, staggered events can share a column when a later card only covers empty space below the earlier card’s information. A small inset keeps the earlier card’s edge visible. Cards whose information would overlap stay side by side, and cards can expand into neighbouring lanes when those lanes are free. The layout uses rendered content height and adjusts to changes in lettering and zoom.
+
+### Fixed
+
+- **Birthdays and anniversaries without a year** ([#225](https://github.com/Ivan-Malinovski/calino/issues/225)). Contacts using vCard dates such as `BDAY:--0218` or `ANNIVERSARY:--02-18` now show their dates without an invented year or age, and keep those dates when you edit another field. They can also be added to the calendar as annual events; a yearless February 29 starts in the next leap year. Thanks to [@skrtskrt-ed](https://github.com/skrtskrt-ed) for reporting the issue.
+
+**Full Changelog**: https://github.com/Ivan-Malinovski/calino/compare/v0.40.0...v0.41.0
+
 ## [0.40.0] - 2026-10-19
 
 This release adds manual task ordering, a tag filter for contacts, and a "Resync From Server" action. It also makes dates in the task and event editors follow your date format setting, and fixes a handful of smaller problems in month and week view, menus and diagnostics.
