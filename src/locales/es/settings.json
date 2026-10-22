@@ -390,6 +390,41 @@
         "needsAttention": "El contraste necesita atención",
         "looksGood": "El contraste es adecuado"
       }
+    },
+    "categoryStyles": {
+      "title": "Estilo por categoría",
+      "description": "Da un estilo visual a los eventos según sus categorías. Los cambios se guardan automáticamente.",
+      "reset": "Restaurar valores",
+      "newRule": "Nueva regla",
+      "disabled": "Desactivada",
+      "addRule": "Añadir regla",
+      "enabled": "Activada",
+      "categories": "Coincidir con alguna categoría",
+      "matchHint": "Separadas por comas · nombres exactos · sin distinguir mayúsculas",
+      "style": "Estilo",
+      "lettering": "Tipografía",
+      "accent": "Acento",
+      "earlier": "↑ Antes",
+      "later": "↓ Después",
+      "remove": "Eliminar",
+      "empty": "Sin reglas. Añade una regla o restaura los valores predeterminados.",
+      "precedence": "Las reglas coincidentes se combinan. Para una misma propiedad, gana la regla inferior. Los colores del calendario se conservan salvo que una regla cambie el fondo. Los estilos visuales no cambian el estado ni la finalización del evento.",
+      "suggestions": "Más estilos para probar",
+      "sample": "Revisión con Alex",
+      "noCategories": "Sin categorías todavía",
+      "treatments": {
+        "tentative": "Lápiz – gris y provisional",
+        "important": "Boceto – contorno a mano",
+        "focus": "Calma – borde discontinuo",
+        "travel": "En movimiento – textura diagonal",
+        "deadline": "Marcador – subrayado",
+        "done": "Terminado – tachado"
+      },
+      "fonts": {
+        "inherit": "Mantener actual",
+        "hand": "A mano",
+        "standard": "Estándar"
+      }
     }
   },
   "categories": {

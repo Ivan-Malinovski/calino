@@ -1,3 +1,4 @@
+import type { CategoryStyleRule } from './categoryStyles'
 export type RecurrenceFrequency =
   'secondly' | 'minutely' | 'hourly' | 'daily' | 'weekly' | 'monthly' | 'yearly'
 
@@ -401,6 +402,7 @@ export interface UserSettings {
   showSidebarTaskCalendarLabels: boolean
   useCategoryColors: boolean
   showEventIcons: boolean
+  categoryStyleRules: CategoryStyleRule[]
   sidebarWidth: number
   sidebarCollapsed: boolean
   journalEnabled: boolean

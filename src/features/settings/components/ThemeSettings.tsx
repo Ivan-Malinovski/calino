@@ -1,3 +1,4 @@
+import { CategoryStyleSettings } from './CategoryStyleSettings'
 import { useEffect, useMemo } from 'react'
 import type { CSSProperties, JSX } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -496,6 +497,7 @@ export function ThemeSettings({ searchControl }: { searchControl?: JSX.Element }
           </div>
         </div>
       </div>
+      <CategoryStyleSettings />
     </section>
   )
 }

@@ -220,6 +220,7 @@
 }
 
 .agendaEventBody {
+  min-width: 0;
   padding: 10px 14px;
   flex: 1;
 }
@@ -240,6 +241,7 @@
 }
 
 .agendaEventTitle {
+  min-width: 0;
   font-size: 13px;
   font-weight: 500;
   color: var(--ink, #2c2823);

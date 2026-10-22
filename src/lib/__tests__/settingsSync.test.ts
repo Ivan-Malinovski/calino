@@ -108,6 +108,26 @@ describe('settingsSync', () => {
   })
 
   describe('serializeSettings', () => {
+    it('round-trips category style rules including disabled and empty lists', () => {
+      const rules = useSettingsStore
+        .getState()
+        .categoryStyleRules.map((rule) => ({ ...rule, enabled: false }))
+      useSettingsStore.getState().updateSettings({ categoryStyleRules: rules })
+      const parsed = JSON.parse(serializeSettings()) as SettingsSyncPayload
+      expect(parsed.settings.categoryStyleRules).toEqual(rules)
+      const local = useSettingsStore.getState()
+      expect(mergeSettings(local, parsed.settings).categoryStyleRules).toEqual(rules)
+      expect(mergeSettings(local, { categoryStyleRules: [] }).categoryStyleRules).toEqual([])
+      expect(
+        mergeSettings(local, { categoryStyleRules: null } as unknown as Partial<typeof local>)
+          .categoryStyleRules
+      ).toEqual(rules)
+      expect(
+        mergeSettings(local, { categoryStyleRules: [{}] } as unknown as Partial<typeof local>)
+          .categoryStyleRules
+      ).toEqual([])
+    })
+
     it('should produce valid JSON with version and syncedAt', () => {
       const json = serializeSettings()
       const parsed = JSON.parse(json) as SettingsSyncPayload

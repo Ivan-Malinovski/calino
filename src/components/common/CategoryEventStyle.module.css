@@ -1,0 +1,67 @@
+@font-face {
+  font-family: 'Calino Handwriting';
+  src: url('/fonts/caveat.ttf') format('truetype');
+  font-weight: 400 700;
+  font-display: swap;
+}
+
+/* Only the lettering clips; the pen stroke can overshoot the title. */
+.title {
+  position: relative;
+  display: inline-grid;
+  max-width: 100%;
+  min-width: 0;
+  vertical-align: middle;
+  line-height: inherit;
+}
+.text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: inherit;
+}
+.title[data-sketch] {
+  padding: 3px 12px;
+}
+.title[data-font='hand'] {
+  font-family: 'Calino Handwriting', cursive;
+  font-size: 1.35em;
+  font-weight: 600;
+  line-height: 1;
+}
+.title[data-font='standard'] {
+  font-family: var(--font-sans, system-ui, sans-serif);
+}
+.title[data-pencil] {
+  color: var(--ink-2);
+}
+.title[data-marker] .text {
+  text-decoration: underline;
+  text-decoration-color: var(--category-marker);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 2px;
+}
+.title[data-finished] .text {
+  text-decoration: line-through;
+}
+.loop {
+  position: absolute;
+  inset: -1px 0;
+  width: 100%;
+  height: calc(100% + 2px);
+  overflow: visible;
+  z-index: 3;
+  pointer-events: none;
+  fill: none;
+  stroke: var(--category-sketch);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.loop path {
+  vector-effect: non-scaling-stroke;
+}
+.tail {
+  stroke-width: 1;
+  opacity: 0.65;
+}

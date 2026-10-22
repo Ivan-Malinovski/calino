@@ -1,3 +1,6 @@
+import { categoryStyleProps } from '@/lib/categoryStylePresentation'
+import { useCategoryEventStyle } from '@/hooks/useCategoryEventStyle'
+import { CategoryStyleTitle } from '@/components/common/CategoryEventStyle'
 import type { JSX } from 'react'
 import React, { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
@@ -108,6 +111,8 @@ export const EventCard = React.memo(function EventCard({
   taskSubtasksPopup = false,
 }: EventCardProps): JSX.Element {
   const { t } = useTranslation('calendar')
+  const categoryAppearance = useCategoryEventStyle(event)
+  const categoryPresentation = categoryStyleProps(dotMode ? {} : categoryAppearance)
   const useCategoryColors = useSettingsStore((state) => state.useCategoryColors)
   const calendar = useCalendarStore((state) =>
     state.calendars.find((candidate) => candidate.id === event.calendarId)
@@ -526,7 +531,9 @@ export const EventCard = React.memo(function EventCard({
     <>
       <div
         ref={setNodeRef}
-        style={style}
+        style={{ ...style, ...categoryPresentation.style }}
+        data-category-texture={categoryPresentation['data-category-texture']}
+        data-category-sketch={!dotMode && categoryAppearance.sketch ? 'true' : undefined}
         data-event-card
         data-component="event-card"
         role="button"
@@ -673,7 +680,7 @@ export const EventCard = React.memo(function EventCard({
                 style={titleStyle}
                 aria-hidden={hideFragmentTitle || undefined}
               >
-                {event.title}
+                <CategoryStyleTitle title={event.title} appearance={categoryAppearance} />
               </div>
               {!hideDueTime && hasDueTime(event) && event.dueDate && (
                 <div className={styles.dueDate}>
@@ -719,7 +726,7 @@ export const EventCard = React.memo(function EventCard({
                 style={titleStyle}
                 aria-hidden={hideFragmentTitle || undefined}
               >
-                {event.title}
+                <CategoryStyleTitle title={event.title} appearance={categoryAppearance} />
               </div>
               {(() => {
                 const timeText =

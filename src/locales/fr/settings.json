@@ -390,6 +390,41 @@
         "needsAttention": "Le contraste doit être amélioré",
         "looksGood": "Le contraste est bon"
       }
+    },
+    "categoryStyles": {
+      "title": "Style par catégorie",
+      "description": "Appliquez un style aux événements selon leurs catégories. Les modifications sont enregistrées automatiquement.",
+      "reset": "Rétablir les valeurs",
+      "newRule": "Nouvelle règle",
+      "disabled": "Désactivée",
+      "addRule": "Ajouter une règle",
+      "enabled": "Activée",
+      "categories": "Correspond à une de ces catégories",
+      "matchHint": "Séparées par des virgules · noms exacts · sans distinction de casse",
+      "style": "Style",
+      "lettering": "Typographie",
+      "accent": "Accent",
+      "earlier": "↑ Avant",
+      "later": "↓ Après",
+      "remove": "Supprimer",
+      "empty": "Aucune règle. Ajoutez une règle ou rétablissez les valeurs par défaut.",
+      "precedence": "Les règles correspondantes se combinent. Pour une même propriété, la règle du bas gagne. Les couleurs du calendrier sont conservées sauf si une règle modifie le fond. Les styles visuels ne changent ni le statut ni l’achèvement d’un événement.",
+      "suggestions": "Autres styles à essayer",
+      "sample": "Revue avec Alex",
+      "noCategories": "Pas encore de catégories",
+      "treatments": {
+        "tentative": "Crayon – gris et provisoire",
+        "important": "Croquis – contour dessiné à la main",
+        "focus": "Calme – bordure en pointillés",
+        "travel": "En déplacement – texture diagonale",
+        "deadline": "Marqueur – soulignement",
+        "done": "Terminé – barré"
+      },
+      "fonts": {
+        "inherit": "Conserver",
+        "hand": "Manuscrite",
+        "standard": "Standard"
+      }
     }
   },
   "categories": {

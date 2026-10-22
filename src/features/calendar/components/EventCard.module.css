@@ -931,3 +931,15 @@
 .card.tight .time {
   margin-top: 0;
 }
+
+/* A pen mark sits above the title, rather than inside its ellipsis mask.
+   CategoryStyleTitle keeps a separate clipped text span for long titles. */
+.card[data-category-sketch],
+.card[data-category-sketch] .dragContent,
+.card[data-category-sketch] .title {
+  overflow: visible;
+}
+
+.card[data-category-sketch]:not(.dragging):not(.resizing) {
+  z-index: 2;
+}

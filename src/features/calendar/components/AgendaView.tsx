@@ -1,3 +1,6 @@
+import { categoryStyleProps } from '@/lib/categoryStylePresentation'
+import { useCategoryEventStyle } from '@/hooks/useCategoryEventStyle'
+import { CategoryEventTitle } from '@/components/common/CategoryEventStyle'
 import type { JSX } from 'react'
 import { useMemo, useState, useRef, useEffect } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
@@ -283,6 +286,8 @@ function AgendaDraggableItem({
   onContextMenu: (event: React.MouseEvent) => void
   disableKeyboardAttributes?: boolean
 }): JSX.Element {
+  const appearance = useCategoryEventStyle(event)
+  const presentation = categoryStyleProps(appearance)
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: event.id,
     disabled,
@@ -294,6 +299,7 @@ function AgendaDraggableItem({
 
   const style = {
     ...(accentColor ? { '--event-color': accentColor } : {}),
+    ...presentation.style,
     // No drag transform: the DragOverlay carries the card. An offset left on
     // the row at drop would slide it from there into its new slot, through the
     // row's transform transition.
@@ -314,6 +320,7 @@ function AgendaDraggableItem({
       style={style}
       className={`${className} ${isDragging ? styles.agendaDragging : ''} ${makeSubtask ? styles.agendaTaskDropOver : ''} ${blocked ? styles.agendaTaskDropBlocked : ''} ${insert === 'before' ? styles.agendaTaskInsertBefore : ''} ${insert === 'after' ? styles.agendaTaskInsertAfter : ''}`}
       data-component={dataComponent}
+      data-category-texture={presentation['data-category-texture']}
       data-drop-id={dropTargetId}
       data-drop-state={
         makeSubtask
@@ -1166,7 +1173,7 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
                                                 )
                                               }}
                                             >
-                                              {event.title}
+                                              <CategoryEventTitle event={event} />
                                             </button>
                                             {taskCollapse.hasSubtasks(event.id) &&
                                               hasLocalSubtasks && (
@@ -1279,7 +1286,7 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
                                                 )}
                                           </span>
                                           <span className={styles.agendaEventTitle}>
-                                            {event.title}
+                                            <CategoryEventTitle event={event} />
                                           </span>
                                         </div>
                                         {event.location && (

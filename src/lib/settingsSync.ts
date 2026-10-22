@@ -1,3 +1,4 @@
+import { normalizeCategoryStyleRules } from './categoryStyles'
 /**
  * CalDAV Settings Sync
  *
@@ -72,6 +73,7 @@ export const SYNCABLE_SETTINGS: (keyof UserSettings)[] = [
   'lightTheme',
   'darkTheme',
   'adjustableTheme',
+  'categoryStyleRules',
   'hideCompletedTasksInMonthView',
   'showTaskCalendarLabels',
   'showSidebarTaskCalendarLabels',
@@ -173,6 +175,13 @@ export function mergeSettings(
     if (key in remoteSettings) {
       const value = remoteSettings[key]
       if (value !== undefined) {
+        if (key === 'categoryStyleRules') {
+          merged.categoryStyleRules = normalizeCategoryStyleRules(
+            value,
+            localSettings.categoryStyleRules
+          )
+          continue
+        }
         if (key === 'adjustableTheme') {
           merged.adjustableTheme = normalizeAdjustableTheme(
             value,

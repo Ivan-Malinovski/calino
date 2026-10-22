@@ -200,6 +200,7 @@ vi.mock('@/store/settingsStore', () => ({
       viewDividerAfter: 'day',
       useCategoryColors: true,
       showEventIcons: true,
+      categoryStyleRules: [],
       journalEnabled: false,
       contactsEnabled: false,
       taskDueDateReminders: true,

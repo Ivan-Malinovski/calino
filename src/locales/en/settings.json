@@ -390,6 +390,41 @@
         "needsAttention": "Contrast needs attention",
         "looksGood": "Contrast looks good"
       }
+    },
+    "categoryStyles": {
+      "title": "Style by category",
+      "description": "Give events a visual style based on their categories. Changes save automatically.",
+      "reset": "Restore defaults",
+      "newRule": "New rule",
+      "disabled": "Disabled",
+      "addRule": "Add rule",
+      "enabled": "Enabled",
+      "categories": "Match any category",
+      "matchHint": "Comma separated · exact names · ignores case",
+      "style": "Style",
+      "lettering": "Lettering",
+      "accent": "Accent",
+      "earlier": "↑ Earlier",
+      "later": "↓ Later",
+      "remove": "Remove",
+      "empty": "No rules. Add a rule or restore the defaults.",
+      "precedence": "Matching rules combine. For the same property, the lower rule wins. Calendar colours stay visible unless a rule changes the fill. These are visual styles; they do not change an event’s status or completion.",
+      "suggestions": "More styles to try",
+      "sample": "Review with Alex",
+      "noCategories": "No categories yet",
+      "treatments": {
+        "tentative": "Pencil – grey & tentative",
+        "important": "Sketch – hand-drawn outline",
+        "focus": "Quiet – dashed border",
+        "travel": "On the move – diagonal texture",
+        "deadline": "Marker – underline",
+        "done": "Finished – strike through"
+      },
+      "fonts": {
+        "inherit": "Keep existing",
+        "hand": "Handwritten",
+        "standard": "Standard"
+      }
     }
   },
   "categories": {

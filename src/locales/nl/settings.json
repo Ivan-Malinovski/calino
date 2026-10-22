@@ -390,6 +390,41 @@
         "needsAttention": "Contrast vereist aandacht",
         "looksGood": "Het contrast ziet er goed uit"
       }
+    },
+    "categoryStyles": {
+      "title": "Stijl per categorie",
+      "description": "Geef afspraken een stijl op basis van hun categorieën. Wijzigingen worden automatisch opgeslagen.",
+      "reset": "Standaard herstellen",
+      "newRule": "Nieuwe regel",
+      "disabled": "Uitgeschakeld",
+      "addRule": "Regel toevoegen",
+      "enabled": "Ingeschakeld",
+      "categories": "Overeenkomende categorieën",
+      "matchHint": "Kommagescheiden · exacte namen · niet hoofdlettergevoelig",
+      "style": "Stijl",
+      "lettering": "Lettertype",
+      "accent": "Accent",
+      "earlier": "↑ Eerder",
+      "later": "↓ Later",
+      "remove": "Verwijderen",
+      "empty": "Geen regels. Voeg een regel toe of herstel de standaardinstellingen.",
+      "precedence": "Overeenkomende regels worden gecombineerd. Bij dezelfde eigenschap wint de onderste regel. Kalenderkleuren blijven zichtbaar tenzij een regel de achtergrond wijzigt. Visuele stijlen veranderen de status of voltooiing van een afspraak niet.",
+      "suggestions": "Meer stijlen om te proberen",
+      "sample": "Bespreking met Alex",
+      "noCategories": "Nog geen categorieën",
+      "treatments": {
+        "tentative": "Potlood – grijs en voorlopig",
+        "important": "Schets – handgetekende omlijning",
+        "focus": "Rust – stippellijn",
+        "travel": "Onderweg – diagonale textuur",
+        "deadline": "Markeerstift – onderstreping",
+        "done": "Afgerond – doorgestreept"
+      },
+      "fonts": {
+        "inherit": "Bestaande behouden",
+        "hand": "Handgeschreven",
+        "standard": "Standaard"
+      }
     }
   },
   "categories": {

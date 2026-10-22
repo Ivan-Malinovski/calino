@@ -1,3 +1,4 @@
+import { CategoryEventTitle, CategoryEventSurface } from '@/components/common/CategoryEventStyle'
 import { type JSX, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
@@ -94,7 +95,8 @@ export function DayEventsPopup({
         </div>
         <div className={styles.eventList}>
           {events.map((event) => (
-            <div
+            <CategoryEventSurface
+              event={event}
               key={event.id}
               className={styles.eventItem}
               role="button"
@@ -112,7 +114,9 @@ export function DayEventsPopup({
                 style={{ backgroundColor: event.color || 'var(--color-accent)' }}
               />
               <div className={styles.eventDetails}>
-                <div className={styles.eventTitle}>{event.title}</div>
+                <div className={styles.eventTitle}>
+                  <CategoryEventTitle event={event} />
+                </div>
                 <div className={styles.eventTime}>
                   {event.isAllDay
                     ? t('modals.dayEvents.allDay')
@@ -135,7 +139,7 @@ export function DayEventsPopup({
                     onToggle={() => onToggleTaskSubtasks(event.id)}
                   />
                 )}
-            </div>
+            </CategoryEventSurface>
           ))}
         </div>
       </motion.div>
