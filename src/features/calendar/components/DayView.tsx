@@ -1,3 +1,4 @@
+import { useEventContentHeights } from '../hooks/useEventContentHeights'
 import { type JSX } from 'react'
 import { useMemo, useState, useCallback, useRef, useLayoutEffect, useEffect } from 'react'
 import {
@@ -417,9 +418,9 @@ export function DayView({
   )
 
   // Geometry is independent of pointer-preview and create-drag state. Keep
-  // all expensive event preparation behind the two data inputs that can
-  // actually change the layout so those interactions only rebuild JSX and
-  // the preview overlay.
+  // event preparation behind data, zoom and content measurements so those
+  // interactions only rebuild JSX and the preview overlay.
+  const { contentHeights, reportContentHeight } = useEventContentHeights()
   const dayEventLayout = useMemo(() => {
     const sortedEvents = [...dayEvents].sort(
       (a, b) =>
@@ -440,9 +441,12 @@ export function DayView({
       sortedEvents,
       transparentEvents,
       taskById,
-      positionedEvents: positionEvents([...sortedEvents, ...taskLayoutItems]),
+      positionedEvents: positionEvents([...sortedEvents, ...taskLayoutItems], {
+        hourHeight,
+        contentHeights,
+      }),
     }
-  }, [dayEvents, timedTasks])
+  }, [dayEvents, timedTasks, hourHeight, contentHeights])
 
   const [isScrolled, setIsScrolled] = useState(false)
   const lastDateRef = useRef(date.toISOString())
@@ -752,7 +756,7 @@ export function DayView({
       )
     }
 
-    for (const { event, column, totalColumns } of positionedEvents) {
+    for (const { event, column, totalColumns, columnSpan, inset } of positionedEvents) {
       const task = taskById.get(event.id)
       if (task) {
         elements.push(
@@ -764,10 +768,11 @@ export function DayView({
             exit={skipExit(task.id) ? undefined : cardExit}
             transition={enterTransition}
             className={`${styles.eventPositioned} ${styles.taskPositioned}`}
-            style={taskPillStyle(task, column, totalColumns)}
+            style={taskPillStyle(task, column, totalColumns, columnSpan, inset)}
           >
             <EventCard
               event={task}
+              onContentHeightChange={reportContentHeight}
               compact
               monthView
               enableResize={false}
@@ -787,7 +792,7 @@ export function DayView({
         calendars,
         useCategoryColors: false,
       })
-      const style = positionedEventStyle(event, column, totalColumns)
+      const style = positionedEventStyle(event, column, totalColumns, columnSpan, inset)
 
       if (event.travelDuration && event.travelDuration > 0) {
         elements.push(
@@ -800,7 +805,7 @@ export function DayView({
             transition={enterTransition}
             className={styles.travelBar}
             style={{
-              ...travelBarStyle(event, column, totalColumns),
+              ...travelBarStyle(event, column, totalColumns, columnSpan, inset),
               backgroundColor: `${eventColor}15`,
             }}
             onClick={() => openModal(undefined, undefined, event.id)}
@@ -821,9 +826,14 @@ export function DayView({
           exit={skipExit(event.id) ? undefined : cardExit}
           transition={enterTransition}
           className={styles.eventPositioned}
-          style={{ ...style, zIndex: event.isFragment ? 1 : 2 }}
+          style={{ ...style, zIndex: 2 }}
         >
-          <EventCard event={event} hideTopRadius={!!event.travelDuration} />
+          <EventCard
+            event={event}
+            onContentHeightChange={reportContentHeight}
+            hourHeight={hourHeight}
+            hideTopRadius={!!event.travelDuration}
+          />
         </motion.div>
       )
     }

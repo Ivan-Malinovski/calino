@@ -1,3 +1,4 @@
+import { useEventContentHeights } from '../hooks/useEventContentHeights'
 import { memo, useMemo } from 'react'
 import type { JSX } from 'react'
 import { addMinutes, format } from 'date-fns'
@@ -46,6 +47,7 @@ const WeekDayColumn = memo(function WeekDayColumn({
   taskDescendantCount,
   onToggleTaskSubtasks,
 }: WeekDayColumnProps): JSX.Element {
+  const { contentHeights, reportContentHeight } = useEventContentHeights()
   const reducedMotion = useReducedMotion()
   const enterTransition = { duration: reducedMotion ? 0 : 0.18, ease: 'easeOut' as const }
   // Reduced-motion handling matches the DayView / DayEventsPopup
@@ -65,8 +67,8 @@ const WeekDayColumn = memo(function WeekDayColumn({
   // Concatenating, sorting and running the overlap-positioning algorithm used
   // to happen on every render pass, including the ones driven by drag state
   // that can't change the layout. Only the data props affect it, so memoize on
-  // exactly those — the JSX below still rebuilds, since it depends on the
-  // active drag and reduced-motion. See #73.
+  // those plus zoom and content measurements. The JSX below still depends
+  // on the active drag and reduced-motion. See #73.
   const { transparentEvents, taskById, positionedEvents } = useMemo(() => {
     const sorted = [...events, ...fragments].sort(
       (a, b) =>
@@ -91,9 +93,12 @@ const WeekDayColumn = memo(function WeekDayColumn({
     return {
       transparentEvents: sorted.filter((e) => e.transparency === 'transparent'),
       taskById: byId,
-      positionedEvents: positionEvents([...sorted, ...taskLayoutItems]),
+      positionedEvents: positionEvents([...sorted, ...taskLayoutItems], {
+        hourHeight,
+        contentHeights,
+      }),
     }
-  }, [events, fragments, timedTasks])
+  }, [events, fragments, timedTasks, hourHeight, contentHeights])
 
   const elements: JSX.Element[] = []
 
@@ -117,7 +122,7 @@ const WeekDayColumn = memo(function WeekDayColumn({
     )
   }
 
-  for (const { event, column, totalColumns } of positionedEvents) {
+  for (const { event, column, totalColumns, columnSpan, inset } of positionedEvents) {
     const task = taskById.get(event.id)
     if (task) {
       elements.push(
@@ -129,10 +134,11 @@ const WeekDayColumn = memo(function WeekDayColumn({
           exit={skipExit(task.id) ? undefined : cardExit}
           transition={enterTransition}
           className={`${styles.eventPositioned} ${styles.taskPositioned}`}
-          style={taskPillStyle(task, column, totalColumns)}
+          style={taskPillStyle(task, column, totalColumns, columnSpan, inset)}
         >
           <EventCard
             event={task}
+            onContentHeightChange={reportContentHeight}
             compact
             monthView
             enableResize={false}
@@ -160,7 +166,7 @@ const WeekDayColumn = memo(function WeekDayColumn({
           transition={enterTransition}
           className={styles.travelBar}
           style={{
-            ...travelBarStyle(event, column, totalColumns),
+            ...travelBarStyle(event, column, totalColumns, columnSpan, inset),
             backgroundColor: `${eventColor}15`,
           }}
           onClick={() => openModal(undefined, undefined, event.id)}
@@ -181,10 +187,11 @@ const WeekDayColumn = memo(function WeekDayColumn({
         exit={skipExit(event.id) ? undefined : cardExit}
         transition={enterTransition}
         className={styles.eventPositioned}
-        style={positionedEventStyle(event, column, totalColumns)}
+        style={positionedEventStyle(event, column, totalColumns, columnSpan, inset)}
       >
         <EventCard
           event={event}
+          onContentHeightChange={reportContentHeight}
           enableResize
           hideTopRadius={!!event.travelDuration}
           hourHeight={hourHeight}

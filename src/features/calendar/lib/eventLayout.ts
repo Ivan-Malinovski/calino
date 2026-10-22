@@ -14,7 +14,9 @@ const GAP = 4
 export function positionedEventStyle(
   event: CalendarEvent,
   column: number,
-  totalColumns: number
+  totalColumns: number,
+  columnSpan = 1,
+  inset = 0
 ): {
   top: string
   height: string
@@ -27,14 +29,12 @@ export function positionedEventStyle(
   const startMinutes = start.getMinutes()
   const durationMinutes = (end.getTime() - start.getTime()) / (1000 * 60)
 
-  const leftPercent = (column / totalColumns) * 100 + GAP / 2
-  const widthPercent = 100 / totalColumns - GAP
+  const horizontal = horizontalStyle(column, totalColumns, columnSpan, inset)
 
   return {
     top: `calc(var(--hour-height, 60px) * ${startHour + startMinutes / 60})`,
     height: `calc(var(--hour-height, 60px) * ${durationMinutes / 60})`,
-    left: `${leftPercent}%`,
-    width: `${widthPercent}%`,
+    ...horizontal,
   }
 }
 
@@ -92,7 +92,9 @@ export const TASK_PILL_LAYOUT_MINUTES = 30
 export function taskPillStyle(
   task: CalendarEvent,
   column: number,
-  totalColumns: number
+  totalColumns: number,
+  columnSpan = 1,
+  inset = 0
 ): {
   top: string
   left: string
@@ -102,13 +104,11 @@ export function taskPillStyle(
   const hour = due.getHours()
   const minutes = due.getMinutes()
 
-  const leftPercent = (column / totalColumns) * 100 + GAP / 2
-  const widthPercent = 100 / totalColumns - GAP
+  const horizontal = horizontalStyle(column, totalColumns, columnSpan, inset)
 
   return {
     top: `calc(var(--hour-height, 60px) * ${hour + minutes / 60})`,
-    left: `${leftPercent}%`,
-    width: `${widthPercent}%`,
+    ...horizontal,
   }
 }
 
@@ -120,7 +120,9 @@ export function taskPillStyle(
 export function travelBarStyle(
   event: CalendarEvent,
   column: number,
-  totalColumns: number
+  totalColumns: number,
+  columnSpan = 1,
+  inset = 0
 ): {
   top: string
   height: string
@@ -133,13 +135,24 @@ export function travelBarStyle(
   const travelStartHour = travelStart.getHours()
   const travelStartMinutes = travelStart.getMinutes()
 
-  const leftPercent = (column / totalColumns) * 100 + GAP / 2
-  const widthPercent = 100 / totalColumns - GAP
+  const horizontal = horizontalStyle(column, totalColumns, columnSpan, inset)
 
   return {
     top: `calc(var(--hour-height, 60px) * ${travelStartHour + travelStartMinutes / 60})`,
     height: `calc(var(--hour-height, 60px) * ${travelDurationMinutes / 60})`,
-    left: `${leftPercent}%`,
-    width: `${widthPercent}%`,
+    ...horizontal,
   }
+}
+
+function horizontalStyle(
+  column: number,
+  totalColumns: number,
+  columnSpan: number,
+  inset: number
+): { left: string; width: string } {
+  const left = (column / totalColumns) * 100 + GAP / 2
+  const width = (columnSpan / totalColumns) * 100 - GAP
+  if (!inset) return { left: `${left}%`, width: `${width}%` }
+  const offset = `min(${inset}px, ${width / 3}%)`
+  return { left: `calc(${left}% + ${offset})`, width: `calc(${width}% - ${offset})` }
 }
