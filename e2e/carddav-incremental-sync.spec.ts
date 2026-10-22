@@ -172,4 +172,40 @@ test.describe('carddav — namespace-aware, incremental sync', () => {
     // replaced it is what carried the contact the multiget dropped.
     expect(kinds).toContain('addressbook-query')
   })
+
+  test('yearless birthdays and anniversaries survive an unrelated edit on the server (#225)', async ({
+    page,
+    baseURL,
+  }) => {
+    const card = vcard('yearless-test', 'Yearless Person').replace(
+      'END:VCARD',
+      'BDAY:--0218\r\nANNIVERSARY:--02-29\r\nEND:VCARD'
+    )
+    await page.request.put(`${baseURL}${MOCK}/put?name=yearless.vcf`, { data: card })
+    await page.goto('/contacts')
+    await page.getByRole('button', { name: 'Yearless Person' }).click()
+    await expect(page.getByText('February 18', { exact: true })).toBeVisible()
+    await expect(page.getByText('February 29', { exact: true })).toBeVisible()
+    await expect(page.getByText(/years old/)).toHaveCount(0)
+
+    await page.getByRole('button', { name: 'Edit contact' }).click()
+    const dialog = page.getByRole('dialog')
+    await dialog.getByRole('textbox', { name: /Write a note/ }).fill('Unrelated note edit')
+    await dialog.getByRole('button', { name: 'Save', exact: true }).click()
+    await expect(dialog).toBeHidden()
+
+    const resource = `${baseURL}/mock-carddav/dav/addressbooks/user/book/yearless.vcf`
+    await expect
+      .poll(async () => (await page.request.get(resource)).text())
+      .toContain('NOTE:Unrelated note edit')
+    const saved = await (await page.request.get(resource)).text()
+    expect(saved).toContain('BDAY:--0218')
+    expect(saved).toContain('ANNIVERSARY:--0229')
+
+    await page.reload()
+    await page.getByRole('button', { name: 'Yearless Person' }).click()
+    await expect(page.getByText('February 18', { exact: true })).toBeVisible()
+    await expect(page.getByText('February 29', { exact: true })).toBeVisible()
+    await expect(page.getByText('Unrelated note edit')).toBeVisible()
+  })
 })

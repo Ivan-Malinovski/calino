@@ -20,7 +20,7 @@ function formatDate(dateStr: string): string {
   try {
     const date = contactDates.parseDateOnly(dateStr)
     if (!date) return dateStr
-    return formatDisplayDate(date, 'MMMM d, yyyy')
+    return formatDisplayDate(date, contactDates.isYearless(dateStr) ? 'MMMM d' : 'MMMM d, yyyy')
   } catch {
     return dateStr
   }
@@ -373,7 +373,9 @@ export function ContactDetail({
               <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
               <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
             </svg>
-            {confirmDelete && <span className={styles.btnDeleteLabel}>{t('detail.confirmQuestion')}</span>}
+            {confirmDelete && (
+              <span className={styles.btnDeleteLabel}>{t('detail.confirmQuestion')}</span>
+            )}
           </button>
         </div>
       </div>
@@ -596,9 +598,11 @@ export function ContactDetail({
                 )}
               </div>
               <div className={styles.birthdayDate}>{formatDate(contact.birthday)}</div>
-              <div className={styles.birthdayAge}>
-                {t('detail.yearsOld', { count: getAge(contact.birthday) })}
-              </div>
+              {Number.isFinite(getAge(contact.birthday)) && (
+                <div className={styles.birthdayAge}>
+                  {t('detail.yearsOld', { count: getAge(contact.birthday) })}
+                </div>
+              )}
               {onAddBirthdayToCalendar && (
                 <button
                   type="button"
@@ -618,7 +622,9 @@ export function ContactDetail({
                     transition: 'background 0.2s, color 0.2s',
                   }}
                 >
-                  {hasBirthdayEvent ? `✓ ${t('detail.onCalendar')}` : `📅 ${t('detail.addToCalendar')}`}
+                  {hasBirthdayEvent
+                    ? `✓ ${t('detail.onCalendar')}`
+                    : `📅 ${t('detail.addToCalendar')}`}
                 </button>
               )}
             </div>

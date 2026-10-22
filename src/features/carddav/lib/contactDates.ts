@@ -9,15 +9,22 @@
  * explicit local parts.
  */
 
-/** Parse `YYYY-MM-DD` or `YYYYMMDD` into a LOCAL calendar-date Date. */
+/** Whether the date omits its year, in extended or compact vCard form. */
+export function isYearless(value: string): boolean {
+  return /^--\d{2}-?\d{2}$/.test(value.trim())
+}
+
+/** Parse a full or yearless date locally; yearless dates use leap year 2000. */
 export function parseDateOnly(value: string): Date | null {
-  const match = /^(\d{4})-?(\d{2})-?(\d{2})$/.exec(value.trim())
+  const normalized = isYearless(value) ? `2000${value.trim().slice(2)}` : value.trim()
+  const match = /^(\d{4})-?(\d{2})-?(\d{2})$/.exec(normalized)
   if (!match) return null
   return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]))
 }
 
 /** Whole years elapsed since the birthday, as of `today` (default: now). */
 export function getAge(birthday: string, today: Date = new Date()): number {
+  if (isYearless(birthday)) return NaN
   const birthDate = parseDateOnly(birthday)
   if (!birthDate) return NaN
   let age = today.getFullYear() - birthDate.getFullYear()

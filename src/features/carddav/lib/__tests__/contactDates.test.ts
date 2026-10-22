@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach, vi } from 'vitest'
-import { parseDateOnly, getAge, daysUntilNext } from '../contactDates'
+import { parseDateOnly, getAge, daysUntilNext, isYearless } from '../contactDates'
 
 afterEach(() => {
   vi.unstubAllEnvs()
@@ -73,5 +73,26 @@ describe('contactDates (timezone-safe date-only arithmetic)', () => {
       const today = new Date(2026, 6, 2) // July 2, local
       expect(daysUntilNext('2000-07-01', today)).toBe(364) // 2027-07-01
     })
+  })
+})
+
+describe('yearless contact dates', () => {
+  it.each(['--02-29', '--0229'])('parses %s in a leap year without inventing an age', (value) => {
+    const date = parseDateOnly(value)!
+    expect(date.getFullYear()).toBe(2000)
+    expect(date.getMonth()).toBe(1)
+    expect(date.getDate()).toBe(29)
+    expect(isYearless(value)).toBe(true)
+    expect(getAge(value)).toBeNaN()
+  })
+
+  it('recognizes full dates as having a year', () => {
+    expect(isYearless('2000-02-29')).toBe(false)
+  })
+
+  it('counts down to a yearless date across the new year', () => {
+    expect(daysUntilNext('--01-01', new Date(2026, 11, 31))).toBe(1)
+    expect(daysUntilNext('--02-18', new Date(2026, 1, 18))).toBe(0)
+    expect(daysUntilNext('--02-29', new Date(2028, 1, 28))).toBe(1)
   })
 })

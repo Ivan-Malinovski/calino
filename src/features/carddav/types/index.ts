@@ -46,7 +46,7 @@ export interface Contact {
   urls: ContactUrl[]
   ims: ContactIM[]
 
-  // Personal info
+  // Personal dates use YYYY-MM-DD or --MM-DD when the year is unknown.
   birthday: string | null
   anniversary: string | null
   gender: string

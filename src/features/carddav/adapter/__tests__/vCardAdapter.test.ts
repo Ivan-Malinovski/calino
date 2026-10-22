@@ -1509,3 +1509,26 @@ END:VCARD`
     expect(reparsed.birthday).toBe('1990-01-01')
   })
 })
+
+// Issue #225: editing an unrelated field must not erase dates from DAVx5 / Apple.
+describe('yearless contact dates', () => {
+  it.each(['--0218', '--02-18', '--0229', '--02-29'])(
+    'round-trips %s for birthdays and anniversaries after editing a note',
+    (value) => {
+      const card = `BEGIN:VCARD\nVERSION:3.0\nUID:yearless\nFN:Test Person\nBDAY:${value}\nANNIVERSARY:${value}\nEND:VCARD`
+      const contact = parseVCard(card, 'book', 'account')!
+      const normalized = value.length === 6 ? `${value.slice(0, 4)}-${value.slice(4)}` : value
+      expect(contact.birthday).toBe(normalized)
+      expect(contact.anniversary).toBe(normalized)
+      contact.note = 'Updated note'
+      const serialized = contactToVCard(contact)
+      const compact = normalized.slice(0, 4) + normalized.slice(5)
+      expect(serialized).toContain(`BDAY:${compact}`)
+      expect(serialized).toContain(`ANNIVERSARY:${compact}`)
+      const reparsed = parseVCard(serialized, 'book', 'account')!
+      expect(reparsed.birthday).toBe(normalized)
+      expect(reparsed.anniversary).toBe(normalized)
+      expect(reparsed.note).toBe('Updated note')
+    }
+  )
+})

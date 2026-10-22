@@ -7,7 +7,7 @@ import { makeDefaultReminders } from './notifications'
 interface CreateBirthdayEventOptions {
   contactId: string
   contactName: string
-  birthday: string // YYYY-MM-DD
+  birthday: string // YYYY-MM-DD or --MM-DD
   calendarId: string
   /** Seeds the same default reminder a new event gets in the modal. */
   defaultReminderMinutes: number | null
@@ -16,7 +16,7 @@ interface CreateBirthdayEventOptions {
 interface CreateAnniversaryEventOptions {
   contactId: string
   contactName: string
-  anniversary: string // YYYY-MM-DD
+  anniversary: string // YYYY-MM-DD or --MM-DD
   calendarId: string
   /** Seeds the same default reminder a new event gets in the modal. */
   defaultReminderMinutes: number | null
@@ -27,10 +27,12 @@ interface CreateAnniversaryEventOptions {
  * MM/DD-bearing date. A fixed year is used — the yearly RRULE handles recurrence.
  */
 function annualStartDateStr(date: string): string {
-  const parts = date.split('-')
-  const month = parseInt(parts[1] ?? '1', 10)
-  const day = parseInt(parts[2] ?? '1', 10)
-  const year = new Date().getFullYear()
+  const parts = date.split('-').slice(-2)
+  const month = parseInt(parts[0] ?? '1', 10)
+  const day = parseInt(parts[1] ?? '1', 10)
+  let year = new Date().getFullYear()
+  // Anchor February 29 in a leap year so yearly recurrence keeps its month/day.
+  while (month === 2 && day === 29 && new Date(year, 1, 29).getMonth() !== 1) year++
   return toLocalDateString(new Date(year, month - 1, day))
 }
 

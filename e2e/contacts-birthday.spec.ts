@@ -19,12 +19,7 @@
  * about the target simply pick Personal.
  */
 import { test, expect, type Page } from '@playwright/test'
-import {
-  clearState,
-  seedAccount,
-  seedContacts,
-  seedStoreCalendars,
-} from './fixtures/localstorage'
+import { clearState, seedAccount, seedContacts, seedStoreCalendars } from './fixtures/localstorage'
 
 // A collection of this spec's own. It asserts the exact number of copies on
 // the server, so it cannot share one with a spec that resets it — and
@@ -187,10 +182,9 @@ test.describe('contact birthday → calendar (#84)', () => {
     // No silent "first calendar the server listed" — the user's choice is
     // where the VEVENT lands.
     await expect
-      .poll(
-        async () => dumpHasMarker(await dump(page, baseURL!, WORK), BIRTHDAY_MARKER('c2')),
-        { timeout: 15_000 }
-      )
+      .poll(async () => dumpHasMarker(await dump(page, baseURL!, WORK), BIRTHDAY_MARKER('c2')), {
+        timeout: 15_000,
+      })
       .toBe(true)
     const birthdays = (await dump(page, baseURL!, BIRTHDAYS)) ?? {}
     expect(dumpHasMarker(birthdays, BIRTHDAY_MARKER('c2'))).toBe(false)
@@ -270,4 +264,73 @@ test.describe('contact birthday → calendar (#84)', () => {
       )
       .toBe(true)
   })
+})
+
+// Issue #225: dates without a known year remain usable after unrelated edits.
+test('yearless contact dates display without an age and survive editing and reload', async ({
+  page,
+  baseURL,
+}) => {
+  await clearState(page)
+  await seedAllCalendars(page, baseURL!)
+  await seedContacts(
+    page,
+    [{ id: 'ab1', name: 'Work' }],
+    [
+      {
+        id: 'yearless',
+        displayName: 'Yearless Person',
+        addressBookId: 'ab1',
+        birthday: '--02-18',
+        anniversary: '--02-29',
+      },
+    ]
+  )
+  await page.goto('/contacts')
+  await page.getByRole('button', { name: 'Yearless Person' }).click()
+  await expect(page.getByText('February 18', { exact: true })).toBeVisible()
+  await expect(page.getByText('February 29', { exact: true })).toBeVisible()
+  await expect(page.getByText(/years old/)).toHaveCount(0)
+
+  await page.getByRole('button', { name: 'Edit contact' }).click()
+  const dialog = page.getByRole('dialog')
+  await dialog
+    .getByRole('textbox', { name: /Write a note/ })
+    .fill('Edited without changing the dates')
+  await dialog.getByRole('button', { name: 'Save', exact: true }).click()
+  await expect(dialog).toBeHidden()
+  await page.reload()
+  await page.getByRole('button', { name: 'Yearless Person' }).click()
+  await expect(page.getByText('Edited without changing the dates')).toBeVisible()
+  await expect(page.getByText('February 18', { exact: true })).toBeVisible()
+  await expect(page.getByText('February 29', { exact: true })).toBeVisible()
+  await expect(page.getByText(/years old/)).toHaveCount(0)
+
+  // Each date card has its own action. Add the birthday, then the anniversary.
+  await page
+    .getByRole('button', { name: /Add to calendar/ })
+    .first()
+    .click()
+  const birthdayPicker = page.getByRole('dialog').filter({ hasText: /Add birthday to/ })
+  await birthdayPicker.getByRole('button', { name: 'Birthdays', exact: true }).click()
+  await expect(page.getByText('Birthday added to calendar')).toBeVisible()
+  await page.getByRole('button', { name: /Add to calendar/ }).click()
+  const anniversaryPicker = page.getByRole('dialog').filter({ hasText: /Add anniversary to/ })
+  await anniversaryPicker.getByRole('button', { name: 'Birthdays', exact: true }).click()
+
+  await expect
+    .poll(async () => {
+      const cards = Object.values((await dump(page, baseURL!, BIRTHDAYS)) ?? {})
+      return cards.filter((ics) => ics.includes('calino:contact:yearless')).length
+    })
+    .toBe(2)
+  const cards = Object.values((await dump(page, baseURL!, BIRTHDAYS)) ?? {})
+  expect(cards.find((ics) => ics.includes('calino:contact:yearless:anniversary'))).toMatch(
+    /DTSTART;VALUE=DATE:\d{4}0229/
+  )
+  expect(
+    cards.find(
+      (ics) => ics.includes('calino:contact:yearless') && !ics.includes(':yearless:anniversary')
+    )
+  ).toMatch(/DTSTART;VALUE=DATE:\d{4}0218/)
 })

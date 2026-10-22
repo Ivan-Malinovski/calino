@@ -585,6 +585,10 @@ function parseIMProtocol(params: string): ContactIM['protocol'] {
 function parseVCardDate(dateStr: string | null): string | null {
   if (!dateStr) return null
 
+  // RFC 6350 reduced-accuracy dates (unknown year).
+  const yearless = /^--(\d{2})-?(\d{2})$/.exec(dateStr)
+  if (yearless) return `--${yearless[1]}-${yearless[2]}`
+
   // Handle YYYYMMDD format
   if (/^\d{8}$/.test(dateStr)) {
     const year = dateStr.substring(0, 4)
@@ -614,6 +618,9 @@ function parseVCardDate(dateStr: string | null): string | null {
 
 function formatVCardDate(dateStr: string): string | null {
   if (!dateStr) return null
+
+  // Preserve the omitted year when writing reduced-accuracy dates.
+  if (/^--\d{2}-\d{2}$/.test(dateStr)) return dateStr.replace(/-(?=\d{2}$)/, '')
 
   // Convert YYYY-MM-DD to YYYYMMDD
   if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {

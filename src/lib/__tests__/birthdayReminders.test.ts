@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import {
   createBirthdayEvent,
   hasBirthdayEvent,
@@ -104,4 +104,38 @@ describe('contact events take the default reminder', () => {
     })
     expect(event.reminders).toEqual([])
   })
+})
+
+describe('yearless contact events', () => {
+  it('preserves month and day for a birthday and anniversary', () => {
+    const options = {
+      contactId: 'yearless',
+      contactName: 'Test Person',
+      calendarId: 'cal1',
+      defaultReminderMinutes: null,
+    }
+    expect(createBirthdayEvent({ ...options, birthday: '--02-18' }).start.slice(5, 10)).toBe(
+      '02-18'
+    )
+    expect(createAnniversaryEvent({ ...options, anniversary: '--06-15' }).start.slice(5, 10)).toBe(
+      '06-15'
+    )
+  })
+})
+
+it('keeps February 29 when adding a yearless birthday in a non-leap year', () => {
+  vi.useFakeTimers()
+  try {
+    vi.setSystemTime(new Date(2026, 0, 1))
+    const event = createBirthdayEvent({
+      contactId: 'leap',
+      contactName: 'Leap Day',
+      birthday: '--02-29',
+      calendarId: 'cal1',
+      defaultReminderMinutes: null,
+    })
+    expect(event.start).toBe('2028-02-29T00:00:00')
+  } finally {
+    vi.useRealTimers()
+  }
 })
