@@ -244,8 +244,15 @@ function readAlarmReminder(
 export function parseAppleTravelDuration(vevent: ICAL.Component): number | undefined {
   const prop = vevent.getFirstProperty('x-apple-travel-duration')
   if (prop) {
-    const value = prop.getFirstValue() as string
-    return parseTravelDuration(value) ?? undefined
+    // iOS writes `X-APPLE-TRAVEL-DURATION;VALUE=DURATION:PT30M`, and ical.js
+    // turns an explicit VALUE=DURATION into an ICAL.Duration rather than the
+    // raw string a bare X- property yields. Accept both (#227).
+    const value: unknown = prop.getFirstValue()
+    if (value instanceof ICAL.Duration) {
+      const minutes = Math.ceil(Math.abs(value.toSeconds()) / 60)
+      return minutes > 0 ? minutes : undefined
+    }
+    if (typeof value === 'string') return parseTravelDuration(value) ?? undefined
   }
   return undefined
 }

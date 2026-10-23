@@ -7,6 +7,7 @@ import {
   icalVjournalToCalendarEvent,
   icalVtodoToCalendarEvent,
   calendarEventToIcalVtodo,
+  parseAppleTravelDuration,
 } from '../icalTypeMapping'
 import type { CalendarEvent } from '@/types'
 
@@ -1185,5 +1186,41 @@ describe('event COLOR property', () => {
     const event = icalEventToCalendarEvent(comp, 'cal')
     const out = calendarEventToIcalComponent({ ...event, title: 'Renamed' }, comp)
     expect(out.getFirstPropertyValue('color')).toBe('tomato')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Issue 227: iOS writes travel time with an explicit VALUE=DURATION
+// ---------------------------------------------------------------------------
+describe('Issue 227: X-APPLE-TRAVEL-DURATION;VALUE=DURATION', () => {
+  const vevent = (travelLine: string): string =>
+    [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'PRODID:-//Apple Inc.//iOS 18//EN',
+      'BEGIN:VEVENT',
+      'UID:travel-1',
+      'DTSTAMP:20260101T000000Z',
+      'DTSTART:20260601T100000Z',
+      'DTEND:20260601T110000Z',
+      'SUMMARY:Dentist',
+      travelLine,
+      'END:VEVENT',
+      'END:VCALENDAR',
+    ].join('\r\n')
+
+  it('parses the typed duration ical.js produces for VALUE=DURATION', () => {
+    const comp = createVevent(vevent('X-APPLE-TRAVEL-DURATION;VALUE=DURATION:PT30M'))
+    expect(parseAppleTravelDuration(comp)).toBe(30)
+  })
+
+  it('still parses a bare string value', () => {
+    const comp = createVevent(vevent('X-APPLE-TRAVEL-DURATION:PT1H'))
+    expect(parseAppleTravelDuration(comp)).toBe(60)
+  })
+
+  it('does not throw when converting the whole event', () => {
+    const comp = createVevent(vevent('X-APPLE-TRAVEL-DURATION;VALUE=DURATION:PT30M'))
+    expect(() => icalEventToCalendarEvent(comp, 'cal-1')).not.toThrow()
   })
 })
