@@ -59,7 +59,9 @@
     "foundEvents_one": "1 fehlerhaftes Ereignis mit ungültigen Datumsangaben gefunden.",
     "foundEvents_other": "{{count}} fehlerhafte Ereignisse mit ungültigen Datumsangaben gefunden.",
     "foundDuplicateUids_one": "1 Gruppe von Ereignissen mit derselben doppelten ID auf Ihrem Server gefunden.",
-    "foundDuplicateUids_other": "{{count}} Gruppen von Ereignissen mit derselben doppelten ID auf Ihrem Server gefunden."
+    "foundDuplicateUids_other": "{{count}} Gruppen von Ereignissen mit derselben doppelten ID auf Ihrem Server gefunden.",
+    "unreadableResources_one": "1 Element auf Ihrem Server konnte nicht gelesen werden und blieb unverändert.",
+    "unreadableResources_other": "{{count}} Elemente auf Ihrem Server konnten nicht gelesen werden und blieben unverändert."
   },
   "reminder": {
     "allDay": "Ganztägig",

@@ -59,7 +59,9 @@
     "foundEvents_one": "1 événement comporte des dates non valides.",
     "foundEvents_other": "{{count}} événements comportent des dates non valides.",
     "foundDuplicateUids_one": "Un groupe d’événements partage un identifiant en double sur votre serveur.",
-    "foundDuplicateUids_other": "{{count}} groupes d’événements partagent un identifiant en double sur votre serveur."
+    "foundDuplicateUids_other": "{{count}} groupes d’événements partagent un identifiant en double sur votre serveur.",
+    "unreadableResources_one": "1 élément de votre serveur n’a pas pu être lu et a été laissé tel quel.",
+    "unreadableResources_other": "{{count}} éléments de votre serveur n’ont pas pu être lus et ont été laissés tels quels."
   },
   "reminder": {
     "allDay": "Toute la journée",

@@ -59,7 +59,9 @@
     "foundEvents_one": "Found 1 broken event with invalid dates.",
     "foundEvents_other": "Found {{count}} broken events with invalid dates.",
     "foundDuplicateUids_one": "Found 1 set of events sharing a duplicate ID on your server.",
-    "foundDuplicateUids_other": "Found {{count}} sets of events sharing a duplicate ID on your server."
+    "foundDuplicateUids_other": "Found {{count}} sets of events sharing a duplicate ID on your server.",
+    "unreadableResources_one": "1 item on your server could not be read and was left as it is.",
+    "unreadableResources_other": "{{count}} items on your server could not be read and were left as they are."
   },
   "reminder": {
     "allDay": "All day",

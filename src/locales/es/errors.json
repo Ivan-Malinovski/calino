@@ -59,7 +59,9 @@
     "foundEvents_one": "Se encontró 1 evento con fechas no válidas.",
     "foundEvents_other": "Se encontraron {{count}} eventos con fechas no válidas.",
     "foundDuplicateUids_one": "Se encontró un grupo de eventos con el mismo ID en el servidor.",
-    "foundDuplicateUids_other": "Se encontraron {{count}} grupos de eventos con el mismo ID en el servidor."
+    "foundDuplicateUids_other": "Se encontraron {{count}} grupos de eventos con el mismo ID en el servidor.",
+    "unreadableResources_one": "No se pudo leer 1 elemento del servidor y se dejó como estaba.",
+    "unreadableResources_other": "No se pudieron leer {{count}} elementos del servidor y se dejaron como estaban."
   },
   "reminder": {
     "allDay": "Todo el día",

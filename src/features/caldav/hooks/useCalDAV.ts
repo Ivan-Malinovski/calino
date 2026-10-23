@@ -1,7 +1,13 @@
 import { useState, useCallback, useContext, useEffect, useMemo } from 'react'
 import { addDays } from 'date-fns'
 import type { CalendarEvent } from '@/types'
-import { showToast, showBrokenEventsNotification, showDuplicateUidNotification } from '@/lib/toast'
+import {
+  showToast,
+  showBrokenEventsNotification,
+  showDuplicateUidNotification,
+  showUnreadableResourcesNotification,
+} from '@/lib/toast'
+import { hrefKey } from '@/lib/hrefKey'
 import i18n from '@/lib/i18n'
 import type {
   CalDAVAccount,
@@ -92,6 +98,13 @@ const inFlightDeletes = new Set<string>()
 // the same account each reconcile against stale state. Callers get the existing
 // promise instead of starting a second run.
 const inFlightSyncs = new Map<string, Promise<void>>()
+
+/**
+ * Resources already reported as unreadable, as `calendarId|hrefKey`. They are
+ * retried every cycle, so without this the same toast would repeat on each sync
+ * until the server-side file is fixed.
+ */
+const reportedUnreadable = new Set<string>()
 
 const MAX_RETRIES = 10
 
@@ -330,29 +343,9 @@ async function collectParsedWithHref(
   return { items: result, hadParseFailures, failedHrefs }
 }
 
-/**
- * Compare two resource hrefs for identity.
- *
- * Stored `resourceHref` values come from tsdav's `obj.url`; sync-collection
- * hrefs are resolved against the collection URL. The same resource can
- * therefore arrive as an absolute URL from one path and a server-relative one
- * from the other, and servers are inconsistent about a trailing slash. Compare
- * on the path only, and keep percent-encoding as-is — decoding would fold
- * `%2F` into a path separator.
- */
 /** Human-readable identifier for sync logging. */
 function calendarLabel(cal: { name?: string; id: string }): string {
   return cal.name || cal.id
-}
-
-function hrefKey(href: string): string {
-  let path = href
-  try {
-    path = new URL(href, 'http://x.invalid').pathname
-  } catch {
-    // Not URL-shaped; fall through and compare the raw string.
-  }
-  return path.replace(/\/+$/, '')
 }
 
 /**
@@ -1515,6 +1508,8 @@ export function useCalDAVInstance(): UseCalDAVReturn {
       // Errors from individual calendars, accumulated so one collection
       // failing never silences the others.
       const syncErrors: string[] = []
+      // Resources that could not be read this cycle, keyed for the dedupe set.
+      const unreadableThisSync: string[] = []
 
       try {
         const credential = await getCredentialById(account.credentialId)
@@ -1791,6 +1786,7 @@ export function useCalDAVInstance(): UseCalDAVReturn {
               hadParseFailures,
               failedHrefs,
             } = await collectParsedWithHref(fetchedEvents, cal.id)
+            for (const href of failedHrefs) unreadableThisSync.push(`${cal.id}|${hrefKey(href)}`)
 
             // Detect independent events illegally sharing a UID across resources.
             // Keep one deterministically; record the rest as data issues (#22).
@@ -2014,6 +2010,14 @@ export function useCalDAVInstance(): UseCalDAVReturn {
         const duplicateIssuesAfterSync = useCalendarStore.getState().duplicateUidIssues
         if (duplicateIssuesAfterSync.length > 0) {
           showDuplicateUidNotification(duplicateIssuesAfterSync.length)
+        }
+
+        // Unreadable resources are left as they are (#228); say so once per
+        // resource rather than leaving only a console warning.
+        const newlyUnreadable = unreadableThisSync.filter((key) => !reportedUnreadable.has(key))
+        if (newlyUnreadable.length > 0) {
+          for (const key of newlyUnreadable) reportedUnreadable.add(key)
+          showUnreadableResourcesNotification(newlyUnreadable.length)
         }
 
         // After sync, check if any journal entries exist and enable journaling if so

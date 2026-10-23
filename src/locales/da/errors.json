@@ -59,7 +59,9 @@
     "foundEvents_one": "Fandt 1 ødelagt begivenhed med ugyldige datoer.",
     "foundEvents_other": "Fandt {{count}} ødelagte begivenheder med ugyldige datoer.",
     "foundDuplicateUids_one": "Fandt 1 sæt begivenheder med et duplikeret ID på din server.",
-    "foundDuplicateUids_other": "Fandt {{count}} sæt begivenheder med et duplikeret ID på din server."
+    "foundDuplicateUids_other": "Fandt {{count}} sæt begivenheder med et duplikeret ID på din server.",
+    "unreadableResources_one": "1 element på din server kunne ikke læses og blev ladt uændret.",
+    "unreadableResources_other": "{{count}} elementer på din server kunne ikke læses og blev ladt uændret."
   },
   "reminder": {
     "allDay": "Hele dagen",

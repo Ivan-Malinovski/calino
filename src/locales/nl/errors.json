@@ -59,7 +59,9 @@
     "foundEvents_one": "Eén ongeldige gebeurtenis met onjuiste datums gevonden.",
     "foundEvents_other": "{{count}} ongeldige gebeurtenissen met onjuiste datums gevonden.",
     "foundDuplicateUids_one": "Eén set gebeurtenissen met hetzelfde dubbele ID op je server gevonden.",
-    "foundDuplicateUids_other": "{{count}} sets gebeurtenissen met hetzelfde dubbele ID op je server gevonden."
+    "foundDuplicateUids_other": "{{count}} sets gebeurtenissen met hetzelfde dubbele ID op je server gevonden.",
+    "unreadableResources_one": "1 item op je server kon niet worden gelezen en is ongewijzigd gelaten.",
+    "unreadableResources_other": "{{count}} items op je server konden niet worden gelezen en zijn ongewijzigd gelaten."
   },
   "reminder": {
     "allDay": "Hele dag",

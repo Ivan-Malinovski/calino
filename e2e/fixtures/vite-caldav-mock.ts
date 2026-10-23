@@ -265,6 +265,14 @@ const ACCOUNTS: MockAccount[] = [
         rejectMixedUids: true,
       },
       {
+        // Owned by `unreadable-resource.spec.ts` (issue #228), which seeds a
+        // resource that cannot be parsed next to a readable one.
+        path: '/dav/calendars/user/unreadable/',
+        displayName: 'Unreadable',
+        color: '#EF4444',
+        components: ['VEVENT', 'VTODO', 'VJOURNAL'],
+      },
+      {
         path: '/dav/calendars/user/calino-settings/',
         displayName: 'Calino Settings',
         components: ['VEVENT'],

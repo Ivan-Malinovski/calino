@@ -69,12 +69,16 @@ function event(id: string, calendarId: string): CalendarEvent {
 const stored = new Map<string, string>()
 
 /** The app's persisted store, which the headless page reads but never writes. */
-function persistCalendars(calendars: { id: string; isVisible: boolean }[]): void {
+function persistCalendars(
+  calendars: { id: string; isVisible: boolean }[],
+  events: CalendarEvent[] = []
+): void {
   stored.set(
     'calino-storage',
     JSON.stringify({
       state: {
         calendars: calendars.map((c) => ({ ...c, name: c.id, color: '#ff0000' })),
+        events,
       },
     })
   )
@@ -203,11 +207,21 @@ describe('runHeadlessSync', () => {
     expect(payload.events.map((event) => event.calendarId)).toEqual(['cal-2'])
   })
 
-  it('leaves a calendar out of the mirror when a resource cannot be parsed', async () => {
+  it('keeps the cached events of an unreadable resource and mirrors the rest', async () => {
+    // Unreadable is a property of one resource. Dropping the whole calendar
+    // from the payload froze every other event in it; dropping only the broken
+    // resource's events would have the reconcile delete them from the provider.
+    persistCalendars(
+      [{ id: 'cal-1', isVisible: true }],
+      [
+        { ...event('cached-broken', 'cal-1'), resourceHref: 'https://dav.test/cal-1/broken.ics' },
+        { ...event('stale-valid', 'cal-1'), resourceHref: '/cal-1/valid.ics' },
+      ]
+    )
     mockFetchEvents.mockResolvedValue({
       objects: [
-        { url: 'valid.ics', data: 'valid-data' },
-        { url: 'broken.ics', data: 'broken-data' },
+        { url: 'https://dav.test/cal-1/valid.ics', data: 'valid-data' },
+        { url: '/cal-1/broken.ics', data: 'broken-data' },
       ],
       hadComponentFailures: false,
     })
@@ -217,8 +231,11 @@ describe('runHeadlessSync', () => {
 
     const result = await runHeadlessSync()
 
-    expect(result).toEqual({ accounts: 1, calendars: 0, events: 0 })
-    expect(bridge.synced).toEqual([])
+    expect(result).toEqual({ accounts: 1, calendars: 1, events: 2 })
+    const payload = JSON.parse(bridge.synced[0]) as { events: { id: string }[] }
+    // The readable resource is refreshed (its stale cached copy is not carried
+    // over), and the unreadable one keeps what the app last cached.
+    expect(payload.events.map((e) => e.id).sort()).toEqual(['cached-broken', 'e1'])
   })
 
   it('never writes to the app store it reads from', async () => {

@@ -61,3 +61,8 @@ export function showDuplicateUidNotification(count: number): void {
     },
   })
 }
+
+/** A resource the server returned but Calino could not parse; kept as it was. */
+export function showUnreadableResourcesNotification(count: number): void {
+  showToast(i18n.t('errors:broken.unreadableResources', { count }), { duration: 8000 })
+}

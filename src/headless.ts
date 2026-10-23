@@ -31,6 +31,7 @@ import { unwrapFetchEvents } from '@/features/caldav/client/CalDAVClient'
 import { createCalendarBackend } from '@/features/caldav/client/createBackend'
 import { parseICALDataAsyncWithStatus } from '@/features/caldav/adapter/iCalendarAdapter'
 import { buildMirrorPayload, MIRROR_PAST_DAYS, MIRROR_FUTURE_DAYS } from '@/lib/calendarMirror'
+import { hrefKey } from '@/lib/hrefKey'
 import { initHeadlessI18n } from '@/lib/i18nHeadless'
 import { CALDAV_FETCH_CONCURRENCY, mapWithConcurrency } from '@/lib/mapWithConcurrency'
 
@@ -71,6 +72,7 @@ export async function runHeadlessSync(): Promise<HeadlessResult> {
   // Visibility and colour live only in the app's store, so it is the authority
   // on what gets mirrored — the same source the foreground pass uses.
   const storeCalendars = readPersisted<{ calendars: Calendar[] }>('calino-storage').calendars ?? []
+  const cachedEvents = readPersisted<{ events: CalendarEvent[] }>('calino-storage').events ?? []
   const visibleById = new Map(storeCalendars.filter((c) => c.isVisible).map((c) => [c.id, c]))
   const now = Date.now()
   const rangeStart = new Date(now - MIRROR_PAST_DAYS * DAY_MS).toISOString()
@@ -151,20 +153,31 @@ export async function runHeadlessSync(): Promise<HeadlessResult> {
           continue
         }
         const calendarEvents: CalendarEvent[] = []
-        let hadParseFailures = false
+        const unreadableHrefs = new Set<string>()
         for (const resource of result.resources) {
           const parsed = await parseICALDataAsyncWithStatus(resource.data, result.calendar.id)
-          if (parsed.hadParseFailures) hadParseFailures = true
+          if (parsed.hadParseFailures) unreadableHrefs.add(hrefKey(resource.url))
           calendarEvents.push(...parsed.events)
         }
-        if (hadParseFailures) {
+        if (unreadableHrefs.size > 0) {
+          // Unreadable is a property of one resource, not of the calendar. The
+          // reconcile deletes provider rows missing from the payload, so carry
+          // over what the app last cached for those resources and let the rest
+          // of the calendar refresh (#228).
           bridge.log(
             t('headless.calendarFailed', {
               calendar: result.calendar.name,
-              error: 'resource parse failed; mirror left unchanged',
+              error: `${unreadableHrefs.size} resource(s) failed to parse; kept as last cached`,
             })
           )
-          continue
+          calendarEvents.push(
+            ...cachedEvents.filter(
+              (event) =>
+                event.calendarId === result.calendar.id &&
+                event.resourceHref !== undefined &&
+                unreadableHrefs.has(hrefKey(event.resourceHref))
+            )
+          )
         }
         events.push(...calendarEvents)
         fetched.push(visibleById.get(result.calendar.id)!)
