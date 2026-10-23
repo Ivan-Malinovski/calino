@@ -1680,6 +1680,14 @@ END:VCALENDAR`,
       expect(init?.method).toBe('GET')
     })
 
+    it('bypasses the browser HTTP cache so a stale copy is never re-served (#226)', async () => {
+      fetchSpy.mockResolvedValueOnce(new Response(ICS, { status: 200 }))
+
+      await client.fetchResourceByHref(href)
+
+      expect(fetchSpy.mock.calls[0][1]?.cache).toBe('no-store')
+    })
+
     it('returns null when the resource vanished between REPORT and GET', async () => {
       fetchSpy.mockResolvedValueOnce(new Response('', { status: 404 }))
 

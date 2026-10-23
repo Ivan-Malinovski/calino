@@ -583,6 +583,14 @@ export class CalDAVClient implements CalendarBackend {
 
     const response = await this.proxyFetch(href, {
       method: 'GET',
+      // The REPORT that named this href already told us it changed, so a
+      // cached copy is by definition stale. Radicale answers GET with
+      // Last-Modified/ETag but no Cache-Control, which lets the browser serve
+      // the previously fetched body from its heuristic cache without ever
+      // contacting the server — the sync then commits the new token having
+      // stored the old data (#226). `no-store` adds no request headers, so it
+      // needs nothing extra from a CORS proxy (unlike `no-cache`/`reload`).
+      cache: 'no-store',
       headers: {
         Authorization: this.authHeader,
         Accept: 'text/calendar',
