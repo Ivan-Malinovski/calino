@@ -2506,6 +2506,57 @@ describe('useCalDAV', () => {
       expect(useCalendarStore.getState().events.find((e) => e.id === mockEvent.id)).toBeDefined()
     })
 
+    it('keeps reconciling the rest of a calendar when one resource cannot be parsed (#228)', async () => {
+      const stillThere: CalendarEvent = {
+        ...mockEvent,
+        id: 'still-there',
+        resourceHref: 'valid.ics',
+      }
+      const goneRemotely: CalendarEvent = {
+        ...mockEvent,
+        id: 'gone-remotely',
+        resourceHref: 'gone.ics',
+      }
+      const unreadable: CalendarEvent = {
+        ...mockEvent,
+        id: 'unreadable',
+        resourceHref: 'broken.ics',
+      }
+      act(() => {
+        const store = useCalendarStore.getState()
+        store.addEvent(stillThere)
+        store.addEvent(goneRemotely)
+        store.addEvent(unreadable)
+      })
+
+      mockCalDAVClient.createCalDAVClient.mockResolvedValue({
+        fetchEvents: vi.fn().mockResolvedValue([
+          { url: 'valid.ics', data: 'valid-data' },
+          { url: 'broken.ics', data: 'broken-data' },
+        ]),
+        fetchCalendars: vi.fn().mockResolvedValue([mockCalendar]),
+      } as any)
+      vi.mocked(iCalendarAdapter.parseICALDataAsyncWithStatus).mockImplementation((data) =>
+        Promise.resolve({
+          events: data === 'valid-data' ? [stillThere] : [],
+          hadParseFailures: data === 'broken-data',
+        })
+      )
+
+      const { result } = renderHook(() => useCalDAV())
+      await waitFor(() => expect(result.current.accounts.length).toBe(1))
+      await act(async () => {
+        await result.current.syncAccount('acc-1')
+      })
+
+      // The event whose resource vanished from the server is reconciled away,
+      // while the one stored in the unreadable resource is left alone.
+      const ids = useCalendarStore.getState().events.map((e) => e.id)
+      expect(ids).toContain('still-there')
+      expect(ids).toContain('unreadable')
+      expect(ids).not.toContain('gone-remotely')
+    })
+
     it('removes a task marked cancelled by another CalDAV client', async () => {
       const localTask: CalendarEvent = {
         id: 'cancelled-task',
