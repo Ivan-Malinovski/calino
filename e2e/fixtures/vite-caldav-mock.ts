@@ -95,6 +95,15 @@ interface MockCollection {
    * has been truncated. Drives the full-sync fallback path.
    */
   rejectSyncToken?: boolean
+  /**
+   * Refuse a PUT whose VEVENTs do not all share one UID, with the `400` Radicale
+   * sends ("Multiple VEVENT components with different UIDs"). RFC 4791 §4.1
+   * requires one UID per calendar object resource, and a server that enforces it
+   * turns a client that bundles two series into one PUT into a failed save. The
+   * rejection is logged as a `PUT 400` request so a spec can assert it never
+   * happened.
+   */
+  rejectMixedUids?: boolean
 }
 
 interface MockAccount {
@@ -244,6 +253,16 @@ const ACCOUNTS: MockAccount[] = [
         displayName: 'Sync Queue',
         color: '#4285F4',
         components: ['VEVENT', 'VTODO', 'VJOURNAL'],
+      },
+      {
+        // Owned by `series-split.spec.ts` (issue #229), which asserts the exact
+        // PUTs a "This and following" edit makes and so cannot share a
+        // collection with a spec running in parallel.
+        path: '/dav/calendars/user/series-split/',
+        displayName: 'Series Split',
+        color: '#0EA5E9',
+        components: ['VEVENT', 'VTODO', 'VJOURNAL'],
+        rejectMixedUids: true,
       },
       {
         path: '/dav/calendars/user/calino-settings/',
@@ -855,6 +874,19 @@ export function caldavMockPlugin(): Plugin {
           body += chunk
         })
         req.on('end', () => {
+          if (owningCollection.rejectMixedUids) {
+            const uids = new Set(
+              [...body.matchAll(/^UID[:;][^\r\n]*$/gim)].map((m) =>
+                m[0].split(':').slice(1).join(':')
+              )
+            )
+            if (uids.size > 1) {
+              requestLog.push({ method: 'PUT 400', path })
+              res.writeHead(400, { 'Content-Type': 'text/plain' })
+              res.end('Multiple VEVENT components with different UIDs')
+              return
+            }
+          }
           eventStore.set(path, body)
           const etag = nextEtag()
           etagStore.set(path, etag)

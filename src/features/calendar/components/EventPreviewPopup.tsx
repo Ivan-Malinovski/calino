@@ -498,7 +498,10 @@ export function EventPreviewPopup({
         occurrenceStartISO
       )
       updateEvent(masterEvent.id, { excludedDates, recurrence, rruleString })
-      safeCalDAVUpdate(
+      // Wait for the truncation to land before creating the new series: while
+      // it is still in flight the two share a store `resourceHref`, and the
+      // group write would put both UIDs into one PUT (#229).
+      await safeCalDAVUpdate(
         updateCalDAVEvent,
         masterEvent.calendarId,
         { ...masterEvent, excludedDates, recurrence, rruleString },
@@ -535,6 +538,12 @@ export function EventPreviewPopup({
         // the master's CREATED. `addEvent` stamps the real time below.
         created: undefined,
         lastModified: undefined,
+        // Server identity belongs to the master's resource. Inheriting it makes
+        // the new series look like another component of that resource, and
+        // RFC 4791 §4.1 allows one UID per resource (#229).
+        resourceHref: undefined,
+        etag: undefined,
+        syncStatus: undefined,
       }
       store.addEvent(newSeriesEvent)
       try {
