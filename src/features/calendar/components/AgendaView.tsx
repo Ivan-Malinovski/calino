@@ -6,7 +6,7 @@ import { useMemo, useState, useRef, useEffect } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useVirtualizer, type Virtualizer } from '@tanstack/react-virtual'
 import { createPortal } from 'react-dom'
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, parseISO, startOfDay } from 'date-fns'
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, parseISO } from 'date-fns'
 import {
   DndContext,
   DragOverlay,
@@ -30,14 +30,14 @@ import type { CalendarEvent } from '@/types'
 import { ContextMenu } from '@/components/common/ContextMenu'
 import { EmptyState } from '@/components/common/EmptyState'
 import { getEventColor } from '@/lib/eventColor'
+import { formatEventTime, pad2, toEventInstant, formatDisplayDate } from '@/lib/datetime'
 import {
-  formatEventTime,
-  pad2,
-  toEventInstant,
-  toZoneWallClock,
-  formatDisplayDate,
-} from '@/lib/datetime'
-import { homeDayKey, homeMinutes, parseHomeWall, useHomeTimezone } from '@/lib/homeTimezone'
+  homeDayKey,
+  homeMinutes,
+  movedDueValue,
+  parseHomeWall,
+  useHomeTimezone,
+} from '@/lib/homeTimezone'
 import { useTranslation } from 'react-i18next'
 import i18n from '@/lib/i18n'
 import { safeCalDAVUpdate } from '@/lib/caldavHelpers'
@@ -355,26 +355,21 @@ function MonthScrollRestorer({
   scrolledMonthRef: React.MutableRefObject<string | null>
 }) {
   useEffect(() => {
-    const today = startOfDay(new Date())
     const viewDate = parseISO(currentDate)
-    const monthStart = startOfMonth(viewDate)
-    const monthEnd = endOfMonth(viewDate)
-    const viewMonthKey = format(monthStart, 'yyyy-MM')
+    const viewMonthKey = format(startOfMonth(viewDate), 'yyyy-MM')
 
     if (scrolledMonthRef.current !== viewMonthKey) {
-      if (today >= monthStart && today <= monthEnd) {
-        const todayKey = format(today, 'yyyy-MM-dd')
-        const index = dayGroups.findIndex(
-          (g) => g.type === 'day' && format(g.days[0], 'yyyy-MM-dd') === todayKey
-        )
-        if (index !== -1) {
-          // Delaying by one frame ensures the DOM has updated its scrollHeight
-          // for the new month, avoiding scroll clamping by the browser.
-          requestAnimationFrame(() => {
-            virtualizer.scrollToIndex(index, { align: 'start', behavior: 'auto' })
-            scrolledMonthRef.current = viewMonthKey
-          })
-        }
+      const todayKey = homeDayKey(new Date())
+      const index = dayGroups.findIndex(
+        (g) => g.type === 'day' && format(g.days[0], 'yyyy-MM-dd') === todayKey
+      )
+      if (index !== -1) {
+        // Delaying by one frame ensures the DOM has updated its scrollHeight
+        // for the new month, avoiding scroll clamping by the browser.
+        requestAnimationFrame(() => {
+          virtualizer.scrollToIndex(index, { align: 'start', behavior: 'auto' })
+          scrolledMonthRef.current = viewMonthKey
+        })
       } else {
         requestAnimationFrame(() => {
           virtualizer.scrollToIndex(0, { align: 'start', behavior: 'auto' })
@@ -481,12 +476,7 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
   const monthKey = currentDate.slice(0, 7)
   const monthChangeMotion = useDateChangeMotion(monthKey)
 
-  const isCurrentMonthView = useMemo(() => {
-    const today = startOfDay(new Date())
-    const monthStart = startOfMonth(date)
-    const monthEnd = endOfMonth(date)
-    return today >= monthStart && today <= monthEnd
-  }, [date])
+  const isCurrentMonthView = useMemo(() => homeDayKey(new Date()).slice(0, 7) === monthKey, [monthKey])
 
   const handleEventClick = (e: React.MouseEvent, event: CalendarEvent): void => {
     if (e.button === 2) return
@@ -678,12 +668,7 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
       if (hasTime) {
         const dueMinutes = homeMinutes(originalDueDate)
         const dueTime = `${pad2(Math.floor(dueMinutes / 60))}:${pad2(dueMinutes % 60)}:00`
-        newDueDate = originalEvent.timezone
-          ? toZoneWallClock(
-              parseHomeWall(`${dayStr}T${dueTime}`).toISOString(),
-              originalEvent.timezone
-            )
-          : `${dayStr}T${dueTime}`
+        newDueDate = movedDueValue(originalEvent.dueDate, originalEvent.timezone, dayStr, dueTime)
       }
     }
 
@@ -881,14 +866,13 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
 
   useEffect(() => {
     const onJumpToToday = () => {
-      const today = startOfDay(new Date())
-      const todayKey = format(today, 'yyyy-MM-dd')
+      const todayKey = homeDayKey(new Date())
       const index = dayGroups.findIndex(
         (g) => g.type === 'day' && format(g.days[0], 'yyyy-MM-dd') === todayKey
       )
       if (index !== -1) {
         virtualizer.scrollToIndex(index, { align: 'start', behavior: 'auto' })
-        scrolledMonthRef.current = format(startOfMonth(today), 'yyyy-MM')
+        scrolledMonthRef.current = todayKey.slice(0, 7)
       }
     }
     window.addEventListener('calino:jumpToToday', onJumpToToday)
@@ -1324,7 +1308,8 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
 
                   const isPast = (() => {
                     if (fadePastDaysInAgenda === 'never') return false
-                    const isDayPast = group.days[group.days.length - 1] < startOfDay(new Date())
+                    const isDayPast =
+                      format(group.days[group.days.length - 1], 'yyyy-MM-dd') < homeDayKey(new Date())
                     if (!isDayPast) return false
                     if (fadePastDaysInAgenda === 'all') return true
                     return isCurrentMonthView

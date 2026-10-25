@@ -32,15 +32,12 @@ import {
   addMonths,
   subMonths,
   isSameDay,
-  isBefore,
-  startOfDay,
   addDays,
   differenceInCalendarDays,
 } from 'date-fns'
 import {
   pad2,
   toEventInstant,
-  toZoneWallClock,
   formatDisplayDate,
   daysBetween,
   addDays as addDayKey,
@@ -49,6 +46,7 @@ import {
   homeDayKey,
   homeMinutes,
   isHomeToday,
+  movedDueValue,
   parseHomeWall,
   useHomeTimezone,
 } from '@/lib/homeTimezone'
@@ -577,15 +575,8 @@ export function CalendarGrid(): JSX.Element {
 
       if (hasTime) {
         const dueMinutes = homeMinutes(originalDueDate)
-        const timeHours = pad2(Math.floor(dueMinutes / 60))
-        const timeMinutes = pad2(dueMinutes % 60)
-        // TZID tasks store their due time as the zone's wall clock.
-        newDueDate = originalEvent.timezone
-          ? toZoneWallClock(
-              parseHomeWall(`${dayStr}T${timeHours}:${timeMinutes}:00`).toISOString(),
-              originalEvent.timezone
-            )
-          : `${dayStr}T${timeHours}:${timeMinutes}:00`
+        const dueTime = `${pad2(Math.floor(dueMinutes / 60))}:${pad2(dueMinutes % 60)}:00`
+        newDueDate = movedDueValue(originalEvent.dueDate, originalEvent.timezone, dayStr, dueTime)
       }
     }
 
@@ -1157,9 +1148,10 @@ export function CalendarGrid(): JSX.Element {
   const autoLimitEnabled = monthLimitIsAuto && !showAgendaSplit && !isCompactMobile
   const compressedWeekCount = useMemo(() => {
     if (!compressWeekRows) return 0
-    const today = startOfDay(new Date())
+    const todayKey = homeDayKey(new Date())
     return weekNumbers.reduce(
-      (count, _weekNum, weekIdx) => (isBefore(days[weekIdx * 7 + 6], today) ? count + 1 : count),
+      (count, _weekNum, weekIdx) =>
+        format(days[weekIdx * 7 + 6], 'yyyy-MM-dd') < todayKey ? count + 1 : count,
       0
     )
   }, [compressWeekRows, weekNumbers, days])
@@ -1386,8 +1378,8 @@ export function CalendarGrid(): JSX.Element {
                   >
                     {weekNumbers.map((weekNum, weekIdx) => {
                       const weekEnd = days[weekIdx * 7 + 6]
-                      const today = startOfDay(new Date())
-                      const isPastWeek = compressPastWeeks && isBefore(weekEnd, today)
+                      const isPastWeek =
+                        compressPastWeeks && format(weekEnd, 'yyyy-MM-dd') < homeDayKey(new Date())
 
                       return (
                         <div
@@ -1595,8 +1587,8 @@ export function CalendarGrid(): JSX.Element {
             >
               {weekNumbers.map((weekNum, weekIdx) => {
                 const weekEnd = days[weekIdx * 7 + 6]
-                const today = startOfDay(new Date())
-                const isPastWeek = compressPastWeeks && isBefore(weekEnd, today)
+                const isPastWeek =
+                  compressPastWeeks && format(weekEnd, 'yyyy-MM-dd') < homeDayKey(new Date())
 
                 return (
                   <div

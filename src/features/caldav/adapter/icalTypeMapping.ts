@@ -563,11 +563,7 @@ function createIcalDateTime(isoString: string, tzid?: string): ICAL.Time {
     // naive string are stripped so .000 cannot fall through to the UTC branch.
     if (/Z$/i.test(isoString) || /[+-]\d{2}:?\d{2}$/.test(isoString)) {
       try {
-        const converted = formatInTimeZone(
-          new Date(isoString),
-          normalizeTzid(tzid),
-          "yyyy-MM-dd'T'HH:mm:ss"
-        )
+        const converted = formatInTimeZone(new Date(isoString), normalizeTzid(tzid), "yyyy-MM-dd'T'HH:mm:ss")
         // date-fns-tz v3 returns 'Invalid Date' for an unknown zone rather
         // than throwing - keep the wall clock only when it is a real time.
         if (!converted.includes('Invalid')) wall = converted
@@ -598,9 +594,7 @@ function createIcalDateTime(isoString: string, tzid?: string): ICAL.Time {
     }
   }
   // Phase 2 (C3): no TZID and a plain naive string - floating wall clock.
-  const floating = isoString.match(
-    /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?(?:\.\d+)?$/
-  )
+  const floating = isoString.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?(?:\.\d+)?$/)
   if (floating) {
     return new ICAL.Time(
       {
@@ -1045,10 +1039,9 @@ export function calendarEventToIcalComponent(
   const originalAlarms = existing
     ? existing.getAllSubcomponents('valarm').map((comp) => ({
         comp,
-        parsed: readAlarmReminder(
-          comp,
-          existing.getFirstProperty('dtstart')?.getFirstValue() as ICAL.Time | undefined
-        ),
+        parsed: readAlarmReminder(comp, existing.getFirstProperty('dtstart')?.getFirstValue() as
+          | ICAL.Time
+          | undefined),
       }))
     : []
 
@@ -1320,7 +1313,9 @@ function writeRRule(comp: ICAL.Component, event: CalendarEvent): void {
     // alongside a DATE-valued DTSTART — repair it on the way out rather than
     // writing back what we were given (see normaliseAllDayUntil).
     comp.addProperty(
-      ICAL.Property.fromString(`RRULE:${normaliseAllDayUntil(event.rruleString, event.isAllDay)}`)
+      ICAL.Property.fromString(
+        `RRULE:${normaliseAllDayUntil(event.rruleString, event.isAllDay)}`
+      )
     )
   } else if (event.recurrence) {
     // R2.1 — Propagate isAllDay so buildRRuleString emits VALUE=DATE for UNTIL.

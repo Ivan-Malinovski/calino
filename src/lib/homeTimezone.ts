@@ -1,16 +1,24 @@
-import { format } from 'date-fns'
+import { format, parseISO } from 'date-fns'
 import { useSettingsStore } from '@/store/settingsStore'
 import {
   clockPattern,
   deviceTimezone,
   formatInZone,
+  isInstantString,
   pad2,
   parseWallClock,
+  toEventInstant,
+  toZoneWallClock,
   zonedDayKey,
   zonedMidnight,
   zonedMinutes,
 } from '@/lib/datetime'
 import type { TimeFormat } from '@/types'
+
+/** The chosen zone, or null when the setting follows the browser. */
+export function homeTimezoneOverride(): string | null {
+  return useSettingsStore.getState().homeTimezone || null
+}
 
 /**
  * The zone Calino treats as the user's clock. An empty setting follows the
@@ -18,7 +26,7 @@ import type { TimeFormat } from '@/types'
  * leftover.
  */
 export function homeTimezone(): string {
-  return useSettingsStore.getState().homeTimezone || deviceTimezone()
+  return homeTimezoneOverride() || deviceTimezone()
 }
 
 /**
@@ -54,6 +62,28 @@ export function formatHome(instant: Date, pattern: string): string {
 /** Instant of a naive `yyyy-MM-ddTHH:mm[:ss]` wall clock in the home zone. */
 export function parseHomeWall(naive: string): Date {
   return parseWallClock(naive, homeTimezone())
+}
+
+/** Day a stored due belongs to. TZID naive stays in the event zone. Floating is the date in the string. */
+export function storedDayKey(iso: string, timezone?: string, isAllDay?: boolean): string {
+  if (isAllDay || !iso.includes('T')) return iso.split('T')[0]
+  if (timezone && !isInstantString(iso)) return zonedDayKey(toEventInstant(iso, timezone), timezone)
+  if (!isInstantString(iso)) return iso.split('T')[0]
+  return homeDayKey(parseISO(iso))
+}
+
+/** Due string after a drag. Keeps TZID wall-clock, `Z`, or floating shape so the next sync does not relabel it. */
+export function movedDueValue(
+  originalDue: string,
+  timezone: string | undefined,
+  dayStr: string,
+  homeTime: string
+): string {
+  const wall = `${dayStr}T${homeTime}`
+  const instant = parseHomeWall(wall).toISOString()
+  if (timezone) return toZoneWallClock(instant, timezone)
+  if (isInstantString(originalDue)) return instant
+  return wall
 }
 
 /** Midnight at the start of a `yyyy-MM-dd` day in the home zone. */

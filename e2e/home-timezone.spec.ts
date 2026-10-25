@@ -34,7 +34,7 @@ const EVENT = {
   timezone: 'Europe/London',
 }
 
-async function seedStore(page: Page): Promise<void> {
+async function seedStore(page: Page, events: unknown[] = [EVENT]): Promise<void> {
   await page.addInitScript(
     ({ calendarKey, events, calendars }) => {
       try {
@@ -48,8 +48,14 @@ async function seedStore(page: Page): Promise<void> {
         /* noop */
       }
     },
-    { calendarKey: 'calino-storage', calendars: [CALENDAR], events: [EVENT] }
+    { calendarKey: 'calino-storage', calendars: [CALENDAR], events }
   )
+}
+
+function column(page: Page, day: string) {
+  return page.locator('[data-component="week-grid"] > div').filter({
+    has: page.locator(`[data-date="${day}"]`),
+  })
 }
 
 async function seedHome(page: Page, homeTimezone: string | null): Promise<void> {
@@ -129,5 +135,81 @@ test.describe('home timezone', () => {
     })
     expect(stored.start).toBe('2026-07-08T11:00:00')
     expect(stored.timezone).toBe('Europe/London')
+  })
+
+  test('a floating event and an all-day event stay on the home wall clock', async ({ page }) => {
+    await seedStore(page, [
+      {
+        id: 'float',
+        uid: 'float',
+        type: 'event',
+        calendarId: 'home-tz',
+        title: 'Floating standup',
+        start: '2026-07-08T09:00:00',
+        end: '2026-07-08T10:00:00',
+        isAllDay: false,
+      },
+      {
+        id: 'all-day',
+        uid: 'all-day',
+        type: 'event',
+        calendarId: 'home-tz',
+        title: 'Bank holiday',
+        start: '2026-07-08T00:00:00',
+        end: '2026-07-08T23:59:59',
+        isAllDay: true,
+      },
+    ])
+    await seedHome(page, 'Pacific/Auckland')
+    await page.goto('/week')
+
+    const floating = page
+      .locator('[data-component="event-card"]', { hasText: 'Floating standup' })
+      .first()
+    await expect(floating).toBeVisible({ timeout: 10_000 })
+    await expect(floating).toContainText('09:00')
+    await expect(floating).not.toContainText('21:00')
+    await expect(floating).not.toContainText('22:00')
+
+    const holiday = page.locator('[data-component="week-day-header"][data-date="2026-07-08"]', {
+      hasText: 'Bank holiday',
+    })
+    await expect(holiday).toBeVisible()
+    await expect(
+      page.locator('[data-component="week-day-header"][data-date="2026-07-07"]', {
+        hasText: 'Bank holiday',
+      })
+    ).toHaveCount(0)
+  })
+
+  test('a naive timed task stays on its due day from a zone ahead of the browser', async ({
+    page,
+  }) => {
+    await seedStore(page, [
+      {
+        id: 'invoice',
+        uid: 'invoice',
+        type: 'task',
+        calendarId: 'home-tz',
+        title: 'Call Auckland',
+        start: '2026-07-08T15:00:00',
+        end: '2026-07-08T15:00:00',
+        dueDate: '2026-07-08T15:00:00',
+        isAllDay: false,
+        completed: false,
+      },
+    ])
+    await seedHome(page, 'Pacific/Auckland')
+    await page.goto('/week')
+
+    const day = column(page, '2026-07-08')
+    const task = day.locator('[data-component="event-card"]', { hasText: 'Call Auckland' })
+    await expect(task).toBeVisible({ timeout: 10_000 })
+    await expect(task).toHaveAttribute('aria-label', /due 15:00/)
+    await expect(
+      column(page, '2026-07-09').locator('[data-component="event-card"]', {
+        hasText: 'Call Auckland',
+      })
+    ).toHaveCount(0)
   })
 })

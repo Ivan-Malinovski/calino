@@ -30,7 +30,6 @@ import { pad2, toLocalDateString, toEventInstant, formatDisplayDate } from '@/li
 import {
   homeDayKey,
   homeMinutes,
-  homeTimezone,
   instantFromHomeMinutes,
   isHomeToday,
   parseHomeWall,
@@ -245,7 +244,7 @@ const DayHeader = React.memo(function DayHeader({
 
 export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Element {
   const { t } = useTranslation('calendar')
-  useHomeTimezone()
+  const homeTz = useHomeTimezone()
   const currentDate = useCalendarStore((state) => state.currentDate)
   const events = useCalendarStore((state) => state.events)
   const calendars = useCalendarStore((state) => state.calendars)
@@ -662,7 +661,7 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
   const date = useMemo(() => parseISO(currentDate), [currentDate])
   const displayDate = dayCount === 7 ? visibleWindowDate : date
 
-  const localTzAbbr = useMemo(() => getTimezoneAbbr(displayDate, homeTimezone()), [displayDate])
+  const localTzAbbr = useMemo(() => getTimezoneAbbr(displayDate, homeTz), [displayDate, homeTz])
   const secondaryTzAbbr = useMemo(
     () =>
       secondaryTimezoneLabel ||
@@ -705,7 +704,7 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
     for (const event of weekEvents) {
       if (event.type !== 'task' && event.type !== 'journal' && event.isAllDay) {
         makeDayFragments(event, allDayLaneOf.get(event.id)).forEach((fragment) => {
-          const dayKey = format(toEventInstant(fragment.start, fragment.timezone), 'yyyy-MM-dd')
+          const dayKey = fragment.start.slice(0, 10)
           allDay.set(dayKey, [...(allDay.get(dayKey) || []), fragment])
         })
       } else if (event.type !== 'task' && !event.isAllDay) {

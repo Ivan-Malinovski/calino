@@ -53,7 +53,6 @@ import { formatTime, pad2, toLocalDateString, toEventInstant } from '@/lib/datet
 import {
   homeDayKey,
   homeMinutes,
-  homeTimezone,
   instantFromHomeMinutes,
   isHomeToday,
   parseHomeWall,
@@ -166,7 +165,7 @@ export function DayView({
   onBack,
 }: { selectedDate?: string; onBack?: () => void } = {}): JSX.Element {
   const { t } = useTranslation('calendar')
-  useHomeTimezone()
+  const homeTz = useHomeTimezone()
   const storeDate = useCalendarStore((state) => state.currentDate)
   const currentDate = propDate || storeDate
   const events = useCalendarStore((state) => state.events)
@@ -345,7 +344,7 @@ export function DayView({
   }, [])
 
   const date = useMemo(() => parseISO(currentDate), [currentDate])
-  const localTzAbbr = useMemo(() => getTimezoneAbbr(date, homeTimezone()), [date])
+  const localTzAbbr = useMemo(() => getTimezoneAbbr(date, homeTz), [date, homeTz])
   const secondaryTzAbbr = useMemo(
     () =>
       secondaryTimezoneLabel || (secondaryTimezone ? getTimezoneAbbr(date, secondaryTimezone) : ''),

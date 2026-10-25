@@ -1,6 +1,6 @@
-import { parseISO, startOfDay } from 'date-fns'
-import { toEventInstant } from '@/lib/datetime'
+import { daysBetween, toEventInstant } from '@/lib/datetime'
 import { hasDueTime } from '@/lib/events'
+import { homeDayKey, storedDayKey } from '@/lib/homeTimezone'
 import type { CalendarEvent } from '@/types'
 
 export type TaskGroupKey = 'overdue' | 'today' | 'week' | 'later' | 'nodate'
@@ -18,10 +18,10 @@ export function getTaskGroup(
 ): TaskGroupKey {
   if (!task.dueDate) return 'nodate'
 
-  const today = startOfDay(now)
-  const dueDate = startOfDay(parseISO(task.dueDate))
-  const diffMs = dueDate.getTime() - today.getTime()
-  const diffDays = Math.round(diffMs / 86400000)
+  const diffDays = daysBetween(
+    homeDayKey(now),
+    storedDayKey(task.dueDate, task.timezone, task.isAllDay)
+  )
 
   if (diffDays < 0) return 'overdue'
   if (

@@ -35,13 +35,10 @@ function dayKeysBetween(startKey: string, endKey: string): string[] {
 }
 
 function eventDayKeys(event: CalendarEvent): { startKey: string; endKey: string; days: string[] } {
-  // All-day values are dates, not instants. Keep the local date key the views
-  // already used so a home-zone override cannot slide them onto another day.
+  // Date in the string. toEventInstant would slide a naive midnight west.
   if (event.isAllDay) {
-    const start = toEventInstant(event.start, event.timezone)
-    const end = eventLastDay(event)
-    const startKey = format(start, 'yyyy-MM-dd')
-    const endKey = format(end, 'yyyy-MM-dd')
+    const startKey = event.start.slice(0, 10)
+    const endKey = event.end.slice(0, 10)
     return { startKey, endKey, days: dayKeysBetween(startKey, endKey) }
   }
   const start = toEventInstant(event.start, event.timezone)

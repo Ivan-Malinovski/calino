@@ -11,7 +11,7 @@ import type { Locale } from 'date-fns'
 import type { DateFormat } from '@/types'
 import { fromZonedTime, formatInTimeZone } from 'date-fns-tz'
 import { normalizeTzid } from '@/lib/timezoneRegistry'
-import { homeTimezone } from '@/lib/homeTimezone'
+import { homeTimezone, homeTimezoneOverride } from '@/lib/homeTimezone'
 import { currentLanguage } from '@/lib/i18n'
 import type { TimeFormat } from '@/types'
 
@@ -143,10 +143,9 @@ export function formatDateLong(date: Date | string, timeFormat: TimeFormat = '24
  *
  * TZID events store naive wall clocks in the event zone (event.timezone), so
  * they must be read through date-fns-tz in that zone; a trailing Z is a
- * genuine instant; floating strings are device-local. Falls back to a
- * device-local parse when the zone cannot be resolved, which keeps locally-
- * created events (which never carry a timezone) and unknown TZIDs behaving
- * as before.
+ * genuine instant. A floating string is a wall clock in the home zone when
+ * that setting is set, and a device-local parse when it is empty. Falls back
+ * to a device-local parse when the zone cannot be resolved.
  */
 /**
  * The browser's IANA zone, with a UTC fallback when Intl cannot resolve one.
@@ -199,9 +198,23 @@ export function parseWallClock(naive: string, zone: string): Date {
   return parseISO(normalized)
 }
 
-/** Midnight at the start of a `yyyy-MM-dd` day in `zone`, as a real instant. */
+/** True when the string names a genuine instant rather than a naive wall clock. */
+export function isInstantString(iso: string): boolean {
+  return /Z$/i.test(iso) || /[+-]\d{2}:?\d{2}$/.test(iso)
+}
+
+/** Midnight at the start of `dayKey` in `zone`. Probes forward if 00:00 is skipped. */
 export function zonedMidnight(dayKey: string, zone: string): Date {
-  return parseWallClock(`${dayKey}T00:00:00`, zone)
+  const instant = parseWallClock(`${dayKey}T00:00:00`, zone)
+  if (zonedDayKey(instant, zone) === dayKey) return instant
+  for (let minutes = 1; minutes <= 180; minutes++) {
+    const probe = parseWallClock(
+      `${dayKey}T${pad2(Math.floor(minutes / 60))}:${pad2(minutes % 60)}:00`,
+      zone
+    )
+    if (zonedDayKey(probe, zone) === dayKey) return probe
+  }
+  return instant
 }
 
 export function toEventInstant(iso: string, timezone?: string): Date {
@@ -214,6 +227,9 @@ export function toEventInstant(iso: string, timezone?: string): Date {
       // Unknown zone name - fall through to the device-local interpretation.
     }
   }
+  // Empty home stays on parseISO, including inside a DST gap.
+  const override = !timezone && !isInstantString(iso) ? homeTimezoneOverride() : null
+  if (override) return parseWallClock(iso, override)
   return parseISO(iso)
 }
 

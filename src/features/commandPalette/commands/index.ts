@@ -315,8 +315,7 @@ const createActionCommands = (deps: CommandFactoryDeps): Command[] => [
   },
   {
     id: 'toggle-dark-mode',
-    label:
-      deps.themeMode === 'dark' ? t('actions.switchToLightMode') : t('actions.switchToDarkMode'),
+    label: deps.themeMode === 'dark' ? t('actions.switchToLightMode') : t('actions.switchToDarkMode'),
     category: 'actions',
     keywords: ['dark mode', 'light mode', 'theme', 'toggle', 'appearance'],
     icon: deps.themeMode === 'dark' ? ICONS.sun : ICONS.moon,
@@ -357,7 +356,8 @@ const createActionCommands = (deps: CommandFactoryDeps): Command[] => [
   },
   {
     id: 'toggle-time-format',
-    label: deps.timeFormat === '24h' ? t('actions.switchTo12Hour') : t('actions.switchTo24Hour'),
+    label:
+      deps.timeFormat === '24h' ? t('actions.switchTo12Hour') : t('actions.switchTo24Hour'),
     category: 'actions',
     keywords: ['time format', '12h', '24h', 'clock', 'toggle'],
     icon: ICONS.clock,
