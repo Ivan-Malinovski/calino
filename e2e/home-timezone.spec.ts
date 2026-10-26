@@ -240,4 +240,20 @@ test.describe('home timezone', () => {
     await options.filter({ hasText: 'Automatic' }).click()
     await expect(page.locator('[data-setting="home-timezone"]')).toHaveAttribute('data-value', '')
   })
+
+  test('week and day views label the home zone only while one is chosen', async ({ page }) => {
+    await seedStore(page)
+    await page.goto('/week')
+    await expect(card(page)).toBeVisible({ timeout: 10_000 })
+    await expect(page.locator('[data-component="home-zone-label"]')).toHaveCount(0)
+
+    await seedHome(page, 'Asia/Shanghai')
+    await page.goto('/week')
+    const label = page.locator('[data-component="home-zone-label"]')
+    await expect(label).toHaveText('GMT+8')
+    await expect(label).toHaveAttribute('title', 'Times shown in Asia/Shanghai')
+
+    await page.goto('/day')
+    await expect(label).toHaveText('GMT+8')
+  })
 })

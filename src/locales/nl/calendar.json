@@ -43,6 +43,9 @@
       "weekTasksAriaLabel": "Taken voor week {{number}}",
       "weekTasksEmpty": "Nog niets gepland voor deze week"
     },
+    "homeTimezone": {
+      "title": "Tijden getoond in {{zone}}"
+    },
     "day": {
       "backToAgenda": "Terug naar agenda"
     },

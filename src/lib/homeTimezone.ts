@@ -57,6 +57,11 @@ export function useHomeTimezone(): string {
   return usableZone(override) || deviceTimezone()
 }
 
+/** The chosen zone, or null while the setting follows the browser. Re-renders on change. */
+export function useHomeTimezoneOverride(): string | null {
+  return usableZone(useSettingsStore((state) => state.homeTimezone))
+}
+
 export function homeDayKey(instant: Date): string {
   return zonedDayKey(instant, homeTimezone())
 }

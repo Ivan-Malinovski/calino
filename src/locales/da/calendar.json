@@ -43,6 +43,9 @@
       "weekTasksAriaLabel": "Opgaver for uge {{number}}",
       "weekTasksEmpty": "Intet planlagt for denne uge endnu"
     },
+    "homeTimezone": {
+      "title": "Tider vist i {{zone}}"
+    },
     "day": {
       "backToAgenda": "Tilbage til dagsorden"
     },

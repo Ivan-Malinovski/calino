@@ -75,6 +75,7 @@ import { assignSpanLanes, compareDayEvents, makeDayFragments } from '../lib/mult
 import { filterTasksByCollapsedAncestors } from '@/lib/taskTree'
 import { useTaskCollapse } from '../hooks/useTaskCollapse'
 import { useTranslation } from 'react-i18next'
+import { HomeZoneLabel } from './HomeZoneLabel'
 import i18n from '@/lib/i18n'
 import { setWeekWindowStart, useWeekWindowStart } from '../weekWindow'
 
@@ -1210,7 +1211,10 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
                 <span>{secondaryTzAbbr}</span>
               </div>
             ) : (
-              `W${weekNumber}`
+              <div className={styles.weekNumberStack}>
+                <span>{`W${weekNumber}`}</span>
+                <HomeZoneLabel date={displayDate} className={styles.homeZoneLabel} />
+              </div>
             )}
           </div>
           <div className={styles.headerDays}>
@@ -1422,10 +1426,11 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
                 <span>{localTzAbbr}</span>
                 <span>{secondaryTzAbbr}</span>
               </div>
-            ) : dayCount === 7 ? (
-              `W${weekNumber}`
             ) : (
-              ''
+              <div className={styles.weekNumberStack}>
+                {dayCount === 7 && <span>{`W${weekNumber}`}</span>}
+                <HomeZoneLabel date={displayDate} className={styles.homeZoneLabel} />
+              </div>
             )}
           </div>
           <div className={styles.headerDays}>

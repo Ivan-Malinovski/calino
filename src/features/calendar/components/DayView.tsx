@@ -20,6 +20,7 @@ import {
 import { format, parseISO, addDays, addMinutes } from 'date-fns'
 import { useCalendarStore, getTasksForDay } from '@/store/calendarStore'
 import { useTranslation } from 'react-i18next'
+import { HomeZoneLabel } from './HomeZoneLabel'
 import i18n from '@/lib/i18n'
 import { formatDisplayDate } from '@/lib/datetime'
 import { filterTasksByCollapsedAncestors } from '@/lib/taskTree'
@@ -57,6 +58,7 @@ import {
   isHomeToday,
   parseHomeWall,
   useHomeTimezone,
+  useHomeTimezoneOverride,
 } from '@/lib/homeTimezone'
 import { HOURS } from '@/lib/hours'
 import { getTimezoneAbbr, getSecondaryHourLabel } from '@/lib/timezoneHelper'
@@ -166,6 +168,7 @@ export function DayView({
 }: { selectedDate?: string; onBack?: () => void } = {}): JSX.Element {
   const { t } = useTranslation('calendar')
   const homeTz = useHomeTimezone()
+  const hasHomeOverride = useHomeTimezoneOverride() !== null
   const storeDate = useCalendarStore((state) => state.currentDate)
   const currentDate = propDate || storeDate
   const events = useCalendarStore((state) => state.events)
@@ -871,14 +874,18 @@ export function DayView({
           ref={setAllDayDropRef}
           className={`${styles.header} ${isScrolled ? styles.headerShadow : ''} ${allDayEvents.length > 0 ? styles.hasAllDayEvents : ''} ${isAllDayDropOver && activeEvent && !activeEvent.isAllDay ? styles.headerDropActive : ''}`}
         >
-          {isDualTz && (
+          {isDualTz ? (
             <div className={styles.headerGutter}>
               <div className={styles.timeZoneHeaders}>
                 <span className={styles.primaryTzHeader}>{localTzAbbr}</span>
                 <span className={styles.secondaryTzHeader}>{secondaryTzAbbr}</span>
               </div>
             </div>
-          )}
+          ) : hasHomeOverride ? (
+            <div className={styles.headerGutter}>
+              <HomeZoneLabel date={date} className={styles.homeZoneLabel} />
+            </div>
+          ) : null}
           {onBack && (
             <button
               className={styles.backButton}

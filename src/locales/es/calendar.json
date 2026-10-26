@@ -43,6 +43,9 @@
       "weekTasksAriaLabel": "Tareas de la semana {{number}}",
       "weekTasksEmpty": "Aún no hay nada previsto para esta semana"
     },
+    "homeTimezone": {
+      "title": "Horas mostradas en {{zone}}"
+    },
     "day": {
       "backToAgenda": "Volver a la agenda"
     },
