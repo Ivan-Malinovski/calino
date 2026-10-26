@@ -88,6 +88,13 @@ const MORE_ROW_HEIGHT = 19
 /** `.compressedWeek > .day { min-height }` — the shortest a past week gets. */
 export const PAST_WEEK_MIN_HEIGHT = 50
 
+/**
+ * How much taller than its old share a week still to come may grow before the
+ * past weeks are given the surplus instead. Without a limit a quiet month is
+ * a row of slivers over one enormous current week.
+ */
+const FULL_ROW_GROWTH = 1.25
+
 /** Spare pixels under a past week's content, so a fractional border can't clip it. */
 const PAST_WEEK_SLACK = 2
 
@@ -160,6 +167,26 @@ export function pastWeekRowHeight(
     0
   )
   return Math.max(PAST_WEEK_MIN_HEIGHT, CELL_CHROME + busiest + PAST_WEEK_SLACK)
+}
+
+/**
+ * Raises the shortest of `heights` towards `cap` until `spare` pixels are
+ * used, so the rows end up level rather than one swelling. Stops early once
+ * every row has reached `cap`.
+ */
+export function levelHeights(heights: number[], cap: number, spare: number): number[] {
+  const used = (level: number): number =>
+    heights.reduce((sum, height) => sum + Math.min(cap, Math.max(height, level)) - height, 0)
+  if (spare <= 0 || heights.length === 0) return heights
+  if (used(cap) <= spare) return heights.map((height) => Math.max(height, cap))
+  let low = Math.min(...heights)
+  let high = cap
+  for (let i = 0; i < 30; i++) {
+    const mid = (low + high) / 2
+    if (used(mid) > spare) high = mid
+    else low = mid
+  }
+  return heights.map((height) => Math.max(height, low))
 }
 
 /**
@@ -273,14 +300,26 @@ export function useMonthEventCapacity({
       let fullRowHeight = fullHeight
       let pastWeeks: MonthEventCapacity['pastWeeks'] = []
       if (pastWeekDemand && pastWeekDemand.length === compressed && compressed < weekCount) {
-        const heights = pastWeekDemand.map((week) =>
+        const futureWeeks = weekCount - compressed
+        const sum = (rows: number[]): number => rows.reduce((total, height) => total + height, 0)
+        let heights = pastWeekDemand.map((week) =>
           Math.max(
             PAST_WEEK_MIN_HEIGHT,
             Math.min(compressedHeight, pastWeekRowHeight(week, itemHeights))
           )
         )
-        const spent = heights.reduce((sum, height) => sum + height, 0)
-        fullRowHeight = Math.max((available - spent) / (weekCount - compressed), rowHeightFloor)
+        fullRowHeight = Math.max((available - sum(heights)) / futureWeeks, rowHeightFloor)
+        // Past what a week to come should grow to, the surplus goes back to
+        // the past weeks, shortest first.
+        const mostFull = Math.max(fullHeight * FULL_ROW_GROWTH, rowHeightFloor)
+        if (fullRowHeight > mostFull) {
+          heights = levelHeights(
+            heights,
+            compressedHeight,
+            (fullRowHeight - mostFull) * futureWeeks
+          )
+          fullRowHeight = Math.max((available - sum(heights)) / futureWeeks, rowHeightFloor)
+        }
         pastWeeks = heights.map((height) => ({
           height,
           capacity: { contentHeight: content(height), itemHeights },

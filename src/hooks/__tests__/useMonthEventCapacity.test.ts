@@ -4,6 +4,7 @@ import {
   useMonthEventCapacity,
   fitMonthCell,
   pastWeekRowHeight,
+  levelHeights,
   ITEM_HEIGHT,
   type MonthDayDemand,
 } from '../useMonthEventCapacity'
@@ -165,6 +166,20 @@ describe('useMonthEventCapacity', () => {
       expect(result.current!.pastWeeks).toEqual([])
     })
 
+    it('gives a quiet month back to its past weeks rather than one huge current week', () => {
+      const { result } = measured(makeGrid(900, 30), {
+        weekCount: 5,
+        compressedWeekCount: 4,
+        pastWeekDemand: [week(empty), week(empty), week(empty), week(empty)],
+      })
+      const { pastWeeks, full } = result.current!
+      // 870px over 1 full + 4 half rows → 290px full, 145px half.
+      // The week to come may grow to 1.25 × 290; the past weeks share the rest.
+      expect(full.contentHeight).toBe(Math.floor(290 * 1.25) - 45)
+      expect(pastWeeks.map((w) => w.height).every((h) => h > 50 && h <= 145)).toBe(true)
+      expect(new Set(pastWeeks.map((w) => w.height)).size).toBe(1)
+    })
+
     it('sizes by the busiest day, counting tasks and their gap', () => {
       const heights = ITEM_HEIGHT
       const busy: MonthDayDemand = { events: ['compactEvent', 'compactEvent'], tasks: ['task'] }
@@ -241,5 +256,27 @@ describe('fitMonthCell', () => {
 
   it('claims no task row on a day with no tasks', () => {
     expect(fitMonthCell(150, Array(5).fill(full), []).taskLimit).toBe(0)
+  })
+})
+
+describe('levelHeights', () => {
+  it('raises the shortest rows first', () => {
+    const [a, b] = levelHeights([50, 100], 200, 50)
+    expect(a).toBeCloseTo(100)
+    expect(b).toBeCloseTo(100)
+  })
+
+  it('spreads what is left over evenly once the rows are level', () => {
+    const [a, b] = levelHeights([50, 100], 200, 100)
+    expect(a).toBeCloseTo(125)
+    expect(b).toBeCloseTo(125)
+  })
+
+  it('stops at the cap', () => {
+    expect(levelHeights([50, 100], 120, 1000)).toEqual([120, 120])
+  })
+
+  it('leaves rows alone with nothing to spend', () => {
+    expect(levelHeights([50, 100], 200, 0)).toEqual([50, 100])
   })
 })

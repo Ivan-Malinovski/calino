@@ -61,17 +61,17 @@ const rowHeight = (row: Locator): Promise<number> =>
 test.describe('month view — past weeks size to their content', () => {
   test.use({ viewport: { width: 1280, height: 800 } })
 
-  // Past weeks: 28 Sep (1 event on the 1st), 5 Oct (empty), 12 Oct (7 events on
-  // the 14th), 19 Oct (2 events). Then the current week from 26 Oct.
+  // Past weeks: 28 Sep (one event on the 1st), then three busy ones with seven
+  // events on a day each. The current week starts on the 26th.
   const events: SeedEvent[] = [
     { id: 'pw-a', title: 'Quiet one', date: '2026-10-01' },
-    ...Array.from({ length: 7 }, (_unused, i) => ({
-      id: `pw-busy-${i}`,
-      title: `Busy ${i}`,
-      date: '2026-10-14',
-    })),
-    { id: 'pw-c1', title: 'Late one', date: '2026-10-20' },
-    { id: 'pw-c2', title: 'Late two', date: '2026-10-20' },
+    ...['2026-10-07', '2026-10-14', '2026-10-21'].flatMap((date) =>
+      Array.from({ length: 7 }, (_unused, i) => ({
+        id: `pw-busy-${date}-${i}`,
+        title: `Busy ${i}`,
+        date,
+      }))
+    ),
   ]
 
   test('a quiet past week is shorter than a busy one and hides nothing', async ({ page }) => {
@@ -81,26 +81,35 @@ test.describe('month view — past weeks size to their content', () => {
     const grid = page.locator('[data-component="calendar-grid"]')
     await expect(grid.locator('[data-date="2026-10-14"]')).toBeVisible()
     const rows = grid.locator('[class*="weekRow"]')
-
     const quiet = rows.nth(0)
-    const empty = rows.nth(1)
-    const busy = rows.nth(2)
-    const current = rows.nth(4)
 
     // Everything in the quiet week is drawn, with no roll-up line.
     await expect(quiet.getByText('Quiet one')).toBeVisible()
     await expect(quiet.locator('[class*="moreEvents"]')).toHaveCount(0)
 
-    const [quietH, emptyH, busyH, currentH] = await Promise.all(
-      [quiet, empty, busy, current].map(rowHeight)
+    const [quietH, busyH, currentH] = await Promise.all(
+      [rows.nth(0), rows.nth(2), rows.nth(4)].map(rowHeight)
     )
-    // The quiet week is just its day number and one pill; an empty one is
-    // shorter still; a busy week is capped but taller than either.
+    // The quiet week is just its day number and one pill; a busy one is held
+    // at the compressed share but taller than that.
     expect(quietH).toBeLessThan(80)
-    expect(emptyH).toBeLessThanOrEqual(quietH)
     expect(busyH).toBeGreaterThan(quietH + 20)
-    // What the quiet weeks give up goes to the current week.
-    expect(currentH).toBeGreaterThan(busyH * 2)
+    // What the quiet week gives up goes to the current week.
+    expect(currentH).toBeGreaterThan(busyH)
+  })
+
+  test('an empty month keeps its rows in proportion', async ({ page }) => {
+    await seedMonth(page, [])
+    await page.goto('/month')
+
+    const grid = page.locator('[data-component="calendar-grid"]')
+    await expect(grid.locator('[data-date="2026-10-14"]')).toBeVisible()
+    const rows = grid.locator('[class*="weekRow"]')
+    const [pastH, currentH] = await Promise.all([rows.nth(1), rows.nth(4)].map(rowHeight))
+    // Past weeks share the spare room instead of collapsing to slivers under
+    // one enormous current week.
+    expect(currentH).toBeLessThan(pastH * 4)
+    expect(currentH).toBeGreaterThan(pastH)
   })
 
   test('the month still fits the window', async ({ page }) => {
@@ -121,12 +130,12 @@ test.describe('month view — past weeks size to their content', () => {
   })
 
   test('a week that gains events grows back', async ({ page }) => {
-    await seedMonth(page, [{ id: 'pw-solo', title: 'Solo', date: '2026-10-01' }])
+    await seedMonth(page, events)
     await page.goto('/month')
 
     const grid = page.locator('[data-component="calendar-grid"]')
     const quiet = grid.locator('[class*="weekRow"]').nth(0)
-    await expect(quiet.getByText('Solo')).toBeVisible()
+    await expect(quiet.getByText('Quiet one')).toBeVisible()
     const before = await rowHeight(quiet)
 
     // Same day, one more event: the week now needs two pill rows.
@@ -135,7 +144,7 @@ test.describe('month view — past weeks size to their content', () => {
       const parsed = JSON.parse(raw ?? '{}')
       parsed.state.events.push(
         ...[1].map((n) => ({
-          ...parsed.state.events[0],
+          ...parsed.state.events.find((e: { id: string }) => e.id === 'pw-a'),
           id: `pw-extra-${n}`,
           title: `Extra ${n}`,
         }))
