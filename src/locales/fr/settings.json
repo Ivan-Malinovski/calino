@@ -21,6 +21,12 @@
   "saved": "Enregistré",
   "general": {
     "title": "Général",
+    "homeTimezone": {
+      "label": "Fuseau horaire principal",
+      "desc": "Les événements sont affichés et créés dans ce fuseau. Automatique suit le navigateur.",
+      "ariaLabel": "Fuseau horaire principal",
+      "automatic": "Automatique (navigateur)"
+    },
     "dateFormat": {
       "label": "Format de date",
       "desc": "Format d’affichage des dates dans l’application",

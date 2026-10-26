@@ -160,6 +160,7 @@ export function normalizeAdjustableTheme(
 const DEFAULT_SETTINGS: UserSettings = {
   language: getBrowserLanguage(),
   timezone: getBrowserTimezone(),
+  homeTimezone: null,
   secondaryTimezoneEnabled: false,
   secondaryTimezone: null,
   secondaryTimezoneLabel: null,

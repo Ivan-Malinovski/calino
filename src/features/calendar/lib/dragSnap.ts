@@ -1,5 +1,6 @@
 import type { Active, Over } from '@dnd-kit/core'
 import { toEventInstant } from '@/lib/datetime'
+import { homeMinutes } from '@/lib/homeTimezone'
 
 export const MINUTE_SNAP_INTERVAL = 15
 
@@ -50,16 +51,15 @@ export function snapMinuteOfDay(startMinutes: number, deltaY: number, hourHeight
 }
 
 /**
- * Minute-of-day a timed event's start drags from, resolved to the device
- * frame. TZID events store naive wall clocks in the event zone, so the start
- * must go through toEventInstant: a Copenhagen 10:00 event viewed in New York
- * drags from 04:00 (240), not 10:00 (600). The drop preview and drop handlers
- * snap in the device frame, so the metadata they read must be too. All-day
- * events have no time of day — callers keep the all-day guard.
+ * Minute-of-day a timed event's start drags from, in the home zone. TZID
+ * events store naive wall clocks in the event zone, so the start must go
+ * through toEventInstant: a Copenhagen 10:00 event viewed from London drags
+ * from 09:00, not 10:00. The drop preview and drop handlers snap in the home
+ * zone, so the metadata they read must be too. All-day events have no time
+ * of day — callers keep the all-day guard.
  */
 export function timedDragStartMinutes(start: string, timezone?: string): number {
-  const startInstant = toEventInstant(start, timezone)
-  return startInstant.getHours() * 60 + startInstant.getMinutes()
+  return homeMinutes(toEventInstant(start, timezone))
 }
 
 /**

@@ -3,6 +3,7 @@ import type { Calendar, CalendarEvent } from '@/types'
 import { buildRRuleString } from './recurrence'
 import i18n from './i18n'
 import { getEffectiveReminders } from './notifications'
+import { homeTimezone } from './homeTimezone'
 
 /**
  * One-way, read-only export of Calino's events into Android's calendar
@@ -216,7 +217,7 @@ export function buildMirrorPayload(
 
   const windowStart = now.getTime() - MIRROR_PAST_DAYS * DAY_MS
   const windowEnd = now.getTime() + MIRROR_FUTURE_DAYS * DAY_MS
-  const deviceTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone
+  const deviceTimezone = homeTimezone()
 
   // RECURRENCE-IDs of detached occurrences, grouped by the master they detach
   // from, so masters can exclude those slots.

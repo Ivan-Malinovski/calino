@@ -5,7 +5,8 @@ import { addDays, addWeeks, addMonths, subWeeks, subMonths, format } from 'date-
 import type { ThemeMode } from '@/types'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useHistoryStore } from '@/store/historyStore'
-import { toLocalDateString, formatDisplayDate } from '@/lib/datetime'
+import { formatDisplayDate } from '@/lib/datetime'
+import { homeDayKey } from '@/lib/homeTimezone'
 import i18n from '@/lib/i18n'
 
 const t = (key: string, opts?: Record<string, unknown>): string => i18n.t(`commands:${key}`, opts)
@@ -486,7 +487,7 @@ const createSettingsCommands = (deps: CommandFactoryDeps): Command[] => [
     keywords: ['journal', 'notes', 'diary', 'new', 'create', 'add'],
     icon: ICONS.plus,
     action: () => {
-      const today = toLocalDateString(new Date())
+      const today = homeDayKey(new Date())
       deps.openJournalModal(today, true)
     },
   },

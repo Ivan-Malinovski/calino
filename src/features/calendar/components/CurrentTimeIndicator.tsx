@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { formatTime } from '@/lib/datetime'
+import { formatHomeClock, homeMinutes } from '@/lib/homeTimezone'
 import type { TimeFormat } from '@/types'
 import styles from './CurrentTimeIndicator.module.css'
 
@@ -30,12 +30,12 @@ export function CurrentTimeIndicator({
     return () => clearInterval(interval)
   }, [])
 
-  const minutesSinceMidnight = now.getHours() * 60 + now.getMinutes()
+  const minutesSinceMidnight = homeMinutes(now)
   const top = (minutesSinceMidnight / 60) * hourHeight
 
   return (
     <div className={`${styles.container} ${className ?? ''}`} style={{ top: `${top}px` }}>
-      {showLabel && <div className={styles.label}>{formatTime(now, timeFormat)}</div>}
+      {showLabel && <div className={styles.label}>{formatHomeClock(now, timeFormat)}</div>}
       <div className={styles.line} />
     </div>
   )

@@ -1,5 +1,7 @@
-import { format, addMinutes, addDays, isSameDay, parseISO } from 'date-fns'
-import { toEventInstant, formatTime } from '@/lib/datetime'
+import { addMinutes, parseISO } from 'date-fns'
+import { toEventInstant } from '@/lib/datetime'
+import { formatHomeClock, homeDayKey, homeTimezone } from '@/lib/homeTimezone'
+import { addDays as addDayKey } from '@/lib/datetime'
 import { useSettingsStore } from '@/store/settingsStore'
 import i18n, { currentLanguage } from '@/lib/i18n'
 import type { Calendar, CalendarEvent, Reminder } from '@/types'
@@ -53,14 +55,21 @@ export function getEffectiveReminders(event: CalendarEvent, calendar?: Calendar)
  * start, so this is phrased as "Due ..." and reads `dueDate` rather than `start`.
  */
 function taskReminderBody(due: Date, timed: boolean, referenceTime: Date): string {
-  const tomorrow = isSameDay(due, addDays(referenceTime, 1))
-  const today = isSameDay(due, referenceTime)
-  const date = new Intl.DateTimeFormat(currentLanguage(), { dateStyle: 'medium' }).format(due)
+  const dueKey = homeDayKey(due)
+  const todayKey = homeDayKey(referenceTime)
+  const tomorrow = dueKey === addDayKey(todayKey, 1)
+  const today = dueKey === todayKey
+  const date = new Intl.DateTimeFormat(currentLanguage(), {
+    dateStyle: 'medium',
+    timeZone: homeTimezone(),
+  }).format(due)
   if (!timed) {
     if (today) return i18n.t('errors:reminder.dueToday')
-    return tomorrow ? i18n.t('errors:reminder.dueTomorrow') : i18n.t('errors:reminder.dueOn', { date })
+    return tomorrow
+      ? i18n.t('errors:reminder.dueTomorrow')
+      : i18n.t('errors:reminder.dueOn', { date })
   }
-  const time = formatTime(due, useSettingsStore.getState().timeFormat)
+  const time = formatHomeClock(due, useSettingsStore.getState().timeFormat)
   if (today) return i18n.t('errors:reminder.dueAt', { time })
   return tomorrow
     ? i18n.t('errors:reminder.dueTomorrowAt', { time })
@@ -70,14 +79,22 @@ function taskReminderBody(due: Date, timed: boolean, referenceTime: Date): strin
 /** Include the event's day even when the reminder fires on an earlier day. */
 export function reminderBody(event: CalendarEvent, referenceTime = new Date()): string {
   const taskDue = event.type === 'task' ? taskDueInstant(event) : null
-  if (taskDue) return taskReminderBody(taskDue, hasDueTime({ dueDate: event.dueDate }), referenceTime)
+  if (taskDue)
+    return taskReminderBody(taskDue, hasDueTime({ dueDate: event.dueDate }), referenceTime)
   const start = event.isAllDay ? parseISO(event.start) : toEventInstant(event.start, event.timezone)
-  const tomorrow = isSameDay(start, addDays(referenceTime, 1))
-  const date = new Intl.DateTimeFormat(currentLanguage(), { dateStyle: 'medium' }).format(start)
+  const startKey = event.isAllDay ? event.start.slice(0, 10) : homeDayKey(start)
+  const todayKey = homeDayKey(referenceTime)
+  const tomorrow = startKey === addDayKey(todayKey, 1)
+  const date = new Intl.DateTimeFormat(currentLanguage(), {
+    dateStyle: 'medium',
+    timeZone: homeTimezone(),
+  }).format(start)
   if (event.isAllDay) {
-    return tomorrow ? i18n.t('errors:reminder.startingTomorrow') : i18n.t('errors:reminder.startingOn', { date })
+    return tomorrow
+      ? i18n.t('errors:reminder.startingTomorrow')
+      : i18n.t('errors:reminder.startingOn', { date })
   }
-  const time = formatTime(start, useSettingsStore.getState().timeFormat)
+  const time = formatHomeClock(start, useSettingsStore.getState().timeFormat)
   return tomorrow
     ? i18n.t('errors:reminder.startingTomorrowAt', { time })
     : i18n.t('errors:reminder.startingOnAt', { date, time })
@@ -214,7 +231,7 @@ export function showNotification(
 
 export function showTestNotification(): Notification | null {
   const now = new Date()
-  const timeStr = format(now, 'h:mm a')
+  const timeStr = formatHomeClock(now, '12h')
   return showNotification(
     'Test Notification',
     `Notifications are working! It is currently ${timeStr}`,

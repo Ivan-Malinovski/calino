@@ -1,5 +1,6 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { useCalendarStore } from '../calendarStore'
+import { useSettingsStore } from '@/store/settingsStore'
 import { nextOpenOccurrence } from '@/lib/occurrenceExpansion'
 import { makeRecurringTask, makeTask } from '@/lib/__tests__/fixtures'
 import type { CalendarEvent } from '@/types'
@@ -168,5 +169,37 @@ describe('nextOpenOccurrence with timed TZID tasks', () => {
     expect(nextOpenOccurrence(master, overrideMap(...done))!.occStartStr).toBe(
       '2026-03-29T08:00:00.000Z'
     )
+  })
+})
+
+describe('floating series expansion in the home zone', () => {
+  beforeEach(() => {
+    const store = useCalendarStore.getState()
+    store.events.forEach((e) => store.deleteEvent(e.id))
+    useSettingsStore.getState().updateSettings({ homeTimezone: 'Pacific/Auckland' })
+  })
+
+  afterEach(() => {
+    useSettingsStore.getState().updateSettings({ homeTimezone: null })
+  })
+
+  it('keeps a naive no-TZID wall clock in the home zone', () => {
+    useCalendarStore.getState().addEvent({
+      id: 'float',
+      calendarId: 'default',
+      title: 'Floating daily',
+      start: '2026-10-25T09:00:00',
+      end: '2026-10-25T10:00:00',
+      isAllDay: false,
+      recurrence: { frequency: 'daily', interval: 1 },
+      rruleString: 'FREQ=DAILY',
+    })
+    const day = useCalendarStore
+      .getState()
+      .getEventsForDateRange('2026-10-25', '2026-10-25')
+      .find((event) => event.id.startsWith('float'))
+    // 09:00 NZDT on the 25th is 20:00Z the previous day. A browser-midnight
+    // window would miss it, and a browser-local parse would not be this instant.
+    expect(day?.start).toBe('2026-10-24T20:00:00.000Z')
   })
 })

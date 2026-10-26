@@ -18,7 +18,7 @@ import { showToast } from './lib/toast'
 import { useTranslation } from 'react-i18next'
 import i18n from './lib/i18n'
 import { hapticIfEnabled } from './lib/haptics'
-import { toLocalDateString } from './lib/datetime'
+import { homeDayKey } from './lib/homeTimezone'
 import { useSettingsStore } from './store/settingsStore'
 // Imported from their modules rather than through a features/calendar barrel:
 // the barrel also re-exported YearView, so pulling these four in eagerly
@@ -572,7 +572,7 @@ function CalendarApp(): JSX.Element {
       // T → go to today
       if (e.key === 't' || e.key === 'T') {
         e.preventDefault()
-        const today = toLocalDateString(new Date())
+        const today = homeDayKey(new Date())
         useCalendarStore.getState().setCurrentDate(today)
         setWeekWindowStart(
           format(

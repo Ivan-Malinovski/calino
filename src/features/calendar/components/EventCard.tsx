@@ -6,7 +6,8 @@ import React, { useState, useRef, useEffect, useLayoutEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { format, parseISO, isSameDay } from 'date-fns'
 import { useTranslation } from 'react-i18next'
-import { formatEventTime, formatDisplayDate, toEventInstant } from '@/lib/datetime'
+import { formatEventTime, toEventInstant } from '@/lib/datetime'
+import { formatHome, homeTimezone, useHomeTimezone } from '@/lib/homeTimezone'
 import { useDraggable } from '@dnd-kit/core'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
@@ -42,10 +43,6 @@ import { MINUTE_SNAP_INTERVAL, timedDragStartMinutes } from '../lib/dragSnap'
 import { eventLastDay } from '../lib/multiDayFragments'
 import { TaskCollapseToggle } from './TaskCollapseToggle'
 import styles from './EventCard.module.css'
-
-/** Device zone — the zone every non-TZID time is shown in. A TZID badge is
- * shown when the event's own zone differs from it (Phase 2 C2). */
-const DEVICE_TIMEZONE = Intl.DateTimeFormat().resolvedOptions().timeZone
 
 /** Below this rendered height a card only has room for a single line of text. */
 const TIGHT_CARD_HEIGHT = 42
@@ -115,6 +112,7 @@ export const EventCard = React.memo(function EventCard({
   const { t } = useTranslation('calendar')
   const categoryAppearance = useCategoryEventStyle(event)
   const categoryPresentation = categoryStyleProps(dotMode ? {} : categoryAppearance)
+  useHomeTimezone()
   const useCategoryColors = useSettingsStore((state) => state.useCategoryColors)
   const calendar = useCalendarStore((state) =>
     state.calendars.find((candidate) => candidate.id === event.calendarId)
@@ -750,11 +748,11 @@ export const EventCard = React.memo(function EventCard({
                 const timeText =
                   !compact && !event.isAllDay
                     ? isFragmentFirst
-                      ? `${formatEventTime(event.start, event.timezone, timeFormat)} - ${formatDisplayDate(toEventInstant(event.originalEnd || event.end, event.timezone), 'MMM d')}`
+                      ? `${formatEventTime(event.start, event.timezone, timeFormat)} - ${formatHome(toEventInstant(event.originalEnd || event.end, event.timezone), 'MMM d')}`
                       : isFragmentMiddle
-                        ? `${formatDisplayDate(toEventInstant(event.originalStart || event.start, event.timezone), 'MMM d')} - ${formatDisplayDate(toEventInstant(event.originalEnd || event.end, event.timezone), 'MMM d')}`
+                        ? `${formatHome(toEventInstant(event.originalStart || event.start, event.timezone), 'MMM d')} - ${formatHome(toEventInstant(event.originalEnd || event.end, event.timezone), 'MMM d')}`
                         : isFragmentLast
-                          ? `${formatDisplayDate(toEventInstant(event.originalStart || event.start, event.timezone), 'MMM d')} - ${formatEventTime(event.end, event.timezone, timeFormat)}`
+                          ? `${formatHome(toEventInstant(event.originalStart || event.start, event.timezone), 'MMM d')} - ${formatEventTime(event.end, event.timezone, timeFormat)}`
                           : `${formatEventTime(event.start, event.timezone, timeFormat)} - ${formatEventTime(event.end, event.timezone, timeFormat)}`
                     : event.isAllDay
                       ? t('modals.eventCard.allDay')
@@ -763,7 +761,7 @@ export const EventCard = React.memo(function EventCard({
                 // The zone rides on the time line rather than below it: a
                 // short card clips anything on a second row.
                 const tzText =
-                  !compact && event.timezone && event.timezone !== DEVICE_TIMEZONE
+                  !compact && event.timezone && event.timezone !== homeTimezone()
                     ? shortZoneLabel(event.timezone)
                     : null
                 if (!timeText && !tzText && !locText) return null

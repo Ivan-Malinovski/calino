@@ -13,7 +13,6 @@ import {
   endOfWeek,
   eachDayOfInterval,
   isSameMonth,
-  isToday,
   getISOWeek,
   getDay,
   addDays,
@@ -23,6 +22,7 @@ import { useCalendarStore } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
 import type { ViewType } from '@/types'
 import { toEventInstant, formatDisplayDate } from '@/lib/datetime'
+import { homeDayKey, isHomeToday, useHomeTimezone } from '@/lib/homeTimezone'
 import { getNarrowWeekdayLabels } from './weekdayLabels'
 import styles from './YearView.module.css'
 
@@ -40,6 +40,7 @@ const VIEW_ROUTES: Record<ViewType, string> = {
 
 export function YearView(): JSX.Element {
   const { t } = useTranslation('calendar')
+  useHomeTimezone()
   const currentDate = useCalendarStore((state) => state.currentDate)
   const events = useCalendarStore((state) => state.events)
   const setCurrentDate = useCalendarStore((state) => state.setCurrentDate)
@@ -71,7 +72,11 @@ export function YearView(): JSX.Element {
     const keys = new Set<string>()
     yearEvents.forEach((event) => {
       try {
-        keys.add(format(toEventInstant(event.start, event.timezone), 'yyyy-MM-dd'))
+        keys.add(
+          event.isAllDay
+            ? event.start.slice(0, 10)
+            : homeDayKey(toEventInstant(event.start, event.timezone))
+        )
       } catch {
         // ignore malformed dates
       }
@@ -165,7 +170,7 @@ export function YearView(): JSX.Element {
                           )
                         }
 
-                        const isTodayDate = isToday(day)
+                        const isTodayDate = isHomeToday(day)
                         const hasEvents = eventDayKeys.has(dayKey)
 
                         return (

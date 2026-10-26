@@ -1,9 +1,10 @@
 import { parseISO } from 'date-fns'
-import { fromZonedTime, formatInTimeZone } from 'date-fns-tz'
+import { formatInTimeZone } from 'date-fns-tz'
 import { RRule } from 'rrule'
 import ICAL from 'ical.js'
 import { buildRRuleString, normaliseAllDayUntil } from './recurrence'
-import { deviceTimezone } from './datetime'
+import { isInstantString, toEventInstant } from './datetime'
+import { homeTimezone } from './homeTimezone'
 import { normalizeTzid, resolveZone } from './timezoneRegistry'
 import type { CalendarEvent } from '@/types'
 
@@ -149,24 +150,9 @@ export function occurrenceRecurrenceValue(
   return isAllDay ? occDateStr : occ.getTime()
 }
 
-/**
- * Resolve a stored date-time string to an instant. TZID series store their
- * EXDATEs/RECURRENCE-IDs as naive wall clocks in the series' zone, so they
- * must be read through date-fns-tz in that zone; a trailing Z is a genuine
- * instant and parses as one. Falls back to a device-local parse for anything
- * that cannot be resolved in the zone (unknown TZID, malformed value).
- */
+/** Same rules as `toEventInstant`. Expansion and the views must share this read. */
 export function parseOccurrenceInstant(iso: string, timezone?: string): Date {
-  if (timezone && !iso.endsWith('Z')) {
-    try {
-      const zoned = fromZonedTime(iso, normalizeTzid(timezone))
-      // date-fns-tz v3 does not throw for an unknown zone - it returns NaN.
-      if (!Number.isNaN(zoned.getTime())) return zoned
-    } catch {
-      // Unknown zone name — fall through to the device-local interpretation.
-    }
-  }
-  return parseISO(iso)
+  return toEventInstant(iso, timezone)
 }
 
 /** True when EXDATE excludes this occurrence. */
@@ -208,11 +194,6 @@ function parseWallClock(wall: string): WallClockParts | null {
   }
 }
 
-/** True when the string names a genuine instant rather than a naive wall clock. */
-function isInstantString(iso: string): boolean {
-  return /Z$/i.test(iso) || /[+-]\d{2}:?\d{2}$/.test(iso)
-}
-
 /** Parse the wall-clock components of a naive timed string (strips any fraction). */
 function wallClockParts(iso: string): WallClockParts | null {
   return parseWallClock(iso.replace(/\.\d+$/, ''))
@@ -222,8 +203,8 @@ function wallClockParts(iso: string): WallClockParts | null {
  * The wall-clock components a stored instant reads as in `timezone`.
  *
  * Used for two cases the expansion must not confuse with a naive wall clock:
- * a no-TZID timed event, which is a UTC instant whose intended wall clock is
- * the *device-local* reading (issue #126); and a TZID event whose start was
+ * a no-TZID timed event stored as a UTC instant, whose wall clock is the home
+ * zone (issue #126); and a TZID event whose start was
  * written back as an instant — a local edit or drag leaves `…Z` on an item
  * that still carries its TZID, and stripping the marker would read the UTC
  * fields as the event zone's wall clock, drifting the whole series by the
@@ -275,7 +256,7 @@ function warnUnknownDeviceZone(deviceTz: string): void {
 
 /**
  * A RecurExpansion seeded in the frame that keeps the wall clock stable — a
- * TZID series in its own zone, a no-TZID timed series in the device zone —
+ * TZID series in its own zone, a no-TZID timed series in the home zone —
  * or null when the series cannot be expanded zonally (all-day, unknown zone,
  * malformed start). The zone must be registered in ICAL.TimezoneService first
  * (see timezoneRegistry), otherwise ical.js resolves it to floating and the
@@ -286,11 +267,10 @@ function warnUnknownDeviceZone(deviceTz: string): void {
  * on *UTC* weekdays, but the user picked *local* weekdays — for a late-evening
  * start the two differ by a day (23:00 in UTC−4 is 03:00Z the next day), so a
  * "every Mon–Fri at 23:00" series renders Sun–Thu. Rebuilding the wall clock
- * in the device zone and expanding there repeats on the local weekdays at the
- * local wall time (stable across DST), which is what the views display.
- *
- * A no-TZID event whose stored start is genuinely meant as UTC wall time can
- * carry `timezone: 'UTC'` to opt into UTC-weekday recurrence instead.
+ * in the home zone and expanding there repeats on the weekdays the grid shows.
+ * Home is the browser zone when unset. A floating start is already that wall
+ * clock — do not parse it with `new Date` first. A no-TZID event whose stored
+ * start is genuinely meant as UTC wall time can carry `timezone: 'UTC'`.
  */
 interface ZonedExpansion {
   expansion: ICAL.RecurExpansion
@@ -302,23 +282,16 @@ function zonedExpansion(master: CalendarEvent): ZonedExpansion | null {
   if (master.isAllDay) return null
   const rruleString = resolveRRuleString(master)
   if (!rruleString) return null
-  // TZID series use their own zone (start is a naive wall clock in it);
-  // no-TZID timed series use the device zone, converting a stored UTC
-  // instant back to the device wall clock (issue #126).
-  const deviceTz = deviceTimezone()
-  const zone = master.timezone ? resolveZone(master.timezone) : resolveZone(deviceTz)
+  // TZID series use their own zone. No-TZID series use the home zone.
+  const frame = master.timezone ?? homeTimezone()
+  const zone = resolveZone(frame)
   if (!zone) {
-    if (!master.timezone) warnUnknownDeviceZone(deviceTz)
+    if (!master.timezone) warnUnknownDeviceZone(frame)
     return null
   }
-  // A TZID series' start is normally a naive wall clock already in its zone;
-  // when it is an instant instead, resolve it *through* that zone rather than
-  // stripping the marker. A no-TZID start is always read as an instant in the
-  // device zone — a naive one parses device-locally, so both agree.
-  const parts =
-    master.timezone && !isInstantString(master.start)
-      ? wallClockParts(master.start)
-      : instantWallClockParts(master.start, master.timezone ?? deviceTz)
+  const parts = !isInstantString(master.start)
+    ? wallClockParts(master.start)
+    : instantWallClockParts(master.start, frame)
   if (!parts) return null
   const dtstart = ICAL.Time.fromData(parts, zone)
   const vevent = new ICAL.Component('vevent')

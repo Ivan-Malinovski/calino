@@ -2,6 +2,7 @@ import type { JSX } from 'react'
 import { useLayoutEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { format, parseISO, subDays } from 'date-fns'
+import { homeDayKey } from '@/lib/homeTimezone'
 import { WEEK_TASK_MIN_DAYS, taskSpanDays, weekRangeKeys } from '@/lib/weekTasks'
 import type { CalendarEvent, TaskPriority } from '@/types'
 import type { TaskTreeItem } from '@/lib/taskTree'
@@ -144,7 +145,7 @@ export function TaskFormFields({
       onDueDateChange('')
       return
     }
-    if (!hasDueDate) onDueDateChange(format(new Date(), 'yyyy-MM-dd'))
+    if (!hasDueDate) onDueDateChange(homeDayKey(new Date()))
     onDueAllDayChange(mode === 'dateOnly')
   }
 
@@ -157,7 +158,7 @@ export function TaskFormFields({
 
   const handleAddStartDate = (): void => {
     // Default to the day before the due date so the new field is a valid range.
-    const due = hasDueDate ? dueDay : format(new Date(), 'yyyy-MM-dd')
+    const due = hasDueDate ? dueDay : homeDayKey(new Date())
     if (!hasDueDate) {
       onDueDateChange(due)
       onDueAllDayChange(true)
@@ -166,7 +167,7 @@ export function TaskFormFields({
   }
 
   const handleSometimeThisWeek = (): void => {
-    const base = hasDueDate ? dueDay : format(new Date(), 'yyyy-MM-dd')
+    const base = hasDueDate ? dueDay : homeDayKey(new Date())
     const { startKey, dueKey } = weekRangeKeys(base, firstDayOfWeek)
     onStartDateChange(startKey)
     onDueDateChange(dueKey)

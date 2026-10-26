@@ -1,6 +1,7 @@
-import { addDays, eachDayOfInterval, endOfDay, format, startOfDay } from 'date-fns'
+import { endOfDay, format, parseISO, startOfDay } from 'date-fns'
 import type { CalendarEvent } from '@/types'
-import { toEventInstant } from '@/lib/datetime'
+import { addDays, toEventInstant } from '@/lib/datetime'
+import { homeDayKey, homeMidnight } from '@/lib/homeTimezone'
 import { compareTaskSortOrder } from '@/lib/taskSortOrder'
 
 interface Span {
@@ -16,21 +17,35 @@ interface Span {
 export function eventLastDay(event: CalendarEvent): Date {
   const start = toEventInstant(event.start, event.timezone)
   const end = toEventInstant(event.end, event.timezone)
-  if (!event.isAllDay && end > start && end.getTime() === startOfDay(end).getTime())
-    return addDays(end, -1)
+  if (!event.isAllDay && end > start) {
+    const midnight = homeMidnight(homeDayKey(end))
+    if (end.getTime() === midnight.getTime()) return new Date(midnight.getTime() - 1)
+  }
   return end
 }
 
+function dayKeysBetween(startKey: string, endKey: string): string[] {
+  const days: string[] = []
+  let cursor = startKey
+  while (cursor <= endKey) {
+    days.push(cursor)
+    cursor = addDays(cursor, 1)
+  }
+  return days
+}
+
 function eventDayKeys(event: CalendarEvent): { startKey: string; endKey: string; days: string[] } {
+  // Date in the string. toEventInstant would slide a naive midnight west.
+  if (event.isAllDay) {
+    const startKey = event.start.slice(0, 10)
+    const endKey = event.end.slice(0, 10)
+    return { startKey, endKey, days: dayKeysBetween(startKey, endKey) }
+  }
   const start = toEventInstant(event.start, event.timezone)
   const end = eventLastDay(event)
-  const startKey = format(start, 'yyyy-MM-dd')
-  const endKey = format(end, 'yyyy-MM-dd')
-  const days = eachDayOfInterval({
-    start: startOfDay(start),
-    end: startOfDay(end),
-  }).map((day) => format(day, 'yyyy-MM-dd'))
-  return { startKey, endKey, days }
+  const startKey = homeDayKey(start)
+  const endKey = homeDayKey(end)
+  return { startKey, endKey, days: dayKeysBetween(startKey, endKey) }
 }
 
 /** Greedy lane per multi-day span: longest first, earlier start breaks a tie, then id. */
@@ -67,19 +82,24 @@ export function makeDayFragments(event: CalendarEvent, laneIndex?: number): Cale
   const { startKey, endKey } = eventDayKeys(event)
   if (startKey === endKey) return [event]
 
-  const eventStart = toEventInstant(event.start, event.timezone)
-  const lastDay = startOfDay(eventLastDay(event))
   const fragments: CalendarEvent[] = []
-  let currentDay = startOfDay(eventStart)
-
-  while (currentDay <= lastDay) {
-    const dayKey = format(currentDay, 'yyyy-MM-dd')
+  for (const dayKey of dayKeysBetween(startKey, endKey)) {
     const isFirst = dayKey === startKey
     const isLast = dayKey === endKey
     fragments.push({
       ...event,
-      start: isFirst ? event.start : format(currentDay, "yyyy-MM-dd'T'HH:mm:ss"),
-      end: isLast ? event.end : format(endOfDay(currentDay), "yyyy-MM-dd'T'HH:mm:ss"),
+      // Continuation bounds are real instants. A naive wall clock would be
+      // re-read in the event's own zone by toEventInstant.
+      start: isFirst
+        ? event.start
+        : event.isAllDay
+          ? format(startOfDay(parseISO(dayKey)), "yyyy-MM-dd'T'HH:mm:ss")
+          : homeMidnight(dayKey).toISOString(),
+      end: isLast
+        ? event.end
+        : event.isAllDay
+          ? format(endOfDay(parseISO(dayKey)), "yyyy-MM-dd'T'HH:mm:ss")
+          : homeMidnight(addDays(dayKey, 1)).toISOString(),
       isFragment: true,
       isFirstFragment: isFirst,
       isLastFragment: isLast,
@@ -87,7 +107,6 @@ export function makeDayFragments(event: CalendarEvent, laneIndex?: number): Cale
       originalStart: event.start,
       originalEnd: event.end,
     })
-    currentDay = addDays(currentDay, 1)
   }
 
   return fragments

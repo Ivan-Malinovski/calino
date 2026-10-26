@@ -13,7 +13,7 @@ import type {
 import { addDays } from 'date-fns'
 import { formatInTimeZone } from 'date-fns-tz'
 import { buildRRuleString, normaliseAllDayUntil } from '@/lib/recurrence'
-import { toLocalDateString } from '@/lib/datetime'
+import { homeDayKey } from '@/lib/homeTimezone'
 import { normalizeTzid } from '@/lib/timezoneRegistry'
 import { parseIcalColor } from '@/lib/cssColors'
 import { parseSortOrder } from '@/lib/taskSortOrder'
@@ -1781,7 +1781,7 @@ export function icalVjournalToCalendarEvent(
   const seqProp = vjournal.getFirstProperty('sequence')
 
   // DTSTART — date only for journal entries
-  let startDate = toLocalDateString(new Date())
+  let startDate = homeDayKey(new Date())
   if (!dtstartProp) {
     console.warn('VJOURNAL missing DTSTART, defaulting to today:', uidProp?.getFirstValue())
   }

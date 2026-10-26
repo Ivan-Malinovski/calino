@@ -21,6 +21,12 @@
   "saved": "Opgeslagen",
   "general": {
     "title": "Algemeen",
+    "homeTimezone": {
+      "label": "Thuis-tijdzone",
+      "desc": "Gebeurtenissen worden in deze tijdzone getoond en gemaakt. Automatisch volgt de browser.",
+      "ariaLabel": "Thuis-tijdzone",
+      "automatic": "Automatisch (browser)"
+    },
     "dateFormat": {
       "label": "Datumnotatie",
       "desc": "Hoe datums in de app worden weergegeven",

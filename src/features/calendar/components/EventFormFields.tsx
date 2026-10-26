@@ -13,7 +13,8 @@ import type {
   CalendarOrganizer,
 } from '@/types'
 import { useSettingsStore } from '@/store/settingsStore'
-import { daysBetween, addDays, deviceTimezone, getDateFnsLocale } from '@/lib/datetime'
+import { daysBetween, addDays, getDateFnsLocale } from '@/lib/datetime'
+import { homeTimezone, parseHomeWall } from '@/lib/homeTimezone'
 import { format } from 'date-fns'
 import { formatInTimeZone } from 'date-fns-tz'
 import { normalizeTzid } from '@/lib/timezoneRegistry'
@@ -25,8 +26,8 @@ import { RecurrenceFields, RecurrenceToggle } from './RecurrenceFields'
 import styles from './EventModal.module.css'
 
 /**
- * The event's own times, for a series anchored in a zone other than the
- * device's. The form's fields are device-local, so this is the same moment
+ * The event's own times, for a series anchored in a zone other than home.
+ * The form's fields are home-zone wall clocks, so this is the same moment
  * read on the event's clock — what actually moves when the fields change.
  * Returns null when there is nothing to disambiguate.
  */
@@ -41,10 +42,10 @@ function foreignZoneTimes(
 ): { zoneLabel: string; times: string } | null {
   if (!eventTimezone || isAllDay) return null
   const calculationTimezone = normalizeTzid(eventTimezone)
-  if (calculationTimezone === normalizeTzid(deviceTimezone())) return null
+  if (calculationTimezone === normalizeTzid(homeTimezone())) return null
 
-  const startInstant = new Date(`${startDate}T${startTime}:00`)
-  const endInstant = new Date(`${endDate}T${endTime}:00`)
+  const startInstant = parseHomeWall(`${startDate}T${startTime}:00`)
+  const endInstant = parseHomeWall(`${endDate}T${endTime}:00`)
   if (Number.isNaN(startInstant.getTime()) || Number.isNaN(endInstant.getTime())) return null
 
   const pattern = timeFormat === '24h' ? 'HH:mm' : 'h:mm a'
@@ -75,7 +76,7 @@ function foreignZoneTimes(
 interface EventFormFieldsProps {
   /**
    * The event's own TZID, when it has one. The date/time fields always work in
-   * the device zone, so a foreign TZID is otherwise invisible: editing a 09:00
+   * the home zone, so a foreign TZID is otherwise invisible: editing a 09:00
    * Los Angeles meeting from Copenhagen shows 18:00 with nothing saying what
    * is actually being moved. Shown as a read-only line under the fields.
    */

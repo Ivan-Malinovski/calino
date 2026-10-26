@@ -20,7 +20,9 @@ import {
   type DragOverEvent,
   type DragStartEvent,
 } from '@dnd-kit/core'
-import { format, parseISO, startOfDay } from 'date-fns'
+import { parseISO } from 'date-fns'
+import { daysBetween, formatDisplayDate } from '@/lib/datetime'
+import { homeDayKey, storedDayKey, useHomeTimezone } from '@/lib/homeTimezone'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { DUR_FAST, EASE_POP } from '@/lib/motion'
@@ -49,7 +51,6 @@ import { TaskCollapseToggle } from './TaskCollapseToggle'
 import { DayEventsPopup } from './DayEventsPopup'
 import type { CalendarEvent } from '@/types'
 import styles from './TodoView.module.css'
-import { formatDisplayDate } from '@/lib/datetime'
 import { getTaskGroup } from '@/lib/taskGroups'
 
 type FilterType = 'all' | 'active' | 'completed'
@@ -113,10 +114,10 @@ function getDueLabel(
 ): { text: string; className: string } {
   if (!task.dueDate) return { text: '—', className: '' }
 
-  const today = startOfDay(new Date())
-  const dueDate = startOfDay(parseISO(task.dueDate))
-  const diffMs = dueDate.getTime() - today.getTime()
-  const diffDays = Math.round(diffMs / 86400000)
+  const diffDays = daysBetween(
+    homeDayKey(new Date()),
+    storedDayKey(task.dueDate, task.timezone, task.isAllDay)
+  )
 
   if (diffDays < 0) {
     return { text: formatDisplayDate(task.dueDate, 'MMM d'), className: styles.dueOverdue }
@@ -161,6 +162,7 @@ type VirtualItem =
     }
 
 export function TodoView(): JSX.Element {
+  useHomeTimezone()
   const { t } = useTranslation('calendar')
   const events = useCalendarStore((state) => state.events)
   const calendars = useCalendarStore((state) => state.calendars)
@@ -721,7 +723,7 @@ export function TodoView(): JSX.Element {
     const value = composerRef.current?.value.trim()
     if (!value) return
     openModal(
-      format(new Date(), 'yyyy-MM-dd'),
+      homeDayKey(new Date()),
       undefined,
       undefined,
       'task',

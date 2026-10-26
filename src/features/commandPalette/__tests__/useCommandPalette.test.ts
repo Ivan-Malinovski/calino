@@ -125,6 +125,7 @@ vi.mock('@/store/settingsStore', () => ({
     const state: SettingsStore = {
       language: 'en',
       timezone: 'UTC',
+      homeTimezone: null,
       secondaryTimezoneEnabled: false,
       secondaryTimezone: null,
       secondaryTimezoneLabel: null,

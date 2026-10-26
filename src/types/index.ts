@@ -362,7 +362,13 @@ export interface AdjustableThemeSettings {
 
 export interface UserSettings {
   language: Language
+  /**
+   * Unread sync leftover. Seeded from the browser so another client's value
+   * round-trips. Display uses `homeTimezone`.
+   */
   timezone: string
+  /** IANA zone treated as the user's clock. `null` follows the browser. */
+  homeTimezone: string | null
   secondaryTimezoneEnabled: boolean
   secondaryTimezone: string | null
   secondaryTimezoneLabel: string | null

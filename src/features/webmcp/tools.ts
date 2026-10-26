@@ -3,6 +3,7 @@ import { differenceInCalendarDays, format, parseISO } from 'date-fns'
 import { useCalendarStore } from '@/store/calendarStore'
 import { findEventById, extractOriginalEventId } from '@/lib/events'
 import { toEventInstant } from '@/lib/datetime'
+import { homeDayKey, homeTimezone } from '@/lib/homeTimezone'
 import type { CalendarEvent } from '@/types'
 
 export interface WebMCPTool {
@@ -16,7 +17,7 @@ export interface WebMCPTool {
 const date = z.iso.date()
 const id = z.string().min(1).max(512)
 const searchInput = z.strictObject({
-  start: date.describe('First date, inclusive, YYYY-MM-DD in the device timezone.'),
+  start: date.describe('First date, inclusive, YYYY-MM-DD in the home timezone.'),
   end: date.describe('Last date, inclusive. Search at most 31 calendar days.'),
   query: z.string().max(200).optional().describe('Literal title or location text.'),
   calendarId: id.optional(),
@@ -124,7 +125,7 @@ export function createWebMCPTools(): WebMCPTool[] {
                 toEventInstant(b.start, b.timezone).getTime() || a.id.localeCompare(b.id)
           )
         return {
-          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          timezone: homeTimezone(),
           truncated: matches.length > limit,
           events: matches.slice(0, limit).map((event) => ({
             id: event.id,
@@ -133,7 +134,7 @@ export function createWebMCPTools(): WebMCPTool[] {
             start: event.start,
             end: event.end,
             allDay: event.isAllDay,
-            timezone: event.timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone,
+            timezone: event.timezone ?? homeTimezone(),
             location: event.location?.slice(0, 500),
             transparency: event.transparency ?? 'opaque',
             syncStatus: event.syncStatus,
@@ -173,7 +174,7 @@ export function createWebMCPTools(): WebMCPTool[] {
         state.setCurrentDate(
           selected.isAllDay
             ? selected.start.split('T')[0]
-            : format(toEventInstant(selected.start, selected.timezone), 'yyyy-MM-dd')
+            : homeDayKey(toEventInstant(selected.start, selected.timezone))
         )
         state.openModal(undefined, undefined, eventId)
         return { status: 'opened', eventId }

@@ -26,19 +26,30 @@ import {
   endOfWeek,
   eachDayOfInterval,
   isSameMonth,
-  isToday,
   parseISO,
   getISOWeek,
   getDay,
   addMonths,
   subMonths,
   isSameDay,
-  isBefore,
-  startOfDay,
   addDays,
   differenceInCalendarDays,
 } from 'date-fns'
-import { pad2, toEventInstant, toZoneWallClock, formatDisplayDate } from '@/lib/datetime'
+import {
+  pad2,
+  toEventInstant,
+  formatDisplayDate,
+  daysBetween,
+  addDays as addDayKey,
+} from '@/lib/datetime'
+import {
+  homeDayKey,
+  homeMinutes,
+  isHomeToday,
+  movedDueValue,
+  parseHomeWall,
+  useHomeTimezone,
+} from '@/lib/homeTimezone'
 import { useTranslation } from 'react-i18next'
 import i18n from '@/lib/i18n'
 import { useCalendarStore } from '@/store/calendarStore'
@@ -157,6 +168,7 @@ const SCROLL_CHAIN_QUIET_MS = 500
 
 export function CalendarGrid(): JSX.Element {
   const { t } = useTranslation('calendar')
+  useHomeTimezone()
   const currentDate = useCalendarStore((state) => state.currentDate)
   const events = useCalendarStore((state) => state.events)
   const calendars = useCalendarStore((state) => state.calendars)
@@ -539,13 +551,17 @@ export function CalendarGrid(): JSX.Element {
 
     let targetDayStr = dayStr
     if (grabbedDay) {
-      const offset = differenceInCalendarDays(parseISO(grabbedDay), originalStart)
-      targetDayStr = format(addDays(parseISO(dayStr), -offset), 'yyyy-MM-dd')
+      const originKey = originalEvent.isAllDay
+        ? originalEvent.start.slice(0, 10)
+        : homeDayKey(originalStart)
+      const offset = daysBetween(originKey, grabbedDay)
+      targetDayStr = addDayKey(dayStr, -offset)
     }
 
-    const hours = pad2(originalStart.getHours())
-    const minutes = pad2(originalStart.getMinutes())
-    const newStart = parseISO(`${targetDayStr}T${hours}:${minutes}:00`)
+    const movedMinutes = homeMinutes(originalStart)
+    const hours = pad2(Math.floor(movedMinutes / 60))
+    const minutes = pad2(movedMinutes % 60)
+    const newStart = parseHomeWall(`${targetDayStr}T${hours}:${minutes}:00`)
     const newEnd = new Date(newStart.getTime() + durationMs)
 
     const isTask = originalEvent.type === 'task'
@@ -560,15 +576,9 @@ export function CalendarGrid(): JSX.Element {
         !originalEvent.dueDate.endsWith('T00:00')
 
       if (hasTime) {
-        const timeHours = pad2(originalDueDate.getHours())
-        const timeMinutes = pad2(originalDueDate.getMinutes())
-        // TZID tasks store their due time as the zone's wall clock.
-        newDueDate = originalEvent.timezone
-          ? toZoneWallClock(
-              new Date(`${dayStr}T${timeHours}:${timeMinutes}:00`).toISOString(),
-              originalEvent.timezone
-            )
-          : `${dayStr}T${timeHours}:${timeMinutes}:00`
+        const dueMinutes = homeMinutes(originalDueDate)
+        const dueTime = `${pad2(Math.floor(dueMinutes / 60))}:${pad2(dueMinutes % 60)}:00`
+        newDueDate = movedDueValue(originalEvent.dueDate, originalEvent.timezone, dayStr, dueTime)
       }
     }
 
@@ -642,7 +652,9 @@ export function CalendarGrid(): JSX.Element {
     gridEvents.forEach((event) => {
       const fragments = makeDayFragments(event, laneOf.get(event.id))
       fragments.forEach((fragment) => {
-        const eventDate = format(toEventInstant(fragment.start, fragment.timezone), 'yyyy-MM-dd')
+        const eventDate = fragment.isAllDay
+          ? fragment.start.slice(0, 10)
+          : homeDayKey(toEventInstant(fragment.start, fragment.timezone))
         const existing = map.get(eventDate) || []
         map.set(eventDate, [...existing, fragment])
       })
@@ -1138,9 +1150,10 @@ export function CalendarGrid(): JSX.Element {
   const autoLimitEnabled = monthLimitIsAuto && !showAgendaSplit && !isCompactMobile
   const compressedWeekCount = useMemo(() => {
     if (!compressWeekRows) return 0
-    const today = startOfDay(new Date())
+    const todayKey = homeDayKey(new Date())
     return weekNumbers.reduce(
-      (count, _weekNum, weekIdx) => (isBefore(days[weekIdx * 7 + 6], today) ? count + 1 : count),
+      (count, _weekNum, weekIdx) =>
+        format(days[weekIdx * 7 + 6], 'yyyy-MM-dd') < todayKey ? count + 1 : count,
       0
     )
   }, [compressWeekRows, weekNumbers, days])
@@ -1410,8 +1423,8 @@ export function CalendarGrid(): JSX.Element {
                   >
                     {weekNumbers.map((weekNum, weekIdx) => {
                       const weekEnd = days[weekIdx * 7 + 6]
-                      const today = startOfDay(new Date())
-                      const isPastWeek = compressPastWeeks && isBefore(weekEnd, today)
+                      const isPastWeek =
+                        compressPastWeeks && format(weekEnd, 'yyyy-MM-dd') < homeDayKey(new Date())
 
                       return (
                         <div
@@ -1460,7 +1473,7 @@ export function CalendarGrid(): JSX.Element {
                             const dayEvents = eventsMap.get(dateKey) || []
                             const dayTasks = visibleTasksMap.get(dateKey) || []
                             const isCurrentMonth = isSameMonth(day, date)
-                            const isTodayDate = isToday(day)
+                            const isTodayDate = isHomeToday(day)
                             const dayOfWeek = getDay(day)
                             const isWeekend = dayOfWeek === 0 || dayOfWeek === 6
 
@@ -1620,8 +1633,8 @@ export function CalendarGrid(): JSX.Element {
             >
               {weekNumbers.map((weekNum, weekIdx) => {
                 const weekEnd = days[weekIdx * 7 + 6]
-                const today = startOfDay(new Date())
-                const isPastWeek = compressPastWeeks && isBefore(weekEnd, today)
+                const isPastWeek =
+                  compressPastWeeks && format(weekEnd, 'yyyy-MM-dd') < homeDayKey(new Date())
 
                 return (
                   <div
@@ -1661,7 +1674,7 @@ export function CalendarGrid(): JSX.Element {
                       const dayEvents = eventsMap.get(dateKey) || []
                       const dayTasks = visibleTasksMap.get(dateKey) || []
                       const isCurrentMonth = isSameMonth(day, date)
-                      const isTodayDate = isToday(day)
+                      const isTodayDate = isHomeToday(day)
                       const dayOfWeek = getDay(day)
                       const isWeekend = dayOfWeek === 0 || dayOfWeek === 6
 

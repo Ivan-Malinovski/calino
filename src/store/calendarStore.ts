@@ -1,8 +1,7 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 import { safeLocalStorage } from '@/lib/storage'
-import { format, parseISO, isWithinInterval, startOfDay, endOfDay } from 'date-fns'
-import { formatInTimeZone } from 'date-fns-tz'
+import { parseISO, isWithinInterval, startOfDay, endOfDay } from 'date-fns'
 import { RRule } from 'rrule'
 import type {
   CalendarStore,
@@ -32,8 +31,14 @@ import {
 import { deleteAttachments } from '@/lib/attachmentStore'
 import { deleteRawIcs, deleteRawIcsForCalendar } from '@/lib/rawIcsStore'
 import { useSettingsStore } from '@/store/settingsStore'
-import { toZoneWallClock } from '@/lib/datetime'
-import { normalizeTzid } from '@/lib/timezoneRegistry'
+import { addDays as addDayKey, toEventInstant, toZoneWallClock } from '@/lib/datetime'
+import {
+  homeDayKey,
+  homeMidnight,
+  homeTimezone,
+  homeTimezoneOverride,
+  storedDayKey,
+} from '@/lib/homeTimezone'
 import { createUuid } from '@/lib/uuid'
 
 // Memo cache for getEventsForDateRange. Keyed by the range; a cached result is
@@ -150,6 +155,7 @@ interface EventIndex {
 }
 
 let eventIndex: EventIndex | null = null
+let eventIndexHome: string | null = null
 
 // RRule construction is expensive and the rules themselves are immutable, so
 // this cache lives at module scope and survives across queries (it used to be
@@ -169,33 +175,9 @@ function getOrCreateRRule(rruleStr: string, eventStart: Date): RRule {
   return rule
 }
 
-/**
- * The `yyyy-MM-dd` a task belongs to.
- *
- * An all-day task's due date is stored as a floating midnight serialized with a
- * `Z` (`2026-08-04T00:00:00.000Z`), so running it through the local-timezone
- * `format(parseISO(...))` files it under the *previous* day anywhere west of
- * UTC. All-day dates have no timezone by definition (RFC 5545 §3.3.4), so read
- * the date part literally and only convert for timed tasks.
- */
+/** The `yyyy-MM-dd` a task belongs to. See `storedDayKey`. */
 function taskDayKey(task: CalendarEvent): string {
-  const due = task.dueDate as string
-  if (task.isAllDay) return due.split('T')[0]
-  // File a timed TZID task under the day it is due in the event's zone (issue
-  // #126), not the viewing device's zone. The due date may be stored either as
-  // a true instant (Z, e.g. the one occurrenceDueDate synthesises) or as a
-  // naive wall clock in the TZID (how a synced VTODO arrives), so resolve it
-  // the same way occurrenceDueDate does rather than assuming an instant --
-  // `new Date(naive)` reads device-locally and files a 23:30 New York task on
-  // the next day for any device west of the event's zone.
-  if (task.timezone) {
-    return formatInTimeZone(
-      parseOccurrenceInstant(due, task.timezone),
-      normalizeTzid(task.timezone),
-      'yyyy-MM-dd'
-    )
-  }
-  return format(parseISO(due), 'yyyy-MM-dd')
+  return storedDayKey(task.dueDate as string, task.timezone, task.isAllDay)
 }
 
 /**
@@ -230,9 +212,11 @@ function sameOccurrenceInstant(event: CalendarEvent, recurrenceId: string | unde
 }
 
 function getEventIndex(events: CalendarEvent[]): EventIndex {
-  if (eventIndex && eventIndex.events === events) {
+  const home = homeTimezone()
+  if (eventIndex && eventIndex.events === events && eventIndexHome === home) {
     return eventIndex
   }
+  eventIndexHome = home
 
   const plain: IndexedEvent[] = []
   const recurring: IndexedEvent[] = []
@@ -245,8 +229,12 @@ function getEventIndex(events: CalendarEvent[]): EventIndex {
 
   for (let order = 0; order < events.length; order++) {
     const event = events[order]
-    const start = parseISO(event.start)
-    const end = parseISO(event.end)
+    // Timed spans use the same instant as the grid, or a late floating event
+    // falls outside the home-day window. All-day values stay dates.
+    const start = event.isAllDay
+      ? parseISO(event.start)
+      : toEventInstant(event.start, event.timezone)
+    const end = event.isAllDay ? parseISO(event.end) : toEventInstant(event.end, event.timezone)
     const indexed: IndexedEvent = {
       event,
       order,
@@ -516,7 +504,7 @@ export const useCalendarStore = create<CalendarStore>()(
       categories: [],
       autoCategoryRules: [],
       selectedCategoryIds: [],
-      currentDate: format(new Date(), 'yyyy-MM-dd'),
+      currentDate: homeDayKey(new Date()),
       currentView: useSettingsStore.getState().defaultView,
       // Bumped by every mutation that affects getEventsForDateRange results.
       // Excluded from persistence (see partialize below) so it stays in sync
@@ -1384,7 +1372,7 @@ export const useCalendarStore = create<CalendarStore>()(
       getEventsForDateRange: (start: string, end: string): CalendarEvent[] => {
         const state = get()
 
-        const cacheKey = `${start}|${end}`
+        const cacheKey = `${start}|${end}|${homeTimezone()}`
         const cached = rangeExpansionCache.get(cacheKey)
         if (
           cached &&
@@ -1430,7 +1418,11 @@ export const useCalendarStore = create<CalendarStore>()(
             )
           )
         } else if (isDateOnlyStart) {
-          startDate = startOfDay(parseDate)
+          // A set home zone means the day key is a home day. Browser midnight
+          // misses a floating instant on the previous UTC day.
+          startDate = homeTimezoneOverride()
+            ? homeMidnight(start.slice(0, 10))
+            : startOfDay(parseDate)
         } else {
           // Has explicit time component — use as-is
           startDate = parseDate
@@ -1450,7 +1442,9 @@ export const useCalendarStore = create<CalendarStore>()(
             )
           )
         } else if (isDateOnlyEnd) {
-          endDate = endOfDay(parseDateEnd)
+          endDate = homeTimezoneOverride()
+            ? new Date(homeMidnight(addDayKey(end.slice(0, 10), 1)).getTime() - 1)
+            : endOfDay(parseDateEnd)
         } else {
           // Has explicit time component — use as-is
           endDate = parseDateEnd
@@ -1683,7 +1677,7 @@ export const useCalendarStore = create<CalendarStore>()(
           // Deliberately today's date, not the persisted one: opening the app
           // should show the current month, not wherever the last session was
           // browsing. Same reasoning as currentView below.
-          currentDate: format(new Date(), 'yyyy-MM-dd'),
+          currentDate: homeDayKey(new Date()),
           currentView: useSettingsStore.getState().defaultView,
           selectedCategoryIds: state.selectedCategoryIds ?? [],
         }
