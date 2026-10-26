@@ -63,7 +63,9 @@ import { useDragDuplicateModifier } from '@/hooks/useDragDuplicateModifier'
 import {
   useMonthEventCapacity,
   fitMonthCell,
+  PAST_WEEK_MIN_HEIGHT,
   type MonthCellCapacity,
+  type MonthDayDemand,
   type MonthRowKind,
 } from '@/hooks/useMonthEventCapacity'
 import { useDragModifierStore } from '@/store/dragModifierStore'
@@ -1177,6 +1179,31 @@ export function CalendarGrid(): JSX.Element {
     return () => observer.disconnect()
   }, [measureAdaptiveRowFloor])
 
+  // What each past week's days will draw, so the week can be sized to it.
+  // Past weeks are the leading ones, so entry `i` is week `i`.
+  const pastWeekDemand = useMemo(() => {
+    if (!autoLimitEnabled) return undefined
+    return Array.from({ length: compressedWeekCount }, (_unused, weekIdx) =>
+      days.slice(weekIdx * 7, weekIdx * 7 + 7).map((day) => {
+        const dateKey = format(day, 'yyyy-MM-dd')
+        return pastDayDemand(
+          eventsMap.get(dateKey) || [],
+          visibleTasksMap.get(dateKey) || [],
+          compactRecurringEvents,
+          isCompactMobile
+        )
+      })
+    )
+  }, [
+    autoLimitEnabled,
+    compressedWeekCount,
+    days,
+    eventsMap,
+    visibleTasksMap,
+    compactRecurringEvents,
+    isCompactMobile,
+  ])
+
   const autoCapacity = useMonthEventCapacity({
     enabled: autoLimitEnabled,
     gridRef: gridScrollRef,
@@ -1187,7 +1214,25 @@ export function CalendarGrid(): JSX.Element {
     // floor is lowered on short windows, so Auto can reduce the number of
     // cards before the grid needs to fall back to scrolling.
     rowHeightFloor: showGutter ? adaptiveRowFloor : 0,
+    pastWeekDemand,
   })
+  // A past week sized to its content is a fixed height; the weeks still to
+  // come are `flex: 1` and share what it leaves. Unmeasured, or with nothing
+  // to size it by, it keeps the `.compressedWeek` flex weight.
+  const pastWeekRowStyle = (
+    weekIdx: number,
+    isCompressed: boolean
+  ): React.CSSProperties | undefined => {
+    const height = isCompressed ? autoCapacity?.pastWeeks[weekIdx]?.height : undefined
+    if (height === undefined) return undefined
+    // The week-number cell holds a row at the grid's min-height, which would
+    // keep a row sized to a pill or two from getting that short.
+    return {
+      flex: `0 0 ${height}px`,
+      '--month-row-min-height': `${PAST_WEEK_MIN_HEIGHT}px`,
+    } as React.CSSProperties
+  }
+
   // Auto is on but nothing has been measured yet (first paint, or a hidden
   // grid): fall back to the old default rather than rendering every event.
   const fixedEventLimit = monthLimitIsAuto ? 3 : monthViewEventLimit
@@ -1372,6 +1417,7 @@ export function CalendarGrid(): JSX.Element {
                         <div
                           key={weekIdx}
                           className={`${styles.weekRow} ${!showGutter ? styles.weekRowNoWeekNum : !showWeekNumbers ? styles.weekRowSlim : ''} ${compressWeekRows && isPastWeek ? styles.compressedWeek : ''}`}
+                          style={pastWeekRowStyle(weekIdx, compressWeekRows && isPastWeek)}
                         >
                           {showGutter && (
                             <WeekGutterCell
@@ -1581,6 +1627,7 @@ export function CalendarGrid(): JSX.Element {
                   <div
                     key={weekIdx}
                     className={`${styles.weekRow} ${!showGutter ? styles.weekRowNoWeekNum : !showWeekNumbers ? styles.weekRowSlim : ''} ${compressWeekRows && isPastWeek ? styles.compressedWeek : ''}`}
+                    style={pastWeekRowStyle(weekIdx, compressWeekRows && isPastWeek)}
                   >
                     {showGutter && (
                       <WeekGutterCell
@@ -1641,7 +1688,9 @@ export function CalendarGrid(): JSX.Element {
                           monthViewEventLimit={fixedEventLimit}
                           monthCapacity={
                             compressWeekRows && isPastWeek
-                              ? (autoCapacity?.compressed ?? null)
+                              ? (autoCapacity?.pastWeeks[weekIdx]?.capacity ??
+                                autoCapacity?.compressed ??
+                                null)
                               : (autoCapacity?.full ?? null)
                           }
                           isMobile={isMobile}
@@ -1703,6 +1752,28 @@ function monthRowKind(
     (compactRecurringEvents &&
       (!!item.rruleString || !!item.recurrence || item.isAllDay || isMultiDay))
   return compact ? 'compactEvent' : 'event'
+}
+
+/**
+ * The rows a past week's day cell will draw. Every one is a compact pill, and
+ * a multi-day fragment sitting in a lane below the first reserves the lanes
+ * above it with spacers (see `eventSlots`), each as tall as a pill.
+ */
+function pastDayDemand(
+  dayEvents: CalendarEvent[],
+  dayTasks: CalendarEvent[],
+  compactRecurringEvents: boolean,
+  isCompactMobile: boolean
+): MonthDayDemand {
+  const kind = (item: CalendarEvent): MonthRowKind =>
+    monthRowKind(item, true, compactRecurringEvents, isCompactMobile)
+  const events = dayEvents.map(kind)
+  const lanes = dayEvents.reduce(
+    (count, event) => (event.isFragment ? Math.max(count, (event.laneIndex ?? -1) + 1) : count),
+    0
+  )
+  while (events.length < lanes) events.push('compactEvent')
+  return { events, tasks: dayTasks.map(kind) }
 }
 
 interface DroppableDayProps {

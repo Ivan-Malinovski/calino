@@ -85,6 +85,12 @@ const TASKS_GAP = 6
 /** The `.moreEvents` button (16px measured) and the gap above it. */
 const MORE_ROW_HEIGHT = 19
 
+/** `.compressedWeek > .day { min-height }` — the shortest a past week gets. */
+export const PAST_WEEK_MIN_HEIGHT = 50
+
+/** Spare pixels under a past week's content, so a fractional border can't clip it. */
+const PAST_WEEK_SLACK = 2
+
 /** How long the grid has to hold a new size before the count follows it. */
 const RESIZE_SETTLE_MS = 150
 
@@ -97,7 +103,20 @@ export interface MonthCellCapacity {
 
 export interface MonthEventCapacity {
   full: MonthCellCapacity
+  /** What a past week gets when it isn't sized to its content. */
   compressed: MonthCellCapacity
+  /**
+   * One entry per past week, in order, when the past weeks are sized to their
+   * content (see `pastWeekDemand`); empty otherwise. `height` is the row's
+   * pixel height and `capacity` what its cells can spend.
+   */
+  pastWeeks: Array<{ height: number; capacity: MonthCellCapacity }>
+}
+
+/** The rows one day cell wants to draw: events above tasks. */
+export interface MonthDayDemand {
+  events: MonthRowKind[]
+  tasks: MonthRowKind[]
 }
 
 /** How many events and tasks a cell of `contentHeight` pixels shows. */
@@ -110,6 +129,37 @@ function stack(heights: number[], count: number): number {
   let total = 0
   for (let i = 0; i < count; i++) total += heights[i] + (i > 0 ? ROW_GAP : 0)
   return total
+}
+
+/** What drawing every event and task costs, with no roll-up line. */
+function cellContentHeight(eventHeights: number[], taskHeights: number[]): number {
+  return (
+    stack(eventHeights, eventHeights.length) +
+    (taskHeights.length > 0 ? TASKS_GAP + stack(taskHeights, taskHeights.length) : 0)
+  )
+}
+
+/**
+ * The height of a past week's row that draws all of its days in full: the
+ * busiest day's rows plus the cell chrome, never under `PAST_WEEK_MIN_HEIGHT`
+ * (the `min-height` `.compressedWeek > .day` imposes).
+ */
+export function pastWeekRowHeight(
+  week: readonly MonthDayDemand[],
+  heights: MonthItemHeights
+): number {
+  const busiest = week.reduce(
+    (most, day) =>
+      Math.max(
+        most,
+        cellContentHeight(
+          day.events.map((kind) => heights[kind]),
+          day.tasks.map((kind) => heights[kind])
+        )
+      ),
+    0
+  )
+  return Math.max(PAST_WEEK_MIN_HEIGHT, CELL_CHROME + busiest + PAST_WEEK_SLACK)
 }
 
 /**
@@ -129,9 +179,7 @@ export function fitMonthCell(
   taskHeights: number[]
 ): MonthCellFit {
   const hasTasks = taskHeights.length > 0
-  const everything =
-    stack(eventHeights, eventHeights.length) +
-    (hasTasks ? TASKS_GAP + stack(taskHeights, taskHeights.length) : 0)
+  const everything = cellContentHeight(eventHeights, taskHeights)
   if (everything <= contentHeight) {
     return { eventLimit: eventHeights.length, taskLimit: taskHeights.length }
   }
@@ -174,6 +222,7 @@ export function useMonthEventCapacity({
   weekCount,
   compressedWeekCount,
   rowHeightFloor,
+  pastWeekDemand,
 }: {
   enabled: boolean
   gridRef: React.RefObject<HTMLElement | null>
@@ -182,6 +231,14 @@ export function useMonthEventCapacity({
   compressedWeekCount: number
   /** Height a week row can't go under, or 0 when nothing imposes one. */
   rowHeightFloor: number
+  /**
+   * What each past week's days want to draw, one entry per compressed week.
+   * Given, each past week shrinks to what its busiest day needs — never above
+   * the compressed share — and the weeks still to come take what that frees.
+   * It is data, not rendered row heights, for the same reason as above: a row
+   * sized by what is in it can't be fed back into how much it may hold.
+   */
+  pastWeekDemand?: ReadonlyArray<ReadonlyArray<MonthDayDemand>>
 }): MonthEventCapacity | null {
   const [capacity, setCapacity] = useState<MonthEventCapacity | null>(null)
 
@@ -210,20 +267,51 @@ export function useMonthEventCapacity({
 
     setCapacity((prev) => {
       const itemHeights = measureItemHeights(grid, prev?.full.itemHeights ?? ITEM_HEIGHT)
+
+      // Past weeks sized to their content. Needs a week still to come to
+      // absorb the space: with none, the rows would stop short of the bottom.
+      let fullRowHeight = fullHeight
+      let pastWeeks: MonthEventCapacity['pastWeeks'] = []
+      if (pastWeekDemand && pastWeekDemand.length === compressed && compressed < weekCount) {
+        const heights = pastWeekDemand.map((week) =>
+          Math.max(
+            PAST_WEEK_MIN_HEIGHT,
+            Math.min(compressedHeight, pastWeekRowHeight(week, itemHeights))
+          )
+        )
+        const spent = heights.reduce((sum, height) => sum + height, 0)
+        fullRowHeight = Math.max((available - spent) / (weekCount - compressed), rowHeightFloor)
+        pastWeeks = heights.map((height) => ({
+          height,
+          capacity: { contentHeight: content(height), itemHeights },
+        }))
+      }
+
       const next: MonthEventCapacity = {
-        full: { contentHeight: content(fullHeight), itemHeights },
+        full: { contentHeight: content(fullRowHeight), itemHeights },
         compressed: { contentHeight: content(compressedHeight), itemHeights },
+        pastWeeks,
       }
       const unchanged =
         prev &&
         prev.full.contentHeight === next.full.contentHeight &&
         prev.compressed.contentHeight === next.compressed.contentHeight &&
+        prev.pastWeeks.length === next.pastWeeks.length &&
+        prev.pastWeeks.every((week, i) => week.height === next.pastWeeks[i].height) &&
         (Object.keys(itemHeights) as MonthRowKind[]).every(
           (kind) => prev.full.itemHeights[kind] === itemHeights[kind]
         )
       return unchanged ? prev : next
     })
-  }, [enabled, gridRef, headerSelector, weekCount, compressedWeekCount, rowHeightFloor])
+  }, [
+    enabled,
+    gridRef,
+    headerSelector,
+    weekCount,
+    compressedWeekCount,
+    rowHeightFloor,
+    pastWeekDemand,
+  ])
 
   const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
