@@ -40,10 +40,18 @@ vi.mock('@/store/calendarStore', () => {
   return { useCalendarStore, calendarMutesReminders: () => false }
 })
 
-vi.mock('@/store/settingsStore', () => ({
-  useSettingsStore: (selector: (s: Record<string, unknown>) => unknown) =>
-    selector({ overdueTaskBadge: badgeEnabled, enableDesktopNotifications: notificationsEnabled }),
-}))
+vi.mock('@/store/settingsStore', () => {
+  const snapshot = () => ({
+    overdueTaskBadge: badgeEnabled,
+    enableDesktopNotifications: notificationsEnabled,
+    homeTimezone: null,
+  })
+  const useSettingsStore = Object.assign(
+    (selector: (s: Record<string, unknown>) => unknown) => selector(snapshot()),
+    { getState: snapshot }
+  )
+  return { useSettingsStore }
+})
 
 const calendar: Calendar = {
   id: 'cal1',

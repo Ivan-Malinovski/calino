@@ -53,8 +53,9 @@ describe('multi-day fragments', () => {
       laneIndex: 2,
     })
     expect(fragments[1]).toMatchObject({
-      start: '2024-03-13T00:00:00',
-      end: '2024-03-13T23:59:59',
+      // Continuation fragments are instants spanning the whole local day.
+      start: new Date(2024, 2, 13).toISOString(),
+      end: new Date(2024, 2, 14).toISOString(),
       isFirstFragment: false,
       isLastFragment: false,
     })

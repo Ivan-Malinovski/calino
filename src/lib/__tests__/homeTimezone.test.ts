@@ -28,6 +28,14 @@ describe('homeTimezone', () => {
     expect(homeTimezone()).toBe('Europe/London')
   })
 
+  it('falls back to the browser for a synced zone that is not valid', () => {
+    useSettingsStore.getState().updateSettings({ homeTimezone: 'Mars/Olympus_Mons' })
+    expect(homeTimezone()).toBe(deviceTimezone())
+    expect(storedDayKey('2026-10-25T15:00:00.000Z')).toBe(
+      storedDayKey('2026-10-25T15:00:00.000Z', deviceTimezone())
+    )
+  })
+
   it('reads a floating string in the home zone, and as the browser when unset', () => {
     expect(toEventInstant('2026-10-25T09:00:00').getTime()).toBe(
       parseISO('2026-10-25T09:00:00').getTime()
@@ -46,6 +54,8 @@ describe('homeTimezone', () => {
     expect(storedDayKey('2026-10-25T15:00:00.000Z')).toBe('2026-10-26')
     expect(storedDayKey('2026-10-25T23:30:00', 'America/New_York')).toBe('2026-10-25')
     expect(storedDayKey('2026-10-25T00:00:00.000Z', undefined, true)).toBe('2026-10-25')
+    // Issue #126: a TZID task is filed in its own zone, whatever shape its due takes.
+    expect(storedDayKey('2026-10-26T03:30:00.000Z', 'America/New_York')).toBe('2026-10-25')
   })
 
   it('preserves due shape when a task moves', () => {

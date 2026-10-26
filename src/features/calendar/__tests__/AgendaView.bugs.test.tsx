@@ -21,11 +21,19 @@ vi.mock('@/store/calendarStore', () => ({
   }),
 }))
 
-vi.mock('@/store/settingsStore', () => ({
-  useSettingsStore: vi.fn((selector) => {
-    return selector({ timeFormat: '12h', taskCollapseOverrides: {}, updateSettings: vi.fn() })
-  }),
-}))
+vi.mock('@/store/settingsStore', () => {
+  const state = {
+    timeFormat: '12h',
+    taskCollapseOverrides: {},
+    homeTimezone: null,
+    updateSettings: vi.fn(),
+  }
+  const useSettingsStore = Object.assign(
+    vi.fn((selector) => selector(state)),
+    { getState: () => state }
+  )
+  return { useSettingsStore }
+})
 
 vi.mock('@/store/contextMenuStore', () => ({
   useContextMenuStore: vi.fn((selector) => {

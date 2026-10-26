@@ -13,11 +13,30 @@ import {
   zonedMidnight,
   zonedMinutes,
 } from '@/lib/datetime'
+import { normalizeTzid } from '@/lib/timezoneRegistry'
 import type { TimeFormat } from '@/types'
 
-/** The chosen zone, or null when the setting follows the browser. */
+const zoneValidity = new Map<string, boolean>()
+
+/** Synced settings are untrusted: an unknown zone would make every formatter throw. */
+function usableZone(zone: string | null | undefined): string | null {
+  if (!zone) return null
+  let valid = zoneValidity.get(zone)
+  if (valid === undefined) {
+    try {
+      new Intl.DateTimeFormat('en-US', { timeZone: normalizeTzid(zone) })
+      valid = true
+    } catch {
+      valid = false
+    }
+    zoneValidity.set(zone, valid)
+  }
+  return valid ? zone : null
+}
+
+/** The chosen zone, or null when the setting follows the browser (or holds an unknown zone). */
 export function homeTimezoneOverride(): string | null {
-  return useSettingsStore.getState().homeTimezone || null
+  return usableZone(useSettingsStore.getState().homeTimezone)
 }
 
 /**
@@ -35,7 +54,7 @@ export function homeTimezone(): string {
  */
 export function useHomeTimezone(): string {
   const override = useSettingsStore((state) => state.homeTimezone)
-  return override || deviceTimezone()
+  return usableZone(override) || deviceTimezone()
 }
 
 export function homeDayKey(instant: Date): string {
@@ -64,10 +83,13 @@ export function parseHomeWall(naive: string): Date {
   return parseWallClock(naive, homeTimezone())
 }
 
-/** Day a stored due belongs to. TZID naive stays in the event zone. Floating is the date in the string. */
+/** Day a stored due belongs to. A TZID task (naive or `Z`) is filed in its own zone. Floating is the date in the string. */
 export function storedDayKey(iso: string, timezone?: string, isAllDay?: boolean): string {
   if (isAllDay || !iso.includes('T')) return iso.split('T')[0]
-  if (timezone && !isInstantString(iso)) return zonedDayKey(toEventInstant(iso, timezone), timezone)
+  if (timezone) {
+    const instant = isInstantString(iso) ? parseISO(iso) : toEventInstant(iso, timezone)
+    return zonedDayKey(instant, timezone)
+  }
   if (!isInstantString(iso)) return iso.split('T')[0]
   return homeDayKey(parseISO(iso))
 }
