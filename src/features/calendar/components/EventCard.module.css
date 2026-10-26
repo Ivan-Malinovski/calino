@@ -209,13 +209,17 @@
   align-items: center;
   gap: 5px;
   min-width: 0;
+  overflow: hidden;
 }
 
 .meta .time {
-  /* The time matters more than the location or zone, so it only gives up
-     width once those have collapsed, and then it ellipsizes like the title. */
-  flex-shrink: 0.01;
+  /* The time matters more than the location or zone: it never shrinks beside
+     them (any shrink at all would ellipsize it), so they collapse first. Only
+     when the time alone is wider than the row does it ellipsize, like the
+     title. */
+  flex-shrink: 0;
   min-width: 0;
+  max-width: 100%;
 }
 
 /* Stacked cards: scale the time down to fit the card width before it
