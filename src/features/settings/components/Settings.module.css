@@ -784,6 +784,78 @@
   box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
+/* ── Searchable timezone picker ─────────────────────────────────────────── */
+.timezoneSelect {
+  position: relative;
+}
+
+.timezoneSelectInput {
+  width: 100%;
+  min-width: 260px;
+  text-overflow: ellipsis;
+  cursor: text;
+}
+
+.timezoneList {
+  position: absolute;
+  z-index: 50;
+  top: calc(100% + 4px);
+  right: 0;
+  width: max(100%, 300px);
+  max-height: 260px;
+  overflow-y: auto;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  background: var(--popover-bg, var(--canvas));
+  border: 1px solid var(--popover-border, var(--line));
+  border-radius: 10px;
+  box-shadow: var(--modal-shadow, 0 8px 24px rgba(0, 0, 0, 0.14));
+}
+
+.timezoneOption,
+.timezoneEmpty {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 7px 10px;
+  border-radius: 6px;
+  font-size: 14px;
+  color: var(--ink);
+}
+
+.timezoneOption {
+  cursor: pointer;
+}
+
+.timezoneOption[aria-selected='true'] {
+  font-weight: 600;
+}
+
+.timezoneOptionActive {
+  background: rgba(var(--ink-raw), 0.08);
+}
+
+.timezoneOptionZone,
+.timezoneEmpty {
+  color: var(--ink-muted, rgba(var(--ink-raw), 0.6));
+}
+
+.timezoneOptionZone {
+  font-size: 12px;
+}
+
+@media (max-width: 768px) {
+  .timezoneSelectInput {
+    min-width: auto;
+  }
+  .timezoneList {
+    left: 0;
+    right: auto;
+    width: 100%;
+  }
+}
+
 /* ── Number input (e.g. custom duration) ────────────────────────────────── */
 .numberInputWrap {
   display: inline-flex;

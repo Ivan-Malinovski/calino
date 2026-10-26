@@ -25,7 +25,9 @@
       "label": "Fuseau horaire principal",
       "desc": "Les événements sont affichés et créés dans ce fuseau. Automatique suit le navigateur.",
       "ariaLabel": "Fuseau horaire principal",
-      "automatic": "Automatique (navigateur)"
+      "automatic": "Automatique (navigateur)",
+      "search": "Rechercher un fuseau horaire",
+      "noResults": "Aucun fuseau horaire correspondant"
     },
     "dateFormat": {
       "label": "Format de date",

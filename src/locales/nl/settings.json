@@ -25,7 +25,9 @@
       "label": "Thuis-tijdzone",
       "desc": "Gebeurtenissen worden in deze tijdzone getoond en gemaakt. Automatisch volgt de browser.",
       "ariaLabel": "Thuis-tijdzone",
-      "automatic": "Automatisch (browser)"
+      "automatic": "Automatisch (browser)",
+      "search": "Zoek tijdzones",
+      "noResults": "Geen overeenkomende tijdzone"
     },
     "dateFormat": {
       "label": "Datumnotatie",

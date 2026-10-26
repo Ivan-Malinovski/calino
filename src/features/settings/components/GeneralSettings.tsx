@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import type { JSX } from 'react'
 import { Capacitor } from '@capacitor/core'
 import { Trans, useTranslation } from 'react-i18next'
@@ -13,7 +13,7 @@ import type { Language } from '@/types'
 import { useSettingsSync } from '@/hooks/useSettingsSync'
 import { classifySyncError, CORS_HEADER_SNIPPET } from '@/features/caldav/client/errorMessages'
 import { getFullWeekdayNames } from '@/features/calendar/components/weekdayLabels'
-import { getSupportedTimezones, TIMEZONE_PRESETS } from '@/lib/timezoneHelper'
+import { TimezoneSelect } from './TimezoneSelect'
 import { SettingsPageHeading } from './SettingsPageHeading'
 import styles from './Settings.module.css'
 
@@ -113,7 +113,6 @@ export function GeneralSettings({ searchControl }: { searchControl?: JSX.Element
   const contactsEnabled = useSettingsStore((s) => s.contactsEnabled)
   const enableHaptics = useSettingsStore((s) => s.enableHaptics)
   const updateSettings = useSettingsStore((s) => s.updateSettings)
-  const allTimezones = useMemo(() => getSupportedTimezones(), [])
 
   // Settings sync
   const {
@@ -161,28 +160,11 @@ export function GeneralSettings({ searchControl }: { searchControl?: JSX.Element
             <div className={styles.rowDesc}>{t('general.homeTimezone.desc')}</div>
           </div>
           <div className={styles.rowControl}>
-            <select
-              className={styles.select}
+            <TimezoneSelect
               value={homeTimezone ?? ''}
-              aria-label={t('general.homeTimezone.ariaLabel')}
-              onChange={(e) => updateSettings({ homeTimezone: e.target.value || null })}
-            >
-              <option value="">{t('general.homeTimezone.automatic')}</option>
-              <optgroup label={t('calendar.secondaryTimezone.presets')}>
-                {TIMEZONE_PRESETS.map((tz) => (
-                  <option key={`preset-${tz.value}`} value={tz.value}>
-                    {tz.label}
-                  </option>
-                ))}
-              </optgroup>
-              <optgroup label={t('calendar.secondaryTimezone.allTimezones')}>
-                {allTimezones.map((tz) => (
-                  <option key={`all-${tz}`} value={tz}>
-                    {tz}
-                  </option>
-                ))}
-              </optgroup>
-            </select>
+              ariaLabel={t('general.homeTimezone.ariaLabel')}
+              onChange={(zone) => updateSettings({ homeTimezone: zone || null })}
+            />
           </div>
         </div>
         <div

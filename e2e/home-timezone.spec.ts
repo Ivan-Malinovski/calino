@@ -212,4 +212,32 @@ test.describe('home timezone', () => {
       })
     ).toHaveCount(0)
   })
+
+  test('the settings picker filters zones by typing and saves the choice', async ({ page }) => {
+    await page.goto('/settings')
+    const picker = page.getByRole('combobox', { name: 'Home timezone' })
+    await picker.click()
+    await picker.fill('auckland')
+    const options = page.locator('[data-component="timezone-select"]').getByRole('option')
+    await expect(options).toHaveCount(1)
+    await expect(options.first()).toContainText('Pacific/Auckland')
+
+    await picker.fill('new york')
+    await expect(options.first()).toContainText('New York')
+
+    await picker.fill('no-such-place')
+    await expect(options).toHaveCount(0)
+
+    await picker.fill('auckland')
+    await picker.press('Enter')
+    await expect(picker).toHaveValue('Pacific/Auckland')
+    await expect(page.locator('[data-setting="home-timezone"]')).toHaveAttribute(
+      'data-value',
+      'Pacific/Auckland'
+    )
+
+    await picker.click()
+    await options.filter({ hasText: 'Automatic' }).click()
+    await expect(page.locator('[data-setting="home-timezone"]')).toHaveAttribute('data-value', '')
+  })
 })

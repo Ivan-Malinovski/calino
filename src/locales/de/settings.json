@@ -25,7 +25,9 @@
       "label": "Heimatzeitzone",
       "desc": "Termine werden in dieser Zeitzone angezeigt und erstellt. Automatisch folgt dem Browser.",
       "ariaLabel": "Heimatzeitzone",
-      "automatic": "Automatisch (Browser)"
+      "automatic": "Automatisch (Browser)",
+      "search": "Zeitzonen suchen",
+      "noResults": "Keine passende Zeitzone"
     },
     "dateFormat": {
       "label": "Datumsformat",

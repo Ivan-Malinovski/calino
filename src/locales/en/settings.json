@@ -25,7 +25,9 @@
       "label": "Home timezone",
       "desc": "Events are shown and created in this zone. Automatic follows the browser.",
       "ariaLabel": "Home timezone",
-      "automatic": "Automatic (browser)"
+      "automatic": "Automatic (browser)",
+      "search": "Search time zones",
+      "noResults": "No matching time zone"
     },
     "dateFormat": {
       "label": "Date Format",
