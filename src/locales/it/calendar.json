@@ -447,7 +447,16 @@
         "hoursBefore_one": "{{count}} ora prima",
         "hoursBefore_other": "{{count}} ore prima",
         "daysBefore_one": "{{count}} giorno prima",
-        "daysBefore_other": "{{count}} giorni prima"
+        "daysBefore_other": "{{count}} giorni prima",
+        "custom": "Personalizzato…",
+        "customInputAria": "Promemoria personalizzato",
+        "customUnitAria": "Unità del promemoria personalizzato",
+        "customAdd": "Aggiungi",
+        "customInvalid": "Inserisci un numero intero tra 0 e {{max}} minuti.",
+        "unitMinutes": "Minuti",
+        "unitHours": "Ore",
+        "unitDays": "Giorni",
+        "unitWeeks": "Settimane"
       }
     },
     "eventCard": {

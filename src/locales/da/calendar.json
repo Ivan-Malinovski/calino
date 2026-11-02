@@ -335,7 +335,16 @@
         "hoursBefore_one": "{{count}} time before",
         "hoursBefore_other": "{{count}} timer before",
         "daysBefore_one": "{{count}} dag before",
-        "daysBefore_other": "{{count}} dage before"
+        "daysBefore_other": "{{count}} dage before",
+        "custom": "Brugerdefineret…",
+        "customInputAria": "Brugerdefineret påmindelse",
+        "customUnitAria": "Enhed for brugerdefineret påmindelse",
+        "customAdd": "Tilføj",
+        "customInvalid": "Indtast et heltal mellem 0 og {{max}} minutter.",
+        "unitMinutes": "Minutter",
+        "unitHours": "Timer",
+        "unitDays": "Dage",
+        "unitWeeks": "Uger"
       }
     },
     "eventCard": {

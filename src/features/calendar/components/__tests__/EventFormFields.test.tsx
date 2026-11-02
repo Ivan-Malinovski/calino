@@ -572,6 +572,108 @@ describe('EventFormFields', () => {
     })
   })
 
+  describe('custom reminders', () => {
+    const openReminderDropdown = (): void => {
+      fireEvent.click(screen.getByRole('button', { name: /add reminder/i }))
+    }
+
+    it('offers "4 hours before" as a preset', () => {
+      const onRemindersChange = vi.fn()
+      renderWithMoreOptions({ reminders: [], onRemindersChange })
+      openReminderDropdown()
+
+      fireEvent.click(screen.getByRole('option', { name: '4 hours before' }))
+
+      expect(onRemindersChange).toHaveBeenCalledWith([
+        expect.objectContaining({ minutesBefore: 240, method: 'popup' }),
+      ])
+    })
+
+    it('adds a custom reminder in minutes', () => {
+      const onRemindersChange = vi.fn()
+      renderWithMoreOptions({ reminders: [], onRemindersChange })
+      openReminderDropdown()
+
+      fireEvent.click(screen.getByText('Custom…'))
+      fireEvent.change(screen.getByLabelText('Custom reminder'), { target: { value: '90' } })
+      fireEvent.click(
+        document.querySelector('[data-component="reminder-custom-add"]')!
+      )
+
+      expect(onRemindersChange).toHaveBeenCalledWith([
+        expect.objectContaining({ minutesBefore: 90, method: 'popup' }),
+      ])
+    })
+
+    it('adds a custom reminder in days', () => {
+      const onRemindersChange = vi.fn()
+      renderWithMoreOptions({ reminders: [], onRemindersChange })
+      openReminderDropdown()
+
+      fireEvent.click(screen.getByText('Custom…'))
+      fireEvent.change(screen.getByLabelText('Custom reminder'), { target: { value: '2' } })
+      fireEvent.change(screen.getByLabelText('Custom reminder unit'), {
+        target: { value: 'days' },
+      })
+      fireEvent.click(
+        document.querySelector('[data-component="reminder-custom-add"]')!
+      )
+
+      expect(onRemindersChange).toHaveBeenCalledWith([
+        expect.objectContaining({ minutesBefore: 2880, method: 'popup' }),
+      ])
+    })
+
+    it('adds a custom reminder in weeks', () => {
+      const onRemindersChange = vi.fn()
+      renderWithMoreOptions({ reminders: [], onRemindersChange })
+      openReminderDropdown()
+
+      fireEvent.click(screen.getByText('Custom…'))
+      fireEvent.change(screen.getByLabelText('Custom reminder'), { target: { value: '1' } })
+      fireEvent.change(screen.getByLabelText('Custom reminder unit'), {
+        target: { value: 'weeks' },
+      })
+      fireEvent.click(
+        document.querySelector('[data-component="reminder-custom-add"]')!
+      )
+
+      expect(onRemindersChange).toHaveBeenCalledWith([
+        expect.objectContaining({ minutesBefore: 10080, method: 'popup' }),
+      ])
+    })
+
+    it('disables Add when the custom value duplicates an existing chip', () => {
+      renderWithMoreOptions({
+        reminders: [{ id: 'r1', minutesBefore: 240, method: 'popup' }],
+      })
+      openReminderDropdown()
+
+      fireEvent.click(screen.getByText('Custom…'))
+      fireEvent.change(screen.getByLabelText('Custom reminder'), { target: { value: '4' } })
+      fireEvent.change(screen.getByLabelText('Custom reminder unit'), {
+        target: { value: 'hours' },
+      })
+
+      expect(
+        document.querySelector('[data-component="reminder-custom-add"]')
+      ).toBeDisabled()
+    })
+
+    it('disables Add and explains itself for invalid input', () => {
+      renderWithMoreOptions({ reminders: [] })
+      openReminderDropdown()
+
+      fireEvent.click(screen.getByText('Custom…'))
+      fireEvent.change(screen.getByLabelText('Custom reminder'), { target: { value: '1.5' } })
+
+      expect(
+        document.querySelector('[data-component="reminder-custom-add"]')
+      ).toBeDisabled()
+      expect(screen.getByText(/whole number between 0 and 40320/)).toBeInTheDocument()
+    })
+  })
+
   describe('date field accessible names', () => {
     it('exposes the start and end date inputs via their associated labels', () => {
       render(<EventFormFields {...defaultProps} />)

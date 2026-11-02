@@ -267,7 +267,10 @@
       "15minBefore": "15 minutes before",
       "30minBefore": "30 minutes before",
       "1hourBefore": "1 hour before",
-      "1dayBefore": "1 day before"
+      "1dayBefore": "1 day before",
+      "custom": "Custom…",
+      "customAriaLabel": "Custom default reminder value",
+      "customUnitAriaLabel": "Custom default reminder unit"
     }
   },
   "conflict": {

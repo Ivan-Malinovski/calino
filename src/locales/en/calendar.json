@@ -447,7 +447,16 @@
         "hoursBefore_one": "{{count}} hour before",
         "hoursBefore_other": "{{count}} hours before",
         "daysBefore_one": "{{count}} day before",
-        "daysBefore_other": "{{count}} days before"
+        "daysBefore_other": "{{count}} days before",
+        "custom": "Custom…",
+        "customInputAria": "Custom reminder",
+        "customUnitAria": "Custom reminder unit",
+        "customAdd": "Add",
+        "customInvalid": "Enter a whole number between 0 and {{max}} minutes.",
+        "unitMinutes": "Minutes",
+        "unitHours": "Hours",
+        "unitDays": "Days",
+        "unitWeeks": "Weeks"
       }
     },
     "eventCard": {

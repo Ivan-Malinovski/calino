@@ -267,7 +267,10 @@
       "15minBefore": "15 minutter før",
       "30minBefore": "30 minutter før",
       "1hourBefore": "1 time før",
-      "1dayBefore": "1 dag før"
+      "1dayBefore": "1 dag før",
+      "custom": "Brugerdefineret…",
+      "customAriaLabel": "Brugerdefineret værdi for standardpåmindelse",
+      "customUnitAriaLabel": "Enhed for brugerdefineret standardpåmindelse"
     }
   },
   "conflict": {
