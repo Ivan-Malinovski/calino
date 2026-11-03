@@ -51,12 +51,15 @@
     },
     "agenda": {
       "emptyTitle": "Niets gepland deze maand",
-      "emptyDescription": "Je agenda is leeg. Voeg een gebeurtenis toe om te beginnen."
+      "emptyDescription": "Je agenda is leeg. Voeg een gebeurtenis toe om te beginnen.",
+      "freeDays_one": "{{count}} dag vrij",
+      "freeDays_other": "{{count}} dagen vrij"
     },
     "year": {
       "weekNumber": "Week {{number}}"
     },
     "grid": {
+      "weekNumberHeader": "Wk",
       "openDayView": "{{date}} openen in dagweergave",
       "hasJournalEntriesFor": "Er zijn dagboeknotities voor {{date}}",
       "viewJournalEntries": "Dagboeknotities bekijken",

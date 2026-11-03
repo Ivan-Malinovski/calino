@@ -51,12 +51,15 @@
     },
     "agenda": {
       "emptyTitle": "本月没有安排",
-      "emptyDescription": "议程空空如也，添加一个日程开始吧。"
+      "emptyDescription": "议程空空如也，添加一个日程开始吧。",
+      "freeDays_one": "空闲 {{count}} 天",
+      "freeDays_other": "空闲 {{count}} 天"
     },
     "year": {
       "weekNumber": "第 {{number}} 周"
     },
     "grid": {
+      "weekNumberHeader": "周",
       "openDayView": "在日视图中打开 {{date}}",
       "hasJournalEntriesFor": "{{date}} 有日记",
       "viewJournalEntries": "查看日记",

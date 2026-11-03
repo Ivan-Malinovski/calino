@@ -51,12 +51,15 @@
     },
     "agenda": {
       "emptyTitle": "No hay nada programado este mes",
-      "emptyDescription": "Tu agenda está despejada. Añade un evento para empezar."
+      "emptyDescription": "Tu agenda está despejada. Añade un evento para empezar.",
+      "freeDays_one": "{{count}} día libre",
+      "freeDays_other": "{{count}} días libres"
     },
     "year": {
       "weekNumber": "Semana {{number}}"
     },
     "grid": {
+      "weekNumberHeader": "Sem",
       "openDayView": "Abre {{date}} en la vista diaria",
       "hasJournalEntriesFor": "Hay entradas del diario para {{date}}",
       "viewJournalEntries": "Ver entradas de diario",

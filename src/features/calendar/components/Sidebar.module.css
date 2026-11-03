@@ -276,6 +276,13 @@
   line-height: 1;
 }
 
+/* Languages that write the year first ("2026年11月"): the buttons keep their
+   DOM order and per-position font sizes, only their visual order flips. */
+.miniMonthYearFirst {
+  flex-direction: row-reverse;
+  gap: 0;
+}
+
 .miniMonthButton {
   background: none;
   border: none;

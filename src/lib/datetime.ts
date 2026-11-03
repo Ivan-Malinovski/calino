@@ -14,6 +14,7 @@ import { fromZonedTime, formatInTimeZone } from 'date-fns-tz'
 import { normalizeTzid } from '@/lib/timezoneRegistry'
 import { homeTimezone, homeTimezoneOverride } from '@/lib/homeTimezone'
 import { currentLanguage } from '@/lib/i18n'
+import { localizeDisplayPattern } from '@/lib/datePatterns'
 import type { TimeFormat } from '@/types'
 
 // ─── Locale-aware display formatting ─────────────────────────────────────────
@@ -45,11 +46,13 @@ export function getDateFnsLocale(): Locale | undefined {
  * Format a date for *display*, in the active UI language.
  *
  * Use this — never bare `format()` — whenever the output contains a month or
- * weekday name, or an ordering a reader would notice.
+ * weekday name, or an ordering a reader would notice. A pattern whose word
+ * order differs in the active locale is rewritten by
+ * `localizeDisplayPattern`; one with no rewrite formats exactly as written.
  */
 export function formatDisplayDate(date: Date | string, pattern: string): string {
   const d = typeof date === 'string' ? parseISO(date) : date
-  return format(d, pattern, { locale: getDateFnsLocale() })
+  return format(d, localizeDisplayPattern(pattern), { locale: getDateFnsLocale() })
 }
 
 /** `'December 2024'` — month and year, e.g. the calendar header. */
@@ -126,8 +129,8 @@ export function formatTime(
   variant: 'full' | 'hour' = 'full'
 ): string {
   const d = typeof date === 'string' ? parseISO(date) : date
-  const pattern = timeFormat === '24h' ? 'HH:mm' : variant === 'hour' ? 'h a' : 'h:mm a'
-  return format(d, pattern, { locale: getDateFnsLocale() })
+  const pattern = clockPattern(timeFormat, variant)
+  return format(d, localizeDisplayPattern(pattern), { locale: getDateFnsLocale() })
 }
 
 /**
@@ -136,8 +139,7 @@ export function formatTime(
  */
 export function formatDateLong(date: Date | string, timeFormat: TimeFormat = '24h'): string {
   const d = typeof date === 'string' ? parseISO(date) : date
-  const timePattern = timeFormat === '24h' ? 'HH:mm' : 'h:mm a'
-  return formatDisplayDate(d, `MMM d, yyyy ${timePattern}`)
+  return formatDisplayDate(d, `MMM d, yyyy ${clockPattern(timeFormat)}`)
 }
 
 /**
@@ -182,7 +184,9 @@ export function zonedMinutes(instant: Date, zone: string): number {
 
 /** Format an instant in `zone`. Numeric patterns do not depend on locale. */
 export function formatInZone(instant: Date, zone: string, pattern: string): string {
-  return formatInTimeZone(instant, resolvedZone(zone), pattern, { locale: getDateFnsLocale() })
+  return formatInTimeZone(instant, resolvedZone(zone), localizeDisplayPattern(pattern), {
+    locale: getDateFnsLocale(),
+  })
 }
 
 /**
