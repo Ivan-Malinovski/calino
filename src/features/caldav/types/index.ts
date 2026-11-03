@@ -30,6 +30,14 @@ export interface CalendarUser {
   displayName?: string
 }
 
+/** Who owns a calendar shared with the user (RFC 3744 DAV:owner → RFC 6638 address). */
+export interface CalendarOwner {
+  calendarUrl: string
+  /** The owner's calendar user address, without `mailto:`. */
+  address: string
+  displayName?: string
+}
+
 export interface CalDAVCalendar {
   id: string
   accountId?: string // Set by caller, not by CalDAV client
@@ -47,6 +55,12 @@ export interface CalDAVCalendar {
   isSubscribed?: boolean
   /** cs:calendar-order — server-side ordering hint. */
   calendarOrder?: number
+  /**
+   * Who shares this calendar with the user, when the server tells: offered as
+   * an attendee. Absent for the user's own calendars and for servers that do
+   * not report an owner.
+   */
+  owner?: { email: string; name?: string }
 }
 
 /**

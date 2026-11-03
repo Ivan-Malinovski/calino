@@ -22,7 +22,7 @@ import type {
   PendingChange,
   ServerSubscription,
 } from '../types'
-import { unwrapFetchEvents } from '../client/CalDAVClient'
+import { davUrlKey, unwrapFetchEvents } from '../client/CalDAVClient'
 import { createCalendarBackend } from '../client/createBackend'
 import type { CalendarBackend } from '../client/CalendarBackend'
 import {
@@ -1594,6 +1594,24 @@ export function useCalDAVInstance(): UseCalDAVReturn {
             reconcileServerSubscriptions(accountId, found, account.proxyUrl)
           }
 
+          // Who shares each calendar, offered as attendees. A failed listing
+          // leaves the owners already known untouched.
+          let owners: Map<string, { email: string; name?: string }> | null = null
+          if (client.fetchCalendarOwners) {
+            try {
+              owners = new Map(
+                (await client.fetchCalendarOwners()).map((owner) => [
+                  davUrlKey(owner.calendarUrl),
+                  { email: owner.address.toLowerCase(), name: owner.displayName },
+                ])
+              )
+            } catch (error) {
+              console.warn('[CalDAV] Could not list calendar owners:', error)
+            }
+          }
+          const ownerOf = (url: string): { owner?: { email: string; name?: string } } =>
+            owners ? { owner: owners.get(davUrlKey(url)) } : {}
+
           const storedByUrl = new Map(accountCalendars.map((calendar) => [calendar.url, calendar]))
           const serverUrls = new Set(serverCalendars.map((calendar) => calendar.url))
           const discoveredCalendars = accountCalendars.filter((calendar) =>
@@ -1623,7 +1641,10 @@ export function useCalDAVInstance(): UseCalDAVReturn {
                 isSubscribed: serverCalendar.isSubscribed,
                 calendarOrder: serverCalendar.calendarOrder,
               }
-              storage.updateCalendar(storedCalendar.id, updates)
+              storage.updateCalendar(storedCalendar.id, {
+                ...updates,
+                ...ownerOf(serverCalendar.url),
+              })
               storeUpdateCalendar(storedCalendar.id, updates)
               freshCursors.set(storedCalendar.id, {
                 ctag: serverCalendar.ctag,
@@ -1636,7 +1657,13 @@ export function useCalDAVInstance(): UseCalDAVReturn {
             // first pass below is a full fetch. Persisting the server's token
             // here would make this sync's own skip check believe we are
             // already up to date with a calendar we hold nothing from.
-            const newCalendar = { ...serverCalendar, accountId, ctag: null, syncToken: null }
+            const newCalendar = {
+              ...serverCalendar,
+              ...ownerOf(serverCalendar.url),
+              accountId,
+              ctag: null,
+              syncToken: null,
+            }
             storage.saveCalendar(newCalendar)
             discoveredCalendars.push(newCalendar)
             freshCursors.set(serverCalendar.id, {
