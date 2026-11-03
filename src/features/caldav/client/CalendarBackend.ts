@@ -97,8 +97,9 @@ export interface CalendarBackend {
   fetchCalendarUser?(): Promise<CalendarUser | null>
   /**
    * Owners of the calendars others share with the user (DAV:owner → their
-   * principal's address). Throws when the listing fails. Optional: JMAP has
-   * no principal.
+   * principal's address). Throws when the listing fails. Optional: the JMAP
+   * backend lists the calendars of the user's own account only, so it has no
+   * shared calendar to name an owner for.
    */
   fetchCalendarOwners?(): Promise<CalendarOwner[]>
   supportsScheduling(url?: string): Promise<boolean>

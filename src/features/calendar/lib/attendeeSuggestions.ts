@@ -1,3 +1,5 @@
+import type { CalDAVAccount } from '@/features/caldav/types'
+import type { Contact } from '@/features/carddav/types'
 import type { CalendarEvent } from '@/types'
 
 /** Someone the attendee field can offer. */
@@ -26,6 +28,31 @@ export interface SuggestionSources {
   ownAddresses?: readonly string[]
   /** Reference time for recency. */
   now?: Date
+}
+
+/** An account as far as the suggestions are concerned: who the user is on it. */
+export type SuggestionAccount = Pick<CalDAVAccount, 'username' | 'calendarUserAddress'>
+
+/**
+ * The addresses the user goes by on their accounts, never offered to them: the
+ * calendar user address each account reported (a CalDAV principal's
+ * calendar-user-address-set, a JMAP account's default participant identity,
+ * as the organizer uses them) and the account username, which only counts
+ * when it is itself an address. Leaving out an address the user might not own
+ * costs one suggestion; it is never claimed as theirs.
+ */
+export function ownAddressesOf(accounts: readonly SuggestionAccount[]): string[] {
+  return accounts.flatMap((account) => [account.calendarUserAddress ?? '', account.username])
+}
+
+/**
+ * Address-book entries as people the field can offer, one per email. Contacts
+ * from CardDAV and from JMAP accounts are the same in the store.
+ */
+export function contactPeople(contacts: readonly Contact[]): KnownPerson[] {
+  return contacts.flatMap((contact) =>
+    contact.emails.map((email) => ({ email: email.value, name: contact.displayName }))
+  )
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
