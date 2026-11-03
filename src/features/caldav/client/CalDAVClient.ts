@@ -3,6 +3,7 @@ import type {
   CalDAVCredentials,
   CalDAVCalendar,
   CreateCalendarOptions,
+  ServerSubscription,
   UpdateCalendarOptions,
 } from '../types'
 import type { CalendarBackend } from './CalendarBackend'
@@ -424,6 +425,61 @@ export class CalDAVClient implements CalendarBackend {
           calendarOrder: Number.isFinite(calendarOrder) ? calendarOrder : undefined,
         }
       })
+  }
+
+  /**
+   * Collections the server holds as subscriptions to an external ICS feed
+   * (Radicale `VSUBSCRIBED`: resourcetype `cs:subscribed`, feed URL in
+   * `cs:source`). tsdav's `fetchCalendars` keeps only `calendar` collections, so
+   * these are invisible to it; one more PROPFIND on the calendar home finds
+   * them. Throws on a failed listing so callers can tell "none" from "unknown".
+   */
+  async fetchSubscribedCollections(): Promise<ServerSubscription[]> {
+    if (!navigator.onLine) {
+      throw new Error('No network connection. Please check your internet connection.')
+    }
+    const client = this.getClient()
+    const homeUrl = await this.findCalendarHome()
+    const responses = await client.propfind({
+      url: homeUrl,
+      depth: '1',
+      props: {
+        'd:resourcetype': {},
+        'd:displayname': {},
+        'ca:calendar-color': {},
+        'cs:source': {},
+      },
+    })
+
+    const subscriptions: ServerSubscription[] = []
+    for (const response of responses) {
+      const props = (response.props ?? {}) as Record<string, unknown>
+      const resourceTypes = props.resourcetype
+      if (resourceTypes == null || typeof resourceTypes !== 'object') continue
+      if (!('subscribed' in resourceTypes)) continue
+
+      // Radicale answers `<CS:source><href>url</href></CS:source>`; tolerate a
+      // bare-text source too.
+      const rawSource = props.source
+      const source =
+        typeof rawSource === 'string'
+          ? rawSource
+          : rawSource != null && typeof rawSource === 'object'
+            ? (rawSource as { href?: unknown }).href
+            : undefined
+      if (typeof source !== 'string' || !source.trim() || !response.href) continue
+
+      subscriptions.push({
+        url: resolveDavHref(homeUrl, response.href),
+        name:
+          typeof props.displayname === 'string' && props.displayname
+            ? props.displayname
+            : 'Subscription',
+        color: normalizeColor(props.calendarColor as string | null | undefined),
+        source: source.trim(),
+      })
+    }
+    return subscriptions
   }
 
   /**

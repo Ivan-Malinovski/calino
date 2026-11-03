@@ -20,10 +20,15 @@ import type {
   MovePendingData,
   DeleteHrefPendingData,
   PendingChange,
+  ServerSubscription,
 } from '../types'
 import { unwrapFetchEvents } from '../client/CalDAVClient'
 import { createCalendarBackend } from '../client/createBackend'
 import type { CalendarBackend } from '../client/CalendarBackend'
+import {
+  reconcileServerSubscriptions,
+  removeServerSubscriptions,
+} from '@/features/webcal/serverSubscriptions'
 import type { SyncCollectionChange } from '../client/CalDAVClient'
 import {
   probeConnection,
@@ -1489,6 +1494,7 @@ export function useCalDAVInstance(): UseCalDAVReturn {
       }
       storage.deleteCalendarsByAccountId(accountId)
       storage.deleteAccount(accountId)
+      removeServerSubscriptions(accountId)
 
       setAccounts(storage.getAllAccounts())
       setCalendars(storage.getAllCalendars())
@@ -1548,6 +1554,19 @@ export function useCalDAVInstance(): UseCalDAVReturn {
             throw new Error(
               'Server returned zero calendars; refusing to treat this as an authoritative listing'
             )
+          }
+
+          // Collections the server holds as external-feed subscriptions are
+          // invisible to fetchCalendars; mirror them as webcal subscriptions.
+          // A failed listing must neither fail the sync nor delete anything.
+          if (client.fetchSubscribedCollections) {
+            let found: ServerSubscription[] | null = null
+            try {
+              found = await client.fetchSubscribedCollections()
+            } catch (error) {
+              console.warn('[CalDAV] Could not list subscribed collections:', error)
+            }
+            reconcileServerSubscriptions(accountId, found, account.proxyUrl)
           }
 
           const storedByUrl = new Map(accountCalendars.map((calendar) => [calendar.url, calendar]))

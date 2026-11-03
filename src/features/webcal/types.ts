@@ -11,4 +11,9 @@ export interface WebcalSubscription {
   // True for subscriptions defined in calino.config.json — hidden from
   // edit/delete in the settings UI, same as preconfigured CalDAV accounts.
   isPreconfigured?: boolean
+  // Set when the subscription mirrors a collection a CalDAV server holds as an
+  // external-feed subscription (Radicale VSUBSCRIBED). The server owns it, so
+  // the settings UI treats it like a preconfigured one: no edit URL / remove.
+  serverAccountId?: string
+  serverCollectionUrl?: string
 }

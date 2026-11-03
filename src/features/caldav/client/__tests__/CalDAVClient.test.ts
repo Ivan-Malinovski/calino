@@ -59,6 +59,7 @@ END:VCALENDAR`,
 
   const mockClientMethods = {
     fetchCalendars: vi.fn(),
+    propfind: vi.fn(),
     fetchCalendarObjects: vi.fn(),
     createCalendarObject: vi.fn(),
     updateCalendarObject: vi.fn(),
@@ -496,6 +497,61 @@ END:VCALENDAR`,
       await client.connect()
 
       await expect(client.fetchCalendars()).rejects.toThrow('No network connection')
+    })
+  })
+
+  describe('fetchSubscribedCollections (#237)', () => {
+    // tsdav's real shape for a Radicale VSUBSCRIBED collection: element names
+    // camelCased, `source` carrying an <href> child, and no `calendar` type.
+    const home = 'https://caldav.example.com/calendars/test/'
+
+    it('lists collections the server holds as external feeds', async () => {
+      mockClientMethods.propfind.mockResolvedValue([
+        { href: '/calendars/test/', props: { resourcetype: { principal: {}, collection: {} } } },
+        {
+          href: '/calendars/test/default/',
+          props: { resourcetype: { calendar: {}, collection: {} }, source: { href: {} } },
+        },
+        {
+          href: '/calendars/test/holidays/',
+          props: {
+            resourcetype: { subscribed: {}, collection: {} },
+            displayname: 'Holidays',
+            source: { href: 'https://example.com/holidays.ics' },
+          },
+        },
+      ])
+      await client.connect()
+      const found = await client.fetchSubscribedCollections()
+
+      expect(mockClientMethods.propfind).toHaveBeenCalledWith(
+        expect.objectContaining({ url: home, depth: '1' })
+      )
+      expect(found).toEqual([
+        {
+          url: 'https://caldav.example.com/calendars/test/holidays/',
+          name: 'Holidays',
+          color: expect.any(String),
+          source: 'https://example.com/holidays.ics',
+        },
+      ])
+    })
+
+    it('skips a subscribed collection that has no feed URL', async () => {
+      mockClientMethods.propfind.mockResolvedValue([
+        {
+          href: '/calendars/test/empty/',
+          props: { resourcetype: { subscribed: {} }, source: { href: {} } },
+        },
+      ])
+      await client.connect()
+      expect(await client.fetchSubscribedCollections()).toEqual([])
+    })
+
+    it('propagates a failed listing so callers can tell "none" from "unknown"', async () => {
+      mockClientMethods.propfind.mockRejectedValue(new Error('boom'))
+      await client.connect()
+      await expect(client.fetchSubscribedCollections()).rejects.toThrow('boom')
     })
   })
 
@@ -1782,7 +1838,9 @@ END:VCALENDAR`,
       // Sent a REPORT carrying the supplied sync token.
       const [, init] = fetchSpy.mock.calls[fetchSpy.mock.calls.length - 1]
       expect(init?.method).toBe('REPORT')
-      expect(String(init?.body)).toContain('<D:sync-token>https://caldav.example.com/sync/1</D:sync-token>')
+      expect(String(init?.body)).toContain(
+        '<D:sync-token>https://caldav.example.com/sync/1</D:sync-token>'
+      )
     })
 
     it('parses tombstoned (removed) resources reported as a top-level 404', async () => {

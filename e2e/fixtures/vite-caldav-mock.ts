@@ -69,6 +69,12 @@ interface MockCollection {
   /** Marks the collection as Calino's settings calendar. */
   isSettings?: boolean
   /**
+   * Make this a Radicale-style `VSUBSCRIBED` collection (#237): resourcetype
+   * `collection + cs:subscribed` (no `calendar`), holding no events, with the
+   * external feed URL in `cs:source/href`.
+   */
+  subscribedSource?: string
+  /**
    * Withhold the `ETag` response header on PUT, forcing Calino's PROPFIND
    * fallback to recover it.
    *
@@ -340,6 +346,31 @@ const ACCOUNTS: MockAccount[] = [
       },
     ],
   },
+  {
+    // A fourth account for `server-subscriptions.spec.ts` (#237): one ordinary
+    // calendar plus a Radicale-style `VSUBSCRIBED` collection that points at an
+    // external ICS feed and holds no events of its own.
+    mount: '/mock-caldav-sub',
+    principalPath: '/dav/principals/userd/',
+    homePath: '/dav/calendars/userd/',
+    displayName: 'Mock CalDAV Subscriptions',
+    collections: [
+      {
+        path: '/dav/calendars/userd/sub-work/',
+        displayName: 'Sub Work',
+        color: '#2563EB',
+        components: ['VEVENT', 'VTODO', 'VJOURNAL'],
+        privileges: ['read', 'write', 'write-content', 'write-properties', 'bind', 'unbind'],
+      },
+      {
+        path: '/dav/calendars/userd/sub-holidays/',
+        displayName: 'Server Holidays',
+        color: '#DC2626',
+        components: ['VEVENT'],
+        subscribedSource: 'https://feeds.example.test/server-holidays.ics',
+      },
+    ],
+  },
 ]
 
 interface FaultRule {
@@ -490,6 +521,9 @@ export function caldavMockPlugin(): Plugin {
             value: c.privileges.map((p) => `<d:privilege><d:${p}/></d:privilege>`).join(''),
             raw: true,
           })
+        }
+        if (c.subscribedSource) {
+          props.push({ name: 'http://calendarserver.org/ns/source', href: c.subscribedSource })
         }
         if (c.isSettings) {
           // Dead-property marker so Calino's `discoverSettingsCalendar`
@@ -685,7 +719,9 @@ export function caldavMockPlugin(): Plugin {
             responseTag(absolute(c.path), [
               {
                 name: 'DAV:resourcetype',
-                value: '<d:collection/><c:calendar/>',
+                value: c.subscribedSource
+                  ? '<d:collection/><cs:subscribed/>'
+                  : '<d:collection/><c:calendar/>',
                 raw: true,
               },
               ...collectionProps(c),
