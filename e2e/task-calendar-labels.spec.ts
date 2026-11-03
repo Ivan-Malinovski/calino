@@ -59,6 +59,9 @@ function row(page: Page, id: string): Locator {
 }
 
 async function expectNoRowOverlap(page: Page): Promise<void> {
+  // Scrolling can move a row under the pointer. Hover lifts that row by 1px,
+  // so compare resting row geometry after moving the pointer off the list.
+  await page.mouse.move(0, 0)
   await expect
     .poll(async () => {
       const boxes = await page.locator('main [data-component="task-row"]').evaluateAll((rows) =>
