@@ -60,6 +60,7 @@
     },
     "grid": {
       "weekNumberHeader": "W#",
+      "weekNumber": "W{{number}}",
       "openDayView": "Open {{date}} in day view",
       "hasJournalEntriesFor": "Has journal entries for {{date}}",
       "viewJournalEntries": "View journal entries",

@@ -897,7 +897,8 @@ export function JournalView(): JSX.Element {
       <div className={styles.inner}>
         <div className={styles.bar} data-component="journal-toolbar">
           <div className={styles.count}>
-            <b>{visibleEntries.length}</b> {visibleEntries.length === 1 ? 'entry' : 'entries'}
+            <b>{visibleEntries.length}</b>{' '}
+            {t('surface.journalEntry', { count: visibleEntries.length })}
           </div>
           <div className={styles.barControls}>
             <div className={styles.segmentedControl} ref={segmentedRef}>

@@ -60,6 +60,7 @@
     },
     "grid": {
       "weekNumberHeader": "Sem",
+      "weekNumber": "S{{number}}",
       "openDayView": "Abre {{date}} en la vista diaria",
       "hasJournalEntriesFor": "Hay entradas del diario para {{date}}",
       "viewJournalEntries": "Ver entradas de diario",

@@ -60,6 +60,7 @@
     },
     "grid": {
       "weekNumberHeader": "周",
+      "weekNumber": "第{{number}}周",
       "openDayView": "在日视图中打开 {{date}}",
       "hasJournalEntriesFor": "{{date}} 有日记",
       "viewJournalEntries": "查看日记",

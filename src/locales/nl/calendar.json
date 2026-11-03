@@ -60,6 +60,7 @@
     },
     "grid": {
       "weekNumberHeader": "Wk",
+      "weekNumber": "W{{number}}",
       "openDayView": "{{date}} openen in dagweergave",
       "hasJournalEntriesFor": "Er zijn dagboeknotities voor {{date}}",
       "viewJournalEntries": "Dagboeknotities bekijken",

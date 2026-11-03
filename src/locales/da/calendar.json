@@ -60,6 +60,7 @@
     },
     "grid": {
       "weekNumberHeader": "Uge",
+      "weekNumber": "U{{number}}",
       "openDayView": "Åbn {{date}} i dagsvisning",
       "hasJournalEntriesFor": "Har dagbogsindlæg for {{date}}",
       "viewJournalEntries": "Vis dagbogsindlæg",

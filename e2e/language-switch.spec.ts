@@ -74,6 +74,79 @@ async function seedEventsWithGap(page: Page): Promise<void> {
   )
 }
 
+/**
+ * A high-priority task and one journal entry, so the task list has a priority
+ * badge and the journal toolbar has a non-zero entry count.
+ */
+async function seedTaskAndJournal(page: Page): Promise<void> {
+  const today = isoDay(new Date())
+  const stamp = new Date().toISOString()
+
+  await page.addInitScript(
+    ({ calendarKey, settingsKey, today, stamp }: Record<string, string>) => {
+      try {
+        if (sessionStorage.getItem('__calino_test_language_task')) return
+        sessionStorage.setItem('__calino_test_language_task', '1')
+
+        const raw = localStorage.getItem(calendarKey)
+        const parsed = raw ? JSON.parse(raw) : { state: {}, version: 2 }
+        parsed.state = {
+          ...(parsed.state ?? {}),
+          calendars: [
+            {
+              id: 'default',
+              name: 'Default',
+              color: '#4285F4',
+              isVisible: true,
+              isDefault: true,
+              showTasksInViews: true,
+            },
+          ],
+          events: [
+            {
+              id: 'language-priority-task',
+              calendarId: 'default',
+              title: 'Water the plants',
+              type: 'task',
+              start: `${today}T09:00:00`,
+              end: `${today}T09:00:00`,
+              isAllDay: false,
+              completed: false,
+              priority: 1,
+            },
+            {
+              id: 'language-journal-entry',
+              calendarId: 'default',
+              title: 'A day worth keeping',
+              description: 'Wrote down what happened today.',
+              type: 'journal',
+              start: today,
+              end: today,
+              isAllDay: true,
+              created: stamp,
+              lastModified: stamp,
+            },
+          ],
+        }
+        localStorage.setItem(calendarKey, JSON.stringify(parsed))
+
+        const settingsRaw = localStorage.getItem(settingsKey)
+        const settings = settingsRaw ? JSON.parse(settingsRaw) : { state: {}, version: 1 }
+        settings.state = { ...(settings.state ?? {}), journalEnabled: true }
+        localStorage.setItem(settingsKey, JSON.stringify(settings))
+      } catch {
+        /* noop */
+      }
+    },
+    {
+      calendarKey: STORAGE_KEYS.calendar,
+      settingsKey: STORAGE_KEYS.settings,
+      today,
+      stamp,
+    }
+  )
+}
+
 test.describe('language settings', () => {
   test.beforeEach(async ({ page }) => {
     await clearState(page)
@@ -191,10 +264,31 @@ test.describe('language settings', () => {
     await expect(weekHeader).toContainText(/月\d{1,2}日/)
     await expect(weekHeader).toContainText(/–\s*\d{1,2}日/)
 
+    // The week-number badge reads "第45周", not the English "W45".
+    await expect(page.getByText(/^第\d{1,2}周$/).first()).toBeVisible()
+
     // The free-day label is translated rather than the hardcoded "1 day free".
     await page.goto('/agenda')
     const freeRange = page.locator('[data-component="agenda-free-range"]').first()
     await expect(freeRange).toContainText('空闲')
     await expect(freeRange).not.toContainText('day free')
+  })
+
+  test('translates the task priority badge and the journal entry count', async ({ page }) => {
+    await seedTaskAndJournal(page)
+    await page.goto('/settings')
+    await page.locator('[data-setting="language"]').getByRole('combobox').selectOption('zh')
+
+    // "高" instead of the hardcoded English "High"/"HIGH".
+    await page.goto('/tasks')
+    const badge = page.locator('[data-component="task-priority-badge"]').first()
+    await expect(badge).toHaveText('高')
+    await expect(badge).not.toHaveText(/HIGH/i)
+
+    // "1 篇日记" instead of "1 entry".
+    await page.goto('/journal')
+    const toolbar = page.locator('[data-component="journal-toolbar"]')
+    await expect(toolbar).toContainText('篇日记')
+    await expect(toolbar).not.toContainText(/entries?/i)
   })
 })

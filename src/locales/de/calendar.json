@@ -60,6 +60,7 @@
     },
     "grid": {
       "weekNumberHeader": "KW",
+      "weekNumber": "KW{{number}}",
       "openDayView": "{{date}} in Tagesansicht öffnen",
       "hasJournalEntriesFor": "Hat Journaleinträge für {{date}}",
       "viewJournalEntries": "Journaleinträge anzeigen",
