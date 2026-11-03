@@ -17,7 +17,9 @@ import { useContactStore } from '@/store/contactStore'
 import { getAllAccounts, getAllCalendars } from '@/features/caldav/sync/accountStorage'
 import {
   collectAttendeeSuggestions,
+  contactPeople,
   matchAttendeeSuggestions,
+  ownAddressesOf,
   type AttendeeSuggestion,
 } from '../lib/attendeeSuggestions'
 import { checkAttendeeAvailability, type Availability } from '@/lib/freeBusyCalculator'
@@ -116,10 +118,7 @@ export function AttendeeSection({
   const organizerEmail = organizer?.email
   const suggestions = useMemo((): AttendeeSuggestion[] => {
     if (!suggestionsOpen) return []
-    const ownAddresses = getAllAccounts().flatMap((account) => [
-      account.calendarUserAddress ?? '',
-      account.username,
-    ])
+    const ownAddresses = ownAddressesOf(getAllAccounts())
     if (organizerEmail) ownAddresses.push(organizerEmail)
     // Owners are kept with the stored collections; only calendars still in
     // the list count.
@@ -127,13 +126,10 @@ export function AttendeeSection({
     const calendarOwners = getAllCalendars().flatMap((calendar) =>
       calendar.owner && listed.has(calendar.id) ? [calendar.owner] : []
     )
-    const people = contacts.flatMap((contact) =>
-      contact.emails.map((email) => ({ email: email.value, name: contact.displayName }))
-    )
     return collectAttendeeSuggestions({
       events,
       calendarOwners,
-      contacts: people,
+      contacts: contactPeople(contacts),
       ownAddresses,
     })
   }, [suggestionsOpen, events, calendars, contacts, organizerEmail])

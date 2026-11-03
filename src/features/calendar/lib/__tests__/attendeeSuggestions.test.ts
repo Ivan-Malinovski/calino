@@ -1,6 +1,16 @@
-import { describe, it, expect } from 'vitest'
+import { afterEach, describe, it, expect, vi } from 'vitest'
 import type { CalendarEvent } from '@/types'
-import { collectAttendeeSuggestions, matchAttendeeSuggestions } from '../attendeeSuggestions'
+import { parseICALData } from '@/features/caldav/adapter/iCalendarAdapter'
+import { createJmapCalendarBackend } from '@/features/jmap/backend/JmapCalendarBackend'
+import { FakeJmapServer } from '@/features/jmap/backend/__tests__/fakeServer'
+import { JmapContactsBackend } from '@/features/jmap/contacts/JmapContactsBackend'
+import { FakeContactsServer } from '@/features/jmap/contacts/__tests__/fakeServer'
+import {
+  collectAttendeeSuggestions,
+  contactPeople,
+  matchAttendeeSuggestions,
+  ownAddressesOf,
+} from '../attendeeSuggestions'
 
 const NOW = new Date('2026-11-03T12:00:00Z')
 
@@ -128,6 +138,124 @@ describe('collectAttendeeSuggestions', () => {
 
   it('makes nothing up from an empty store', () => {
     expect(collectAttendeeSuggestions({ events: [], now: NOW })).toEqual([])
+  })
+})
+
+describe('ownAddressesOf', () => {
+  it('takes the calendar user address and an address-shaped username', () => {
+    expect(
+      ownAddressesOf([
+        { username: 'me@example.com', calendarUserAddress: 'me.alias@example.com' },
+        { username: 'login', calendarUserAddress: null },
+        { username: 'login2' },
+      ])
+    ).toEqual(['me.alias@example.com', 'me@example.com', '', 'login', '', 'login2'])
+  })
+})
+
+/**
+ * JMAP accounts feed the same stores as CalDAV and CardDAV ones: events reach
+ * the calendar store as iCalendar converted from JSCalendar, contacts reach the
+ * contact store as vCards converted from JSContact, and the account's user is
+ * its default participant identity. These run the real backends against the
+ * in-memory JMAP servers the backend tests use.
+ */
+describe('attendee suggestions from a JMAP account', () => {
+  // The origins the in-memory servers answer as.
+  const credentials = (origin: string) => ({
+    id: 'credential',
+    serverUrl: origin,
+    username: 'login',
+    password: '',
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+    vi.unstubAllGlobals()
+  })
+
+  it('offers the participants of JMAP events, never the account identity', async () => {
+    const server = new FakeJmapServer()
+    vi.stubGlobal('fetch', server.fetch)
+    server.identities = [
+      { id: 'me', calendarAddress: 'mailto:owner@example.com', name: 'Owner', isDefault: true },
+    ]
+    server.seed({
+      id: 'planning',
+      title: 'Planning',
+      start: '2026-11-04T10:00:00',
+      participants: {
+        owner: {
+          '@type': 'Participant',
+          calendarAddress: 'mailto:owner@example.com',
+          name: 'Owner',
+          roles: { owner: true, attendee: true },
+        },
+        alice: {
+          '@type': 'Participant',
+          calendarAddress: 'mailto:alice@example.com',
+          name: 'Alice Example',
+          roles: { attendee: true },
+        },
+        bob: {
+          '@type': 'Participant',
+          sendTo: { imip: 'mailto:Bob@Example.com' },
+          roles: { optional: true },
+        },
+      },
+    })
+    const backend = await createJmapCalendarBackend(
+      'https://calendar.test',
+      credentials('https://calendar.test'),
+      null
+    )
+    const calendarUrl = (await backend.fetchCalendars())[0]!.url
+    const events = (await backend.fetchEvents(calendarUrl, '', '', true)).objects.flatMap(
+      (object) => parseICALData(object.data, 'jmap-calendar')
+    )
+    const user = await backend.fetchCalendarUser!()
+
+    const result = collectAttendeeSuggestions({
+      events,
+      ownAddresses: ownAddressesOf([{ username: 'login', calendarUserAddress: user?.address }]),
+      now: NOW,
+    })
+    expect(result).toEqual([
+      { email: 'alice@example.com', name: 'Alice Example', score: 2 },
+      { email: 'bob@example.com', name: undefined, score: 2 },
+    ])
+  })
+
+  it('offers the email addresses of a JMAP address book', async () => {
+    const server = new FakeContactsServer()
+    vi.stubGlobal('fetch', server.fetch)
+    server.seed({
+      '@type': 'Card',
+      version: '1.0',
+      name: { '@type': 'Name', full: 'Carol Example' },
+      emails: {
+        work: { '@type': 'EmailAddress', address: 'carol@example.com' },
+        home: { '@type': 'EmailAddress', address: 'carol.home@example.org' },
+      },
+    })
+    server.seed({ '@type': 'Card', version: '1.0', name: { '@type': 'Name', full: 'No Email' } })
+    const backend = new JmapContactsBackend(
+      'https://contacts.test',
+      credentials('https://contacts.test')
+    )
+    await backend.connect()
+    const book = { ...(await backend.fetchAddressBooks())[0]!, accountId: 'jmap-account' }
+    const contacts = await backend.fetchContacts(book)
+
+    const result = collectAttendeeSuggestions({
+      events: [],
+      contacts: contactPeople(contacts),
+      now: NOW,
+    })
+    expect(result.map((s) => [s.email, s.name])).toEqual([
+      ['carol.home@example.org', 'Carol Example'],
+      ['carol@example.com', 'Carol Example'],
+    ])
   })
 })
 
