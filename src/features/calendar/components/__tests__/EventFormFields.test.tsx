@@ -672,6 +672,35 @@ describe('EventFormFields', () => {
       ).toBeDisabled()
       expect(screen.getByText(/whole number between 0 and 40320/)).toBeInTheDocument()
     })
+
+    it('keeps a typed custom value open on an outside press and reports it as a draft', () => {
+      const onDraftChange = vi.fn()
+      renderWithMoreOptions({ reminders: [], onDraftChange })
+      openReminderDropdown()
+      fireEvent.click(screen.getByText('Custom…'))
+      fireEvent.change(screen.getByLabelText('Custom reminder'), { target: { value: '45' } })
+      expect(onDraftChange).toHaveBeenLastCalledWith(true)
+
+      fireEvent.mouseDown(document.body)
+      expect(screen.getByLabelText('Custom reminder')).toHaveValue(45)
+
+      fireEvent.change(screen.getByLabelText('Custom reminder'), { target: { value: '' } })
+      expect(onDraftChange).toHaveBeenLastCalledWith(false)
+      fireEvent.mouseDown(document.body)
+      expect(screen.queryByLabelText('Custom reminder')).not.toBeInTheDocument()
+    })
+  })
+
+  it('reports a half-typed attendee address as a draft', () => {
+    const onDraftChange = vi.fn()
+    render(<EventFormFields {...defaultProps} onDraftChange={onDraftChange} />)
+    const attendeeInput = screen.getByLabelText('Add attendee email')
+
+    fireEvent.change(attendeeInput, { target: { value: 'bob@' } })
+    expect(onDraftChange).toHaveBeenLastCalledWith(true)
+
+    fireEvent.change(attendeeInput, { target: { value: '' } })
+    expect(onDraftChange).toHaveBeenLastCalledWith(false)
   })
 
   describe('date field accessible names', () => {

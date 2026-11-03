@@ -829,4 +829,69 @@ describe('EventModal', () => {
       expect(saveButton).not.toBeDisabled()
     })
   })
+
+  describe('outside click', () => {
+    const clickBackdrop = (): void => {
+      fireEvent.click(document.querySelector('[data-component="modal-backdrop"]')!)
+    }
+    // Longer than the close animation, so "still open" is not "still closing".
+    const pastCloseAnimation = (): Promise<void> => new Promise((r) => setTimeout(r, 300))
+
+    beforeEach(() => {
+      useCalendarStore.getState().addEvent({
+        id: 'outside-click-event',
+        calendarId: 'default',
+        title: 'Existing Event',
+        start: '2024-03-15T10:00:00',
+        end: '2024-03-15T11:00:00',
+        isAllDay: false,
+      })
+      useCalendarStore.getState().openModal(undefined, undefined, 'outside-click-event')
+    })
+
+    it('closes the modal when nothing was changed', async () => {
+      render(<EventModal />)
+      clickBackdrop()
+      await waitFor(() => expect(useCalendarStore.getState().isModalOpen).toBe(false))
+    })
+
+    it('keeps the modal open, on a click or Escape, once a field was changed', async () => {
+      render(<EventModal />)
+      fireEvent.click(screen.getByRole('button', { name: /show more options/i }))
+      fireEvent.click(screen.getByRole('button', { name: /add reminder/i }))
+      fireEvent.click(screen.getByRole('option', { name: /30 minutes before/i }))
+
+      clickBackdrop()
+      fireEvent.keyDown(document, { key: 'Escape' })
+      await pastCloseAnimation()
+      expect(useCalendarStore.getState().isModalOpen).toBe(true)
+    })
+
+    it('closes the modal again once the change was undone', async () => {
+      render(<EventModal />)
+      const titleInput = screen.getByPlaceholderText('Event title')
+      fireEvent.change(titleInput, { target: { value: 'Renamed Event' } })
+      clickBackdrop()
+      await pastCloseAnimation()
+      expect(useCalendarStore.getState().isModalOpen).toBe(true)
+
+      fireEvent.change(titleInput, { target: { value: 'Existing Event' } })
+      clickBackdrop()
+      await waitFor(() => expect(useCalendarStore.getState().isModalOpen).toBe(false))
+    })
+
+    it('keeps the modal open while an attendee address is half typed', async () => {
+      render(<EventModal />)
+      const attendeeInput = screen.getByLabelText('Add attendee email')
+      fireEvent.change(attendeeInput, { target: { value: 'ali' } })
+      clickBackdrop()
+      await pastCloseAnimation()
+      expect(useCalendarStore.getState().isModalOpen).toBe(true)
+      expect(attendeeInput).toHaveValue('ali')
+
+      fireEvent.change(attendeeInput, { target: { value: '' } })
+      clickBackdrop()
+      await waitFor(() => expect(useCalendarStore.getState().isModalOpen).toBe(false))
+    })
+  })
 })

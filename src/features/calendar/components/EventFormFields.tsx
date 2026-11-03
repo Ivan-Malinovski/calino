@@ -1,5 +1,5 @@
 import type { JSX } from 'react'
-import { useId, useState, useRef, useEffect } from 'react'
+import { useId, useState, useRef, useEffect, useLayoutEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { createUuid } from '@/lib/uuid'
 import { useTranslation } from 'react-i18next'
@@ -140,6 +140,11 @@ interface EventFormFieldsProps {
   endIso: string
   /** Excluded from the availability scan so an event never clashes with itself. */
   excludeEventId?: string
+  /**
+   * Told whether a field holds typed text not yet added to the event: an
+   * attendee address or a custom reminder value.
+   */
+  onDraftChange?: (hasDraft: boolean) => void
 }
 
 const TRAVEL_DURATION_VALUES: (number | undefined)[] = [
@@ -233,6 +238,7 @@ export function EventFormFields({
   startIso,
   endIso,
   excludeEventId,
+  onDraftChange,
 }: EventFormFieldsProps): JSX.Element {
   const { t } = useTranslation('calendar')
   // Instance-scoped ids for the label↔input pairs: hard-coded ids would
@@ -251,6 +257,15 @@ export function EventFormFields({
   const [customReminderOpen, setCustomReminderOpen] = useState(false)
   const [customReminderValue, setCustomReminderValue] = useState('')
   const [customReminderUnit, setCustomReminderUnit] = useState<ReminderUnit>('minutes')
+  const customReminderDraft =
+    reminderDropdownOpen && customReminderOpen && customReminderValue.trim() !== ''
+  const [attendeeDraft, setAttendeeDraft] = useState(false)
+  const hasDraft = customReminderDraft || attendeeDraft
+  // Layout effect: the modal must know before the next click lands.
+  useLayoutEffect(() => {
+    onDraftChange?.(hasDraft)
+    return () => onDraftChange?.(false)
+  }, [hasDraft, onDraftChange])
   const firstDayOfWeek = useSettingsStore((state) => state.firstDayOfWeek)
   const timeFormat = useSettingsStore((state) => state.timeFormat)
   const defaultDuration = useSettingsStore((state) => state.defaultDuration)
@@ -262,8 +277,10 @@ export function EventFormFields({
   // Close reminder dropdown on outside click. The menu is portaled to
   // document.body, so it's outside the button's subtree — check both. A close
   // also collapses the custom panel so the next open starts from the presets.
+  // A typed custom value keeps it open, as unsaved changes keep the form open:
+  // it takes Add, or the "+ Add" button, to go.
   useEffect(() => {
-    if (!reminderDropdownOpen) return
+    if (!reminderDropdownOpen || customReminderDraft) return
     const handleClick = (e: MouseEvent): void => {
       const target = e.target as Node
       if (
@@ -276,7 +293,7 @@ export function EventFormFields({
     }
     document.addEventListener('mousedown', handleClick)
     return () => document.removeEventListener('mousedown', handleClick)
-  }, [reminderDropdownOpen])
+  }, [reminderDropdownOpen, customReminderDraft])
 
   const customReminderMinutes = parseReminderInput(customReminderValue, customReminderUnit)
   const customReminderDuplicate =
@@ -737,6 +754,7 @@ export function EventFormFields({
             startIso={startIso}
             endIso={endIso}
             excludeEventId={excludeEventId}
+            onDraftChange={setAttendeeDraft}
           />
         </div>
       </div>
