@@ -546,6 +546,23 @@ describe('JmapCalendarBackend wire boundary', () => {
     server.failMethod = { method: 'ParticipantIdentity/get', error: { type: 'unknownMethod' } }
     expect(await backend.supportsScheduling()).toBe(false)
   })
+  it('reads the calendar user from the default participant identity', async () => {
+    expect(await backend.fetchCalendarUser!()).toEqual({ address: null })
+    server.identities = [
+      { id: 'a', calendarAddress: 'mailto:alias@example.test', name: 'Alias' },
+      { id: 'b', calendarAddress: 'mailto:owner@example.test', name: 'Owner', isDefault: true },
+    ]
+    expect(await backend.fetchCalendarUser!()).toEqual({
+      address: 'owner@example.test',
+      displayName: 'Owner',
+    })
+    server.identities = [{ id: 'c', sendTo: { imip: 'mailto:rfc@example.test' } }]
+    expect(await backend.fetchCalendarUser!()).toEqual({ address: 'rfc@example.test' })
+    server.identities = [{ id: 'd', calendarAddress: 'https://example.test/principal' }]
+    expect(await backend.fetchCalendarUser!()).toEqual({ address: null })
+    server.failMethod = { method: 'ParticipantIdentity/get', error: { type: 'unknownMethod' } }
+    expect(await backend.fetchCalendarUser!()).toBeNull()
+  })
   it('honours scheduling capability flags', async () => {
     server.session.accounts[server.accountId].accountCapabilities[
       JMAP_CALENDARS
