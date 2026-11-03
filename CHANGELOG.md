@@ -4,6 +4,36 @@ All notable changes to Calino will be documented in this file.
 
 ## [Unreleased]
 
+## [0.42.0] - 2026-11-03
+
+This release adds a home timezone that Calino uses throughout the calendar, custom reminder times, improves month-view spacing and event-time visibility, and fixes several CalDAV sync problems.
+
+### Added
+
+- **Home timezone** ([#207](https://github.com/Ivan-Malinovski/calino/issues/207), [#230](https://github.com/Ivan-Malinovski/calino/pull/230)). Under Settings → General, choose a timezone to use for the calendar clock, today, new timed events, drag-and-drop, and events without their own timezone. Leave it unset to follow your device. Events with their own timezone keep it, all-day dates stay unchanged, and reminders still fire at the correct instant. The picker is searchable, and week and day views label the chosen zone. Thanks to [@sllrs](https://github.com/sllrs) for the feature.
+
+- **Custom reminders** ([#234](https://github.com/Ivan-Malinovski/calino/pull/234)). The event reminder picker now offers a “4 hours before” preset and a “Custom…” option that takes a whole number of minutes, hours, days or weeks, up to 4 weeks. Settings → Calendar has the same custom option for the default reminder. Thanks to [@rlopardo](https://github.com/rlopardo) for the feature.
+
+### Changed
+
+- **Past weeks in month view fit their content.** Quiet past weeks give more room to the weeks still ahead, while a height limit keeps a quiet month balanced.
+
+- **Event times stay readable.** Long locations give up space before the time, so event cards keep the full time visible.
+
+### Fixed
+
+- **Server edits appear on incremental sync** ([#226](https://github.com/Ivan-Malinovski/calino/issues/226)). Fetching a changed CalDAV resource now bypasses the browser cache, preventing stale event data from being saved with a newer sync token.
+
+- **Apple events with travel time stay visible** ([#227](https://github.com/Ivan-Malinovski/calino/issues/227)). Travel durations written by iOS with an explicit duration type no longer cause the whole event to fail to load.
+
+- **One unreadable CalDAV resource no longer holds back the calendar** ([#228](https://github.com/Ivan-Malinovski/calino/issues/228)). Deletions elsewhere still reconcile, cached events from the unreadable resource are preserved, and the resource is retried. A notice identifies unreadable resources without repeating every sync, and Android background sync keeps refreshing the readable resources too.
+
+- **“This and following” edits sync correctly** ([#229](https://github.com/Ivan-Malinovski/calino/issues/229)). Splitting a recurring series now writes the new series to its own CalDAV resource after updating the original, avoiding server rejection of a resource containing two event identities.
+
+Thanks to [@zxzxzx258](https://github.com/zxzxzx258) and [@robinmaypanpan](https://github.com/robinmaypanpan) for reporting the sync issues.
+
+**Full Changelog**: https://github.com/Ivan-Malinovski/calino/compare/v0.41.0...v0.42.0
+
 ## [0.41.0] - 2026-10-22
 
 This release adds configurable event styles based on categories and gives overlapping events more room in week and day view. It also fixes birthdays and anniversaries that have no year, so they stay visible and survive contact edits.
