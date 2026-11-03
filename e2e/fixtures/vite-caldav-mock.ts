@@ -35,7 +35,10 @@ import type { AddressInfo } from 'node:net'
  *                                              REPORT body (e.g. VTODO).
  *   - GET  /.well-known/caldav                → 301 redirect to /mock-caldav/dav/
  *   - PROPFIND /mock-caldav/dav/              → 207 with current-user-principal
- *   - PROPFIND /dav/principals/...            → 207 with calendar-home-set
+ *   - PROPFIND /dav/principals/...            → 207 with calendar-home-set,
+ *                                              plus calendar-user-address-set
+ *                                              and displayname where the
+ *                                              account defines them.
  *   - PROPFIND /dav/calendars/...             → 207 listing the collections
  *                                              of that account (account A:
  *                                              Personal + Work + the
@@ -118,6 +121,13 @@ interface MockAccount {
   principalPath: string
   homePath: string
   displayName: string
+  /**
+   * CALDAV:calendar-user-address-set hrefs (RFC 6638 §2.4.1) the principal
+   * answers with. Omitted: the principal does not report the property.
+   */
+  calendarUserAddresses?: string[]
+  /** DAV:displayname of the principal — the user's name, not a calendar's. */
+  principalDisplayName?: string
   collections: MockCollection[]
 }
 
@@ -127,6 +137,11 @@ const ACCOUNTS: MockAccount[] = [
     principalPath: '/dav/principals/user/',
     homePath: '/dav/calendars/user/',
     displayName: 'Mock CalDAV',
+    // The sabre/dav shape: the principal's own path next to its address. The
+    // path comes first so a client taking the first href, not the first
+    // `mailto:` one, gets caught.
+    calendarUserAddresses: ['/dav/principals/user/', 'mailto:user@example.com'],
+    principalDisplayName: 'Mock User',
     collections: [
       {
         path: '/dav/calendars/user/personal/',
@@ -271,6 +286,14 @@ const ACCOUNTS: MockAccount[] = [
         rejectMixedUids: true,
       },
       {
+        // Owned by `organizer.spec.ts`, which asserts the ORGANIZER of the
+        // events it creates.
+        path: '/dav/calendars/user/organizer/',
+        displayName: 'Organizer',
+        color: '#0891B2',
+        components: ['VEVENT', 'VTODO', 'VJOURNAL'],
+      },
+      {
         // Owned by `unreadable-resource.spec.ts` (issue #228), which seeds a
         // resource that cannot be parsed next to a readable one.
         path: '/dav/calendars/user/unreadable/',
@@ -291,11 +314,20 @@ const ACCOUNTS: MockAccount[] = [
     principalPath: '/dav/principals/userb/',
     homePath: '/dav/calendars/userb/',
     displayName: 'Mock CalDAV B',
+    // The Radicale shape: the set holds the principal's path and no address.
+    calendarUserAddresses: ['/dav/principals/userb/'],
     collections: [
       {
         path: '/dav/calendars/userb/personal/',
         displayName: 'Personal',
         color: '#10B981',
+        components: ['VEVENT', 'VTODO', 'VJOURNAL'],
+      },
+      {
+        // Owned by `organizer.spec.ts`, like `user/organizer/` on account A.
+        path: '/dav/calendars/userb/organizer/',
+        displayName: 'Organizer B',
+        color: '#0891B2',
         components: ['VEVENT', 'VTODO', 'VJOURNAL'],
       },
     ],
@@ -697,16 +729,29 @@ export function caldavMockPlugin(): Plugin {
         ])
       }
 
-      // 3) PROPFIND on the principal → calendar-home-set
+      // 3) PROPFIND on the principal → calendar-home-set, and who the user is
       if (path === account.principalPath && method === 'PROPFIND') {
-        return write207([
-          responseTag(absolute(account.principalPath), [
-            {
-              name: 'CAL:calendar-home-set',
-              href: absolute(account.homePath),
-            },
-          ]),
-        ])
+        const principalProps: Array<{
+          name: string
+          href?: string
+          value?: string
+          raw?: boolean
+        }> = [{ name: 'CAL:calendar-home-set', href: absolute(account.homePath) }]
+        if (account.calendarUserAddresses) {
+          principalProps.push({
+            name: 'CAL:calendar-user-address-set',
+            value: account.calendarUserAddresses
+              .map(
+                (href) => `<d:href>${esc(href.startsWith('/') ? absolute(href) : href)}</d:href>`
+              )
+              .join(''),
+            raw: true,
+          })
+        }
+        if (account.principalDisplayName) {
+          principalProps.push({ name: 'DAV:displayname', value: account.principalDisplayName })
+        }
+        return write207([responseTag(absolute(account.principalPath), principalProps)])
       }
 
       // 4) PROPFIND on the calendar home — list every collection of this

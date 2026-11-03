@@ -2,6 +2,7 @@ import { createDAVClient } from 'tsdav'
 import type {
   CalDAVCredentials,
   CalDAVCalendar,
+  CalendarUser,
   CreateCalendarOptions,
   ServerSubscription,
   UpdateCalendarOptions,
@@ -989,6 +990,73 @@ export class CalDAVClient implements CalendarBackend {
       )
       if (!homeHref) return null
       return resolveDavHref(baseUrl, homeHref)
+    } catch {
+      return null
+    }
+  }
+
+  /**
+   * The signed-in user as scheduling knows them: the first `mailto:` entry of
+   * the principal's CALDAV:calendar-user-address-set (RFC 6638 §2.4.1) and its
+   * DAV:displayname, in one PROPFIND.
+   *
+   * The set is unordered and mixes URI schemes: sabre/dav lists `mailto:`
+   * addresses next to the principal URL, and Radicale answers with the
+   * principal path alone — a valid answer meaning "no address", not a
+   * failure. Only a request that could not be made or answered returns null.
+   */
+  async fetchCalendarUser(): Promise<CalendarUser | null> {
+    try {
+      // The stored URL as discovered, trailing slash included: some servers
+      // (Davis) answer PROPFIND only on the slashed form.
+      const principalHref = await this.propfindFirstHref(
+        this.serverUrl,
+        'DAV:',
+        'current-user-principal'
+      )
+      if (!principalHref) return null
+      const principalUrl = resolveDavHref(this.serverUrl, principalHref)
+
+      const response = await this.proxyFetch(principalUrl, {
+        method: 'PROPFIND',
+        headers: {
+          'Content-Type': 'application/xml; charset=utf-8',
+          Authorization: this.authHeader,
+          Depth: '0',
+        },
+        body: `<?xml version="1.0" encoding="UTF-8" ?>
+<d:propfind xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav">
+  <d:prop>
+    <c:calendar-user-address-set/>
+    <d:displayname/>
+  </d:prop>
+</d:propfind>`,
+      })
+      if (!response.ok && response.status !== 207) return null
+
+      const doc = this.parseXmlDocument(await response.text())
+      const addressSet = this.firstElementByLocalName(
+        doc,
+        'urn:ietf:params:xml:ns:caldav',
+        'calendar-user-address-set'
+      )
+      const hrefs = addressSet
+        ? Array.from(addressSet.getElementsByTagName('*')).filter((el) => el.localName === 'href')
+        : []
+      const mailto = hrefs
+        .map((el) => el.textContent?.trim() ?? '')
+        .find((href) => /^mailto:[^@\s]+@\S+$/i.test(href))
+
+      const displayName = this.firstElementByLocalName(
+        doc,
+        'DAV:',
+        'displayname'
+      )?.textContent?.trim()
+
+      return {
+        address: mailto ? mailto.slice('mailto:'.length) : null,
+        displayName: displayName || undefined,
+      }
     } catch {
       return null
     }

@@ -12,6 +12,22 @@ export interface CalDAVAccount {
   credentialId: string
   createdAt: string
   lastSyncAt: string | null
+  /**
+   * The user's own calendar user address (RFC 6638 §2.4.1), without the
+   * `mailto:` scheme. `null` once the server answered without a `mailto:`
+   * entry; absent when it has not been asked yet (accounts stored by older
+   * versions, or after the principal changed).
+   */
+  calendarUserAddress?: string | null
+  /** The principal's DAV:displayname, when the server reports one. */
+  principalDisplayName?: string
+}
+
+/** Who the signed-in user is to the server's scheduling: their own principal. */
+export interface CalendarUser {
+  /** First `mailto:` entry of CALDAV:calendar-user-address-set, without the scheme. */
+  address: string | null
+  displayName?: string
 }
 
 export interface CalDAVCalendar {

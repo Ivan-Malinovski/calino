@@ -348,6 +348,25 @@ async function collectParsedWithHref(
   return { items: result, hadParseFailures, failedHrefs }
 }
 
+/**
+ * Remember who the account's user is to the server's scheduling, so an event
+ * they invite people to can name them as its ORGANIZER (RFC 5545 §3.8.4.3).
+ *
+ * Best effort: it never fails a connect or a sync. A server that could not be
+ * asked leaves the account untouched, and the next sync asks again. An answer
+ * without a `mailto:` address is stored as `null`, so it is not asked for on
+ * every sync.
+ */
+async function rememberCalendarUser(client: CalendarBackend, accountId: string): Promise<void> {
+  if (!client.fetchCalendarUser) return
+  const user = await client.fetchCalendarUser().catch(() => null)
+  if (!user) return
+  storage.updateAccount(accountId, {
+    calendarUserAddress: user.address,
+    principalDisplayName: user.displayName,
+  })
+}
+
 /** Human-readable identifier for sync logging. */
 function calendarLabel(cal: { name?: string; id: string }): string {
   return cal.name || cal.id
@@ -1069,6 +1088,7 @@ export function useCalDAVInstance(): UseCalDAVReturn {
           username,
           credentialId: credential.id,
         })
+        await rememberCalendarUser(client, newAccount.id)
 
         for (const cal of serverCalendars) {
           // Store the collection without its change cursors. The tokens the
@@ -1529,6 +1549,11 @@ export function useCalDAVInstance(): UseCalDAVReturn {
           account.proxyUrl,
           account.protocol
         )
+        // Accounts stored before the address was kept, or whose principal
+        // changed, have not been asked yet.
+        if (account.calendarUserAddress === undefined) {
+          await rememberCalendarUser(client, accountId)
+        }
         const accountCalendars = storage.getCalendarsByAccountId(accountId)
         let calendarsToSync = accountCalendars
 
@@ -2243,6 +2268,11 @@ export function useCalDAVInstance(): UseCalDAVReturn {
           serverUrl: resolvedUrl,
           username: updates.username,
           proxyUrl,
+          // A different principal is a different user: forget the old one's
+          // address so the sync below asks again.
+          ...(principalChanged
+            ? { calendarUserAddress: undefined, principalDisplayName: undefined }
+            : {}),
         })
 
         if (principalChanged) {
