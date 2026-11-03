@@ -286,6 +286,14 @@ const ACCOUNTS: MockAccount[] = [
         rejectMixedUids: true,
       },
       {
+        // Owned by `all-day-drag.spec.ts`, which asserts the DTSTART/DTEND
+        // bytes an all-day drag writes.
+        path: '/dav/calendars/user/allday-drag/',
+        displayName: 'All-day Drag',
+        color: '#16A34A',
+        components: ['VEVENT', 'VTODO', 'VJOURNAL'],
+      },
+      {
         // Owned by `organizer.spec.ts`, which asserts the ORGANIZER of the
         // events it creates.
         path: '/dav/calendars/user/organizer/',
