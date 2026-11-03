@@ -320,4 +320,27 @@ test.describe('incremental sync (RFC 6578)', () => {
     expect(options).toContain('Inc Sync')
     expect(options).not.toContain('Inc Read Only')
   })
+
+  test('a calendar granting only write-content is offered as a save target', async ({ page }) => {
+    await page.goto('/month')
+    await syncAll(page)
+
+    await expect
+      .poll(async () => (await storedCalendars(page)).map((c) => c.url).join(','), {
+        timeout: 15_000,
+      })
+      .toContain('inc-shared')
+
+    await page.locator('[data-component="calendar-section-toggle"]').click()
+    await expect(page.getByText('Inc Shared', { exact: true })).toBeVisible({ timeout: 10_000 })
+
+    // "c" opens the create-event modal (see smoke.spec.ts).
+    await page.keyboard.press('c')
+    await expect(page.locator('[data-component="event-title-input"]')).toBeVisible({
+      timeout: 10_000,
+    })
+    const select = page.locator('#calendar-select')
+    await expect(select).toBeVisible({ timeout: 10_000 })
+    await expect(select.locator('option', { hasText: 'Inc Shared' })).toHaveCount(1)
+  })
 })

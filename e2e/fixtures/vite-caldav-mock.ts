@@ -328,6 +328,16 @@ const ACCOUNTS: MockAccount[] = [
         components: ['VEVENT', 'VTODO', 'VJOURNAL'],
         privileges: ['read', 'read-current-user-privilege-set'],
       },
+      {
+        // What Radicale grants on a calendar shared read-write: write-content,
+        // with no write or all aggregate. Must still be offered as a save
+        // target.
+        path: '/dav/calendars/userc/inc-shared/',
+        displayName: 'Inc Shared',
+        color: '#D97706',
+        components: ['VEVENT', 'VTODO', 'VJOURNAL'],
+        privileges: ['read', 'write-content'],
+      },
     ],
   },
 ]

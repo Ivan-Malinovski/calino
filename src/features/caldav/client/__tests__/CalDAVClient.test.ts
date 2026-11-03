@@ -336,6 +336,25 @@ END:VCALENDAR`,
       expect(calendars[0].readOnly).toBe(false)
     })
 
+    it('reads a calendar granting only writeContent as writable (Radicale share, tsdav camelCase)', async () => {
+      // tsdav camelCases element names; Radicale grants a calendar shared
+      // read-write only <write-content>, with no <write> or <all>.
+      mockClientMethods.fetchCalendars.mockResolvedValue([
+        {
+          ...mockCalendar,
+          projectedProps: {
+            currentUserPrivilegeSet: {
+              privilege: [{ read: {} }, { readFreeBusy: {} }, { writeContent: {} }],
+            },
+          },
+        },
+      ])
+      await client.connect()
+
+      const calendars = await client.fetchCalendars()
+      expect(calendars[0].readOnly).toBe(false)
+    })
+
     it('reads a write privilege nested inside an aggregate, and through a namespace prefix', async () => {
       // `<write>` aggregates `<write-content>`/`<write-properties>` (RFC 3744
       // §3.2), so a server may grant write only as a child of an aggregate.

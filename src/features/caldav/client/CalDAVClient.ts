@@ -148,12 +148,17 @@ function parsePrivileges(raw: unknown): { canWrite: boolean } | null {
   const granted = new Set<string>()
   collectPrivilegeNames(privilege, granted)
   if (granted.size === 0) return null
+  // tsdav camelCases element names (`<write-content/>` arrives as
+  // `writeContent`), so compare without the hyphens. Radicale grants only
+  // `<write-content/>` on a calendar shared read-write, which otherwise reads
+  // as read-only.
+  for (const name of [...granted]) granted.add(name.replace(/-/g, ''))
   const canWrite =
     granted.has('write') ||
     granted.has('all') ||
     granted.has('unlocked') ||
-    granted.has('write-content') ||
-    granted.has('write-properties') ||
+    granted.has('writecontent') ||
+    granted.has('writeproperties') ||
     // A calendar you may add resources to is writable even if the server
     // spells that as bind/unbind rather than as a write aggregate.
     granted.has('bind')
