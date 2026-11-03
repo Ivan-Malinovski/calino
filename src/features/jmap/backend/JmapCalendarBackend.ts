@@ -8,6 +8,7 @@ import {
 import type {
   CalDAVCalendar,
   CalDAVCredentials,
+  CalendarUser,
   CreateCalendarOptions,
   UpdateCalendarOptions,
 } from '@/features/caldav/types'
@@ -576,6 +577,37 @@ export class JmapCalendarBackend implements CalendarBackend {
       return list((await this.call('ParticipantIdentity/get', { ids: null })).list).length > 0
     } catch {
       return false
+    }
+  }
+  /**
+   * The address this account organizes meetings as: its default participant
+   * identity (else the first one) that has a `mailto:` address. The server ties
+   * a meeting to one of these, so it is the only address worth claiming as
+   * ORGANIZER. Null when the server cannot say.
+   */
+  async fetchCalendarUser(): Promise<CalendarUser | null> {
+    try {
+      const identities = list((await this.call('ParticipantIdentity/get', { ids: null })).list)
+      const text = (value: unknown): string => (typeof value === 'string' ? value : '')
+      const withAddress = identities.flatMap((identity) => {
+        const sendTo = isJsonObject(identity.sendTo) ? identity.sendTo : {}
+        const uri = text(identity.calendarAddress) || text(sendTo.imip)
+        const match = /^mailto:([^@\s]+@\S+)$/i.exec(uri)
+        return match
+          ? [
+              {
+                address: match[1],
+                name: text(identity.name),
+                isDefault: identity.isDefault === true,
+              },
+            ]
+          : []
+      })
+      const chosen = withAddress.find((identity) => identity.isDefault) ?? withAddress[0]
+      if (!chosen) return { address: null }
+      return { address: chosen.address, ...(chosen.name ? { displayName: chosen.name } : {}) }
+    } catch {
+      return null
     }
   }
   private async principalForEmail(email: string): Promise<string | null> {

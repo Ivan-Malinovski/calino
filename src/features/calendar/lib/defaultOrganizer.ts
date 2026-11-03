@@ -15,17 +15,18 @@ export type OrganizerAccount = Pick<
  *
  * In order: the principal's calendar user address (RFC 6638 §2.4.1), then a
  * username that is itself an email address — what servers with no address set
- * (Radicale) identify their users by. JMAP accounts are left alone: there the
- * server ties a meeting to one of the account's participant identities.
+ * (Radicale) identify their users by. A JMAP account's address is its default
+ * participant identity, which is what the server ties a meeting to; its
+ * username says nothing about that, so it is never guessed from.
  */
 export function accountOrganizer(
   account: OrganizerAccount | undefined
 ): CalendarOrganizer | undefined {
-  if (!account || account.protocol === 'jmap') return undefined
+  if (!account) return undefined
 
   const username = account.username.trim()
-  const email =
-    account.calendarUserAddress?.trim() || (EMAIL_RE.test(username) ? username : undefined)
+  const guessed = account.protocol !== 'jmap' && EMAIL_RE.test(username) ? username : undefined
+  const email = account.calendarUserAddress?.trim() || guessed
   if (!email) return undefined
 
   // A display name that only repeats the address adds nothing to CN.

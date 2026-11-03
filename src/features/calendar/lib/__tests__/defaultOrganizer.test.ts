@@ -62,7 +62,20 @@ describe('accountOrganizer', () => {
     ).toEqual({ email: 'alex@example.com' })
   })
 
-  it('leaves JMAP accounts alone', () => {
+  it('uses the participant identity of a JMAP account', () => {
+    expect(
+      accountOrganizer(
+        account({
+          protocol: 'jmap',
+          username: 'login',
+          calendarUserAddress: 'alex@example.com',
+          principalDisplayName: 'Alex',
+        })
+      )
+    ).toEqual({ email: 'alex@example.com', name: 'Alex' })
+  })
+
+  it('does not guess a JMAP identity from the username', () => {
     expect(accountOrganizer(account({ protocol: 'jmap', username: 'alex@example.com' }))).toBe(
       undefined
     )
