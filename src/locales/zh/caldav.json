@@ -1,0 +1,71 @@
+{
+  "progress": {
+    "checkingConnection": "正在检查连接…",
+    "lookingForCalendars": "正在查找日历…",
+    "savingAccount": "正在保存账户…",
+    "syncingEvents": "正在同步日程…",
+    "checkingForContacts": "正在检查通讯录…",
+    "importingCalendar": "正在导入 {{name}}…",
+    "downloadingCalendars_one": "正在从 {{count}} 个日历下载日程…",
+    "downloadingCalendars_other": "正在从 {{count}} 个日历下载日程…",
+    "savingEvent": "正在保存日程…",
+    "savingEvents": "正在保存日程…",
+    "deletingEvent": "正在删除日程…",
+    "creatingCalendar": "正在创建日历…",
+    "savingCalendar": "正在保存日历…",
+    "deletingCalendar": "正在删除日历…"
+  },
+  "ui": {
+    "cleartextWarning": "当前是明文 HTTP 连接，密码和日历数据都没有加密。私有网络或 VPN 里问题不大，请不要在不信任的 Wi-Fi 下使用。",
+    "headers": {
+      "count_one": "{{count}} 个自定义请求头",
+      "count_other": "{{count}} 个自定义请求头",
+      "proxyOn": "代理已开启",
+      "optional": "可选",
+      "protectedServers": "用于受保护的 CalDAV 服务器",
+      "connectionSettings": "连接设置",
+      "gatewayAccess": "网关访问",
+      "headerN": "请求头 {{n}}",
+      "removeHeader": "移除请求头",
+      "removeHeaderN": "移除请求头 {{n}}",
+      "name": "名称",
+      "nameAria": "请求头 {{n}} 的名称",
+      "namePlaceholder": "例如 P-Access-Token-Id",
+      "value": "值",
+      "valueAria": "请求头 {{n}} 的值",
+      "valuePlaceholder": "输入密钥值",
+      "revealAria": "显示请求头 {{n}} 的密钥",
+      "hideAria": "隐藏请求头 {{n}} 的密钥",
+      "hideValue": "隐藏值",
+      "showValue": "显示值",
+      "addHeader": "添加请求头",
+      "proxyUrl": "代理地址",
+      "proxyWarning": "账号密码和日历数据都会经过这个服务器，请只用你信任的代理。",
+      "learnMore": "了解更多",
+      "customHeaders": "自定义请求头",
+      "gatewayHint": "用于位于认证网关后面的服务器"
+    },
+    "nudge": {
+      "checkProxyAction": "检查代理地址 ↓",
+      "checkProxyLabel": "检查代理地址",
+      "setUpProxyAction": "设置代理 ↓",
+      "proxyMayFix": "用代理可能可以解决",
+      "headersAction": "服务器在网关后面？加一个请求头 ↓",
+      "headerMayFix": "加一个自定义请求头可能可以解决"
+    },
+    "connecting": "正在连接服务器…",
+    "addAccountFailed": "添加账户失败",
+    "syncFailed": "同步失败",
+    "accountNotFound": "找不到该账户",
+    "credentialsNotFound": "找不到账号密码",
+    "headerErrors": {
+      "invalid": "自定义请求头无效。",
+      "proxyConflict": "自定义请求头需要直连 DAV，请先移除代理地址。",
+      "invalidName": "自定义请求头名称无效或是保留名：{{name}}",
+      "duplicateName": "自定义请求头名称重复：{{name}}",
+      "invalidValue": "自定义请求头 {{name}} 的值无效",
+      "originChanged": "DAV 请求的来源变了，请直接填写最终的 DAV 地址。",
+      "requestFailed": "DAV 请求失败或被重定向。请直接填写最终的 DAV 地址，并检查自定义请求头的 CORS 设置。"
+    }
+  }
+}

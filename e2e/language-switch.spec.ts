@@ -68,4 +68,24 @@ test.describe('language settings', () => {
     await expect(page.locator('[data-setting="language"]')).toHaveAttribute('data-value', 'nl')
     await expect(page.locator('html')).toHaveAttribute('lang', 'nl')
   })
+
+  test('renders and keeps the Simplified Chinese catalog', async ({ page }) => {
+    await page.goto('/settings')
+
+    const language = page.locator('[data-setting="language"]')
+    await language.getByRole('combobox').selectOption('zh')
+    await expect(language).toHaveAttribute('data-value', 'zh')
+    await expect(page.locator('html')).toHaveAttribute('lang', 'zh')
+
+    await page.goto('/month')
+    const desktopSwitcher = page.locator('[data-component="view-switcher"]')
+    await expect(desktopSwitcher.getByRole('button', { name: '月', exact: true })).toBeVisible()
+    await expect(desktopSwitcher.getByRole('button', { name: '周', exact: true })).toBeVisible()
+
+    await page.reload()
+    await expect(page.locator('html')).toHaveAttribute('lang', 'zh')
+    await expect(
+      page.locator('[data-component="view-switcher"]').getByRole('button', { name: '月', exact: true })
+    ).toBeVisible()
+  })
 })

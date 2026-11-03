@@ -159,6 +159,26 @@ const loaders: Record<Exclude<Language, 'en'>, () => Promise<LocaleResources>> =
       commands: commands.default,
     }
   },
+  zh: async () => {
+    const [common, calendar, settings, contacts, caldav, errors, commands] = await Promise.all([
+      import('./zh/common.json'),
+      import('./zh/calendar.json'),
+      import('./zh/settings.json'),
+      import('./zh/contacts.json'),
+      import('./zh/caldav.json'),
+      import('./zh/errors.json'),
+      import('./zh/commands.json'),
+    ])
+    return {
+      common: common.default,
+      calendar: calendar.default,
+      settings: settings.default,
+      contacts: contacts.default,
+      caldav: caldav.default,
+      errors: errors.default,
+      commands: commands.default,
+    }
+  },
 }
 
 const pendingLoads = new Map<Language, Promise<LocaleResources>>()

@@ -57,14 +57,14 @@ describe('locale-aware display formatting', () => {
  * fields, URL params. If a locale ever leaks into those, stored data breaks.
  */
 describe('locale-neutral storage helpers', () => {
-  it.each(['en', 'da', 'de', 'es', 'fr', 'it', 'nl'] as const)(
+  it.each(['en', 'da', 'de', 'es', 'fr', 'it', 'nl', 'zh'] as const)(
     'toLocalDateString is identical under %s',
     async (lang) => {
       expect(await withLanguage(lang, () => toLocalDateString(DATE))).toBe('2024-12-31')
     }
   )
 
-  it.each(['en', 'da', 'de', 'es', 'fr', 'it', 'nl'] as const)(
+  it.each(['en', 'da', 'de', 'es', 'fr', 'it', 'nl', 'zh'] as const)(
     'toICalUTC is identical under %s',
     async (lang) => {
       const utc = new Date(Date.UTC(2024, 11, 31, 14, 30, 0))
@@ -72,7 +72,7 @@ describe('locale-neutral storage helpers', () => {
     }
   )
 
-  it.each(['en', 'da', 'de', 'es', 'fr', 'it', 'nl'] as const)(
+  it.each(['en', 'da', 'de', 'es', 'fr', 'it', 'nl', 'zh'] as const)(
     'date arithmetic is identical under %s',
     async (lang) => {
       expect(await withLanguage(lang, () => addDays('2024-12-31', 1))).toBe('2025-01-01')
@@ -80,7 +80,7 @@ describe('locale-neutral storage helpers', () => {
     }
   )
 
-  it.each(['en', 'da', 'de', 'es', 'fr', 'it', 'nl'] as const)(
+  it.each(['en', 'da', 'de', 'es', 'fr', 'it', 'nl', 'zh'] as const)(
     'an explicit yyyy-MM-dd pattern stays numeric under %s',
     async (lang) => {
       expect(await withLanguage(lang, () => formatDisplayDate(DATE, 'yyyy-MM-dd'))).toBe(
@@ -89,7 +89,7 @@ describe('locale-neutral storage helpers', () => {
     }
   )
 
-  it.each(['en', 'da', 'de', 'es', 'fr', 'it', 'nl'] as const)(
+  it.each(['en', 'da', 'de', 'es', 'fr', 'it', 'nl', 'zh'] as const)(
     '24-hour time is identical under %s',
     async (lang) => {
       expect(await withLanguage(lang, () => formatTime(DATE, '24h'))).toBe('14:30')

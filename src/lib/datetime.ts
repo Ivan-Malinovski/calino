@@ -6,6 +6,7 @@ import {
   fr as frLocale,
   it as itLocale,
   nl as nlLocale,
+  zhCN as zhLocale,
 } from 'date-fns/locale'
 import type { Locale } from 'date-fns'
 import type { DateFormat } from '@/types'
@@ -32,6 +33,7 @@ const DATE_FNS_LOCALES: Record<string, Locale | undefined> = {
   fr: frLocale,
   it: itLocale,
   nl: nlLocale,
+  zh: zhLocale,
 }
 
 /** The date-fns locale matching the active UI language. */
