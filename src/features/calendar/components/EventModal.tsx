@@ -39,6 +39,8 @@ import { LocationPicker } from './LocationPicker'
 import { RecurrenceDialog } from './RecurrenceDialog'
 import { DeleteDialog } from './DeleteDialog'
 import { getInitialFormState, addMinutesToTimeStr } from './eventModalState'
+import { organizerForSave } from '../lib/defaultOrganizer'
+import { getAccountById } from '@/features/caldav/sync/accountStorage'
 import { useFocusTrap } from '@/hooks/useFocusTrap'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { useIsMobile } from '@/hooks/useIsMobile'
@@ -1144,6 +1146,16 @@ export function EventModal(): JSX.Element | null {
       const taskTime = dueAllDay ? '00:00:00' : `${dueTime}:00`
       const taskEndTime = dueAllDay ? '23:59:59' : `${dueTime}:00`
 
+      // An event with attendees names its organizer: the user's own address on
+      // the calendar's account. Read from storage at save time, so an address a
+      // sync learnt while the modal was open still counts.
+      const accountId = calendars.find((calendar) => calendar.id === calendarId)?.accountId
+      const savedOrganizer = organizerForSave(
+        organizer,
+        attendees,
+        accountId ? getAccountById(accountId) : undefined
+      )
+
       if (isEditing && selectedEventId) {
         // For recurring-instance edits ("this occurrence" / "this and following"),
         // the clicked occurrence's date is encoded in the instance id as
@@ -1241,13 +1253,17 @@ export function EventModal(): JSX.Element | null {
             sequence: 0,
             relatedTo: relatedTo.length > 0 ? relatedTo : undefined,
             attendees: attendees.length > 0 ? attendees : undefined,
-            organizer,
+            organizer: savedOrganizer,
             attachments: attachments.length > 0 ? attachments : undefined,
           }
 
           const occurrenceDate = originalOccurrenceDate.split('T')[0]
           const masterWithoutLegacyExdate = {
             ...masterEvent,
+            // RFC 6638 §3.1: every component of one resource names the same
+            // organizer, so a first invitation on one occurrence names it on
+            // the series too.
+            organizer: masterEvent.organizer ?? exceptionEvent.organizer,
             excludedDates: masterEvent.excludedDates?.filter(
               (date) => date.split('T')[0] !== occurrenceDate
             ),
@@ -1348,7 +1364,7 @@ export function EventModal(): JSX.Element | null {
             sequence: 0,
             relatedTo: relatedTo.length > 0 ? relatedTo : undefined,
             attendees: attendees.length > 0 ? attendees : undefined,
-            organizer,
+            organizer: savedOrganizer,
             attachments: attachments.length > 0 ? attachments : undefined,
           }
 
@@ -1416,7 +1432,7 @@ export function EventModal(): JSX.Element | null {
             categories: selectedCategories,
             relatedTo: relatedTo.length > 0 ? relatedTo : undefined,
             attendees: attendees.length > 0 ? attendees : undefined,
-            organizer,
+            organizer: savedOrganizer,
             attachments: attachments.length > 0 ? attachments : undefined,
           })
           const cascadedTasks =
@@ -1468,7 +1484,7 @@ export function EventModal(): JSX.Element | null {
                   categories: selectedCategories,
                   relatedTo: relatedTo.length > 0 ? relatedTo : undefined,
                   attendees: attendees.length > 0 ? attendees : undefined,
-                  organizer,
+                  organizer: savedOrganizer,
                 },
                 {
                   title,
@@ -1494,7 +1510,7 @@ export function EventModal(): JSX.Element | null {
                   categories: selectedCategories,
                   relatedTo: relatedTo.length > 0 ? relatedTo : undefined,
                   attendees: attendees.length > 0 ? attendees : undefined,
-                  organizer,
+                  organizer: savedOrganizer,
                   attachments: attachments.length > 0 ? attachments : undefined,
                 }
               )
@@ -1546,7 +1562,7 @@ export function EventModal(): JSX.Element | null {
           categories: selectedCategories,
           relatedTo: relatedTo.length > 0 ? relatedTo : undefined,
           attendees: attendees.length > 0 ? attendees : undefined,
-          organizer,
+          organizer: savedOrganizer,
           attachments: attachments.length > 0 ? attachments : undefined,
         }
         addEvent(newEvent)

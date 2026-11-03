@@ -221,6 +221,131 @@ END:VCALENDAR`,
     })
   })
 
+  describe('fetchCalendarUser (RFC 6638 §2.4.1)', () => {
+    /** Answer the root with the principal and the principal with `principalBody`. */
+    function serve(principalBody: string, principalStatus = 207): string[] {
+      const bodies: string[] = []
+      fetchSpy.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = typeof input === 'string' ? input : input.toString()
+        bodies.push(String(init?.body ?? ''))
+        if (url === 'https://caldav.example.com') {
+          return new Response(radicalePrincipalResponse, { status: 207 })
+        }
+        if (url === 'https://caldav.example.com/ivan/') {
+          return new Response(principalBody, { status: principalStatus })
+        }
+        return new Response(null, { status: 404 })
+      })
+      return bodies
+    }
+
+    const radicalePrincipalResponse = `<?xml version="1.0" encoding="UTF-8" ?>
+<D:multistatus xmlns:D="DAV:">
+  <D:response>
+    <D:href>/</D:href>
+    <D:propstat>
+      <D:prop>
+        <D:current-user-principal>
+          <href>/ivan/</href>
+        </D:current-user-principal>
+      </D:prop>
+      <D:status>HTTP/1.1 200 OK</D:status>
+    </D:propstat>
+  </D:response>
+</D:multistatus>`
+
+    it('takes the first mailto: address and the display name (sabre/dav shape)', async () => {
+      const bodies = serve(`<?xml version="1.0" encoding="utf-8"?>
+<d:multistatus xmlns:d="DAV:" xmlns:cal="urn:ietf:params:xml:ns:caldav">
+  <d:response>
+    <d:href>/ivan/</d:href>
+    <d:propstat>
+      <d:prop>
+        <cal:calendar-user-address-set>
+          <d:href>/ivan/</d:href>
+          <d:href>mailto:ivan@example.com</d:href>
+          <d:href>mailto:ivan.alias@example.com</d:href>
+        </cal:calendar-user-address-set>
+        <d:displayname>Ivan Example</d:displayname>
+      </d:prop>
+      <d:status>HTTP/1.1 200 OK</d:status>
+    </d:propstat>
+  </d:response>
+</d:multistatus>`)
+      await client.connect()
+
+      await expect(client.fetchCalendarUser()).resolves.toEqual({
+        address: 'ivan@example.com',
+        displayName: 'Ivan Example',
+      })
+      // One PROPFIND to the principal asks for both properties.
+      expect(bodies[1]).toContain('calendar-user-address-set')
+      expect(bodies[1]).toContain('displayname')
+    })
+
+    it('reports no address when the set holds only the principal path (Radicale shape)', async () => {
+      // Radicale 3.x: unprefixed hrefs, and the displayname it does not have
+      // comes back in a 404 propstat.
+      serve(`<?xml version="1.0" encoding="UTF-8" ?>
+<D:multistatus xmlns:D="DAV:" xmlns:C="urn:ietf:params:xml:ns:caldav">
+  <D:response>
+    <D:href>/ivan/</D:href>
+    <D:propstat>
+      <D:prop>
+        <C:calendar-user-address-set>
+          <href>/ivan/</href>
+        </C:calendar-user-address-set>
+      </D:prop>
+      <D:status>HTTP/1.1 200 OK</D:status>
+    </D:propstat>
+    <D:propstat>
+      <D:prop>
+        <D:displayname />
+      </D:prop>
+      <D:status>HTTP/1.1 404 Not Found</D:status>
+    </D:propstat>
+  </D:response>
+</D:multistatus>`)
+      await client.connect()
+
+      await expect(client.fetchCalendarUser()).resolves.toEqual({
+        address: null,
+        displayName: undefined,
+      })
+    })
+
+    it('reads an unprefixed mailto: href', async () => {
+      serve(`<?xml version="1.0" encoding="UTF-8" ?>
+<D:multistatus xmlns:D="DAV:" xmlns:C="urn:ietf:params:xml:ns:caldav">
+  <D:response>
+    <D:href>/ivan/</D:href>
+    <D:propstat>
+      <D:prop>
+        <C:calendar-user-address-set>
+          <href>MAILTO:ivan@example.com</href>
+        </C:calendar-user-address-set>
+      </D:prop>
+      <D:status>HTTP/1.1 200 OK</D:status>
+    </D:propstat>
+  </D:response>
+</D:multistatus>`)
+      await client.connect()
+
+      await expect(client.fetchCalendarUser()).resolves.toMatchObject({
+        address: 'ivan@example.com',
+      })
+    })
+
+    it('returns null when the principal cannot be asked, so the caller retries later', async () => {
+      serve('Server error', 500)
+      await client.connect()
+      await expect(client.fetchCalendarUser()).resolves.toBe(null)
+
+      fetchSpy.mockRejectedValue(new TypeError('Failed to fetch'))
+      await expect(client.fetchCalendarUser()).resolves.toBe(null)
+    })
+  })
+
   describe('fetchCalendars', () => {
     it('fetches and maps calendars', async () => {
       await client.connect()
