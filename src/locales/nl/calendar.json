@@ -447,7 +447,16 @@
         "hoursBefore_one": "{{count}} uur van tevoren",
         "hoursBefore_other": "{{count}} uur van tevoren",
         "daysBefore_one": "{{count}} dag van tevoren",
-        "daysBefore_other": "{{count}} dagen van tevoren"
+        "daysBefore_other": "{{count}} dagen van tevoren",
+        "custom": "Aangepast…",
+        "customInputAria": "Aangepaste herinnering",
+        "customUnitAria": "Eenheid van aangepaste herinnering",
+        "customAdd": "Toevoegen",
+        "customInvalid": "Voer een geheel getal tussen 0 en {{max}} minuten in.",
+        "unitMinutes": "Minuten",
+        "unitHours": "Uren",
+        "unitDays": "Dagen",
+        "unitWeeks": "Weken"
       }
     },
     "eventCard": {

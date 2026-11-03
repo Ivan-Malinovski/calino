@@ -890,6 +890,27 @@
   color: var(--ink-muted, rgba(var(--ink-raw), 0.55));
 }
 
+/* Unit selector beside the custom default-reminder number input. */
+.reminderUnitSelect {
+  background: var(--canvas);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  font-size: 14px;
+  color: var(--ink);
+  font-family: inherit;
+}
+
+.reminderUnitSelect:hover {
+  border-color: rgba(var(--ink-raw), 0.18);
+}
+
+.reminderUnitSelect:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
 /* ── Text input (e.g. secondary timezone custom label) ───────────────────── */
 .textInput {
   background: var(--canvas);

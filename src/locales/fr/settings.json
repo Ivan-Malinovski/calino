@@ -267,7 +267,10 @@
       "15minBefore": "15 minutes avant",
       "30minBefore": "30 minutes avant",
       "1hourBefore": "1 heure avant",
-      "1dayBefore": "1 jour avant"
+      "1dayBefore": "1 jour avant",
+      "custom": "Personnalisé…",
+      "customAriaLabel": "Valeur personnalisée du rappel par défaut",
+      "customUnitAriaLabel": "Unité du rappel par défaut personnalisé"
     }
   },
   "conflict": {

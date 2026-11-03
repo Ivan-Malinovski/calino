@@ -5,6 +5,7 @@ import { MemoryRouter } from 'react-router'
 import { SettingsPage } from '../SettingsPage'
 import { ThemeProvider } from '@/components/ThemeProvider'
 import { useCalendarStore } from '@/store/calendarStore'
+import { useSettingsStore } from '@/store/settingsStore'
 
 const renderWithProviders = (entries: string[]) => {
   Object.defineProperty(window, 'matchMedia', {
@@ -124,5 +125,53 @@ describe('SettingsPage', () => {
     expect(nav!.textContent).toContain('Notifications')
     expect(nav!.textContent).toContain('Sync')
     expect(nav!.textContent).toContain('Data')
+  })
+})
+
+describe('default reminder setting', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    useSettingsStore.getState().updateSettings({ defaultReminderMinutes: 15 })
+  })
+
+  const renderCalendarSettings = () => renderWithProviders(['/settings?tab=calendar'])
+
+  it('shows a non-preset default as a custom number + unit and saves edits', () => {
+    useSettingsStore.getState().updateSettings({ defaultReminderMinutes: 90 })
+    renderCalendarSettings()
+
+    const value = screen.getByLabelText('Custom default reminder value')
+    expect(value).toHaveValue(90)
+    expect(
+      (screen.getByLabelText('Custom default reminder unit') as HTMLSelectElement).value
+    ).toBe('minutes')
+
+    fireEvent.change(value, { target: { value: '30' } })
+    fireEvent.change(screen.getByLabelText('Custom default reminder unit'), {
+      target: { value: 'hours' },
+    })
+    expect(useSettingsStore.getState().defaultReminderMinutes).toBe(1800)
+  })
+
+  it('seeds a non-preset value when Custom is picked', () => {
+    renderCalendarSettings()
+
+    fireEvent.change(screen.getByLabelText('Default reminder'), { target: { value: 'custom' } })
+
+    expect(useSettingsStore.getState().defaultReminderMinutes).toBe(90)
+    expect(screen.getByLabelText('Custom default reminder value')).toBeInTheDocument()
+  })
+
+  it('decomposes a stored non-preset into the largest unit (240 → 4 hours)', () => {
+    useSettingsStore.getState().updateSettings({ defaultReminderMinutes: 240 })
+    renderCalendarSettings()
+
+    const select = screen.getByLabelText('Default reminder')
+    expect(select).not.toHaveTextContent('4 hours before') // not a preset anymore
+    expect((select as HTMLSelectElement).value).toBe('custom')
+    expect(screen.getByLabelText('Custom default reminder value')).toHaveValue(4)
+    expect(
+      (screen.getByLabelText('Custom default reminder unit') as HTMLSelectElement).value
+    ).toBe('hours')
   })
 })

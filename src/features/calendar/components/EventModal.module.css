@@ -1736,6 +1736,76 @@
   text-align: center;
 }
 
+.reminderCustomSection {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 12px;
+  border-top: 1px solid var(--popover-border, rgba(0, 0, 0, 0.08));
+}
+
+.reminderCustomSection > .reminderDropdownItem {
+  padding: 4px 0;
+}
+
+.reminderCustomRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.reminderCustomInput {
+  width: 72px;
+  flex-shrink: 0;
+  padding: 5px 8px;
+  border: 1px solid var(--color-border, rgba(0, 0, 0, 0.15));
+  border-radius: var(--radius-md, 6px);
+  background: var(--color-bg, #fff);
+  color: var(--color-text, #333);
+  font-size: 13px;
+  font-family: var(--font-sans, 'Inter', sans-serif);
+}
+
+.reminderCustomUnit {
+  flex: 1;
+  min-width: 0;
+  padding: 5px 8px;
+  border: 1px solid var(--color-border, rgba(0, 0, 0, 0.15));
+  border-radius: var(--radius-md, 6px);
+  background: var(--color-bg, #fff);
+  color: var(--color-text, #333);
+  font-size: 13px;
+  font-family: var(--font-sans, 'Inter', sans-serif);
+}
+
+.reminderCustomAdd {
+  flex-shrink: 0;
+  padding: 5px 10px;
+  border: 1px solid var(--color-accent, #3b82f6);
+  border-radius: var(--radius-md, 6px);
+  background: var(--color-accent, #3b82f6);
+  color: #fff;
+  font-size: 12px;
+  font-family: var(--font-sans, 'Inter', sans-serif);
+  cursor: pointer;
+  transition: opacity var(--dur-fast) var(--ease-out);
+}
+
+.reminderCustomAdd:hover:not(:disabled) {
+  opacity: 0.85;
+}
+
+.reminderCustomAdd:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.reminderCustomInvalid {
+  font-size: 11px;
+  line-height: 1.3;
+  color: var(--color-error, #c2697f);
+}
+
 .titleSuggestions {
   position: absolute;
   top: calc(100% + 4px);

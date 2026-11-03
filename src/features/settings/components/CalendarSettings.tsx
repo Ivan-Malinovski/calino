@@ -1,13 +1,30 @@
-import { useMemo, type JSX } from 'react'
+import { useMemo, useState, type JSX } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSettingsStore, DURATION_OPTIONS, DEFAULT_REMINDER_OPTIONS } from '@/store/settingsStore'
 import { useCalendarStore } from '@/store/calendarStore'
 import { getSupportedTimezones, TIMEZONE_PRESETS } from '@/lib/timezoneHelper'
+import {
+  MAX_REMINDER_MINUTES,
+  parseReminderInput,
+  REMINDER_UNITS,
+  splitReminderMinutes,
+  type ReminderUnit,
+} from '@/lib/reminderUnits'
 import { SettingsPageHeading } from './SettingsPageHeading'
 import styles from './Settings.module.css'
 
+/** Unit labels reuse the event form's translations via the calendar namespace. */
+const REMINDER_UNIT_LABEL_KEYS: Record<ReminderUnit, string> = {
+  minutes: 'calendar:modals.eventForm.reminder.unitMinutes',
+  hours: 'calendar:modals.eventForm.reminder.unitHours',
+  days: 'calendar:modals.eventForm.reminder.unitDays',
+  weeks: 'calendar:modals.eventForm.reminder.unitWeeks',
+}
+
 export function CalendarSettings({ searchControl }: { searchControl?: JSX.Element }): JSX.Element {
-  const { t } = useTranslation('settings')
+  // 'calendar' rides along for the shared reminder unit labels — they are the
+  // same words the event form shows next to its custom reminder input.
+  const { t } = useTranslation(['settings', 'calendar'])
   const defaultView = useSettingsStore((s) => s.defaultView)
   const showWeekNumbers = useSettingsStore((s) => s.showWeekNumbers)
   const showWeekNumbersInSidebar = useSettingsStore((s) => s.showWeekNumbersInSidebar)
@@ -30,6 +47,26 @@ export function CalendarSettings({ searchControl }: { searchControl?: JSX.Elemen
 
   const defaultCalendar = calendars.find((c) => c.isDefault) || calendars[0]
   const isCustomDuration = !DURATION_OPTIONS.some((o) => o.value === defaultDuration)
+
+  // Default-reminder custom entry, mirroring the default-duration row above:
+  // the select gains a "Custom…" option and the stored minutes (always whole
+  // minutes) get a number + unit input that saves as it becomes valid.
+  const [reminderDraft, setReminderDraft] = useState<{ value: string; unit: ReminderUnit } | null>(
+    null
+  )
+  // A stored value outside the preset list shows the custom row — and the row
+  // also stays mounted while a draft edit is in flight: typing "30" into the
+  // input stores 30, which matches the "30 minutes before" preset, and without
+  // this the row would vanish (select snaps back) mid-keystroke.
+  const isCustomReminder =
+    reminderDraft !== null ||
+    (defaultReminderMinutes !== null &&
+      !DEFAULT_REMINDER_OPTIONS.some((o) => o.value === defaultReminderMinutes))
+  const reminderSplit = splitReminderMinutes(defaultReminderMinutes ?? 90)
+  const reminderEditing = reminderDraft ?? {
+    value: String(reminderSplit.value),
+    unit: reminderSplit.unit,
+  }
 
   return (
     <section
@@ -515,20 +552,76 @@ export function CalendarSettings({ searchControl }: { searchControl?: JSX.Elemen
           <div className={styles.rowControl}>
             <select
               className={styles.select}
-              value={defaultReminderMinutes === null ? '' : defaultReminderMinutes}
-              aria-label={t('calendar.defaultReminder.ariaLabel')}
-              onChange={(e) =>
-                updateSettings({
-                  defaultReminderMinutes: e.target.value === '' ? null : Number(e.target.value),
-                })
+              value={
+                defaultReminderMinutes === null
+                  ? ''
+                  : isCustomReminder
+                    ? 'custom'
+                    : String(defaultReminderMinutes)
               }
+              aria-label={t('calendar.defaultReminder.ariaLabel')}
+              onChange={(e) => {
+                const { value } = e.target
+                setReminderDraft(null)
+                if (value === '') {
+                  updateSettings({ defaultReminderMinutes: null })
+                } else if (value === 'custom') {
+                  // Seed a value that is not a preset so the row stays custom;
+                  // keep the current one if it is already non-preset.
+                  const isNonPreset =
+                    defaultReminderMinutes !== null &&
+                    !DEFAULT_REMINDER_OPTIONS.some((o) => o.value === defaultReminderMinutes)
+                  updateSettings({ defaultReminderMinutes: isNonPreset ? defaultReminderMinutes : 90 })
+                } else {
+                  updateSettings({ defaultReminderMinutes: Number(value) })
+                }
+              }}
             >
               {DEFAULT_REMINDER_OPTIONS.map((opt) => (
                 <option key={opt.labelKey} value={opt.value ?? ''}>
                   {t(opt.labelKey)}
                 </option>
               ))}
+              <option value="custom">{t('calendar.defaultReminder.custom')}</option>
             </select>
+            {isCustomReminder && (
+              <span className={styles.numberInputWrap}>
+                <input
+                  type="number"
+                  className={styles.numberInput}
+                  min={0}
+                  max={MAX_REMINDER_MINUTES}
+                  step={1}
+                  value={reminderEditing.value}
+                  aria-label={t('calendar.defaultReminder.customAriaLabel')}
+                  data-component="default-reminder-custom-input"
+                  onChange={(e) => {
+                    const value = e.target.value
+                    const next = parseReminderInput(value, reminderEditing.unit)
+                    setReminderDraft({ value, unit: reminderEditing.unit })
+                    if (next !== null) updateSettings({ defaultReminderMinutes: next })
+                  }}
+                />
+                <select
+                  className={styles.reminderUnitSelect}
+                  value={reminderEditing.unit}
+                  aria-label={t('calendar.defaultReminder.customUnitAriaLabel')}
+                  data-component="default-reminder-custom-unit"
+                  onChange={(e) => {
+                    const unit = e.target.value as ReminderUnit
+                    const next = parseReminderInput(reminderEditing.value, unit)
+                    setReminderDraft({ value: reminderEditing.value, unit })
+                    if (next !== null) updateSettings({ defaultReminderMinutes: next })
+                  }}
+                >
+                  {REMINDER_UNITS.map((unit) => (
+                    <option key={unit.id} value={unit.id}>
+                      {t(REMINDER_UNIT_LABEL_KEYS[unit.id])}
+                    </option>
+                  ))}
+                </select>
+              </span>
+            )}
           </div>
         </div>
       </div>

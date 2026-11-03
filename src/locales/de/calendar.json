@@ -335,7 +335,16 @@
         "hoursBefore_one": "{{count}} hour before",
         "hoursBefore_other": "{{count}} hours before",
         "daysBefore_one": "{{count}} day before",
-        "daysBefore_other": "{{count}} days before"
+        "daysBefore_other": "{{count}} days before",
+        "custom": "Benutzerdefiniert…",
+        "customInputAria": "Benutzerdefinierte Erinnerung",
+        "customUnitAria": "Einheit der benutzerdefinierten Erinnerung",
+        "customAdd": "Hinzufügen",
+        "customInvalid": "Ganze Zahl zwischen 0 und {{max}} Minuten eingeben.",
+        "unitMinutes": "Minuten",
+        "unitHours": "Stunden",
+        "unitDays": "Tage",
+        "unitWeeks": "Wochen"
       }
     },
     "eventCard": {
