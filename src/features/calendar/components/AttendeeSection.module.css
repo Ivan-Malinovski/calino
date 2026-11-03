@@ -284,3 +284,45 @@
   font-size: 11px;
   color: var(--color-text-tertiary, #888);
 }
+
+/* ── Suggestions ─────────────────────────────────────────────────────────── */
+
+.addAttendeeField {
+  position: relative;
+  flex: 1;
+  display: flex;
+}
+
+.addAttendeeField .addAttendeeInput {
+  width: 100%;
+}
+
+/* Portaled to the body and placed by AttendeeSection: above the event modal
+   (z-index 200), at the level of the location suggestions. */
+.suggestionList {
+  position: fixed;
+  z-index: 300;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  max-height: 240px;
+  overflow-y: auto;
+  background: var(--color-surface, var(--color-bg-input, #fff));
+  border: 1px solid var(--color-border, #ddd);
+  border-radius: 6px;
+  box-shadow: var(--shadow-md, 0 4px 12px rgb(0 0 0 / 0.15));
+}
+
+.suggestionOption {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.suggestionActive {
+  background: var(--color-bg-hover, rgb(0 0 0 / 0.06));
+}
