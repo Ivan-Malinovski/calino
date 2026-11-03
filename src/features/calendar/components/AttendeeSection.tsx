@@ -1,8 +1,25 @@
-import { useLayoutEffect, useMemo, useState, type JSX } from 'react'
+import {
+  useCallback,
+  useId,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type JSX,
+} from 'react'
+import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import type { CalendarAttendee, CalendarOrganizer, AttendeePartstat, CalendarEvent } from '@/types'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
+import { useContactStore } from '@/store/contactStore'
+import { getAllAccounts, getAllCalendars } from '@/features/caldav/sync/accountStorage'
+import {
+  collectAttendeeSuggestions,
+  matchAttendeeSuggestions,
+  type AttendeeSuggestion,
+} from '../lib/attendeeSuggestions'
 import { checkAttendeeAvailability, type Availability } from '@/lib/freeBusyCalculator'
 import { buildMailtoUri } from '@/lib/mailtoInvite'
 import { showToast } from '@/lib/toast'
@@ -69,6 +86,13 @@ export function AttendeeSection({
   const { t } = useTranslation('calendar')
   const [inputValue, setInputValue] = useState('')
   const [inputError, setInputError] = useState('')
+  // The suggestion list: open while the field has focus, `active` the option
+  // the arrow keys are on (-1: none, Enter adds what is typed).
+  const [suggestionsOpen, setSuggestionsOpen] = useState(false)
+  const [active, setActive] = useState(-1)
+  const listId = useId()
+  const inputRef = useRef<HTMLInputElement>(null)
+  const [listStyle, setListStyle] = useState<CSSProperties>({})
 
   // A half-typed address is an unsaved change too: the form around it must
   // not close on an outside click and lose it. A layout effect, so the form
@@ -94,7 +118,83 @@ export function AttendeeSection({
   }
 
   const events = useCalendarStore((state) => state.events)
+  const calendars = useCalendarStore((state) => state.calendars)
+  const contacts = useContactStore((state) => state.contacts)
   const timeFormat = useSettingsStore((state) => state.timeFormat)
+
+  // Everyone met in an event or task, owning a shared calendar, or in the
+  // address book, best first. Built only while the list is open, from what the
+  // browser already holds: typing never makes a request.
+  const organizerEmail = organizer?.email
+  const suggestions = useMemo((): AttendeeSuggestion[] => {
+    if (!suggestionsOpen) return []
+    const ownAddresses = getAllAccounts().flatMap((account) => [
+      account.calendarUserAddress ?? '',
+      account.username,
+    ])
+    if (organizerEmail) ownAddresses.push(organizerEmail)
+    // Owners are kept with the stored collections; only calendars still in
+    // the list count.
+    const listed = new Set(calendars.map((calendar) => calendar.id))
+    const calendarOwners = getAllCalendars().flatMap((calendar) =>
+      calendar.owner && listed.has(calendar.id) ? [calendar.owner] : []
+    )
+    const people = contacts.flatMap((contact) =>
+      contact.emails.map((email) => ({ email: email.value, name: contact.displayName }))
+    )
+    return collectAttendeeSuggestions({
+      events,
+      calendarOwners,
+      contacts: people,
+      ownAddresses,
+    })
+  }, [suggestionsOpen, events, calendars, contacts, organizerEmail])
+
+  const matches = useMemo(
+    () =>
+      matchAttendeeSuggestions(
+        suggestions,
+        inputValue,
+        attendees.map((attendee) => attendee.email)
+      ),
+    [suggestions, inputValue, attendees]
+  )
+  const listShown = suggestionsOpen && matches.length > 0
+  const activeOption = listShown && active >= 0 && active < matches.length ? active : -1
+
+  // The list is portaled to the body and placed against the field, as the
+  // location suggestions are: inside the form it would be clipped by the
+  // scrolling body and drawn under the fields that follow. It opens upwards
+  // when the room left above the modal footer is too short.
+  const placeList = useCallback((): void => {
+    const input = inputRef.current
+    if (!input) return
+    const rect = input.getBoundingClientRect()
+    const dialog = input.closest('[role="dialog"]')
+    const footer = dialog?.querySelector('[data-component="modal-footer"]')
+    const floor = Math.min(window.innerHeight, footer?.getBoundingClientRect().top ?? Infinity)
+    const gap = 2
+    const below = Math.max(0, floor - rect.bottom - gap)
+    const above = Math.max(0, rect.top - gap)
+    const upwards = below < 80 && above > below
+    setListStyle({
+      left: rect.left,
+      width: rect.width,
+      maxHeight: Math.max(40, Math.min(240, upwards ? above : below)),
+      ...(upwards ? { bottom: window.innerHeight - rect.top + gap } : { top: rect.bottom + gap }),
+    })
+  }, [])
+
+  useLayoutEffect(() => {
+    if (!listShown) return
+    placeList()
+    window.addEventListener('resize', placeList)
+    document.addEventListener('scroll', placeList, true)
+    return () => {
+      window.removeEventListener('resize', placeList)
+      document.removeEventListener('scroll', placeList, true)
+    }
+  }, [listShown, placeList])
 
   // Local-store availability only. The CalDAV path (RFC 6638 Outbox) is wired
   // in CalDAVClient but not driven from here: it needs a scheduling-capable
@@ -139,7 +239,11 @@ export function AttendeeSection({
   }
 
   const handleAdd = (): void => {
-    const email = inputValue.trim().toLowerCase()
+    addAttendee(inputValue)
+  }
+
+  const addAttendee = (value: string, name?: string): void => {
+    const email = value.trim().toLowerCase()
     if (!email) return
 
     if (!EMAIL_RE.test(email)) {
@@ -154,6 +258,7 @@ export function AttendeeSection({
 
     const newAttendee: CalendarAttendee = {
       email,
+      ...(name ? { name } : {}),
       role: 'REQ-PARTICIPANT',
       partstat: 'NEEDS-ACTION',
       rsvp: true,
@@ -162,6 +267,11 @@ export function AttendeeSection({
     onAttendeesChange([...attendees, newAttendee])
     setInputValue('')
     setInputError('')
+    setActive(-1)
+  }
+
+  const pick = (suggestion: AttendeeSuggestion): void => {
+    addAttendee(suggestion.email, suggestion.name)
   }
 
   const handleRemove = (email: string): void => {
@@ -169,14 +279,31 @@ export function AttendeeSection({
   }
 
   const handleKeyDown = (e: React.KeyboardEvent): void => {
-    if (e.key === 'Enter') {
+    if (e.key === 'ArrowDown') {
       e.preventDefault()
-      handleAdd()
+      setSuggestionsOpen(true)
+      setActive((index) => Math.min(index + 1, matches.length - 1))
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setActive((index) => Math.max(index - 1, -1))
+    } else if (e.key === 'Enter') {
+      e.preventDefault()
+      const chosen = activeOption >= 0 ? matches[activeOption] : undefined
+      if (chosen) pick(chosen)
+      else handleAdd()
+    } else if (e.key === 'Escape' && listShown) {
+      // Closes the list only, not the event form around it.
+      e.preventDefault()
+      e.stopPropagation()
+      setSuggestionsOpen(false)
+      setActive(-1)
     }
   }
 
   const handleInputChange = (val: string): void => {
     setInputValue(val)
+    setSuggestionsOpen(true)
+    setActive(-1)
     if (inputError) setInputError('')
   }
 
@@ -252,15 +379,68 @@ export function AttendeeSection({
       )}
 
       <div className={styles.addAttendeeRow}>
-        <input
-          type="email"
-          placeholder={t('modals.attendees.addAttendeePlaceholder')}
-          value={inputValue}
-          onChange={(e) => handleInputChange(e.target.value)}
-          onKeyDown={handleKeyDown}
-          className={styles.addAttendeeInput}
-          aria-label={t('modals.attendees.addAttendeeAria')}
-        />
+        <div className={styles.addAttendeeField}>
+          <input
+            ref={inputRef}
+            type="email"
+            role="combobox"
+            aria-autocomplete="list"
+            aria-expanded={listShown}
+            aria-controls={listId}
+            aria-activedescendant={activeOption >= 0 ? `${listId}-${activeOption}` : undefined}
+            autoComplete="off"
+            placeholder={t('modals.attendees.addAttendeePlaceholder')}
+            value={inputValue}
+            onChange={(e) => handleInputChange(e.target.value)}
+            onKeyDown={handleKeyDown}
+            onFocus={() => setSuggestionsOpen(true)}
+            onBlur={() => {
+              setSuggestionsOpen(false)
+              setActive(-1)
+            }}
+            className={styles.addAttendeeInput}
+            aria-label={t('modals.attendees.addAttendeeAria')}
+            data-component="attendee-input"
+          />
+          {listShown &&
+            createPortal(
+              <ul
+                id={listId}
+                role="listbox"
+                aria-label={t('modals.attendees.suggestionsAria')}
+                className={styles.suggestionList}
+                style={listStyle}
+                data-component="attendee-suggestions"
+              >
+                {matches.map((suggestion, index) => (
+                  <li
+                    key={suggestion.email}
+                    id={`${listId}-${index}`}
+                    role="option"
+                    aria-selected={index === activeOption}
+                    className={`${styles.suggestionOption} ${index === activeOption ? styles.suggestionActive : ''}`}
+                    data-component="attendee-suggestion"
+                    data-email={suggestion.email}
+                    // Keeps the focus in the field, so the click lands before blur.
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => pick(suggestion)}
+                    onMouseEnter={() => setActive(index)}
+                  >
+                    <span className={styles.attendeeAvatar} aria-hidden="true">
+                      {getInitials(suggestion.email, suggestion.name)}
+                    </span>
+                    <span className={styles.attendeeInfo}>
+                      <span className={styles.attendeeName}>
+                        {getDisplayName(suggestion.email, suggestion.name)}
+                      </span>
+                      <span className={styles.attendeeEmail}>{suggestion.email}</span>
+                    </span>
+                  </li>
+                ))}
+              </ul>,
+              document.body
+            )}
+        </div>
         <button
           type="button"
           className={styles.addAttendeeButton}

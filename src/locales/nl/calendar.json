@@ -355,6 +355,7 @@
       "removeAttendee": "{{name}} verwijderen",
       "addAttendeePlaceholder": "E-mailadres van deelnemer toevoegen…",
       "addAttendeeAria": "E-mailadres van deelnemer toevoegen",
+      "suggestionsAria": "Voorgestelde deelnemers",
       "add": "Toevoegen",
       "conflictWarning_one": "{{count}} deelnemer heeft op dit tijdstip een planningsconflict.",
       "conflictWarning_other": "{{count}} deelnemers hebben op dit tijdstip planningsconflicten.",

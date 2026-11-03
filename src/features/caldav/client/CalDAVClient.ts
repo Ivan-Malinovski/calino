@@ -2,6 +2,7 @@ import { createDAVClient } from 'tsdav'
 import type {
   CalDAVCredentials,
   CalDAVCalendar,
+  CalendarOwner,
   CalendarUser,
   CreateCalendarOptions,
   ServerSubscription,
@@ -99,6 +100,22 @@ export function resolveDavHref(baseUrl: string, href: string): string {
   } catch {
     return href
   }
+}
+
+// Owner principals read by fetchCalendarOwners, by URL; null for one that
+// could not be read. Kept for the page's life: a client is made per sync, and
+// a principal's address does not change between two of them.
+const calendarOwnerCache = new Map<string, CalendarUser | null>()
+
+/** A DAV URL in one spelling: decoded, without its trailing slash. */
+export function davUrlKey(url: string): string {
+  let decoded = url
+  try {
+    decoded = decodeURIComponent(url)
+  } catch {
+    // Not valid percent-encoding: compare as it is.
+  }
+  return decoded.replace(/\/+$/, '')
 }
 
 /**
@@ -1025,8 +1042,18 @@ export class CalDAVClient implements CalendarBackend {
         'current-user-principal'
       )
       if (!principalHref) return null
-      const principalUrl = resolveDavHref(this.serverUrl, principalHref)
+      return await this.readCalendarUser(resolveDavHref(this.serverUrl, principalHref))
+    } catch {
+      return null
+    }
+  }
 
+  /**
+   * A principal's first `mailto:` calendar user address and DAV:displayname.
+   * Null when the principal could not be read (refused, absent, bad answer).
+   */
+  private async readCalendarUser(principalUrl: string): Promise<CalendarUser | null> {
+    try {
       const response = await this.proxyFetch(principalUrl, {
         method: 'PROPFIND',
         headers: {
@@ -1070,6 +1097,86 @@ export class CalDAVClient implements CalendarBackend {
     } catch {
       return null
     }
+  }
+
+  /**
+   * Who owns each collection in the calendar home, for the calendars someone
+   * else shares with the user: DAV:owner (RFC 3744 §5.1) names the owner's
+   * principal, whose calendar user address and display name are then read
+   * (RFC 6638 §2.4.1), once per principal. Calendars the user owns, and those
+   * whose owner the server does not tell (an empty DAV:owner, as Radicale's
+   * shares answer) or whose principal it does not let the user read, are left
+   * out. Throws when the listing itself fails, so a caller can tell "nobody"
+   * from "unknown".
+   */
+  async fetchCalendarOwners(): Promise<CalendarOwner[]> {
+    if (!navigator.onLine) {
+      throw new Error('No network connection. Please check your internet connection.')
+    }
+    const homeUrl = await this.findCalendarHome()
+    const response = await this.proxyFetch(homeUrl, {
+      method: 'PROPFIND',
+      headers: {
+        'Content-Type': 'application/xml; charset=utf-8',
+        Authorization: this.authHeader,
+        Depth: '1',
+      },
+      body: `<?xml version="1.0" encoding="UTF-8" ?>
+<d:propfind xmlns:d="DAV:">
+  <d:prop>
+    <d:owner/>
+    <d:current-user-principal/>
+  </d:prop>
+</d:propfind>`,
+    })
+    if (!response.ok && response.status !== 207) {
+      throw new Error(`Listing calendar owners failed: ${response.status}`)
+    }
+
+    const doc = this.parseXmlDocument(await response.text())
+    const childHref = (scope: Element, localName: string): string | undefined => {
+      const holder = this.firstElementByLocalName(scope, 'DAV:', localName)
+      if (!holder) return undefined
+      const href = Array.from(holder.getElementsByTagName('*')).find(
+        (el) => el.localName === 'href'
+      )
+      return href?.textContent?.trim() || undefined
+    }
+    const responses = Array.from(doc.getElementsByTagName('*')).filter(
+      (el) => el.localName === 'response'
+    )
+    const sameUrl = (a: string, b: string): boolean => davUrlKey(a) === davUrlKey(b)
+
+    let me: string | undefined
+    const owned: { calendarUrl: string; ownerUrl: string }[] = []
+    for (const item of responses) {
+      const href = Array.from(item.children).find((el) => el.localName === 'href')
+      const ownHref = href?.textContent?.trim()
+      if (!ownHref) continue
+      const principal = childHref(item, 'current-user-principal')
+      if (principal) me ??= resolveDavHref(homeUrl, principal)
+      const owner = childHref(item, 'owner')
+      if (!owner) continue
+      owned.push({
+        calendarUrl: resolveDavHref(homeUrl, ownHref),
+        ownerUrl: resolveDavHref(homeUrl, owner),
+      })
+    }
+
+    const owners: CalendarOwner[] = []
+    for (const { calendarUrl, ownerUrl } of owned) {
+      if (sameUrl(calendarUrl, homeUrl)) continue
+      if (me && sameUrl(ownerUrl, me)) continue
+      let user = calendarOwnerCache.get(ownerUrl)
+      if (user === undefined) {
+        user = await this.readCalendarUser(ownerUrl)
+        calendarOwnerCache.set(ownerUrl, user)
+      }
+      if (user?.address) {
+        owners.push({ calendarUrl, address: user.address, displayName: user.displayName })
+      }
+    }
+    return owners
   }
 
   /**
