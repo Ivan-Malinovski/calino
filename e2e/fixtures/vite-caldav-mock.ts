@@ -302,6 +302,14 @@ const ACCOUNTS: MockAccount[] = [
         components: ['VEVENT', 'VTODO', 'VJOURNAL'],
       },
       {
+        // Owned by `attendee-suggestions.spec.ts`: the meetings whose
+        // attendees the attendee field then suggests.
+        path: '/dav/calendars/user/attendees/',
+        displayName: 'Attendees',
+        color: '#7C3AED',
+        components: ['VEVENT', 'VTODO', 'VJOURNAL'],
+      },
+      {
         // Owned by `unreadable-resource.spec.ts` (issue #228), which seeds a
         // resource that cannot be parsed next to a readable one.
         path: '/dav/calendars/user/unreadable/',

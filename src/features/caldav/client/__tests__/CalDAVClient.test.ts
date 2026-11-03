@@ -680,6 +680,162 @@ END:VCALENDAR`,
     })
   })
 
+  describe('fetchCalendarOwners (RFC 3744 DAV:owner)', () => {
+    const home = 'https://caldav.example.com/calendars/test/'
+
+    /** Answer the home listing with `listing` and each principal from `principals`. */
+    function serve(listing: string, principals: Record<string, [number, string]>): string[] {
+      const asked: string[] = []
+      fetchSpy.mockImplementation(async (input: RequestInfo | URL) => {
+        const url = typeof input === 'string' ? input : input.toString()
+        asked.push(url)
+        if (url === home) return new Response(listing, { status: 207 })
+        const principal = principals[url]
+        if (principal) return new Response(principal[1], { status: principal[0] })
+        return new Response(null, { status: 404 })
+      })
+      return asked
+    }
+
+    const principal = (href: string, address: string | null, name?: string): string =>
+      `<?xml version="1.0" encoding="utf-8"?>
+<d:multistatus xmlns:d="DAV:" xmlns:cal="urn:ietf:params:xml:ns:caldav">
+  <d:response>
+    <d:href>${href}</d:href>
+    <d:propstat>
+      <d:prop>
+        <cal:calendar-user-address-set>
+          <d:href>${href}</d:href>
+          ${address ? `<d:href>mailto:${address}</d:href>` : ''}
+        </cal:calendar-user-address-set>
+        ${name ? `<d:displayname>${name}</d:displayname>` : ''}
+      </d:prop>
+      <d:status>HTTP/1.1 200 OK</d:status>
+    </d:propstat>
+  </d:response>
+</d:multistatus>`
+
+    it('names the owners of calendars shared by others (sabre/dav shape)', async () => {
+      const asked = serve(
+        `<?xml version="1.0" encoding="utf-8"?>
+<d:multistatus xmlns:d="DAV:">
+  <d:response>
+    <d:href>/calendars/test/</d:href>
+    <d:propstat><d:prop>
+      <d:owner><d:href>/principals/test/</d:href></d:owner>
+      <d:current-user-principal><d:href>/principals/test/</d:href></d:current-user-principal>
+    </d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat>
+  </d:response>
+  <d:response>
+    <d:href>/calendars/test/default/</d:href>
+    <d:propstat><d:prop>
+      <d:owner><d:href>/principals/test/</d:href></d:owner>
+    </d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat>
+  </d:response>
+  <d:response>
+    <d:href>/calendars/test/team_shared_by_alice/</d:href>
+    <d:propstat><d:prop>
+      <d:owner><d:href>/principals/alice/</d:href></d:owner>
+    </d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat>
+  </d:response>
+  <d:response>
+    <d:href>/calendars/test/projects_shared_by_alice/</d:href>
+    <d:propstat><d:prop>
+      <d:owner><d:href>/principals/alice/</d:href></d:owner>
+    </d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat>
+  </d:response>
+  <d:response>
+    <d:href>/calendars/test/shared_by_bob/</d:href>
+    <d:propstat><d:prop>
+      <d:owner><d:href>/principals/bob/</d:href></d:owner>
+    </d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat>
+  </d:response>
+</d:multistatus>`,
+        {
+          'https://caldav.example.com/principals/alice/': [
+            207,
+            principal('/principals/alice/', 'alice@example.com', 'Alice Example'),
+          ],
+          // Bob's principal may not be read by this user.
+          'https://caldav.example.com/principals/bob/': [403, ''],
+        }
+      )
+      await client.connect()
+
+      await expect(client.fetchCalendarOwners()).resolves.toEqual([
+        {
+          calendarUrl: `${home}team_shared_by_alice/`,
+          address: 'alice@example.com',
+          displayName: 'Alice Example',
+        },
+        {
+          calendarUrl: `${home}projects_shared_by_alice/`,
+          address: 'alice@example.com',
+          displayName: 'Alice Example',
+        },
+      ])
+      // Alice's principal is read once for her two calendars; the user's own
+      // principal never.
+      expect(asked.filter((url) => url.endsWith('/principals/alice/'))).toHaveLength(1)
+      expect(asked.some((url) => url.endsWith('/principals/test/'))).toBe(false)
+    })
+
+    it('finds no owner where the server leaves DAV:owner empty (Radicale shape)', async () => {
+      // Radicale 3.9: a calendar shared with the user is mapped into their
+      // home and answers an empty <owner/>; hrefs come unprefixed.
+      serve(
+        `<?xml version="1.0" encoding="utf-8"?>
+<multistatus xmlns="DAV:">
+  <response>
+    <href>/calendars/test/</href>
+    <propstat><prop>
+      <owner><href>/calendars/test/</href></owner>
+      <current-user-principal><href>/calendars/test/</href></current-user-principal>
+    </prop><status>HTTP/1.1 200 OK</status></propstat>
+  </response>
+  <response>
+    <href>/calendars/test/team/</href>
+    <propstat><prop><owner /></prop><status>HTTP/1.1 200 OK</status></propstat>
+  </response>
+</multistatus>`,
+        {}
+      )
+      await client.connect()
+
+      await expect(client.fetchCalendarOwners()).resolves.toEqual([])
+    })
+
+    it('leaves out an owner whose principal lists no mailto: address', async () => {
+      serve(
+        `<?xml version="1.0" encoding="utf-8"?>
+<d:multistatus xmlns:d="DAV:">
+  <d:response>
+    <d:href>/calendars/test/shared_by_carol/</d:href>
+    <d:propstat><d:prop>
+      <d:owner><d:href>https://caldav.example.com/principals/carol/</d:href></d:owner>
+    </d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat>
+  </d:response>
+</d:multistatus>`,
+        {
+          'https://caldav.example.com/principals/carol/': [
+            207,
+            principal('/principals/carol/', null),
+          ],
+        }
+      )
+      await client.connect()
+
+      await expect(client.fetchCalendarOwners()).resolves.toEqual([])
+    })
+
+    it('propagates a failed listing so callers keep the owners they know', async () => {
+      fetchSpy.mockResolvedValue(new Response(null, { status: 500 }))
+      await client.connect()
+
+      await expect(client.fetchCalendarOwners()).rejects.toThrow('500')
+    })
+  })
+
   describe('fetchEvents', () => {
     it('fetches both VEVENTs, VTODOs, and VJOURNALs', async () => {
       await client.connect()

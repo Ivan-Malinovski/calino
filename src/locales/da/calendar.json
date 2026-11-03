@@ -243,6 +243,7 @@
       "removeAttendee": "Fjern {{name}}",
       "addAttendeePlaceholder": "Tilføj deltagerens e-mail...",
       "addAttendeeAria": "Tilføj deltagerens e-mail",
+      "suggestionsAria": "Foreslåede deltagere",
       "add": "Tilføj",
       "conflictWarning_one": "{{count}} deltager har en planlægningskonflikt på dette tidspunkt.",
       "conflictWarning_other": "{{count}} deltagere har planlægningskonflikter på dette tidspunkt.",

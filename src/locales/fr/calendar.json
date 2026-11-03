@@ -355,6 +355,7 @@
       "removeAttendee": "Retirer {{name}}",
       "addAttendeePlaceholder": "Ajouter l’adresse e-mail d’un participant…",
       "addAttendeeAria": "Ajouter l’adresse e-mail d’un participant",
+      "suggestionsAria": "Participants suggérés",
       "add": "Ajouter",
       "conflictWarning_one": "{{count}} participant a un conflit d’horaire à ce moment-là.",
       "conflictWarning_other": "{{count}} participants ont un conflit d’horaire à ce moment-là.",

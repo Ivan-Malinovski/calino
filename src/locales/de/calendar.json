@@ -243,6 +243,7 @@
       "removeAttendee": "Entfernen {{name}}",
       "addAttendeePlaceholder": "Hinzufügen attendee email...",
       "addAttendeeAria": "Hinzufügen attendee email",
+      "suggestionsAria": "Vorgeschlagene Teilnehmer",
       "add": "Hinzufügen",
       "conflictWarning_one": "{{count}} attendee has a scheduling conflict at this time.",
       "conflictWarning_other": "{{count}} attendees have scheduling conflicts at this time.",

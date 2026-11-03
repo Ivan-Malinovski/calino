@@ -355,6 +355,7 @@
       "removeAttendee": "Quitar {{name}}",
       "addAttendeePlaceholder": "Añadir correo electrónico del asistente...",
       "addAttendeeAria": "Agregar correo electrónico del asistente",
+      "suggestionsAria": "Asistentes sugeridos",
       "add": "Agregar",
       "conflictWarning_one": "{{count}} asistente tiene un conflicto de horario.",
       "conflictWarning_other": "{{count}} asistentes tienen conflictos de horario.",
