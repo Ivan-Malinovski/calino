@@ -42,7 +42,9 @@ export function SubscribeCalendarModal({
 }: SubscribeCalendarModalProps): JSX.Element | null {
   const { t } = useTranslation('calendar')
   const isEdit = mode === 'edit' && subscription !== undefined
-  const urlLocked = Boolean(isEdit && subscription.isPreconfigured)
+  const urlLocked = Boolean(
+    isEdit && (subscription.isPreconfigured || subscription.serverAccountId)
+  )
 
   const [name, setName] = useState('')
   const [url, setUrl] = useState('')

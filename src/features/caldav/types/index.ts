@@ -33,6 +33,20 @@ export interface CalDAVCalendar {
   calendarOrder?: number
 }
 
+/**
+ * A collection the server holds as a *subscription* to an external ICS feed
+ * (Radicale `VSUBSCRIBED`, resourcetype `cs:subscribed`). The server stores no
+ * events for it, only the feed URL, so it never shows up as a CalDAV calendar.
+ */
+export interface ServerSubscription {
+  /** Absolute URL of the collection on the CalDAV server. */
+  url: string
+  name: string
+  color: string
+  /** The external ICS feed (`cs:source`), as published by the server. */
+  source: string
+}
+
 export interface SyncState {
   status: 'idle' | 'syncing' | 'error' | 'offline'
   lastSyncAt: string | null

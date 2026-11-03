@@ -5,6 +5,7 @@ import type { Calendar, CalendarEvent } from '@/types'
 import { fetchWebcalIcs, normalizeWebcalUrl } from '../fetchWebcal'
 import { parseICALDataAsync } from '@/features/caldav/adapter/iCalendarAdapter'
 import * as storage from '../subscriptionStorage'
+import { WEBCAL_SUBSCRIPTIONS_CHANGED } from '../serverSubscriptions'
 import type { WebcalSubscription } from '../types'
 import {
   useCalendarStore,
@@ -70,7 +71,11 @@ export function useWebcalSubscriptions(): UseWebcalSubscriptionsReturn {
   const applyEventChanges = useCalendarStore(selectApplyEventChanges)
 
   useEffect(() => {
-    setSubscriptions(storage.getAllSubscriptions())
+    const reload = (): void => setSubscriptions(storage.getAllSubscriptions())
+    reload()
+    // A CalDAV sync can add or remove server-held subscriptions on its own.
+    window.addEventListener(WEBCAL_SUBSCRIPTIONS_CHANGED, reload)
+    return () => window.removeEventListener(WEBCAL_SUBSCRIPTIONS_CHANGED, reload)
   }, [])
 
   const addSubscription = useCallback(
@@ -155,9 +160,10 @@ export function useWebcalSubscriptions(): UseWebcalSubscriptionsReturn {
       const subscription = storage.getSubscriptionById(id)
       if (!subscription) return
 
-      const normalizedUrl = subscription.isPreconfigured
-        ? subscription.url
-        : normalizeWebcalUrl(options.url)
+      const normalizedUrl =
+        subscription.isPreconfigured || subscription.serverAccountId
+          ? subscription.url
+          : normalizeWebcalUrl(options.url)
       const nextProxy = options.proxyUrl ?? null
       const feedChanged =
         normalizedUrl !== subscription.url || nextProxy !== (subscription.proxyUrl ?? null)

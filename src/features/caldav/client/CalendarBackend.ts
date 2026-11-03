@@ -2,6 +2,7 @@ import type {
   CalDAVCalendar,
   CalendarProtocol,
   CreateCalendarOptions,
+  ServerSubscription,
   UpdateCalendarOptions,
 } from '../types'
 import type { FetchEventsResult, SyncCollectionResult } from './CalDAVClient'
@@ -40,6 +41,12 @@ export interface CalendarBackend {
   watch?(onChange: () => void): () => void
 
   fetchCalendars(): Promise<CalDAVCalendar[]>
+  /**
+   * Collections the server keeps as subscriptions to external ICS feeds. They
+   * are not calendars (no events live on the server), so they are reported
+   * separately and imported as webcal subscriptions. CalDAV only.
+   */
+  fetchSubscribedCollections?(): Promise<ServerSubscription[]>
   fetchEvents(
     calendarUrl: string,
     start: string,
