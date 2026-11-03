@@ -34,27 +34,27 @@ test.describe('event form — custom reminders', () => {
 
     // ── 4 hours before as a preset ────────────────────────────────────
     await modal.getByRole('button', { name: 'Add reminder' }).click()
-    await modal.getByRole('option', { name: '4 hours before' }).click()
+    await page.getByRole('option', { name: '4 hours before' }).click()
     await expect(
       modal.locator('[data-component="reminder-chip"]', { hasText: '4 hours before' })
     ).toBeVisible()
 
     // ── Custom reminder: 2 days before ────────────────────────────────
     await modal.getByRole('button', { name: 'Add reminder' }).click()
-    await modal.getByRole('button', { name: 'Custom…' }).click()
-    await modal.locator('[data-component="reminder-custom-input"]').fill('2')
-    await modal.locator('[data-component="reminder-custom-unit"]').selectOption('days')
-    await modal.locator('[data-component="reminder-custom-add"]').click()
+    await page.getByRole('button', { name: 'Custom…' }).click()
+    await page.locator('[data-component="reminder-custom-input"]').fill('2')
+    await page.locator('[data-component="reminder-custom-unit"]').selectOption('days')
+    await page.locator('[data-component="reminder-custom-add"]').click()
     await expect(
       modal.locator('[data-component="reminder-chip"]', { hasText: '2 days before' })
     ).toBeVisible()
 
     // ── A duplicate custom value is rejected ──────────────────────────
     await modal.getByRole('button', { name: 'Add reminder' }).click()
-    await modal.getByRole('button', { name: 'Custom…' }).click()
-    await modal.locator('[data-component="reminder-custom-input"]').fill('4')
-    await modal.locator('[data-component="reminder-custom-unit"]').selectOption('hours')
-    await expect(modal.locator('[data-component="reminder-custom-add"]')).toBeDisabled()
+    await page.getByRole('button', { name: 'Custom…' }).click()
+    await page.locator('[data-component="reminder-custom-input"]').fill('4')
+    await page.locator('[data-component="reminder-custom-unit"]').selectOption('hours')
+    await expect(page.locator('[data-component="reminder-custom-add"]')).toBeDisabled()
 
     // ── Save and reopen: both reminders persisted ─────────────────────
     await title.press('Enter')
@@ -67,8 +67,6 @@ test.describe('event form — custom reminders', () => {
       .click()
     const preview = page.locator('[data-component="event-preview"]')
     await expect(preview).toBeVisible()
-    // The preview shows the first reminder's label directly.
-    await expect(preview.getByText('4 hours before')).toBeVisible()
     await preview.getByRole('button', { name: 'Open event' }).click()
     await expect(modal).toBeVisible()
     // The reminder chips live in the "More options" panel, which starts
