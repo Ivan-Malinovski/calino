@@ -52,6 +52,15 @@ const allowHttpConnections = isSelfHosted || process.env.CALINO_E2E_MOCK === '1'
 // note on `server.host` below before setting it.
 const devHost = process.env.CALINO_DEV_HOST
 
+// What the browser dials for HMR; see the note on `server.hmr` below. On
+// localhost the socket is pinned to its own port, so it is cross-origin to the
+// page and 'self' does not cover it. Chromium lets the CSP's `http:` source
+// match `ws:`, but Firefox does not, and it raises the blocked socket as an
+// uncaught NS_ERROR_CONTENT_BLOCKED. The dev-served page names it explicitly.
+// Builds never load the HMR client, so this stays out of production CSPs.
+const hmr = devHost ? true : { host: 'localhost', port: 8080 }
+const devConnectSources = typeof hmr === 'object' ? [`ws://${hmr.host}:${hmr.port}`] : []
+
 export default defineConfig({
   base: '/',
   // The app reads these non-VITE_ build-time values from import.meta.env.
@@ -67,10 +76,10 @@ export default defineConfig({
     {
       name: 'calino-content-security-policy',
       enforce: 'pre',
-      transformIndexHtml: (html) =>
+      transformIndexHtml: (html, ctx) =>
         html.replace(
           '__CALINO_CONTENT_SECURITY_POLICY__',
-          contentSecurityPolicy(allowHttpConnections)
+          contentSecurityPolicy(allowHttpConnections, ctx.server ? devConnectSources : [])
         ),
     },
     react(),
@@ -103,7 +112,7 @@ export default defineConfig({
     // the main one. Off localhost, share the server's port and let the client
     // infer the origin from window.location — that also keeps the socket
     // same-origin, so strict extension CSPs allow it under 'self'.
-    hmr: devHost ? true : { host: 'localhost', port: 8080 },
+    hmr,
   },
   css: {
     // Makes every font size follow the Font Size setting; see fontScale.ts.

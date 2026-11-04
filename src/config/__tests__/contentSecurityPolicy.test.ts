@@ -16,4 +16,15 @@ describe('contentSecurityPolicy', () => {
     expect(policy).toContain("default-src 'self'")
     expect(policy).toContain("script-src 'self'")
   })
+
+  it('names extra connect sources (the dev HMR socket) only when given', () => {
+    expect(contentSecurityPolicy(true, ['ws://localhost:8080'])).toContain(
+      "connect-src 'self' https: http: ws://localhost:8080"
+    )
+    expect(contentSecurityPolicy(false, ['ws://localhost:8080'])).toContain(
+      "connect-src 'self' https: ws://localhost:8080"
+    )
+    expect(contentSecurityPolicy(true)).not.toContain('ws:')
+    expect(contentSecurityPolicy(false)).not.toContain('ws:')
+  })
 })

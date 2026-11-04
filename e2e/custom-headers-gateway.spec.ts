@@ -9,6 +9,21 @@ test('connects and syncs through a cross-origin gateway requiring Pangolin-style
 }) => {
   if (!baseURL) throw new Error('Playwright baseURL is required')
   await clearState(page)
+  // Vite binds the one address `localhost` resolved to for it, which can be
+  // [::1] alone, while Node's fetch dials 127.0.0.1 for `localhost` and is
+  // refused — the gateway then answers 502 and the dialog never closes. Forward
+  // to whichever loopback the dev server actually answers on.
+  const devPort = new URL(baseURL).port
+  let upstreamOrigin = baseURL
+  for (const candidate of [baseURL, `http://127.0.0.1:${devPort}`, `http://[::1]:${devPort}`]) {
+    try {
+      await fetch(candidate, { method: 'HEAD' })
+      upstreamOrigin = candidate
+      break
+    } catch {
+      // Not listening on this address; try the next.
+    }
+  }
   const methods: string[] = []
   let preflights = 0
   const gateway = createServer(async (request, response) => {
@@ -41,23 +56,23 @@ test('connects and syncs through a cross-origin gateway requiring Pangolin-style
       if (typeof value === 'string') headers[name] = value
     }
     try {
-      const upstream = await fetch(`${baseURL}${request.url}`, {
+      const upstream = await fetch(`${upstreamOrigin}${request.url}`, {
         method: request.method,
         headers,
         body: chunks.length ? Buffer.concat(chunks) : undefined,
         redirect: 'manual',
       })
-      const resultHeaders: Record<string, string> = { ...cors }
-      for (const name of ['content-type', 'etag', 'location', 'dav']) {
-        const value = upstream.headers.get(name)
-        if (value) resultHeaders[name] = value
-      }
       // The Vite mock emits absolute DAV hrefs using its own Host. A real
       // reverse proxy emits its public origin, so reproduce that here.
       const publicOrigin = `http://${request.headers.host}`
-      const body = Buffer.from(await upstream.arrayBuffer())
-        .toString('utf8')
-        .replaceAll(baseURL, publicOrigin)
+      const toPublic = (text: string) =>
+        text.replaceAll(upstreamOrigin, publicOrigin).replaceAll(baseURL, publicOrigin)
+      const resultHeaders: Record<string, string> = { ...cors }
+      for (const name of ['content-type', 'etag', 'location', 'dav']) {
+        const value = upstream.headers.get(name)
+        if (value) resultHeaders[name] = name === 'location' ? toPublic(value) : value
+      }
+      const body = toPublic(Buffer.from(await upstream.arrayBuffer()).toString('utf8'))
       response.writeHead(upstream.status, resultHeaders)
       response.end(body)
     } catch (error) {
