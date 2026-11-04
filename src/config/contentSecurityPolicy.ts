@@ -6,8 +6,18 @@ const BASE_DIRECTIVES = [
   "font-src 'self' https://fonts.gstatic.com",
 ] as const
 
-/** Build the meta CSP baked into the main HTML entry. */
-export function contentSecurityPolicy(selfHosted: boolean): string {
-  const connectSrc = selfHosted ? "connect-src 'self' https: http:" : "connect-src 'self' https:"
+/**
+ * Build the meta CSP baked into the main HTML entry. `extraConnectSources` is
+ * for the dev server only (its HMR socket); builds pass nothing.
+ */
+export function contentSecurityPolicy(
+  selfHosted: boolean,
+  extraConnectSources: readonly string[] = []
+): string {
+  const connectSrc = [
+    "connect-src 'self' https:",
+    ...(selfHosted ? ['http:'] : []),
+    ...extraConnectSources,
+  ].join(' ')
   return [...BASE_DIRECTIVES.slice(0, 3), connectSrc, ...BASE_DIRECTIVES.slice(3)].join('; ')
 }
