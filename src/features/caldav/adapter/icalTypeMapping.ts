@@ -49,20 +49,18 @@ function paramString(prop: ICAL.Property, name: string): string | undefined {
  * one — `CATEGORIES:Work,Personal,Urgent` parsed as `['Work']` and the other
  * two were destroyed on the next save.
  *
- * ical.js splits a multi-value TEXT property for us, but whether it does so
- * depends on how the jCal was produced, so still split string values on commas
- * as a belt-and-braces measure.
+ * ical.js splits the list on its unescaped commas and unescapes each value, so
+ * a comma left in a value is part of the category name: `CATEGORIES:R\, D` is
+ * the one category "R, D" (RFC 5545 §3.3.11). Do not split the values again.
  */
 function readCategories(component: ICAL.Component): string[] {
   const categories: string[] = []
   for (const prop of component.getAllProperties('categories')) {
     for (const value of prop.getValues()) {
       if (typeof value !== 'string') continue
-      for (const name of value.split(',')) {
-        const trimmed = name.trim()
-        // Preserve first-seen order; a category repeated across lines is one tag.
-        if (trimmed.length > 0 && !categories.includes(trimmed)) categories.push(trimmed)
-      }
+      const trimmed = value.trim()
+      // Preserve first-seen order; a category repeated across lines is one tag.
+      if (trimmed.length > 0 && !categories.includes(trimmed)) categories.push(trimmed)
     }
   }
   return categories

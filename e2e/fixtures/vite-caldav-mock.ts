@@ -302,6 +302,14 @@ const ACCOUNTS: MockAccount[] = [
         components: ['VEVENT', 'VTODO', 'VJOURNAL'],
       },
       {
+        // Owned by `ics-text-escaping.spec.ts`, which asserts the exact bytes
+        // of the resource it seeds after an edit.
+        path: '/dav/calendars/user/text-esc/',
+        displayName: 'Text Escaping',
+        color: '#0F9D58',
+        components: ['VEVENT', 'VTODO', 'VJOURNAL'],
+      },
+      {
         path: '/dav/calendars/user/calino-settings/',
         displayName: 'Calino Settings',
         components: ['VEVENT'],

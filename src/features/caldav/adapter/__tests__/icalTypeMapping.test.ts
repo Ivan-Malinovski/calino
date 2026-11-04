@@ -834,6 +834,51 @@ describe('CATEGORIES multi-value parsing', () => {
 
     expect(out).toContain('CATEGORIES:Work,Personal,Urgent')
   })
+
+  it('keeps an escaped comma inside one category', () => {
+    // RFC 5545 §3.3.11: `R\, D` is the single category "R, D". ical.js has
+    // already split the list on unescaped commas and unescaped each value.
+    const vevent = createVevent(
+      [
+        'BEGIN:VCALENDAR',
+        'VERSION:2.0',
+        'BEGIN:VEVENT',
+        'UID:cat-escaped',
+        'DTSTART:20260615T100000Z',
+        'DTEND:20260615T110000Z',
+        'CATEGORIES:R\\, D,Work',
+        'END:VEVENT',
+        'END:VCALENDAR',
+      ].join('\r\n')
+    )
+
+    const parsed = icalEventToCalendarEvent(vevent, 'cal-1')
+    expect(parsed.categories).toEqual(['R, D', 'Work'])
+    expect(calendarEventToIcalComponent(parsed).toString()).toContain('CATEGORIES:R\\, D,Work')
+  })
+
+  it('round-trips a category with a comma written by Calino', () => {
+    const vevent = createVevent(
+      [
+        'BEGIN:VCALENDAR',
+        'VERSION:2.0',
+        'BEGIN:VEVENT',
+        'UID:cat-escaped-rt',
+        'DTSTART:20260615T100000Z',
+        'DTEND:20260615T110000Z',
+        'END:VEVENT',
+        'END:VCALENDAR',
+      ].join('\r\n')
+    )
+    const event = { ...icalEventToCalendarEvent(vevent, 'cal-1'), categories: ['R, D', 'Work'] }
+
+    const out = calendarEventToIcalComponent(event).toString()
+    const reparsed = icalEventToCalendarEvent(
+      createVevent(`BEGIN:VCALENDAR\r\nVERSION:2.0\r\n${out}\r\nEND:VCALENDAR`),
+      'cal-1'
+    )
+    expect(reparsed.categories).toEqual(['R, D', 'Work'])
+  })
 })
 
 // ---------------------------------------------------------------------------
