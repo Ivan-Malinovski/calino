@@ -14,6 +14,10 @@ task itself, and each occurrence you complete is recorded as a separate
 component sharing the same `UID`. This is the same representation Thunderbird
 writes, so the two interoperate cleanly in both directions.
 
+Two-way sync with the Android and iOS task apps needs a different shape — see
+[Rolling completion mode](#rolling-completion-mode-opt-in) below. It is off by
+default.
+
 ## What Calino writes
 
 "Exercise, every Tuesday", with the 10 March occurrence completed:
@@ -83,6 +87,11 @@ more than one client agrees on.
 | **KDE (libkcal)** | Proprietary `X-KDE-LIBKCAL-DTRECURRENCE` listing completed occurrence timestamps. | **Partial** — the custom property is ignored; the series itself reads fine. |
 | **todoman** | Does not support recurring `VTODO` ([#304](https://github.com/pimutils/todoman/issues/304)). | n/a |
 
+Each row reads Calino's default (override) shape. The mobile clients marked
+partial, plus Apple Reminders, read the [rolling completion
+mode](#rolling-completion-mode-opt-in) instead — the same series, written as
+single-`VTODO` resources.
+
 ### Nextcloud Tasks
 
 Two behaviours to be aware of, both handled by Calino but visible if you look at
@@ -108,8 +117,98 @@ completions, which is not what RFC 5545 describes
 Calino will still show and can still be completed there, but the two apps
 disagree about what "completed" means for a single occurrence, so completion
 history will not match. This is a limitation on their side; Calino deliberately
-does not imitate it, because doing so would break Thunderbird and Nextcloud
-compatibility and lose the history permanently.
+does not imitate it by default, because doing so would break Thunderbird and
+Nextcloud compatibility and lose the history permanently.
+
+## Rolling completion mode (opt-in)
+
+**Settings → Tasks → Repeating tasks → Rolling completion for mobile sync.**
+
+The default shape above is the only one Thunderbird and Nextcloud agree on, but
+it is the one shape the mainstream mobile clients cannot round-trip:
+
+- **DAVx⁵ → OpenTasks / Tasks.org** drops `RECURRENCE-ID` overrides on download
+  and uploads only the master
+  ([davx5-ose#2357](https://github.com/bitfireAT/davx5-ose/issues/2357)), so
+  occurrences ticked off in Calino stay open on the phone — and the next edit
+  there overwrites the resource and deletes those overrides from the server.
+- **Tasks.org's built-in CalDAV** rejects a resource containing more than one
+  `VTODO` and aborts fetching the rest of the calendar
+  ([tasks#2270](https://github.com/tasks/tasks/issues/2270),
+  [tasks#3360](https://github.com/tasks/tasks/issues/3360)).
+- **Apple Reminders** expects a rolling master plus completed copies.
+
+Rolling mode keeps every calendar object resource to a **single `VTODO`**:
+
+1. **The earliest open occurrence.** The master's `DTSTART`/`DUE` advance to the
+   next occurrence in the `RRULE` (with `COUNT` decremented for the occurrences
+   consumed; `UNTIL` is left alone) and it stays `STATUS:NEEDS-ACTION`. The
+   finished occurrence is written as its own resource, under a **new `UID`**, at
+   the dates it was due.
+2. **A later occurrence, out of order.** The anchor cannot move without losing
+   an earlier open occurrence, so that date is appended to the master's
+   `EXDATE` and only the completed copy is written.
+3. **The last occurrence** (`COUNT` exhausted, or past `UNTIL`). There is
+   nothing left to roll to, so the master itself is marked `STATUS:COMPLETED`.
+
+Completing 3 March of "Exercise, every Tuesday" in rolling mode writes these two
+resources — no `RECURRENCE-ID` anywhere:
+
+```
+BEGIN:VCALENDAR
+…
+BEGIN:VTODO
+UID:gym-1234
+DTSTAMP:20260803T070436Z
+SEQUENCE:1
+SUMMARY:Exercise
+DTSTART;VALUE=DATE:20260310
+DUE;VALUE=DATE:20260310
+RRULE:FREQ=WEEKLY;BYDAY=TU
+STATUS:NEEDS-ACTION
+END:VTODO
+END:VCALENDAR
+```
+
+```
+BEGIN:VCALENDAR
+…
+BEGIN:VTODO
+UID:7c9e0b3a-…
+DTSTAMP:20260803T070436Z
+SEQUENCE:0
+SUMMARY:Exercise
+DUE;VALUE=DATE:20260303
+PERCENT-COMPLETE:100
+STATUS:COMPLETED
+COMPLETED:20260303T180400Z
+END:VTODO
+END:VCALENDAR
+```
+
+Points worth noting:
+
+- **Completion history is kept.** The copy is a real task in Calino's
+  **Completed** filter and on its day in the calendar views, so nothing is lost
+  the way it is with Tasks.org's bare `DUE` advance. Every client that reads a
+  plain finished task — including Thunderbird and Nextcloud — shows it too.
+- **`COUNT` counts from `DTSTART`,** so moving the anchor forward without
+  decrementing it would extend the series. `UNTIL` names an absolute instant and
+  is never rewritten.
+- **Slots skipped by the move are consumed.** If the series still carries
+  completions from the default mode (overrides), those slots count too, and an
+  override covering the occurrence being completed is folded into the copy and
+  dropped from the master's resource — otherwise it would keep that resource
+  multi-component, which is the whole thing this mode avoids.
+- **Un-completing a finished repeat** reopens the copy as an ordinary one-off
+  task on its date. The series itself is not rolled back, so nothing is
+  resurrected twice.
+- **Overrides that live in their own resource** (Nextcloud Tasks' split write)
+  are left alone: folding one into the master's resource would duplicate it on
+  the server. That single occurrence keeps the override shape.
+- **Switching modes is not automatic for old data.** Occurrences completed
+  before the switch stay `RECURRENCE-ID` overrides until they are reopened;
+  anything completed afterwards uses the rolling shape.
 
 ## What Calino will not do
 
@@ -134,6 +233,13 @@ relevant RFC section. Tests mirroring those tags — including round-trip
 fixtures for the Thunderbird and Nextcloud shapes described above — are in
 `src/features/caldav/adapter/__tests__/iCalendarAdapter.test.ts` and
 `src/store/__tests__/taskOccurrences.test.ts`.
+
+Rolling mode is planned by the pure `planRollingTaskCompletion` in
+`src/lib/rollingTaskCompletion.ts` (tagged `R2.8`) and written as two resources
+by `saveRollingTaskCompletion` in `src/features/caldav/hooks/useCalDAV.ts`.
+`src/lib/taskCompletion.ts` is the only place that picks between the two shapes.
+Tests are in `src/lib/__tests__/rollingTaskCompletion.test.ts` and
+`e2e/rolling-task-completion.spec.ts`.
 
 One thing worth knowing if you are changing this code: an all-day date is
 timezone-less (RFC 5545 §3.3.4), but `rrule` evaluates `BYDAY` against its

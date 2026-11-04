@@ -340,6 +340,18 @@ describe('settingsSync', () => {
       expect(merged.adjustableTheme.dark.panel).toBe(local.adjustableTheme.dark.panel)
       expect(merged.adjustableTheme.light).toEqual(local.adjustableTheme.light)
     })
+
+    it('only accepts known recurring-task completion modes', () => {
+      const local = useSettingsStore.getState()
+      expect(mergeSettings(local, { taskCompletionMode: 'rolling' }).taskCompletionMode).toBe(
+        'rolling'
+      )
+      expect(
+        mergeSettings(local, {
+          taskCompletionMode: 'rolling-mode',
+        } as unknown as Parameters<typeof mergeSettings>[1]).taskCompletionMode
+      ).toBe('override')
+    })
   })
 
   describe('resolveConflict', () => {

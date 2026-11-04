@@ -100,6 +100,7 @@ vi.mock('@/store/calendarStore', () => ({
       closeJournalModal: vi.fn(),
       getEventsForDateRange: vi.fn(),
       getVisibleEvents: vi.fn(),
+      completeTaskOccurrenceRolling: vi.fn(),
     }
     return selector(state)
   }),
@@ -207,6 +208,7 @@ vi.mock('@/store/settingsStore', () => ({
       taskDueDateReminders: true,
       overdueTaskBadge: false,
       taskCollapseOverrides: {},
+      taskCompletionMode: 'override',
       updateSettings: vi.fn(),
       resetSettings: vi.fn(),
     }

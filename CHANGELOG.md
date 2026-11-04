@@ -4,6 +4,10 @@ All notable changes to Calino will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- **Rolling completion for repeating tasks** ([#244](https://github.com/Ivan-Malinovski/calino/issues/244)). Settings → Tasks has an opt-in mode that moves a repeating task to its next date when you tick one off and saves the finished repeat as its own task, so every resource holds a single `VTODO`. This is the only shape DAVx⁵/OpenTasks, Tasks.org's built-in CalDAV and Apple Reminders round-trip; the default stays the `RECURRENCE-ID` representation Thunderbird and Nextcloud read. See [`docs/RECURRING_TASKS.md`](docs/RECURRING_TASKS.md).
+
 ## [0.42.0] - 2026-11-03
 
 This release adds a home timezone that Calino uses throughout the calendar, custom reminder times, improves month-view spacing and event-time visibility, and fixes several CalDAV sync problems.

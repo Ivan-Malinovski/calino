@@ -148,6 +148,11 @@
       "label": "Masquer les tâches terminées",
       "desc": "Ne pas afficher les tâches terminées dans la grille du calendrier"
     },
+    "recurring": "Tâches répétées",
+    "rollingTaskCompletion": {
+      "label": "Achèvement glissant pour la synchronisation mobile",
+      "desc": "Décale une tâche répétée à sa date suivante et enregistre chaque répétition terminée comme une tâche à part. Nécessaire pour la synchronisation bidirectionnelle avec DAVx⁵/OpenTasks, Tasks.org et Apple Rappels ; Thunderbird et Nextcloud le lisent aussi."
+    },
     "reminders": "Rappels",
     "taskDueDateReminders": {
       "label": "Rappels d’échéance des tâches",

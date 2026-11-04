@@ -148,6 +148,11 @@
       "label": "Hide Completed Tasks",
       "desc": "Don't show done tasks in the calendar grid"
     },
+    "recurring": "Repeating tasks",
+    "rollingTaskCompletion": {
+      "label": "Rolling completion for mobile sync",
+      "desc": "Move a repeating task to its next date and save each finished repeat as its own task. Needed for two-way sync with DAVx⁵/OpenTasks, Tasks.org and Apple Reminders; Thunderbird and Nextcloud read it too."
+    },
     "reminders": "Reminders",
     "taskDueDateReminders": {
       "label": "Task Due Date Reminders",

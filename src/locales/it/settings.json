@@ -148,6 +148,11 @@
       "label": "Nascondi attività completate",
       "desc": "Non mostrare le attività svolte nella griglia del calendario"
     },
+    "recurring": "Attività ricorrenti",
+    "rollingTaskCompletion": {
+      "label": "Completamento progressivo per la sincronizzazione mobile",
+      "desc": "Sposta un'attività ricorrente alla data successiva e salva ogni ripetizione completata come attività separata. Necessario per la sincronizzazione bidirezionale con DAVx⁵/OpenTasks, Tasks.org e Apple Promemoria; anche Thunderbird e Nextcloud lo leggono."
+    },
     "reminders": "Promemoria",
     "taskDueDateReminders": {
       "label": "Promemoria della data di scadenza dell'attività",

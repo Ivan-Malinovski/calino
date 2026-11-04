@@ -135,6 +135,10 @@ export const EventCard = React.memo(function EventCard({
   const updateEvent = useCalendarStore((state) => state.updateEvent)
   const completeTask = useCalendarStore((state) => state.completeTask)
   const completeTaskOccurrence = useCalendarStore((state) => state.completeTaskOccurrence)
+  const completeTaskOccurrenceRolling = useCalendarStore(
+    (state) => state.completeTaskOccurrenceRolling
+  )
+  const taskCompletionMode = useSettingsStore((state) => state.taskCompletionMode)
   const deleteEvent = useCalendarStore((state) => state.deleteEvent)
   const addEvent = useCalendarStore((state) => state.addEvent)
   const timeFormat = useSettingsStore((state) => state.timeFormat)
@@ -144,6 +148,7 @@ export const EventCard = React.memo(function EventCard({
     updateEvent: updateCalDAVEvent,
     createEvent: createCalDAVEvent,
     saveRecurrenceOverride,
+    saveRollingTaskCompletion,
   } = useCalDAV()
   // Cross-fragment hover: a multi-day event is rendered as separate cards per
   // grid cell. Share one hover highlight by tracking the hovered id in a store.
@@ -531,8 +536,11 @@ export const EventCard = React.memo(function EventCard({
       await completeTaskAndSync(event, newCompleted, {
         completeTask,
         completeTaskOccurrence,
+        completeTaskOccurrenceRolling,
         updateCalDAVEvent,
         saveRecurrenceOverride,
+        saveRollingTaskCompletion,
+        taskCompletionMode,
       })
     } catch {
       // The CalDAV hook queues failed writes and surfaces their status.

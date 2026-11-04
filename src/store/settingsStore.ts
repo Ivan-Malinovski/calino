@@ -220,6 +220,9 @@ const DEFAULT_SETTINGS: UserSettings = {
   // tools, which is what the groups encode.
   viewDividerAfter: DEFAULT_DIVIDER_AFTER,
   taskCollapseOverrides: {},
+  // R2.8 — Off by default: the override shape is what Thunderbird and Calino
+  // itself read, and mobile interop is the exception the user opts into.
+  taskCompletionMode: 'override',
 }
 
 export const useSettingsStore = create<SettingsStore>()(

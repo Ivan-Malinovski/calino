@@ -10,6 +10,7 @@ import { homeDayKey, storedDayKey } from '@/lib/homeTimezone'
 import { useTranslation } from 'react-i18next'
 import { formatDayMonth } from '@/lib/datetime'
 import { useCalendarStore } from '@/store/calendarStore'
+import { useSettingsStore } from '@/store/settingsStore'
 import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
 import { resolveRecurringTasks } from '@/lib/openTasks'
 import { compareTaskSortOrder } from '@/lib/taskSortOrder'
@@ -36,8 +37,13 @@ export function MiniTasksSection({ isExpanded, onToggle }: MiniTasksSectionProps
   const { calendarById, labelsVisible } = useTaskCalendarLabels('sidebar')
   const completeTask = useCalendarStore((state) => state.completeTask)
   const completeTaskOccurrence = useCalendarStore((state) => state.completeTaskOccurrence)
+  const completeTaskOccurrenceRolling = useCalendarStore(
+    (state) => state.completeTaskOccurrenceRolling
+  )
+  const taskCompletionMode = useSettingsStore((state) => state.taskCompletionMode)
   const openModal = useCalendarStore((state) => state.openModal)
-  const { updateEvent: updateCalDAVEvent, saveRecurrenceOverride } = useCalDAV()
+  const { updateEvent: updateCalDAVEvent, saveRecurrenceOverride, saveRollingTaskCompletion } =
+    useCalDAV()
   const [hoveredTask, setHoveredTask] = useState<string | null>(null)
   const [focusedTask, setFocusedTask] = useState<string | null>(null)
   const [tooltipPosition, setTooltipPosition] = useState<{ x: number; y: number } | null>(null)
@@ -181,8 +187,11 @@ export function MiniTasksSection({ isExpanded, onToggle }: MiniTasksSectionProps
         await completeTaskAndSync(task, newCompleted, {
           completeTask,
           completeTaskOccurrence,
+          completeTaskOccurrenceRolling,
           updateCalDAVEvent,
           saveRecurrenceOverride,
+          saveRollingTaskCompletion,
+          taskCompletionMode,
         })
       } catch {
         // error handled by useCalDAV

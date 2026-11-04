@@ -286,6 +286,15 @@ const ACCOUNTS: MockAccount[] = [
         rejectMixedUids: true,
       },
       {
+        // Owned by `rolling-task-completion.spec.ts` (issue #244), which asserts
+        // the exact resource count and bytes after a rolling completion — a
+        // parallel spec writing here would change the dump it reads back.
+        path: '/dav/calendars/user/rolling/',
+        displayName: 'Rolling',
+        color: '#06B6D4',
+        components: ['VEVENT', 'VTODO'],
+      },
+      {
         // Owned by `organizer.spec.ts`, which asserts the ORGANIZER of the
         // events it creates.
         path: '/dav/calendars/user/organizer/',

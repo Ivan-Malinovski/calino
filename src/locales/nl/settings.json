@@ -148,6 +148,11 @@
       "label": "Voltooide taken verbergen",
       "desc": "Voltooide taken niet tonen in het agendaraster"
     },
+    "recurring": "Herhalende taken",
+    "rollingTaskCompletion": {
+      "label": "Doorlopend afvinken voor mobiele synchronisatie",
+      "desc": "Verplaatst een herhalende taak naar de volgende datum en slaat elke voltooide herhaling op als een eigen taak. Nodig voor tweerichtingssynchronisatie met DAVx⁵/OpenTasks, Tasks.org en Apple Herinneringen; Thunderbird en Nextcloud lezen het ook."
+    },
     "reminders": "Herinneringen",
     "taskDueDateReminders": {
       "label": "Herinneringen voor taakvervaldatums",
