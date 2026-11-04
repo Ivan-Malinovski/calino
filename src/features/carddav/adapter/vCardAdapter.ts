@@ -96,13 +96,33 @@ function escapeVCardValue(value: string): string {
 /**
  * Unescape a vCard property value (reverse of escapeVCardValue).
  * Applied to all parsed property values that may contain escapes.
+ *
+ * One pass, so an escaped backslash is never read as the start of another
+ * escape: `C:\\new` reads as `C:\new`, not as `C:\` + newline + `ew`.
  */
 function unescapeVCardValue(value: string): string {
-  return value
-    .replace(/\\n/gi, '\n')
-    .replace(/\\,/g, ',')
-    .replace(/\\;/g, ';')
-    .replace(/\\\\/g, '\\')
+  return value.replace(/\\([\\;,nN])/g, (_, char: string) =>
+    char === 'n' || char === 'N' ? '\n' : char
+  )
+}
+
+/**
+ * Split a structured (`;`) or list (`,`) value on its delimiter, skipping the
+ * escaped ones: `Dupont\;Jr;Jean` is two components, not three. The parts
+ * are still escaped; unescape each one.
+ */
+function splitVCardValue(value: string, delimiter: ';' | ','): string[] {
+  const parts: string[] = []
+  let start = 0
+  for (let i = 0; i < value.length; i++) {
+    if (value[i] === '\\') i++
+    else if (value[i] === delimiter) {
+      parts.push(value.slice(start, i))
+      start = i + 1
+    }
+  }
+  parts.push(value.slice(start))
+  return parts
 }
 
 // ---------------------------------------------------------------------------
@@ -346,7 +366,7 @@ function extractAddresses(
       }
     }
 
-    const parts = result.value.split(';')
+    const parts = splitVCardValue(result.value, ';')
 
     addresses.push({
       type,
@@ -708,9 +728,9 @@ export function parseVCard(
   }
 
   // Extract basic properties
-  const fn = extractProperty(lines, 'FN') || ''
+  const fn = unescapeVCardValue(extractProperty(lines, 'FN') || '')
   const n = extractProperty(lines, 'N') || ''
-  const nParts = n.split(';')
+  const nParts = splitVCardValue(n, ';')
 
   const uid = extractProperty(lines, 'UID') || createUuid()
   // NB: `Contact.url` is the CardDAV *resource href*, not the contact's website — the
@@ -729,7 +749,7 @@ export function parseVCard(
 
   // Parse organization
   const org = extractProperty(lines, 'ORG') || ''
-  const orgParts = org.split(';')
+  const orgParts = splitVCardValue(org, ';')
   const organization = unescapeVCardValue(orgParts[0] || '')
   const department = unescapeVCardValue(orgParts[1] || '')
 
@@ -767,8 +787,7 @@ export function parseVCard(
 
   // Parse categories
   const categoriesStr = extractProperty(lines, 'CATEGORIES') || ''
-  const categories = categoriesStr
-    .split(',')
+  const categories = splitVCardValue(categoriesStr, ',')
     .map((c) => unescapeVCardValue(c.trim()))
     .filter(Boolean)
 

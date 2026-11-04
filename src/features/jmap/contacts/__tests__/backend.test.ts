@@ -110,6 +110,32 @@ describe('JMAP contacts backend with real transport and an in-memory wire server
     expect(await backend.fetchContact(book, created.url)).toBeNull()
     expect(contactEtag({ b: 1, a: { d: 2, c: 3 } })).toBe(contactEtag({ a: { c: 3, d: 2 }, b: 1 }))
   })
+  it('shows and keeps names with commas and semicolons, which the vCard step escapes', async () => {
+    server.seed({
+      ...person,
+      name: { '@type': 'Name', full: 'Martin, Jean' },
+      organizations: {
+        organizations1: {
+          '@type': 'Organization',
+          name: 'ACME, Inc.',
+          units: [{ '@type': 'OrgUnit', name: 'R&D; Lab' }],
+        },
+      },
+      keywords: { 'R, D': true },
+    })
+    const [contact] = await backend.fetchContacts(book)
+    expect(contact).toMatchObject({
+      displayName: 'Martin, Jean',
+      organization: 'ACME, Inc.',
+      department: 'R&D; Lab',
+      categories: ['R, D'],
+    })
+    contact.note = 'Changed note'
+    await backend.updateContact(book, contact, contact.url, contact.etag!)
+    // Only the note changes: the name, organization and keyword go back as they came.
+    const update = (last('ContactCard/set').update as JsonObject).card1 as JsonObject
+    expect(Object.keys(update)).toEqual(['jsCard/notes/notes1/note'])
+  })
   it('preserves server metadata and opaque fields on a focused update', async () => {
     const id = server.seed({
       ...person,
