@@ -5,6 +5,7 @@
     "contactCount_one": "{{count}} contact",
     "contactCount_other": "{{count}} contacten",
     "newContact": "+ Nieuw",
+    "noWritableAddressBook": "Geen adresboek waarin je kunt schrijven",
     "allAddressBooks": "Alle adresboeken",
     "filterByTag": "Filteren op label", "allTags": "Alle", "allTagsLabel": "Alle labels", "tagsMore": "{{tag}} +{{count}}", "clearTagFilter": "Labelfilter wissen",
     "noMatches": "Geen overeenkomsten",

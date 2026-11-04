@@ -89,6 +89,26 @@ test.describe('carddav — read-only address book', () => {
     expect((await writes(page, baseURL!))[0]).toMatch(/^\/dav\/addressbooks\/user\/book\//)
   })
 
+  test('"+ New" is disabled while every address book is read-only', async ({ page, baseURL }) => {
+    // Only the team book is listed: the user can read contacts but write none.
+    await page.request.post(`${baseURL}${MOCK}/own-book?listed=0`)
+    await page.goto('/contacts')
+    await expect(page.getByRole('button', { name: 'Bob Brown' })).toBeVisible()
+
+    const newButton = page.getByRole('button', { name: '+ New' })
+    await expect(newButton).toBeDisabled()
+    await expect(newButton).toHaveAttribute('title', 'No address book you can write to')
+
+    // A writable book shows up on the next sync: "+ New" works again.
+    await page.request.post(`${baseURL}${MOCK}/own-book?listed=1`)
+    await page.reload()
+    await expect(page.getByRole('button', { name: 'Alice Adams' })).toBeVisible()
+    await expect(newButton).toBeEnabled()
+    await expect(newButton).not.toHaveAttribute('title')
+    await newButton.click()
+    await expect(page.getByRole('dialog').getByPlaceholder('New Contact')).toBeVisible()
+  })
+
   test('importing a vCard file targets a writable book', async ({ page, baseURL }) => {
     await page.goto('/contacts')
     await expect(page.getByRole('button', { name: 'Bob Brown' })).toBeVisible()

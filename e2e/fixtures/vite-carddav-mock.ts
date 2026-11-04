@@ -19,6 +19,8 @@ import type { Plugin } from 'vite'
  *   - PUT    /__test__/put?book=team&name=<file.vcf>
  *                                         adds the card to a second book, shared
  *                                         read-only (only <read/>, 403 on writes)
+ *   - POST   /__test__/own-book?listed=0|1    leave the user's own (writable) book
+ *                                         out of the listing, or list it again
  *   - DELETE /__test__/delete?name=<file.vcf>
  *   - GET    /__test__/log                        → [{ method, path, kind?, hrefs? }]
  *   - POST   /__test__/clear-log
@@ -72,10 +74,13 @@ export function carddavMockPlugin(): Plugin {
   const log: LoggedRequest[] = []
   // The read-only book: listed once a card is put into it, never written to by the app.
   const teamCards = new Map<string, string>()
+  // Off: the home lists only the read-only book, so the user has nowhere to write.
+  let ownBookListed = true
 
   const reset = () => {
     cards.clear()
     teamCards.clear()
+    ownBookListed = true
     tombstones.clear()
     log.length = 0
     shortMultiget = 0
@@ -178,6 +183,10 @@ export function carddavMockPlugin(): Plugin {
         reset()
         return send(204)
       }
+      if (endpoint === 'own-book' && method === 'POST') {
+        ownBookListed = query.get('listed') !== '0'
+        return send(204)
+      }
       if (endpoint === 'put' && method === 'PUT' && query.get('book') === 'team') {
         teamCards.set(query.get('name') ?? 'unnamed.vcf', await readBody(req))
         return send(204)
@@ -241,7 +250,7 @@ export function carddavMockPlugin(): Plugin {
           propResponse(HOME, '<resourcetype><collection/></resourcetype>'),
           // Listed first, so "the first book" is the one the app must not pick.
           ...(teamCards.size > 0 ? [propResponse(TEAM, teamProps())] : []),
-          propResponse(BOOK, bookProps()),
+          ...(ownBookListed ? [propResponse(BOOK, bookProps())] : []),
         ])
       )
     }

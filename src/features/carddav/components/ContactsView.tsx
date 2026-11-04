@@ -112,6 +112,8 @@ export function ContactsView(): JSX.Element {
     const visible = addressBooks.filter((ab) => ab.isVisible)
     return (visible.length > 0 ? visible : addressBooks).filter((ab) => ab.canWrite !== false)
   }, [addressBooks])
+  // Books exist but every one is read-only: grey "+ New" out rather than offer it.
+  const noWritableAddressBook = addressBooks.length > 0 && targetAddressBooks.length === 0
 
   const selectedContact = selectedContactId ? getContactById(selectedContactId) : null
   const isSelectedContactReadOnly =
@@ -134,6 +136,8 @@ export function ContactsView(): JSX.Element {
 
   // "+ New" — if 1 address book go straight to form, if >1 show picker
   const handleNewClick = (): void => {
+    // Only reached with no address book at all (nothing synced yet): when books exist
+    // but all are read-only, the button is disabled instead.
     if (targetAddressBooks.length === 0) {
       showToast(t('view.noAddressBookAvailable'))
       return
@@ -412,7 +416,11 @@ export function ContactsView(): JSX.Element {
     <div className={`${styles.contactsPage} ${showDetail ? styles.showDetail : ''}`}>
       {/* Left panel */}
       <div className={styles.clist}>
-        <ContactList onNewContact={handleNewClick} loading={syncState.status === 'syncing'} />
+        <ContactList
+          onNewContact={handleNewClick}
+          newContactDisabled={noWritableAddressBook}
+          loading={syncState.status === 'syncing'}
+        />
 
         {/* Address book picker dropdown — anchored to the list panel, which is
             position: relative, so it lands under the "+ New" button */}

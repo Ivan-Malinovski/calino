@@ -5,6 +5,7 @@
     "contactCount_one": "{{count}} Kontakt",
     "contactCount_other": "{{count}} Kontakte",
     "newContact": "+ Neu",
+    "noWritableAddressBook": "Kein Adressbuch, in das du schreiben kannst",
     "allAddressBooks": "Alle Adressbücher",
     "filterByTag": "Nach Tag filtern", "allTags": "Alle", "allTagsLabel": "Alle Tags", "tagsMore": "{{tag}} +{{count}}", "clearTagFilter": "Tag-Filter zurücksetzen",
     "noMatches": "Keine Treffer",
