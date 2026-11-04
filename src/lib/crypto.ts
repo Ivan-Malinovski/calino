@@ -24,6 +24,7 @@
 import { gcm } from '@noble/ciphers/aes.js'
 import { pbkdf2Async } from '@noble/hashes/pbkdf2.js'
 import { sha256 } from '@noble/hashes/sha2.js'
+import type { Pbkdf2Request, Pbkdf2Response } from './pbkdf2.worker'
 
 // ─── App-level encryption (existing) ─────────────────────────────────────────
 
@@ -83,11 +84,92 @@ function randomBytes(length: number): Uint8Array {
   return cryptoApi.getRandomValues(new Uint8Array(length))
 }
 
+// ─── JavaScript PBKDF2, off the main thread ──────────────────────────────────
+//
+// Without SubtleCrypto (plain-HTTP origins such as a self-hosted instance
+// opened by LAN address, some WebViews) PBKDF2 runs in JavaScript. noble's
+// pbkdf2Async yields only to microtasks, so on the main thread a derivation
+// freezes the page outright: about 2.4 s each in Firefox, 1.5 s in Chromium.
+// Unlocking a config decrypts several fields, each with its own salt, so that
+// added up to a ~10 s freeze. Each derivation runs in a worker instead, a few
+// at once, which keeps the page responsive and spreads them over the cores.
+// Where a worker cannot start, derivation stays on the main thread as before.
+
+const MAX_KDF_WORKERS = Math.max(1, Math.min(4, globalThis.navigator?.hardwareConcurrency || 2))
+let activeKdfWorkers = 0
+const kdfQueue: Array<() => void> = []
+let kdfWorkersUnavailable = false
+
+function acquireKdfSlot(): Promise<void> {
+  if (activeKdfWorkers < MAX_KDF_WORKERS) {
+    activeKdfWorkers++
+    return Promise.resolve()
+  }
+  return new Promise((resolve) => kdfQueue.push(resolve))
+}
+
+function releaseKdfSlot(): void {
+  const next = kdfQueue.shift()
+  // Hand the slot straight to the next waiter rather than freeing it, so a
+  // caller arriving in between cannot push the count past the limit.
+  if (next) next()
+  else activeKdfWorkers--
+}
+
+function deriveInWorker(password: string, salt: Uint8Array): Promise<Uint8Array> {
+  return new Promise((resolve, reject) => {
+    const worker = new Worker(new URL('./pbkdf2.worker.ts', import.meta.url), { type: 'module' })
+    worker.onmessage = (event: MessageEvent<Pbkdf2Response>) => {
+      worker.terminate()
+      if ('key' in event.data) resolve(event.data.key)
+      else reject(new Error(event.data.error))
+    }
+    worker.onerror = (event) => {
+      event.preventDefault()
+      worker.terminate()
+      reject(new Error(event.message || 'PBKDF2 worker failed to start'))
+    }
+    worker.onmessageerror = () => {
+      worker.terminate()
+      reject(new Error('PBKDF2 worker returned unreadable data'))
+    }
+    const request: Pbkdf2Request = { password, salt, iterations: PBKDF2_ITERATIONS, dkLen: 32 }
+    worker.postMessage(request)
+  })
+}
+
 async function deriveJavaScriptKey(password: string, salt: Uint8Array): Promise<Uint8Array> {
+  if (!kdfWorkersUnavailable && typeof Worker !== 'undefined') {
+    await acquireKdfSlot()
+    try {
+      return await deriveInWorker(password, salt)
+    } catch (error) {
+      // A blocked or unsupported worker fails the same way every time, so stop
+      // trying for this page load rather than paying the failure per field.
+      kdfWorkersUnavailable = true
+      console.warn('[crypto] PBKDF2 worker unavailable; deriving on the main thread:', error)
+    } finally {
+      releaseKdfSlot()
+    }
+  }
   return pbkdf2Async(sha256, password, salt, {
     c: PBKDF2_ITERATIONS,
     dkLen: 32,
   })
+}
+
+// The app-level key comes from a fixed secret and salt, so it is the same on
+// every call. Derive it once, as getEncryptionKey does for the native key.
+let cachedJavaScriptKey: Promise<Uint8Array> | null = null
+
+function getJavaScriptEncryptionKey(): Promise<Uint8Array> {
+  cachedJavaScriptKey ??= deriveJavaScriptKey(APP_SECRET, new TextEncoder().encode(APP_SALT)).catch(
+    (error: unknown) => {
+      cachedJavaScriptKey = null
+      throw error
+    }
+  )
+  return cachedJavaScriptKey
 }
 
 async function getEncryptionKey(): Promise<CryptoKey> {
@@ -153,7 +235,7 @@ export async function encryptPassword(password: string): Promise<EncryptedData> 
   const cryptoApi = getNativeCrypto()
 
   if (!cryptoApi) {
-    const key = await deriveJavaScriptKey(APP_SECRET, encoder.encode(APP_SALT))
+    const key = await getJavaScriptEncryptionKey()
     const encrypted = gcm(key, iv).encrypt(encoder.encode(password))
 
     return {
@@ -183,7 +265,7 @@ export async function decryptPassword(encrypted: EncryptedData): Promise<string>
   const cryptoApi = getNativeCrypto()
 
   if (!cryptoApi) {
-    const key = await deriveJavaScriptKey(APP_SECRET, new TextEncoder().encode(APP_SALT))
+    const key = await getJavaScriptEncryptionKey()
     const decrypted = gcm(key, iv).decrypt(data)
     return decoder.decode(decrypted)
   }
