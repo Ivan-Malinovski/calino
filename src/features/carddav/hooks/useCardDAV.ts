@@ -272,6 +272,9 @@ export function useCardDAV(): UseCardDAVReturn {
               name: newAb.name,
               ctag: newAb.ctag,
               syncToken: newAb.syncToken || existingSyncToken,
+              // Sharing changes on the server: refresh it like the name, or a book
+              // shared read-only after its first sync would stay writable here.
+              canWrite: newAb.canWrite,
             }
           } else {
             mergedAddressBooks.push(newAb)

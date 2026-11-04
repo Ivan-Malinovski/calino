@@ -854,21 +854,35 @@ export class CardDAVClient implements ContactsBackend {
     return Number.isFinite(size) ? size : undefined
   }
 
+  /**
+   * Whether the current-user-privilege-set lets us change the cards in this book.
+   *
+   * Read like parsePrivileges on the CalDAV side: `<write>` aggregates
+   * `<write-content>` (RFC 3744 §3.2) and `<all>` aggregates everything, so any
+   * DAV: element under a `<privilege>` counts, not only a literal `<write>`.
+   * Radicale grants only `<write-content>` on a book shared read-write and only
+   * `<read>` on a book shared read-only. `<write-properties>` alone does not
+   * count: it covers the book's own properties (its name), not its cards.
+   *
+   * undefined means the server did not answer the property (it then comes back
+   * empty in a 404 propstat); callers treat that as writable, as before.
+   */
   private parseCanWrite(text: string): boolean | undefined {
     const doc = parseXmlDocument(text)
     if (!doc) return undefined
 
-    // Look for a DAV:write inside any DAV:privilege of the privilege set. The old
-    // regex wanted the literal "<D:write/>", so it missed Radicale twice over:
-    // no prefix, and a space before the self-closing slash.
+    const granted = new Set<string>()
     for (const privilegeSet of Array.from(
       doc.getElementsByTagNameNS(DAV_NS, 'current-user-privilege-set')
     )) {
       for (const privilege of childElements(privilegeSet, DAV_NS, 'privilege')) {
-        if (childElements(privilege, DAV_NS, 'write').length > 0) return true
+        for (const element of Array.from(privilege.getElementsByTagNameNS(DAV_NS, '*'))) {
+          granted.add(element.localName)
+        }
       }
     }
-    return undefined
+    if (granted.size === 0) return undefined
+    return ['write', 'all', 'write-content', 'bind'].some((name) => granted.has(name))
   }
 
   /**

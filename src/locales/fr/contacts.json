@@ -26,6 +26,7 @@
     "yearsOld_other": "{{count}} ans",
     "onCalendar": "Dans le calendrier",
     "addToCalendar": "Ajouter au calendrier",
+    "readOnlyAddressBook": "{{name}} (lecture seule)",
     "field": {
       "email": "E-MAIL",
       "phone": "TÉLÉPHONE",

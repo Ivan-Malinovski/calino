@@ -171,6 +171,8 @@ interface ContactDetailProps {
   onDelete?: () => void
   onFieldSave?: (field: string, value: unknown) => void
   confirmDelete?: boolean
+  /** The contact's address book is read-only on the server: no edit, no delete. */
+  readOnly?: boolean
   onAddBirthdayToCalendar?: () => void
   hasBirthdayEvent?: boolean
   onAddAnniversaryToCalendar?: () => void
@@ -183,6 +185,7 @@ export function ContactDetail({
   onDelete,
   onFieldSave,
   confirmDelete,
+  readOnly = false,
   onAddBirthdayToCalendar,
   hasBirthdayEvent = false,
   onAddAnniversaryToCalendar,
@@ -204,6 +207,7 @@ export function ContactDetail({
   const contactLookup = useMemo(() => buildContactLookup(allContacts), [allContacts])
 
   function startInlineEdit(field: string, currentValue: string) {
+    if (readOnly) return
     setInlineEditing({ field, original: currentValue, value: currentValue })
   }
 
@@ -300,9 +304,9 @@ export function ContactDetail({
             const ab = useContactStore
               .getState()
               .addressBooks.find((a) => a.id === contact.addressBookId)
-            return ab && useContactStore.getState().addressBooks.length > 1 ? (
+            return ab && (readOnly || useContactStore.getState().addressBooks.length > 1) ? (
               <p className={styles.heroRole} style={{ fontSize: 12, opacity: 0.6 }}>
-                {ab.name}
+                {readOnly ? t('detail.readOnlyAddressBook', { name: ab.name }) : ab.name}
               </p>
             ) : null
           })()}
@@ -335,6 +339,7 @@ export function ContactDetail({
             type="button"
             className={styles.iconBtn}
             onClick={onEdit}
+            disabled={readOnly}
             title={t('detail.editContact')}
             aria-label={t('detail.editContact')}
           >
@@ -356,6 +361,7 @@ export function ContactDetail({
             type="button"
             className={`${styles.iconBtn} ${confirmDelete ? styles.btnDeleteConfirm : ''}`}
             onClick={onDelete}
+            disabled={readOnly}
             title={confirmDelete ? t('detail.clickAgainToConfirm') : t('detail.deleteContact')}
             aria-label={t('detail.deleteContact')}
           >

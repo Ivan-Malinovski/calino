@@ -26,6 +26,7 @@
     "yearsOld_other": "{{count}} jaar oud",
     "onCalendar": "In agenda",
     "addToCalendar": "Aan agenda toevoegen",
+    "readOnlyAddressBook": "{{name}} (alleen-lezen)",
     "field": {
       "email": "E-MAIL",
       "phone": "TELEFOON",

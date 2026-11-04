@@ -41,6 +41,7 @@ export function MergeDuplicatesModal({
 }: MergeDuplicatesModalProps): JSX.Element | null {
   const { t } = useTranslation(['contacts', 'common'])
   const contacts = useContactStore((s) => s.contacts)
+  const addressBooks = useContactStore((s) => s.addressBooks)
   const updateContact = useContactStore((s) => s.updateContact)
   const deleteContact = useContactStore((s) => s.deleteContact)
   const addPendingChange = useContactStore((s) => s.addPendingChange)
@@ -48,7 +49,15 @@ export function MergeDuplicatesModal({
 
   const [mergedIds, setMergedIds] = useState<Set<string>>(new Set())
 
-  const groups = useMemo(() => (isOpen ? findDuplicateGroups(contacts) : []), [isOpen, contacts])
+  // A merge rewrites the first contact and deletes the others, so a contact in a book
+  // the server shares read-only can't take part in one.
+  const groups = useMemo(() => {
+    if (!isOpen) return []
+    const readOnlyBookIds = new Set(
+      addressBooks.filter((ab) => ab.canWrite === false).map((ab) => ab.id)
+    )
+    return findDuplicateGroups(contacts.filter((c) => !readOnlyBookIds.has(c.addressBookId)))
+  }, [isOpen, contacts, addressBooks])
 
   const visibleGroups = useMemo(
     () => groups.filter((g) => !g.contacts.every((c) => mergedIds.has(c.id))),

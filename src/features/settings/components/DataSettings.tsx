@@ -281,7 +281,7 @@ export function DataSettings({ searchControl }: { searchControl?: JSX.Element })
     try {
       const content = await readFileAsText(file)
       const addressBooks = useContactStore.getState().addressBooks
-      const visibleAbs = addressBooks.filter((ab) => ab.isVisible)
+      const visibleAbs = addressBooks.filter((ab) => ab.isVisible && ab.canWrite !== false)
       const targetAbId = visibleAbs[0]?.id ?? ''
       const accountId = visibleAbs[0]?.accountId ?? ''
       const parsed = parseVCardFile(content, targetAbId, accountId)
@@ -713,7 +713,7 @@ export function DataSettings({ searchControl }: { searchControl?: JSX.Element })
         parsedContacts={parsedImportContacts}
         onImportComplete={() => {
           const addressBooks = useContactStore.getState().addressBooks
-          const ab = addressBooks.find((a) => a.isVisible)
+          const ab = addressBooks.find((a) => a.isVisible && a.canWrite !== false)
           if (ab?.accountId) syncAccount(ab.accountId).catch(() => {})
         }}
       />

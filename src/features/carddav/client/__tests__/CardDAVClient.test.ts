@@ -9,6 +9,7 @@ import radicaleSyncCollection from './fixtures/radicale-sync-collection.xml?raw'
 import radicaleMultiget from './fixtures/radicale-addressbook-multiget.xml?raw'
 import radicaleMultiget404 from './fixtures/radicale-multiget-404.xml?raw'
 import radicalePropfind from './fixtures/radicale-propfind-addressbook.xml?raw'
+import radicalePropfindReadOnly from './fixtures/radicale-propfind-addressbook-read-only.xml?raw'
 import dprefixedMultiget from './fixtures/dprefixed-addressbook-multiget.xml?raw'
 import dprefixedSyncCollection from './fixtures/dprefixed-sync-collection.xml?raw'
 
@@ -130,6 +131,55 @@ describe('collection property parsing', () => {
   // both counts, leaving the address book looking read-only.
   it('detects the write privilege from unprefixed, space-padded elements', () => {
     expect(client['parseCanWrite'](radicalePropfind)).toBe(true)
+  })
+
+  describe('read-only address books', () => {
+    /** A d:-prefixed PROPFIND answer (sabre/dav, Nextcloud) granting these privileges. */
+    const sabrePropfind = (...privileges: string[]) => {
+      const granted = privileges.map((p) => `<d:privilege><d:${p}/></d:privilege>`).join('')
+      return `<?xml version="1.0"?>
+<d:multistatus xmlns:d="DAV:"><d:response><d:href>/addressbooks/users/bob/team/</d:href><d:propstat><d:prop><d:current-user-privilege-set>${granted}</d:current-user-privilege-set></d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat></d:response></d:multistatus>`
+    }
+
+    // Captured from Radicale 3.9.0: alice's book, which the rights file lets bob read.
+    // A PUT from bob there answers 403.
+    it('reads a book granting only read as read-only (Radicale)', () => {
+      expect(client['parseCanWrite'](radicalePropfindReadOnly)).toBe(false)
+    })
+
+    it('reads a book granting only read privileges as read-only (sabre/dav)', () => {
+      expect(
+        client['parseCanWrite'](
+          sabrePropfind('read', 'read-acl', 'read-current-user-privilege-set')
+        )
+      ).toBe(false)
+    })
+
+    // What Radicale grants on a book shared read-write: write-content, with no
+    // write or all aggregate (the same shape as the calendar fix in #236).
+    it('reads a book granting only write-content as writable', () => {
+      expect(client['parseCanWrite'](sabrePropfind('read', 'write-content'))).toBe(true)
+    })
+
+    it('reads write nested inside an aggregate as writable', () => {
+      const nested = sabrePropfind('read').replace(
+        '</d:current-user-privilege-set>',
+        '<d:privilege><d:all><d:write/></d:all></d:privilege></d:current-user-privilege-set>'
+      )
+      expect(client['parseCanWrite'](nested)).toBe(true)
+    })
+
+    // write-properties covers the book's own properties (its name), not its cards.
+    it('does not read write-properties alone as writable', () => {
+      expect(client['parseCanWrite'](sabrePropfind('read', 'write-properties'))).toBe(false)
+    })
+
+    it('reads a book as unknown, not read-only, when the server does not answer the property', () => {
+      const unanswered = `<?xml version="1.0"?>
+<multistatus xmlns="DAV:"><response><href>/test/contacts/</href><propstat><prop><current-user-privilege-set/></prop><status>HTTP/1.1 404 Not Found</status></propstat></response></multistatus>`
+      expect(client['parseCanWrite'](unanswered)).toBeUndefined()
+      expect(client['parseCanWrite'](radicaleMultiget)).toBeUndefined()
+    })
   })
 
   it('reports no max-resource-size when the server 404s that property', () => {
