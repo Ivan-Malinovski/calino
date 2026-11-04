@@ -148,6 +148,11 @@
       "label": "Skjul fuldførte opgaver",
       "desc": "Vis ikke afsluttede opgaver i kalendergitteret"
     },
+    "recurring": "Gentagne opgaver",
+    "rollingTaskCompletion": {
+      "label": "Rullende fuldførelse til mobilsynkronisering",
+      "desc": "Flyt en gentagen opgave til næste dato og gem hver fuldført gentagelse som sin egen opgave. Kræves for tovejssynkronisering med DAVx⁵/OpenTasks, Tasks.org og Apple Reminders; Thunderbird og Nextcloud kan også læse det."
+    },
     "reminders": "Påmindelser",
     "taskDueDateReminders": {
       "label": "Påmindelser om opgavers forfaldsdato",

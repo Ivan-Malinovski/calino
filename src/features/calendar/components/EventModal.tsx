@@ -102,6 +102,10 @@ export function EventModal(): JSX.Element | null {
   const updateEvent = useCalendarStore((state) => state.updateEvent)
   const completeTask = useCalendarStore((state) => state.completeTask)
   const completeTaskOccurrence = useCalendarStore((state) => state.completeTaskOccurrence)
+  const completeTaskOccurrenceRolling = useCalendarStore(
+    (state) => state.completeTaskOccurrenceRolling
+  )
+  const taskCompletionMode = useSettingsStore((state) => state.taskCompletionMode)
   const closeModal = useCalendarStore((state) => state.closeModal)
   const openModal = useCalendarStore((state) => state.openModal)
   const [isClosing, setIsClosing] = useState(false)
@@ -144,6 +148,7 @@ export function EventModal(): JSX.Element | null {
     createEvent: createCalDAVEvent,
     updateEvent: updateCalDAVEvent,
     saveRecurrenceOverride,
+    saveRollingTaskCompletion,
     deleteEvent: deleteCalDAVEvent,
   } = useCalDAV()
 
@@ -788,8 +793,11 @@ export function EventModal(): JSX.Element | null {
         await completeTaskAndSync(task, !task.completed, {
           completeTask,
           completeTaskOccurrence,
+          completeTaskOccurrenceRolling,
           updateCalDAVEvent,
           saveRecurrenceOverride,
+          saveRollingTaskCompletion,
+          taskCompletionMode,
         })
       } catch {
         // The CalDAV hook queues failed writes and surfaces their status.

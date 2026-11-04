@@ -47,12 +47,19 @@ test.describe('Task settings', () => {
   test('Tasks tab groups display and reminder settings', async ({ page }) => {
     await page.goto('/settings?tab=tasks')
     const section = page.locator('[data-component="tasks-settings"]')
-    await expect(section.locator('[data-component="setting-row"]')).toHaveCount(5)
+    await expect(section.locator('[data-component="setting-row"]')).toHaveCount(6)
     for (const { setting, label, initial } of movedSettings) {
       const row = section.locator(`[data-component="setting-row"][data-setting="${setting}"]`)
       await expect(row).toHaveAttribute('data-value', String(initial))
       await expect(row.getByLabel(label)).toBeChecked({ checked: initial })
     }
+    // R2.8 — Rolling task completion, default off so the RRULE+RECURRENCE-ID
+    // shape Thunderbird reads stays the default.
+    const rolling = section.locator(
+      '[data-component="setting-row"][data-setting="rolling-task-completion"]'
+    )
+    await expect(rolling).toHaveAttribute('data-value', 'false')
+    await expect(section.getByLabel('Rolling completion for mobile sync')).not.toBeChecked()
     await expect(section.getByText('Reminders', { exact: true })).toBeVisible()
   })
 
@@ -66,6 +73,17 @@ test.describe('Task settings', () => {
       await expect(section.getByLabel(label)).toBeChecked({ checked: !initial })
     })
   }
+
+  test('Rolling completion toggles from the Tasks tab and persists', async ({ page }) => {
+    await page.goto('/settings?tab=tasks')
+    const section = page.locator('[data-component="tasks-settings"]')
+    await section
+      .locator('[data-component="toggle"][data-setting="rolling-task-completion"]')
+      .click()
+    await expect.poll(() => storedSetting(page, 'taskCompletionMode')).toBe('rolling')
+    await page.reload()
+    await expect(section.getByLabel('Rolling completion for mobile sync')).toBeChecked()
+  })
 
   test('Calendar and Notifications tabs no longer list the task settings', async ({ page }) => {
     for (const tab of ['calendar', 'notifications']) {

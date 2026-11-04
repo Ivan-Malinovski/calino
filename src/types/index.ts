@@ -247,6 +247,61 @@ export interface TaskOccurrencePlan {
 }
 
 /**
+ * R2.8 — How a recurring task records a completed occurrence on the wire.
+ *
+ * `override` (default) is the RFC 5545 shape Thunderbird writes: the master
+ * keeps its RRULE untouched and a completed copy with the same UID and a
+ * RECURRENCE-ID is appended to the same calendar object resource.
+ *
+ * `rolling` is the opt-in shape every mainstream mobile client can read: the
+ * master's DTSTART/DUE advance to the next open occurrence, and every
+ * completed occurrence is written as its own single-VTODO resource under a new
+ * UID. DAVx⁵/OpenTasks, Tasks.org's built-in CalDAV, and Apple Reminders only
+ * understand this one; they drop or reject RECURRENCE-ID overrides.
+ */
+export type TaskCompletionMode = 'override' | 'rolling'
+
+/**
+ * R2.8 — The write plan for completing one occurrence of a recurring task in
+ * rolling mode. Shaped to be passed straight to
+ * `saveRollingTaskCompletion(calendarId, plan)`.
+ *
+ * A discriminated union rather than optional fields: "the series rolled and a
+ * copy is due", "the series ended on this occurrence", "this click is stale —
+ * do nothing", and "leave it to the override path" are four different writes,
+ * and letting a caller read the wrong one is how a duplicate completed task
+ * gets created.
+ */
+export interface RollingRollPlan {
+  kind: 'roll'
+  /**
+   * The master to write: re-anchored onto the next open occurrence.
+   */
+  master: CalendarEvent
+  /** Standalone COMPLETED copy (new UID, no RRULE/EXDATE/RECURRENCE-ID). */
+  completedCopy: CalendarEvent
+  /** Legacy RECURRENCE-ID overrides folded into the copy and dropped from the resource. */
+  removedOverrideIds: string[]
+}
+
+export interface RollingFinalPlan {
+  kind: 'final'
+  /** The master itself, marked COMPLETED on the series' last occurrence. */
+  master: CalendarEvent
+  removedOverrideIds: string[]
+}
+
+/** The plans that actually write something. */
+export type RollingWritePlan = RollingRollPlan | RollingFinalPlan
+
+export type RollingTaskCompletionPlan =
+  | RollingWritePlan
+  /** The clicked occurrence is already behind the master — a stale click, not a completion. */
+  | { kind: 'noop' }
+  /** This occurrence must keep the RECURRENCE-ID shape (see the planner). */
+  | { kind: 'fallback' }
+
+/**
  * A complete event/category reconciliation applied as one store transaction.
  * Event IDs are upserted in input order (the last occurrence wins), while
  * deletions are applied first so an upsert for the same ID wins deterministically.
@@ -267,6 +322,16 @@ export interface CalendarActions {
     occurrenceStart: string,
     completed: boolean
   ) => TaskOccurrencePlan | null
+  /**
+   * R2.8 — Plan the rolling-mode write for completing one occurrence: the
+   * re-anchored master plus the standalone completed copy. Returns null when
+   * the occurrence cannot be rolled (no RRULE, no due date), so the caller can
+   * fall back to the override shape.
+   */
+  completeTaskOccurrenceRolling: (
+    masterId: string,
+    occurrenceStart: string
+  ) => RollingTaskCompletionPlan | null
   deleteEvent: (id: string) => void
   addBrokenEvent: (event: CalendarEvent, reason: string) => void
   removeBrokenEvent: (eventId: string) => void
@@ -431,6 +496,13 @@ export interface UserSettings {
   viewDividerAfter: ViewType | null
   /** Explicit per-task overrides for the automatic subtask collapse state. */
   taskCollapseOverrides: Record<string, boolean>
+  /**
+   * R2.8 — Wire shape for completing one occurrence of a repeating task.
+   * `override` (default) writes RECURRENCE-ID overrides like Thunderbird;
+   * `rolling` writes a re-anchored master plus standalone completed copies so
+   * DAVx⁵/OpenTasks, Tasks.org, and Apple Reminders can round-trip the series.
+   */
+  taskCompletionMode: TaskCompletionMode
 }
 
 export type SettingsState = UserSettings

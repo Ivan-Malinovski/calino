@@ -81,6 +81,7 @@ export const SYNCABLE_SETTINGS: (keyof UserSettings)[] = [
   'useCategoryColors',
   'journalEnabled',
   'taskCollapseOverrides',
+  'taskCompletionMode',
 ]
 
 // ─── Serialization ────────────────────────────────────────────────────────────
@@ -188,6 +189,13 @@ export function mergeSettings(
             value,
             localSettings.adjustableTheme ?? DEFAULT_ADJUSTABLE_THEME
           )
+          continue
+        }
+        if (key === 'taskCompletionMode') {
+          // A remote device may run a build that knows a mode this one does not;
+          // anything but the two known shapes falls back rather than steering
+          // recurring-task writes into an undefined branch.
+          if (value === 'override' || value === 'rolling') merged.taskCompletionMode = value
           continue
         }
         ;(merged as Record<string, unknown>)[key] = value

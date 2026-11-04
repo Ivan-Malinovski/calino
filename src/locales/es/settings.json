@@ -148,6 +148,11 @@
       "label": "Ocultar tareas completadas",
       "desc": "No mostrar las tareas realizadas en la cuadrícula del calendario"
     },
+    "recurring": "Tareas repetidas",
+    "rollingTaskCompletion": {
+      "label": "Finalización continua para la sincronización móvil",
+      "desc": "Mueve una tarea repetida a su siguiente fecha y guarda cada repetición completada como una tarea propia. Necesario para la sincronización bidireccional con DAVx⁵/OpenTasks, Tasks.org y Apple Recordatorios; Thunderbird y Nextcloud también lo leen."
+    },
     "reminders": "Recordatorios",
     "taskDueDateReminders": {
       "label": "Recordatorios de vencimiento de tareas",

@@ -11,6 +11,7 @@ import type {
   EventType,
   DuplicateUidIssue,
   TaskOccurrencePlan,
+  RollingTaskCompletionPlan,
   CalendarEventChanges,
 } from '@/types'
 import type { Category, AutoCategoryRule } from '@/types/categories'
@@ -40,6 +41,7 @@ import {
   storedDayKey,
 } from '@/lib/homeTimezone'
 import { createUuid } from '@/lib/uuid'
+import { planRollingTaskCompletion } from '@/lib/rollingTaskCompletion'
 
 // Memo cache for getEventsForDateRange. Keyed by the range; a cached result is
 // reused only when its stored `version` matches the current
@@ -938,6 +940,34 @@ export const useCalendarStore = create<CalendarStore>()(
           },
           removedOverrideIds: [],
         }
+      },
+
+      // R2.8 — Rolling-mode completion, the single-VTODO shape mobile clients
+      // can round-trip. Planning is pure (`planRollingTaskCompletion`); this
+      // only supplies the current state, a fresh UID for the copy, and now.
+      completeTaskOccurrenceRolling: (
+        masterId: string,
+        occurrenceStart: string
+      ): RollingTaskCompletionPlan | null => {
+        const events = get().events
+        const master = events.find((event) => event.id === masterId && event.type === 'task')
+        if (!master) return null
+
+        const uid = master.uid || master.id
+        const overrides = new Map<string, CalendarEvent>()
+        for (const event of events) {
+          if (!event.recurrenceId) continue
+          if (event.uid === uid || event.recurrenceMasterId === masterId) {
+            // Indexed under both keys the expansion path matches on, so a
+            // lookup by either form finds the same override.
+            overrides.set(event.recurrenceId, event)
+          }
+        }
+
+        return planRollingTaskCompletion(master, occurrenceStart, overrides, {
+          now: new Date(),
+          newUid: createUuid(),
+        })
       },
 
       deleteEvent: (id: string): void => {

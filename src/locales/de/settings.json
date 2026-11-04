@@ -148,6 +148,11 @@
       "label": "Erledigte Aufgaben ausblenden",
       "desc": "Erledigte Aufgaben nicht im Kalenderraster anzeigen"
     },
+    "recurring": "Wiederkehrende Aufgaben",
+    "rollingTaskCompletion": {
+      "label": "Fortlaufendes Abhaken für die Mobilsynchronisierung",
+      "desc": "Verschiebt eine wiederkehrende Aufgabe auf ihr nächstes Datum und speichert jede erledigte Wiederholung als eigene Aufgabe. Nötig für die Zwei-Wege-Synchronisierung mit DAVx⁵/OpenTasks, Tasks.org und Apple Erinnerungen; Thunderbird und Nextcloud lesen es ebenfalls."
+    },
     "reminders": "Erinnerungen",
     "taskDueDateReminders": {
       "label": "Erinnerungen an Fälligkeitstermine",

@@ -1,8 +1,10 @@
 import { useCallback } from 'react'
 import type { ContextMenuItem } from '@/components/common/ContextMenu'
 import { useCalendarStore, isCalendarReadOnly } from '@/store/calendarStore'
+import { useSettingsStore } from '@/store/settingsStore'
 import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
 import { safeCalDAVUpdate } from '@/lib/caldavHelpers'
+import { completeTaskAndSync } from '@/lib/taskCompletion'
 import { deleteEventWithUndo } from '@/lib/deleteWithUndo'
 import { hapticIfEnabled } from '@/lib/haptics'
 import { showToast } from '@/lib/toast'
@@ -54,65 +56,61 @@ export function useTaskContextMenuItems(
   const deleteEvent = useCalendarStore((s) => s.deleteEvent)
   const completeTask = useCalendarStore((s) => s.completeTask)
   const completeTaskOccurrence = useCalendarStore((s) => s.completeTaskOccurrence)
+  const completeTaskOccurrenceRolling = useCalendarStore((s) => s.completeTaskOccurrenceRolling)
+  const taskCompletionMode = useSettingsStore((state) => state.taskCompletionMode)
   const {
     updateEvent: updateCalDAVEvent,
     createEvent: createCalDAVEvent,
     deleteEvent: deleteCalDAVEvent,
     saveRecurrenceOverride,
+    saveRollingTaskCompletion,
   } = useCalDAV()
   const { moveStep } = useTaskReorder()
 
   const readOnly = task ? isCalendarReadOnly(task.calendarId) : true
 
   /**
-   * The completion path TodoView has always used, lifted here verbatim so the
-   * checkbox and the menu item stay one behaviour. R2.7 — a recurring row
-   * completes ONE occurrence via a detached override; the master's RRULE is
-   * left alone so the series carries on.
+   * The completion path TodoView has always used, lifted here so the checkbox
+   * and the menu item stay one behaviour. Every surface now goes through
+   * `completeTaskAndSync`, which picks the wire shape: a detached override
+   * (R2.7) or — when the user opted into rolling mode (R2.8) — a re-anchored
+   * master plus a standalone completed task.
    */
   const toggleComplete = useCallback(
     async (override?: TaskMenuTarget): Promise<void> => {
       const subject = override ?? task
       if (!subject || isCalendarReadOnly(subject.calendarId)) return
-      const newCompleted = !subject.completed
-
-      const recurringTarget = subject.occurrenceStart
-        ? { masterId: subject.id, occurrenceStart: subject.occurrenceStart }
-        : subject.recurrenceId && subject.recurrenceMasterId
-          ? { masterId: subject.recurrenceMasterId, occurrenceStart: subject.recurrenceId }
-          : null
-
-      if (recurringTarget) {
-        const plan = completeTaskOccurrence(
-          recurringTarget.masterId,
-          recurringTarget.occurrenceStart,
-          newCompleted
-        )
-        if (plan) {
-          try {
-            await saveRecurrenceOverride(
-              plan.master.calendarId,
-              plan.master,
-              plan.override,
-              plan.removedOverrideIds
-            )
-          } catch {
-            // error handled by useCalDAV
-          }
-        }
-        return
-      }
-
-      const updatedTasks = completeTask(subject.id, newCompleted)
+      // TodoView's marker for "this row is one occurrence of a series": the
+      // row keeps the master's id, so the occurrence's own master comes from
+      // the materialized occurrence rather than the row id.
+      const target =
+        subject.occurrenceStart && !subject.occurrenceMasterId
+          ? { ...subject, occurrenceMasterId: subject.id }
+          : subject
       try {
-        await Promise.all(
-          updatedTasks.map((updated) => updateCalDAVEvent(updated.calendarId, updated))
-        )
+        await completeTaskAndSync(target, !subject.completed, {
+          completeTask,
+          completeTaskOccurrence,
+          completeTaskOccurrenceRolling,
+          updateCalDAVEvent,
+          saveRecurrenceOverride,
+          saveRollingTaskCompletion,
+          taskCompletionMode,
+        })
       } catch {
         // error handled by useCalDAV
       }
     },
-    [task, completeTask, completeTaskOccurrence, saveRecurrenceOverride, updateCalDAVEvent]
+    [
+      task,
+      completeTask,
+      completeTaskOccurrence,
+      completeTaskOccurrenceRolling,
+      saveRecurrenceOverride,
+      saveRollingTaskCompletion,
+      taskCompletionMode,
+      updateCalDAVEvent,
+    ]
   )
 
   const items: ContextMenuItem[] = []

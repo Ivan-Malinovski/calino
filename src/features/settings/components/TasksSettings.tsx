@@ -11,6 +11,7 @@ type TaskToggleKey =
   | 'hideCompletedTasks'
   | 'taskDueDateReminders'
   | 'overdueTaskBadge'
+  | 'rollingTaskCompletion'
 
 interface TaskToggle {
   /** Locale key under `tasks.` for the row's label and description. */
@@ -32,6 +33,7 @@ export function TasksSettings({ searchControl }: { searchControl?: JSX.Element }
   )
   const taskDueDateReminders = useSettingsStore((state) => state.taskDueDateReminders)
   const overdueTaskBadge = useSettingsStore((state) => state.overdueTaskBadge)
+  const taskCompletionMode = useSettingsStore((state) => state.taskCompletionMode)
   const updateSettings = useSettingsStore((state) => state.updateSettings)
 
   const groups: Array<{ labelKey: string; toggles: TaskToggle[] }> = [
@@ -72,6 +74,22 @@ export function TasksSettings({ searchControl }: { searchControl?: JSX.Element }
           setting: 'overdue-task-badge',
           checked: overdueTaskBadge,
           update: { overdueTaskBadge: !overdueTaskBadge },
+        },
+      ],
+    },
+    {
+      // R2.8 — Wire format for completing one occurrence of a repeating task.
+      // Off is Calino's/Thunderbird's RECURRENCE-ID shape; on is the rolling
+      // single-VTODO shape mobile CalDAV clients can round-trip.
+      labelKey: 'tasks.recurring',
+      toggles: [
+        {
+          key: 'rollingTaskCompletion',
+          setting: 'rolling-task-completion',
+          checked: taskCompletionMode === 'rolling',
+          update: {
+            taskCompletionMode: taskCompletionMode === 'rolling' ? 'override' : 'rolling',
+          },
         },
       ],
     },
