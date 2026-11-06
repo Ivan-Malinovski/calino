@@ -599,7 +599,13 @@ export function CalendarHeader({
         onClick={currentView === 'week' ? undefined : handleTitleClick}
         role={currentView === 'week' ? undefined : 'button'}
         tabIndex={currentView === 'week' ? undefined : 0}
-        aria-label={currentView === 'week' ? undefined : homeLabel}
+        // The name has to contain the visible title (WCAG 2.5.3, Label in Name), or
+        // a voice-control user who says what they see ("November") can't click it.
+        aria-label={
+          currentView === 'week'
+            ? undefined
+            : `${typeof title === 'object' ? `${title.month} ${title.year}` : title}, ${homeLabel}`
+        }
         title={currentView === 'week' ? undefined : homeLabel}
         onKeyDown={
           currentView === 'week'
@@ -628,6 +634,8 @@ export function CalendarHeader({
             <h1 key={`m${titleAnimKey}`} className={`${styles.monthTitle} ${titleAnimClass}`}>
               {title.month}
             </h1>
+            {/* A real space between the two, so the visible text reads "November 2026"
+                (it is a flex row, so the space itself is not laid out). */}{' '}
             <span key={`y${titleAnimKey}`} className={`${styles.yearTitle} ${titleAnimClass}`}>
               {title.year}
             </span>
