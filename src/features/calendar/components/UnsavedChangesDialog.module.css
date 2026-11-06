@@ -1,0 +1,138 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 99999;
+  animation: fadeIn 0.15s ease-out;
+}
+
+.modal {
+  background: var(--modal-bg, var(--color-bg-secondary));
+  border-radius: var(--radius-sm);
+  width: 100%;
+  max-width: 320px;
+  box-shadow: var(--shadow-card);
+  animation: slideUp 0.15s ease-out;
+}
+
+.overlay.closing {
+  animation: fadeOut 0.15s ease-in forwards;
+}
+
+.overlay.closing .modal {
+  animation: slideDown 0.15s ease-in forwards;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
+.content {
+  padding: var(--space-4);
+}
+
+.title {
+  margin: 0 0 8px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text-primary, #202124);
+}
+
+.message {
+  margin: 0 0 16px;
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--color-text-secondary, #5f6368);
+}
+
+.buttons {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.saveButton,
+.discardButton,
+.cancelButton {
+  padding: 10px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.saveButton {
+  border: none;
+  background: var(--accent-strong, var(--color-accent));
+  color: var(--accent-contrast, #fff);
+}
+
+.saveButton:hover:not(:disabled) {
+  background: var(--color-accent-hover);
+}
+
+.saveButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.discardButton {
+  border: none;
+  background: var(--color-error, #ea4335);
+  color: var(--color-bg, #ffffff);
+}
+
+.discardButton:hover {
+  background: color-mix(in srgb, var(--color-error, #ea4335) 85%, black);
+}
+
+.cancelButton {
+  border: 1px solid var(--color-border-subtle, #e0e0e0);
+  background: var(--color-bg-secondary);
+  color: var(--color-text-secondary, #5f6368);
+}
+
+.cancelButton:hover {
+  background: var(--color-bg-hover, #f1f3f4);
+  border-color: var(--color-border-visible, #d0d0d0);
+}

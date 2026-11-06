@@ -5,8 +5,9 @@ import { clearState } from './fixtures/localstorage'
  * A click outside the event modal closes it only while it has no unsaved
  * changes. Once a field differs from what the modal opened with, an outside
  * click (a stray one, a text selection released past the edge, or the click
- * that brings the window back after working in another tab) keeps it open;
- * Close, Cancel and Save still close it. Text typed but not yet added (an
+ * that brings the window back after working in another tab) or Escape asks
+ * "Save your changes?" instead, as the Android app does, and the modal stays
+ * open until Save or Discard is chosen; Close, Cancel and Save still close it. Text typed but not yet added (an
  * attendee address, a custom reminder value) counts as a change. The read-only
  * preview keeps closing on an outside click.
  */
@@ -45,6 +46,16 @@ async function expectStillOpen(page: Page, dialog: Locator): Promise<void> {
   await expect(dialog).toBeVisible()
 }
 
+/** The "Save your changes?" prompt. */
+function unsavedPrompt(page: Page): Locator {
+  return page.locator('[data-component="unsaved-changes-dialog"]')
+}
+
+async function keepEditing(page: Page): Promise<void> {
+  await unsavedPrompt(page).getByRole('button', { name: 'Keep editing' }).click()
+  await expect(unsavedPrompt(page)).toBeHidden()
+}
+
 async function openNewEvent(page: Page): Promise<{ modal: Locator; titleInput: Locator }> {
   await page.goto('/week')
   await expect(page.locator('[data-component="header"]')).toBeVisible()
@@ -67,21 +78,49 @@ test.describe('event popups on an outside click', () => {
     await expect(modal).toBeHidden()
   })
 
-  test('a modal with unsaved changes stays open; its Close button closes it', async ({ page }) => {
+  test('a modal with unsaved changes asks first; Keep editing returns to it', async ({ page }) => {
     const { modal, titleInput } = await openNewEvent(page)
     await titleInput.fill('Half-written event')
 
     await clickOutside(page)
+    await expect(unsavedPrompt(page)).toBeVisible()
+    await expect(unsavedPrompt(page)).toContainText('Save your changes?')
     await expectStillOpen(page, modal)
+    await keepEditing(page)
     await expect(titleInput).toHaveValue('Half-written event')
 
-    // Escape would throw the change away just as silently.
+    // Escape asks as well, and a second Escape is "keep editing".
     await page.keyboard.press('Escape')
+    await expect(unsavedPrompt(page)).toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect(unsavedPrompt(page)).toBeHidden()
     await expectStillOpen(page, modal)
     await expect(titleInput).toHaveValue('Half-written event')
 
+    // The Close button is an explicit choice and does not ask.
     await modal.getByRole('button', { name: 'Close', exact: true }).click()
     await expect(modal).toBeHidden()
+  })
+
+  test('Discard closes the modal without creating the event', async ({ page }) => {
+    const { modal, titleInput } = await openNewEvent(page)
+    await titleInput.fill('Thrown away')
+
+    await clickOutside(page)
+    await unsavedPrompt(page).getByRole('button', { name: 'Discard changes and close' }).click()
+    await expect(modal).toBeHidden()
+    await expect(unsavedPrompt(page)).toBeHidden()
+    await expect(page.getByRole('button', { name: /Thrown away/ })).toHaveCount(0)
+  })
+
+  test('Save in the prompt creates the event', async ({ page }) => {
+    const { modal, titleInput } = await openNewEvent(page)
+    await titleInput.fill('Saved from the prompt')
+
+    await page.keyboard.press('Escape')
+    await unsavedPrompt(page).getByRole('button', { name: 'Save', exact: true }).click()
+    await expect(modal).toBeHidden()
+    await expect(page.getByRole('button', { name: /Saved from the prompt/ }).first()).toBeVisible()
   })
 
   test('undoing the change makes the modal close on an outside click again', async ({ page }) => {
@@ -89,6 +128,7 @@ test.describe('event popups on an outside click', () => {
     await titleInput.fill('Changed my mind')
     await clickOutside(page)
     await expectStillOpen(page, modal)
+    await keepEditing(page)
 
     await titleInput.fill('')
     await clickOutside(page)
@@ -127,6 +167,7 @@ test.describe('event popups on an outside click', () => {
     await clickOutside(page)
     await expectStillOpen(page, modal)
     await expect(customInput).toHaveValue('45')
+    await keepEditing(page)
 
     await customInput.fill('')
     await clickOutside(page)
@@ -157,6 +198,7 @@ test.describe('event popups on an outside click', () => {
 
     await expectStillOpen(page, modal)
     await expect(titleInput).toHaveValue('Back from another tab')
+    await keepEditing(page)
 
     await page.locator('[data-component="modal-save"]').click()
     await expect(modal).toBeHidden()

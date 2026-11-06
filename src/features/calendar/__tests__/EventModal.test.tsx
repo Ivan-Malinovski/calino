@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { screen, fireEvent, waitFor } from '@testing-library/react'
+import { screen, fireEvent, waitFor, within } from '@testing-library/react'
 import { render } from '@/test/caldavRender'
 import { EventModal } from '../components/EventModal'
 import { useCalendarStore } from '@/store/calendarStore'
@@ -878,6 +878,71 @@ describe('EventModal', () => {
       fireEvent.change(titleInput, { target: { value: 'Existing Event' } })
       clickBackdrop()
       await waitFor(() => expect(useCalendarStore.getState().isModalOpen).toBe(false))
+    })
+
+    describe('unsaved changes prompt', () => {
+      const renameThenClickOutside = (): void => {
+        fireEvent.change(screen.getByPlaceholderText('Event title'), {
+          target: { value: 'Renamed Event' },
+        })
+        clickBackdrop()
+      }
+
+      it('asks what to do with the changes on a click outside', async () => {
+        render(<EventModal />)
+        renameThenClickOutside()
+        expect(await screen.findByRole('alertdialog', { name: 'Save your changes?' })).toBeVisible()
+        expect(useCalendarStore.getState().isModalOpen).toBe(true)
+      })
+
+      it('asks instead of closing on Escape', async () => {
+        render(<EventModal />)
+        fireEvent.change(screen.getByPlaceholderText('Event title'), {
+          target: { value: 'Renamed Event' },
+        })
+        fireEvent.keyDown(document, { key: 'Escape' })
+        expect(await screen.findByRole('alertdialog', { name: 'Save your changes?' })).toBeVisible()
+        expect(useCalendarStore.getState().isModalOpen).toBe(true)
+      })
+
+      it('"Keep editing" returns to the form with the changes intact', async () => {
+        render(<EventModal />)
+        renameThenClickOutside()
+        fireEvent.click(await screen.findByRole('button', { name: 'Keep editing' }))
+        await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument())
+        expect(useCalendarStore.getState().isModalOpen).toBe(true)
+        expect(screen.getByPlaceholderText('Event title')).toHaveValue('Renamed Event')
+      })
+
+      it('"Discard" closes the modal and leaves the event as it was', async () => {
+        render(<EventModal />)
+        renameThenClickOutside()
+        fireEvent.click(await screen.findByRole('button', { name: 'Discard changes and close' }))
+        await waitFor(() => expect(useCalendarStore.getState().isModalOpen).toBe(false))
+        expect(
+          useCalendarStore.getState().events.find((e) => e.id === 'outside-click-event')?.title
+        ).toBe('Existing Event')
+      })
+
+      it('"Save" saves the changes and closes the modal', async () => {
+        render(<EventModal />)
+        renameThenClickOutside()
+        const prompt = await screen.findByRole('alertdialog')
+        fireEvent.click(within(prompt).getByRole('button', { name: 'Save' }))
+        await waitFor(() => expect(useCalendarStore.getState().isModalOpen).toBe(false))
+        expect(
+          useCalendarStore.getState().events.find((e) => e.id === 'outside-click-event')?.title
+        ).toBe('Renamed Event')
+      })
+
+      it('offers no Save while the form cannot be saved', async () => {
+        render(<EventModal />)
+        fireEvent.change(screen.getByPlaceholderText('Event title'), { target: { value: '  ' } })
+        clickBackdrop()
+        await screen.findByRole('alertdialog')
+        const prompt = screen.getByRole('alertdialog')
+        expect(within(prompt).getByRole('button', { name: 'Save' })).toBeDisabled()
+      })
     })
 
     it('keeps the modal open while an attendee address is half typed', async () => {

@@ -499,6 +499,14 @@
       "thisAndFollowing_event": "此日程及后续",
       "thisAndFollowing_task": "此任务及后续"
     },
+    "unsavedChangesDialog": {
+      "title": "保存你的更改？",
+      "message": "你的更改尚未保存。",
+      "save": "保存",
+      "discard": "放弃",
+      "discardDescription": "放弃更改并关闭",
+      "keepEditing": "继续编辑"
+    },
     "eventModal": {
       "addressCopied": "地址已复制",
       "addressesCopied_one": "已复制 {{count}} 个地址",

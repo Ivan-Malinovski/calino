@@ -38,6 +38,7 @@ import { EventFormFields } from './EventFormFields'
 import { LocationPicker } from './LocationPicker'
 import { RecurrenceDialog } from './RecurrenceDialog'
 import { DeleteDialog } from './DeleteDialog'
+import { UnsavedChangesDialog } from './UnsavedChangesDialog'
 import { getInitialFormState, addMinutesToTimeStr } from './eventModalState'
 import { organizerForSave } from '../lib/defaultOrganizer'
 import { getAccountById } from '@/features/caldav/sync/accountStorage'
@@ -221,6 +222,8 @@ export function EventModal(): JSX.Element | null {
   const [reminders, setReminders] = useState<Reminder[]>(initialState.reminders)
   const [showRecurrenceDialog, setShowRecurrenceDialog] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [showUnsavedDialog, setShowUnsavedDialog] = useState(false)
+  const saveButtonRef = useRef<HTMLButtonElement>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [showDescription, setShowDescription] = useState(!!initialState.description)
   const [attachments, setAttachments] = useState<CalendarAttachment[]>([])
@@ -350,18 +353,20 @@ export function EventModal(): JSX.Element | null {
   const [hasDraft, setHasDraft] = useState(false)
   const isDirty = hasDraft || (seededSnapshot !== null && formSnapshot !== seededSnapshot)
 
-  // Close on Escape, unless that would throw away unsaved changes: those take
-  // an explicit Close, Cancel or Save.
+  // Escape closes the modal. With unsaved changes it asks first ("Save your
+  // changes?", as the Android app does) instead of throwing them away. The
+  // other dialogs stacked on this one handle their own Escape.
+  const hasStackedDialog = showUnsavedDialog || showRecurrenceDialog || showDeleteDialog
   useEffect(() => {
-    if (!isModalOpen || isDirty) return
+    if (!isModalOpen || hasStackedDialog) return
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        closeModalRef.current()
-      }
+      if (e.key !== 'Escape') return
+      if (isDirty) setShowUnsavedDialog(true)
+      else closeModalRef.current()
     }
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [isModalOpen, isDirty])
+  }, [isModalOpen, isDirty, hasStackedDialog])
 
   const lastSelectedEventId = useRef<string | null>(null)
   const lastSelectedDate = useRef<string | null>(null)
@@ -1703,14 +1708,21 @@ export function EventModal(): JSX.Element | null {
     return null
   }
 
+  const canSave =
+    !!title.trim() &&
+    !isTimeRangeInvalid &&
+    !isCurrentCalendarReadOnly &&
+    compatibleCalendars.some((calendar) => calendar.id === calendarId)
+
   return (
-    // A click outside closes the modal only while it has no unsaved changes.
-    // Coming back from another tab or app, the click that brings the window
-    // back, or a text selection released past the card's edge, lands here and
-    // would otherwise throw away what was typed.
+    // A click outside closes the modal at once only while it has no unsaved
+    // changes; otherwise it asks what to do with them. Coming back from another
+    // tab or app, the click that brings the window back, or a text selection
+    // released past the card's edge, lands here and would otherwise throw away
+    // what was typed.
     <div
       className={`${styles.modalBackdrop} ${isClosing ? styles.closing : ''}`}
-      onClick={isDirty ? undefined : animateClose}
+      onClick={isDirty ? () => setShowUnsavedDialog(true) : animateClose}
       data-component="modal-backdrop"
     >
       <motion.div
@@ -2193,14 +2205,10 @@ export function EventModal(): JSX.Element | null {
                   )}
                 </div>
                 <button
+                  ref={saveButtonRef}
                   type="submit"
                   className={styles.modalSave}
-                  disabled={
-                    !title.trim() ||
-                    isTimeRangeInvalid ||
-                    isCurrentCalendarReadOnly ||
-                    !compatibleCalendars.some((calendar) => calendar.id === calendarId)
-                  }
+                  disabled={!canSave}
                   data-component="modal-save"
                 >
                   {/* No in-flight state: the save is applied locally and the
@@ -2221,6 +2229,20 @@ export function EventModal(): JSX.Element | null {
         onClose={() => setShowRecurrenceDialog(false)}
         onConfirm={handleRecurrenceDialogConfirm}
         isTask={isTaskMode}
+      />
+
+      <UnsavedChangesDialog
+        isOpen={showUnsavedDialog}
+        canSave={canSave}
+        onKeepEditing={() => setShowUnsavedDialog(false)}
+        onDiscard={() => {
+          setShowUnsavedDialog(false)
+          animateClose()
+        }}
+        onSave={() => {
+          setShowUnsavedDialog(false)
+          saveButtonRef.current?.click()
+        }}
       />
 
       <DeleteDialog

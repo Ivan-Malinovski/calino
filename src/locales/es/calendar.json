@@ -499,6 +499,14 @@
       "thisAndFollowing_event": "Este y los siguientes eventos.",
       "thisAndFollowing_task": "Esta y las siguientes tareas."
     },
+    "unsavedChangesDialog": {
+      "title": "¿Guardar los cambios?",
+      "message": "Tus cambios no se han guardado.",
+      "save": "Guardar",
+      "discard": "Descartar",
+      "discardDescription": "Descartar los cambios y cerrar",
+      "keepEditing": "Seguir editando"
+    },
     "eventModal": {
       "addressCopied": "Dirección copiada",
       "addressesCopied_one": "Se copió {{count}} dirección",

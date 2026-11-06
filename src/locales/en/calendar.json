@@ -499,6 +499,14 @@
       "thisAndFollowing_event": "This and following events",
       "thisAndFollowing_task": "This and following tasks"
     },
+    "unsavedChangesDialog": {
+      "title": "Save your changes?",
+      "message": "Your changes haven’t been saved.",
+      "save": "Save",
+      "discard": "Discard",
+      "discardDescription": "Discard changes and close",
+      "keepEditing": "Keep editing"
+    },
     "eventModal": {
       "addressCopied": "Address copied",
       "addressesCopied_one": "{{count}} address copied",

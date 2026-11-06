@@ -499,6 +499,14 @@
       "thisAndFollowing_event": "Deze en volgende gebeurtenissen",
       "thisAndFollowing_task": "Deze en volgende taken"
     },
+    "unsavedChangesDialog": {
+      "title": "Wijzigingen opslaan?",
+      "message": "Je wijzigingen zijn niet opgeslagen.",
+      "save": "Opslaan",
+      "discard": "Verwerpen",
+      "discardDescription": "Wijzigingen verwerpen en sluiten",
+      "keepEditing": "Doorgaan met bewerken"
+    },
     "eventModal": {
       "addressCopied": "Adres gekopieerd",
       "addressesCopied_one": "{{count}} adres gekopieerd",

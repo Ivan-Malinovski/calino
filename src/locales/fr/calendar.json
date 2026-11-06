@@ -499,6 +499,14 @@
       "thisAndFollowing_event": "Cet événement et les suivants",
       "thisAndFollowing_task": "Cette tâche et les suivantes"
     },
+    "unsavedChangesDialog": {
+      "title": "Enregistrer vos modifications ?",
+      "message": "Vos modifications n’ont pas été enregistrées.",
+      "save": "Enregistrer",
+      "discard": "Ignorer",
+      "discardDescription": "Ignorer les modifications et fermer",
+      "keepEditing": "Continuer la modification"
+    },
     "eventModal": {
       "addressCopied": "Adresse copiée",
       "addressesCopied_one": "{{count}} adresse copiée",

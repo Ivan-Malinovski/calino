@@ -387,6 +387,14 @@
       "thisAndFollowing_event": "This and following events",
       "thisAndFollowing_task": "This and following tasks"
     },
+    "unsavedChangesDialog": {
+      "title": "Änderungen speichern?",
+      "message": "Deine Änderungen wurden nicht gespeichert.",
+      "save": "Speichern",
+      "discard": "Verwerfen",
+      "discardDescription": "Änderungen verwerfen und schließen",
+      "keepEditing": "Weiter bearbeiten"
+    },
     "eventModal": {
       "addressCopied": "Hinzufügenress copied",
       "addressesCopied_one": "{{count}} address copied",

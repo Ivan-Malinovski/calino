@@ -387,6 +387,14 @@
       "thisAndFollowing_event": "Denne og følgende begivenheder",
       "thisAndFollowing_task": "Denne og følgende opgaver"
     },
+    "unsavedChangesDialog": {
+      "title": "Gem dine ændringer?",
+      "message": "Dine ændringer er ikke gemt.",
+      "save": "Gem",
+      "discard": "Kasser",
+      "discardDescription": "Kasser ændringer og luk",
+      "keepEditing": "Fortsæt redigering"
+    },
     "eventModal": {
       "addressCopied": "Tilføjress copied",
       "addressesCopied_one": "{{count}} adresse copied",
