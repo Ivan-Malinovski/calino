@@ -18,7 +18,12 @@ export const escape = (value: string): string =>
 export const unescape = (value: string): string =>
   value.replace(/\\([nN,;\\])/g, (_, char: string) => (/n/i.test(char) ? '\n' : char))
 
-export function split(value: string, delimiter: string): string[] {
+/**
+ * Split on an unescaped delimiter. `quotes` makes a double-quoted run opaque,
+ * which is right in parameters (RFC 6350 §3.3, `LABEL="a; b"`) but wrong in
+ * property values, where `"` is an ordinary character.
+ */
+export function split(value: string, delimiter: string, quotes = false): string[] {
   const result: string[] = []
   let start = 0
   let quoted = false
@@ -27,7 +32,7 @@ export function split(value: string, delimiter: string): string[] {
       i++
       continue
     }
-    if (value[i] === '"') quoted = !quoted
+    if (quotes && value[i] === '"') quoted = !quoted
     if (value[i] === delimiter && !quoted) {
       result.push(value.slice(start, i))
       start = i + 1
@@ -59,7 +64,7 @@ export function parseProperties(vcard: string): VCardProperty[] {
       }
     }
     if (colon < 0) throw new Error('Malformed vCard content line')
-    const [name, ...parameters] = split(line.slice(0, colon), ';')
+    const [name, ...parameters] = split(line.slice(0, colon), ';', true)
     const params: Record<string, string[]> = Object.create(null)
     for (const parameter of parameters) {
       const equals = parameter.indexOf('=')
@@ -70,7 +75,7 @@ export function parseProperties(vcard: string): VCardProperty[] {
         .replace(/\^(\^|n|')/gi, (_, char: string) =>
           char === '^' ? '^' : char === "'" ? '"' : '\n'
         )
-      params[key] = [...(params[key] ?? []), ...split(decoded, ',')]
+      params[key] = [...(params[key] ?? []), ...split(decoded, ',', true)]
     }
     return { name: name.split('.').at(-1)!.toUpperCase(), params, value: line.slice(colon + 1) }
   })

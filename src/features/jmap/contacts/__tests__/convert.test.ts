@@ -178,6 +178,39 @@ describe('hand-authored JSContact/vCard paired fixtures', () => {
       },
     })
   })
+  it('treats a double quote in a value as an ordinary character', () => {
+    const card = (lines: string) =>
+      vCardToJscontact(`BEGIN:VCARD\nVERSION:4.0\nFN:Test\n${lines}\nEND:VCARD`)
+    expect(card('ORG:12" Records;Sales')).toMatchObject({
+      organizations: {
+        organizations1: { name: '12" Records', units: [{ name: 'Sales' }] },
+      },
+    })
+    expect(card('N:O"Neil;Pat;;;').name).toMatchObject({
+      components: [
+        { kind: 'surname', value: 'O"Neil' },
+        { kind: 'given', value: 'Pat' },
+      ],
+    })
+    expect(card('NICKNAME:5" Pat,Ace')).toMatchObject({
+      nicknames: { nicknames1: { name: '5" Pat' }, nicknames2: { name: 'Ace' } },
+    })
+    expect(card('ADR:;;12" Road;Town;;1000;DK').addresses).toMatchObject({
+      addresses1: {
+        components: expect.arrayContaining([
+          { '@type': 'AddressComponent', kind: 'locality', value: 'Town' },
+          { '@type': 'AddressComponent', kind: 'postcode', value: '1000' },
+        ]),
+      },
+    })
+    expect(card('CATEGORIES:5" Pat,Ace')).toHaveProperty('keywords')
+  })
+  it('still honours quotes in parameters', () => {
+    const card = vCardToJscontact(
+      'BEGIN:VCARD\nVERSION:4.0\nFN:Test\nADR;LABEL="a; b:c":;;Road;Town;;1000;DK\nEND:VCARD'
+    )
+    expect(card.addresses).toMatchObject({ addresses1: { full: 'a; b:c' } })
+  })
   it('drops X properties and rejects malformed/multiple resources', () => {
     expect(
       vCardToJscontact('BEGIN:VCARD\nVERSION:4.0\nFN:Test\nX-CUSTOM:secret\nEND:VCARD')
