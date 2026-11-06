@@ -1532,3 +1532,143 @@ describe('yearless contact dates', () => {
     }
   )
 })
+
+// RFC 6350 §3.4 (and RFC 2426 §4 for vCard 3.0): in a TEXT value `\\`, `\,`,
+// `\;` and `\n` are escapes, and in a structured (N, ORG, ADR) or list
+// (CATEGORIES) value only an unescaped `;` or `,` is a delimiter.
+describe('text escaping (RFC 6350 §3.4)', () => {
+  // Shaped like what Radicale, Nextcloud and Apple Contacts store.
+  const ESCAPED_VCARD = String.raw`BEGIN:VCARD
+VERSION:3.0
+UID:escaped-001
+FN:Martin\, Jean
+N:Dupont\;Jr;Jean;;;
+ORG:ACME\, Inc.;R&D
+TITLE:Head of Sales\, EMEA
+NOTE:Line one\nLine two\, with C:\\new\\folder and a \; semicolon
+ADR;TYPE=WORK:;;Unit 4\; Building B;Paris;;75002;France
+CATEGORIES:R\, D,Friends
+END:VCARD`
+
+  it('unescapes FN', () => {
+    const contact = parseVCard(ESCAPED_VCARD, ADDRESS_BOOK_ID, ACCOUNT_ID)!
+    expect(contact.displayName).toBe('Martin, Jean')
+  })
+
+  it('splits N only on unescaped semicolons', () => {
+    const contact = parseVCard(ESCAPED_VCARD, ADDRESS_BOOK_ID, ACCOUNT_ID)!
+    expect(contact.familyName).toBe('Dupont;Jr')
+    expect(contact.givenName).toBe('Jean')
+    expect(contact.additionalNames).toBe('')
+  })
+
+  it('splits ORG only on unescaped semicolons', () => {
+    const vcard = ESCAPED_VCARD.replace('ORG:ACME\\, Inc.;R&D', 'ORG:ACME\\; Holdings;R&D')
+    const contact = parseVCard(vcard, ADDRESS_BOOK_ID, ACCOUNT_ID)!
+    expect(contact.organization).toBe('ACME; Holdings')
+    expect(contact.department).toBe('R&D')
+
+    const withComma = parseVCard(ESCAPED_VCARD, ADDRESS_BOOK_ID, ACCOUNT_ID)!
+    expect(withComma.organization).toBe('ACME, Inc.')
+    expect(withComma.department).toBe('R&D')
+  })
+
+  it('keeps an escaped backslash in front of n, and reads \\n as a newline', () => {
+    const contact = parseVCard(ESCAPED_VCARD, ADDRESS_BOOK_ID, ACCOUNT_ID)!
+    expect(contact.note).toBe('Line one\nLine two, with C:\\new\\folder and a ; semicolon')
+    expect(contact.title).toBe('Head of Sales, EMEA')
+  })
+
+  it('reads an uppercase \\N as a newline (vCard 3.0)', () => {
+    const vcard = ESCAPED_VCARD.replace(/^NOTE:.*$/m, 'NOTE:First\\NSecond')
+    expect(parseVCard(vcard, ADDRESS_BOOK_ID, ACCOUNT_ID)!.note).toBe('First\nSecond')
+  })
+
+  it('splits ADR only on unescaped semicolons', () => {
+    const contact = parseVCard(ESCAPED_VCARD, ADDRESS_BOOK_ID, ACCOUNT_ID)!
+    expect(contact.addresses[0]).toMatchObject({
+      street: 'Unit 4; Building B',
+      city: 'Paris',
+      postalCode: '75002',
+      country: 'France',
+    })
+  })
+
+  it('splits CATEGORIES only on unescaped commas', () => {
+    const contact = parseVCard(ESCAPED_VCARD, ADDRESS_BOOK_ID, ACCOUNT_ID)!
+    expect(contact.categories).toEqual(['R, D', 'Friends'])
+  })
+
+  it('round-trips every escaped field through serialize and parse', () => {
+    const contact = parseVCard(ESCAPED_VCARD, ADDRESS_BOOK_ID, ACCOUNT_ID)!
+    for (const version of ['3.0', '4.0'] as const) {
+      const reparsed = parseVCard(contactToVCard(contact, version), ADDRESS_BOOK_ID, ACCOUNT_ID)!
+      expect(reparsed).toMatchObject({
+        displayName: contact.displayName,
+        familyName: contact.familyName,
+        givenName: contact.givenName,
+        organization: contact.organization,
+        department: contact.department,
+        title: contact.title,
+        note: contact.note,
+        addresses: contact.addresses,
+        categories: contact.categories,
+      })
+    }
+  })
+
+  it('writes the same escaped FN, N, ORG and CATEGORIES on every save', () => {
+    // FN used to gain a backslash on each save: `Martin\, Jean` was read
+    // verbatim, then escaped again to `Martin\\\, Jean`.
+    const once = contactToVCard(parseVCard(ESCAPED_VCARD, ADDRESS_BOOK_ID, ACCOUNT_ID)!)
+    const twice = contactToVCard(parseVCard(once, ADDRESS_BOOK_ID, ACCOUNT_ID)!)
+    for (const serialized of [once, twice]) {
+      expect(serialized).toContain('\r\nFN:Martin\\, Jean\r\n')
+      expect(serialized).toContain('\r\nN:Dupont\\;Jr;Jean;;;\r\n')
+      expect(serialized).toContain('\r\nORG:ACME\\, Inc.;R&D\r\n')
+      expect(serialized).toContain('\r\nCATEGORIES:R\\, D,Friends\r\n')
+    }
+  })
+
+  it('round-trips a contact built in the app', () => {
+    const contact: Contact = {
+      ...makeMinimalContact('typed-001'),
+      displayName: 'Martin, Jean',
+      familyName: 'Martin',
+      givenName: 'Jean',
+      organization: 'ACME, Inc.',
+      department: 'R&D; Lab',
+      note: 'Path: C:\\new\\n\nComma, semicolon; backslash \\',
+      categories: ['R, D', 'Friends'],
+    }
+    const reparsed = parseVCard(contactToVCard(contact), ADDRESS_BOOK_ID, ACCOUNT_ID)!
+    expect(reparsed).toMatchObject({
+      displayName: contact.displayName,
+      organization: contact.organization,
+      department: contact.department,
+      note: contact.note,
+      categories: contact.categories,
+    })
+  })
+
+  it('unfolds and folds lines with accented characters and emoji at the fold', () => {
+    // Folded between characters, as Radicale (vobject) and sabre/dav do.
+    const vcard = [
+      'BEGIN:VCARD',
+      'VERSION:4.0',
+      'UID:folded-utf8',
+      'FN:Hélène Martin\\, née',
+      '  Dupré 😀',
+      'NOTE:Café\\, thé 😀',
+      ' 😀 et brioche',
+      'END:VCARD',
+    ].join('\r\n')
+    const contact = parseVCard(vcard, ADDRESS_BOOK_ID, ACCOUNT_ID)!
+    expect(contact.displayName).toBe('Hélène Martin, née Dupré 😀')
+    expect(contact.note).toBe('Café, thé 😀😀 et brioche')
+
+    const long = { ...contact, note: 'é😀, '.repeat(40) }
+    const serialized = contactToVCard(long)
+    expect(parseVCard(serialized, ADDRESS_BOOK_ID, ACCOUNT_ID)!.note).toBe(long.note)
+  })
+})
