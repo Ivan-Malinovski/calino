@@ -341,6 +341,30 @@ export function addDays(date: string, days: number): string {
 }
 
 /**
+ * The calendar day of an all-day `start`/`end` value. All-day values are
+ * floating (`yyyy-MM-dd`, optionally `T00:00:00`); one carrying a UTC offset
+ * (written by an older build as an instant) is read as the device-local day
+ * it stands for.
+ */
+export function allDayKey(value: string): string {
+  const time = value.slice(10)
+  if (/(?:[zZ]|[+-]\d{2}:?\d{2})$/.test(time)) return format(parseISO(value), 'yyyy-MM-dd')
+  return value.slice(0, 10)
+}
+
+/**
+ * Move an all-day `start`/`end` value by whole days, keeping its floating
+ * shape. Never goes through an instant: the all-day serializer writes the date
+ * part of the string, and east of UTC local midnight's UTC date is the day
+ * before.
+ */
+export function shiftAllDayValue(value: string, days: number): string {
+  const time = value.slice(10)
+  const floatingTime = /(?:[zZ]|[+-]\d{2}:?\d{2})$/.test(time) ? '' : time
+  return `${addDays(allDayKey(value), days)}${floatingTime}`
+}
+
+/**
  * Add `minutes` to a "HH:mm" time-of-day string, wrapping past midnight.
  * Time-of-day only — no date rollover. Used to derive an event's end time
  * from its start plus a duration (default or user-preserved).

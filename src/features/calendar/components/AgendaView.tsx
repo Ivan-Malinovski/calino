@@ -30,7 +30,15 @@ import type { CalendarEvent } from '@/types'
 import { ContextMenu } from '@/components/common/ContextMenu'
 import { EmptyState } from '@/components/common/EmptyState'
 import { getEventColor } from '@/lib/eventColor'
-import { formatEventTime, pad2, toEventInstant, formatDisplayDate } from '@/lib/datetime'
+import {
+  allDayKey,
+  daysBetween,
+  formatDisplayDate,
+  formatEventTime,
+  pad2,
+  shiftAllDayValue,
+  toEventInstant,
+} from '@/lib/datetime'
 import {
   homeDayKey,
   homeMinutes,
@@ -642,7 +650,7 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
       originalEvent.timezone
     )
     const sourceDate = originalEvent.isAllDay
-      ? originalEvent.start.slice(0, 10)
+      ? allDayKey(originalEvent.start)
       : homeDayKey(sourceInstant)
     const isTask = originalEvent.type === 'task'
     const shouldPromoteTask = isTask && Boolean(originalEvent.parentTaskId)
@@ -672,9 +680,17 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
       }
     }
 
+    // An all-day event moves by whole days on its floating dates: local
+    // midnight sent as toISOString() is the previous day's date east of UTC,
+    // and that date part is what the all-day serializer writes.
+    const dayShift = originalEvent.isAllDay ? daysBetween(sourceDate, dayStr) : 0
     const updates: Partial<CalendarEvent> = {
-      start: newStart.toISOString(),
-      end: newEnd.toISOString(),
+      start: originalEvent.isAllDay
+        ? shiftAllDayValue(originalEvent.start, dayShift)
+        : newStart.toISOString(),
+      end: originalEvent.isAllDay
+        ? shiftAllDayValue(originalEvent.end, dayShift)
+        : newEnd.toISOString(),
       ...(isTask ? { dueDate: newDueDate, parentTaskId: undefined } : {}),
     }
 
