@@ -48,6 +48,7 @@ import * as accountStorage from '../../sync/accountStorage'
 import * as iCalendarAdapter from '../../adapter/iCalendarAdapter'
 import * as CalDAVClientModule from '../../client/CalDAVClient'
 import * as SyncEngineModule from '../../sync/syncEngine'
+import { resetBackendPool } from '../../client/backendPool'
 import { useCalDAVInstance as useCalDAV } from '../useCalDAV'
 
 type MockDiscovery = typeof discovery & {
@@ -1876,6 +1877,9 @@ describe('useCalDAV', () => {
       syncCollection: ReturnType<typeof vi.fn>
       fetchResourceByHref: ReturnType<typeof vi.fn>
     } {
+      // A test may install several clients one after another and expect each
+      // sync to connect to the newest; the pool would hand back the first.
+      resetBackendPool()
       const client = {
         fetchCalendars: vi.fn().mockResolvedValue([SERVER_CHANGED]),
         fetchEvents: vi.fn().mockResolvedValue([]),

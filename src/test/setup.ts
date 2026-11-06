@@ -1,5 +1,6 @@
 import '@testing-library/jest-dom'
-import { vi } from 'vitest'
+import { beforeEach, vi } from 'vitest'
+import { resetBackendPool } from '@/features/caldav/client/backendPool'
 import pkg from '../../package.json'
 import { initI18n } from '@/lib/i18n'
 
@@ -50,3 +51,6 @@ if (typeof globalThis.ResizeObserver === 'undefined') {
 if (typeof Element !== 'undefined' && !Element.prototype.scrollIntoView) {
   Element.prototype.scrollIntoView = function scrollIntoView(): void {}
 }
+
+// A pooled CalDAV client from one test must not answer the next test's connect.
+beforeEach(() => resetBackendPool())

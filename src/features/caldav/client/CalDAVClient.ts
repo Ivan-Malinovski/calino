@@ -489,23 +489,33 @@ export class CalDAVClient implements CalendarBackend {
    * but before the first explicit fetchCalendars() call).
    */
   private async findCalendarByUrl(calendarUrl: string) {
+    const lookup = () =>
+      this.cachedCalendars.find((c) => {
+        if (c.url === calendarUrl) return true
+        // Legacy: stored URL may be proxy-prefixed (e.g. proxy/cal-encoded), decode it
+        try {
+          const decoded = decodeURIComponent(calendarUrl)
+          if (decoded === c.url) return true
+        } catch {
+          /* ignore decode errors */
+        }
+        return false
+      })
+
     // Lazily populate cache on first use after connect()
     if (this.cachedCalendars.length === 0) {
       const client = this.getClient()
       this.cachedCalendars = await client.fetchCalendars()
     }
 
-    const calendar = this.cachedCalendars.find((c) => {
-      if (c.url === calendarUrl) return true
-      // Legacy: stored URL may be proxy-prefixed (e.g. proxy/cal-encoded), decode it
-      try {
-        const decoded = decodeURIComponent(calendarUrl)
-        if (decoded === c.url) return true
-      } catch {
-        /* ignore decode errors */
-      }
-      return false
-    })
+    let calendar = lookup()
+    if (!calendar) {
+      // The client is shared and long-lived, so its list can predate a
+      // collection created since. List once more before calling it missing.
+      const client = this.getClient()
+      this.cachedCalendars = await client.fetchCalendars()
+      calendar = lookup()
+    }
 
     if (!calendar) {
       throw new Error(`Calendar not found: ${calendarUrl}`)

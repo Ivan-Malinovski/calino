@@ -326,6 +326,14 @@ const ACCOUNTS: MockAccount[] = [
         components: ['VEVENT', 'VTODO', 'VJOURNAL'],
       },
       {
+        // Owned by `write-no-handshake.spec.ts` (issue #257), which counts the
+        // requests a save makes before its PUT.
+        path: '/dav/calendars/user/write-handshake/',
+        displayName: 'Write Handshake',
+        color: '#7C3AED',
+        components: ['VEVENT', 'VTODO', 'VJOURNAL'],
+      },
+      {
         path: '/dav/calendars/user/calino-settings/',
         displayName: 'Calino Settings',
         components: ['VEVENT'],
