@@ -41,6 +41,8 @@ import {
   formatDisplayDate,
   daysBetween,
   addDays as addDayKey,
+  allDayKey,
+  shiftAllDayValue,
 } from '@/lib/datetime'
 import {
   homeDayKey,
@@ -552,7 +554,7 @@ export function CalendarGrid(): JSX.Element {
     let targetDayStr = dayStr
     if (grabbedDay) {
       const originKey = originalEvent.isAllDay
-        ? originalEvent.start.slice(0, 10)
+        ? allDayKey(originalEvent.start)
         : homeDayKey(originalStart)
       const offset = daysBetween(originKey, grabbedDay)
       targetDayStr = addDayKey(dayStr, -offset)
@@ -582,9 +584,19 @@ export function CalendarGrid(): JSX.Element {
       }
     }
 
+    // An all-day event moves by whole days on its floating dates: going through
+    // the instant above would hand the serializer local midnight as a UTC
+    // string, whose date part is the previous day east of UTC.
+    const dayShift = originalEvent.isAllDay
+      ? daysBetween(allDayKey(originalEvent.start), targetDayStr)
+      : 0
     const updates = {
-      start: newStart.toISOString(),
-      end: newEnd.toISOString(),
+      start: originalEvent.isAllDay
+        ? shiftAllDayValue(originalEvent.start, dayShift)
+        : newStart.toISOString(),
+      end: originalEvent.isAllDay
+        ? shiftAllDayValue(originalEvent.end, dayShift)
+        : newEnd.toISOString(),
       ...(isTask && { dueDate: newDueDate }),
     }
 
@@ -1408,7 +1420,9 @@ export function CalendarGrid(): JSX.Element {
                     data-component="calendar-grid-header"
                   >
                     {showGutter && (
-                      <div className={styles.weekNumHeader}>{showWeekNumbers ? 'W#' : ''}</div>
+                      <div className={styles.weekNumHeader}>
+                        {showWeekNumbers ? t('views.grid.weekNumberHeader') : ''}
+                      </div>
                     )}
                     {weekdays.map((day) => (
                       <div key={day} className={styles.weekday}>
@@ -1618,7 +1632,9 @@ export function CalendarGrid(): JSX.Element {
               data-component="calendar-grid-header"
             >
               {showGutter && (
-                <div className={styles.weekNumHeader}>{showWeekNumbers ? 'W#' : ''}</div>
+                <div className={styles.weekNumHeader}>
+                  {showWeekNumbers ? t('views.grid.weekNumberHeader') : ''}
+                </div>
               )}
               {weekdays.map((day) => (
                 <div key={day} className={styles.weekday}>

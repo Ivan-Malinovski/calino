@@ -2,8 +2,9 @@
 
 Calino's English catalog is the source of truth. The shipped interface
 languages are English (`en`), Danish (`da`), German (`de`), Spanish (`es`),
-French (`fr`), Italian (`it`), and Dutch (`nl`); language names remain written
-in their own language so they can be found from any locale.
+French (`fr`), Italian (`it`), Dutch (`nl`), and Simplified Chinese (`zh`);
+language names remain written in their own language so they can be found from
+any locale.
 
 Translation catalogs live under `src/locales/<language>/`, with one JSON file
 per namespace. Keep every namespace and key aligned with English. Missing keys

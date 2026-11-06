@@ -51,12 +51,16 @@
     },
     "agenda": {
       "emptyTitle": "Intet planlagt denne måned",
-      "emptyDescription": "Din dagsorden er tom. Tilføj en begivenhed for at komme i gang."
+      "emptyDescription": "Din dagsorden er tom. Tilføj en begivenhed for at komme i gang.",
+      "freeDays_one": "{{count}} dag fri",
+      "freeDays_other": "{{count}} dage fri"
     },
     "year": {
       "weekNumber": "Uge {{number}}"
     },
     "grid": {
+      "weekNumberHeader": "Uge",
+      "weekNumber": "U{{number}}",
       "openDayView": "Åbn {{date}} i dagsvisning",
       "hasJournalEntriesFor": "Har dagbogsindlæg for {{date}}",
       "viewJournalEntries": "Vis dagbogsindlæg",

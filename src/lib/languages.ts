@@ -4,7 +4,7 @@ import type { Language } from '@/types'
  * UI languages Calino ships catalogs for. `en` is the source of truth and the
  * fallback for any key a translation is missing.
  */
-export const SUPPORTED_LANGUAGES = ['en', 'da', 'de', 'es', 'fr', 'it', 'nl'] as const
+export const SUPPORTED_LANGUAGES = ['en', 'da', 'de', 'es', 'fr', 'it', 'nl', 'zh'] as const
 
 export const FALLBACK_LANGUAGE: Language = 'en'
 
@@ -21,6 +21,7 @@ export const LANGUAGE_OPTIONS: { value: Language; label: string }[] = [
   { value: 'fr', label: 'Français' },
   { value: 'it', label: 'Italiano' },
   { value: 'nl', label: 'Nederlands' },
+  { value: 'zh', label: '简体中文' },
 ]
 
 export function isSupportedLanguage(value: unknown): value is Language {

@@ -13,7 +13,7 @@ import type {
   CalendarOrganizer,
 } from '@/types'
 import { useSettingsStore } from '@/store/settingsStore'
-import { daysBetween, addDays, getDateFnsLocale } from '@/lib/datetime'
+import { daysBetween, addDays, clockPattern, formatInZone } from '@/lib/datetime'
 import {
   MAX_REMINDER_MINUTES,
   parseReminderInput,
@@ -22,7 +22,6 @@ import {
 } from '@/lib/reminderUnits'
 import { homeTimezone, parseHomeWall } from '@/lib/homeTimezone'
 import { format } from 'date-fns'
-import { formatInTimeZone } from 'date-fns-tz'
 import { normalizeTzid } from '@/lib/timezoneRegistry'
 import { AttachmentSection } from './AttachmentSection'
 import { AttendeeSection } from './AttendeeSection'
@@ -54,17 +53,16 @@ function foreignZoneTimes(
   const endInstant = parseHomeWall(`${endDate}T${endTime}:00`)
   if (Number.isNaN(startInstant.getTime()) || Number.isNaN(endInstant.getTime())) return null
 
-  const pattern = timeFormat === '24h' ? 'HH:mm' : 'h:mm a'
   let start: string
   let end: string
   try {
-    start = formatInTimeZone(startInstant, calculationTimezone, pattern)
-    end = formatInTimeZone(endInstant, calculationTimezone, pattern)
+    start = formatInZone(startInstant, calculationTimezone, clockPattern(timeFormat))
+    end = formatInZone(endInstant, calculationTimezone, clockPattern(timeFormat))
     // A late or early event can sit on a different calendar day over there, so
     // name the day when it differs — otherwise the times alone would mislead.
-    const startDay = formatInTimeZone(startInstant, calculationTimezone, 'yyyy-MM-dd')
+    const startDay = formatInZone(startInstant, calculationTimezone, 'yyyy-MM-dd')
     if (startDay !== startDate) {
-      start = `${formatInTimeZone(startInstant, calculationTimezone, 'MMM d', { locale: getDateFnsLocale() })}, ${start}`
+      start = `${formatInZone(startInstant, calculationTimezone, 'MMM d')}, ${start}`
     }
   } catch {
     // Unknown zone: better to show nothing than a wrong time.

@@ -834,6 +834,51 @@ describe('CATEGORIES multi-value parsing', () => {
 
     expect(out).toContain('CATEGORIES:Work,Personal,Urgent')
   })
+
+  it('keeps an escaped comma inside one category', () => {
+    // RFC 5545 §3.3.11: `R\, D` is the single category "R, D". ical.js has
+    // already split the list on unescaped commas and unescaped each value.
+    const vevent = createVevent(
+      [
+        'BEGIN:VCALENDAR',
+        'VERSION:2.0',
+        'BEGIN:VEVENT',
+        'UID:cat-escaped',
+        'DTSTART:20260615T100000Z',
+        'DTEND:20260615T110000Z',
+        'CATEGORIES:R\\, D,Work',
+        'END:VEVENT',
+        'END:VCALENDAR',
+      ].join('\r\n')
+    )
+
+    const parsed = icalEventToCalendarEvent(vevent, 'cal-1')
+    expect(parsed.categories).toEqual(['R, D', 'Work'])
+    expect(calendarEventToIcalComponent(parsed).toString()).toContain('CATEGORIES:R\\, D,Work')
+  })
+
+  it('round-trips a category with a comma written by Calino', () => {
+    const vevent = createVevent(
+      [
+        'BEGIN:VCALENDAR',
+        'VERSION:2.0',
+        'BEGIN:VEVENT',
+        'UID:cat-escaped-rt',
+        'DTSTART:20260615T100000Z',
+        'DTEND:20260615T110000Z',
+        'END:VEVENT',
+        'END:VCALENDAR',
+      ].join('\r\n')
+    )
+    const event = { ...icalEventToCalendarEvent(vevent, 'cal-1'), categories: ['R, D', 'Work'] }
+
+    const out = calendarEventToIcalComponent(event).toString()
+    const reparsed = icalEventToCalendarEvent(
+      createVevent(`BEGIN:VCALENDAR\r\nVERSION:2.0\r\n${out}\r\nEND:VCALENDAR`),
+      'cal-1'
+    )
+    expect(reparsed.categories).toEqual(['R, D', 'Work'])
+  })
 })
 
 // ---------------------------------------------------------------------------
@@ -1222,5 +1267,46 @@ describe('Issue 227: X-APPLE-TRAVEL-DURATION;VALUE=DURATION', () => {
   it('does not throw when converting the whole event', () => {
     const comp = createVevent(vevent('X-APPLE-TRAVEL-DURATION;VALUE=DURATION:PT30M'))
     expect(() => icalEventToCalendarEvent(comp, 'cal-1')).not.toThrow()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Issue 256: a recurring VTODO with only DUE;TZID (Tasks.org via DAVx5) has no
+// DTSTART, so DUE is the only carrier of the zone. The DTSTART written as the
+// recurrence anchor must keep it, or the server reads it as UTC and rejects
+// the PUT ("DUE must occur after DTSTART").
+// ---------------------------------------------------------------------------
+describe('Issue 256: DUE-only recurring VTODO keeps its TZID on the synthesized DTSTART', () => {
+  const ics = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:DAVx5/4.5.21-ose ical4j/4.3.0 (org.tasks)',
+    'BEGIN:VTODO',
+    'DTSTAMP:20261105T124417Z',
+    'UID:4295177671402792109',
+    'SUMMARY:Test',
+    'DUE;TZID=Europe/Brussels:20261105T134501',
+    'STATUS:NEEDS-ACTION',
+    'RRULE:FREQ=DAILY;INTERVAL=1',
+    'END:VTODO',
+    'END:VCALENDAR',
+  ].join('\r\n')
+
+  it('reads the zone from DUE and writes DTSTART with the same TZID and wall clock', () => {
+    const vtodo = new ICAL.Component(ICAL.parse(ics)).getFirstSubcomponent('vtodo')!
+    const task = icalVtodoToCalendarEvent(vtodo, 'c1')
+    expect(task.timezone).toBe('Europe/Brussels')
+    const out = calendarEventToIcalVtodo(task, vtodo).toString()
+    expect(out).toContain('DTSTART;TZID=Europe/Brussels:20261105T134501')
+    expect(out).toContain('DUE;TZID=Europe/Brussels:20261105T134501')
+  })
+
+  it('still takes the zone from DTSTART when both are present', () => {
+    const both = ics.replace(
+      'DUE;TZID=Europe/Brussels:20261105T134501',
+      'DTSTART;TZID=America/New_York:20261105T070000\r\nDUE;TZID=Europe/Brussels:20261105T134501'
+    )
+    const vtodo = new ICAL.Component(ICAL.parse(both)).getFirstSubcomponent('vtodo')!
+    expect(icalVtodoToCalendarEvent(vtodo, 'c1').timezone).toBe('America/New_York')
   })
 })

@@ -6,6 +6,7 @@ import {
   fr as frLocale,
   it as itLocale,
   nl as nlLocale,
+  zhCN as zhLocale,
 } from 'date-fns/locale'
 import type { Locale } from 'date-fns'
 import type { DateFormat } from '@/types'
@@ -13,6 +14,7 @@ import { fromZonedTime, formatInTimeZone } from 'date-fns-tz'
 import { normalizeTzid } from '@/lib/timezoneRegistry'
 import { homeTimezone, homeTimezoneOverride } from '@/lib/homeTimezone'
 import { currentLanguage } from '@/lib/i18n'
+import { localizeDisplayPattern } from '@/lib/datePatterns'
 import type { TimeFormat } from '@/types'
 
 // ─── Locale-aware display formatting ─────────────────────────────────────────
@@ -32,6 +34,7 @@ const DATE_FNS_LOCALES: Record<string, Locale | undefined> = {
   fr: frLocale,
   it: itLocale,
   nl: nlLocale,
+  zh: zhLocale,
 }
 
 /** The date-fns locale matching the active UI language. */
@@ -43,11 +46,13 @@ export function getDateFnsLocale(): Locale | undefined {
  * Format a date for *display*, in the active UI language.
  *
  * Use this — never bare `format()` — whenever the output contains a month or
- * weekday name, or an ordering a reader would notice.
+ * weekday name, or an ordering a reader would notice. A pattern whose word
+ * order differs in the active locale is rewritten by
+ * `localizeDisplayPattern`; one with no rewrite formats exactly as written.
  */
 export function formatDisplayDate(date: Date | string, pattern: string): string {
   const d = typeof date === 'string' ? parseISO(date) : date
-  return format(d, pattern, { locale: getDateFnsLocale() })
+  return format(d, localizeDisplayPattern(pattern), { locale: getDateFnsLocale() })
 }
 
 /** `'December 2024'` — month and year, e.g. the calendar header. */
@@ -124,8 +129,8 @@ export function formatTime(
   variant: 'full' | 'hour' = 'full'
 ): string {
   const d = typeof date === 'string' ? parseISO(date) : date
-  const pattern = timeFormat === '24h' ? 'HH:mm' : variant === 'hour' ? 'h a' : 'h:mm a'
-  return format(d, pattern, { locale: getDateFnsLocale() })
+  const pattern = clockPattern(timeFormat, variant)
+  return format(d, localizeDisplayPattern(pattern), { locale: getDateFnsLocale() })
 }
 
 /**
@@ -134,8 +139,7 @@ export function formatTime(
  */
 export function formatDateLong(date: Date | string, timeFormat: TimeFormat = '24h'): string {
   const d = typeof date === 'string' ? parseISO(date) : date
-  const timePattern = timeFormat === '24h' ? 'HH:mm' : 'h:mm a'
-  return formatDisplayDate(d, `MMM d, yyyy ${timePattern}`)
+  return formatDisplayDate(d, `MMM d, yyyy ${clockPattern(timeFormat)}`)
 }
 
 /**
@@ -180,7 +184,9 @@ export function zonedMinutes(instant: Date, zone: string): number {
 
 /** Format an instant in `zone`. Numeric patterns do not depend on locale. */
 export function formatInZone(instant: Date, zone: string, pattern: string): string {
-  return formatInTimeZone(instant, resolvedZone(zone), pattern, { locale: getDateFnsLocale() })
+  return formatInTimeZone(instant, resolvedZone(zone), localizeDisplayPattern(pattern), {
+    locale: getDateFnsLocale(),
+  })
 }
 
 /**
@@ -338,6 +344,30 @@ export function addDays(date: string, days: number): string {
   const d = new Date(`${date}T00:00:00Z`)
   d.setUTCDate(d.getUTCDate() + days)
   return d.toISOString().split('T')[0]!
+}
+
+/**
+ * The calendar day of an all-day `start`/`end` value. All-day values are
+ * floating (`yyyy-MM-dd`, optionally `T00:00:00`); one carrying a UTC offset
+ * (written by an older build as an instant) is read as the device-local day
+ * it stands for.
+ */
+export function allDayKey(value: string): string {
+  const time = value.slice(10)
+  if (/(?:[zZ]|[+-]\d{2}:?\d{2})$/.test(time)) return format(parseISO(value), 'yyyy-MM-dd')
+  return value.slice(0, 10)
+}
+
+/**
+ * Move an all-day `start`/`end` value by whole days, keeping its floating
+ * shape. Never goes through an instant: the all-day serializer writes the date
+ * part of the string, and east of UTC local midnight's UTC date is the day
+ * before.
+ */
+export function shiftAllDayValue(value: string, days: number): string {
+  const time = value.slice(10)
+  const floatingTime = /(?:[zZ]|[+-]\d{2}:?\d{2})$/.test(time) ? '' : time
+  return `${addDays(allDayKey(value), days)}${floatingTime}`
 }
 
 /**

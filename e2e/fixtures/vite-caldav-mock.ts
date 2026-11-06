@@ -286,6 +286,14 @@ const ACCOUNTS: MockAccount[] = [
         rejectMixedUids: true,
       },
       {
+        // Owned by `all-day-drag.spec.ts`, which asserts the DTSTART/DTEND
+        // bytes an all-day drag writes.
+        path: '/dav/calendars/user/allday-drag/',
+        displayName: 'All-day Drag',
+        color: '#16A34A',
+        components: ['VEVENT', 'VTODO', 'VJOURNAL'],
+      },
+      {
         // Owned by `organizer.spec.ts`, which asserts the ORGANIZER of the
         // events it creates.
         path: '/dav/calendars/user/organizer/',
@@ -299,6 +307,22 @@ const ACCOUNTS: MockAccount[] = [
         path: '/dav/calendars/user/unreadable/',
         displayName: 'Unreadable',
         color: '#EF4444',
+        components: ['VEVENT', 'VTODO', 'VJOURNAL'],
+      },
+      {
+        // Owned by `ics-text-escaping.spec.ts`, which asserts the exact bytes
+        // of the resource it seeds after an edit.
+        path: '/dav/calendars/user/text-esc/',
+        displayName: 'Text Escaping',
+        color: '#0F9D58',
+        components: ['VEVENT', 'VTODO', 'VJOURNAL'],
+      },
+      {
+        // Owned by `vtodo-due-only.spec.ts` (issue #256), which asserts the
+        // bytes written for a recurring task that has a DUE and no DTSTART.
+        path: '/dav/calendars/user/due-only/',
+        displayName: 'Due Only',
+        color: '#D97706',
         components: ['VEVENT', 'VTODO', 'VJOURNAL'],
       },
       {

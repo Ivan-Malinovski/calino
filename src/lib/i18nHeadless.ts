@@ -61,6 +61,13 @@ const resourceLoaders: Record<Language, () => Promise<HeadlessResources>> = {
     ])
     return { common: common.default, errors: errors.default }
   },
+  zh: async () => {
+    const [common, errors] = await Promise.all([
+      import('@/locales/zh/common.json'),
+      import('@/locales/zh/errors.json'),
+    ])
+    return { common: common.default, errors: errors.default }
+  },
 }
 
 function readPersistedLanguage(): Language {

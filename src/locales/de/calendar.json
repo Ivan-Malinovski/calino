@@ -51,12 +51,16 @@
     },
     "agenda": {
       "emptyTitle": "Diesen Monat ist nichts geplant",
-      "emptyDescription": "Deine Agenda ist leer. Füge einen Termin hinzu."
+      "emptyDescription": "Deine Agenda ist leer. Füge einen Termin hinzu.",
+      "freeDays_one": "{{count}} Tag frei",
+      "freeDays_other": "{{count}} Tage frei"
     },
     "year": {
       "weekNumber": "Woche {{number}}"
     },
     "grid": {
+      "weekNumberHeader": "KW",
+      "weekNumber": "KW{{number}}",
       "openDayView": "{{date}} in Tagesansicht öffnen",
       "hasJournalEntriesFor": "Hat Journaleinträge für {{date}}",
       "viewJournalEntries": "Journaleinträge anzeigen",

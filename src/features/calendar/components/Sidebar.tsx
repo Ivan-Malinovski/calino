@@ -47,6 +47,7 @@ import { MiniTasksSection } from './MiniTasksSection'
 import { useTranslation } from 'react-i18next'
 import i18n from '@/lib/i18n'
 import { formatDisplayDate } from '@/lib/datetime'
+import { yearComesFirst } from '@/lib/datePatterns'
 import styles from './Sidebar.module.css'
 
 let hasAutoSyncedCalendars = false
@@ -586,7 +587,11 @@ export function Sidebar({
                 <ChevronLeft />
               </button>
               <div style={{ position: 'relative' }} ref={dropdownRef}>
-                <span className={styles.miniMonth}>
+                <span
+                  className={`${styles.miniMonth} ${
+                    yearComesFirst() ? styles.miniMonthYearFirst : ''
+                  }`}
+                >
                   <button onClick={handleMonthClick} className={styles.miniMonthButton}>
                     {formatDisplayDate(effectiveMiniDate, 'MMMM')}
                   </button>
@@ -606,7 +611,9 @@ export function Sidebar({
                     </div>
                   )}
                   <button onClick={handleYearClick} className={styles.miniMonthButton}>
-                    {format(effectiveMiniDate, 'yyyy')}
+                    {yearComesFirst()
+                      ? `${format(effectiveMiniDate, 'yyyy')}年`
+                      : format(effectiveMiniDate, 'yyyy')}
                   </button>
                   {showYearDropdown && (
                     <div className={`${styles.yearDropdown} ${styles.yearDropdownRight}`}>

@@ -2,10 +2,19 @@ import type { Plugin, ViteDevServer } from 'vite'
 
 const CORE = 'urn:ietf:params:jmap:core'
 const CALENDARS = 'urn:ietf:params:jmap:calendars'
+const CONTACTS = 'urn:ietf:params:jmap:contacts'
 const accountId = 'calendar-account'
 
+/** Stored ContactCards by id. Pass one to `jmapMockResponse` to enable the contacts capability. */
+export type JmapContactStore = Map<string, Record<string, unknown>>
+
 /** A small, stateless JMAP server. No backend substitutions: exercises the real transport. */
-export function jmapMockResponse(url: string, method: string, body = '') {
+export function jmapMockResponse(
+  url: string,
+  method: string,
+  body = '',
+  contacts?: JmapContactStore
+) {
   const parsed = new URL(url)
   const base = `${parsed.origin}/mock-jmap`
   const respond = (data: unknown, status = 200) => ({
@@ -18,16 +27,17 @@ export function jmapMockResponse(url: string, method: string, body = '') {
       capabilities: {
         [CORE]: { maxCallsInRequest: 16, maxObjectsInGet: 256, maxObjectsInSet: 256 },
         [CALENDARS]: {},
+        ...(contacts ? { [CONTACTS]: {} } : {}),
       },
       accounts: {
         [accountId]: {
           name: 'JMAP fixture',
           isPersonal: true,
           isReadOnly: false,
-          accountCapabilities: { [CALENDARS]: {} },
+          accountCapabilities: { [CALENDARS]: {}, ...(contacts ? { [CONTACTS]: {} } : {}) },
         },
       },
-      primaryAccounts: { [CALENDARS]: accountId },
+      primaryAccounts: { [CALENDARS]: accountId, ...(contacts ? { [CONTACTS]: accountId } : {}) },
       username: 'fixture-user',
       apiUrl: `${base}/api`,
       uploadUrl: `${base}/upload/{accountId}`,
@@ -99,6 +109,76 @@ export function jmapMockResponse(url: string, method: string, body = '') {
         },
         callId,
       ]
+    if (contacts && name === 'AddressBook/get')
+      return [
+        name,
+        {
+          accountId,
+          state: 'books-1',
+          notFound: [],
+          list: [
+            {
+              id: 'contacts',
+              name: 'JMAP Contacts',
+              isSubscribed: true,
+              myRights: { mayRead: true, mayWrite: true, mayShare: true, mayDelete: true },
+            },
+          ],
+        },
+        callId,
+      ]
+    if (contacts && name.startsWith('ContactCard/')) {
+      const state = `cards-${contacts.size}`
+      if (name === 'ContactCard/query') {
+        const ids = [...contacts.keys()]
+        return [
+          name,
+          {
+            accountId,
+            queryState: state,
+            canCalculateChanges: false,
+            position: 0,
+            ids,
+            total: ids.length,
+          },
+          callId,
+        ]
+      }
+      if (name === 'ContactCard/get') {
+        const wanted = (args.ids as string[] | null) ?? [...contacts.keys()]
+        const list = wanted.flatMap((id) => (contacts.has(id) ? [contacts.get(id)] : []))
+        return [name, { accountId, state, list, notFound: [] }, callId]
+      }
+      if (name === 'ContactCard/changes')
+        return [
+          name,
+          {
+            accountId,
+            oldState: args.sinceState,
+            newState: state,
+            hasMoreChanges: false,
+            created: [],
+            updated: [],
+            destroyed: [],
+          },
+          callId,
+        ]
+      if (name === 'ContactCard/set') {
+        const created: Record<string, { id: string }> = {}
+        for (const [key, card] of Object.entries(
+          (args.create ?? {}) as Record<string, Record<string, unknown>>
+        )) {
+          const id = `card-${contacts.size + 1}`
+          contacts.set(id, { ...card, id })
+          created[key] = { id }
+        }
+        return [
+          name,
+          { accountId, oldState: state, newState: `cards-${contacts.size}`, created },
+          callId,
+        ]
+      }
+    }
     return ['error', { type: 'unknownMethod' }, callId]
   })
   return respond({ sessionState: 'session-1', methodResponses })
