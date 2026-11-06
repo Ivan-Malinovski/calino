@@ -1420,7 +1420,9 @@ export function CalendarGrid(): JSX.Element {
                     data-component="calendar-grid-header"
                   >
                     {showGutter && (
-                      <div className={styles.weekNumHeader}>{showWeekNumbers ? 'W#' : ''}</div>
+                      <div className={styles.weekNumHeader}>
+                        {showWeekNumbers ? t('views.grid.weekNumberHeader') : ''}
+                      </div>
                     )}
                     {weekdays.map((day) => (
                       <div key={day} className={styles.weekday}>
@@ -1630,7 +1632,9 @@ export function CalendarGrid(): JSX.Element {
               data-component="calendar-grid-header"
             >
               {showGutter && (
-                <div className={styles.weekNumHeader}>{showWeekNumbers ? 'W#' : ''}</div>
+                <div className={styles.weekNumHeader}>
+                  {showWeekNumbers ? t('views.grid.weekNumberHeader') : ''}
+                </div>
               )}
               {weekdays.map((day) => (
                 <div key={day} className={styles.weekday}>

@@ -899,7 +899,7 @@ export function AgendaView({ embedded = false }: { embedded?: boolean } = {}): J
     const first = group.days[0]
     const last = group.days[group.days.length - 1]
     const freeDays = group.days.length - 1
-    const label = `${formatDisplayDate(first, 'EEE MMM d')} – ${formatDisplayDate(last, 'EEE MMM d')} · ${freeDays} day${freeDays === 1 ? '' : 's'} free`
+    const label = `${formatDisplayDate(first, 'EEE MMM d')} – ${formatDisplayDate(last, 'EEE MMM d')} · ${t('views.agenda.freeDays', { count: freeDays })}`
 
     return (
       <div className={styles.agendaSkip} key={`skip-${format(first, 'yyyy-MM-dd')}`}>

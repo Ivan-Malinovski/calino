@@ -1,0 +1,16 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Calino</string>
+    <string name="title_activity_main">Calino</string>
+    <string name="package_name">calino.malinov.ski</string>
+    <string name="custom_url_scheme">calino.malinov.ski</string>
+
+    <string name="shortcut_new_event_short">新建日程</string>
+    <string name="shortcut_new_event_long">创建新日程</string>
+    <string name="shortcut_new_task_short">新建任务</string>
+    <string name="shortcut_new_task_long">创建新任务</string>
+    <string name="shortcut_search_short">搜索</string>
+    <string name="shortcut_search_long">搜索 Calino</string>
+    <string name="shortcut_ai_photo_short">拍照导入</string>
+    <string name="shortcut_ai_photo_long">从照片创建日程</string>
+</resources>

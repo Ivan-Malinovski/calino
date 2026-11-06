@@ -82,6 +82,7 @@ describe('LANGUAGE_OPTIONS', () => {
       { value: 'fr', label: 'Français' },
       { value: 'it', label: 'Italiano' },
       { value: 'nl', label: 'Nederlands' },
+      { value: 'zh', label: '简体中文' },
     ])
   })
 })

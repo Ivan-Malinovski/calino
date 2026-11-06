@@ -1,0 +1,225 @@
+{
+  "undo": {
+    "eventDeleted": "日程已删除",
+    "taskDeleted": "任务已删除",
+    "journalDeleted": "日记已删除",
+    "contactDeleted": "联系人已删除"
+  },
+  "sync": {
+    "eventSyncRetry": "日程与 CalDAV 服务器同步失败，稍后会自动重试。",
+    "deletionSyncRetry": "删除操作同步失败，稍后会自动重试。",
+    "eventRestoreFailed": "恢复日程失败。",
+    "taskRestoreFailed": "恢复任务失败。",
+    "journalRestoreFailed": "恢复日记条目失败。",
+    "duplicateSyncRetry": "复制出的日程同步失败，稍后会自动重试。",
+    "genericSyncRetry": "与 CalDAV 服务器同步失败，稍后会自动重试。",
+    "deletionSyncRetryGeneric": "删除操作与 CalDAV 服务器同步失败，稍后会自动重试。",
+    "occurrenceDeleteFailed": "删除这一次日程失败，整个日程已保留。",
+    "seriesDeleteFailed": "删除本次及之后的所有日程失败，整个系列已保留。",
+    "settingsSaved": "设置已保存到服务器。",
+    "settingsSyncEnabled": "设置同步已开启。",
+    "settingsFoundEnabled": "已找到 Calino 设置，同步已开启。",
+    "settingsCalendarFoundEnabled": "已找到 Calino 设置日历，同步已开启。",
+    "settingsFoundEnabledAuto": "已找到 Calino 设置，同步已自动开启。",
+    "shortFailure": "{{subject}}失败：{{reason}}",
+    "subjectDefault": "同步"
+  },
+  "syncReason": {
+    "cors": "你的服务器阻止了这次连接（CORS）。",
+    "network": "连不上你的服务器。可能已离线，或阻止了 CORS。",
+    "timeout": "服务器响应超时。",
+    "auth": "身份验证失败。请检查用户名和密码。",
+    "forbidden": "服务器拒绝了这次修改。你可能没有这个日历的写入权限，或者服务器不接受这些数据。",
+    "quota": "服务器存储空间已满。请清理服务器空间后重试。",
+    "rateLimited": "服务器正在限流。请稍后再试。",
+    "notFound": "服务器上找不到该资源。",
+    "conflict": "这条内容在服务器上已被改动。请重新同步以获取较新的版本。",
+    "server": "服务器返回了错误。请查看服务器日志。"
+  },
+  "connection": {
+    "corsOrNetwork": "连不上服务器。请检查地址，也可能是服务器离线或阻止了跨域请求。",
+    "timeout": "服务器响应超时。",
+    "auth": "服务器拒绝了这个账户的凭据。",
+    "forbidden": "服务器拒绝了该请求。请确认你有这个日历的写入权限。",
+    "quota": "服务器存储空间已满。请清理服务器空间后重试。",
+    "rateLimited": "服务器正在限流。请稍后再试。",
+    "notFound": "服务器有响应，但该地址下没有内容。请检查 URL 路径。",
+    "server": "服务器返回了错误。请查看服务器日志。",
+    "badStatus": "服务器返回状态码 {{status}}",
+    "failedGeneric": "连接失败：{{message}}。这可能是 CORS 问题——服务器必须允许跨域请求。",
+    "urlHint": "{{domain}} 可以试试填：{{url}}",
+    "unknownError": "未知错误",
+    "fastmailAuthHint": "Fastmail 拒绝了这个凭据。Fastmail 的 CalDAV 需要应用专用密码，普通的登录密码不能用。请到 设置 → 隐私与安全 → 集成 → 新建应用密码（授予「Calendars (CalDAV)」权限），然后用邮箱地址作为用户名、用该密码登录。",
+    "jmapNoCalendars": "这个 JMAP 账户不支持日历。",
+    "jmapCors": "JMAP 服务器阻止了跨域请求（CORS）。请检查它的 CORS 设置，或使用代理。",
+    "jmapNetwork": "无法连接 JMAP 服务器。请检查地址和网络；缺少 CORS 响应头也会导致这个问题。",
+    "blockedHttp": "在当前页面下，Calino 无法连接纯 http:// 的服务器。该页面只允许 https:// 连接，所以请求在离开浏览器之前就被拦下了。请改用 https:// 地址、配置代理，或自建一个允许 http 的 Calino（CALINO_SELF_HOSTED=true）。"
+  },
+  "broken": {
+    "foundEvents_one": "发现 1 个日期无效的损坏日程。",
+    "foundEvents_other": "发现 {{count}} 个日期无效的损坏日程。",
+    "foundDuplicateUids_one": "发现 1 组在服务器上共用重复 ID 的日程。",
+    "foundDuplicateUids_other": "发现 {{count}} 组在服务器上共用重复 ID 的日程。",
+    "unreadableResources_one": "服务器上有 1 项内容无法读取，已保持原样。",
+    "unreadableResources_other": "服务器上有 {{count}} 项内容无法读取，已保持原样。"
+  },
+  "reminder": {
+    "allDay": "全天",
+    "startingToday": "今天开始",
+    "startingAt": "{{time}} 开始",
+    "startingTomorrow": "明天开始",
+    "startingTomorrowAt": "明天 {{time}} 开始",
+    "startingOn": "{{date}} 开始",
+    "startingOnAt": "{{date}} {{time}} 开始",
+    "snooze5m": "推迟 5 分钟",
+    "testNotificationTitle": "测试通知",
+    "testNotificationBody": "通知功能正常！现在是 {{time}}",
+    "dueToday": "今天到期",
+    "dueTomorrow": "明天到期",
+    "dueOn": "{{date}} 到期",
+    "dueAt": "{{time}} 到期",
+    "dueTomorrowAt": "明天 {{time}} 到期",
+    "dueOnAt": "{{date}} {{time}} 到期",
+    "overdueTasks_one": "{{count}} 个任务已逾期",
+    "overdueTasks_other": "{{count}} 个任务已逾期",
+    "overdueTasksBody": "打开 Calino 查看",
+    "overdueChannelName": "逾期任务"
+  },
+  "settingsSync": {
+    "notConfigured": "同步未正确配置",
+    "calendarNotFound": "找不到设置日历",
+    "accountNotFound": "找不到账户",
+    "credentialsNotFound": "找不到凭据",
+    "pullFailed": "拉取失败",
+    "pushFailed": "推送失败",
+    "noCalendarsFound": "没有找到日历",
+    "enableFailed": "开启同步失败",
+    "autoDiscoveryFailed": "自动发现失败",
+    "subject": "设置同步"
+  },
+  "pending": {
+    "event": "日程",
+    "thisEvent": "这个日程",
+    "staleEtagUpdateConflict": "无法保存「{{title}}」——排队期间它在服务器上已被改动。你的版本已保存在本地。",
+    "staleEtagDeleteConflict": "无法删除「{{title}}」——排队期间它在服务器上已被改动。日程仍保留在服务器上。",
+    "moveFailedWithCalendar": "无法把「{{title}}」移动到 {{calendar}}，它可能仍在原来的日历里。",
+    "moveFailedNoCalendar": "无法移动「{{title}}」，它可能仍在原来的日历里。",
+    "moveCleanupPending": "已移动「{{title}}」，但 {{calendar}} 里的旧副本暂时还删不掉，正在重试。",
+    "staleCopyWithCalendar": "无法从 {{calendar}} 移除已移动日程的旧副本。它可能会重复显示，请手动删除多余的那份。",
+    "staleCopyNoCalendar": "无法移除已移动日程的旧副本。它可能会重复显示，请手动删除多余的那份。"
+  },
+  "account": {
+    "couldNotConnect": "用这些设置无法连接"
+  },
+  "headless": {
+    "accountCredentialsMissing": "跳过账户 {{account}}：凭据已丢失",
+    "calendarFailed": "日历 {{calendar}} 失败：{{error}}",
+    "accountFailed": "账户 {{account}} 失败：{{error}}",
+    "noCalendarsFetched": "没有拉到任何日历，镜像保持原样",
+    "syncDone": "后台同步完成：{{accounts}} 个账户的 {{calendars}} 个日历，共 {{events}} 个日程"
+  },
+  "toast": {
+    "history": {
+      "undo": "撤销",
+      "redo": "重做"
+    },
+    "aiImport": {
+      "setupNeeded": "请先在设置里开启 AI 拍照导入",
+      "openSettings": "打开设置",
+      "noDetails": "这张照片里没找到日程信息。请拍清楚一些，或手动添加。",
+      "addManually": "手动添加",
+      "keyInvalid": "你的 AI API Key 似乎无效或已过期。",
+      "unreachable": "连不上 AI 服务商，请检查网络。",
+      "unreadable": "无法从这张照片中读取日程信息。",
+      "blankFallback": "{{message}} 改为打开一个空白日程。",
+      "cameraDenied": "相机权限被拒绝。请在安卓设置里开启后使用此功能。",
+      "cameraUnavailable": "无法访问相机或相册。",
+      "reviewEach_task": "请逐条确认并保存任务——这张照片里找到 {{total}} 个。",
+      "reviewEach_event": "请逐条确认并保存日程——这张照片里找到 {{total}} 个。",
+      "reviewEach_item": "请逐条确认并保存——这张照片里找到 {{total}} 项。",
+      "sharedFirstOnly": "只处理了第一张分享的图片——目前请一次分享一张。",
+      "sharedUnreadable": "无法读取分享的图片。"
+    },
+    "ics": {
+      "notIcs": "这个文件不是 .ics 日历文件",
+      "unreadable": "无法读取该文件"
+    },
+    "attachments": {
+      "tooLarge": "文件「{{name}}」超过 {{limit}}MB 上限",
+      "mayNotSync": "文件「{{name}}」大于 {{limit}}MB，可能无法正常同步",
+      "saveLocal": "附件保存到本地失败",
+      "readFailed": "读取 {{name}} 失败",
+      "readFailedGeneric": "读取文件失败",
+      "unavailable": "附件数据不可用，请重新打开该日程再试。"
+    },
+    "journal": {
+      "syncUpdateRetry": "更新同步失败，稍后会自动重试。",
+      "syncEntryRetry": "日记同步失败，稍后会自动重试。"
+    },
+    "sync": {
+      "failed": "同步失败",
+      "deleteSubject": "删除",
+      "retrying": "正在重试修改…",
+      "retrySent_one": "已发送 {{count}} 处修改",
+      "retrySent_other": "已发送 {{count}} 处修改",
+      "retryPartial": "已发送 {{succeeded}} 处，{{failed}} 处仍在等待",
+      "offlineWaiting": "离线中——恢复连接后会自动发送修改",
+      "waiting_one": "{{count}} 处修改等待中",
+      "waiting_other": "{{count}} 处修改等待中",
+      "waitingOffline_one": "{{count}} 处修改等待中——离线",
+      "waitingOffline_other": "{{count}} 处修改等待中——离线"
+    },
+    "notifications": {
+      "blocked": "通知已被拦截。请在浏览器设置里修改网站权限以启用提醒。",
+      "calendarBlocked": "日历访问被拦截。请在安卓应用设置里授权，才能把日程同步到设备日历。"
+    },
+    "tasks": {
+      "movedToday": "已移到今天",
+      "movedTomorrow": "已移到明天",
+      "movedTo": "已移到 {{date}}"
+    },
+    "contacts": {
+      "fallbackLabel": "联系人",
+      "rejected_create": "无法在服务器上创建「{{label}}」：{{reason}}",
+      "rejected_update": "无法在服务器上更新「{{label}}」：{{reason}}",
+      "rejected_delete": "无法在服务器上删除「{{label}}」：{{reason}}",
+      "conflict": "「{{name}}」发生冲突——已保留服务器上的版本",
+      "syncFailed": "通讯录同步失败：{{message}}"
+    },
+    "storage": {
+      "full": "存储空间已满，你的数据可能无法保存。",
+      "error": "存储出错，你的数据可能无法保存。"
+    },
+    "pendingDrop_create": "无法创建「{{title}}」——{{reason}}",
+    "pendingDrop_update": "无法保存「{{title}}」——{{reason}}",
+    "pendingDrop_delete": "无法删除「{{title}}」——{{reason}}",
+    "pendingDrop_move": "无法移动「{{title}}」——{{reason}}",
+    "pendingDrop_deleteHref": "无法移除「{{title}}」的旧副本——{{reason}}",
+    "pendingReason": {
+      "savedLocally": "你的修改已保存在本地。",
+      "staysOnServer": "日程仍保留在服务器上。",
+      "maybeOldCalendar": "日程可能仍在原来的日历里。",
+      "alreadyExists": "服务器上已存在，请检查是否重复。",
+      "duplicateUid": "这个日程的重复项已存在于服务器上。",
+      "invalidData": "服务器认为该日程数据对这个日历无效，已拒绝。",
+      "forbidden": "服务器拒绝了这次修改（403）。你可能没有这个日历的写入权限。",
+      "storageFull": "服务器存储空间已满（507）。",
+      "gone": "该日历或日程在服务器上已不存在。"
+    }
+  },
+  "ui": {
+    "carddav": {
+      "conflict": "联系人在服务器端已被修改，请刷新后重试。",
+      "permission": "你没有修改此联系人的权限。",
+      "sizeLimit": "联系人超出服务器的大小限制（{{max}} 字节）。",
+      "version": "服务器不接受本客户端能生成的任何 vCard 版本。"
+    },
+    "moveLostSource": "移动时丢失了源资源：{{message}}",
+    "dragSync": {
+      "event": "拖动的日程同步失败",
+      "task": "拖动的任务同步失败",
+      "item": "拖动的内容同步失败",
+      "hierarchy": "任务层级变更同步失败"
+    }
+  }
+}

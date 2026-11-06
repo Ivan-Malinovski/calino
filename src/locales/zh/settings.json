@@ -1,0 +1,927 @@
+{
+  "nav": {
+    "title": "设置",
+    "general": "通用",
+    "appearance": "外观",
+    "calendar": "日历",
+    "tasks": "任务",
+    "categories": "分类",
+    "notifications": "通知",
+    "sync": "同步",
+    "data": "数据",
+    "aiVision": "AI 拍照导入",
+    "backToCalendar": "返回日历",
+    "settingsCategories": "设置分类",
+    "searchPlaceholder": "搜索设置…",
+    "searchAriaLabel": "搜索设置",
+    "searchResults": "设置搜索结果",
+    "noSearchResults": "没有找到匹配的设置",
+    "clearSearch": "清除搜索"
+  },
+  "saved": "已保存",
+  "general": {
+    "title": "通用",
+    "homeTimezone": {
+      "label": "本地时区",
+      "desc": "日程按此时区显示和创建，选择「自动」则跟随浏览器。",
+      "ariaLabel": "本地时区",
+      "automatic": "自动（浏览器）",
+      "search": "搜索时区",
+      "noResults": "没有匹配的时区"
+    },
+    "dateFormat": {
+      "label": "日期格式",
+      "desc": "应用中日期的显示方式",
+      "ariaLabel": "日期格式",
+      "mmddyyyy": "MM/DD/YYYY（12/31/2024）",
+      "ddmmyyyy": "DD/MM/YYYY（31/12/2024）",
+      "yyyymmdd": "YYYY-MM-DD（2024-12-31）"
+    },
+    "mapProvider": {
+      "label": "地图服务",
+      "desc": "打开日程地点时使用的服务",
+      "ariaLabel": "地图服务",
+      "google": "Google 地图",
+      "apple": "Apple 地图",
+      "osm": "OpenStreetMap（OSM）",
+      "mapy": "mapy.com 地图",
+      "geo": "设备默认（geo:）"
+    },
+    "timeFormat": {
+      "label": "时间格式",
+      "desc": "以 12 小时制或 24 小时制显示时间",
+      "ariaLabel": "时间格式",
+      "12h": "12 小时制（下午 2:30）",
+      "24h": "24 小时制（14:30）"
+    },
+    "firstDayOfWeek": {
+      "label": "每周第一天",
+      "desc": "周视图和日视图的每周起始日",
+      "ariaLabel": "每周第一天"
+    },
+    "language": {
+      "label": "语言",
+      "desc": "界面显示语言",
+      "ariaLabel": "语言"
+    },
+    "journal": {
+      "label": "日记",
+      "desc": "在日历中的每一天记录自由格式的笔记",
+      "ariaLabel": "日记"
+    },
+    "contacts": {
+      "label": "通讯录",
+      "desc": "通过 CardDAV 同步管理通讯录",
+      "ariaLabel": "通讯录"
+    },
+    "haptics": {
+      "label": "触感反馈",
+      "desc": "点击、滑动和长按时振动。若感觉拖沓，可以关闭。",
+      "ariaLabel": "触感反馈"
+    },
+    "settingsSync": {
+      "groupLabel": "同步",
+      "label": "CalDAV 设置同步",
+      "descEnabled": "会自动拉取设置。如需手动保存改动，请使用下方按钮。",
+      "descDisabled": "启用后可通过 CalDAV 在多台设备间同步设置",
+      "syncing": "正在同步…",
+      "syncedAt": "已于 {{time}} 同步",
+      "disableAriaLabel": "关闭设置同步",
+      "enable": "启用",
+      "somethingWrong": "出了点问题"
+    },
+    "syncNow": {
+      "label": "立即同步",
+      "desc": "将本地设置保存到服务器",
+      "saving": "正在保存…",
+      "save": "保存"
+    },
+    "accountPicker": {
+      "title": "启用设置同步",
+      "description": "这会在你的 CalDAV 服务器上创建一个 <strong>Calino 设置</strong>日历，其中只有一个日程，用 JSON 数据保存你的偏好设置（主题、每周第一天等）。",
+      "descriptionSmall": "该日历在 Calino 侧栏中隐藏，但在其他 CalDAV 客户端中可能可见。它不影响你的其他日历，可随时在设置中删除。",
+      "chooseAccount": "选择要同步的账户：",
+      "settingUp": "正在设置…",
+      "cancel": "取消"
+    },
+    "disableSync": {
+      "title": "关闭设置同步？",
+      "description": "关闭后设置将不再跨设备同步。是否同时删除服务器上的设置文件？",
+      "keepFile": "保留文件",
+      "deleteAndDisable": "删除并关闭"
+    },
+    "syncError": {
+      "cors": "你的服务器阻止了连接，通常意味着未配置 CORS 响应头。请确认 CalDAV 服务器会发送这些响应头，并能响应 OPTIONS 请求：",
+      "corsHelp": "「同步」→ 你的账户 → <strong>诊断</strong> 会指出缺了哪一部分。可参阅 <docs>Baikal CORS 文档</docs>。",
+      "network": "无法连接你的 CalDAV 服务器。请检查网络连接，确认服务器在线——缺少 CORS 响应头时这里看到的现象完全一样，若服务器正常，可在「同步」中试试 <strong>诊断</strong>。",
+      "timeout": "CalDAV 服务器响应超时，可能负载过高，请稍后再试。",
+      "auth": "身份验证失败。请检查 CalDAV 用户名和密码。不少服务商要求使用专用密码，而不是账户密码。",
+      "forbidden": "服务器拒绝了此次修改。你可能没有该日历的写入权限，或服务器不接受这份数据。",
+      "quota": "服务器存储空间已满。请清理服务器空间后重试。",
+      "rateLimited": "服务器正在限制请求频率，请稍后再试。",
+      "notFound": "服务器上找不到设置日历，可能已被删除。请尝试关闭同步后重新启用。",
+      "conflict": "自上次同步以来，设置已在其他设备上被修改。请再次同步以获取较新的版本。",
+      "server": "CalDAV 服务器返回了错误。这属于服务器端问题，请查看服务器日志。"
+    }
+  },
+  "weekday": {
+    "sunday": "星期日",
+    "monday": "星期一",
+    "tuesday": "星期二",
+    "wednesday": "星期三",
+    "thursday": "星期四",
+    "friday": "星期五",
+    "saturday": "星期六"
+  },
+  "tasks": {
+    "title": "任务",
+    "display": "显示",
+    "showTaskCalendarLabels": {
+      "label": "在任务中显示日历名称",
+      "desc": "启用多个任务日历后，在任务的截止日期旁显示其所属日历。"
+    },
+    "showSidebarTaskCalendarLabels": {
+      "label": "在侧栏中显示日历名称",
+      "desc": "启用多个任务日历后，在悬停或用键盘聚焦时显示任务所属的日历。"
+    },
+    "hideCompletedTasks": {
+      "label": "隐藏已完成任务",
+      "desc": "不在日历网格中显示已完成的任务"
+    },
+    "reminders": "提醒",
+    "taskDueDateReminders": {
+      "label": "任务到期提醒",
+      "desc": "任务到期时通知：在截止时间提醒；仅有截止日期的任务则在 9:00 提醒"
+    },
+    "overdueTaskBadge": {
+      "label": "逾期任务角标",
+      "desc": "在应用图标上显示逾期任务的角标"
+    }
+  },
+  "calendar": {
+    "title": "日历",
+    "display": "显示",
+    "defaultView": {
+      "label": "默认视图",
+      "desc": "打开应用时显示的视图",
+      "ariaLabel": "默认视图",
+      "month": "月",
+      "week": "周",
+      "day": "日",
+      "agenda": "议程",
+      "todo": "任务"
+    },
+    "showWeekNumbers": {
+      "label": "显示周数",
+      "desc": "在每行左侧显示 ISO 周数",
+      "ariaLabel": "显示周数"
+    },
+    "showWeekNumbersInSidebar": {
+      "label": "在侧栏显示周数",
+      "desc": "在迷你日历的每行旁显示 ISO 周数",
+      "ariaLabel": "在侧栏显示周数"
+    },
+    "eventDensity": {
+      "label": "日程显示密度",
+      "desc": "网格中日程条目的紧凑程度",
+      "ariaLabel": "日程密度",
+      "notAvailable": "暂不可用",
+      "compact": "紧凑",
+      "comfortable": "舒适"
+    },
+    "agendaBelowMonth": {
+      "label": "在月视图下方分栏显示议程",
+      "desc": "在竖屏、较高的屏幕上，于月视图网格下方显示议程面板",
+      "ariaLabel": "在月视图下方分栏显示议程"
+    },
+    "secondaryTimezoneGroup": "第二时区",
+    "secondaryTimezoneEnabled": {
+      "label": "显示第二时区",
+      "desc": "在日视图和周视图的时间网格中额外显示一个时区",
+      "ariaLabel": "显示第二时区"
+    },
+    "secondaryTimezone": {
+      "label": "第二时区",
+      "desc": "选择与本地时间一并显示的时区",
+      "ariaLabel": "第二时区",
+      "presets": "常用时区",
+      "allTimezones": "全部时区"
+    },
+    "secondaryTimezoneLabel": {
+      "label": "自定义标签",
+      "desc": "可选的简短标签（如 NYC、总部，最多 8 个字符）",
+      "placeholder": "如 NYC",
+      "ariaLabel": "第二时区标签"
+    },
+    "gridBehaviour": "网格行为",
+    "compactRecurringEvents": {
+      "label": "紧凑显示重复日程",
+      "desc": "在月视图中以精简条目显示重复日程",
+      "ariaLabel": "紧凑显示重复日程"
+    },
+    "compressPastWeeks": {
+      "label": "压缩已过的周",
+      "desc": "降低已过去各行的行高",
+      "ariaLabel": "压缩已过的周"
+    },
+    "fadePastDays": {
+      "label": "淡化议程中已过的日期",
+      "desc": "让已过的日期略微变淡",
+      "ariaLabel": "淡化已过的日期",
+      "never": "从不",
+      "current": "当月",
+      "all": "全部"
+    },
+    "monthViewEventLimit": {
+      "label": "折叠前显示的日程数",
+      "desc": "每天显示多少个日程后折叠为“+N 更多”。自动模式会按日期单元格的空间尽量多显示，并随窗口尺寸调整。",
+      "ariaLabel": "折叠前显示的日程数",
+      "auto": "自动"
+    },
+    "newEventDefaults": "新日程默认值",
+    "defaultDuration": {
+      "label": "默认时长",
+      "desc": "点击某一天新建日程时的时长",
+      "ariaLabel": "默认时长",
+      "customAriaLabel": "自定义时长（分钟）",
+      "custom": "自定义…",
+      "unit": "分钟",
+      "15min": "15 分钟",
+      "30min": "30 分钟",
+      "1hour": "1 小时",
+      "1.5hours": "1.5 小时",
+      "2hours": "2 小时"
+    },
+    "defaultCalendar": {
+      "label": "默认日历",
+      "desc": "新日程会添加到哪个日历",
+      "ariaLabel": "默认日历"
+    },
+    "defaultReminder": {
+      "label": "默认提醒",
+      "desc": "新日程默认使用的提醒",
+      "ariaLabel": "默认提醒",
+      "none": "无",
+      "atTimeOfEvent": "日程开始时",
+      "5minBefore": "提前 5 分钟",
+      "15minBefore": "提前 15 分钟",
+      "30minBefore": "提前 30 分钟",
+      "1hourBefore": "提前 1 小时",
+      "1dayBefore": "提前 1 天",
+      "custom": "自定义…",
+      "customAriaLabel": "自定义默认提醒值",
+      "customUnitAriaLabel": "自定义默认提醒单位"
+    }
+  },
+  "conflict": {
+    "serverWins": "以服务器为准（默认）",
+    "localWins": "以本地为准",
+    "askMe": "询问我"
+  },
+  "theme": {
+    "title": "外观",
+    "appearance": {
+      "label": "外观",
+      "desc": "选择 Calino 的外观",
+      "light": "浅色",
+      "dark": "深色",
+      "system": "跟随系统"
+    },
+    "lightTheme": {
+      "label": "浅色主题",
+      "desc": "浅色模式下使用的配色"
+    },
+    "darkTheme": {
+      "label": "深色主题",
+      "desc": "深色模式下使用的配色"
+    },
+    "mochaAccent": {
+      "label": "Catppuccin 强调色",
+      "desc": "用于选中、聚焦和主要操作",
+      "ariaLabel": "Catppuccin 强调色",
+      "useAccent": "使用 {{name}} 强调色",
+      "blue": "蓝色",
+      "lavender": "薰衣草紫",
+      "mauve": "锦葵紫",
+      "pink": "粉色",
+      "teal": "青色",
+      "green": "绿色",
+      "peach": "蜜桃色"
+    },
+    "eventTint": {
+      "label": "日程色彩强度",
+      "desc": "日历颜色在日程上的显示程度。强度越高，越容易一眼区分不同日历。",
+      "ariaLabel": "日程色彩强度",
+      "subtle": "淡雅",
+      "balanced": "均衡",
+      "vivid": "鲜明"
+    },
+    "showEventIcons": {
+      "label": "日程图标",
+      "desc": "根据日程标题显示对应的图标（例如标题为 “Coffee” 时显示咖啡杯）",
+      "ariaLabel": "显示日程图标"
+    },
+    "fontSize": {
+      "label": "字号",
+      "desc": "调整整个应用中的文字大小",
+      "small": "小",
+      "default": "默认",
+      "large": "大",
+      "xlarge": "特大"
+    },
+    "adjustable": {
+      "headerLabel": "可调主题 · {{mode}}",
+      "desc": "实时调整当前配色。改动会自动保存在本机。",
+      "reset": "重置",
+      "previewLabel": "日程卡片预览",
+      "previewDesc": "看看这套配色在日历中的效果。",
+      "live": "实时",
+      "previewToday": "今天",
+      "previewDate": "8 月 23 日，星期二",
+      "previewEvent1Title": "设计评审",
+      "previewEvent1Meta": "10:00–11:00 · 会议室",
+      "previewEvent2Title": "与 Alex 午餐",
+      "previewEvent2Meta": "12:30–13:15 · Flora 咖啡馆",
+      "previewEvent3Title": "专注时间",
+      "previewEvent3Meta": "14:00–15:30",
+      "font": {
+        "label": "字体",
+        "desc": "界面使用的字体",
+        "ariaLabel": "主题字体",
+        "system": "系统无衬线体",
+        "serif": "Newsreader 衬线体",
+        "mono": "等宽字体"
+      },
+      "colors": {
+        "canvas": {
+          "label": "画布",
+          "desc": "主页面背景"
+        },
+        "panel": {
+          "label": "表面",
+          "desc": "卡片、对话框和面板"
+        },
+        "accent": {
+          "label": "强调色",
+          "desc": "操作、选中与聚焦"
+        },
+        "accentContrast": {
+          "label": "强调色文字",
+          "desc": "强调色填充上的文字"
+        },
+        "text": {
+          "label": "正文",
+          "desc": "主要的可读文字"
+        },
+        "mutedText": {
+          "label": "次要文字",
+          "desc": "辅助和弱化的文字"
+        },
+        "border": {
+          "label": "边框",
+          "desc": "分割线和输入框轮廓"
+        },
+        "colorAriaLabel": "{{label}} 颜色"
+      },
+      "cornerRadius": "圆角",
+      "cornerRadiusAriaLabel": "圆角",
+      "density": "密度",
+      "densityAriaLabel": "主题密度",
+      "shadowStrength": "阴影强度",
+      "shadowStrengthAriaLabel": "阴影强度",
+      "eventTint": "日程色彩",
+      "eventTintAriaLabel": "日程色彩强度",
+      "contrast": {
+        "ariaLabel": "对比度检查：{{details}}",
+        "textCanvas": "正文文字在画布上的对比度低于 WCAG AA。",
+        "textPanel": "正文文字在表面上的对比度低于 WCAG AA。",
+        "mutedTextCanvas": "次要文字在画布上的对比度低于 WCAG AA。",
+        "accentContrast": "强调色填充上的文字对比度低于 WCAG AA。",
+        "meetsAA": "配色符合 WCAG AA。",
+        "needsAttention": "对比度需要关注",
+        "looksGood": "对比度良好"
+      }
+    },
+    "categoryStyles": {
+      "title": "按分类设置样式",
+      "description": "根据日程的分类为其设置视觉样式。改动会自动保存。",
+      "reset": "恢复默认设置",
+      "newRule": "新建规则",
+      "disabled": "已停用",
+      "addRule": "添加规则",
+      "enabled": "已启用",
+      "categories": "匹配任意分类",
+      "matchHint": "用逗号分隔 · 名称需精确匹配 · 不区分大小写",
+      "style": "样式",
+      "lettering": "字体",
+      "accent": "强调色",
+      "earlier": "↑ 上移",
+      "later": "↓ 下移",
+      "remove": "移除",
+      "empty": "暂无规则。可以添加规则或恢复默认设置。",
+      "precedence": "匹配的规则会叠加。同一属性以较靠下的规则为准。除非规则改变了填充，否则日历颜色仍然可见。这些只是视觉样式，不会改变日程的状态或完成情况。",
+      "suggestions": "更多可尝试的样式",
+      "sample": "与 Alex 评审",
+      "noCategories": "暂无分类",
+      "treatments": {
+        "tentative": "铅笔 · 灰色、待定",
+        "important": "速写 · 手绘轮廓",
+        "focus": "安静 · 虚线边框",
+        "travel": "出行 · 斜线纹理",
+        "deadline": "标记 · 下划线",
+        "done": "完成 · 删除线"
+      },
+      "fonts": {
+        "inherit": "保持现有",
+        "hand": "手写体",
+        "standard": "标准"
+      }
+    }
+  },
+  "categories": {
+    "title": "分类",
+    "useCategoryColors": {
+      "label": "日程使用分类颜色",
+      "desc": "关闭后日程使用所属日历的颜色",
+      "ariaLabel": "日程使用分类颜色"
+    },
+    "keywords": {
+      "ariaLabel": "关键词",
+      "removeKeyword": "移除关键词 {{keyword}}",
+      "placeholder": "输入关键词，用逗号分隔",
+      "addAriaLabel": "添加关键词"
+    },
+    "color": {
+      "swatchAriaLabel": "颜色 {{color}}",
+      "customAriaLabel": "分类 {{name}} 的自定义颜色",
+      "customNewAriaLabel": "新分类的自定义颜色"
+    },
+    "editName": "分类名称",
+    "eventCount_one": "{{count}} 个日程",
+    "eventCount_other": "{{count}} 个日程",
+    "editAriaLabel": "编辑分类 {{name}}",
+    "delete": "删除",
+    "deleteAriaLabel": "删除分类 {{name}}",
+    "addForm": {
+      "namePlaceholder": "分类名称",
+      "nameAriaLabel": "新分类名称",
+      "add": "添加",
+      "cancel": "取消"
+    },
+    "addCategory": "添加分类",
+    "autoCategorize": {
+      "title": "自动分类",
+      "desc": "根据标题中的关键词自动为日程分配分类",
+      "selectCategory": "选择分类",
+      "selectCategoryAriaLabel": "选择分类",
+      "selectCategoryForNewRuleAriaLabel": "为新规则选择分类",
+      "save": "保存",
+      "cancel": "取消",
+      "edit": "编辑",
+      "delete": "删除",
+      "add": "添加",
+      "matchCount_one": "{{count}} 个匹配",
+      "matchCount_other": "{{count}} 个匹配",
+      "uncategorizedCount": "（{{count}} 个未分类）",
+      "countInCalendar": "{{name}} 中有 {{count}} 个",
+      "unknownCalendar": "未知",
+      "willMatch_one": "将匹配 {{count}} 个日程",
+      "willMatch_other": "将匹配 {{count}} 个日程",
+      "currentlyUncategorized": " （{{count}} 个当前未分类）",
+      "addRule": "添加自动分类规则",
+      "applyToExisting": "将规则应用到已有日程",
+      "applyToExistingDesc": "追溯性地为符合规则的已有日程分类"
+    }
+  },
+  "notifications": {
+    "title": "通知",
+    "events": "日程",
+    "eventReminders": {
+      "label": "日程提醒",
+      "desc": "在日程开始前收到通知",
+      "ariaLabel": "日程提醒"
+    },
+    "soundAlerts": {
+      "label": "声音提醒",
+      "desc": "日程即将开始时播放声音",
+      "ariaLabel": "声音提醒"
+    },
+    "deviceCalendar": "设备日历",
+    "calendarMirror": {
+      "label": "同步到 Android 日历（测试版）",
+      "ariaLabel": "同步到 Android 日历（测试版）",
+      "descOff": "把日程复制到设备日历，这样即使 Calino 已关闭，Android 也能送达提醒，小组件、Wear OS 和 Android Auto 也能看到这些日程。只读——不会向你的 CalDAV 服务器写回任何内容。",
+      "descActive": "Android 正在送达提醒。小组件、Wear OS 和 Android Auto 可以看到日程。",
+      "descNoCalendarApp": "日程已同步，但没有安装可发出提醒的日历应用——目前仍由 Calino 自己处理提醒。",
+      "descDenied": "日历访问权限不可用。请在 Android 应用设置中重新授予。",
+      "descFailed": "无法写入设备日历：{{error}}",
+      "descFailedNoDetail": "无法写入设备日历。",
+      "descSyncing": "正在同步…"
+    },
+    "calendarMirrorInfo": {
+      "label": "工作原理",
+      "desc": "会复制哪些内容、由谁送达提醒，以及测试版的注意事项",
+      "learnMore": "了解更多"
+    },
+    "calendarMirrorModal": {
+      "title": "同步到 Android 日历",
+      "intro": "Calino 会把日程复制到 Android 自带的日历数据库中——也就是日历小组件、Wear OS 手表和 Android Auto 读取的那一个。这些应用看不到 Calino 的存储，所以需要这一步才能让日程显示在其中。",
+      "reliabilityTitle": "为什么这样提醒更可靠",
+      "reliabilityP1": "Calino 单独运行时，只能在运行期间安排提醒。Android 会为日历中的日程安排提醒，无论 Calino 是否被打开；因此开启此功能后，由 Android 送达提醒，Calino 不再重复发送——同一个日程不会收到两条通知。",
+      "reliabilityP2": "这需要安装一个日历应用才能真正发出通知。如果没有，Calino 会在上方提示，并继续自行处理提醒。",
+      "oneWayTitle": "只单向同步",
+      "oneWayItem1": "镜像的日历是只读的。写入 CalDAV 服务器的始终只有 Calino，你在其他日历应用中的任何操作都不会回传。",
+      "oneWayItem2": "只复制你设为可见的日历。",
+      "oneWayItem3": "关闭此功能会再次删除镜像的日历，其他日历不受影响。",
+      "stayingUpToDateTitle": "保持最新",
+      "stayingUpToDateP1": "Calino 大约每小时在后台检查一次服务器，因此在其他设备上新加的日程也能到达手机并提醒你，即使此后没再打开过 Calino。不会新增任何发送目的地——用的仍是应用原本与你自己的服务器之间的连接。",
+      "betaTitle": "为什么还是测试版",
+      "betaP1": "后台检查受手机电池策略的影响。小米、三星、OPPO、一加和华为设备尤其会激进地冻结后台应用，并会悄悄跳过检查。如果日程看起来没有更新，请在 Android 的电池设置中把 Calino 设为<strong>无限制</strong>。",
+      "betaP2": "如果镜像的日历没有出现在你的日历应用中，通常只是被隐藏了，而不是丢失——新日历在该应用自己的日历显示列表中常常默认未勾选。"
+    },
+    "test": {
+      "label": "测试通知",
+      "descDefault": "点击以启用通知并进行测试",
+      "descDenied": "通知已在浏览器设置中被阻止",
+      "descReady": "发送一条测试通知",
+      "enableAndTest": "启用并测试",
+      "sendTest": "发送测试"
+    },
+    "permissionDeniedToast": "通知已被阻止。请在浏览器设置中更新网站权限，以启用提醒。",
+    "calendarPermissionDeniedToast": "日历访问权限已被阻止。请在 Android 应用设置中授予权限，以便将日程同步到设备日历。"
+  },
+  "caldav": {
+    "title": "同步",
+    "connectedAccounts": "已连接的账户",
+    "test": "测试",
+    "testAriaLabel": "测试 {{name}} 的连接",
+    "diagnose": "诊断",
+    "diagnoseAriaLabel": "对 {{name}} 运行诊断",
+    "edit": "编辑",
+    "editAriaLabel": "编辑 {{name}}",
+    "disconnect": "断开连接",
+    "disconnectAriaLabel": "断开 {{name}}",
+    "testing": "正在测试…",
+    "connectionOk": "连接正常",
+    "connectionFailed": "连接失败",
+    "failedWithMessage": "失败：{{message}}",
+    "syncedOn": "已同步 · {{date}}",
+    "connected": "已连接",
+    "addAccount": "添加日历账户",
+    "calendarSubscriptions": "日历订阅",
+    "syncNow": "立即同步",
+    "syncing": "正在同步…",
+    "syncAriaLabel": "立即同步 {{name}}",
+    "remove": "移除",
+    "removeAriaLabel": "移除 {{name}}",
+    "notYetSynced": "尚未同步",
+    "subscribe": "订阅日历（.ics）",
+    "confirmRemoveSubscription": "移除该日历订阅？其日程将从本地删除。",
+    "confirmRemoveAccount": "确定要移除该账户吗？日历数据会保留在本地。",
+    "credentialsNotFound": "未找到凭证",
+    "accountProtocol": "账户协议"
+  },
+  "data": {
+    "webmcp": {
+      "label": "浏览器 AI 访问（WebMCP，实验性）",
+      "desc": "允许浏览器 AI 代理读取日历名称和可见的日程摘要、打开日程，并准备草稿供你查看后保存。结果可能会发送给该代理的 AI 服务商。仅对当前浏览器生效。",
+      "unavailable": "此页面不支持 WebMCP API。请在浏览器中启用后重新启动，或改用支持 WebMCP 的浏览器。"
+    },
+    "title": "数据",
+    "importExport": "导入与导出",
+    "exportCalendar": {
+      "label": "导出日历",
+      "desc": "将全部日历或其中某一个的日程下载为标准 .ics 文件",
+      "exporting": "正在导出…",
+      "export": "导出 .ics"
+    },
+    "importCalendar": {
+      "label": "导入日历",
+      "desc": "从 .ics 或 .json 文件添加日程",
+      "importing": "正在导入…",
+      "chooseFile": "选择文件…"
+    },
+    "importedEvents_one": "已导入 {{count}} 个日程",
+    "importedEvents_other": "已导入 {{count}} 个日程",
+    "noEventsInJson": "JSON 文件中没有找到日程",
+    "importFailed": "导入文件失败，请检查文件格式。",
+    "contacts": "通讯录",
+    "exportContacts": {
+      "label": "导出通讯录",
+      "desc": "将所有联系人下载为标准 .vcf 文件",
+      "export": "导出 .vcf"
+    },
+    "importContacts": {
+      "label": "导入通讯录",
+      "desc": "从 .vcf 文件添加联系人",
+      "chooseFile": "选择文件…"
+    },
+    "mergeDuplicates": {
+      "label": "合并重复项",
+      "desc": "查找并合并邮箱、电话或姓名相同的联系人",
+      "merge": "合并…"
+    },
+    "noContactsInFile": "文件中没有找到联系人",
+    "failedToParseVCard": "解析 vCard 文件失败",
+    "noContactsToExport": "没有可导出的联系人",
+    "exportedContacts_one": "已导出 {{count}} 位联系人",
+    "exportedContacts_other": "已导出 {{count}} 位联系人",
+    "dataIssues": "数据问题",
+    "noIssues": "无效或损坏的日程（例如开始日期晚于结束日期）会显示在这里，方便你修复或删除。",
+    "brokenEventsIntro": "这些日程的开始日期晚于结束日期，无法显示。你可以交换日期来修复，或直接删除。",
+    "untitledEvent": "无标题日程",
+    "start": "开始：{{date}}",
+    "end": "结束：{{date}}",
+    "fix": "修复",
+    "delete": "删除",
+    "fixAll": "全部修复（{{count}}）",
+    "deleteAll": "全部删除",
+    "duplicateUidIntro": "这些日程在服务器上共用同一个唯一 ID（UID），却作为独立条目存储。Calino 每一组只能显示一个——其余的被隐藏，以保证日历稳定。这一般是其他应用批量复制造成的。要修复，请在服务器上为每个日程设置唯一的 UID，然后重新同步。",
+    "duplicateUid": "重复的 UID：{{uid}}",
+    "kept": "已保留",
+    "hidden": "已隐藏",
+    "deleting": "正在删除…",
+    "dismiss": "忽略",
+    "dangerZone": "危险区域",
+    "deleteAllEvents": {
+      "label": "删除本地日程",
+      "desc": "仅从本设备移除所选日历中的日程。CalDAV 服务器上的日程不会被删除，下次同步时可能会重新出现。",
+      "confirm": "删除本设备上存储的所有日程？服务器上的日程不会被删除，下次同步后可能重新出现。此操作无法撤销。",
+      "action": "删除本地日程",
+      "confirmCalendar": "从本设备删除“{{name}}”中的所有日程？服务器上的日程不会被删除，下次同步后可能重新出现。此操作无法撤销。"
+    },
+    "resync": {
+      "group": "同步",
+      "label": "从服务器重新同步",
+      "desc": "忘掉 Calino 已同步的内容，重新从服务器下载日历和通讯录。账户、密码和设置会保留。如果发现数据过时，可以用这一项。",
+      "confirm": "从服务器重新同步所有内容？账户和设置会保留，本设备上尚未同步的改动仍会上传。仅存在于本设备的日程和联系人不会被删除。",
+      "action": "重新同步",
+      "running": "正在重新同步…",
+      "done": "重新同步完成",
+      "failed": "重新同步完成，但有错误。请检查网络连接后重试。"
+    },
+    "resetApp": {
+      "label": "在本设备上重置 Calino",
+      "desc": "清除本设备上的所有设置、已连接账户和本地数据，从头开始。服务器上的日历和日程不受影响。仅存在于 Calino 中（未同步到任何地方）的日程会丢失。",
+      "confirm": "在本设备上重置 Calino？这会清除所有本地数据、设置和已连接的账户。服务器上的日历和日程不会被删除，但仅存在于 Calino 中的日程会丢失。此操作无法撤销。",
+      "action": "重置本设备"
+    },
+    "duplicateDeleted": "重复日程已删除",
+    "duplicateDeleteFailed": "删除日程失败，请重试。",
+    "allCalendars": "所有日历",
+    "calendarPickerLabel": "日历",
+    "purgeCalendar": {
+      "label": "删除某个日历中的全部日程",
+      "desc": "永久删除某个日历中的全部日程，包括 CalDAV 服务器上的。此操作无法撤销。",
+      "placeholder": "选择日历…",
+      "action": "全部删除…",
+      "done_one": "已从“{{name}}”删除 {{count}} 个日程",
+      "done_other": "已从“{{name}}”删除 {{count}} 个日程",
+      "partial": "已从“{{name}}”删除 {{deleted}} 个日程；{{failed}} 个无法从服务器删除，将稍后重试",
+      "dialog": {
+        "title": "删除全部日程",
+        "message": "即将删除 <strong>“{{calendarName}}”</strong> 中的全部日程。日历本身会保留。",
+        "warningRemote_one": "这将从 Calino 和服务器上永久删除 <strong>{{count}} 个日程</strong>。此操作无法撤销。",
+        "warningRemote_other": "这将从 Calino 和服务器上永久删除 <strong>{{count}} 个日程</strong>。此操作无法撤销。",
+        "warningLocal_one": "这将从 Calino 中永久删除 <strong>{{count}} 个日程</strong>。此操作无法撤销。",
+        "warningLocal_other": "这将从 Calino 中永久删除 <strong>{{count}} 个日程</strong>。此操作无法撤销。",
+        "typeToConfirm": "输入日历名称以确认：",
+        "confirm": "删除全部日程",
+        "deleting": "正在删除…"
+      }
+    }
+  },
+  "aiVision": {
+    "title": "AI 拍照导入",
+    "intro": "使用你自己的 API 密钥，从照片自动填写日程详情。仅限在 Android 上新建日程时使用。",
+    "androidOnly": "此功能仅在 Android 应用中可用。",
+    "provider": {
+      "groupLabel": "服务商",
+      "label": "服务商",
+      "desc": "将照片发送到哪个视觉 AI 服务",
+      "ariaLabel": "AI 服务商",
+      "anthropic": "Anthropic（Claude）",
+      "openai": "OpenAI（GPT）",
+      "custom": "自定义（兼容 OpenAI）"
+    },
+    "baseUrl": {
+      "label": "接口地址",
+      "descCustom": "完整的、兼容 OpenAI 或 Anthropic 的 API 根地址，需包含 /v1——会完全按输入内容使用。如果对方使用 Anthropic 的 API，请在路径中加上 /anthropic。",
+      "descPreset": "请求会发送到这里",
+      "placeholder": "例如 https://api.example.com/v1",
+      "ariaLabel": "接口地址"
+    },
+    "apiKey": {
+      "label": "API 密钥",
+      "desc": "仅在本设备上加密保存",
+      "placeholderSaved": "••••••••••••••••",
+      "placeholderEmpty": "输入 API 密钥",
+      "ariaLabel": "API 密钥",
+      "showAriaLabel": "显示 API 密钥",
+      "hideAriaLabel": "隐藏 API 密钥",
+      "saved": "密钥已保存",
+      "clear": "清除",
+      "noKeySaved": "尚未保存 API 密钥。"
+    },
+    "model": {
+      "label": "模型",
+      "descError": "无法获取模型列表，请手动输入模型 ID。",
+      "descReady": "用于读取照片的、具备视觉能力的模型",
+      "placeholder": "模型 ID",
+      "idAriaLabel": "模型 ID",
+      "ariaLabel": "模型",
+      "refreshAriaLabel": "刷新模型列表"
+    },
+    "test": {
+      "label": "测试连接",
+      "desc": "验证密钥是否有效、模型能否读取图像",
+      "testing": "正在测试…",
+      "ok": "连接正常——支持视觉能力",
+      "warnDefault": "密钥有效，但该模型似乎不支持图像",
+      "failed": "失败：{{message}}",
+      "failedGeneric": "连接失败",
+      "button": "测试连接",
+      "buttonTesting": "正在测试…"
+    },
+    "lastVerified": {
+      "capable": "上次验证于 {{when}}——支持视觉能力",
+      "maybeNotCapable": "上次验证于 {{when}}——模型可能不支持图像"
+    }
+  },
+  "privacy": {
+    "back": "← 返回",
+    "title": "隐私政策",
+    "lastUpdated": "最后更新：2026 年 7 月",
+    "section1": {
+      "heading": "1. 你的数据保存在你的设备上",
+      "body": "Calino 是一款本地优先的日历应用。你的所有日历日程、设置和偏好都通过 IndexedDB 和 localStorage 保存在浏览器本地。我们无法访问你的个人数据。"
+    },
+    "section2": {
+      "heading": "2. CalDAV 同步（可选）",
+      "intro": "Calino 可以与你自行配置的 CalDAV 服务器（如 Nextcloud、ownCloud 或其他兼容 CalDAV 的服务）同步。添加 CalDAV 账户时：",
+      "item1": "你的凭证（用户名/密码）仅保存在浏览器的 localStorage 中",
+      "item2": "数据在你的浏览器与 CalDAV 服务器之间直接传输",
+      "item3": "我们不会在任何外部服务器上看到或存储你的凭证"
+    },
+    "section3": {
+      "heading": "3. CORS 代理（可选）",
+      "intro": "如果你的 CalDAV 服务器不支持 CORS，可以选择使用 CORS 代理来实现浏览器访问。",
+      "hostedProxyIntro": "我们在 {{proxy}} 提供了一个公共 CORS 代理。如果使用这个选项：",
+      "hostedProxyLabel": "Calino 托管的代理（proxy.calino.io）：",
+      "item1": "我们可以看到你的 IP 地址、所在国家，以及每次请求的完整 URL（视你的 CalDAV 服务器而定，其中有时会包含账户路径的一部分）",
+      "item2": "我们<strong>无法</strong>看到你的密码或日历日程数据",
+      "item3": "凭证通过 Authorization 请求头发送（不会记录日志）",
+      "item4": "包含日历数据的请求/响应正文不会被记录",
+      "thirdPartyLabel": "第三方或自建代理：",
+      "thirdPartyBody": "原理相同——代理运营方能看到连接元数据，但看不到你的凭证或日历内容。",
+      "maxPrivacy": "为最大限度地保护隐私，建议直接在 CalDAV 服务器上添加 CORS 响应头，而不要使用代理。"
+    },
+    "section4": {
+      "heading": "4. Cookie 与本地存储",
+      "intro": "Calino 使用 localStorage 存储：",
+      "item1": "你的偏好和设置",
+      "item2": "CalDAV 账户凭证，并用应用内置的密钥做了混淆处理。这可以防止 localStorage 被随意查看（例如其他网站或扩展误访问），但对于同时能拿到应用源码和浏览器存储的人来说，并不算强加密。",
+      "outro": "我们不使用跟踪 Cookie、分析工具或收集个人信息的第三方服务。"
+    },
+    "section5": {
+      "heading": "5. 无需账户",
+      "body": "Calino 无需注册或账户，你可以立即开始使用，无需提供任何个人信息。"
+    },
+    "section6": {
+      "heading": "6. 联系我们",
+      "body": "如对本隐私政策有疑问，请联系："
+    }
+  },
+  "masterPassword": {
+    "overlayAriaLabel": "解锁 CalDAV 账户",
+    "title": "解锁 CalDAV 账户",
+    "subtitle": "输入主密码以连接预配置的账户。",
+    "label": "主密码",
+    "placeholder": "输入主密码",
+    "unlock": "解锁",
+    "wait": "请等待 {{seconds}} 秒",
+    "tooManyAttempts": "尝试次数过多，请 1 分钟后再试。",
+    "wrongPassword_one": "密码错误，还可尝试 {{count}} 次。",
+    "wrongPassword_other": "密码错误，还可尝试 {{count}} 次。"
+  },
+  "diagnostics": {
+    "runDiagnostics": "运行诊断",
+    "runAgain": "重新运行",
+    "running": "正在运行…",
+    "runWithWriteTest": "带写入测试运行",
+    "runWithWriteTestTitle": "会在你的服务器上创建一个临时日程，随后将其删除",
+    "copyReport": "复制报告",
+    "copied": "已复制",
+    "note": "写入测试会在你的服务器上创建一个临时日程，并立即删除；其余项目只读取数据。",
+    "inferred": "推断",
+    "inferredTitle": "浏览器会隐藏相关响应头，因此这一项是根据服务器的行为推断出来的。",
+    "howToFix": "如何修复",
+    "status": {
+      "pass": "通过",
+      "fail": "未通过",
+      "warn": "警告",
+      "skipped": "已跳过",
+      "unknown": "未知"
+    },
+    "summary": {
+      "ok": "各项检查均正常。",
+      "degraded": "同步可以使用，但服务器配置还有优化空间。",
+      "broken": "下面的检查发现了问题。打开未通过的检查，查看需要修改什么。",
+      "broken_page": "连接是被当前页面阻止的，而不是你的服务器。打开未通过的检查查看可选方案。",
+      "broken_credentials": "服务器有响应，但拒绝了用户名或密码。"
+    },
+    "corsNote": " 标为“推断”的检查无法直接读取——浏览器不会把服务器的 CORS 响应头暴露给 JavaScript。"
+  },
+  "ui": {
+    "aiVision": {
+      "hintCheckKey": "请再次核对 API 密钥和接口地址。",
+      "emptyReply": "模型对测试提示返回了空响应。",
+      "hintReasoning": "如果这是推理模型，可能需要比本应用允许值更高的 token 上限——若问题依旧，请换用非推理模型。",
+      "hintNoVision": "该模型有响应，但似乎不支持图像理解。请选择支持视觉的模型。",
+      "err": {
+        "auth": "身份验证失败（{{status}}）——请检查 API 密钥是否正确。",
+        "authAnthropic": "身份验证失败（{{status}}）——请检查 Anthropic API 密钥是否正确。",
+        "failed": "请求失败（{{status}}）：{{message}}",
+        "failedAnthropic": "Anthropic 请求失败（{{status}}）：{{message}}",
+        "failedNoMessage": "请求失败，状态码 {{status}}",
+        "failedNoMessageAnthropic": "Anthropic 请求失败，状态码 {{status}}",
+        "noText": "响应中没有文本内容",
+        "noTextAnthropic": "Anthropic 响应中没有文本内容"
+      }
+    },
+    "setup": {
+      "title": "Calino 设置",
+      "subtitle": "为你的自托管 Calino 实例生成配置文件。",
+      "stepAccounts": "账户",
+      "stepPassword": "密码",
+      "stepDownload": "下载",
+      "remove": "移除 {{name}}",
+      "displayName": "显示名称",
+      "optional": "（可选）",
+      "displayNamePlaceholder": "例如：个人、工作",
+      "serverUrl": "服务器地址",
+      "username": "用户名",
+      "password": "密码",
+      "connectionSuccessful": "连接成功",
+      "diagnose": "诊断连接",
+      "testing": "正在测试…",
+      "testConnection": "测试连接",
+      "addAccount": "添加账户",
+      "subscriptionsHeading": "日历订阅（.ics）",
+      "name": "名称",
+      "namePlaceholder": "例如：节假日",
+      "calendarUrl": "日历地址",
+      "refreshInterval": "刷新间隔（分钟）",
+      "proxyOptional": "代理地址（可选）",
+      "proxyHint": "仅当日历主机不允许跨域请求时才需要。",
+      "addSubscription": "添加订阅",
+      "next": "下一步 →",
+      "masterPassword": "主密码",
+      "masterPlaceholder": "设置一个强密码",
+      "masterHint": "该密码将用于在 Calino 中解锁你的日历。",
+      "confirmPassword": "确认密码",
+      "confirmPlaceholder": "再次输入",
+      "back": "← 返回",
+      "encrypting": "正在加密…",
+      "generate": "生成配置",
+      "nextSteps": "后续步骤",
+      "step1": "将 <code>calino.config.json</code> 放在项目根目录",
+      "step2": "重新构建：<code>docker compose up -d --build</code>",
+      "step3": "打开 Calino 并输入主密码",
+      "rebuildWarning": "⚠️ 配置在构建时会打包进 JS 包中，必须重新构建才能让改动生效。",
+      "startOver": "← 重新开始",
+      "downloadAgain": "再次下载",
+      "done": "完成 →",
+      "passwordsMismatch": "两次输入的密码不一致。",
+      "passwordTooShort": "密码至少需要 6 个字符。",
+      "encryptionFailed": "加密失败。"
+    },
+    "categories": {
+      "unknown": "未知",
+      "eventCount_one": "{{count}} 个日程",
+      "eventCount_other": "{{count}} 个日程",
+      "matches_one": "{{count}} 个匹配",
+      "matches_other": "{{count}} 个匹配",
+      "uncategorized": "（{{count}} 个未分类）",
+      "inCalendar": "{{name}} 中有 {{count}} 个",
+      "willMatch_one": "将匹配 {{count}} 个日程",
+      "willMatch_other": "将匹配 {{count}} 个日程",
+      "currentlyUncategorized": "（{{count}} 个当前未分类）"
+    },
+    "data": {
+      "untitledEvent": "无标题日程",
+      "start": "开始：{{date}}",
+      "end": "结束：{{date}}",
+      "fix": "修复",
+      "delete": "删除",
+      "fixAll": "全部修复（{{count}}）",
+      "deleteAll": "全部删除",
+      "duplicateIntro": "这些日程在服务器上共用同一个唯一 ID（UID），却作为独立条目存储。Calino 每一组只能显示一个——其余的被隐藏，以保证日历稳定。这一般是其他应用批量复制造成的。要修复，请在服务器上为每个日程设置唯一的 UID，然后重新同步。",
+      "duplicateUid": "重复的 UID：{{uid}}",
+      "kept": "已保留",
+      "hidden": "已隐藏",
+      "deleting": "正在删除…",
+      "dismiss": "忽略"
+    }
+  }
+}

@@ -88,10 +88,11 @@ interface TaskGroup {
   tasks: TaskWithColor[]
 }
 
-const PRIORITY_LABELS: Record<number, string> = {
-  1: 'High',
-  2: 'Medium',
-  3: 'Low',
+/** Translation keys for the priority badge; the CSS uppercases the label. */
+const PRIORITY_LABEL_KEYS: Record<number, string> = {
+  1: 'ui.task.priority.high',
+  2: 'ui.task.priority.medium',
+  3: 'ui.task.priority.low',
 }
 
 // Sentinel used internally by handleTaskDragEnd for "not dropped onto a
@@ -1077,7 +1078,7 @@ export function TodoView(): JSX.Element {
               className={`${styles.priority} ${getPriorityClass(task.priority)}`}
               data-component="task-priority-badge"
             >
-              {PRIORITY_LABELS[task.priority]}
+              {t(PRIORITY_LABEL_KEYS[task.priority]!)}
             </span>
           )}
         </>

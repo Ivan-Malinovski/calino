@@ -1212,7 +1212,7 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
               </div>
             ) : (
               <div className={styles.weekNumberStack}>
-                <span>{`W${weekNumber}`}</span>
+                <span>{t('views.grid.weekNumber', { number: weekNumber })}</span>
                 <HomeZoneLabel date={displayDate} className={styles.homeZoneLabel} />
               </div>
             )}
@@ -1428,7 +1428,9 @@ export function WeekView({ dayCount = 7 }: { dayCount?: number } = {}): JSX.Elem
               </div>
             ) : (
               <div className={styles.weekNumberStack}>
-                {dayCount === 7 && <span>{`W${weekNumber}`}</span>}
+                {dayCount === 7 && (
+                  <span>{t('views.grid.weekNumber', { number: weekNumber })}</span>
+                )}
                 <HomeZoneLabel date={displayDate} className={styles.homeZoneLabel} />
               </div>
             )}
