@@ -5,6 +5,7 @@
     "contactCount_one": "{{count}} 位联系人",
     "contactCount_other": "{{count}} 位联系人",
     "newContact": "+ 新建",
+    "noWritableAddressBook": "没有可写入的通讯录",
     "allAddressBooks": "所有通讯录",
     "filterByTag": "按标签筛选", "allTags": "全部", "allTagsLabel": "所有标签", "tagsMore": "{{tag}} +{{count}}", "clearTagFilter": "清除标签筛选",
     "noMatches": "没有匹配项",
@@ -26,6 +27,7 @@
     "yearsOld_other": "{{count}} 岁",
     "onCalendar": "已在日历中",
     "addToCalendar": "添加到日历",
+    "readOnlyAddressBook": "{{name}}（只读）",
     "field": {
       "email": "邮箱",
       "phone": "电话",

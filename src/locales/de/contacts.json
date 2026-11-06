@@ -5,6 +5,7 @@
     "contactCount_one": "{{count}} Kontakt",
     "contactCount_other": "{{count}} Kontakte",
     "newContact": "+ Neu",
+    "noWritableAddressBook": "Kein Adressbuch, in das du schreiben kannst",
     "allAddressBooks": "Alle Adressbücher",
     "filterByTag": "Nach Tag filtern", "allTags": "Alle", "allTagsLabel": "Alle Tags", "tagsMore": "{{tag}} +{{count}}", "clearTagFilter": "Tag-Filter zurücksetzen",
     "noMatches": "Keine Treffer",
@@ -13,7 +14,7 @@
     "syncToSeeContacts": "Synchronisiere dein CardDAV-Konto, um hier Kontakte zu sehen."
   },
   "detail": {
-    "unknownContact": "Unbekannter Kontakt", "sendEmail": "E-Mail senden", "editContact": "Kontakt bearbeiten", "deleteContact": "Kontakt löschen", "clickAgainToConfirm": "Zum Bestätigen erneut klicken", "confirmQuestion": "Bestätigen?", "today": "(heute!)", "inDays_one": "(in {{count}} Tag)", "inDays_other": "(in {{count}} Tagen)", "yearsOld_one": "{{count}} Jahr alt", "yearsOld_other": "{{count}} Jahre alt", "onCalendar": "Im Kalender", "addToCalendar": "Zum Kalender hinzufügen",
+    "unknownContact": "Unbekannter Kontakt", "sendEmail": "E-Mail senden", "editContact": "Kontakt bearbeiten", "deleteContact": "Kontakt löschen", "clickAgainToConfirm": "Zum Bestätigen erneut klicken", "confirmQuestion": "Bestätigen?", "today": "(heute!)", "inDays_one": "(in {{count}} Tag)", "inDays_other": "(in {{count}} Tagen)", "yearsOld_one": "{{count}} Jahr alt", "yearsOld_other": "{{count}} Jahre alt", "onCalendar": "Im Kalender", "addToCalendar": "Zum Kalender hinzufügen", "readOnlyAddressBook": "{{name}} (schreibgeschützt)",
     "field": { "email": "E-MAIL", "phone": "TELEFON", "url": "URL", "im": "IM", "address": "ADRESSE", "language_one": "SPRACHE", "language_other": "SPRACHEN", "related": "VERKNÜPFT", "members": "MITGLIEDER", "tags": "TAGS", "xmlData": "XML-DATEN", "notes": "NOTIZEN", "birthday": "GEBURTSTAG", "anniversary": "JAHRESTAG" },
     "type": { "home": "Privat", "work": "Arbeit", "mobile": "Mobil", "fax": "Fax", "other": "Andere", "preferred": "Bevorzugt" },
     "relatedType": { "friend": "Freund/in", "coworker": "Kolleg/in", "family": "Familie", "child": "Kind", "spouse": "Ehepartner/in", "agent": "Vertretung", "emergency": "Notfall", "other": "Andere" }

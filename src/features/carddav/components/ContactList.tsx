@@ -424,10 +424,16 @@ function ContactListSkeleton(): JSX.Element {
 
 interface ContactListProps {
   onNewContact?: () => void
+  /** Every address book is read-only: "+ New" is greyed out and says why. */
+  newContactDisabled?: boolean
   loading?: boolean
 }
 
-export function ContactList({ onNewContact, loading }: ContactListProps = {}): JSX.Element {
+export function ContactList({
+  onNewContact,
+  newContactDisabled = false,
+  loading,
+}: ContactListProps = {}): JSX.Element {
   const { t } = useTranslation('contacts')
   const searchQuery = useContactStore((s) => s.searchQuery)
   const setSearchQuery = useContactStore((s) => s.setSearchQuery)
@@ -579,7 +585,13 @@ export function ContactList({ onNewContact, loading }: ContactListProps = {}): J
         <span className={styles.count}>
           {t('list.contactCount', { count: filteredContacts.length })}
         </span>
-        <button type="button" className={styles.newBtn} onClick={onNewContact}>
+        <button
+          type="button"
+          className={styles.newBtn}
+          onClick={onNewContact}
+          disabled={newContactDisabled}
+          title={newContactDisabled ? t('list.noWritableAddressBook') : undefined}
+        >
           {t('list.newContact')}
         </button>
       </div>

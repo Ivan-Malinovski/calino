@@ -5,6 +5,7 @@
     "contactCount_one": "{{count}} contact",
     "contactCount_other": "{{count}} contacts",
     "newContact": "+ Nouveau",
+    "noWritableAddressBook": "Aucun carnet d’adresses accessible en écriture",
     "allAddressBooks": "Tous les carnets d’adresses",
     "filterByTag": "Filtrer par étiquette", "allTags": "Tous", "allTagsLabel": "Toutes les étiquettes", "tagsMore": "{{tag}} +{{count}}", "clearTagFilter": "Effacer le filtre d’étiquettes",
     "noMatches": "Aucun résultat",
@@ -26,6 +27,7 @@
     "yearsOld_other": "{{count}} ans",
     "onCalendar": "Dans le calendrier",
     "addToCalendar": "Ajouter au calendrier",
+    "readOnlyAddressBook": "{{name}} (lecture seule)",
     "field": {
       "email": "E-MAIL",
       "phone": "TÉLÉPHONE",

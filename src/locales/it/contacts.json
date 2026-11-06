@@ -5,6 +5,7 @@
     "contactCount_one": "{{count}} contatto",
     "contactCount_other": "{{count}} contatti",
     "newContact": "+ Nuovo",
+    "noWritableAddressBook": "Nessuna rubrica in cui puoi scrivere",
     "allAddressBooks": "Tutte le rubriche",
     "filterByTag": "Filtra per tag", "allTags": "Tutti", "allTagsLabel": "Tutti i tag", "tagsMore": "{{tag}} +{{count}}", "clearTagFilter": "Cancella filtro tag",
     "noMatches": "Nessuna corrispondenza",
@@ -26,6 +27,7 @@
     "yearsOld_other": "{{count}} anni",
     "onCalendar": "Nel calendario",
     "addToCalendar": "Aggiungi al calendario",
+    "readOnlyAddressBook": "{{name}} (sola lettura)",
     "field": {
       "email": "E-MAIL",
       "phone": "TELEFONO",

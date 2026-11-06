@@ -106,13 +106,19 @@ export function ContactsView(): JSX.Element {
   // Webcal subscriptions can't be written to, so they're never a valid target.
   const targetCalendars = useMemo(() => calendars.filter((c) => !c.readOnly), [calendars])
 
-  // Fall back to all books if none are flagged visible, so "+ New" is never a no-op
-  const visibleAddressBooks = useMemo(() => {
+  // Fall back to all books if none are flagged visible, so "+ New" is never a no-op.
+  // A book the server shares read-only can't take a new contact either.
+  const targetAddressBooks = useMemo(() => {
     const visible = addressBooks.filter((ab) => ab.isVisible)
-    return visible.length > 0 ? visible : addressBooks
+    return (visible.length > 0 ? visible : addressBooks).filter((ab) => ab.canWrite !== false)
   }, [addressBooks])
+  // Books exist but every one is read-only: grey "+ New" out rather than offer it.
+  const noWritableAddressBook = addressBooks.length > 0 && targetAddressBooks.length === 0
 
   const selectedContact = selectedContactId ? getContactById(selectedContactId) : null
+  const isSelectedContactReadOnly =
+    selectedContact != null &&
+    addressBooks.find((ab) => ab.id === selectedContact.addressBookId)?.canWrite === false
 
   const showDetail = isMobile && selectedContact !== null
 
@@ -130,12 +136,14 @@ export function ContactsView(): JSX.Element {
 
   // "+ New" — if 1 address book go straight to form, if >1 show picker
   const handleNewClick = (): void => {
-    if (visibleAddressBooks.length === 0) {
+    // Only reached with no address book at all (nothing synced yet): when books exist
+    // but all are read-only, the button is disabled instead.
+    if (targetAddressBooks.length === 0) {
       showToast(t('view.noAddressBookAvailable'))
       return
     }
-    if (visibleAddressBooks.length === 1) {
-      const [ab] = visibleAddressBooks
+    if (targetAddressBooks.length === 1) {
+      const [ab] = targetAddressBooks
       openFormFor(ab.id, ab.accountId)
     } else {
       // Always open — the outside-click/Escape handler below is what closes it
@@ -408,14 +416,18 @@ export function ContactsView(): JSX.Element {
     <div className={`${styles.contactsPage} ${showDetail ? styles.showDetail : ''}`}>
       {/* Left panel */}
       <div className={styles.clist}>
-        <ContactList onNewContact={handleNewClick} loading={syncState.status === 'syncing'} />
+        <ContactList
+          onNewContact={handleNewClick}
+          newContactDisabled={noWritableAddressBook}
+          loading={syncState.status === 'syncing'}
+        />
 
         {/* Address book picker dropdown — anchored to the list panel, which is
             position: relative, so it lands under the "+ New" button */}
-        {showPicker && visibleAddressBooks.length > 1 && (
+        {showPicker && targetAddressBooks.length > 1 && (
           <div className={styles.addressBookPicker} ref={pickerRef}>
             <div className={styles.addressBookPickerLabel}>{t('view.chooseAddressBook')}</div>
-            {visibleAddressBooks.map((ab) => (
+            {targetAddressBooks.map((ab) => (
               <button
                 key={ab.id}
                 type="button"
@@ -455,6 +467,7 @@ export function ContactsView(): JSX.Element {
             onDelete={() => handleDelete(selectedContact)}
             onFieldSave={(field, value) => handleFieldSave(selectedContact, field, value)}
             confirmDelete={confirmDeleteId === selectedContact.id}
+            readOnly={isSelectedContactReadOnly}
             onAddBirthdayToCalendar={
               selectedContact.birthday
                 ? () => void handleAddContactEventToCalendar('birthday', selectedContact)
@@ -498,7 +511,7 @@ export function ContactsView(): JSX.Element {
         onClose={handleFormClose}
         contact={editingContact}
         addressBookId={
-          editingContact?.addressBookId || pendingAddressBookId || visibleAddressBooks[0]?.id || ''
+          editingContact?.addressBookId || pendingAddressBookId || targetAddressBooks[0]?.id || ''
         }
         accountId={pendingAccountId}
         onSave={handleFormSave}

@@ -16,6 +16,11 @@ import type { Plugin } from 'vite'
  * Control endpoints (the spec talking to the mock, not the app):
  *   - POST   /__test__/reset
  *   - PUT    /__test__/put?name=<file.vcf>        body = vCard
+ *   - PUT    /__test__/put?book=team&name=<file.vcf>
+ *                                         adds the card to a second book, shared
+ *                                         read-only (only <read/>, 403 on writes)
+ *   - POST   /__test__/own-book?listed=0|1    leave the user's own (writable) book
+ *                                         out of the listing, or list it again
  *   - DELETE /__test__/delete?name=<file.vcf>
  *   - GET    /__test__/log                        → [{ method, path, kind?, hrefs? }]
  *   - POST   /__test__/clear-log
@@ -26,6 +31,7 @@ const MOUNT = '/mock-carddav'
 const PRINCIPAL = `${MOUNT}/dav/principals/user/`
 const HOME = `${MOUNT}/dav/addressbooks/user/`
 const BOOK = `${HOME}book/`
+const TEAM = `${HOME}team/`
 const TOKEN_PREFIX = 'http://calino.test/ns/sync/'
 
 const NS =
@@ -66,9 +72,15 @@ export function carddavMockPlugin(): Plugin {
   let etagCounter = 0
   let shortMultiget = 0
   const log: LoggedRequest[] = []
+  // The read-only book: listed once a card is put into it, never written to by the app.
+  const teamCards = new Map<string, string>()
+  // Off: the home lists only the read-only book, so the user has nowhere to write.
+  let ownBookListed = true
 
   const reset = () => {
     cards.clear()
+    teamCards.clear()
+    ownBookListed = true
     tombstones.clear()
     log.length = 0
     shortMultiget = 0
@@ -96,8 +108,8 @@ export function carddavMockPlugin(): Plugin {
   // Paths below are relative to the mount, because `middlewares.use(MOUNT, …)` strips it.
   const rel = (absolute: string) => absolute.slice(MOUNT.length)
 
-  const nameFromPath = (path: string): string | null => {
-    const prefix = rel(BOOK)
+  const nameFromPath = (path: string, book = BOOK): string | null => {
+    const prefix = rel(book)
     if (!path.startsWith(prefix)) return null
     const rest = path.slice(prefix.length)
     if (!rest) return null
@@ -129,6 +141,24 @@ export function carddavMockPlugin(): Plugin {
       '<current-user-privilege-set><privilege><read/></privilege><privilege><write/></privilege><privilege><write-content/></privilege><privilege><bind/></privilege><privilege><unbind/></privilege></current-user-privilege-set>',
     ].join('')
 
+  // What Radicale answers for a book the rights file lets this user only read.
+  const teamProps = () =>
+    [
+      '<resourcetype><collection/><CR:addressbook/></resourcetype>',
+      '<displayname>Team Directory</displayname>',
+      `<CS:getctag>"team-ctag-${teamCards.size}"</CS:getctag>`,
+      `<sync-token>${TOKEN_PREFIX}team-${teamCards.size}</sync-token>`,
+      '<CR:supported-address-data><CR:address-data-type content-type="text/vcard" version="3.0"/></CR:supported-address-data>',
+      '<current-user-privilege-set><privilege><read/></privilege></current-user-privilege-set>',
+    ].join('')
+
+  const teamCardResponse = (name: string, withData: boolean) =>
+    propResponse(
+      `${TEAM}${encodeURIComponent(name)}`,
+      `<getetag>"team-etag-${esc(name)}"</getetag>` +
+        (withData ? `<CR:address-data>${esc(teamCards.get(name)!)}</CR:address-data>` : '')
+    )
+
   const cardResponse = (name: string, withData: boolean) => {
     const card = cards.get(name)!
     const props =
@@ -151,6 +181,14 @@ export function carddavMockPlugin(): Plugin {
       const endpoint = path.slice('/__test__/'.length)
       if (endpoint === 'reset' && method === 'POST') {
         reset()
+        return send(204)
+      }
+      if (endpoint === 'own-book' && method === 'POST') {
+        ownBookListed = query.get('listed') !== '0'
+        return send(204)
+      }
+      if (endpoint === 'put' && method === 'PUT' && query.get('book') === 'team') {
+        teamCards.set(query.get('name') ?? 'unnamed.vcf', await readBody(req))
         return send(204)
       }
       if (endpoint === 'put' && method === 'PUT') {
@@ -210,9 +248,34 @@ export function carddavMockPlugin(): Plugin {
         207,
         multistatus([
           propResponse(HOME, '<resourcetype><collection/></resourcetype>'),
-          propResponse(BOOK, bookProps()),
+          // Listed first, so "the first book" is the one the app must not pick.
+          ...(teamCards.size > 0 ? [propResponse(TEAM, teamProps())] : []),
+          ...(ownBookListed ? [propResponse(BOOK, bookProps())] : []),
         ])
       )
+    }
+    if (method === 'PROPFIND' && path === rel(TEAM)) {
+      return send(207, multistatus([propResponse(TEAM, teamProps())]))
+    }
+    if (method === 'REPORT' && path === rel(TEAM)) {
+      // No change log here: the book never changes during a spec, so every report
+      // just lists it, with the card data when asked for (multiget, query).
+      const body = await readBody(req)
+      const withData = !body.includes('sync-collection')
+      const responses = [...teamCards.keys()].map((n) => teamCardResponse(n, withData))
+      return send(
+        207,
+        multistatus(responses, withData ? undefined : `${TOKEN_PREFIX}team-${teamCards.size}`)
+      )
+    }
+    const teamCard = nameFromPath(path, TEAM)
+    if (teamCard !== null) {
+      // Radicale refuses a write to a book shared read-only with a bare 403.
+      if (method === 'PUT' || method === 'DELETE') return send(403)
+      if (method === 'GET' && teamCards.has(teamCard)) {
+        res.writeHead(200, { 'Content-Type': 'text/vcard' })
+        return res.end(teamCards.get(teamCard))
+      }
     }
     if (method === 'PROPFIND' && path === rel(BOOK)) {
       return send(207, multistatus([propResponse(BOOK, bookProps())]))

@@ -3,6 +3,7 @@ import type { AddressBook, Contact, CardDAVSyncState, PendingContactChange } fro
 import type { PendingDeleteSnapshot } from '@/lib/deleteContactWithUndo'
 import type { ContactsBackend } from '../client/ContactsBackend'
 import { createContactsBackend } from '../client/createBackend'
+import { CardDAVPermissionError } from '../client/errors'
 import { useContactStore } from '@/store/contactStore'
 import { getCredentialById } from '@/features/caldav/client/credentials'
 import * as storage from '@/features/caldav/sync/accountStorage'
@@ -80,6 +81,39 @@ function resourcePath(url: string): string {
     return decodeURIComponent(new URL(url, 'http://placeholder.invalid').pathname)
   } catch {
     return url
+  }
+}
+
+/**
+ * Undo the optimistic local change behind a write the server refused: drop a contact
+ * it never accepted, and put the server's copy back over an edit or a delete. Best
+ * effort — if the copy can't be fetched now, the next full fetch of the book brings it.
+ */
+async function restoreServerCopy(
+  client: ContactsBackend,
+  change: PendingContactChange
+): Promise<void> {
+  const store = useContactStore.getState()
+  if (change.type === 'create') {
+    store.deleteContact(change.contactId)
+    return
+  }
+  const snapshot = parseDeleteSnapshot(change)
+  const url = snapshot?.url ?? store.contacts.find((c) => c.id === change.contactId)?.url
+  const addressBookId = snapshot?.addressBookId ?? change.addressBookId
+  const addressBook = store.addressBooks.find((ab) => ab.id === addressBookId)
+  if (!url || !addressBook) return
+  try {
+    const [serverCopy] = await client.fetchContactsByUrls(addressBook, [url])
+    if (!serverCopy) return
+    const restored: Contact = { ...serverCopy, syncStatus: 'synced' }
+    useContactStore.setState((state) => ({
+      contacts: state.contacts.some((c) => c.id === restored.id)
+        ? state.contacts.map((c) => (c.id === restored.id ? restored : c))
+        : [...state.contacts, restored],
+    }))
+  } catch (err) {
+    console.warn(`[CardDAV] Could not restore the server copy of ${change.contactId}:`, err)
   }
 }
 
@@ -197,11 +231,16 @@ export function useCardDAV(): UseCardDAVReturn {
           replayedIds.push(change.id)
         } catch (err) {
           console.warn(`[CardDAV] Failed to replay change ${change.id}:`, err)
-          useContactStore.getState().updateContact(change.contactId, { syncStatus: 'failed' })
-          useContactStore.getState().incrementRetryCount(change.id)
+          // A 403 is the server's final word (a book shared read-only): retrying won't
+          // change it, and keeping the local edit would show what the server refused.
+          const forbidden = err instanceof CardDAVPermissionError
+          if (!forbidden) {
+            useContactStore.getState().updateContact(change.contactId, { syncStatus: 'failed' })
+            useContactStore.getState().incrementRetryCount(change.id)
+          }
 
           const updated = useContactStore.getState().pendingChanges.find((c) => c.id === change.id)
-          if (updated && updated.retryCount >= MAX_REPLAY_RETRIES) {
+          if (forbidden || (updated && updated.retryCount >= MAX_REPLAY_RETRIES)) {
             // Retire the change instead of replaying it on every sync forever. A change the
             // server keeps rejecting (a malformed card, a revoked permission) is a poison
             // pill: while it sits in the queue its contact is also exempt from merge and
@@ -217,6 +256,7 @@ export function useCardDAV(): UseCardDAVReturn {
               snapshot?.displayName ??
               i18n.t('errors:toast.contacts.fallbackLabel')
             const reason = err instanceof Error ? err.message : String(err)
+            if (forbidden) await restoreServerCopy(client, change)
             showToast(
               i18n.t('errors:toast.contacts.rejected', { context: change.type, label, reason })
             )
@@ -272,6 +312,9 @@ export function useCardDAV(): UseCardDAVReturn {
               name: newAb.name,
               ctag: newAb.ctag,
               syncToken: newAb.syncToken || existingSyncToken,
+              // Sharing changes on the server: refresh it like the name, or a book
+              // shared read-only after its first sync would stay writable here.
+              canWrite: newAb.canWrite,
             }
           } else {
             mergedAddressBooks.push(newAb)
