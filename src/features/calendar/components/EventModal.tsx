@@ -293,17 +293,6 @@ export function EventModal(): JSX.Element | null {
     closeModalRef.current = closeModal
   })
 
-  // Close on Escape
-  useEffect(() => {
-    if (!isModalOpen) return
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        closeModalRef.current()
-      }
-    }
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [isModalOpen])
   const [dueDate, setDueDate] = useState<string>('')
   // Optional first day of a multi-day task; '' means the task has no start.
   const [taskStartDate, setTaskStartDate] = useState<string>('')
@@ -312,6 +301,67 @@ export function EventModal(): JSX.Element | null {
   const [completed, setCompleted] = useState(false)
   const [priority, setPriority] = useState<TaskPriority | undefined>(undefined)
   const [selectedCategories, setSelectedCategories] = useState<string[]>(initialState.categories)
+
+  // Unsaved changes: every field the form can edit, compared with the values
+  // the form was seeded with. The reset below clears `seededSnapshot` when it
+  // reseeds the form, and the render that follows records the seeded values.
+  // Changing a field back makes the form clean again. Attachments count by
+  // number only: they arrive from IndexedDB after the open, and their data
+  // URIs are too large to serialise on every render.
+  const formSnapshot = JSON.stringify([
+    title,
+    description,
+    location,
+    startDate,
+    startTime,
+    endDate,
+    endTime,
+    isAllDay,
+    calendarId,
+    recurring,
+    recurrence,
+    interval,
+    byWeekday,
+    byMonthDay,
+    byMonth,
+    byDayOrdinals,
+    endCondition,
+    endOnDate,
+    endAfterCount,
+    travelDuration,
+    transparency,
+    reminders,
+    attachments.length,
+    relatedTo,
+    attendees,
+    parentTaskId,
+    dueDate,
+    taskStartDate,
+    dueTime,
+    dueAllDay,
+    completed,
+    priority,
+    selectedCategories,
+  ])
+  const [seededSnapshot, setSeededSnapshot] = useState<string | null>(null)
+  if (seededSnapshot === null) setSeededSnapshot(formSnapshot)
+  // Text typed in a field but not yet added (an attendee address, a custom
+  // reminder value) counts as a change as well.
+  const [hasDraft, setHasDraft] = useState(false)
+  const isDirty = hasDraft || (seededSnapshot !== null && formSnapshot !== seededSnapshot)
+
+  // Close on Escape, unless that would throw away unsaved changes: those take
+  // an explicit Close, Cancel or Save.
+  useEffect(() => {
+    if (!isModalOpen || isDirty) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        closeModalRef.current()
+      }
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [isModalOpen, isDirty])
 
   const lastSelectedEventId = useRef<string | null>(null)
   const lastSelectedDate = useRef<string | null>(null)
@@ -526,6 +576,7 @@ export function EventModal(): JSX.Element | null {
 
       calendarTouchedRef.current = false
       durationTouchedRef.current = false
+      setSeededSnapshot(null)
 
       const requestedParent = subtaskParentId
         ? currentEvents.find((event) => event.id === subtaskParentId && event.type === 'task')
@@ -1653,9 +1704,13 @@ export function EventModal(): JSX.Element | null {
   }
 
   return (
+    // A click outside closes the modal only while it has no unsaved changes.
+    // Coming back from another tab or app, the click that brings the window
+    // back, or a text selection released past the card's edge, lands here and
+    // would otherwise throw away what was typed.
     <div
       className={`${styles.modalBackdrop} ${isClosing ? styles.closing : ''}`}
-      onClick={animateClose}
+      onClick={isDirty ? undefined : animateClose}
       data-component="modal-backdrop"
     >
       <motion.div
@@ -1934,6 +1989,7 @@ export function EventModal(): JSX.Element | null {
                     startIso={isAllDay ? `${startDate}T00:00:00` : `${startDate}T${startTime}:00`}
                     endIso={isAllDay ? `${endDate}T23:59:59` : `${endDate}T${endTime}:00`}
                     excludeEventId={originalEventId ?? selectedEventId ?? undefined}
+                    onDraftChange={setHasDraft}
                   />
                 )}
               </div>

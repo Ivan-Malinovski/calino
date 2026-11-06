@@ -1,4 +1,4 @@
-import { useMemo, useState, type JSX } from 'react'
+import { useLayoutEffect, useMemo, useState, type JSX } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { CalendarAttendee, CalendarOrganizer, AttendeePartstat, CalendarEvent } from '@/types'
 import { useCalendarStore } from '@/store/calendarStore'
@@ -19,6 +19,8 @@ interface AttendeeSectionProps {
   excludeEventId?: string
   /** Seeds the mailto: subject/body. Omit while composing a brand-new event. */
   event?: CalendarEvent
+  /** Told whether the field holds typed text not yet added as an attendee. */
+  onDraftChange?: (hasDraft: boolean) => void
 }
 
 const AVAILABILITY_CLASSES: Record<Availability, string> = {
@@ -62,10 +64,20 @@ export function AttendeeSection({
   endIso,
   excludeEventId,
   event,
+  onDraftChange,
 }: AttendeeSectionProps): JSX.Element {
   const { t } = useTranslation('calendar')
   const [inputValue, setInputValue] = useState('')
   const [inputError, setInputError] = useState('')
+
+  // A half-typed address is an unsaved change too: the form around it must
+  // not close on an outside click and lose it. A layout effect, so the form
+  // knows before the next click lands.
+  const hasDraft = inputValue.trim() !== ''
+  useLayoutEffect(() => {
+    onDraftChange?.(hasDraft)
+    return () => onDraftChange?.(false)
+  }, [hasDraft, onDraftChange])
 
   const availabilityLabels: Record<Availability, string> = {
     available: t('modals.attendees.availability.free'),
