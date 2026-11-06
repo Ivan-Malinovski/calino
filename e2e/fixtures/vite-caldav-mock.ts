@@ -318,6 +318,14 @@ const ACCOUNTS: MockAccount[] = [
         components: ['VEVENT', 'VTODO', 'VJOURNAL'],
       },
       {
+        // Owned by `vtodo-due-only.spec.ts` (issue #256), which asserts the
+        // bytes written for a recurring task that has a DUE and no DTSTART.
+        path: '/dav/calendars/user/due-only/',
+        displayName: 'Due Only',
+        color: '#D97706',
+        components: ['VEVENT', 'VTODO', 'VJOURNAL'],
+      },
+      {
         path: '/dav/calendars/user/calino-settings/',
         displayName: 'Calino Settings',
         components: ['VEVENT'],

@@ -1357,15 +1357,22 @@ export function icalVtodoToCalendarEvent(vtodo: ICAL.Component, calendarId: stri
   const seqProp = vtodo.getFirstProperty('sequence')
 
   let dueDate: string | undefined
+  let dueTzid: string | undefined
   let isAllDay = true
+  // Without a DTSTART, DUE is the only carrier of the task's TZID (Tasks.org
+  // via DAVx5 writes recurring tasks this way). With one, DTSTART stays the
+  // source of the zone and DUE is read as before.
+  const hasDtstart = Boolean(vtodo.getFirstProperty('dtstart'))
 
   if (dueProp) {
     try {
       const dueRawValue = dueProp.getFirstValue()
       if (dueRawValue instanceof ICAL.Time) {
-        const isoStr = icalTimeToISO(dueRawValue).iso
+        const dueResult = icalTimeToISO(dueRawValue, hasDtstart ? undefined : dueProp)
+        const isoStr = dueResult.iso
         if (isoStr && !isoStr.endsWith('T::')) {
           dueDate = isoStr
+          dueTzid = dueResult.tzid
           isAllDay = dueRawValue.isDate
         }
       }
@@ -1405,6 +1412,7 @@ export function icalVtodoToCalendarEvent(vtodo: ICAL.Component, calendarId: stri
       /* skip malformed DTSTART; DUE still carries the date */
     }
   }
+  if (!hasDtstart && dueTzid) timezone = dueTzid
 
   const { rruleString, recurrence } = readRRule(vtodo)
   const excludedDates = readExdates(vtodo)
