@@ -4,6 +4,10 @@ All notable changes to Calino will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- **Rolling completion for repeating tasks, per calendar** ([#244](https://github.com/Ivan-Malinovski/calino/issues/244)). A task list can complete repeats by moving the task to its next date and saving the finished one as its own task, the shape DAVx⁵/OpenTasks and Tasks.org can sync back. Turn it on from the calendar's **Settings** in the sidebar. When a list's tasks come from Tasks.org or OpenTasks, Calino asks once, right after you complete a repeat there; it never switches on its own. Lists keep the Thunderbird-compatible default otherwise.
+
 ## [0.42.0] - 2026-11-03
 
 This release adds a home timezone that Calino uses throughout the calendar, custom reminder times, improves month-view spacing and event-time visibility, and fixes several CalDAV sync problems.

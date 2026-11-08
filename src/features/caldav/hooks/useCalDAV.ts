@@ -1,5 +1,6 @@
 import { useState, useCallback, useContext, useEffect, useMemo } from 'react'
 import { addDays } from 'date-fns'
+import type { RollingWritePlan } from '@/types'
 import type { CalendarEvent } from '@/types'
 import {
   showToast,
@@ -103,6 +104,23 @@ const inFlightDeletes = new Set<string>()
 // the same account each reconcile against stale state. Callers get the existing
 // promise instead of starting a second run.
 const inFlightSyncs = new Map<string, Promise<void>>()
+
+const rollingWriteQueues = new Map<string, Promise<unknown>>()
+
+function enqueueRollingWrite<T>(key: string, task: () => Promise<T>): Promise<T> {
+  const previous = rollingWriteQueues.get(key) ?? Promise.resolve()
+  const result = previous.then(task, task)
+  const settled = result.then(
+    () => undefined,
+    () => undefined
+  )
+  rollingWriteQueues.set(key, settled)
+  void settled.then(() => {
+    if (rollingWriteQueues.get(key) === settled) rollingWriteQueues.delete(key)
+  })
+  return result
+}
+
 
 /**
  * Resources already reported as unreadable, as `calendarId|hrefKey`. They are
@@ -422,6 +440,7 @@ export interface UseCalDAVReturn {
   createEvent: (calendarId: string, event: CalendarEvent) => Promise<void>
   updateEvent: (calendarId: string, event: CalendarEvent) => Promise<void>
   createEventGroup: (calendarId: string, events: CalendarEvent[]) => Promise<void>
+  saveRollingTaskCompletion: (calendarId: string, plan: RollingWritePlan) => Promise<void>
   saveRecurrenceOverride: (
     calendarId: string,
     master: CalendarEvent,
@@ -2679,6 +2698,147 @@ export function useCalDAVInstance(): UseCalDAVReturn {
     [storeAddEvent, storeDeleteEvent, storeUpdateEvent]
   )
 
+
+  const saveRollingTaskCompletionFn = useCallback(
+    (calendarId: string, plan: RollingWritePlan): Promise<void> => {
+      const allCalendars = storage.getAllCalendars()
+      const allAccounts = storage.getAllAccounts()
+      const calendar = allCalendars.find((item) => item.id === calendarId)
+      const account = allAccounts.find((item) => item.id === calendar?.accountId)
+
+      const uid = plan.master.uid || plan.master.id
+      const masterWithSequence = {
+        ...plan.master,
+        uid,
+        sequence: (plan.master.sequence ?? 0) + 1,
+      }
+      const copy =
+        plan.kind === 'roll'
+          ? { ...plan.completedCopy, uid: plan.completedCopy.uid || plan.completedCopy.id }
+          : null
+      const convertedOverrides = plan.convertedOverrides.map((converted) => ({
+        ...converted,
+        uid: converted.uid || converted.id,
+      }))
+
+      // Local-only calendars have no remote resource to update.
+      if (!calendar) {
+        storeUpdateEvent(plan.master.id, masterWithSequence)
+        for (const eventId of plan.removedOverrideIds) storeDeleteEvent(eventId)
+        if (copy) storeAddEvent(copy)
+        for (const converted of convertedOverrides) storeAddEvent(converted)
+        return Promise.resolve()
+      }
+      if (!account) return Promise.reject(new Error('Calendar account not found'))
+
+      storeUpdateEvent(plan.master.id, { ...masterWithSequence, syncStatus: 'pending' })
+      for (const eventId of plan.removedOverrideIds) storeDeleteEvent(eventId)
+      if (copy) storeAddEvent({ ...copy, syncStatus: 'pending' })
+      for (const converted of convertedOverrides) storeAddEvent({ ...converted, syncStatus: 'pending' })
+
+      return enqueueRollingWrite(`${calendarId}|${plan.master.id}`, async () => {
+        const credential = await getCredentialById(account.credentialId)
+        if (!credential) throw new Error('Credentials not found')
+
+        // Read the href/etag now rather than from the plan: an earlier queued
+        // completion of this master may have just created or rewritten the
+        // resource, and PUTting against the stale etag would 412.
+        const state = useCalendarStore.getState()
+        const liveMaster = state.events.find((event) => event.id === plan.master.id)
+        const masterForWrite = {
+          ...masterWithSequence,
+          resourceHref: liveMaster?.resourceHref ?? masterWithSequence.resourceHref,
+          etag: liveMaster?.etag ?? masterWithSequence.etag,
+        }
+        const existingOverrides = state.events.filter(
+          (event) =>
+            event.id !== copy?.id &&
+            !plan.removedOverrideIds.includes(event.id) &&
+            !convertedOverrides.some((converted) => converted.id === event.id) &&
+            event.calendarId === calendarId &&
+            Boolean(event.recurrenceId) &&
+            (event.uid === uid || event.recurrenceMasterId === plan.master.id)
+        )
+        const groupedEvents = withResourceSiblings(
+          [masterForWrite, ...existingOverrides],
+          state.events,
+          masterForWrite.resourceHref,
+          plan.removedOverrideIds
+        )
+
+        const client = await createCalendarBackend(
+          account.serverUrl,
+          credential,
+          account.proxyUrl,
+          account.protocol
+        )
+        const engine = new SyncEngine(client, calendarId)
+
+        let failure: unknown = null
+        try {
+          const written = await engine.updateEventGroup(groupedEvents, masterForWrite.etag ?? '')
+          for (const groupedEvent of groupedEvents) {
+            storeUpdateEvent(groupedEvent.id, {
+              resourceHref: written.url,
+              etag: written.etag,
+              syncStatus: 'synced',
+            })
+          }
+        } catch (error) {
+          // Same contract as the override write: the change is already local, so
+          // queue it for replay instead of letting a dropped connection lose it.
+          failure = error
+          storeUpdateEvent(plan.master.id, { syncStatus: 'pending' })
+
+          const queued =
+            useCalendarStore.getState().events.find((event) => event.id === plan.master.id) ??
+            masterWithSequence
+          storage.addPendingChange({
+            type: 'update',
+            eventId: plan.master.id,
+            calendarId,
+            data: JSON.stringify(queued),
+          })
+          setSyncState((prev) => ({ ...prev, pendingChanges: prev.pendingChanges + 1 }))
+        }
+
+        // The completed copy and any converted legacy overrides are new
+        // single-VTODO resources, each created on its own so one failure is
+        // queued without losing the others.
+        const newStandaloneEvents = [...(copy ? [copy] : []), ...convertedOverrides]
+        for (const standalone of newStandaloneEvents) {
+          try {
+            const created = await engine.pushEvent(standalone)
+            storeUpdateEvent(standalone.id, {
+              resourceHref: created.url,
+              etag: created.etag,
+              syncStatus: 'synced',
+            })
+          } catch (error) {
+            failure ??= error
+            storeUpdateEvent(standalone.id, { syncStatus: 'pending' })
+            storage.addPendingChange({
+              type: 'create',
+              eventId: standalone.id,
+              calendarId,
+              data: JSON.stringify(standalone),
+            })
+            setSyncState((prev) => ({ ...prev, pendingChanges: prev.pendingChanges + 1 }))
+          }
+        }
+
+        if (failure) {
+          showToast(i18n.t('errors:sync.genericSyncRetry'))
+          throw failure
+        }
+
+        storage.updateAccountLastSync(account.id)
+      })
+    },
+    [storeAddEvent, storeDeleteEvent, storeUpdateEvent]
+  )
+
+
   const updateEventFn = useCallback(
     async (calendarId: string, event: CalendarEvent): Promise<void> => {
       if (caldavDebugMode) {
@@ -3321,6 +3481,10 @@ export function useCalDAVInstance(): UseCalDAVReturn {
     () => tracked(i18n.t('caldav:progress.savingEvent'), saveRecurrenceOverrideFn),
     [saveRecurrenceOverrideFn]
   )
+  const trackedSaveRollingTaskCompletion = useMemo(
+    () => tracked(i18n.t('caldav:progress.savingEvent'), saveRollingTaskCompletionFn),
+    [saveRollingTaskCompletionFn]
+  )
   const trackedDeleteEvent = useMemo(
     () => tracked(i18n.t('caldav:progress.deletingEvent'), deleteEventFn),
     [deleteEventFn]
@@ -3356,6 +3520,7 @@ export function useCalDAVInstance(): UseCalDAVReturn {
     createEventGroup: trackedCreateEventGroup,
     updateEvent: trackedUpdateEvent,
     saveRecurrenceOverride: trackedSaveRecurrenceOverride,
+    saveRollingTaskCompletion: trackedSaveRollingTaskCompletion,
     deleteEvent: trackedDeleteEvent,
     deleteEventByHref: trackedDeleteEventByHref,
     retryAllFailedSyncs,

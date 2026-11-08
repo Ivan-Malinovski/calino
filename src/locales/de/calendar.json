@@ -109,7 +109,8 @@
       "updateAvailable": "Calino {{version}} ist verfügbar",
       "updateCurrentVersion": "Du verwendest {{version}}",
       "updateDismiss": "Schließen",
-      "updateViewRelease": "Release anzeigen"
+      "updateViewRelease": "Release anzeigen",
+      "calendarSettings": "Kalendereinstellungen"
     }
   },
   "modals": {
@@ -820,5 +821,10 @@
     "travel": {
       "bar": "{{duration}} Reisezeit"
     }
+  },
+  "rollingPrompt": {
+    "message": "Diese Liste scheint von {{client}} bearbeitet zu werden. Wiederkehrende Aufgaben abschließen, indem das Fälligkeitsdatum auf den nächsten Termin verschoben wird?",
+    "accept": "Rollierende Erledigung verwenden",
+    "dismiss": "Jetzt nicht"
   }
 }

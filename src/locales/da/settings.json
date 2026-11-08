@@ -156,6 +156,10 @@
     "overdueTaskBadge": {
       "label": "Mærke for forfaldne opgaver",
       "desc": "Vis et mærke på appikonet for forfaldne opgaver"
+    },
+    "rollingTaskCompletion": {
+      "label": "Rullende fuldførelse til mobilsynkronisering",
+      "desc": "Flyt en gentagen opgave til næste dato og gem hver fuldført gentagelse som sin egen opgave. Kræves for tovejssynkronisering med DAVx⁵/OpenTasks, Tasks.org og Apple Reminders."
     }
   },
   "calendar": {

@@ -63,6 +63,8 @@ vi.mock('@/store/calendarStore', () => ({
       updateEvent: vi.fn(),
       completeTask: vi.fn(),
       completeTaskOccurrence: vi.fn(),
+      completeTaskOccurrenceRolling: vi.fn(),
+      getCalendar: vi.fn(),
       deleteEvent: vi.fn(),
       duplicateEvent: vi.fn(),
       addBrokenEvent: vi.fn(),

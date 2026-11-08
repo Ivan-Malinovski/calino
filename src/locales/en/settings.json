@@ -156,6 +156,10 @@
     "overdueTaskBadge": {
       "label": "Overdue Task Badge",
       "desc": "Show a badge on the app icon for overdue tasks"
+    },
+    "rollingTaskCompletion": {
+      "label": "Rolling completion for mobile sync",
+      "desc": "Move a recurring task to its next date and save each completed occurrence as its own task. Required for two-way sync with DAVx⁵/OpenTasks, Tasks.org, and Apple Reminders."
     }
   },
   "calendar": {

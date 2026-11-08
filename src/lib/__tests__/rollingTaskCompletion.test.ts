@@ -1,4 +1,5 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vitest'
+import { useCalendarStore } from '@/store/calendarStore'
 import { planRollingTaskCompletion } from '@/lib/rollingTaskCompletion'
 import { makeRecurringTask } from '@/lib/__tests__/fixtures'
 import { eventToICAL } from '@/features/caldav/adapter/iCalendarAdapter'
@@ -443,6 +444,28 @@ describe('R2.8 rolling task completion', () => {
       expect(ics).toContain('DUE;VALUE=DATE:20260310')
       expect(ics).toContain('STATUS:NEEDS-ACTION')
       expect(ics).not.toContain('STATUS:COMPLETED')
+    })
+  })
+
+  describe('store action', () => {
+    beforeEach(() => {
+      const store = useCalendarStore.getState()
+      store.events.forEach((event) => store.deleteEvent(event.id))
+    })
+
+    it('mints a fresh UID for the copy and leaves the store untouched', () => {
+      const master = weekly({ calendarId: useCalendarStore.getState().calendars[0].id })
+      useCalendarStore.getState().addEvent(master)
+
+      const result = useCalendarStore
+        .getState()
+        .completeTaskOccurrenceRolling(master.id, '2026-03-03T00:00:00')
+      if (result?.kind !== 'roll') throw new Error(`expected a roll plan, got ${result?.kind}`)
+
+      expect(result.completedCopy.id).not.toBe('gym')
+      expect(result.completedCopy.uid).toBe(result.completedCopy.id)
+      // Planning is side-effect free — the write happens in the CalDAV hook.
+      expect(useCalendarStore.getState().events).toHaveLength(1)
     })
   })
 })

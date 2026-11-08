@@ -36,8 +36,10 @@ export function MiniTasksSection({ isExpanded, onToggle }: MiniTasksSectionProps
   const { calendarById, labelsVisible } = useTaskCalendarLabels('sidebar')
   const completeTask = useCalendarStore((state) => state.completeTask)
   const completeTaskOccurrence = useCalendarStore((state) => state.completeTaskOccurrence)
+  const completeTaskOccurrenceRolling = useCalendarStore((state) => state.completeTaskOccurrenceRolling)
+  const getCalendar = useCalendarStore((state) => state.getCalendar)
   const openModal = useCalendarStore((state) => state.openModal)
-  const { updateEvent: updateCalDAVEvent, saveRecurrenceOverride } = useCalDAV()
+  const { updateEvent: updateCalDAVEvent, saveRecurrenceOverride, saveRollingTaskCompletion } = useCalDAV()
   const [hoveredTask, setHoveredTask] = useState<string | null>(null)
   const [focusedTask, setFocusedTask] = useState<string | null>(null)
   const [tooltipPosition, setTooltipPosition] = useState<{ x: number; y: number } | null>(null)
@@ -183,6 +185,9 @@ export function MiniTasksSection({ isExpanded, onToggle }: MiniTasksSectionProps
           completeTaskOccurrence,
           updateCalDAVEvent,
           saveRecurrenceOverride,
+          completeTaskOccurrenceRolling,
+          saveRollingTaskCompletion,
+          getCalendar,
         })
       } catch {
         // error handled by useCalDAV

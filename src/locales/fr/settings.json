@@ -156,6 +156,10 @@
     "overdueTaskBadge": {
       "label": "Badge des tâches en retard",
       "desc": "Afficher un badge sur l’icône de l’application lorsqu’une tâche est en retard"
+    },
+    "rollingTaskCompletion": {
+      "label": "Achèvement glissant pour la synchronisation mobile",
+      "desc": "Déplacez une tâche récurrente à sa prochaine date et enregistrez chaque occurrence terminée comme sa propre tâche. Requis pour la synchronisation bidirectionnelle avec DAVx⁵/OpenTasks, Tasks.org et Apple Reminders."
     }
   },
   "calendar": {

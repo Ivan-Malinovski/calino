@@ -109,7 +109,8 @@
       "updateAvailable": "Calino {{version}} er tilgængelig",
       "updateCurrentVersion": "Du har {{version}}",
       "updateDismiss": "Luk",
-      "updateViewRelease": "Se udgivelse"
+      "updateViewRelease": "Se udgivelse",
+      "calendarSettings": "Kalenderindstillinger"
     }
   },
   "modals": {
@@ -820,5 +821,10 @@
     "travel": {
       "bar": "{{duration}} rejsetid"
     }
+  },
+  "rollingPrompt": {
+    "message": "Denne liste ser ud til at blive redigeret af {{client}}. Fuldfør gentagne opgaver ved at flytte forfaldsdatoen fremad?",
+    "accept": "Brug rullende fuldførelse",
+    "dismiss": "Ikke nu"
   }
 }

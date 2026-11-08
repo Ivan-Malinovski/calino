@@ -156,6 +156,10 @@
     "overdueTaskBadge": {
       "label": "Insignia de tareas vencidas",
       "desc": "Mostrar una insignia en el icono de la aplicación cuando haya tareas vencidas"
+    },
+    "rollingTaskCompletion": {
+      "label": "Finalización rodante para sincronización móvil",
+      "desc": "Mueva una tarea recurrente a su próxima fecha y guarde cada aparición completada como su propia tarea. Necesario para la sincronización bidireccional con DAVx⁵/OpenTasks, Tasks.org y Apple Reminders."
     }
   },
   "calendar": {

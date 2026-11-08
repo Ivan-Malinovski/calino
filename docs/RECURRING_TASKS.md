@@ -122,9 +122,16 @@ Nextcloud compatibility and lose the history permanently.
 
 ## Rolling completion mode (opt-in)
 
-> Status: the conversion logic is in place; the per-calendar setting and the
-> prompt that offers it are a follow-up. Until then the mode is not reachable
-> from the UI.
+Rolling mode is set **per calendar** (task list): right-click the calendar in
+the sidebar → **Settings** → **Rolling completion for mobile sync**. Lists
+default to the override shape above.
+
+Calino also looks at the `PRODID` of the tasks in a list. If they were written by
+Tasks.org or OpenTasks (directly or through DAVx⁵), then right after you complete
+a repeating task there it asks once whether to switch that list to rolling
+completion. It never switches on its own: **Use rolling completion** turns the
+mode on for that list, and **Not now** is remembered for it. Apple Reminders is
+not detected yet.
 
 The default shape above is the only one Thunderbird and Nextcloud agree on, but
 it is the one shape the mainstream mobile clients cannot round-trip:

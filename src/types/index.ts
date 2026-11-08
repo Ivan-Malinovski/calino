@@ -159,6 +159,7 @@ export interface CalendarEvent {
   attendees?: CalendarAttendee[]
   /** RFC 5545 §3.8.4.3 ORGANIZER property. */
   organizer?: CalendarOrganizer
+  clientProdid?: string
 }
 
 export type CalendarSource = 'local' | 'caldav' | 'webcal'
@@ -181,6 +182,10 @@ export interface Calendar {
   // (the default for an overlay). Set true from the subscription edit modal
   // to opt in. CalDAV calendars ignore this field.
   notifyReminders?: boolean
+  // Task completion mode for recurring tasks in this calendar.
+  taskCompletionMode?: 'override' | 'rolling'
+  // Whether the prompt to switch to rolling completion has been dismissed.
+  rollingPromptDismissed?: boolean
 }
 
 export type ViewType =
@@ -328,6 +333,10 @@ export interface CalendarActions {
   applyEventChanges: (changes: CalendarEventChanges) => void
   updateEvent: (id: string, updates: Partial<CalendarEvent>) => void
   completeTask: (id: string, completed: boolean) => CalendarEvent[]
+  completeTaskOccurrenceRolling: (
+    masterId: string,
+    occurrenceStart: string
+  ) => RollingTaskCompletionPlan | null
   completeTaskOccurrence: (
     masterId: string,
     occurrenceStart: string,
@@ -350,6 +359,7 @@ export interface CalendarActions {
   bumpVersion: () => void
   addCalendar: (calendar: Calendar) => void
   updateCalendar: (id: string, updates: Partial<Calendar>) => void
+  getCalendar: (id: string) => Calendar | undefined
   deleteCalendar: (id: string) => void
   toggleCalendarVisibility: (id: string) => void
   setDefaultCalendar: (id: string) => void

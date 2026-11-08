@@ -129,11 +129,14 @@ function parseEventsFromComponents(
 
   for (const comp of comps) {
     registerTimezones(comp)
+    const prodid = comp.getFirstPropertyValue('prodid') as string | undefined
 
     if (!only || only === 'event')
       for (const vevent of comp.getAllSubcomponents('vevent')) {
         try {
-          events.push(icalEventToCalendarEvent(vevent, calendarId))
+          const event = icalEventToCalendarEvent(vevent, calendarId)
+          if (prodid) event.clientProdid = prodid
+          events.push(event)
         } catch (e) {
           hadComponentParseFailures = true
           console.error('Failed to parse vevent:', e)
@@ -144,7 +147,9 @@ function parseEventsFromComponents(
       const resourceTasks: CalendarEvent[] = []
       for (const vtodo of comp.getAllSubcomponents('vtodo')) {
         try {
-          resourceTasks.push(icalVtodoToCalendarEvent(vtodo, calendarId))
+          const task = icalVtodoToCalendarEvent(vtodo, calendarId)
+          if (prodid) task.clientProdid = prodid
+          resourceTasks.push(task)
         } catch (e) {
           hadComponentParseFailures = true
           console.error('Failed to parse vtodo:', e)
@@ -157,7 +162,9 @@ function parseEventsFromComponents(
     if (!only || only === 'journal')
       for (const vjournal of comp.getAllSubcomponents('vjournal')) {
         try {
-          journals.push(icalVjournalToCalendarEvent(vjournal, calendarId))
+          const journal = icalVjournalToCalendarEvent(vjournal, calendarId)
+          if (prodid) journal.clientProdid = prodid
+          journals.push(journal)
         } catch (e) {
           hadComponentParseFailures = true
           console.error('Failed to parse vjournal:', e)

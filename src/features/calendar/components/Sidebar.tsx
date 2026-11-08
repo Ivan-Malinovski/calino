@@ -41,6 +41,7 @@ import { SyncStatusIndicator } from './SyncStatusIndicator'
 import { SubscribeCalendarModal } from './SubscribeCalendarModal'
 import { useWebcalSubscriptions } from '@/features/webcal/hooks/useWebcalSubscriptions'
 import { CreateCalendarModal } from './CreateCalendarModal'
+import { EditCalendarSettingsModal } from './EditCalendarSettingsModal'
 import { DeleteCalendarDialog } from './DeleteCalendarDialog'
 import { EmptyState } from '@/components/common/EmptyState'
 import { MiniTasksSection } from './MiniTasksSection'
@@ -114,6 +115,7 @@ export function Sidebar({
   const [showCreateCalendar, setShowCreateCalendar] = useState(false)
   const [createCalendarAccountId, setCreateCalendarAccountId] = useState<string | null>(null)
   const [showDeleteCalendar, setShowDeleteCalendar] = useState(false)
+  const [settingsCalendarId, setSettingsCalendarId] = useState<string | null>(null)
   const [deleteCalendarId, setDeleteCalendarId] = useState<string | null>(null)
   const [deleteCalendarName, setDeleteCalendarName] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
@@ -1048,6 +1050,11 @@ export function Sidebar({
               />,
               document.body
             )}
+          <EditCalendarSettingsModal
+            isOpen={!!settingsCalendarId}
+            calendarId={settingsCalendarId || ''}
+            onClose={() => setSettingsCalendarId(null)}
+          />
           <CreateCalendarModal
             isOpen={showCreateCalendar}
             onClose={() => {
@@ -1144,6 +1151,16 @@ export function Sidebar({
                             if (calendar) {
                               setEditingId(calendar.id)
                               setEditName(calendar.name)
+                            }
+                            closeContextMenu()
+                          },
+                        },
+                        {
+                          label: t('views.sidebar.calendarSettings', { defaultValue: 'Settings' }),
+                          onClick: () => {
+                            const calendar = calendars.find((c) => c.id === contextMenu.calendarId)
+                            if (calendar) {
+                              setSettingsCalendarId(calendar.id)
                             }
                             closeContextMenu()
                           },

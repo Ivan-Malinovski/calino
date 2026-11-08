@@ -109,7 +109,8 @@
       "updateAvailable": "Calino {{version}} 已发布",
       "updateCurrentVersion": "当前版本 {{version}}",
       "updateDismiss": "忽略",
-      "updateViewRelease": "查看版本说明"
+      "updateViewRelease": "查看版本说明",
+      "calendarSettings": "日历设置"
     }
   },
   "surface": {
@@ -820,5 +821,10 @@
     "travel": {
       "bar": "路程 {{duration}}"
     }
+  },
+  "rollingPrompt": {
+    "message": "此列表似乎由 {{client}} 编辑。完成定期任务时，将截止日期顺延到下一次？",
+    "accept": "使用滚动完成",
+    "dismiss": "暂不"
   }
 }
