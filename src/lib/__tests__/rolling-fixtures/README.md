@@ -8,6 +8,9 @@ synthetic series for edge cases. Loaded by
 
 ```
 synthetic/<name>.ics                 hand-written RFC 5545 inputs (edge cases)
+calino/<series>/                     what Calino writes for the same seed: before.ics,
+                                     override-after.ics (today's default) and
+                                     rolling-after-{master,copy}.ics (reference only)
 clients/<client>/<series>/
   meta.json                          what was done in the client (see below)
   before/*.ics                       the collection before completing
