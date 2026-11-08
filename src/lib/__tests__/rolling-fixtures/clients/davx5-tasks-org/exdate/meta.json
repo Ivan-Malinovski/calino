@@ -1,0 +1,8 @@
+{
+  "completedDue": "2026-11-10",
+  "writesCopy": false,
+  "notes": "Tasks.org 15.12 via DAVx5 4.5.21 (emulator, fake data). Bare DUE advance, no completed copy.",
+  "divergent": {
+    "due": "Tasks.org rolls onto 2026-11-17 even though EXDATE excludes it; Calino skips to 2026-11-24."
+  }
+}
