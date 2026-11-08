@@ -1,0 +1,5 @@
+{
+  "completedDue": "2026-11-10",
+  "writesCopy": true,
+  "notes": "OpenTasks 1.4.2 via DAVx5 4.5.21 (emulator, fake data). Timed series in UTC: completing an all-day recurring task crashes OpenTasks 1.4.2 (IllegalArgumentException: TIMEZONE must be supplied, in instances.Detaching). Writes TZID=Etc/UTC together with a trailing Z."
+}
