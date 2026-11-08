@@ -228,17 +228,23 @@ describe('R2.8 rolling task completion', () => {
   })
 
   describe('legacy RECURRENCE-ID overrides', () => {
-    const overrideAt = (recurrenceId: string, extra: Partial<CalendarEvent> = {}): CalendarEvent =>
-      weekly({
+    const overrideAt = (recurrenceId: string, extra: Partial<CalendarEvent> = {}): CalendarEvent => {
+      // A real override carries its own occurrence's dates, not the master's.
+      const date = recurrenceId.slice(0, 10)
+      return weekly({
         id: `gym-${recurrenceId}`,
         recurrenceId,
         recurrenceMasterId: 'gym',
         rruleString: undefined,
         recurrence: undefined,
+        start: `${date}T00:00:00`,
+        end: `${date}T23:59:59`,
+        dueDate: date,
         completed: true,
         taskStatus: 'COMPLETED',
         ...extra,
       })
+    }
 
     it('folds an override sharing the master resource into the copy and drops it', () => {
       const master = weekly({ resourceHref: '/cals/home/gym.ics' })
