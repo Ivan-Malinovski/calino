@@ -355,6 +355,7 @@
       "removeAttendee": "移除 {{name}}",
       "addAttendeePlaceholder": "添加参与者邮箱…",
       "addAttendeeAria": "添加参与者邮箱",
+      "suggestionsAria": "推荐的参与者",
       "add": "添加",
       "conflictWarning_one": "{{count}} 位参与者此时有日程冲突。",
       "conflictWarning_other": "{{count}} 位参与者此时有日程冲突。",
