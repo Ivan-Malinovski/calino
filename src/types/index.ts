@@ -247,6 +247,72 @@ export interface TaskOccurrencePlan {
 }
 
 /**
+ * R2.8 — How a recurring task records a completed occurrence on the wire.
+ *
+ * `override` (default) is the RFC 5545 shape Thunderbird writes: the master
+ * keeps its RRULE untouched and a completed copy with the same UID and a
+ * RECURRENCE-ID is appended to the same calendar object resource.
+ *
+ * `rolling` is the opt-in shape every mainstream mobile client can read: the
+ * master's DTSTART/DUE advance to the next open occurrence, and every
+ * completed occurrence is written as its own single-VTODO resource under a new
+ * UID. DAVx⁵/OpenTasks, Tasks.org's built-in CalDAV, and Apple Reminders only
+ * understand this one; they drop or reject RECURRENCE-ID overrides.
+ */
+export type TaskCompletionMode = 'override' | 'rolling'
+
+/**
+ * R2.8 — The write plan for completing one occurrence of a recurring task in
+ * rolling mode. Shaped to be passed straight to
+ * `saveRollingTaskCompletion(calendarId, plan)`.
+ *
+ * A discriminated union rather than optional fields: "the series rolled and a
+ * copy is due", "the series ended on this occurrence", "this click is stale —
+ * do nothing", and "leave it to the override path" are four different writes,
+ * and letting a caller read the wrong one is how a duplicate completed task
+ * gets created.
+ */
+export interface RollingRollPlan {
+  kind: 'roll'
+  /**
+   * The master to write: re-anchored onto the next open occurrence.
+   */
+  master: CalendarEvent
+  /** Standalone COMPLETED copy (new UID, no RRULE/EXDATE/RECURRENCE-ID). */
+  completedCopy: CalendarEvent
+  /**
+   * IDs of every legacy RECURRENCE-ID override this write drops from the
+   * master's resource: the one folded into the copy, plus any converted below.
+   */
+  removedOverrideIds: string[]
+  /**
+   * Other legacy overrides from the master's resource, each rewritten as a
+   * standalone task under its own new UID with its status unchanged. They are
+   * written as new resources next to the copy.
+   */
+  convertedOverrides: CalendarEvent[]
+}
+
+export interface RollingFinalPlan {
+  kind: 'final'
+  /** The master itself, marked COMPLETED on the series' last occurrence. */
+  master: CalendarEvent
+  removedOverrideIds: string[]
+  /** As on {@link RollingRollPlan}. */
+  convertedOverrides: CalendarEvent[]
+}
+
+/** The plans that actually write something. */
+export type RollingWritePlan = RollingRollPlan | RollingFinalPlan
+
+export type RollingTaskCompletionPlan =
+  | RollingWritePlan
+  /** The clicked occurrence is already behind the master — a stale click, not a completion. */
+  | { kind: 'noop' }
+  /** This occurrence must keep the RECURRENCE-ID shape (see the planner). */
+  | { kind: 'fallback' }
+
+/**
  * A complete event/category reconciliation applied as one store transaction.
  * Event IDs are upserted in input order (the last occurrence wins), while
  * deletions are applied first so an upsert for the same ID wins deterministically.
