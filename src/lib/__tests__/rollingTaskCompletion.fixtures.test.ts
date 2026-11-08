@@ -28,7 +28,16 @@ const clientFiles = import.meta.glob<string>('./rolling-fixtures/clients/*/*/{be
   import: 'default',
   eager: true,
 })
-const clientMeta = import.meta.glob<{ completedDue: string; writesCopy: boolean }>(
+interface ClientMeta {
+  completedDue: string
+  writesCopy: boolean
+  /**
+   * Fields where Calino deliberately differs from the client, with the reason.
+   * Each one is still printed, so the difference stays visible.
+   */
+  divergent?: Partial<Record<'due' | 'count' | 'exdate', string>>
+}
+const clientMeta = import.meta.glob<ClientMeta>(
   './rolling-fixtures/clients/*/*/meta.json',
   { import: 'default', eager: true }
 )
@@ -256,11 +265,20 @@ describe('R2.8 rolling completion: captured client fixtures', () => {
         }
         expect(theirMaster, 'client master after completion').toBeDefined()
         if (!theirMaster) return
-        expect(due(result.master)).toBe(due(theirMaster))
-        expect(countOf(result.master)).toBe(countOf(theirMaster))
-        expect([...(result.master.excludedDates ?? [])].map((d) => d.slice(0, 10)).sort()).toEqual(
-          [...(theirMaster.excludedDates ?? [])].map((d) => d.slice(0, 10)).sort()
-        )
+        const exdates = (event: CalendarEvent) =>
+          [...(event.excludedDates ?? [])].map((d) => d.slice(0, 10)).sort()
+        const check = (field: 'due' | 'count' | 'exdate', ours: unknown, theirs: unknown) => {
+          const reason = meta.divergent?.[field]
+          if (reason) {
+            console.info(`[${name}] ${field}: Calino=${JSON.stringify(ours)} client=${JSON.stringify(theirs)} (${reason})`)
+            expect(ours, `documented divergence on ${field} no longer diverges`).not.toEqual(theirs)
+            return
+          }
+          expect(ours, field).toEqual(theirs)
+        }
+        check('due', due(result.master), due(theirMaster))
+        check('count', countOf(result.master), countOf(theirMaster))
+        check('exdate', exdates(result.master), exdates(theirMaster))
         for (const ics of after) expect(ics).not.toContain('RECURRENCE-ID')
       })
     })
