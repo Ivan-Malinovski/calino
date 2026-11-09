@@ -134,9 +134,7 @@ function parseEventsFromComponents(
     if (!only || only === 'event')
       for (const vevent of comp.getAllSubcomponents('vevent')) {
         try {
-          const event = icalEventToCalendarEvent(vevent, calendarId)
-          if (prodid) event.clientProdid = prodid
-          events.push(event)
+          events.push(icalEventToCalendarEvent(vevent, calendarId))
         } catch (e) {
           hadComponentParseFailures = true
           console.error('Failed to parse vevent:', e)
@@ -148,6 +146,8 @@ function parseEventsFromComponents(
       for (const vtodo of comp.getAllSubcomponents('vtodo')) {
         try {
           const task = icalVtodoToCalendarEvent(vtodo, calendarId)
+          // Only tasks carry the writing client's PRODID: it is read solely by
+          // the rolling-completion prompt, and every stamped event is persisted.
           if (prodid) task.clientProdid = prodid
           resourceTasks.push(task)
         } catch (e) {
@@ -162,9 +162,7 @@ function parseEventsFromComponents(
     if (!only || only === 'journal')
       for (const vjournal of comp.getAllSubcomponents('vjournal')) {
         try {
-          const journal = icalVjournalToCalendarEvent(vjournal, calendarId)
-          if (prodid) journal.clientProdid = prodid
-          journals.push(journal)
+          journals.push(icalVjournalToCalendarEvent(vjournal, calendarId))
         } catch (e) {
           hadComponentParseFailures = true
           console.error('Failed to parse vjournal:', e)
