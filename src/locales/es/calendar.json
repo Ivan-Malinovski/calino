@@ -109,7 +109,8 @@
       "updateAvailable": "Calino {{version}} está disponible",
       "updateCurrentVersion": "Tienes {{version}}",
       "updateDismiss": "Descartar",
-      "updateViewRelease": "Ver lanzamiento"
+      "updateViewRelease": "Ver lanzamiento",
+      "calendarSettings": "Ajustes del calendario"
     }
   },
   "surface": {
@@ -820,5 +821,10 @@
     "travel": {
       "bar": "{{duration}} de desplazamiento"
     }
+  },
+  "rollingPrompt": {
+    "message": "Esta lista parece estar editada por {{client}}. ¿Completar tareas recurrentes moviendo la fecha de vencimiento hacia adelante?",
+    "accept": "Usar finalización rodante",
+    "dismiss": "Ahora no"
   }
 }

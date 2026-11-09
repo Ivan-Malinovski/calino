@@ -1,3 +1,4 @@
+import { planRollingTaskCompletion } from '@/lib/rollingTaskCompletion'
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 import { safeLocalStorage } from '@/lib/storage'
@@ -11,6 +12,7 @@ import type {
   EventType,
   DuplicateUidIssue,
   TaskOccurrencePlan,
+  RollingTaskCompletionPlan,
   CalendarEventChanges,
 } from '@/types'
 import type { Category, AutoCategoryRule } from '@/types/categories'
@@ -940,6 +942,29 @@ export const useCalendarStore = create<CalendarStore>()(
         }
       },
 
+      completeTaskOccurrenceRolling: (
+        masterId: string,
+        occurrenceStart: string
+      ): RollingTaskCompletionPlan | null => {
+        const events = get().events
+        const master = events.find((event) => event.id === masterId && event.type === 'task')
+        if (!master) return null
+
+        const uid = master.uid || master.id
+        const overrides = new Map<string, CalendarEvent>()
+        for (const event of events) {
+          if (!event.recurrenceId) continue
+          if (event.uid === uid || event.recurrenceMasterId === masterId) {
+            overrides.set(event.recurrenceId, event)
+          }
+        }
+
+        return planRollingTaskCompletion(master, occurrenceStart, overrides, {
+          now: new Date(),
+          newUid: createUuid(),
+        })
+      },
+
       deleteEvent: (id: string): void => {
         // Clean up attachments from IndexedDB (fire and forget)
         deleteAttachments(id).catch(() => {})
@@ -1088,6 +1113,9 @@ export const useCalendarStore = create<CalendarStore>()(
         bumpRangeExpansionVersion()
       },
 
+      getCalendar: (id: string): Calendar | undefined => {
+        return get().calendars.find((c) => c.id === id)
+      },
       updateCalendar: (id: string, updates: Partial<Calendar>): void => {
         set((state) => ({
           calendars: state.calendars.map((c) => (c.id === id ? { ...c, ...updates } : c)),

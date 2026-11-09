@@ -109,7 +109,8 @@
       "updateAvailable": "Calino {{version}} est disponible",
       "updateCurrentVersion": "Votre version : {{version}}",
       "updateDismiss": "Ignorer",
-      "updateViewRelease": "Voir la version"
+      "updateViewRelease": "Voir la version",
+      "calendarSettings": "Paramètres de l'agenda"
     }
   },
   "surface": {
@@ -820,5 +821,10 @@
     "travel": {
       "bar": "{{duration}} de trajet"
     }
+  },
+  "rollingPrompt": {
+    "message": "Cette liste semble être éditée par {{client}}. Terminer les tâches récurrentes en reportant la date d'échéance à la prochaine occurrence ?",
+    "accept": "Utiliser l'achèvement glissant",
+    "dismiss": "Pas maintenant"
   }
 }

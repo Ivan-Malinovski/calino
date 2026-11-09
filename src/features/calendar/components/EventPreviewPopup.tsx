@@ -65,6 +65,8 @@ export function EventPreviewPopup({
   const calendars = useCalendarStore((state) => state.calendars)
   const completeTask = useCalendarStore((state) => state.completeTask)
   const completeTaskOccurrence = useCalendarStore((state) => state.completeTaskOccurrence)
+  const completeTaskOccurrenceRolling = useCalendarStore((state) => state.completeTaskOccurrenceRolling)
+  const getCalendar = useCalendarStore((state) => state.getCalendar)
   const [isClosing, setIsClosing] = useState(false)
   const prefersReducedMotion = useReducedMotion()
   const isMobile = useIsMobile()
@@ -98,6 +100,7 @@ export function EventPreviewPopup({
     createEvent: createCalDAVEvent,
     updateEvent: updateCalDAVEvent,
     saveRecurrenceOverride,
+    saveRollingTaskCompletion,
     deleteEvent: deleteCalDAVEvent,
   } = useCalDAV()
   const originalEventId = extractOriginalEventId(clickedEventId)
@@ -176,8 +179,11 @@ export function EventPreviewPopup({
       await completeTaskAndSync(task, !task.completed, {
         completeTask,
         completeTaskOccurrence,
-        updateCalDAVEvent,
-        saveRecurrenceOverride,
+          updateCalDAVEvent,
+          saveRecurrenceOverride,
+          completeTaskOccurrenceRolling,
+          saveRollingTaskCompletion,
+          getCalendar,
       })
     } catch {
       // The CalDAV hook queues failed writes and surfaces their status.

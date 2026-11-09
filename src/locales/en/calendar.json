@@ -109,7 +109,8 @@
       "updateAvailable": "Calino {{version}} is available",
       "updateCurrentVersion": "You have {{version}}",
       "updateDismiss": "Dismiss",
-      "updateViewRelease": "View release"
+      "updateViewRelease": "View release",
+      "calendarSettings": "Settings"
     }
   },
   "surface": {
@@ -820,5 +821,10 @@
     "travel": {
       "bar": "{{duration}} travel"
     }
+  },
+  "rollingPrompt": {
+    "message": "This list looks like it is edited by {{client}}. Complete recurring tasks by moving the due date forward?",
+    "accept": "Use rolling completion",
+    "dismiss": "Not now"
   }
 }

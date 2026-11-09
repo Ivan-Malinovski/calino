@@ -156,6 +156,10 @@
     "overdueTaskBadge": {
       "label": "逾期任务角标",
       "desc": "在应用图标上显示逾期任务的角标"
+    },
+    "rollingTaskCompletion": {
+      "label": "用于移动同步的滚动完成",
+      "desc": "将定期任务移动到下一个日期，并将每个已完成的发生作为其自己的任务保存。与 DAVx⁵/OpenTasks、Tasks.org 和 Apple Reminders 进行双向同步所必需。"
     }
   },
   "calendar": {

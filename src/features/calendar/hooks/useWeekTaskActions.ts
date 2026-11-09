@@ -36,10 +36,13 @@ export function useWeekTaskActions({ weekStartKey, weekEndKey }: UseWeekTaskActi
   const addEvent = useCalendarStore((state) => state.addEvent)
   const completeTask = useCalendarStore((state) => state.completeTask)
   const completeTaskOccurrence = useCalendarStore((state) => state.completeTaskOccurrence)
+  const completeTaskOccurrenceRolling = useCalendarStore((state) => state.completeTaskOccurrenceRolling)
+  const getCalendar = useCalendarStore((state) => state.getCalendar)
   const {
     updateEvent: updateCalDAVEvent,
     createEvent: createCalDAVEvent,
     saveRecurrenceOverride,
+    saveRollingTaskCompletion,
   } = useCalDAV()
   const openMenu = useContextMenuStore((state) => state.openMenu)
   const closeMenu = useContextMenuStore((state) => state.closeMenu)
@@ -105,8 +108,11 @@ export function useWeekTaskActions({ weekStartKey, weekEndKey }: UseWeekTaskActi
       await completeTaskAndSync(task, !task.completed, {
         completeTask,
         completeTaskOccurrence,
-        updateCalDAVEvent,
-        saveRecurrenceOverride,
+          updateCalDAVEvent,
+          saveRecurrenceOverride,
+          completeTaskOccurrenceRolling,
+          saveRollingTaskCompletion,
+          getCalendar,
       })
     } catch {
       // The CalDAV hook queues failed writes and surfaces their status.

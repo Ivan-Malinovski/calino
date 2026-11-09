@@ -129,6 +129,7 @@ function parseEventsFromComponents(
 
   for (const comp of comps) {
     registerTimezones(comp)
+    const prodid = comp.getFirstPropertyValue('prodid') as string | undefined
 
     if (!only || only === 'event')
       for (const vevent of comp.getAllSubcomponents('vevent')) {
@@ -144,7 +145,11 @@ function parseEventsFromComponents(
       const resourceTasks: CalendarEvent[] = []
       for (const vtodo of comp.getAllSubcomponents('vtodo')) {
         try {
-          resourceTasks.push(icalVtodoToCalendarEvent(vtodo, calendarId))
+          const task = icalVtodoToCalendarEvent(vtodo, calendarId)
+          // Only tasks carry the writing client's PRODID: it is read solely by
+          // the rolling-completion prompt, and every stamped event is persisted.
+          if (prodid) task.clientProdid = prodid
+          resourceTasks.push(task)
         } catch (e) {
           hadComponentParseFailures = true
           console.error('Failed to parse vtodo:', e)

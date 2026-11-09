@@ -109,7 +109,8 @@
       "updateAvailable": "Calino {{version}} is beschikbaar",
       "updateCurrentVersion": "Je gebruikt {{version}}",
       "updateDismiss": "Sluiten",
-      "updateViewRelease": "Release bekijken"
+      "updateViewRelease": "Release bekijken",
+      "calendarSettings": "Agenda-instellingen"
     }
   },
   "surface": {
@@ -820,5 +821,10 @@
     "travel": {
       "bar": "{{duration}} reistijd"
     }
+  },
+  "rollingPrompt": {
+    "message": "Deze lijst lijkt bewerkt te zijn door {{client}}. Terugkerende taken voltooien door de vervaldatum vooruit te schuiven?",
+    "accept": "Gebruik doorschuivende voltooiing",
+    "dismiss": "Nu niet"
   }
 }
