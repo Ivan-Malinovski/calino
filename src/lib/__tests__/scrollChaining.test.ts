@@ -17,6 +17,8 @@ function makeScroller(
   Object.defineProperty(el, 'clientHeight', { value: geometry.clientHeight, configurable: true })
   Object.defineProperty(el, 'scrollHeight', { value: geometry.scrollHeight, configurable: true })
   el.scrollTop = geometry.scrollTop
+  // jsdom 31 computes no style for detached elements, so attach it.
+  document.body.appendChild(el)
   return el
 }
 
