@@ -631,6 +631,7 @@
       "enterUrl": "请输入日历地址。",
       "updateFailedReason": "无法更新：{{reason}}",
       "subscribeFailedReason": "无法订阅：{{reason}}",
+      "feedBlocked": "无法加载此日历。许多主机（包括 Google 日历）不允许浏览器直接读取其订阅源。请在下方填写代理 URL 后重试。",
       "updateFailed": "更新日历订阅失败。",
       "subscribeFailed": "订阅日历失败。"
     },

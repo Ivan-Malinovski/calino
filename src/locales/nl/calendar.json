@@ -631,6 +631,7 @@
       "enterUrl": "Voer een agenda-URL in.",
       "updateFailedReason": "Bijwerken mislukt: {{reason}}",
       "subscribeFailedReason": "Abonneren mislukt: {{reason}}",
+      "feedBlocked": "Kan de agenda niet laden. Veel hosts, waaronder Google Agenda, staan niet toe dat browsers hun feeds rechtstreeks lezen. Vul hieronder een proxy-URL in en probeer het opnieuw.",
       "updateFailed": "Agenda-abonnement bijwerken mislukt.",
       "subscribeFailed": "Abonneren op agenda mislukt."
     },

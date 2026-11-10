@@ -631,6 +631,7 @@
       "enterUrl": "Inserisci l’URL di un calendario.",
       "updateFailedReason": "Impossibile aggiornare: {{reason}}",
       "subscribeFailedReason": "Impossibile iscriversi: {{reason}}",
+      "feedBlocked": "Impossibile caricare il calendario. Molti host, tra cui Google Calendar, non consentono ai browser di leggere direttamente i loro feed. Aggiungi un URL proxy qui sotto e riprova.",
       "updateFailed": "Impossibile aggiornare l’iscrizione al calendario.",
       "subscribeFailed": "Impossibile iscriversi al calendario."
     },

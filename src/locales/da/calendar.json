@@ -631,6 +631,7 @@
       "enterUrl": "Indtast en kalender-URL.",
       "updateFailedReason": "Kunne ikke opdatere: {{reason}}",
       "subscribeFailedReason": "Kunne ikke abonnere: {{reason}}",
+      "feedBlocked": "Kunne ikke hente kalenderen. Mange værter, bl.a. Google Kalender, tillader ikke, at browsere læser deres feeds direkte. Angiv en proxy-URL nedenfor, og prøv igen.",
       "updateFailed": "Kalenderabonnementet kunne ikke opdateres.",
       "subscribeFailed": "Kunne ikke abonnere på kalenderen."
     },
