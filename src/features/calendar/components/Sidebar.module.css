@@ -637,6 +637,13 @@
   animation: spin 1s linear infinite;
 }
 
+.showAllCalendarsButton {
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  color: var(--accent-strong, var(--accent));
+}
+
 .calendarItem {
   display: flex;
   align-items: center;

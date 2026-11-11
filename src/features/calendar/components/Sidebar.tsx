@@ -126,6 +126,9 @@ export function Sidebar({
   const selectedCategoryIds = useCalendarStore((state) => state.selectedCategoryIds)
   const toggleCategoryFilter = useCalendarStore((state) => state.toggleCategoryFilter)
   const toggleCalendarVisibility = useCalendarStore((state) => state.toggleCalendarVisibility)
+  const isolateCalendar = useCalendarStore((state) => state.isolateCalendar)
+  const restoreCalendarVisibility = useCalendarStore((state) => state.restoreCalendarVisibility)
+  const isCalendarIsolated = useCalendarStore((state) => state.calendarVisibilitySnapshot !== null)
   const updateCalendar = useCalendarStore((state) => state.updateCalendar)
   const deleteCalendar = useCalendarStore((state) => state.deleteCalendar)
   const useCategoryColors = useSettingsStore((state) => state.useCategoryColors)
@@ -713,6 +716,18 @@ export function Sidebar({
                 />
               </button>
               <div className={styles.calendarHeaderActions}>
+                {isCalendarIsolated && (
+                  <button
+                    type="button"
+                    className={`${styles.addCalendarButton} ${styles.showAllCalendarsButton}`}
+                    onClick={restoreCalendarVisibility}
+                    title={t('views.sidebar.showAllCalendars')}
+                    aria-label={t('views.sidebar.showAllCalendars')}
+                    data-component="show-all-calendars"
+                  >
+                    {t('views.sidebar.showAll')}
+                  </button>
+                )}
                 <button
                   className={`${styles.addCalendarButton} ${isSyncingAll || globalSyncStatus === 'syncing' ? styles.headerSyncing : ''}`}
                   onClick={handleSyncAll}
@@ -782,7 +797,16 @@ export function Sidebar({
                       <input
                         type="checkbox"
                         checked={calendar.isVisible}
-                        onChange={() => toggleCalendarVisibility(calendar.id)}
+                        onChange={(e) => {
+                          // Alt/Option-click is the shortcut for "Show only this calendar".
+                          // A checkbox's change event is driven by its click, so
+                          // the native event carries the modifier keys.
+                          if (e.nativeEvent instanceof MouseEvent && e.nativeEvent.altKey) {
+                            isolateCalendar(calendar.id)
+                          } else {
+                            toggleCalendarVisibility(calendar.id)
+                          }
+                        }}
                         className={styles.checkbox}
                         data-component="calendar-visibility-toggle"
                         data-calendar-id={calendar.id}
@@ -1089,6 +1113,23 @@ export function Sidebar({
                 x={contextMenu.x}
                 y={contextMenu.y}
                 items={[
+                  isCalendarIsolated
+                    ? {
+                        label: t('views.sidebar.showAllCalendars'),
+                        dataComponent: 'calendar-show-all',
+                        onClick: () => {
+                          restoreCalendarVisibility()
+                          closeContextMenu()
+                        },
+                      }
+                    : {
+                        label: t('views.sidebar.isolateCalendar'),
+                        dataComponent: 'calendar-isolate',
+                        onClick: () => {
+                          isolateCalendar(contextMenu.calendarId)
+                          closeContextMenu()
+                        },
+                      },
                   {
                     label: calendars.find((c) => c.id === contextMenu.calendarId)?.showTasksInViews
                       ? t('views.sidebar.hideTasksInViews')
