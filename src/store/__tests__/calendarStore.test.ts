@@ -983,6 +983,7 @@ describe('calendarStore', () => {
         brokenEvents: [{ event: { id: 'b1' }, reason: 'bad', detectedAt: '2024-01-01' }],
         currentDate: '2024-06-15',
         selectedCategoryIds: ['cat1'],
+        calendarVisibilitySnapshot: { c1: false },
       }
       const result = getMigrate()(persisted)
       expect(result.events).toHaveLength(1)
@@ -995,6 +996,7 @@ describe('calendarStore', () => {
       expect(result.currentDate).toBe(format(new Date(), 'yyyy-MM-dd'))
       expect(result.currentView).toBe('month')
       expect(result.selectedCategoryIds).toEqual(['cat1'])
+      expect(result.calendarVisibilitySnapshot).toEqual({ c1: false })
     })
 
     it('falls back to defaults for missing keys', () => {
@@ -1005,6 +1007,7 @@ describe('calendarStore', () => {
       expect(result.autoCategoryRules).toEqual([])
       expect(result.brokenEvents).toEqual([])
       expect(result.selectedCategoryIds).toEqual([])
+      expect(result.calendarVisibilitySnapshot).toBeNull()
       // currentDate falls back to today; just verify it's a yyyy-MM-dd string
       expect(result.currentDate).toMatch(/^\d{4}-\d{2}-\d{2}$/)
       // currentView falls back to 'month'
