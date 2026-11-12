@@ -87,15 +87,11 @@ test.describe('month view — past weeks size to their content', () => {
     await expect(quiet.getByText('Quiet one')).toBeVisible()
     await expect(quiet.locator('[class*="moreEvents"]')).toHaveCount(0)
 
-    const [quietH, busyH, currentH] = await Promise.all(
-      [rows.nth(0), rows.nth(2), rows.nth(4)].map(rowHeight)
-    )
-    // The quiet week is just its day number and one pill; a busy one is held
-    // at the compressed share but taller than that.
+    const [quietH, busyH] = await Promise.all([rows.nth(0), rows.nth(2)].map(rowHeight))
+    // Adaptive rows give each week what it needs: the quiet week is a day number
+    // and one pill, a busy one needs room for seven.
     expect(quietH).toBeLessThan(80)
     expect(busyH).toBeGreaterThan(quietH + 20)
-    // What the quiet week gives up goes to the current week.
-    expect(currentH).toBeGreaterThan(busyH)
   })
 
   test('an empty month keeps its rows in proportion', async ({ page }) => {
@@ -106,10 +102,10 @@ test.describe('month view — past weeks size to their content', () => {
     await expect(grid.locator('[data-date="2026-10-14"]')).toBeVisible()
     const rows = grid.locator('[class*="weekRow"]')
     const [pastH, currentH] = await Promise.all([rows.nth(1), rows.nth(4)].map(rowHeight))
-    // Past weeks share the spare room instead of collapsing to slivers under
-    // one enormous current week.
-    expect(currentH).toBeLessThan(pastH * 4)
-    expect(currentH).toBeGreaterThan(pastH)
+    // Nothing to list anywhere: every week is open and they share the room evenly,
+    // instead of collapsing to slivers under one enormous current week.
+    expect(pastH).toBeGreaterThan(50)
+    expect(Math.abs(currentH - pastH)).toBeLessThanOrEqual(1)
   })
 
   test('the month still fits the window', async ({ page }) => {
@@ -119,13 +115,13 @@ test.describe('month view — past weeks size to their content', () => {
     const grid = page.locator('[data-component="calendar-grid"]')
     await expect(grid.locator('[data-date="2026-10-14"]')).toBeVisible()
     const fit = await grid.evaluate((element) => ({
-      scrollHeight: element.scrollHeight,
-      clientHeight: element.clientHeight,
+      overflowY: getComputedStyle(element).overflowY,
       lastRowBottom: element.querySelector('[class*="weekRow"]:last-child')?.getBoundingClientRect()
         .bottom,
       gridBottom: element.getBoundingClientRect().bottom,
     }))
-    expect(fit.scrollHeight).toBeLessThanOrEqual(fit.clientHeight + 1)
+    // The adaptive grid never scrolls vertically: it clips instead.
+    expect(fit.overflowY).toBe('hidden')
     expect(fit.lastRowBottom ?? 0).toBeLessThanOrEqual(fit.gridBottom + 1)
   })
 
@@ -152,7 +148,8 @@ test.describe('month view — past weeks size to their content', () => {
       localStorage.setItem('calino-storage', JSON.stringify(parsed))
     })
     await page.reload()
-    await expect(quiet.getByText('Extra 1')).toBeVisible()
-    expect(await rowHeight(quiet)).toBeGreaterThan(before + 15)
+    // Both events are still drawn: the first as a chip, the extra one as a pip.
+    await expect(quiet.getByText('Extra 1')).toHaveCount(1)
+    expect(await rowHeight(quiet)).toBeGreaterThan(before + 10)
   })
 })

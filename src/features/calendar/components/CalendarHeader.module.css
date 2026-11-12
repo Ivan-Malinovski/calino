@@ -1117,3 +1117,51 @@
     cursor: pointer;
   }
 }
+
+/* ---- Short windows ----
+   Under 420px of window height the month grid is fighting for every pixel, so
+   the desktop top bar tightens: about 70px down to 46px. */
+@media (min-width: 769px) and (max-height: 419px) {
+  .header {
+    padding-top: calc(8px + var(--safe-area-top, 0px));
+    padding-bottom: 8px;
+  }
+
+  .navigationGroup {
+    gap: 4px;
+  }
+
+  .navigator,
+  .navArrow,
+  .navToday,
+  .weekWindowControls {
+    height: 30px;
+  }
+
+  .navToday {
+    font-size: 13px;
+  }
+
+  .monthTitle,
+  .viewTitle {
+    font-size: 26px;
+  }
+
+  .yearTitle {
+    font-size: 20px;
+  }
+
+  .iconButton {
+    width: 28px;
+    height: 28px;
+  }
+
+  .viewTab,
+  .viewTabDivider {
+    height: 28px;
+  }
+
+  .viewTabIndicator {
+    height: 28px;
+  }
+}
