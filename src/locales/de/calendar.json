@@ -634,6 +634,7 @@
       "enterUrl": "Gib eine Kalender-URL ein.",
       "updateFailedReason": "Aktualisierung nicht möglich: {{reason}}",
       "subscribeFailedReason": "Abonnieren nicht möglich: {{reason}}",
+      "feedBlocked": "Kalender konnte nicht geladen werden. Viele Hosts, darunter Google Kalender, erlauben Browsern nicht, ihre Feeds direkt zu lesen. Gib unten eine Proxy-URL ein und versuche es erneut.",
       "updateFailed": "Das Kalenderabonnement konnte nicht aktualisiert werden.",
       "subscribeFailed": "Der Kalender konnte nicht abonniert werden."
     },

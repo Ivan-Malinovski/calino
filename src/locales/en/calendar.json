@@ -634,6 +634,7 @@
       "enterUrl": "Enter a calendar URL.",
       "updateFailedReason": "Couldn't update: {{reason}}",
       "subscribeFailedReason": "Couldn't subscribe: {{reason}}",
+      "feedBlocked": "Couldn't load this calendar. Many hosts, Google Calendar included, don't let browsers read their feeds directly. Add a proxy URL below and try again.",
       "updateFailed": "Failed to update calendar subscription.",
       "subscribeFailed": "Failed to subscribe to calendar."
     },

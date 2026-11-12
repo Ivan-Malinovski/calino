@@ -12,7 +12,7 @@ import { useModalDismiss } from '@/hooks/useModalDismiss'
 import { EVENT_COLORS } from '@/store/settingsStore'
 import { calendarMutesReminders, useCalendarStore } from '@/store/calendarStore'
 import { classifySyncError, syncErrorReason } from '@/features/caldav/client/errorMessages'
-import { normalizeWebcalUrl } from '@/features/webcal/fetchWebcal'
+import { normalizeWebcalUrl, WebcalUnreachableError } from '@/features/webcal/fetchWebcal'
 import styles from './AddCalendarModal.module.css'
 
 interface SubscribeCalendarModalProps {
@@ -140,6 +140,14 @@ export function SubscribeCalendarModal({
       }
       requestClose()
     } catch (err) {
+      // The proxy field starts collapsed, and "couldn't reach your server"
+      // doesn't point anyone at it. When the feed never answered and there's
+      // no proxy yet, open the field and say why it's there.
+      if (err instanceof WebcalUnreachableError && !proxyUrl.trim()) {
+        setShowProxyField(true)
+        setError(t('ui.calModal.feedBlocked'))
+        return
+      }
       setError(
         err instanceof Error
           ? t(isEdit ? 'ui.calModal.updateFailedReason' : 'ui.calModal.subscribeFailedReason', {
