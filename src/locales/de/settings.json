@@ -156,6 +156,10 @@
     "overdueTaskBadge": {
       "label": "Kennzeichen für überfällige Aufgaben",
       "desc": "Für überfällige Aufgaben ein Kennzeichen auf dem App-Symbol anzeigen"
+    },
+    "rollingTaskCompletion": {
+      "label": "Rollierende Erledigung für mobile Synchronisation",
+      "desc": "Verschieben Sie eine wiederkehrende Aufgabe auf das nächste Datum und speichern Sie jedes abgeschlossene Vorkommen als eigene Aufgabe. Erforderlich für die Zwei-Wege-Synchronisation mit DAVx⁵/OpenTasks, Tasks.org und Apple Reminders."
     }
   },
   "calendar": {

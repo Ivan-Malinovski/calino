@@ -1,4 +1,5 @@
 import { useCallback } from 'react'
+import { completeTaskAndSync } from '@/lib/taskCompletion'
 import type { ContextMenuItem } from '@/components/common/ContextMenu'
 import { useCalendarStore, isCalendarReadOnly } from '@/store/calendarStore'
 import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
@@ -54,11 +55,14 @@ export function useTaskContextMenuItems(
   const deleteEvent = useCalendarStore((s) => s.deleteEvent)
   const completeTask = useCalendarStore((s) => s.completeTask)
   const completeTaskOccurrence = useCalendarStore((s) => s.completeTaskOccurrence)
+  const completeTaskOccurrenceRolling = useCalendarStore((s) => s.completeTaskOccurrenceRolling)
+  const getCalendar = useCalendarStore((s) => s.getCalendar)
   const {
     updateEvent: updateCalDAVEvent,
     createEvent: createCalDAVEvent,
     deleteEvent: deleteCalDAVEvent,
     saveRecurrenceOverride,
+    saveRollingTaskCompletion,
   } = useCalDAV()
   const { moveStep } = useTaskReorder()
 
@@ -74,45 +78,22 @@ export function useTaskContextMenuItems(
     async (override?: TaskMenuTarget): Promise<void> => {
       const subject = override ?? task
       if (!subject || isCalendarReadOnly(subject.calendarId)) return
-      const newCompleted = !subject.completed
-
-      const recurringTarget = subject.occurrenceStart
-        ? { masterId: subject.id, occurrenceStart: subject.occurrenceStart }
-        : subject.recurrenceId && subject.recurrenceMasterId
-          ? { masterId: subject.recurrenceMasterId, occurrenceStart: subject.recurrenceId }
-          : null
-
-      if (recurringTarget) {
-        const plan = completeTaskOccurrence(
-          recurringTarget.masterId,
-          recurringTarget.occurrenceStart,
-          newCompleted
-        )
-        if (plan) {
-          try {
-            await saveRecurrenceOverride(
-              plan.master.calendarId,
-              plan.master,
-              plan.override,
-              plan.removedOverrideIds
-            )
-          } catch {
-            // error handled by useCalDAV
-          }
-        }
-        return
-      }
-
-      const updatedTasks = completeTask(subject.id, newCompleted)
+      
       try {
-        await Promise.all(
-          updatedTasks.map((updated) => updateCalDAVEvent(updated.calendarId, updated))
-        )
+        await completeTaskAndSync(subject, !subject.completed, {
+          completeTask,
+          completeTaskOccurrence,
+          updateCalDAVEvent,
+          saveRecurrenceOverride,
+          completeTaskOccurrenceRolling,
+          saveRollingTaskCompletion,
+          getCalendar,
+        })
       } catch {
         // error handled by useCalDAV
       }
     },
-    [task, completeTask, completeTaskOccurrence, saveRecurrenceOverride, updateCalDAVEvent]
+    [task, completeTask, completeTaskOccurrence, completeTaskOccurrenceRolling, getCalendar, saveRecurrenceOverride, saveRollingTaskCompletion, updateCalDAVEvent]
   )
 
   const items: ContextMenuItem[] = []

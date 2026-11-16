@@ -286,6 +286,15 @@ const ACCOUNTS: MockAccount[] = [
         rejectMixedUids: true,
       },
       {
+        // Owned by `rolling-task-completion.spec.ts` (issue #244), which asserts
+        // the exact resource count and bytes after a rolling completion — a
+        // parallel spec writing here would change the dump it reads back.
+        path: '/dav/calendars/user/rolling/',
+        displayName: 'Rolling',
+        color: '#06B6D4',
+        components: ['VEVENT', 'VTODO'],
+      },
+      {
         // Owned by `all-day-drag.spec.ts`, which asserts the DTSTART/DTEND
         // bytes an all-day drag writes.
         path: '/dav/calendars/user/allday-drag/',
