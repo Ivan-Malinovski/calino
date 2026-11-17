@@ -4,6 +4,10 @@ All notable changes to Calino will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- **Subpath deployments.** Set `CALINO_BASE_PATH` (for example `/cal/`) at build time to serve Calino below the site root. Vite assets, client-side routes, the PWA manifest, service-worker registration and in-app links now follow the configured base, and `VITE_SITE_URL` can include the same subpath for canonical and social metadata. The Docker image accepts the value as a build arg.
+
 ## [0.42.0] - 2026-11-03
 
 This release adds a home timezone that Calino uses throughout the calendar, custom reminder times, improves month-view spacing and event-time visibility, and fixes several CalDAV sync problems.

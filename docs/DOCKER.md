@@ -32,6 +32,17 @@ VITE_SITE_URL=https://calendar.example.com
 CALINO_ENABLE_SW=true
 ```
 
+To serve under a subpath, set the base path at build time:
+
+```bash
+docker compose build --build-arg CALINO_BASE_PATH=/cal/
+docker compose up -d
+```
+
+Then reverse-proxy `/cal/` to the container, stripping the prefix, or mount the
+built `dist/` under `/cal/`. `VITE_SITE_URL` should include the subpath
+(`https://calendar.example.com/cal`).
+
 Then rebuild:
 
 ```bash
@@ -43,7 +54,8 @@ docker compose up -d
 
 | Variable | Description | Default | Requires Rebuild |
 |----------|-------------|---------|:---:|
-| `VITE_SITE_URL` | Public URL for SEO / Open Graph meta tags. No trailing slash. | `https://calino.io` | ✅ |
+| `VITE_SITE_URL` | Public URL for SEO / Open Graph meta tags. No trailing slash; include the subpath if any. | `https://calino.io` | ✅ |
+| `CALINO_BASE_PATH` | Serve the app under a subpath, e.g. `/cal/`. Assets, routes, manifest and in-app links follow it. Must start and end with `/`. | `/` | ✅ |
 | `CALINO_GITHUB_REPO` | GitHub repo slug (shown in footer). | `ivan-malinovski/Calino` | ✅ |
 | `CALINO_CONTACT_EMAIL` | Contact email (shown in footer). | `calendar@malinov.ski` | ✅ |
 | `CALINO_ENABLE_SW` | Enable service worker for offline support. Requires `Service-Worker-Allowed: /` header from your reverse proxy. | `false` | ✅ |

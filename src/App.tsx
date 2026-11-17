@@ -15,6 +15,7 @@ import { useMatchMedia } from './hooks/useMatchMedia'
 import { useCalendarStore } from './store/calendarStore'
 import { useHistoryStore } from './store/historyStore'
 import { showToast } from './lib/toast'
+import { getBasePath } from './lib/basePath'
 import { useTranslation } from 'react-i18next'
 import i18n from './lib/i18n'
 import { hapticIfEnabled } from './lib/haptics'
@@ -1010,7 +1011,7 @@ function App(): JSX.Element {
   }, [])
 
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={getBasePath() || '/'}>
       <ThemeProvider>
         <CalDAVProvider>
           {/* Skip link — the first tabbable element in the document. Visually
