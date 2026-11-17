@@ -5,11 +5,14 @@ RUN npm install -g corepack@latest --force && corepack enable && corepack prepar
 
 # Build-time env vars (overridable via --build-arg)
 ARG VITE_SITE_URL=https://calino.io
+# Serve the app under a subpath, e.g. /cal/. Leave "/" for the site root.
+ARG CALINO_BASE_PATH=/
 ARG CALINO_ENABLE_SW=false
 ARG CALINO_GITHUB_REPO=ivan-malinovski/Calino
 ARG CALINO_CONTACT_EMAIL=calendar@malinov.ski
 ARG CALINO_SELF_HOSTED=true
 ENV VITE_SITE_URL=$VITE_SITE_URL \
+    CALINO_BASE_PATH=$CALINO_BASE_PATH \
     CALINO_ENABLE_SW=$CALINO_ENABLE_SW \
     CALINO_GITHUB_REPO=$CALINO_GITHUB_REPO \
     CALINO_CONTACT_EMAIL=$CALINO_CONTACT_EMAIL \

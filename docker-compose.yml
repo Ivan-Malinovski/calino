@@ -4,6 +4,7 @@ services:
       context: .
       args:
         - VITE_SITE_URL=${VITE_SITE_URL:-https://calino.io}
+        - CALINO_BASE_PATH=${CALINO_BASE_PATH:-/}
         - CALINO_ENABLE_SW=${CALINO_ENABLE_SW:-false}
         - CALINO_GITHUB_REPO=${CALINO_GITHUB_REPO:-ivan-malinovski/Calino}
         - CALINO_CONTACT_EMAIL=${CALINO_CONTACT_EMAIL:-calendar@malinov.ski}

@@ -3,6 +3,7 @@ import { Capacitor } from '@capacitor/core'
 import { App as CapacitorApp } from '@capacitor/app'
 import { useCalendarStore } from '@/store/calendarStore'
 import { useSettingsStore } from '@/store/settingsStore'
+import { withBase } from '@/lib/basePath'
 import {
   showNotification,
   createNotificationId,
@@ -268,7 +269,7 @@ export function useNotifications(): void {
             label: i18n.t('common:actions.view'),
             onClick: () => {
               const eventDateStr = snoozed.eventDate.split('T')[0]
-              window.location.href = `/?date=${eventDateStr}&event=${snoozed.eventId}`
+              window.location.href = withBase(`/?date=${eventDateStr}&event=${snoozed.eventId}`)
             },
           },
         })
