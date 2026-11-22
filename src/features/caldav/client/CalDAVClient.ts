@@ -888,8 +888,16 @@ export class CalDAVClient implements CalendarBackend {
 
     let colorXml = ''
     if (options.color) {
+      // Both spellings, deliberately. Apple's namespace is the one every server
+      // actually stores and every client actually reads (Nextcloud maps it to
+      // its own colour column), while RFC 7986's `COLOR` is the standard one.
+      // Sending only `COLOR` leaves the calendar colourless in Apple Calendar,
+      // Nextcloud and SOGo; sending only Apple's ignores the standard. Servers
+      // that do not know a property ignore it in the propstat, so writing both
+      // costs a few bytes and is compatible in both directions.
       colorXml = `
-        <ICAL:calendar-color xmlns:ICAL="http://apple.com/ns/ical/">${escapeXml(options.color)}</ICAL:calendar-color>`
+        <ICAL:calendar-color xmlns:ICAL="http://apple.com/ns/ical/">${escapeXml(options.color)}</ICAL:calendar-color>
+        <ICAL:COLOR xmlns:ICAL="urn:ietf:params:xml:ns:icalendar">${escapeXml(options.color)}</ICAL:COLOR>`
     }
 
     let descriptionXml = ''
