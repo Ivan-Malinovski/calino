@@ -81,6 +81,20 @@ export function transparentEventStyle(
 export const TASK_PILL_LAYOUT_MINUTES = 30
 
 /**
+ * A timed event that ends when it starts, such as a deadline exported by
+ * Moodle. A block sized by its duration would have no height, so the views
+ * draw it as a pill, like a timed task.
+ */
+export function isZeroDuration(event: CalendarEvent): boolean {
+  return (
+    event.type !== 'task' &&
+    !event.isAllDay &&
+    toEventInstant(event.start, event.timezone).getTime() ===
+      toEventInstant(event.end, event.timezone).getTime()
+  )
+}
+
+/**
  * CSS properties for a timed task rendered as a compact pill on the timeline.
  *
  * Anchored by `top` at the due time and sized horizontally by the same
@@ -104,8 +118,12 @@ export function taskPillStyle(
 
   const horizontal = horizontalStyle(column, totalColumns, columnSpan, inset)
 
+  // A pill due late in the day, such as at 23:59, is raised so that it ends
+  // at midnight instead of running past the bottom of the grid.
+  const hours = Math.min(minutesOfDay / 60, 24 - TASK_PILL_LAYOUT_MINUTES / 60)
+
   return {
-    top: `calc(var(--hour-height, 60px) * ${minutesOfDay / 60})`,
+    top: `calc(var(--hour-height, 60px) * ${hours})`,
     ...horizontal,
   }
 }
