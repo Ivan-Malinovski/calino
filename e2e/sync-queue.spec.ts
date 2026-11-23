@@ -181,6 +181,67 @@ test.describe('queued edits survive failed writes', () => {
       .toContain('SUMMARY:Queue edit event (edited)')
   })
 
+  test('a second edit preserves server fields after PUT read-back fails', async ({
+    page,
+    baseURL,
+  }) => {
+    await clearState(page)
+    await seedAccountSQ(page, baseURL!)
+    await seedStoreCalendars(page, [{ id: CAL_SQ, name: 'Sync Queue', color: '#4285F4' }])
+    const url = `${baseURL}/mock-caldav${SQ_PATH}read-back.ics`
+    const start = new Date()
+    start.setUTCHours(10, 0, 0, 0)
+    await page.request.put(url, {
+      data: [
+        'BEGIN:VCALENDAR',
+        'VERSION:2.0',
+        'BEGIN:VEVENT',
+        'UID:read-back',
+        `DTSTART:${icalStamp(start)}`,
+        `DTEND:${icalStamp(new Date(+start + 3600000))}`,
+        'SUMMARY:Read-back event',
+        'END:VEVENT',
+        'END:VCALENDAR',
+      ].join('\r\n'),
+    })
+    await page.goto('/month')
+    await triggerSync(page)
+    await openEventModal(page, 'Read-back event')
+
+    let firstPut = true
+    let failedRead = false
+    await page.route('**/mock-caldav' + SQ_PATH + '**', async (route) => {
+      const request = route.request()
+      const body = request.postData() ?? ''
+      if (firstPut && request.method() === 'PUT' && request.url() === url) {
+        firstPut = false
+        const response = await route.fetch({
+          postData: body.replace('END:VEVENT', 'X-SERVER-FIELD:preserved\r\nEND:VEVENT'),
+        })
+        await route.fulfill({ response, headers: { ...response.headers(), etag: 'W/"weak"' } })
+      } else if (
+        !failedRead &&
+        request.method() === 'REPORT' &&
+        body.includes('calendar-multiget')
+      ) {
+        failedRead = true
+        await route.fulfill({ status: 503 })
+      } else {
+        await route.continue()
+      }
+    })
+    await page.locator('[data-component="event-title-input"]').fill('First edit')
+    await page.locator('[data-component="modal-save"]').click()
+    await expect.poll(() => failedRead).toBe(true)
+    await openEventModal(page, 'First edit')
+    await page.locator('[data-component="event-title-input"]').fill('Second edit')
+    await page.locator('[data-component="modal-save"]').click()
+    await expect
+      .poll(async () => (await page.request.get(url)).text())
+      .toContain('SUMMARY:Second edit')
+    expect(await (await page.request.get(url)).text()).toContain('X-SERVER-FIELD:preserved')
+  })
+
   test('a stale-etag 412 is recovered by re-fetching the etag and re-applying once', async ({
     page,
     baseURL,

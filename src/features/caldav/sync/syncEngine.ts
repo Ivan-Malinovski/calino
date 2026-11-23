@@ -1,7 +1,7 @@
 import type { CalendarEvent } from '@/types'
 import type { SyncResult, ConflictResolution } from '../types'
-import { unwrapFetchEvents } from '../client/CalDAVClient'
-import type { CalendarBackend } from '../client/CalendarBackend'
+import { isStrongEtag, unwrapFetchEvents } from '../client/CalDAVClient'
+import type { CalendarBackend, WrittenEvent } from '../client/CalendarBackend'
 import {
   eventToICAL,
   eventsToICAL,
@@ -219,12 +219,7 @@ export class SyncEngine {
       event.resourceHref && resourceIsInCollection(event.resourceHref, calendar.url)
         ? event.resourceHref
         : `${calendar.url}${eventResourceFilename(event.id)}`
-    // `If-Match` is sent below, so a stale original is caught by a 412.
-    const iCalString = await this.serializeForResource([enriched], eventUrl)
-
-    const written = await this.client.updateEvent(calendar.url, eventUrl, iCalString, etag)
-    await this.rememberRawIcs(written, iCalString, eventUrl)
-    return written
+    return this.writeResource(calendar.url, eventUrl, [enriched], etag)
   }
 
   async updateEventGroup(
@@ -243,11 +238,7 @@ export class SyncEngine {
       master.resourceHref && resourceIsInCollection(master.resourceHref, calendar.url)
         ? master.resourceHref
         : `${calendar.url}${eventResourceFilename(master.id)}`
-    // As in updateEvent: `If-Match` below makes a stale original a 412.
-    const iCalString = await this.serializeForResource(enriched, eventUrl)
-    const written = await this.client.updateEvent(calendar.url, eventUrl, iCalString, etag)
-    await this.rememberRawIcs(written, iCalString, eventUrl)
-    return written
+    return this.writeResource(calendar.url, eventUrl, enriched, etag)
   }
 
   /**
@@ -268,13 +259,7 @@ export class SyncEngine {
 
     const enriched = await Promise.all(events.map((event) => withInlineAttachments(event)))
     const eventUrl = `${calendar.url}${eventResourceFilename(master.id)}`
-    // This path sends an empty `If-Match` on purpose (see above), so nothing
-    // would catch a stale original — require the stored etag to match the one
-    // the master was last seen with before trusting it.
-    const iCalString = await this.serializeForResource(enriched, eventUrl, master.etag ?? '')
-    const written = await this.client.updateEvent(calendar.url, eventUrl, iCalString, '')
-    await this.rememberRawIcs(written, iCalString, eventUrl)
-    return written
+    return this.writeResource(calendar.url, eventUrl, enriched, '', master.etag ?? '')
   }
 
   /** True when both engines talk to the same backend instance (same account). */
@@ -303,42 +288,51 @@ export class SyncEngine {
       throw new Error(`Calendar or recurrence master not found: ${this.calendarId}`)
     }
     const enriched = await Promise.all(events.map((event) => withInlineAttachments(event)))
-    const iCalString = await this.serializeForResource(enriched, sourceHref, sourceEtag)
-    const written = await this.client.updateEvent(calendar.url, sourceHref, iCalString, sourceEtag)
-    await deleteRawIcs(sourceHref).catch(() => {})
-    await this.rememberRawIcs(written, iCalString)
+    const written = await this.writeResource(
+      calendar.url,
+      sourceHref,
+      enriched,
+      sourceEtag,
+      sourceEtag
+    )
+    if (written.url !== sourceHref) await deleteRawIcs(sourceHref).catch(() => {})
     return written
   }
 
-  /**
-   * Serialize a resource, preferring a patch of the bytes the server last gave
-   * us over a from-scratch rebuild.
-   *
-   * Rebuilding drops every property Calino doesn't model, so patching is always
-   * preferred — but only against an original we can show is current. Pass
-   * `expectedEtag` on any path that does NOT send `If-Match`: elsewhere a stale
-   * original is caught by the server returning 412, but an unconditional PUT
-   * would silently resurrect properties the server has since dropped.
-   *
-   * Falls back to the previous behaviour whenever there is nothing stored or
-   * the patch fails — a save that loses unmodelled properties beats no save.
-   */
-  private async serializeForResource(
+  private async writeResource(
+    calendarUrl: string,
+    href: string,
     events: CalendarEvent[],
-    href: string | undefined,
-    expectedEtag?: string
-  ): Promise<string> {
-    const fromScratch = () => (events.length > 1 ? eventsToICAL(events) : serializeEvent(events[0]))
-
-    if (!href) return fromScratch()
-
+    etag: string,
+    expectedBaseEtag?: string
+  ): Promise<WrittenEvent> {
     const original = await getRawIcs(href).catch(() => undefined)
-    if (!original) return fromScratch()
-    if (expectedEtag !== undefined && (!original.etag || original.etag !== expectedEtag)) {
-      return fromScratch()
-    }
+    let base = original?.ics
+    if (expectedBaseEtag !== undefined && (!original?.etag || original.etag !== expectedBaseEtag))
+      base = undefined
 
-    return patchICALData(original.ics, events) ?? fromScratch()
+    // A new move destination may not exist yet. A null cache entry, however,
+    // identifies a previous successful PUT there whose read-back failed.
+    const needsRead =
+      original?.ics === null ||
+      (expectedBaseEtag === undefined && (!base || !isStrongEtag(etag) || original?.etag !== etag))
+    if (this.client.readCalendarObject && needsRead) {
+      const stored = await this.client.readCalendarObject(calendarUrl, href)
+      if (!stored) throw new Error('Could not read the stored calendar object before updating it')
+      if (isStrongEtag(etag) && etag !== stored.etag) {
+        throw Object.assign(new Error('Calendar object changed before update'), { status: 412 })
+      }
+      base = stored.data
+      etag = stored.etag
+    }
+    const patched = base ? patchICALData(base, events) : null
+    if (this.client.readCalendarObject && base && !patched) {
+      throw new Error('Could not patch the stored calendar object')
+    }
+    const ics = patched ?? (events.length > 1 ? eventsToICAL(events) : serializeEvent(events[0]))
+    const written = await this.client.updateEvent(calendarUrl, href, ics, etag)
+    await this.rememberRawIcs(written, ics, href)
+    return written
   }
 
   async deleteEvent(eventUrl: string, etag: string): Promise<void> {
@@ -348,23 +342,21 @@ export class SyncEngine {
     await deleteRawIcs(eventUrl).catch(() => {})
   }
 
-  /**
-   * Remember the exact bytes we just PUT, so consecutive edits keep patching a
-   * current original instead of waiting for the next sync to refresh it.
-   *
-   * Keyed by the url the server reported; `fallbackUrl` covers a client that
-   * answers without one. Non-fatal for the same reason as on read: the write
-   * already succeeded, and failing it here would make the caller retry a PUT
-   * that landed.
-   */
+  // An unreadable post-PUT body is recorded as null, including across reloads.
+  // A cache failure must never cause a successful PUT to be retried.
   private async rememberRawIcs(
-    written: { url?: string; etag?: string },
+    written: WrittenEvent,
     ics: string,
     fallbackUrl?: string
   ): Promise<void> {
     const href = written?.url || fallbackUrl
     if (!href) return
-    await putRawIcs(href, this.calendarId, ics, written.etag).catch(() => {})
+    await putRawIcs(
+      href,
+      this.calendarId,
+      written.data === undefined ? ics : written.data,
+      written.etag
+    ).catch(() => {})
   }
 
   private hasConflict(local: CalendarEvent, server: CalendarEvent): boolean {
