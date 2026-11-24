@@ -4,6 +4,14 @@ import i18n from '@/lib/i18n'
 const NETWORK_TIMEOUT_MS = 15_000
 
 /**
+ * The request never got a response. Either the host is down, or it sends no
+ * CORS headers and the browser won't hand the body over; from JS the two look
+ * the same. The second is the usual case for big public feeds (Google
+ * Calendar's ical URLs, for one), and a proxy fixes it.
+ */
+export class WebcalUnreachableError extends Error {}
+
+/**
  * webcal:// and webcals:// are aliases for https:// (some feed publishers
  * still hand out webcal links, but the scheme just tells the OS "open in
  * your calendar app" — the transport is plain HTTP(S)).
@@ -54,7 +62,12 @@ export async function fetchWebcalIcs(url: string, proxyUrl?: string | null): Pro
   } catch (error) {
     const message =
       error instanceof Error ? error.message : i18n.t('calendar:ui.webcal.unknownError')
-    throw new Error(i18n.t('calendar:ui.webcal.unreachable', { message }), { cause: error })
+    const text = i18n.t('calendar:ui.webcal.unreachable', { message })
+    // A timeout means the host answered too slowly, not that it was blocked.
+    if ((error as Error | undefined)?.name === 'AbortError') {
+      throw new Error(text, { cause: error })
+    }
+    throw new WebcalUnreachableError(text, { cause: error })
   }
 
   if (!response.ok) {

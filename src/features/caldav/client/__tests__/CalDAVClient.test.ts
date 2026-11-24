@@ -207,6 +207,32 @@ END:VCALENDAR`,
       ])
     })
 
+    it('writes a new calendar colour in both spellings', async () => {
+      // Apple's namespace is what servers store and clients read; RFC 7986's
+      // COLOR is the standard one. A calendar created with only the standard
+      // property looks uncoloured in Nextcloud and Apple Calendar, and one with
+      // only Apple's ignores the standard -- so both travel together.
+      const bodies: string[] = []
+      fetchSpy.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = typeof input === 'string' ? input : input.toString()
+        bodies.push(String(init?.body ?? ''))
+        if (url === 'https://caldav.example.com') {
+          return new Response(radicalePrincipalResponse, { status: 207 })
+        }
+        if (url === 'https://caldav.example.com/ivan/') {
+          return new Response(radicaleHomeSetResponse, { status: 207 })
+        }
+        return new Response(null, { status: 201 })
+      })
+
+      await client.createCalendar({ name: 'Trip Plans', color: '#2f6f4f' })
+
+      const creation = bodies.find((body) => body.includes('mkcol') || body.includes('MKCALENDAR'))
+      expect(creation).toBeDefined()
+      expect(creation).toMatch(/calendar-color[^>]*>#2f6f4f</)
+      expect(creation).toMatch(/COLOR[^>]*xmlns[^>]*urn:ietf:params:xml:ns:icalendar[^>]*>#2f6f4f</)
+    })
+
     it('survives a principal that answers no properties (falls back)', async () => {
       await client.connect()
       mockClientMethods.fetchCalendars.mockResolvedValue([])

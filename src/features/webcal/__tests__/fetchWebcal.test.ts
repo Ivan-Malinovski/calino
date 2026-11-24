@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { normalizeWebcalUrl, fetchWebcalIcs } from '../fetchWebcal'
+import { normalizeWebcalUrl, fetchWebcalIcs, WebcalUnreachableError } from '../fetchWebcal'
 
 describe('normalizeWebcalUrl', () => {
   it('rewrites webcal:// to https://', () => {
@@ -38,6 +38,23 @@ describe('fetchWebcalIcs', () => {
 
   it('rejects a non-http(s) scheme', async () => {
     await expect(fetchWebcalIcs('ftp://example.com/cal.ics')).rejects.toThrow(/http\(s\)/)
+  })
+
+  it('throws WebcalUnreachableError when the request gets no response', async () => {
+    // What a browser gives you for a feed that sends no CORS headers.
+    vi.mocked(globalThis.fetch).mockRejectedValue(new TypeError('Failed to fetch'))
+    await expect(fetchWebcalIcs('https://example.com/cal.ics')).rejects.toBeInstanceOf(
+      WebcalUnreachableError
+    )
+  })
+
+  it('does not report a timeout as unreachable', async () => {
+    vi.mocked(globalThis.fetch).mockRejectedValue(
+      new DOMException('The operation was aborted.', 'AbortError')
+    )
+    const error = await fetchWebcalIcs('https://example.com/cal.ics').catch((e: unknown) => e)
+    expect(error).toBeInstanceOf(Error)
+    expect(error).not.toBeInstanceOf(WebcalUnreachableError)
   })
 
   it('throws a friendly error on non-2xx response', async () => {
