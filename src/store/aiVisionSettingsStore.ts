@@ -30,7 +30,9 @@ function versionedStorage<T>(inner: JSONStorage<T> | undefined): JSONStorage<T> 
     ...inner,
     getItem: (name) => {
       const value = inner.getItem(name)
-      return value instanceof Promise ? value.then(stamp) : stamp(value)
+      // Persist storage also permits PromiseLike values, including promises
+      // from another realm. Keep localStorage hydration synchronous.
+      return value && 'then' in value ? Promise.resolve(value).then(stamp) : stamp(value)
     },
   }
 }
