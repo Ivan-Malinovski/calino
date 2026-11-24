@@ -70,6 +70,7 @@
       "newJournalEntry": "Nieuwe dagboeknotitie"
     },
     "sidebar": {
+      "reorderCalendar": "{{name}} verplaatsen",
       "previousMonth": "Vorige maand",
       "nextMonth": "Volgende maand",
       "calendars": "Agenda’s",

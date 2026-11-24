@@ -355,6 +355,7 @@ export interface CalendarActions {
    */
   bumpVersion: () => void
   addCalendar: (calendar: Calendar) => void
+  reorderCalendar: (id: string, overId: string) => void
   updateCalendar: (id: string, updates: Partial<Calendar>) => void
   deleteCalendar: (id: string) => void
   toggleCalendarVisibility: (id: string) => void

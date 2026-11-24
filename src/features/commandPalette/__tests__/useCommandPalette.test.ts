@@ -74,6 +74,7 @@ vi.mock('@/store/calendarStore', () => ({
       removeDuplicateUidResource: vi.fn(),
       bumpVersion: vi.fn(),
       addCalendar: vi.fn(),
+      reorderCalendar: vi.fn(),
       updateCalendar: vi.fn(),
       deleteCalendar: vi.fn(),
       toggleCalendarVisibility: vi.fn(),

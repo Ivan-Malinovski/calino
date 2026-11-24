@@ -1089,6 +1089,17 @@ export const useCalendarStore = create<CalendarStore>()(
         bumpRangeExpansionVersion()
       },
 
+      reorderCalendar: (id: string, overId: string): void => {
+        set((state) => {
+          const from = state.calendars.findIndex((calendar) => calendar.id === id)
+          const to = state.calendars.findIndex((calendar) => calendar.id === overId)
+          if (from < 0 || to < 0 || from === to) return state
+          const calendars = [...state.calendars]
+          calendars.splice(to, 0, calendars.splice(from, 1)[0])
+          return { calendars }
+        })
+      },
+
       updateCalendar: (id: string, updates: Partial<Calendar>): void => {
         set((state) => ({
           calendars: state.calendars.map((c) => (c.id === id ? { ...c, ...updates } : c)),
