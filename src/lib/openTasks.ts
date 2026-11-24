@@ -1,6 +1,22 @@
 import { nextOpenOccurrence, materializeOccurrence } from '@/lib/occurrenceExpansion'
 import type { CalendarEvent } from '@/types'
 
+export function indexTaskOverrides(events: CalendarEvent[]) {
+  const overridesByMaster = new Map<string, Map<string, CalendarEvent>>()
+  for (const event of events) {
+    if (event.type !== 'task' || !event.recurrenceId) continue
+    const key = event.recurrenceMasterId || event.uid || ''
+    const group = overridesByMaster.get(key) ?? new Map<string, CalendarEvent>()
+    group.set(event.recurrenceId, event)
+    overridesByMaster.set(key, group)
+  }
+  return overridesByMaster
+}
+
+export function taskOverridesFor(task: CalendarEvent, index: ReturnType<typeof indexTaskOverrides>) {
+  return index.get(task.id) ?? index.get(task.uid || '') ?? new Map<string, CalendarEvent>()
+}
+
 /**
  * Replaces each recurring task master in a raw store event list with its next
  * open occurrence, and drops cancelled tasks. Non-task events pass through.
@@ -13,23 +29,13 @@ import type { CalendarEvent } from '@/types'
  * routes a toggle to the override path.
  */
 export function resolveRecurringTasks(events: CalendarEvent[]): CalendarEvent[] {
-  const overridesByMaster = new Map<string, Map<string, CalendarEvent>>()
-  for (const e of events) {
-    if (e.type !== 'task' || !e.recurrenceId) continue
-    const key = e.recurrenceMasterId || e.uid || ''
-    const group = overridesByMaster.get(key) ?? new Map<string, CalendarEvent>()
-    group.set(e.recurrenceId, e)
-    overridesByMaster.set(key, group)
-  }
+  const overridesByMaster = indexTaskOverrides(events)
   return events.flatMap((e): CalendarEvent[] => {
     if (e.type !== 'task') return [e]
     // A cancelled override exists only to suppress one occurrence.
     if (e.taskStatus === 'CANCELLED') return []
     if (e.recurrenceId || !(e.rruleString || e.recurrence)) return [e]
-    const next = nextOpenOccurrence(
-      e,
-      overridesByMaster.get(e.id) ?? overridesByMaster.get(e.uid || '') ?? new Map()
-    )
+    const next = nextOpenOccurrence(e, taskOverridesFor(e, overridesByMaster))
     return next ? [materializeOccurrence(e, next)] : []
   })
 }

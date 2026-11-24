@@ -21,8 +21,10 @@ import { parseNaturalLanguage } from '@/features/nlp'
 import {
   displayOccurrence,
   materializeOccurrence,
+  nextOpenOccurrence,
   resolveRRuleString,
 } from '@/lib/occurrenceExpansion'
+import { indexTaskOverrides, taskOverridesFor } from '@/lib/openTasks'
 import { describeRecurrence } from '@/lib/recurrence'
 import { createUuid } from '@/lib/uuid'
 import {
@@ -352,6 +354,7 @@ export function useCommandPalette({ isOpen, toggleSidebar, sidebarOpen }: UseCom
     return null
   }, [query, parseInput])
 
+  const taskOverrides = useMemo(() => indexTaskOverrides(events), [events])
   const searchEvents = useCallback(
     (searchQuery: string): EventResult[] => {
       if (!searchQuery.trim()) return []
@@ -388,17 +391,19 @@ export function useCommandPalette({ isOpen, toggleSidebar, sidebarOpen }: UseCom
       for (const event of matches) {
         if (event.recurrenceMasterId && matchedIds.has(event.recurrenceMasterId)) continue
 
-        // A series is shown as one row, dated at the occurrence a user would
-        // recognise — the next one — rather than at the master's DTSTART,
-        // which for a long-running weekly is years in the past. The synthetic
-        // occurrence id is what `findEventById` resolves, so the modal opens
-        // on that occurrence and its recurrence-scope dialog offers the right
-        // choices.
-        const shape = resolveRRuleString(event) ? displayOccurrence(event, now) : null
+        // Use the same unfinished occurrence as Tasks, even when it is past due.
+        let shape = null
+        if (!event.recurrenceId && resolveRRuleString(event)) {
+          if (event.type === 'task') {
+            shape = nextOpenOccurrence(event, taskOverridesFor(event, taskOverrides))
+          }
+          shape ??= displayOccurrence(event, now)
+        }
+        const occurrence = shape ? materializeOccurrence(event, shape) : undefined
         results.push({
-          id: shape ? `${event.id}-${shape.occKey}` : event.id,
+          id: occurrence?.id ?? event.id,
           title: event.title,
-          start: shape ? shape.occStartStr : event.start,
+          start: occurrence?.dueDate ?? occurrence?.start ?? event.start,
           calendarId: event.calendarId,
           isAllDay: event.isAllDay,
           type: event.type,
@@ -408,7 +413,7 @@ export function useCommandPalette({ isOpen, toggleSidebar, sidebarOpen }: UseCom
       }
       return results
     },
-    [events]
+    [events, taskOverrides]
   )
 
   const searchCalendars = useCallback(

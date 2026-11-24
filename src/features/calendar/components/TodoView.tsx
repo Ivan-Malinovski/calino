@@ -28,6 +28,7 @@ import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { DUR_FAST, EASE_POP } from '@/lib/motion'
 import { useCalendarStore, isCalendarReadOnly } from '@/store/calendarStore'
 import { nextOpenOccurrence, materializeOccurrence } from '@/lib/occurrenceExpansion'
+import { indexTaskOverrides, taskOverridesFor } from '@/lib/openTasks'
 import { describeRecurrence } from '@/lib/recurrence'
 import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
 import { useContextMenuStore } from '@/store/contextMenuStore'
@@ -309,30 +310,13 @@ export function TodoView(): JSX.Element {
   const tasks: TaskWithColor[] = useMemo(() => {
     const calendarMap = new Map(calendars.map((c) => [c.id, c.color]))
     const visibleCalendarIds = new Set(calendars.filter((c) => c.isVisible).map((c) => c.id))
-    const allTasks = events.filter(
-      (e) =>
-        e.type === 'task' &&
-        visibleCalendarIds.has(e.calendarId) &&
-        // R2.7 — A cancelled override only exists to suppress one occurrence of
-        // a series; it is not a task the user still has to do.
-        e.taskStatus !== 'CANCELLED'
+    const calendarTasks = events.filter(
+      (e) => e.type === 'task' && visibleCalendarIds.has(e.calendarId)
     )
-
-    // R2.7 — Group a recurring series' components by their shared UID so the
-    // list can collapse them to one row. Overrides stay in the array in their
-    // own right: a completed occurrence is a real, dated task and belongs under
-    // the Completed filter, it just must not also appear as an open row.
-    const overridesByMaster = new Map<string, Map<string, CalendarEvent>>()
-    for (const task of allTasks) {
-      if (!task.recurrenceId) continue
-      const key = task.recurrenceMasterId || task.uid || ''
-      let group = overridesByMaster.get(key)
-      if (!group) {
-        group = new Map()
-        overridesByMaster.set(key, group)
-      }
-      group.set(task.recurrenceId, task)
-    }
+    // Keep cancelled overrides in the index so they suppress their slots.
+    const overridesByMaster = indexTaskOverrides(calendarTasks)
+    // Completed overrides remain separate tasks under the Completed filter.
+    const allTasks = calendarTasks.filter((task) => task.taskStatus !== 'CANCELLED')
 
     const withColor = (task: CalendarEvent): TaskWithColor => ({
       ...task,
@@ -366,11 +350,10 @@ export function TodoView(): JSX.Element {
         }
       }
 
-      const overrides =
-        overridesByMaster.get(task.id) ??
-        overridesByMaster.get(task.uid || '') ??
-        new Map<string, CalendarEvent>()
-      const completedCount = [...overrides.values()].filter((o) => o.completed).length
+      const overrides = taskOverridesFor(task, overridesByMaster)
+      const completedCount = [...overrides.values()].filter(
+        (o) => o.completed && o.taskStatus !== 'CANCELLED'
+      ).length
       const next = nextOpenOccurrence(task, overrides)
       if (!next) {
         // Series exhausted — every occurrence has been dealt with. Show the row

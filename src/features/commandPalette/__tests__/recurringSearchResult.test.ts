@@ -180,10 +180,18 @@ describe('command palette — recurring results', () => {
     expect((row.data as { start: string }).start).toBe('2024-01-16T09:00:00.000Z')
   })
 
-  it('dates a recurring task at its next occurrence too', () => {
-    mockEvents = [{ ...master, type: 'task', title: 'Water the plants' }]
+  it('dates a recurring task at its earliest open due date', () => {
+    mockEvents = [
+      {
+        ...master,
+        type: 'task',
+        title: 'Water the plants',
+        dueDate: '2024-01-02T17:00:00.000Z',
+      },
+    ]
     const [row] = search('plants')
-    expect((row.data as { start: string }).start).toBe('2026-08-11T09:00:00.000Z')
+    expect((row.data as { start: string }).start).toBe('2024-01-02T17:00:00.000Z')
+    expect(row.id).toBe('event-m1-2024-01-02T09:00:00.000Z')
     expect(row.group).toBe('task')
   })
 })

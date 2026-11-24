@@ -1,4 +1,5 @@
-import { test, expect } from '@playwright/test'
+import { readFile } from 'node:fs/promises'
+import { test, expect, type Page } from '@playwright/test'
 import { clearState } from './fixtures/localstorage'
 
 // R2.7 — Recurring tasks (recurring VTODOs), issue #96.
@@ -38,7 +39,7 @@ const MASTER = {
   taskStatus: 'NEEDS-ACTION',
 }
 
-async function seed(page: import('@playwright/test').Page, events: unknown[]): Promise<void> {
+async function seed(page: Page, events: unknown[]): Promise<void> {
   await clearState(page)
   await page.addInitScript(
     ({ calendar, events }) => {
@@ -50,6 +51,107 @@ async function seed(page: import('@playwright/test').Page, events: unknown[]): P
     { calendar: CALENDAR, events }
   )
 }
+
+async function searchTask(page: Page, title: string) {
+  await page.getByRole('button', { name: 'Search or commands' }).click()
+  const palette = page.locator('[data-component="command-palette"]')
+  await palette.getByRole('combobox').fill(title)
+  return { palette, result: palette.getByRole('option', { name: new RegExp(`^${title}`) }) }
+}
+
+test('search opens the overdue monthly occurrence and its download retains the open task', async ({
+  page,
+}) => {
+  const monthly = {
+    ...MASTER,
+    title: 'Monthly boiler check',
+    rruleString: 'FREQ=MONTHLY',
+    recurrence: { frequency: 'monthly', interval: 1 },
+  }
+  await page.clock.setFixedTime(new Date('2026-03-02T12:00:00Z'))
+  await seed(page, [monthly])
+  await page.goto('/month')
+
+  const { result } = await searchTask(page, monthly.title)
+  await expect(result).toContainText('3 Mar 2026')
+
+  await page.clock.setFixedTime(new Date('2026-03-06T12:00:00Z'))
+  await page.goto('/tasks')
+  await expect(page.getByRole('heading', { name: 'Overdue', exact: true })).toBeVisible()
+  await expect(
+    page
+      .locator('[data-component="task-row"]')
+      .filter({ hasText: monthly.title })
+      .getByLabel('Mark as complete')
+  ).toBeVisible()
+
+  await page.goto('/month')
+  await searchTask(page, monthly.title)
+  await expect(result).toContainText('3 Mar 2026')
+  await result.click()
+  await expect(page.locator('#due-date')).toHaveValue('03/03/2026')
+
+  const footer = page.locator('[data-component="modal-footer"]')
+  await footer.locator('[data-component="event-actions-menu-btn"]').click()
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    footer.locator('[data-component="export-event-ics"]').click(),
+  ])
+  const ics = await readFile((await download.path())!, 'utf8')
+  expect(ics).toContain('DUE;VALUE=DATE:20260303')
+  expect(ics).toContain('RRULE:FREQ=MONTHLY')
+  expect(ics).toContain('STATUS:NEEDS-ACTION')
+})
+
+test('recurring task search skips completed and cancelled occurrences without skipping overdue work', async ({
+  page,
+}) => {
+  await page.clock.setFixedTime(new Date('2026-03-12T12:00:00Z'))
+  const detached = (date: string, taskStatus: 'COMPLETED' | 'CANCELLED') => ({
+    ...MASTER,
+    id: `${MASTER.id}-${date}T00:00:00`,
+    recurrenceId: `${date}T00:00:00`,
+    recurrenceMasterId: MASTER.id,
+    start: `${date}T00:00:00`,
+    end: `${date}T23:59:59`,
+    dueDate: date,
+    rruleString: undefined,
+    recurrence: undefined,
+    completed: true,
+    taskStatus,
+  })
+  await seed(page, [
+    MASTER,
+    detached('2026-03-03', 'COMPLETED'),
+    detached('2026-03-17', 'CANCELLED'),
+  ])
+  await page.goto('/month')
+
+  const { palette, result } = await searchTask(page, MASTER.title)
+  await expect(result).toContainText('10 Mar 2026')
+  await palette.getByRole('button', { name: 'Filter events' }).click()
+  await expect(result).toContainText('10 Mar 2026')
+  await result.click()
+  await expect(page.locator('#due-date')).toHaveValue('10/03/2026')
+
+  await page.goto('/month')
+  await searchTask(page, MASTER.title)
+  await palette.getByRole('button', { name: 'Filter events' }).click()
+  await palette.getByLabel('From').fill('24/03/2026')
+  await palette.getByLabel('To').fill('24/03/2026')
+  await expect(result).toContainText('24 Mar 2026')
+  await result.click()
+  await expect(page.locator('#due-date')).toHaveValue('24/03/2026')
+
+  await page.goto('/tasks')
+  const openTask = page
+    .locator('[data-component="task-row"]')
+    .filter({ hasText: MASTER.title, has: page.getByLabel('Mark as complete') })
+  const repeatBadge = openTask.locator('[data-component="task-recurring-badge"]')
+  await expect(repeatBadge).toHaveAttribute('aria-label', /10 Mar 2026/)
+  await openTask.getByLabel('Mark as complete').click()
+  await expect(repeatBadge).toHaveAttribute('aria-label', /24 Mar 2026/)
+})
 
 test('collapses a repeating task to one row and marks it as repeating', async ({ page }) => {
   await seed(page, [MASTER])

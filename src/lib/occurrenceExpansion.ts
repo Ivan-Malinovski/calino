@@ -497,7 +497,7 @@ export function nextOpenOccurrence(
   // occurrenceInstant covers both.
   let cursor = new Date(occurrenceInstant(master, master.start).getTime() - 1)
   for (const override of overridesByRecurrenceId.values()) {
-    if (!override.completed) continue
+    if (!override.completed || override.taskStatus === 'CANCELLED') continue
     // Compare in the same frame the rule generates in, or an all-day
     // RECURRENCE-ID parsed as local midnight sorts before its own occurrence.
     const at = occurrenceInstant(master, override.recurrenceId as string)

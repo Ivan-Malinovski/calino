@@ -4,12 +4,14 @@ import {
   displayOccurrence,
   isOccurrenceExcluded,
   materializeOccurrence,
+  nextOpenOccurrence,
   occurrencesAfter,
   occurrenceInstant,
   shapeOccurrence,
   resolveRRuleString,
   type OccurrenceShape,
 } from '@/lib/occurrenceExpansion'
+import { indexTaskOverrides, taskOverridesFor } from '@/lib/openTasks'
 
 export type FilterDate = string
 
@@ -445,6 +447,7 @@ export function getFilteredEvents(
   now: Date = new Date()
 ): { matches: FilteredEvent[]; invalidDateRange: boolean } {
   const range = validateFilterDateRange(filter)
+  const taskOverrides = hasDateConstraint(range) ? undefined : indexTaskOverrides(events)
   const masters = new Map(events.filter(isRecurring).map((event) => [event.id, event]))
   const overridesByMaster = new Map<string, CalendarEvent[]>()
   for (const event of events) {
@@ -458,13 +461,13 @@ export function getFilteredEvents(
   const matchedMasterIds = new Set<string>()
   for (const master of masters.values()) {
     if (isCancelled(master)) continue
-    const match = filterRecurringMaster(
-      master,
-      overridesByMaster.get(master.id) ?? [],
-      filter,
-      range,
-      now
-    )
+    const openOccurrence =
+      master.type === 'task' && taskOverrides && eventMatchesText(master, filter)
+        ? nextOpenOccurrence(master, taskOverridesFor(master, taskOverrides))
+        : null
+    const match = openOccurrence
+      ? { event: master, occurrence: openOccurrence }
+      : filterRecurringMaster(master, overridesByMaster.get(master.id) ?? [], filter, range, now)
     if (match) {
       matches.push(match)
       matchedMasterIds.add(master.id)
