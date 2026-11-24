@@ -1600,8 +1600,8 @@ function readDueInstant(prop: ICAL.Property | null | undefined): Date | null {
 }
 
 /**
- * Give a new timed task the VALARM that other CalDAV clients need in order to
- * schedule a notification.
+ * Give an eligible timed task the VALARM other CalDAV clients need to schedule
+ * a notification.
  *
  * Calino derives its own task due-date reminders locally from DUE, but Apple
  * Reminders only schedules a notification when the VTODO carries a VALARM. A
@@ -1609,9 +1609,10 @@ function readDueInstant(prop: ICAL.Property | null | undefined): Date | null {
  * created on the iPhone (which writes its own alarm) did notify.
  *
  * The alarm matches what iOS writes: an absolute UTC trigger, DISPLAY action.
- * Existing alarms are never duplicated. Absolute triggers are shifted by the
- * DUE delta so an alarm written by another client keeps its offset when the
- * due date changes here; relative triggers already follow DUE and stay alone.
+ * Existing alarms are never duplicated. Alarms created here are marked so they
+ * can be removed when the task no longer qualifies. Absolute triggers shift by
+ * the DUE delta so alarms from other clients keep their offset on reschedule;
+ * relative triggers retain their original anchor and stay alone.
  *
  * Date-only tasks and recurring tasks are deliberately left without a new
  * alarm: neither has a single instant a fixed trigger can represent, and
@@ -1622,10 +1623,20 @@ function syncTaskDueAlarm(
   task: CalendarEvent,
   previousDue: Date | null
 ): void {
-  const dueInstant =
-    task.dueDate && !task.isAllDay ? toEventInstant(task.dueDate, task.timezone) : null
-  const newDue =
-    dueInstant && !Number.isNaN(dueInstant.getTime()) ? dueInstant : null
+  // Use the DUE just written so the trigger matches its exact timezone and
+  // value type, including inputs that already carry a UTC offset.
+  const newDue = readDueInstant(vtodo.getFirstProperty('due'))
+
+  const eligible = Boolean(
+    newDue && !task.completed && !task.recurrence && !task.rruleString && !task.recurrenceId
+  )
+  // Only remove alarms we created. Imported alarms may express an independent
+  // reminder and must survive changes to the task's date mode or status.
+  for (const alarm of vtodo.getAllSubcomponents('valarm')) {
+    if (!eligible && alarm.getFirstPropertyValue('x-calino-due-alarm') === 'TRUE') {
+      vtodo.removeSubcomponent(alarm)
+    }
+  }
 
   const alarms = vtodo.getAllSubcomponents('valarm')
   if (alarms.length > 0) {
@@ -1636,8 +1647,8 @@ function syncTaskDueAlarm(
     for (const alarm of alarms) {
       const triggerProp = alarm.getFirstProperty('trigger')
       const trigger = triggerProp?.getFirstValue()
-      // A relative trigger is resolved against DUE by the receiving client, so
-      // it already moved with the task. Only absolute instants need shifting.
+      // Relative triggers retain their START/END anchor. Only absolute
+      // instants need shifting.
       if (!(trigger instanceof ICAL.Time)) continue
       const shifted = new Date(trigger.toJSDate().getTime() + delta)
       if (Number.isNaN(shifted.getTime())) continue
@@ -1646,14 +1657,12 @@ function syncTaskDueAlarm(
     return
   }
 
-  if (!newDue || task.completed) return
-  // One absolute alarm cannot represent a whole recurrence set; Calino's local
-  // task reminder still covers recurring tasks.
-  if (task.recurrence || task.rruleString || task.recurrenceId) return
+  if (!eligible || !newDue) return
 
   const alarm = new ICAL.Component('valarm')
   alarm.updatePropertyWithValue('action', 'DISPLAY')
   alarm.updatePropertyWithValue('description', 'Reminder')
+  alarm.updatePropertyWithValue('x-calino-due-alarm', 'TRUE')
   alarm.addPropertyWithValue('trigger', ICAL.Time.fromJSDate(newDue, true))
   vtodo.addSubcomponent(alarm)
 }
@@ -1667,8 +1676,9 @@ function syncTaskDueAlarm(
  * removed here, and everything else is left exactly as the server sent it.
  *
  * VALARMs are not modelled on read, so their contents are preserved. The write
- * path only adds a due-time alarm to a new task and shifts absolute triggers
- * when DUE moves; see {@link syncTaskDueAlarm}.
+ * path adds a due-time alarm to eligible tasks, removes its own alarms when
+ * no longer eligible, and shifts absolute triggers when DUE moves; see
+ * {@link syncTaskDueAlarm}.
  */
 export function calendarEventToIcalVtodo(
   task: CalendarEvent,

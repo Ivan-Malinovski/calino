@@ -6,7 +6,7 @@ All notable changes to Calino will be documented in this file.
 
 ### Fixed
 
-- **Task reminders reach other CalDAV clients.** A timed task created in Calino now writes a `VALARM` at its due time (absolute UTC trigger, `ACTION:DISPLAY`), so Apple Reminders and similar clients schedule a notification instead of only displaying the task. Existing alarms are preserved, and absolute triggers move with `DUE` when the task is edited. Recurring and date-only tasks keep Calino's local due-date reminder.
+- **Task reminders reach other CalDAV clients.** A timed task created in Calino now writes a `VALARM` at its due time (absolute UTC trigger, `ACTION:DISPLAY`), so Apple Reminders and similar clients schedule a notification instead of only displaying the task. Existing alarms are preserved, and absolute triggers move with `DUE` when the task is edited. Alarms created by Calino are removed when a task is completed, loses its due time, or becomes recurring. Recurring and date-only tasks keep Calino's local due-date reminder.
 
 ## [0.42.0] - 2026-11-03
 

@@ -1437,3 +1437,64 @@ describe('VTODO due-time VALARM', () => {
     expect(vtodo.getAllSubcomponents('valarm')[0].toString()).toBe(before)
   })
 })
+
+describe('Calino due-alarm lifecycle', () => {
+  const task = {
+    id: 'managed-alarm',
+    uid: 'managed-alarm',
+    calendarId: 'cal-1',
+    type: 'task',
+    title: 'Managed alarm',
+    start: '2027-03-27T16:30:00',
+    end: '2027-03-27T16:30:00',
+    dueDate: '2027-03-27T16:30:00',
+    timezone: 'Europe/Copenhagen',
+    isAllDay: false,
+  } as CalendarEvent
+
+  it.each([
+    { isAllDay: true, dueDate: '2027-03-27' },
+    { dueDate: undefined },
+    { completed: true },
+    { rruleString: 'FREQ=DAILY' },
+    { recurrenceId: '2027-03-27T16:30:00' },
+  ])('removes only its own alarm when no longer eligible: %j', (changes) => {
+    const todo = calendarEventToIcalVtodo(task)
+    expect(todo.getAllSubcomponents('valarm')).toHaveLength(1)
+    expect(todo.toString()).toContain('X-CALINO-DUE-ALARM:TRUE')
+    const imported = new ICAL.Component('valarm')
+    imported.updatePropertyWithValue('action', 'DISPLAY')
+    imported.updatePropertyWithValue('description', 'External reminder')
+    imported.addPropertyWithValue('trigger', ICAL.Duration.fromString('-PT30M'))
+    todo.addSubcomponent(imported)
+    const before = imported.toString()
+    calendarEventToIcalVtodo({ ...task, ...changes }, todo)
+    expect(todo.getAllSubcomponents('valarm')).toEqual([imported])
+    expect(imported.toString()).toBe(before)
+  })
+
+  it('matches the written DUE when the input already carries an offset', () => {
+    const todo = calendarEventToIcalVtodo({ ...task, dueDate: '2027-03-27T16:30:00+02:00' })
+    expect(todo.toString()).toContain('DUE;TZID=Europe/Copenhagen:20270327T153000')
+    expect(todo.toString()).toContain('TRIGGER;VALUE=DATE-TIME:20270327T143000Z')
+  })
+
+  it('restores one alarm when an undated task becomes timed again', () => {
+    const todo = calendarEventToIcalVtodo(task)
+    calendarEventToIcalVtodo({ ...task, dueDate: undefined }, todo)
+    expect(todo.getAllSubcomponents('valarm')).toHaveLength(0)
+    calendarEventToIcalVtodo(task, todo)
+    calendarEventToIcalVtodo(task, todo)
+    expect(todo.getAllSubcomponents('valarm')).toHaveLength(1)
+  })
+
+  it.each([
+    ['2027-03-27T16:30:00', '2027-03-28T16:30:00', '20270328T143000Z'],
+    ['2027-10-30T16:30:00', '2027-10-31T16:30:00', '20271031T153000Z'],
+  ])('shifts by elapsed time across DST: %s to %s', (previous, next, expected) => {
+    const todo = calendarEventToIcalVtodo({ ...task, dueDate: previous })
+    calendarEventToIcalVtodo({ ...task, dueDate: next }, todo)
+    expect(todo.getAllSubcomponents('valarm')).toHaveLength(1)
+    expect(todo.toString()).toContain(`TRIGGER;VALUE=DATE-TIME:${expected}`)
+  })
+})
