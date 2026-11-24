@@ -232,7 +232,7 @@ export async function runDiagnostics(options: DiagnosticsOptions): Promise<Diagn
     Depth: depth,
   })
 
-  let base = serverUrl.replace(/\/$/, '')
+  let base = serverUrl
   const kindOf = (): DiagnosticsKind => (protocol === 'jmap' ? 'jmap' : kind)
   const everythingAfterReach = (): CheckId[] =>
     protocol === 'jmap'
@@ -294,6 +294,7 @@ export async function runDiagnostics(options: DiagnosticsOptions): Promise<Diagn
   } else {
     try {
       base = await discoverServerUrl(serverUrl, proxyUrl ?? undefined)
+      if (base === serverUrl.replace(/\/$/, '')) base = serverUrl
     } catch {
       // Keep the URL as typed.
     }
@@ -398,7 +399,7 @@ export async function runDiagnostics(options: DiagnosticsOptions): Promise<Diagn
   // `probeConnection` already retries the base URL for exactly this reason; do
   // the same here, or every check below reports on the UI and the 403 gets
   // misread as "your credentials were rejected".
-  const normalizedBase = serverUrl.replace(/\/$/, '')
+  const normalizedBase = serverUrl
   if (base !== normalizedBase && !isDavResponse(propfind)) {
     try {
       const retry = await request(normalizedBase, {
