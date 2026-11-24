@@ -17,6 +17,7 @@ e2e/.env.test
 
 # Self-hosted config (contains encrypted credentials)
 calino.config.json
+calino-config/
 
 # Logs
 logs/

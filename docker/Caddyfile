@@ -23,13 +23,33 @@
 	# Keep the mounted directory outside the SPA document root.
 	handle /calino.config.json {
 		header Cache-Control "no-store"
-		@protected expression `{env.CALINO_CONFIG_AUTH_USER} != "" && {env.CALINO_CONFIG_AUTH_HASH} != ""`
-		@public expression `{env.CALINO_CONFIG_ALLOW_PUBLIC} == "true" && {env.CALINO_CONFIG_AUTH_USER} == "" && {env.CALINO_CONFIG_AUTH_HASH} == ""`
+		@perUser expression `{env.CALINO_CONFIG_PER_USER} == "true"`
+		@protected expression `{env.CALINO_CONFIG_PER_USER} != "true" && {env.CALINO_CONFIG_AUTH_USER} != "" && {env.CALINO_CONFIG_AUTH_HASH} != ""`
+		@public expression `{env.CALINO_CONFIG_PER_USER} != "true" && {env.CALINO_CONFIG_ALLOW_PUBLIC} == "true" && {env.CALINO_CONFIG_AUTH_USER} == "" && {env.CALINO_CONFIG_AUTH_HASH} == ""`
 		@anonymousAppFetch {
 			header X-Calino-Config-Fetch 1
 			not header Authorization *
 		}
 		@missingConfig not file /calino.config.json
+		@invalidUser expression `!{http.auth.user.id}.matches('^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$')`
+
+		handle @perUser {
+			route {
+				header X-Calino-Config-Mode per-user
+				header @anonymousAppFetch X-Calino-Config-Auth basic
+				respond @anonymousAppFetch 401
+				basic_auth {
+					# The glob can be empty. This account cannot authenticate.
+					__calino_disabled__ AA==
+					import /calino/auth/*.caddy
+				}
+				respond @invalidUser 403
+				header X-Calino-Config-User {http.auth.user.id}
+				root * /calino/users
+				rewrite /{http.auth.user.id}.json
+				file_server
+			}
+		}
 
 		handle @protected {
 			route {
@@ -66,6 +86,8 @@
 			header -WWW-Authenticate
 			header Cache-Control "no-store"
 			header X-Calino-Config-Auth basic
+			@perUserError expression `{env.CALINO_CONFIG_PER_USER} == "true"`
+			header @perUserError X-Calino-Config-Mode per-user
 			respond 401
 		}
 	}

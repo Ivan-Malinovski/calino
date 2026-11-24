@@ -7,17 +7,20 @@ import styles from './MasterPasswordPrompt.module.css'
 
 export function HostedConfigSignIn() {
   const runtimeSignIn = useConfigStore((state) => state.runtimeSignIn)
+  const perUser = useConfigStore((state) => state.perUser)
   const { pathname } = useLocation()
   if (runtimeSignIn !== 'required' || pathname === '/setup') return null
-  return <SignInForm />
+  return <SignInForm perUser={perUser} />
 }
 
-function SignInForm() {
+function SignInForm({ perUser }: { perUser: boolean }) {
   const { t } = useTranslation('settings', { keyPrefix: 'hostedConfigSignIn' })
   const signIn = useConfigStore((state) => state.signIn)
   const setOpen = useConfigStore((state) => state.setRuntimeSignInOpen)
   const [pending, setPending] = useState(false)
-  const [error, setError] = useState<'unauthorized' | 'unavailable' | 'insecure' | null>(null)
+  const [error, setError] = useState<
+    'unauthorized' | 'unavailable' | 'insecure' | 'otherProfile' | null
+  >(null)
   const dialogRef = useRef<HTMLDivElement>(null)
   const passwordRef = useRef<HTMLInputElement>(null)
   const secure = window.isSecureContext
@@ -49,7 +52,7 @@ function SignInForm() {
       aria-modal="true"
       aria-labelledby="hosted-config-sign-in-title"
       onKeyDown={(event) => {
-        if (event.key === 'Escape' && !pending) {
+        if (event.key === 'Escape' && !pending && !perUser) {
           event.stopPropagation()
           setOpen(false)
         }
@@ -104,14 +107,16 @@ function SignInForm() {
         )}
 
         <div className={styles.actions}>
-          <button
-            type="button"
-            className={`${styles.button} ${styles.cancel}`}
-            onClick={() => setOpen(false)}
-            disabled={pending}
-          >
-            {t('skip')}
-          </button>
+          {!perUser && (
+            <button
+              type="button"
+              className={`${styles.button} ${styles.cancel}`}
+              onClick={() => setOpen(false)}
+              disabled={pending}
+            >
+              {t('skip')}
+            </button>
+          )}
           {secure && (
             <button
               type="submit"

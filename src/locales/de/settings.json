@@ -802,7 +802,8 @@
     "signingIn": "Anmeldung läuft…",
     "unauthorized": "Benutzername oder Passwort ist falsch.",
     "unavailable": "Die gehostete Konfiguration konnte nicht geladen werden. Versuche es erneut.",
-    "insecure": "Öffne diese Instanz über HTTPS, um dich anzumelden."
+    "insecure": "Öffne diese Instanz über HTTPS, um dich anzumelden.",
+    "otherProfile": "Dieses Browserprofil enthält bereits Calino-Daten oder gehört einer anderen Person. Öffne Calino in einem separaten Browserprofil."
   },
   "masterPassword": {
     "overlayAriaLabel": "CalDAV-Konten entsperren",

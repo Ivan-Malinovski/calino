@@ -37,6 +37,8 @@ export interface LoadedConfig {
   config: CalinoConfig | null
   linkSchemes: Record<string, string>
   requiresSignIn?: true
+  perUser?: true
+  verifiedUser?: string
 }
 
 let configLoad: Promise<LoadedConfig> | undefined
@@ -68,6 +70,7 @@ const CalinoConfigEnvelopeSchema = z.object({
 })
 
 const SIGN_IN_REQUIRED = Symbol('config sign-in required')
+const PER_USER_SIGN_IN_REQUIRED = Symbol('per-user config sign-in required')
 
 function fetchRuntimeConfig(authorization?: string): Promise<Response> {
   return fetch(`${import.meta.env.BASE_URL}calino.config.json`, {
@@ -87,6 +90,9 @@ async function selectConfig(): Promise<unknown> {
 
   try {
     const response = await fetchRuntimeConfig()
+    if (response.headers.get('X-Calino-Config-Mode') === 'per-user') {
+      return PER_USER_SIGN_IN_REQUIRED
+    }
     if (response.status === 401 && response.headers.get('X-Calino-Config-Auth') === 'basic') {
       return SIGN_IN_REQUIRED
     }
@@ -119,6 +125,9 @@ export async function loadConfig(): Promise<CalinoConfig | null> {
 
 async function readConfigDocument(): Promise<LoadedConfig> {
   const raw = await selectConfig()
+  if (raw === PER_USER_SIGN_IN_REQUIRED) {
+    return { config: null, linkSchemes: {}, requiresSignIn: true, perUser: true }
+  }
   if (raw === SIGN_IN_REQUIRED) return { config: null, linkSchemes: {}, requiresSignIn: true }
   return parseConfig(raw) ?? { config: null, linkSchemes: {} }
 }
@@ -136,7 +145,14 @@ export async function signInToRuntimeConfig(
     const response = await fetchRuntimeConfig(`Basic ${encoded}`)
     if (response.status === 401 || response.status === 403) return 'unauthorized'
     if (!response.ok) return 'unavailable'
-    return parseConfig(await response.json()) ?? 'unavailable'
+    const document = parseConfig(await response.json())
+    if (!document) return 'unavailable'
+    if (response.headers.get('X-Calino-Config-Mode') !== 'per-user') return document
+
+    const verifiedUser = response.headers.get('X-Calino-Config-User')
+    if (!verifiedUser || !/^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/.test(verifiedUser))
+      return 'unavailable'
+    return { ...document, perUser: true, verifiedUser }
   } catch {
     return 'unavailable'
   }

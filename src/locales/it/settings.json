@@ -802,7 +802,8 @@
     "signingIn": "Accesso in corso…",
     "unauthorized": "Il nome utente o la password non sono corretti.",
     "unavailable": "Impossibile caricare la configurazione ospitata. Riprova.",
-    "insecure": "Apri questa istanza tramite HTTPS per accedere."
+    "insecure": "Apri questa istanza tramite HTTPS per accedere.",
+    "otherProfile": "Questo profilo del browser contiene già dati di Calino o appartiene a un altro utente. Apri Calino in un profilo del browser separato."
   },
   "masterPassword": {
     "overlayAriaLabel": "Sblocca gli account CalDAV",

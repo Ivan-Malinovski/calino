@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { bindHostedProfile, getHostedProfile } from '../lib/hostedProfile'
 import { validateCustomHeaders } from '../features/caldav/client/customHeaders'
 import {
   loadConfigDocument,
@@ -34,6 +35,7 @@ interface ConfigState {
   config: CalinoConfig | null
   configLoaded: boolean
   checkingMasterPassword: boolean
+  perUser: boolean
   runtimeSignIn: 'required' | 'dismissed' | null
   linkSchemes: Record<string, string> | null
 
@@ -54,7 +56,7 @@ interface ConfigState {
   signIn: (
     username: string,
     password: string
-  ) => Promise<'ok' | 'unauthorized' | 'unavailable' | 'insecure'>
+  ) => Promise<'ok' | 'unauthorized' | 'unavailable' | 'insecure' | 'otherProfile'>
   setRuntimeSignInOpen: (open: boolean) => void
   unlock: (masterPassword: string) => Promise<boolean>
   lock: () => Promise<void>
@@ -106,6 +108,7 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
   config: null,
   configLoaded: false,
   checkingMasterPassword: false,
+  perUser: getHostedProfile() !== null,
   runtimeSignIn: null,
   linkSchemes: null,
   masterPassword: null, // loaded async in loadConfigFile
@@ -121,18 +124,29 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
   loadConfigFile: async () => {
     const document = await loadConfigDocument()
     if (get().configLoaded) return
+    if (get().perUser && !document.perUser) {
+      set({ configLoaded: true, runtimeSignIn: 'required' })
+      return
+    }
     await installConfig(document)
   },
 
   signIn: async (username, password) => {
     const result = await signInToRuntimeConfig(username, password)
     if (typeof result === 'string') return result
+    if (result.perUser || get().perUser) {
+      if (!result.verifiedUser) return 'unavailable'
+      const binding = await bindHostedProfile(result.verifiedUser)
+      if (binding !== 'ok') return binding
+    }
     await installConfig(result)
     return 'ok'
   },
 
   setRuntimeSignInOpen: (open) => {
-    if (get().runtimeSignIn) set({ runtimeSignIn: open ? 'required' : 'dismissed' })
+    if (!get().perUser && get().runtimeSignIn) {
+      set({ runtimeSignIn: open ? 'required' : 'dismissed' })
+    }
   },
 
   /**
@@ -224,11 +238,17 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
   },
 }))
 
-async function installConfig({ config, linkSchemes, requiresSignIn }: LoadedConfig): Promise<void> {
+async function installConfig({
+  config,
+  linkSchemes,
+  requiresSignIn,
+  perUser,
+}: LoadedConfig): Promise<void> {
   useConfigStore.setState({
     config,
     linkSchemes,
     configLoaded: true,
+    perUser: Boolean(perUser),
     checkingMasterPassword: config !== null,
     runtimeSignIn: requiresSignIn ? 'required' : null,
     hasPreconfiguredAccounts: Boolean(config?.accounts.length),

@@ -955,6 +955,9 @@ function GitHubPagesRedirect(): null {
 function App(): JSX.Element {
   const { t } = useTranslation()
   const loadConfigFile = useConfigStore((state) => state.loadConfigFile)
+  const configLoaded = useConfigStore((state) => state.configLoaded)
+  const perUser = useConfigStore((state) => state.perUser)
+  const runtimeSignIn = useConfigStore((state) => state.runtimeSignIn)
   const overdueTaskBadge = useSettingsStore((state) => state.overdueTaskBadge)
 
   // Load self-hosted config on mount. Explicitly caught: a missing or malformed
@@ -1009,6 +1012,21 @@ function App(): JSX.Element {
       if (capListener) void capListener.remove()
     }
   }, [])
+
+  // Per-user profiles must never mount the app or start sync before sign-in.
+  if (!configLoaded || (perUser && runtimeSignIn)) {
+    return (
+      <BrowserRouter>
+        <ThemeProvider>
+          <HostedConfigSignIn />
+          <Routes>
+            <Route path="/setup" element={<SetupPage />} />
+            <Route path="*" element={null} />
+          </Routes>
+        </ThemeProvider>
+      </BrowserRouter>
+    )
+  }
 
   return (
     <BrowserRouter>

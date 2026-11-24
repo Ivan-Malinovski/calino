@@ -802,7 +802,8 @@
     "signingIn": "Connexion en cours…",
     "unauthorized": "Le nom d’utilisateur ou le mot de passe est incorrect.",
     "unavailable": "Impossible de charger la configuration hébergée. Réessayez.",
-    "insecure": "Ouvrez cette instance via HTTPS pour vous connecter."
+    "insecure": "Ouvrez cette instance via HTTPS pour vous connecter.",
+    "otherProfile": "Ce profil de navigateur contient déjà des données Calino ou appartient à une autre personne. Ouvrez Calino dans un profil de navigateur distinct."
   },
   "masterPassword": {
     "overlayAriaLabel": "Déverrouiller les comptes CalDAV",

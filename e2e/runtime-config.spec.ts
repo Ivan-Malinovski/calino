@@ -51,17 +51,18 @@ test('a mounted config provisions and rotates a CalDAV account after reload', as
   expect(loads).toBe(1)
 
   current = await configFor(url, 'Rotated calendar', 'second-password', 'second-gateway')
-  const rotatedSync = page.waitForRequest(
+  await page.reload()
+  await expect(account('Rotated calendar')).toBeVisible()
+  const rotatedConnection = page.waitForRequest(
     async (request) =>
-      request.method() === 'REPORT' &&
+      request.method() === 'PROPFIND' &&
       request.url().startsWith(url) &&
       request.headers()['x-gateway'] === 'second-gateway' &&
       (await request.headerValue('authorization')) ===
         `Basic ${Buffer.from('user:second-password').toString('base64')}`
   )
-  await page.reload()
-  await rotatedSync
-  await expect(account('Rotated calendar')).toBeVisible()
+  await page.getByRole('button', { name: 'Test connection for Rotated calendar' }).click()
+  await rotatedConnection
   await expect(unlock).toBeHidden()
   expect(await storedAccountIds()).toEqual(ids)
   expect(loads).toBe(2)
@@ -99,7 +100,7 @@ test('a config containing only an encrypted webcal feed can be unlocked', async 
   await expect(unlock).toBeVisible()
   const feed = page.waitForResponse(url)
   await unlock.fill(masterPassword)
-  await unlock.press('Enter')
+  await page.getByRole('button', { name: 'Unlock', exact: true }).click()
   expect((await feed).ok()).toBe(true)
   await expect(unlock).toBeHidden()
 
@@ -163,4 +164,92 @@ test('hosted config sign-in downloads and unlocks the config without leaving Cal
         JSON.stringify(sessionStorage).includes('download-password')
     )
   ).toBe(false)
+})
+
+test('one hosted instance provisions different calendars in separate browser profiles', async ({
+  page,
+  browser,
+  baseURL,
+}) => {
+  const users = {
+    alice: await configFor(
+      `${baseURL}/mock-caldav/dav/`,
+      'Alice calendar account',
+      'alice-dav',
+      'alice-gateway'
+    ),
+    bob: await configFor(
+      `${baseURL}/mock-caldav-b/dav/`,
+      'Bob calendar account',
+      'bob-dav',
+      'bob-gateway'
+    ),
+  }
+  const configure = async (profile: typeof page) => {
+    await clearState(profile)
+    await profile.route('**/calino.config.json', async (route) => {
+      const authorization = await route.request().headerValue('authorization')
+      const user = (['alice', 'bob'] as const).find(
+        (username) =>
+          authorization ===
+          `Basic ${Buffer.from(`${username}:download-password`).toString('base64')}`
+      )
+      const headers = { 'X-Calino-Config-Mode': 'per-user' }
+      if (!user) {
+        return route.fulfill({
+          status: 401,
+          headers: { ...headers, 'X-Calino-Config-Auth': 'basic' },
+        })
+      }
+      return route.fulfill({
+        headers: { ...headers, 'X-Calino-Config-User': user },
+        json: users[user],
+      })
+    })
+  }
+
+  const signIn = async (profile: typeof page, username: string) => {
+    const dialog = profile.getByRole('dialog', { name: 'Connect to hosted configuration' })
+    await dialog.getByLabel('Username').fill(username)
+    await dialog.getByLabel('Sign-in password').fill('download-password')
+    await dialog.getByRole('button', { name: 'Sign in', exact: true }).click()
+  }
+  const unlock = async (profile: typeof page) => {
+    const input = profile.locator('#master-password')
+    await input.fill(masterPassword)
+    await input.press('Enter')
+  }
+  const accounts = (profile: typeof page) =>
+    profile.locator('[data-component="connected-accounts"]')
+
+  await configure(page)
+  await page.goto('/settings?tab=caldav')
+  await expect(page.getByRole('button', { name: 'Continue without it' })).toHaveCount(0)
+  await expect(accounts(page)).toHaveCount(0)
+  await signIn(page, 'alice')
+  await unlock(page)
+  await expect(accounts(page).getByText('Alice calendar account')).toBeVisible()
+
+  await page.reload()
+  await expect(accounts(page)).toHaveCount(0)
+  await signIn(page, 'bob')
+  await expect(page.getByRole('alert')).toContainText('Open Calino in a separate browser profile.')
+  await expect(accounts(page)).toHaveCount(0)
+
+  const secondContext = await browser.newContext({ baseURL })
+  try {
+    const bob = await secondContext.newPage()
+    await configure(bob)
+    await bob.goto('/settings?tab=caldav')
+    await signIn(bob, 'bob')
+    await unlock(bob)
+    await expect(accounts(bob).getByText('Bob calendar account')).toBeVisible()
+    await expect(accounts(bob).getByText('Alice calendar account')).toHaveCount(0)
+  } finally {
+    await secondContext.close()
+  }
+
+  await signIn(page, 'alice')
+  await expect(accounts(page).getByText('Alice calendar account')).toBeVisible()
+  await expect(accounts(page).getByText('Bob calendar account')).toHaveCount(0)
 })

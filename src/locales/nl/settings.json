@@ -802,7 +802,8 @@
     "signingIn": "Bezig met aanmelden…",
     "unauthorized": "De gebruikersnaam of het wachtwoord is onjuist.",
     "unavailable": "De gehoste configuratie kon niet worden geladen. Probeer het opnieuw.",
-    "insecure": "Open deze instantie via HTTPS om je aan te melden."
+    "insecure": "Open deze instantie via HTTPS om je aan te melden.",
+    "otherProfile": "Dit browserprofiel bevat al Calino-gegevens of is van een andere gebruiker. Open Calino in een apart browserprofiel."
   },
   "masterPassword": {
     "overlayAriaLabel": "CalDAV-accounts ontgrendelen",

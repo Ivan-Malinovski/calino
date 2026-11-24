@@ -802,7 +802,8 @@
     "signingIn": "Iniciando sesión…",
     "unauthorized": "El nombre de usuario o la contraseña no son correctos.",
     "unavailable": "No se pudo cargar la configuración alojada. Vuelve a intentarlo.",
-    "insecure": "Abre esta instancia mediante HTTPS para iniciar sesión."
+    "insecure": "Abre esta instancia mediante HTTPS para iniciar sesión.",
+    "otherProfile": "Este perfil del navegador ya contiene datos de Calino o pertenece a otra persona. Abre Calino en otro perfil del navegador."
   },
   "masterPassword": {
     "overlayAriaLabel": "Desbloquear cuentas CalDAV",

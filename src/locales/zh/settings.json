@@ -802,7 +802,8 @@
     "signingIn": "正在登录…",
     "unauthorized": "用户名或密码不正确。",
     "unavailable": "无法加载托管配置。请重试。",
-    "insecure": "请通过 HTTPS 打开此实例以登录。"
+    "insecure": "请通过 HTTPS 打开此实例以登录。",
+    "otherProfile": "此浏览器配置文件已包含 Calino 数据或属于其他用户。请在单独的浏览器配置文件中打开 Calino。"
   },
   "masterPassword": {
     "overlayAriaLabel": "解锁 CalDAV 账户",

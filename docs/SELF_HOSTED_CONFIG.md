@@ -187,6 +187,7 @@ services:
     ports:
       - "127.0.0.1:8080:8080"
     environment:
+      CALINO_CONFIG_PER_USER: ${CALINO_CONFIG_PER_USER:-false}
       CALINO_CONFIG_AUTH_USER: ${CALINO_CONFIG_AUTH_USER:-}
       CALINO_CONFIG_AUTH_HASH: ${CALINO_CONFIG_AUTH_HASH:-}
       CALINO_CONFIG_ALLOW_PUBLIC: ${CALINO_CONFIG_ALLOW_PUBLIC:-false}
@@ -241,6 +242,41 @@ requires entering the master password again.
 
 Building from source with `calino.config.json` in the project root also works.
 The config is bundled during `docker compose up -d --build`.
+
+### One instance, separate user configs
+
+Set `CALINO_CONFIG_PER_USER=true` on the container to require sign-in and give
+each user a separate config. Use HTTPS and mount the directory read-only, as
+above. Lay out the directory as follows:
+
+```text
+calino-config/
+  auth/users.caddy
+  users/alice.json
+  users/bob.json
+```
+
+Put one `username bcrypt-hash` pair per line in `auth/users.caddy`. Generate a
+separate hash for each user with `caddy hash-password`. Use stable, unique
+usernames starting with a letter or digit and containing only letters, digits,
+underscores, or hyphens, up to 64 characters. Usernames and filenames are case
+sensitive. Generate each config with `/setup` and use a separate master password
+for each file. Caddy uses the verified username to choose `users/<username>.json`.
+This mode ignores the single-user credentials and public-download flag. Keep
+the entire directory outside source control and treat the auth file and configs
+as private deployment files.
+
+Each user opens the same Calino URL in **their own browser profile**. Calino
+requires sign-in before it opens calendars in this mode. On first sign-in it
+binds an empty local profile to that identity and rejects another identity in
+that profile. Existing Calino users should start in a new profile. Ordinary
+tabs in the same browser profile share data. Opening a new page in this mode
+requires a connection to the server. Removing a server user blocks future
+downloads but cannot delete data already saved in their browser.
+
+Replace a user's JSON file and reload Calino to apply updates. Restart the
+container after adding or changing authentication entries so Caddy reads the
+updated hashes.
 
 ### CORS Requirement
 

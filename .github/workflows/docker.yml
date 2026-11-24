@@ -138,13 +138,32 @@ jobs:
             exit 1
           fi
 
+      - name: Verify config selection in per-user mode
+        run: |
+          config_dir="$RUNNER_TEMP/calino-per-user"
+          mkdir -p "$config_dir/auth" "$config_dir/users"
+          hash=$(docker run --rm calino:test caddy hash-password --plaintext fixture-password)
+          printf 'alice %s\nbob %s\n' "$hash" "$hash" > "$config_dir/auth/users.caddy"
+          printf '%s\n' '{"version":1,"linkSchemes":{"obsidian":"Alice"}}' > "$config_dir/users/alice.json"
+          printf '%s\n' '{"version":1,"linkSchemes":{"obsidian":"Bob"}}' > "$config_dir/users/bob.json"
+          docker run -d --name calino-test-per-user -p 127.0.0.1:8082:8080 \
+            --mount "type=bind,source=$config_dir,target=/calino,readonly" \
+            -e CALINO_CONFIG_PER_USER=true -e CALINO_CONFIG_ALLOW_PUBLIC=true calino:test
+          endpoint=http://localhost:8082/calino.config.json
+          curl --retry 10 --retry-all-errors --retry-delay 1 -fsS http://localhost:8082/ > /dev/null
+          test "$(curl -sS -o /dev/null -w '%{http_code}' "$endpoint")" = 401
+          curl -fsS -u alice:fixture-password "$endpoint?user=bob" | jq -e '.linkSchemes.obsidian == "Alice"'
+          curl -fsS -u bob:fixture-password "$endpoint?user=alice" | jq -e '.linkSchemes.obsidian == "Bob"'
+
       - name: Dump logs on failure
         if: failure()
         run: docker logs calino-test
 
       - name: Cleanup
         if: always()
-        run: docker rm -f calino-test
+        run: |
+          docker rm -f calino-test-per-user || true
+          docker rm -f calino-test
 
   # ── Build & test the standalone proxy (all triggers) ──────────
   proxy-test:

@@ -802,7 +802,8 @@
     "signingIn": "Logger ind…",
     "unauthorized": "Brugernavnet eller adgangskoden er forkert.",
     "unavailable": "Kunne ikke hente den hostede konfiguration. Prøv igen.",
-    "insecure": "Åbn denne instans via HTTPS for at logge ind."
+    "insecure": "Åbn denne instans via HTTPS for at logge ind.",
+    "otherProfile": "Denne browserprofil indeholder allerede Calino-data eller tilhører en anden bruger. Åbn Calino i en separat browserprofil."
   },
   "masterPassword": {
     "overlayAriaLabel": "Lås CalDAV-konti op",

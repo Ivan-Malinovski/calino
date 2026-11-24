@@ -802,7 +802,8 @@
     "signingIn": "Signing in…",
     "unauthorized": "The username or password is incorrect.",
     "unavailable": "Could not load the hosted configuration. Try again.",
-    "insecure": "Open this instance over HTTPS to sign in."
+    "insecure": "Open this instance over HTTPS to sign in.",
+    "otherProfile": "This browser profile already contains Calino data or belongs to another user. Open Calino in a separate browser profile."
   },
   "masterPassword": {
     "overlayAriaLabel": "Unlock CalDAV accounts",
