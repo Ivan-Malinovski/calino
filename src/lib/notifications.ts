@@ -213,8 +213,8 @@ export function showNotification(
 
   const notification = new Notification(title, {
     body,
-    icon: '/apple-touch-icon.png',
-    badge: '/apple-touch-icon.png',
+    icon: withBase('/apple-touch-icon.png'),
+    badge: withBase('/apple-touch-icon.png'),
     tag: `calino-${eventId}`,
     data: { eventId, eventDate } as NotificationData,
     requireInteraction: false,

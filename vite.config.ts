@@ -1,5 +1,5 @@
 import { readFileSync, existsSync } from 'node:fs'
-import { defineConfig, loadEnv } from 'vite'
+import { defineConfig, loadEnv, type UserConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
 import { nodePolyfills } from 'vite-plugin-node-polyfills'
@@ -11,12 +11,6 @@ import { contentSecurityPolicy } from './src/config/contentSecurityPolicy.ts'
 import { fontScalePostcss } from './src/config/fontScale.ts'
 
 const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf-8'))
-
-// Deployment base path, e.g. "/cal/". Shell/Docker environment wins over .env
-// files; unset or "/" means the site root. The app reads the normalized value
-// back from import.meta.env.BASE_URL for assets, routing and links.
-const env = loadEnv(process.env.NODE_ENV ?? 'production', process.cwd(), '')
-const basePath = normalizeBasePath(process.env.CALINO_BASE_PATH ?? env.CALINO_BASE_PATH)
 
 // Load self-hosted config at build time (baked into bundle, not served as separate file)
 const configPath = new URL('./calino.config.json', import.meta.url)
@@ -68,8 +62,7 @@ const devHost = process.env.CALINO_DEV_HOST
 const hmr = devHost ? true : { host: 'localhost', port: 8080 }
 const devConnectSources = typeof hmr === 'object' ? [`ws://${hmr.host}:${hmr.port}`] : []
 
-export default defineConfig({
-  base: basePath,
+const appConfig = {
   // The app reads these non-VITE_ build-time values from import.meta.env.
   // Keep the allowlist narrow: CALINO_DEV_* and other server-only settings
   // must not be exposed to browser code.
@@ -188,4 +181,12 @@ export default defineConfig({
     // instead of the proxy other tests rely on.
     css: { include: [/built-in\.css/] },
   },
+} satisfies UserConfig
+
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), 'CALINO_BASE_PATH')
+  return {
+    ...appConfig,
+    base: normalizeBasePath(process.env.CALINO_BASE_PATH ?? env.CALINO_BASE_PATH),
+  }
 })

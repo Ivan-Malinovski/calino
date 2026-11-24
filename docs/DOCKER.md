@@ -34,23 +34,40 @@ VITE_SITE_URL=https://calendar.example.com
 CALINO_ENABLE_SW=true
 ```
 
-To serve under a subpath, set the base path at build time:
-
-```bash
-docker compose build --build-arg CALINO_BASE_PATH=/cal/
-docker compose up -d
-```
-
-Then reverse-proxy `/cal/` to the container, stripping the prefix, or mount the
-built `dist/` under `/cal/`. `VITE_SITE_URL` should include the subpath
-(`https://calendar.example.com/cal`).
-
-Then rebuild:
+Then rebuild.
 
 ```bash
 docker compose build
 docker compose up -d
 ```
+
+## Serve Calino under a URL subpath
+
+Set the deployment path and public URL when building the image.
+
+```bash
+docker compose build --build-arg CALINO_BASE_PATH=/cal/ --build-arg VITE_SITE_URL=https://calendar.example.com/cal
+docker compose up -d
+```
+
+Configure the reverse proxy to strip `/cal` from every request it forwards
+to the container, including `/cal/calino.config.json`. For example, if Caddy
+runs on the same host as Docker, add these routes to your site's Caddyfile.
+
+```caddyfile
+redir /cal /cal/ 308
+handle_path /cal/* {
+    reverse_proxy 127.0.0.1:8080
+}
+```
+
+If you use the single-user Compose export, set `CALINO_IMAGE` to your subpath
+build when starting it. The default image serves from `/`.
+
+For a static deployment, serve the built `dist/` files under `/cal/` and
+route client-side URLs to `/cal/index.html`. Use separate hostnames if you
+need isolated Calino instances. Browser storage is shared across paths on
+the same origin.
 
 ## Environment Variables
 
@@ -60,7 +77,7 @@ docker compose up -d
 | `CALINO_BASE_PATH` | Serve the app under a subpath, e.g. `/cal/`. Assets, routes, manifest and in-app links follow it. Must start and end with `/`. | `/` | ✅ |
 | `CALINO_GITHUB_REPO` | GitHub repo slug (shown in footer). | `ivan-malinovski/Calino` | ✅ |
 | `CALINO_CONTACT_EMAIL` | Contact email (shown in footer). | `calendar@malinov.ski` | ✅ |
-| `CALINO_ENABLE_SW` | Enable service worker for offline support. Requires `Service-Worker-Allowed: /` header from your reverse proxy. | `false` | ✅ |
+| `CALINO_ENABLE_SW` | Enable service worker for offline support. The worker is scoped to the Calino deployment path. | `false` | ✅ |
 | `CALINO_SELF_HOSTED` | Marks the build as self-hosted and permits direct connections to plain-HTTP DAV servers. | `true` | ✅ |
 
 The `CALINO_CONFIG_*` access settings are read by Caddy at runtime. Pass these
