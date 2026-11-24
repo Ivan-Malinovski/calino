@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test'
+import { test, expect, type Locator, type Page } from '@playwright/test'
 import { clearState } from './fixtures/localstorage'
 
 const EVENT_ID = 'week-all-day-span'
@@ -12,9 +12,11 @@ function weekStartDate(offset = 0): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 }
 
-async function seedEvent(page: Page): Promise<void> {
-  const start = weekStartDate()
-  const end = weekStartDate(2)
+async function seedEvent(
+  page: Page,
+  start = `${weekStartDate()}T00:00:00`,
+  end = `${weekStartDate(2)}T23:59:59`
+): Promise<void> {
   await page.addInitScript(
     ({ event }) => {
       try {
@@ -36,8 +38,8 @@ async function seedEvent(page: Page): Promise<void> {
         id: EVENT_ID,
         title: EVENT_TITLE,
         type: 'event',
-        start: `${start}T00:00:00`,
-        end: `${end}T23:59:59`,
+        start,
+        end,
         isAllDay: true,
         calendarId: 'default',
       },
@@ -79,6 +81,17 @@ async function dragCardToCell(page: Page, targetDate: string): Promise<void> {
   await page.mouse.up()
 }
 
+async function dragToHeader(page: Page, card: Locator, targetDate: string): Promise<void> {
+  const header = page.locator(`[data-component="week-day-header"][data-date="${targetDate}"]`)
+  const from = (await card.boundingBox())!
+  const to = (await header.boundingBox())!
+  await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2)
+  await page.mouse.down()
+  await page.mouse.move(from.x + from.width / 2 + 20, from.y + from.height / 2, { steps: 5 })
+  await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 15 })
+  await page.mouse.up()
+}
+
 test.describe('Week view multi-day all-day events', () => {
   test.beforeEach(async ({ page }) => {
     await clearState(page)
@@ -105,5 +118,58 @@ test.describe('Week view multi-day all-day events', () => {
     }, EVENT_ID)
 
     expect(stored).toMatchObject({ id: EVENT_ID, isAllDay: false })
+  })
+
+  test('dragging a fragment onto another day header moves the whole span', async ({ page }) => {
+    // Grab the second day's fragment and drop it on the fourth day: the event
+    // starts two days later and keeps its three-day length.
+    const fragment = page.locator(
+      `[data-component="week-day-header"][data-date="${weekStartDate(1)}"] [data-component="event-card"][aria-label*="${EVENT_TITLE}"]`
+    )
+    await dragToHeader(page, fragment, weekStartDate(3))
+
+    await expect
+      .poll(async () =>
+        page.evaluate((id) => {
+          const parsed = JSON.parse(localStorage.getItem('calino-storage') ?? '{}')
+          const event = (parsed.state?.events ?? []).find((e: { id: string }) => e.id === id)
+          return event && { start: event.start, end: event.end, isAllDay: event.isAllDay }
+        }, EVENT_ID)
+      )
+      .toEqual({
+        start: `${weekStartDate(2)}T00:00:00`,
+        end: `${weekStartDate(4)}T23:59:59`,
+        isAllDay: true,
+      })
+  })
+})
+
+test.describe('Week view legacy all-day events', () => {
+  test.use({ timezoneId: 'America/New_York' })
+
+  test('dropping an all-day event stored at UTC midnight uses the selected header date', async ({
+    page,
+  }) => {
+    await clearState(page)
+    await page.clock.setFixedTime(new Date('2026-11-25T12:00:00-05:00'))
+    await seedEvent(page, '2026-11-25T00:00:00.000Z', '2026-11-25T00:00:00.000Z')
+    await page.goto('/week')
+
+    const card = page.locator('[data-component="week-day-header"]').getByText(EVENT_TITLE)
+    await dragToHeader(page, card, '2026-11-26')
+    await expect(
+      page
+        .locator('[data-component="week-day-header"][data-date="2026-11-26"]')
+        .getByText(EVENT_TITLE)
+    ).toBeVisible()
+    await expect
+      .poll(() =>
+        page.evaluate((id) => {
+          const { state } = JSON.parse(localStorage.getItem('calino-storage')!)
+          const event = state.events.find((item: { id: string }) => item.id === id)
+          return [event.start, event.end]
+        }, EVENT_ID)
+      )
+      .toEqual(['2026-11-26', '2026-11-26'])
   })
 })
