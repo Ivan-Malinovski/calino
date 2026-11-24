@@ -23,7 +23,8 @@ interface RawIcsRecord {
    */
   href: string
   calendarId: string
-  ics: string
+  /** Null after a successful PUT whose stored representation could not be read. */
+  ics: string | null
   etag?: string
   /**
    * Written on every put and never on read, so "not touched in N days" is the
@@ -58,7 +59,7 @@ const db = new RawIcsDatabase()
 export async function putRawIcs(
   href: string,
   calendarId: string,
-  ics: string,
+  ics: string | null,
   etag?: string
 ): Promise<void> {
   await db.rawIcs.put({ href, calendarId, ics, etag, updatedAt: Date.now() })
@@ -72,7 +73,7 @@ export async function putRawIcs(
  */
 export async function getRawIcs(
   href: string
-): Promise<{ ics: string; etag?: string } | undefined> {
+): Promise<{ ics: string | null; etag?: string } | undefined> {
   const record = await db.rawIcs.get(href)
   if (!record) return undefined
   return { ics: record.ics, etag: record.etag }

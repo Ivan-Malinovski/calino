@@ -3154,9 +3154,9 @@ export function useCalDAVInstance(): UseCalDAVReturn {
         )
         const engine = new SyncEngine(client, event.calendarId)
 
-        if (event.etag) {
+        if (event.resourceHref || event.etag) {
           // Event previously existed on server; update it
-          const { url, etag } = await engine.updateEvent(event, event.etag)
+          const { url, etag } = await engine.updateEvent(event, event.etag ?? '')
           storeUpdateEvent(event.id, { resourceHref: url, etag, syncStatus: 'synced' })
         } else {
           // Event is new; create it
@@ -3168,7 +3168,7 @@ export function useCalDAVInstance(): UseCalDAVReturn {
       } catch {
         // Failed again; store a pending change for background retry
         storage.addPendingChange({
-          type: event.etag ? 'update' : 'create',
+          type: event.resourceHref || event.etag ? 'update' : 'create',
           eventId: event.id,
           calendarId: event.calendarId,
           data: JSON.stringify(event),

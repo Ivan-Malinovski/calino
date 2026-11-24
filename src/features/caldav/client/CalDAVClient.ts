@@ -8,7 +8,7 @@ import type {
   ServerSubscription,
   UpdateCalendarOptions,
 } from '../types'
-import type { CalendarBackend } from './CalendarBackend'
+import type { CalendarBackend, WrittenEvent } from './CalendarBackend'
 import { basicAuthHeader } from './basicAuth'
 import { createUuid } from '@/lib/uuid'
 import { decodeBase64 } from '@/lib/settingsSync'
@@ -26,6 +26,11 @@ import {
   parseScheduleResponse,
   parseVFreeBusy,
 } from './freeBusy'
+
+// RFC 9110 §8.8.3: only a quoted, strong entity tag can satisfy If-Match.
+export function isStrongEtag(value: string | null | undefined): value is string {
+  return typeof value === 'string' && /^"[!#-~\x80-\xff]*"$/.test(value)
+}
 
 const NETWORK_TIMEOUT_MS = 15_000
 
@@ -699,7 +704,7 @@ export class CalDAVClient implements CalendarBackend {
     calendarUrl: string,
     iCalString: string,
     filename: string
-  ): Promise<{ url: string; etag: string }> {
+  ): Promise<WrittenEvent> {
     if (!navigator.onLine) {
       throw new Error('No network connection. Please check your internet connection.')
     }
@@ -722,24 +727,73 @@ export class CalDAVClient implements CalendarBackend {
     })
     await this.assertResponseOk(result, 'PUT', calendarUrl)
 
-    // Extract ETag from response headers
-    let etag = result.headers?.get('etag') || ''
+    return this.writtenEvent(calendarUrl, eventUrl, result.headers?.get('etag'))
+  }
 
-    // Some servers (Google, iCloud) omit the ETag header on PUT — and in the
-    // browser a server that doesn't send `Access-Control-Expose-Headers: ETag`
-    // is indistinguishable from one that omits it, so this is the common path
-    // on the web, not an edge case. Persisting an empty etag with syncStatus
-    // 'synced' means the next update sends an empty If-Match — the stale-etag
-    // conflict we want to avoid. Recover it with a follow-up PROPFIND. Never
-    // throw: a missing etag must not fail creation.
-    if (!etag) {
-      etag = await this.fetchEtag(eventUrl)
-    }
+  private async writtenEvent(
+    calendarUrl: string,
+    url: string,
+    etag?: string | null
+  ): Promise<WrittenEvent> {
+    if (isStrongEtag(etag)) return { url, etag }
 
-    return {
-      url: eventUrl,
-      etag,
+    // RFC 4791 §5.3.4: the server may have transformed the submitted ICS.
+    const stored = await this.readCalendarObject(calendarUrl, url).catch(() => null)
+    if (stored) return { url, ...stored }
+
+    // A tag alone is still useful for deletes and conflict detection.
+    const recovered = await this.fetchEtag(url)
+    return { url, etag: isStrongEtag(recovered) ? recovered : '', data: null }
+  }
+
+  /**
+   * calendar-multiget REPORT (RFC 4791 §7.9) for one resource.
+   *
+   * Its text and its ETag come in one response body, so they are of one
+   * version, and the ETag does not depend on a response header the browser
+   * may be unable to read. `null` unless the answer names the resource with
+   * both.
+   */
+  async readCalendarObject(
+    calendarUrl: string,
+    eventUrl: string
+  ): Promise<{ etag: string; data: string } | null> {
+    const target = new URL(eventUrl, calendarUrl)
+    const path = target.pathname + target.search
+    const response = await this.proxyFetch(calendarUrl, {
+      method: 'REPORT',
+      headers: {
+        'Content-Type': 'application/xml; charset=utf-8',
+        Authorization: this.authHeader,
+      },
+      body: `<?xml version="1.0" encoding="UTF-8" ?>
+<c:calendar-multiget xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav">
+  <d:prop>
+    <d:getetag/>
+    <c:calendar-data/>
+  </d:prop>
+  <d:href>${escapeXml(path)}</d:href>
+</c:calendar-multiget>`,
+    })
+    if (response.status !== 207) return null
+
+    const doc = new DOMParser().parseFromString(await response.text(), 'application/xml')
+    if (doc.getElementsByTagName('parsererror').length > 0) return null
+    // A server may answer with more than was asked; take the named resource.
+    const named = this.getDavElements(doc, 'response').find((item) => {
+      const href = this.getDavElementText(item, 'href')?.trim()
+      return !!href && new URL(href, target).href === target.href
+    })
+    if (!named) return null
+    let etag: string | undefined
+    let data: string | null | undefined
+    for (const propstat of this.getDavElements(named, 'propstat')) {
+      if (!/^HTTP\/\S+ 200\b/.test(this.getDavElementText(propstat, 'status') ?? '')) continue
+      etag ??= this.getDavElementText(propstat, 'getetag')?.trim()
+      data ??= propstat.getElementsByTagNameNS('urn:ietf:params:xml:ns:caldav', 'calendar-data')[0]
+        ?.textContent
     }
+    return isStrongEtag(etag) && data ? { etag, data } : null
   }
 
   /**
@@ -792,7 +846,7 @@ export class CalDAVClient implements CalendarBackend {
     eventUrl: string,
     iCalString: string,
     etag: string
-  ): Promise<{ url: string; etag: string }> {
+  ): Promise<WrittenEvent> {
     if (!navigator.onLine) {
       throw new Error('No network connection. Please check your internet connection.')
     }
@@ -804,23 +858,7 @@ export class CalDAVClient implements CalendarBackend {
     })
     await this.assertResponseOk(result, 'PUT', eventUrl)
 
-    // Extract ETag from response headers; if the server omits it (Google,
-    // iCloud), re-fetch it with a PROPFIND instead of keeping the stale
-    // pre-update etag — the old one will 412 the next update. Mirrors the
-    // createEvent fallback. Never throw: a missing etag must not fail the
-    // update, and a fresh etag is preferred over the stale one but either is
-    // accepted.
-    let newEtag = result.headers?.get('etag') || ''
-    if (!newEtag) {
-      newEtag = await this.fetchEtag(eventUrl)
-    }
-
-    // `eventUrl`, not `result.url` — see the note in createEvent: the response
-    // URL is proxy-prefixed behind a CORS proxy.
-    return {
-      url: eventUrl,
-      etag: newEtag || etag,
-    }
+    return this.writtenEvent(calendarUrl, eventUrl, result.headers?.get('etag'))
   }
 
   async deleteEvent(eventUrl: string, etag: string): Promise<void> {
