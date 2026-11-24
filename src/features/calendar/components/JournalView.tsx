@@ -313,7 +313,9 @@ function JournalEditor({
                       className={styles.calendarDot}
                       style={{ backgroundColor: selected ? calendar.color : 'transparent' }}
                     />
-                    {calendar.name}
+                    <span className={styles.calendarName} title={calendar.name}>
+                      {calendar.name}
+                    </span>
                   </button>
                 )
               })}
