@@ -10,6 +10,8 @@ export interface CalDAVAccount {
   proxyUrl: string | null
   username: string
   credentialId: string
+  /** Original server URL from the config that provisioned this account. */
+  provisionedServerUrl?: string
   createdAt: string
   lastSyncAt: string | null
   /**

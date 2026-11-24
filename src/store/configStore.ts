@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { validateCustomHeaders } from '../features/caldav/client/customHeaders'
-import { loadConfig, type CalinoConfig } from '../lib/configLoader'
+import { loadConfigDocument, type CalinoConfig } from '../lib/configLoader'
 import {
   decryptWithMasterPassword,
   encryptPassword,
@@ -28,6 +28,7 @@ interface ConfigState {
   // Config file data
   config: CalinoConfig | null
   configLoaded: boolean
+  linkSchemes: Record<string, string> | null
 
   // Master password
   masterPassword: string | null
@@ -92,6 +93,7 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
   // Initial state
   config: null,
   configLoaded: false,
+  linkSchemes: null,
   masterPassword: null, // loaded async in loadConfigFile
   decryptedCredentials: [],
   decryptedWebcalSubscriptions: [],
@@ -103,11 +105,13 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
    * Load the config file. Call once on app mount.
    */
   loadConfigFile: async () => {
-    const config = await loadConfig()
+    const { config, linkSchemes } = await loadConfigDocument()
+    if (get().configLoaded) return
 
     if (!config) {
       set({
         config: null,
+        linkSchemes,
         configLoaded: true,
         hasPreconfiguredAccounts: false,
         hasPreconfiguredWebcal: false,
@@ -117,6 +121,7 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
 
     set({
       config,
+      linkSchemes,
       configLoaded: true,
       hasPreconfiguredAccounts: config.accounts.length > 0,
       hasPreconfiguredWebcal: config.webcalSubscriptions.length > 0,

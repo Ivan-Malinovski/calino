@@ -32,6 +32,9 @@ self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return
 
   const { request } = event
+  const configUrl = new URL('calino.config.json', self.registration.scope)
+  const url = new URL(request.url)
+  if (url.origin === configUrl.origin && url.pathname === configUrl.pathname) return
 
   // Network-first for navigation requests (HTML shell) so users always
   // see the latest app version. Falls back to cache when offline.

@@ -1,4 +1,6 @@
+import { Capacitor } from '@capacitor/core'
 import { z } from 'zod'
+import { loadLinkSchemes } from './appLinks'
 import { isMasterEncryptedData, type MasterEncryptedData } from './crypto'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -31,7 +33,12 @@ declare const __CALINO_CONFIG__: Record<string, unknown> | null
 
 // ─── Config loading ──────────────────────────────────────────────────────────
 
-let cachedConfig: CalinoConfig | null | undefined
+interface LoadedConfig {
+  config: CalinoConfig | null
+  linkSchemes: Record<string, string>
+}
+
+let configLoad: Promise<LoadedConfig> | undefined
 
 const MasterEncryptedDataSchema = z.custom<MasterEncryptedData>(
   (value) => isMasterEncryptedData(value),
@@ -59,30 +66,51 @@ const CalinoConfigEnvelopeSchema = z.object({
   webcalSubscriptions: z.array(z.unknown()).optional(),
 })
 
-/**
- * Load self-hosted config.
- * The config is baked into the JS bundle at build time (not served as a separate file).
- * Returns null if no config was provided at build time (not self-hosted mode).
- */
+async function selectConfig(): Promise<unknown> {
+  const bundled = typeof __CALINO_CONFIG__ === 'undefined' ? null : __CALINO_CONFIG__
+  if (!__CALINO_RUNTIME_CONFIG__ || Capacitor.isNativePlatform()) return bundled
+
+  try {
+    const response = await fetch(`${import.meta.env.BASE_URL}calino.config.json`, {
+      cache: 'no-store',
+      redirect: 'error',
+      signal: AbortSignal.timeout(5000),
+    })
+    if (response.status === 404 || response.headers.get('content-type')?.includes('text/html')) {
+      return bundled
+    }
+    if (!response.ok) {
+      console.warn('[configLoader] Runtime config request failed:', response.status)
+      return bundled
+    }
+    try {
+      return await response.json()
+    } catch {
+      console.warn('[configLoader] Runtime config is not valid JSON')
+      return null
+    }
+  } catch {
+    console.warn('[configLoader] Runtime config is unavailable; using bundled config')
+    return bundled
+  }
+}
+
+export function loadConfigDocument(): Promise<LoadedConfig> {
+  return (configLoad ??= readConfigDocument())
+}
+
 export async function loadConfig(): Promise<CalinoConfig | null> {
-  // Return cached result if already loaded
-  if (cachedConfig !== undefined) {
-    return cachedConfig
-  }
+  return (await loadConfigDocument()).config
+}
 
-  // __CALINO_CONFIG__ is injected by Vite's define at build time
-  // It's null if calino.config.json doesn't exist
-  if (typeof __CALINO_CONFIG__ === 'undefined' || __CALINO_CONFIG__ === null) {
-    cachedConfig = null
-    return null
-  }
+async function readConfigDocument(): Promise<LoadedConfig> {
+  const raw = await selectConfig()
+  if (raw === null) return { config: null, linkSchemes: {} }
 
-  const envelope = CalinoConfigEnvelopeSchema.safeParse(__CALINO_CONFIG__)
-
+  const envelope = CalinoConfigEnvelopeSchema.safeParse(raw)
   if (!envelope.success) {
     console.warn('[configLoader] Invalid config, ignoring', envelope.error.issues)
-    cachedConfig = null
-    return null
+    return { config: null, linkSchemes: {} }
   }
 
   const accounts: PreconfiguredAccount[] = []
@@ -105,19 +133,18 @@ export async function loadConfig(): Promise<CalinoConfig | null> {
     }
   }
 
-  if (accounts.length === 0 && webcalSubscriptions.length === 0) {
-    cachedConfig = null
-    return null
+  return {
+    config:
+      accounts.length || webcalSubscriptions.length
+        ? { version: 1, accounts, webcalSubscriptions }
+        : null,
+    linkSchemes: loadLinkSchemes(raw),
   }
-
-  const config: CalinoConfig = { version: 1, accounts, webcalSubscriptions }
-  cachedConfig = config
-  return config
 }
 
 /**
  * Reset cached config (for testing).
  */
 export function resetConfigCache(): void {
-  cachedConfig = undefined
+  configLoad = undefined
 }

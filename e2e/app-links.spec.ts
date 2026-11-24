@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, type Page } from '@playwright/test'
 import { clearState } from './fixtures/localstorage'
 
 // The E2E server adds `linkSchemes: { obsidian: 'Obsidian' }` to its config
@@ -20,6 +20,15 @@ const DESCRIPTION = [
   '',
   `[unlisted](${UNLISTED_APP_LINK}) [do not run](javascript:alert(1))`,
 ].join('\n')
+
+async function openPreview(page: Page): Promise<void> {
+  await page.goto('/month')
+  await page
+    .getByRole('button', { name: /Planning sync/ })
+    .first()
+    .click()
+  await expect(page.locator('[data-component="event-preview"]')).toBeVisible()
+}
 
 test.describe('links into other apps in descriptions', () => {
   test.beforeEach(async ({ page }) => {
@@ -62,16 +71,10 @@ test.describe('links into other apps in descriptions', () => {
         })
       )
     }, DESCRIPTION)
-
-    await page.goto('/month')
-    await page
-      .getByRole('button', { name: /Planning sync/ })
-      .first()
-      .click()
-    await expect(page.locator('[data-component="event-preview"]')).toBeVisible()
   })
 
   test('a configured scheme is linked, by the app name when the link is bare', async ({ page }) => {
+    await openPreview(page)
     const preview = page.locator('[data-component="event-preview"]')
 
     const bare = preview.getByRole('link', { name: 'Obsidian ↗' }).first()
@@ -87,6 +90,7 @@ test.describe('links into other apps in descriptions', () => {
   test('a bare link is named after the app inside emphasis and left alone in code', async ({
     page,
   }) => {
+    await openPreview(page)
     const preview = page.locator('[data-component="event-preview"]')
 
     await expect(preview.locator('strong a')).toHaveText('Obsidian ↗')
@@ -96,11 +100,26 @@ test.describe('links into other apps in descriptions', () => {
   })
 
   test('schemes that are not configured, or that run code, are not linked', async ({ page }) => {
+    await openPreview(page)
     const preview = page.locator('[data-component="event-preview"]')
 
     await expect(preview).toContainText(UNLISTED_APP_LINK)
     await expect(preview.getByText('unlisted', { exact: true })).toHaveAttribute('href', '')
     await expect(preview.getByText('do not run')).toHaveAttribute('href', '')
     await expect(preview.locator('a[href^="anytype:"], a[href^="javascript:"]')).toHaveCount(0)
+  })
+
+  test('a mounted config replaces the bundled app links', async ({ page }) => {
+    await page.route('**/calino.config.json', (route) =>
+      route.fulfill({ json: { version: 1, linkSchemes: { anytype: 'Anytype' } } })
+    )
+    await openPreview(page)
+    const preview = page.locator('[data-component="event-preview"]')
+    await expect(preview.getByRole('link', { name: 'Anytype ↗' })).toHaveAttribute(
+      'href',
+      UNLISTED_APP_LINK
+    )
+    await expect(preview.getByRole('link', { name: 'Project page' })).toHaveAttribute('href', '')
+    await expect(page.locator('#master-password')).toBeHidden()
   })
 })

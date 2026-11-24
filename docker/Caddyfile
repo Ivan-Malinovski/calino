@@ -1,0 +1,41 @@
+:8080 {
+	request_body {
+		max_size 1mb
+	}
+
+	encode gzip
+
+	header {
+		X-Frame-Options "SAMEORIGIN"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()"
+		-Server
+	}
+
+	@assets path /assets/*
+	header @assets Cache-Control "public, immutable"
+
+	@sw path /sw.js
+	header @sw Cache-Control "no-store, no-cache, must-revalidate"
+	header @sw Service-Worker-Allowed "/"
+
+	# Keep the mounted directory outside the SPA document root.
+	handle /calino.config.json {
+		root * /calino
+		header Cache-Control "no-store"
+		file_server
+		# A missing file must not fall through to index.html.
+	}
+
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+
+	log {
+		output stdout
+		format console
+	}
+}

@@ -7,6 +7,7 @@ declare module '@touch4it/ical-timezones/zones.js' {
 
 declare const __APP_VERSION__: string
 declare const __CALINO_SELF_HOSTED__: boolean
+declare const __CALINO_RUNTIME_CONFIG__: boolean
 
 interface ImportMetaEnv {
   readonly CALINO_GITHUB_REPO?: string
