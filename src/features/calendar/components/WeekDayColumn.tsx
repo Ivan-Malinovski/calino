@@ -16,6 +16,7 @@ import {
   transparentEventStyle,
   travelBarStyle,
   taskPillStyle,
+  isZeroDuration,
   TASK_PILL_LAYOUT_MINUTES,
 } from '../lib/eventLayout'
 import { eventCardVariants } from '../lib/eventAnimations'
@@ -70,7 +71,7 @@ const WeekDayColumn = memo(function WeekDayColumn({
   // those plus zoom and content measurements. The JSX below still depends
   // on the active drag and reduced-motion. See #73.
   const { transparentEvents, taskById, positionedEvents } = useMemo(() => {
-    const sorted = [...events, ...fragments].sort(
+    const sorted = [...events.filter((e) => !isZeroDuration(e)), ...fragments].sort(
       (a, b) =>
         toEventInstant(a.start, a.timezone).getTime() -
         toEventInstant(b.start, b.timezone).getTime()
@@ -81,8 +82,9 @@ const WeekDayColumn = memo(function WeekDayColumn({
     // overlap test) would never collide them — give each a nominal interval
     // matching the pill's visual footprint for layout purposes only, and
     // render the original task.
-    const byId = new Map(timedTasks.map((task) => [task.id, task]))
-    const taskLayoutItems = timedTasks.map((task) => ({
+    const pills = [...timedTasks, ...events.filter(isZeroDuration)]
+    const byId = new Map(pills.map((task) => [task.id, task]))
+    const taskLayoutItems = pills.map((task) => ({
       ...task,
       end: format(
         addMinutes(toEventInstant(task.start, task.timezone), TASK_PILL_LAYOUT_MINUTES),

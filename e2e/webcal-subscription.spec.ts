@@ -86,6 +86,38 @@ test.describe('Webcal calendar subscription', () => {
     await expect(page.getByRole('button', { name: /add reminder/i })).toHaveCount(0)
   })
 
+  test('a feed the browser cannot read opens the proxy field', async ({ page }) => {
+    // Stands in for a host that sends no CORS headers (Google Calendar's
+    // ical feeds): the request fails before the page sees any response.
+    await page.route('https://calendar.example.com/**', (route) => route.abort('failed'))
+    await page.route('https://proxy.example.com/**', (route) =>
+      route.fulfill({ status: 200, contentType: 'text/calendar', body: ICS_FIXTURE })
+    )
+
+    await page.goto('/')
+    await page.getByRole('button', { name: 'Add calendar' }).click()
+    await page.getByText('Subscribe to Calendar (.ics)').click()
+
+    const dialog = page.getByRole('dialog', { name: 'Subscribe to Calendar' })
+    await dialog.getByLabel('Name (optional)').fill('Blocked Feed')
+    await dialog
+      .getByRole('textbox', { name: 'Calendar URL' })
+      .fill('https://calendar.example.com/ical/private/basic.ics')
+    const proxyInput = dialog.getByPlaceholder('https://proxy.calino.io')
+    await expect(proxyInput).toBeHidden()
+
+    await dialog.getByRole('button', { name: 'Subscribe' }).click()
+    await expect(dialog.getByText(/read their feeds directly/)).toBeVisible()
+    await expect(proxyInput).toBeVisible()
+
+    await proxyInput.fill('https://proxy.example.com')
+    await dialog.getByRole('button', { name: 'Subscribe' }).click()
+    await expect(dialog).not.toBeVisible()
+    await expect(
+      page.locator('[data-component="event-card"]', { hasText: 'Webcal Test Event' })
+    ).toBeVisible()
+  })
+
   test('settings can edit a subscription and mute is on by default', async ({ page }) => {
     await page.goto('/')
     await subscribeTestFeed(page)

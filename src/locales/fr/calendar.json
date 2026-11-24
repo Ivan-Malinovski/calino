@@ -634,6 +634,7 @@
       "enterUrl": "Saisissez l’URL d’un agenda.",
       "updateFailedReason": "Mise à jour impossible : {{reason}}",
       "subscribeFailedReason": "Abonnement impossible : {{reason}}",
+      "feedBlocked": "Impossible de charger l’agenda. Beaucoup d’hôtes, dont Google Agenda, n’autorisent pas les navigateurs à lire leurs flux directement. Ajoutez une URL de proxy ci-dessous et réessayez.",
       "updateFailed": "Impossible de mettre à jour l’abonnement à l’agenda.",
       "subscribeFailed": "Impossible de s’abonner à l’agenda."
     },

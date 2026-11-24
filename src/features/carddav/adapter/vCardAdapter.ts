@@ -159,14 +159,29 @@ function parseLineWithParams(
   return null
 }
 
-function extractProperty(lines: string[], property: string): string | null {
-  const prefix = property + ':'
-  const prefixUpper = prefix.toUpperCase()
+/** Decode a vCard 2.1 `ENCODING=QUOTED-PRINTABLE` value (UTF-8 bytes as `=XX`). */
+function decodeQuotedPrintable(value: string): string {
+  const bytes: number[] = []
+  for (let i = 0; i < value.length; i++) {
+    const hex = value.substring(i + 1, i + 3)
+    if (value[i] === '=' && /^[0-9A-Fa-f]{2}$/.test(hex)) {
+      bytes.push(parseInt(hex, 16))
+      i += 2
+    } else {
+      bytes.push(...new TextEncoder().encode(value[i]))
+    }
+  }
+  return new TextDecoder().decode(new Uint8Array(bytes))
+}
 
+/** The value of the first `PROP:` or `PROP;params:` line (CHARSET, LANGUAGE, ... are common). */
+function extractProperty(lines: string[], property: string): string | null {
   for (const line of lines) {
-    const lineUpper = line.toUpperCase()
-    if (lineUpper.startsWith(prefixUpper)) {
-      return line.substring(prefix.length)
+    const parsed = parseLineWithParams(line, property)
+    if (parsed) {
+      return /ENCODING=QUOTED-PRINTABLE/i.test(parsed.params)
+        ? decodeQuotedPrintable(parsed.value)
+        : parsed.value
     }
   }
   return null
