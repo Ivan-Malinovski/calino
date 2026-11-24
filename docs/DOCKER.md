@@ -10,9 +10,11 @@ docker compose up -d
 
 Calino is now running at http://localhost:8080.
 
+To start with calendars already configured, use the [single-user Compose export](SELF_HOSTED_CONFIG.md#single-user-docker-quick-start) in `/setup`.
+
 ## ⚠️ Build-Time vs Runtime Variables
 
-All `VITE_*` and `CALINO_*` variables are **baked into the JavaScript at build time**. Changing them in `docker-compose.yml` `environment:` section does nothing — you must **rebuild the image**:
+The site URL, service-worker flag, and other build settings in the table below are baked into the JavaScript. To change a build setting, pass it as a build argument and rebuild the image:
 
 ```bash
 # ❌ This does NOT change the site URL:
@@ -49,6 +51,22 @@ docker compose up -d
 | `CALINO_ENABLE_SW` | Enable service worker for offline support. Requires `Service-Worker-Allowed: /` header from your reverse proxy. | `false` | ✅ |
 | `CALINO_SELF_HOSTED` | Marks the build as self-hosted and permits direct connections to plain-HTTP DAV servers. | `true` | ✅ |
 
+The `CALINO_CONFIG_*` access settings are read by Caddy at runtime. Pass these
+to the container with Compose's `environment:` section. Run `docker compose up -d`
+after changing them so Compose can recreate the container. No image rebuild is needed.
+
+| Variable | Runtime use | Default |
+|---|---|---|
+| `CALINO_CONFIG_AUTH_USER`, `CALINO_CONFIG_AUTH_HASH` | Username and password hash for a shared config download. Both are required to enable built-in authentication. | Unset |
+| `CALINO_CONFIG_AUTH_ALGORITHM` | Hash algorithm for the shared config. The single-user Compose export uses `argon2id`. | `bcrypt` |
+| `CALINO_CONFIG_QUICK_START` | Enables password-only sign-in for the single-user Compose export. The wizard sets it automatically. | `false` |
+| `CALINO_CONFIG_PER_USER` | Uses separate config files and authentication entries for each user. | `false` |
+| `CALINO_CONFIG_ALLOW_PUBLIC` | Explicitly allows the shared config to be downloaded without built-in authentication. | `false` |
+
+`CALINO_CONFIG_DIR` is a host-side Compose variable for deployments using a
+directory mount. The single-user export uses inline Compose config instead.
+See the [self-hosted config guide](SELF_HOSTED_CONFIG.md) for access modes and examples.
+
 ## Architecture
 
 ```
@@ -63,7 +81,9 @@ docker compose up -d
 └──────────────────────────────────────────┘
 ```
 
-The container is **stateless** — all user data lives in the browser's `localStorage`. No volumes needed.
+Calino stores local user data in the browser's localStorage and IndexedDB.
+There is no data volume for the app. Self-hosted provisioning can optionally
+mount a config directory or use inline Compose config.
 
 ### Why Caddy over nginx?
 

@@ -12,7 +12,48 @@ If you self-host Calino, you can preconfigure CalDAV accounts and webcal (`.ics`
 2. Select **Download Compose file**. Save `compose.yaml` in its own folder and run `docker compose up -d` there.
 3. Open `http://localhost:8080` on the Docker host and sign in with the password you chose. Calino also uses it to unlock the encrypted config.
 
-The export needs Docker Compose 2.23.1 or newer. It contains the encrypted config and a password hash, so there are no separate files or environment variables to set. Keep the file private. Calino does not save the sign-in password in browser storage. The generated port listens on localhost. Use an HTTPS reverse proxy if you need to reach it from another device.
+The export needs Docker Compose 2.23.1 or newer and a Calino image that supports the Compose quick start. It contains the encrypted config and a password hash, so there are no separate files or environment variables to set. Keep the file private. Calino does not save the sign-in password in browser storage. The generated port listens on localhost. Use an HTTPS reverse proxy if you need to reach it from another device.
+
+Here is what a generated `compose.yaml` looks like for one webcal subscription,
+with the hash and encrypted values replaced by placeholders:
+
+```yaml
+services:
+  calino:
+    image: "${CALINO_IMAGE:-ghcr.io/ivan-malinovski/calino:latest}"
+    ports:
+      - "127.0.0.1:8080:8080"
+    environment:
+      CALINO_CONFIG_QUICK_START: "true"
+      CALINO_CONFIG_AUTH_USER: "calino"
+      CALINO_CONFIG_AUTH_ALGORITHM: "argon2id"
+      CALINO_CONFIG_AUTH_HASH: "$$argon2id$$v=19$$m=47104,t=1,p=1$$<salt>$$<hash>"
+    configs:
+      - source: calino_config
+        target: /calino/calino.config.json
+    restart: unless-stopped
+configs:
+  calino_config:
+    content: |-
+      {
+        "version": 1,
+        "accounts": [],
+        "webcalSubscriptions": [
+          {
+            "name": "Holidays",
+            "url": {"ciphertext": "<encrypted URL>", "iv": "<iv>", "salt": "<salt>"},
+            "refreshIntervalMinutes": 60
+          }
+        ],
+        "unlockWithSignIn": true
+      }
+```
+
+Use the file downloaded from `/setup`. Compose passes the inline JSON to the
+container at `/calino/calino.config.json` and turns each `$$` into a literal `$`.
+`CALINO_IMAGE` is an optional override for choosing another compatible image
+or tag. If host port 8080 is in use, change the middle number in the port
+mapping (for example, `127.0.0.1:8081:8080`) and open the corresponding port.
 
 To replace the config, generate a new Compose file and rerun `docker compose up -d`. If you edit only the inline config by hand, use `docker compose up -d --force-recreate`. For independent sign-in and encryption passwords, multiple users, or JSON updates without recreating the container, use the separate JSON export below.
 
@@ -27,7 +68,7 @@ http://localhost:8080/setup    # Local Docker
 https://calino.io/setup        # Hosted instance
 ```
 
-The setup wizard runs entirely in your browser — credentials never leave your device.
+The wizard generates the file in your browser. If you test a connection, Calino sends the credentials to the CalDAV server you entered.
 
 **2. Add your CalDAV accounts and/or webcal subscriptions:**
 
@@ -43,9 +84,9 @@ Click "Generate Config" — the encrypted `calino.config.json` downloads automat
 
 **5. Deploy the config:**
 
-With the prebuilt image, [mount the config directory](#docker-compose-example) and
-reload Calino. If you build from source, copy the file into the project root
-and run `docker compose up -d --build`.
+With the prebuilt image, [mount the config directory and configure access](#docker-compose-example).
+Start the container and reload Calino. If you build from source, you can also
+copy the file into the project root and run `docker compose up -d --build`.
 
 **6. Tell users the master password.**
 
