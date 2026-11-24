@@ -1,5 +1,10 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { loadConfig, resetConfigCache, type CalinoConfig } from '../configLoader'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import {
+  loadConfig,
+  loadConfigDocument,
+  resetConfigCache,
+  type CalinoConfig,
+} from '../configLoader'
 
 const validConfig: CalinoConfig = {
   version: 1,
@@ -32,6 +37,8 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  vi.unstubAllGlobals()
+  vi.restoreAllMocks()
   // Restore original
   if ('__CALINO_CONFIG__' in originalGlobal) {
     delete originalGlobal.__CALINO_CONFIG__
@@ -211,5 +218,42 @@ describe('configLoader', () => {
       expect(config).not.toBeNull()
       expect(config!.webcalSubscriptions).toEqual([])
     })
+  })
+})
+
+describe('runtime config', () => {
+  beforeEach(() => {
+    vi.stubGlobal('__CALINO_RUNTIME_CONFIG__', true)
+    originalGlobal.__CALINO_CONFIG__ = validConfig
+  })
+
+  it('uses the mounted document instead of merging it into the bundle', async () => {
+    const fetch = vi
+      .fn()
+      .mockResolvedValue(Response.json({ version: 1, linkSchemes: { obsidian: 'Mounted' } }))
+    vi.stubGlobal('fetch', fetch)
+    const [result, second] = await Promise.all([loadConfigDocument(), loadConfigDocument()])
+    expect(result).toEqual({ config: null, linkSchemes: { obsidian: 'Mounted' } })
+    expect(second).toBe(result)
+    expect(fetch).toHaveBeenCalledExactlyOnceWith(
+      '/calino.config.json',
+      expect.objectContaining({
+        cache: 'no-store',
+        headers: { 'X-Calino-Config-Fetch': '1' },
+        redirect: 'error',
+      })
+    )
+  })
+
+  it('falls back to the bundle when the file is absent', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(null, { status: 404 })))
+    expect(await loadConfig()).toEqual(validConfig)
+  })
+
+  it('reports an invalid mounted file without provisioning bundled accounts', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json({ version: 2 })))
+    expect(await loadConfig()).toBeNull()
+    expect(warn).toHaveBeenCalledWith('[configLoader] Invalid config, ignoring', expect.any(Array))
   })
 })

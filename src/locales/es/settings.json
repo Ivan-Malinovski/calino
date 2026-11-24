@@ -792,6 +792,19 @@
       "body": "Si tienes preguntas sobre esta política de privacidad, ponte en contacto con:"
     }
   },
+  "hostedConfigSignIn": {
+    "title": "Conectar con la configuración alojada",
+    "description": "Inicia sesión para descargar la configuración compartida de esta instancia.",
+    "username": "Nombre de usuario",
+    "password": "Contraseña de inicio de sesión",
+    "skip": "Continuar sin ella",
+    "signIn": "Iniciar sesión",
+    "signingIn": "Iniciando sesión…",
+    "unauthorized": "El nombre de usuario o la contraseña no son correctos.",
+    "unavailable": "No se pudo cargar la configuración alojada. Vuelve a intentarlo.",
+    "insecure": "Abre esta instancia mediante HTTPS para iniciar sesión.",
+    "otherProfile": "Este perfil del navegador ya contiene datos de Calino o pertenece a otra persona. Abre Calino en otro perfil del navegador."
+  },
   "masterPassword": {
     "overlayAriaLabel": "Desbloquear cuentas CalDAV",
     "title": "Desbloquear cuentas CalDAV",
@@ -894,6 +907,11 @@
       "done": "Listo →",
       "passwordsMismatch": "Las contraseñas no coinciden.",
       "passwordTooShort": "La contraseña debe tener al menos 6 caracteres.",
+      "quickStartHint": "Para Docker con un solo usuario, usa esta contraseña para iniciar sesión y desbloquear la configuración cifrada.",
+      "quickStartDownload": "Descargar archivo Compose",
+      "quickPasswordTooShort": "Usa al menos 12 caracteres para la contraseña de inicio de sesión de Docker.",
+      "quickStartRun": "Coloca <code>compose.yaml</code> en su propia carpeta y ejecuta allí <code>docker compose up -d</code>.",
+      "quickStartOpen": "Abre <code>http://localhost:8080</code> en el equipo que ejecuta Docker e inicia sesión con la contraseña que elegiste.",
       "encryptionFailed": "Error al cifrar."
     },
     "categories": {

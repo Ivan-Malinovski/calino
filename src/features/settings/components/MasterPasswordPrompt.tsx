@@ -45,7 +45,13 @@ function setBlockedUntil(ts: number): void {
 export function MasterPasswordPrompt() {
   const { t } = useTranslation('settings')
   const location = useLocation()
-  const { hasPreconfiguredAccounts, isUnlocked, unlock } = useConfigStore()
+  const {
+    hasPreconfiguredAccounts,
+    hasPreconfiguredWebcal,
+    checkingMasterPassword,
+    isUnlocked,
+    unlock,
+  } = useConfigStore()
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -128,8 +134,11 @@ export function MasterPasswordPrompt() {
     [handleSubmit]
   )
 
-  // Don't show if no preconfigured accounts, already unlocked, or on /setup
-  const isOpen = hasPreconfiguredAccounts && !isUnlocked && location.pathname !== '/setup'
+  const isOpen =
+    (hasPreconfiguredAccounts || hasPreconfiguredWebcal) &&
+    !checkingMasterPassword &&
+    !isUnlocked &&
+    location.pathname !== '/setup'
 
   // This gate is deliberately non-dismissable (Escape is a no-op above), so it
   // uses the focus trap directly rather than useModalDismiss. Without it, Tab
@@ -152,9 +161,7 @@ export function MasterPasswordPrompt() {
         <div className={styles.header}>
           <div className={styles.icon}>🔐</div>
           <h2 className={styles.title}>{t('masterPassword.title')}</h2>
-          <p className={styles.subtitle}>
-            {t('masterPassword.subtitle')}
-          </p>
+          <p className={styles.subtitle}>{t('masterPassword.subtitle')}</p>
         </div>
 
         <div className={styles.inputGroup}>

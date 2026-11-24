@@ -792,6 +792,19 @@
       "body": "Wenn Sie Fragen zu dieser Datenschutzerklärung haben, wenden Sie sich bitte an:"
     }
   },
+  "hostedConfigSignIn": {
+    "title": "Mit gehosteter Konfiguration verbinden",
+    "description": "Melde dich an, um die gemeinsame Konfiguration dieser Instanz herunterzuladen.",
+    "username": "Benutzername",
+    "password": "Anmeldepasswort",
+    "skip": "Ohne fortfahren",
+    "signIn": "Anmelden",
+    "signingIn": "Anmeldung läuft…",
+    "unauthorized": "Benutzername oder Passwort ist falsch.",
+    "unavailable": "Die gehostete Konfiguration konnte nicht geladen werden. Versuche es erneut.",
+    "insecure": "Öffne diese Instanz über HTTPS, um dich anzumelden.",
+    "otherProfile": "Dieses Browserprofil enthält bereits Calino-Daten oder gehört einer anderen Person. Öffne Calino in einem separaten Browserprofil."
+  },
   "masterPassword": {
     "overlayAriaLabel": "CalDAV-Konten entsperren",
     "title": "CalDAV-Konten entsperren",
@@ -894,6 +907,11 @@
       "done": "Fertig →",
       "passwordsMismatch": "Die Passwörter stimmen nicht überein.",
       "passwordTooShort": "Das Passwort muss mindestens 6 Zeichen lang sein.",
+      "quickStartHint": "Für Docker mit einem Benutzer meldest du dich mit diesem Passwort an und entsperrst damit die verschlüsselte Konfiguration.",
+      "quickStartDownload": "Compose-Datei herunterladen",
+      "quickPasswordTooShort": "Verwende mindestens 12 Zeichen für das Docker-Anmeldepasswort.",
+      "quickStartRun": "Lege <code>compose.yaml</code> in einen eigenen Ordner und führe dort <code>docker compose up -d</code> aus.",
+      "quickStartOpen": "Öffne auf dem Docker-Host <code>http://localhost:8080</code> und melde dich mit dem gewählten Passwort an.",
       "encryptionFailed": "Verschlüsselung fehlgeschlagen."
     },
     "categories": {

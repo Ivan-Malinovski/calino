@@ -71,6 +71,7 @@ export default defineConfig({
     __APP_VERSION__: JSON.stringify(pkg.version),
     __CALINO_CONFIG__: JSON.stringify(calinoConfig),
     __CALINO_SELF_HOSTED__: JSON.stringify(isSelfHosted),
+    __CALINO_RUNTIME_CONFIG__: JSON.stringify(isSelfHosted || process.env.CALINO_E2E_MOCK === '1'),
   },
   plugins: [
     {
