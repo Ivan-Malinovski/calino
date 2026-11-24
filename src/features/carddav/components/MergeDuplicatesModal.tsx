@@ -1,3 +1,4 @@
+import type { TFunction } from 'i18next'
 import type { JSX } from 'react'
 import { useState, useMemo, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -22,7 +23,7 @@ const CONFIDENCE_COLORS: Record<string, string> = {
   low: '#999',
 }
 
-function formatReason(t: (key: string, opts?: Record<string, unknown>) => string, reason: DuplicateGroup['reason']): string {
+function formatReason(t: TFunction<'contacts'>, reason: DuplicateGroup['reason']): string {
   switch (reason.kind) {
     case 'sameEmail':
       return t('merge.reasonSameEmail', { value: reason.value })
@@ -101,7 +102,7 @@ export function MergeDuplicatesModal({
 
       // Queue update for primary
       addPendingChange({
-          id: createUuid(),
+        id: createUuid(),
         type: 'update',
         contactId: primary!.id,
         addressBookId: primary!.addressBookId,

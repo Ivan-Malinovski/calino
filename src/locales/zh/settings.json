@@ -792,6 +792,19 @@
       "body": "如对本隐私政策有疑问，请联系："
     }
   },
+  "hostedConfigSignIn": {
+    "title": "连接托管配置",
+    "description": "登录以下载此实例的共享配置。",
+    "username": "用户名",
+    "password": "登录密码",
+    "skip": "暂不连接",
+    "signIn": "登录",
+    "signingIn": "正在登录…",
+    "unauthorized": "用户名或密码不正确。",
+    "unavailable": "无法加载托管配置。请重试。",
+    "insecure": "请通过 HTTPS 打开此实例以登录。",
+    "otherProfile": "此浏览器配置文件已包含 Calino 数据或属于其他用户。请在单独的浏览器配置文件中打开 Calino。"
+  },
   "masterPassword": {
     "overlayAriaLabel": "解锁 CalDAV 账户",
     "title": "解锁 CalDAV 账户",
@@ -894,6 +907,11 @@
       "done": "完成 →",
       "passwordsMismatch": "两次输入的密码不一致。",
       "passwordTooShort": "密码至少需要 6 个字符。",
+      "quickStartHint": "对于单用户 Docker 部署，此密码用于登录和解锁加密配置。",
+      "quickStartDownload": "下载 Compose 文件",
+      "quickPasswordTooShort": "Docker 登录密码至少需要 12 个字符。",
+      "quickStartRun": "将 <code>compose.yaml</code> 放入独立目录，然后在该目录中运行 <code>docker compose up -d</code>。",
+      "quickStartOpen": "在 Docker 主机上打开 <code>http://localhost:8080</code>，使用刚设置的密码登录。",
       "encryptionFailed": "加密失败。"
     },
     "categories": {

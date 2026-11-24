@@ -1,6 +1,12 @@
 import { create } from 'zustand'
+import { bindHostedProfile, getHostedProfile } from '../lib/hostedProfile'
 import { validateCustomHeaders } from '../features/caldav/client/customHeaders'
-import { loadConfig, type CalinoConfig } from '../lib/configLoader'
+import {
+  loadConfigDocument,
+  signInToRuntimeConfig,
+  type CalinoConfig,
+  type LoadedConfig,
+} from '../lib/configLoader'
 import {
   decryptWithMasterPassword,
   encryptPassword,
@@ -28,6 +34,11 @@ interface ConfigState {
   // Config file data
   config: CalinoConfig | null
   configLoaded: boolean
+  checkingMasterPassword: boolean
+  perUser: boolean
+  quickStart: boolean
+  runtimeSignIn: 'required' | 'dismissed' | null
+  linkSchemes: Record<string, string> | null
 
   // Master password
   masterPassword: string | null
@@ -43,6 +54,11 @@ interface ConfigState {
 
   // Actions
   loadConfigFile: () => Promise<void>
+  signIn: (
+    username: string,
+    password: string
+  ) => Promise<'ok' | 'unauthorized' | 'unavailable' | 'insecure' | 'otherProfile'>
+  setRuntimeSignInOpen: (open: boolean) => void
   unlock: (masterPassword: string) => Promise<boolean>
   lock: () => Promise<void>
   getCredential: (accountUrl: string, username: string) => DecryptedCredential | null
@@ -92,6 +108,11 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
   // Initial state
   config: null,
   configLoaded: false,
+  checkingMasterPassword: false,
+  perUser: getHostedProfile() !== null,
+  quickStart: false,
+  runtimeSignIn: null,
+  linkSchemes: null,
   masterPassword: null, // loaded async in loadConfigFile
   decryptedCredentials: [],
   decryptedWebcalSubscriptions: [],
@@ -103,29 +124,33 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
    * Load the config file. Call once on app mount.
    */
   loadConfigFile: async () => {
-    const config = await loadConfig()
-
-    if (!config) {
-      set({
-        config: null,
-        configLoaded: true,
-        hasPreconfiguredAccounts: false,
-        hasPreconfiguredWebcal: false,
-      })
+    const document = await loadConfigDocument()
+    if (get().configLoaded) return
+    if (get().perUser && !document.perUser) {
+      set({ configLoaded: true, runtimeSignIn: 'required' })
       return
     }
+    await installConfig(document)
+  },
 
-    set({
-      config,
-      configLoaded: true,
-      hasPreconfiguredAccounts: config.accounts.length > 0,
-      hasPreconfiguredWebcal: config.webcalSubscriptions.length > 0,
-    })
+  signIn: async (username, password) => {
+    const result = await signInToRuntimeConfig(username, password)
+    if (typeof result === 'string') return result
+    if (result.perUser || get().perUser) {
+      if (!result.verifiedUser) return 'unavailable'
+      const binding = await bindHostedProfile(result.verifiedUser)
+      if (binding !== 'ok') return binding
+    }
+    await installConfig(
+      result,
+      result.quickStart && result.config?.unlockWithSignIn ? password : undefined
+    )
+    return 'ok'
+  },
 
-    // Auto-unlock if master password is stored
-    const storedPassword = await getStoredMasterPassword()
-    if (storedPassword) {
-      await get().unlock(storedPassword)
+  setRuntimeSignInOpen: (open) => {
+    if (!get().perUser && get().runtimeSignIn) {
+      set({ runtimeSignIn: open ? 'required' : 'dismissed' })
     }
   },
 
@@ -174,9 +199,11 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
       }
 
       // All decrypted successfully
-      await setMasterPassword(masterPassword)
+      // A password reused for server sign-in must never be remembered here.
+      const rememberedPassword = config.unlockWithSignIn ? null : masterPassword
+      await setMasterPassword(rememberedPassword)
       set({
-        masterPassword,
+        masterPassword: rememberedPassword,
         decryptedCredentials: decrypted,
         decryptedWebcalSubscriptions: decryptedWebcal,
         isUnlocked: true,
@@ -217,6 +244,32 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
     return get().decryptedCredentials
   },
 }))
+
+async function installConfig(
+  { config, linkSchemes, requiresSignIn, perUser, quickStart }: LoadedConfig,
+  signInPassword?: string
+): Promise<void> {
+  useConfigStore.setState({
+    config,
+    linkSchemes,
+    configLoaded: true,
+    perUser: Boolean(perUser),
+    quickStart: Boolean(quickStart),
+    checkingMasterPassword: config !== null,
+    runtimeSignIn: requiresSignIn ? 'required' : null,
+    hasPreconfiguredAccounts: Boolean(config?.accounts.length),
+    hasPreconfiguredWebcal: Boolean(config?.webcalSubscriptions.length),
+  })
+
+  if (config) {
+    try {
+      const password = config.unlockWithSignIn ? signInPassword : await getStoredMasterPassword()
+      if (password) await useConfigStore.getState().unlock(password)
+    } finally {
+      useConfigStore.setState({ checkingMasterPassword: false })
+    }
+  }
+}
 
 // ─── Persist master password ─────────────────────────────────────────────────
 

@@ -1,29 +1,46 @@
 import { test, expect, type Page } from '@playwright/test'
 import { clearState, STORAGE_KEYS } from './fixtures/localstorage'
 
-async function seedEvents(page: Page) {
+async function seedEvents(page: Page, oscillation = false, timeFormat = '12h') {
   await clearState(page)
   await page.addInitScript(
-    ({ key }) => {
+    ({ key, settingsKey, oscillation, timeFormat }) => {
       if (sessionStorage.getItem('__calino_timed_overlap')) return
       sessionStorage.setItem('__calino_timed_overlap', '1')
       const d = new Date()
       const day = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-      const items = [
-        {
-          id: 'workshop',
-          title: 'Planning workshop',
-          from: '16:00',
-          to: '17:30',
-          categories: ['important', 'maybe'],
-          location: 'Meeting room',
-        },
-        { id: 'call', title: 'Client call', from: '17:00', to: '18:00' },
-        { id: 'simultaneous-a', title: 'Concurrent first', from: '10:00', to: '12:00' },
-        { id: 'simultaneous-b', title: 'Concurrent second', from: '10:00', to: '11:00' },
-        { id: 'close-a', title: 'Close start first', from: '13:00', to: '15:00' },
-        { id: 'close-b', title: 'Close start second', from: '13:15', to: '14:00' },
-      ]
+      const items = oscillation
+        ? [
+            {
+              id: 'planning',
+              title: 'Planning meeting',
+              from: '16:20',
+              to: '17:20',
+              location: 'Meeting room',
+            },
+            { id: 'concurrent-1', title: 'Concurrent 1', from: '17:00', to: '19:00' },
+            { id: 'concurrent-2', title: 'Concurrent 2', from: '17:00', to: '19:00' },
+          ]
+        : [
+            {
+              id: 'workshop',
+              title: 'Planning workshop',
+              from: '16:00',
+              to: '17:30',
+              categories: ['important', 'maybe'],
+              location: 'Meeting room',
+            },
+            { id: 'call', title: 'Client call', from: '17:00', to: '18:00' },
+            { id: 'simultaneous-a', title: 'Concurrent first', from: '10:00', to: '12:00' },
+            { id: 'simultaneous-b', title: 'Concurrent second', from: '10:00', to: '11:00' },
+            { id: 'close-a', title: 'Close start first', from: '13:00', to: '15:00' },
+            { id: 'close-b', title: 'Close start second', from: '13:15', to: '14:00' },
+          ]
+      if (oscillation) {
+        const settings = JSON.parse(localStorage.getItem(settingsKey)!)
+        settings.state.timeFormat = timeFormat
+        localStorage.setItem(settingsKey, JSON.stringify(settings))
+      }
       localStorage.setItem(
         key,
         JSON.stringify({
@@ -50,7 +67,7 @@ async function seedEvents(page: Page) {
         })
       )
     },
-    { key: STORAGE_KEYS.calendar }
+    { key: STORAGE_KEYS.calendar, settingsKey: STORAGE_KEYS.settings, oscillation, timeFormat }
   )
 }
 
@@ -151,3 +168,51 @@ test('week: overlap adjusts when larger lettering needs more vertical space', as
     })
     .toBeGreaterThan(30)
 })
+
+for (const timeFormat of ['12h', '24h']) {
+  test(`week: overlapping cards settle across responsive time widths (${timeFormat})`, async ({
+    page,
+  }) => {
+    await seedEvents(page, true, timeFormat)
+    await page.setViewportSize({ width: 1320, height: 1000 })
+    await page.goto('/week')
+    const planning = card(page, 'Planning meeting')
+    // Do not wait for stable geometry before observing a potentially oscillating card.
+    await planning.evaluate((element) => element.scrollIntoView({ block: 'center' }))
+    await expect(card(page, 'Concurrent 1')).toBeVisible()
+    await expect(card(page, 'Concurrent 2')).toBeVisible()
+    await page.evaluate(() => document.fonts.ready)
+
+    for (const width of [1180, 1240, 1320, 1400]) {
+      await page.setViewportSize({ width, height: 1000 })
+      // Allow resize/entry animations to finish before measuring an idle grid.
+      await page.waitForTimeout(350)
+      const changes = await page.evaluate(async () => {
+        const cards = [
+          ...document.querySelectorAll<HTMLElement>('[data-component="event-card"]'),
+        ].filter((element) => /Planning meeting|Concurrent [12]/.test(element.textContent ?? ''))
+        const positions = () =>
+          cards.map((element) => {
+            const rect = element.getBoundingClientRect()
+            return [rect.x, rect.width].map((value) => Math.round(value * 100) / 100)
+          })
+        let previous = JSON.stringify(positions())
+        let changes = 0
+        const start = performance.now()
+        await new Promise<void>((resolve) => {
+          const sample = () => {
+            const current = JSON.stringify(positions())
+            if (current !== previous) changes++
+            previous = current
+            if (performance.now() - start >= 1000) resolve()
+            else requestAnimationFrame(sample)
+          }
+          requestAnimationFrame(sample)
+        })
+        return changes
+      })
+      expect(changes, `${timeFormat} at ${width}px must stop resizing`).toBe(0)
+      await expect(planning.getByText('Meeting room')).toBeVisible()
+    }
+  })
+}

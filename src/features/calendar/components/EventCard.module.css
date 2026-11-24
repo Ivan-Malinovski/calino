@@ -232,6 +232,11 @@
 
 .card:not(.tight) .meta .time {
   font-size: clamp(9px, calc(100cqw / (var(--time-chars, 13) * 0.58)), 11.5px);
+  /* Reserve the tallest time line even when its font shrinks horizontally.
+     A width-dependent height feeds back into measured overlap placement and
+     can alternate forever between wide and narrow columns. Keep text scaling
+     available without making the measured height depend on the chosen lane. */
+  line-height: calc(11.5px * 1.3 * var(--font-scale, 1));
 }
 
 .metaDot {

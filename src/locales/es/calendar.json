@@ -634,6 +634,7 @@
       "enterUrl": "Introduce la URL de un calendario.",
       "updateFailedReason": "No se pudo actualizar: {{reason}}",
       "subscribeFailedReason": "No se pudo suscribir: {{reason}}",
+      "feedBlocked": "No se pudo cargar el calendario. Muchos servidores, entre ellos Google Calendar, no permiten que los navegadores lean sus feeds directamente. Añade una URL de proxy abajo y vuelve a intentarlo.",
       "updateFailed": "No se pudo actualizar la suscripción al calendario.",
       "subscribeFailed": "No se pudo suscribir al calendario."
     },

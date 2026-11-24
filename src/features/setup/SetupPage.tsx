@@ -38,6 +38,7 @@ interface WebcalEntry {
 }
 
 type Step = 'accounts' | 'password' | 'done'
+type Download = { filename: 'calino.config.json' | 'compose.yaml'; content: string }
 
 /** What the diagnostics panel needs; it supplies the rest of its options. */
 type DiagnosticsTarget = Omit<DiagnosticsOptions, 'includeWriteTest' | 'onProgress'>
@@ -90,8 +91,8 @@ export function SetupPage(): JSX.Element {
   const [passwordError, setPasswordError] = useState('')
 
   // Generate state
-  const [configJson, setConfigJson] = useState<string | null>(null)
-  const [generating, setGenerating] = useState(false)
+  const [download, setDownload] = useState<Download | null>(null)
+  const [generating, setGenerating] = useState<'config' | 'compose' | null>(null)
 
   // ── Account handlers ──────────────────────────────────────────────────────
 
@@ -229,85 +230,101 @@ export function SetupPage(): JSX.Element {
 
   // ── Download ──────────────────────────────────────────────────────────────
 
-  const downloadConfig = useCallback((json: string) => {
-    const blob = new Blob([json], { type: 'application/json' })
+  const downloadFile = useCallback(({ filename, content }: Download) => {
+    const blob = new Blob([content], {
+      type: filename === 'compose.yaml' ? 'application/yaml' : 'application/json',
+    })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = 'calino.config.json'
+    a.download = filename
     a.click()
     URL.revokeObjectURL(url)
   }, [])
 
   // ── Config generation ─────────────────────────────────────────────────────
 
-  const handleGenerate = useCallback(async () => {
-    if (masterPassword !== masterConfirm) {
-      setPasswordError(t('ui.setup.passwordsMismatch'))
-      return
-    }
-    if (masterPassword.length < 6) {
-      setPasswordError(t('ui.setup.passwordTooShort'))
-      return
-    }
-    setPasswordError('')
-    setGenerating(true)
+  const handleGenerate = useCallback(
+    async (quickStart: boolean) => {
+      if (masterPassword !== masterConfirm) {
+        setPasswordError(t('ui.setup.passwordsMismatch'))
+        return
+      }
+      if (masterPassword.length < (quickStart ? 12 : 6)) {
+        setPasswordError(
+          t(quickStart ? 'ui.setup.quickPasswordTooShort' : 'ui.setup.passwordTooShort')
+        )
+        return
+      }
+      setPasswordError('')
+      setGenerating(quickStart ? 'compose' : 'config')
 
-    try {
-      const configAccounts: PreconfiguredAccount[] = []
+      try {
+        const configAccounts: PreconfiguredAccount[] = []
 
-      for (const account of accounts) {
-        const [encryptedUrl, encryptedUsername, encryptedPassword] = await Promise.all([
-          encryptWithMasterPassword(account.url, masterPassword),
-          encryptWithMasterPassword(account.username, masterPassword),
-          encryptWithMasterPassword(account.password, masterPassword),
-        ])
-        const headers = Object.keys(account.customHeaders).length
-          ? Object.fromEntries(
-              await Promise.all(
-                Object.entries(account.customHeaders).map(
-                  async ([name, value]) =>
-                    [name, await encryptWithMasterPassword(value, masterPassword)] as const
+        for (const account of accounts) {
+          const [encryptedUrl, encryptedUsername, encryptedPassword] = await Promise.all([
+            encryptWithMasterPassword(account.url, masterPassword),
+            encryptWithMasterPassword(account.username, masterPassword),
+            encryptWithMasterPassword(account.password, masterPassword),
+          ])
+          const headers = Object.keys(account.customHeaders).length
+            ? Object.fromEntries(
+                await Promise.all(
+                  Object.entries(account.customHeaders).map(
+                    async ([name, value]) =>
+                      [name, await encryptWithMasterPassword(value, masterPassword)] as const
+                  )
                 )
               )
-            )
-          : undefined
-        configAccounts.push({
-          name: account.name,
-          url: encryptedUrl,
-          username: encryptedUsername,
-          password: encryptedPassword,
-          headers,
-        })
-      }
+            : undefined
+          configAccounts.push({
+            name: account.name,
+            url: encryptedUrl,
+            username: encryptedUsername,
+            password: encryptedPassword,
+            headers,
+          })
+        }
 
-      const configWebcal: PreconfiguredWebcal[] = []
-      for (const webcal of webcalSubscriptions) {
-        const encryptedUrl = await encryptWithMasterPassword(webcal.url, masterPassword)
-        configWebcal.push({
-          name: webcal.name,
-          url: encryptedUrl,
-          refreshIntervalMinutes: webcal.refreshIntervalMinutes,
-          proxyUrl: webcal.proxyUrl,
-        })
-      }
+        const configWebcal: PreconfiguredWebcal[] = []
+        for (const webcal of webcalSubscriptions) {
+          const encryptedUrl = await encryptWithMasterPassword(webcal.url, masterPassword)
+          configWebcal.push({
+            name: webcal.name,
+            url: encryptedUrl,
+            refreshIntervalMinutes: webcal.refreshIntervalMinutes,
+            proxyUrl: webcal.proxyUrl,
+          })
+        }
 
-      const config: CalinoConfig = {
-        version: 1,
-        accounts: configAccounts,
-        webcalSubscriptions: configWebcal,
-      }
+        const config: CalinoConfig = {
+          version: 1,
+          accounts: configAccounts,
+          webcalSubscriptions: configWebcal,
+        }
 
-      const json = JSON.stringify(config, null, 2)
-      setConfigJson(json)
-      setStep('done')
-      downloadConfig(json)
-    } catch (err) {
-      setPasswordError(err instanceof Error ? err.message : t('ui.setup.encryptionFailed'))
-    } finally {
-      setGenerating(false)
-    }
-  }, [accounts, webcalSubscriptions, masterPassword, masterConfirm, downloadConfig, t])
+        const file: Download = quickStart
+          ? {
+              filename: 'compose.yaml',
+              content: await (
+                await import('./quickStartCompose')
+              ).makeQuickStartCompose(config, masterPassword),
+            }
+          : { filename: 'calino.config.json', content: JSON.stringify(config, null, 2) }
+        setDownload(file)
+        setStep('done')
+        downloadFile(file)
+        setMasterPassword('')
+        setMasterConfirm('')
+      } catch (err) {
+        setPasswordError(err instanceof Error ? err.message : t('ui.setup.encryptionFailed'))
+      } finally {
+        setGenerating(null)
+      }
+    },
+    [accounts, webcalSubscriptions, masterPassword, masterConfirm, downloadFile, t]
+  )
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -716,19 +733,39 @@ export function SetupPage(): JSX.Element {
               />
             </div>
 
-            {passwordError && <div className={styles.error}>{passwordError}</div>}
+            {passwordError && (
+              <div className={styles.error} role="alert">
+                {passwordError}
+              </div>
+            )}
+            <p className={styles.hint}>{t('ui.setup.quickStartHint')}</p>
 
             <div className={styles.actions}>
-              <button type="button" className={styles.btn} onClick={() => setStep('accounts')}>
+              <button
+                type="button"
+                className={styles.btn}
+                onClick={() => setStep('accounts')}
+                disabled={generating !== null}
+              >
                 {t('ui.setup.back')}
               </button>
               <button
                 type="button"
-                className={`${styles.btn} ${styles.btnSuccess}`}
-                onClick={handleGenerate}
-                disabled={generating}
+                className={styles.btn}
+                onClick={() => void handleGenerate(false)}
+                disabled={generating !== null}
               >
-                {generating ? t('ui.setup.encrypting') : t('ui.setup.generate')}
+                {generating === 'config' ? t('ui.setup.encrypting') : t('ui.setup.generate')}
+              </button>
+              <button
+                type="button"
+                className={`${styles.btn} ${styles.btnSuccess}`}
+                onClick={() => void handleGenerate(true)}
+                disabled={generating !== null}
+              >
+                {generating === 'compose'
+                  ? t('ui.setup.encrypting')
+                  : t('ui.setup.quickStartDownload')}
               </button>
             </div>
           </>
@@ -739,16 +776,33 @@ export function SetupPage(): JSX.Element {
           <>
             <div className={styles.instructions}>
               <h2>{t('ui.setup.nextSteps')}</h2>
-              <ol>
-                <li>
-                  <Trans t={t} i18nKey="ui.setup.step1" components={{ code: <code /> }} />
-                </li>
-                <li>
-                  <Trans t={t} i18nKey="ui.setup.step2" components={{ code: <code /> }} />
-                </li>
-                <li>{t('ui.setup.step3')}</li>
-              </ol>
-              <div className={styles.warn}>{t('ui.setup.rebuildWarning')}</div>
+              {download?.filename === 'compose.yaml' ? (
+                <>
+                  <p>
+                    <Trans t={t} i18nKey="ui.setup.quickStartRun" components={{ code: <code /> }} />
+                  </p>
+                  <p>
+                    <Trans
+                      t={t}
+                      i18nKey="ui.setup.quickStartOpen"
+                      components={{ code: <code /> }}
+                    />
+                  </p>
+                </>
+              ) : (
+                <>
+                  <ol>
+                    <li>
+                      <Trans t={t} i18nKey="ui.setup.step1" components={{ code: <code /> }} />
+                    </li>
+                    <li>
+                      <Trans t={t} i18nKey="ui.setup.step2" components={{ code: <code /> }} />
+                    </li>
+                    <li>{t('ui.setup.step3')}</li>
+                  </ol>
+                  <div className={styles.warn}>{t('ui.setup.rebuildWarning')}</div>
+                </>
+              )}
             </div>
 
             <div className={styles.actions}>
@@ -757,7 +811,7 @@ export function SetupPage(): JSX.Element {
                 className={styles.btn}
                 onClick={() => {
                   setStep('accounts')
-                  setConfigJson(null)
+                  setDownload(null)
                 }}
               >
                 {t('ui.setup.startOver')}
@@ -765,7 +819,7 @@ export function SetupPage(): JSX.Element {
               <button
                 type="button"
                 className={styles.btn}
-                onClick={() => configJson && downloadConfig(configJson)}
+                onClick={() => download && downloadFile(download)}
               >
                 {t('ui.setup.downloadAgain')}
               </button>

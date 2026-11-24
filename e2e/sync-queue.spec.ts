@@ -89,7 +89,7 @@ async function dump(
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
       const response = await page.request.get(
-        `${baseURL}/mock-caldav/__test__/dump?prefix=${encodeURIComponent(prefix)}`,
+        `${baseURL}/mock-caldav/__test__/dump?prefix=${encodeURIComponent(prefix)}`
       )
       return (await response.json()) as Record<string, string>
     } catch {
@@ -100,8 +100,7 @@ async function dump(
   return null
 }
 
-const icalStamp = (date: Date) =>
-  date.toISOString().replace(/[-:]/g, '').replace('.000', '')
+const icalStamp = (date: Date) => date.toISOString().replace(/[-:]/g, '').replace('.000', '')
 
 async function triggerSync(page: Page): Promise<void> {
   const syncButton = page.locator('[data-component="sync-all-calendars"]')
@@ -125,7 +124,7 @@ test.describe('queued edits survive failed writes', () => {
 
   test.beforeEach(async ({ page, baseURL }) => {
     await page.request.post(
-      `${baseURL!}/mock-caldav/__test__/reset?prefix=${encodeURIComponent(SQ_PATH)}`,
+      `${baseURL!}/mock-caldav/__test__/reset?prefix=${encodeURIComponent(SQ_PATH)}`
     )
   })
 
@@ -142,8 +141,7 @@ test.describe('queued edits survive failed writes', () => {
     const start = new Date()
     start.setUTCHours(10, 0, 0, 0)
     await page.request.put(`${baseURL}/mock-caldav${SQ_PATH}queue-edit.ics`, {
-      data:
-        `BEGIN:VCALENDAR\r\nVERSION:2.0\r\nBEGIN:VEVENT\r\nUID:queue-edit\r\nDTSTART:${icalStamp(start)}\r\nDTEND:${icalStamp(new Date(start.getTime() + 3_600_000))}\r\nSUMMARY:Queue edit event\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n`,
+      data: `BEGIN:VCALENDAR\r\nVERSION:2.0\r\nBEGIN:VEVENT\r\nUID:queue-edit\r\nDTSTART:${icalStamp(start)}\r\nDTEND:${icalStamp(new Date(start.getTime() + 3_600_000))}\r\nSUMMARY:Queue edit event\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n`,
     })
 
     await page.goto('/month')
@@ -154,7 +152,7 @@ test.describe('queued edits survive failed writes', () => {
 
     // Arm the fault injector: the next PUT to this collection returns 500.
     await page.request.post(
-      `${baseURL}/mock-caldav/__test__/fail?method=PUT&prefix=${encodeURIComponent(SQ_PATH)}&count=1`,
+      `${baseURL}/mock-caldav/__test__/fail?method=PUT&prefix=${encodeURIComponent(SQ_PATH)}&count=1`
     )
 
     await openEventModal(page, 'Queue edit event')
@@ -163,9 +161,7 @@ test.describe('queued edits survive failed writes', () => {
 
     // The edit survives locally even though the write failed.
     await expect(
-      page
-        .locator('[data-component="event-card"]')
-        .filter({ hasText: 'Queue edit event (edited)' })
+      page.locator('[data-component="event-card"]').filter({ hasText: 'Queue edit event (edited)' })
     ).toBeVisible({ timeout: 15_000 })
 
     // Recover: the next sync drains the queue and the edit lands on the server.
@@ -181,6 +177,93 @@ test.describe('queued edits survive failed writes', () => {
       .toContain('SUMMARY:Queue edit event (edited)')
   })
 
+  for (const reload of [false, true]) {
+    test(`a second edit preserves server fields after PUT read-back fails${reload ? ' across reload' : ''}`, async ({
+      page,
+      baseURL,
+    }) => {
+      await clearState(page)
+      await seedAccountSQ(page, baseURL!)
+      await seedStoreCalendars(page, [{ id: CAL_SQ, name: 'Sync Queue', color: '#4285F4' }])
+      const url = `${baseURL}/mock-caldav${SQ_PATH}read-back.ics`
+      const start = new Date()
+      start.setUTCHours(10, 0, 0, 0)
+      await page.request.put(url, {
+        data: [
+          'BEGIN:VCALENDAR',
+          'VERSION:2.0',
+          'BEGIN:VEVENT',
+          'UID:read-back',
+          `DTSTART:${icalStamp(start)}`,
+          `DTEND:${icalStamp(new Date(+start + 3600000))}`,
+          'SUMMARY:Read-back event',
+          'END:VEVENT',
+          'END:VCALENDAR',
+        ].join('\r\n'),
+      })
+      await page.goto('/month')
+      await triggerSync(page)
+      await openEventModal(page, 'Read-back event')
+
+      let firstPut = true
+      let failedRead = false
+      await page.route('**/mock-caldav' + SQ_PATH + '**', async (route) => {
+        const request = route.request()
+        const body = request.postData() ?? ''
+        if (firstPut && request.method() === 'PUT' && request.url() === url) {
+          firstPut = false
+          const response = await route.fetch({
+            postData: body.replace('END:VEVENT', 'X-SERVER-FIELD:preserved\r\nEND:VEVENT'),
+          })
+          await route.fulfill({ response, headers: { ...response.headers(), etag: 'W/"weak"' } })
+        } else if (
+          !failedRead &&
+          request.method() === 'REPORT' &&
+          body.includes('calendar-multiget')
+        ) {
+          failedRead = true
+          await route.fulfill({ status: 503 })
+        } else if (
+          reload &&
+          failedRead &&
+          request.method() === 'REPORT' &&
+          !body.includes('calendar-multiget')
+        ) {
+          // Keep startup sync from refreshing the unknown body; the next edit
+          // must recover it from the persisted cache state itself.
+          await route.fulfill({ status: 503 })
+        } else {
+          await route.continue()
+        }
+      })
+      await page.locator('[data-component="event-title-input"]').fill('First edit')
+      await page.locator('[data-component="modal-save"]').click()
+      await expect.poll(() => failedRead).toBe(true)
+      if (reload) {
+        // Wait for the completed write before navigating away from its async work.
+        await expect
+          .poll(() =>
+            page.evaluate((key) => {
+              const events = JSON.parse(localStorage.getItem(key) ?? '{}').state?.events ?? []
+              return events.some(
+                (event: { title: string; syncStatus?: string }) =>
+                  event.title === 'First edit' && event.syncStatus === 'synced'
+              )
+            }, STORAGE_KEYS.calendar)
+          )
+          .toBe(true)
+        await page.reload()
+      }
+      await openEventModal(page, 'First edit')
+      await page.locator('[data-component="event-title-input"]').fill('Second edit')
+      await page.locator('[data-component="modal-save"]').click()
+      await expect
+        .poll(async () => (await page.request.get(url)).text())
+        .toContain('SUMMARY:Second edit')
+      expect(await (await page.request.get(url)).text()).toContain('X-SERVER-FIELD:preserved')
+    })
+  }
+
   test('a stale-etag 412 is recovered by re-fetching the etag and re-applying once', async ({
     page,
     baseURL,
@@ -193,8 +276,7 @@ test.describe('queued edits survive failed writes', () => {
 
     const start = new Date()
     start.setUTCHours(11, 0, 0, 0)
-    const ics =
-      `BEGIN:VCALENDAR\r\nVERSION:2.0\r\nBEGIN:VEVENT\r\nUID:stale-etag\r\nDTSTART:${icalStamp(start)}\r\nDTEND:${icalStamp(new Date(start.getTime() + 3_600_000))}\r\nSUMMARY:Stale etag event\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n`
+    const ics = `BEGIN:VCALENDAR\r\nVERSION:2.0\r\nBEGIN:VEVENT\r\nUID:stale-etag\r\nDTSTART:${icalStamp(start)}\r\nDTEND:${icalStamp(new Date(start.getTime() + 3_600_000))}\r\nSUMMARY:Stale etag event\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n`
     await page.request.put(`${baseURL}/mock-caldav${SQ_PATH}stale-etag.ics`, { data: ics })
 
     await page.goto('/month')
@@ -228,9 +310,7 @@ test.describe('queued edits survive failed writes', () => {
 
     // And the UI agrees.
     await expect(
-      page
-        .locator('[data-component="event-card"]')
-        .filter({ hasText: 'Stale etag event (edited)' })
+      page.locator('[data-component="event-card"]').filter({ hasText: 'Stale etag event (edited)' })
     ).toBeVisible({ timeout: 15_000 })
   })
 })

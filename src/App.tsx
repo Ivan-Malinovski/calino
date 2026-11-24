@@ -37,6 +37,7 @@ import { FloatingNavPill } from './features/calendar/components/nav/FloatingNavP
 import { OnboardingModal } from './features/onboarding/OnboardingModal'
 import { ShortcutsHelp } from './features/calendar/components/ShortcutsHelp'
 import { SetupPage } from './features/setup/SetupPage'
+import { HostedConfigSignIn } from './features/settings/components/HostedConfigSignIn'
 import { MasterPasswordPrompt } from './features/settings/components/MasterPasswordPrompt'
 import { useConfigStore } from './store/configStore'
 import { ThemeProvider } from './components/ThemeProvider'
@@ -955,6 +956,9 @@ function GitHubPagesRedirect(): null {
 function App(): JSX.Element {
   const { t } = useTranslation()
   const loadConfigFile = useConfigStore((state) => state.loadConfigFile)
+  const configLoaded = useConfigStore((state) => state.configLoaded)
+  const perUser = useConfigStore((state) => state.perUser)
+  const runtimeSignIn = useConfigStore((state) => state.runtimeSignIn)
   const overdueTaskBadge = useSettingsStore((state) => state.overdueTaskBadge)
 
   // Load self-hosted config on mount. Explicitly caught: a missing or malformed
@@ -1010,6 +1014,21 @@ function App(): JSX.Element {
     }
   }, [])
 
+  // Per-user profiles must never mount the app or start sync before sign-in.
+  if (!configLoaded || (perUser && runtimeSignIn)) {
+    return (
+      <BrowserRouter>
+        <ThemeProvider>
+          <HostedConfigSignIn />
+          <Routes>
+            <Route path="/setup" element={configLoaded ? <SetupPage /> : null} />
+            <Route path="*" element={null} />
+          </Routes>
+        </ThemeProvider>
+      </BrowserRouter>
+    )
+  }
+
   return (
     <BrowserRouter basename={getBasePath() || '/'}>
       <ThemeProvider>
@@ -1031,6 +1050,7 @@ function App(): JSX.Element {
             </ErrorBoundary>
           )}
           {!Capacitor.isNativePlatform() && <CookieConsent />}
+          <HostedConfigSignIn />
           <MasterPasswordPrompt />
           <Routes>
             <Route path="/month" element={<CalendarApp />} />

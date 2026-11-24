@@ -1,4 +1,4 @@
-import '@testing-library/jest-dom'
+import '@testing-library/jest-dom/vitest'
 import { beforeEach, vi } from 'vitest'
 import { resetBackendPool } from '@/features/caldav/client/backendPool'
 import pkg from '../../package.json'
@@ -17,6 +17,7 @@ initI18n('en')
 ;(globalThis as any).__APP_VERSION__ = pkg.version
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ;(globalThis as any).__CALINO_SELF_HOSTED__ = false
+Object.assign(globalThis, { __CALINO_RUNTIME_CONFIG__: false })
 
 const localStorageMock = {
   getItem: vi.fn(),

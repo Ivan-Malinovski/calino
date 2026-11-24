@@ -15,6 +15,7 @@ import { AddCalendarModal } from '@/features/calendar/components/AddCalendarModa
 import { SubscribeCalendarModal } from '@/features/calendar/components/SubscribeCalendarModal'
 import { useWebcalSubscriptions } from '@/features/webcal/hooks/useWebcalSubscriptions'
 import type { WebcalSubscription } from '@/features/webcal/types'
+import { useConfigStore } from '@/store/configStore'
 import styles from './Settings.module.css'
 
 interface TestState {
@@ -25,6 +26,8 @@ interface TestState {
 
 export function CalDAVSettings({ searchControl }: { searchControl?: JSX.Element }): JSX.Element {
   const { t } = useTranslation('settings')
+  const runtimeSignIn = useConfigStore((state) => state.runtimeSignIn)
+  const setRuntimeSignInOpen = useConfigStore((state) => state.setRuntimeSignInOpen)
   const [isAddingAccount, setIsAddingAccount] = useState(false)
   const [editingAccount, setEditingAccount] = useState<CalDAVAccount | null>(null)
   // Keyed by account id so testing one account never shows a spinner on another.
@@ -183,6 +186,15 @@ export function CalDAVSettings({ searchControl }: { searchControl?: JSX.Element 
 
       <div className={styles.group} data-component="connected-accounts">
         <div className={styles.groupLabel}>{t('caldav.connectedAccounts')}</div>
+        {runtimeSignIn === 'dismissed' && (
+          <button
+            type="button"
+            className={styles.connectBtn}
+            onClick={() => setRuntimeSignInOpen(true)}
+          >
+            {t('hostedConfigSignIn.title')}
+          </button>
+        )}
         {accounts.map((account) => {
           const test = testStates[account.id]
           return (

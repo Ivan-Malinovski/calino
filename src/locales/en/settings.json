@@ -792,6 +792,19 @@
       "body": "If you have questions about this privacy policy, please contact:"
     }
   },
+  "hostedConfigSignIn": {
+    "title": "Connect to hosted configuration",
+    "description": "Sign in to download this instance’s shared configuration.",
+    "username": "Username",
+    "password": "Sign-in password",
+    "skip": "Continue without it",
+    "signIn": "Sign in",
+    "signingIn": "Signing in…",
+    "unauthorized": "The username or password is incorrect.",
+    "unavailable": "Could not load the hosted configuration. Try again.",
+    "insecure": "Open this instance over HTTPS to sign in.",
+    "otherProfile": "This browser profile already contains Calino data or belongs to another user. Open Calino in a separate browser profile."
+  },
   "masterPassword": {
     "overlayAriaLabel": "Unlock CalDAV accounts",
     "title": "Unlock CalDAV Accounts",
@@ -894,6 +907,11 @@
       "done": "Done →",
       "passwordsMismatch": "Passwords do not match.",
       "passwordTooShort": "Password must be at least 6 characters.",
+      "quickStartHint": "For a single-user Docker setup, use this password to sign in and unlock the encrypted config.",
+      "quickStartDownload": "Download Compose file",
+      "quickPasswordTooShort": "Use at least 12 characters for the Docker sign-in password.",
+      "quickStartRun": "Put <code>compose.yaml</code> in its own folder and run <code>docker compose up -d</code> there.",
+      "quickStartOpen": "Open <code>http://localhost:8080</code> on the Docker host and sign in with the password you just chose.",
       "encryptionFailed": "Encryption failed."
     },
     "categories": {

@@ -13,6 +13,16 @@ import type { FreeBusyPeriod } from '@/lib/freeBusyCalculator'
 export type { CalendarProtocol }
 
 /**
+ * Where a write landed. `data` is the text the server stored, when it was read
+ * back. A null body means the PUT succeeded but its representation is unknown.
+ */
+export interface WrittenEvent {
+  url: string
+  etag: string
+  data?: string | null
+}
+
+/**
  * Protocol-neutral calendar backend.
  *
  * This is the surface `SyncEngine`, `useCalDAV`, `useSettingsSync` and
@@ -56,18 +66,18 @@ export interface CalendarBackend {
     includeAllEvents?: boolean
   ): Promise<FetchEventsResult>
   fetchResourceByHref(href: string): Promise<{ url: string; data: string; etag?: string } | null>
-  createEvent(
+  readCalendarObject?(
     calendarUrl: string,
-    iCalString: string,
-    filename: string
-  ): Promise<{ url: string; etag: string }>
+    href: string
+  ): Promise<{ etag: string; data: string } | null>
+  createEvent(calendarUrl: string, iCalString: string, filename: string): Promise<WrittenEvent>
   fetchEtag(eventUrl: string): Promise<string>
   updateEvent(
     calendarUrl: string,
     eventUrl: string,
     iCalString: string,
     etag: string
-  ): Promise<{ url: string; etag: string }>
+  ): Promise<WrittenEvent>
   deleteEvent(eventUrl: string, etag: string): Promise<void>
   createCalendar(options: CreateCalendarOptions): Promise<CalDAVCalendar>
   updateCalendar(calendarUrl: string, options: UpdateCalendarOptions): Promise<void>

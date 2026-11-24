@@ -792,6 +792,19 @@
       "body": "Per domande su questa informativa sulla privacy, contattaci:"
     }
   },
+  "hostedConfigSignIn": {
+    "title": "Connetti alla configurazione ospitata",
+    "description": "Accedi per scaricare la configurazione condivisa di questa istanza.",
+    "username": "Nome utente",
+    "password": "Password di accesso",
+    "skip": "Continua senza",
+    "signIn": "Accedi",
+    "signingIn": "Accesso in corso…",
+    "unauthorized": "Il nome utente o la password non sono corretti.",
+    "unavailable": "Impossibile caricare la configurazione ospitata. Riprova.",
+    "insecure": "Apri questa istanza tramite HTTPS per accedere.",
+    "otherProfile": "Questo profilo del browser contiene già dati di Calino o appartiene a un altro utente. Apri Calino in un profilo del browser separato."
+  },
   "masterPassword": {
     "overlayAriaLabel": "Sblocca gli account CalDAV",
     "title": "Sblocca gli account CalDAV",
@@ -894,6 +907,11 @@
       "done": "Fatto →",
       "passwordsMismatch": "Le password non coincidono.",
       "passwordTooShort": "La password deve contenere almeno 6 caratteri.",
+      "quickStartHint": "Per un’installazione Docker con un solo utente, usa questa password per accedere e sbloccare la configurazione cifrata.",
+      "quickStartDownload": "Scarica il file Compose",
+      "quickPasswordTooShort": "Usa almeno 12 caratteri per la password di accesso a Docker.",
+      "quickStartRun": "Metti <code>compose.yaml</code> in una cartella dedicata ed esegui <code>docker compose up -d</code> in quella cartella.",
+      "quickStartOpen": "Apri <code>http://localhost:8080</code> sull’host Docker e accedi con la password che hai scelto.",
       "encryptionFailed": "Cifratura non riuscita."
     },
     "categories": {

@@ -388,6 +388,7 @@ function tracked<A extends unknown[], R>(
 
 export interface AddAccountOptions extends ConnectionOptions {
   onProtocolDetected?: (protocol: CalendarProtocol) => void
+  provisioned?: boolean
 }
 
 export interface UseCalDAVReturn {
@@ -1059,6 +1060,17 @@ export function useCalDAVInstance(): UseCalDAVReturn {
 
         const discoveredUrl = probe.resolvedUrl ?? serverUrl.replace(/\/$/, '')
 
+        if (
+          options.provisioned &&
+          storage
+            .getAllAccounts()
+            .some((account) => account.serverUrl === discoveredUrl && account.username === username)
+        ) {
+          setSyncState((prev) => ({ ...prev, status: 'idle' }))
+          useCalDAVSyncStore.getState().setStatus('idle')
+          return
+        }
+
         const credential = await saveCredentials({
           serverUrl: discoveredUrl,
           username,
@@ -1087,6 +1099,7 @@ export function useCalDAVInstance(): UseCalDAVReturn {
           proxyUrl: proxyUrl || null,
           username,
           credentialId: credential.id,
+          ...(options.provisioned ? { provisionedServerUrl: serverUrl } : {}),
         })
         await rememberCalendarUser(client, newAccount.id)
 
@@ -1443,66 +1456,6 @@ export function useCalDAVInstance(): UseCalDAVReturn {
     },
     [applyEventChanges]
   )
-
-  // Auto-connect to preconfigured accounts when unlocked
-  const isUnlocked = useConfigStore((state) => state.isUnlocked)
-  const hasPreconfiguredAccounts = useConfigStore((state) => state.hasPreconfiguredAccounts)
-
-  useEffect(() => {
-    if (!isUnlocked || !hasPreconfiguredAccounts || autoConnectDone) {
-      return
-    }
-
-    const { config, getDecryptedCredentials } = useConfigStore.getState()
-    if (!config) return
-
-    // Mark immediately to prevent any re-runs across all hook instances
-    autoConnectDone = true
-
-    const existingAccounts = storage.getAllAccounts()
-    const decrypted = getDecryptedCredentials()
-
-    // Run sequentially to avoid localStorage race conditions in saveCredentials
-    const connectAccounts = async (): Promise<void> => {
-      let connected = 0
-      for (let i = 0; i < decrypted.length; i++) {
-        const credential = decrypted[i]
-        const accountName = config.accounts[i]?.name ?? credential.username
-
-        // Skip if already connected (dedup by URL + username)
-        const alreadyConnected = existingAccounts.some(
-          (a) => a.serverUrl === credential.url && a.username === credential.username
-        )
-        if (alreadyConnected) continue
-
-        console.log(`[CalDAV] Auto-connecting to preconfigured account: ${accountName}`)
-        try {
-          await addAccount(
-            credential.url,
-            credential.username,
-            credential.password,
-            accountName,
-            undefined,
-            credential.customHeaders
-          )
-          connected++
-        } catch (err) {
-          console.error(`[CalDAV] Failed to auto-connect ${accountName}:`, err)
-        }
-      }
-
-      // Remove the default offline calendar if we connected at least one account
-      if (connected > 0) {
-        const { calendars, events, deleteCalendar } = useCalendarStore.getState()
-        const offlineCal = calendars.find((c) => c.id === 'default')
-        if (offlineCal && !events.some((e) => e.calendarId === 'default')) {
-          deleteCalendar('default')
-        }
-      }
-    }
-    connectAccounts()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isUnlocked, hasPreconfiguredAccounts])
 
   const removeAccount = useCallback(async (accountId: string): Promise<void> => {
     const account = storage.getAccountById(accountId)
@@ -2295,6 +2248,9 @@ export function useCalDAVInstance(): UseCalDAVReturn {
           serverUrl: resolvedUrl,
           username: updates.username,
           proxyUrl,
+          ...(updates.serverUrl !== account.serverUrl || updates.username !== account.username
+            ? { provisionedServerUrl: undefined }
+            : {}),
           // A different principal is a different user: forget the old one's
           // address so the sync below asks again.
           ...(principalChanged
@@ -2370,6 +2326,95 @@ export function useCalDAVInstance(): UseCalDAVReturn {
     },
     [syncAccount, storeAddCalendar, storeDeleteCalendar]
   )
+
+  // Auto-connect to preconfigured accounts when unlocked
+  const isUnlocked = useConfigStore((state) => state.isUnlocked)
+  const hasPreconfiguredAccounts = useConfigStore((state) => state.hasPreconfiguredAccounts)
+
+  useEffect(() => {
+    if (!isUnlocked || !hasPreconfiguredAccounts || autoConnectDone) {
+      return
+    }
+
+    const { config, getDecryptedCredentials } = useConfigStore.getState()
+    if (!config) return
+
+    // Mark immediately to prevent any re-runs across all hook instances
+    autoConnectDone = true
+
+    const decrypted = getDecryptedCredentials()
+
+    // Run sequentially to avoid localStorage race conditions in saveCredentials
+    const connectAccounts = async (): Promise<void> => {
+      let connected = 0
+      for (let i = 0; i < decrypted.length; i++) {
+        const credential = decrypted[i]
+        const accountName = config.accounts[i]?.name ?? credential.username
+
+        try {
+          const accounts = storage.getAllAccounts()
+          const managed = accounts.find(
+            (account) =>
+              account.provisionedServerUrl === credential.url &&
+              account.username === credential.username
+          )
+          if (managed) {
+            const current = await getCredentialById(managed.credentialId)
+            const headers = credential.customHeaders ?? {}
+            const oldHeaders = current?.customHeaders ?? {}
+            const headersChanged =
+              Object.keys(headers).length !== Object.keys(oldHeaders).length ||
+              Object.entries(headers).some(([name, value]) => oldHeaders[name] !== value)
+            if (
+              current?.password !== credential.password ||
+              headersChanged ||
+              managed.name !== accountName
+            ) {
+              await updateAccount(managed.id, {
+                name: accountName,
+                serverUrl: managed.serverUrl,
+                username: managed.username,
+                password: credential.password,
+                proxyUrl: managed.proxyUrl,
+                customHeaders: headers,
+              })
+            }
+            continue
+          }
+          if (
+            accounts.some(
+              (account) =>
+                account.serverUrl === credential.url && account.username === credential.username
+            )
+          )
+            continue
+
+          await addAccount(
+            credential.url,
+            credential.username,
+            credential.password,
+            accountName,
+            undefined,
+            credential.customHeaders,
+            { provisioned: true }
+          )
+          if (storage.getAllAccounts().length > accounts.length) connected++
+        } catch (err) {
+          console.error(`[CalDAV] Failed to apply preconfigured account ${accountName}:`, err)
+        }
+      }
+
+      // Remove the default offline calendar if we connected at least one account
+      if (connected > 0) {
+        const { calendars, events, deleteCalendar } = useCalendarStore.getState()
+        const offlineCal = calendars.find((c) => c.id === 'default')
+        if (offlineCal && !events.some((e) => e.calendarId === 'default')) {
+          deleteCalendar('default')
+        }
+      }
+    }
+    connectAccounts()
+  }, [addAccount, updateAccount, isUnlocked, hasPreconfiguredAccounts])
 
   const syncAll = useCallback(async (): Promise<void> => {
     // One account failing must not prevent the rest from syncing: runSyncAccount
@@ -3154,9 +3199,9 @@ export function useCalDAVInstance(): UseCalDAVReturn {
         )
         const engine = new SyncEngine(client, event.calendarId)
 
-        if (event.etag) {
+        if (event.resourceHref || event.etag) {
           // Event previously existed on server; update it
-          const { url, etag } = await engine.updateEvent(event, event.etag)
+          const { url, etag } = await engine.updateEvent(event, event.etag ?? '')
           storeUpdateEvent(event.id, { resourceHref: url, etag, syncStatus: 'synced' })
         } else {
           // Event is new; create it
@@ -3168,7 +3213,7 @@ export function useCalDAVInstance(): UseCalDAVReturn {
       } catch {
         // Failed again; store a pending change for background retry
         storage.addPendingChange({
-          type: event.etag ? 'update' : 'create',
+          type: event.resourceHref || event.etag ? 'update' : 'create',
           eventId: event.id,
           calendarId: event.calendarId,
           data: JSON.stringify(event),
