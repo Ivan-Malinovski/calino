@@ -249,7 +249,7 @@ labels:
 
 ### With Auth (Authelia / Authentik)
 
-Add authentication in front of Calino using your identity provider's proxy integration. Calino has no built-in auth — it relies on your reverse proxy layer.
+To require sign-in for the whole Calino site, use your identity provider's reverse proxy integration. The Docker image's [built-in authentication](SELF_HOSTED_CONFIG.md#docker-compose-example) protects config downloads only.
 
 ## Offline Support / Service Worker
 
