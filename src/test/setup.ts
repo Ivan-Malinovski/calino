@@ -1,4 +1,4 @@
-import '@testing-library/jest-dom'
+import '@testing-library/jest-dom/vitest'
 import { beforeEach, vi } from 'vitest'
 import { resetBackendPool } from '@/features/caldav/client/backendPool'
 import pkg from '../../package.json'
