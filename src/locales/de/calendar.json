@@ -70,6 +70,7 @@
       "newJournalEntry": "Neuen Journaleintrag erstellen"
     },
     "sidebar": {
+      "reorderCalendar": "{{name}} umordnen",
       "previousMonth": "Vorheriger Monat",
       "nextMonth": "Nächster Monat",
       "calendars": "Kalender",

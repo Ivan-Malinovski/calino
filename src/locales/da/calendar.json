@@ -70,6 +70,7 @@
       "newJournalEntry": "Nyt dagbogsindlæg"
     },
     "sidebar": {
+      "reorderCalendar": "Flyt {{name}}",
       "previousMonth": "Forrige måned",
       "nextMonth": "Næste måned",
       "calendars": "Kalendere",

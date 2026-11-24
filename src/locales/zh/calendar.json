@@ -70,6 +70,7 @@
       "newJournalEntry": "新建日记"
     },
     "sidebar": {
+      "reorderCalendar": "重新排序 {{name}}",
       "previousMonth": "上个月",
       "nextMonth": "下个月",
       "calendars": "日历",

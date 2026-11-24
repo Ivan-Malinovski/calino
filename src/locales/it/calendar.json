@@ -70,6 +70,7 @@
       "newJournalEntry": "Nuova voce del diario"
     },
     "sidebar": {
+      "reorderCalendar": "Riordina {{name}}",
       "previousMonth": "Mese precedente",
       "nextMonth": "Il mese prossimo",
       "calendars": "Calendari",

@@ -88,7 +88,10 @@ export function useDrawerDrag(
     }
 
     const handleTouchStart = (e: TouchEvent): void => {
-      if (e.touches.length !== 1) {
+      if (
+        e.touches.length !== 1 ||
+        (e.target instanceof Element && e.target.closest('[data-drawer-drag-ignore]'))
+      ) {
         tracking = false
         return
       }
