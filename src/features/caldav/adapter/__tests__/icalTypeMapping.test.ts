@@ -1310,3 +1310,191 @@ describe('Issue 256: DUE-only recurring VTODO keeps its TZID on the synthesized 
     expect(icalVtodoToCalendarEvent(vtodo, 'c1').timezone).toBe('America/New_York')
   })
 })
+
+// VTODO due-time alarms: other CalDAV clients schedule notifications only from
+// a VALARM, so a task created in Calino needs one too.
+// ---------------------------------------------------------------------------
+describe('VTODO due-time VALARM', () => {
+  function task(overrides: Partial<CalendarEvent> = {}): CalendarEvent {
+    return {
+      id: 'vtodo-alarm-1',
+      uid: 'vtodo-alarm-1',
+      title: 'Task with a due time',
+      type: 'task',
+      calendarId: 'cal-1',
+      start: '2026-11-17T16:30:00',
+      end: '2026-11-17T16:30:00',
+      dueDate: '2026-11-17T16:30:00',
+      isAllDay: false,
+      timezone: 'Europe/Berlin',
+      ...overrides,
+    } as CalendarEvent
+  }
+
+  function serialize(overrides: Partial<CalendarEvent> = {}, existing?: ICAL.Component) {
+    const vtodo = existing ?? new ICAL.Component('vtodo')
+    calendarEventToIcalVtodo(task(overrides), vtodo)
+    return vtodo
+  }
+
+  function existingVtodo(alarmLines: string[]): ICAL.Component {
+    const cal = new ICAL.Component(
+      ICAL.parse(
+        [
+          'BEGIN:VCALENDAR',
+          'VERSION:2.0',
+          'BEGIN:VTODO',
+          'UID:vtodo-alarm-1',
+          'DUE;TZID=Europe/Berlin:20261117T163000',
+          ...alarmLines,
+          'END:VTODO',
+          'END:VCALENDAR',
+        ].join('\r\n')
+      )
+    )
+    return cal.getFirstSubcomponent('vtodo')!
+  }
+
+  it('adds an absolute DISPLAY alarm at DUE for a new timed task', () => {
+    const vtodo = serialize()
+    const alarms = vtodo.getAllSubcomponents('valarm')
+
+    expect(alarms).toHaveLength(1)
+    expect(alarms[0].getFirstPropertyValue('action')).toBe('DISPLAY')
+    expect(alarms[0].getFirstPropertyValue('description')).toBe('Reminder')
+
+    const trigger = alarms[0].getFirstProperty('trigger')
+    expect((trigger?.getFirstValue() as ICAL.Time).toJSDate().toISOString()).toBe(
+      '2026-11-17T15:30:00.000Z'
+    )
+    expect(vtodo.toString()).toContain('TRIGGER;VALUE=DATE-TIME:20261117T153000Z')
+  })
+
+  it('does not invent an alarm for a date-only task', () => {
+    const vtodo = serialize({ isAllDay: true, dueDate: '2026-11-17' })
+    expect(vtodo.getAllSubcomponents('valarm')).toHaveLength(0)
+  })
+
+  it('does not add an alarm to a completed task', () => {
+    const vtodo = serialize({ completed: true })
+    expect(vtodo.getAllSubcomponents('valarm')).toHaveLength(0)
+  })
+
+  it('does not add an alarm to a recurring task', () => {
+    const vtodo = serialize({ rruleString: 'FREQ=DAILY' })
+    expect(vtodo.getAllSubcomponents('valarm')).toHaveLength(0)
+  })
+
+  it('shifts an existing absolute alarm when DUE moves', () => {
+    // 14:30Z is one hour before the old 16:30 Berlin due time.
+    const vtodo = existingVtodo([
+      'BEGIN:VALARM',
+      'ACTION:DISPLAY',
+      'DESCRIPTION:Reminder',
+      'TRIGGER;VALUE=DATE-TIME:20261117T143000Z',
+      'END:VALARM',
+    ])
+
+    serialize({ dueDate: '2026-11-17T17:30:00' }, vtodo)
+
+    const alarms = vtodo.getAllSubcomponents('valarm')
+    expect(alarms).toHaveLength(1)
+    const trigger = alarms[0].getFirstProperty('trigger')
+    expect((trigger?.getFirstValue() as ICAL.Time).toJSDate().toISOString()).toBe(
+      '2026-11-17T15:30:00.000Z'
+    )
+  })
+
+  it('leaves a relative alarm alone when DUE moves', () => {
+    const vtodo = existingVtodo([
+      'BEGIN:VALARM',
+      'ACTION:DISPLAY',
+      'DESCRIPTION:Reminder',
+      'TRIGGER:-PT30M',
+      'END:VALARM',
+    ])
+
+    serialize({ dueDate: '2026-11-17T17:30:00' }, vtodo)
+
+    const alarms = vtodo.getAllSubcomponents('valarm')
+    expect(alarms).toHaveLength(1)
+    expect(alarms[0].toString()).toContain('TRIGGER:-PT30M')
+  })
+
+  it('does not rewrite an existing alarm when DUE is unchanged', () => {
+    const vtodo = existingVtodo([
+      'BEGIN:VALARM',
+      'ACTION:DISPLAY',
+      'DESCRIPTION:Reminder',
+      'TRIGGER;VALUE=DATE-TIME:20261117T143000Z',
+      'END:VALARM',
+    ])
+    const before = vtodo.getAllSubcomponents('valarm')[0].toString()
+
+    serialize({}, vtodo)
+
+    expect(vtodo.getAllSubcomponents('valarm')).toHaveLength(1)
+    expect(vtodo.getAllSubcomponents('valarm')[0].toString()).toBe(before)
+  })
+})
+
+describe('Calino due-alarm lifecycle', () => {
+  const task = {
+    id: 'managed-alarm',
+    uid: 'managed-alarm',
+    calendarId: 'cal-1',
+    type: 'task',
+    title: 'Managed alarm',
+    start: '2027-03-27T16:30:00',
+    end: '2027-03-27T16:30:00',
+    dueDate: '2027-03-27T16:30:00',
+    timezone: 'Europe/Copenhagen',
+    isAllDay: false,
+  } as CalendarEvent
+
+  it.each([
+    { isAllDay: true, dueDate: '2027-03-27' },
+    { dueDate: undefined },
+    { completed: true },
+    { rruleString: 'FREQ=DAILY' },
+    { recurrenceId: '2027-03-27T16:30:00' },
+  ])('removes only its own alarm when no longer eligible: %j', (changes) => {
+    const todo = calendarEventToIcalVtodo(task)
+    expect(todo.getAllSubcomponents('valarm')).toHaveLength(1)
+    expect(todo.toString()).toContain('X-CALINO-DUE-ALARM:TRUE')
+    const imported = new ICAL.Component('valarm')
+    imported.updatePropertyWithValue('action', 'DISPLAY')
+    imported.updatePropertyWithValue('description', 'External reminder')
+    imported.addPropertyWithValue('trigger', ICAL.Duration.fromString('-PT30M'))
+    todo.addSubcomponent(imported)
+    const before = imported.toString()
+    calendarEventToIcalVtodo({ ...task, ...changes }, todo)
+    expect(todo.getAllSubcomponents('valarm')).toEqual([imported])
+    expect(imported.toString()).toBe(before)
+  })
+
+  it('matches the written DUE when the input already carries an offset', () => {
+    const todo = calendarEventToIcalVtodo({ ...task, dueDate: '2027-03-27T16:30:00+02:00' })
+    expect(todo.toString()).toContain('DUE;TZID=Europe/Copenhagen:20270327T153000')
+    expect(todo.toString()).toContain('TRIGGER;VALUE=DATE-TIME:20270327T143000Z')
+  })
+
+  it('restores one alarm when an undated task becomes timed again', () => {
+    const todo = calendarEventToIcalVtodo(task)
+    calendarEventToIcalVtodo({ ...task, dueDate: undefined }, todo)
+    expect(todo.getAllSubcomponents('valarm')).toHaveLength(0)
+    calendarEventToIcalVtodo(task, todo)
+    calendarEventToIcalVtodo(task, todo)
+    expect(todo.getAllSubcomponents('valarm')).toHaveLength(1)
+  })
+
+  it.each([
+    ['2027-03-27T16:30:00', '2027-03-28T16:30:00', '20270328T143000Z'],
+    ['2027-10-30T16:30:00', '2027-10-31T16:30:00', '20271031T153000Z'],
+  ])('shifts by elapsed time across DST: %s to %s', (previous, next, expected) => {
+    const todo = calendarEventToIcalVtodo({ ...task, dueDate: previous })
+    calendarEventToIcalVtodo({ ...task, dueDate: next }, todo)
+    expect(todo.getAllSubcomponents('valarm')).toHaveLength(1)
+    expect(todo.toString()).toContain(`TRIGGER;VALUE=DATE-TIME:${expected}`)
+  })
+})

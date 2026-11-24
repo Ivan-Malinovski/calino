@@ -12,6 +12,7 @@ import type {
 } from '@/types'
 import { addDays } from 'date-fns'
 import { formatInTimeZone } from 'date-fns-tz'
+import { toEventInstant } from '@/lib/datetime'
 import { buildRRuleString, normaliseAllDayUntil } from '@/lib/recurrence'
 import { homeDayKey } from '@/lib/homeTimezone'
 import { normalizeTzid } from '@/lib/timezoneRegistry'
@@ -1585,6 +1586,87 @@ function writeSortOrder(vtodo: ICAL.Component, task: CalendarEvent): void {
   vtodo.updatePropertyWithValue('x-apple-sort-order', String(task.sortOrder))
 }
 
+/** The instant a timed DUE property represents, or null for DATE values. */
+function readDueInstant(prop: ICAL.Property | null | undefined): Date | null {
+  const value = prop?.getFirstValue()
+  if (!(value instanceof ICAL.Time) || value.isDate) return null
+  try {
+    const { iso, tzid } = icalTimeToISO(value, prop ?? undefined)
+    const instant = toEventInstant(iso, tzid)
+    return Number.isNaN(instant.getTime()) ? null : instant
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Give an eligible timed task the VALARM other CalDAV clients need to schedule
+ * a notification.
+ *
+ * Calino derives its own task due-date reminders locally from DUE, but Apple
+ * Reminders only schedules a notification when the VTODO carries a VALARM. A
+ * task created here therefore appeared on iOS without an alert, while one
+ * created on the iPhone (which writes its own alarm) did notify.
+ *
+ * The alarm matches what iOS writes: an absolute UTC trigger, DISPLAY action.
+ * Existing alarms are never duplicated. Alarms created here are marked so they
+ * can be removed when the task no longer qualifies. Absolute triggers shift by
+ * the DUE delta so alarms from other clients keep their offset on reschedule;
+ * relative triggers retain their original anchor and stay alone.
+ *
+ * Date-only tasks and recurring tasks are deliberately left without a new
+ * alarm: neither has a single instant a fixed trigger can represent, and
+ * Calino still schedules its local due-date reminder for them.
+ */
+function syncTaskDueAlarm(
+  vtodo: ICAL.Component,
+  task: CalendarEvent,
+  previousDue: Date | null
+): void {
+  // Use the DUE just written so the trigger matches its exact timezone and
+  // value type, including inputs that already carry a UTC offset.
+  const newDue = readDueInstant(vtodo.getFirstProperty('due'))
+
+  const eligible = Boolean(
+    newDue && !task.completed && !task.recurrence && !task.rruleString && !task.recurrenceId
+  )
+  // Only remove alarms we created. Imported alarms may express an independent
+  // reminder and must survive changes to the task's date mode or status.
+  for (const alarm of vtodo.getAllSubcomponents('valarm')) {
+    if (!eligible && alarm.getFirstPropertyValue('x-calino-due-alarm') === 'TRUE') {
+      vtodo.removeSubcomponent(alarm)
+    }
+  }
+
+  const alarms = vtodo.getAllSubcomponents('valarm')
+  if (alarms.length > 0) {
+    if (!newDue || !previousDue) return
+    const delta = newDue.getTime() - previousDue.getTime()
+    if (delta === 0) return
+
+    for (const alarm of alarms) {
+      const triggerProp = alarm.getFirstProperty('trigger')
+      const trigger = triggerProp?.getFirstValue()
+      // Relative triggers retain their START/END anchor. Only absolute
+      // instants need shifting.
+      if (!(trigger instanceof ICAL.Time)) continue
+      const shifted = new Date(trigger.toJSDate().getTime() + delta)
+      if (Number.isNaN(shifted.getTime())) continue
+      alarm.updatePropertyWithValue('trigger', ICAL.Time.fromJSDate(shifted, true))
+    }
+    return
+  }
+
+  if (!eligible || !newDue) return
+
+  const alarm = new ICAL.Component('valarm')
+  alarm.updatePropertyWithValue('action', 'DISPLAY')
+  alarm.updatePropertyWithValue('description', 'Reminder')
+  alarm.updatePropertyWithValue('x-calino-due-alarm', 'TRUE')
+  alarm.addPropertyWithValue('trigger', ICAL.Time.fromJSDate(newDue, true))
+  vtodo.addSubcomponent(alarm)
+}
+
 /**
  * Serialize a task to a VTODO.
  *
@@ -1593,14 +1675,19 @@ function writeSortOrder(vtodo: ICAL.Component, task: CalendarEvent): void {
  * two builders share: everything `icalVtodoToCalendarEvent` reads is written or
  * removed here, and everything else is left exactly as the server sent it.
  *
- * There is no alarm reconciliation because the VTODO parser reads no VALARM, so
- * a task's alarms are entirely unmodelled and survive by being left alone.
+ * VALARMs are not modelled on read, so their contents are preserved. The write
+ * path adds a due-time alarm to eligible tasks, removes its own alarms when
+ * no longer eligible, and shifts absolute triggers when DUE moves; see
+ * {@link syncTaskDueAlarm}.
  */
 export function calendarEventToIcalVtodo(
   task: CalendarEvent,
   existing?: ICAL.Component
 ): ICAL.Component {
   const vtodo = existing ?? new ICAL.Component('vtodo')
+  // Capture DUE before overwriting it: a VALARM written by another client is
+  // absolute, so it has to move by the same delta the due date does.
+  const previousDue = readDueInstant(existing?.getFirstProperty('due'))
 
   // R2.7 — A detached override carries the master's UID, so prefer the stored
   // UID over the local id (which for an override is `${uid}-${recurrenceId}`).
@@ -1651,6 +1738,8 @@ export function calendarEventToIcalVtodo(
   } else {
     vtodo.removeAllProperties('due')
   }
+
+  syncTaskDueAlarm(vtodo, task, previousDue)
 
   // An override describes one instance; the recurrence lives on the master.
   if (!task.recurrenceId) {
