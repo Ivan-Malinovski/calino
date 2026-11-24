@@ -89,7 +89,7 @@ export function describeRuleLocalised(rruleBody: string): string | null {
 
   const interval = options.interval ?? 1
   const t = (key: string, opts?: Record<string, unknown>): string =>
-    i18n.t(`calendar:ui.rrule.${key}`, opts)
+    i18n.t(`calendar:ui.rrule.${key}`, opts ?? {})
 
   const weekdays = asArray(options.byweekday).map((day) => {
     if (typeof day === 'number') return { weekday: day, n: undefined }
