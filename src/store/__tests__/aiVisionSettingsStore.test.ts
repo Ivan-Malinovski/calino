@@ -74,6 +74,15 @@ describe('aiVisionSettingsStore', () => {
       return useAIVisionSettingsStore.getState().baseUrl
     }
 
+    it('hydrates localStorage synchronously so saved settings are available on first render', () => {
+      localStorage.setItem(
+        'calino-ai-vision-settings',
+        JSON.stringify({ state: { ...DEFAULTS, model: 'saved-model' }, version: 1 })
+      )
+      void useAIVisionSettingsStore.persist.rehydrate()
+      expect(useAIVisionSettingsStore.getState().model).toBe('saved-model')
+    })
+
     it('folds in the /v1 that v0 adapters used to append', async () => {
       const baseUrl = await rehydrateFrom({
         state: { ...DEFAULTS, baseUrl: 'https://api.xiaomimimo.com' },

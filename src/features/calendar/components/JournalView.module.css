@@ -470,10 +470,16 @@
   flex-wrap: wrap;
   gap: 6px;
   margin-top: 12px;
+  max-height: 96px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 .calendarChip {
   display: inline-flex;
   align-items: center;
+  min-width: 0;
+  max-width: 100%;
+  flex-shrink: 0;
   gap: 5px;
   padding: 4px 9px;
   border: 1px solid var(--line);
@@ -483,12 +489,18 @@
   font: 12px inherit;
   cursor: pointer;
 }
+.calendarName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .calendarChipActive {
   border-color: var(--chip-color, var(--accent));
   color: var(--ink);
   font-weight: 500;
 }
 .calendarDot {
+  flex-shrink: 0;
   width: 8px;
   height: 8px;
   border: 1.5px solid var(--chip-color, var(--accent));

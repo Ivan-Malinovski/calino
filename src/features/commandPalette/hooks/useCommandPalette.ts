@@ -18,7 +18,11 @@ import { makeDefaultReminders } from '@/lib/notifications'
 import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
 import { createCommandRegistry, type Command } from '../commands'
 import { parseNaturalLanguage } from '@/features/nlp'
-import { displayOccurrence, materializeOccurrence, resolveRRuleString } from '@/lib/occurrenceExpansion'
+import {
+  displayOccurrence,
+  materializeOccurrence,
+  resolveRRuleString,
+} from '@/lib/occurrenceExpansion'
 import { describeRecurrence } from '@/lib/recurrence'
 import { createUuid } from '@/lib/uuid'
 import {
@@ -81,7 +85,8 @@ interface UseCommandPaletteProps {
   sidebarOpen?: boolean
 }
 
-const t = (key: string, opts?: Record<string, unknown>): string => i18n.t(`commands:${key}`, opts)
+const t = (key: string, opts?: Record<string, unknown>): string =>
+  i18n.t(`commands:${key}`, opts ?? {})
 
 function categoryToGroup(category: string): CommandPaletteItemGroup {
   if (category === 'event') return 'event'
@@ -424,10 +429,7 @@ export function useCommandPalette({ isOpen, toggleSidebar, sidebarOpen }: UseCom
   )
 
   const filteredData = useMemo(
-    () =>
-      isOpen
-        ? getFilteredEvents(events, filter)
-        : { matches: [], invalidDateRange: false },
+    () => (isOpen ? getFilteredEvents(events, filter) : { matches: [], invalidDateRange: false }),
     [events, filter, isOpen]
   )
 
@@ -442,9 +444,9 @@ export function useCommandPalette({ isOpen, toggleSidebar, sidebarOpen }: UseCom
         const displayStart =
           event.type === 'task'
             ? occurrence
-              ? materializeOccurrence(event, occurrence).dueDate ?? occurrence.occStartStr
-              : event.dueDate ?? event.start
-            : occurrence?.occStartStr ?? event.start
+              ? (materializeOccurrence(event, occurrence).dueDate ?? occurrence.occStartStr)
+              : (event.dueDate ?? event.start)
+            : (occurrence?.occStartStr ?? event.start)
         return {
           id: event.recurrenceMasterId
             ? event.id

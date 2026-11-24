@@ -1,3 +1,4 @@
+import type { TFunction } from 'i18next'
 import { useState, type JSX, type KeyboardEvent } from 'react'
 import type { CommandPaletteFilter } from '../lib/eventFilters'
 import { parseFilterTokens } from '../lib/eventFilters'
@@ -15,7 +16,7 @@ interface CommandPaletteFilterFormProps {
   setToDate: (date: string) => void
   onReset: () => void
   invalidDateRange: boolean
-  t: (key: string, options?: Record<string, unknown>) => string
+  t: TFunction<'commands'>
 }
 
 interface TokenInputProps {
@@ -286,7 +287,6 @@ export function CommandPaletteFilterForm({
           {t('palette.filter.invalidDateRange')}
         </p>
       )}
-
     </section>
   )
 }
