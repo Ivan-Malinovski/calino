@@ -311,11 +311,13 @@ export class SyncEngine {
     if (expectedBaseEtag !== undefined && (!original?.etag || original.etag !== expectedBaseEtag))
       base = undefined
 
-    // A new move destination may not exist yet. A null cache entry, however,
-    // identifies a previous successful PUT there whose read-back failed.
+    // A new move destination may not exist yet. Once it has a cache entry,
+    // this is a retry: read its current body even if the caller still carries
+    // the source ETag. Rebuilding would drop fields added to the first PUT.
     const needsRead =
-      original?.ics === null ||
-      (expectedBaseEtag === undefined && (!base || !isStrongEtag(etag) || original?.etag !== etag))
+      expectedBaseEtag !== undefined
+        ? original !== undefined
+        : !base || !isStrongEtag(etag) || original?.etag !== etag
     if (this.client.readCalendarObject && needsRead) {
       const stored = await this.client.readCalendarObject(calendarUrl, href)
       if (!stored) throw new Error('Could not read the stored calendar object before updating it')

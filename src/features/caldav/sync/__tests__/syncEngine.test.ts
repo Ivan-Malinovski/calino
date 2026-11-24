@@ -667,6 +667,42 @@ describe('SyncEngine — patches the original instead of rebuilding', () => {
     )
   })
 
+  it('does not repeat a successful create when a later engine must recover its body', async () => {
+    const href = `${calendarUrl}created.ics`
+    mockClient.createEvent = vi.fn().mockResolvedValue({ url: href, etag: '', data: null })
+    const event = makeEvent()
+    await engine.pushEvent(event)
+    expect(rawIcs.get(href)?.ics).toBeNull()
+
+    const nextEngine = createSyncEngine(mockClient as CalDAVClient, 'cal-1')
+    mockClient.readCalendarObject = vi
+      .fn()
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ etag: '"stored"', data: serverIcs })
+    const edit = { ...event, resourceHref: href, title: 'After create' }
+    await expect(nextEngine.updateEvent(edit, '')).rejects.toThrow('read')
+    expect(mockClient.updateEvent).not.toHaveBeenCalled()
+    await nextEngine.updateEvent(edit, '')
+    expect(mockClient.createEvent).toHaveBeenCalledTimes(1)
+    expect(mockClient.updateEvent).toHaveBeenCalledWith(
+      calendarUrl,
+      href,
+      expect.stringContaining('X-CUSTOM-PROP:keep me'),
+      '"stored"'
+    )
+  })
+
+  it('refuses a stale conditional update when the required read finds a newer version', async () => {
+    const href = `${calendarUrl}one.ics`
+    rawIcs.set(href, { ics: null, etag: '"old"' })
+    mockClient.readCalendarObject = vi.fn().mockResolvedValue({ etag: '"new"', data: serverIcs })
+
+    await expect(
+      engine.updateEvent(makeEvent({ resourceHref: href }), '"old"')
+    ).rejects.toMatchObject({ status: 412 })
+    expect(mockClient.updateEvent).not.toHaveBeenCalled()
+  })
+
   it('keeps the master sequence independent of the sequence of an exception', async () => {
     const url = calendarUrl + 'series.ics'
     const series = serverIcs
@@ -714,6 +750,35 @@ describe('SyncEngine — patches the original instead of rebuilding', () => {
     expect(`${calendarUrl}${eventResourceFilename(events[0].id)}`).toBe(href)
     return events[0]
   }
+
+  it('reads a previously written move destination before retrying with the source ETag', async () => {
+    const href = `${calendarUrl}${eventResourceFilename('event-1')}`
+    rawIcs.set(href, { ics: serverIcs, etag: '"destination-1"' })
+    mockClient.readCalendarObject = vi.fn().mockResolvedValue({
+      etag: '"destination-2"',
+      data: serverIcs.replace('keep me', 'rewritten destination'),
+    })
+    const event = makeEvent({ etag: '"source"' })
+
+    await engine.putEventGroup([event])
+
+    expect(mockClient.readCalendarObject).toHaveBeenCalledWith(calendarUrl, href)
+    expect(mockClient.updateEvent).toHaveBeenCalledWith(
+      calendarUrl,
+      href,
+      expect.stringContaining('X-CUSTOM-PROP:rewritten destination'),
+      '"destination-2"'
+    )
+  })
+
+  it('does not overwrite a cached move destination when its required read fails', async () => {
+    const href = `${calendarUrl}${eventResourceFilename('event-1')}`
+    rawIcs.set(href, { ics: serverIcs, etag: '"destination"' })
+    mockClient.readCalendarObject = vi.fn().mockResolvedValue(null)
+
+    await expect(engine.putEventGroup([makeEvent({ etag: '"source"' })])).rejects.toThrow('read')
+    expect(mockClient.updateEvent).not.toHaveBeenCalled()
+  })
 
   it('refuses to patch a stale original on the unconditional move path', async () => {
     const event = await syncAtDerivedHref('"etag-1"')

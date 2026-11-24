@@ -1671,6 +1671,27 @@ END:VCALENDAR`,
       expect(result.url).toBe(mockEventObject.url)
     })
 
+    it.each([undefined, 'W/"weak"'])(
+      'keeps an update successful when read-back fails for tag %s',
+      async (etag) => {
+        await client.connect()
+        mockClientMethods.updateCalendarObject.mockResolvedValue({
+          headers: new Headers(etag ? { ETag: etag } : {}),
+        })
+        fetchSpy.mockRejectedValue(new TypeError('Read-back unavailable'))
+
+        const result = await client.updateEvent(
+          mockCalendar.url,
+          mockEventObject.url,
+          mockEventObject.data,
+          '"old"'
+        )
+
+        expect(result).toEqual({ url: mockEventObject.url, etag: '', data: null })
+        expect(mockClientMethods.updateCalendarObject).toHaveBeenCalledTimes(1)
+      }
+    )
+
     // Issue #110 — same reasoning as createEvent's proxy case.
     it('returns raw URL without proxy prefix', async () => {
       const proxyClient = new CalDAVClient(
