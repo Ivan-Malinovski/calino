@@ -2,18 +2,20 @@ import { useRef, useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation } from 'react-router'
 import { useFocusTrap } from '@/hooks/useFocusTrap'
+import { QUICK_START_USERNAME } from '@/lib/configLoader'
 import { useConfigStore } from '@/store/configStore'
 import styles from './MasterPasswordPrompt.module.css'
 
 export function HostedConfigSignIn() {
   const runtimeSignIn = useConfigStore((state) => state.runtimeSignIn)
   const perUser = useConfigStore((state) => state.perUser)
+  const quickStart = useConfigStore((state) => state.quickStart)
   const { pathname } = useLocation()
   if (runtimeSignIn !== 'required' || pathname === '/setup') return null
-  return <SignInForm perUser={perUser} />
+  return <SignInForm perUser={perUser} quickStart={quickStart} />
 }
 
-function SignInForm({ perUser }: { perUser: boolean }) {
+function SignInForm({ perUser, quickStart }: { perUser: boolean; quickStart: boolean }) {
   const { t } = useTranslation('settings', { keyPrefix: 'hostedConfigSignIn' })
   const signIn = useConfigStore((state) => state.signIn)
   const setOpen = useConfigStore((state) => state.setRuntimeSignInOpen)
@@ -31,7 +33,7 @@ function SignInForm({ perUser }: { perUser: boolean }) {
     event.preventDefault()
     if (pending || !secure) return
     const fields = new FormData(event.currentTarget)
-    const username = String(fields.get('username') ?? '')
+    const username = quickStart ? QUICK_START_USERNAME : String(fields.get('username') ?? '')
     const password = String(fields.get('password') ?? '')
     if (!username || !password) return
 
@@ -68,21 +70,23 @@ function SignInForm({ perUser }: { perUser: boolean }) {
 
         {secure && (
           <>
-            <div className={styles.inputGroup}>
-              <label className={styles.label} htmlFor="hosted-config-username">
-                {t('username')}
-              </label>
-              <input
-                className={styles.input}
-                id="hosted-config-username"
-                name="username"
-                autoComplete="username"
-                autoCapitalize="none"
-                spellCheck={false}
-                readOnly={pending}
-                required
-              />
-            </div>
+            {!quickStart && (
+              <div className={styles.inputGroup}>
+                <label className={styles.label} htmlFor="hosted-config-username">
+                  {t('username')}
+                </label>
+                <input
+                  className={styles.input}
+                  id="hosted-config-username"
+                  name="username"
+                  autoComplete="username"
+                  autoCapitalize="none"
+                  spellCheck={false}
+                  readOnly={pending}
+                  required
+                />
+              </div>
+            )}
             <div className={styles.inputGroup}>
               <label className={styles.label} htmlFor="hosted-config-password">
                 {t('password')}

@@ -907,6 +907,11 @@
       "done": "Done →",
       "passwordsMismatch": "Passwords do not match.",
       "passwordTooShort": "Password must be at least 6 characters.",
+      "quickStartHint": "For a single-user Docker setup, use this password to sign in and unlock the encrypted config.",
+      "quickStartDownload": "Download Compose file",
+      "quickPasswordTooShort": "Use at least 12 characters for the Docker sign-in password.",
+      "quickStartRun": "Put <code>compose.yaml</code> in its own folder and run <code>docker compose up -d</code> there.",
+      "quickStartOpen": "Open <code>http://localhost:8080</code> on the Docker host and sign in with the password you just chose.",
       "encryptionFailed": "Encryption failed."
     },
     "categories": {

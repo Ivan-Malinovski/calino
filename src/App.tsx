@@ -1020,7 +1020,7 @@ function App(): JSX.Element {
         <ThemeProvider>
           <HostedConfigSignIn />
           <Routes>
-            <Route path="/setup" element={<SetupPage />} />
+            <Route path="/setup" element={configLoaded ? <SetupPage /> : null} />
             <Route path="*" element={null} />
           </Routes>
         </ThemeProvider>

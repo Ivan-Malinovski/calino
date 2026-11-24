@@ -907,6 +907,11 @@
       "done": "Færdig →",
       "passwordsMismatch": "Adgangskoderne er ikke ens.",
       "passwordTooShort": "Adgangskoden skal være mindst 6 tegn.",
+      "quickStartHint": "Med Docker til én bruger låser denne adgangskode også den krypterede konfiguration op.",
+      "quickStartDownload": "Download Compose-fil",
+      "quickPasswordTooShort": "Brug mindst 12 tegn til adgangskoden til Docker-login.",
+      "quickStartRun": "Læg <code>compose.yaml</code> i sin egen mappe, og kør <code>docker compose up -d</code> der.",
+      "quickStartOpen": "Åbn <code>http://localhost:8080</code> på Docker-værten, og log ind med den valgte adgangskode.",
       "encryptionFailed": "Kryptering mislykkedes."
     },
     "categories": {

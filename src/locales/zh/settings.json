@@ -907,6 +907,11 @@
       "done": "完成 →",
       "passwordsMismatch": "两次输入的密码不一致。",
       "passwordTooShort": "密码至少需要 6 个字符。",
+      "quickStartHint": "对于单用户 Docker 部署，此密码用于登录和解锁加密配置。",
+      "quickStartDownload": "下载 Compose 文件",
+      "quickPasswordTooShort": "Docker 登录密码至少需要 12 个字符。",
+      "quickStartRun": "将 <code>compose.yaml</code> 放入独立目录，然后在该目录中运行 <code>docker compose up -d</code>。",
+      "quickStartOpen": "在 Docker 主机上打开 <code>http://localhost:8080</code>，使用刚设置的密码登录。",
       "encryptionFailed": "加密失败。"
     },
     "categories": {

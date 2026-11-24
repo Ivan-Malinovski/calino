@@ -6,7 +6,17 @@
 
 If you self-host Calino, you can preconfigure CalDAV accounts and webcal (`.ics` URL) subscriptions so users don't need to manually enter server URLs, usernames, and passwords. Instead, you encrypt the sensitive values with a master password, and users just enter that master password once to unlock everything — both CalDAV accounts and webcal subscriptions live in the same `calino.config.json` and unlock together.
 
-### Quick Start (Recommended)
+### Single-user Docker quick start
+
+1. Open `/setup`, add your accounts or feeds, and choose a strong, unique password.
+2. Select **Download Compose file**. Save `compose.yaml` in its own folder and run `docker compose up -d` there.
+3. Open `http://localhost:8080` on the Docker host and sign in with the password you chose. Calino also uses it to unlock the encrypted config.
+
+The export needs Docker Compose 2.23.1 or newer. It contains the encrypted config and a password hash, so there are no separate files or environment variables to set. Keep the file private. Calino does not save the sign-in password in browser storage. The generated port listens on localhost. Use an HTTPS reverse proxy if you need to reach it from another device.
+
+To replace the config, generate a new Compose file and rerun `docker compose up -d`. If you edit only the inline config by hand, use `docker compose up -d --force-recreate`. For independent sign-in and encryption passwords, multiple users, or JSON updates without recreating the container, use the separate JSON export below.
+
+### Separate JSON export
 
 The easiest way to generate a config file is the browser-based setup wizard. No Node.js required.
 

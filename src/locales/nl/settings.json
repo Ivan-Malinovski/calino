@@ -907,6 +907,11 @@
       "done": "Klaar →",
       "passwordsMismatch": "De wachtwoorden komen niet overeen.",
       "passwordTooShort": "Het wachtwoord moet minstens 6 tekens bevatten.",
+      "quickStartHint": "Voor Docker met één gebruiker gebruik je dit wachtwoord om je aan te melden en de versleutelde configuratie te ontgrendelen.",
+      "quickStartDownload": "Compose-bestand downloaden",
+      "quickPasswordTooShort": "Gebruik minstens 12 tekens voor het Docker-aanmeldwachtwoord.",
+      "quickStartRun": "Plaats <code>compose.yaml</code> in een eigen map en voer daar <code>docker compose up -d</code> uit.",
+      "quickStartOpen": "Open <code>http://localhost:8080</code> op de Docker-host en meld je aan met het gekozen wachtwoord.",
       "encryptionFailed": "Versleuteling mislukt."
     },
     "categories": {

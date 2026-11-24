@@ -907,6 +907,11 @@
       "done": "Listo →",
       "passwordsMismatch": "Las contraseñas no coinciden.",
       "passwordTooShort": "La contraseña debe tener al menos 6 caracteres.",
+      "quickStartHint": "Para Docker con un solo usuario, usa esta contraseña para iniciar sesión y desbloquear la configuración cifrada.",
+      "quickStartDownload": "Descargar archivo Compose",
+      "quickPasswordTooShort": "Usa al menos 12 caracteres para la contraseña de inicio de sesión de Docker.",
+      "quickStartRun": "Coloca <code>compose.yaml</code> en su propia carpeta y ejecuta allí <code>docker compose up -d</code>.",
+      "quickStartOpen": "Abre <code>http://localhost:8080</code> en el equipo que ejecuta Docker e inicia sesión con la contraseña que elegiste.",
       "encryptionFailed": "Error al cifrar."
     },
     "categories": {

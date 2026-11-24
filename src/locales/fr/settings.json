@@ -907,6 +907,11 @@
       "done": "Terminé →",
       "passwordsMismatch": "Les mots de passe ne correspondent pas.",
       "passwordTooShort": "Le mot de passe doit comporter au moins 6 caractères.",
+      "quickStartHint": "Pour une installation Docker à utilisateur unique, ce mot de passe sert à la connexion et au déverrouillage de la configuration chiffrée.",
+      "quickStartDownload": "Télécharger le fichier Compose",
+      "quickPasswordTooShort": "Utilisez au moins 12 caractères pour le mot de passe de connexion Docker.",
+      "quickStartRun": "Placez <code>compose.yaml</code> dans son propre dossier et exécutez-y <code>docker compose up -d</code>.",
+      "quickStartOpen": "Ouvrez <code>http://localhost:8080</code> sur l’hôte Docker et connectez-vous avec le mot de passe choisi.",
       "encryptionFailed": "Échec du chiffrement."
     },
     "categories": {

@@ -31,6 +31,7 @@
 			not header Authorization *
 		}
 		@missingConfig not file /calino.config.json
+		@quickStart expression `{env.CALINO_CONFIG_QUICK_START} == "true"`
 		@invalidUser expression `!{http.auth.user.id}.matches('^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$')`
 
 		handle @perUser {
@@ -55,10 +56,11 @@
 			route {
 				root * /calino
 				respond @missingConfig 404
+				header @quickStart X-Calino-Config-Mode quick-start
 				# Tell the app to show its own sign-in form without a native challenge.
 				header @anonymousAppFetch X-Calino-Config-Auth basic
 				respond @anonymousAppFetch 401
-				basic_auth {
+				basic_auth {$CALINO_CONFIG_AUTH_ALGORITHM:bcrypt} {
 					# Caddy validates this block even when @protected is false.
 					{$CALINO_CONFIG_AUTH_USER:disabled} {$CALINO_CONFIG_AUTH_HASH:AA==}
 				}

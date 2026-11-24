@@ -36,6 +36,7 @@ interface ConfigState {
   configLoaded: boolean
   checkingMasterPassword: boolean
   perUser: boolean
+  quickStart: boolean
   runtimeSignIn: 'required' | 'dismissed' | null
   linkSchemes: Record<string, string> | null
 
@@ -109,6 +110,7 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
   configLoaded: false,
   checkingMasterPassword: false,
   perUser: getHostedProfile() !== null,
+  quickStart: false,
   runtimeSignIn: null,
   linkSchemes: null,
   masterPassword: null, // loaded async in loadConfigFile
@@ -139,7 +141,10 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
       const binding = await bindHostedProfile(result.verifiedUser)
       if (binding !== 'ok') return binding
     }
-    await installConfig(result)
+    await installConfig(
+      result,
+      result.quickStart && result.config?.unlockWithSignIn ? password : undefined
+    )
     return 'ok'
   },
 
@@ -194,9 +199,11 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
       }
 
       // All decrypted successfully
-      await setMasterPassword(masterPassword)
+      // A password reused for server sign-in must never be remembered here.
+      const rememberedPassword = config.unlockWithSignIn ? null : masterPassword
+      await setMasterPassword(rememberedPassword)
       set({
-        masterPassword,
+        masterPassword: rememberedPassword,
         decryptedCredentials: decrypted,
         decryptedWebcalSubscriptions: decryptedWebcal,
         isUnlocked: true,
@@ -238,17 +245,16 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
   },
 }))
 
-async function installConfig({
-  config,
-  linkSchemes,
-  requiresSignIn,
-  perUser,
-}: LoadedConfig): Promise<void> {
+async function installConfig(
+  { config, linkSchemes, requiresSignIn, perUser, quickStart }: LoadedConfig,
+  signInPassword?: string
+): Promise<void> {
   useConfigStore.setState({
     config,
     linkSchemes,
     configLoaded: true,
     perUser: Boolean(perUser),
+    quickStart: Boolean(quickStart),
     checkingMasterPassword: config !== null,
     runtimeSignIn: requiresSignIn ? 'required' : null,
     hasPreconfiguredAccounts: Boolean(config?.accounts.length),
@@ -257,8 +263,8 @@ async function installConfig({
 
   if (config) {
     try {
-      const storedPassword = await getStoredMasterPassword()
-      if (storedPassword) await useConfigStore.getState().unlock(storedPassword)
+      const password = config.unlockWithSignIn ? signInPassword : await getStoredMasterPassword()
+      if (password) await useConfigStore.getState().unlock(password)
     } finally {
       useConfigStore.setState({ checkingMasterPassword: false })
     }

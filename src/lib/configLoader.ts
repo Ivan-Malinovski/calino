@@ -21,7 +21,10 @@ export interface PreconfiguredWebcal {
   proxyUrl?: string
 }
 
+export const QUICK_START_USERNAME = 'calino'
+
 export interface CalinoConfig {
+  unlockWithSignIn?: true
   version: number
   accounts: PreconfiguredAccount[]
   webcalSubscriptions: PreconfiguredWebcal[]
@@ -38,6 +41,7 @@ export interface LoadedConfig {
   linkSchemes: Record<string, string>
   requiresSignIn?: true
   perUser?: true
+  quickStart?: true
   verifiedUser?: string
 }
 
@@ -65,12 +69,14 @@ const PreconfiguredWebcalSchema = z.object({
 
 const CalinoConfigEnvelopeSchema = z.object({
   version: z.literal(1),
+  unlockWithSignIn: z.literal(true).optional(),
   accounts: z.array(z.unknown()).default([]),
   webcalSubscriptions: z.array(z.unknown()).optional(),
 })
 
 const SIGN_IN_REQUIRED = Symbol('config sign-in required')
 const PER_USER_SIGN_IN_REQUIRED = Symbol('per-user config sign-in required')
+const QUICK_START_SIGN_IN_REQUIRED = Symbol('quick start sign-in required')
 
 function fetchRuntimeConfig(authorization?: string): Promise<Response> {
   return fetch(`${import.meta.env.BASE_URL}calino.config.json`, {
@@ -90,7 +96,9 @@ async function selectConfig(): Promise<unknown> {
 
   try {
     const response = await fetchRuntimeConfig()
-    if (response.headers.get('X-Calino-Config-Mode') === 'per-user') {
+    const mode = response.headers.get('X-Calino-Config-Mode')
+    if (mode === 'quick-start') return QUICK_START_SIGN_IN_REQUIRED
+    if (mode === 'per-user') {
       return PER_USER_SIGN_IN_REQUIRED
     }
     if (response.status === 401 && response.headers.get('X-Calino-Config-Auth') === 'basic') {
@@ -128,6 +136,9 @@ async function readConfigDocument(): Promise<LoadedConfig> {
   if (raw === PER_USER_SIGN_IN_REQUIRED) {
     return { config: null, linkSchemes: {}, requiresSignIn: true, perUser: true }
   }
+  if (raw === QUICK_START_SIGN_IN_REQUIRED) {
+    return { config: null, linkSchemes: {}, requiresSignIn: true, quickStart: true }
+  }
   if (raw === SIGN_IN_REQUIRED) return { config: null, linkSchemes: {}, requiresSignIn: true }
   return parseConfig(raw) ?? { config: null, linkSchemes: {} }
 }
@@ -147,7 +158,9 @@ export async function signInToRuntimeConfig(
     if (!response.ok) return 'unavailable'
     const document = parseConfig(await response.json())
     if (!document) return 'unavailable'
-    if (response.headers.get('X-Calino-Config-Mode') !== 'per-user') return document
+    const mode = response.headers.get('X-Calino-Config-Mode')
+    if (mode === 'quick-start') return { ...document, quickStart: true }
+    if (mode !== 'per-user') return document
 
     const verifiedUser = response.headers.get('X-Calino-Config-User')
     if (!verifiedUser || !/^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/.test(verifiedUser))
@@ -190,7 +203,12 @@ function parseConfig(raw: unknown): LoadedConfig | null {
   return {
     config:
       accounts.length || webcalSubscriptions.length
-        ? { version: 1, accounts, webcalSubscriptions }
+        ? {
+            version: 1,
+            accounts,
+            webcalSubscriptions,
+            ...(envelope.data.unlockWithSignIn ? { unlockWithSignIn: true } : {}),
+          }
         : null,
     linkSchemes: loadLinkSchemes(raw),
   }
