@@ -11,6 +11,10 @@ services:
     ports:
       - "8080:8080"
     # Optional runtime config. Create the host directory before starting Calino.
+    environment:
+      CALINO_CONFIG_AUTH_USER: ${CALINO_CONFIG_AUTH_USER:-}
+      CALINO_CONFIG_AUTH_HASH: ${CALINO_CONFIG_AUTH_HASH:-}
+      CALINO_CONFIG_ALLOW_PUBLIC: ${CALINO_CONFIG_ALLOW_PUBLIC:-false}
     # volumes:
     #   - ${CALINO_CONFIG_DIR:-./calino-config}:/calino:ro
     restart: unless-stopped

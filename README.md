@@ -160,7 +160,7 @@ docker compose up -d
 Calino runs at http://localhost:8080 by default.
 To customize settings (site URL, offline support), create a `.env` file — see [`docs/DOCKER.md`](./docs/DOCKER.md) for full details.
 
-**Preconfigure CalDAV accounts:** Visit `/setup` in any running Calino instance to generate a config file with encrypted credentials. Mount the config directory when running the Docker image to apply changes on reload. Users enter a master password to unlock the preconfigured accounts. See [`docs/SELF_HOSTED_CONFIG.md`](./docs/SELF_HOSTED_CONFIG.md) for details.
+**Preconfigure CalDAV accounts:** Visit `/setup` in any running Calino instance to generate a config file with encrypted credentials. Mount the config directory when running the Docker image to apply changes on reload. Configure access to the mounted file, then use the master password to unlock the preconfigured accounts. See [`docs/SELF_HOSTED_CONFIG.md`](./docs/SELF_HOSTED_CONFIG.md) for details.
 
 ## No-Docker
 

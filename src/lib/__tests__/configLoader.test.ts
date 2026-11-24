@@ -237,7 +237,11 @@ describe('runtime config', () => {
     expect(second).toBe(result)
     expect(fetch).toHaveBeenCalledExactlyOnceWith(
       '/calino.config.json',
-      expect.objectContaining({ cache: 'no-store', redirect: 'error' })
+      expect.objectContaining({
+        cache: 'no-store',
+        headers: { 'X-Calino-Config-Fetch': '1' },
+        redirect: 'error',
+      })
     )
   })
 

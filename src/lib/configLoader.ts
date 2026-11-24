@@ -73,6 +73,7 @@ async function selectConfig(): Promise<unknown> {
   try {
     const response = await fetch(`${import.meta.env.BASE_URL}calino.config.json`, {
       cache: 'no-store',
+      headers: { 'X-Calino-Config-Fetch': '1' },
       redirect: 'error',
       signal: AbortSignal.timeout(5000),
     })

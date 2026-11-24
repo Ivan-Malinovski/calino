@@ -72,8 +72,11 @@ jobs:
 
       - name: Start container
         run: |
+          mkdir -p "$RUNNER_TEMP/calino-config"
+          printf '%s\n' '{"version":1,"linkSchemes":{"obsidian":"Fixture"}}' > "$RUNNER_TEMP/calino-config/calino.config.json"
           docker run -d --name calino-test \
             -p 8080:8080 \
+            --mount "type=bind,source=$RUNNER_TEMP/calino-config,target=/calino,readonly" \
             --tmpfs /tmp:rw,noexec,nosuid \
             --health-cmd 'wget -qO- http://localhost:8080/ || exit 1' \
             --health-interval 5s \
@@ -126,6 +129,14 @@ jobs:
             exit 1
           fi
           echo "✅ Server header stripped"
+
+      - name: Verify mounted config is private by default
+        run: |
+          status=$(curl -sS -o /dev/null -w '%{http_code}' http://localhost:8080/calino.config.json)
+          if [ "$status" != "404" ]; then
+            echo "Mounted config returned $status, expected 404"
+            exit 1
+          fi
 
       - name: Dump logs on failure
         if: failure()

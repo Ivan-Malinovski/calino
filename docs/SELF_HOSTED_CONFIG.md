@@ -185,7 +185,11 @@ services:
   calino:
     image: ghcr.io/ivan-malinovski/calino:main
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
+    environment:
+      CALINO_CONFIG_AUTH_USER: ${CALINO_CONFIG_AUTH_USER:-}
+      CALINO_CONFIG_AUTH_HASH: ${CALINO_CONFIG_AUTH_HASH:-}
+      CALINO_CONFIG_ALLOW_PUBLIC: ${CALINO_CONFIG_ALLOW_PUBLIC:-false}
     volumes:
       - ${CALINO_CONFIG_DIR:-./calino-config}:/calino:ro
 ```
@@ -195,6 +199,30 @@ as a Portainer stack. Replace the file in that directory and reload the app to
 apply changes. Mounting the directory also supports editors that save by
 replacing the file. Caddy serves only `/calino.config.json` from the mount and
 sets `Cache-Control: no-store`.
+
+**The mounted file is private by default.** Calino loads normally, and Caddy
+returns 404 for the config until you choose how to expose it:
+
+- **Built-in authentication:** Set both `CALINO_CONFIG_AUTH_USER` and
+  `CALINO_CONFIG_AUTH_HASH`. Generate the bcrypt hash interactively using
+  `docker run --rm -it caddy:2-alpine caddy hash-password`. In a Compose `.env`
+  file, put the hash in single quotes to preserve its `$` characters. Use a
+  separate password for download access and serve Calino through an HTTPS
+  reverse proxy. Authorized users visit `/calino.config.json` directly to
+  sign in, then return to Calino. The app will fetch and unlock the config as
+  usual. Public visitors can load the app without a browser sign-in prompt.
+- **Authentication at a reverse proxy:** Restrict `/calino.config.json` to
+  authorized users at the proxy, make the container reachable only from the
+  proxy, and set `CALINO_CONFIG_ALLOW_PUBLIC=true` on the container so the
+  proxy can fetch the file. Leave both built-in authentication settings empty.
+- **Intentionally public config:** Set `CALINO_CONFIG_ALLOW_PUBLIC=true` with
+  both authentication settings empty. Anyone who can reach the app can
+  download the file. Use only encrypted config and a strong, unique master
+  password.
+
+If you set only one built-in authentication setting, the file stays private
+even when `CALINO_CONFIG_ALLOW_PUBLIC=true`. Keep private config out of the
+public JavaScript bundle by omitting it from the source directory at build time.
 
 The runtime file takes precedence over bundled config, including app links.
 When the file is missing or the request fails, Calino uses bundled config if
@@ -219,7 +247,7 @@ The browser connects directly to your CalDAV server. Your server must allow cros
 
 | Problem | Solution |
 |---------|----------|
-| Prompt doesn't appear | Check that the mounted file is served at `/calino.config.json` and is valid. For a source build, check the build logs for `[build] Loaded calino.config.json`. |
+| Prompt doesn't appear | Check the endpoint access settings and open `/calino.config.json` directly to sign in if built-in authentication is enabled. For a source build, check the build logs for `[build] Loaded calino.config.json`. |
 | "Wrong password" | The master password must match the one used to encrypt. Re-encrypt if needed. |
 | Accounts don't connect | Check browser console. Server URL must be reachable and CORS-enabled. |
 | Prompt keeps appearing | Don't clear browser localStorage. The master password is stored there. |
