@@ -107,3 +107,60 @@ test('a config containing only an encrypted webcal feed can be unlocked', async 
   if ((await calendars.getAttribute('aria-expanded')) !== 'true') await calendars.click()
   await expect(page.getByText('Mounted feed', { exact: true })).toBeVisible()
 })
+
+test('hosted config sign-in downloads and unlocks the config without leaving Calino', async ({
+  page,
+  baseURL,
+}) => {
+  await clearState(page)
+  const config = await configFor(
+    `${baseURL}/mock-caldav/dav/`,
+    'Private config calendar',
+    'dav-password',
+    'test-gateway'
+  )
+  await page.route('**/calino.config.json', async (route) => {
+    const authorization = await route.request().headerValue('authorization')
+    if (authorization !== `Basic ${Buffer.from('fixture:download-password').toString('base64')}`) {
+      return route.fulfill({ status: 401, headers: { 'X-Calino-Config-Auth': 'basic' } })
+    }
+    return route.fulfill({ json: config })
+  })
+
+  await page.goto('/settings?tab=caldav')
+  const dialog = page.getByRole('dialog', { name: 'Connect to hosted configuration' })
+  await expect(dialog).toBeVisible()
+  await expect(dialog.getByLabel('Username')).toBeFocused()
+  await dialog.getByRole('button', { name: 'Continue without it' }).click()
+  await expect(dialog).toBeHidden()
+
+  await page.getByRole('button', { name: 'Connect to hosted configuration' }).click()
+  await dialog.getByLabel('Username').fill('fixture')
+  await dialog.getByLabel('Sign-in password').fill('wrong-password')
+  await dialog.getByRole('button', { name: 'Sign in', exact: true }).click()
+  await expect(dialog.getByRole('alert')).toHaveText('The username or password is incorrect.')
+  await expect(dialog.getByLabel('Sign-in password')).toBeEmpty()
+
+  await dialog.getByLabel('Sign-in password').fill('download-password')
+  await dialog.getByRole('button', { name: 'Sign in', exact: true }).click()
+  await expect(dialog).toBeHidden()
+  await expect(page).toHaveURL('/settings?tab=caldav')
+
+  const unlock = page.locator('#master-password')
+  await expect(unlock).toBeVisible()
+  await unlock.fill(masterPassword)
+  await unlock.press('Enter')
+  await expect(
+    page
+      .locator('[data-component="connected-accounts"]')
+      .getByText('Private config calendar', { exact: true })
+  ).toBeVisible()
+
+  expect(
+    await page.evaluate(
+      () =>
+        JSON.stringify(localStorage).includes('download-password') ||
+        JSON.stringify(sessionStorage).includes('download-password')
+    )
+  ).toBe(false)
+})

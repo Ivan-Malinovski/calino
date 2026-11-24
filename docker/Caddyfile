@@ -29,16 +29,19 @@
 			header X-Calino-Config-Fetch 1
 			not header Authorization *
 		}
+		@missingConfig not file /calino.config.json
 
 		handle @protected {
 			route {
-				# Public visitors should not see a browser login prompt on page load.
-				respond @anonymousAppFetch 404
+				root * /calino
+				respond @missingConfig 404
+				# Tell the app to show its own sign-in form without a native challenge.
+				header @anonymousAppFetch X-Calino-Config-Auth basic
+				respond @anonymousAppFetch 401
 				basic_auth {
 					# Caddy validates this block even when @protected is false.
 					{$CALINO_CONFIG_AUTH_USER:disabled} {$CALINO_CONFIG_AUTH_HASH:AA==}
 				}
-				root * /calino
 				file_server
 			}
 		}
@@ -51,6 +54,19 @@
 		# Also deny access if only one authentication setting was supplied.
 		handle {
 			respond 404
+		}
+	}
+
+	handle_errors 401 {
+		@configAppFetch {
+			path /calino.config.json
+			header X-Calino-Config-Fetch 1
+		}
+		handle @configAppFetch {
+			header -WWW-Authenticate
+			header Cache-Control "no-store"
+			header X-Calino-Config-Auth basic
+			respond 401
 		}
 	}
 

@@ -792,6 +792,18 @@
       "body": "Neem bij vragen over dit privacybeleid contact op met:"
     }
   },
+  "hostedConfigSignIn": {
+    "title": "Verbinding maken met de gehoste configuratie",
+    "description": "Meld je aan om de gedeelde configuratie van deze instantie te downloaden.",
+    "username": "Gebruikersnaam",
+    "password": "Aanmeldwachtwoord",
+    "skip": "Doorgaan zonder",
+    "signIn": "Aanmelden",
+    "signingIn": "Bezig met aanmelden…",
+    "unauthorized": "De gebruikersnaam of het wachtwoord is onjuist.",
+    "unavailable": "De gehoste configuratie kon niet worden geladen. Probeer het opnieuw.",
+    "insecure": "Open deze instantie via HTTPS om je aan te melden."
+  },
   "masterPassword": {
     "overlayAriaLabel": "CalDAV-accounts ontgrendelen",
     "title": "CalDAV-accounts ontgrendelen",

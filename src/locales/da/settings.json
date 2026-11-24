@@ -792,6 +792,18 @@
       "body": "Hvis du har spørgsmål om denne privatlivspolitik, bedes du kontakte:"
     }
   },
+  "hostedConfigSignIn": {
+    "title": "Opret forbindelse til den hostede konfiguration",
+    "description": "Log ind for at hente denne instans’ delte konfiguration.",
+    "username": "Brugernavn",
+    "password": "Adgangskode til login",
+    "skip": "Fortsæt uden",
+    "signIn": "Log ind",
+    "signingIn": "Logger ind…",
+    "unauthorized": "Brugernavnet eller adgangskoden er forkert.",
+    "unavailable": "Kunne ikke hente den hostede konfiguration. Prøv igen.",
+    "insecure": "Åbn denne instans via HTTPS for at logge ind."
+  },
   "masterPassword": {
     "overlayAriaLabel": "Lås CalDAV-konti op",
     "title": "Lås CalDAV-konti op",

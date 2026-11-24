@@ -36,6 +36,7 @@ import { FloatingNavPill } from './features/calendar/components/nav/FloatingNavP
 import { OnboardingModal } from './features/onboarding/OnboardingModal'
 import { ShortcutsHelp } from './features/calendar/components/ShortcutsHelp'
 import { SetupPage } from './features/setup/SetupPage'
+import { HostedConfigSignIn } from './features/settings/components/HostedConfigSignIn'
 import { MasterPasswordPrompt } from './features/settings/components/MasterPasswordPrompt'
 import { useConfigStore } from './store/configStore'
 import { ThemeProvider } from './components/ThemeProvider'
@@ -1030,6 +1031,7 @@ function App(): JSX.Element {
             </ErrorBoundary>
           )}
           {!Capacitor.isNativePlatform() && <CookieConsent />}
+          <HostedConfigSignIn />
           <MasterPasswordPrompt />
           <Routes>
             <Route path="/month" element={<CalendarApp />} />

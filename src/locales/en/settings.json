@@ -792,6 +792,18 @@
       "body": "If you have questions about this privacy policy, please contact:"
     }
   },
+  "hostedConfigSignIn": {
+    "title": "Connect to hosted configuration",
+    "description": "Sign in to download this instance’s shared configuration.",
+    "username": "Username",
+    "password": "Sign-in password",
+    "skip": "Continue without it",
+    "signIn": "Sign in",
+    "signingIn": "Signing in…",
+    "unauthorized": "The username or password is incorrect.",
+    "unavailable": "Could not load the hosted configuration. Try again.",
+    "insecure": "Open this instance over HTTPS to sign in."
+  },
   "masterPassword": {
     "overlayAriaLabel": "Unlock CalDAV accounts",
     "title": "Unlock CalDAV Accounts",

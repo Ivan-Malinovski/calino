@@ -792,6 +792,18 @@
       "body": "Per domande su questa informativa sulla privacy, contattaci:"
     }
   },
+  "hostedConfigSignIn": {
+    "title": "Connetti alla configurazione ospitata",
+    "description": "Accedi per scaricare la configurazione condivisa di questa istanza.",
+    "username": "Nome utente",
+    "password": "Password di accesso",
+    "skip": "Continua senza",
+    "signIn": "Accedi",
+    "signingIn": "Accesso in corso…",
+    "unauthorized": "Il nome utente o la password non sono corretti.",
+    "unavailable": "Impossibile caricare la configurazione ospitata. Riprova.",
+    "insecure": "Apri questa istanza tramite HTTPS per accedere."
+  },
   "masterPassword": {
     "overlayAriaLabel": "Sblocca gli account CalDAV",
     "title": "Sblocca gli account CalDAV",

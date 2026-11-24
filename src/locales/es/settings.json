@@ -792,6 +792,18 @@
       "body": "Si tienes preguntas sobre esta política de privacidad, ponte en contacto con:"
     }
   },
+  "hostedConfigSignIn": {
+    "title": "Conectar con la configuración alojada",
+    "description": "Inicia sesión para descargar la configuración compartida de esta instancia.",
+    "username": "Nombre de usuario",
+    "password": "Contraseña de inicio de sesión",
+    "skip": "Continuar sin ella",
+    "signIn": "Iniciar sesión",
+    "signingIn": "Iniciando sesión…",
+    "unauthorized": "El nombre de usuario o la contraseña no son correctos.",
+    "unavailable": "No se pudo cargar la configuración alojada. Vuelve a intentarlo.",
+    "insecure": "Abre esta instancia mediante HTTPS para iniciar sesión."
+  },
   "masterPassword": {
     "overlayAriaLabel": "Desbloquear cuentas CalDAV",
     "title": "Desbloquear cuentas CalDAV",

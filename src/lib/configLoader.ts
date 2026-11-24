@@ -33,9 +33,10 @@ declare const __CALINO_CONFIG__: Record<string, unknown> | null
 
 // ─── Config loading ──────────────────────────────────────────────────────────
 
-interface LoadedConfig {
+export interface LoadedConfig {
   config: CalinoConfig | null
   linkSchemes: Record<string, string>
+  requiresSignIn?: true
 }
 
 let configLoad: Promise<LoadedConfig> | undefined
@@ -66,17 +67,29 @@ const CalinoConfigEnvelopeSchema = z.object({
   webcalSubscriptions: z.array(z.unknown()).optional(),
 })
 
+const SIGN_IN_REQUIRED = Symbol('config sign-in required')
+
+function fetchRuntimeConfig(authorization?: string): Promise<Response> {
+  return fetch(`${import.meta.env.BASE_URL}calino.config.json`, {
+    cache: 'no-store',
+    headers: {
+      'X-Calino-Config-Fetch': '1',
+      ...(authorization ? { Authorization: authorization } : {}),
+    },
+    redirect: 'error',
+    signal: AbortSignal.timeout(5000),
+  })
+}
+
 async function selectConfig(): Promise<unknown> {
   const bundled = typeof __CALINO_CONFIG__ === 'undefined' ? null : __CALINO_CONFIG__
   if (!__CALINO_RUNTIME_CONFIG__ || Capacitor.isNativePlatform()) return bundled
 
   try {
-    const response = await fetch(`${import.meta.env.BASE_URL}calino.config.json`, {
-      cache: 'no-store',
-      headers: { 'X-Calino-Config-Fetch': '1' },
-      redirect: 'error',
-      signal: AbortSignal.timeout(5000),
-    })
+    const response = await fetchRuntimeConfig()
+    if (response.status === 401 && response.headers.get('X-Calino-Config-Auth') === 'basic') {
+      return SIGN_IN_REQUIRED
+    }
     if (response.status === 404 || response.headers.get('content-type')?.includes('text/html')) {
       return bundled
     }
@@ -106,12 +119,36 @@ export async function loadConfig(): Promise<CalinoConfig | null> {
 
 async function readConfigDocument(): Promise<LoadedConfig> {
   const raw = await selectConfig()
-  if (raw === null) return { config: null, linkSchemes: {} }
+  if (raw === SIGN_IN_REQUIRED) return { config: null, linkSchemes: {}, requiresSignIn: true }
+  return parseConfig(raw) ?? { config: null, linkSchemes: {} }
+}
+
+export async function signInToRuntimeConfig(
+  username: string,
+  password: string
+): Promise<LoadedConfig | 'unauthorized' | 'unavailable' | 'insecure'> {
+  if (!window.isSecureContext) return 'insecure'
+  if (username.includes(':')) return 'unauthorized'
+
+  try {
+    const bytes = new TextEncoder().encode(`${username}:${password}`)
+    const encoded = btoa(Array.from(bytes, (byte) => String.fromCharCode(byte)).join(''))
+    const response = await fetchRuntimeConfig(`Basic ${encoded}`)
+    if (response.status === 401 || response.status === 403) return 'unauthorized'
+    if (!response.ok) return 'unavailable'
+    return parseConfig(await response.json()) ?? 'unavailable'
+  } catch {
+    return 'unavailable'
+  }
+}
+
+function parseConfig(raw: unknown): LoadedConfig | null {
+  if (raw === null) return null
 
   const envelope = CalinoConfigEnvelopeSchema.safeParse(raw)
   if (!envelope.success) {
     console.warn('[configLoader] Invalid config, ignoring', envelope.error.issues)
-    return { config: null, linkSchemes: {} }
+    return null
   }
 
   const accounts: PreconfiguredAccount[] = []

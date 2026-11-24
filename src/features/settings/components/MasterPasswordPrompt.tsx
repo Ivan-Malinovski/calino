@@ -45,7 +45,13 @@ function setBlockedUntil(ts: number): void {
 export function MasterPasswordPrompt() {
   const { t } = useTranslation('settings')
   const location = useLocation()
-  const { hasPreconfiguredAccounts, hasPreconfiguredWebcal, isUnlocked, unlock } = useConfigStore()
+  const {
+    hasPreconfiguredAccounts,
+    hasPreconfiguredWebcal,
+    checkingMasterPassword,
+    isUnlocked,
+    unlock,
+  } = useConfigStore()
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -130,6 +136,7 @@ export function MasterPasswordPrompt() {
 
   const isOpen =
     (hasPreconfiguredAccounts || hasPreconfiguredWebcal) &&
+    !checkingMasterPassword &&
     !isUnlocked &&
     location.pathname !== '/setup'
 

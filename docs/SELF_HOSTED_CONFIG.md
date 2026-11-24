@@ -208,9 +208,12 @@ returns 404 for the config until you choose how to expose it:
   `docker run --rm -it caddy:2-alpine caddy hash-password`. In a Compose `.env`
   file, put the hash in single quotes to preserve its `$` characters. Use a
   separate password for download access and serve Calino through an HTTPS
-  reverse proxy. Authorized users visit `/calino.config.json` directly to
-  sign in, then return to Calino. The app will fetch and unlock the config as
-  usual. Public visitors can load the app without a browser sign-in prompt.
+  reverse proxy. Calino prompts for the download username and password inside
+  the app, fetches the file in the background, and asks for the master password
+  if it cannot unlock the config automatically. Public visitors can continue
+  without the shared config and reopen sign-in in Settings → Sync. Calino
+  does not store the download password, so users may need to sign in again after
+  reloading.
 - **Authentication at a reverse proxy:** Restrict `/calino.config.json` to
   authorized users at the proxy, make the container reachable only from the
   proxy, and set `CALINO_CONFIG_ALLOW_PUBLIC=true` on the container so the
@@ -247,7 +250,7 @@ The browser connects directly to your CalDAV server. Your server must allow cros
 
 | Problem | Solution |
 |---------|----------|
-| Prompt doesn't appear | Check the endpoint access settings and open `/calino.config.json` directly to sign in if built-in authentication is enabled. For a source build, check the build logs for `[build] Loaded calino.config.json`. |
+| Prompt doesn't appear | Check the endpoint access settings. If built-in authentication is enabled, open Calino over HTTPS and sign in to the hosted config. For a source build, check the build logs for `[build] Loaded calino.config.json`. |
 | "Wrong password" | The master password must match the one used to encrypt. Re-encrypt if needed. |
 | Accounts don't connect | Check browser console. Server URL must be reachable and CORS-enabled. |
 | Prompt keeps appearing | Don't clear browser localStorage. The master password is stored there. |

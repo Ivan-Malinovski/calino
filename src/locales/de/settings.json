@@ -792,6 +792,18 @@
       "body": "Wenn Sie Fragen zu dieser Datenschutzerklärung haben, wenden Sie sich bitte an:"
     }
   },
+  "hostedConfigSignIn": {
+    "title": "Mit gehosteter Konfiguration verbinden",
+    "description": "Melde dich an, um die gemeinsame Konfiguration dieser Instanz herunterzuladen.",
+    "username": "Benutzername",
+    "password": "Anmeldepasswort",
+    "skip": "Ohne fortfahren",
+    "signIn": "Anmelden",
+    "signingIn": "Anmeldung läuft…",
+    "unauthorized": "Benutzername oder Passwort ist falsch.",
+    "unavailable": "Die gehostete Konfiguration konnte nicht geladen werden. Versuche es erneut.",
+    "insecure": "Öffne diese Instanz über HTTPS, um dich anzumelden."
+  },
   "masterPassword": {
     "overlayAriaLabel": "CalDAV-Konten entsperren",
     "title": "CalDAV-Konten entsperren",

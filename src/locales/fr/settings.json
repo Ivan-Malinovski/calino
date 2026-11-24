@@ -792,6 +792,18 @@
       "body": "Pour toute question sur cette politique de confidentialité, veuillez contacter :"
     }
   },
+  "hostedConfigSignIn": {
+    "title": "Se connecter à la configuration hébergée",
+    "description": "Connectez-vous pour télécharger la configuration partagée de cette instance.",
+    "username": "Nom d’utilisateur",
+    "password": "Mot de passe de connexion",
+    "skip": "Continuer sans",
+    "signIn": "Se connecter",
+    "signingIn": "Connexion en cours…",
+    "unauthorized": "Le nom d’utilisateur ou le mot de passe est incorrect.",
+    "unavailable": "Impossible de charger la configuration hébergée. Réessayez.",
+    "insecure": "Ouvrez cette instance via HTTPS pour vous connecter."
+  },
   "masterPassword": {
     "overlayAriaLabel": "Déverrouiller les comptes CalDAV",
     "title": "Déverrouiller les comptes CalDAV",
