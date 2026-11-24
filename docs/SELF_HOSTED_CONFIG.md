@@ -6,6 +6,8 @@
 
 If you self-host Calino, you can preconfigure CalDAV accounts and webcal (`.ics` URL) subscriptions so users don't need to manually enter server URLs, usernames, and passwords. Instead, you encrypt the sensitive values with a master password, and users just enter that master password once to unlock everything — both CalDAV accounts and webcal subscriptions live in the same `calino.config.json` and unlock together.
 
+**For new Docker installs, use runtime config.** Use the [Compose export](#single-user-docker-quick-start) for one user, or [mount the JSON config](#docker-compose-example) for a shared or per-user deployment. Both keep the encrypted config out of the public JavaScript bundle and allow updates without rebuilding the image. [Build-time config](#build-time-compatibility) remains supported for existing installations and static hosting.
+
 ### Single-user Docker quick start
 
 1. Open `/setup`, add your accounts or feeds, and choose a strong, unique password.
@@ -90,7 +92,7 @@ copy the file into the project root and run `docker compose up -d --build`.
 
 **6. Tell users the master password.**
 
-When they open Calino, they'll see an unlock prompt. After entering the master password, all preconfigured accounts connect automatically.
+When they open Calino, they'll sign in if the server requires it. After they enter the master password, Calino connects the preconfigured accounts.
 
 ### Quick Start (CLI)
 
@@ -186,21 +188,19 @@ The lock does **not** disconnect active CalDAV sessions in the current tab — i
 
 ### Brute-Force Protection
 
-The master password prompt limits attempts to 5 before blocking for 1 minute. Failed attempts are tracked per browser session (sessionStorage).
+The master password prompt limits attempts to 5 before blocking for 1 minute. The browser tracks failed attempts and the cooldown in localStorage.
 
 ### Security
 
 | What | Where | Contains |
 |------|-------|----------|
-| JS bundle | Server (minified) | Encrypted URLs, usernames, and passwords (all encrypted with master password) |
-| localStorage | User's browser | Master password (encrypted with app-level key) |
-| Memory (Zustand) | User's browser tab | Decrypted CalDAV passwords |
+| Runtime config file | Server | Encrypted credentials and URLs, plus readable metadata such as account names |
+| Build-time config | Public JavaScript bundle | The same encrypted config, available to anyone who can load the app |
+| localStorage | User's browser | Saved CalDAV credentials and, for the separate JSON flow, the remembered master password |
 
-- The config is baked into the JS bundle at build time. It's not served as a separate file.
-- **Anyone who loads the page gets the encrypted config in the JS bundle.** This is by design — the URLs, usernames, and passwords are encrypted with AES-256-GCM using the master password. Without the master password, the encrypted blobs are useless. Only the account name (display label) is readable.
-- The master password is encrypted at rest in localStorage using AES-256-GCM (same as CalDAV credentials). Plaintext never touches persistent storage.
-- Decrypted CalDAV passwords exist only in memory and are re-derived from the master password + config on each page load.
-- Brute-force protection: 5 attempts, then 1-minute cooldown. PBKDF2 with 600,000 iterations makes each attempt inherently expensive (~2 seconds).
+- Runtime config downloads are private by default in the Docker image. The config encrypts credentials and feed URLs with AES-256-GCM using a key derived from your password. Use a strong, unique password to protect against offline guessing if someone obtains a copy.
+- Calino obfuscates credentials and the remembered master password in browser storage with a key bundled with the app. Anyone who can read the browser storage and app bundle can recover them. The one-password Compose flow keeps the sign-in password out of browser storage.
+- The master-password prompt limits attempts in the app. This limit does not apply to offline guessing against a copied file.
 
 ### Multiple Accounts
 
@@ -217,16 +217,6 @@ You can add as many accounts as needed. Each has its own encrypted password:
 ```
 
 ### Docker Compose Example
-
-```yaml
-services:
-  calino:
-    build:
-      context: .
-    ports:
-      - "3000:8080"
-    restart: unless-stopped
-```
 
 Use the prebuilt image with a read-only directory mount. Generate the file with
 `/setup` and save it as `calino-config/calino.config.json` on the Docker host.
@@ -291,8 +281,18 @@ through account settings. Removing an entry from the mounted file leaves the
 existing account or subscription connected. Clearing browser storage still
 requires entering the master password again.
 
-Building from source with `calino.config.json` in the project root also works.
-The config is bundled during `docker compose up -d --build`.
+#### Build-time compatibility
+
+If you need a bundled config for static hosting or an existing source build, you
+can still place `calino.config.json` in the project root before building. Updating
+this config requires a rebuild, and visitors can download its encrypted contents
+as part of the JavaScript bundle.
+
+To migrate a Docker install, move the existing encrypted file into the runtime
+mount, configure access, and switch to the prebuilt image or rebuild once with
+the file removed from the project root. That keeps it out of the new bundle.
+The existing master password still works. Older copies of the bundle may still
+contain the config, so rotate the underlying credentials if you suspect exposure.
 
 ### One instance, separate user configs
 
@@ -481,7 +481,7 @@ To test without config: delete `calino.config.json` from project root before bui
 ### Known Limitations
 
 - No support for changing master password without re-encrypting all passwords/URLs
-- Config requires a rebuild to update (it's baked into the JS bundle)
+- Build-time config requires a rebuild to update. Runtime config can be updated without rebuilding the image.
 - Preconfigured accounts and webcal subscriptions are read-only in the settings UI (can't delete or edit them)
 - Lock does not disconnect active CalDAV sessions in the current tab
 - Webcal subscriptions are always read-only in Calino regardless of config, same as manually-added ones
