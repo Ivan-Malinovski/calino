@@ -6,6 +6,7 @@ import { startI18n } from './lib/i18nBridge'
 import { initI18n } from './lib/i18n'
 import App from './App.tsx'
 import { config } from './config'
+import { withBase } from './lib/basePath'
 import { startDynamicFavicon } from './lib/dynamicFavicon'
 
 // Browser tab icon: current local day. No-ops on Capacitor; index.html keeps
@@ -15,7 +16,7 @@ startDynamicFavicon()
 // Register service worker when enabled (requires self-hosting with proper CSP headers)
 if (config.enableServiceWorker && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch(() => {
+    navigator.serviceWorker.register(withBase('/sw.js')).catch(() => {
       // SW registration failed — silently ignore
     })
   })

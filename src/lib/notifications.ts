@@ -1,4 +1,5 @@
 import { addMinutes, parseISO } from 'date-fns'
+import { withBase } from '@/lib/basePath'
 import { toEventInstant } from '@/lib/datetime'
 import { formatHomeClock, homeDayKey, homeTimezone } from '@/lib/homeTimezone'
 import { addDays as addDayKey } from '@/lib/datetime'
@@ -212,8 +213,8 @@ export function showNotification(
 
   const notification = new Notification(title, {
     body,
-    icon: '/apple-touch-icon.png',
-    badge: '/apple-touch-icon.png',
+    icon: withBase('/apple-touch-icon.png'),
+    badge: withBase('/apple-touch-icon.png'),
     tag: `calino-${eventId}`,
     data: { eventId, eventDate } as NotificationData,
     requireInteraction: false,
@@ -222,7 +223,7 @@ export function showNotification(
   notification.onclick = () => {
     window.focus()
     const eventDateStr = eventDate.split('T')[0]
-    window.location.href = `/?date=${eventDateStr}&event=${eventId}`
+    window.location.href = withBase(`/?date=${eventDateStr}&event=${eventId}`)
     notification.close()
   }
 
