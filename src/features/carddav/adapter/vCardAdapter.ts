@@ -34,7 +34,21 @@ export function decodeCaretEncoding(s: string): string {
  */
 function unfoldVCard(vCard: string): string[] {
   const unfolded = vCard.replace(/\r?\n[ \t]/g, '')
-  return unfolded.split(/\r?\n/)
+  const lines: string[] = []
+  for (const line of unfolded.split(/\r?\n/)) {
+    const prev = lines[lines.length - 1]
+    // vCard 2.1 quoted-printable values wrap with a soft line break: `=` at the end of the line.
+    if (
+      prev?.endsWith('=') &&
+      /ENCODING=QUOTED-PRINTABLE/i.test(prev.split(':')[0]) &&
+      !/^END:VCARD/i.test(line)
+    ) {
+      lines[lines.length - 1] = prev.slice(0, -1) + line
+    } else {
+      lines.push(line)
+    }
+  }
+  return lines
 }
 
 /**
@@ -145,9 +159,13 @@ function parseLineWithParams(
     const rest = line.substring(property.length + 1)
     const colonIndex = rest.indexOf(':')
     if (colonIndex >= 0) {
+      const params = rest.substring(0, colonIndex)
+      const value = rest.substring(colonIndex + 1)
       return {
-        params: rest.substring(0, colonIndex),
-        value: rest.substring(colonIndex + 1),
+        params,
+        value: /ENCODING=QUOTED-PRINTABLE/i.test(params)
+          ? decodeQuotedPrintable(value, params.match(/CHARSET=([^;]+)/i)?.[1])
+          : value,
       }
     }
   } else if (lineUpper.startsWith(prefixWithColon)) {
@@ -159,8 +177,8 @@ function parseLineWithParams(
   return null
 }
 
-/** Decode a vCard 2.1 `ENCODING=QUOTED-PRINTABLE` value (UTF-8 bytes as `=XX`). */
-function decodeQuotedPrintable(value: string): string {
+/** Decode a vCard 2.1 `ENCODING=QUOTED-PRINTABLE` value (`=XX` bytes in CHARSET, UTF-8 by default). */
+function decodeQuotedPrintable(value: string, charset = 'utf-8'): string {
   const bytes: number[] = []
   for (let i = 0; i < value.length; i++) {
     const hex = value.substring(i + 1, i + 3)
@@ -171,18 +189,20 @@ function decodeQuotedPrintable(value: string): string {
       bytes.push(...new TextEncoder().encode(value[i]))
     }
   }
-  return new TextDecoder().decode(new Uint8Array(bytes))
+  let decoder: TextDecoder
+  try {
+    decoder = new TextDecoder(charset)
+  } catch {
+    decoder = new TextDecoder()
+  }
+  return decoder.decode(new Uint8Array(bytes)).replace(/\r\n/g, '\n')
 }
 
 /** The value of the first `PROP:` or `PROP;params:` line (CHARSET, LANGUAGE, ... are common). */
 function extractProperty(lines: string[], property: string): string | null {
   for (const line of lines) {
     const parsed = parseLineWithParams(line, property)
-    if (parsed) {
-      return /ENCODING=QUOTED-PRINTABLE/i.test(parsed.params)
-        ? decodeQuotedPrintable(parsed.value)
-        : parsed.value
-    }
+    if (parsed) return parsed.value
   }
   return null
 }
