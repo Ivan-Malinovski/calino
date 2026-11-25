@@ -10,13 +10,13 @@
   background: var(--canvas);
   display: flex;
   flex-direction: column;
-  padding: 1px 20px 0 20px;
+  padding-top: 1px;
   gap: var(--space-4);
   overflow: hidden;
   transition:
     width 0.3s cubic-bezier(0.32, 0.72, 0, 1),
     min-width 0.3s cubic-bezier(0.32, 0.72, 0, 1),
-    padding 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+    padding-top 0.3s cubic-bezier(0.32, 0.72, 0, 1);
   position: relative;
 }
 
@@ -45,15 +45,9 @@
   width: 100%;
   opacity: 1;
   transition: opacity 0.2s ease;
-  /* .sidebar clips overflow, so without this the sections past the bottom of
-     a short viewport (a long task list, many calendars) were simply
-     unreachable. */
+  /* Keep the gutters inside the scrollport so card shadows can paint into them. */
+  padding-inline: 20px;
   overflow-y: auto;
-  /* `overflow-y: auto` alone computes the x axis to `auto` as well, so any
-     child a fraction of a pixel too wide — the mini calendar's grid once the
-     vertical scrollbar eats into the width, a card's shadow — put a horizontal
-     scrollbar under the whole sidebar. Nothing here is meant to scroll
-     sideways. */
   overflow-x: hidden;
   overscroll-behavior: contain;
 }
@@ -69,7 +63,7 @@
   opacity: 0;
   pointer-events: none;
   position: absolute;
-  width: calc(var(--sidebar-width, 300px) - 40px);
+  width: var(--sidebar-width, 300px);
 }
 
 .expandButton {
