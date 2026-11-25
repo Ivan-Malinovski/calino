@@ -1700,3 +1700,31 @@ END:VCARD`
     expect(parseVCard(serialized, ADDRESS_BOOK_ID, ACCOUNT_ID)!.note).toBe(long.note)
   })
 })
+
+describe('Apple itemN. grouped properties', () => {
+  const vcard = [
+    'BEGIN:VCARD',
+    'VERSION:3.0',
+    'FN:John Appleseed',
+    'item1.EMAIL;type=INTERNET;type=pref:john@example.com',
+    'item1.X-ABLabel:_$!<Work>!$_',
+    'item2.ADR;type=HOME:;;1 Infinite Loop;Cupertino;CA;95014;United States',
+    'item2.X-ABADR:us',
+    'item3.URL;type=pref:https\\://example.com',
+    'END:VCARD',
+  ].join('\r\n')
+
+  it('reads grouped e-mails, addresses and URLs', () => {
+    const contact = parseVCard(vcard, ADDRESS_BOOK_ID, ACCOUNT_ID)!
+    expect(contact.emails).toMatchObject([{ value: 'john@example.com', type: 'work' }])
+    expect(contact.addresses).toMatchObject([{ street: '1 Infinite Loop', city: 'Cupertino' }])
+    expect(contact.urls).toMatchObject([{ value: 'https://example.com' }])
+  })
+
+  it('writes each grouped value once on save', () => {
+    const serialized = contactToVCard(parseVCard(vcard, ADDRESS_BOOK_ID, ACCOUNT_ID)!)
+    expect(serialized.match(/john@example\.com/g)).toHaveLength(1)
+    expect(serialized.match(/Infinite Loop/g)).toHaveLength(1)
+    expect(serialized).toContain('item2.X-ABADR:us')
+  })
+})
