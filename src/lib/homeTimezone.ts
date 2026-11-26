@@ -34,6 +34,15 @@ function usableZone(zone: string | null | undefined): string | null {
   return valid ? zone : null
 }
 
+/**
+ * `zone` when this browser can compute with it (Windows names included, via
+ * normalizeTzid), otherwise null. Event TZIDs come from other clients and are
+ * just as untrusted as synced settings.
+ */
+export function usableTimezone(zone: string | null | undefined): string | null {
+  return usableZone(zone)
+}
+
 /** The chosen zone, or null when the setting follows the browser (or holds an unknown zone). */
 export function homeTimezoneOverride(): string | null {
   return usableZone(useSettingsStore.getState().homeTimezone)

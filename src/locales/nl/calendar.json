@@ -424,6 +424,7 @@
       "end": "Einde",
       "endTime": "Eindtijd",
       "foreignZoneTimes": "{{times}} in {{zone}}",
+      "timezone": "Tijdzone",
       "allDay": "Hele dag",
       "available": "Beschikbaar",
       "showMoreOptions": "Meer opties tonen",

@@ -1,6 +1,12 @@
 import { format, parseISO } from 'date-fns'
-import { pad2, addMinutesToTimeStr, toEventInstant } from '@/lib/datetime'
-import { formatHome, homeDayKey, homeMinutes } from '@/lib/homeTimezone'
+import {
+  pad2,
+  addMinutesToTimeStr,
+  formatInZone,
+  toEventInstant,
+  zonedDayKey,
+} from '@/lib/datetime'
+import { homeDayKey, homeMinutes, homeTimezone, usableTimezone } from '@/lib/homeTimezone'
 export { addMinutesToTimeStr }
 import { extractOriginalEventId } from '@/lib/events'
 import { isUUID } from '@/lib/uuid'
@@ -45,6 +51,12 @@ export interface InitialFormState {
   relatedTo: string[]
   attendees: CalendarAttendee[]
   organizer: CalendarOrganizer | undefined
+  /**
+   * Zone the timed date/time fields are wall clocks in (#281). null means the
+   * home zone, which is what a new event starts in. An existing timed event
+   * opens in its own TZID so a 09:00 Los Angeles meeting reads 09:00.
+   */
+  timezone: string | null
 }
 
 export type InitialFormStateWithMeta = InitialFormState & {
@@ -84,6 +96,7 @@ export function makeDefaultState(
     relatedTo: [],
     attendees: [],
     organizer: undefined,
+    timezone: null,
     isRecurringInstance: false,
     originalEventId: null,
     ...overrides,
@@ -195,11 +208,21 @@ export function getInitialFormState(
           : rule?.bySetPos && rule.byWeekday && rule.byWeekday.length > 0
             ? rule.bySetPos.filter((p) => p !== 0)
             : undefined
+      // Tasks keep home-zone fields: the due-date editor has no zone picker.
+      // An unknown TZID (a custom VTIMEZONE this browser cannot resolve) also
+      // stays on home fields; the save path keeps its zone untouched.
+      const formZone =
+        existingEvent.isAllDay || existingEvent.type === 'task'
+          ? null
+          : usableTimezone(existingEvent.timezone)
+      const fieldZone = formZone ?? homeTimezone()
+      const startInstant = toEventInstant(existingEvent.start, existingEvent.timezone)
+      const endInstant = toEventInstant(existingEvent.end, existingEvent.timezone)
       const endOnDate = rule?.endDate
         ? format(parseISO(rule.endDate), 'yyyy-MM-dd')
         : existingEvent.isAllDay
           ? existingEvent.start.slice(0, 10)
-          : homeDayKey(toEventInstant(existingEvent.start, existingEvent.timezone))
+          : zonedDayKey(startInstant, fieldZone)
       const endCondition: 'never' | 'on' | 'after' = rule?.endDate
         ? 'on'
         : rule?.count
@@ -209,21 +232,19 @@ export function getInitialFormState(
         title: existingEvent.title,
         description: existingEvent.description || '',
         location: existingEvent.location || '',
-        // TZID events store naive wall clocks in the event zone — the modal
-        // shows the instant on the home clock. All-day values stay the date
+        // Timed fields are wall clocks in the form zone (the event's own TZID
+        // when it has a usable one, else home). All-day values stay the date
         // in the string.
         startDate: existingEvent.isAllDay
           ? existingEvent.start.slice(0, 10)
-          : homeDayKey(toEventInstant(existingEvent.start, existingEvent.timezone)),
+          : zonedDayKey(startInstant, fieldZone),
         startTime: existingEvent.isAllDay
           ? '00:00'
-          : formatHome(toEventInstant(existingEvent.start, existingEvent.timezone), 'HH:mm'),
+          : formatInZone(startInstant, fieldZone, 'HH:mm'),
         endDate: existingEvent.isAllDay
           ? existingEvent.end.slice(0, 10)
-          : homeDayKey(toEventInstant(existingEvent.end, existingEvent.timezone)),
-        endTime: existingEvent.isAllDay
-          ? '00:00'
-          : formatHome(toEventInstant(existingEvent.end, existingEvent.timezone), 'HH:mm'),
+          : zonedDayKey(endInstant, fieldZone),
+        endTime: existingEvent.isAllDay ? '00:00' : formatInZone(endInstant, fieldZone, 'HH:mm'),
         isAllDay: existingEvent.isAllDay,
         calendarId: existingEvent.calendarId,
         recurring: !!rule,
@@ -244,6 +265,7 @@ export function getInitialFormState(
         relatedTo: existingEvent.relatedTo || [],
         attendees: existingEvent.attendees || [],
         organizer: existingEvent.organizer,
+        timezone: formZone,
         isRecurringInstance,
         originalEventId,
       }

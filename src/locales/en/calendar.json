@@ -424,6 +424,7 @@
       "end": "End",
       "endTime": "End time",
       "foreignZoneTimes": "{{times}} in {{zone}}",
+      "timezone": "Time zone",
       "allDay": "All day",
       "available": "Available",
       "showMoreOptions": "Show more options",

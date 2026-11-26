@@ -312,6 +312,7 @@
       "end": "Slut",
       "endTime": "Sluttidspunkt",
       "foreignZoneTimes": "{{times}} i {{zone}}",
+      "timezone": "Tidszone",
       "allDay": "Hele dagen",
       "available": "Ledig",
       "showMoreOptions": "Vis flere muligheder",

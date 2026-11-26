@@ -16,11 +16,25 @@ interface TimezoneSelectProps {
   value: string
   onChange: (value: string) => void
   ariaLabel: string
+  /**
+   * Offer the "follow the browser" entry (stored as ''). On for the home-zone
+   * setting; an event is always pinned to a real zone, so the event form
+   * turns it off.
+   */
+  includeAutomatic?: boolean
+  /** Forwarded to the wrapper, so a test can find one picker among several. */
+  dataComponent?: string
 }
 
 const normalize = (text: string): string => text.toLowerCase().replace(/[_/]+/g, ' ')
 
-export function TimezoneSelect({ value, onChange, ariaLabel }: TimezoneSelectProps): JSX.Element {
+export function TimezoneSelect({
+  value,
+  onChange,
+  ariaLabel,
+  includeAutomatic = true,
+  dataComponent = 'timezone-select',
+}: TimezoneSelectProps): JSX.Element {
   const { t } = useTranslation('settings')
   const listboxId = useId()
   const containerRef = useRef<HTMLDivElement>(null)
@@ -33,7 +47,9 @@ export function TimezoneSelect({ value, onChange, ariaLabel }: TimezoneSelectPro
     const presets = new Set(TIMEZONE_PRESETS.map((tz) => tz.value))
     const automatic = t('general.homeTimezone.automatic')
     return [
-      { value: '', label: automatic, haystack: normalize(automatic) },
+      ...(includeAutomatic
+        ? [{ value: '', label: automatic, haystack: normalize(automatic) }]
+        : []),
       ...TIMEZONE_PRESETS.map((tz) => ({
         value: tz.value,
         label: tz.label,
@@ -43,7 +59,7 @@ export function TimezoneSelect({ value, onChange, ariaLabel }: TimezoneSelectPro
         .filter((tz) => !presets.has(tz))
         .map((tz) => ({ value: tz, label: tz, haystack: normalize(tz) })),
     ]
-  }, [t])
+  }, [t, includeAutomatic])
 
   const selected = options.find((option) => option.value === value)
   const selectedLabel = selected?.label ?? value
@@ -97,7 +113,7 @@ export function TimezoneSelect({ value, onChange, ariaLabel }: TimezoneSelectPro
     <div
       ref={containerRef}
       className={styles.timezoneSelect}
-      data-component="timezone-select"
+      data-component={dataComponent}
       onBlur={(event) => {
         if (!containerRef.current?.contains(event.relatedTarget as Node | null)) close()
       }}
