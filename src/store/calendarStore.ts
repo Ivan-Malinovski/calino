@@ -3,7 +3,7 @@ import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 import { safeLocalStorage } from '@/lib/storage'
 import { parseISO, isWithinInterval, startOfDay, endOfDay } from 'date-fns'
-import { RRule } from 'rrule'
+import { RRuleSet } from 'rrule'
 import type {
   CalendarStore,
   CalendarEvent,
@@ -27,6 +27,7 @@ import {
   materializeOccurrenceAt,
   rruleAnchor,
   rruleWindow,
+  buildRecurrenceSet,
   expandZonedOccurrences,
   parseOccurrenceInstant,
 } from '@/lib/occurrenceExpansion'
@@ -162,15 +163,14 @@ let eventIndexHome: string | null = null
 // RRule construction is expensive and the rules themselves are immutable, so
 // this cache lives at module scope and survives across queries (it used to be
 // rebuilt per call, which meant it only ever helped within a single range).
-const rruleCache = new Map<string, RRule>()
+const rruleCache = new Map<string, RRuleSet>()
 const MAX_RRULE_CACHE = 512
 
-function getOrCreateRRule(rruleStr: string, eventStart: Date): RRule {
+function getOrCreateRRule(rruleStr: string, eventStart: Date): RRuleSet {
   const key = `${rruleStr}|${eventStart.getTime()}`
   let rule = rruleCache.get(key)
   if (!rule) {
-    const options = RRule.parseString(rruleStr)
-    rule = new RRule({ ...options, dtstart: eventStart })
+    rule = buildRecurrenceSet(rruleStr, eventStart)
     if (rruleCache.size > MAX_RRULE_CACHE) rruleCache.clear()
     rruleCache.set(key, rule)
   }
@@ -506,6 +506,7 @@ export const useCalendarStore = create<CalendarStore>()(
       categories: [],
       autoCategoryRules: [],
       selectedCategoryIds: [],
+      calendarVisibilitySnapshot: null,
       currentDate: homeDayKey(new Date()),
       currentView: useSettingsStore.getState().defaultView,
       // Bumped by every mutation that affects getEventsForDateRange results.
@@ -1116,6 +1117,18 @@ export const useCalendarStore = create<CalendarStore>()(
       getCalendar: (id: string): Calendar | undefined => {
         return get().calendars.find((c) => c.id === id)
       },
+
+      reorderCalendar: (id: string, overId: string): void => {
+        set((state) => {
+          const from = state.calendars.findIndex((calendar) => calendar.id === id)
+          const to = state.calendars.findIndex((calendar) => calendar.id === overId)
+          if (from < 0 || to < 0 || from === to) return state
+          const calendars = [...state.calendars]
+          calendars.splice(to, 0, calendars.splice(from, 1)[0])
+          return { calendars }
+        })
+      },
+
       updateCalendar: (id: string, updates: Partial<Calendar>): void => {
         set((state) => ({
           calendars: state.calendars.map((c) => (c.id === id ? { ...c, ...updates } : c)),
@@ -1146,6 +1159,31 @@ export const useCalendarStore = create<CalendarStore>()(
         set((state) => ({
           calendars: state.calendars.map((c) =>
             c.id === id ? { ...c, isVisible: !c.isVisible } : c
+          ),
+        }))
+        bumpRangeExpansionVersion()
+      },
+
+      isolateCalendar: (id: string): void => {
+        if (!get().calendars.some((c) => c.id === id)) return
+        set((state) => ({
+          // Keep the snapshot from the first isolation so switching the solo
+          // calendar still restores the selection from before any isolating.
+          calendarVisibilitySnapshot:
+            state.calendarVisibilitySnapshot ??
+            Object.fromEntries(state.calendars.map((c) => [c.id, c.isVisible])),
+          calendars: state.calendars.map((c) => ({ ...c, isVisible: c.id === id })),
+        }))
+        bumpRangeExpansionVersion()
+      },
+
+      restoreCalendarVisibility: (): void => {
+        const snapshot = get().calendarVisibilitySnapshot
+        if (!snapshot) return
+        set((state) => ({
+          calendarVisibilitySnapshot: null,
+          calendars: state.calendars.map((c) =>
+            Object.hasOwn(snapshot, c.id) ? { ...c, isVisible: snapshot[c.id] } : c
           ),
         }))
         bumpRangeExpansionVersion()
@@ -1708,6 +1746,7 @@ export const useCalendarStore = create<CalendarStore>()(
           currentDate: homeDayKey(new Date()),
           currentView: useSettingsStore.getState().defaultView,
           selectedCategoryIds: state.selectedCategoryIds ?? [],
+          calendarVisibilitySnapshot: state.calendarVisibilitySnapshot ?? null,
         }
       },
       partialize: (state) => ({
@@ -1728,6 +1767,7 @@ export const useCalendarStore = create<CalendarStore>()(
         calendars: state.calendars,
         categories: state.categories,
         autoCategoryRules: state.autoCategoryRules,
+        calendarVisibilitySnapshot: state.calendarVisibilitySnapshot,
         // currentDate is NOT persisted: every fresh load starts on today.
       }),
     }

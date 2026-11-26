@@ -190,6 +190,34 @@ END:VCARD`
       expect(contact!.displayName).toBe('John Doe')
     })
 
+    it('reads FN, N and ORG that carry parameters', () => {
+      const vcard = `BEGIN:VCARD
+VERSION:3.0
+N;CHARSET=utf-8:Doe;Jane;;;
+FN;CHARSET=utf-8:Jane Doe
+ORG;LANGUAGE=en-us:ACME
+END:VCARD`
+
+      const contact = parseVCard(vcard, ADDRESS_BOOK_ID, ACCOUNT_ID)
+
+      expect(contact!.displayName).toBe('Jane Doe')
+      expect(contact!.familyName).toBe('Doe')
+      expect(contact!.organization).toBe('ACME')
+    })
+
+    it('decodes quoted-printable names from vCard 2.1 exports', () => {
+      const vcard = `BEGIN:VCARD
+VERSION:2.1
+N;CHARSET=UTF-8;ENCODING=QUOTED-PRINTABLE:M=C3=BCller;J=C3=BCrgen;;;
+FN;CHARSET=UTF-8;ENCODING=QUOTED-PRINTABLE:J=C3=BCrgen M=C3=BCller
+END:VCARD`
+
+      const contact = parseVCard(vcard, ADDRESS_BOOK_ID, ACCOUNT_ID)
+
+      expect(contact!.displayName).toBe('Jürgen Müller')
+      expect(contact!.givenName).toBe('Jürgen')
+    })
+
     it('returns Unknown when both FN and N are missing', () => {
       const vcard = `BEGIN:VCARD
 VERSION:3.0

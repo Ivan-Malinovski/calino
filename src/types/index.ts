@@ -199,6 +199,12 @@ export interface CalendarState {
   categories: Category[]
   autoCategoryRules: AutoCategoryRule[]
   selectedCategoryIds: string[]
+  /**
+   * Per-calendar visibility captured when the user isolated one calendar
+   * ("Show only this calendar"), restored by `restoreCalendarVisibility`.
+   * `null` while nothing is isolated. Persisted.
+   */
+  calendarVisibilitySnapshot: Record<string, boolean> | null
   currentDate: string
   currentView: ViewType
   selectedEventId: string | null
@@ -358,10 +364,23 @@ export interface CalendarActions {
    */
   bumpVersion: () => void
   addCalendar: (calendar: Calendar) => void
+  reorderCalendar: (id: string, overId: string) => void
   updateCalendar: (id: string, updates: Partial<Calendar>) => void
   getCalendar: (id: string) => Calendar | undefined
   deleteCalendar: (id: string) => void
   toggleCalendarVisibility: (id: string) => void
+  /**
+   * Show only `id` and hide every other calendar. The first isolation saves
+   * the current visibility to `calendarVisibilitySnapshot`; isolating another
+   * calendar while one is already isolated keeps that original snapshot.
+   */
+  isolateCalendar: (id: string) => void
+  /**
+   * Put back the visibility saved by `isolateCalendar` and clear the snapshot.
+   * Calendars added since keep their current visibility; deleted ones are
+   * ignored. No-op when nothing is isolated.
+   */
+  restoreCalendarVisibility: () => void
   setDefaultCalendar: (id: string) => void
   addCategory: (category: Category) => void
   updateCategory: (id: string, updates: Partial<Category>) => void

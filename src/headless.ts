@@ -67,7 +67,7 @@ export async function runHeadlessSync(): Promise<HeadlessResult> {
   if (!bridge) throw new Error('runHeadlessSync called outside the headless WebView')
   const i18n = await initHeadlessI18n()
   const t = (key: string, options?: Record<string, unknown>): string =>
-    i18n.t(`errors:${key}`, options)
+    i18n.t(`errors:${key}`, options ?? {})
 
   // Visibility and colour live only in the app's store, so it is the authority
   // on what gets mirrored — the same source the foreground pass uses.

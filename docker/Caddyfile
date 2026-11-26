@@ -1,0 +1,107 @@
+:8080 {
+	request_body {
+		max_size 1mb
+	}
+
+	encode gzip
+
+	header {
+		X-Frame-Options "SAMEORIGIN"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()"
+		-Server
+	}
+
+	@assets path /assets/*
+	header @assets Cache-Control "public, immutable"
+
+	@sw path /sw.js
+	header @sw Cache-Control "no-store, no-cache, must-revalidate"
+	header @sw Service-Worker-Allowed "/"
+
+	# Keep the mounted directory outside the SPA document root.
+	handle /calino.config.json {
+		header Cache-Control "no-store"
+		@perUser expression `{env.CALINO_CONFIG_PER_USER} == "true"`
+		@protected expression `{env.CALINO_CONFIG_PER_USER} != "true" && {env.CALINO_CONFIG_AUTH_USER} != "" && {env.CALINO_CONFIG_AUTH_HASH} != ""`
+		@public expression `{env.CALINO_CONFIG_PER_USER} != "true" && {env.CALINO_CONFIG_ALLOW_PUBLIC} == "true" && {env.CALINO_CONFIG_AUTH_USER} == "" && {env.CALINO_CONFIG_AUTH_HASH} == ""`
+		@anonymousAppFetch {
+			header X-Calino-Config-Fetch 1
+			not header Authorization *
+		}
+		@missingConfig not file /calino.config.json
+		@quickStart expression `{env.CALINO_CONFIG_QUICK_START} == "true"`
+		@invalidUser expression `!{http.auth.user.id}.matches('^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$')`
+
+		handle @perUser {
+			route {
+				header X-Calino-Config-Mode per-user
+				header @anonymousAppFetch X-Calino-Config-Auth basic
+				respond @anonymousAppFetch 401
+				basic_auth {
+					# The glob can be empty. This account cannot authenticate.
+					__calino_disabled__ AA==
+					import /calino/auth/*.caddy
+				}
+				respond @invalidUser 403
+				header X-Calino-Config-User {http.auth.user.id}
+				root * /calino/users
+				rewrite /{http.auth.user.id}.json
+				file_server
+			}
+		}
+
+		handle @protected {
+			route {
+				root * /calino
+				respond @missingConfig 404
+				header @quickStart X-Calino-Config-Mode quick-start
+				# Tell the app to show its own sign-in form without a native challenge.
+				header @anonymousAppFetch X-Calino-Config-Auth basic
+				respond @anonymousAppFetch 401
+				basic_auth {$CALINO_CONFIG_AUTH_ALGORITHM:bcrypt} {
+					# Caddy validates this block even when @protected is false.
+					{$CALINO_CONFIG_AUTH_USER:disabled} {$CALINO_CONFIG_AUTH_HASH:AA==}
+				}
+				file_server
+			}
+		}
+
+		handle @public {
+			root * /calino
+			file_server
+		}
+
+		# Also deny access if only one authentication setting was supplied.
+		handle {
+			respond 404
+		}
+	}
+
+	handle_errors 401 {
+		@configAppFetch {
+			path /calino.config.json
+			header X-Calino-Config-Fetch 1
+		}
+		handle @configAppFetch {
+			header -WWW-Authenticate
+			header Cache-Control "no-store"
+			header X-Calino-Config-Auth basic
+			@perUserError expression `{env.CALINO_CONFIG_PER_USER} == "true"`
+			header @perUserError X-Calino-Config-Mode per-user
+			respond 401
+		}
+	}
+
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+
+	log {
+		output stdout
+		format console
+	}
+}

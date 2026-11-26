@@ -1,11 +1,12 @@
 import { readFileSync, existsSync } from 'node:fs'
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv, type UserConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
 import { nodePolyfills } from 'vite-plugin-node-polyfills'
 import { configDefaults } from 'vitest/config'
 import { caldavMockPlugin } from './e2e/fixtures/vite-caldav-mock'
 import { carddavMockPlugin } from './e2e/fixtures/vite-carddav-mock'
+import { normalizeBasePath } from './src/config/basePath.ts'
 import { contentSecurityPolicy } from './src/config/contentSecurityPolicy.ts'
 import { fontScalePostcss } from './src/config/fontScale.ts'
 
@@ -61,8 +62,7 @@ const devHost = process.env.CALINO_DEV_HOST
 const hmr = devHost ? true : { host: 'localhost', port: 8080 }
 const devConnectSources = typeof hmr === 'object' ? [`ws://${hmr.host}:${hmr.port}`] : []
 
-export default defineConfig({
-  base: '/',
+const appConfig = {
   // The app reads these non-VITE_ build-time values from import.meta.env.
   // Keep the allowlist narrow: CALINO_DEV_* and other server-only settings
   // must not be exposed to browser code.
@@ -71,6 +71,7 @@ export default defineConfig({
     __APP_VERSION__: JSON.stringify(pkg.version),
     __CALINO_CONFIG__: JSON.stringify(calinoConfig),
     __CALINO_SELF_HOSTED__: JSON.stringify(isSelfHosted),
+    __CALINO_RUNTIME_CONFIG__: JSON.stringify(isSelfHosted || process.env.CALINO_E2E_MOCK === '1'),
   },
   plugins: [
     {
@@ -180,4 +181,12 @@ export default defineConfig({
     // instead of the proxy other tests rely on.
     css: { include: [/built-in\.css/] },
   },
+} satisfies UserConfig
+
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), 'CALINO_BASE_PATH')
+  return {
+    ...appConfig,
+    base: normalizeBasePath(process.env.CALINO_BASE_PATH ?? env.CALINO_BASE_PATH),
+  }
 })

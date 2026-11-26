@@ -6,6 +6,32 @@ test.describe('Sidebar sections', () => {
     await clearState(page)
   })
 
+  test('sidebar cards have room for their shadows when the sidebar scrolls', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 420 })
+    await page.goto('/month')
+
+    const miniCalendar = page.locator('[data-component="sidebar-today-button"]').locator('..')
+    const tasks = page.locator('[data-component="tasks-section"]')
+
+    for (const card of [miniCalendar, tasks]) {
+      await expect(card).toBeVisible()
+      const gutter = await card.evaluate((element) => {
+        const scrollport = element.parentElement!
+        const cardBounds = element.getBoundingClientRect()
+        const scrollportLeft = scrollport.getBoundingClientRect().left + scrollport.clientLeft
+        const scrollportRight = scrollportLeft + scrollport.clientWidth
+        return Math.min(cardBounds.left - scrollportLeft, scrollportRight - cardBounds.right)
+      })
+      expect(gutter).toBeGreaterThanOrEqual(16)
+    }
+
+    const privacyLink = page
+      .locator('[data-component="sidebar"]')
+      .getByRole('link', { name: 'Privacy' })
+    await privacyLink.scrollIntoViewIfNeeded()
+    await expect(privacyLink).toBeInViewport()
+  })
+
   test('calendar and category filters are revealed by their section buttons', async ({ page }) => {
     await page.addInitScript(() => {
       localStorage.setItem(

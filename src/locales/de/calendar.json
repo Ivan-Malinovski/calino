@@ -70,6 +70,7 @@
       "newJournalEntry": "Neuen Journaleintrag erstellen"
     },
     "sidebar": {
+      "reorderCalendar": "{{name}} umordnen",
       "previousMonth": "Vorheriger Monat",
       "nextMonth": "Nächster Monat",
       "calendars": "Kalender",
@@ -98,6 +99,9 @@
       "categories": "Kategorien",
       "useCategoryColors": "Kategoriefarben verwenden",
       "showCalendarName": "{{name}} anzeigen",
+      "isolateCalendar": "Nur diesen Kalender anzeigen",
+      "showAllCalendars": "Alle Kalender anzeigen",
+      "showAll": "Alle anzeigen",
       "changeCalendarColor": "Farbe von {{name}} ändern",
       "colorPickerFor": "Farbauswahl für {{name}}",
       "useColorFor": "{{color}} für {{name}} verwenden",
@@ -632,6 +636,7 @@
       "enterUrl": "Gib eine Kalender-URL ein.",
       "updateFailedReason": "Aktualisierung nicht möglich: {{reason}}",
       "subscribeFailedReason": "Abonnieren nicht möglich: {{reason}}",
+      "feedBlocked": "Kalender konnte nicht geladen werden. Viele Hosts, darunter Google Kalender, erlauben Browsern nicht, ihre Feeds direkt zu lesen. Gib unten eine Proxy-URL ein und versuche es erneut.",
       "updateFailed": "Das Kalenderabonnement konnte nicht aktualisiert werden.",
       "subscribeFailed": "Der Kalender konnte nicht abonniert werden."
     },

@@ -140,8 +140,103 @@ function profileFor(pathname) {
   return healthy
 }
 
+/** A Radicale-style discovery chain, isolated on the 127.0.0.1 host. */
+function radicaleResponse(req, res, pathname) {
+  const origin = req.headers.origin
+  if (req.method === 'GET' && origin) res.setHeader('Access-Control-Allow-Origin', origin)
+  // Both OPTIONS and GET redirect here: OPTIONS redirects cannot pass CORS.
+  if (pathname === '/.well-known/caldav' || pathname === '/') {
+    if (req.method === 'GET' || req.method === 'OPTIONS') {
+      res.writeHead(301, { Location: '/.web/' }).end()
+      return
+    }
+  }
+  if (pathname.startsWith('/.web')) {
+    res.writeHead(200, { 'Content-Type': 'text/html' }).end('<title>Radicale</title>')
+    return
+  }
+  if (!pathname.endsWith('/') && !pathname.endsWith('.ics')) {
+    res.writeHead(301, { Location: `${pathname}/` }).end()
+    return
+  }
+  if (origin) {
+    res.setHeader('Access-Control-Allow-Origin', origin)
+    res.setHeader('Access-Control-Allow-Methods', ALLOW_METHODS)
+    res.setHeader('Access-Control-Allow-Headers', ALLOW_HEADERS)
+    res.setHeader('Access-Control-Expose-Headers', 'ETag, DAV, Allow')
+  }
+  res.setHeader('DAV', '1, 2, 3, calendar-access')
+  res.setHeader('Allow', ALLOW_METHODS)
+  if (req.method === 'OPTIONS') {
+    res.writeHead(204).end()
+    return
+  }
+  if (pathname.includes('.well-known')) {
+    res.writeHead(404).end()
+    return
+  }
+  if (
+    req.headers.authorization !== `Basic ${Buffer.from('alice:hunter2').toString('base64')}` &&
+    req.method !== 'GET'
+  ) {
+    res.writeHead(401).end()
+    return
+  }
+  let body = ''
+  req.on('data', (chunk) => (body += chunk))
+  req.on('end', () => {
+    const home = '/radicale/alice/'
+    const calendar = `${home}work/`
+    const calendarProps =
+      '<d:displayname>Radicale calendar</d:displayname><d:resourcetype><d:collection/><c:calendar/></d:resourcetype><c:supported-calendar-component-set><c:comp name="VEVENT"/></c:supported-calendar-component-set>'
+    res.setHeader('Content-Type', 'text/xml; charset=utf-8')
+    if (req.method === 'PROPFIND') {
+      if (body.includes('current-user-principal')) {
+        res
+          .writeHead(207)
+          .end(
+            responses([
+              [
+                pathname,
+                `<d:current-user-principal><d:href>${home}</d:href></d:current-user-principal>`,
+              ],
+            ])
+          )
+      } else if (body.includes('calendar-home-set')) {
+        res
+          .writeHead(207)
+          .end(
+            responses([
+              [pathname, `<c:calendar-home-set><d:href>${home}</d:href></c:calendar-home-set>`],
+            ])
+          )
+      } else if (pathname === home) {
+        res.writeHead(207).end(
+          responses([
+            [home, '<d:resourcetype><d:collection/></d:resourcetype>'],
+            [calendar, calendarProps],
+          ])
+        )
+      } else {
+        res.writeHead(207).end(responses([[pathname, calendarProps]]))
+      }
+      return
+    }
+    if (req.method === 'REPORT') {
+      res.writeHead(207).end(responses([]))
+      return
+    }
+    res.setHeader('ETag', '"radicale-event"')
+    res.writeHead(200).end('BEGIN:VCALENDAR\r\nVERSION:2.0\r\nEND:VCALENDAR\r\n')
+  })
+}
+
 const server = createServer((req, res) => {
   const { pathname } = new URL(req.url, `http://localhost:${PORT}`)
+  if (req.headers.host?.startsWith('127.0.0.1:')) {
+    radicaleResponse(req, res, pathname)
+    return
+  }
   const profile = profileFor(pathname)
   const origin = req.headers.origin
 

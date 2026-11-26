@@ -70,6 +70,7 @@
       "newJournalEntry": "Nieuwe dagboeknotitie"
     },
     "sidebar": {
+      "reorderCalendar": "{{name}} verplaatsen",
       "previousMonth": "Vorige maand",
       "nextMonth": "Volgende maand",
       "calendars": "Agenda’s",
@@ -98,6 +99,9 @@
       "categories": "Categorieën",
       "useCategoryColors": "Categoriekleuren gebruiken",
       "showCalendarName": "{{name}} tonen",
+      "isolateCalendar": "Alleen deze agenda tonen",
+      "showAllCalendars": "Alle agenda’s tonen",
+      "showAll": "Alles tonen",
       "changeCalendarColor": "Kleur van {{name}} wijzigen",
       "colorPickerFor": "Kleurkiezer voor {{name}}",
       "useColorFor": "{{color}} gebruiken voor {{name}}",
@@ -632,6 +636,7 @@
       "enterUrl": "Voer een agenda-URL in.",
       "updateFailedReason": "Bijwerken mislukt: {{reason}}",
       "subscribeFailedReason": "Abonneren mislukt: {{reason}}",
+      "feedBlocked": "Kan de agenda niet laden. Veel hosts, waaronder Google Agenda, staan niet toe dat browsers hun feeds rechtstreeks lezen. Vul hieronder een proxy-URL in en probeer het opnieuw.",
       "updateFailed": "Agenda-abonnement bijwerken mislukt.",
       "subscribeFailed": "Abonneren op agenda mislukt."
     },

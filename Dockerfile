@@ -5,11 +5,14 @@ RUN npm install -g corepack@latest --force && corepack enable && corepack prepar
 
 # Build-time env vars (overridable via --build-arg)
 ARG VITE_SITE_URL=https://calino.io
+# Serve the app under a subpath, e.g. /cal/. Leave "/" for the site root.
+ARG CALINO_BASE_PATH=/
 ARG CALINO_ENABLE_SW=false
 ARG CALINO_GITHUB_REPO=ivan-malinovski/Calino
 ARG CALINO_CONTACT_EMAIL=calendar@malinov.ski
 ARG CALINO_SELF_HOSTED=true
 ENV VITE_SITE_URL=$VITE_SITE_URL \
+    CALINO_BASE_PATH=$CALINO_BASE_PATH \
     CALINO_ENABLE_SW=$CALINO_ENABLE_SW \
     CALINO_GITHUB_REPO=$CALINO_GITHUB_REPO \
     CALINO_CONTACT_EMAIL=$CALINO_CONTACT_EMAIL \
@@ -31,8 +34,7 @@ RUN node scripts/update-sample-events.mjs && pnpm exec vite build
 # ── Stage 2: Runtime ─────────────────────────────────────────────
 FROM docker.io/library/caddy:2-alpine
 
-# Inline Caddy config — no separate file needed
-RUN printf ':8080 {\n\troot * /srv\n\ttry_files {path} /index.html\n\tfile_server\n\n\trequest_body {\n\t\tmax_size 1mb\n\t}\n\n\tencode gzip\n\n\theader {\n\t\tX-Frame-Options "SAMEORIGIN"\n\t\tX-Content-Type-Options "nosniff"\n\t\tReferrer-Policy "strict-origin-when-cross-origin"\n\t\tPermissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()"\n\t\t-Server\n\t}\n\n\t@assets path /assets/*\n\theader @assets Cache-Control "public, immutable"\n\n\t@sw path /sw.js\n\theader @sw Cache-Control "no-store, no-cache, must-revalidate"\n\theader @sw Service-Worker-Allowed "/"\n\n\tlog {\n\t\toutput stdout\n\t\tformat console\n\t}\n}\n' > /etc/caddy/Caddyfile
+COPY docker/Caddyfile /etc/caddy/Caddyfile
 
 # Copy built assets from build stage
 COPY --from=build /app/dist /srv

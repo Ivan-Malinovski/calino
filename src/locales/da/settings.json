@@ -796,6 +796,19 @@
       "body": "Hvis du har spørgsmål om denne privatlivspolitik, bedes du kontakte:"
     }
   },
+  "hostedConfigSignIn": {
+    "title": "Opret forbindelse til den hostede konfiguration",
+    "description": "Log ind for at hente denne instans’ delte konfiguration.",
+    "username": "Brugernavn",
+    "password": "Adgangskode til login",
+    "skip": "Fortsæt uden",
+    "signIn": "Log ind",
+    "signingIn": "Logger ind…",
+    "unauthorized": "Brugernavnet eller adgangskoden er forkert.",
+    "unavailable": "Kunne ikke hente den hostede konfiguration. Prøv igen.",
+    "insecure": "Åbn denne instans via HTTPS for at logge ind.",
+    "otherProfile": "Denne browserprofil indeholder allerede Calino-data eller tilhører en anden bruger. Åbn Calino i en separat browserprofil."
+  },
   "masterPassword": {
     "overlayAriaLabel": "Lås CalDAV-konti op",
     "title": "Lås CalDAV-konti op",
@@ -898,6 +911,11 @@
       "done": "Færdig →",
       "passwordsMismatch": "Adgangskoderne er ikke ens.",
       "passwordTooShort": "Adgangskoden skal være mindst 6 tegn.",
+      "quickStartHint": "Med Docker til én bruger låser denne adgangskode også den krypterede konfiguration op.",
+      "quickStartDownload": "Download Compose-fil",
+      "quickPasswordTooShort": "Brug mindst 12 tegn til adgangskoden til Docker-login.",
+      "quickStartRun": "Læg <code>compose.yaml</code> i sin egen mappe, og kør <code>docker compose up -d</code> der.",
+      "quickStartOpen": "Åbn <code>http://localhost:8080</code> på Docker-værten, og log ind med den valgte adgangskode.",
       "encryptionFailed": "Kryptering mislykkedes."
     },
     "categories": {

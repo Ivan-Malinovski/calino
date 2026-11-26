@@ -4,12 +4,23 @@ services:
       context: .
       args:
         - VITE_SITE_URL=${VITE_SITE_URL:-https://calino.io}
+        - CALINO_BASE_PATH=${CALINO_BASE_PATH:-/}
         - CALINO_ENABLE_SW=${CALINO_ENABLE_SW:-false}
         - CALINO_GITHUB_REPO=${CALINO_GITHUB_REPO:-ivan-malinovski/Calino}
         - CALINO_CONTACT_EMAIL=${CALINO_CONTACT_EMAIL:-calendar@malinov.ski}
         - CALINO_SELF_HOSTED=${CALINO_SELF_HOSTED:-true}
     ports:
       - "8080:8080"
+    # Optional runtime config. Create the host directory before starting Calino.
+    environment:
+      CALINO_CONFIG_PER_USER: ${CALINO_CONFIG_PER_USER:-false}
+      CALINO_CONFIG_AUTH_USER: ${CALINO_CONFIG_AUTH_USER:-}
+      CALINO_CONFIG_AUTH_HASH: ${CALINO_CONFIG_AUTH_HASH:-}
+      CALINO_CONFIG_AUTH_ALGORITHM: ${CALINO_CONFIG_AUTH_ALGORITHM:-bcrypt}
+      CALINO_CONFIG_QUICK_START: ${CALINO_CONFIG_QUICK_START:-false}
+      CALINO_CONFIG_ALLOW_PUBLIC: ${CALINO_CONFIG_ALLOW_PUBLIC:-false}
+    # volumes:
+    #   - ${CALINO_CONFIG_DIR:-./calino-config}:/calino:ro
     restart: unless-stopped
     # ⚠️ cap_drop ALL removed — Docker Desktop 4.7.1 (runc v1.0.3) has a bug
     # where it drops capabilities needed by the container init process itself,

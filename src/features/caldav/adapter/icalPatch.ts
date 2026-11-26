@@ -102,7 +102,13 @@ export function patchICALData(originalIcs: string, events: CalendarEvent[]): str
     // VEVENT into a VTODO would emit a component with both types' properties.
     if (existing && existing.name === componentName(event)) {
       matched.add(existing)
-      buildInto(event, existing)
+      const sequence = existing.getFirstPropertyValue('sequence')
+      buildInto(
+        typeof sequence === 'number' && sequence > (event.sequence ?? 0)
+          ? { ...event, sequence }
+          : event,
+        existing
+      )
     } else {
       root.addSubcomponent(buildInto(event))
     }

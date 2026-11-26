@@ -101,6 +101,8 @@ import {
 } from '../lib/multiDayFragments'
 import { filterTasksByCollapsedAncestors, getTaskDescendantIds } from '@/lib/taskTree'
 import { useTaskCollapse } from '../hooks/useTaskCollapse'
+import { initialFocusWeek, visibleChips, weekNeed, type MonthRowState } from '../lib/monthRowLayout'
+import { useMonthRowLayout } from '@/hooks/useMonthRowLayout'
 
 // Module-level so `useRovingGrid`'s `handleKeyDown` stays referentially stable.
 // ←/→ move one day, ↑/↓ move one week in the flattened cell list.
@@ -116,6 +118,9 @@ const gridDelta = (key: string): number | null =>
           : null
 
 const DEFAULT_MONTH_AGENDA_GRID_RATIO = 0.4
+
+// Pips a collapsed week row shows beside the first event, before a faint "+".
+const MAX_PIPS = 5
 
 // A fragment that owns its week's title lets the text overflow into the next
 // day cells. The card wrapper's transform makes it a stacking context, so the
@@ -255,7 +260,14 @@ export function CalendarGrid(): JSX.Element {
   // cells are rows of dots — so compressing buys nothing and just leaves past
   // weeks cramped and unevenly sized. Row height only; `isPastWeek` still
   // drives card compactness at the render sites.
-  const compressWeekRows = compressPastWeeks && !isCompactMobile
+  //
+  // Adaptive rows (`useMonthRowLayout`) replace the per-day "Auto" capacity and
+  // past-week compression: they size every week to the grid's height and open
+  // them in priority order, so past weeks are simply the last to open. A fixed
+  // `monthViewEventLimit`, the month+agenda split and compact mobile keep the
+  // flex layout they always had.
+  const adaptiveRowsEnabled = monthViewEventLimit === 0 && !showAgendaSplit && !isCompactMobile
+  const compressWeekRows = compressPastWeeks && !isCompactMobile && !adaptiveRowsEnabled
   const [bottomPanelDay, setBottomPanelDay] = useState<string | null>(null)
   const [splitRatio, setSplitRatio] = useState(monthAgendaSplitRatioSetting)
   const [gridRatio, setGridRatio] = useState(monthAgendaGridRatioSetting)
@@ -1230,7 +1242,7 @@ export function CalendarGrid(): JSX.Element {
   ])
 
   const autoCapacity = useMonthEventCapacity({
-    enabled: autoLimitEnabled,
+    enabled: autoLimitEnabled && !adaptiveRowsEnabled,
     gridRef: gridScrollRef,
     headerSelector: '[data-component="calendar-grid-header"]',
     weekCount: weekNumbers.length,
@@ -1256,6 +1268,81 @@ export function CalendarGrid(): JSX.Element {
       flex: `0 0 ${height}px`,
       '--month-row-min-height': `${PAST_WEEK_MIN_HEIGHT}px`,
     } as React.CSSProperties
+  }
+
+  // ---- Adaptive row heights -------------------------------------------------
+  // Rows drawn per day: its events (a multi-day fragment reserves its lane in
+  // every cell it covers) plus its tasks.
+  const dayItemCounts = useMemo(() => {
+    if (!adaptiveRowsEnabled) return []
+    return days.map((day) => {
+      const dateKey = format(day, 'yyyy-MM-dd')
+      const dayEvents = eventsMap.get(dateKey) || []
+      const lanes = dayEvents.reduce(
+        (count, event) => (event.isFragment ? Math.max(count, (event.laneIndex ?? -1) + 1) : count),
+        0
+      )
+      return Math.max(dayEvents.length, lanes) + (visibleTasksMap.get(dateKey)?.length ?? 0)
+    })
+  }, [adaptiveRowsEnabled, days, eventsMap, visibleTasksMap])
+  const weekNeeds = useMemo(
+    () =>
+      adaptiveRowsEnabled
+        ? weekNumbers.map((_num, weekIdx) =>
+            weekNeed(dayItemCounts.slice(weekIdx * 7, weekIdx * 7 + 7))
+          )
+        : [],
+    [adaptiveRowsEnabled, weekNumbers, dayItemCounts]
+  )
+  // The focused week opens first. By default that is the week of today (or the
+  // next week with anything left in it); once a day takes focus, its week.
+  const focusMonthKey = currentDate.slice(0, 7)
+  const [focusOverride, setFocusOverride] = useState<{ month: string; week: number } | null>(null)
+  const defaultFocusWeek = useMemo(() => {
+    if (!adaptiveRowsEnabled) return 0
+    const todayIndex = days.findIndex((day) => isHomeToday(day))
+    if (todayIndex >= 0) return initialFocusWeek(dayItemCounts, todayIndex).focus
+    const anchorIndex = days.findIndex((day) => format(day, 'yyyy-MM-dd') === currentDate)
+    return anchorIndex >= 0 ? Math.floor(anchorIndex / 7) : 0
+  }, [adaptiveRowsEnabled, days, dayItemCounts, currentDate])
+  const focusWeek =
+    focusOverride && focusOverride.month === focusMonthKey && focusOverride.week < numWeeks
+      ? focusOverride.week
+      : defaultFocusWeek
+  const rowLayout = useMonthRowLayout({
+    enabled: adaptiveRowsEnabled,
+    gridRef: gridScrollRef,
+    headerSelector: '[data-component="calendar-grid-header"]',
+    needs: weekNeeds,
+    focus: focusWeek,
+  })
+  // Clicking a day, or arrowing onto one, focuses its week. Focus events bubble,
+  // so one handler on the rows covers the pointer, the keyboard and the day
+  // number's own button.
+  const handleRowsFocus = (event: React.FocusEvent<HTMLElement>): void => {
+    if (!adaptiveRowsEnabled) return
+    const cell = (event.target as HTMLElement).closest<HTMLElement>('[data-date]')
+    const index = days.findIndex((day) => format(day, 'yyyy-MM-dd') === cell?.dataset.date)
+    if (index < 0) return
+    const week = Math.floor(index / 7)
+    setFocusOverride((previous) =>
+      previous && previous.month === focusMonthKey && previous.week === week
+        ? previous
+        : { month: focusMonthKey, week }
+    )
+  }
+  const adaptiveRowProps = (
+    weekIdx: number
+  ): { style?: React.CSSProperties; 'data-row-state'?: string } => {
+    const row = rowLayout?.rows[weekIdx]
+    if (!rowLayout || !row) return {}
+    return {
+      'data-row-state': row.expanded ? 'expanded' : row.tier,
+      style: {
+        flex: `0 0 ${rowLayout.heights[weekIdx]}px`,
+        '--month-row-min-height': '0px',
+      } as React.CSSProperties,
+    }
   }
 
   // Auto is on but nothing has been measured yet (first paint, or a hidden
@@ -1611,6 +1698,7 @@ export function CalendarGrid(): JSX.Element {
             ref={gridScrollRef}
             className={styles.grid}
             data-component="calendar-grid"
+            data-adaptive-rows={rowLayout ? '' : undefined}
             onKeyDown={handleGridKeyDown}
             style={
               {
@@ -1646,6 +1734,7 @@ export function CalendarGrid(): JSX.Element {
               className={styles.daysContainer}
               onMouseDown={handleCreateDragStart}
               onMouseMove={handleCreateDragMove}
+              onFocus={handleRowsFocus}
             >
               {weekNumbers.map((weekNum, weekIdx) => {
                 const weekEnd = days[weekIdx * 7 + 6]
@@ -1657,6 +1746,7 @@ export function CalendarGrid(): JSX.Element {
                     key={weekIdx}
                     className={`${styles.weekRow} ${!showGutter ? styles.weekRowNoWeekNum : !showWeekNumbers ? styles.weekRowSlim : ''} ${compressWeekRows && isPastWeek ? styles.compressedWeek : ''}`}
                     style={pastWeekRowStyle(weekIdx, compressWeekRows && isPastWeek)}
+                    {...adaptiveRowProps(weekIdx)}
                   >
                     {showGutter && (
                       <WeekGutterCell
@@ -1715,6 +1805,7 @@ export function CalendarGrid(): JSX.Element {
                           isPastWeek={isPastWeek}
                           compactRecurringEvents={compactRecurringEvents}
                           monthViewEventLimit={fixedEventLimit}
+                          rowState={rowLayout?.rows[weekIdx] ?? null}
                           monthCapacity={
                             compressWeekRows && isPastWeek
                               ? (autoCapacity?.pastWeeks[weekIdx]?.capacity ??
@@ -1827,6 +1918,12 @@ interface DroppableDayProps {
   monthViewEventLimit: number
   /** Rows the cell measures out to in "Auto" mode; null means use the setting. */
   monthCapacity: MonthCellCapacity | null
+  /**
+   * How the adaptive row layout wants this cell's week drawn: expanded (events
+   * listed, "+N more" when they overflow) or collapsed to a one- or two-line
+   * summary. Null leaves the cell to `monthViewEventLimit` / `monthCapacity`.
+   */
+  rowState?: MonthRowState | null
   isMobile: boolean
   isCompactMobile: boolean
   taskHasSubtasks: (taskId: string) => boolean
@@ -1869,6 +1966,7 @@ const DroppableDay = React.memo(function DroppableDay({
   compactRecurringEvents,
   monthViewEventLimit,
   monthCapacity,
+  rowState = null,
   isMobile,
   isCompactMobile,
   taskHasSubtasks,
@@ -1894,6 +1992,21 @@ const DroppableDay = React.memo(function DroppableDay({
   // forced compact), so costing it full-height errs towards a spare gap rather
   // than an overflowing cell.
   const { eventLimit, taskLimit } = useMemo(() => {
+    if (rowState?.expanded) {
+      // Every item is drawn until the row runs out of slots; then the last slot
+      // becomes "+N more". Events take the slots first, tasks the rest. A
+      // multi-day lane that has no event today still holds its row as a spacer.
+      const lanes = dayEvents.reduce(
+        (count, event) => (event.isFragment ? Math.max(count, (event.laneIndex ?? -1) + 1) : count),
+        0
+      )
+      const eventRows = Math.max(dayEvents.length, lanes)
+      const { show } = visibleChips(eventRows + dayTasks.length, rowState.cap)
+      return {
+        eventLimit: Math.min(dayEvents.length, show),
+        taskLimit: Math.max(0, show - eventRows),
+      }
+    }
     if (!monthCapacity) return { eventLimit: monthViewEventLimit, taskLimit: monthViewEventLimit }
     const height = monthCapacity.itemHeights
     const eventHeights = dayEvents.map(
@@ -1904,6 +2017,7 @@ const DroppableDay = React.memo(function DroppableDay({
     )
     return fitMonthCell(monthCapacity.contentHeight, eventHeights, taskHeights)
   }, [
+    rowState,
     monthCapacity,
     monthViewEventLimit,
     dayEvents,
@@ -2018,6 +2132,98 @@ const DroppableDay = React.memo(function DroppableDay({
     setContextMenu({ x: e.clientX, y: e.clientY })
   }
 
+  const dayNumberButton = (
+    <button
+      className={styles.dayNumber}
+      onClick={(e) => {
+        e.stopPropagation()
+        onDayNumberClick(day)
+      }}
+      aria-label={t('views.grid.openDayView', {
+        date: formatDisplayDate(day, 'EEEE, MMMM d'),
+      })}
+    >
+      {format(day, 'd')}
+    </button>
+  )
+  const journalIndicator =
+    journalEnabled &&
+    hasJournal &&
+    // #79: on compact mobile this is an indicator, not a control —
+    // same call as the event dots. A span (rather than a button with
+    // its click removed) keeps it out of the tab order and off the
+    // a11y tree as a control, and lets the tap reach the day cell.
+    (isCompactMobile ? (
+      <span
+        className={styles.journalIndicator}
+        role="img"
+        aria-label={t('views.grid.hasJournalEntriesFor', {
+          date: formatDisplayDate(day, 'MMMM d'),
+        })}
+      >
+        <span className={styles.journalIndicatorDot} />
+        {journalIndicatorIcon}
+      </span>
+    ) : (
+      <button
+        className={styles.journalIndicator}
+        title={t('views.grid.viewJournalEntries')}
+        aria-label={t('views.grid.viewJournalEntriesFor', {
+          date: formatDisplayDate(day, 'MMMM d'),
+        })}
+        onClick={(e) => {
+          e.stopPropagation()
+          onJournalIndicatorClick(day)
+        }}
+      >
+        <span className={styles.journalIndicatorDot} />
+        {journalIndicatorIcon}
+      </button>
+    ))
+
+  // Collapsed rows (adaptive layout): the first item as a one-line chip, every
+  // other item as a coloured pip. Events come before tasks, as in an open row.
+  const collapsedItems = rowState && !rowState.expanded ? [...dayEvents, ...dayTasks] : []
+  const collapsedFirst = collapsedItems[0]
+  const collapsedChip =
+    collapsedFirst && rowState?.tier !== 'dots' ? (
+      <div
+        className={styles.collapsedChip}
+        style={fragmentTitleWrapperStyle(collapsedFirst, isWeekStart)}
+      >
+        <EventCard
+          event={collapsedFirst}
+          compact
+          isMobileMonth={isMobile}
+          enableResize={false}
+          monthView
+          hideFragmentTitle={
+            collapsedFirst.isFragment && !collapsedFirst.isFirstFragment && !isWeekStart
+          }
+          fragmentSpanDays={fragmentSpanDays(collapsedFirst, day, weekDaysLeft)}
+        />
+      </div>
+    ) : null
+  const collapsedPipItems = collapsedItems.slice(rowState?.tier === 'dots' ? 0 : 1)
+  const collapsedPips =
+    collapsedPipItems.length > 0 ? (
+      <div className={styles.pips} aria-hidden>
+        {collapsedPipItems.slice(0, MAX_PIPS).map((item) => (
+          <EventCard
+            key={item.id}
+            event={item}
+            compact
+            dotMode
+            isMobileMonth={isMobile}
+            enableResize={false}
+            monthView
+            clickDisabled
+          />
+        ))}
+        {collapsedPipItems.length > MAX_PIPS && <span className={styles.pipsMore}>+</span>}
+      </div>
+    ) : null
+
   return (
     <motion.div
       ref={setNodeRef}
@@ -2051,54 +2257,20 @@ const DroppableDay = React.memo(function DroppableDay({
           height: '100%',
         }}
       >
-        <div className={styles.dayHeader}>
-          <button
-            className={styles.dayNumber}
-            onClick={(e) => {
-              e.stopPropagation()
-              onDayNumberClick(day)
-            }}
-            aria-label={t('views.grid.openDayView', {
-              date: formatDisplayDate(day, 'EEEE, MMMM d'),
-            })}
-          >
-            {format(day, 'd')}
-          </button>
-          {journalEnabled &&
-            hasJournal &&
-            // #79: on compact mobile this is an indicator, not a control —
-            // same call as the event dots. A span (rather than a button with
-            // its click removed) keeps it out of the tab order and off the
-            // a11y tree as a control, and lets the tap reach the day cell.
-            (isCompactMobile ? (
-              <span
-                className={styles.journalIndicator}
-                role="img"
-                aria-label={t('views.grid.hasJournalEntriesFor', {
-                  date: formatDisplayDate(day, 'MMMM d'),
-                })}
-              >
-                <span className={styles.journalIndicatorDot} />
-                {journalIndicatorIcon}
-              </span>
-            ) : (
-              <button
-                className={styles.journalIndicator}
-                title={t('views.grid.viewJournalEntries')}
-                aria-label={t('views.grid.viewJournalEntriesFor', {
-                  date: formatDisplayDate(day, 'MMMM d'),
-                })}
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onJournalIndicatorClick(day)
-                }}
-              >
-                <span className={styles.journalIndicatorDot} />
-                {journalIndicatorIcon}
-              </button>
-            ))}
-        </div>
-        {isCompactMobile ? (
+        {rowState && !rowState.expanded ? (
+          <div className={styles.collapsedDay} data-tier={rowState.tier}>
+            {dayNumberButton}
+            {collapsedChip}
+            {collapsedPips}
+            {rowState.tier === 'mini' && journalIndicator}
+          </div>
+        ) : (
+          <div className={styles.dayHeader}>
+            {dayNumberButton}
+            {journalIndicator}
+          </div>
+        )}
+        {rowState && !rowState.expanded ? null : isCompactMobile ? (
           <>
             {/*
                 #79: multi-day bars get their own row above the single-day
@@ -2244,6 +2416,7 @@ const DroppableDay = React.memo(function DroppableDay({
                   )
                   const shouldCompact =
                     slot.forceCompact ||
+                    !!rowState ||
                     isPastWeek ||
                     (compactRecurringEvents &&
                       (!!event.rruleString ||

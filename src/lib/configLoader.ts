@@ -1,4 +1,6 @@
+import { Capacitor } from '@capacitor/core'
 import { z } from 'zod'
+import { loadLinkSchemes } from './appLinks'
 import { isMasterEncryptedData, type MasterEncryptedData } from './crypto'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -19,7 +21,10 @@ export interface PreconfiguredWebcal {
   proxyUrl?: string
 }
 
+export const QUICK_START_USERNAME = 'calino'
+
 export interface CalinoConfig {
+  unlockWithSignIn?: true
   version: number
   accounts: PreconfiguredAccount[]
   webcalSubscriptions: PreconfiguredWebcal[]
@@ -31,7 +36,16 @@ declare const __CALINO_CONFIG__: Record<string, unknown> | null
 
 // ─── Config loading ──────────────────────────────────────────────────────────
 
-let cachedConfig: CalinoConfig | null | undefined
+export interface LoadedConfig {
+  config: CalinoConfig | null
+  linkSchemes: Record<string, string>
+  requiresSignIn?: true
+  perUser?: true
+  quickStart?: true
+  verifiedUser?: string
+}
+
+let configLoad: Promise<LoadedConfig> | undefined
 
 const MasterEncryptedDataSchema = z.custom<MasterEncryptedData>(
   (value) => isMasterEncryptedData(value),
@@ -55,33 +69,114 @@ const PreconfiguredWebcalSchema = z.object({
 
 const CalinoConfigEnvelopeSchema = z.object({
   version: z.literal(1),
+  unlockWithSignIn: z.literal(true).optional(),
   accounts: z.array(z.unknown()).default([]),
   webcalSubscriptions: z.array(z.unknown()).optional(),
 })
 
-/**
- * Load self-hosted config.
- * The config is baked into the JS bundle at build time (not served as a separate file).
- * Returns null if no config was provided at build time (not self-hosted mode).
- */
+const SIGN_IN_REQUIRED = Symbol('config sign-in required')
+const PER_USER_SIGN_IN_REQUIRED = Symbol('per-user config sign-in required')
+const QUICK_START_SIGN_IN_REQUIRED = Symbol('quick start sign-in required')
+
+function fetchRuntimeConfig(authorization?: string): Promise<Response> {
+  return fetch(`${import.meta.env.BASE_URL}calino.config.json`, {
+    cache: 'no-store',
+    headers: {
+      'X-Calino-Config-Fetch': '1',
+      ...(authorization ? { Authorization: authorization } : {}),
+    },
+    redirect: 'error',
+    signal: AbortSignal.timeout(5000),
+  })
+}
+
+async function selectConfig(): Promise<unknown> {
+  const bundled = typeof __CALINO_CONFIG__ === 'undefined' ? null : __CALINO_CONFIG__
+  if (!__CALINO_RUNTIME_CONFIG__ || Capacitor.isNativePlatform()) return bundled
+
+  try {
+    const response = await fetchRuntimeConfig()
+    const mode = response.headers.get('X-Calino-Config-Mode')
+    if (mode === 'quick-start') return QUICK_START_SIGN_IN_REQUIRED
+    if (mode === 'per-user') {
+      return PER_USER_SIGN_IN_REQUIRED
+    }
+    if (response.status === 401 && response.headers.get('X-Calino-Config-Auth') === 'basic') {
+      return SIGN_IN_REQUIRED
+    }
+    if (response.status === 404 || response.headers.get('content-type')?.includes('text/html')) {
+      return bundled
+    }
+    if (!response.ok) {
+      console.warn('[configLoader] Runtime config request failed:', response.status)
+      return bundled
+    }
+    try {
+      return await response.json()
+    } catch {
+      console.warn('[configLoader] Runtime config is not valid JSON')
+      return null
+    }
+  } catch {
+    console.warn('[configLoader] Runtime config is unavailable; using bundled config')
+    return bundled
+  }
+}
+
+export function loadConfigDocument(): Promise<LoadedConfig> {
+  return (configLoad ??= readConfigDocument())
+}
+
 export async function loadConfig(): Promise<CalinoConfig | null> {
-  // Return cached result if already loaded
-  if (cachedConfig !== undefined) {
-    return cachedConfig
+  return (await loadConfigDocument()).config
+}
+
+async function readConfigDocument(): Promise<LoadedConfig> {
+  const raw = await selectConfig()
+  if (raw === PER_USER_SIGN_IN_REQUIRED) {
+    return { config: null, linkSchemes: {}, requiresSignIn: true, perUser: true }
   }
-
-  // __CALINO_CONFIG__ is injected by Vite's define at build time
-  // It's null if calino.config.json doesn't exist
-  if (typeof __CALINO_CONFIG__ === 'undefined' || __CALINO_CONFIG__ === null) {
-    cachedConfig = null
-    return null
+  if (raw === QUICK_START_SIGN_IN_REQUIRED) {
+    return { config: null, linkSchemes: {}, requiresSignIn: true, quickStart: true }
   }
+  if (raw === SIGN_IN_REQUIRED) return { config: null, linkSchemes: {}, requiresSignIn: true }
+  return parseConfig(raw) ?? { config: null, linkSchemes: {} }
+}
 
-  const envelope = CalinoConfigEnvelopeSchema.safeParse(__CALINO_CONFIG__)
+export async function signInToRuntimeConfig(
+  username: string,
+  password: string
+): Promise<LoadedConfig | 'unauthorized' | 'unavailable' | 'insecure'> {
+  if (!window.isSecureContext) return 'insecure'
+  if (username.includes(':')) return 'unauthorized'
 
+  try {
+    const bytes = new TextEncoder().encode(`${username}:${password}`)
+    const encoded = btoa(Array.from(bytes, (byte) => String.fromCharCode(byte)).join(''))
+    const response = await fetchRuntimeConfig(`Basic ${encoded}`)
+    if (response.status === 401 || response.status === 403) return 'unauthorized'
+    if (!response.ok) return 'unavailable'
+    const document = parseConfig(await response.json())
+    if (!document) return 'unavailable'
+    const mode = response.headers.get('X-Calino-Config-Mode')
+    if (mode === 'quick-start') return { ...document, quickStart: true }
+    if (mode !== 'per-user') return document
+
+    const verifiedUser = response.headers.get('X-Calino-Config-User')
+    if (!verifiedUser || !/^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/.test(verifiedUser))
+      return 'unavailable'
+    return { ...document, perUser: true, verifiedUser }
+  } catch {
+    return 'unavailable'
+  }
+}
+
+function parseConfig(raw: unknown): LoadedConfig | null {
+  if (raw === null) return null
+
+  const envelope = CalinoConfigEnvelopeSchema.safeParse(raw)
   if (!envelope.success) {
     console.warn('[configLoader] Invalid config, ignoring', envelope.error.issues)
-    cachedConfig = null
     return null
   }
 
@@ -105,19 +200,23 @@ export async function loadConfig(): Promise<CalinoConfig | null> {
     }
   }
 
-  if (accounts.length === 0 && webcalSubscriptions.length === 0) {
-    cachedConfig = null
-    return null
+  return {
+    config:
+      accounts.length || webcalSubscriptions.length
+        ? {
+            version: 1,
+            accounts,
+            webcalSubscriptions,
+            ...(envelope.data.unlockWithSignIn ? { unlockWithSignIn: true } : {}),
+          }
+        : null,
+    linkSchemes: loadLinkSchemes(raw),
   }
-
-  const config: CalinoConfig = { version: 1, accounts, webcalSubscriptions }
-  cachedConfig = config
-  return config
 }
 
 /**
  * Reset cached config (for testing).
  */
 export function resetConfigCache(): void {
-  cachedConfig = undefined
+  configLoad = undefined
 }

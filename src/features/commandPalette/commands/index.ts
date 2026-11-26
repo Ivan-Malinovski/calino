@@ -9,7 +9,8 @@ import { formatDisplayDate } from '@/lib/datetime'
 import { homeDayKey } from '@/lib/homeTimezone'
 import i18n from '@/lib/i18n'
 
-const t = (key: string, opts?: Record<string, unknown>): string => i18n.t(`commands:${key}`, opts)
+const t = (key: string, opts?: Record<string, unknown>): string =>
+  i18n.t(`commands:${key}`, opts ?? {})
 
 interface CommandFactoryDeps {
   navigate: (path: string) => void
@@ -315,7 +316,8 @@ const createActionCommands = (deps: CommandFactoryDeps): Command[] => [
   },
   {
     id: 'toggle-dark-mode',
-    label: deps.themeMode === 'dark' ? t('actions.switchToLightMode') : t('actions.switchToDarkMode'),
+    label:
+      deps.themeMode === 'dark' ? t('actions.switchToLightMode') : t('actions.switchToDarkMode'),
     category: 'actions',
     keywords: ['dark mode', 'light mode', 'theme', 'toggle', 'appearance'],
     icon: deps.themeMode === 'dark' ? ICONS.sun : ICONS.moon,
@@ -356,8 +358,7 @@ const createActionCommands = (deps: CommandFactoryDeps): Command[] => [
   },
   {
     id: 'toggle-time-format',
-    label:
-      deps.timeFormat === '24h' ? t('actions.switchTo12Hour') : t('actions.switchTo24Hour'),
+    label: deps.timeFormat === '24h' ? t('actions.switchTo12Hour') : t('actions.switchTo24Hour'),
     category: 'actions',
     keywords: ['time format', '12h', '24h', 'clock', 'toggle'],
     icon: ICONS.clock,

@@ -19,6 +19,46 @@ describe('calendarStore', () => {
     useCalendarStore.setState({ selectedCategoryIds: [] })
   })
 
+  it('keeps manual calendar order through discovery updates, additions and deletions', () => {
+    const store = useCalendarStore.getState()
+    const calendar = (id: string) => ({
+      id,
+      name: id,
+      color: '#112233',
+      showTasksInViews: true,
+      isVisible: true,
+      isDefault: false,
+    })
+    store.addCalendar(calendar('order-a'))
+    store.addCalendar(calendar('order-b'))
+    store.reorderCalendar('order-b', 'order-a')
+    expect(
+      useCalendarStore
+        .getState()
+        .calendars.slice(-2)
+        .map((item) => item.id)
+    ).toEqual(['order-b', 'order-a'])
+    store.addCalendar({ ...calendar('order-a'), name: 'Server renamed A' })
+    expect(
+      useCalendarStore
+        .getState()
+        .calendars.slice(-2)
+        .map((item) => item.id)
+    ).toEqual(['order-b', 'order-a'])
+    store.addCalendar(calendar('order-c'))
+    store.deleteCalendar('order-b')
+    const current = useCalendarStore
+      .getState()
+      .calendars.filter((item) => item.id.startsWith('order-'))
+    expect(current.map((item) => item.id)).toEqual(['order-a', 'order-c'])
+    expect(current[0].name).toBe('Server renamed A')
+    const before = useCalendarStore.getState().calendars
+    store.reorderCalendar('missing', 'order-a')
+    store.reorderCalendar('order-a', 'missing')
+    store.reorderCalendar('order-a', 'order-a')
+    expect(useCalendarStore.getState().calendars).toBe(before)
+  })
+
   describe('addEvent', () => {
     it('adds an event to the store', () => {
       const store = useCalendarStore.getState()
@@ -983,6 +1023,7 @@ describe('calendarStore', () => {
         brokenEvents: [{ event: { id: 'b1' }, reason: 'bad', detectedAt: '2024-01-01' }],
         currentDate: '2024-06-15',
         selectedCategoryIds: ['cat1'],
+        calendarVisibilitySnapshot: { c1: false },
       }
       const result = getMigrate()(persisted)
       expect(result.events).toHaveLength(1)
@@ -995,6 +1036,7 @@ describe('calendarStore', () => {
       expect(result.currentDate).toBe(format(new Date(), 'yyyy-MM-dd'))
       expect(result.currentView).toBe('month')
       expect(result.selectedCategoryIds).toEqual(['cat1'])
+      expect(result.calendarVisibilitySnapshot).toEqual({ c1: false })
     })
 
     it('falls back to defaults for missing keys', () => {
@@ -1005,6 +1047,7 @@ describe('calendarStore', () => {
       expect(result.autoCategoryRules).toEqual([])
       expect(result.brokenEvents).toEqual([])
       expect(result.selectedCategoryIds).toEqual([])
+      expect(result.calendarVisibilitySnapshot).toBeNull()
       // currentDate falls back to today; just verify it's a yyyy-MM-dd string
       expect(result.currentDate).toMatch(/^\d{4}-\d{2}-\d{2}$/)
       // currentView falls back to 'month'

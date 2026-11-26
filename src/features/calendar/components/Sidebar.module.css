@@ -10,13 +10,13 @@
   background: var(--canvas);
   display: flex;
   flex-direction: column;
-  padding: 1px 20px 0 20px;
+  padding-top: 1px;
   gap: var(--space-4);
   overflow: hidden;
   transition:
     width 0.3s cubic-bezier(0.32, 0.72, 0, 1),
     min-width 0.3s cubic-bezier(0.32, 0.72, 0, 1),
-    padding 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+    padding-top 0.3s cubic-bezier(0.32, 0.72, 0, 1);
   position: relative;
 }
 
@@ -45,15 +45,9 @@
   width: 100%;
   opacity: 1;
   transition: opacity 0.2s ease;
-  /* .sidebar clips overflow, so without this the sections past the bottom of
-     a short viewport (a long task list, many calendars) were simply
-     unreachable. */
+  /* Keep the gutters inside the scrollport so card shadows can paint into them. */
+  padding-inline: 20px;
   overflow-y: auto;
-  /* `overflow-y: auto` alone computes the x axis to `auto` as well, so any
-     child a fraction of a pixel too wide — the mini calendar's grid once the
-     vertical scrollbar eats into the width, a card's shadow — put a horizontal
-     scrollbar under the whole sidebar. Nothing here is meant to scroll
-     sideways. */
   overflow-x: hidden;
   overscroll-behavior: contain;
 }
@@ -69,7 +63,7 @@
   opacity: 0;
   pointer-events: none;
   position: absolute;
-  width: calc(var(--sidebar-width, 300px) - 40px);
+  width: var(--sidebar-width, 300px);
 }
 
 .expandButton {
@@ -637,12 +631,21 @@
   animation: spin 1s linear infinite;
 }
 
+.showAllCalendarsButton {
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  color: var(--accent-strong, var(--accent));
+}
+
 .calendarItem {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 6px 8px;
+  padding: 6px 16px 6px 8px;
   margin: 0 -8px;
+  width: calc(100% + 16px);
+  box-sizing: border-box;
   border-radius: var(--radius-sm);
   cursor: pointer;
   transition: background-color var(--dur-fast);
@@ -852,8 +855,10 @@
   font-size: 14px;
   color: var(--ink);
   cursor: pointer;
-  padding: 6px 8px;
+  padding: 6px 16px 6px 8px;
   margin: 0 -8px;
+  width: calc(100% + 16px);
+  box-sizing: border-box;
   border-radius: var(--radius-sm);
   transition: background var(--dur-fast);
 }
@@ -1050,8 +1055,10 @@
   display: flex;
   align-items: flex-start;
   gap: 11px;
-  padding: 6px 8px;
+  padding: 6px 16px 6px 8px;
   margin: 0 -8px;
+  width: calc(100% + 16px);
+  box-sizing: border-box;
   border-radius: var(--radius-sm);
   transition: background var(--dur-fast);
   cursor: pointer;
@@ -1731,5 +1738,51 @@
 @media (pointer: coarse) {
   .renameInput {
     font-size: 16px;
+  }
+}
+
+.calendarDragHandle {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 20px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--ink-3);
+  cursor: grab;
+  touch-action: none;
+  opacity: 0;
+  transition: opacity var(--dur-fast);
+}
+
+.calendarDragHandle:hover,
+.calendarDragHandle:focus-visible {
+  color: var(--ink);
+  background: rgba(var(--ink-raw, 44, 40, 33), 0.06);
+}
+
+.calendarDragging {
+  position: relative;
+  z-index: 2;
+  background: var(--canvas);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.calendarDragging .calendarDragHandle {
+  cursor: grabbing;
+}
+
+.calendarItem:hover .calendarDragHandle,
+.calendarItem:focus-within .calendarDragHandle,
+.calendarDragging .calendarDragHandle {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .calendarDragHandle {
+    opacity: 1;
   }
 }

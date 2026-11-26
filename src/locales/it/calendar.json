@@ -70,6 +70,7 @@
       "newJournalEntry": "Nuova voce del diario"
     },
     "sidebar": {
+      "reorderCalendar": "Riordina {{name}}",
       "previousMonth": "Mese precedente",
       "nextMonth": "Il mese prossimo",
       "calendars": "Calendari",
@@ -98,6 +99,9 @@
       "categories": "Categorie",
       "useCategoryColors": "Usa i colori delle categorie",
       "showCalendarName": "Mostra {{name}}",
+      "isolateCalendar": "Mostra solo questo calendario",
+      "showAllCalendars": "Mostra tutti i calendari",
+      "showAll": "Mostra tutti",
       "changeCalendarColor": "Cambia il colore di {{name}}",
       "colorPickerFor": "Selettore colore per {{name}}",
       "useColorFor": "Usa {{color}} per {{name}}",
@@ -632,6 +636,7 @@
       "enterUrl": "Inserisci l’URL di un calendario.",
       "updateFailedReason": "Impossibile aggiornare: {{reason}}",
       "subscribeFailedReason": "Impossibile iscriversi: {{reason}}",
+      "feedBlocked": "Impossibile caricare il calendario. Molti host, tra cui Google Calendar, non consentono ai browser di leggere direttamente i loro feed. Aggiungi un URL proxy qui sotto e riprova.",
       "updateFailed": "Impossibile aggiornare l’iscrizione al calendario.",
       "subscribeFailed": "Impossibile iscriversi al calendario."
     },

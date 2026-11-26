@@ -4,9 +4,83 @@ All notable changes to Calino will be documented in this file.
 
 ## [Unreleased]
 
+This release lets you reorder and isolate calendars in the sidebar, suggests attendees as you type, adds Simplified Chinese, and gives self-hosters runtime configuration and subpath deployments. It also asks before discarding unsaved event edits, sizes month rows to the window, and fixes a long list of CalDAV, CardDAV and JMAP interoperability problems.
+
 ### Added
 
 - **Rolling completion for repeating tasks, per calendar** ([#244](https://github.com/Ivan-Malinovski/calino/issues/244)). A task list can complete repeats by moving the task to its next date and saving the finished one as its own task, the shape DAVx⁵/OpenTasks and Tasks.org can sync back. Turn it on from the calendar's **Settings** in the sidebar. When a list's tasks come from Tasks.org or OpenTasks, Calino asks once, right after you complete a repeat there; it never switches on its own. Lists keep the Thunderbird-compatible default otherwise.
+
+- **Reorder calendars in the sidebar** ([#291](https://github.com/Ivan-Malinovski/calino/pull/291)). Drag a calendar by the handle on the left of its row. The handle appears on hover or keyboard focus and stays visible on touch devices. The order survives reloads and calendar discovery, and newly discovered calendars are added at the end.
+
+- **Show only one calendar** ([#267](https://github.com/Ivan-Malinovski/calino/pull/267)). Right-click a calendar and choose “Show only this calendar”, or Alt/Option-click its checkbox, to hide every other calendar. A “Show all” button in the Calendars header then restores the selection you had before, even after a reload. Thanks to [@networksaphyra](https://github.com/networksaphyra) for the feature.
+
+- **Attendee suggestions** ([#248](https://github.com/Ivan-Malinovski/calino/issues/248), [#249](https://github.com/Ivan-Malinovski/calino/pull/249)). The attendee field suggests people as you type, drawn from your contacts, from the attendees and organizers of your events, and from the owners of calendars shared with you on CalDAV. People you meet often and recently rank first, your own addresses are never offered, and typing sends no requests. JMAP accounts are included. Thanks to [@caewa](https://github.com/caewa) for the feature.
+
+- **Simplified Chinese** ([#239](https://github.com/Ivan-Malinovski/calino/pull/239)). Calino is now available in 简体中文, including the Android background-sync notifications and localized dates. Thanks to [@Wine90](https://github.com/Wine90) for the translation.
+
+- **Runtime configuration for self-hosted Calino** ([#292](https://github.com/Ivan-Malinovski/calino/pull/292)). The prebuilt Docker image can read a mounted `calino.config.json`, so replacing the file takes effect on reload without rebuilding. The config endpoint is private by default and Calino handles sign-in in the app. Shared mode provisions accounts and feeds for everyone; per-user mode serves an encrypted config chosen by the verified sign-in identity. The single-user `/setup` wizard can export a ready-to-run `compose.yaml` where one password both signs in and unlocks the config. See [docs/SELF_HOSTED_CONFIG.md](docs/SELF_HOSTED_CONFIG.md). The idea came from [CalinoWCG](https://github.com/Ivan-Malinovski/calino/discussions/223).
+
+- **Subpath deployments** ([#278](https://github.com/Ivan-Malinovski/calino/pull/278)). Set `CALINO_BASE_PATH` (for example `/cal/`) at build time to serve Calino below the site root. Vite assets, client-side routes, the PWA manifest, service-worker registration and in-app links now follow the configured base, and `VITE_SITE_URL` can include the same subpath for canonical and social metadata. The Docker image accepts the value as a build arg. Thanks to [@Alex1607](https://github.com/Alex1607) for the feature.
+
+- **Radicale subscriptions appear in Calino** ([#237](https://github.com/Ivan-Malinovski/calino/issues/237), [#240](https://github.com/Ivan-Malinovski/calino/pull/240)). External feeds that Radicale holds as subscribed collections are now mirrored as read-only webcal subscriptions. They follow renames and feed-URL changes on the server and disappear when removed there. A feed you already subscribed to by hand is left alone.
+
+### Changed
+
+- **Month rows size to the window.** On a short window every week stays visible without scrolling, on a medium one the current week opens first, and on a tall one busy weeks expand to list their events. The week holding keyboard focus gets the room, and a short window also tightens the top bar.
+
+- **Unsaved event edits are kept** ([#247](https://github.com/Ivan-Malinovski/calino/pull/247)). With unsaved changes, a click outside the event editor or Escape now asks “Save your changes?” with Save, Discard and Keep editing, as the Android app does, instead of throwing the edit away. Close and Cancel still close without asking, and an unchanged event still closes at once. Thanks to [@caewa](https://github.com/caewa).
+
+- **Faster on distant servers** ([#257](https://github.com/Ivan-Malinovski/calino/issues/257)). Calino reuses one connected CalDAV client per account instead of connecting again for every write, which removes several round trips per edit on high-latency connections.
+
+- **Blocked feeds point at the proxy** ([#265](https://github.com/Ivan-Malinovski/calino/issues/265), [#266](https://github.com/Ivan-Malinovski/calino/pull/266)). When an .ics feed cannot be fetched at all and no proxy is set, the subscribe dialog opens the proxy field and explains that some hosts, such as Google Calendar, do not let browsers read their feeds directly. Thanks to [@Pwnion](https://github.com/Pwnion).
+
+- **Clearer self-hosted diagnostics** ([#259](https://github.com/Ivan-Malinovski/calino/pull/259)). SabreDAV-based server roots (Davis, Baïkal, Nextcloud) no longer report false warnings, the ETag check reads a real event found through discovery, and the write test runs against one of the account's own calendars. Thanks to [@chrisf4lc0n](https://github.com/chrisf4lc0n).
+
+- **New calendars carry both colour properties.** Creating a calendar now writes RFC 7986's `COLOR` alongside Apple's `calendar-color`, as updating one already did, so clients that prefer either property see the colour.
+
+### Fixed
+
+- **A missed recurring task goes overdue instead of skipping ahead** ([#275](https://github.com/Ivan-Malinovski/calino/issues/275)). When a repeating task's start or due date fell off its own pattern, for example a "monthly on the 15th" task whose due date another app moved to the 18th, Calino dropped that first date and showed the next slot on the pattern, so an unfinished task looked done and due next month. RFC 5545 counts that date as the first occurrence, and Calino now does too: the task stays on its real due date and turns overdue when it passes. The calendar grid and search show the same date, and recurring events get the same correction.
+
+- **Task reminders reach other CalDAV clients** ([#277](https://github.com/Ivan-Malinovski/calino/pull/277)). A timed task created in Calino now writes a `VALARM` at its due time (absolute UTC trigger, `ACTION:DISPLAY`), so Apple Reminders and similar clients schedule a notification instead of only displaying the task. Existing alarms are preserved, and absolute triggers move with `DUE` when the task is edited. Alarms created by Calino are removed when a task is completed, loses its due time, or becomes recurring. Recurring and date-only tasks keep Calino's local due-date reminder. Thanks to [@Alex1607](https://github.com/Alex1607).
+
+- **Server-side changes survive the next edit** ([#284](https://github.com/Ivan-Malinovski/calino/pull/284)). When a CalDAV server rewrites an event on save and returns no strong ETag, Calino reads the stored event back before the next edit, so properties the server added are no longer dropped. Moves between calendars do the same, and recurring events keep each occurrence's own `SEQUENCE`. Thanks to [@nrydanov](https://github.com/nrydanov).
+
+- **Radicale setup recovers from discovery redirects** ([#271](https://github.com/Ivan-Malinovski/calino/issues/271), [#290](https://github.com/Ivan-Malinovski/calino/pull/290)). When the well-known redirect lands on Radicale's web interface and the browser blocks it, setup now retries the exact URL you entered, keeping its trailing slash, instead of stopping.
+
+- **Shared Radicale calendars are writable again** ([#236](https://github.com/Ivan-Malinovski/calino/pull/236)). A calendar that grants only `write-content`, as Radicale does for calendars shared read-write, is no longer shown read-only or left out of the event form's calendar picker.
+
+- **Read-only address books stay read-only** ([#253](https://github.com/Ivan-Malinovski/calino/pull/253)). An address book shared with read access only, such as a team directory, is no longer offered for new or edited contacts.
+
+- **Invitations name you as the organizer** ([#242](https://github.com/Ivan-Malinovski/calino/pull/242), [#243](https://github.com/Ivan-Malinovski/calino/pull/243)). Saving an event with attendees and no organizer now names your account's calendar address, with your display name, as `ORGANIZER` on CalDAV and as the owner participant on JMAP, so the server knows who sends the invitations.
+
+- **Categories with commas stay whole** ([#252](https://github.com/Ivan-Malinovski/calino/pull/252)). A category such as “R, D” is no longer split into two on load and written back that way for every client sharing the calendar.
+
+- **Contact names import correctly** ([#280](https://github.com/Ivan-Malinovski/calino/pull/280)). Names and organizations with parameters, as Android and Outlook export them (`FN;CHARSET=UTF-8:`), and quoted-printable vCard 2.1 values are now read instead of saving the contact as “Unknown”. Thanks to [@jayhemnani9910](https://github.com/jayhemnani9910).
+
+- **Escaped commas and semicolons in contacts** ([#255](https://github.com/Ivan-Malinovski/calino/pull/255)). A contact named “Martin, Jean” no longer shows a backslash, and saving it no longer adds another escape on the server each time.
+
+- **Double quotes in JMAP contacts** ([#254](https://github.com/Ivan-Malinovski/calino/issues/254)). A `"` in a vCard value is now an ordinary character, so the fields after it are no longer swallowed.
+
+- **Completing a Tasks.org recurring task** ([#256](https://github.com/Ivan-Malinovski/calino/issues/256)). Ticking off an occurrence of a recurring task that has only `DUE;TZID` now keeps that timezone on the `DTSTART` Calino adds, so servers no longer reject the save. Thanks to [@Vlammuh](https://github.com/Vlammuh) for the report.
+
+- **Dragging all-day events east of UTC** ([#245](https://github.com/Ivan-Malinovski/calino/issues/245), [#246](https://github.com/Ivan-Malinovski/calino/pull/246)). Moving an all-day event now shifts it by whole days, so a two-day drag no longer lands one day short after the next sync.
+
+- **All-day events and tasks move onto week headers** ([#285](https://github.com/Ivan-Malinovski/calino/pull/285)). In week view you can drag them between day headers; a multi-day event moves from the part you grabbed, and a task's due date follows. Thanks to [@nrydanov](https://github.com/nrydanov).
+
+- **Zero-duration events are visible** ([#286](https://github.com/Ivan-Malinovski/calino/pull/286)). Events with no end, or whose end equals their start, now show on the day and week timelines. Thanks to [@nrydanov](https://github.com/nrydanov).
+
+- **Overlapping events stop resizing** ([#270](https://github.com/Ivan-Malinovski/calino/issues/270), [#289](https://github.com/Ivan-Malinovski/calino/pull/289)). Week-view cards no longer change width continuously at certain window sizes when their time text shrinks.
+
+- **Long calendar lists in the journal** ([#272](https://github.com/Ivan-Malinovski/calino/issues/272), [#288](https://github.com/Ivan-Malinovski/calino/pull/288)). With many calendars, the journal's calendar picker scrolls within a bounded height and truncates long names, so the entry stays usable on desktop and mobile.
+
+- **Unlocking without Web Crypto no longer freezes the page** ([#258](https://github.com/Ivan-Malinovski/calino/pull/258)). On plain-HTTP self-hosted instances, where browsers hide Web Crypto, key derivation now runs in background workers instead of blocking the page for up to 10 seconds in Firefox. Thanks to [@chrisf4lc0n](https://github.com/chrisf4lc0n).
+
+- **The view title is reachable by voice control.** The month, day and agenda title button's accessible name now includes the visible title, and the month and year are separated by a real space.
+
+- **Sidebar card shadows** are no longer clipped.
+
+Thanks to [@brog-io](https://github.com/brog-io), [@madepass](https://github.com/madepass), [@ateebamateen21](https://github.com/ateebamateen21), [@GregoryLi360](https://github.com/GregoryLi360) and [@arustler](https://github.com/arustler) for reporting issues fixed in this release, and to [@karan](https://github.com/karan) for the groundwork and client fixtures for rolling recurring-task completion ([#260](https://github.com/Ivan-Malinovski/calino/pull/260)).
 
 ## [0.42.0] - 2026-11-03
 

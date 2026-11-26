@@ -3,8 +3,7 @@ import { createDAVClient } from 'tsdav'
 import type { CalDAVCredentials } from '@/features/caldav/types'
 import type { AddressBook, Contact } from '../types'
 import { parseVCard, contactToVCard } from '../adapter/vCardAdapter'
-import { buildProxyUrl } from '@/features/caldav/client/CalDAVClient'
-import { webFetch } from '@/lib/webFetch'
+import { createProxyFetch, fetchWithTimeout } from '@/features/caldav/client/CalDAVClient'
 import { createDirectDavFetch, validateCustomHeaders } from '@/features/caldav/client/customHeaders'
 import { createUuid } from '@/lib/uuid'
 import {
@@ -13,8 +12,6 @@ import {
   CardDAVSizeLimitError,
   CardDAVVersionError,
 } from './errors'
-
-const NETWORK_TIMEOUT_MS = 15_000
 
 // ---------------------------------------------------------------------------
 // sync-collection types
@@ -216,57 +213,6 @@ function escapeXml(str: string): string {
 export function extractSyncTokenFromBody(xml: string): string | null {
   const token = parseXmlDocument(xml)?.getElementsByTagNameNS(DAV_NS, 'sync-token')[0]?.textContent
   return token?.trim() || null
-}
-
-// Takes the full `fetch` input type, not just `string | URL`: tsdav types its
-// `fetch` option as `typeof fetch`, so a narrower parameter is not assignable.
-async function fetchWithTimeout(url: RequestInfo | URL, init?: RequestInit): Promise<Response> {
-  const controller = new AbortController()
-  const timer = setTimeout(() => controller.abort(), NETWORK_TIMEOUT_MS)
-  try {
-    return await webFetch(url, { ...init, signal: controller.signal })
-  } finally {
-    clearTimeout(timer)
-  }
-}
-
-function createProxyFetch(proxyUrl: string): typeof fetch {
-  return async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
-    let url: string
-    if (typeof input === 'string') {
-      url = input
-    } else if (input instanceof Request) {
-      url = input.url
-    } else {
-      url = input.toString()
-    }
-    const proxiedUrl = prefixUrlWithProxy(url, proxyUrl)
-    return fetchWithTimeout(proxiedUrl, init)
-  }
-}
-
-function prefixUrlWithProxy(url: string, proxyBase: string): string {
-  if (!proxyBase) {
-    return url
-  }
-
-  // Already pointing at the proxy — prefixing again yields
-  // `proxy/https%3A%2F%2Fproxy/https%3A%2F%2Fdav…`, which resolves to nothing.
-  // Same guard as CalDAVClient, for the same reason: stored hrefs from older
-  // versions can already carry the proxy prefix.
-  if (url.replace(/\/$/, '').startsWith(proxyBase.replace(/\/$/, '') + '/')) {
-    return url
-  }
-
-  if (url.startsWith('http://') || url.startsWith('https://')) {
-    return buildProxyUrl(proxyBase, url)
-  }
-
-  if (url.startsWith('/')) {
-    return buildProxyUrl(proxyBase, url)
-  }
-
-  return buildProxyUrl(proxyBase, url)
 }
 
 export class CardDAVClient implements ContactsBackend {

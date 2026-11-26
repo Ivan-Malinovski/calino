@@ -117,7 +117,7 @@ For notification reminders to actually fire reliably, some phone makers (Xiaomi/
 
 ### Security and privacy
 - **Local-first storage.** Calendar data, settings, contacts, and credentials are stored in the browser/device storage. Large attachments, photos, and raw ICS data use IndexedDB.
-- **Credential warning.** The default local credential protection uses a key bundled with the app; it is obfuscation against casual inspection, not protection from someone who can read the app bundle and storage. For stronger protection, use the master-password setup wizard (`/setup`), which derives the key from a password that stays on the device.
+- **Credential warning.** Calino obfuscates saved browser credentials with a key bundled with the app. The `/setup` wizard encrypts deployment configs separately with a password you choose.
 - **No tracking analytics.** Calino does not include telemetry or analytics. Network requests can still go to the CalDAV/CardDAV servers, webcal feeds, configured proxy, optional map/font services, and an AI provider when those features are used.
 - **Serverless by design.** The hosted app has no Calino account database or application backend; your configured integrations still have their own operators and privacy policies.
 - **Docker hardening.** The bundled production image uses Caddy with security headers and container hardening; see [`docs/DOCKER.md`](./docs/DOCKER.md).
@@ -160,7 +160,7 @@ docker compose up -d
 Calino runs at http://localhost:8080 by default.
 To customize settings (site URL, offline support), create a `.env` file — see [`docs/DOCKER.md`](./docs/DOCKER.md) for full details.
 
-**Preconfigure CalDAV accounts:** Visit `/setup` in any running Calino instance to generate a config file with encrypted credentials. Place it in the project root and rebuild — users will be prompted for a master password instead of entering server details manually. See [`docs/SELF_HOSTED_CONFIG.md`](./docs/SELF_HOSTED_CONFIG.md) for details.
+**Recommended for new Docker installs with preconfigured accounts:** Open `/setup` and select **Download Compose file** for a single-user deployment with one password. Mount the separate JSON export for shared configs or per-user deployments. Both load the config at runtime. See the [self-hosting guide](./docs/SELF_HOSTED_CONFIG.md) for deployment and migration instructions.
 
 ## No-Docker
 

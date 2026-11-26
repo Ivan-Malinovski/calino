@@ -681,6 +681,50 @@ describe('discovery', () => {
       expect(result.resolvedUrl).toBe('https://radicale.example.com')
     })
 
+    it('retries the exact entered URL after a discovered endpoint throws a CORS error', async () => {
+      const entered = 'https://radicale.example.com/alice/work/'
+      stubFetch({
+        wellKnownUrl: 'https://radicale.example.com/.web/',
+        propfind: (url) =>
+          url === entered
+            ? { ok: true, status: 207 }
+            : Promise.reject(new TypeError('NetworkError when attempting to fetch resource.')),
+      })
+      const result = await probeConnection(entered, 'user', 'pw')
+      expect(result.ok).toBe(true)
+      expect(result.resolvedUrl).toBe(entered)
+    })
+
+    it('keeps the entered trailing slash when well-known discovery is unavailable', async () => {
+      const entered = 'https://radicale.example.com/alice/work/'
+      stubFetch({
+        propfind: (url) =>
+          url === entered
+            ? { ok: true, status: 207 }
+            : Promise.reject(new TypeError('Redirected preflight')),
+      })
+      const result = await probeConnection(entered, 'user', 'pw')
+      expect(result.ok).toBe(true)
+      expect(result.resolvedUrl).toBe(entered)
+    })
+
+    it('reports rejected credentials from the entered fallback URL', async () => {
+      stubFetch({
+        wellKnownUrl: 'https://radicale.example.com/.web/',
+        propfind: (url) =>
+          url.includes('/.web/')
+            ? Promise.reject(new TypeError('CORS blocked'))
+            : { ok: false, status: 401 },
+      })
+      const result = await probeConnection(
+        'https://radicale.example.com/alice/work/',
+        'user',
+        'wrong'
+      )
+      expect(result.ok).toBe(false)
+      expect(result.status).toBe(401)
+    })
+
     it('surfaces a CORS explanation when the request never completes', async () => {
       stubFetch({
         wellKnownUrl: 'https://caldav.example.com/.well-known/caldav',

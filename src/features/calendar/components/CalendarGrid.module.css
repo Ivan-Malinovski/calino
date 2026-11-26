@@ -776,3 +776,182 @@
   align-items: center;
   min-height: 8px;
 }
+
+/* ============================================================================
+   Adaptive month rows (`useMonthRowLayout`)
+   Every week row has an explicit height; `data-row-state` says how it draws:
+   `expanded` lists the events, `mini` / `line` / `dots` are collapsed summaries.
+   ============================================================================ */
+
+.grid[data-adaptive-rows] {
+  /* Every week already fits; nothing (a hover tip, a tall cell) may make the grid scroll. */
+  overflow-y: hidden;
+}
+
+.weekRow[data-row-state] {
+  min-height: 0;
+  /* The track is exactly the row, so a tall cell overflows instead of
+     stretching the row and pushing the grid into a scroll. */
+  grid-template-rows: minmax(0, 1fr);
+}
+
+.weekRow[data-row-state] > .day {
+  min-height: 0;
+  padding: 2px 5px;
+}
+
+.weekRow[data-row-state] > .weekNumber {
+  min-height: 0;
+}
+
+/* Expanded: 20px chips on a 22px pitch, date number a 20px circle. */
+.weekRow[data-row-state='expanded'] .dayHeader {
+  margin-bottom: 0;
+}
+
+.weekRow[data-row-state='expanded'] .dayNumber {
+  width: 20px;
+  height: 20px;
+  font-size: 13px;
+}
+
+.weekRow[data-row-state='expanded'] .events,
+.weekRow[data-row-state='expanded'] .tasks {
+  gap: 2px;
+}
+
+.weekRow[data-row-state='expanded'] .events .card,
+.weekRow[data-row-state='expanded'] .tasks .card {
+  min-height: 20px;
+  max-height: 20px;
+  box-sizing: border-box;
+}
+
+.weekRow[data-row-state='expanded'] .moreEvents {
+  height: 18px;
+  padding: 0 7px;
+  display: flex;
+  align-items: center;
+}
+
+.weekRow[data-row-state='expanded'] > .weekNumber {
+  color: var(--accent-strong, var(--accent));
+}
+
+.weekRow[data-row-state='expanded'] .day > div {
+  animation: monthRowOpen 0.3s 0.08s both;
+}
+
+@keyframes monthRowOpen {
+  from {
+    opacity: 0;
+    transform: translateY(-3px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .weekRow[data-row-state='expanded'] .day > div {
+    animation: none;
+  }
+}
+
+/* Collapsed rows: the week number sits centred and quiet. */
+.weekRow[data-row-state]:not([data-row-state='expanded']) > .weekNumber {
+  justify-content: center;
+  padding-top: 0;
+  opacity: 0.7;
+}
+
+.weekRow[data-row-state]:not([data-row-state='expanded']):hover > .day {
+  background: var(--day-cell-hover-bg, rgba(var(--ink-raw, 44, 40, 33), 0.02));
+}
+
+.collapsedDay {
+  display: flex;
+  align-items: center;
+  gap: 0 4px;
+  min-width: 0;
+  height: 100%;
+}
+
+.collapsedDay .dayNumber {
+  width: 20px;
+  height: 20px;
+  font-size: 13px;
+  flex: none;
+}
+
+.collapsedChip {
+  min-width: 0;
+}
+
+.collapsedChip .card {
+  min-height: 0;
+  height: 16px;
+  max-height: 16px;
+  padding-top: 0;
+  padding-bottom: 0;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+}
+
+.collapsedChip .card * {
+  line-height: 1;
+}
+
+.pips {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: auto;
+  flex: none;
+  padding-right: 1px;
+}
+
+.pipsMore {
+  font-size: 9.5px;
+  color: var(--ink-3);
+}
+
+/* line: date · chip (flex 1) · pips on one row. */
+.collapsedDay[data-tier='line'] .collapsedChip {
+  flex: 1;
+}
+
+.collapsedDay[data-tier='line'] .pips {
+  margin-left: 0;
+}
+
+/* mini: date … pips on the first line, the chip full-width underneath. */
+.collapsedDay[data-tier='mini'] {
+  flex-wrap: wrap;
+  align-content: flex-start;
+  height: auto;
+}
+
+.collapsedDay[data-tier='mini'] .collapsedChip {
+  order: 2;
+  width: 100%;
+  margin-top: 2px;
+}
+
+.collapsedDay[data-tier='mini'] .pips {
+  order: 1;
+}
+
+.collapsedDay[data-tier='mini'] .journalIndicator {
+  order: 1;
+  margin-left: 0;
+}
+
+/* dots: date and pips only, a little smaller. */
+.weekRow[data-row-state='dots'] > .day {
+  padding: 0 4px;
+}
+
+.collapsedDay[data-tier='dots'] .dayNumber {
+  width: 17px;
+  height: 17px;
+  font-size: 11px;
+}

@@ -246,4 +246,22 @@ test.describe('Week view: sometime-this-week tasks', () => {
     expect(stored.start).toBe('2026-09-28T00:00:00')
     expect(stored.dueDate).toBe('2026-10-04')
   })
+
+  test('dragging a task between day headers moves it to that day', async ({ page }) => {
+    const card = page
+      .locator('[data-component="week-day-header"][data-date="2026-10-01"]')
+      .getByText('Water plants')
+    const header = page.locator('[data-component="week-day-header"][data-date="2026-10-03"]')
+    const from = (await card.boundingBox())!
+    const to = (await header.boundingBox())!
+    await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2)
+    await page.mouse.down()
+    await page.mouse.move(from.x + from.width / 2 + 20, from.y + from.height / 2, { steps: 5 })
+    await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 15 })
+    await page.mouse.up()
+
+    await expect(header.getByText('Water plants')).toHaveCount(1)
+    await expect.poll(async () => (await storedTask(page, 'one-day')).dueDate).toBe('2026-10-03')
+    expect((await storedTask(page, 'one-day')).start).toBe('2026-10-03T00:00:00')
+  })
 })

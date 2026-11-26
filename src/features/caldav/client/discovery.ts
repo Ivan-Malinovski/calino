@@ -435,10 +435,11 @@ export async function probeConnection(
       }
     }
     let baseUrl = await discoverServerUrl(serverUrl, proxyUrl ?? undefined)
-    // When a gateway protects /.well-known, discovery falls back to the
-    // entered URL. Keep its trailing slash: some DAV servers require it.
-    if (Object.keys(customHeaders).length && baseUrl === serverUrl.replace(/\/$/, '')) {
-      baseUrl = serverUrl
+    // A collection's trailing slash is significant: dropping it can redirect
+    // the DAV preflight, which browsers reject before making the request.
+    const enteredUrl = normalizeUrl(serverUrl)
+    if (baseUrl === enteredUrl.replace(/\/$/, '')) {
+      baseUrl = enteredUrl
     }
     if (
       Object.keys(customHeaders).length &&
@@ -472,13 +473,22 @@ export async function probeConnection(
       return { ok: response.ok || response.status === 207, status: response.status }
     }
 
-    let result = await attempt(baseUrl)
+    let result: { ok: boolean; status: number }
+    try {
+      result = await attempt(baseUrl)
+    } catch (error) {
+      // A discovered web UI can reject CORS before we see an HTTP status.
+      // Discovery is optional; still try the exact DAV URL the user entered.
+      if (baseUrl === enteredUrl) throw error
+      result = await attempt(enteredUrl)
+      baseUrl = enteredUrl
+    }
 
     // Fallback: if the discovered URL fails, try the original base URL.
     // This handles cases like Radicale where the well-known redirect chain
     // ends at the web UI (/.web/) instead of the CalDAV endpoint (/).
     if (!result.ok) {
-      const normalizedBase = serverUrl.replace(/\/$/, '')
+      const normalizedBase = enteredUrl
       if (baseUrl !== normalizedBase) {
         console.log(
           '[CalDAV] Probe: discovered URL failed (' + result.status + '), trying base URL:',

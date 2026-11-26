@@ -70,6 +70,7 @@
       "newJournalEntry": "新建日记"
     },
     "sidebar": {
+      "reorderCalendar": "重新排序 {{name}}",
       "previousMonth": "上个月",
       "nextMonth": "下个月",
       "calendars": "日历",
@@ -98,6 +99,9 @@
       "categories": "分类",
       "useCategoryColors": "使用分类颜色",
       "showCalendarName": "显示 {{name}}",
+      "isolateCalendar": "仅显示此日历",
+      "showAllCalendars": "显示所有日历",
+      "showAll": "显示全部",
       "changeCalendarColor": "更改 {{name}} 的颜色",
       "colorPickerFor": "{{name}} 的颜色选择器",
       "useColorFor": "为 {{name}} 使用 {{color}}",
@@ -632,6 +636,7 @@
       "enterUrl": "请输入日历地址。",
       "updateFailedReason": "无法更新：{{reason}}",
       "subscribeFailedReason": "无法订阅：{{reason}}",
+      "feedBlocked": "无法加载此日历。许多主机（包括 Google 日历）不允许浏览器直接读取其订阅源。请在下方填写代理 URL 后重试。",
       "updateFailed": "更新日历订阅失败。",
       "subscribeFailed": "订阅日历失败。"
     },

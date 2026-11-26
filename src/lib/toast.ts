@@ -1,5 +1,6 @@
 import { toast as sonner } from 'sonner'
 import i18n from './i18n'
+import { withBase } from './basePath'
 
 export interface ShowToastOptions {
   onUndo?: () => void
@@ -60,7 +61,7 @@ export function showBrokenEventsNotification(count: number): void {
     duration: 8000,
     linkText: i18n.t('common:actions.view'),
     onLinkClick: () => {
-      window.location.href = '/settings?tab=data'
+      window.location.href = withBase('/settings?tab=data')
     },
   })
 }
@@ -72,7 +73,7 @@ export function showDuplicateUidNotification(count: number): void {
     duration: 8000,
     linkText: i18n.t('common:actions.view'),
     onLinkClick: () => {
-      window.location.href = '/settings?tab=data'
+      window.location.href = withBase('/settings?tab=data')
     },
   })
 }

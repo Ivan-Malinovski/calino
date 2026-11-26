@@ -70,6 +70,7 @@
       "newJournalEntry": "New journal entry"
     },
     "sidebar": {
+      "reorderCalendar": "Reorder {{name}}",
       "previousMonth": "Previous month",
       "nextMonth": "Next month",
       "calendars": "Calendars",
@@ -98,6 +99,9 @@
       "categories": "Categories",
       "useCategoryColors": "Use category colors",
       "showCalendarName": "Show {{name}}",
+      "isolateCalendar": "Show only this calendar",
+      "showAllCalendars": "Show all calendars",
+      "showAll": "Show all",
       "changeCalendarColor": "Change {{name}} color",
       "colorPickerFor": "Color picker for {{name}}",
       "useColorFor": "Use {{color}} for {{name}}",
@@ -632,6 +636,7 @@
       "enterUrl": "Enter a calendar URL.",
       "updateFailedReason": "Couldn't update: {{reason}}",
       "subscribeFailedReason": "Couldn't subscribe: {{reason}}",
+      "feedBlocked": "Couldn't load this calendar. Many hosts, Google Calendar included, don't let browsers read their feeds directly. Add a proxy URL below and try again.",
       "updateFailed": "Failed to update calendar subscription.",
       "subscribeFailed": "Failed to subscribe to calendar."
     },

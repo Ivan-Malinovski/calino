@@ -17,7 +17,7 @@ type TestWindow = Window & {
 
 const toolNames = ['list_calendars', 'open_event', 'prepare_event', 'search_events']
 
-test.use({ launchOptions: { args: ['--enable-features=WebMCPTesting'] } })
+test.use({ launchOptions: { args: ['--enable-features=WebMCPTesting,WebMCP'] } })
 
 // Test the producer contract on all browsers without depending on an origin
 // trial. Registration is deliberately asynchronous to exercise React cleanup.

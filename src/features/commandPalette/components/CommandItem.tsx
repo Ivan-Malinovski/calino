@@ -1,3 +1,4 @@
+import type { TFunction } from 'i18next'
 import type { CSSProperties, JSX } from 'react'
 import { parseISO } from 'date-fns'
 import { formatDisplayDate, formatTime } from '@/lib/datetime'
@@ -10,7 +11,7 @@ export interface CommandItemContentProps {
   item: Command | EventResult | CalendarResult | QuickAddResult
   type: 'command' | 'event' | 'calendar' | 'quick-add'
   timeFormat: TimeFormat
-  t: (key: string, opts?: Record<string, unknown>) => string
+  t: TFunction<'commands'>
 }
 
 export function renderCommandItemContent({
@@ -43,7 +44,8 @@ export function renderCommandItemContent({
     // the day itself west of Greenwich — parseISO keeps it local. Journal
     // entries are day-scoped, so they get no time either way.
     const start = parseISO(event.start)
-    const dayOnly = event.type === 'journal' || event.isAllDay === true || !event.start.includes('T')
+    const dayOnly =
+      event.type === 'journal' || event.isAllDay === true || !event.start.includes('T')
     return (
       <>
         <span className={styles.eventColor} style={{ backgroundColor: calendarColor }} />

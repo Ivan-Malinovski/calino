@@ -12,6 +12,7 @@ import { parseICALDataAsync } from '@/features/caldav/adapter/iCalendarAdapter'
 import { parseVCard } from '@/features/carddav/adapter/vCardAdapter'
 import { requestNativeReminderPermission } from '@/lib/nativeReminders'
 import { config } from '@/config'
+import { withBase } from '@/lib/basePath'
 import { createUuid } from '@/lib/uuid'
 import i18n from '@/lib/i18n'
 import styles from './OnboardingModal.module.css'
@@ -39,7 +40,13 @@ export function OnboardingModal({ onAddCalendar }: OnboardingModalProps): JSX.El
 
   // Open state is derived from settings; every dismiss path flips it closed,
   // which the hook detects and animates out before unmounting.
-  const isOpen = !(hasCompletedOnboarding || hasPreconfiguredAccounts)
+  const configLoaded = useConfigStore((state) => state.configLoaded)
+  const hasPreconfiguredWebcal = useConfigStore((state) => state.hasPreconfiguredWebcal)
+  const runtimeSignIn = useConfigStore((state) => state.runtimeSignIn)
+  const isOpen =
+    configLoaded &&
+    runtimeSignIn !== 'required' &&
+    !(hasCompletedOnboarding || hasPreconfiguredAccounts || hasPreconfiguredWebcal)
   const noop = useCallback(() => {}, [])
   const { rendered, closing } = useAnimatedClose(isOpen, noop, 200)
   const contentRef = useRef<HTMLDivElement>(null)
@@ -97,7 +104,7 @@ export function OnboardingModal({ onAddCalendar }: OnboardingModalProps): JSX.El
     setDemoError('')
 
     try {
-      const response = await fetch('/sample-events.ics')
+      const response = await fetch(withBase('/sample-events.ics'))
       if (!response.ok) {
         throw new Error(i18n.t('common:ui.onboarding.demoFailed'))
       }
@@ -142,7 +149,7 @@ export function OnboardingModal({ onAddCalendar }: OnboardingModalProps): JSX.El
 
       // Load sample contacts
       try {
-        const vcfResponse = await fetch('/sample-contacts.vcf')
+        const vcfResponse = await fetch(withBase('/sample-contacts.vcf'))
         if (vcfResponse.ok) {
           const vcfData = await vcfResponse.text()
           const vcards = vcfData.split(/(?=BEGIN:VCARD)/).filter(Boolean)

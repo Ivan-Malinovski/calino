@@ -6,7 +6,8 @@
 
 import Markdown, { defaultUrlTransform } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import type { JSX } from 'react'
+import { useMemo, type JSX } from 'react'
+import { useConfigStore } from '../store/configStore'
 import { BARE_APP_LINK, appOf, loadLinkSchemes, remarkAppLinks } from './appLinks'
 
 export interface MarkdownProps {
@@ -15,24 +16,23 @@ export interface MarkdownProps {
 }
 
 /** Apps whose links open that app: scheme → name (calino.config.json). */
-const LINK_SCHEMES = loadLinkSchemes()
-
-const REMARK_PLUGINS = [remarkGfm, remarkAppLinks(LINK_SCHEMES)]
+const BUNDLED_LINK_SCHEMES = loadLinkSchemes()
 
 export function MarkdownView({ text, className }: MarkdownProps): JSX.Element {
+  const schemes = useConfigStore((state) => state.linkSchemes) ?? BUNDLED_LINK_SCHEMES
+  const remarkPlugins = useMemo(() => [remarkGfm, remarkAppLinks(schemes)], [schemes])
+
   return (
     <div className={className}>
       <Markdown
-        remarkPlugins={REMARK_PLUGINS}
+        remarkPlugins={remarkPlugins}
         // react-markdown drops every scheme outside its safe list; the apps
-        // configured for this build are let through beside them.
-        urlTransform={(url) =>
-          appOf(url, LINK_SCHEMES) !== undefined ? url : defaultUrlTransform(url)
-        }
+        // configured by the deployment are let through beside them.
+        urlTransform={(url) => (appOf(url, schemes) !== undefined ? url : defaultUrlTransform(url))}
         components={{
           a: ({ node, children, ...props }) => {
             void node
-            const app = appOf(props.href, LINK_SCHEMES)
+            const app = appOf(props.href, schemes)
             // A bare link into an app is an address that says little to the
             // reader, so it is shown by the app's name; a link with text of
             // its own keeps it. remarkAppLinks marks the bare ones.
