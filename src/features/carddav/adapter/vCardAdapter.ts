@@ -251,6 +251,10 @@ function withoutItemGroup(line: string): string {
   return /^ITEM\d+\.(TEL|EMAIL|URL|ADR)[;:]/i.test(line) ? line.replace(/^ITEM\d+\./i, '') : line
 }
 
+function vCardGroupPrefix(group?: string): string {
+  return group && /^ITEM\d+$/i.test(group) ? `${group}.` : ''
+}
+
 /**
  * Apply Apple AB label token to a type string.
  */
@@ -302,6 +306,7 @@ function extractEmails(
     }
 
     emails.push({
+      ...(itemNMatch && { vCardGroup: itemNMatch[0].slice(0, -1) }),
       value: unescapeVCardValue(result.value),
       type,
       isPrimary,
@@ -346,6 +351,7 @@ function extractPhones(
     }
 
     phones.push({
+      ...(itemNMatch && { vCardGroup: itemNMatch[0].slice(0, -1) }),
       value: unescapeVCardValue(result.value),
       type,
       isPrimary,
@@ -392,6 +398,7 @@ function extractAddresses(
     const parts = splitVCardValue(result.value, ';')
 
     addresses.push({
+      ...(itemNMatch && { vCardGroup: itemNMatch[0].slice(0, -1) }),
       type,
       isPrimary,
       poBox: unescapeVCardValue(parts[0] || ''),
@@ -442,6 +449,7 @@ function extractUrls(
     }
 
     urls.push({
+      ...(itemNMatch && { vCardGroup: itemNMatch[0].slice(0, -1) }),
       value: unescapeVCardValue(result.value),
       type,
       isPrimary,
@@ -982,13 +990,15 @@ export function contactToVCard(contact: Contact, targetVersion: '3.0' | '4.0' = 
   // Emails
   for (const email of contact.emails) {
     const params = buildTypeParamsV(targetVersion, email.type, email.isPrimary)
-    lines.push(`EMAIL${params}:${escapeVCardValue(email.value)}`)
+    lines.push(
+      `${vCardGroupPrefix(email.vCardGroup)}EMAIL${params}:${escapeVCardValue(email.value)}`
+    )
   }
 
   // Phones
   for (const phone of contact.phones) {
     const params = buildTypeParamsV(targetVersion, phone.type, phone.isPrimary)
-    lines.push(`TEL${params}:${escapeVCardValue(phone.value)}`)
+    lines.push(`${vCardGroupPrefix(phone.vCardGroup)}TEL${params}:${escapeVCardValue(phone.value)}`)
   }
 
   // Addresses
@@ -1003,13 +1013,13 @@ export function contactToVCard(contact: Contact, targetVersion: '3.0' | '4.0' = 
       escapeVCardValue(addr.postalCode),
       escapeVCardValue(addr.country),
     ].join(';')
-    lines.push(`ADR${params}:${value}`)
+    lines.push(`${vCardGroupPrefix(addr.vCardGroup)}ADR${params}:${value}`)
   }
 
   // URLs
   for (const url of contact.urls) {
     const params = buildTypeParamsV(targetVersion, url.type, url.isPrimary)
-    lines.push(`URL${params}:${escapeVCardValue(url.value)}`)
+    lines.push(`${vCardGroupPrefix(url.vCardGroup)}URL${params}:${escapeVCardValue(url.value)}`)
   }
 
   // IMs
