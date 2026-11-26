@@ -424,6 +424,7 @@
       "end": "Fin",
       "endTime": "Heure de fin",
       "foreignZoneTimes": "{{times}} dans {{zone}}",
+      "timezone": "Fuseau horaire",
       "allDay": "Toute la journée",
       "available": "Disponible",
       "showMoreOptions": "Afficher plus d’options",

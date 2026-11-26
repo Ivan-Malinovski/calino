@@ -3,14 +3,14 @@ import { useState, useMemo, useEffect, useRef, useCallback, useId } from 'react'
 import { motion } from 'framer-motion'
 import { format, parseISO } from 'date-fns'
 import { useTranslation } from 'react-i18next'
-import { pad2, toEventInstant, formatDisplayDate } from '@/lib/datetime'
 import {
-  formatHome,
-  homeDayKey,
-  homeTimezone,
-  parseHomeWall,
-  useHomeTimezone,
-} from '@/lib/homeTimezone'
+  pad2,
+  toEventInstant,
+  formatDisplayDate,
+  formatInZone,
+  parseWallClock,
+} from '@/lib/datetime'
+import { formatHome, homeDayKey, homeTimezone, useHomeTimezone } from '@/lib/homeTimezone'
 import { createUuid } from '@/lib/uuid'
 import { calendarMutesReminders, useCalendarStore } from '@/store/calendarStore'
 import { useCalDAV } from '@/features/caldav/hooks/useCalDAV'
@@ -80,7 +80,7 @@ async function runNetworkWrites(writes: Array<() => Promise<void>>): Promise<voi
 
 export function EventModal(): JSX.Element | null {
   const { t } = useTranslation(['calendar', 'common'])
-  useHomeTimezone()
+  const homeZone = useHomeTimezone()
   const isModalOpen = useCalendarStore((state) => state.isModalOpen)
   const selectedEventId = useCalendarStore((state) => state.selectedEventId)
   const selectedDate = useCalendarStore((state) => state.selectedDate)
@@ -199,6 +199,16 @@ export function EventModal(): JSX.Element | null {
   const [startTime, setStartTime] = useState(initialState.startTime)
   const [endDate, setEndDate] = useState(initialState.endDate)
   const [endTime, setEndTime] = useState(initialState.endTime)
+  // #281 — zone the timed fields are typed in. null follows home. Changing it
+  // keeps the wall clocks as typed (09:00 stays 09:00, now in the new zone),
+  // which is what planning a trip in its local time wants.
+  const [formTimezone, setFormTimezone] = useState<string | null>(initialState.timezone)
+  const formZone = formTimezone ?? homeZone
+  /** Instant of a naive form wall clock, read in the form zone. */
+  const parseFormWall = useCallback(
+    (naive: string): Date => parseWallClock(naive, formZone),
+    [formZone]
+  )
   const [isAllDay, setIsAllDay] = useState(initialState.isAllDay)
   const [calendarId, setCalendarId] = useState(initialState.calendarId)
   const [recurring, setRecurring] = useState<boolean>(initialState.recurring)
@@ -948,12 +958,14 @@ export function EventModal(): JSX.Element | null {
 
     const localStart = isAllDay ? `${startDate}T00:00:00` : `${startDate}T${startTime}:00`
     const localEnd = isAllDay ? `${endDate}T23:59:59` : `${endDate}T${endTime}:00`
-    const existingStart = formatHome(
+    const existingStart = formatInZone(
       toEventInstant(existingEventForMode.start, existingEventForMode.timezone),
+      formZone,
       "yyyy-MM-dd'T'HH:mm:ss"
     )
-    const existingEnd = formatHome(
+    const existingEnd = formatInZone(
       toEventInstant(existingEventForMode.end, existingEventForMode.timezone),
+      formZone,
       "yyyy-MM-dd'T'HH:mm:ss"
     )
 
@@ -963,6 +975,7 @@ export function EventModal(): JSX.Element | null {
       location !== (existingEventForMode.location || '') ||
       localStart !== existingStart ||
       localEnd !== existingEnd ||
+      (!isAllDay && formTimezone !== initialState.timezone) ||
       isAllDay !== existingEventForMode.isAllDay ||
       recurrenceChanged ||
       travelDuration !== existingEventForMode.travelDuration ||
@@ -985,6 +998,9 @@ export function EventModal(): JSX.Element | null {
     endDate,
     endTime,
     isAllDay,
+    formZone,
+    formTimezone,
+    initialState.timezone,
     dueDate,
     effectiveTaskStart,
     dueTime,
@@ -1033,12 +1049,12 @@ export function EventModal(): JSX.Element | null {
     // trip the endMs <= startMs check below and permanently disable Save.
     if (isTaskMode) return false
     if (!isAllDay) {
-      const startMs = parseHomeWall(`${startDate}T${startTime}:00`).getTime()
-      const endMs = parseHomeWall(`${endDate}T${endTime}:00`).getTime()
+      const startMs = parseFormWall(`${startDate}T${startTime}:00`).getTime()
+      const endMs = parseFormWall(`${endDate}T${endTime}:00`).getTime()
       return endMs <= startMs
     }
     return endDate < startDate
-  }, [isTaskMode, isAllDay, startDate, startTime, endDate, endTime])
+  }, [isTaskMode, isAllDay, startDate, startTime, endDate, endTime, parseFormWall])
 
   const handleSubmit = (e: React.FormEvent): void => {
     e.preventDefault()
@@ -1149,11 +1165,13 @@ export function EventModal(): JSX.Element | null {
       // user chose, at the wall time they chose, and it exports as
       // `DTSTART;TZID=…` so other CalDAV clients agree with us.
       //
-      // Only stamped when the item does not already carry a zone. An item
-      // synced with a foreign TZID keeps today's behaviour: the form shows its
-      // times in the home zone, so writing them back as a wall clock would
-      // silently re-read them in the foreign zone. Those stay real instants,
-      // which createIcalDateTime converts to the event zone on write.
+      // #281 — the form's wall clocks are in `formZone`: the zone the user
+      // picked, the event's own TZID when it opened with a usable one, or home.
+      // Those are stamped as-is. The one item left on instants is a timed
+      // event whose stored TZID this browser cannot resolve (the form fell
+      // back to home fields): its zone stays, and createIcalDateTime converts
+      // the instant to it on write. Tasks never take a picked zone — the due
+      // editor works in home.
       const editedStoredEvent = isEditing
         ? events.find((event) => event.id === selectedEventId) ||
           (originalEventId ? events.find((event) => event.id === originalEventId) : undefined)
@@ -1161,11 +1179,14 @@ export function EventModal(): JSX.Element | null {
       // Tasks carry their all-day-ness in `dueAllDay`, which is also what the
       // written `isAllDay` resolves to below.
       const effectiveAllDay = isTaskMode ? dueAllDay : isAllDay
-      const stampDeviceZone = !effectiveAllDay && !editedStoredEvent?.timezone
-      const eventTimezone = stampDeviceZone ? homeTimezone() : editedStoredEvent?.timezone
+      const pickedZone = isTaskMode ? null : formTimezone
+      const stampDeviceZone = !effectiveAllDay && (!!pickedZone || !editedStoredEvent?.timezone)
+      const eventTimezone = stampDeviceZone
+        ? (pickedZone ?? homeTimezone())
+        : editedStoredEvent?.timezone
       /** A timed wall clock in the form's zone, stored in the item's own frame. */
       const storeTimed = (localWall: string): string =>
-        stampDeviceZone ? localWall : parseHomeWall(localWall).toISOString()
+        stampDeviceZone ? localWall : parseFormWall(localWall).toISOString()
 
       const startDateTime = isAllDay ? `${startDate}T00:00:00` : storeTimed(localStart)
       const endDateTime = isAllDay ? `${endDate}T00:00:00` : storeTimed(localEnd)
@@ -1231,7 +1252,7 @@ export function EventModal(): JSX.Element | null {
           : undefined
         const occDateStr = occurrenceKey?.split('T')[0] || startDate
         const durationMs = stampDeviceZone
-          ? parseHomeWall(endDateTime).getTime() - parseHomeWall(startDateTime).getTime()
+          ? parseFormWall(endDateTime).getTime() - parseFormWall(startDateTime).getTime()
           : new Date(endDateTime).getTime() - new Date(startDateTime).getTime()
         const occStartDateTime = isTaskMode
           ? `${occDateStr}T${taskTime}`
@@ -1252,12 +1273,12 @@ export function EventModal(): JSX.Element | null {
           occEndDateTime = `${endD.toISOString().split('T')[0]}T00:00:00`
         } else if (stampDeviceZone) {
           // Wall-clock frame: add the duration to the instant, then read it
-          // back as a home-zone wall clock so a DST transition inside the
-          // occurrence does not shift the stored end by an hour.
+          // back as a wall clock in the event zone so a DST transition inside
+          // the occurrence does not shift the stored end by an hour.
           const occEnd = new Date(
             toEventInstant(occStartDateTime, eventTimezone).getTime() + durationMs
           )
-          occEndDateTime = formatHome(occEnd, "yyyy-MM-dd'T'HH:mm:ss")
+          occEndDateTime = formatInZone(occEnd, formZone, "yyyy-MM-dd'T'HH:mm:ss")
         } else {
           occEndDateTime = new Date(new Date(occStartDateTime).getTime() + durationMs).toISOString()
         }
@@ -1936,10 +1957,9 @@ export function EventModal(): JSX.Element | null {
 
                 {!isTaskMode && (
                   <EventFormFields
-                    eventTimezone={
-                      events.find((event) => event.id === (originalEventId ?? selectedEventId))
-                        ?.timezone
-                    }
+                    formTimezone={formZone}
+                    homeTimezone={homeZone}
+                    onFormTimezoneChange={setFormTimezone}
                     isAllDay={isAllDay}
                     onIsAllDayChange={setIsAllDay}
                     startDate={startDate}
@@ -1998,8 +2018,16 @@ export function EventModal(): JSX.Element | null {
                     onAttendeesChange={setAttendees}
                     organizer={organizer}
                     editingEvent={existingEventForMode ?? undefined}
-                    startIso={isAllDay ? `${startDate}T00:00:00` : `${startDate}T${startTime}:00`}
-                    endIso={isAllDay ? `${endDate}T23:59:59` : `${endDate}T${endTime}:00`}
+                    startIso={
+                      isAllDay
+                        ? `${startDate}T00:00:00`
+                        : parseFormWall(`${startDate}T${startTime}:00`).toISOString()
+                    }
+                    endIso={
+                      isAllDay
+                        ? `${endDate}T23:59:59`
+                        : parseFormWall(`${endDate}T${endTime}:00`).toISOString()
+                    }
                     excludeEventId={originalEventId ?? selectedEventId ?? undefined}
                     onDraftChange={setHasDraft}
                   />

@@ -424,6 +424,7 @@
       "end": "结束",
       "endTime": "结束时间",
       "foreignZoneTimes": "{{times}}（{{zone}} 时间）",
+      "timezone": "时区",
       "allDay": "全天",
       "available": "空闲",
       "showMoreOptions": "显示更多选项",

@@ -312,6 +312,7 @@
       "end": "Ende",
       "endTime": "Ende time",
       "foreignZoneTimes": "{{times}} in {{zone}}",
+      "timezone": "Zeitzone",
       "allDay": "Ganztägig",
       "available": "Verfügbar",
       "showMoreOptions": "Weitere Optionen anzeigen",

@@ -233,20 +233,32 @@ describe('issue 126 — editing a foreign-TZID event does not move it', () => {
     expect(splitDay.filter((e) => e.title.startsWith('LA standup'))).toHaveLength(1)
   })
 
-  // The form's fields are device-local, so without this the zone an event is
-  // anchored in is invisible while editing it — which is how a 09:00 Los
-  // Angeles meeting comes to be edited as "18:00" with no hint that those are
-  // different clocks.
-  it('shows the event own wall clock while editing it', async () => {
+  // #281 — the fields are now the event's own wall clock, with the zone
+  // picker set to it, and a line under them says what that is at home.
+  it('shows the event own wall clock while editing it, and the home time below', async () => {
     const { EventModal } = await import('@/features/calendar/components/EventModal')
     render(<EventModal />)
 
-    const note = document.querySelector('[data-component="event-foreign-zone"]')
+    expect((screen.getByLabelText('Start time') as HTMLInputElement).value).toBe('09:00')
+    expect((screen.getByRole('combobox', { name: 'Time zone' }) as HTMLInputElement).value).toBe(
+      'Los Angeles (PT)'
+    )
+
+    const note = document.querySelector('[data-component="event-home-zone-times"]')
     expect(note).toBeTruthy()
-    // The event's own clock — identical in both vitest zones, which is the
-    // whole point: the fields above read 12:00 in the west project and 18:00
-    // in the east, and neither is the event's time.
-    expect(note!.textContent).toBe('09:00\u201309:30 in Los Angeles')
+    // 09:00–09:30 Los Angeles on the home (device) clock: 12:00 in the west
+    // project, 18:00 in the east.
+    const home = deviceTimezone()
+    const clock = new Intl.DateTimeFormat('en-GB', {
+      timeZone: home,
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    })
+    const city = (home.split('/').pop() ?? home).replace(/_/g, ' ')
+    const start = clock.format(new Date('2026-08-03T16:00:00Z'))
+    const end = clock.format(new Date('2026-08-03T16:30:00Z'))
+    expect(note!.textContent).toBe(`${start}\u2013${end} in ${city}`)
   })
 
   it('says nothing when the event is anchored in the device zone', async () => {
@@ -262,6 +274,6 @@ describe('issue 126 — editing a foreign-TZID event does not move it', () => {
     const { EventModal } = await import('@/features/calendar/components/EventModal')
     render(<EventModal />)
 
-    expect(document.querySelector('[data-component="event-foreign-zone"]')).toBeNull()
+    expect(document.querySelector('[data-component="event-home-zone-times"]')).toBeNull()
   })
 })

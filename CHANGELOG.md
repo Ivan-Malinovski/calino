@@ -6,6 +6,8 @@ All notable changes to Calino will be documented in this file.
 
 ### Added
 
+- **Event time zone picker** ([#281](https://github.com/Ivan-Malinovski/calino/issues/281)). Timed events now have a searchable Time zone field under the start and end times. The times you type are in that zone, so an event planned for a trip can be entered in local time there, and a line below shows the same times in your home zone. Events from other clients open in their own zone, and changing the zone keeps the typed times. New events start in the home zone.
+
 - **Subpath deployments.** Set `CALINO_BASE_PATH` (for example `/cal/`) at build time to serve Calino below the site root. Vite assets, client-side routes, the PWA manifest, service-worker registration and in-app links now follow the configured base, and `VITE_SITE_URL` can include the same subpath for canonical and social metadata. The Docker image accepts the value as a build arg.
 
 ### Fixed

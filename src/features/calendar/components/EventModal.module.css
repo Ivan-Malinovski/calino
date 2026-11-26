@@ -2051,3 +2051,26 @@
   pointer-events: none;
   color-scheme: inherit;
 }
+
+/* #281 — the zone the date/time fields above are typed in. */
+.eventTimezoneRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 4px;
+}
+
+.eventTimezoneLabel {
+  flex: 0 0 auto;
+  font-size: 12px;
+  color: var(--ink-2);
+}
+
+.eventTimezonePicker {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.eventTimezonePicker [data-component='event-timezone-select'] input {
+  min-width: 0;
+}
