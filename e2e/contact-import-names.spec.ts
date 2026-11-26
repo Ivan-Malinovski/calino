@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { clearState, seedAccount } from './fixtures/localstorage'
 
-test('vCard import preserves parameterized and quoted-printable names through sync and reload', async ({
+test('vCard import preserves parameterized names and quoted-printable contact details through sync and reload', async ({
   page,
   baseURL,
 }) => {
@@ -33,6 +33,9 @@ test('vCard import preserves parameterized and quoted-printable names through sy
     'UID:uid-quoted-printable-name',
     'FN;CHARSET=UTF-8;ENCODING=QUOTED-PRINTABLE:J=C3=BCrgen M=C3=BCller',
     'N;CHARSET=UTF-8;ENCODING=QUOTED-PRINTABLE:M=C3=BCller;J=C3=BCrgen;;;',
+    'ADR;HOME;CHARSET=UTF-8;ENCODING=QUOTED-PRINTABLE:;;M=C3=BCnchner Stra=C3=9Fe=3B Hinterhaus;K=C3=B6ln;;50667;Deutschland',
+    'NOTE;CHARSET=UTF-8;ENCODING=QUOTED-PRINTABLE:Gr=C3=BC=C3=9Fe aus K=C3=B6ln, den =',
+    'Code am Tor eingeben',
     'END:VCARD',
     '',
   ].join('\r\n')
@@ -62,7 +65,12 @@ test('vCard import preserves parameterized and quoted-printable names through sy
     const saved = await page.request.get(
       `${baseURL}/mock-carddav/dav/addressbooks/user/book/${uid}.vcf`
     )
-    expect(await saved.text()).toContain(`N:${structuredName}\r\n`)
+    const savedCard = (await saved.text()).replace(/\r\n[ \t]/g, '')
+    expect(savedCard).toContain(`N:${structuredName}\r\n`)
+    if (uid === 'uid-quoted-printable-name') {
+      expect(savedCard).toMatch(/ADR[^:]*:;;Münchner Straße\\; Hinterhaus;Köln;;50667;Deutschland/)
+      expect(savedCard).toContain('NOTE:Grüße aus Köln\\, den Code am Tor eingeben')
+    }
   }
 
   await page.goto('/contacts')
