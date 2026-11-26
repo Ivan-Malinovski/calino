@@ -24,6 +24,8 @@ This release lets you reorder and isolate calendars in the sidebar, suggests att
 
 - **Radicale subscriptions appear in Calino** ([#237](https://github.com/Ivan-Malinovski/calino/issues/237), [#240](https://github.com/Ivan-Malinovski/calino/pull/240)). External feeds that Radicale holds as subscribed collections are now mirrored as read-only webcal subscriptions. They follow renames and feed-URL changes on the server and disappear when removed there. A feed you already subscribed to by hand is left alone.
 
+- **Rolling completion for repeating tasks, per calendar** ([#244](https://github.com/Ivan-Malinovski/calino/issues/244)). A task list can complete repeats by moving the task to its next date and saving the finished one as its own task, the shape DAVx⁵/OpenTasks and Tasks.org can sync back. Turn it on from the calendar's **Settings** in the sidebar. When a list's tasks come from Tasks.org or OpenTasks, Calino asks once, right after you complete a repeat there; it never switches on its own. Lists keep the Thunderbird-compatible default otherwise.
+
 ### Changed
 
 - **Month rows size to the window.** On a short window every week stays visible without scrolling, on a medium one the current week opens first, and on a tall one busy weeks expand to list their events. The week holding keyboard focus gets the room, and a short window also tightens the top bar.

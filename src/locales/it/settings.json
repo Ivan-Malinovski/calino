@@ -156,6 +156,10 @@
     "overdueTaskBadge": {
       "label": "Badge attività scadute",
       "desc": "Mostra un badge sull'icona dell'app per le attività scadute"
+    },
+    "rollingTaskCompletion": {
+      "label": "Completamento a rotazione per la sincronizzazione mobile",
+      "desc": "Sposta un'attività ricorrente alla data successiva e salva ogni occorrenza completata come attività a sé stante. Necessario per la sincronizzazione bidirezionale con DAVx⁵/OpenTasks, Tasks.org e Apple Reminders."
     }
   },
   "calendar": {

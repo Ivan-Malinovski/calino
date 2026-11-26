@@ -156,6 +156,10 @@
     "overdueTaskBadge": {
       "label": "Badge voor achterstallige taken",
       "desc": "Een badge op het app-pictogram tonen voor achterstallige taken"
+    },
+    "rollingTaskCompletion": {
+      "label": "Doorschuivende voltooiing voor mobiele synchronisatie",
+      "desc": "Verplaats een terugkerende taak naar de volgende datum en sla elke voltooide gebeurtenis op als een eigen taak. Vereist voor tweewegsynchronisatie met DAVx⁵/OpenTasks, Tasks.org en Apple Reminders."
     }
   },
   "calendar": {

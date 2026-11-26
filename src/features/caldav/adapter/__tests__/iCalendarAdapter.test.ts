@@ -7,6 +7,7 @@ import {
   parseICALData,
   parseICALEvent,
   parseICALTask,
+  parseICALJournal,
   taskToICAL,
   parseICALDataAsync,
   parseICALDataAsyncWithStatus,
@@ -2560,5 +2561,39 @@ END:VCALENDAR`
       expect(parseICALEvent(combined, 'cal-1')).toHaveLength(1)
       expect(parseICALTask(combined, 'cal-1')).toHaveLength(1)
     })
+  })
+})
+
+describe('client PRODID', () => {
+  const wrap = (body: string): string =>
+    [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'PRODID:+//IDN tasks.org//android-151202//EN',
+      body,
+      'END:VCALENDAR',
+      '',
+    ].join('\r\n')
+
+  it('is kept on tasks, for the rolling-completion prompt', () => {
+    const ics = wrap(
+      'BEGIN:VTODO\r\nUID:t1\r\nDTSTAMP:20260101T000000Z\r\nSUMMARY:Task\r\nEND:VTODO'
+    )
+    expect(parseICALTask(ics, 'cal-1')[0].clientProdid).toBe('+//IDN tasks.org//android-151202//EN')
+  })
+
+  it('is not stored on events or journals, which would only bloat what is persisted', () => {
+    const event = wrap(
+      'BEGIN:VEVENT\r\nUID:e1\r\nDTSTAMP:20260101T000000Z\r\nDTSTART:20260303T100000Z\r\nDTEND:20260303T110000Z\r\nSUMMARY:Event\r\nEND:VEVENT'
+    )
+    const journal = wrap(
+      'BEGIN:VJOURNAL\r\nUID:j1\r\nDTSTAMP:20260101T000000Z\r\nDTSTART;VALUE=DATE:20260303\r\nSUMMARY:Entry\r\nEND:VJOURNAL'
+    )
+    const parsedEvent = parseICALEvent(event, 'cal-1')
+    const parsedJournal = parseICALJournal(journal, 'cal-1')
+    expect(parsedEvent).toHaveLength(1)
+    expect(parsedJournal).toHaveLength(1)
+    expect(parsedEvent[0].clientProdid).toBeUndefined()
+    expect(parsedJournal[0].clientProdid).toBeUndefined()
   })
 })

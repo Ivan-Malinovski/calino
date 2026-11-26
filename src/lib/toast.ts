@@ -7,6 +7,10 @@ export interface ShowToastOptions {
   duration?: number
   linkText?: string
   onLinkClick?: () => void
+  cancelText?: string
+  onCancelClick?: () => void
+  /** Stable id: showing a toast with the same id replaces it instead of stacking. */
+  id?: string
 }
 
 /**
@@ -18,6 +22,17 @@ export interface ShowToastOptions {
 export function showToast(message: string, options?: ShowToastOptions): void {
   const opts: Parameters<typeof sonner>[1] = {
     duration: options?.duration,
+    className: 'sonner-toast',
+  }
+  if (options?.id) opts.id = options.id
+
+  if (options?.cancelText && options.onCancelClick) {
+    opts.cancel = {
+      label: options.cancelText,
+      onClick: () => {
+        options.onCancelClick?.()
+      },
+    }
   }
 
   if (options?.onUndo) {
