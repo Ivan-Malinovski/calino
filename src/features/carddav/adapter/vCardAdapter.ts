@@ -283,11 +283,11 @@ function extractEmails(
   const emails: ContactEmail[] = []
   const usedItemNs = new Set<string>()
 
-  for (const line of lines) {
-    const property = withoutItemGroup(line)
-    if (!property.toUpperCase().startsWith('EMAIL')) continue
+  for (const rawLine of lines) {
+    const line = withoutItemGroup(rawLine)
+    if (!line.toUpperCase().startsWith('EMAIL')) continue
 
-    const result = parseLineWithParams(property, 'EMAIL')
+    const result = parseLineWithParams(line, 'EMAIL')
     if (!result) continue
 
     let type = parseTypeParam(result.params)
@@ -295,7 +295,7 @@ function extractEmails(
       result.params.toUpperCase().includes('PREF') || result.params.includes('TYPE=pref')
 
     // Check for itemN group with Apple label
-    const itemNMatch = line.match(/^ITEM(\d+)\./i)
+    const itemNMatch = rawLine.match(/^ITEM(\d+)\./i)
     if (itemNMatch) {
       const itemId = itemNMatch[1]
       const groupInfo = itemNMap.get(itemId)
@@ -328,11 +328,11 @@ function extractPhones(
   const phones: ContactPhone[] = []
   const usedItemNs = new Set<string>()
 
-  for (const line of lines) {
-    const property = withoutItemGroup(line)
-    if (!property.toUpperCase().startsWith('TEL')) continue
+  for (const rawLine of lines) {
+    const line = withoutItemGroup(rawLine)
+    if (!line.toUpperCase().startsWith('TEL')) continue
 
-    const result = parseLineWithParams(property, 'TEL')
+    const result = parseLineWithParams(line, 'TEL')
     if (!result) continue
 
     let type = parsePhoneTypeParam(result.params)
@@ -340,7 +340,7 @@ function extractPhones(
       result.params.toUpperCase().includes('PREF') || result.params.includes('TYPE=pref')
 
     // Check for itemN group with Apple label
-    const itemNMatch = line.match(/^ITEM(\d+)\./i)
+    const itemNMatch = rawLine.match(/^ITEM(\d+)\./i)
     if (itemNMatch) {
       const itemId = itemNMatch[1]
       const groupInfo = itemNMap.get(itemId)
@@ -373,11 +373,11 @@ function extractAddresses(
   const addresses: ContactAddress[] = []
   const usedItemNs = new Set<string>()
 
-  for (const line of lines) {
-    const property = withoutItemGroup(line)
-    if (!property.toUpperCase().startsWith('ADR')) continue
+  for (const rawLine of lines) {
+    const line = withoutItemGroup(rawLine)
+    if (!line.toUpperCase().startsWith('ADR')) continue
 
-    const result = parseLineWithParams(property, 'ADR')
+    const result = parseLineWithParams(line, 'ADR')
     if (!result) continue
 
     let type = parseTypeParam(result.params)
@@ -385,7 +385,7 @@ function extractAddresses(
       result.params.toUpperCase().includes('PREF') || result.params.includes('TYPE=pref')
 
     // Check for itemN group with Apple label
-    const itemNMatch = line.match(/^ITEM(\d+)\./i)
+    const itemNMatch = rawLine.match(/^ITEM(\d+)\./i)
     if (itemNMatch) {
       const itemId = itemNMatch[1]
       const groupInfo = itemNMap.get(itemId)
@@ -426,11 +426,11 @@ function extractUrls(
   const urls: ContactUrl[] = []
   const usedItemNs = new Set<string>()
 
-  for (const line of lines) {
-    const property = withoutItemGroup(line)
-    if (!property.toUpperCase().startsWith('URL')) continue
+  for (const rawLine of lines) {
+    const line = withoutItemGroup(rawLine)
+    if (!line.toUpperCase().startsWith('URL')) continue
 
-    const result = parseLineWithParams(property, 'URL')
+    const result = parseLineWithParams(line, 'URL')
     if (!result) continue
 
     let type = parseTypeParam(result.params)
@@ -438,7 +438,7 @@ function extractUrls(
       result.params.toUpperCase().includes('PREF') || result.params.includes('TYPE=pref')
 
     // Check for itemN group with Apple label
-    const itemNMatch = line.match(/^ITEM(\d+)\./i)
+    const itemNMatch = rawLine.match(/^ITEM(\d+)\./i)
     if (itemNMatch) {
       const itemId = itemNMatch[1]
       const groupInfo = itemNMap.get(itemId)
