@@ -110,7 +110,11 @@ test.describe('calendar discovery sync', () => {
     await page.locator('[data-component="calendar-section-toggle"]').click()
     const calendar = page.getByText('Personal', { exact: true }).locator('..')
     await expect(calendar).toBeVisible()
-    await expect(calendar.locator('button').first()).toHaveCSS('background-color', 'rgb(59, 130, 246)')
+    // The row's first button is the reorder handle, so name the swatch itself.
+    await expect(calendar.locator('[data-component="calendar-color-dot"]')).toHaveCSS(
+      'background-color',
+      'rgb(59, 130, 246)'
+    )
   })
 
   test('imports Planify PRIORITY:0 as no priority', async ({ page, baseURL }) => {

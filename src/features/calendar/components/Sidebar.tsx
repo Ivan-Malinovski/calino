@@ -854,6 +854,7 @@ export function Sidebar({
                               type="button"
                               className={styles.colorDot}
                               style={{ backgroundColor: calendar.color }}
+                              data-component="calendar-color-dot"
                               onClick={(event) => {
                                 event.preventDefault()
                                 setColorPickerCalendarId((current) =>
