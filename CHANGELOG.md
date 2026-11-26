@@ -8,8 +8,6 @@ This release lets you reorder and isolate calendars in the sidebar, suggests att
 
 ### Added
 
-- **Rolling completion for repeating tasks, per calendar** ([#244](https://github.com/Ivan-Malinovski/calino/issues/244)). A task list can complete repeats by moving the task to its next date and saving the finished one as its own task, the shape DAVx⁵/OpenTasks and Tasks.org can sync back. Turn it on from the calendar's **Settings** in the sidebar. When a list's tasks come from Tasks.org or OpenTasks, Calino asks once, right after you complete a repeat there; it never switches on its own. Lists keep the Thunderbird-compatible default otherwise.
-
 - **Reorder calendars in the sidebar** ([#291](https://github.com/Ivan-Malinovski/calino/pull/291)). Drag a calendar by the handle on the left of its row. The handle appears on hover or keyboard focus and stays visible on touch devices. The order survives reloads and calendar discovery, and newly discovered calendars are added at the end.
 
 - **Show only one calendar** ([#267](https://github.com/Ivan-Malinovski/calino/pull/267)). Right-click a calendar and choose “Show only this calendar”, or Alt/Option-click its checkbox, to hide every other calendar. A “Show all” button in the Calendars header then restores the selection you had before, even after a reload. Thanks to [@networksaphyra](https://github.com/networksaphyra) for the feature.
@@ -23,6 +21,8 @@ This release lets you reorder and isolate calendars in the sidebar, suggests att
 - **Subpath deployments** ([#278](https://github.com/Ivan-Malinovski/calino/pull/278)). Set `CALINO_BASE_PATH` (for example `/cal/`) at build time to serve Calino below the site root. Vite assets, client-side routes, the PWA manifest, service-worker registration and in-app links now follow the configured base, and `VITE_SITE_URL` can include the same subpath for canonical and social metadata. The Docker image accepts the value as a build arg. Thanks to [@Alex1607](https://github.com/Alex1607) for the feature.
 
 - **Radicale subscriptions appear in Calino** ([#237](https://github.com/Ivan-Malinovski/calino/issues/237), [#240](https://github.com/Ivan-Malinovski/calino/pull/240)). External feeds that Radicale holds as subscribed collections are now mirrored as read-only webcal subscriptions. They follow renames and feed-URL changes on the server and disappear when removed there. A feed you already subscribed to by hand is left alone.
+
+- **Rolling completion for repeating tasks, per calendar** ([#244](https://github.com/Ivan-Malinovski/calino/issues/244)). A task list can complete repeats by moving the task to its next date and saving the finished one as its own task, the shape DAVx⁵/OpenTasks and Tasks.org can sync back. Turn it on from the calendar's **Settings** in the sidebar. When a list's tasks come from Tasks.org or OpenTasks, Calino asks once, right after you complete a repeat there; it never switches on its own. Lists keep the Thunderbird-compatible default otherwise.
 
 ### Changed
 
