@@ -20,15 +20,15 @@ const CALENDAR = {
   supportedComponents: ['VEVENT', 'VTODO', 'VJOURNAL'],
 }
 
-async function seed(page: Page): Promise<void> {
+async function seed(page: Page, events: object[] = []): Promise<void> {
   await page.addInitScript(
-    ({ calendars }) => {
+    ({ calendars, events }) => {
       try {
         if (sessionStorage.getItem('__calino_test_tz_picker')) return
         sessionStorage.setItem('__calino_test_tz_picker', '1')
         const raw = localStorage.getItem('calino-storage')
         const parsed = raw ? JSON.parse(raw) : { state: {}, version: 2 }
-        parsed.state = { ...(parsed.state ?? {}), calendars, events: [] }
+        parsed.state = { ...(parsed.state ?? {}), calendars, events }
         localStorage.setItem('calino-storage', JSON.stringify(parsed))
         const rawSettings = localStorage.getItem('calino-settings')
         const settings = rawSettings ? JSON.parse(rawSettings) : { state: {}, version: 4 }
@@ -38,7 +38,7 @@ async function seed(page: Page): Promise<void> {
         /* noop */
       }
     },
-    { calendars: [CALENDAR] }
+    { calendars: [CALENDAR], events }
   )
 }
 
@@ -53,10 +53,10 @@ test.describe('event time zone picker', () => {
   test.beforeEach(async ({ page }) => {
     await clearState(page)
     await page.clock.setFixedTime(new Date('2026-07-08T08:00:00Z'))
-    await seed(page)
   })
 
   test('creates an event in a picked zone and reopens it in that zone', async ({ page }) => {
+    await seed(page)
     await page.goto('/week')
     await expect(page.locator('[data-component="header"]')).toBeVisible()
     await page.keyboard.press('c')
@@ -114,5 +114,40 @@ test.describe('event time zone picker', () => {
     await expect(modal).toBeVisible()
     await expect(modal.getByLabel('Start time')).toHaveValue('14:00')
     await expect(modal.getByRole('combobox', { name: 'Time zone' })).toHaveValue('Tokyo (JST)')
+  })
+
+  test('keeps a recurring occurrence on its local date when renaming it', async ({ page }) => {
+    await seed(page, [
+      {
+        id: 'tokyo-standup',
+        title: 'Tokyo standup',
+        calendarId: CALENDAR.id,
+        type: 'event',
+        start: '2026-07-09T07:00:00',
+        end: '2026-07-09T07:30:00',
+        timezone: 'Asia/Tokyo',
+        recurrence: { frequency: 'daily', interval: 1, count: 2 },
+      },
+    ])
+    await page.goto('/week')
+    const cards = page.locator('[data-component="event-card"]', { hasText: 'Tokyo standup' })
+    await expect(cards).toHaveCount(2)
+    await cards.last().click()
+    await page.getByRole('button', { name: 'Open event' }).click()
+
+    const modal = page.locator('[data-component="modal-card"]')
+    await expect(modal.getByLabel('Start time')).toHaveValue('07:00')
+    await modal.getByPlaceholder('Event title').fill('Renamed Tokyo standup')
+    await modal.getByRole('button', { name: 'Save', exact: true }).click()
+    await page.getByRole('button', { name: 'This event only' }).click()
+
+    await expect
+      .poll(() => storedEvent(page, 'Renamed Tokyo standup'))
+      .toMatchObject({
+        start: '2026-07-10T07:00:00',
+        end: '2026-07-10T07:30:00',
+        timezone: 'Asia/Tokyo',
+      })
+    await expect(cards.filter({ hasNotText: 'Renamed' })).toHaveCount(1)
   })
 })

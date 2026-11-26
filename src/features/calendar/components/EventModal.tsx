@@ -9,6 +9,7 @@ import {
   formatDisplayDate,
   formatInZone,
   parseWallClock,
+  zonedDayKey,
 } from '@/lib/datetime'
 import { formatHome, homeDayKey, homeTimezone, useHomeTimezone } from '@/lib/homeTimezone'
 import { createUuid } from '@/lib/uuid'
@@ -613,6 +614,7 @@ export function EventModal(): JSX.Element | null {
       setStartTime(formDefaults.startTime)
       setEndDate(formDefaults.endDate)
       setEndTime(formDefaults.endTime)
+      setFormTimezone(formDefaults.timezone)
       setIsAllDay(
         pendingEventPrefill?.allDay !== undefined
           ? pendingEventPrefill.allDay
@@ -1250,7 +1252,18 @@ export function EventModal(): JSX.Element | null {
         const occurrenceKey = originalEventId
           ? getOccurrenceStart(selectedStoredEvent, selectedEventId, originalEventId)
           : undefined
-        const occDateStr = occurrenceKey?.split('T')[0] || startDate
+        let occDateStr = occurrenceKey?.split('T')[0] || startDate
+        if (occurrenceKey && !isTaskMode && !isAllDay) {
+          // Expanded ids carry UTC instants, while the editor uses the event's
+          // local date. Existing overrides already have their own form date.
+          const sourceZone = initialState.timezone ?? homeZone
+          occDateStr = selectedStoredEvent?.recurrenceId
+            ? startDate
+            : zonedDayKey(
+                toEventInstant(occurrenceKey, initialState.timezone ?? undefined),
+                sourceZone
+              )
+        }
         const durationMs = stampDeviceZone
           ? parseFormWall(endDateTime).getTime() - parseFormWall(startDateTime).getTime()
           : new Date(endDateTime).getTime() - new Date(startDateTime).getTime()
