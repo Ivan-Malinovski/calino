@@ -1,11 +1,39 @@
 import { test, expect } from '@playwright/test'
-import { clearState } from './fixtures/localstorage'
+import { clearState, seedStoreCalendars } from './fixtures/localstorage'
 
 test.describe('desktop event modal', () => {
   test.use({ viewport: { width: 1280, height: 800 } })
 
   test.beforeEach(async ({ page }) => {
     await clearState(page)
+  })
+
+  test('keeps Location and Calendar balanced with a long calendar name', async ({ page }) => {
+    const name = 'Shared department calendar for long-term planning, bookings, and holidays'.repeat(
+      2
+    )
+    await seedStoreCalendars(page, [{ id: 'long-name', name }])
+    await page.goto('/month')
+    await expect(page.locator('[data-component="header"]')).toBeVisible()
+    await page.keyboard.press('c')
+
+    const modal = page.locator('[data-component="modal-card"]')
+    const location = modal.getByRole('combobox', { name: 'Location' })
+    const calendar = modal.getByRole('combobox', { name: 'Calendar' })
+    await expect(calendar).toHaveValue('long-name')
+    const widths = await calendar.evaluate((select) => {
+      const editor = select.closest('[data-component="modal-card"]')!
+      const location = editor.querySelector('[data-component="event-location-input"]')!
+      const calendarBounds = select.getBoundingClientRect()
+      return {
+        difference: Math.abs(location.getBoundingClientRect().width - calendarBounds.width),
+        remaining: editor.getBoundingClientRect().right - calendarBounds.right,
+      }
+    })
+    expect(widths.difference).toBeLessThan(2)
+    expect(widths.remaining).toBeGreaterThan(0)
+    await location.fill('Meeting room')
+    await expect(location).toHaveValue('Meeting room')
   })
 
   test('keeps advanced editing actions reachable while the body scrolls', async ({ page }) => {

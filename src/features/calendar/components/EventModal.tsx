@@ -207,6 +207,7 @@ export function EventModal(): JSX.Element | null {
   // keeps the wall clocks as typed (09:00 stays 09:00, now in the new zone),
   // which is what planning a trip in its local time wants.
   const [formTimezone, setFormTimezone] = useState<string | null>(initialState.timezone)
+  const [newEventTimezoneOpen, setNewEventTimezoneOpen] = useState(false)
   const formZone = formTimezone ?? homeZone
   /** Instant of a naive form wall clock, read in the form zone. */
   const parseFormWall = useCallback(
@@ -618,6 +619,7 @@ export function EventModal(): JSX.Element | null {
       setEndDate(formDefaults.endDate)
       setEndTime(formDefaults.endTime)
       setFormTimezone(formDefaults.timezone)
+      setNewEventTimezoneOpen(false)
       setIsAllDay(
         pendingEventPrefill?.allDay !== undefined
           ? pendingEventPrefill.allDay
@@ -1982,6 +1984,10 @@ export function EventModal(): JSX.Element | null {
                     formTimezone={formZone}
                     homeTimezone={homeZone}
                     onFormTimezoneChange={setFormTimezone}
+                    showTimezone={isEditing || newEventTimezoneOpen}
+                    onTimezoneToggle={
+                      isEditing ? undefined : () => setNewEventTimezoneOpen((open) => !open)
+                    }
                     isAllDay={isAllDay}
                     onIsAllDayChange={setIsAllDay}
                     startDate={startDate}

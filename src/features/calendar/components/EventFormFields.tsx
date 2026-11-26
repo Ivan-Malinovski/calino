@@ -1,6 +1,7 @@
 import type { JSX } from 'react'
 import { useId, useState, useRef, useEffect, useLayoutEffect } from 'react'
 import { createPortal } from 'react-dom'
+import { Globe } from 'lucide-react'
 import { createUuid } from '@/lib/uuid'
 import { useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
@@ -39,6 +40,8 @@ interface EventFormFieldsProps {
   formTimezone: string
   homeTimezone: string
   onFormTimezoneChange: (zone: string) => void
+  showTimezone: boolean
+  onTimezoneToggle?: () => void
   isAllDay: boolean
   onIsAllDayChange: (checked: boolean) => void
   startDate: string
@@ -146,6 +149,8 @@ export function EventFormFields({
   formTimezone,
   homeTimezone: homeTz,
   onFormTimezoneChange,
+  showTimezone,
+  onTimezoneToggle,
   startTime,
   onStartTimeChange,
   endDate,
@@ -200,6 +205,9 @@ export function EventFormFields({
   // RecurrenceDialog/DeleteDialog).
   const startDateId = useId()
   const endDateId = useId()
+  const timezoneId = useId()
+  const timezoneLabel = t('modals.eventForm.timezone')
+  const canToggleTimezone = !isAllDay && !!onTimezoneToggle
   const advancedOptionsId = useId()
   const [moreOpen, setMoreOpen] = useState(false)
   const [reminderDropdownOpen, setReminderDropdownOpen] = useState(false)
@@ -279,7 +287,9 @@ export function EventFormFields({
 
   return (
     <>
-      <div className={styles.dateTimeRow}>
+      <div
+        className={`${styles.dateTimeRow}${canToggleTimezone ? ` ${styles.dateTimeRowWithTimezone}` : ''}`}
+      >
         <div className={styles.dateTimeGroup}>
           <label className={styles.label} htmlFor={startDateId}>
             {t('modals.eventForm.start')}
@@ -363,22 +373,40 @@ export function EventFormFields({
             )}
           </div>
         </div>
+        {canToggleTimezone && (
+          <button
+            type="button"
+            className={styles.timezoneToggle}
+            aria-label={timezoneLabel}
+            aria-expanded={showTimezone}
+            aria-controls={timezoneId}
+            title={timezoneLabel}
+            onClick={onTimezoneToggle}
+          >
+            <Globe size={16} aria-hidden="true" />
+          </button>
+        )}
       </div>
 
       {!isAllDay && (
-        <div className={styles.eventTimezoneRow} data-component="event-timezone">
-          <span className={styles.eventTimezoneLabel}>{t('modals.eventForm.timezone')}</span>
-          <div className={styles.eventTimezonePicker}>
-            <TimezoneSelect
-              value={formTimezone}
-              onChange={(zone) => {
-                if (zone) onFormTimezoneChange(zone)
-              }}
-              ariaLabel={t('modals.eventForm.timezone')}
-              includeAutomatic={false}
-              dataComponent="event-timezone-select"
-            />
-          </div>
+        <div id={timezoneId} hidden={!showTimezone}>
+          {showTimezone && (
+            <div className={styles.eventTimezoneRow} data-component="event-timezone">
+              <span className={styles.eventTimezoneLabel}>{timezoneLabel}</span>
+              <div className={styles.eventTimezonePicker}>
+                <TimezoneSelect
+                  value={formTimezone}
+                  onChange={(zone) => {
+                    if (zone) onFormTimezoneChange(zone)
+                  }}
+                  ariaLabel={timezoneLabel}
+                  includeAutomatic={false}
+                  floating
+                  dataComponent="event-timezone-select"
+                />
+              </div>
+            </div>
+          )}
         </div>
       )}
 

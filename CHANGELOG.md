@@ -8,7 +8,7 @@ This release lets you reorder and isolate calendars in the sidebar, suggests att
 
 ### Added
 
-- **Event time zone picker** ([#281](https://github.com/Ivan-Malinovski/calino/issues/281)). Timed events now have a searchable Time zone field under the start and end times. The times you type are in that zone, so an event planned for a trip can be entered in local time there, and a line below shows the same times in your home zone. Events from other clients open in their own zone, and changing the zone keeps the typed times. New events start in the home zone.
+- **Event time zone picker** ([#281](https://github.com/Ivan-Malinovski/calino/issues/281)). Use the globe beside the date and time fields to show the searchable Time zone picker when creating a timed event. Existing timed events show it below those fields. The times you type are in that zone, so an event planned for a trip can be entered in local time there, and a line below shows the same times in your home zone. Events from other clients open in their own zone, and changing the zone keeps the typed times. New events start in the home zone.
 
 - **Reorder calendars in the sidebar** ([#291](https://github.com/Ivan-Malinovski/calino/pull/291)). Drag a calendar by the handle on the left of its row. The handle appears on hover or keyboard focus and stays visible on touch devices. The order survives reloads and calendar discovery, and newly discovered calendars are added at the end.
 

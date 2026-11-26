@@ -102,10 +102,12 @@ describe('issue 281 — event time zone picker', () => {
     })
   })
 
-  it('starts a new event in the home zone with no extra line', async () => {
+  it('hides the picker on new events and reveals the home zone with the globe button', async () => {
     const { EventModal } = await import('@/features/calendar/components/EventModal')
     render(<EventModal />)
 
+    expect(screen.queryByRole('combobox', { name: 'Time zone' })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Time zone' }))
     expect((screen.getByRole('combobox', { name: 'Time zone' }) as HTMLInputElement).value).toBe(
       'Europe/Copenhagen'
     )
@@ -121,6 +123,7 @@ describe('issue 281 — event time zone picker', () => {
         target: { value: 'Tokyo dinner' },
       })
     })
+    fireEvent.click(screen.getByRole('button', { name: 'Time zone' }))
     await pickZone('tokyo')
 
     // The fields keep 09:00–10:00, now read as Tokyo time.

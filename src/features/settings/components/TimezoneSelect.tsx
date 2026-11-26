@@ -1,5 +1,6 @@
-import { useEffect, useId, useMemo, useRef, useState } from 'react'
-import type { JSX, KeyboardEvent } from 'react'
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import type { CSSProperties, JSX, KeyboardEvent } from 'react'
+import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { getSupportedTimezones, TIMEZONE_PRESETS } from '@/lib/timezoneHelper'
 import styles from './Settings.module.css'
@@ -22,6 +23,8 @@ interface TimezoneSelectProps {
    * turns it off.
    */
   includeAutomatic?: boolean
+  /** Position the list outside a scrolling container, such as the event editor. */
+  floating?: boolean
   /** Forwarded to the wrapper, so a test can find one picker among several. */
   dataComponent?: string
 }
@@ -33,6 +36,7 @@ export function TimezoneSelect({
   onChange,
   ariaLabel,
   includeAutomatic = true,
+  floating = false,
   dataComponent = 'timezone-select',
 }: TimezoneSelectProps): JSX.Element {
   const { t } = useTranslation('settings')
@@ -42,6 +46,7 @@ export function TimezoneSelect({
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [highlighted, setHighlighted] = useState(0)
+  const [listPosition, setListPosition] = useState<CSSProperties>()
 
   const options = useMemo<Option[]>(() => {
     const presets = new Set(TIMEZONE_PRESETS.map((tz) => tz.value))
@@ -69,6 +74,47 @@ export function TimezoneSelect({
     if (terms.length === 0) return options
     return options.filter((option) => terms.every((term) => option.haystack.includes(term)))
   }, [options, query])
+
+  useLayoutEffect(() => {
+    const anchor = containerRef.current
+    if (!open || !floating || !anchor) return
+    const footer = anchor
+      .closest('[role="dialog"]')
+      ?.querySelector('[data-component="modal-footer"]')
+    const viewport = window.visualViewport
+    const gap = 4
+    const maxHeight = 260
+
+    const positionList = (): void => {
+      const rect = anchor.getBoundingClientRect()
+      const viewportTop = viewport?.offsetTop ?? 0
+      const viewportBottom = viewportTop + (viewport?.height ?? window.innerHeight)
+      const bottom = Math.min(viewportBottom, footer?.getBoundingClientRect().top ?? viewportBottom)
+      const above = rect.top - viewportTop - gap
+      const below = bottom - rect.bottom - gap
+      const opensAbove = below < maxHeight && above > below
+      setListPosition({
+        left: rect.left,
+        width: rect.width,
+        maxHeight: Math.max(0, Math.min(maxHeight, opensAbove ? above : below)),
+        ...(opensAbove
+          ? { bottom: window.innerHeight - rect.top + gap }
+          : { top: rect.bottom + gap }),
+      })
+    }
+
+    positionList()
+    window.addEventListener('resize', positionList)
+    window.addEventListener('scroll', positionList, true)
+    viewport?.addEventListener('resize', positionList)
+    viewport?.addEventListener('scroll', positionList)
+    return () => {
+      window.removeEventListener('resize', positionList)
+      window.removeEventListener('scroll', positionList, true)
+      viewport?.removeEventListener('resize', positionList)
+      viewport?.removeEventListener('scroll', positionList)
+    }
+  }, [floating, open])
 
   useEffect(() => {
     if (!open) return
@@ -108,6 +154,46 @@ export function TimezoneSelect({
       close()
     }
   }
+
+  const list = open && (
+    <ul
+      id={listboxId}
+      role="listbox"
+      className={
+        floating ? `${styles.timezoneList} ${styles.timezoneListFloating}` : styles.timezoneList
+      }
+      style={floating ? listPosition : undefined}
+      aria-label={ariaLabel}
+    >
+      {results.length === 0 && (
+        <li role="presentation" className={styles.timezoneEmpty}>
+          {t('general.homeTimezone.noResults')}
+        </li>
+      )}
+      {results.map((option, index) => (
+        <li
+          key={option.value || 'automatic'}
+          ref={(element) => {
+            optionRefs.current[index] = element
+          }}
+          id={`${listboxId}-${index}`}
+          role="option"
+          aria-selected={option.value === value}
+          className={`${styles.timezoneOption} ${
+            index === highlighted ? styles.timezoneOptionActive : ''
+          }`}
+          onMouseDown={(event) => event.preventDefault()}
+          onMouseEnter={() => setHighlighted(index)}
+          onClick={() => choose(option)}
+        >
+          {option.label}
+          {option.label !== option.value && option.value && (
+            <span className={styles.timezoneOptionZone}>{option.value}</span>
+          )}
+        </li>
+      ))}
+    </ul>
+  )
 
   return (
     <div
@@ -151,37 +237,7 @@ export function TimezoneSelect({
         }}
         onKeyDown={handleKeyDown}
       />
-      {open && (
-        <ul id={listboxId} role="listbox" className={styles.timezoneList} aria-label={ariaLabel}>
-          {results.length === 0 && (
-            <li role="presentation" className={styles.timezoneEmpty}>
-              {t('general.homeTimezone.noResults')}
-            </li>
-          )}
-          {results.map((option, index) => (
-            <li
-              key={option.value || 'automatic'}
-              ref={(element) => {
-                optionRefs.current[index] = element
-              }}
-              id={`${listboxId}-${index}`}
-              role="option"
-              aria-selected={option.value === value}
-              className={`${styles.timezoneOption} ${
-                index === highlighted ? styles.timezoneOptionActive : ''
-              }`}
-              onMouseDown={(event) => event.preventDefault()}
-              onMouseEnter={() => setHighlighted(index)}
-              onClick={() => choose(option)}
-            >
-              {option.label}
-              {option.label !== option.value && option.value && (
-                <span className={styles.timezoneOptionZone}>{option.value}</span>
-              )}
-            </li>
-          ))}
-        </ul>
-      )}
+      {list && (floating ? createPortal(list, document.body) : list)}
     </div>
   )
 }
