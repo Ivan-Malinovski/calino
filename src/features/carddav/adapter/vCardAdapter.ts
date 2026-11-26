@@ -116,7 +116,7 @@ function escapeVCardValue(value: string): string {
  * escape: `C:\\new` reads as `C:\new`, not as `C:\` + newline + `ew`.
  */
 function unescapeVCardValue(value: string): string {
-  return value.replace(/\\([\\;,nN])/g, (_, char: string) =>
+  return value.replace(/\\([\\;,:nN])/g, (_, char: string) =>
     char === 'n' || char === 'N' ? '\n' : char
   )
 }
@@ -246,7 +246,7 @@ const APPLE_LABEL_MAP: Record<string, string> = {
  * Process itemN. grouped properties (Apple Address Book format).
  * Scans for itemN.X-ABLabel lines and applies their values as type overrides
  * on the matching itemN.TEL/EMAIL/URL/ADR line.
- * Both the label line and the data line are preserved in opaqueLines.
+ * The label line is preserved in opaqueLines; the data line is read into its field.
  *
  * Returns a map of itemId → type string to apply.
  */
@@ -254,7 +254,7 @@ function processItemNGroups(
   lines: string[]
 ): Map<string, { dataLine: string; labelValue: string }> {
   const result = new Map<string, { dataLine: string; labelValue: string }>()
-  const labelRegex = /^ITEM(\d+)\.X-ABLABEL$/i
+  const labelRegex = /^ITEM(\d+)\.X-ABLABEL[;:]/i
   const dataPropRegex = /^ITEM(\d+)\.(TEL|EMAIL|URL|ADR)/i
 
   // Build index of label lines
@@ -286,6 +286,15 @@ function processItemNGroups(
   return result
 }
 
+/** `item2.ADR;...` → `ADR;...` for the grouped properties the extractors read. */
+function withoutItemGroup(line: string): string {
+  return /^ITEM\d+\.(TEL|EMAIL|URL|ADR)[;:]/i.test(line) ? line.replace(/^ITEM\d+\./i, '') : line
+}
+
+function vCardGroupPrefix(group?: string): string {
+  return group && /^ITEM\d+$/i.test(group) ? `${group}.` : ''
+}
+
 /**
  * Apply Apple AB label token to a type string.
  */
@@ -314,7 +323,8 @@ function extractEmails(
   const emails: ContactEmail[] = []
   const usedItemNs = new Set<string>()
 
-  for (const line of lines) {
+  for (const rawLine of lines) {
+    const line = withoutItemGroup(rawLine)
     if (!line.toUpperCase().startsWith('EMAIL')) continue
 
     const result = parseLineWithParams(line, 'EMAIL')
@@ -325,7 +335,7 @@ function extractEmails(
       result.params.toUpperCase().includes('PREF') || result.params.includes('TYPE=pref')
 
     // Check for itemN group with Apple label
-    const itemNMatch = line.match(/^ITEM(\d+)\./i)
+    const itemNMatch = rawLine.match(/^ITEM(\d+)\./i)
     if (itemNMatch) {
       const itemId = itemNMatch[1]
       const groupInfo = itemNMap.get(itemId)
@@ -336,6 +346,7 @@ function extractEmails(
     }
 
     emails.push({
+      ...(itemNMatch && { vCardGroup: itemNMatch[0].slice(0, -1) }),
       value: unescapeVCardValue(result.value),
       type,
       isPrimary,
@@ -357,7 +368,8 @@ function extractPhones(
   const phones: ContactPhone[] = []
   const usedItemNs = new Set<string>()
 
-  for (const line of lines) {
+  for (const rawLine of lines) {
+    const line = withoutItemGroup(rawLine)
     if (!line.toUpperCase().startsWith('TEL')) continue
 
     const result = parseLineWithParams(line, 'TEL')
@@ -368,7 +380,7 @@ function extractPhones(
       result.params.toUpperCase().includes('PREF') || result.params.includes('TYPE=pref')
 
     // Check for itemN group with Apple label
-    const itemNMatch = line.match(/^ITEM(\d+)\./i)
+    const itemNMatch = rawLine.match(/^ITEM(\d+)\./i)
     if (itemNMatch) {
       const itemId = itemNMatch[1]
       const groupInfo = itemNMap.get(itemId)
@@ -379,6 +391,7 @@ function extractPhones(
     }
 
     phones.push({
+      ...(itemNMatch && { vCardGroup: itemNMatch[0].slice(0, -1) }),
       value: unescapeVCardValue(result.value),
       type,
       isPrimary,
@@ -400,7 +413,8 @@ function extractAddresses(
   const addresses: ContactAddress[] = []
   const usedItemNs = new Set<string>()
 
-  for (const line of lines) {
+  for (const rawLine of lines) {
+    const line = withoutItemGroup(rawLine)
     if (!line.toUpperCase().startsWith('ADR')) continue
 
     const result = parseRawLineWithParams(line, 'ADR')
@@ -411,7 +425,7 @@ function extractAddresses(
       result.params.toUpperCase().includes('PREF') || result.params.includes('TYPE=pref')
 
     // Check for itemN group with Apple label
-    const itemNMatch = line.match(/^ITEM(\d+)\./i)
+    const itemNMatch = rawLine.match(/^ITEM(\d+)\./i)
     if (itemNMatch) {
       const itemId = itemNMatch[1]
       const groupInfo = itemNMap.get(itemId)
@@ -424,6 +438,7 @@ function extractAddresses(
     const parts = decodePropertyParts(result, ';')
 
     addresses.push({
+      ...(itemNMatch && { vCardGroup: itemNMatch[0].slice(0, -1) }),
       type,
       isPrimary,
       poBox: unescapeVCardValue(parts[0] || ''),
@@ -451,7 +466,8 @@ function extractUrls(
   const urls: ContactUrl[] = []
   const usedItemNs = new Set<string>()
 
-  for (const line of lines) {
+  for (const rawLine of lines) {
+    const line = withoutItemGroup(rawLine)
     if (!line.toUpperCase().startsWith('URL')) continue
 
     const result = parseLineWithParams(line, 'URL')
@@ -462,7 +478,7 @@ function extractUrls(
       result.params.toUpperCase().includes('PREF') || result.params.includes('TYPE=pref')
 
     // Check for itemN group with Apple label
-    const itemNMatch = line.match(/^ITEM(\d+)\./i)
+    const itemNMatch = rawLine.match(/^ITEM(\d+)\./i)
     if (itemNMatch) {
       const itemId = itemNMatch[1]
       const groupInfo = itemNMap.get(itemId)
@@ -473,6 +489,7 @@ function extractUrls(
     }
 
     urls.push({
+      ...(itemNMatch && { vCardGroup: itemNMatch[0].slice(0, -1) }),
       value: unescapeVCardValue(result.value),
       type,
       isPrimary,
@@ -726,8 +743,8 @@ function formatVCardDate(dateStr: string): string | null {
  *
  * Unknown / opaque lines are preserved in `opaqueLines` for round-trip fidelity.
  * itemN. grouped properties (Apple Address Book format) are parsed and their
- * label values applied to the corresponding fields; both lines are preserved
- * in opaqueLines.
+ * label values applied to the corresponding fields; the label lines are
+ * preserved in opaqueLines.
  *
  * RFC 6868 caret-encoding is decoded in parameter values.
  * RFC 6350 §3.4 escapes are reversed in all property values.
@@ -775,7 +792,7 @@ export function parseVCard(
   const opaqueLines: string[] = []
 
   for (const line of lines) {
-    const upper = line.toUpperCase().split(':')[0].split(';')[0]
+    const upper = withoutItemGroup(line).toUpperCase().split(':')[0].split(';')[0]
     const isKnown = knownPrefixes.some((p) => upper.startsWith(p))
     if (!isKnown && line.trim() !== '') {
       opaqueLines.push(line)
@@ -1013,13 +1030,15 @@ export function contactToVCard(contact: Contact, targetVersion: '3.0' | '4.0' = 
   // Emails
   for (const email of contact.emails) {
     const params = buildTypeParamsV(targetVersion, email.type, email.isPrimary)
-    lines.push(`EMAIL${params}:${escapeVCardValue(email.value)}`)
+    lines.push(
+      `${vCardGroupPrefix(email.vCardGroup)}EMAIL${params}:${escapeVCardValue(email.value)}`
+    )
   }
 
   // Phones
   for (const phone of contact.phones) {
     const params = buildTypeParamsV(targetVersion, phone.type, phone.isPrimary)
-    lines.push(`TEL${params}:${escapeVCardValue(phone.value)}`)
+    lines.push(`${vCardGroupPrefix(phone.vCardGroup)}TEL${params}:${escapeVCardValue(phone.value)}`)
   }
 
   // Addresses
@@ -1034,13 +1053,13 @@ export function contactToVCard(contact: Contact, targetVersion: '3.0' | '4.0' = 
       escapeVCardValue(addr.postalCode),
       escapeVCardValue(addr.country),
     ].join(';')
-    lines.push(`ADR${params}:${value}`)
+    lines.push(`${vCardGroupPrefix(addr.vCardGroup)}ADR${params}:${value}`)
   }
 
   // URLs
   for (const url of contact.urls) {
     const params = buildTypeParamsV(targetVersion, url.type, url.isPrimary)
-    lines.push(`URL${params}:${escapeVCardValue(url.value)}`)
+    lines.push(`${vCardGroupPrefix(url.vCardGroup)}URL${params}:${escapeVCardValue(url.value)}`)
   }
 
   // IMs

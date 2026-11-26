@@ -80,18 +80,21 @@ export interface Contact {
 }
 
 export interface ContactEmail {
+  vCardGroup?: string
   value: string
   type: 'home' | 'work' | 'other' | 'pref'
   isPrimary: boolean
 }
 
 export interface ContactPhone {
+  vCardGroup?: string
   value: string
   type: 'home' | 'work' | 'cell' | 'fax' | 'other' | 'pref'
   isPrimary: boolean
 }
 
 export interface ContactAddress {
+  vCardGroup?: string
   type: 'home' | 'work' | 'other' | 'pref'
   isPrimary: boolean
   poBox: string
@@ -104,6 +107,7 @@ export interface ContactAddress {
 }
 
 export interface ContactUrl {
+  vCardGroup?: string
   value: string
   type: 'home' | 'work' | 'other' | 'pref'
   isPrimary: boolean
