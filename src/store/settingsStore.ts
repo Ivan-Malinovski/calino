@@ -184,8 +184,11 @@ const DEFAULT_SETTINGS: UserSettings = {
   conflictResolution: 'server-wins',
   compactRecurringEvents: true,
   compressPastWeeks: true,
-  // 0 = Auto: the day cell's height decides. See `useMonthEventCapacity`.
-  monthViewEventLimit: 0,
+  // 0 = Auto: the week rows and the day-cell height decide. See
+  // `useMonthEventCapacity` and `layoutMonthRows`. Auto also draws month
+  // events as one-line chips, so it is opt-in: the default stays a fixed
+  // limit and keeps the full card with its time and location.
+  monthViewEventLimit: 3,
   hasCompletedOnboarding: false,
   themeMode: 'auto' as ThemeMode,
   lightTheme: config.defaultLightTheme,

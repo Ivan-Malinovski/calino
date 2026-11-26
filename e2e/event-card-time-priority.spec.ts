@@ -12,7 +12,10 @@ test.describe('event card — time outranks location', () => {
           sessionStorage.setItem('__calino_test_time_priority', '1')
           const settingsRaw = localStorage.getItem(keys.settings)
           const settings = settingsRaw ? JSON.parse(settingsRaw) : { state: {}, version: 1 }
-          settings.state = { ...settings.state, monthViewEventLimit: 0 }
+          // A fixed limit keeps the month card in its full form. Auto sizes the
+          // rows to the window and draws one-line chips, which have no time line
+          // to measure. The default is 3, spelled out here so the spec says so.
+          settings.state = { ...settings.state, monthViewEventLimit: 3 }
           localStorage.setItem(keys.settings, JSON.stringify(settings))
           const now = new Date().toISOString()
           const raw = localStorage.getItem(keys.calendar)

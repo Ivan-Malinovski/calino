@@ -238,7 +238,7 @@
     },
     "monthViewEventLimit": {
       "label": "Events Before Rollup",
-      "desc": "How many events to show per day before showing \"+N more\". Auto fits as many as the day cell has room for, and follows the window as it resizes.",
+      "desc": "How many events to show per day before showing \"+N more\". Auto sizes the week rows to the window and fits as many events as each day has room for, drawing them as one-line chips, and follows the window as it resizes.",
       "ariaLabel": "Events before rollup",
       "auto": "Auto"
     },

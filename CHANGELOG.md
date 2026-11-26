@@ -30,7 +30,7 @@ Set an event’s time zone, choose how each calendar completes repeating tasks, 
 
 ### Changed
 
-- **Month rows size to the window.** On a short window every week stays visible without scrolling, on a medium one the current week opens first, and on a tall one busy weeks expand to list their events. The week holding keyboard focus gets the room, and a short window also tightens the top bar.
+- **Month rows size to the window, once you turn Auto on.** With Events Before Rollup set to **Auto**, month weeks size to the window: on a short window every week stays visible without scrolling, on a medium one the current week opens first, and on a tall one busy weeks expand to list their events. The week holding keyboard focus gets the room, and a short window also tightens the top bar. Auto draws each event as a one-line chip, so pick a fixed limit if you want the full card with its time and location; the default stays at 3 events before “+N more”.
 
 - **Unsaved event edits are kept** ([#247](https://github.com/Ivan-Malinovski/calino/pull/247)). With unsaved changes, a click outside the event editor or Escape now asks “Save your changes?” with Save, Discard and Keep editing, as the Android app does, instead of throwing the edit away. Close and Cancel still close without asking, and an unchanged event still closes at once. Thanks to [@caewa](https://github.com/caewa).
 
