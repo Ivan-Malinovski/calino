@@ -4,7 +4,9 @@ All notable changes to Calino will be documented in this file.
 
 ## [Unreleased]
 
-This release lets you reorder and isolate calendars in the sidebar, suggests attendees as you type, adds Simplified Chinese, and gives self-hosters runtime configuration and subpath deployments. It also asks before discarding unsaved event edits, sizes month rows to the window, and fixes a long list of CalDAV, CardDAV and JMAP interoperability problems.
+## [0.43.0] - 2026-11-26
+
+Set an event’s time zone, choose how each calendar completes repeating tasks, and reorder or isolate calendars in the sidebar. Calino also adds attendee suggestions and Simplified Chinese. Self-hosted installs gain runtime configuration and subpath support, and this release improves interoperability with CalDAV, CardDAV, and JMAP servers.
 
 ### Added
 
@@ -42,7 +44,7 @@ This release lets you reorder and isolate calendars in the sidebar, suggests att
 
 ### Fixed
 
-- **A missed recurring task goes overdue instead of skipping ahead** ([#275](https://github.com/Ivan-Malinovski/calino/issues/275)). When a repeating task's start or due date fell off its own pattern, for example a "monthly on the 15th" task whose due date another app moved to the 18th, Calino dropped that first date and showed the next slot on the pattern, so an unfinished task looked done and due next month. RFC 5545 counts that date as the first occurrence, and Calino now does too: the task stays on its real due date and turns overdue when it passes. The calendar grid and search show the same date, and recurring events get the same correction.
+- **A missed recurring task goes overdue instead of skipping ahead** ([#275](https://github.com/Ivan-Malinovski/calino/issues/275)). When a repeating task's start or due date fell off its own pattern, for example a "monthly on the 15th" task whose due date another app moved to the 18th, Calino dropped that first date and showed the next slot on the pattern, so an unfinished task looked done and due next month. RFC 5545 counts that date as the first occurrence, and Calino now does too: the task stays on its real due date and turns overdue when it passes. Search opens the overdue task and skips occurrences already completed or cancelled. The calendar grid also keeps the first date when a repeating event starts off its pattern.
 
 - **Task reminders reach other CalDAV clients** ([#277](https://github.com/Ivan-Malinovski/calino/pull/277)). A timed task created in Calino now writes a `VALARM` at its due time (absolute UTC trigger, `ACTION:DISPLAY`), so Apple Reminders and similar clients schedule a notification instead of only displaying the task. Existing alarms are preserved, and absolute triggers move with `DUE` when the task is edited. Alarms created by Calino are removed when a task is completed, loses its due time, or becomes recurring. Recurring and date-only tasks keep Calino's local due-date reminder. Thanks to [@Alex1607](https://github.com/Alex1607).
 
@@ -59,6 +61,10 @@ This release lets you reorder and isolate calendars in the sidebar, suggests att
 - **Categories with commas stay whole** ([#252](https://github.com/Ivan-Malinovski/calino/pull/252)). A category such as “R, D” is no longer split into two on load and written back that way for every client sharing the calendar.
 
 - **Contact names import correctly** ([#280](https://github.com/Ivan-Malinovski/calino/pull/280)). Names and organizations with parameters, as Android and Outlook export them (`FN;CHARSET=UTF-8:`), and quoted-printable vCard 2.1 values are now read instead of saving the contact as “Unknown”. Thanks to [@jayhemnani9910](https://github.com/jayhemnani9910).
+
+- **Apple contact fields and labels survive edits** ([#293](https://github.com/Ivan-Malinovski/calino/pull/293)). Calino reads grouped phone numbers, emails, addresses, and websites from Apple contacts and preserves their labels when saving. Thanks to [@jayhemnani9910](https://github.com/jayhemnani9910).
+
+- **Quoted-printable contact details import correctly** ([#294](https://github.com/Ivan-Malinovski/calino/pull/294)). Older vCards retain characters, address fields, and notes that wrap across lines. Thanks to [@jayhemnani9910](https://github.com/jayhemnani9910).
 
 - **Escaped commas and semicolons in contacts** ([#255](https://github.com/Ivan-Malinovski/calino/pull/255)). A contact named “Martin, Jean” no longer shows a backslash, and saving it no longer adds another escape on the server each time.
 
