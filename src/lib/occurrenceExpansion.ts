@@ -1,6 +1,6 @@
 import { parseISO } from 'date-fns'
 import { formatInTimeZone } from 'date-fns-tz'
-import { RRule } from 'rrule'
+import { RRule, RRuleSet } from 'rrule'
 import ICAL from 'ical.js'
 import { buildRRuleString, normaliseAllDayUntil } from './recurrence'
 import { isInstantString, toEventInstant } from './datetime'
@@ -109,6 +109,32 @@ export function shapeOccurrence(
 export function rruleAnchor(event: CalendarEvent, parsedStart: Date): Date {
   if (!event.isAllDay) return parsedStart
   return utcMidnight(event.start)
+}
+
+/**
+ * The recurrence set an RRULE generates from `anchor`, with the anchor itself
+ * always in it.
+ *
+ * RFC 5545 §3.8.5.3: "The DTSTART property value always counts as the first
+ * occurrence." rrule.js only emits instants that match the rule's BY* parts, so
+ * a DTSTART that is off the pattern — a monthly-on-the-15th task whose due date
+ * was moved to the 18th in another client — silently dropped out of the series
+ * and the task jumped to next month's slot instead of going overdue (#275).
+ * COUNT includes DTSTART too, so an off-pattern anchor takes one off it.
+ */
+export function buildRecurrenceSet(rruleString: string, anchor: Date): RRuleSet {
+  const options = RRule.parseString(rruleString)
+  const rule = new RRule({ ...options, dtstart: anchor })
+  const set = new RRuleSet()
+  if (rule.after(anchor, true)?.getTime() === anchor.getTime()) {
+    set.rrule(rule)
+    return set
+  }
+  set.rdate(anchor)
+  if (options.count == null) set.rrule(rule)
+  else if (options.count > 1)
+    set.rrule(new RRule({ ...options, count: options.count - 1, dtstart: anchor }))
+  return set
 }
 
 /**
@@ -273,9 +299,12 @@ function warnUnknownDeviceZone(deviceTz: string): void {
  * start is genuinely meant as UTC wall time can carry `timezone: 'UTC'`.
  */
 interface ZonedExpansion {
-  expansion: ICAL.RecurExpansion
+  /** Null when the rule has nothing left beyond DTSTART (COUNT=1 off-pattern). */
+  expansion: ICAL.RecurExpansion | null
   /** Sub-second remainder ICAL.Time drops; added back to every instant. */
   msOffset: number
+  /** Instants owed before the expansion resumes — DTSTART, see below. */
+  queue: Date[]
 }
 
 function zonedExpansion(master: CalendarEvent): ZonedExpansion | null {
@@ -294,25 +323,53 @@ function zonedExpansion(master: CalendarEvent): ZonedExpansion | null {
     : instantWallClockParts(master.start, frame)
   if (!parts) return null
   const dtstart = ICAL.Time.fromData(parts, zone)
-  const vevent = new ICAL.Component('vevent')
-  vevent.addPropertyWithValue('dtstart', dtstart)
+  const msOffset = subSecondMs(master.start)
+  const expand = (recur: ICAL.Recur): ICAL.RecurExpansion => {
+    const vevent = new ICAL.Component('vevent')
+    vevent.addPropertyWithValue('dtstart', dtstart)
+    vevent.addPropertyWithValue('rrule', recur)
+    return new ICAL.RecurExpansion({ dtstart, component: vevent })
+  }
   try {
-    vevent.addPropertyWithValue('rrule', ICAL.Recur.fromString(rruleString))
-    return {
-      expansion: new ICAL.RecurExpansion({ dtstart, component: vevent }),
-      msOffset: subSecondMs(master.start),
+    const recur = ICAL.Recur.fromString(rruleString)
+    const expansion = expand(recur)
+    const anchor = dtstart.toJSDate()
+    const first = expansion.next()
+    if (first && first.toJSDate().getTime() === anchor.getTime()) {
+      return { expansion, msOffset, queue: [withMsOffset(anchor, msOffset)] }
     }
+    // DTSTART is off the rule's pattern. It still counts as the first
+    // occurrence (RFC 5545 §3.8.5.3, see buildRecurrenceSet), and against COUNT.
+    const queue = [withMsOffset(anchor, msOffset)]
+    if (recur.count == null) {
+      if (first) queue.push(withMsOffset(first.toJSDate(), msOffset))
+      return { expansion, msOffset, queue }
+    }
+    if (recur.count <= 1) return { expansion: null, msOffset, queue }
+    const shorter = recur.clone()
+    shorter.count = recur.count - 1
+    return { expansion: expand(shorter), msOffset, queue }
   } catch {
     return null
   }
 }
 
+function withMsOffset(instant: Date, msOffset: number): Date {
+  return msOffset ? new Date(instant.getTime() + msOffset) : instant
+}
+
+/** True once a zoned walk has nothing left to yield. */
+function zonedWalkComplete(walk: ZonedExpansion): boolean {
+  return walk.queue.length === 0 && (!walk.expansion || walk.expansion.complete)
+}
+
 /** The next occurrence instant of a zoned walk, or null when it is exhausted. */
 function nextZonedInstant(walk: ZonedExpansion): Date | null {
-  const next = walk.expansion.next()
+  const queued = walk.queue.shift()
+  if (queued) return queued
+  const next = walk.expansion?.next()
   if (!next) return null
-  const instant = next.toJSDate()
-  return walk.msOffset ? new Date(instant.getTime() + walk.msOffset) : instant
+  return withMsOffset(next.toJSDate(), walk.msOffset)
 }
 
 /**
@@ -327,7 +384,7 @@ export function expandZonedOccurrences(master: CalendarEvent, from: Date, to: Da
   const out: Date[] = []
   let n = 0
   try {
-    while (!walk.expansion.complete && n++ < MAX_ZONED_EXPANSION_SCAN) {
+    while (!zonedWalkComplete(walk) && n++ < MAX_ZONED_EXPANSION_SCAN) {
       const instant = nextZonedInstant(walk)
       if (!instant) break
       if (instant > to) break
@@ -391,7 +448,7 @@ function* occurrencesFrom(
   const walk = zonedExpansion(master)
   if (walk) {
     let n = 0
-    while (!walk.expansion.complete && n++ < MAX_ZONED_EXPANSION_SCAN) {
+    while (!zonedWalkComplete(walk) && n++ < MAX_ZONED_EXPANSION_SCAN) {
       const instant = nextZonedInstant(walk)
       if (!instant) return
       if (instant.getTime() > cursor.getTime()) yield instant
@@ -400,9 +457,9 @@ function* occurrencesFrom(
   }
   const masterStart = parseISO(master.start)
   const anchor = rruleAnchor(master, masterStart)
-  let rule: RRule
+  let rule: RRuleSet
   try {
-    rule = new RRule({ ...RRule.parseString(rruleString), dtstart: anchor })
+    rule = buildRecurrenceSet(rruleString, anchor)
   } catch {
     return
   }
@@ -568,7 +625,7 @@ function computeDisplayOccurrence(master: CalendarEvent, now: Date): OccurrenceS
       const hasExclusions = (master.excludedDates?.length ?? 0) > 0
       let lastBefore: Date | null = null
       let n = 0
-      while (!walk.expansion.complete && n++ < MAX_ZONED_EXPANSION_SCAN) {
+      while (!zonedWalkComplete(walk) && n++ < MAX_ZONED_EXPANSION_SCAN) {
         const occ = nextZonedInstant(walk)
         if (!occ) break
         if (occ.getTime() < from.getTime()) {
@@ -583,12 +640,9 @@ function computeDisplayOccurrence(master: CalendarEvent, now: Date): OccurrenceS
   }
 
   // Non-zoned frame: forward walk, then the rrule.before fallback.
-  let rule: RRule
+  let rule: RRuleSet
   try {
-    rule = new RRule({
-      ...RRule.parseString(rruleString),
-      dtstart: rruleAnchor(master, masterStart),
-    })
+    rule = buildRecurrenceSet(rruleString, rruleAnchor(master, masterStart))
   } catch {
     return null
   }
