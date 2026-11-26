@@ -187,3 +187,31 @@ test('offers recurrence on a dated task and explains why it is unavailable on a 
     modal.locator('[data-component="task-recurrence"]').getByRole('checkbox')
   ).toBeDisabled()
 })
+
+// Issue #275 — a missed occurrence must go overdue, not vanish. RFC 5545
+// §3.8.5.3 counts DTSTART as the first occurrence even when it is off the
+// rule's pattern, which is what a task looks like after another client moves
+// its due date (here: "monthly on the 15th", due moved to the 18th).
+test('a missed repeat whose due date is off the pattern shows as overdue', async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-11-26T12:00:00') })
+  await seed(page, [
+    {
+      ...MASTER,
+      id: 'rent',
+      uid: 'rent',
+      title: 'Pay rent',
+      start: '2026-11-18T00:00:00',
+      end: '2026-11-18T23:59:59',
+      dueDate: '2026-11-18',
+      rruleString: 'FREQ=MONTHLY;BYMONTHDAY=15',
+      recurrence: { frequency: 'monthly', interval: 1, byMonthDay: [15] },
+    },
+  ])
+  await page.goto('/tasks')
+
+  const row = page.locator('[data-component="task-row"]').filter({ hasText: 'Pay rent' })
+  await expect(row).toHaveCount(1)
+  // Before the fix the row skipped to 15 December, the next on-pattern slot.
+  await expect(row.locator('[data-component="task-due-date"]')).toHaveText('Nov 18')
+  await expect(page.getByRole('heading', { name: 'Overdue' })).toBeVisible()
+})

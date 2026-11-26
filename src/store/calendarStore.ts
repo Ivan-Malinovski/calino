@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 import { safeLocalStorage } from '@/lib/storage'
 import { parseISO, isWithinInterval, startOfDay, endOfDay } from 'date-fns'
-import { RRule } from 'rrule'
+import { RRuleSet } from 'rrule'
 import type {
   CalendarStore,
   CalendarEvent,
@@ -25,6 +25,7 @@ import {
   materializeOccurrenceAt,
   rruleAnchor,
   rruleWindow,
+  buildRecurrenceSet,
   expandZonedOccurrences,
   parseOccurrenceInstant,
 } from '@/lib/occurrenceExpansion'
@@ -160,15 +161,14 @@ let eventIndexHome: string | null = null
 // RRule construction is expensive and the rules themselves are immutable, so
 // this cache lives at module scope and survives across queries (it used to be
 // rebuilt per call, which meant it only ever helped within a single range).
-const rruleCache = new Map<string, RRule>()
+const rruleCache = new Map<string, RRuleSet>()
 const MAX_RRULE_CACHE = 512
 
-function getOrCreateRRule(rruleStr: string, eventStart: Date): RRule {
+function getOrCreateRRule(rruleStr: string, eventStart: Date): RRuleSet {
   const key = `${rruleStr}|${eventStart.getTime()}`
   let rule = rruleCache.get(key)
   if (!rule) {
-    const options = RRule.parseString(rruleStr)
-    rule = new RRule({ ...options, dtstart: eventStart })
+    rule = buildRecurrenceSet(rruleStr, eventStart)
     if (rruleCache.size > MAX_RRULE_CACHE) rruleCache.clear()
     rruleCache.set(key, rule)
   }
