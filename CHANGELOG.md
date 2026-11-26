@@ -10,6 +10,8 @@ All notable changes to Calino will be documented in this file.
 
 ### Fixed
 
+- **A missed recurring task goes overdue instead of skipping ahead** ([#275](https://github.com/Ivan-Malinovski/calino/issues/275)). When a repeating task's start or due date fell off its own pattern, for example a "monthly on the 15th" task whose due date another app moved to the 18th, Calino dropped that first date and showed the next slot on the pattern, so an unfinished task looked done and due next month. RFC 5545 counts that date as the first occurrence, and Calino now does too: the task stays on its real due date and turns overdue when it passes. The calendar grid and search show the same date, and recurring events get the same correction.
+
 - **Task reminders reach other CalDAV clients.** A timed task created in Calino now writes a `VALARM` at its due time (absolute UTC trigger, `ACTION:DISPLAY`), so Apple Reminders and similar clients schedule a notification instead of only displaying the task. Existing alarms are preserved, and absolute triggers move with `DUE` when the task is edited. Alarms created by Calino are removed when a task is completed, loses its due time, or becomes recurring. Recurring and date-only tasks keep Calino's local due-date reminder.
 
 ## [0.42.0] - 2026-11-03
