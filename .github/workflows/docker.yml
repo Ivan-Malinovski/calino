@@ -70,6 +70,14 @@ jobs:
           cache-from: type=gha,scope=test
           cache-to: type=gha,mode=max,scope=test
 
+      - name: Verify image labels
+        run: |
+          # Nothing may be left over from the Caddy base image.
+          docker image inspect --format '{{json .Config.Labels}}' calino:test | jq -e '
+            ."org.opencontainers.image.title" == "Calino"
+            and ."org.opencontainers.image.source" == "https://github.com/Ivan-Malinovski/calino"
+            and (tostring | test("caddy|light code labs"; "i") | not)'
+
       - name: Start container
         run: |
           mkdir -p "$RUNNER_TEMP/calino-config"
@@ -184,6 +192,12 @@ jobs:
           cache-from: type=gha,scope=proxy-test
           cache-to: type=gha,mode=max,scope=proxy-test
 
+      - name: Verify proxy image labels
+        run: |
+          docker image inspect --format '{{json .Config.Labels}}' calino-proxy:test | jq -e '
+            ."org.opencontainers.image.title" == "Calino CalDAV Proxy"
+            and ."org.opencontainers.image.source" == "https://github.com/Ivan-Malinovski/calino"'
+
       - name: Start proxy container
         run: |
           docker run -d --name calino-proxy-test \
@@ -257,12 +271,25 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # Labels are part of each platform's image config, so they are set here;
+      # the `merge` job can only assemble and tag what these builds pushed.
+      - name: Extract image labels
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ghcr.io/ivan-malinovski/calino
+          tags: type=semver,pattern={{version}}
+          labels: |
+            org.opencontainers.image.title=Calino
+            org.opencontainers.image.url=https://calino.io
+
       - name: Build & push by digest
         id: build
         uses: docker/build-push-action@v7
         with:
           context: .
           platforms: ${{ matrix.platform }}
+          labels: ${{ steps.meta.outputs.labels }}
           outputs: type=image,name=ghcr.io/ivan-malinovski/calino,push-by-digest=true,name-canonical=true,push=true
           cache-from: type=gha,scope=build-${{ matrix.slug }}
           cache-to: type=gha,mode=max,scope=build-${{ matrix.slug }}
@@ -380,12 +407,25 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # A manual proxy publish has no release version, so its label stays empty.
+      - name: Extract proxy image labels
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ghcr.io/ivan-malinovski/calino-proxy
+          tags: type=semver,pattern={{version}}
+          labels: |
+            org.opencontainers.image.title=Calino CalDAV Proxy
+            org.opencontainers.image.description=Optional CORS proxy for using Calino with CalDAV servers
+            org.opencontainers.image.url=https://calino.io
+
       - name: Build & push proxy by digest
         id: build
         uses: docker/build-push-action@v7
         with:
           context: ./proxy
           platforms: ${{ matrix.platform }}
+          labels: ${{ steps.meta.outputs.labels }}
           outputs: type=image,name=ghcr.io/ivan-malinovski/calino-proxy,push-by-digest=true,name-canonical=true,push=true
           cache-from: type=gha,scope=proxy-build-${{ matrix.slug }}
           cache-to: type=gha,mode=max,scope=proxy-build-${{ matrix.slug }}

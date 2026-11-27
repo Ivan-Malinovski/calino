@@ -340,7 +340,9 @@ start_docker_build() {
   # any point still restores a pre-existing calino:test tag in the EXIT trap.
   DOCKER_TEST_IMAGE_BUILT=true
   DOCKER_BUILD_LOG=$(mktemp)
-  $ENGINE build -t calino:test . > "$DOCKER_BUILD_LOG" 2>&1 &
+  $ENGINE build -t calino:test \
+    --label "org.opencontainers.image.version=${RELEASE_VERSION:-$CURRENT_VERSION}" \
+    . > "$DOCKER_BUILD_LOG" 2>&1 &
   DOCKER_BUILD_PID=$!
   echo "  $ENGINE build started in the background (pid $DOCKER_BUILD_PID)"
 }
@@ -553,6 +555,7 @@ if [ "$DOCKER_PUSH" = true ] && [ "$DRY_RUN" = false ]; then
     step "Building with tags: main, latest, $VERSION_TAG, $SHA_TAG"
     BUILD_STATUS=0
     BUILD_OUTPUT=$($ENGINE build \
+      --label "org.opencontainers.image.version=$VERSION_TAG" \
       -t "$IMAGE:main" \
       -t "$IMAGE:latest" \
       -t "$IMAGE:$VERSION_TAG" \
