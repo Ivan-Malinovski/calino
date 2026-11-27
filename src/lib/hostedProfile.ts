@@ -11,6 +11,7 @@ const DATA_KEYS = [
   'calino_caldav_calendars',
   'calino_caldav_credentials',
   'calino_pending_changes',
+  'calino.preconfigured.accounts',
   'calino_webcal_subscriptions',
   'calino.masterPassword',
 ]

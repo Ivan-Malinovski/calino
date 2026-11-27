@@ -11,6 +11,9 @@ export interface PreconfiguredAccount {
   username: MasterEncryptedData
   password: MasterEncryptedData
   headers?: Record<string, MasterEncryptedData>
+  // Encrypted JSON array of { url, name }: the only calendars to sync.
+  // Absent means every calendar on the account.
+  calendars?: MasterEncryptedData
 }
 
 export interface PreconfiguredWebcal {
@@ -58,6 +61,7 @@ const PreconfiguredAccountSchema = z.object({
   username: MasterEncryptedDataSchema,
   password: MasterEncryptedDataSchema,
   headers: z.record(z.string(), MasterEncryptedDataSchema).optional(),
+  calendars: MasterEncryptedDataSchema.optional(),
 })
 
 const PreconfiguredWebcalSchema = z.object({
