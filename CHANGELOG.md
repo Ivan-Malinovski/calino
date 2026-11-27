@@ -4,6 +4,10 @@ All notable changes to Calino will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Docker images identify themselves as Calino** ([#301](https://github.com/Ivan-Malinovski/calino/issues/301)). The image inherited the OCI labels of its Caddy base image, so container managers listed it as Caddy and could not find Calino’s release notes. Both the app and proxy images now carry their own title, source, version and licence. Thanks to [@budbay](https://github.com/budbay) for the report.
+
 ## [0.43.0] - 2026-11-26
 
 Set an event’s time zone, choose how each calendar completes repeating tasks, and reorder or isolate calendars in the sidebar. Calino also adds attendee suggestions and Simplified Chinese. Self-hosted installs gain runtime configuration and subpath support, and this release improves interoperability with CalDAV, CardDAV, and JMAP servers.

@@ -41,6 +41,18 @@ COPY --from=build /app/dist /srv
 
 EXPOSE 8080
 
+# The base image carries Caddy's OCI labels; override every one, or registries
+# and container managers identify this image as Caddy. Release builds set the
+# version with --label (a build arg here would go stale in Podman's cache).
+LABEL org.opencontainers.image.title="Calino" \
+    org.opencontainers.image.description="A beautiful CalDAV client for the web" \
+    org.opencontainers.image.url="https://calino.io" \
+    org.opencontainers.image.source="https://github.com/Ivan-Malinovski/calino" \
+    org.opencontainers.image.documentation="https://github.com/Ivan-Malinovski/calino/blob/main/docs/DOCKER.md" \
+    org.opencontainers.image.vendor="Ivan Malinovski" \
+    org.opencontainers.image.licenses="MIT" \
+    org.opencontainers.image.version=""
+
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD wget -qO- http://localhost:8080/ || exit 1
 
