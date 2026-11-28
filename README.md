@@ -22,7 +22,7 @@ If you've been looking for a beautiful, modern browser-based CalDAV calendar tha
 
 > **Active project:** Calino is under active development. New features and improvements ship regularly — please report bugs, they're more than welcome!
 
-<img width="1613" height="942" alt="image" src="https://github.com/user-attachments/assets/832356b1-0b20-4161-8083-06ff71934a16" />
+<img src="docs/screenshots/month-light-dark.webp" width="100%" alt="Calino's month view, split diagonally between the light and dark themes" />
 (more screenshots at the bottom)
 
 ### JMAP
@@ -280,17 +280,17 @@ restrictions reduce open-relay and SSRF risk; see [`docs/CORS_PROXY.md`](./docs/
 
 ## Mobile month and task view
 
-<img width="357" height="774" alt="image" src="https://github.com/user-attachments/assets/609e3443-ac80-4116-94d5-fe13b97a0673" />
-<img width="357" height="774" alt="image" src="https://github.com/user-attachments/assets/3e1d565a-a066-4452-a389-3cb847953b3e" />
+<img src="docs/screenshots/mobile-month.webp" width="357" alt="Month view on a phone, with the agenda list below" />
+<img src="docs/screenshots/mobile-tasks.webp" width="357" alt="Task list on a phone" />
 
 ## Desktop tasks and journal (the journal has markdown support!)
 
-<img width="1224" height="925" alt="image" src="https://github.com/user-attachments/assets/cdd8cb01-8a5e-4a7b-b83f-dfdec8158512" />
-<img width="1221" height="925" alt="image" src="https://github.com/user-attachments/assets/4037bd13-755c-4e2a-a4a3-57544afb60c9" />
+<img src="docs/screenshots/tasks.webp" width="100%" alt="Desktop task list grouped into overdue, this week and later" />
+<img src="docs/screenshots/journal.webp" width="100%" alt="A journal entry with rendered markdown, in the dark theme" />
 
 ## Quickly create events through Natural Language Processing in the Command Palette (no AI)
 
-<img width="640" height="244" alt="image" src="https://github.com/user-attachments/assets/7e6623f7-5f12-4b44-a74b-8cce3fb1bf94" />
+<img src="docs/screenshots/command-palette.webp" width="634" alt="Command palette turning a typed sentence into an event" />
 
 
 ## Tech Stack
